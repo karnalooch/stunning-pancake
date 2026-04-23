@@ -196,3 +196,25 @@ The "SPORT" platform leverages data to provide value beyond simple tracking:
 - **Visual Regression**: Automated screenshot testing to ensure UI consistency across different device resolutions.
 - **E2E Testing**: Critical paths (Login, Start Session, Payment) must be covered by End-to-End tests (Playwright/Cypress/Appium).
 - **Performance Budgets**: Monitoring of API response times and mobile frame rates (FPS) to maintain high responsiveness.
+
+## 15. Governance and User Roles
+
+The "SPORT" platform follows a hierarchical access control model to ensure secure and efficient management.
+
+### 15.1 Project Owner (akarn)
+- **Supreme Authority**: Full access to all system modules, global financial reports, and infrastructure configurations.
+- **Constitutional Control**: Only the Project Owner can authorize changes to the Project Constitution and Core AI Safety standards.
+- **Administrative Oversight**: Power to appoint and revoke Global Administrators.
+
+### 15.2 Global Administrator
+- **B2B Management**: Oversight of corporate and municipal clients (tenants).
+- **Global Anti-Cheat Tuning**: Authority to adjust validation thresholds for the entire platform.
+- **Security Monitoring**: Access to system-wide audit logs and security alerts.
+
+### 15.3 Local Moderator (Tenant Level)
+- **Community Management**: Management of clans, users, and local challenges within a specific B2B tenant.
+- **Route Verification**: Manual review of flagged tracks and handling of user disputes.
+
+### 15.4 End User (Athlete)
+- **Personal Profile**: Management of personal data, privacy zones, and training history.
+- **Social Interaction**: Participation in clans, cities, and leaderboard competitions.
