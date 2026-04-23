@@ -66,10 +66,10 @@ The project applies strict **[Safety Constitution](./ai_toolkit_constitution.md)
 - Article VI: Repair Discipline (no dead code, immediate bug fixes).
 - Planning before implementation and evidence-based verification before task completion.
 
-## 7. Commercial Model
-- **B2B (Corporate Wellness)**: SaaS model with full client branding.
-- **B2C (Freemium)**: Advanced training plans and premium maps.
-- **Sponsors POI**: Dynamic partner points on the map with a voucher system.
+## 7. Model Komercjalizacji
+- **B2B (Corporate Wellness)**: SaaS model with full client branding and advanced HR analytics (see Section 18).
+- **B2C (Freemium)**: Advanced training plans, premium maps, and special event access.
+- **Sponsors POI**: Dynamic partner points on the map with a voucher system and Brand Portal (see Section 17).
 
 ## 8. Coding and Documentation Standards
 
@@ -247,3 +247,44 @@ To ensure the long-term viability and professional standing of the "SPORT" platf
 ### 16.5 Legal, Licensing, and Attribution
 - **Open Source Compliance**: The app must include an "Open Source Licenses" screen providing proper attribution to OpenStreetMap, BRouter, MapLibre, and other core components.
 - **Privacy Compliance**: Strict adherence to GDPR (Europe) and CCPA (USA) for data processing, including the "Right to be Forgotten" and data export features.
+
+## 17. Sponsorship and Brand Integration Module
+
+The "Brand Partner Portal" allows companies to interact with the active community through spatial gamification.
+
+### 17.1 Brand Portal Features
+- **Voucher Hotspots**: Sponsors can place dynamic reward zones on the map. Users who complete activities passing through these zones unlock exclusive brand vouchers.
+- **User Footfall Analytics**: Real-time heatmaps showing user density around sponsor locations (anonymized).
+- **Brand Sentiment Monitoring**: Integrated feedback loop for sponsored events and challenges.
+
+### 17.2 Visual Identity
+![Sponsor Dashboard](./assets/sponsor_dashboard.png)
+
+## 18. Corporate Wellness and HR Analytics
+
+Dedicated dashboard for B2B clients to monitor and incentivize employee health.
+
+### 18.1 Corporate Features
+- **Department Leaderboards**: Internal competition between teams (Sales vs. Engineering) to drive engagement.
+- **Sustainability Impact**: Tracking CO2 savings by employees choosing active commuting over vehicles.
+- **Engagement Insights**: Deep analytics on employee participation rates and milestone achievements.
+- **Privacy First**: HR managers only see aggregated, anonymized data to protect individual employee privacy.
+
+### 18.2 Visual Identity
+![HR Wellness Dashboard](./assets/hr_wellness_dashboard.png)
+
+## 19. Accessibility and Inclusion
+
+The "SPORT" platform must be usable by everyone, regardless of physical ability.
+
+- **Adaptive Profiles**: Support for wheelchair and handcycle activities with specific routing profiles in BRouter.
+- **High-Contrast Themes**: Specialized UI modes for users with visual impairments.
+- **Screen Reader Optimization**: Full compliance with WCAG 2.1 for the web dashboard and mobile app.
+
+## 20. Viral Growth and Social Mechanics
+
+To ensure rapid adoption, the platform includes built-in viral loops:
+
+- **Dynamic Social Cards**: Automated generation of beautiful, shareable "Activity Cards" with stats, maps, and brand logos for social media.
+- **Referral Rewards**: Gamified system where users unlock premium features or badges by inviting friends and colleagues.
+- **Cross-Platform Sharing**: Seamless integration with Strava, Instagram, and Matrix for activity broadcasting.
