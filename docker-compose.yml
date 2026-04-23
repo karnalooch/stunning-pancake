@@ -48,5 +48,23 @@ services:
       - redis
       - brouter
 
+  # Backend API (Django/FastAPI)
+  backend:
+    build: ./backend
+    container_name: sport_backend
+    restart: always
+    environment:
+      DEBUG: 1
+      DATABASE_URL: postgres://sport_user:sport_password_2026@db:5432/sport_db
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+      - traccar
+
 volumes:
   pgdata:
