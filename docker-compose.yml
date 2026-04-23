@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # Database with PostGIS extension for Geospatial data
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: sport_db
+    restart: always
+    environment:
+      POSTGRES_DB: sport_db
+      POSTGRES_USER: sport_user
+      POSTGRES_PASSWORD: sport_password_2026
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # Redis for high-speed caching and leaderboard Sorted Sets
+  redis:
+    image: redis:7-alpine
+    container_name: sport_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # BRouter for track validation and anti-cheat (Topological matching)
+  brouter:
+    image: nilsnolde/brouter:latest
+    container_name: sport_brouter
+    restart: always
+    ports:
+      - "17878:17878"
+
+  # Traccar for real-time telemetry collection
+  traccar:
+    image: traccar/traccar:latest
+    container_name: sport_traccar
+    restart: always
+    ports:
+      - "8082:8082"
+      - "5000-5150:5000-5150"
+      - "5000-5150:5000-5150/udp"
+    volumes:
+      - ./infrastructure/traccar/conf/traccar.xml:/opt/traccar/conf/traccar.xml:ro
+      - ./infrastructure/traccar/logs:/opt/traccar/logs
+    depends_on:
+      - db
+      - redis
+      - brouter
+
+volumes:
+  pgdata:

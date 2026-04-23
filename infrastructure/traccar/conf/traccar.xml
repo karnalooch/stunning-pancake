@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
+
+<properties>
+
+    <entry key='config.default'>./conf/default.xml</entry>
+
+    <!-- Database Configuration (PostGIS) -->
+    <entry key='database.driver'>org.postgresql.Driver</entry>
+    <entry key='database.url'>jdbc:postgresql://db:5432/sport_db</entry>
+    <entry key='database.user'>sport_user</entry>
+    <entry key='database.password'>sport_password_2026</entry>
+
+    <!-- Redis Configuration for Caching -->
+    <entry key='redis.enabled'>true</entry>
+    <entry key='redis.host'>redis</entry>
+
+    <!-- BRouter Configuration for Anti-Cheat Validation -->
+    <entry key='geocoder.type'>osm</entry>
+    <entry key='router.type'>brouter</entry>
+    <entry key='router.url'>http://brouter:17878/brouter</entry>
+
+    <!-- Web Interface -->
+    <entry key='web.port'>8082</entry>
+
+</properties>
