@@ -1,4 +1,4 @@
-﻿from rest_framework import viewsets, permissions, status, generics
+from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
@@ -76,3 +76,32 @@ class VoucherRedeemView(generics.UpdateAPIView):
         except Voucher.DoesNotExist:
             return Response({"error": "invalid or already redeemed voucher"}, status=status.HTTP_400_BAD_REQUEST)
 
+from .services import TelemetryService
+
+class TelemetryLiveView(generics.GenericAPIView):
+    """
+    Proxy view for fetching live telemetry from Traccar.
+    Authorized for Admin roles.
+    """
+    permission_classes = (permissions.IsAuthenticated,) # Add IsAdminRole here later if needed
+
+    def get(self, request):
+        positions = TelemetryService.get_live_positions()
+        devices = TelemetryService.get_devices()
+        
+        # Merge device names into positions for better UI
+        device_map = {d['id']: d['name'] for d in devices}
+        
+        enriched_data = []
+        for pos in positions:
+            enriched_data.append({
+                "deviceId": pos['deviceId'],
+                "name": device_map.get(pos['deviceId'], f"Athlete {pos['deviceId']}"),
+                "lat": pos['latitude'],
+                "lng": pos['longitude'],
+                "speed": pos['speed'],
+                "course": pos['course'],
+                "lastUpdate": pos['deviceTime']
+            })
+            
+        return Response(enriched_data)

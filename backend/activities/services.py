@@ -117,3 +117,46 @@ class MatrixService:
         except Exception:
             return False
 
+
+class TelemetryService:
+    """
+    Client for interacting with the Traccar GPS tracking server.
+    Used for real-time athlete positioning and history retrieval.
+    """
+    BASE_URL = os.getenv('TRACCAR_URL', 'http://traccar:8082/api')
+    USER = os.getenv('TRACCAR_USER', 'admin')
+    PASS = os.getenv('TRACCAR_PASS', 'admin')
+
+    @classmethod
+    def get_live_positions(cls):
+        """
+        Fetches latest positions for all active devices.
+        """
+        try:
+            response = requests.get(
+                f"{cls.BASE_URL}/positions",
+                auth=(cls.USER, cls.PASS),
+                timeout=5
+            )
+            if response.status_code == 200:
+                return response.json()
+            return []
+        except Exception:
+            return []
+
+    @classmethod
+    def get_devices(cls):
+        """
+        Fetches metadata about registered devices (athletes).
+        """
+        try:
+            response = requests.get(
+                f"{cls.BASE_URL}/devices",
+                auth=(cls.USER, cls.PASS),
+                timeout=5
+            )
+            if response.status_code == 200:
+                return response.json()
+            return []
+        except Exception:
+            return []

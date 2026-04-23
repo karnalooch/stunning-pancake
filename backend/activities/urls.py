@@ -1,7 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView
-from .admin_views import GlobalActivityListView, TenantActivityListView
+from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')
@@ -12,5 +11,6 @@ urlpatterns = [
     path('admin/all/', GlobalActivityListView.as_view(), name='global-activities'),
     path('admin/tenant/', TenantActivityListView.as_view(), name='tenant-activities'),
     path('vouchers/redeem/<str:code>/', VoucherRedeemView.as_view(), name='voucher-redeem'),
+    path('telemetry/live/', TelemetryLiveView.as_view(), name='telemetry-live'),
 ]
 
