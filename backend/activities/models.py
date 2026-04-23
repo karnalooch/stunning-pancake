@@ -43,3 +43,30 @@ class PrivacyZone(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Privacy Zone: {self.label}"
+
+class POI(models.Model):
+    """
+    Point of Interest (Sponsor Location).
+    """
+    name = models.CharField(max_length=200)
+    location = models.PointField(srid=4326)
+    tenant_id = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"{self.name} ({self.tenant_id})"
+
+class Voucher(models.Model):
+    """
+    Redeemable reward linked to a POI.
+    """
+    poi = models.ForeignKey(POI, on_delete=models.CASCADE, related_name='vouchers')
+    code = models.CharField(max_length=50, unique=True)
+    discount_value = models.CharField(max_length=100)
+    is_redeemed = models.BooleanField(default=False)
+    redeemed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    expiry_date = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.code} - {self.poi.name}"

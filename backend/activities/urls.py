@@ -11,4 +11,5 @@ urlpatterns = [
     path('', include(router.urls)),
     path('admin/all/', GlobalActivityListView.as_view(), name='global-activities'),
     path('admin/tenant/', TenantActivityListView.as_view(), name='tenant-activities'),
+    path('vouchers/redeem/<str:code>/', VoucherRedeemView.as_view(), name='voucher-redeem'),
 ]
