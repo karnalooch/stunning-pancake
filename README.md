@@ -11,7 +11,10 @@ Full project documentation can be found in the `docs/` directory:
 - **[AI Toolkit Standards](./docs/ai_toolkit_constitution.md)** - AI Quality and Safety rules (Safety Constitution).
 - **[Python + TypeScript Strategy](./docs/python_typescript_strategy.md)** - "Power Couple" division of responsibilities.
 
-## Tech Stack
+## 🚀 Quick Start
+If you are a developer joining the project, please follow the **[Developer Quick Start Guide](./docs/developer_quickstart.md)** to set up your environment.
+
+## 🛠 Tech Stack
 - **Backend**: Python (Django/FastAPI) + PostgreSQL/PostGIS
 - **Mobile**: Flutter
 - **Infrastructure**: Docker
