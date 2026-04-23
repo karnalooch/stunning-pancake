@@ -43,6 +43,9 @@ The interface must inspire trust and motivate activity.
 ![City Analytics](./assets/city_analytics_mockup.png)
 
 ## 4. System Architecture
+### High-Level Architecture Overview
+![System Architecture](./assets/system_architecture.png)
+
 ### Offline-First Model
 The mobile app treats the local database (SQLite) as the single source of truth during an activity. Synchronization with the server occurs asynchronously (batching), minimizing battery consumption.
 
