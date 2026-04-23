@@ -25,11 +25,17 @@ services:
 
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
-    image: joeakeem/brouter:v1.7.9
+    build: ./infrastructure/brouter/brouter-src
     container_name: sport_brouter
     restart: always
     ports:
-      - "17878:17878"
+      - "17777:17777"
+    volumes:
+      - ./infrastructure/brouter/segments4:/segments4:ro
+
+
+
+
 
   # Traccar for real-time telemetry collection
   traccar:

@@ -189,28 +189,53 @@ body {
 }
 
 .athlete-marker {
-  width: 14px;
-  height: 14px;
-  background: var(--primary);
-  border: 2px solid #fff;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  box-shadow: 0 0 10px var(--primary);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
   cursor: pointer;
   position: relative;
+  transition: transform 0.2s ease;
+  z-index: 100;
+}
+
+/* Ensure default MapLibre SVG pins are hidden */
+.maplibregl-marker:not(.athlete-marker) {
+  display: none !important;
+}
+
+.athlete-marker svg {
+  display: none !important;
+}
+
+
+.athlete-marker.type-run {
+  background: var(--primary); /* Blue */
+  box-shadow: 0 0 10px var(--primary);
+}
+
+.athlete-marker.type-bike {
+  background: var(--secondary); /* Green */
+  box-shadow: 0 0 10px var(--secondary);
 }
 
 .athlete-marker::after {
   content: '';
   position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  border: 2px solid var(--primary);
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  border: 1.5px solid currentColor;
   border-radius: 50%;
-  animation: pulse 2s infinite;
+  animation: pulse 2.5s infinite;
   opacity: 0;
 }
+
+.athlete-marker.type-run::after { color: var(--primary); }
+.athlete-marker.type-bike::after { color: var(--secondary); }
+
 
 @keyframes pulse {
   0% { transform: scale(0.8); opacity: 0.8; }

@@ -89,19 +89,36 @@ class TelemetryLiveView(generics.GenericAPIView):
         positions = TelemetryService.get_live_positions()
         devices = TelemetryService.get_devices()
         
-        # Merge device names into positions for better UI
-        device_map = {d['id']: d['name'] for d in devices}
+        # Ensure we have lists to work with
+        if not isinstance(positions, list):
+            positions = []
+        if not isinstance(devices, list):
+            devices = []
+            
+        # Merge device names and types into positions for better UI
+        device_info = {d.get('id'): {'name': d.get('name'), 'type': d.get('category')} for d in devices if isinstance(d, dict)}
         
         enriched_data = []
         for pos in positions:
+            if not isinstance(pos, dict):
+                continue
+                
+            device_id = pos.get('deviceId')
+            if device_id is None:
+                continue
+            
+            info = device_info.get(device_id, {})
             enriched_data.append({
-                "deviceId": pos['deviceId'],
-                "name": device_map.get(pos['deviceId'], f"Athlete {pos['deviceId']}"),
-                "lat": pos['latitude'],
-                "lng": pos['longitude'],
-                "speed": pos['speed'],
-                "course": pos['course'],
-                "lastUpdate": pos['deviceTime']
+                "deviceId": device_id,
+                "name": info.get('name', f"Athlete {device_id}"),
+                "type": info.get('type', 'person'),
+                "lat": pos.get('latitude', 0.0),
+                "lng": pos.get('longitude', 0.0),
+                "speed": pos.get('speed', 0.0),
+                "course": pos.get('course', 0.0),
+                "lastUpdate": pos.get('deviceTime')
             })
+
             
         return Response(enriched_data)
+
