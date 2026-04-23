@@ -83,7 +83,7 @@ class TelemetryLiveView(generics.GenericAPIView):
     Proxy view for fetching live telemetry from Traccar.
     Authorized for Admin roles.
     """
-    permission_classes = (permissions.IsAuthenticated,) # Add IsAdminRole here later if needed
+    permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
         positions = TelemetryService.get_live_positions()

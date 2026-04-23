@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView
+from .admin_views import GlobalActivityListView, TenantActivityListView
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')

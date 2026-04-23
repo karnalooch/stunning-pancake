@@ -3,56 +3,63 @@ import time
 import math
 import random
 
-# Traccar OsmAnd protocol URL
-# Format: http://host:port/?id=deviceid&lat=lat&lon=lon&timestamp=time&hdop=hdop&altitude=alt&speed=speed
-TRACCAR_URL = "http://localhost:5055/"
-
-# Warsaw Center
-START_LAT = 52.2297
-START_LON = 21.0122
+# Traccar API and protocol
+API_URL = "http://localhost:8082/api"
+PROTO_URL = "http://localhost:5055/"
+AUTH = ("admin", "admin")
 
 DEVICE_ID = "athlete_001"
+DEVICE_NAME = "Maria Wisniewska (Sim)"
+
+def setup_device():
+    print(f"Checking device {DEVICE_ID} in Traccar...")
+    try:
+        # Check if device exists
+        resp = requests.get(f"{API_URL}/devices", auth=AUTH)
+        devices = resp.json()
+        if any(d['uniqueId'] == DEVICE_ID for d in devices):
+            print("Device already exists.")
+            return
+            
+        # Create device
+        print("Creating new device...")
+        payload = {
+            "name": DEVICE_NAME,
+            "uniqueId": DEVICE_ID,
+            "category": "person"
+        }
+        requests.post(f"{API_URL}/devices", json=payload, auth=AUTH)
+        print("Device created.")
+    except Exception as e:
+        print(f"Setup error (maybe Traccar not ready): {e}")
 
 def simulate_runner():
-    print(f"🚀 Starting Traccar Simulator for device: {DEVICE_ID}")
-    print(f"📍 Target: {TRACCAR_URL}")
+    setup_device()
     
-    current_lat = START_LAT
-    current_lon = START_LON
-    
-    # Simulate a path (walking in a circle/trail)
+    current_lat = 52.2297
+    current_lon = 21.0122
     angle = 0
     
     while True:
-        # Move approx 5-10 meters (speed around 10-15 km/h)
-        speed_kmh = 12 + random.uniform(-2, 2)
-        speed_ms = speed_kmh / 3.6
-        
-        # Simple circular movement for demo
-        angle += 0.05
-        current_lat += math.sin(angle) * 0.0005
-        current_lon += math.cos(angle) * 0.0005
+        angle += 0.02
+        current_lat += math.sin(angle) * 0.0003
+        current_lon += math.cos(angle) * 0.0003
         
         params = {
             "id": DEVICE_ID,
             "lat": current_lat,
             "lon": current_lon,
             "timestamp": int(time.time()),
-            "hdop": 1.0,
-            "altitude": 100,
-            "speed": speed_ms / 0.514444 # Convert m/s to knots for Traccar
+            "speed": (12 + random.uniform(-1, 1)) / 1.852 # ~12 km/h in knots
         }
         
         try:
-            response = requests.get(TRACCAR_URL, params=params, timeout=5)
-            if response.status_code == 200:
-                print(f"✅ Sent: {current_lat:.5f}, {current_lon:.5f} | Speed: {speed_kmh:.1f} km/h")
-            else:
-                print(f"❌ Error {response.status_code}: {response.text}")
-        except Exception as e:
-            print(f"⚠️ Connection error: {e}")
+            requests.get(PROTO_URL, params=params, timeout=5)
+            print(f"Sent: {current_lat:.5f}, {current_lon:.5f}")
+        except:
+            pass
             
-        time.sleep(2) # Send every 2 seconds
+        time.sleep(2)
 
 if __name__ == "__main__":
     simulate_runner()
