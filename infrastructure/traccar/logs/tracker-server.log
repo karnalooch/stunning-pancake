@@ -542,3 +542,34 @@
 2026-04-23 21:52:57  INFO: Started oejs.ServerConnector@7c40260b{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
 2026-04-23 21:52:57  INFO: Started oejs.Server@8f589d7{STARTING}[12.1.6,sto=0] @866ms
 2026-04-23 21:53:42  INFO: Stopping server...
+2026-04-23 21:54:03  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 21:54:03  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 21:54:03  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 21:54:03  INFO: Character encoding: UTF-8
+2026-04-23 21:54:03  INFO: Version: 6.12.2
+2026-04-23 21:54:03  INFO: Starting server...
+2026-04-23 21:54:03  INFO: HikariPool-1 - Starting...
+2026-04-23 21:54:04  INFO: HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6b7d1df8
+2026-04-23 21:54:04  INFO: HikariPool-1 - Start completed.
+2026-04-23 21:54:04  INFO: Set default schema name to public
+2026-04-23 21:54:04  INFO: Successfully acquired change log lock
+2026-04-23 21:54:04  INFO: Clearing database change log checksums for database postgresql
+2026-04-23 21:54:04  INFO: Successfully released change log lock
+2026-04-23 21:54:04  INFO: Command execution complete
+2026-04-23 21:54:05  INFO: Reading from public.databasechangelog
+2026-04-23 21:54:06  INFO: Reading from public.databasechangelog
+2026-04-23 21:54:06  INFO: Reading from public.databasechangelog
+2026-04-23 21:54:06  INFO: UPDATE SUMMARY
+2026-04-23 21:54:06  INFO: Run:                          0
+2026-04-23 21:54:06  INFO: Previously run:              31
+2026-04-23 21:54:06  INFO: Filtered out:                 0
+2026-04-23 21:54:06  INFO: -------------------------------
+2026-04-23 21:54:06  INFO: Total change sets:           31
+2026-04-23 21:54:06  INFO: Update summary generated
+2026-04-23 21:54:06  INFO: Command execution complete
+2026-04-23 21:54:08  INFO: jetty-12.1.6; built: 2026-01-27T18:53:19.182Z; git: 88ca559572b1c8858b3c5684bb0293fa64e5e90f; jvm 21.0.10+7-LTS
+2026-04-23 21:54:08  INFO: Session workerName=node0
+2026-04-23 21:54:08  INFO: Started oeje10s.ServletContextHandler@9bf63d2{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@7ffcb232{STARTED}}
+2026-04-23 21:54:09  INFO: Started oeje10s.ServletContextHandler@9bf63d2{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@7ffcb232{STARTED}}
+2026-04-23 21:54:09  INFO: Started oejs.ServerConnector@6edbed6a{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
+2026-04-23 21:54:09  INFO: Started oejs.Server@1b5cf611{STARTING}[12.1.6,sto=0] @978ms
