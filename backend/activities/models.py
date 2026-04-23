@@ -27,6 +27,10 @@ class Activity(models.Model):
 
     class Meta:
         verbose_name_plural = "Activities"
+        indexes = [
+            models.Index(fields=['user', 'start_time']),
+            models.Index(fields=['type', 'is_verified']),
+        ]
 
     def __str__(self):
         return f"{self.user.username} - {self.type} - {self.start_time.date()}"

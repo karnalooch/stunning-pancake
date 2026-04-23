@@ -1,0 +1,47 @@
+name: SPORT CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    - name: Run Linting (Ruff)
+      run: |
+        pip install ruff
+        ruff check backend
+    - name: Run Tests
+      run: |
+        cd backend
+        # We need a DB for tests, skipping for now in CI or use SQLite
+        python manage.py test --settings=core.settings
+
+  admin-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    - name: Install dependencies
+      run: |
+        cd admin
+        npm install
+    - name: Run Lint
+      run: |
+        cd admin
+        npm run lint
