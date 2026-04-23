@@ -260,6 +260,10 @@ The "Brand Partner Portal" allows companies to interact with the active communit
 ### 17.2 Visual Identity
 ![Sponsor Dashboard](./assets/sponsor_dashboard.png)
 
+#### Brand Wellness Mobile App
+For store managers and local wellness coordinators to manage vouchers and live events.
+![Brand Wellness App](./assets/brand_wellness_app.png)
+
 ## 18. Corporate Wellness and HR Analytics
 
 Dedicated dashboard for B2B clients to monitor and incentivize employee health.
