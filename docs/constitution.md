@@ -221,3 +221,29 @@ The "SPORT" platform follows a hierarchical access control model to ensure secur
 ### 15.4 End User (Athlete)
 - **Personal Profile**: Management of personal data, privacy zones, and training history.
 - **Social Interaction**: Participation in clans, cities, and leaderboard competitions.
+
+## 16. Reliability, Maintenance, and Compliance Standards
+
+To ensure the long-term viability and professional standing of the "SPORT" platform, the following operational standards are established:
+
+### 16.1 Disaster Recovery and Backups
+- **Automated Backups**: Full database backups (PostgreSQL/TimescaleDB) are performed daily and stored in a geographically isolated location.
+- **Point-in-Time Recovery (PITR)**: Enable write-ahead logging (WAL) archiving to allow recovery to any specific second in case of data corruption.
+- **Recovery Testing**: Backup restoration must be tested and verified at least once per quarter.
+
+### 16.2 Energy Efficiency and Resource Management
+- **Adaptive GPS Sampling**: The mobile app must adjust GPS polling frequency based on current battery levels and movement speed to prevent excessive drain during long activities.
+- **Battery Impact Monitoring**: Continuous monitoring of the app's battery footprint using native profiling tools (Android Battery Historian, iOS Instruments).
+
+### 16.3 Update and Deployment Strategy
+- **Staged Rollouts**: New mobile app versions are released to 5%, 10%, 20%, and then 100% of users to monitor for crashes.
+- **OTA (Over-the-Air) Updates**: Critical bug fixes for the web and mobile (logic layer) can be deployed via OTA mechanisms to bypass slow App Store approval cycles.
+
+### 16.4 Observability and Monitoring
+- **Error Tracking**: Integration with **Sentry** or similar for real-time crash reporting across backend, web, and mobile.
+- **Health Metrics**: Use **Prometheus** and **Grafana** to monitor server health (CPU, RAM, DB connection pools) and API performance.
+- **Synthetic Monitoring**: Automated "smoke tests" that simulate user login and session starts every 15 minutes to verify system uptime.
+
+### 16.5 Legal, Licensing, and Attribution
+- **Open Source Compliance**: The app must include an "Open Source Licenses" screen providing proper attribution to OpenStreetMap, BRouter, MapLibre, and other core components.
+- **Privacy Compliance**: Strict adherence to GDPR (Europe) and CCPA (USA) for data processing, including the "Right to be Forgotten" and data export features.
