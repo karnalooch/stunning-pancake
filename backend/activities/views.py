@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status, generics
+﻿from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
@@ -75,3 +75,4 @@ class VoucherRedeemView(generics.UpdateAPIView):
             })
         except Voucher.DoesNotExist:
             return Response({"error": "invalid or already redeemed voucher"}, status=status.HTTP_400_BAD_REQUEST)
+

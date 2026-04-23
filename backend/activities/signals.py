@@ -1,7 +1,7 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Activity
-from .services import BRouterService, PrivacyService
+from .services import BRouterService, PrivacyService, MatrixService
 from .leaderboards import LeaderboardService
 
 @receiver(post_save, sender=Activity)
@@ -49,3 +49,4 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
                 verification_score=instance.verification_score,
                 route_path=instance.route_path # Save masked path
             )
+

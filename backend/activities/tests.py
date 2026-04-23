@@ -1,4 +1,4 @@
-from django.test import TestCase
+﻿from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString, Point
 from django.utils import timezone
@@ -34,3 +34,4 @@ class ActivityTest(TestCase):
             radius=100.0
         )
         self.assertEqual(zone.radius, 100.0)
+

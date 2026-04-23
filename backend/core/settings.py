@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -59,7 +59,7 @@ DATABASES = {
         'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'sport_db',
         'USER': 'sport_user',
-        'PASSWORD': 'sport_password_2026',
+        'PASSWORD': 'sport_secure_pass_42a8b9f',
         'HOST': 'db',
         'PORT': '5432',
     }
@@ -110,3 +110,4 @@ SPECTACULAR_SETTINGS = {
     'LICENSE': {'name': 'MIT License'},
     'CONTACT': {'name': 'akarn', 'url': 'https://github.com/akarn'},
 }
+

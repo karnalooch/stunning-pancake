@@ -1,4 +1,4 @@
-from rest_framework import generics, permissions, status
+﻿from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from .serializers import UserSerializer, RegisterSerializer
@@ -55,3 +55,4 @@ class TenantBrandingView(generics.RetrieveAPIView):
             })
         except TenantProfile.DoesNotExist:
             return Response({"error": "tenant not found"}, status=status.HTTP_404_NOT_FOUND)
+

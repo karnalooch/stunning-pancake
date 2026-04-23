@@ -9,7 +9,7 @@ class Activity(models.Model):
         ('WHEELCHAIR', 'Wheelchair'),
     )
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_back='activities')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activities')
     type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
@@ -70,3 +70,4 @@ class Voucher(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.poi.name}"
+

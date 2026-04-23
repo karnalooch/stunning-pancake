@@ -1,7 +1,10 @@
 import stripe
 import os
+import logging
 from django.conf import settings
 from users.models import User
+
+logger = logging.getLogger(__name__)
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'sk_test_placeholder')
 
@@ -29,6 +32,7 @@ class PaymentService:
             )
             return session.url
         except Exception as e:
+            logger.error(f"Stripe checkout session creation failed for user {user.id}: {e}")
             return str(e)
 
     @classmethod
@@ -39,7 +43,11 @@ class PaymentService:
         endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        except stripe.error.SignatureVerificationError as e:
+            logger.warning(f"Stripe webhook signature verification failed: {e}")
+            return False
         except Exception as e:
+            logger.error(f"Stripe webhook processing error: {e}")
             return False
 
         if event['type'] == 'checkout.session.completed':
@@ -49,3 +57,4 @@ class PaymentService:
             User.objects.filter(id=user_id).update(is_premium=True)
             
         return True
+

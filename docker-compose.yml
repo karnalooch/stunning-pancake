@@ -7,9 +7,9 @@ services:
     container_name: sport_db
     restart: always
     environment:
-      POSTGRES_DB: sport_db
-      POSTGRES_USER: sport_user
-      POSTGRES_PASSWORD: sport_password_2026
+      POSTGRES_DB: ${POSTGRES_DB:-sport_db}
+      POSTGRES_USER: ${POSTGRES_USER:-sport_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sport_password_2026}
     ports:
       - "5432:5432"
     volumes:
@@ -25,7 +25,7 @@ services:
 
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
-    image: nilsnolde/brouter:latest
+    image: joeakeem/brouter:v1.7.9
     container_name: sport_brouter
     restart: always
     ports:
@@ -48,15 +48,17 @@ services:
       - redis
       - brouter
 
-  # Backend API (Django/FastAPI)
+  # Backend API (Django)
   backend:
     build: ./backend
     container_name: sport_backend
     restart: always
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
-      DEBUG: 1
-      DATABASE_URL: postgres://sport_user:sport_password_2026@db:5432/sport_db
-      REDIS_URL: redis://redis:6379/0
+      DEBUG: ${DEBUG:-1}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-key}
+      DATABASE_URL: postgres://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     ports:
       - "8000:8000"
     volumes:
@@ -65,6 +67,16 @@ services:
       - db
       - redis
       - traccar
+
+  # Admin Dashboard (React/Vite)
+  admin:
+    build: ./admin
+    container_name: sport_admin
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

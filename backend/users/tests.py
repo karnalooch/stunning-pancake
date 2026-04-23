@@ -1,4 +1,4 @@
-from django.test import TestCase
+﻿from django.test import TestCase
 from .models import User
 
 class UserTest(TestCase):
@@ -22,3 +22,4 @@ class UserTest(TestCase):
 
     def test_user_str(self):
         self.assertEqual(str(self.user), "testathlete (End User / Athlete)")
+

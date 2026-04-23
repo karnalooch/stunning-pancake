@@ -1,4 +1,4 @@
-from rest_framework import serializers
+﻿from rest_framework import serializers
 from .models import User
 
 class UserSerializer(serializers.ModelSerializer):
@@ -31,3 +31,4 @@ class RegisterSerializer(serializers.ModelSerializer):
             role='ATHLETE' # Default role for new registrations
         )
         return user
+

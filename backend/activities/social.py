@@ -1,4 +1,4 @@
-from django.utils import timezone
+﻿from django.utils import timezone
 
 class SocialSharingService:
     """
@@ -20,3 +20,4 @@ class SocialSharingService:
             "is_verified": activity.is_verified,
             "tenant_name": activity.user.tenant_id if activity.user.tenant_id else "Independent Athlete"
         }
+

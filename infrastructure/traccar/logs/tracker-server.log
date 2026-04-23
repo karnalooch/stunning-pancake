@@ -1,0 +1,480 @@
+2026-04-23 20:09:25  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:25  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:25  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:25  INFO: Character encoding: UTF-8
+2026-04-23 20:09:25  INFO: Version: 6.12.2
+2026-04-23 20:09:25  INFO: Starting server...
+2026-04-23 20:09:26  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:27 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:29  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:29  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:29  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:29  INFO: Character encoding: UTF-8
+2026-04-23 20:09:29  INFO: Version: 6.12.2
+2026-04-23 20:09:29  INFO: Starting server...
+2026-04-23 20:09:30  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:31 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:33  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:33  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:33  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:33  INFO: Character encoding: UTF-8
+2026-04-23 20:09:33  INFO: Version: 6.12.2
+2026-04-23 20:09:33  INFO: Starting server...
+2026-04-23 20:09:33  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:34 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:36  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:36  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:36  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:36  INFO: Character encoding: UTF-8
+2026-04-23 20:09:36  INFO: Version: 6.12.2
+2026-04-23 20:09:36  INFO: Starting server...
+2026-04-23 20:09:36  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:38 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:39  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:39  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:39  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:39  INFO: Character encoding: UTF-8
+2026-04-23 20:09:39  INFO: Version: 6.12.2
+2026-04-23 20:09:39  INFO: Starting server...
+2026-04-23 20:09:39  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:41 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:43  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:43  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:43  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:43  INFO: Character encoding: UTF-8
+2026-04-23 20:09:43  INFO: Version: 6.12.2
+2026-04-23 20:09:43  INFO: Starting server...
+2026-04-23 20:09:43  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:44 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:46  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:46  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:46  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:46  INFO: Character encoding: UTF-8
+2026-04-23 20:09:46  INFO: Version: 6.12.2
+2026-04-23 20:09:46  INFO: Starting server...
+2026-04-23 20:09:46  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:48 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:50  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:50  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:50  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:50  INFO: Character encoding: UTF-8
+2026-04-23 20:09:50  INFO: Version: 6.12.2
+2026-04-23 20:09:50  INFO: Starting server...
+2026-04-23 20:09:50  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:51 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:53  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:53  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:53  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:53  INFO: Character encoding: UTF-8
+2026-04-23 20:09:53  INFO: Version: 6.12.2
+2026-04-23 20:09:53  INFO: Starting server...
+2026-04-23 20:09:53  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:54 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:56  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:56  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:56  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:56  INFO: Character encoding: UTF-8
+2026-04-23 20:09:56  INFO: Version: 6.12.2
+2026-04-23 20:09:56  INFO: Starting server...
+2026-04-23 20:09:56  INFO: HikariPool-1 - Starting...
+2026-04-23 20:09:58 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:09:59  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:09:59  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:09:59  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:09:59  INFO: Character encoding: UTF-8
+2026-04-23 20:09:59  INFO: Version: 6.12.2
+2026-04-23 20:09:59  INFO: Starting server...
+2026-04-23 20:10:00  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:01 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:03  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:03  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:03  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:03  INFO: Character encoding: UTF-8
+2026-04-23 20:10:03  INFO: Version: 6.12.2
+2026-04-23 20:10:03  INFO: Starting server...
+2026-04-23 20:10:03  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:05 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:06  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:06  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:06  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:06  INFO: Character encoding: UTF-8
+2026-04-23 20:10:06  INFO: Version: 6.12.2
+2026-04-23 20:10:06  INFO: Starting server...
+2026-04-23 20:10:07  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:08 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:10  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:10  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:10  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:10  INFO: Character encoding: UTF-8
+2026-04-23 20:10:10  INFO: Version: 6.12.2
+2026-04-23 20:10:10  INFO: Starting server...
+2026-04-23 20:10:10  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:11 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:13  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:13  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:13  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:13  INFO: Character encoding: UTF-8
+2026-04-23 20:10:13  INFO: Version: 6.12.2
+2026-04-23 20:10:13  INFO: Starting server...
+2026-04-23 20:10:13  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:15 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:17  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:17  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:17  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:17  INFO: Character encoding: UTF-8
+2026-04-23 20:10:17  INFO: Version: 6.12.2
+2026-04-23 20:10:17  INFO: Starting server...
+2026-04-23 20:10:17  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:18 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:20  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:20  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:20  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:20  INFO: Character encoding: UTF-8
+2026-04-23 20:10:20  INFO: Version: 6.12.2
+2026-04-23 20:10:20  INFO: Starting server...
+2026-04-23 20:10:20  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:21 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:23  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:23  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:23  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:23  INFO: Character encoding: UTF-8
+2026-04-23 20:10:23  INFO: Version: 6.12.2
+2026-04-23 20:10:23  INFO: Starting server...
+2026-04-23 20:10:24  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:25 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:27  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:27  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:27  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:27  INFO: Character encoding: UTF-8
+2026-04-23 20:10:27  INFO: Version: 6.12.2
+2026-04-23 20:10:27  INFO: Starting server...
+2026-04-23 20:10:27  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:28 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:30  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:30  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:30  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:30  INFO: Character encoding: UTF-8
+2026-04-23 20:10:30  INFO: Version: 6.12.2
+2026-04-23 20:10:30  INFO: Starting server...
+2026-04-23 20:10:30  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:32 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:33  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:33  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:33  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:33  INFO: Character encoding: UTF-8
+2026-04-23 20:10:33  INFO: Version: 6.12.2
+2026-04-23 20:10:33  INFO: Starting server...
+2026-04-23 20:10:33  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:35 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:36  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:36  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:36  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:36  INFO: Character encoding: UTF-8
+2026-04-23 20:10:36  INFO: Version: 6.12.2
+2026-04-23 20:10:36  INFO: Starting server...
+2026-04-23 20:10:37  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:38 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:40  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:40  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:40  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:40  INFO: Character encoding: UTF-8
+2026-04-23 20:10:40  INFO: Version: 6.12.2
+2026-04-23 20:10:40  INFO: Starting server...
+2026-04-23 20:10:40  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:41 ERROR: Main method error - FATAL: password authentication failed for user "sport_user" - PSQLException (... < DatabaseModule:80 < <gener:-1 < *:-1 < ... < MainModule:140 < <gener:-1 < ...)
+2026-04-23 20:10:43  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:43  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:43  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:43  INFO: Character encoding: UTF-8
+2026-04-23 20:10:43  INFO: Version: 6.12.2
+2026-04-23 20:10:43  INFO: Starting server...
+2026-04-23 20:10:44  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:44  INFO: HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6b7d1df8
+2026-04-23 20:10:44  INFO: HikariPool-1 - Start completed.
+2026-04-23 20:10:44  INFO: Set default schema name to public
+2026-04-23 20:10:44  INFO: Creating snapshot
+2026-04-23 20:10:45  INFO: Successfully acquired change log lock
+2026-04-23 20:10:45  INFO: Creating database changelog table with name: public.databasechangelog
+2026-04-23 20:10:45  INFO: Clearing database change log checksums for database postgresql
+2026-04-23 20:10:45  INFO: Successfully released change log lock
+2026-04-23 20:10:45  INFO: Command execution complete
+2026-04-23 20:10:45  INFO: Reading from public.databasechangelog
+2026-04-23 20:10:46  INFO: Successfully acquired change log lock
+2026-04-23 20:10:46  INFO: Using deploymentId: 6975044549
+2026-04-23 20:10:46  INFO: Reading from public.databasechangelog
+2026-04-23 20:10:46  INFO: Table tc_attributes created
+2026-04-23 20:10:46  INFO: Table tc_calendars created
+2026-04-23 20:10:47  INFO: Table tc_commands created
+2026-04-23 20:10:47  INFO: Table tc_device_attribute created
+2026-04-23 20:10:47  INFO: Table tc_device_command created
+2026-04-23 20:10:47  INFO: Table tc_device_driver created
+2026-04-23 20:10:47  INFO: Table tc_device_geofence created
+2026-04-23 20:10:47  INFO: Table tc_device_maintenance created
+2026-04-23 20:10:47  INFO: Table tc_device_notification created
+2026-04-23 20:10:47  INFO: Table tc_devices created
+2026-04-23 20:10:47  INFO: Table tc_drivers created
+2026-04-23 20:10:47  INFO: Table tc_events created
+2026-04-23 20:10:47  INFO: Table tc_geofences created
+2026-04-23 20:10:47  INFO: Table tc_group_attribute created
+2026-04-23 20:10:47  INFO: Table tc_group_command created
+2026-04-23 20:10:47  INFO: Table tc_group_driver created
+2026-04-23 20:10:47  INFO: Table tc_group_geofence created
+2026-04-23 20:10:47  INFO: Table tc_group_maintenance created
+2026-04-23 20:10:47  INFO: Table tc_group_notification created
+2026-04-23 20:10:47  INFO: Table tc_groups created
+2026-04-23 20:10:47  INFO: Table tc_maintenances created
+2026-04-23 20:10:47  INFO: Table tc_notifications created
+2026-04-23 20:10:47  INFO: Table tc_positions created
+2026-04-23 20:10:47  INFO: Table tc_servers created
+2026-04-23 20:10:47  INFO: Table tc_statistics created
+2026-04-23 20:10:47  INFO: Table tc_user_attribute created
+2026-04-23 20:10:47  INFO: Table tc_user_calendar created
+2026-04-23 20:10:47  INFO: Table tc_user_command created
+2026-04-23 20:10:47  INFO: Table tc_user_device created
+2026-04-23 20:10:47  INFO: Table tc_user_driver created
+2026-04-23 20:10:47  INFO: Table tc_user_geofence created
+2026-04-23 20:10:47  INFO: Table tc_user_group created
+2026-04-23 20:10:47  INFO: Table tc_user_maintenance created
+2026-04-23 20:10:47  INFO: Table tc_user_notification created
+2026-04-23 20:10:47  INFO: Table tc_user_user created
+2026-04-23 20:10:47  INFO: Table tc_users created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_command (commandid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_command (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_driver (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_driver (driverid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_geofence (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_geofence (geofenceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_maintenance (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_maintenance (maintenanceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_notification (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_notification (notificationid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_devices (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_events (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_geofences (calendarid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_attribute (attributeid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_attribute (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_command (commandid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_command (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_driver (driverid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_driver (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_geofence (geofenceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_geofence (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_maintenance (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_maintenance (maintenanceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_notification (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_notification (notificationid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_notifications (calendarid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_positions (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_attribute (attributeid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_attribute (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_calendar (calendarid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_calendar (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_command (commandid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_command (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_attribute (attributeid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_attribute (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_device (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_device (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_driver (driverid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_driver (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_geofence (geofenceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_geofence (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_group (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_group (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_maintenance (maintenanceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_maintenance (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_notification (notificationid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_notification (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_user (userid)
+2026-04-23 20:10:47  INFO: New row inserted into tc_servers
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.0-clean::changelog-4.0-clean::author ran successfully in 387ms
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_groups (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_user (manageduserid)
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.0-clean::changelog-4.0-clean-common::author ran successfully in 10ms
+2026-04-23 20:10:47  INFO: Marking ChangeSet: "changelog-4.1::changelog-4.1-mssql::author" as ran despite precondition failure due to onFail='MARK_RAN': 
+          schema/changelog-master.xml : DBMS Precondition failed: expected mssql, got postgresql
+
+2026-04-23 20:10:47  INFO: Creating snapshot
+2026-04-23 20:10:47  INFO: Index user_device_user_id created
+2026-04-23 20:10:47  INFO: Index position_deviceid_fixtime created
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.7::changelog-4.7::author ran successfully in 71ms
+2026-04-23 20:10:47  INFO: Index event_deviceid_servertime created
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.9::changelog-4.9::author ran successfully in 6ms
+2026-04-23 20:10:47  INFO: Columns protocols(VARCHAR(4096)) added to tc_statistics
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.10::changelog-4.10::author ran successfully in 4ms
+2026-04-23 20:10:47  INFO: Columns announcement(VARCHAR(4000)) added to tc_servers
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.11::changelog-4.11::author ran successfully in 3ms
+2026-04-23 20:10:47  INFO: Column tc_events.servertime renamed to eventtime
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.13::changelog-4.13::author ran successfully in 3ms
+2026-04-23 20:10:47  INFO: Table tc_orders created
+2026-04-23 20:10:47  INFO: Table tc_user_order created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_order (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_order (orderid)
+2026-04-23 20:10:47  INFO: Table tc_group_order created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_order (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_order (orderid)
+2026-04-23 20:10:47  INFO: Table tc_device_order created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_order (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_order (orderid)
+2026-04-23 20:10:47  INFO: ChangeSet changelog-4.15::changelog-4.15::author ran successfully in 37ms
+2026-04-23 20:10:47  INFO: Columns disablereports(BOOLEAN) added to tc_servers
+2026-04-23 20:10:47  INFO: Columns disablereports(BOOLEAN) added to tc_users
+2026-04-23 20:10:47  INFO: Column tc_orders.toAddress renamed to toaddresstmp
+2026-04-23 20:10:47  INFO: Column tc_orders.fromAddress renamed to fromaddresstmp
+2026-04-23 20:10:47  INFO: Column tc_orders.toaddresstmp renamed to toaddress
+2026-04-23 20:10:47  INFO: Column tc_orders.fromaddresstmp renamed to fromaddress
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.0::changelog-5.0::author ran successfully in 13ms
+2026-04-23 20:10:47  INFO: Index idx_drivers_uniqueid created
+2026-04-23 20:10:47  INFO: Index idx_devices_uniqueid created
+2026-04-23 20:10:47  INFO: Index idx_users_email created
+2026-04-23 20:10:47  INFO: Index idx_users_login created
+2026-04-23 20:10:47  INFO: Index idx_users_token created
+2026-04-23 20:10:47  INFO: Columns overlayurl(VARCHAR(512)) added to tc_servers
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.1::changelog-5.1::author ran successfully in 23ms
+2026-04-23 20:10:47  INFO: Columns status(CHAR(8)) added to tc_devices
+2026-04-23 20:10:47  INFO: Columns geofenceids(VARCHAR(128)) added to tc_devices
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.2::changelog-5.2::author ran successfully in 5ms
+2026-04-23 20:10:47  INFO: Columns fixedemail(BOOLEAN) added to tc_servers
+2026-04-23 20:10:47  INFO: Columns fixedemail(BOOLEAN) added to tc_users
+2026-04-23 20:10:47  INFO: Columns expirationtime(TIMESTAMP) added to tc_devices
+2026-04-23 20:10:47  INFO: Table tc_keystore created
+2026-04-23 20:10:47  INFO: Index idx_users_token dropped from table tc_users
+2026-04-23 20:10:47  INFO: Column tc_users.token dropped
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.3::changelog-5.3::author ran successfully in 17ms
+2026-04-23 20:10:47  INFO: Columns motionstate(BOOLEAN),motiontime(TIMESTAMP),motiondistance(DOUBLE),overspeedstate(BOOLEAN),overspeedtime(TIMESTAMP),overspeedgeofenceid(INT) added to tc_devices
+2026-04-23 20:10:47  INFO: Table tc_commands_queue created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_commands_queue (deviceid)
+2026-04-23 20:10:47  INFO: Index idx_commands_queue_deviceid created
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.4::changelog-5.4::author ran successfully in 30ms
+2026-04-23 20:10:47  INFO: Column tc_commands_queue.description dropped
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.5::changelog-5.5::author ran successfully in 5ms
+2026-04-23 20:10:47  INFO: Columns motionstreak(BOOLEAN) added to tc_devices
+2026-04-23 20:10:47  INFO: Table tc_reports created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_reports (calendarid)
+2026-04-23 20:10:47  INFO: Table tc_user_report created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_report (userid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_user_report (reportid)
+2026-04-23 20:10:47  INFO: Table tc_group_report created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_report (groupid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_group_report (reportid)
+2026-04-23 20:10:47  INFO: Table tc_device_report created
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_report (deviceid)
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_device_report (reportid)
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.6::changelog-5.6::author ran successfully in 33ms
+2026-04-23 20:10:47  INFO: Columns commandid(INT) added to tc_notifications
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_notifications (commandid)
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.7::changelog-5.7::author ran successfully in 5ms
+2026-04-23 20:10:47  INFO: Column tc_devices.geofenceids dropped
+2026-04-23 20:10:47  INFO: Columns geofenceids(VARCHAR(128)) added to tc_positions
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.8::changelog-5.8::author ran successfully in 4ms
+2026-04-23 20:10:47  INFO: Columns calendarid(INT) added to tc_devices
+2026-04-23 20:10:47  INFO: Foreign key constraint added to tc_devices (calendarid)
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.9::changelog-5.9::author ran successfully in 5ms
+2026-04-23 20:10:47  INFO: Columns totpkey(VARCHAR(64)) added to tc_users
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.10::changelog-5.10::author ran successfully in 4ms
+2026-04-23 20:10:47  INFO: Columns temporary(BOOLEAN) added to tc_users
+2026-04-23 20:10:47  INFO: ChangeSet changelog-5.11::changelog-5.11::author ran successfully in 4ms
+2026-04-23 20:10:47  INFO: Column tc_servers.twelvehourformat dropped
+2026-04-23 20:10:47  INFO: Column tc_users.twelvehourformat dropped
+2026-04-23 20:10:47  INFO: Columns priority(INT) added to tc_attributes
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.2::changelog-6.2::author ran successfully in 11ms
+2026-04-23 20:10:47  INFO: Creating snapshot
+2026-04-23 20:10:47  INFO: Marking ChangeSet: "changelog-6.3::changelog-6.3-old::author" as ran despite precondition failure due to onFail='MARK_RAN': 
+          schema/changelog-master.xml : Foreign Key public.fk_event_deviceid does not exist
+
+2026-04-23 20:10:47  INFO: Foreign key fk_events_deviceid dropped
+2026-04-23 20:10:47  INFO: Foreign key fk_positions_deviceid dropped
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.3::changelog-6.3-new::author ran successfully in 17ms
+2026-04-23 20:10:47  INFO: Columns description(VARCHAR(4000)) added to tc_notifications
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.6::changelog-6.6::author ran successfully in 4ms
+2026-04-23 20:10:47  INFO: Creating snapshot
+2026-04-23 20:10:47  INFO: Table tc_actions created
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.7.0::changelog-6.7.0::author ran successfully in 30ms
+2026-04-23 20:10:47  INFO: Marking ChangeSet: "changelog-6.8.0::changelog-6.8.0-timescale::author" as ran despite precondition failure due to onFail='MARK_RAN': 
+          schema/changelog-master.xml : SQL Precondition failed.  Expected '1' got '0'
+
+2026-04-23 20:10:47  INFO: Columns motionpositionid(INT) added to tc_devices
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.9.0::changelog-6.9.0::author ran successfully in 3ms
+2026-04-23 20:10:47  INFO: Marking ChangeSet: "changelog-6.11.0::changelog-6.11.0-timescale::author" as ran despite precondition failure due to onFail='MARK_RAN': 
+          schema/changelog-master.xml : SQL Precondition failed.  Expected '1' got '0'
+
+2026-04-23 20:10:47  INFO: Marking ChangeSet: "changelog-6.11.0::changelog-6.11.0-other::author" as ran despite precondition failure due to onFail='MARK_RAN': 
+          schema/changelog-master.xml : Not precondition failed
+
+2026-04-23 20:10:47  INFO: Table tc_revoked_tokens created
+2026-04-23 20:10:47  INFO: ChangeSet changelog-6.11.0::changelog-6.11.0::author ran successfully in 6ms
+2026-04-23 20:10:47  INFO: UPDATE SUMMARY
+2026-04-23 20:10:47  INFO: Run:                         31
+2026-04-23 20:10:47  INFO: Previously run:               0
+2026-04-23 20:10:47  INFO: Filtered out:                 0
+2026-04-23 20:10:47  INFO: -------------------------------
+2026-04-23 20:10:47  INFO: Total change sets:           31
+2026-04-23 20:10:47  INFO: Update summary generated
+2026-04-23 20:10:47  INFO: Update command completed successfully.
+2026-04-23 20:10:47  INFO: Successfully released change log lock
+2026-04-23 20:10:47  INFO: Command execution complete
+2026-04-23 20:10:49  INFO: jetty-12.1.6; built: 2026-01-27T18:53:19.182Z; git: 88ca559572b1c8858b3c5684bb0293fa64e5e90f; jvm 21.0.10+7-LTS
+2026-04-23 20:10:49  INFO: Session workerName=node0
+2026-04-23 20:10:49  INFO: Started oeje10s.ServletContextHandler@2a54c92e{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@31533eb1{STARTED}}
+2026-04-23 20:10:51  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:10:51  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:10:51  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:10:51  INFO: Character encoding: UTF-8
+2026-04-23 20:10:51  INFO: Version: 6.12.2
+2026-04-23 20:10:51  INFO: Starting server...
+2026-04-23 20:10:51  INFO: HikariPool-1 - Starting...
+2026-04-23 20:10:52  INFO: HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@49096b06
+2026-04-23 20:10:52  INFO: HikariPool-1 - Start completed.
+2026-04-23 20:10:52  INFO: Set default schema name to public
+2026-04-23 20:10:52  INFO: Successfully acquired change log lock
+2026-04-23 20:10:52  INFO: Clearing database change log checksums for database postgresql
+2026-04-23 20:10:52  INFO: Successfully released change log lock
+2026-04-23 20:10:52  INFO: Command execution complete
+2026-04-23 20:10:53  INFO: Reading from public.databasechangelog
+2026-04-23 20:10:53  INFO: Reading from public.databasechangelog
+2026-04-23 20:10:53  INFO: Reading from public.databasechangelog
+2026-04-23 20:10:53  INFO: UPDATE SUMMARY
+2026-04-23 20:10:53  INFO: Run:                          0
+2026-04-23 20:10:53  INFO: Previously run:              31
+2026-04-23 20:10:53  INFO: Filtered out:                 0
+2026-04-23 20:10:53  INFO: -------------------------------
+2026-04-23 20:10:53  INFO: Total change sets:           31
+2026-04-23 20:10:53  INFO: Update summary generated
+2026-04-23 20:10:53  INFO: Command execution complete
+2026-04-23 20:10:55  INFO: jetty-12.1.6; built: 2026-01-27T18:53:19.182Z; git: 88ca559572b1c8858b3c5684bb0293fa64e5e90f; jvm 21.0.10+7-LTS
+2026-04-23 20:10:55  INFO: Session workerName=node0
+2026-04-23 20:10:55  INFO: Started oeje10s.ServletContextHandler@5feb82b3{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@2d38db6f{STARTED}}
+2026-04-23 20:10:56  INFO: Started oeje10s.ServletContextHandler@5feb82b3{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@2d38db6f{STARTED}}
+2026-04-23 20:10:56  INFO: Started oejs.ServerConnector@75df818c{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
+2026-04-23 20:10:56  INFO: Started oejs.Server@4687366b{STARTING}[12.1.6,sto=0] @1214ms
+2026-04-23 20:14:16  INFO: Operating system name: Linux version: 6.6.87.2-microsoft-standard-WSL2 architecture: amd64
+2026-04-23 20:14:16  INFO: Java runtime name: OpenJDK 64-Bit Server VM vendor: Eclipse Adoptium version: 21.0.10+7-LTS
+2026-04-23 20:14:16  INFO: Memory limit heap: 3990mb non-heap: 0mb
+2026-04-23 20:14:16  INFO: Character encoding: UTF-8
+2026-04-23 20:14:16  INFO: Version: 6.12.2
+2026-04-23 20:14:16  INFO: Starting server...
+2026-04-23 20:14:16  INFO: HikariPool-1 - Starting...
+2026-04-23 20:14:16  INFO: HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@49096b06
+2026-04-23 20:14:16  INFO: HikariPool-1 - Start completed.
+2026-04-23 20:14:17  INFO: Set default schema name to public
+2026-04-23 20:14:17  INFO: Successfully acquired change log lock
+2026-04-23 20:14:17  INFO: Clearing database change log checksums for database postgresql
+2026-04-23 20:14:17  INFO: Successfully released change log lock
+2026-04-23 20:14:17  INFO: Command execution complete
+2026-04-23 20:14:18  INFO: Reading from public.databasechangelog
+2026-04-23 20:14:18  INFO: Reading from public.databasechangelog
+2026-04-23 20:14:18  INFO: Reading from public.databasechangelog
+2026-04-23 20:14:18  INFO: UPDATE SUMMARY
+2026-04-23 20:14:18  INFO: Run:                          0
+2026-04-23 20:14:18  INFO: Previously run:              31
+2026-04-23 20:14:18  INFO: Filtered out:                 0
+2026-04-23 20:14:18  INFO: -------------------------------
+2026-04-23 20:14:18  INFO: Total change sets:           31
+2026-04-23 20:14:19  INFO: Update summary generated
+2026-04-23 20:14:19  INFO: Command execution complete
+2026-04-23 20:14:20  INFO: jetty-12.1.6; built: 2026-01-27T18:53:19.182Z; git: 88ca559572b1c8858b3c5684bb0293fa64e5e90f; jvm 21.0.10+7-LTS
+2026-04-23 20:14:20  INFO: Session workerName=node0
+2026-04-23 20:14:20  INFO: Started oeje10s.ServletContextHandler@9bf63d2{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@7ffcb232{STARTED}}
+2026-04-23 20:14:22  INFO: Started oeje10s.ServletContextHandler@9bf63d2{ROOT,/,b=file:///opt/traccar/web/,a=AVAILABLE,h=oeje10s.SessionHandler@7ffcb232{STARTED}}
+2026-04-23 20:14:22  INFO: Started oejs.ServerConnector@1b5cf611{HTTP/1.1, (http/1.1)}{0.0.0.0:8082}
+2026-04-23 20:14:22  INFO: Started oejs.Server@3d01ea33{STARTING}[12.1.6,sto=0] @1515ms

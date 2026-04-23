@@ -105,7 +105,7 @@ const App: React.FC = () => {
           </div>
           <div style={{ marginTop: '10px' }}>
              {[
-               { id: '9121037', user: 'Janusz K.', trigger: 'User', status: 'Snowced' },
+               { id: '9121037', user: 'Janusz K.', trigger: 'User', status: 'Silenced' },
                { id: '9127637', user: 'Maria W.', trigger: 'Flagged', status: 'Active' }
              ].map((a, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>

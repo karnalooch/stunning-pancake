@@ -53,8 +53,14 @@ body {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: url('https://i.pravatar.cc/150?u=wojciech') center/cover;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   border: 2px solid var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--bg-deep);
 }
 
 /* Stats Row */

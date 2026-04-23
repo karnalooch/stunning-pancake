@@ -73,9 +73,12 @@ class PrivacyService:
         masked_points = []
         for point in route_path.coords:
             p = Point(point[0], point[1], srid=4326)
+            # Transform to metric projection (EPSG:3857) for accurate meter-based distance
+            p_merc = p.transform(3857, clone=True)
             is_private = False
             for zone in zones:
-                if p.distance(zone.center) * 100000 <= zone.radius: # Rough conversion or use proper GIS distance
+                zone_merc = zone.center.transform(3857, clone=True)
+                if p_merc.distance(zone_merc) <= zone.radius:  # Distance now in meters
                     is_private = True
                     break
             
@@ -113,3 +116,4 @@ class MatrixService:
             return True
         except Exception:
             return False
+

@@ -10,7 +10,7 @@
     <entry key='database.driver'>org.postgresql.Driver</entry>
     <entry key='database.url'>jdbc:postgresql://db:5432/sport_db</entry>
     <entry key='database.user'>sport_user</entry>
-    <entry key='database.password'>sport_password_2026</entry>
+    <entry key='database.password'>sport_secure_pass_42a8b9f</entry>
 
     <!-- Redis Configuration for Caching -->
     <entry key='redis.enabled'>true</entry>
