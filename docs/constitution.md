@@ -126,6 +126,40 @@ To ensure a "lightning-fast" user experience and stable data flow under high loa
 ### 9.6 Map Performance
 - **Vector Tiles & CDN**: Utilize **Vector Tiles** (PMTiles or similar) served via CDN to offload map rendering from the application server and ensure global low-latency map availability.
 
-## 10. Internationalization (i18n)
-- **Primary Language**: English (Code, Commits, Documentation).
-- **User Interface**: Multi-language support (i18n) with **Polish** as the default locale for end-users.
+## 10. Security and Privacy Governance
+
+Security is the foundation of user trust in a location-based sports application. The following security measures are mandatory:
+
+### 10.1 User Privacy (Privacy-by-Design)
+- **Dynamic Privacy Zones**: Automatic masking of start/finish points within a user-defined radius (e.g., home, work).
+- **Data Minimization**: Only collect and retain GPS data necessary for route validation. Raw tracks should be purged or anonymized after processing according to user preferences and GDPR.
+- **E2EE Communication**: All social interaction (clan/city chats) must be end-to-end encrypted via the Matrix protocol.
+
+### 10.2 API and Server Security
+- **Rate Limiting & Throttling**: Protection against Brute Force attacks and API abuse using Redis-based rate limiters.
+- **Modern Auth**: Implementation of JWT-based authentication with short-lived Access Tokens and secure Refresh Tokens (OAuth2 standard).
+- **CORS & CSP**: Strict Cross-Origin Resource Sharing and Content Security Policies to prevent XSS and data injection attacks.
+
+### 10.3 Data Protection
+- **Encryption at Rest**: Databases (PostgreSQL/PostGIS) and storage buckets must be encrypted at rest.
+- **Secret Management**: Absolute prohibition of committing secrets to the repository. Use environment variables or managed secret stores (e.g., HashiCorp Vault, AWS Secrets Manager).
+- **SQL Injection Prevention**: Mandatory use of ORMs with parameterized queries for all database interactions.
+
+### 10.4 Auditing and Compliance
+- **Audit Logs**: Maintain immutable logs of all administrative actions (e.g., manual route approval, user bans).
+- **Automated Security Scanning**: Continuous scanning of dependencies for known vulnerabilities (CVEs) using tools like `ruff` and GitHub Dependabot.
+
+## 11. Internationalization and Localization (i18n/L10n)
+
+The "SPORT" platform is designed from the ground up to be **multi-language** and multi-regional.
+
+### 11.1 Language Standards
+- **Primary Development Language**: English (Code, Commits, Technical Documentation).
+- **Default End-User Locale**: **Polish (pl_PL)**.
+- **Supported Launch Locales**: English (en_US), Polish (pl_PL).
+
+### 11.2 Implementation Strategy
+- **Frontend/Mobile**: Use standard i18n libraries (e.g., `react-i18next` for web, `easy_localization` or `flutter_localizations` for Flutter).
+- **Backend**: Implement locale-aware API responses. Error messages and notifications must be localized based on the user's preferred language.
+- **Externalization**: No user-facing strings should be hardcoded. All text must be stored in localization files (e.g., JSON or ARB).
+- **Date/Currency**: Use international standards for date formatting (ISO 8601) and currency handling to ensure consistency across regions.
