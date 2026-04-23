@@ -93,10 +93,14 @@ To ensure the "SPORT" project is maintainable and readable for any professional 
   - Files/Folders: `kebab-case` (e.g., `user-profile-service.ts`)
 - **Documentation**: Use **JSDoc** for all public functions and interfaces.
 
-### 8.3 Documentation and Architecture
+### 8.3 Documentation and Architecture (Non-Negotiable)
+- **"Documentation is Foundation" Policy**: No code change will be merged without updated technical and API documentation. Documentation is treated as a first-class citizen of the codebase.
+- **API Documentation**: Every API endpoint must be fully described using **OpenAPI/Swagger** (via drf-spectacular). This includes parameter descriptions, request/response schemas, and error codes.
 - **Architecture Decisions**: Major architectural changes must be documented using **ADR** (Architecture Decision Records) in the `docs/adr/` directory.
-- **Project Docs**: All internal documentation must be written in **Markdown** and kept in the `docs/` folder.
-- **Comments**: Code should be self-documenting. Use comments only to explain "Why" something is done, not "What" is done.
+- **Code Documentation**:
+  - **Python**: Google Style docstrings are mandatory for all public members.
+  - **TypeScript**: JSDoc is mandatory for all interfaces, types, and exported functions.
+- **Living Documentation**: The `/docs` folder must always reflect the current state of the implementation.
 
 ### 8.4 Git and Workflow
 - **Commit Messages**: Follow **Conventional Commits** (e.g., `feat:`, `fix:`, `docs:`, `refactor:`).
