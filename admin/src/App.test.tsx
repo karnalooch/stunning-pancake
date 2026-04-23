@@ -4,19 +4,19 @@ import App from './App';
 import React from 'react';
 
 describe('Admin Dashboard Smoke Test', () => {
-  it('renders the command center title', () => {
+  it('renders the command center branding', () => {
     render(<App />);
-    const titleElement = screen.getByText(/SPORT COMMAND/i);
+    const titleElement = screen.getByText(/COMMAND CENTER/i);
     expect(titleElement).toBeDefined();
   });
 
-  it('renders the stats grid', () => {
+  it('renders the premium stats grid', () => {
     render(<App />);
-    const statsElement = screen.getByText(/Active Users/i);
+    const statsElement = screen.getByText(/Active Athletes/i);
     expect(statsElement).toBeDefined();
   });
 
-  it('contains the sidebar navigation', () => {
+  it('contains the interactive sidebar navigation', () => {
     render(<App />);
     expect(screen.getByText(/Live Telemetry/i)).toBeDefined();
     expect(screen.getByText(/Anti-Cheat Monitor/i)).toBeDefined();
