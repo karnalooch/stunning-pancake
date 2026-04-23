@@ -1,16 +1,22 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Activity
-from .services import BRouterService
+from .services import BRouterService, PrivacyService
 from .leaderboards import LeaderboardService
 
 @receiver(post_save, sender=Activity)
 def validate_activity_on_completion(sender, instance, created, **kwargs):
     """
-    Trigger anti-cheat validation when an activity is marked as finished.
-    Update leaderboards if verified.
+    Trigger anti-cheat validation and privacy masking when an activity is marked as finished.
     """
     if not created and instance.end_time and instance.route_path and not instance.is_verified:
+        # Apply Privacy Masking first
+        masked_path = PrivacyService.mask_track(instance.user, instance.route_path)
+        if not masked_path:
+            return # Activity invalid after masking
+            
+        instance.route_path = masked_path
+        
         coords = instance.route_path.coords
         result = BRouterService.validate_track(instance.type, coords)
         
@@ -34,5 +40,6 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
             
             Activity.objects.filter(pk=instance.pk).update(
                 is_verified=instance.is_verified,
-                verification_score=instance.verification_score
+                verification_score=instance.verification_score,
+                route_path=instance.route_path # Save masked path
             )

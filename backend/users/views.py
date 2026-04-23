@@ -35,3 +35,23 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     )
     def get(self, request, *args, **kwargs):
         return super().get(request, *args, **kwargs)
+
+class TenantBrandingView(generics.RetrieveAPIView):
+    """
+    Get branding details for a specific tenant.
+    Used for White-Labeling.
+    """
+    permission_classes = (permissions.AllowAny,)
+    
+    def get(self, request, tenant_id):
+        from .models import TenantProfile
+        try:
+            tenant = TenantProfile.objects.get(tenant_id=tenant_id, is_active=True)
+            return Response({
+                "name": tenant.name,
+                "primary_color": tenant.primary_color,
+                "secondary_color": tenant.secondary_color,
+                "logo_url": tenant.logo.url if tenant.logo else None
+            })
+        except TenantProfile.DoesNotExist:
+            return Response({"error": "tenant not found"}, status=status.HTTP_404_NOT_FOUND)
