@@ -1,19 +1,51 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
 
+interface Athlete {
+  deviceId: number;
+  name: string;
+  lat: number;
+  lng: number;
+  speed: number;
+  course: number;
+  lastUpdate: string;
+}
+
 const App: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<Record<number, maplibregl.Marker>>({});
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
 
+  // Telemetry Polling
+  useEffect(() => {
+    const fetchTelemetry = async () => {
+      try {
+        // In production this would use proper Auth headers
+        const response = await fetch('http://localhost:8000/api/activities/telemetry/live/');
+        if (response.ok) {
+          const data = await response.json();
+          setAthletes(data);
+        }
+      } catch (err) {
+        console.error("Telemetry fetch error:", err);
+      }
+    };
+
+    fetchTelemetry();
+    const interval = setInterval(fetchTelemetry, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Map Initialization
   useEffect(() => {
     if (map.current) return;
     if (!mapContainer.current) return;
 
     console.log("Initializing map...");
     try {
-      // Robust Raster Style for Dark Mode
       const rasterStyle: maplibregl.StyleSpecification = {
         version: 8,
         sources: {
@@ -25,18 +57,10 @@ const App: React.FC = () => {
               'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
             ],
             tileSize: 256,
-            attribution: '&copy; OpenStreetMap &copy; CartoDB'
+            attribution: '&copy; CartoDB'
           }
         },
-        layers: [
-          {
-            id: 'simple-tiles',
-            type: 'raster',
-            source: 'raster-tiles',
-            minzoom: 0,
-            maxzoom: 22
-          }
-        ]
+        layers: [{ id: 'simple-tiles', type: 'raster', source: 'raster-tiles' }]
       };
 
       map.current = new maplibregl.Map({
@@ -48,26 +72,10 @@ const App: React.FC = () => {
       });
 
       map.current.on('load', () => {
-        console.log("Map loaded successfully");
         map.current?.resize();
       });
 
-      map.current.on('error', (e) => {
-        console.error("MapLibre error:", e);
-      });
-
-      // Add navigation controls
       map.current.addControl(new maplibregl.NavigationControl(), 'top-right');
-
-      // Add a mock athlete marker (Maria)
-      const el = document.createElement('div');
-      el.className = 'athlete-marker';
-      
-      new maplibregl.Marker(el)
-        .setLngLat([21.0122, 52.2297])
-        .setPopup(new maplibregl.Popup({ offset: 25 })
-        .setHTML('<h3>Maria Wiśniewska</h3><p>Live trail | 14.8 km/h</p>'))
-        .addTo(map.current);
 
     } catch (err) {
       console.error("Failed to initialize map:", err);
@@ -78,6 +86,32 @@ const App: React.FC = () => {
       map.current = null;
     };
   }, []);
+
+  // Update Markers when Athletes change
+  useEffect(() => {
+    if (!map.current) return;
+
+    athletes.forEach(athlete => {
+      if (markers.current[athlete.deviceId]) {
+        // Update existing marker
+        markers.current[athlete.deviceId].setLngLat([athlete.lng, athlete.lat]);
+      } else {
+        // Create new marker
+        const el = document.createElement('div');
+        el.className = 'athlete-marker';
+        
+        const marker = new maplibregl.Marker(el)
+          .setLngLat([athlete.lng, athlete.lat])
+          .setPopup(new maplibregl.Popup({ offset: 25 })
+          .setHTML(`<h3>${athlete.name}</h3><p>Speed: ${(athlete.speed * 1.852).toFixed(1)} km/h</p>`))
+          .addTo(map.current!);
+          
+        markers.current[athlete.deviceId] = marker;
+      }
+    });
+
+    // Clean up markers for devices that are no longer active (optional)
+  }, [athletes]);
 
   return (
     <div className="dashboard-container">
@@ -102,10 +136,10 @@ const App: React.FC = () => {
       {/* Stats Row */}
       <section className="stats-row">
         {[
-          { label: 'Active Athletes', val: '1,452', trend: '+8.1%', icon: '🏃', color: 'var(--primary)' },
-          { label: 'Live Sessions', val: '218', trend: '+14.5%', icon: '📡', color: 'var(--secondary)' },
+          { label: 'Active Athletes', val: athletes.length, trend: '+8.1%', icon: '🏃', color: 'var(--primary)' },
+          { label: 'Live Sessions', val: athletes.filter(a => a.speed > 0).length, trend: '+14.5%', icon: '📡', color: 'var(--secondary)' },
           { label: 'New Registrations', val: '67', trend: '+3.2%', icon: '👤', color: '#00d2ff' },
-          { label: 'Alerts', val: '3', trend: 'active', icon: '⚠️', color: 'var(--accent)' }
+          { label: 'Alerts', val: '0', trend: 'stable', icon: '⚠️', color: 'var(--accent)' }
         ].map((s, i) => (
           <div key={i} className="stat-card">
             <div className="stat-icon" style={{ background: `${s.color}20`, color: s.color }}>{s.icon}</div>
@@ -133,7 +167,7 @@ const App: React.FC = () => {
           <div className="map-overlay-stats">
              <div className="overlay-stat">
                 <span className="overlay-dot" style={{ color: 'var(--primary)' }}>●</span>
-                <span>218 athletes online</span>
+                <span>{athletes.length} athletes online</span>
              </div>
           </div>
         </div>
