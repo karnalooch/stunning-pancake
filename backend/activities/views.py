@@ -42,6 +42,16 @@ class ActivityViewSet(viewsets.ModelViewSet):
             return Response({"status": "path updated"}, status=status.HTTP_200_OK)
         return Response({"error": "no path data provided"}, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        description="Returns formatted data for generating a social media sharing card."
+    )
+    @action(detail=True, methods=['get'])
+    def share_data(self, request, pk=None):
+        from .social import SocialSharingService
+        activity = self.get_object()
+        data = SocialSharingService.generate_activity_card_data(activity)
+        return Response(data)
+
 class PrivacyZoneViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing user privacy zones.
