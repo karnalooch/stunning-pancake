@@ -1,0 +1,41 @@
+name: sport_mobile
+description: A new Flutter project for the SPORT platform.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  
+  # Networking
+  dio: ^5.4.0
+  
+  # Persistence (Offline-First)
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  
+  # Maps and Geolocation (Phase 2 Core)
+  maplibre_gl: ^0.16.0
+  geolocator: ^10.1.0
+  latlong2: ^0.9.0
+  
+  # Utils
+  intl: ^0.18.1
+  flutter_secure_storage: ^9.0.0
+  
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/maps/
