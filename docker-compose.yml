@@ -53,7 +53,7 @@ services:
     build: ./backend
     container_name: sport_backend
     restart: always
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    command: sh -c "python manage.py makemigrations users activities && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
       DEBUG: ${DEBUG:-1}
       SECRET_KEY: ${SECRET_KEY:-django-insecure-key}

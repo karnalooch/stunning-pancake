@@ -1,6 +1,6 @@
-﻿from django.urls import path, include
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ActivityViewSet, PrivacyZoneViewSet
+from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView
 from .admin_views import GlobalActivityListView, TenantActivityListView
 
 router = DefaultRouter()

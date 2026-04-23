@@ -23,6 +23,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgeos-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Auto-detect GDAL/GEOS library paths for Django GIS
+RUN GDAL_PATH=$(find /usr -name 'libgdal.so*' -type f 2>/dev/null | head -1) && \
+    GEOS_PATH=$(find /usr -name 'libgeos_c.so*' -type f 2>/dev/null | head -1) && \
+    echo "GDAL_LIBRARY_PATH=${GDAL_PATH}" >> /etc/environment && \
+    echo "GEOS_LIBRARY_PATH=${GEOS_PATH}" >> /etc/environment
+
+ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
+ENV GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
+
 # Install dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt

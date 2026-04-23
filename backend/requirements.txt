@@ -12,3 +12,4 @@ dj-database-url==2.1.0
 django-filter==23.3
 djangorestframework-gis==1.0.0
 stripe==10.4.0
+Pillow==11.2.1
