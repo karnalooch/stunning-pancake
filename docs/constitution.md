@@ -99,6 +99,33 @@ To ensure the "SPORT" project is maintainable and readable for any professional 
 - **Commit Messages**: Follow **Conventional Commits** (e.g., `feat:`, `fix:`, `docs:`, `refactor:`).
 - **PR Rules**: All PRs must pass linting, type checking, and tests before merging. 
 
-## 9. Internationalization (i18n)
+## 9. Performance and Data Integrity Strategy
+
+To ensure a "lightning-fast" user experience and stable data flow under high load, the following strategies are mandatory:
+
+### 9.1 Optimistic UI & Local-First Approach
+- **Instant Feedback**: Use **TanStack Query** (Web) and **Riverpod** (Mobile) to implement optimistic updates. The UI must reflect user actions immediately, with synchronization happening in the background.
+- **Conflict Resolution**: Implement robust local-first logic with automatic retries and rollback mechanisms in case of server-side failures.
+
+### 9.2 Asynchronous Processing & Task Queues
+- **Worker Pattern**: Heavy computational tasks, such as GPX validation via BRouter or leaderboard recalculations, must be handled off-thread using **Celery** or **Redis Queue (RQ)**.
+- **Non-blocking API**: The API should acknowledge data receipt immediately and notify the user of results via WebSockets or Push Notifications once background processing is complete.
+
+### 9.3 Data Efficiency & Batching
+- **GPS Batching**: GPS points must be batched locally and sent to the server in compressed chunks (e.g., via optimized JSON or Protocol Buffers) to minimize battery drain and network overhead.
+- **Exponential Backoff**: Implement smart retry logic for network requests to prevent "thundering herd" issues during server recovery.
+
+### 9.4 Geospatial Optimization (PostGIS)
+- **GIST Indexing**: All spatial columns must be indexed using GIST to ensure sub-millisecond query times for geofencing and proximity checks.
+- **Geometry Simplification**: Use algorithms like **Douglas-Peucker** to store simplified versions of tracks for high-speed map previews, while preserving high-resolution raw data for analytical validation.
+
+### 9.5 Real-time Scalability
+- **Redis Pub/Sub**: Use Redis as a message broker for WebSockets to scale real-time telemetry updates across multiple server nodes efficiently.
+- **Multiplexing**: Minimize active WebSocket connections by multiplexing data streams based on user context (e.g., current clan or city view).
+
+### 9.6 Map Performance
+- **Vector Tiles & CDN**: Utilize **Vector Tiles** (PMTiles or similar) served via CDN to offload map rendering from the application server and ensure global low-latency map availability.
+
+## 10. Internationalization (i18n)
 - **Primary Language**: English (Code, Commits, Documentation).
 - **User Interface**: Multi-language support (i18n) with **Polish** as the default locale for end-users.
