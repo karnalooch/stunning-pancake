@@ -86,3 +86,30 @@ class PrivacyService:
             return None # Track too short after masking
             
         return LineString(masked_points, srid=4326)
+
+class MatrixService:
+    """
+    Service for sending notifications to Matrix (E2EE Chat).
+    Used for alerting moderators about fraud detections.
+    """
+    HOMESERVER = os.getenv('MATRIX_HOMESERVER', 'https://matrix.org')
+    ACCESS_TOKEN = os.getenv('MATRIX_TOKEN', 'placeholder_token')
+
+    @classmethod
+    def send_alert(cls, room_id, message):
+        """
+        Sends a simple text message to a Matrix room.
+        """
+        url = f"{cls.HOMESERVER}/_matrix/client/r0/rooms/{room_id}/send/m.room.message"
+        headers = {"Authorization": f"Bearer {cls.ACCESS_TOKEN}"}
+        payload = {
+            "msgtype": "m.text",
+            "body": f"🚨 [SPORT_ALERT]: {message}"
+        }
+        try:
+            # We skip actual request in dev to avoid errors
+            if cls.ACCESS_TOKEN != 'placeholder_token':
+                requests.post(url, json=payload, headers=headers, timeout=5)
+            return True
+        except Exception:
+            return False

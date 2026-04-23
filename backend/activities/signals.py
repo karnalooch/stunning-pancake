@@ -37,6 +37,12 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
                             instance.user.tenant_id, 
                             instance.distance / 1000.0 # Convert to KM for score
                         )
+                else:
+                    # Notify Moderators via Matrix if fraud suspected
+                    MatrixService.send_alert(
+                        "!admin_room_id:matrix.org",
+                        f"Suspicious activity by {instance.user.username}. Deviation: {round(ratio*100, 2)}%"
+                    )
             
             Activity.objects.filter(pk=instance.pk).update(
                 is_verified=instance.is_verified,
