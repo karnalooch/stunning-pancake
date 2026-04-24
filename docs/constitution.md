@@ -364,3 +364,11 @@ To allow rapid innovation without bloating the core engine, the SPORT platform f
 - **Registry**: The PluginRegistry manages the lifecycle (load/unload/config) of external logic modules.
 - **Sandboxing**: Experimental plugins (e.g., new gamification ideas) are initially deployed in 'Pilot' mode for specific tenants.
 - **Idea Gate**: Every new feature starts as a Plugin before being considered for core engine promotion.
+
+### 23.2 Nienaruszalnoœæ J¹dra (Core Immutability)
+Pluginy **pod ¿adnym pozorem nie mog¹ modyfikowaæ kodu j¹dra** systemu (core apps: users, activities, core). Interakcja z j¹drem musi odbywaæ siê wy³¹cznie poprzez:
+- **Django Signals**: Nas³uchiwanie na zdarzenia systemowe bez modyfikacji nadawcy.
+- **Middleware Hooks**: Przechwytywanie zapytañ bez ingerencji w logikê widoków j¹dra.
+- **Adapter Pattern**: Tworzenie warstw poœrednich dla nowych funkcjonalnoœci.
+
+Ka¿da próba bezpoœredniej edycji modeli bazowych lub widoków j¹dra przez plugin bêdzie odrzucana na etapie walidacji AI Gate.
