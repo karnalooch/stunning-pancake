@@ -19,6 +19,6 @@ django-allauth==0.61.1
 # Phase 7: Async + Notifications
 celery==5.3.6
 django-celery-results==2.5.1
-firebase-admin==6.4.0
+firebase-admin==7.4.0
 # Phase 10: Observability
 sentry-sdk[django,celery]==2.5.0
