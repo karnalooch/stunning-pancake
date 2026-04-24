@@ -9,6 +9,7 @@ import { EventsView } from './views/EventsView';
 import { ClubsView } from './views/ClubsView';
 import { AntiCheatView } from './views/AntiCheatView';
 import { AnalyticsView } from './views/AnalyticsView';
+import { ModeratorView } from './views/ModeratorView';
 
 // ─── Session context (replace with real auth context in Phase 2+ full wiring) ───
 const SESSION = {
@@ -36,6 +37,7 @@ const App: React.FC = () => {
       case 'events':    return <EventsView />;
       case 'clubs':     return <ClubsView />;
       case 'anticheat': return <AntiCheatView />;
+      case 'moderator': return <ModeratorView />;
       case 'analytics': return <AnalyticsView />;
       default:          return <LiveTrackingView />;
     }
@@ -46,6 +48,7 @@ const App: React.FC = () => {
     events:    'Event Management',
     clubs:     'Clubs & Challenges',
     anticheat: 'Anti-Cheat Monitor',
+    moderator: 'Moderator Control Panel',
     analytics: 'City Analytics',
   };
 

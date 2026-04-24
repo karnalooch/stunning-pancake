@@ -1,4 +1,4 @@
-export type ViewId = 'live' | 'events' | 'clubs' | 'anticheat' | 'analytics';
+export type ViewId = 'live' | 'events' | 'clubs' | 'anticheat' | 'analytics' | 'moderator';
 
 export interface NavItem {
   id: ViewId;
@@ -13,6 +13,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'events',    label: 'Events',        icon: '🏆' },
   { id: 'clubs',     label: 'Clubs',         icon: '🛡️' },
   { id: 'anticheat', label: 'Anti-Cheat',    icon: '🔍', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_MODERATOR', 'OWNER'] },
+  { id: 'moderator', label: 'Moderator',    icon: '🛡️', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_MODERATOR'] },
   { id: 'analytics', label: 'Analytics',     icon: '📊', allowedRoles: ['GLOBAL_ADMIN', 'OWNER'] },
 ];
 
