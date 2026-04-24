@@ -1,60 +1,138 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface Athlete {
-  deviceId: number;
-  name: string;
+  deviceId: string;
+  name?: string;
+  user_id?: number | null;
   type: string;
   lat: number;
   lng: number;
   speed: number;
-  course: number;
   lastUpdate: string;
 }
+
+interface WsMessage {
+  type: 'position_update' | 'ping';
+  device_id?: string;
+  user_id?: number | null;
+  lat?: number;
+  lon?: number;
+  speed_ms?: number;
+  activity_id?: number | null;
+}
+
+const TELEMETRY_WS  = import.meta.env.VITE_TELEMETRY_WS  ?? 'ws://localhost:8001/ws/telemetry/live';
+const TELEMETRY_API = import.meta.env.VITE_TELEMETRY_API ?? 'http://localhost:8001/api/telemetry/live';
 
 /**
  * Live Tracking view — MapLibre map with real-time athlete markers,
  * Canvas-based GPU comet trail renderer, and stats overlay.
  *
- * Extracted from monolithic App.tsx with full logic preserved.
+ * Data source: FastAPI WebSocket (Constitution §24.1) with HTTP fallback.
  */
 export const LiveTrackingView = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markers = useRef<Record<number, maplibregl.Marker>>({});
-  const history = useRef<Record<number, { pts: [number, number][]; type: string }>>({});
-  const animFrame = useRef<number>(0);
-  const [athletes, setAthletes] = useState<Athlete[]>([]);
-  const [lastPoll, setLastPoll] = useState<string>('—');
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const mapRef       = useRef<maplibregl.Map | null>(null);
+  const markers      = useRef<Record<string, maplibregl.Marker>>({});
+  const history      = useRef<Record<string, { pts: [number, number][]; type: string }>>({});
+  const animFrame    = useRef<number>(0);
+  const wsRef        = useRef<WebSocket | null>(null);
 
-  // Telemetry polling (3s)
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/api/activities/telemetry/live/');
-        if (res.ok) {
-          const data: Athlete[] = await res.json();
-          setAthletes(data);
-          setLastPoll(new Date().toLocaleTimeString('pl'));
-          data.forEach((a) => {
-            const entry = history.current[a.deviceId] || { pts: [], type: a.type };
-            const pt: [number, number] = [a.lng, a.lat];
-            const last = entry.pts[entry.pts.length - 1];
-            if (!last || last[0] !== pt[0] || last[1] !== pt[1]) {
-              entry.pts = [...entry.pts, pt].slice(-18);
-            }
-            entry.type = a.type;
-            history.current[a.deviceId] = entry;
-          });
-        }
-      } catch { /* network error — silent */ }
+  const [athletes, setAthletes]       = useState<Athlete[]>([]);
+  const [lastPoll, setLastPoll]       = useState<string>('—');
+  const [wsStatus, setWsStatus]       = useState<'connecting' | 'live' | 'polling'>('connecting');
+
+  // -------------------------------------------------------------------------
+  // Athlete state updater
+  // -------------------------------------------------------------------------
+  const upsertAthlete = useCallback((msg: WsMessage) => {
+    if (!msg.device_id || msg.lat == null || msg.lon == null) return;
+    const athlete: Athlete = {
+      deviceId:   msg.device_id,
+      user_id:    msg.user_id,
+      type:       'RUN',
+      lat:        msg.lat,
+      lng:        msg.lon,
+      speed:      msg.speed_ms ?? 0,
+      lastUpdate: new Date().toLocaleTimeString('pl'),
     };
-    poll();
-    const t = setInterval(poll, 3000);
-    return () => clearInterval(t);
+    setAthletes(prev => {
+      const next = prev.filter(a => a.deviceId !== athlete.deviceId);
+      return [...next, athlete];
+    });
+    setLastPoll(new Date().toLocaleTimeString('pl'));
+
+    // Update comet trail
+    const entry = history.current[athlete.deviceId] ?? { pts: [], type: athlete.type };
+    const pt: [number, number] = [athlete.lng, athlete.lat];
+    const last = entry.pts[entry.pts.length - 1];
+    if (!last || last[0] !== pt[0] || last[1] !== pt[1]) {
+      entry.pts = [...entry.pts, pt].slice(-18);
+    }
+    history.current[athlete.deviceId] = entry;
   }, []);
+
+  // -------------------------------------------------------------------------
+  // WebSocket connection (FastAPI telemetry — Constitution §24.1)
+  // -------------------------------------------------------------------------
+  useEffect(() => {
+    let fallbackTimer: ReturnType<typeof setInterval>;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+
+    const connect = () => {
+      setWsStatus('connecting');
+      const ws = new WebSocket(TELEMETRY_WS);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsStatus('live');
+        clearInterval(fallbackTimer);
+      };
+
+      ws.onmessage = (ev) => {
+        try {
+          const msg: WsMessage = JSON.parse(ev.data as string);
+          if (msg.type === 'position_update') upsertAthlete(msg);
+        } catch { /* malformed frame */ }
+      };
+
+      ws.onclose = () => {
+        setWsStatus('polling');
+        // Start HTTP fallback (3s polling) while reconnecting
+        fallbackTimer = setInterval(async () => {
+          try {
+            const res = await fetch(TELEMETRY_API);
+            if (res.ok) {
+              const rows: Array<{ device_id: string; lat: number; lon: number; speed_ms: number }> = await res.json();
+              rows.forEach(r => upsertAthlete({
+                type: 'position_update',
+                device_id: r.device_id,
+                lat: r.lat,
+                lon: r.lon,
+                speed_ms: r.speed_ms,
+              }));
+            }
+          } catch { /* network error */ }
+        }, 3000);
+        // Reconnect in 5s
+        reconnectTimer = setTimeout(connect, 5000);
+      };
+
+      ws.onerror = () => ws.close();
+    };
+
+    connect();
+
+    return () => {
+      wsRef.current?.close();
+      clearInterval(fallbackTimer);
+      clearTimeout(reconnectTimer);
+    };
+  }, [upsertAthlete]);
+
 
   // Map init
   useEffect(() => {
@@ -148,9 +226,9 @@ export const LiveTrackingView = () => {
         markers.current[a.deviceId] = mk;
       }
     });
+    });
     Object.keys(markers.current).forEach((id) => {
-      const n = parseInt(id);
-      if (!ids.has(n)) { markers.current[n].remove(); delete markers.current[n]; }
+      if (!ids.has(id)) { markers.current[id].remove(); delete markers.current[id]; }
     });
   }, [athletes]);
 
@@ -161,8 +239,8 @@ export const LiveTrackingView = () => {
         {[
           { label: 'Athletes Online', val: athletes.length, icon: '🏃', color: 'var(--primary)' },
           { label: 'Live Sessions', val: athletes.filter(a => a.speed > 0).length, icon: '📡', color: 'var(--secondary)' },
-          { label: 'Avg Speed', val: athletes.length ? `${(athletes.reduce((s, a) => s + a.speed * 1.852, 0) / athletes.length).toFixed(1)} km/h` : '—', icon: '⚡', color: '#ff9500' },
-          { label: 'Last Poll', val: lastPoll, icon: '🕐', color: 'var(--text-dim)' },
+          { label: 'Avg Speed', val: athletes.length ? `${(athletes.reduce((s, a) => s + a.speed * 3.6, 0) / athletes.length).toFixed(1)} km/h` : '—', icon: '⚡', color: '#ff9500' },
+          { label: wsStatus === 'live' ? 'WebSocket LIVE' : wsStatus === 'polling' ? 'HTTP Fallback' : 'Connecting…', val: lastPoll, icon: wsStatus === 'live' ? '🟢' : wsStatus === 'polling' ? '🟡' : '⚪', color: wsStatus === 'live' ? '#92fe9d' : 'var(--text-dim)' },
         ].map((s, i) => (
           <div key={i} className="stat-card" style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px' }}>
             <div style={{ fontSize: '24px', width: '42px', height: '42px', borderRadius: '12px', background: `${s.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
@@ -177,7 +255,9 @@ export const LiveTrackingView = () => {
       {/* Map */}
       <div className="glass-panel" style={{ flex: 1, padding: 0, overflow: 'hidden', position: 'relative' }}>
         <div style={{ position: 'absolute', top: 16, left: 16, zIndex: 10, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span className="live-indicator">● LIVE</span>
+          <span className="live-indicator" style={{ color: wsStatus === 'live' ? undefined : '#ff9500' }}>
+            {wsStatus === 'live' ? '● WS LIVE' : wsStatus === 'polling' ? '◌ HTTP POLL' : '○ CONNECTING'}
+          </span>
           <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>{athletes.length} athletes tracked</span>
         </div>
         <div ref={mapContainer} style={{ width: '100%', height: '100%' }} className="map-container" />
