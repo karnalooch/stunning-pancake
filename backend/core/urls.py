@@ -8,6 +8,7 @@ urlpatterns = [
     path('api/users/', include('users.urls')),
     path('api/activities/', include('activities.urls')),
     path('api/clubs/', include('clubs.urls')),
+    path('api/', include('events.urls')),   # Events Engine + OGC endpoints
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     # Phase 2: JWT Auth

@@ -365,10 +365,32 @@ To allow rapid innovation without bloating the core engine, the SPORT platform f
 - **Sandboxing**: Experimental plugins (e.g., new gamification ideas) are initially deployed in 'Pilot' mode for specific tenants.
 - **Idea Gate**: Every new feature starts as a Plugin before being considered for core engine promotion.
 
-### 23.2 Nienaruszalno�� J�dra (Core Immutability)
-Pluginy **pod �adnym pozorem nie mog� modyfikowa� kodu j�dra** systemu (core apps: users, activities, core). Interakcja z j�drem musi odbywa� si� wy��cznie poprzez:
-- **Django Signals**: Nas�uchiwanie na zdarzenia systemowe bez modyfikacji nadawcy.
-- **Middleware Hooks**: Przechwytywanie zapyta� bez ingerencji w logik� widok�w j�dra.
-- **Adapter Pattern**: Tworzenie warstw po�rednich dla nowych funkcjonalno�ci.
+### 23.2 Nienaruszalność Jądra (Core Immutability)
+Pluginy **pod żadnym pozorem nie mogą modyfikować kodu jądra** systemu (core apps: users, activities, core). Interakcja z jądrem musi odbywać się wyłącznie poprzez:
+- **Django Signals**: Nasłuchiwanie na zdarzenia systemowe bez modyfikacji nadawcy.
+- **Middleware Hooks**: Przechwytywanie zapytań bez ingerencji w logikę widoków jądra.
+- **Adapter Pattern**: Tworzenie warstw pośrednich dla nowych funkcjonalności.
 
-Ka�da pr�ba bezpo�redniej edycji modeli bazowych lub widok�w j�dra przez plugin b�dzie odrzucana na etapie walidacji AI Gate.
+Każda próba bezpośredniej edycji modeli bazowych lub widoków jądra przez plugin będzie odrzucana na etapie walidacji AI Gate.
+
+## 24. Zaawansowane Standardy Techniczne (Sync v2.0)
+*Niniejszy rozdział został zsynchronizowany z Gemini Gem "APLIKACJA SPORTOWA" i stanowi priorytet techniczny dla implementacji fazy 2+.*
+
+### 24.1 Architektura Hybrydowa (Power Couple v2)
+System ewoluuje w stronę podziału na dwa silniki:
+1.  **Django (Core)**: Obsługa procesów biznesowych, tożsamości (Auth) i relacyjnych struktur danych.
+2.  **FastAPI (Telemetry)**: Dedykowany, asynchroniczny mikroserwis do obsługi strumieni GPS i integracji z Traccar. Zapewnia brak blokowania I/O przy wysokim natężeniu ruchu.
+
+### 24.2 Przetwarzanie Sygnału i Prawda Geoprzestrzenna
+Wprowadzamy rygorystyczną walidację sygnału przed zapisem do bazy:
+- **Filtrowanie Kalmana**: Redukcja dryfu GPS i szumów pozycjonowania.
+- **HMM (Hidden Markov Models)**: Wykorzystanie algorytmu Viterbi do precyzyjnego Map Matchingu (dopasowanie do siatki OpenStreetMap).
+- **Analiza Kinematyczna**: Weryfikacja spójności fizycznej ruchu (biomechanika vs parametry pojazdów).
+
+### 24.3 Persystencja i Szeregi Czasowe (TimescaleDB)
+- Wszystkie punkty GPS trafiają do **Hypertabel w TimescaleDB**.
+- Wykorzystanie mechanizmu *chunking* i *continuous aggregates* dla błyskawicznego generowania statystyk (heatmaps, pace analysis) bez obciążania głównej bazy PostgreSQL.
+
+### 24.4 Interoperacyjność OGC
+- Implementacja standardu **OGC API — Moving Features** jako domyślnego formatu wymiany danych telemetrycznych.
+- Przygotowanie platformy na rolę "Data Providera" dla zewnętrznych systemów Smart City.

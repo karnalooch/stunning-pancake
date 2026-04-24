@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # Database with PostGIS extension for Geospatial data
+  # Database: TimescaleDB + PostGIS (Constitution §24.3 — Time-Series Hypertables)
   db:
-    image: postgis/postgis:15-3.3
+    image: timescale/timescaledb-ha:pg15-latest
     container_name: sport_db
     restart: always
     environment:
@@ -73,6 +73,18 @@ services:
       - db
       - redis
       - traccar
+
+  # Telemetry Microservice (FastAPI — Constitution §24.1)
+  telemetry:
+    build: ./telemetry
+    container_name: sport_telemetry
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}
+    depends_on:
+      - db
 
   # Admin Dashboard (React/Vite)
   admin:

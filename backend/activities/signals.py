@@ -1,8 +1,12 @@
+import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Activity
 from .services import BRouterService, PrivacyService, MatrixService
 from .leaderboards import LeaderboardService
+from .signal_processing import GpsPoint, process_gps_track
+
+logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=Activity)
 def validate_activity_on_completion(sender, instance, created, **kwargs):
@@ -16,9 +20,28 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
             return # Activity invalid after masking
             
         instance.route_path = masked_path
-        
-        coords = instance.route_path.coords
+
+        coords = list(instance.route_path.coords)
+
+        # --- Constitution §24.2: Signal Processing Pipeline ---
+        raw_points = [
+            GpsPoint(lat=c[1], lon=c[0], timestamp=float(i))
+            for i, c in enumerate(coords)
+        ]
         result = BRouterService.validate_track(instance.type, coords)
+        processing = process_gps_track(
+            raw_points=raw_points,
+            activity_type=instance.type,
+            brouter_result=result,
+        )
+
+        if processing.is_suspicious:
+            logger.warning(
+                'signal_anomaly user=%s ratio=%.2f anomalies=%s',
+                instance.user_id,
+                processing.anomaly_ratio,
+                processing.anomalous_indices[:5],
+            )
         
         if result['success']:
             b_dist = float(result['brouter_distance'])
@@ -51,8 +74,14 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
                             club_id=club_membership.club_id if club_membership else None,
                         )
                     except Exception as e:
-                        import logging
-                        logging.getLogger(__name__).warning('event_progress_update_failed: %s', e)
+                        logger.warning('event_progress_update_failed: %s', e)
+
+                    # --- Constitution §23: Fire Plugin Hooks ---
+                    try:
+                        from core.plugin_registry import registry
+                        registry.fire('activity.verified', activity=instance)
+                    except Exception as e:
+                        logger.warning('plugin_hook_fire_failed: %s', e)
 
                 else:
                     # Notify Moderators via Matrix if fraud suspected

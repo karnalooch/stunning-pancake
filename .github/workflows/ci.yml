@@ -2,9 +2,9 @@ name: SPORT CI/CD Pipeline
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, develop]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, develop]
 
 env:
   PYTHON_VERSION: '3.11'
