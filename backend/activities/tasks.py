@@ -33,7 +33,7 @@ def process_activity_async(self, activity_id: int) -> dict:
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
     from activities.leaderboards import LeaderboardService
-    from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother
+    from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother, fast_rejection_gate
     from django.contrib.gis.geos import LineString
 
     try:
@@ -53,8 +53,28 @@ def process_activity_async(self, activity_id: int) -> dict:
     coords = list(masked_path.coords)
     raw_points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
 
-    # --- Step 2: Lightweight Heuristics (V-max check) ---
-    # We do this BEFORE BRouter to save resources on obviously fake tracks.
+    # --- Step 2: FAST SELECTION GATE (Layer 1 Anti-Cheat) ---
+    # O(N) pure math — no DB, no network. Catches trams, cars, GPS spoofs.
+    # Runs on RAW points before Kalman to detect spoofed clean-looking tracks.
+    gate = fast_rejection_gate(raw_points, activity.type)
+    if not gate["passed"]:
+        logger.warning(
+            "activity.rejected_gate activity_id=%d reason=%s details=%s",
+            activity_id, gate["reason"], gate["details"]
+        )
+        Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
+        try:
+            from core.plugin_registry import registry
+            registry.fire('activity.suspicious', activity=activity, anomaly_ratio=1.0)
+        except Exception:
+            pass
+        return {
+            "status": "rejected_gate",
+            "reason": gate["reason"],
+            "details": gate["details"],
+        }
+
+    # --- Step 3: Lightweight V-max Heuristics (Layer 2 Anti-Cheat) ---
     smoother = GpsKalmanSmoother()
     smoothed = smoother.smooth(raw_points)
     analysis = analyze_anomalies(smoothed, activity.type)

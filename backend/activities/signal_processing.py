@@ -3,10 +3,28 @@ GPS Signal Processing Engine — SPORT Platform
 ==============================================
 Constitution §24.2: Signal Truth Layer
 
-Implements:
-- Kalman Filter: removes GPS drift and noise
-- Haversine distance calculator
-- HMM-based Map Matching stub (Viterbi algorithm pattern)
+Pipeline (Milestone 2+):
+
+  raw GPS
+    │
+    ▼
+  [1] fast_rejection_gate()          ← THIS FILE — cheap math, NO DB, NO network
+      ├── Teleport detection          (>500m jump between consecutive points)
+      ├── Acceleration gate           (humans can't do >6 m/s² sustained)
+      ├── Motor vehicle fingerprint   (low variance, unnaturally smooth speed)
+      └── Straight-line ratio         (>92% straight = bus/tram/car)
+    │ PASS
+    ▼
+  [2] Kalman filter (noise smoothing)
+    │
+    ▼
+  [3] V-max kinematic check          (per-sport biomechanical ceiling)
+    │ PASS
+    ▼
+  [4] BRouter topological validation  (expensive — only reached if clean)
+    │
+    ▼
+  [5] Viterbi HMM map matching
 """
 import math
 import logging
@@ -192,6 +210,8 @@ def total_distance_m(points: list[GpsPoint]) -> float:
 #   WHEELCHAIR: World record 100m = ~8 m/s sprint; marathon ~7 m/s
 # ---------------------------------------------------------------------------
 
+import os
+
 VMAX_MS: dict[str, float] = {
     "RUN":         12.0,   # m/s — ~43 km/h, sprint burst
     "BIKE":        25.0,   # m/s — ~90 km/h
@@ -204,7 +224,152 @@ _ANOMALY_RATIO_THRESHOLD = float(os.getenv("VMAX_ANOMALY_RATIO", "0.20"))   # >2
 _CONSECUTIVE_THRESHOLD   = int(os.getenv("VMAX_CONSECUTIVE", "3"))           # 3+ consecutive = reject
 _VMAX_MARGIN             = float(os.getenv("VMAX_MARGIN", "1.10"))           # 10% margin
 
-import os as _os_import
+
+# ---------------------------------------------------------------------------
+# FAST SELECTION LAYER (Anti-Cheat Layer 1) — Pure math, O(N), no I/O
+# ---------------------------------------------------------------------------
+# This gate runs BEFORE Kalman, BEFORE BRouter, BEFORE any database access.
+# It is the single most important cost-saving component in the whole pipeline.
+# Inspired by: "Most fake activities are trivially identifiable by kinematics"
+#
+# Four independent tests. Any single FAIL → immediate reject.
+# ---------------------------------------------------------------------------
+
+# --- Thresholds (all configurable via .env) ---
+_TELEPORT_JUMP_M        = float(os.getenv("GATE_TELEPORT_M",       "500"))   # >500m between consecutive pts
+_MAX_ACCEL_MS2          = float(os.getenv("GATE_MAX_ACCEL",         "6.0"))   # m/s² — sprint start ≈ 4-5 m/s²
+_MOTOR_VARIANCE_RATIO   = float(os.getenv("GATE_MOTOR_VAR",         "0.05"))  # speed σ/μ < 5% → suspiciously smooth
+_STRAIGHT_LINE_RATIO    = float(os.getenv("GATE_STRAIGHT_RATIO",    "0.92"))  # >92% displacement/track = bus/tram
+_MOTOR_MIN_SEGMENTS     = int(os.getenv("GATE_MOTOR_MIN_SEG",       "15"))    # need at least N segs for variance check
+
+
+def fast_rejection_gate(
+    points: list["GpsPoint"],
+    activity_type: str,
+) -> dict:
+    """
+    Fast Selection Layer — O(N) kinematic pre-filter.
+
+    Applies four independent mathematical tests to detect non-human movement
+    (cars, trams, buses, motorbikes) before any expensive processing.
+
+    Tests:
+        1. TELEPORT: Consecutive GPS jump > 500m in one interval.
+           (Impossible for any human sport; indicates GPS spoof or vehicle)
+
+        2. ACCELERATION: Sustained acceleration > 6 m/s².
+           (Sprint start ≈ 4-5 m/s²; a tram accelerating is smoother but faster)
+
+        3. MOTOR VEHICLE FINGERPRINT: Speed coefficient of variation (σ/μ) < 5%.
+           (Humans naturally vary pace; a bus/tram maintains unnaturally constant speed)
+
+        4. STRAIGHT-LINE RATIO: Displacement / total track length > 92%.
+           (Running/cycling follows curves; straight-line ratio > 92% = road vehicle)
+
+    Args:
+        points: Raw GPS points (pre-Kalman — cheaper to run early).
+        activity_type: 'RUN', 'BIKE', 'WALK', 'WHEELCHAIR'
+
+    Returns:
+        dict with:
+            passed: bool
+            reason: str | None  (None if passed)
+            details: dict       (per-test numeric values for logging/audit)
+    """
+    if len(points) < 3:
+        return {"passed": True, "reason": None, "details": {}}
+
+    speeds: list[float] = []
+    accels: list[float] = []
+    prev_speed: float | None = None
+    total_track_m = 0.0
+
+    for i in range(1, len(points)):
+        dt = points[i].timestamp - points[i - 1].timestamp
+        if dt <= 0:
+            continue
+
+        dist = haversine_m(
+            points[i - 1].lat, points[i - 1].lon,
+            points[i].lat,     points[i].lon,
+        )
+        total_track_m += dist
+        speed = dist / dt
+        speeds.append(speed)
+
+        # --- Test 1: TELEPORT ---
+        if dist > _TELEPORT_JUMP_M:
+            logger.warning(
+                "gate.TELEPORT idx=%d dist=%.1fm type=%s",
+                i, dist, activity_type,
+            )
+            return {
+                "passed": False,
+                "reason": f"TELEPORT: {dist:.0f}m jump between points #{i-1} and #{i}",
+                "details": {"teleport_dist_m": dist, "idx": i},
+            }
+
+        # --- Test 2: ACCELERATION ---
+        if prev_speed is not None and dt > 0:
+            accel = abs(speed - prev_speed) / dt
+            accels.append(accel)
+            if accel > _MAX_ACCEL_MS2:
+                logger.warning(
+                    "gate.ACCEL idx=%d accel=%.2f m/s² limit=%.1f type=%s",
+                    i, accel, _MAX_ACCEL_MS2, activity_type,
+                )
+                return {
+                    "passed": False,
+                    "reason": f"ACCEL: {accel:.2f} m/s² exceeds physiological limit ({_MAX_ACCEL_MS2} m/s²)",
+                    "details": {"accel_ms2": accel, "idx": i},
+                }
+        prev_speed = speed
+
+    # --- Test 3: MOTOR VEHICLE FINGERPRINT (speed variance) ---
+    if len(speeds) >= _MOTOR_MIN_SEGMENTS:
+        mean_speed = sum(speeds) / len(speeds)
+        if mean_speed > 0.5:  # only check if moving (>0.5 m/s = 1.8 km/h)
+            variance  = sum((s - mean_speed) ** 2 for s in speeds) / len(speeds)
+            std_dev   = math.sqrt(variance)
+            cv        = std_dev / mean_speed  # coefficient of variation
+
+            # Humans are sloppy — their CV is typically 0.15–0.40
+            # Motor vehicles: CV < 0.05 (cruise control, tracks, rails)
+            if cv < _MOTOR_VARIANCE_RATIO:
+                logger.warning(
+                    "gate.MOTOR_FINGERPRINT cv=%.4f mean=%.2f m/s type=%s",
+                    cv, mean_speed, activity_type,
+                )
+                return {
+                    "passed": False,
+                    "reason": f"MOTOR_FINGERPRINT: speed CV={cv:.3f} < {_MOTOR_VARIANCE_RATIO} (unnaturally constant)",
+                    "details": {"speed_cv": cv, "mean_speed_ms": mean_speed, "std_dev": std_dev},
+                }
+
+    # --- Test 4: STRAIGHT-LINE RATIO ---
+    if total_track_m > 200:  # only meaningful for tracks longer than 200m
+        displacement_m = haversine_m(
+            points[0].lat, points[0].lon,
+            points[-1].lat, points[-1].lon,
+        )
+        straight_ratio = displacement_m / total_track_m
+
+        if straight_ratio > _STRAIGHT_LINE_RATIO:
+            logger.warning(
+                "gate.STRAIGHT_LINE ratio=%.3f displacement=%.0fm track=%.0fm type=%s",
+                straight_ratio, displacement_m, total_track_m, activity_type,
+            )
+            return {
+                "passed": False,
+                "reason": f"STRAIGHT_LINE: {straight_ratio:.1%} displacement ratio > {_STRAIGHT_LINE_RATIO:.0%} (vehicle pattern)",
+                "details": {"straight_ratio": straight_ratio, "displacement_m": displacement_m, "track_m": total_track_m},
+            }
+
+    logger.debug(
+        "gate.PASSED type=%s points=%d track_m=%.0f",
+        activity_type, len(points), total_track_m,
+    )
+    return {"passed": True, "reason": None, "details": {"track_m": total_track_m}}
 
 
 def detect_speed_anomalies(
