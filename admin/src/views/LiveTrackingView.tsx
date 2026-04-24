@@ -23,7 +23,7 @@ interface WsMessage {
   activity_id?: number | null;
 }
 
-const TELEMETRY_WS  = import.meta.env.VITE_TELEMETRY_WS  ?? 'ws://localhost:8001/ws/telemetry/live';
+const TELEMETRY_WS = import.meta.env.VITE_TELEMETRY_WS ?? 'ws://localhost:8001/ws/telemetry/live';
 const TELEMETRY_API = import.meta.env.VITE_TELEMETRY_API ?? 'http://localhost:8001/api/telemetry/live';
 
 /**
@@ -34,16 +34,16 @@ const TELEMETRY_API = import.meta.env.VITE_TELEMETRY_API ?? 'http://localhost:80
  */
 export const LiveTrackingView = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const canvasRef    = useRef<HTMLCanvasElement>(null);
-  const mapRef       = useRef<maplibregl.Map | null>(null);
-  const markers      = useRef<Record<string, maplibregl.Marker>>({});
-  const history      = useRef<Record<string, { pts: [number, number][]; type: string }>>({});
-  const animFrame    = useRef<number>(0);
-  const wsRef        = useRef<WebSocket | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<Record<string, maplibregl.Marker>>({});
+  const history = useRef<Record<string, { pts: [number, number][]; type: string }>>({});
+  const animFrame = useRef<number>(0);
+  const wsRef = useRef<WebSocket | null>(null);
 
-  const [athletes, setAthletes]       = useState<Athlete[]>([]);
-  const [lastPoll, setLastPoll]       = useState<string>('—');
-  const [wsStatus, setWsStatus]       = useState<'connecting' | 'live' | 'polling'>('connecting');
+  const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [lastPoll, setLastPoll] = useState<string>('—');
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'live' | 'polling'>('connecting');
 
   // -------------------------------------------------------------------------
   // Athlete state updater
@@ -51,12 +51,12 @@ export const LiveTrackingView = () => {
   const upsertAthlete = useCallback((msg: WsMessage) => {
     if (!msg.device_id || msg.lat == null || msg.lon == null) return;
     const athlete: Athlete = {
-      deviceId:   msg.device_id,
-      user_id:    msg.user_id,
-      type:       'RUN',
-      lat:        msg.lat,
-      lng:        msg.lon,
-      speed:      msg.speed_ms ?? 0,
+      deviceId: msg.device_id,
+      user_id: msg.user_id,
+      type: 'RUN',
+      lat: msg.lat,
+      lng: msg.lon,
+      speed: msg.speed_ms ?? 0,
       lastUpdate: new Date().toLocaleTimeString('pl'),
     };
     setAthletes(prev => {
@@ -225,7 +225,6 @@ export const LiveTrackingView = () => {
           .addTo(mapRef.current!);
         markers.current[a.deviceId] = mk;
       }
-    });
     });
     Object.keys(markers.current).forEach((id) => {
       if (!ids.has(id)) { markers.current[id].remove(); delete markers.current[id]; }
