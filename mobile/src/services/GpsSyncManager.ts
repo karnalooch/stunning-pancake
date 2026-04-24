@@ -109,9 +109,12 @@ async function uploadBatch(points: GpsPoint[], attempt = 1): Promise<void> {
 export class GpsSyncManager {
   private _deviceId: string;
   private _userId: number | null;
-  private _activityId: number | null;
+  private _activityId: number | null = null;
   private _batchTimer: ReturnType<typeof setInterval> | null = null;
   private _currentMotion: string = 'unknown';
+  private _totalDistanceM: number = 0;
+  private _lastCoord: [number, number] | null = null;
+  private _onUpdate: ((stats: { distanceM: number }) => void) | null = null;
 
   constructor(deviceId: string, userId: number | null = null) {
     this._deviceId = deviceId;
@@ -160,6 +163,19 @@ export class GpsSyncManager {
 
     // Buffer incoming GPS points
     BackgroundGeolocation.onLocation((location: Location) => {
+      const coord: [number, number] = [location.coords.longitude, location.coords.latitude];
+      
+      // Update distance (Haversine)
+      if (this._lastCoord) {
+        const d = this.calculateDistance(this._lastCoord, coord);
+        // Filter out GPS jitter (< 2m jump)
+        if (d > 2) {
+          this._totalDistanceM += d;
+          if (this._onUpdate) this._onUpdate({ distanceM: this._totalDistanceM });
+        }
+      }
+      this._lastCoord = coord;
+
       appendToBuffer({
         deviceId: this._deviceId,
         userId: this._userId,
@@ -202,7 +218,30 @@ export class GpsSyncManager {
 
     await BackgroundGeolocation.stop();
     this._activityId = null;
+    this._lastCoord = null;
+    this._totalDistanceM = 0;
     console.log('[SyncManager] Tracking stopped, buffer flushed');
+  }
+
+  /** Registers a callback for real-time stats updates. */
+  setUpdateCallback(cb: (stats: { distanceM: number }) => void): void {
+    this._onUpdate = cb;
+  }
+
+  /** Haversine formula for distance between coordinates in metres. */
+  private calculateDistance(p1: [number, number], p2: [number, number]): number {
+    const R = 6371e3; // Earth radius in metres
+    const φ1 = p1[1] * Math.PI / 180;
+    const φ2 = p2[1] * Math.PI / 180;
+    const Δφ = (p2[1] - p1[1]) * Math.PI / 180;
+    const Δλ = (p2[0] - p1[0]) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
   }
 
   /** Returns the current buffer size (for UI display). */

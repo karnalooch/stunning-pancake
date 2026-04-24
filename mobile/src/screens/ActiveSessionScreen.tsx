@@ -120,6 +120,9 @@ export const ActiveSessionScreen: React.FC = () => {
 
       const activity = await api.createActivity(activityType);
       const manager = new GpsSyncManager('device_local', null);
+      manager.setUpdateCallback(({ distanceM }) => {
+        setSession(prev => ({ ...prev, distanceM }));
+      });
       syncManagerRef.current = manager;
       await manager.startTracking(activity.id);
 
