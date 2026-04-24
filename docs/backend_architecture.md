@@ -1,46 +1,125 @@
-# BACKEND ARCHITECTURE: "SPORT"
+# BACKEND ARCHITECTURE: "SPORT" Platform
+> Last Updated: 2026-04-24 | **Hyperscale Edition** (Post Milestone 5)
 
-## 1. Telemetry Core: Traccar (Apache 2.0)
-Traccar remains the central data ingestion point, but Milestone 2 introduces a high-performance **Redis Direct Pipeline**.
+## 1. Telemetry Core: FastAPI + Redis Pipeline
 
-### Data Flow (Milestone 2 Optimized)
-- **Direct Pub/Sub**: Traccar pushes raw GPS positions directly to a Redis channel (`traccar:positions`), bypassing traditional HTTP webhooks to achieve <1ms ingestion lag.
-- **FastAPI Telemetry Service**: A dedicated async service consumes the Redis stream and performs the first pass of validation.
-- **TimescaleDB**: GPS points are stored in **Hypertables**, optimized for time-series analysis and rapid heatmap generation.
+The primary data ingestion path is a high-throughput async stack designed for 10,000+ concurrent GPS streams.
 
-## 2. Multi-Layer Anti-Cheat Engine
-The validation process is now a structured 3-layer pipeline designed for cost-efficiency and high integrity.
+### Data Flow (Current)
+```
+MOBILE (30s batch) → FastAPI :8001 → Redis Pipeline → TimescaleDB Hypertable
+                                    ↓
+                             Celery: process_activity
+                               └─ Layer 1: Fast Selection Gate (O(N) math, no I/O)
+                               └─ Layer 1.5: ML Anomaly Detector (IsolationForest)
+                               └─ Layer 2: V-max Kinematic Check
+                               └─ Layer 3: BRouter Topological Validation (Viterbi HMM)
+                               └─ Layer 4: Leaderboard Sync + Points Award
+```
 
-### Layer 1: Fast Selection Gate (O(N) Math)
-- **Zero I/O**: Performs kinematic tests (Teleport, Accel, Motor Fingerprint) purely in memory.
-- **Early Rejection**: Obvious "tram/car" tracks are rejected before hitting expensive map-matching engines.
+- **FastAPI + asyncpg**: Non-blocking I/O, handles 10k+ req/sec on a single node.
+- **Redis Pipeline**: Buffers GPS points in memory before writing to TimescaleDB in batches.
+- **TimescaleDB Hypertables**: GPS points auto-partitioned by time — reads and writes never contend.
 
-### Layer 2: V-max Biomechanical Check
-- Verifies segments against sport-specific speed ceilings (RUN/BIKE/WALK).
-- Uses configurable anomaly ratios (e.g., >20% violations = reject).
+---
 
-### Layer 3: BRouter Topological Validation (MIT)
-- **Map-Matching**: Snaps track to the OpenStreetMap road network via the Viterbi HMM algorithm.
-- **Topology Check**: Verifies that the track follows valid paths and doesn't cross physical barriers (buildings, rivers) without infrastructure.
+## 2. Multi-Layer Anti-Cheat Engine (5 Layers)
 
-## 3. High-Performance Leaderboards: Redis + PostGIS
-Rankings are handled by a hybrid approach for both speed and official accuracy.
+| Layer | Technology | Cost | Rejects |
+|:---|:---|:---|:---|
+| **1. Fast Gate** | Pure Python math (O(N), no I/O) | ~0.5ms | Teleports, cars, trams |
+| **1.5 ML Gate** | IsolationForest (8 kinematic features) | ~5ms | Statistical outliers |
+| **2. V-max** | Biomechanical ceilings per sport | ~1ms | Unrealistic speeds |
+| **3. BRouter** | Viterbi HMM map-matching (OSM) | ~200ms | Off-road GPS fraud |
+| **4. Plugin** | `core/plugin_registry.py` hooks | custom | Domain-specific rules |
 
-### Real-time (Redis)
-- **Sorted Sets**: Instant rankings for active events.
-- **Pipeline Batching**: Updates are batched via Redis pipelines to handle hundreds of concurrent session finishes.
+**Key design**: Each layer only runs if the previous passes. 90%+ of cheats are caught at Layer 1 (zero cost), making the expensive BRouter call rare.
+
+---
+
+## 3. High-Performance Leaderboards: Redis Cluster + PostGIS
+
+### Real-time (Redis Cluster — Hyperscale)
+- **3 Master nodes** (16,384 hash slots distributed) + 3 replicas for failover.
+- **Sorted Sets**: Instant rankings for active events and 200 cities simultaneously.
+- **Pipeline Batching**: Bulk `ZADD` via `core/redis_cluster.py` — auto-detects standalone vs cluster.
+- **Read replicas**: GET operations routed to replicas → 3× read throughput.
 
 ### Official Rankings (PostGIS)
-- **Materialized Views**: `city_rankings_mv` provides the "Source of Truth" for official municipal battles.
-- **Async Refresh**: Updated concurrently via Celery tasks to ensure the API remains responsive.
+- **Materialized Views**: `city_rankings_mv` — source of truth for official municipal rankings.
+- **Async Refresh**: Celery `refresh_city_rankings_mv` task refreshes concurrently (non-blocking).
 
-## 4. Communication: Matrix (Apache 2.0)
-Decentralized, encrypted chat for clans and cities.
-- **Clan Automation**: Matrix rooms are automatically provisioned when a sports club is created.
-- **Matrix SDK**: Integrated via `matrix-js-sdk` (Mobile) and Python `matrix-nio` (Backend).
+---
 
-## 5. Domain-Driven Design (DDD)
-The backend follows a service-oriented pattern to isolate business logic from delivery mechanisms.
-- `activities.services.signal_processing`: The brain of the telemetry engine.
-- `activities.tasks`: Asynchronous pipeline management using Celery.
-- `leaderboards.services`: Logic for Redis/PostGIS ranking synchronization.
+## 4. Distributed Database: Citus Sharding (`core/citus.py`)
+
+For hyperscale deployment, TimescaleDB runs inside a **Citus 4-node cluster**:
+
+| Node | Role | Data |
+|:---|:---|:---|
+| `db` | Coordinator | Query routing, metadata |
+| `db-worker-1` | Worker | Shards 0-10 |
+| `db-worker-2` | Worker | Shards 11-21 |
+| `db-worker-3` | Worker | Shards 22-31 |
+
+**Sharding strategy**: Distributed by `user_id` → all data for a given user is co-located on a single worker. JOINs are **local** (no network hops).
+
+**Reference tables** (replicated to all workers): `users_user`, `events_event`, `clubs_club`, `rewards_voucherpool`.
+
+---
+
+## 5. Async Task Architecture: Celery (3 Queues)
+
+| Queue | Workers | Purpose |
+|:---|:---|:---|
+| `critical` | 8 concurrent | Anti-cheat validation, BRouter, Leaderboard sync |
+| `default` | 8 concurrent | ML scoring, reward awarding, MV refresh |
+| `notifications` | 4 concurrent | Matrix chat, push, email |
+
+All queues are backed by **Redis** (standalone or cluster — transparent).
+
+---
+
+## 6. Rewards & Payments (`rewards/`)
+
+- **StripeService**: B2C checkout, B2B multi-seat, Customer Portal, Webhook with signature validation.
+- **RewardsService**: Points ledger (append-only), atomic voucher redemption via `SELECT FOR UPDATE`.
+- **Points Pipeline**: Auto-awarded after activity verification (10 pts/km, idempotent).
+
+---
+
+## 7. Security Architecture
+
+- **RLS**: PostgreSQL Row Level Security on 5 tables (`core/rls.py`). Tenant isolation at DB level.
+- **Trivy CI**: Automated CVE scans for backend/admin/mobile on every push → SARIF to GitHub Security.
+- **Dependabot**: 4 ecosystems (backend, telemetry, admin, mobile), `security-patches` auto-group.
+- **Sentry**: Django + Celery + FastAPI + Mobile with GPS-stripping `beforeSend` hook (zero PII).
+
+---
+
+## 8. Domain-Driven Design (DDD)
+
+```
+backend/
+├── core/
+│   ├── redis_cluster.py      ← Redis Cluster manager (auto-detect)
+│   ├── citus.py              ← Citus sharding manager
+│   ├── rls.py                ← PostgreSQL Row Level Security
+│   ├── plugin_registry.py   ← Plugin hook system
+│   ├── sentry.py             ← Observability configuration
+│   └── infra_views.py        ← /api/infra/health/ monitoring
+├── activities/
+│   ├── signal_processing.py  ← GPS processing engine
+│   ├── ml_anomaly.py         ← IsolationForest anti-cheat (Layer 1.5)
+│   ├── analytics.py          ← Riegel predictions, ACWR, trend analysis
+│   ├── heatmap.py            ← Heatmap API + premium analytics endpoint
+│   ├── leaderboards.py       ← Redis Cluster leaderboard service
+│   └── tasks.py              ← Celery async pipeline
+├── clubs/
+│   ├── tasks.py              ← Matrix async provisioning
+│   └── signals.py            ← Club/membership lifecycle hooks
+└── rewards/
+    ├── models.py             ← Sponsor, VoucherPool, Voucher, PointsLedger
+    ├── services.py           ← Atomic redemption + balance
+    └── stripe_service.py     ← Stripe B2C/B2B/Portal/Webhook
+```

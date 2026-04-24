@@ -1,47 +1,129 @@
-# MOBILE ARCHITECTURE: "SPORT"
+# MOBILE ARCHITECTURE: "SPORT" Platform
+> Last Updated: 2026-04-24 | **Hyperscale Edition** (Post Milestone 5)
 
-## 1. React Native Foundation (0.76+)
-The mobile app (Android/iOS) is built using React Native 0.76, leveraging the **New Architecture** (TurboModules, Fabric) for maximum performance and a smooth 60 FPS experience.
+## 1. React Native Foundation (0.76+ New Architecture)
 
-### Key Components
-- **Framework**: Expo (Managed Workflow with Config Plugins).
-- **State Management**: TanStack Query (Server State) + Zustand (Global UI State).
-- **Local Persistence**: **MMKV** — high-performance key-value storage (C++ based).
-- **Navigation**: Expo Router (File-based routing, native feel).
-- **Styling**: NativeWind (Tailwind CSS for React Native).
+The mobile app (Android/iOS) is built on React Native 0.76 with the **New Architecture** (TurboModules + Fabric Renderer) for maximum performance.
 
-## 2. Tracking Engine: Precision Telemetry
-The tracking engine is designed for reliability and minimal battery drain, using native background geolocation.
+| Component | Library | Purpose |
+|:---|:---|:---|
+| Framework | Expo (Config Plugins) | Managed workflow, OTA updates |
+| State (Server) | TanStack Query | API caching, background refresh |
+| State (UI) | Zustand | Lightweight global state |
+| Storage | **MMKV** (C++ native) | GPS buffer, offline cache |
+| Navigation | Expo Router | File-based routing |
+| Observability | **SentryService.ts** | Error tracking (GPS-stripped) |
 
-### Tracking Features
-- **Background Processing**: `react-native-background-geolocation` ensuring zero data loss during screen-off.
-- **Haversine Core**: Real-time distance and pace calculation performed on-device using high-precision Haversine logic.
-- **Jitter Filter**: Intelligent noise reduction (>2m threshold) to prevent distance accumulation while stationary.
-- **Batch Telemetry**: Points are buffered in MMKV and pushed to the `/api/telemetry/ingest/batch` endpoint every 30s.
+---
 
-## 3. Visualization: MapLibre GL
-High-performance vector map engine integrated via `@maplibre/maplibre-react-native`.
+## 2. GPS Tracking Engine: `GpsSyncManager.ts` (v3)
 
-### Map Features
-- **Glowing Tracks**: Dynamic line styling for active sessions with real-time gradient updates.
-- **Vector Tiles**: Dark-mode optimized OSM tiles served via PMTiles or CDN.
-- **Interactive Overlays**: Real-time display of pace, elevation, and heart rate zones.
+Battery-aware, production-hardened tracking with automatic accuracy adaptation.
 
-## 4. Offline-First Strategy
-The app treats connectivity as a luxury, not a requirement.
-- **MMKV Buffering**: All GPS points are stored locally first.
-- **Sync Manager**: Asynchronous background sync that retries automatically.
-- **Local Metrics**: All statistics (distance, time, speed) are calculated locally.
+### Features
+- **Battery Adaptation**: Switches `HIGH → MEDIUM` accuracy automatically at <20% battery.
+- **Metrics Pipeline**: Real-time `elevationGainM` and `paceSecPerKm` calculated on-device.
+- **Offline-first**: Points buffered in MMKV, synced in 30s batches to FastAPI.
+- **Error Boundary**: `onError` callback wired to `SentryService.sentryCapture()`.
 
-## 5. Directory Structure (Domain-Driven)
-We follow a feature-based organization in `src/`:
-- `app/`: Expo Router file-based pages.
-- `features/`: Domain logic (tracking, leaderboard, social, rewards).
-- `services/`: Singleton managers (GpsSyncManager, MatrixClient, ApiClient).
-- `components/`: Reusable Atomic UI elements (Atoms, Molecules).
-- `hooks/`: Shared React hooks for telemetry and UI state.
+### Batch Sync Flow
+```
+GPS Hardware → Background Geolocation → GpsSyncManager
+                                           │ every 30s (or on finish)
+                                           ▼
+                              POST /api/telemetry/ingest/batch
+                                           │
+                                     FastAPI :8001
+                                           │
+                                     Redis → Celery
+```
 
-## 6. Security and Privacy
-- **Privacy Zones**: Local masking of start/finish coordinates before they leave the device.
-- **Mock Detection**: Hard-rejection of activities using simulated GPS providers.
-- **E2EE**: Matrix protocol integration for secure, encrypted clan chats.
+---
+
+## 3. Privacy Architecture: Zones v2
+
+Privacy masking is applied **on-device before any data leaves the phone**.
+
+| Zone Type | Base Radius | Density Boost |
+|:---|:---|:---|
+| HOME | 250m | ×1.5 if ≥3 nearby zones |
+| WORK | 150m | ×1.5 if ≥3 nearby zones |
+| CUSTOM | 75m | ×1.5 if ≥3 nearby zones |
+
+- **Segment Bridging**: Linear interpolation fills gaps at zone entry/exit — prevents geometric re-identification.
+- **Sentry**: `beforeSend` hook strips any GPS coordinates before transmission to Sentry.
+
+---
+
+## 4. Observability: `SentryService.ts`
+
+```typescript
+import { initSentry, sentryCapture } from '@/services/SentryService';
+
+// In App.tsx (before any component mounts)
+initSentry();
+
+// Automatic in GpsSyncManager._handleError():
+sentryCapture(error, 'GpsSyncManager.sync');
+```
+
+- No-op if `SENTRY_DSN` is not set (local dev).
+- **GPS-stripping `beforeSend`**: Breadcrumbs containing `lat=` or `GPS` are filtered before transmission.
+
+---
+
+## 5. Visualization: MapLibre GL
+
+High-performance vector map engine (`@maplibre/maplibre-react-native`).
+
+- **Glowing Tracks**: Dynamic line styling with real-time gradient updates.
+- **Heatmap Layer**: Consumes `/api/activities/heatmap/?bbox=...` → renders activity density.
+- **Vector Tiles**: Dark-mode optimized OSM tiles (PMTiles or CDN).
+- **Live Overlays**: Pace, elevation, ACWR injury risk indicator.
+
+---
+
+## 6. Premium Analytics: `/api/activities/analytics/`
+
+Available for premium users via the `analytics_summary_view` endpoint:
+
+| Feature | Logic |
+|:---|:---|
+| **Trend Analysis** | Linear regression (slope + R²) over 12 weeks of volume |
+| **Race Predictions** | Riegel formula: T2 = T1 × (D2/D1)^1.06 (per sport type) |
+| **Training Load** | ACWR (Acute/Chronic Workload Ratio): `OPTIMAL / ELEVATED / OVERTRAINING_RISK` |
+| **Race Targets** | 5K / 10K / Half-Marathon / Marathon predictions from best effort |
+
+---
+
+## 7. Directory Structure (Domain-Driven)
+
+```
+mobile/src/
+├── app/              ← Expo Router file-based pages
+├── features/
+│   ├── tracking/     ← Active session UI, map view
+│   ├── leaderboard/  ← City/event rankings
+│   ├── social/       ← Matrix club chat
+│   ├── rewards/      ← Voucher marketplace, points balance
+│   └── analytics/    ← Premium charts (Riegel, ACWR, heatmap)
+├── services/
+│   ├── GpsSyncManager.ts  ← Battery-aware GPS engine (v3)
+│   ├── SentryService.ts   ← Observability (GPS-stripped)
+│   ├── MatrixClient.ts    ← E2EE club chat
+│   └── ApiClient.ts       ← JWT-authenticated HTTP client
+├── components/       ← Atomic UI (Atoms → Molecules → Organisms)
+└── hooks/            ← Shared React hooks
+```
+
+---
+
+## 8. Security & Privacy Checklist
+
+| Control | Implementation | Status |
+|:---|:---|:---|
+| Privacy Zones v2 | Dynamic radius masking, density boost, segment bridging | ✅ |
+| Mock GPS detection | Rejection of simulated GPS providers | ✅ |
+| E2EE Chat | Matrix protocol, server-side room provisioning | ✅ |
+| Sentry PII guard | GPS-stripping `beforeSend`, `send_default_pii=False` | ✅ |
+| JWT Auth | Short-lived tokens (60min) + refresh rotation (30d) | ✅ |
