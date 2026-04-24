@@ -41,4 +41,22 @@ The platform employs advanced detection algorithms in Python.
 *   **Human-in-the-Loop**: Flagged sessions are automatically routed to the **Moderator App** for manual review and disciplinary actions (Cropping, Disqualification).
 
 ---
-*Updated: 2026-04-24 | Arch-Ref: SPORT-PHASE-5-RBAC*
+
+### 6. Roadmap & Strategic Next Steps (2026)
+
+Following the successful modularization of the Admin ecosystem, the project moves into the **Hardening & Expansion** phase.
+
+#### 6.1 Database Hardening (RLS & Tenancy)
+*   **Target**: Move multi-tenant isolation from the Application Layer (Django ORM) to the Database Layer (PostgreSQL RLS).
+*   **Goal**: Zero-trust data access. Even if the backend is compromised, a tenant can never access another tenant's data.
+
+#### 6.2 Wearable & Biometric Integration
+*   **Target**: SDK integration for Garmin Connect, Apple HealthKit, and Google Health Connect.
+*   **Goal**: Ingest high-fidelity biometric data (HRV, VO2Max) to enhance Layer 1.5 Anti-Cheat detection (Human vs. Bot correlation).
+
+#### 6.3 GIS Interoperability (OGC API)
+*   **Target**: Full implementation of **OGC API - Features** and **Moving Features**.
+*   **Goal**: Allow municipal partners to integrate their GIS tools (QGIS, ArcGIS) directly into the SPORT telemetry stream.
+
+---
+*Updated: 2026-04-24 | Arch-Ref: SPORT-PHASE-6-ROADMAP*

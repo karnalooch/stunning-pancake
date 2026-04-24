@@ -76,10 +76,30 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ---
 
+## 🛡 Milestone 6: Hardening & Global Ecosystem Expansion 🏗 IN PROGRESS
+**Objective**: Robust data isolation, wearable integration, and GIS interoperability.
+
+### 6.1 Database Isolation (RLS Hardening)
+- **Zero-Trust RLS**: 🏗 Move all multi-tenant logic from Django to PostgreSQL RLS policies.
+- **Audit Logging**: 🏗 DB-level audit triggers for all administrative actions.
+
+### 6.2 Wearable & Health SDKs
+- **Garmin Connect**: 🏗 Integration for direct activity import.
+- **Apple HealthKit / Google Health Connect**: 🏗 Native mobile app integration for HRV and biometric data ingestion.
+
+### 6.3 GIS & Interoperability
+- **OGC API Features**: 🏗 Paginated GeoJSON export for municipal GIS tools.
+- **Dynamic Geofencing**: 🏗 Automated event "corridors" activation/deactivation.
+
+### 6.4 Community Moderation
+- **Decentralized Mod Tools**: 🏗 Tools for city-specific "Community Moderators" (RBAC Level 3 Expansion).
+
+---
+
 ## 📊 Progress Summary
-- **Total Progress**: **100%** 🏁
-- **Current Sprint**: Production deployment & field testing.
-- **Platform Status**: ✅ **PRODUCTION READY** — All 5 Milestones complete.
+- **Total Progress**: **85%** 🏗 (Added Milestone 6 for Hardening & Expansion)
+- **Current Sprint**: Database RLS Hardening & Wearable SDK Analysis.
+- **Platform Status**: ✅ **PRODUCTION READY** | 🏗 **EXPANDING**
 
 ### Architecture Fingerprint (Final)
 | Layer | Technology | Status |
