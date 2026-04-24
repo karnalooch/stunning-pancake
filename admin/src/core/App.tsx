@@ -1,15 +1,15 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { Sidebar } from './components/Sidebar';
-import { TopBar } from './components/TopBar';
-import { LiveTrackingView } from './views/LiveTrackingView';
-import { EventsView } from './views/EventsView';
-import { ClubsView } from './views/ClubsView';
-import { AntiCheatView } from './views/AntiCheatView';
-import { AnalyticsView } from './views/AnalyticsView';
-import { ModeratorView } from './views/ModeratorView';
-import { UserSimulator } from './components/UserSimulator';
+import { Sidebar } from '../shared/components/Sidebar';
+import { TopBar } from '../shared/components/TopBar';
+import { LiveTrackingView } from '../modules/tracking/LiveTrackingView';
+import { EventsView } from '../modules/social/EventsView';
+import { ClubsView } from '../modules/social/ClubsView';
+import { AntiCheatView } from '../modules/anti-cheat/AntiCheatView';
+import { AnalyticsView } from '../modules/analytics/AnalyticsView';
+import { ModeratorView } from '../modules/moderation/ModeratorView';
+import { UserSimulator } from '../shared/components/UserSimulator';
 
 const APP_MODE = (import.meta.env.VITE_APP_MODE || 'GLOBAL_ADMIN') as 'GLOBAL_ADMIN' | 'LOCAL_ADMIN' | 'MODERATOR';
 

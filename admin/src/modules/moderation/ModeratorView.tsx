@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapTrackViewer } from '../components/MapTrackViewer';
+import { MapTrackViewer } from '../../shared/components/MapTrackViewer';
 
 interface Activity {
   id: number;

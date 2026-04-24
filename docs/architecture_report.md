@@ -1,36 +1,44 @@
-# Komprehensywny Raport Architektoniczny: Projektowanie i Wdrożenie Skalowalnej Aplikacji Sportowej
+# Comprehensive Architectural Report: SPORT Platform
+## Scaling Sports Applications with Python, TypeScript, and 4-Level RBAC
 
-## 1. Wstęp i Filozofia Systemu
-Nowoczesny ekosystem aplikacji sportowych, oparty na zaawansowanym przetwarzaniu danych geolokalizacyjnych w czasie rzeczywistym oraz grywalizacji, wymaga wdrożenia wysoce zoptymalizowanej architektury systemowej. Decyzja o oparciu fundamentów projektu na połączonych siłach języków Python (w warstwie backendowej) oraz TypeScript (w warstwie interfejsów webowych i mobilnych) stanowi strategiczny krok w kierunku budowy otwartego, modularnego i wysoce skalowalnego oprogramowania.
+### 1. Introduction & Philosophy
+The SPORT platform is a high-fidelity sports ecosystem built on real-time GPS telemetry and gamification. Our architecture leverages the "Power Couple" strategy: **Python** for the heavy-lifting backend logic (Anti-Cheat, Spatial Analysis) and **TypeScript** for robust, type-safe interfaces across Mobile and Admin panels.
 
-## 2. Paradygmat Wielodostępności (Multi-tenancy) i RLS
-Platforma sportowa obsługująca wiele niezależnych wydarzeń musi funkcjonować w architekturze wielodostępnej (multi-tenant). Wybranym modelem jest **Shared Database, Shared Schema** z wykorzystaniem **Row-Level Security (RLS)** w PostgreSQL.
+### 2. Multi-tenancy & Data Isolation (RLS)
+To serve multiple independent organizations (cities, clubs) on a single infrastructure, we implement a **Shared Database, Shared Schema** model powered by PostgreSQL **Row-Level Security (RLS)**.
 
-*   **Bezpieczeństwo**: RLS przesuwa odpowiedzialność za izolację danych z kodu aplikacji (ORM) bezpośrednio do silnika bazy danych.
-*   **Fail-closed**: Jeśli backend nie dostarczy zmiennej sesyjnej `app.current_tenant`, baza danych odmówi dostępu (zwróci 0 wierszy).
+*   **Security Enforcement**: Isolation is moved from the application code (ORM) directly to the database engine.
+*   **Fail-Closed Mechanism**: If the backend fails to provide a session context (`app.current_tenant`), the database denies access by default (returning 0 rows).
+*   **PostGIS**: All spatial queries (Geofencing via `ST_Intersects`) are performed natively within the database, ensuring high performance for thousands of concurrent athletes.
 
-## 3. Czteropoziomowy Model RBAC (Role-Based Access Control)
+### 3. 4-Level Role-Based Access Control (RBAC)
 
-### Poziom 1: Superuser / Global Admin (Zarządzanie Wszystkim)
-*   **Zakres**: Cała infrastruktura chmurowa, wiele tenantów.
-*   **Uprawnienia**: Jako jedyny posiada atrybut `BYPASSRLS`. Definiuje nowe instancje tenantów, konfiguruje globalne parametry i audytuje system.
+| Level | Role | Scope | Key Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **Level 1** | **Global Admin** | Global (All Tenants) | Platform config, billing, tenant creation, system audits. Bypasses RLS (`BYPASSRLS`). |
+| **Level 2** | **Tenant Admin** | Specific Tenant | Club management, event creation, PoI setup, moderator assignment. |
+| **Level 3** | **Moderator** | Specific Tenant | Anti-Cheat monitoring, track verification, incident handling. No billing access. |
+| **Level 4** | **User** | Specific Resource | GPS recording, personal stats, leaderboard participation. |
 
-### Poziom 2: Tenant Admin / Lokalny Administrator (Właściciel Firmy)
-*   **Zakres**: Wyłącznie własna organizacja (silos informacyjny).
-*   **Uprawnienia**: Zarządzanie wydarzeniami (EventCreator), punktami POI, regulaminem oraz mianowanie Moderatorów.
+### 4. Modular Admin Architecture
+The Admin Panel has been refactored from a monolith into a **Modular Monorepo-style** structure.
 
-### Poziom 3: Moderator (Osoba Wspierająca)
-*   **Zakres**: Higiena cyfrowa i uczciwość sportowa (Fair Play) wewnątrz organizacji.
-*   **Uprawnienia**: Dedykowany widok **Anti-Cheat View**. Weryfikacja anomalii, analiza śladów GPX, podejmowanie decyzji o dyskwalifikacji (bez dostępu do danych billingowych).
+#### 4.1 Deployment Strategy (3 Separate Apps)
+We deploy three distinct containers built from the same source code using the `VITE_APP_MODE` flag:
+1.  **Global Admin Panel** (Port 3001)
+2.  **Tenant Admin Panel** (Port 3002)
+3.  **Moderation Command Center** (Port 3003)
 
-### Poziom 4: Użytkownik / Sportowiec
-*   **Zakres**: Własny profil i wygenerowane trasy.
-*   **Uprawnienia**: Rejestrowanie telemetrii, analiza własnych statystyk, udział w rankingach.
+#### 4.2 Source Code Organization (`admin/src/`)
+*   `core/`: Application skeleton, routing, and global styles.
+*   `modules/`: Domain-specific logic (Analytics, Anti-Cheat, Moderation, Social, Tracking).
+*   `shared/`: Common UI components, hooks, and TypeScript types.
 
-## 4. Technologie i Mechanizmy Detekcji
-*   **Backend**: Django (DRF) dla logiki biznesowej i zarządzania rolami + FastAPI dla wysokowydajnej telemetrii (ASGI).
-*   **Geo-weryfikacja**: Wykorzystanie bibliotek `GeoPandas`, `Shapely` oraz silnika `BRouter` do weryfikacji wektorów przyspieszeń i walki z oszustwami (e-bike, transport samochodowy).
-*   **Frontend**: TypeScript, React, Zustand (stan UI) oraz TanStack Query (zarządzanie danymi serwerowymi).
+### 5. Anti-Cheat Engine
+The platform employs advanced detection algorithms in Python.
+*   **BRouter Integration**: Verifies that tracks adhere to real-world topology.
+*   **Vector Analysis**: Detects anomalies like E-bike usage or vehicle transport by analyzing acceleration vectors and heart rate correlations (where available).
+*   **Human-in-the-Loop**: Flagged sessions are automatically routed to the **Moderator App** for manual review and disciplinary actions (Cropping, Disqualification).
 
 ---
-*Opracowano na podstawie wytycznych architektury SPORT 2026.*
+*Updated: 2026-04-24 | Arch-Ref: SPORT-PHASE-5-RBAC*

@@ -1,34 +1,48 @@
-# Architektura Paneli Administracyjnych (SPORT Phase 5+)
+# Admin Panel Technical Architecture
 
-## 1. Koncepcja Trzech Aplikacji (Multi-App Strategy)
-W celu zapewnienia najwyższego poziomu izolacji i bezpieczeństwa, system SPORT został rozdzielony na trzy niezależne aplikacje webowe budowane z jednego kodu źródłowego (`src/admin`).
+## 1. Multi-App Deployment (The 3-Container Strategy)
+To ensure maximum security and isolation, the SPORT administrative interface is split into three independent web applications. While they share the same codebase, they are compiled into distinct bundles at build time.
 
-### 1.1 Izolacja Trybów (APP_MODE)
-Podczas budowania obrazów Docker, wstrzykiwana jest zmienna środowiskowa `VITE_APP_MODE`, która trwale konfiguruje przeznaczenie danej instancji:
+### 1.1 Application Modes (`VITE_APP_MODE`)
+The deployment mode is locked via environment variables during the build process:
 
-*   **GLOBAL_ADMIN** (Port 3001): Panel zarządczy dla właścicieli platformy.
-*   **LOCAL_ADMIN** (Port 3002): Panel B2B dla właścicieli klubów i miast (Tenant Admin).
-*   **MODERATOR** (Port 3003): Narzędzie operacyjne dla służb weryfikacyjnych (Anti-Cheat).
+*   **GLOBAL_ADMIN** (Port 3001): High-level platform management. Includes tenant onboarding and global analytics.
+*   **LOCAL_ADMIN** (Port 3002): B2B dashboard for club owners and city coordinators. Scoped to a specific Tenant ID.
+*   **MODERATOR** (Port 3003): Operational tool for Anti-Cheat verification and track inspection.
 
-## 2. Mapa Portów i Kontenerów
-Każda aplikacja działa jako osobny kontener Nginx:
+## 2. Modular Directory Structure
+The source code under `admin/src/` follows a domain-driven modular structure to ensure scalability and maintainability:
 
-| Serwis | Kontener | Port Host | Rola |
-| :--- | :--- | :--- | :--- |
-| `global_admin` | `sport_global_admin` | 3001 | Superuser |
-| `tenant_admin` | `sport_tenant_admin` | 3002 | Lokalny Admin |
-| `moderator` | `sport_moderator` | 3003 | Moderator |
+### 2.1 Core (`src/core/`)
+Contains the application shell, global routing logic, and centralized theme configuration.
 
-## 3. Struktura Widoków i Uprawnień (RBAC)
-Aplikacja wykorzystuje `react-router-dom` do dynamicznego serwowania tras w zależności od trybu `APP_MODE`:
+### 2.2 Modules (`src/modules/`)
+Each directory contains the views and logic for a specific business domain:
+*   `analytics/`: BI dashboards and usage statistics.
+*   `anti-cheat/`: Integrity monitoring and anomaly lists.
+*   `moderation/`: Interactive track review and moderation tools.
+*   `social/`: Management of clubs, challenges, and events.
+*   `tracking/`: Real-time map-based athlete tracking.
 
-*   **Wspólne**: `Live Tracking`.
-*   **Global Admin**: `Analytics (Global)`, `Anti-Cheat`, `Tenant Management`.
-*   **Local Admin**: `Analytics (Tenant)`, `Events`, `Clubs`.
-*   **Moderator**: `Moderation Center`, `Anti-Cheat`.
+### 2.3 Shared (`src/shared/`)
+Reusable assets across all modules:
+*   `components/`: UI library (TopBar, Sidebar, MapTrackViewer).
+*   `hooks/`: Shared React hooks (Auth, API fetching).
+*   `types/`: Centralized TypeScript definitions.
 
-## 4. Bezpieczeństwo i Kompilacja
-Dzięki zastosowaniu warunkowego renderowania tras na etapie kompilacji (Vite), kod nieużywanych widoków jest optymalizowany, a użytkownik (np. Moderator) nie posiada w swoim bundle'u komponentów do zarządzania finansami platformy.
+## 3. Security & Code Splitting
+By using build-time flags, Vite performs **tree-shaking** to physically remove code associated with other modes. For instance, the Moderator's bundle does not contain the logic for financial transactions or tenant configuration, reducing the attack surface.
+
+## 4. Development Workflow
+To run a specific app mode locally:
+```bash
+VITE_APP_MODE=MODERATOR npm run dev
+```
+
+To build all apps via Docker/Podman:
+```bash
+podman-compose up -d --build
+```
 
 ---
-*Ostatnia aktualizacja: 2026-04-24*
+*Status: Production Ready | Architecture Version: 2.1.0*

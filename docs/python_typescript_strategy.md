@@ -1,39 +1,27 @@
-# DEVELOPMENT STRATEGY: PYTHON & TYPESCRIPT (THE "POWER COUPLE")
+# The Power Couple: Python & TypeScript Strategy
 
-## 1. Architectural Philosophy
-The "SPORT" platform leverages a dual-stack strategy to achieve the perfect equilibrium between **computational analytical power** (Python) and **high-performance, type-safe interfaces** (TypeScript). This "Power Couple" approach ensures that we remain agile during feature development while maintaining absolute stability in production.
+## 1. Vision
+The SPORT platform utilizes a "Power Couple" architecture: combining the analytical prowess of **Python** on the backend with the type-safe, responsive interfaces of **TypeScript** on the frontend. This strategy ensures rapid development, high performance, and absolute system reliability.
 
-## 2. Backend Engine: Python 3.12 (The Analytical Core)
-Python is the undisputed leader for geospatial processing, signal analysis, and complex business logic.
+## 2. The Role of Python (The Brain)
+Python is chosen for the backend due to its unparalleled ecosystem for spatial data and machine learning.
 
-### Framework Excellence
-- **Django 4.2 LTS**: Serves as the primary Command & Control center. It handles Identity (Auth), RBAC, relational data structures, and the administrative backbone.
-- **FastAPI**: A high-performance, asynchronous microservice dedicated to the **Telemetry Ingestion Layer**. It handles the thousands of concurrent GPS pings without blocking the main application flow.
-- **Pluggy**: The same plugin system used by `pytest`, allowing for isolated, discipline-specific sport validators (e.g., Run vs. Bike).
+*   **Django & DRF**: Provides the "Admin out of the box" experience, robust migrations, and the main B2B business logic.
+*   **FastAPI**: Handles high-concurrency real-time telemetry ingestion using asynchronous I/O (ASGI).
+*   **Spatial Analysis**: Libraries like `GeoPandas`, `Shapely`, and `BRouter` allow us to perform complex anti-cheat checks and route matching that would be impossible in simpler frameworks.
+*   **PostGIS Integration**: Python acts as the orchestrator for our PostGIS spatial database, managing RLS (Row-Level Security) and spatial indexing.
 
-### Geospatial Mastery
-- **PostGIS + TimescaleDB**: The "Golden Master" for sports data. We utilize hypertables for time-series GPS points and spatial indices for geofencing.
-- **GeoPandas / Shapely**: Used within the `analyze_anomalies` pipeline for deep topological verification.
+## 3. The Role of TypeScript (The Shield)
+TypeScript is used across the Admin Panel and the Mobile App (React Native) to provide a unified, type-safe development experience.
 
-## 3. Client Ecosystem: TypeScript (The Interface Pillar)
-TypeScript is enforced across all client-side codebases to guarantee predictability and eliminate entire classes of runtime errors.
+*   **Predictability**: Shared type definitions between the API and the UI eliminate "runtime surprises" and data mismatch errors.
+*   **Modular Architecture**: Our Admin Panel is organized into domain-specific modules (Analytics, Anti-Cheat, Moderation), ensuring that the codebase remains maintainable as it scales.
+*   **High-Performance UI**: Utilizing engines like MapLibre GL JS and Canvas-based rendering to visualize thousands of live athletes at 60 FPS.
 
-### Admin & Moderator Control Panels (React 19)
-- **Vite-powered**: Blazing fast HMR and optimized builds.
-- **TanStack Query v5**: Managed server-state with intelligent caching and optimistic UI updates.
-- **MapLibre GL JS**: High-frequency vector rendering (60 FPS) for real-time athlete tracking.
+## 4. Key Integration Points
+*   **JWT & RBAC**: A unified authentication flow where roles defined in Python are strictly enforced in the TypeScript UI.
+*   **Schema Synchronization**: Using TypeScript interfaces to mirror Pydantic and Django models, ensuring full-stack integrity.
+*   **Shared Logic**: Domain logic (like speed calculations or coordinate normalization) can be conceptually shared, reducing translation errors between backend and frontend teams.
 
-### Mobile Application (React Native 0.76)
-- **Expo Managed Workflow**: Ensures native module stability while allowing for rapid iterative development.
-- **TurboModules**: Leveraged for high-performance bridge communication during background tracking.
-- **MMKV Persistence**: C++ based local storage ensuring that GPS points are recorded even if the app process is terminated.
-
-## 4. Scalable Data Flow
-1.  **Ingestion (TS/FastAPI)**: Mobile device buffers points → Batch push (JSON/Protobuf) → FastAPI validates and writes to TimescaleDB.
-2.  **Processing (Python/Celery)**: Activity finish → 3-Layer Anti-Cheat pipeline → Distance/Pace calculation → Leaderboard update.
-3.  **Visualization (React/TanStack)**: Admin panel fetches materialized views → Reactive UI updates with zero-refresh.
-
-## 5. Engineering Standards
-- **Contract-First**: Every API endpoint is defined by a Pydantic schema (Python) or a Zod schema (TypeScript).
-- **Type Rigor**: `strict: true` in TS and full type annotations in Python are non-negotiable.
-- **Linting**: Unified by **Ruff** (Python) and **ESLint 9** (TypeScript).
+---
+*Document Version: 1.2.0 | Language: English*
