@@ -24,4 +24,7 @@ pluggy==1.5.0
 firebase-admin==6.6.0
 # Phase 10: Observability
 sentry-sdk[django,celery]==2.22.0
+# Milestone 5: ML Anti-Cheat Layer
+scikit-learn==1.4.2
+numpy==1.26.4
 

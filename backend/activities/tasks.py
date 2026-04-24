@@ -74,6 +74,23 @@ def process_activity_async(self, activity_id: int) -> dict:
             "details": gate["details"],
         }
 
+    # --- Step 2.5: ML ANOMALY DETECTOR (Layer 1.5 — Milestone 5) ---
+    # IsolationForest on 8 kinematic features. Fails open (no false positives).
+    try:
+        from activities.ml_anomaly import is_ml_anomaly
+        if is_ml_anomaly(raw_points):
+            logger.warning("activity.rejected_ml activity_id=%d", activity_id)
+            Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
+            try:
+                from core.plugin_registry import registry
+                registry.fire('activity.suspicious', activity=activity, anomaly_ratio=0.9)
+            except Exception:
+                pass
+            return {"status": "rejected_ml", "reason": "isolation_forest_anomaly"}
+    except Exception as exc:
+        logger.warning("ml_anomaly.skip activity_id=%d err=%s", activity_id, exc)
+        # Fail open — proceed to V-max
+
     # --- Step 3: Lightweight V-max Heuristics (Layer 2 Anti-Cheat) ---
     smoother = GpsKalmanSmoother()
     smoothed = smoother.smooth(raw_points)

@@ -4,6 +4,7 @@ from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, Telem
 from .admin_views import GlobalActivityListView, TenantActivityListView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .leaderboard_views import city_leaderboard, my_rank
+from .heatmap import heatmap_view, analytics_summary_view
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')
@@ -21,7 +22,7 @@ urlpatterns = [
     # Milestone 2: Leaderboard API (Redis-first, <5ms response)
     path('leaderboard/<str:city_id>/', city_leaderboard, name='city-leaderboard'),
     path('leaderboard/<str:city_id>/me/', my_rank, name='my-rank'),
+    # Milestone 5: Premium Analytics
+    path('heatmap/', heatmap_view, name='heatmap'),
+    path('analytics/', analytics_summary_view, name='analytics-summary'),
 ]
-
-
-

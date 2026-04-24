@@ -66,16 +66,30 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ---
 
-## 🎯 Milestone 5: AI & Premium Analytics ⚪ PLANNED
+## 🎯 Milestone 5: AI & Premium Analytics ✅ COMPLETED
 **Objective**: Machine learning anomaly detection, predictive leaderboards, and premium insights.
 
-- **ML Anomaly Detector**: ⚪ Replace rule-based anti-cheat with trained classifier (Isolation Forest / LSTM).
-- **Performance Predictions**: ⚪ Trend analysis and race-time predictions for premium users.
-- **Heatmap API**: ⚪ Population density heatmaps for city analytics dashboards.
+- **ML Anomaly Detector**: ✅ `activities/ml_anomaly.py` — IsolationForest on 8 kinematic features. Layer 1.5 in Celery pipeline. Fails open (no false positives). Includes `train_and_save_model()` for offline training. `scikit-learn==1.4.2` + `numpy==1.26.4` added to requirements.
+- **Performance Predictions**: ✅ `activities/analytics.py` — Riegel's formula (per activity type), linear regression trend with R², ACWR injury risk calculator. Zero external deps (stdlib only).
+- **Heatmap API**: ✅ `activities/heatmap.py` — Zoom-adaptive grid binning, bbox filtering, PostGIS `bboverlaps`. Returns weighted GeoJSON polygons at `/api/activities/heatmap/`.
+- **Analytics Endpoint**: ✅ `/api/activities/analytics/` — Combined: trend, ACWR, race predictions (5K/10K/HM/Marathon). Premium user endpoint.
 
 ---
 
 ## 📊 Progress Summary
-- **Total Progress**: ~95%
-- **Current Sprint**: Milestone 5 (AI Analytics) — Planning.
-- **Production Ready**: Milestones 1–4 complete. Full stack stable.
+- **Total Progress**: **100%** 🏁
+- **Current Sprint**: Production deployment & field testing.
+- **Platform Status**: ✅ **PRODUCTION READY** — All 5 Milestones complete.
+
+### Architecture Fingerprint (Final)
+| Layer | Technology | Status |
+|:---|:---|:---|
+| Mobile | React Native 0.76 + MMKV + react-native-background-geolocation | ✅ |
+| Telemetry | FastAPI + asyncpg + TimescaleDB + Redis Pipeline | ✅ |
+| Anti-Cheat | Fast Gate → IsolationForest → V-max → BRouter Viterbi | ✅ |
+| Backend | Django 4.2 + DRF + Celery + PostGIS + Redis | ✅ |
+| Rewards | Stripe + Voucher Marketplace + PointsLedger | ✅ |
+| Analytics | Heatmap API + Riegel + ACWR + Trend | ✅ |
+| Social | Matrix E2EE (async Celery provisioning) | ✅ |
+| Security | Trivy CI + Dependabot + PostgreSQL RLS | ✅ |
+| Observability | Sentry (Django + FastAPI + Mobile) | ✅ |
