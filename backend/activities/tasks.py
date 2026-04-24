@@ -168,7 +168,16 @@ def process_activity_async(self, activity_id: int) -> dict:
                 tenant_id=activity.user.tenant_id
             )
         except Exception: pass
-    
+
+        # Milestone 4: Award points for verified activity
+        try:
+            from rewards.services import RewardsService
+            points = RewardsService.award_for_activity(activity_id)
+            if points:
+                logger.info("rewards.awarded activity_id=%d points=%d", activity_id, points)
+        except Exception as exc:
+            logger.error("rewards.award_error activity_id=%d err=%s", activity_id, exc)
+
     return {"status": "done", "verified": is_verified}
 
 

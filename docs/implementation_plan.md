@@ -55,17 +55,27 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ---
 
-## 💰 Milestone 4: Scale & Monetization ⚪ PLANNED
+## 💰 Milestone 4: Scale & Monetization ✅ COMPLETED
 **Objective**: Multi-tenancy, payments, and marketplace.
 
-- **Stripe Integration**: ⚪ Subscription management for B2C and corporate B2B.
-- **Voucher Marketplace**: ⚪ Integration with sponsor POIs and reward redemption.
-- **Multi-Tenancy (RLS)**: ⚪ Row Level Security for isolated corporate data.
-- **OGC API Moving Features**: ⚪ Standardized telemetry export for Smart City partners.
+- **Stripe Integration**: ✅ `StripeService` — B2C/B2B checkout sessions, Customer Portal, webhook with signature verification.
+- **Voucher Marketplace**: ✅ `rewards` Django app — Sponsor, VoucherPool, Voucher, PointsLedger models. Atomic redemption via `SELECT FOR UPDATE` (race-condition safe). REST API: `/api/rewards/*`.
+- **Points Pipeline**: ✅ `RewardsService.award_for_activity` wired into Celery task — points auto-awarded on activity verification (10 pts/km, idempotent).
+- **Multi-Tenancy (RLS)**: ✅ `core/rls.py` — PostgreSQL Row Level Security policies on 5 tables with `set_tenant_context()` helper.
+- **OGC API Moving Features**: ✅ `/api/ogc/` — Conformance declaration, collections listing, paginated trajectory export in MF-JSON format.
+
+---
+
+## 🎯 Milestone 5: AI & Premium Analytics ⚪ PLANNED
+**Objective**: Machine learning anomaly detection, predictive leaderboards, and premium insights.
+
+- **ML Anomaly Detector**: ⚪ Replace rule-based anti-cheat with trained classifier (Isolation Forest / LSTM).
+- **Performance Predictions**: ⚪ Trend analysis and race-time predictions for premium users.
+- **Heatmap API**: ⚪ Population density heatmaps for city analytics dashboards.
 
 ---
 
 ## 📊 Progress Summary
-- **Total Progress**: ~75%
-- **Current Sprint**: Milestone 4 (Scale & Monetization).
-- **Stability**: [STABLE] Milestones 1-3 completed. All core tests passing.
+- **Total Progress**: ~95%
+- **Current Sprint**: Milestone 5 (AI Analytics) — Planning.
+- **Production Ready**: Milestones 1–4 complete. Full stack stable.
