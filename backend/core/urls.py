@@ -4,6 +4,10 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 from core.ogc_views import ogc_conformance, ogc_collections, ogc_collection_items, ogc_single_item
 from core.infra_views import redis_health_view, citus_health_view, infra_health_view
+from core.matrix_e2ee_verify import (
+    initiate_verification, accept_verification,
+    confirm_verification, verification_status,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -21,6 +25,11 @@ urlpatterns = [
     path('api/infra/health/',         infra_health_view,   name='infra-health'),
     path('api/infra/health/redis/',   redis_health_view,   name='infra-redis'),
     path('api/infra/health/citus/',   citus_health_view,   name='infra-citus'),
+    # Matrix E2EE SAS Key Verification
+    path('api/matrix/verify/initiate/', initiate_verification, name='matrix-verify-initiate'),
+    path('api/matrix/verify/accept/',   accept_verification,   name='matrix-verify-accept'),
+    path('api/matrix/verify/confirm/',  confirm_verification,  name='matrix-verify-confirm'),
+    path('api/matrix/verify/status/',   verification_status,   name='matrix-verify-status'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     # Phase 2: JWT Auth

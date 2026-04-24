@@ -171,7 +171,26 @@ CELERY_TIMEZONE = 'Europe/Warsaw'
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
     'activities.tasks.*': {'queue': 'critical'},
+    'activities.ml_retrain.*': {'queue': 'default'},
     'events.tasks.*': {'queue': 'critical'},
     'notifications.tasks.*': {'queue': 'notifications'},
 }
 CELERY_TASK_QUEUE_MAX_PRIORITY = 10
+
+# Celery Beat: Periodic task schedule
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    # ML model retraining — every Monday at 03:00 Warsaw (lowest load window)
+    'ml-model-retrain-weekly': {
+        'task': 'activities.tasks.retrain_ml_model',
+        'schedule': crontab(hour=3, minute=0, day_of_week=1),
+        'options': {'queue': 'default'},
+    },
+    # Leaderboard MV refresh — every 5 minutes
+    'refresh-city-rankings-mv': {
+        'task': 'activities.tasks.refresh_city_rankings_mv',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default'},
+    },
+}
