@@ -7,9 +7,9 @@ services:
     container_name: sport_db
     restart: always
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-sport_db}
-      POSTGRES_USER: ${POSTGRES_USER:-sport_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-sport_password_2026}
+      POSTGRES_DB: ${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      POSTGRES_USER: ${POSTGRES_USER:?err_POSTGRES_USER_not_set}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?err_DB_PASSWORD_not_set}
     ports:
       - "5432:5432"
     volumes:
@@ -49,6 +49,10 @@ services:
     volumes:
       - ./infrastructure/traccar/conf/traccar.xml:/opt/traccar/conf/traccar.xml:ro
       - ./infrastructure/traccar/logs:/opt/traccar/logs
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      TRACCAR_DB_PASSWORD: ${DB_PASSWORD}
     depends_on:
       - db
       - redis
@@ -61,10 +65,14 @@ services:
     restart: always
     command: sh -c "python manage.py makemigrations users activities && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
-      DEBUG: ${DEBUG:-1}
-      SECRET_KEY: ${SECRET_KEY:-django-insecure-key}
-      DATABASE_URL: postgres://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
+      MATRIX_TOKEN: ${MATRIX_TOKEN:-}
+      BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
+      TRACCAR_URL: ${TRACCAR_URL:-http://traccar:8082}
     ports:
       - "8000:8000"
     volumes:
@@ -82,9 +90,12 @@ services:
     ports:
       - "8001:8001"
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      TRACCAR_REDIS_CHANNEL: ${TRACCAR_REDIS_CHANNEL:-traccar:positions}
     depends_on:
       - db
+      - redis
 
   # Admin Dashboard (React/Vite)
   admin:
@@ -103,9 +114,28 @@ services:
     restart: always
     command: celery -A core worker -Q critical,notifications -l info --concurrency=4
     environment:
-      DEBUG: ${DEBUG:-1}
-      SECRET_KEY: ${SECRET_KEY:-django-insecure-key}
-      DATABASE_URL: postgres://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
+      MATRIX_TOKEN: ${MATRIX_TOKEN:-}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+
+  # Celery Beat — periodic task scheduler
+  celery_beat:
+    build: ./backend
+    container_name: sport_celery_beat
+    restart: always
+    command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     volumes:
       - ./backend:/app

@@ -1,72 +1,118 @@
-# Developer Quick Start Guide: "SPORT" Platform
+# Developer Quickstart — SPORT Platform v0.1.0-alpha
 
-Welcome to the **SPORT** platform project. This guide will help you get your development environment up and running as quickly as possible.
+> Czas do uruchomienia: **~15 minut** (zakładając Docker i Git)
 
-## 1. Prerequisites
-Ensure you have the following installed on your machine:
-- **Docker & Docker Compose**
-- **Python 3.11+** (for local backend development)
-- **Node.js 18+ & npm** (for Admin Dashboard)
-- **Flutter SDK** (for Mobile App)
+## Wymagania
 
-## 2. Infrastructure Setup (Phase 1)
-The core infrastructure runs on Docker. Launch it using:
-```bash
-docker-compose up -d
-```
-This will start:
-- **PostGIS** (Port 5432)
-- **Redis** (Port 6379)
-- **Traccar** (Port 8082)
-- **BRouter** (Port 17878)
-- **Backend API** (Port 8000)
-
-## 3. Backend Development (Django)
-Navigate to the `backend` directory:
-```bash
-cd backend
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py createsuperuser
-python manage.py runserver
-```
-- **API Docs**: [http://localhost:8000/api/docs/](http://localhost:8000/api/docs/)
-- **Admin Panel**: [http://localhost:8000/admin/](http://localhost:8000/admin/)
-
-## 4. Admin Dashboard (React/Vite)
-Navigate to the `admin` directory:
-```bash
-cd admin
-npm install
-npm run dev
-```
-- **Local Dev**: [http://localhost:5173/](http://localhost:5173/)
-
-## 5. Mobile App (Flutter)
-Navigate to the `mobile` directory:
-```bash
-cd mobile
-flutter pub get
-flutter run
-```
-*Note: Ensure you have an Android/iOS emulator or a physical device connected.*
-
-## 6. Coding Standards & Constitution
-Before you write any code, you **MUST** read the following documents:
-- **[Constitution.md](../constitution.md)**: Core project rules and ethics.
-- **[Python/TypeScript Strategy](../python_typescript_strategy.md)**: Technical standards.
-- **[AI Toolkit Constitution](../ai_toolkit_constitution.md)**: Safety and quality gates.
-
-### Mandatory Rules:
-1.  **Conventional Commits**: Every commit must follow the `type: description` format.
-2.  **API Documentation**: Every new endpoint must be documented in Swagger.
-3.  **Docstrings/JSDoc**: No code will be merged without proper documentation.
-4.  **Privacy First**: Never store or log raw GPS data from privacy zones.
-
-## 7. Useful Commands
-- `docker-compose logs -f backend`: View live backend logs.
-- `python manage.py test`: Run backend tests.
-- `npm run lint`: Run frontend linting.
+| Narzędzie | Minimalna wersja |
+|:---|:---|
+| Docker / Podman | 24.0+ |
+| Docker Compose | v2.24+ |
+| Git | 2.40+ |
 
 ---
-**Happy coding! Let's build the future of active communities.**
+
+## 1. Klonowanie
+
+```bash
+git clone https://github.com/karnalooch/stunning-pancake.git sport
+cd sport
+```
+
+---
+
+## 2. Konfiguracja środowiska
+
+```bash
+cp .env.example .env
+```
+
+Otwórz `.env` i wypełnij **WSZYSTKIE** pola oznaczone `CHANGE_ME`:
+
+```bash
+# Generuj SECRET_KEY:
+python -c "import secrets; print(secrets.token_hex(50))"
+
+# Ustaw mocne haslo DB i wklej wynik SECRET_KEY do .env
+```
+
+> Nigdy nie commituj `.env` do repozytorium. Plik jest w .gitignore.
+
+---
+
+## 3. Uruchomienie stacku
+
+```bash
+docker compose up --build -d
+```
+
+Sprawdz status:
+
+```bash
+docker compose ps
+```
+
+Oczekiwane kontenery ze statusem `Up`:
+
+```
+sport_db        - TimescaleDB + PostGIS    :5432
+sport_redis     - Redis 7                  :6379
+sport_traccar   - Traccar 6                :8082
+sport_brouter   - BRouter 1.7             :17777
+sport_backend   - Django API              :8000
+sport_telemetry - FastAPI Telemetry       :8001
+sport_admin     - React Admin             :3000
+sport_celery_worker
+sport_celery_beat
+```
+
+---
+
+## 4. Migracje i superuser
+
+```bash
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py createsuperuser
+```
+
+---
+
+## 5. Weryfikacja
+
+| Endpoint | Oczekiwana odpowiedz |
+|:---|:---|
+| `http://localhost:8000/api/docs/` | Swagger UI (Django REST) |
+| `http://localhost:8001/api/telemetry/docs` | Swagger UI (FastAPI Telemetry) |
+| `http://localhost:8001/api/telemetry/health` | `{"status": "ok"}` |
+| `http://localhost:3000/` | Admin Dashboard |
+| `http://localhost:8082/` | Traccar Web UI |
+
+---
+
+## 6. Testy
+
+```bash
+docker compose exec backend python manage.py test --verbosity=2
+```
+
+---
+
+## Architektura w skrocie
+
+```
+Mobile GPS -> [batch 30s] -> FastAPI :8001 -> TimescaleDB
+Traccar    -> [Redis pub/sub] -> FastAPI -> WebSocket -> Admin Map
+Activity.finish() -> Celery -> Kalman -> Viterbi -> BRouter -> Leaderboard
+```
+
+Pelna dokumentacja: docs/constitution.md | docs/project_structure.md
+
+---
+
+## Rozwiazywanie problemow
+
+**Kontener `db` nie startuje:** upewnij sie ze DB_PASSWORD, POSTGRES_USER, POSTGRES_DB sa ustawione w .env
+
+**Backend rzuca `KeyError: DATABASE_URL`:** upewnij sie ze .env jest w glownym katalogu projektu
+
+**Traccar nie laczy sie z DB:** sprawdz czy TRACCAR_DB_PASSWORD w .env rowna sie DB_PASSWORD

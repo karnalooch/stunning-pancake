@@ -2,21 +2,46 @@
 
 <!DOCTYPE properties SYSTEM 'http://java.sun.com/dtd/properties.dtd'>
 
+<!--
+  Traccar Configuration — SPORT Platform
+  =========================================
+  Passwords are injected via docker-compose environment variables.
+  Never hardcode credentials here.
+
+  See .env.example for all required env vars.
+-->
+
 <properties>
 
     <entry key='config.default'>./conf/default.xml</entry>
 
-    <!-- Database Configuration (PostGIS) -->
+    <!-- Database: Reads password from environment (injected by docker-compose) -->
     <entry key='database.driver'>org.postgresql.Driver</entry>
-    <entry key='database.url'>jdbc:postgresql://db:5432/sport_db</entry>
-    <entry key='database.user'>sport_user</entry>
-    <entry key='database.password'>sport_secure_pass_42a8b9f</entry>
+    <entry key='database.url'>jdbc:postgresql://db:5432/${POSTGRES_DB}</entry>
+    <entry key='database.user'>${POSTGRES_USER}</entry>
+    <entry key='database.password'>${TRACCAR_DB_PASSWORD}</entry>
 
-    <!-- Redis Configuration for Caching -->
+    <!--
+        Redis: Traccar publishes position updates to Redis pub/sub channel.
+        The FastAPI telemetry service subscribes and broadcasts via WebSocket.
+
+        Channel: traccar:positions
+        Format: JSON { device_id, lat, lon, speed, timestamp }
+
+        This decouples Traccar → Redis → FastAPI → Admin WS (Constitution §24.1).
+        Avoids direct HTTP webhook to Django which causes cascading failures under load.
+    -->
     <entry key='redis.enabled'>true</entry>
     <entry key='redis.host'>redis</entry>
+    <entry key='redis.port'>6379</entry>
+    <entry key='redis.channel'>traccar:positions</entry>
 
-    <!-- BRouter Configuration for Anti-Cheat Validation -->
+    <!-- Forward positions to Redis pub/sub instead of HTTP webhook -->
+    <entry key='event.forward.enable'>true</entry>
+    <entry key='event.forward.url'>redis://redis:6379</entry>
+    <entry key='event.forward.types'>positionStored</entry>
+
+    <!-- BRouter for anti-cheat route validation -->
     <entry key='geocoder.type'>osm</entry>
     <entry key='router.type'>brouter</entry>
     <entry key='router.url'>http://brouter:17878/brouter</entry>

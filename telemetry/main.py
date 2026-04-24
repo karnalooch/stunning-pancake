@@ -16,6 +16,7 @@ Run (dev):
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import time
@@ -52,10 +53,12 @@ app.add_middleware(
 # Database connection pool (TimescaleDB / PostgreSQL)
 # ---------------------------------------------------------------------------
 
-DB_DSN = os.getenv(
-    "DATABASE_URL",
-    "postgresql://sport_user:sport_secure_pass_42a8b9f@db:5432/sport_db",
-)
+# Fail fast — DATABASE_URL must be set via .env / docker-compose
+DB_DSN = os.environ["DATABASE_URL"]  # raises KeyError if missing
+
+# Redis for Traccar pub/sub bridge
+REDIS_URL  = os.getenv("REDIS_URL", "redis://redis:6379/0")
+TRACCAR_CHANNEL = os.getenv("TRACCAR_REDIS_CHANNEL", "traccar:positions")
 
 _pool: asyncpg.Pool | None = None
 
@@ -95,6 +98,9 @@ async def startup() -> None:
             logger.warning("timescaledb hypertable creation skipped: %s", exc)
 
     logger.info("telemetry service started — pool ready")
+    # Start Traccar → Redis bridge as background task
+    asyncio.create_task(_traccar_redis_bridge())
+    logger.info("traccar_redis_bridge: listener started on channel=%s", TRACCAR_CHANNEL)
 
 
 @app.on_event("shutdown")
@@ -135,6 +141,71 @@ class ConnectionManager:
 
 
 manager = ConnectionManager()
+
+
+# ---------------------------------------------------------------------------
+# Traccar → Redis pub/sub bridge (Constitution §24.1 Architecture Fix)
+# ---------------------------------------------------------------------------
+# Traccar publishes positions to Redis channel 'traccar:positions' instead of
+# sending HTTP webhooks to Django. This prevents cascading failures under load.
+# The bridge consumes from Redis and broadcasts to WebSocket clients + writes DB.
+# ---------------------------------------------------------------------------
+
+async def _traccar_redis_bridge() -> None:
+    """
+    Subscribes to the Redis pub/sub channel that Traccar writes to.
+    On each message, writes to TimescaleDB and broadcasts via WebSocket.
+
+    Traccar publishes JSON: { deviceId, lat, lon, speed, timestamp }
+    """
+    import aioredis  # type: ignore[import]
+
+    while True:
+        try:
+            redis = await aioredis.from_url(REDIS_URL)
+            pubsub = redis.pubsub()
+            await pubsub.subscribe(TRACCAR_CHANNEL)
+            logger.info("traccar_bridge: subscribed to channel=%s", TRACCAR_CHANNEL)
+
+            async for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                try:
+                    data = json.loads(message["data"])
+                    device_id  = str(data.get("deviceId", "unknown"))
+                    lat        = float(data["lat"])
+                    lon        = float(data["lon"])
+                    speed_ms   = float(data.get("speed", 0))
+                    ts         = float(data.get("fixTime", time.time()))
+
+                    # Write to TimescaleDB
+                    pool = await get_pool()
+                    async with pool.acquire() as conn:
+                        await conn.execute(
+                            """
+                            INSERT INTO gps_points
+                                (time, device_id, lat, lon, speed_ms)
+                            VALUES (to_timestamp($1), $2, $3, $4, $5)
+                            ON CONFLICT DO NOTHING
+                            """,
+                            ts, device_id, lat, lon, speed_ms,
+                        )
+
+                    # Broadcast to Admin Dashboard
+                    await manager.broadcast({
+                        "type":      "position_update",
+                        "device_id": device_id,
+                        "lat":       lat,
+                        "lon":       lon,
+                        "speed_ms":  speed_ms,
+                    })
+
+                except (KeyError, ValueError, json.JSONDecodeError) as exc:
+                    logger.warning("traccar_bridge: malformed message err=%s", exc)
+
+        except Exception as exc:
+            logger.error("traccar_bridge: connection lost err=%s — reconnecting in 5s", exc)
+            await asyncio.sleep(5)
 
 
 # ---------------------------------------------------------------------------
