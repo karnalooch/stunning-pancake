@@ -53,6 +53,13 @@ class SportHookSpec:
     """
 
     @hookspec
+    def validate_activity(self, activity: Any, processing_result: Any) -> bool:
+        """
+        Allows sport-specific plugins to perform additional validation.
+        If any plugin returns False, the activity is rejected.
+        """
+
+    @hookspec
     def activity_verified(self, activity: Any) -> Any:
         """
         Called after an activity is successfully verified.
@@ -327,3 +334,60 @@ class VoucherHotspotPlugin:
 
 
 registry.register(VOUCHER_MANIFEST, VoucherHotspotPlugin())
+
+
+# ---------------------------------------------------------------------------
+# Sport Disciplines: Run Validator Plugin
+# ---------------------------------------------------------------------------
+
+RUN_VALIDATOR_MANIFEST = PluginManifest(
+    name="run_validator",
+    version="1.0.0",
+    author="sport-core",
+    description="Custom validation logic for running activities.",
+    hooks=["validate_activity"],
+)
+
+class RunValidatorPlugin:
+    @hookimpl
+    def validate_activity(self, activity: Any, processing_result: Any) -> bool:
+        if activity.type != "RUN":
+            return True
+        
+        # Example: Reject runs with impossibly high elevation gain per km
+        # (Very simple biomechanical heuristic)
+        if hasattr(processing_result, 'total_elevation_gain'):
+            dist_km = processing_result.total_distance_m / 1000.0
+            if dist_km > 0.1:
+                gain_per_km = processing_result.total_elevation_gain / dist_km
+                if gain_per_km > 400: # >40% average grade is impossible for running long distances
+                    logger.warning("run_validator.rejected: gain_per_km=%.1f", gain_per_km)
+                    return False
+        return True
+
+registry.register(RUN_VALIDATOR_MANIFEST, RunValidatorPlugin())
+
+
+# ---------------------------------------------------------------------------
+# Sport Disciplines: Bike Validator Plugin
+# ---------------------------------------------------------------------------
+
+BIKE_VALIDATOR_MANIFEST = PluginManifest(
+    name="bike_validator",
+    version="1.0.0",
+    author="sport-core",
+    description="Custom validation logic for biking activities.",
+    hooks=["validate_activity"],
+)
+
+class BikeValidatorPlugin:
+    @hookimpl
+    def validate_activity(self, activity: Any, processing_result: Any) -> bool:
+        if activity.type != "BIKE":
+            return True
+        
+        # Example: Biking usually follows road networks more strictly
+        # We could check the map-matching confidence here.
+        return True
+
+registry.register(BIKE_VALIDATOR_MANIFEST, BikeValidatorPlugin())
