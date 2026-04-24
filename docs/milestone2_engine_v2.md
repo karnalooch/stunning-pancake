@@ -26,11 +26,12 @@ Milestone 2 delivers three major engine upgrades and two new mobile screens:
 
 | Component | Change | Impact |
 |:---|:---|:---|
-| Plugin System | Custom registry → **pluggy** | Isolated, testable plugins; pytest-compatible |
-| Anti-Cheat | Simple speed check → **V-max heuristics** | <2% false positive rate; configurable thresholds |
-| Leaderboard | Per-activity ZINCRBY → **Redis pipeline batch** | Handles 200+ concurrent finishes without data loss |
-| REST API | — | `GET /api/activities/leaderboard/<city>/` (<5ms) |
-| Mobile | Added **LoginScreen**, **HistoryScreen** | Full auth + history flow |
+| Data Flow | Traccar → **Redis Direct** | Bypasses HTTP; <1ms ingestion lag |
+| Plugin System | **Sport Validators** | Per-discipline logic (Run/Bike) using pluggy |
+| Anti-Cheat | **Lightweight Rejection** | Rejects fake tracks *before* BRouter call |
+| Rankings | **PostGIS Materialized Views** | Official city stats with `REFRESH CONCURRENTLY` |
+| Moderator Panel | **React + MapLibre** | Split-screen review of flagged activities |
+| Mobile Engine | **Haversine + Jitter Filter** | Real-time distance calculation on device |
 
 ---
 
@@ -52,10 +53,17 @@ The custom `PluginRegistry` from Milestone 1 used a simple dict of callables.
 # All hooks defined in SportHookSpec (core/plugin_registry.py)
 
 activity_verified(activity)        # Activity passed all validation checks
-activity_suspicious(activity, anomaly_ratio)  # V-max heuristics rejected the track
+validate_activity(activity, res)   # [NEW] Sport-specific veto (returns bool)
+activity_suspicious(activity, ratio) # V-max heuristics rejected the track
 event_completed(event)             # Event transitioned ACTIVE → COMPLETED
 club_created(club)                 # New club provisioned (triggers Matrix room)
 ```
+
+### Sport Discipline Plugins
+
+Milestone 2 introduces specialized validators:
+- **RunValidatorPlugin**: Rejects runs with impossible elevation gain (>400m/km).
+- **BikeValidatorPlugin**: Verifies biking tracks against cycling road networks.
 
 ### Backwards Compatibility
 
@@ -107,10 +115,9 @@ raw GPS points
       ↓
   Kalman Filter (noise reduction)
       ↓
-  analyze_anomalies()  ←─── NEW in Milestone 2
-    ├── detect_speed_anomalies()   (per-segment V-max check)
-    ├── consecutive run analysis   (3+ violations = reject)
-    └── anomaly ratio check        (>20% = reject)
+  analyze_anomalies()  ← Lightweight Heuristics (V-max)
+      ↓
+  [REJECT EARLY] if suspicious (Saves BRouter CPU)
       ↓
   Viterbi HMM Map Matching
       ↓
@@ -280,7 +287,19 @@ Returns the current user's rank and score.
 
 ---
 
-## 5. React Native — New Screens
+## 5. Moderator Control Panel (React)
+
+Milestone 2 adds a high-performance **Moderator Panel** for reviewing flagged tracks.
+
+### Features
+- **Split-screen View**: Activity list on the left, map/details on the right.
+- **MapLibre Visualization**: Renders the rejected track with anomaly markers.
+- **Action Suite**: One-click Approve, Reject, or Ban User.
+- **Technical Blue Theme**: Integrated with the Obsidian Design System.
+
+### Components
+- `ModeratorView.tsx`: Main layout and API integration.
+- `MapTrackViewer.tsx`: Reusable MapLibre GL component for track display.
 
 ### LoginScreen
 
@@ -337,6 +356,7 @@ Full schedule after Milestone 2:
 | Task | Schedule | Queue | Description |
 |:---|:---|:---|:---|
 | `recalculate_city_leaderboard` | Every 5 min | `default` | Atomic Redis pipeline batch recalc |
+| `refresh_city_rankings_mv` | Triggered | `default` | REFRESH MATERIALIZED VIEW CONCURRENTLY |
 | `send_leaderboard_digest` | Monday 08:00 | `notifications` | Weekly Matrix digest |
 | `close_expired_events` | Daily 00:05 | `default` | Auto-close + Redis cleanup |
 
@@ -412,6 +432,7 @@ LEADERBOARD_CACHE_TTL=30    # Redis TTL multiplier in seconds (actual = x60)
 │  └── _traccar_redis_bridge()  ← pub/sub from Traccar           │
 │                                                                 │
 │  TimescaleDB (gps_points hypertable)                            │
+│  PostGIS (city_rankings_mv Materialized View)                   │
 │  Redis (leaderboard sorted sets + pub/sub)                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
