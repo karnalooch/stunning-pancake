@@ -19,17 +19,14 @@ stunning-pancake/
 ├── telemetry/                  ← FastAPI Ingestion Engine (Port 8001)
 │   └── main.py                 ← Redis Direct Bridge + WebSocket Live
 │
-├── admin/                      ← React 19 Admin Dashboard (Port 5173)
+├── admin/                      ← React Admin Dashboard (Split into 3 apps)
 │   ├── src/
-│   │   ├── components/
-│   │   │   ├── MapTrackViewer.tsx ← MapLibre track renderer
-│   │   │   └── Sidebar.tsx        ← RBAC-enabled navigation
-│   │   └── views/
-│   │       ├── ModeratorView.tsx  ← Flagged activity review panel
-│   │       └── AntiCheatView.tsx  ← System health & heuristic stats
+│   │   ├── core/               ← Main App & Routing
+│   │   ├── modules/            # Business Domains (Analytics, Anti-Cheat, etc.)
+│   │   └── shared/             # Common UI components (Sidebar, TopBar)
 │   └── package.json            ← Vite + TypeScript configuration
 │
-├── mobile/                     ← React Native Mobile App (Expo)
+├── user/                       ← React Native Mobile App (Athlete App)
 │   └── src/
 │       ├── services/
 │       │   └── GpsSyncManager.ts ← Haversine tracking & MMKV buffering
@@ -39,11 +36,10 @@ stunning-pancake/
 │
 ├── docs/                       ← Engineering & Business Documentation
 │   ├── constitution.md         ← Core principles & Safety Constitution
-│   ├── milestone2_engine_v2.md ← Technical spec for current phase
-│   └── architecture/           ← Module-specific deep dives
+│   ├── architecture_report.md  ← RBAC & Multi-tenant technical spec
+│   └── adr/                    ← Architecture Decision Records
 │
-└── docker-compose.yml          ← Integrated development environment
-```
+└── docker-compose.yml          ← Integrated development environment (11+ services)```
 
 ## Core Architecture Principles
 
@@ -63,5 +59,5 @@ This is where the mathematical brain of the project lives. It handles coordinate
 ### `/admin/src/views`
 The control panels for different user roles. `ModeratorView` is the primary interface for managing system integrity in Milestone 2.
 
-### `/mobile/src/services`
+### `/user/src/services`
 The client-side telemetry engine. Responsible for battery-aware GPS polling and real-time metric derivation.
