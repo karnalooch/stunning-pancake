@@ -8,17 +8,17 @@ drf-spectacular==0.26.5
 redis==5.0.1
 pydantic==2.5.2
 requests==2.31.0
-dj-database-url==2.1.0
+dj-database-url==3.1.2
 django-filter==23.3
 djangorestframework-gis==1.0.0
 stripe==10.4.0
-Pillow==11.2.1
+Pillow==12.2.0
 # Phase 2: Authentication
 djangorestframework-simplejwt==5.3.1
 django-allauth==0.61.1
 # Phase 7: Async + Notifications
 celery==5.3.6
 django-celery-results==2.5.1
-firebase-admin==6.4.0
+firebase-admin==7.4.0
 # Phase 10: Observability
 sentry-sdk[django,celery]==2.5.0
