@@ -17,9 +17,9 @@
 
     <!-- Database: Reads password from environment (injected by docker-compose) -->
     <entry key='database.driver'>org.postgresql.Driver</entry>
-    <entry key='database.url'>jdbc:postgresql://db:5432/${POSTGRES_DB}</entry>
-    <entry key='database.user'>${POSTGRES_USER}</entry>
-    <entry key='database.password'>${TRACCAR_DB_PASSWORD}</entry>
+    <entry key='database.url'>jdbc:postgresql://db:5432/sport_db</entry>
+    <entry key='database.user'>sport_user</entry>
+    <entry key='database.password'>sport_secure_pass_42a8b9f</entry>
 
     <!--
         Redis: Traccar publishes position updates to Redis pub/sub channel.

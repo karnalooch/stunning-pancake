@@ -11,10 +11,10 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { id: 'live',      label: 'Live Tracking', icon: '📡' },
   { id: 'events',    label: 'Events',        icon: '🏆' },
-  { id: 'clubs',     label: 'Clubs',         icon: '🛡️' },
-  { id: 'anticheat', label: 'Anti-Cheat',    icon: '🔍', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_MODERATOR', 'OWNER'] },
-  { id: 'moderator', label: 'Moderator',    icon: '🛡️', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_MODERATOR'] },
-  { id: 'analytics', label: 'Analytics',     icon: '📊', allowedRoles: ['GLOBAL_ADMIN', 'OWNER'] },
+  { id: 'clubs',     label: 'Clubs',         icon: '👥' },
+  { id: 'anticheat', label: 'Anti-Cheat',    icon: '🔍', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN', 'MODERATOR'] },
+  { id: 'moderator', label: 'Moderator',     icon: '🛡️', allowedRoles: ['GLOBAL_ADMIN', 'MODERATOR'] },
+  { id: 'analytics', label: 'Analytics',     icon: '📈', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN'] },
 ];
 
 interface SidebarProps {

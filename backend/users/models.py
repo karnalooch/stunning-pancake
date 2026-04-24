@@ -3,13 +3,13 @@ from django.db import models
 
 class User(AbstractUser):
     ROLE_CHOICES = (
-        ('OWNER', 'Project Owner'),
-        ('GLOBAL_ADMIN', 'Global Administrator'),
-        ('LOCAL_MODERATOR', 'Local Moderator'),
-        ('ATHLETE', 'End User / Athlete'),
+        ('GLOBAL_ADMIN', 'Superuser / Global Admin'),
+        ('LOCAL_ADMIN', 'Tenant Admin / Coordinator'),
+        ('MODERATOR', 'Moderator / Support'),
+        ('USER', 'Athlete / User'),
     )
     
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='ATHLETE')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='USER')
     is_premium = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(max_length=500, blank=True)

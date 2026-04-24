@@ -1,8 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './index.css';
-import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
-import type { ViewId } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { LiveTrackingView } from './views/LiveTrackingView';
 import { EventsView } from './views/EventsView';
@@ -10,65 +9,37 @@ import { ClubsView } from './views/ClubsView';
 import { AntiCheatView } from './views/AntiCheatView';
 import { AnalyticsView } from './views/AnalyticsView';
 import { ModeratorView } from './views/ModeratorView';
+import { UserSimulator } from './components/UserSimulator';
 
-// ─── Session context (replace with real auth context in Phase 2+ full wiring) ───
+const APP_MODE = (import.meta.env.VITE_APP_MODE || 'GLOBAL_ADMIN') as 'GLOBAL_ADMIN' | 'LOCAL_ADMIN' | 'MODERATOR';
+
 const SESSION = {
   userName: 'Wojciech Kowalski',
-  userRole: 'GLOBAL_ADMIN',
+  userRole: APP_MODE, // Role is locked by the application mode
 };
 
-/**
- * App — thin orchestrator (Phase 5 refactor).
- *
- * Responsibility: layout skeleton + view routing.
- * All logic lives inside individual view modules under src/views/.
- *
- * Adding a new module:
- *   1. Create src/views/MyView.tsx
- *   2. Add entry to NAV_ITEMS in Sidebar.tsx
- *   3. Add case in renderView() below — done.
- */
-const App: React.FC = () => {
-  const [activeView, setActiveView] = useState<ViewId>('live');
-
-  const renderView = () => {
-    switch (activeView) {
-      case 'live':      return <LiveTrackingView />;
-      case 'events':    return <EventsView />;
-      case 'clubs':     return <ClubsView />;
-      case 'anticheat': return <AntiCheatView />;
-      case 'moderator': return <ModeratorView />;
-      case 'analytics': return <AnalyticsView />;
-      default:          return <LiveTrackingView />;
-    }
-  };
-
-  const viewTitles: Record<ViewId, string> = {
-    live:      'Real-Time Live Tracking',
-    events:    'Event Management',
-    clubs:     'Clubs & Challenges',
-    anticheat: 'Anti-Cheat Monitor',
-    moderator: 'Moderator Control Panel',
-    analytics: 'City Analytics',
-  };
+const AppContent = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const path = location.pathname.split('/').filter(Boolean)[0] || 'live';
+  const activeView = path as any;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-deep)' }}>
-      {/* Top bar */}
       <TopBar
         userName={SESSION.userName}
         userRole={SESSION.userRole}
+        appTitle={`${APP_MODE.replace('_', ' ')} PANEL`}
       />
 
-      {/* Body: sidebar + content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar
           activeView={activeView}
-          onViewChange={setActiveView}
+          onViewChange={(view) => navigate(`/${view}`)}
           userRole={SESSION.userRole}
         />
 
-        {/* Main content area */}
         <main style={{
           flex: 1,
           overflowY: 'auto',
@@ -77,21 +48,47 @@ const App: React.FC = () => {
           flexDirection: 'column',
           gap: '0',
         }}>
-          {/* View title */}
-          <div style={{ marginBottom: '20px' }}>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-              {viewTitles[activeView]}
-            </h1>
-          </div>
+          <Routes>
+            {/* Common Routes */}
+            <Route path="/live" element={<LiveTrackingView />} />
+            
+            {/* Mode Specific Routes */}
+            {APP_MODE === 'GLOBAL_ADMIN' && (
+               <>
+                 <Route path="/analytics" element={<AnalyticsView />} />
+                 <Route path="/anticheat" element={<AntiCheatView />} />
+               </>
+            )}
 
-          {/* Active view */}
-          <div style={{ flex: 1 }}>
-            {renderView()}
-          </div>
+            {APP_MODE === 'LOCAL_ADMIN' && (
+               <>
+                 <Route path="/analytics" element={<AnalyticsView />} />
+                 <Route path="/events" element={<EventsView />} />
+                 <Route path="/clubs" element={<ClubsView />} />
+               </>
+            )}
+
+            {APP_MODE === 'MODERATOR' && (
+               <>
+                 <Route path="/moderator" element={<ModeratorView />} />
+                 <Route path="/anticheat" element={<AntiCheatView />} />
+               </>
+            )}
+
+            <Route path="/" element={<LiveTrackingView />} />
+          </Routes>
+          
+          <UserSimulator />
         </main>
       </div>
     </div>
   );
 };
+
+const App = () => (
+  <Router>
+    <AppContent />
+  </Router>
+);
 
 export default App;

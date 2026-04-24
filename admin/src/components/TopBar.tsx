@@ -1,11 +1,12 @@
 interface TopBarProps {
   userRole: string;
   userName: string;
+  appTitle?: string;
   onSearch?: (query: string) => void;
 }
 
 /** Top navigation bar with global search and user profile. */
-export const TopBar = ({ userRole, userName, onSearch }: TopBarProps) => {
+export const TopBar = ({ userRole, userName, appTitle, onSearch }: TopBarProps) => {
   const initials = userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
@@ -23,7 +24,7 @@ export const TopBar = ({ userRole, userName, onSearch }: TopBarProps) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary)', letterSpacing: '-1px' }}>SPORT</span>
         <span style={{ color: 'var(--border)', fontSize: '18px' }}>/</span>
-        <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>Admin Portal</span>
+        <span style={{ fontSize: '13px', color: 'var(--text-dim)', fontWeight: 700 }}>{appTitle || 'Admin Portal'}</span>
       </div>
 
       {/* Center: search */}

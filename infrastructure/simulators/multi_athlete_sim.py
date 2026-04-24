@@ -95,11 +95,24 @@ class BRouterAthleteSimulator(threading.Thread):
                 self.lon += (d_lon_m / dist_m) * move_step_m / m_per_lon
             
             try:
+                # 1. Standard Traccar ingestion (OsmAnd protocol)
                 requests.get(PROTO_URL, params={
                     "id": self.device_id, "lat": self.lat, "lon": self.lon,
                     "timestamp": int(time.time()), "speed": self.speed_kmh / 1.852
-                }, timeout=5)
-            except: pass
+                }, timeout=2)
+                
+                # 2. Direct Telemetry Injection (FastAPI) for immediate Dashboard update
+                # This bypasses the Traccar->Redis bridge if it's unstable.
+                requests.post("http://localhost:8001/api/telemetry/ingest", json={
+                    "device_id": self.device_id,
+                    "lat": self.lat,
+                    "lon": self.lon,
+                    "speed_ms": self.speed_kmh / 3.6,
+                    "activity_type": 'bicycle' if self.athlete_type == 'BIKE' else 'RUN',
+                    "timestamp": time.time()
+                }, timeout=2)
+            except Exception as e:
+                print(f"Ingestion Error for {self.name}: {e}")
                 
             time.sleep(2)
 

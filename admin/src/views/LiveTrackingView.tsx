@@ -21,6 +21,7 @@ interface WsMessage {
   lon?: number;
   speed_ms?: number;
   activity_id?: number | null;
+  activity_type?: string;
 }
 
 const TELEMETRY_WS = import.meta.env.VITE_TELEMETRY_WS ?? 'ws://localhost:8001/ws/telemetry/live';
@@ -53,7 +54,7 @@ export const LiveTrackingView = () => {
     const athlete: Athlete = {
       deviceId: msg.device_id,
       user_id: msg.user_id,
-      type: 'RUN',
+      type: msg.activity_type ?? 'RUN',
       lat: msg.lat,
       lng: msg.lon,
       speed: msg.speed_ms ?? 0,
