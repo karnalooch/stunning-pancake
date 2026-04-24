@@ -5,7 +5,7 @@ import random
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from users.models import User
+from users.models import User  # noqa: E402
 
 def seed_athletes():
     first_names = ["Adam", "Ewa", "Piotr", "Anna", "Marek", "Katarzyna", "Tomasz", "Magdalena", "Krzysztof", "Zofia"]

@@ -1,4 +1,4 @@
-from django.utils import timezone
+# noqa: F401 — timezone kept for potential future use
 
 class SocialSharingService:
     """

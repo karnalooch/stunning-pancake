@@ -1,6 +1,6 @@
-﻿from django.test import TestCase
+from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.contrib.gis.geos import LineString, Point
+from django.contrib.gis.geos import Point
 from django.utils import timezone
 from .models import Activity, PrivacyZone
 

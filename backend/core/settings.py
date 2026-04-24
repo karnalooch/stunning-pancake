@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 from core.sentry import init_sentry
 init_sentry()  # Phase 10: Observability
@@ -108,7 +109,6 @@ REST_FRAMEWORK = {
     ],
 }
 
-from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),

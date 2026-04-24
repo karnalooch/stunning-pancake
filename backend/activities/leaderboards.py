@@ -1,6 +1,5 @@
 import redis
 import os
-from django.conf import settings
 
 class LeaderboardService:
     """

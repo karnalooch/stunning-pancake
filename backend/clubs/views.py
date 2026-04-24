@@ -1,7 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema
 from .models import Club, ClubMembership, ClubChallenge
 from .serializers import (
     ClubSerializer,

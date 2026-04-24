@@ -1,7 +1,7 @@
-import requests
-import json
 import os
-from django.conf import settings
+
+import requests
+from django.contrib.gis.geos import Point, LineString
 
 class BRouterService:
     """
@@ -50,7 +50,6 @@ class BRouterService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-from django.contrib.gis.geos import Point, LineString
 from .models import PrivacyZone
 
 class PrivacyService:

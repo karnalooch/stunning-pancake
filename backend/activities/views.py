@@ -2,8 +2,10 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
-from .models import Activity, PrivacyZone, POI, Voucher
+from .models import Activity, PrivacyZone, Voucher
 from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer
+from .services import TelemetryService
+from .social import SocialSharingService
 
 class ActivityViewSet(viewsets.ModelViewSet):
     """
@@ -38,7 +40,6 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['get'])
     def share_data(self, request, pk=None):
-        from .social import SocialSharingService
         activity = self.get_object()
         data = SocialSharingService.generate_activity_card_data(activity)
         return Response(data)
@@ -76,7 +77,6 @@ class VoucherRedeemView(generics.UpdateAPIView):
         except Voucher.DoesNotExist:
             return Response({"error": "invalid or already redeemed voucher"}, status=status.HTTP_400_BAD_REQUEST)
 
-from .services import TelemetryService
 
 class TelemetryLiveView(generics.GenericAPIView):
     """
