@@ -165,6 +165,22 @@ class SportApiClient {
     });
     return z.array(LeaderboardEntrySchema).parse(resp.data);
   }
+  // ------------------------------------------------------------------
+  // City Leaderboard (Milestone 2)
+  // ------------------------------------------------------------------
+
+  async getCityLeaderboard(cityId: string, limit = 50): Promise<LeaderboardEntry[]> {
+    const resp = await this._client.get(`/api/activities/leaderboard/${cityId}/`, {
+      params: { limit },
+    });
+    if (resp.status === 202) return [];  // recalculating
+    return z.array(LeaderboardEntrySchema).parse(resp.data.leaderboard ?? resp.data);
+  }
+
+  async getMyRank(cityId: string): Promise<{ rank: number | null; score_km: number }> {
+    const resp = await this._client.get(`/api/activities/leaderboard/${cityId}/me/`);
+    return resp.data as { rank: number | null; score_km: number };
+  }
 }
 
 // ---------------------------------------------------------------------------

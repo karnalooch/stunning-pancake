@@ -1,23 +1,100 @@
 """
-Plugin Registry — SPORT Platform
-=================================
+Plugin System v2 — SPORT Platform (pluggy-based)
+=================================================
 Constitution §23 + §8: Plugin-Based Extensibility Architecture
 
-Rules:
-- Plugins MUST NOT modify core models directly.
-- All interaction via Django Signals, middleware hooks, or this Registry.
-- Metadata stored in JSONB (PluginConfig model).
-- Each plugin declares a manifest and registers hooks.
+Replaces the custom PluginRegistry with the industry-standard `pluggy`
+library (same engine used by pytest). Provides:
+
+- Hook specifications (HookSpec) for all SPORT core events
+- Isolated plugin registration via pluggy.PluginManager
+- Full backwards-compatible API: registry.fire(), registry.hook()
+- Tracing mode when DEBUG=True
+
+Hook inventory:
+    activity.verified    — called after a valid activity is saved
+    activity.suspicious  — called when is_suspicious=True
+    event.completed      — called when an event transitions to COMPLETED
+    club.created         — called when a new club is provisioned
+
+Rules (Constitution §23):
+    - Plugins MUST NOT modify core models directly.
+    - All cross-domain interaction via these hooks only.
+    - Each plugin declares a PluginManifest for metadata/introspection.
 """
+from __future__ import annotations
+
 import logging
-from typing import Callable, Any
+import os
 from dataclasses import dataclass, field
+from typing import Any, Callable
+
+import pluggy
 
 logger = logging.getLogger(__name__)
+DEBUG = os.getenv("DEBUG", "0") == "1"
+
+# ---------------------------------------------------------------------------
+# Hook specification — defines the contract for each hook
+# ---------------------------------------------------------------------------
+
+PROJECT_NAME = "sport"
+hookspec = pluggy.HookspecMarker(PROJECT_NAME)
+hookimpl = pluggy.HookimplMarker(PROJECT_NAME)
+
+
+class SportHookSpec:
+    """
+    Formal hook specifications for the SPORT Plugin System.
+
+    Each method here defines a hook that plugins can implement.
+    The docstring is the contract: what arguments are passed, what
+    return values are expected.
+    """
+
+    @hookspec
+    def activity_verified(self, activity: Any) -> Any:
+        """
+        Called after an activity is successfully verified.
+
+        Args:
+            activity: The Django Activity model instance.
+
+        Returns:
+            Any dict or None. Results are collected by the engine.
+        """
+
+    @hookspec
+    def activity_suspicious(self, activity: Any, anomaly_ratio: float) -> Any:
+        """
+        Called when an activity fails kinematic validation (anomaly_ratio > threshold).
+
+        Args:
+            activity: The Django Activity model instance.
+            anomaly_ratio: Fraction of GPS segments that exceeded V-max.
+        """
+
+    @hookspec
+    def event_completed(self, event: Any) -> Any:
+        """
+        Called when an Event transitions from ACTIVE to COMPLETED.
+
+        Args:
+            event: The Django Event model instance.
+        """
+
+    @hookspec
+    def club_created(self, club: Any) -> Any:
+        """
+        Called when a new Club is created and provisioned.
+
+        Args:
+            club: The Django Club model instance.
+        """
 
 
 # ---------------------------------------------------------------------------
-# Plugin Manifest
+# Plugin Manifest (metadata)
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -26,12 +103,12 @@ class PluginManifest:
     Describes a plugin's identity and capabilities.
 
     Attributes:
-        name: Unique slug identifier (e.g. 'voucher_hotspots').
-        version: Semver string (e.g. '1.0.0').
-        author: Maintainer name/team.
-        description: Short description of what the plugin does.
-        hooks: List of hook names this plugin registers into.
-        pilot_mode: If True, plugin only activates for pilot tenants.
+        name: Unique slug (e.g. 'voucher_hotspots').
+        version: Semver string.
+        author: Maintainer name.
+        description: Short description.
+        hooks: List of hook names implemented.
+        pilot_mode: If True, only activates for pilot tenants.
     """
     name: str
     version: str
@@ -42,141 +119,122 @@ class PluginManifest:
 
 
 # ---------------------------------------------------------------------------
-# Registry
+# SPORT Plugin Manager (wraps pluggy.PluginManager)
 # ---------------------------------------------------------------------------
 
-class PluginRegistry:
+class SportPluginManager:
     """
-    Central registry for all SPORT plugins.
-
-    Implements an event-hook system analogous to pluggy.
-    Each hook is a named event (e.g. 'activity.verified', 'event.completed').
-    Plugins register callables against these hooks, which are invoked
-    by the core engine via :meth:`fire`.
-
-    Usage::
-
-        # In a plugin module:
-        from core.plugin_registry import registry, PluginManifest
-
-        MANIFEST = PluginManifest(
-            name='voucher_hotspots',
-            version='1.0.0',
-            author='akarn',
-            description='Awards vouchers when athletes pass sponsor POIs.',
-            hooks=['activity.verified'],
-        )
-
-        @registry.hook('activity.verified')
-        def on_activity_verified(activity, **kwargs):
-            ...  # check proximity to POIs, award vouchers
-
-        registry.register(MANIFEST)
+    Thin wrapper around pluggy.PluginManager that adds:
+    - PluginManifest registry for introspection
+    - Backwards-compatible .fire() and .hook() API
+    - DEBUG tracing
     """
 
     def __init__(self) -> None:
+        self._pm = pluggy.PluginManager(PROJECT_NAME)
+        self._pm.add_hookspecs(SportHookSpec)
         self._manifests: dict[str, PluginManifest] = {}
-        self._hooks: dict[str, list[Callable]] = {}
+
+        if DEBUG:
+            self._pm.enable_tracing()
+            logger.debug("pluggy: tracing enabled")
 
     # ------------------------------------------------------------------
     # Registration
     # ------------------------------------------------------------------
 
-    def register(self, manifest: PluginManifest) -> None:
+    def register(self, manifest: PluginManifest, plugin_obj: object | None = None) -> None:
         """
-        Registers a plugin manifest with the registry.
+        Registers a plugin manifest + optionally the plugin object.
 
         Args:
-            manifest: The plugin's PluginManifest.
+            manifest: Plugin identity/metadata.
+            plugin_obj: The class/module with @hookimpl methods. If None,
+                        the plugin is metadata-only (no hook handlers).
 
         Raises:
-            ValueError: If a plugin with the same name is already registered.
+            ValueError: If plugin name already registered.
         """
         if manifest.name in self._manifests:
             raise ValueError(f"Plugin '{manifest.name}' is already registered.")
         self._manifests[manifest.name] = manifest
+        if plugin_obj is not None:
+            self._pm.register(plugin_obj, name=manifest.name)
         logger.info("plugin.registered name=%s version=%s", manifest.name, manifest.version)
 
     def unregister(self, name: str) -> None:
-        """
-        Removes a plugin and all its hook handlers.
-
-        Args:
-            name: Plugin slug to remove.
-        """
+        """Removes plugin by name."""
         if name not in self._manifests:
-            logger.warning("plugin.unregister_failed name=%s (not found)", name)
+            logger.warning("plugin.unregister_failed name=%s", name)
             return
-        manifest = self._manifests.pop(name)
-        # Remove all handlers tagged with this plugin
-        for hook_name in manifest.hooks:
-            self._hooks[hook_name] = [
-                fn for fn in self._hooks.get(hook_name, [])
-                if getattr(fn, '_plugin_name', None) != name
-            ]
+        self._manifests.pop(name)
+        plugin = self._pm.get_plugin(name)
+        if plugin:
+            self._pm.unregister(plugin)
         logger.info("plugin.unregistered name=%s", name)
 
     # ------------------------------------------------------------------
-    # Hook decorator
-    # ------------------------------------------------------------------
-
-    def hook(self, hook_name: str) -> Callable:
-        """
-        Decorator that registers a function as a handler for a named hook.
-
-        Args:
-            hook_name: The hook event name (e.g. 'activity.verified').
-
-        Returns:
-            Decorator function.
-        """
-        def decorator(fn: Callable) -> Callable:
-            fn._hook_name = hook_name  # type: ignore[attr-defined]
-            self._hooks.setdefault(hook_name, []).append(fn)
-            logger.debug("hook.registered hook=%s fn=%s", hook_name, fn.__qualname__)
-            return fn
-        return decorator
-
-    # ------------------------------------------------------------------
-    # Firing hooks
+    # fire() — backwards-compatible hook dispatcher
     # ------------------------------------------------------------------
 
     def fire(self, hook_name: str, **kwargs: Any) -> list[Any]:
         """
-        Fires all handlers registered for a hook.
+        Fires all pluggy implementations registered for a hook.
 
-        Called by core engine (signals, views). Must not raise — all
-        exceptions are caught and logged to prevent one bad plugin from
-        breaking the core.
+        Translates dot-notation hook names ('activity.verified') to
+        pluggy method names ('activity_verified').
 
         Args:
-            hook_name: The event name.
-            **kwargs: Context data passed to each handler.
+            hook_name: Dot-notation hook name.
+            **kwargs: Context data forwarded to all implementations.
 
         Returns:
-            List of return values from each handler (None on exception).
+            List of return values from each implementation.
         """
-        results: list[Any] = []
-        for handler in self._hooks.get(hook_name, []):
-            plugin_name = getattr(handler, '_plugin_name', 'unknown')
-            try:
-                result = handler(**kwargs)
-                results.append(result)
-            except Exception as exc:
-                logger.error(
-                    "plugin.hook_error hook=%s plugin=%s err=%s",
-                    hook_name, plugin_name, exc,
-                    exc_info=True,
-                )
-                results.append(None)
-        return results
+        method_name = hook_name.replace(".", "_")
+        hook = getattr(self._pm.hook, method_name, None)
+        if hook is None:
+            logger.debug("plugin.fire: no hook '%s'", hook_name)
+            return []
+        try:
+            return hook(**kwargs)
+        except Exception as exc:
+            logger.error("plugin.fire_error hook=%s err=%s", hook_name, exc, exc_info=True)
+            return []
+
+    # ------------------------------------------------------------------
+    # hook() decorator — backwards-compatible shim
+    # ------------------------------------------------------------------
+
+    def hook(self, hook_name: str) -> Callable:
+        """
+        Decorator shim for backwards compatibility with the old registry API.
+
+        For new plugins, use @hookimpl directly and pass the object to register().
+        """
+        def decorator(fn: Callable) -> Callable:
+            # Tag the function so pluggy recognises it
+            fn = hookimpl(fn)
+            fn._hook_name = hook_name  # type: ignore[attr-defined]
+            # Create an ad-hoc plugin object wrapping the function
+            method_name = hook_name.replace(".", "_")
+            AdHocPlugin = type(
+                f"AdHocPlugin_{fn.__name__}",
+                (),
+                {method_name: staticmethod(fn)},
+            )
+            plugin = AdHocPlugin()
+            self._pm.register(plugin, name=f"adhoc_{hook_name}_{fn.__name__}")
+            logger.debug("hook.registered hook=%s fn=%s", hook_name, fn.__qualname__)
+            return fn
+        return decorator
 
     # ------------------------------------------------------------------
     # Introspection
     # ------------------------------------------------------------------
 
     def list_plugins(self) -> list[dict]:
-        """Returns a summary of all registered plugins."""
+        """Returns summary of all registered plugins."""
         return [
             {
                 "name": m.name,
@@ -191,14 +249,19 @@ class PluginRegistry:
 
     def get_hooks(self) -> dict[str, int]:
         """Returns hook names with handler counts."""
-        return {k: len(v) for k, v in self._hooks.items()}
+        counts: dict[str, int] = {}
+        for hook_name in ["activity_verified", "activity_suspicious", "event_completed", "club_created"]:
+            hook = getattr(self._pm.hook, hook_name, None)
+            if hook:
+                counts[hook_name.replace("_", ".")] = len(hook.get_hookimpls())
+        return counts
 
 
 # ---------------------------------------------------------------------------
-# Global singleton (imported by core engine and plugins)
+# Global singleton
 # ---------------------------------------------------------------------------
 
-registry = PluginRegistry()
+registry = SportPluginManager()
 
 
 # ---------------------------------------------------------------------------
@@ -206,68 +269,61 @@ registry = PluginRegistry()
 # ---------------------------------------------------------------------------
 
 VOUCHER_MANIFEST = PluginManifest(
-    name='voucher_hotspots',
-    version='1.0.0',
-    author='akarn',
-    description='Awards vouchers when athletes complete activities near sponsor POIs.',
-    hooks=['activity.verified'],
-    pilot_mode=False,
+    name="voucher_hotspots",
+    version="2.0.0",
+    author="akarn",
+    description="Awards vouchers when athletes complete activities near sponsor POIs.",
+    hooks=["activity.verified"],
 )
 
 
-@registry.hook('activity.verified')
-def voucher_hotspot_handler(activity=None, **kwargs) -> dict:
+class VoucherHotspotPlugin:
     """
-    Checks whether the verified activity passes within range of any sponsor POI
-    and, if so, assigns an unclaimed voucher to the athlete.
+    pluggy-native implementation of the Voucher Hotspot plugin.
 
-    This handler is completely decoupled from the core — it only reads Activity
-    and POI via Django ORM and writes to Voucher.redeemed_by.
-
-    Args:
-        activity: The saved Activity model instance.
-
-    Returns:
-        Dict with 'vouchers_awarded' count.
+    Checks if a verified activity passed within 100m of any sponsor POI
+    and assigns unclaimed vouchers to the athlete.
     """
-    if activity is None:
-        return {"vouchers_awarded": 0}
 
-    try:
-        from activities.models import POI, Voucher
-        from django.contrib.gis.measure import Distance as D
-
-        if not activity.route_path:
+    @hookimpl
+    def activity_verified(self, activity: Any) -> dict:
+        if activity is None:
             return {"vouchers_awarded": 0}
 
-        awarded = 0
-        nearby_pois = POI.objects.filter(
-            location__distance_lte=(activity.route_path, D(m=100))
-        )
+        try:
+            from activities.models import POI, Voucher
+            from django.contrib.gis.measure import Distance as D
 
-        for poi in nearby_pois:
-            voucher = (
-                Voucher.objects
-                .filter(poi=poi, is_redeemed=False)
-                .select_for_update(skip_locked=True)
-                .first()
+            if not activity.route_path:
+                return {"vouchers_awarded": 0}
+
+            awarded = 0
+            nearby_pois = POI.objects.filter(
+                location__distance_lte=(activity.route_path, D(m=100))
             )
-            if voucher:
-                voucher.is_redeemed = True
-                voucher.redeemed_by = activity.user
-                voucher.save(update_fields=['is_redeemed', 'redeemed_by'])
-                awarded += 1
-                logger.info(
-                    "voucher.awarded code=%s user=%s poi=%s",
-                    voucher.code, activity.user_id, poi.name,
+
+            for poi in nearby_pois:
+                voucher = (
+                    Voucher.objects
+                    .filter(poi=poi, is_redeemed=False)
+                    .select_for_update(skip_locked=True)
+                    .first()
                 )
+                if voucher:
+                    voucher.is_redeemed = True
+                    voucher.redeemed_by = activity.user
+                    voucher.save(update_fields=["is_redeemed", "redeemed_by"])
+                    awarded += 1
+                    logger.info(
+                        "voucher.awarded code=%s user=%s poi=%s",
+                        voucher.code, activity.user_id, poi.name,
+                    )
 
-        return {"vouchers_awarded": awarded}
+            return {"vouchers_awarded": awarded}
 
-    except Exception as exc:
-        logger.error("voucher_hotspot_handler.error err=%s", exc, exc_info=True)
-        return {"vouchers_awarded": 0}
+        except Exception as exc:
+            logger.error("voucher_hotspot.error err=%s", exc, exc_info=True)
+            return {"vouchers_awarded": 0}
 
 
-voucher_hotspot_handler._plugin_name = 'voucher_hotspots'  # type: ignore[attr-defined]
-registry.register(VOUCHER_MANIFEST)
+registry.register(VOUCHER_MANIFEST, VoucherHotspotPlugin())

@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView
 from .admin_views import GlobalActivityListView, TenantActivityListView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
+from .leaderboard_views import city_leaderboard, my_rank
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')
@@ -17,6 +18,10 @@ urlpatterns = [
     # Phase 9: Payments
     path('payments/checkout/', CreateCheckoutSessionView.as_view(), name='checkout'),
     path('payments/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
+    # Milestone 2: Leaderboard API (Redis-first, <5ms response)
+    path('leaderboard/<str:city_id>/', city_leaderboard, name='city-leaderboard'),
+    path('leaderboard/<str:city_id>/me/', my_rank, name='my-rank'),
 ]
+
 
 

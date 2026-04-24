@@ -21,9 +21,10 @@ app.autodiscover_tasks()
 # ---------------------------------------------------------------------------
 
 app.conf.task_routes = {
-    'activities.tasks.process_activity':        {'queue': 'critical'},
-    'activities.tasks.send_leaderboard_digest': {'queue': 'notifications'},
-    '*':                                         {'queue': 'default'},
+    'activities.tasks.process_activity':              {'queue': 'critical'},
+    'activities.tasks.send_leaderboard_digest':       {'queue': 'notifications'},
+    'activities.tasks.recalculate_city_leaderboard':  {'queue': 'default'},
+    '*':                                               {'queue': 'default'},
 }
 
 app.conf.task_queue_max_priority = 10
@@ -39,6 +40,12 @@ app.conf.beat_schedule = {
         'task': 'activities.tasks.send_leaderboard_digest',
         'schedule': crontab(hour=8, minute=0, day_of_week='monday'),
         'kwargs': {'city_id': 'siedlce', 'top_n': 10},
+    },
+    # Every 5 minutes — batch recalculate city leaderboard
+    'city-leaderboard-recalculate': {
+        'task': 'activities.tasks.recalculate_city_leaderboard',
+        'schedule': crontab(minute='*/5'),
+        'kwargs': {'city_id': 'siedlce'},
     },
     # Every day 00:05 — close expired events, reset Redis leaderboards
     'daily-event-cleanup': {

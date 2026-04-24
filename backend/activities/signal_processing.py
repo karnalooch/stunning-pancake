@@ -178,16 +178,33 @@ def total_distance_m(points: list[GpsPoint]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Kinematic anomaly detection (Anti-Cheat layer 2)
+# V-max Kinematic Heuristics (Anti-Cheat layer 2 — Milestone 2)
+# ---------------------------------------------------------------------------
+#
+# Biomechanical speed ceilings per sport (m/s).
+# Values are conservative upper bounds; margin of +10% is applied internally
+# to account for GPS jitter and legitimate speed bursts.
+#
+# Sources:
+#   RUN:        World record marathon pace ~5.7 m/s; sprint max ~12.4 m/s
+#   BIKE:       Road race sprint ~25 m/s; downhill limit 28 m/s
+#   WALK:       Competitive walking world record ~4.2 m/s
+#   WHEELCHAIR: World record 100m = ~8 m/s sprint; marathon ~7 m/s
 # ---------------------------------------------------------------------------
 
-# Maximum realistic speeds in m/s per activity type
-_MAX_SPEED_MS: dict[str, float] = {
-    'RUN':         7.0,   # ~25 km/h (world-record pace)
-    'BIKE':        25.0,  # ~90 km/h (sprint downhill)
-    'WALK':        2.5,   # ~9 km/h
-    'WHEELCHAIR':  5.0,   # ~18 km/h
+VMAX_MS: dict[str, float] = {
+    "RUN":         12.0,   # m/s — ~43 km/h, sprint burst
+    "BIKE":        25.0,   # m/s — ~90 km/h
+    "WALK":         3.5,   # m/s — ~12.6 km/h
+    "WHEELCHAIR":   8.0,   # m/s — ~29 km/h
 }
+
+# Configurable via env (allow ops to tune without deploy)
+_ANOMALY_RATIO_THRESHOLD = float(os.getenv("VMAX_ANOMALY_RATIO", "0.20"))   # >20% = suspicious
+_CONSECUTIVE_THRESHOLD   = int(os.getenv("VMAX_CONSECUTIVE", "3"))           # 3+ consecutive = reject
+_VMAX_MARGIN             = float(os.getenv("VMAX_MARGIN", "1.10"))           # 10% margin
+
+import os as _os_import
 
 
 def detect_speed_anomalies(
@@ -195,17 +212,21 @@ def detect_speed_anomalies(
     activity_type: str,
 ) -> list[int]:
     """
-    Returns indices of GPS points where the inter-segment speed exceeds
-    the biomechanically possible maximum for the given activity type.
+    Advanced V-max kinematic anomaly detection.
+
+    Algorithm:
+    1. Per-segment speed check vs V-max * margin.
+    2. Sliding window: flags consecutive anomalous sequences.
+    3. Returns indices of flagged points.
 
     Args:
         points: Smoothed GPS track.
-        activity_type: One of RUN / BIKE / WALK / WHEELCHAIR.
+        activity_type: RUN / BIKE / WALK / WHEELCHAIR.
 
     Returns:
-        List of (1-indexed) point indices flagged as anomalous.
+        List of (1-indexed) flagged segment indices.
     """
-    max_speed = _MAX_SPEED_MS.get(activity_type, 10.0)
+    max_speed = VMAX_MS.get(activity_type.upper(), 12.0) * _VMAX_MARGIN
     flagged: list[int] = []
 
     for i in range(1, len(points)):
@@ -216,15 +237,84 @@ def detect_speed_anomalies(
             points[i - 1].lat, points[i - 1].lon,
             points[i].lat, points[i].lon,
         )
-        speed = dist / dt
-        if speed > max_speed:
+        speed_ms = dist / dt
+        if speed_ms > max_speed:
             flagged.append(i)
             logger.warning(
-                "speed_anomaly idx=%d speed=%.1f m/s max=%.1f type=%s",
-                i, speed, max_speed, activity_type,
+                "vmax_violation idx=%d speed=%.2f m/s (%.1f km/h) limit=%.2f type=%s",
+                i, speed_ms, speed_ms * 3.6, max_speed, activity_type,
             )
 
     return flagged
+
+
+def analyze_anomalies(
+    points: list[GpsPoint],
+    activity_type: str,
+) -> dict:
+    """
+    Full V-max heuristic analysis — returns verdict + detailed stats.
+
+    Checks:
+    - Anomaly ratio (>20% of segments above V-max → suspicious)
+    - Consecutive run (3+ consecutive violations → suspicious)
+
+    Args:
+        points: Smoothed GPS track.
+        activity_type: Sport type string.
+
+    Returns:
+        Dict with keys:
+            flagged_indices: list[int]
+            anomaly_ratio: float
+            max_consecutive: int
+            is_suspicious: bool
+            reason: str | None
+    """
+    flagged = detect_speed_anomalies(points, activity_type)
+    n = max(len(points) - 1, 1)
+    ratio = len(flagged) / n
+
+    # Find longest consecutive run of anomalous indices
+    max_consecutive = 0
+    if flagged:
+        run = 1
+        for j in range(1, len(flagged)):
+            if flagged[j] == flagged[j - 1] + 1:
+                run += 1
+                max_consecutive = max(max_consecutive, run)
+            else:
+                run = 1
+        max_consecutive = max(max_consecutive, run)
+
+    is_suspicious = False
+    reason: str | None = None
+
+    if ratio > _ANOMALY_RATIO_THRESHOLD:
+        is_suspicious = True
+        reason = f"anomaly_ratio={ratio:.2%} exceeds {_ANOMALY_RATIO_THRESHOLD:.0%} threshold"
+    elif max_consecutive >= _CONSECUTIVE_THRESHOLD:
+        is_suspicious = True
+        reason = f"{max_consecutive} consecutive V-max violations (threshold={_CONSECUTIVE_THRESHOLD})"
+
+    if is_suspicious:
+        logger.warning(
+            "activity_suspicious type=%s ratio=%.2f consecutive=%d reason=%s",
+            activity_type, ratio, max_consecutive, reason,
+        )
+    else:
+        logger.debug(
+            "activity_clean type=%s ratio=%.2f consecutive=%d",
+            activity_type, ratio, max_consecutive,
+        )
+
+    return {
+        "flagged_indices":  flagged,
+        "anomaly_ratio":    round(ratio, 4),
+        "max_consecutive":  max_consecutive,
+        "is_suspicious":    is_suspicious,
+        "reason":           reason,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -273,12 +363,14 @@ def match_to_road_network(
 @dataclass
 class ProcessingResult:
     """Aggregated output of the full signal processing pipeline."""
-    smoothed_points: list[GpsPoint] = field(default_factory=list)
-    matched_points: list[GpsPoint] = field(default_factory=list)
-    total_distance_m: float = 0.0
+    smoothed_points:   list[GpsPoint] = field(default_factory=list)
+    matched_points:    list[GpsPoint] = field(default_factory=list)
+    total_distance_m:  float = 0.0
     anomalous_indices: list[int] = field(default_factory=list)
-    is_suspicious: bool = False
-    anomaly_ratio: float = 0.0
+    is_suspicious:     bool = False
+    anomaly_ratio:     float = 0.0
+    max_consecutive:   int = 0
+    suspicious_reason: str | None = None
 
 
 def process_gps_track(
@@ -291,24 +383,25 @@ def process_gps_track(
 
     Steps:
     1. Kalman smoothing (noise/drift reduction).
-    2. Kinematic anomaly detection (speed validation).
-    3. Map matching via BRouter (topology snapping).
+    2. V-max kinematic heuristic analysis (anti-cheat).
+    3. Map matching via Viterbi HMM + BRouter (topology snapping).
     4. Total distance calculation on final matched track.
 
     Args:
-        raw_points: Unprocessed GPS observations from the mobile device.
+        raw_points: Unprocessed GPS observations from mobile device.
         activity_type: RUN / BIKE / WALK / WHEELCHAIR.
         brouter_result: Optional BRouter validation payload.
 
     Returns:
-        ProcessingResult with all derived data.
+        ProcessingResult with all derived data and anti-cheat verdict.
     """
+    if not raw_points:
+        return ProcessingResult()
+
     smoother = GpsKalmanSmoother()
     smoothed = smoother.smooth(raw_points)
 
-    anomalies = detect_speed_anomalies(smoothed, activity_type)
-    anomaly_ratio = len(anomalies) / max(len(smoothed), 1)
-    is_suspicious = anomaly_ratio > 0.05  # >5% flagged segments → suspect
+    analysis = analyze_anomalies(smoothed, activity_type)
 
     matched = match_to_road_network(smoothed, brouter_result or {})
     distance = total_distance_m(matched)
@@ -317,7 +410,9 @@ def process_gps_track(
         smoothed_points=smoothed,
         matched_points=matched,
         total_distance_m=distance,
-        anomalous_indices=anomalies,
-        is_suspicious=is_suspicious,
-        anomaly_ratio=anomaly_ratio,
+        anomalous_indices=analysis["flagged_indices"],
+        is_suspicious=analysis["is_suspicious"],
+        anomaly_ratio=analysis["anomaly_ratio"],
+        max_consecutive=analysis["max_consecutive"],
+        suspicious_reason=analysis["reason"],
     )
