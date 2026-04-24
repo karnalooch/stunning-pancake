@@ -1,144 +1,109 @@
-# Developer Quickstart — SPORT Platform v0.1.0-alpha
+# DEVELOPER QUICKSTART: SPORT PLATFORM v0.2.0 (MILESTONE 2)
 
-> Time to running stack: **~15 minutes** (assuming Docker and Git are installed)
+> Time to running stack: **~10 minutes** (assuming Docker and Git are installed)
 
-## Prerequisites
+## 🏗 Prerequisites
 
-| Tool | Minimum Version |
-|:---|:---|
-| Docker / Podman | 24.0+ |
-| Docker Compose | v2.24+ |
-| Git | 2.40+ |
+| Tool | Minimum Version | Note |
+|:---|:---|:---|
+| Docker / Podman | 24.0+ | Mandatory for infrastructure |
+| Docker Compose | v2.24+ | V2 required (not `docker-compose`) |
+| Node.js | v20+ | For `admin/` and `mobile/` development |
+| Python | 3.12+ | For local `backend/` debugging |
 
 ---
 
-## 1. Clone the repository
+## 1. Clone & Initialize
 
 ```bash
 git clone https://github.com/karnalooch/stunning-pancake.git sport
 cd sport
-```
-
----
-
-## 2. Configure environment variables
-
-```bash
 cp .env.example .env
 ```
 
-Open `.env` and fill in **all** fields marked `CHANGE_ME`:
-
+### Configure Secrets
+Generate a 50-char hex key and fill `.env`:
 ```bash
-# Generate a secure SECRET_KEY:
 python -c "import secrets; print(secrets.token_hex(50))"
-
-# Set a strong DB password and paste the SECRET_KEY output into .env
-DB_PASSWORD=your_strong_password_here
-SECRET_KEY=<paste output from above>
 ```
-
-> **Warning:** Never commit `.env` to version control. It is already listed in `.gitignore`.
 
 ---
 
-## 3. Start the stack
+## 2. Infrastructure Spin-up
 
 ```bash
 docker compose up --build -d
 ```
 
-On first run Docker will pull images (~5 min). Subsequent starts take ~20 seconds.
-
-Check container status:
-
-```bash
-docker compose ps
-```
-
-Expected containers with status `Up`:
-
-```
-sport_db            — TimescaleDB + PostGIS    :5432
-sport_redis         — Redis 7                  :6379
-sport_traccar       — Traccar 6                :8082
-sport_brouter       — BRouter 1.7             :17777
-sport_backend       — Django API              :8000
-sport_telemetry     — FastAPI Telemetry       :8001
-sport_admin         — React Admin Dashboard   :3000
-sport_celery_worker — Celery Worker (critical queue)
-sport_celery_beat   — Celery Beat (periodic tasks)
-```
+### Core Services
+| Service | Role | Port |
+|:---|:---|:---|
+| `sport_db` | TimescaleDB + PostGIS | 5432 |
+| `sport_redis` | Cache & Leaderboards | 6379 |
+| `sport_traccar` | Telemetry Core | 8082 |
+| `sport_brouter` | OSM Routing Engine | 17777 |
+| `sport_backend` | Django REST API | 8000 |
+| `sport_telemetry` | FastAPI Ingestion | 8001 |
+| `sport_admin` | React Dashboard | 5173 |
 
 ---
 
-## 4. Run migrations and create superuser
+## 3. Database Initialization
 
 ```bash
+# Run migrations
 docker compose exec backend python manage.py migrate
+
+# Initialize materialized views
+docker compose exec backend python manage.py shell -c "from activities.tasks import refresh_city_rankings_mv; refresh_city_rankings_mv()"
+
+# Create administrative account
 docker compose exec backend python manage.py createsuperuser
 ```
 
 ---
 
-## 5. Verification
+## 4. Verification Endpoints
 
-| Endpoint | Expected Response |
-|:---|:---|
-| `http://localhost:8000/api/docs/` | Swagger UI (Django REST API) |
-| `http://localhost:8001/api/telemetry/docs` | Swagger UI (FastAPI Telemetry) |
-| `http://localhost:8001/api/telemetry/health` | `{"status": "ok"}` |
-| `http://localhost:3000/` | Admin Dashboard (login screen) |
-| `http://localhost:8082/` | Traccar Web UI |
+- **Admin Dashboard**: `http://localhost:5173` (Login using your superuser)
+- **Moderator Panel**: `http://localhost:5173/moderator`
+- **Django API Docs**: `http://localhost:8000/api/docs/`
+- **Telemetry Health**: `http://localhost:8001/api/telemetry/health`
 
 ---
 
-## 6. Running tests
+## 5. Development Workflow
 
+### Backend (Django)
+Run tests to verify the 3-layer anti-cheat pipeline:
 ```bash
-# Via Docker (recommended)
-docker compose exec backend python manage.py test --verbosity=2
+docker compose exec backend pytest activities/tests.py
+```
 
-# Locally (after: pip install -r backend/requirements.txt)
-cd backend && pytest -q
+### Frontend (Admin)
+Run in dev mode for HMR:
+```bash
+cd admin && npm install && npm run dev
+```
+
+### Mobile (React Native)
+Ensure Expo Go is on your device:
+```bash
+cd mobile && npm install && npx expo start
 ```
 
 ---
 
-## Architecture overview
+## 🏁 Architecture Overview
 
 ```
-Mobile GPS  → [30s batch]       → FastAPI :8001  → TimescaleDB hypertable
-Traccar     → [Redis pub/sub]   → FastAPI        → WebSocket → Admin Live Map
-Activity.finish() → Celery → Kalman Filter → Viterbi HMM → BRouter → Leaderboard
-```
-
-Full documentation: [`docs/constitution.md`](constitution.md) | [`docs/project_structure.md`](project_structure.md)
-
----
-
-## Troubleshooting
-
-**Container `db` fails to start:**
-Make sure `DB_PASSWORD`, `POSTGRES_USER`, and `POSTGRES_DB` are all set in `.env`.
-
-```bash
-docker compose logs db
-```
-
-**Backend raises `KeyError: DATABASE_URL`:**
-Ensure `.env` is in the project root directory and contains `DATABASE_URL`.
-
-**Traccar cannot connect to database:**
-Verify that `TRACCAR_DB_PASSWORD` in `.env` matches `DB_PASSWORD`.
-
-```bash
-docker compose logs traccar
-```
-
-**WebSocket live map shows "CONNECTING" indefinitely:**
-The FastAPI telemetry service must be running and `REDIS_URL` must be correctly set.
-
-```bash
-docker compose logs telemetry
+MOBILE (RN) → [Batch 30s] → FASTAPI (8001) → REDIS (Direct) → TIMESCALEDB
+                                             ↓
+                                      WEBSOCKET (Live Map)
+                                             ↓
+                               ACTIVITY FINISH (Celery Task)
+                                 1. Fast Selection Gate (O(N))
+                                 2. V-max Kinematic Check
+                                 3. BRouter Map-Matching
+                                 4. Leaderboard Sync (Redis)
 ```

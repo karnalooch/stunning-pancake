@@ -1,105 +1,68 @@
-# Dokumentacja Techniczna Platformy SPORT (v2.0)
-> Ostatnia aktualizacja: 2026-04-24
+# DOKUMENTACJA TECHNICZNA PLATFORMY SPORT (v0.2.0-alpha)
+> Ostatnia aktualizacja: 2026-04-24 | Milestone 2 (Engine V2 & Anti-Cheat)
 
 ## 1. Wstęp i Misja
-SPORT to nowoczesna platforma B2B/B2C zaprojektowana do gamifikacji aktywności fizycznej, zarządzania społecznościami sportowymi oraz precyzyjnej analizy telemetrii GPS w czasie rzeczywistym.
+SPORT to wysokowydajna platforma B2B/B2C zaprojektowana do gamifikacji aktywności fizycznej, zarządzania społecznościami miejskimi (B2G) oraz precyzyjnej analizy telemetrii GPS w czasie rzeczywistym.
 
-## 2. Architektura Systemu (v2)
-System oparty jest na architekturze hybrydowej (Django Core + FastAPI Telemetry) z konteneryzacją (Podman/Docker).
+## 2. Architektura Systemu (High-Performance Sync)
+System oparty jest na architekturze hybrydowej **"Power Couple"** (Django Core + FastAPI Telemetry) z pełną konteneryzacją.
 
 ```mermaid
 graph TD
-    A[Mobile App - Flutter/ReactNative] -->|GPS Batch / OSMand Prot.| B(Traccar Telemetry Server)
-    A -->|REST API / JWT| C(Django Backend :8000)
-    A -->|GPS Batch Ingest| T(FastAPI Telemetry :8001)
+    A[Mobile App - React Native 0.76] -->|GPS Batch Ingest| T(FastAPI Telemetry :8001)
+    T -->|Redis Direct Bridge| F[(Redis)]
     T -->|Write Hypertable| D[(TimescaleDB + PostGIS)]
     T -->|WebSocket Broadcast| G
-    B -->|Database Persistence| D
-    C -->|GIS Logic / RBAC| D
-    C -->|Real-time Routing| E(BRouter Engine)
-    C -->|Caching / Leaderboards| F[(Redis)]
-    G[Admin Dashboard - React] -->|Monitoring / Analytics| C
+    F -->|Leaderboard Pub/Sub| DJ(Django Backend :8000)
+    DJ -->|3-Layer Anti-Cheat| E(BRouter Engine)
+    G[Admin Panel - React 19] -->|Moderator Command Center| DJ
     G -->|Live Map WebSocket| T
-    C -->|Alerts / Chat| H(Matrix E2EE)
-    C -->|Payments| I(Stripe)
-    C -->|Plugin Hooks| P[Plugin Registry]
-    P -->|Vouchers / Extensions| C
+    DJ -->|E2EE Social| H(Matrix Protocol)
 ```
 
-## 3. Przepływ Danych Telemetrycznych (v2 — FastAPI + TimescaleDB)
-```mermaid
-sequenceDiagram
-    participant M as Mobile App
-    participant TE as FastAPI Telemetry (:8001)
-    participant TS as TimescaleDB (gps_points)
-    participant WS as WebSocket Clients (Admin Map)
-    participant DJ as Django Backend (:8000)
+## 3. Przepływ Danych Telemetrycznych (v2 — Sync Direct)
+1.  **Ingest**: Aplikacja mobilna wysyła paczki (batch) punktów GPS do FastAPI (`/api/telemetry/ingest/batch`).
+2.  **Bridge**: FastAPI przesyła pozycje bezpośrednio do kanału Redis Pub/Sub (`traccar:positions`).
+3.  **Persistence**: Punkty trafiają do Hypertabel w TimescaleDB (optymalizacja szeregów czasowych).
+4.  **Live**: Panel Admina subskrybuje WebSockety FastAPI dla natychmiastowej wizualizacji śladów "ogonów komet".
 
-    M->>TE: POST /api/telemetry/ingest/batch (30s chunks)
-    TE->>TS: INSERT INTO gps_points (hypertable)
-    TE-->>WS: Broadcast position_update (WebSocket)
-    DJ->>TE: GET /api/telemetry/live (fallback polling)
-    TE-->>DJ: Latest positions JSON
-```
+## 4. Silnik Anti-Cheat (3-Warstwowa Weryfikacja)
+Każda aktywność przechodzi przez rygorystyczny potok walidacji przed zatwierdzeniem w rankingach:
 
-## 4. Przetwarzanie Sygnału GPS (Constitution §24.2)
-Każda trasa przechodzi przez 3-etapowy potok walidacji:
+1.  **Warstwa 1: Fast Selection Gate** (`fast_rejection_gate`):
+    - O(N) czysta matematyka (Teleportacja, Akceleracja, Fingerprint pojazdu, Straight-line ratio).
+    - Odrzuca "tramwaje" i "samochody" przed obciążeniem silników mapowych.
+2.  **Warstwa 2: Kinematic Anomaly Detection**:
+    - Weryfikacja prędkości względem biomechanicznych limitów (V-max) per dyscyplina.
+    - Filtracja szumów za pomocą Filtra Kalmana.
+3.  **Warstwa 3: BRouter Map Matching (Viterbi HMM)**:
+    - Dopasowanie trasy do sieci OSM za pomocą algorytmu Viterbi.
+    - Weryfikacja topologiczna (czy trasa nie przecina budynków/rzek).
 
-```
-Raw GPS → Kalman Filter → Kinematic Anomaly Detection → BRouter Map Matching → DB
-```
+## 5. Status Projektu (Milestone 2)
 
-1. **Kalman Filter** (`activities/signal_processing.py`): Usuwa szumy GPS i dryfowanie.
-2. **Kinematic Check**: Weryfikuje prędkość względem biomechanicznych maksimów dla danej dyscypliny.
-3. **Map Matching**: Nakłada wygładzoną trasę na sieć dróg OSM (BRouter) z progiem 30m.
+### Backend & Telemetry
+- ✅ **Redis Direct Pipeline**: Eliminacja lagów HTTP w przesyłaniu pozycji.
+- ✅ **TimescaleDB Integration**: Hypertabela `gps_points` z automatycznym chunkingiem.
+- ✅ **Anti-Cheat V2**: Pełna implementacja 3 warstw (Gate, V-max, BRouter).
+- ✅ **Materialized Views**: `city_rankings_mv` dla błyskawicznych rankingów miejskich.
+- ✅ **Plugin System**: Pluggy hooks dla walidatorów sportowych.
 
-## 5. Co działa (Status Projektu)
+### Admin Dashboard (React 19)
+- ✅ **Moderator View**: Panel weryfikacji oflagowanych aktywności (split-screen).
+- ✅ **MapTrackViewer**: Reużywalny komponent MapLibre do wizualizacji anomalii na trasie.
 
-### Backend (Django + GeoDjango)
-- ✅ **Infrastruktura**: Pełny stack kontenerowy (TimescaleDB, Redis, Traccar, BRouter).
-- ✅ **Telemetria**: Integracja z Traccar, pobieranie pozycji live.
-- ✅ **Geospatial**: PostGIS + GIST indeksy przestrzenne.
-- ✅ **Privacy**: Automatyczne maskowanie punktów GPS w Strefach Prywatności.
-- ✅ **Anti-Cheat v2**: Kalman Filter + Kinematic Check + BRouter Map Matching.
-- ✅ **Auth**: JWT z rotacją tokenów + Social Auth (Google).
-- ✅ **Events Engine**: Modele Event/Participation/Achievement + normalizacja INTER_TENANT.
-- ✅ **Plugin Registry**: Hook system (`core/plugin_registry.py`), wbudowany plugin Voucher Hotspots.
-- ✅ **OGC API**: Endpoint `/api/events/{id}/ogc/boundary/` (Moving Features standard).
+### Mobile (React Native 0.76)
+- ✅ **Haversine Engine**: Obliczanie dystansu i tempa w czasie rzeczywistym na urządzeniu.
+- ✅ **MMKV Buffer**: Bezpieczne buforowanie punktów GPS offline.
 
-### Mikroserwis Telemetrii (FastAPI)
-- ✅ **Hypertable**: Auto-tworzenie tabeli `gps_points` w TimescaleDB.
-- ✅ **Batch Ingest**: `POST /api/telemetry/ingest/batch` (GPS batching).
-- ✅ **WebSocket Live**: `/ws/telemetry/live` (live map broadcast).
-- ✅ **History Query**: `GET /api/telemetry/history/{device_id}` (TimescaleDB range queries).
-
-### Admin Dashboard (React + Vite)
-- ✅ **Live Map**: Silnik MapLibre z renderowaniem "ogonów komet".
-- ✅ **RBAC**: Interfejs dostosowujący się do roli.
-- ✅ **Analytics**: Statystyki KPI, prędkości, aktywnych zawodników.
-
-## 6. Backlog i Rozwój
-
-| Moduł | Status | Zadania |
+## 6. Stack Techniczny
+| Komponent | Technologia | Rola |
 | :--- | :--- | :--- |
-| **Mobile App** | 🟡 In Progress | Background Tracking, Sync Manager (offline-first), React Native Fabric. |
-| **Matrix Sync** | 🟡 In Progress | Auto-provisioning pokoi dla klubów sportowych. |
-| **Voucher Marketplace** | 🟡 In Progress | UI marketplace POI (wymiana punktów na vouchery u sponsorów). |
-| **Viterbi HMM** | 🔴 Backlog | Pełna implementacja algorytmu Viterbi dla Map Matching (offline OSM graph). |
-| **CI/CD Hardening** | 🟢 Done | Skalowanie kontenerów, skanowanie bezpieczeństwa (Trivy). |
-| **TimescaleDB** | 🟢 Done | Hypertable konfiguracja w docker-compose + auto-init. |
-| **FastAPI Telemetry** | 🟢 Done | Mikroserwis z batch ingest, WebSocket, history query. |
-| **Plugin System** | 🟢 Done | PluginRegistry + Voucher Hotspots plugin. |
-| **Kalman Filter** | 🟢 Done | GPS signal processing pipeline. |
-| **OGC API** | 🟢 Done | Moving Features boundary endpoint. |
-| **Events Engine** | 🟢 Done | REST API, leaderboard, INTER_TENANT normalization, Admin. |
-
-## 7. Stack Techniczny (v2)
-- **Backend Core**: Python 3.11, Django 4.2, DRF, Celery.
-- **Telemetry Engine**: Python 3.11, FastAPI 0.111, asyncpg, uvicorn.
-- **Database**: PostgreSQL 15 + PostGIS 3.x + **TimescaleDB**.
-- **Cache/Queue**: Redis 7.
-- **Frontend**: TypeScript, React 18, Vite, MapLibre GL.
-- **Mobile**: Flutter 3.x (→ React Native Fabric docelowo).
-- **Telemetry**: Traccar 6.
-- **Routing**: BRouter 1.7.
-- **Plugin System**: Native hook registry (`core/plugin_registry.py`).
+| **Backend** | Python 3.12, Django 4.2 LTS, Celery | Logika biznesowa, RBAC, API |
+| **Telemetry** | Python 3.12, FastAPI, asyncpg | Szybki ingest, WebSockety |
+| **Database** | TimescaleDB (PostGIS) | Dane przestrzenne i szeregi czasowe |
+| **Cache** | Redis 7 | Leaderboardy, Pub/Sub, Pipelines |
+| **Mobile** | React Native 0.76, Expo, MMKV | Tracking, Offline-first, UI |
+| **Admin** | React 19, Vite, MapLibre GL | Dashboard, Moderator Panel |
+| **Routing** | BRouter 1.7 | Walidacja topologiczna trasy |

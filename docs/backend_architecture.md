@@ -1,53 +1,46 @@
 # BACKEND ARCHITECTURE: "SPORT"
 
 ## 1. Telemetry Core: Traccar (Apache 2.0)
-Traccar is the central point for data collection. This choice is driven by project maturity and support for hundreds of GPS protocols.
+Traccar remains the central data ingestion point, but Milestone 2 introduces a high-performance **Redis Direct Pipeline**.
 
-### Configuration and Integration
-- **Database**: PostgreSQL (TimescaleDB recommended for large-scale time-series data).
-- **Communication**: Real-time stream via WebSockets (JSON protocol).
-- **Computed Attributes**: Using JEXL to filter activity types based on speed and sensors (e.g., heart rate monitor).
-- **Groups**: Logical isolation of B2B users (e.g., Company X sees only its employees).
+### Data Flow (Milestone 2 Optimized)
+- **Direct Pub/Sub**: Traccar pushes raw GPS positions directly to a Redis channel (`traccar:positions`), bypassing traditional HTTP webhooks to achieve <1ms ingestion lag.
+- **FastAPI Telemetry Service**: A dedicated async service consumes the Redis stream and performs the first pass of validation.
+- **TimescaleDB**: GPS points are stored in **Hypertables**, optimized for time-series analysis and rapid heatmap generation.
 
-## 2. Validation and Map-Matching: BRouter (MIT)
-BRouter is used to verify the authenticity of traveled tracks.
+## 2. Multi-Layer Anti-Cheat Engine
+The validation process is now a structured 3-layer pipeline designed for cost-efficiency and high integrity.
 
-### GPX Validation Process
-1.  **Track Receipt**: After a session ends, the GPX track is sent to the BRouter API.
-2.  **Topological Check**: BRouter matches points to the OpenStreetMap road network.
-3.  **Cost Factor Analysis**: If the track passes through inaccessible areas (e.g., buildings, lakes without ferries) for the selected profile (bike/run), it is flagged as suspicious.
-4.  **Anti-Cheat**: Comparison of GPS distance with "on-road" distance (routing distance). Significant discrepancies suggest spoofing or the use of a motorized vehicle.
+### Layer 1: Fast Selection Gate (O(N) Math)
+- **Zero I/O**: Performs kinematic tests (Teleport, Accel, Motor Fingerprint) purely in memory.
+- **Early Rejection**: Obvious "tram/car" tracks are rejected before hitting expensive map-matching engines.
 
-## 3. Gamification Engine: Redis (BSD-3-Clause)
-Rankings must be calculated instantaneously.
+### Layer 2: V-max Biomechanical Check
+- Verifies segments against sport-specific speed ceilings (RUN/BIKE/WALK).
+- Uses configurable anomaly ratios (e.g., >20% violations = reject).
 
-### Data Structure (Sorted Sets)
-- **Key**: `leaderboard:city:{city_id}` or `leaderboard:corp:{corp_id}`.
-- **Score**: Normalized points (e.g., kilometers / number of residents/employees).
-- **Member**: UserID.
-- **Advantage**: O(log(N)) operations allow handling millions of records in milliseconds.
+### Layer 3: BRouter Topological Validation (MIT)
+- **Map-Matching**: Snaps track to the OpenStreetMap road network via the Viterbi HMM algorithm.
+- **Topology Check**: Verifies that the track follows valid paths and doesn't cross physical barriers (buildings, rivers) without infrastructure.
+
+## 3. High-Performance Leaderboards: Redis + PostGIS
+Rankings are handled by a hybrid approach for both speed and official accuracy.
+
+### Real-time (Redis)
+- **Sorted Sets**: Instant rankings for active events.
+- **Pipeline Batching**: Updates are batched via Redis pipelines to handle hundreds of concurrent session finishes.
+
+### Official Rankings (PostGIS)
+- **Materialized Views**: `city_rankings_mv` provides the "Source of Truth" for official municipal battles.
+- **Async Refresh**: Updated concurrently via Celery tasks to ensure the API remains responsive.
 
 ## 4. Communication: Matrix (Apache 2.0)
-A decentralized chat protocol ensuring retention and security.
+Decentralized, encrypted chat for clans and cities.
+- **Clan Automation**: Matrix rooms are automatically provisioned when a sports club is created.
+- **Matrix SDK**: Integrated via `matrix-js-sdk` (Mobile) and Python `matrix-nio` (Backend).
 
-### Integration
-- **Matrix Rust SDK**: Used in the Flutter app to handle clan and city rooms.
-- **E2EE**: End-to-end encryption for private messages.
-- **Identity Provider**: Integration with the platform's user database.
-
-## 5. Extensibility: Service-Oriented Logic
-To ensure the platform can evolve (AI, Marketplaces, New Sports), the backend follows a strict decoupled pattern:
-
-### 5.1 Domain-Driven Design (DDD)
-Business logic is encapsulated in **Service Layers** within each Django app, not in Views.
-- `activities.services`: Handles track processing and BRouter validation.
-- `events.services`: Manages participation, progress calculation, and leaderboard updates.
-- `rewards.services`: Integration with external voucher providers.
-
-### 5.2 Multi-Tenant Data Isolation
-- All models contain a `tenant_id` to ensure data leakage prevention at the database level (PostgreSQL RLS - Row Level Security is an option for Phase 5).
-- Each tenant can have its own validation rules and normalization factors stored in a `TenantConfig` JSON object.
-
-### 5.3 Future-Proof Integration Hooks
-- **Signal System**: Use of Django Signals (or a local event bus) to trigger cross-app actions (e.g., "Activity Verified" -> "Update Event Progress").
-- **Task Queue Isolation**: Separate Celery queues for critical (Telemetry) and non-critical (Social notifications) tasks to prevent bottlenecks.
+## 5. Domain-Driven Design (DDD)
+The backend follows a service-oriented pattern to isolate business logic from delivery mechanisms.
+- `activities.services.signal_processing`: The brain of the telemetry engine.
+- `activities.tasks`: Asynchronous pipeline management using Celery.
+- `leaderboards.services`: Logic for Redis/PostGIS ranking synchronization.
