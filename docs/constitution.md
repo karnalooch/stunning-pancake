@@ -1,17 +1,18 @@
 # PROJECT CONSTITUTION: "SPORT"
+# PROJECT CONSTITUTION: "SPORT"
 
 ## 1. Mission and Identity
 A B2B/B2C sports platform built 100% on **Permissive Open Source** foundations and a rigorous **Safety Constitution** (AI Quality Standards). The project aims to provide advanced telemetry, gamification, and social tools while maintaining full commercial freedom (White-Label) without the risk of copyleft (GPL) infection.
 
 ## 2. Tech Canon (Permissive Stack)
 Strictly selected components to ensure business security:
-- **Telemetry Core**: Traccar (Apache 2.0).
-- **Mobile Tracking**: OpenTracks (ISC).
+- **Telemetry Core**: Traccar (Apache 2.0) — **pozycje przesyłane bezpośrednio do Redis (pub/sub), omijając HTTP**.
+- **Mobile Tracking**: React Native 0.76 + `react-native-background-geolocation` (ISC).
 - **Validation and Map-Matching**: BRouter (MIT).
 - **Map Visualization**: MapLibre GL (BSD-2/MIT).
 - **Communication**: Matrix (Apache 2.0).
-- **Gamification**: Redis (BSD-3-Clause).
-- **Interfaces**: Flutter (BSD-3).
+- **Gamification**: Redis (BSD-3-Clause) — Sorted Sets + Pipeline batch.
+- **Admin Panel**: React 19 + Vite + TypeScript.
 
 ## 3. Visual Vision (UX/UI Manifesto)
 The interface must inspire trust and motivate activity.
@@ -49,8 +50,23 @@ The interface must inspire trust and motivate activity.
 ### Offline-First Model
 The mobile app treats the local database (SQLite) as the single source of truth during an activity. Synchronization with the server occurs asynchronously (batching), minimizing battery consumption.
 
-### Anti-Cheat System
-Every GPX track is topologically validated by the BRouter engine. The system detects GPS "drifting" and cheating attempts (e.g., driving a car instead of running) through physical parameter analysis and OpenStreetMap topology.
+### Anti-Cheat System (3-Layer Architecture)
+
+Każda aktywność przechodzi przez trójwarstwowy filtr przed zapisem do bazy:
+
+**Warstwa 1 — Fast Selection Gate** (`fast_rejection_gate`, O(N), zero I/O):
+- **TELEPORT**: Skok GPS >500m między kolejnymi punktami → natychmiastowe odrzucenie.
+- **ACCELERATION**: Przyspieszenie >6 m/s² → tramwaje, samochody, GPS spoof.
+- **MOTOR FINGERPRINT**: Współczynnik zmienności prędkości CV<5% → nieludzka stałość (pojazd szynowy/drogowy).
+- **STRAIGHT-LINE RATIO**: Przemieszczenie/dystans >92% → linia prosta = pojazd drogowy.
+
+**Warstwa 2 — V-max Kinematic Check** (`analyze_anomalies`):
+- Biomechaniczne progi prędkości per sport (RUN 12 m/s, BIKE 25 m/s, WALK 3.5 m/s).
+- Odrzucenie przy >20% segmentów powyżej progu lub ≥3 kolejnych naruszeń.
+
+**Warstwa 3 — BRouter Topological Validation** (wywoływana TYLKO jeśli warstwy 1+2 przeszły):
+- Dopasowanie do siatki OSM, weryfikacja że trasa nie przecina barier fizycznych.
+- Algorytm Viterbi HMM dla map matchingu.
 
 ### Leaderboards and Gamification
 The use of **Sorted Sets** in Redis allows for instantaneous recalculation of rankings for millions of users with minimal overhead.
@@ -228,7 +244,7 @@ The "SPORT" platform follows a hierarchical access control model to ensure secur
 
 ## 16. Reliability, Maintenance, and Compliance Standards
 
-To ensure the long-term viability and professional standing of the "SPORT" platform, the following operational standards are established:
+To ensure the long-term viability and professional standing of the "SPORT" platform, the following operational standards are established.
 
 ### 16.1 Disaster Recovery and Backups
 - **Automated Backups**: Full database backups (PostgreSQL/TimescaleDB) are performed daily and stored in a geographically isolated location.
@@ -382,15 +398,42 @@ System ewoluuje w stronę podziału na dwa silniki:
 2.  **FastAPI (Telemetry)**: Dedykowany, asynchroniczny mikroserwis do obsługi strumieni GPS i integracji z Traccar. Zapewnia brak blokowania I/O przy wysokim natężeniu ruchu.
 
 ### 24.2 Przetwarzanie Sygnału i Prawda Geoprzestrzenna
-Wprowadzamy rygorystyczną walidację sygnału przed zapisem do bazy:
+Wprowadziliśmy rygorystyczną walidację sygnału przed zapisem do bazy:
+- **Fast Selection Gate (Layer 1)**: O(N) filtr kinematyczny — teleport, przyspieszenie, fingerprint pojazdu, stosunek linii prostej. Zero I/O. Patrz §24.5.
 - **Filtrowanie Kalmana**: Redukcja dryfu GPS i szumów pozycjonowania.
-- **HMM (Hidden Markov Models)**: Wykorzystanie algorytmu Viterbi do precyzyjnego Map Matchingu (dopasowanie do siatki OpenStreetMap).
-- **Analiza Kinematyczna**: Weryfikacja spójności fizycznej ruchu (biomechanika vs parametry pojazdów).
+- **Analiza V-max (Layer 2)**: Per-sport progi biomechaniczne z konfigurowalnym marginesem.
+- **HMM (Hidden Markov Models)**: Algorytm Viterbi do precyzyjnego Map Matchingu (OSM).
+- **BRouter Topological Validation (Layer 3)**: Wywoływana wyłącznie gdy warstwy 1 i 2 przeszły — oszczędność zasobów serwerowych.
 
 ### 24.3 Persystencja i Szeregi Czasowe (TimescaleDB)
 - Wszystkie punkty GPS trafiają do **Hypertabel w TimescaleDB**.
 - Wykorzystanie mechanizmu *chunking* i *continuous aggregates* dla błyskawicznego generowania statystyk (heatmaps, pace analysis) bez obciążania głównej bazy PostgreSQL.
+- **city_rankings_mv**: Zmaterializowany widok PostGIS agregujący dystanse per miasto/użytkownik. Odświeżany asynchronicznie przez Celery (`REFRESH MATERIALIZED VIEW CONCURRENTLY`).
 
 ### 24.4 Interoperacyjność OGC
 - Implementacja standardu **OGC API — Moving Features** jako domyślnego formatu wymiany danych telemetrycznych.
 - Przygotowanie platformy na rolę "Data Providera" dla zewnętrznych systemów Smart City.
+
+### 24.5 Fast Selection Layer — Specyfikacja Techniczna
+
+> **Zasada:** Zanim jakikolwiek punkt GPS dotrze do BRoutera, musi przejść przez bramę kinematyczną. Koszt bramki = O(N) czystej matematyki. Koszt BRoutera = sieć + CPU + DB. Bramka jest najtańszą inwestycją w skalowanie.
+
+| Test | Algorytm | Próg domyślny | Env var | Co wykrywa |
+|:---|:---|:---:|:---|:---|
+| TELEPORT | `dist > threshold` | 500 m | `GATE_TELEPORT_M` | GPS spoof, pojazd |
+| ACCELERATION | `Δv/Δt > threshold` | 6.0 m/s² | `GATE_MAX_ACCEL` | Tramwaj, samochód |
+| MOTOR FINGERPRINT | `σ/μ(speed) < threshold` | 0.05 | `GATE_MOTOR_VAR` | Autobus, kolej |
+| STRAIGHT-LINE | `displacement/track > threshold` | 0.92 | `GATE_STRAIGHT_RATIO` | Pojazd drogowy |
+
+**Wynik odrzucenia gate'u:**
+```json
+{ "status": "rejected_gate", "reason": "MOTOR_FINGERPRINT: speed CV=0.02 < 0.05", "details": {"speed_cv": 0.02} }
+```
+
+**Pluggy hook po odrzuceniu:** `activity.suspicious` z `anomaly_ratio=1.0`.
+
+### 24.6 Moderator Control Panel
+- **Widok split-screen**: Lista oflagowanych aktywności + podgląd trasy GPS na MapLibre.
+- **Akcje manualne**: Approve / Reject / Ban User — bezpośrednio z mapy.
+- **RBAC**: Dostępny tylko dla ról `GLOBAL_ADMIN` i `LOCAL_MODERATOR`.
+- **Komponenty**: `ModeratorView.tsx`, `MapTrackViewer.tsx` (`admin/src/`).

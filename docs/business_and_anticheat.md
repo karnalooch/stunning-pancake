@@ -21,13 +21,27 @@ Dzięki architekturze White-Label, platforma może być oferowana w wielu modela
 Rywalizacja o nagrody wymaga rygorystycznej walki z oszustwami.
 
 ### Warstwa Urządzenia (On-Device)
-- **Mock Location Detection**: Wykorzystanie API systemowych (Android/iOS) do wykrywania fałszywych dostawców lokalizacji.
+- **Mock Location Detection**: Wykrywanie fałszywych dostawców lokalizacji (API systemowe Android/iOS).
 - **Accelerometer Analysis**: Klasyfikacja ruchu (bieg vs samochód) na podstawie wzorców drgań.
 
-### Warstwa Serwera (Cloud Validation)
+### Warstwa Szybkiej Selekcji (Fast Selection Gate — NOWE)
+Uruchamiana **przed** Kalmanem i BRouterem. Zero I/O. O(N) czysta matematyka.
+
+| Test | Próg | Co blokuje |
+|:---|:---:|:---|
+| TELEPORT | >500 m/skok | GPS spoof, pojazd |
+| ACCELERATION | >6 m/s² | Tramwaj, auto, motocykl |
+| MOTOR FINGERPRINT | CV prędkości <5% | Autobus, kolej, statek |
+| STRAIGHT-LINE RATIO | >92% | Pojazd drogowy/szynowy |
+
+### Warstwa Kinematyczna (V-max Check)
+- Biomechaniczne progi prędkości per sport z 10% marginesem.
+- Odrzucenie przy >20% segmentów powyżej progu lub ≥3 kolejnych naruszeń.
+
+### Warstwa Serwera (Cloud Validation — BRouter)
 - **BRouter Map-Matching**: Sprawdzenie czy trasa nie przecina fizycznych barier (ściany, rzeki) bez infrastruktury.
-- **Speed Consistency**: Analiza nagłych skoków prędkości (np. teleportacja lub przejście w tryb pojazdu).
-- **Heart Rate Correlation**: Wymaganie danych z pulsometru dla rankingów "Pro" (trudne do podrobienia bez wysiłku fizycznego).
+- Wywoływana **wyłącznie** gdy warstwy Fast Gate i V-max przeszły pomyślnie.
+- **Heart Rate Correlation**: Wymaganie danych z pulsometru dla rankingów "Pro".
 
 ## 3. Grywalizacja: Mechanizm Punktacji
 - **Normalizacja**: Punkty = (Dystans * Przewyższenie) / Liczba uczestników grupy. Pozwala to na uczciwą rywalizację małych firm z gigantami.
