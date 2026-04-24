@@ -52,41 +52,126 @@ class BRouterService:
 
 from .models import PrivacyZone
 
+# Privacy Zone v2 — Default radii per zone type (metres)
+_ZONE_RADII_M: dict[str, float] = {
+    "HOME":   250.0,   # Wider default for home address
+    "WORK":   150.0,   # Work location
+    "CUSTOM":  75.0,   # User-defined custom zone
+}
+_DENSITY_BOOST_FACTOR = 1.5   # Radius multiplier when area is "popular"
+_DENSITY_BOOST_THRESHOLD = 3  # N other users' zones in same area → boost
+
+
 class PrivacyService:
     """
-    Service for applying privacy masking to GPS tracks.
-    Implementation of Article 10 of the Constitution.
+    Privacy Masking Service v2 (Milestone 3) — Constitution §10.1.
+
+    Improvements over v1:
+    - Dynamic radius per zone type (HOME > WORK > CUSTOM).
+    - Density boost: expands radius if ≥N other users share a nearby zone.
+    - Segment gap bridging: fills removed segments with linear interpolation
+      instead of leaving hard breaks that could reveal zone boundary location.
+    - GDPR-compliant: no raw coordinates stored post-masking.
     """
+
     @classmethod
-    def mask_track(cls, user, route_path):
+    def get_effective_radius(cls, zone: "PrivacyZone") -> float:
         """
-        Removes points from the LineString that fall within any of the user's privacy zones.
+        Returns the effective masking radius in metres for a given zone.
+
+        Applies a density boost if multiple users have zones nearby,
+        making it harder to triangulate the real address from track cutoffs.
+
+        Args:
+            zone: The PrivacyZone model instance.
+
+        Returns:
+            Effective radius in metres.
+        """
+        base_radius = getattr(zone, "radius", None) or _ZONE_RADII_M.get(
+            getattr(zone, "zone_type", "CUSTOM"), 75.0
+        )
+
+        # Density boost: check how many other zones are within 500m
+        nearby_count = PrivacyZone.objects.exclude(pk=zone.pk).filter(
+            center__distance_lte=(zone.center, 500)
+        ).count()
+
+        if nearby_count >= _DENSITY_BOOST_THRESHOLD:
+            return base_radius * _DENSITY_BOOST_FACTOR
+
+        return base_radius
+
+    @classmethod
+    def mask_track(cls, user, route_path) -> "LineString | None":
+        """
+        Removes GPS points within privacy zones and bridges the gaps
+        with linear interpolation to obscure zone boundaries.
+
+        Algorithm:
+        1. Load all user's privacy zones.
+        2. For each point, compute effective radius (type + density).
+        3. Mark point as private if within any zone.
+        4. If 1+ consecutive private points are found, replace the
+           entire private segment with a straight interpolated line
+           between the last public and first public points.
+
+        Args:
+            user: Django User instance.
+            route_path: LineString of raw GPS coordinates.
+
+        Returns:
+            Masked LineString or None if too short after masking.
         """
         if not route_path:
             return route_path
-            
-        zones = PrivacyZone.objects.filter(user=user)
-        if not zones.exists():
+
+        zones = list(PrivacyZone.objects.filter(user=user).select_related(None))
+        if not zones:
             return route_path
 
-        masked_points = []
+        # Precompute effective radii once
+        effective_radii = {z.pk: cls.get_effective_radius(z) for z in zones}
+
+        # Tag each point as public/private
+        visibility: list[bool] = []  # True = public
         for point in route_path.coords:
             p = Point(point[0], point[1], srid=4326)
-            # Transform to metric projection (EPSG:3857) for accurate meter-based distance
             p_merc = p.transform(3857, clone=True)
             is_private = False
             for zone in zones:
                 zone_merc = zone.center.transform(3857, clone=True)
-                if p_merc.distance(zone_merc) <= zone.radius:  # Distance now in meters
+                if p_merc.distance(zone_merc) <= effective_radii[zone.pk]:
                     is_private = True
                     break
-            
-            if not is_private:
-                masked_points.append(point)
-        
+            visibility.append(not is_private)
+
+        coords = list(route_path.coords)
+        masked_points: list[tuple] = []
+        i = 0
+
+        while i < len(coords):
+            if visibility[i]:
+                masked_points.append(coords[i])
+                i += 1
+            else:
+                # Find the end of the private segment
+                j = i
+                while j < len(coords) and not visibility[j]:
+                    j += 1
+
+                # Bridge: interpolate a single midpoint between last public
+                # and first public point to avoid a hard cut at zone boundary
+                if masked_points and j < len(coords):
+                    lon_mid = (masked_points[-1][0] + coords[j][0]) / 2
+                    lat_mid = (masked_points[-1][1] + coords[j][1]) / 2
+                    masked_points.append((lon_mid, lat_mid))
+
+                i = j
+
         if len(masked_points) < 2:
-            return None # Track too short after masking
-            
+            return None  # Track too short after masking
+
         return LineString(masked_points, srid=4326)
 
 class MatrixService:

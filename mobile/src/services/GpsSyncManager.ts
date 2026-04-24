@@ -20,6 +20,7 @@ import BackgroundGeolocation, {
   type MotionActivityEvent,
 } from 'react-native-background-geolocation';
 import axios from 'axios';
+import { sentryCapture } from './SentryService';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -170,7 +171,7 @@ export class GpsSyncManager {
     const error = err instanceof Error ? err : new Error(String(err));
     console.error(`[SyncManager] ${context}:`, error.message);
     if (this._onError) this._onError(error);
-    // Future: Sentry.captureException(error, { extra: { context } });
+    sentryCapture(error, `GpsSyncManager.${context}`);
   }
 
   /**

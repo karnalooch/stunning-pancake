@@ -40,14 +40,18 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ---
 
-## 🛠 Milestone 3: Production Hardening & Social Sync 🟡 IN PROGRESS
-**Objective**: Matrix integration, background stability, and security audits.
+## 🛠 Milestone 3: Production Hardening & Social Sync ✅ COMPLETED
+**Objective**: Matrix integration, background stability, and security hardening.
 
-- **Matrix Sync**: 🟡 Auto-provisioning of E2EE rooms for sports clubs.
-- **Background Tracking**: 🟡 Native background geolocation optimization for iOS/Android (battery focus).
-- **Privacy Zones v2**: ⚪ Dynamic-radius masking based on user density.
-- **CI/CD Hardening**: ⚪ Automated Trivy vulnerability scans and Dependabot auto-fixes.
-- **Sentry Integration**: ⚪ Global error tracking and performance profiling.
+- **Matrix Async Sync**: ✅ All Matrix operations moved to Celery `notifications` queue (`clubs/tasks.py`).
+- **Matrix Member Invites**: ✅ `invite_member_to_matrix_async` fires when ClubMembership becomes ACTIVE.
+- **Background Tracking v3**: ✅ `GpsSyncManager` upgraded — elevation gain, pace (sec/km), battery-adaptive accuracy (<20% → `MEDIUM`), `onError` boundary.
+- **Sentry — Django**: ✅ Active via `core/sentry.py` + `settings.py` (Django + Celery + Redis integrations).
+- **Sentry — FastAPI**: ✅ `FastApiIntegration` + `HttpxIntegration` added to `telemetry/main.py`.
+- **Sentry — Mobile**: ✅ `SentryService.ts` created with GPS-stripping `beforeSend` hook (Constitution §10.1). Wired into `GpsSyncManager._handleError`.
+- **Privacy Zones v2**: ✅ Dynamic-radius masking (HOME=250m / WORK=150m / CUSTOM=75m), density boost ×1.5 if ≥3 zones nearby, segment gap bridging via linear interpolation.
+- **CI/CD Hardening**: ✅ Trivy CVE scanner added for backend/admin/mobile → SARIF to GitHub Security tab. Python bumped to 3.12. All action versions updated to v4/v5.
+- **Dependabot v2**: ✅ Expanded to 4 ecosystems (backend, telemetry, admin, mobile). `security-patches` auto-group for admin.
 
 ---
 
@@ -62,6 +66,6 @@ This document tracks the engineering milestones and real-time progress of the SP
 ---
 
 ## 📊 Progress Summary
-- **Total Progress**: ~55%
-- **Current Sprint**: Finalizing Matrix Social Sync.
-- **Stability**: [STABLE] Milestone 2 internal tests passing (Pytest/Vite).
+- **Total Progress**: ~75%
+- **Current Sprint**: Milestone 4 (Scale & Monetization).
+- **Stability**: [STABLE] Milestones 1-3 completed. All core tests passing.

@@ -1,7 +1,7 @@
 version: 2
 
 updates:
-  # Python backend dependencies
+  # Python backend (Django/FastAPI)
   - package-ecosystem: pip
     directory: /backend
     schedule:
@@ -16,18 +16,35 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     ignore:
-      # Stable pinned versions — update manually with migration review
+      # Stable LTS versions — update manually with migration review
       - dependency-name: "django"
         update-types: ["version-update:semver-major"]
       - dependency-name: "djangorestframework"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "celery"
+        update-types: ["version-update:semver-major"]
 
-  # Node.js admin dashboard dependencies
+  # Python telemetry service (FastAPI)
+  - package-ecosystem: pip
+    directory: /telemetry
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: "Europe/Warsaw"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "telemetry"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Node.js admin dashboard
   - package-ecosystem: npm
     directory: /admin
     schedule:
       interval: weekly
-      day: monday
+      day: tuesday
       time: "06:00"
       timezone: "Europe/Warsaw"
     open-pull-requests-limit: 5
@@ -36,8 +53,28 @@ updates:
       - "admin"
     commit-message:
       prefix: "chore(deps)"
+    # Security-only updates for dev tools with known CVEs
+    groups:
+      security-patches:
+        update-types:
+          - "security"
 
-  # GitHub Actions versions
+  # Node.js mobile app (React Native)
+  - package-ecosystem: npm
+    directory: /mobile
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: "06:30"
+      timezone: "Europe/Warsaw"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "mobile"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # GitHub Actions versions (monthly — stability focused)
   - package-ecosystem: github-actions
     directory: /
     schedule:
