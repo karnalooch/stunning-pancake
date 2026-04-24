@@ -1,4 +1,4 @@
-﻿from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 class User(AbstractUser):
@@ -35,7 +35,28 @@ class TenantProfile(models.Model):
     # Configuration
     is_active = models.BooleanField(default=True)
     max_users = models.IntegerField(default=1000)
-    
+
+    # Phase 8: White-Label and per-tenant normalization rules
+    white_label_domain = models.CharField(
+        max_length=200, blank=True,
+        help_text='Custom domain for white-label deployments (e.g. wellness.acme.com)'
+    )
+    config_json = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            'Per-tenant configuration: brouter_validation, normalization_factor, '
+            'allowed_sports, push_notification_key, etc.'
+        ),
+    )
+    # Example config_json:
+    # {
+    #   "normalization_factor": 1.2,
+    #   "require_brouter": true,
+    #   "allowed_sports": ["RUN", "BIKE"],
+    #   "fcm_server_key": "...",
+    # }
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

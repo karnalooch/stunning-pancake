@@ -30,13 +30,30 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
                 if ratio < 0.15: # 15% tolerance
                     instance.is_verified = True
                     
-                    # Update Leaderboard if verified
+                    # Update City Leaderboard if verified
                     if instance.user.tenant_id:
                         LeaderboardService.update_score(
                             instance.user.id, 
                             instance.user.tenant_id, 
                             instance.distance / 1000.0 # Convert to KM for score
                         )
+
+                    # Update Event Progress (Phase 6)
+                    try:
+                        from events.services import EventProgressService
+                        club_membership = instance.user.club_memberships.filter(
+                            status='ACTIVE'
+                        ).first()
+                        EventProgressService.record_activity(
+                            user=instance.user,
+                            km=instance.distance / 1000.0,
+                            tenant_id=instance.user.tenant_id,
+                            club_id=club_membership.club_id if club_membership else None,
+                        )
+                    except Exception as e:
+                        import logging
+                        logging.getLogger(__name__).warning('event_progress_update_failed: %s', e)
+
                 else:
                     # Notify Moderators via Matrix if fraud suspected
                     MatrixService.send_alert(

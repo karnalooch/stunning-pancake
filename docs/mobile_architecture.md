@@ -28,3 +28,21 @@ High-performance vector map engine.
 The application must be fully functional without an internet connection during a session.
 - **Local Validation**: Basic heuristic checks (e.g., maximum speed) performed locally.
 - **Sync Manager**: Robust synchronization mechanism with conflict resolution.
+
+## 5. Extensibility: Modular Feature Architecture
+To ensure the app can scale to millions of users and dozens of features, we follow a **Feature-First** approach:
+
+### 5.1 Directory Structure (Feature-Based)
+Instead of layering by type (views/models), we layer by domain:
+- `features/telemetry`: Core tracking and GPS logic.
+- `features/events`: Competitions, leaderboards, and geofence alerts.
+- `features/social`: Matrix chat integration and club management.
+- `features/rewards`: Voucher wallet and sponsor POI integration.
+
+### 5.2 Dependency Injection (DI)
+- Use of **get_it** or **Riverpod providers** to decouple interface from implementation.
+- Allows for easy swapping of the Tracking Engine (e.g., from GPS-only to BLE-sensor integrated) without affecting the UI.
+
+### 5.3 Dynamic UI (Server-Driven Elements)
+- Certain UI elements (e.g., Event Banners, Reward Popups) are driven by a backend JSON schema, allowing for real-time app updates without App Store releases.
+- Support for **White-Labeling**: Dynamic theme injection (colors, logos) based on the active `tenant_id`.

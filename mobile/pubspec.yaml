@@ -29,6 +29,9 @@ dependencies:
   # Utils
   intl: ^0.18.1
   flutter_secure_storage: ^9.0.0
+  # Phase 3: Background Tracking
+  flutter_background_service: ^5.0.5
+  workmanager: ^0.5.2
   
 dev_dependencies:
   flutter_test:

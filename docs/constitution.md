@@ -296,3 +296,61 @@ To ensure rapid adoption, the platform includes built-in viral loops:
 - **Dynamic Social Cards**: Automated generation of beautiful, shareable "Activity Cards" with stats, maps, and brand logos for social media.
 - **Referral Rewards**: Gamified system where users unlock premium features or badges by inviting friends and colleagues.
 - **Cross-Platform Sharing**: Seamless integration with Strava, Instagram, and Matrix for activity broadcasting.
+
+## 21. Event System and Real-Time Competitions
+
+The Event System is the engine of collective activity, enabling cities, corporations, and global brands to host time-bound and location-based challenges.
+
+### 21.1 Event Types
+- **Accumulative Challenges**: Users compete by reaching a total distance, elevation, or time goal within a specific period (e.g., "Siedlce 500km Month").
+- **Checkpoint/POI Runs**: Users must visit a series of Points of Interest or pass through specific Geofences in a defined order.
+- **Route Matches**: Real-time or asynchronous racing on a specific segment or official marathon route, validated against OSM topology.
+- **Inter-Tenant Leagues (B2B/B2G)**: Competitions between different corporations or cities.
+- **Club/Clan Challenges**: Grassroots competitions between user-created sports clubs (e.g., "Siedlce Cycling Club vs. Warsaw Riders").
+
+### 21.2 Technical Implementation & Normalization
+- **Aggregation Engine**: Real-time aggregation of activity data based on `tenant_id`, `department_id`, and `club_id`.
+- **Normalization Score**: To ensure fairness, scores are calculated using: `Score = (Total Distance * Complexity Factor) / Active Participants`.
+- **Matrix Integration**: Every club automatically gets a private E2EE Matrix room for coordination and social interaction.
+- **Traccar Geofencing**: Real-time event triggers when an athlete enters or exits a predefined zone.
+- **BRouter Validation**: Every event-related activity undergoes rigorous topological verification to ensure integrity and prevent spoofing.
+- **Redis Leaderboards**: Instantaneous ranking updates per event, category, and department, allowing for high-frequency "comet trail" visualizations on the live dashboard.
+
+### 21.3 Visual Identity
+![Event Details View](./assets/event_details_view.png)
+
+#### City vs. City Battles
+Competitive leagues between municipalities with normalized scoring.
+![City Battle Mockup](./assets/city_battle_mockup.png)
+
+#### Club vs. Club Challenges
+Grassroots social competition with Matrix integration.
+![Club Challenge Mockup](./assets/club_challenge_mockup.png)
+
+#### Admin Event Management
+Tool for creating, scheduling, and monitoring real-time sports events.
+![Admin Events Management](./assets/admin_events_management.png)
+
+## 22. Notification Infrastructure
+
+Real-time push notifications are a critical engagement driver, especially for time-sensitive event alerts (e.g., "Your city just overtook Lublin!").
+
+### 22.1 Delivery Channels
+- **Mobile Push (Primary)**: FCM (Firebase Cloud Messaging) for Android, APNs for iOS.
+- **WebSockets (Secondary)**: For real-time in-app notifications on the admin panel without page refresh.
+- **Email (Fallback)**: Digest emails for weekly rankings and event summaries.
+
+### 22.2 Notification Categories
+- **Event Triggers**: Milestone reached, geofence entry/exit, leaderboard position change.
+- **Social**: New club member, challenge invitation, Matrix room message (badge only).
+- **Anti-Cheat**: Activity flagged for review, verification result delivered.
+- **System**: Voucher expiry, subscription renewal, maintenance windows.
+
+### 22.3 Technical Architecture
+- **Decoupled via Celery**: All notifications are dispatched via the `notifications` Celery queue to prevent blocking the main API thread.
+- **`NotificationTemplate` Model**: Localized templates (pl/en) with variable interpolation stored in the database.
+- **User Preferences**: Granular opt-in/opt-out per notification category stored in `UserProfile`.
+
+### 22.4 Privacy
+- Notification content must **never** include raw GPS coordinates.
+- Aggregated metrics only (e.g., "Your club covered 120km this week").

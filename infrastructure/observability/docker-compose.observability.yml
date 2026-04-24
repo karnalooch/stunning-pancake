@@ -1,0 +1,76 @@
+version: '3.8'
+
+# Observability stack — run alongside main docker-compose.yml
+# Usage: podman-compose -f docker-compose.yml -f infrastructure/observability/docker-compose.observability.yml up
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: sport_prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: sport_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-sport_grafana_2026}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_SERVER_ROOT_URL: 'http://localhost:3001'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
+  # Redis metrics exporter
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: sport_redis_exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports:
+      - "9121:9121"
+
+  # PostgreSQL metrics exporter
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: sport_postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-sport_user}:${DB_PASSWORD:-sport_password_2026}@db:5432/${POSTGRES_DB:-sport_db}?sslmode=disable
+    ports:
+      - "9187:9187"
+
+  # System node metrics
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: sport_node_exporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+
+volumes:
+  prometheus_data:
+  grafana_data:

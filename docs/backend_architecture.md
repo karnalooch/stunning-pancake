@@ -34,3 +34,20 @@ A decentralized chat protocol ensuring retention and security.
 - **Matrix Rust SDK**: Used in the Flutter app to handle clan and city rooms.
 - **E2EE**: End-to-end encryption for private messages.
 - **Identity Provider**: Integration with the platform's user database.
+
+## 5. Extensibility: Service-Oriented Logic
+To ensure the platform can evolve (AI, Marketplaces, New Sports), the backend follows a strict decoupled pattern:
+
+### 5.1 Domain-Driven Design (DDD)
+Business logic is encapsulated in **Service Layers** within each Django app, not in Views.
+- `activities.services`: Handles track processing and BRouter validation.
+- `events.services`: Manages participation, progress calculation, and leaderboard updates.
+- `rewards.services`: Integration with external voucher providers.
+
+### 5.2 Multi-Tenant Data Isolation
+- All models contain a `tenant_id` to ensure data leakage prevention at the database level (PostgreSQL RLS - Row Level Security is an option for Phase 5).
+- Each tenant can have its own validation rules and normalization factors stored in a `TenantConfig` JSON object.
+
+### 5.3 Future-Proof Integration Hooks
+- **Signal System**: Use of Django Signals (or a local event bus) to trigger cross-app actions (e.g., "Activity Verified" -> "Update Event Progress").
+- **Task Queue Isolation**: Separate Celery queues for critical (Telemetry) and non-critical (Social notifications) tasks to prevent bottlenecks.
