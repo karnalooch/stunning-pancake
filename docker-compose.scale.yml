@@ -1,0 +1,295 @@
+version: '3.8'
+
+# =============================================================================
+# SPORT Platform — HYPERSCALE Stack (docker-compose.scale.yml)
+# =============================================================================
+# Deploy with:
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d
+#
+# This file OVERRIDES the base docker-compose.yml to swap:
+#   - Single Redis  →  Redis Cluster (3 masters + 3 replicas)
+#   - Single DB     →  Citus Coordinator + 3 Worker nodes
+#   - 1 Celery worker → 3 Celery workers (critical + default + notifications)
+#
+# First-time setup after deploy:
+#   1. Register Citus workers:
+#      docker compose exec backend python manage.py shell -c \
+#        "from core.citus import apply_citus_sharding; apply_citus_sharding()"
+#   2. Initialize Redis Cluster:
+#      docker compose exec redis-cluster-init true
+# =============================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Citus Coordinator (replaces 'db' from base compose)
+  # ---------------------------------------------------------------------------
+  db:
+    image: citusdata/citus:12.1
+    container_name: sport_db_coordinator
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      CITUS_HOST: sport_db_coordinator
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata_coordinator:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Citus Worker Nodes (shard data across 3 workers = 32 shards each)
+  # ---------------------------------------------------------------------------
+  db-worker-1:
+    image: citusdata/citus:12.1
+    container_name: sport_db_worker_1
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata_worker1:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db-worker-2:
+    image: citusdata/citus:12.1
+    container_name: sport_db_worker_2
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata_worker2:/var/lib/postgresql/data
+
+  db-worker-3:
+    image: citusdata/citus:12.1
+    container_name: sport_db_worker_3
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata_worker3:/var/lib/postgresql/data
+
+  # ---------------------------------------------------------------------------
+  # Redis Cluster — 3 Masters + 3 Replicas (6 nodes total)
+  # Slots: Master-1(0-5460), Master-2(5461-10922), Master-3(10923-16383)
+  # ---------------------------------------------------------------------------
+  redis-master-1:
+    image: redis:7-alpine
+    container_name: sport_redis_m1
+    restart: always
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --save 60 1000
+    volumes:
+      - redis_m1:/data
+    ports:
+      - "6379:6379"
+
+  redis-master-2:
+    image: redis:7-alpine
+    container_name: sport_redis_m2
+    restart: always
+    command: >
+      redis-server
+      --port 6380
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --save 60 1000
+    volumes:
+      - redis_m2:/data
+    ports:
+      - "6380:6380"
+
+  redis-master-3:
+    image: redis:7-alpine
+    container_name: sport_redis_m3
+    restart: always
+    command: >
+      redis-server
+      --port 6381
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --save 60 1000
+    volumes:
+      - redis_m3:/data
+    ports:
+      - "6381:6381"
+
+  redis-replica-1:
+    image: redis:7-alpine
+    container_name: sport_redis_r1
+    restart: always
+    command: >
+      redis-server
+      --port 6382
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    volumes:
+      - redis_r1:/data
+
+  redis-replica-2:
+    image: redis:7-alpine
+    container_name: sport_redis_r2
+    restart: always
+    command: >
+      redis-server
+      --port 6383
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    volumes:
+      - redis_r2:/data
+
+  redis-replica-3:
+    image: redis:7-alpine
+    container_name: sport_redis_r3
+    restart: always
+    command: >
+      redis-server
+      --port 6384
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+    volumes:
+      - redis_r3:/data
+
+  # ---------------------------------------------------------------------------
+  # Redis Cluster Bootstrap (runs once, then exits)
+  # Creates the cluster topology: 3 masters → 3 replicas assigned automatically
+  # ---------------------------------------------------------------------------
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: sport_redis_cluster_init
+    depends_on:
+      - redis-master-1
+      - redis-master-2
+      - redis-master-3
+      - redis-replica-1
+      - redis-replica-2
+      - redis-replica-3
+    command: >
+      sh -c "
+        sleep 5 &&
+        redis-cli --cluster create
+          redis-master-1:6379
+          redis-master-2:6380
+          redis-master-3:6381
+          redis-replica-1:6382
+          redis-replica-2:6383
+          redis-replica-3:6384
+          --cluster-replicas 1
+          --cluster-yes
+      "
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # Backend — overrides: points to cluster env vars
+  # ---------------------------------------------------------------------------
+  backend:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_CLUSTER_NODES: "redis-master-1:6379,redis-master-2:6380,redis-master-3:6381"
+      REDIS_URL: ""  # Disabled when cluster mode active
+
+  # ---------------------------------------------------------------------------
+  # Telemetry Microservice — overrides: cluster Redis
+  # ---------------------------------------------------------------------------
+  telemetry:
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_CLUSTER_NODES: "redis-master-1:6379,redis-master-2:6380,redis-master-3:6381"
+      REDIS_URL: ""
+
+  # ---------------------------------------------------------------------------
+  # Celery Workers — 3 separate worker pools for different queue priorities
+  # ---------------------------------------------------------------------------
+  celery_worker_critical:
+    build: ./backend
+    container_name: sport_celery_critical
+    restart: always
+    command: celery -A core worker -Q critical -l info --concurrency=8
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_CLUSTER_NODES: "redis-master-1:6379,redis-master-2:6380,redis-master-3:6381"
+      REDIS_URL: ""
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis-master-1
+
+  celery_worker_default:
+    build: ./backend
+    container_name: sport_celery_default
+    restart: always
+    command: celery -A core worker -Q default -l info --concurrency=8
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_CLUSTER_NODES: "redis-master-1:6379,redis-master-2:6380,redis-master-3:6381"
+      REDIS_URL: ""
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis-master-1
+
+  celery_worker_notifications:
+    build: ./backend
+    container_name: sport_celery_notifications
+    restart: always
+    command: celery -A core worker -Q notifications -l info --concurrency=4
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_CLUSTER_NODES: "redis-master-1:6379,redis-master-2:6380,redis-master-3:6381"
+      REDIS_URL: ""
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis-master-1
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  pgdata_coordinator:
+  pgdata_worker1:
+  pgdata_worker2:
+  pgdata_worker3:
+  redis_m1:
+  redis_m2:
+  redis_m3:
+  redis_r1:
+  redis_r2:
+  redis_r3:

@@ -22,11 +22,10 @@ import os
 import time
 from typing import Any
 
-import redis
+from core.redis_cluster import get_redis, get_pipeline
 
 logger = logging.getLogger(__name__)
 
-_REDIS_URL   = os.getenv("REDIS_URL", "redis://redis:6379/0")
 _CACHE_TTL_S = int(os.getenv("LEADERBOARD_CACHE_TTL", "30"))   # seconds
 
 
@@ -42,12 +41,12 @@ class LeaderboardService:
     All keys follow: leaderboard:<scope>:<id>
     """
 
-    _redis: redis.Redis | None = None
+    _redis = None
 
     @classmethod
-    def _get_redis(cls) -> redis.Redis:
+    def _get_redis(cls):
         if cls._redis is None:
-            cls._redis = redis.from_url(_REDIS_URL, decode_responses=True)
+            cls._redis = get_redis()
         return cls._redis
 
     @classmethod

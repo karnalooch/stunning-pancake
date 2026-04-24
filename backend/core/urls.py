@@ -3,6 +3,7 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 from core.ogc_views import ogc_conformance, ogc_collections, ogc_collection_items, ogc_single_item
+from core.infra_views import redis_health_view, citus_health_view, infra_health_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -16,6 +17,10 @@ urlpatterns = [
     path('api/ogc/collections/',                                    ogc_collections,        name='ogc-collections'),
     path('api/ogc/collections/<str:collection_id>/items/',          ogc_collection_items,   name='ogc-items'),
     path('api/ogc/collections/<str:collection_id>/items/<str:feature_id>/', ogc_single_item, name='ogc-item'),
+    # Infrastructure Health (Hyperscale — admin only)
+    path('api/infra/health/',         infra_health_view,   name='infra-health'),
+    path('api/infra/health/redis/',   redis_health_view,   name='infra-redis'),
+    path('api/infra/health/citus/',   citus_health_view,   name='infra-citus'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     # Phase 2: JWT Auth

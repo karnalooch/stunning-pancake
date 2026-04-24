@@ -154,8 +154,15 @@ SPECTACULAR_SETTINGS = {
 }
 
 # Phase 7: Celery — Async Task Queue
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://redis:6379/1')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://redis:6379/1')
+# Broker: auto-detects Redis Cluster or standalone from environment
+_redis_cluster_nodes = os.getenv('REDIS_CLUSTER_NODES', '')
+_celery_broker = (
+    f"redis://{_redis_cluster_nodes.split(',')[0]}/1"
+    if _redis_cluster_nodes
+    else os.getenv('REDIS_URL', 'redis://redis:6379/1')
+)
+CELERY_BROKER_URL = _celery_broker
+CELERY_RESULT_BACKEND = _celery_broker
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
