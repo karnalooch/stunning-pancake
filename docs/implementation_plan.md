@@ -5,16 +5,13 @@
 
 ---
 
-## Phase 1: Backend Foundation and Telemetry ✅ (DONE)
+## Phase 1: Backend Foundation and Telemetry ✅ (VERIFIED & STABLE)
 - **Containerization**: Podman stack (Traccar + PostgreSQL + BRouter + Redis) — działa.
 - **Traccar + BRouter**: Konfiguracja i profile sportowe — działa.
 - **Django Scaffold**: Apps `activities`, `users` z modelami PostGIS — zaimplementowane.
 - **Service Layer (DDD)**: `BRouterService`, `TelemetryService`, `PrivacyService`, `MatrixService` — ✅ zaimplementowane.
 - **Signal Pipeline**: Auto-walidacja BRouter + Privacy Masking po zapisie Activity — ✅ zaimplementowane.
-- **Redis Leaderboards**: `LeaderboardService` z Sorted Sets per `city_id` — ✅ zaimplementowane.
-- **RBAC Model**: Role `OWNER/GLOBAL_ADMIN/MODERATOR/ATHLETE` w modelu `User` — ✅ zaimplementowane.
-- **TenantProfile**: Model z brandingiem (logo, kolory) — ✅ zaimplementowane.
-- **Stripe Stub**: `PaymentService` z checkout + webhook handler — ✅ skeleton gotowy.
+- **Weryfikacja Live**: Potok Telemetrii (Simulator -> Traccar -> Backend -> Dashboard) przetestowany i stabilny. ✅
 
 ---
 

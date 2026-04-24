@@ -354,3 +354,13 @@ Real-time push notifications are a critical engagement driver, especially for ti
 ### 22.4 Privacy
 - Notification content must **never** include raw GPS coordinates.
 - Aggregated metrics only (e.g., "Your club covered 120km this week").
+
+## 23. Plugin-Based Extensibility Architecture
+
+To allow rapid innovation without bloating the core engine, the SPORT platform follows a strict plugin-based strategy for experimental features and third-party integrations.
+
+### 23.1 Plugin Principles
+- **Isolation**: Plugins must be decoupled from the core Django models where possible, using signals or dedicated registration hooks.
+- **Registry**: The PluginRegistry manages the lifecycle (load/unload/config) of external logic modules.
+- **Sandboxing**: Experimental plugins (e.g., new gamification ideas) are initially deployed in 'Pilot' mode for specific tenants.
+- **Idea Gate**: Every new feature starts as a Plugin before being considered for core engine promotion.
