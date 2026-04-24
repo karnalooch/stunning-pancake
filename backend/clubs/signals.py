@@ -2,6 +2,7 @@
 Django Signals — Clubs app
 ===========================
 Auto-provisions Matrix room on Club creation (Constitution §21.2).
+Milestone 3: All Matrix calls are now async (Celery notifications queue).
 """
 import logging
 from django.db.models.signals import post_save
@@ -15,10 +16,11 @@ logger = logging.getLogger(__name__)
 @receiver(post_save, sender=Club)
 def provision_matrix_room_on_creation(sender, instance: Club, created: bool, **kwargs) -> None:
     """
-    Automatically creates a Matrix E2EE room for a new Club.
+    Dispatches async Celery task to provision a Matrix E2EE room for a new Club.
 
     Runs only on creation and only if no room has been provisioned yet.
-    Saves the room_id back to the Club instance without triggering another signal.
+    Matrix API call is deferred to the 'notifications' queue to avoid
+    blocking the HTTP request that created the club.
 
     Args:
         instance: The saved Club model instance.
@@ -27,24 +29,19 @@ def provision_matrix_room_on_creation(sender, instance: Club, created: bool, **k
     if not created or instance.matrix_room_id:
         return
 
-    from core.matrix_provisioner import MatrixProvisioner
-    room_id = MatrixProvisioner.create_club_room(
-        club_name=instance.name,
-        club_id=instance.pk,
-    )
-    if room_id:
-        # Use queryset update to avoid re-triggering post_save
-        Club.objects.filter(pk=instance.pk).update(matrix_room_id=room_id)
-        instance.matrix_room_id = room_id
-        logger.info("club.matrix_provisioned club_id=%d room=%s", instance.pk, room_id)
-    else:
-        logger.warning("club.matrix_provision_failed club_id=%d", instance.pk)
+    # Defer to Celery — do NOT block the HTTP request
+    from clubs.tasks import provision_matrix_room_async
+    provision_matrix_room_async.delay(instance.pk)
+    logger.info("club.matrix_provision_queued club_id=%d", instance.pk)
 
 
 @receiver(post_save, sender=ClubMembership)
 def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool, **kwargs) -> None:
     """
-    Sends a welcome notification to the club's Matrix room when a new member joins.
+    Sends a welcome notification and invite to the club's Matrix room when a new member joins.
+
+    If the user has a Matrix ID configured in their profile,
+    they are also invited to the room. All operations are async.
 
     Args:
         instance: The saved ClubMembership instance.
@@ -57,13 +54,24 @@ def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool,
     if not club.matrix_room_id:
         return
 
-    from core.matrix_provisioner import MatrixProvisioner
+    from clubs.tasks import send_matrix_notification_async, invite_member_to_matrix_async
+
+    # Welcome notification in club room
     message = (
         f"👋 {instance.user.username} dołączył/a do klubu {club.name}! "
         f"Łączna liczba aktywnych członków: {club.member_count}."
     )
-    MatrixProvisioner.send_notification(club.matrix_room_id, message)
-    logger.info(
-        "club.matrix_welcome_sent user=%s club=%s",
-        instance.user_id, club.pk,
-    )
+    send_matrix_notification_async.delay(club.matrix_room_id, message)
+
+    # Invite user if they have a Matrix ID
+    matrix_user_id = getattr(instance.user, 'matrix_user_id', None)
+    if matrix_user_id:
+        invite_member_to_matrix_async.delay(
+            room_id=club.matrix_room_id,
+            matrix_user_id=matrix_user_id,
+            club_id=club.pk,
+        )
+        logger.info(
+            "club.matrix_invite_queued user=%s club=%d",
+            instance.user_id, club.pk,
+        )
