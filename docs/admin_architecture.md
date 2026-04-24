@@ -1,42 +1,34 @@
-# ADMIN PANEL ARCHITECTURE: "SPORT"
+# Architektura Paneli Administracyjnych (SPORT Phase 5+)
 
-## 1. Technical Stack
-The Management Panel is built using the **Obsidian** design system (Technical Blue / Glassmorphism) with a modern React stack.
+## 1. Koncepcja Trzech Aplikacji (Multi-App Strategy)
+W celu zapewnienia najwyższego poziomu izolacji i bezpieczeństwa, system SPORT został rozdzielony na trzy niezależne aplikacje webowe budowane z jednego kodu źródłowego (`src/admin`).
 
-- **Framework**: React 19 + Vite.
-- **Language**: TypeScript (Strict mode).
-- **Styling**: Vanilla CSS (CSS Variables) for maximum flexibility and performance.
-- **State Management**: TanStack Query (Server State) + React Context (UI State).
-- **Visualization**: MapLibre GL JS for high-performance track and geofence rendering.
+### 1.1 Izolacja Trybów (APP_MODE)
+Podczas budowania obrazów Docker, wstrzykiwana jest zmienna środowiskowa `VITE_APP_MODE`, która trwale konfiguruje przeznaczenie danej instancji:
 
-## 2. Core Modules (Milestone 2)
+*   **GLOBAL_ADMIN** (Port 3001): Panel zarządczy dla właścicieli platformy.
+*   **LOCAL_ADMIN** (Port 3002): Panel B2B dla właścicieli klubów i miast (Tenant Admin).
+*   **MODERATOR** (Port 3003): Narzędzie operacyjne dla służb weryfikacyjnych (Anti-Cheat).
 
-### 2.1 Moderator Command Center
-A high-performance interface for reviewing flagged activities.
-- **Split-screen Layout**: Flagged activities list (left) + Detailed Track Map (right).
-- **Interactive Map**: Renders the problematic track with anomaly markers (speed violations, teleport points).
-- **Action Suit**: One-click Approve, Reject, or Ban User directly from the context.
+## 2. Mapa Portów i Kontenerów
+Każda aplikacja działa jako osobny kontener Nginx:
 
-### 2.2 Event Management
-Tools for creating and monitoring municipal/corporate competitions.
-- **Geofence Editor**: Interactive polygon drawing tool to define event boundaries.
-- **Live Leaderboard**: Real-time ranking visualization via WebSocket/Redis pub-sub.
+| Serwis | Kontener | Port Host | Rola |
+| :--- | :--- | :--- | :--- |
+| `global_admin` | `sport_global_admin` | 3001 | Superuser |
+| `tenant_admin` | `sport_tenant_admin` | 3002 | Lokalny Admin |
+| `moderator` | `sport_moderator` | 3003 | Moderator |
 
-### 2.3 System Analytics
-Materialized view visualization for city-scale performance metrics.
+## 3. Struktura Widoków i Uprawnień (RBAC)
+Aplikacja wykorzystuje `react-router-dom` do dynamicznego serwowania tras w zależności od trybu `APP_MODE`:
 
-## 3. Component Architecture (Atomic Design)
-Components are organized in `src/components/`:
-- **Layout/**: `Sidebar`, `AppContainer`, `Navigation`.
-- **Maps/**: `MapTrackViewer` (Reusable track renderer), `LiveHeatmap`.
-- **Common/**: `StatCard`, `GlassCard`, `StatusBadge` (Obsidian aesthetics).
+*   **Wspólne**: `Live Tracking`.
+*   **Global Admin**: `Analytics (Global)`, `Anti-Cheat`, `Tenant Management`.
+*   **Local Admin**: `Analytics (Tenant)`, `Events`, `Clubs`.
+*   **Moderator**: `Moderation Center`, `Anti-Cheat`.
 
-## 4. State Management Strategy
-- **Query Keys**: Standardized keys for activity management (e.g., `['activities', 'flagged']`).
-- **Map Context**: `MapProvider` manages the MapLibre instance to ensure only one instance is active per view.
+## 4. Bezpieczeństwo i Kompilacja
+Dzięki zastosowaniu warunkowego renderowania tras na etapie kompilacji (Vite), kod nieużywanych widoków jest optymalizowany, a użytkownik (np. Moderator) nie posiada w swoim bundle'u komponentów do zarządzania finansami platformy.
 
-## 5. Security and RBAC
-The panel enforces Role-Based Access Control:
-- **`GLOBAL_ADMIN`**: Full system oversight and tenant management.
-- **`MODERATOR`**: Focused access to the Anti-Cheat and verification suite.
-- **`TENANT_ADMIN`**: View-only or restricted access to specific city/corporate data.
+---
+*Ostatnia aktualizacja: 2026-04-24*
