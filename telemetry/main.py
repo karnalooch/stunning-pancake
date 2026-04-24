@@ -172,11 +172,24 @@ async def _traccar_redis_bridge() -> None:
                     continue
                 try:
                     data = json.loads(message["data"])
-                    device_id  = str(data.get("deviceId", "unknown"))
-                    lat        = float(data["lat"])
-                    lon        = float(data["lon"])
-                    speed_ms   = float(data.get("speed", 0))
-                    ts         = float(data.get("fixTime", time.time()))
+                    device_id  = str(data.get("deviceId", data.get("id", "unknown")))
+                    
+                    # Traccar uses full names for latitude/longitude in forwarding
+                    lat = float(data.get("latitude", data.get("lat", 0)))
+                    lon = float(data.get("longitude", data.get("lon", 0)))
+                    
+                    # Speed is usually in knots in Traccar raw data, but let's assume m/s if it was converted,
+                    # or knots (0.514444 m/s) if raw. Standard forwarding often sends knots.
+                    speed_raw = float(data.get("speed", 0))
+                    speed_ms = speed_raw * 0.514444 # Convert knots to m/s
+                    
+                    # Timestamp: fixTime is preferred (time of GPS lock)
+                    ts_ms = data.get("fixTime", data.get("deviceTime", data.get("serverTime")))
+                    ts = float(ts_ms) / 1000.0 if ts_ms else time.time()
+
+                    # Log for debugging (only in non-prod or high log level)
+                    logger.debug("traccar_bridge: pos device=%s lat=%.6f lon=%.6f speed=%.1f", 
+                                 device_id, lat, lon, speed_ms)
 
                     # Write to TimescaleDB
                     pool = await get_pool()
@@ -191,13 +204,14 @@ async def _traccar_redis_bridge() -> None:
                             ts, device_id, lat, lon, speed_ms,
                         )
 
-                    # Broadcast to Admin Dashboard
+                    # Broadcast to Admin Dashboard (live map)
                     await manager.broadcast({
                         "type":      "position_update",
                         "device_id": device_id,
                         "lat":       lat,
                         "lon":       lon,
                         "speed_ms":  speed_ms,
+                        "ts":        ts
                     })
 
                 except (KeyError, ValueError, json.JSONDecodeError) as exc:

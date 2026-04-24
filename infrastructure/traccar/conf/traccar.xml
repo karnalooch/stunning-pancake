@@ -31,15 +31,15 @@
         This decouples Traccar → Redis → FastAPI → Admin WS (Constitution §24.1).
         Avoids direct HTTP webhook to Django which causes cascading failures under load.
     -->
-    <entry key='redis.enabled'>true</entry>
-    <entry key='redis.host'>redis</entry>
-    <entry key='redis.port'>6379</entry>
+    <!--
+        Optimized Data Flow: Traccar pushes positions directly to Redis.
+        This bypasses heavy HTTP webhooks in Django/FastAPI (Constitution §24.1).
+        FastAPI telemetry service subscribes to 'traccar:positions' to bridge to WS.
+    -->
+    <entry key='forward.enable'>true</entry>
+    <entry key='forward.type'>redis</entry>
+    <entry key='forward.url'>redis://redis:6379</entry>
     <entry key='redis.channel'>traccar:positions</entry>
-
-    <!-- Forward positions to Redis pub/sub instead of HTTP webhook -->
-    <entry key='event.forward.enable'>true</entry>
-    <entry key='event.forward.url'>redis://redis:6379</entry>
-    <entry key='event.forward.types'>positionStored</entry>
 
     <!-- BRouter for anti-cheat route validation -->
     <entry key='geocoder.type'>osm</entry>
