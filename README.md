@@ -26,6 +26,7 @@ A modern, high-precision B2B/B2C sports platform designed for city-wide competit
 -   **[Milestone 2: Engine V2 & Anti-Cheat](./docs/milestone2_engine_v2.md)** — Deep dive into the current implementation.
 -   **[Business & Anti-Cheat Logic](./docs/business_and_anticheat.md)** — Commercialization paths and verification layers.
 -   **[Developer Quick Start](./docs/developer_quickstart.md)** — Setup your environment in 5 minutes.
+-   **[User Management V2 (RBAC/RLS)](./docs/user_management_redesign.md)** — Architecture for identity, roles, and Multi-Tenant logic.
 -   **[AI Toolkit Standards](./docs/ai_toolkit_constitution.md)** — AI Quality and Safety rules.
 
 ## 🛠 Testing & Simulation
