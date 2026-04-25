@@ -45,12 +45,13 @@
 ## Phase 4: User Journey & Security Hardening (Weeks 9-10)
 *Goal: Polish the onboarding and ensure absolute privacy.*
 
-- [ ] **Auth & Onboarding**:
-    - [ ] Implement **Passkeys (FIDO2)** for passwordless login.
-    - [ ] Build the 3-minute TTV onboarding flow with progressive disclosure.
-- [ ] **Privacy Guard**:
-    - [ ] Finalize on-device **Privacy Zones v2** (masking before sync).
-    - [ ] Audit Sentry PII stripping for GPS coordinates.
+- [x] **Auth & Onboarding**:
+    - [x] Implement **Passkeys (FIDO2)** for passwordless login.
+    - [x] Build the 3-minute TTV onboarding flow with progressive disclosure.
+- [x] **Privacy Guard**:
+    - [x] Finalize on-device **Privacy Zones v2** (masking before sync).
+    - [x] Audit Sentry PII stripping for GPS coordinates.
+
 
 ---
 

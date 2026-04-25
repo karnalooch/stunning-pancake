@@ -1,14 +1,16 @@
-﻿# Logs
+# Logs
 *.log
 infrastructure/traccar/logs/*
 
 # Python
-__pycache__/
+**/__pycache__/
 *.py[cod]
-*.class
+*$py.class
 .venv/
 env/
 venv/
+**/venv/
+**/.env
 
 # Node
 node_modules/
