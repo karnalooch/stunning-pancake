@@ -1,16 +1,24 @@
 import { Box, Group, Stack, Text } from '@mantine/core';
 import { Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Square, Gift } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
+import { motion } from 'framer-motion';
 
 export const Sidebar = ({ mode }: { mode: string }) => {
   const location = useLocation();
+  const { user } = useAuth();
 
   const navItems = [
-    { icon: '📊', label: 'Dashboard', path: '/' },
-    { icon: '🏢', label: 'Tenants', path: '/tenants' },
-    { icon: '👥', label: 'Users', path: '/users' },
-    { icon: '🛡️', label: 'Anti-Cheat', path: '/anti-cheat' },
-    { icon: '⚙️', label: 'Settings', path: '/settings' }
+    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/', roles: ['GLOBAL_OWNER'] },
+    { icon: <Building2 size={18} />, label: 'Tenants', path: '/tenants', roles: ['GLOBAL_OWNER'] },
+    { icon: <Users size={18} />, label: 'Users', path: '/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
+    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
+    { icon: <Settings size={18} />, label: 'Settings', path: '/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
   ];
+
+  const visibleItems = navItems.filter(item => user && item.roles.includes(user.role));
+
 
   return (
     <Box 
@@ -28,7 +36,7 @@ export const Sidebar = ({ mode }: { mode: string }) => {
         </Stack>
       </Group>
 
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const active = location.pathname === item.path;
         return (
           <Link to={item.path} key={item.label} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -42,8 +50,10 @@ export const Sidebar = ({ mode }: { mode: string }) => {
                 transition: 'background 0.2s ease'
               }}
             >
-              <Text size="lg">{item.icon}</Text>
-              <Text size="sm" fw={active ? 600 : 400}>{item.label}</Text>
+              <Box style={{ color: active ? 'var(--color-win-accent-dark)' : 'rgba(255,255,255,0.6)' }}>
+                {item.icon}
+              </Box>
+              <Text size="sm" fw={active ? 700 : 400}>{item.label}</Text>
             </Group>
           </Link>
         );
@@ -80,18 +90,31 @@ export const Taskbar = () => (
   </Box>
 );
 
-export const WinWindow = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Box className="fluent-acrylic" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-    <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', userSelect: 'none' }}>
-      <Text size="xs" fw={600} style={{ fontFamily: 'var(--font-segoe)', opacity: 0.8 }}>{title}</Text>
-      <Group gap={8}>
-        <Box w={12} h={2} bg="dimmed" style={{ cursor: 'pointer' }} />
-        <Box w={10} h={10} style={{ border: '1px solid var(--mantine-color-dimmed)', cursor: 'pointer' }} />
-        <Text size="sm" style={{ cursor: 'pointer' }}>✕</Text>
+export const WinWindow = ({ title, children }: { title: string | React.ReactNode; children: React.ReactNode }) => (
+  <motion.div
+    initial={{ scale: 0.98, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+    style={{ height: '100%', width: '100%' }}
+  >
+    <Box className="fluent-acrylic" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.1)', userSelect: 'none' }}>
+        <Box style={{ opacity: 0.9 }}>
+          {typeof title === 'string' ? (
+            <Text size="xs" fw={700} style={{ fontFamily: 'var(--font-segoe)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</Text>
+          ) : (
+            title
+          )}
+        </Box>
+        <Group gap={12}>
+          <Box w={12} h={1} bg="white" style={{ cursor: 'pointer', opacity: 0.5 }} />
+          <Square size={10} style={{ opacity: 0.5, cursor: 'pointer' }} />
+          <Text size="xs" fw={400} style={{ cursor: 'pointer', opacity: 0.5, marginLeft: '4px' }}>✕</Text>
+        </Group>
       </Group>
-    </Group>
-    <Box p="md" style={{ flex: 1, overflow: 'auto' }}>
-      {children}
+      <Box p="md" style={{ flex: 1, overflow: 'auto' }}>
+        {children}
+      </Box>
     </Box>
-  </Box>
+  </motion.div>
 );

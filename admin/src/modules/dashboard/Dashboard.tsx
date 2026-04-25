@@ -2,7 +2,8 @@ import { Box, SimpleGrid, Group, Stack, Text, ScrollArea, Button, Badge } from '
 import { WinWindow } from '../../core/Layout';
 import { AreaChart, Title, Metric, Flex, ProgressBar } from '@tremor/react';
 import { useDesigner, EditableText } from '../../providers/DesignerProvider';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Users, Radio, ShieldCheck, TrendingUp, Activity as ActivityIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const chartdata = [
   { date: "Jan 22", "Active Users": 2890, "Telemetry Packets": 2338 },
@@ -23,8 +24,8 @@ export const Dashboard = ({ mode }: { mode: string }) => {
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       <Group justify="space-between">
         <Stack gap={0}>
-          <Title style={{ color: 'white' }}>
-            <EditableText initialValue="Platform Overview" size="xl" weight={800} />
+          <Title className="text-gradient">
+            <EditableText initialValue="Global Command Center" size="xl" weight={900} />
           </Title>
           <Text size="xs" c="dimmed">Operational status for {mode} node</Text>
         </Stack>
@@ -39,36 +40,36 @@ export const Dashboard = ({ mode }: { mode: string }) => {
       </Group>
 
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xl">
-        <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-          <Flex alignItems="start">
-            <Stack gap={0}>
-              <Text size="xs" tt="uppercase" fw={600} c="dimmed">Total Athletes</Text>
-              <Metric style={{ color: 'white' }}>1,042,981</Metric>
-            </Stack>
-            <Badge color="green">+12.3%</Badge>
-          </Flex>
-          <ProgressBar value={72} color="blue" className="mt-3" />
-        </Box>
-
-        <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-          <Stack gap={0}>
-            <Text size="xs" tt="uppercase" fw={600} c="dimmed">Active telemetry Streams</Text>
-            <Metric style={{ color: 'var(--color-win-accent-dark)' }}>241,082</Metric>
-          </Stack>
-          <ProgressBar value={84} color="emerald" className="mt-3" />
-        </Box>
-
-        <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-          <Stack gap={0}>
-            <Text size="xs" tt="uppercase" fw={600} c="dimmed">Global Trust Score</Text>
-            <Metric style={{ color: 'white' }}>98.4%</Metric>
-          </Stack>
-          <ProgressBar value={98} color="amber" className="mt-3" />
-        </Box>
+        {[
+          { icon: <Users size={14} color="#60cdff" />, label: 'Total Athletes', value: '1,042,981', badge: '+12.3%', color: 'blue', progress: 72, glow: 'glow-blue' },
+          { icon: <Radio size={14} color="var(--mantine-primary-color-filled)" />, label: 'Active Telemetry', value: '241,082', badge: 'LIVE', color: 'lime', progress: 84, glow: 'glow-lime' },
+          { icon: <ShieldCheck size={14} color="#ffcc00" />, label: 'Integrity Index', value: '98.4%', badge: 'SECURE', color: 'yellow', progress: 98, glow: '' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1, duration: 0.5 }}
+          >
+            <Box p="lg" className={`fluent-acrylic stat-card-premium ${stat.glow}`}>
+              <Flex alignItems="start">
+                <Stack gap={0}>
+                  <Group gap="xs">
+                    {stat.icon}
+                    <Text size="xs" tt="uppercase" fw={700} c="dimmed">{stat.label}</Text>
+                  </Group>
+                  <Metric style={{ color: 'white', fontWeight: 900, letterSpacing: '-1px' }}>{stat.value}</Metric>
+                </Stack>
+                <Badge variant="light" color={stat.color} size="sm">{stat.badge}</Badge>
+              </Flex>
+              <ProgressBar value={stat.progress} color={stat.color} className="mt-4" />
+            </Box>
+          </motion.div>
+        ))}
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" style={{ flex: 1 }}>
-        <WinWindow title="Engagement Metrics (Real-time)">
+        <WinWindow title={<Group gap="xs"><TrendingUp size={14} /><span>Engagement Metrics (Real-time)</span></Group>}>
           <AreaChart
             className="h-72 mt-4"
             data={chartdata}
@@ -79,16 +80,19 @@ export const Dashboard = ({ mode }: { mode: string }) => {
           />
         </WinWindow>
 
-        <WinWindow title="Anti-Cheat System Pulse">
+        <WinWindow title={<Group gap="xs"><ActivityIcon size={14} /><span>Anti-Cheat System Pulse</span></Group>}>
           <ScrollArea h={300}>
             <Stack gap="sm">
               {[...Array(8)].map((_, i) => (
-                <Group key={i} justify="space-between" p="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <Group key={i} justify="space-between" p="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', borderRadius: '4px' }} className="fluent-acrylic-hover">
                   <Stack gap={0}>
-                    <Text size="sm" fw={600}>Node {i+1} Verification</Text>
-                    <Text size="xs" c="dimmed">Viterbi matching depth: 12ms</Text>
+                    <Text size="sm" fw={700}>Node {String(i+1).padStart(2, '0')} Analysis</Text>
+                    <Text size="xs" c="dimmed" style={{ fontFamily: 'monospace' }}>SHA-256: {Math.random().toString(16).substring(2, 10).toUpperCase()}</Text>
                   </Stack>
-                  <Badge color="green" variant="dot">Healthy</Badge>
+                  <Group gap="xs">
+                    <Text size="xs" c="dimmed">4ms</Text>
+                    <Badge color="lime" variant="dot" size="sm">Active</Badge>
+                  </Group>
                 </Group>
               ))}
             </Stack>
