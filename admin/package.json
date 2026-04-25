@@ -13,6 +13,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@mantine/core": "^9.1.0",
     "@mantine/dates": "^9.1.0",
     "@mantine/form": "^9.1.0",
@@ -22,6 +25,8 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.0",
     "@tabler/icons-react": "^3.41.1",
+    "@tanstack/react-query": "^5.100.5",
+    "@tremor/react": "^3.18.7",
     "@types/three": "^0.184.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.20",
@@ -35,7 +40,9 @@
     "react-router-dom": "^7.14.2",
     "recharts": "^3.8.1",
     "tailwind-merge": "^3.5.0",
-    "three": "^0.184.0"
+    "three": "^0.184.0",
+    "tremor": "^0.0.1",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

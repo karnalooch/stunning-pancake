@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Group, Stack, Text } from '@mantine/core';
 import { Link, useLocation } from 'react-router-dom';
 
@@ -24,7 +23,7 @@ export const Sidebar = ({ mode }: { mode: string }) => {
       <Group mb="xl" px="sm">
         <Box w={32} h={32} bg="var(--color-win-accent-dark)" style={{ borderRadius: '6px' }} />
         <Stack gap={0}>
-          <Text size="sm" fw={800} tracking="tight">SPORT OS</Text>
+          <Text size="sm" fw={800} style={{ letterSpacing: '-0.02em' }}>SPORT OS</Text>
           <Text size="xs" c="dimmed">{mode}</Text>
         </Stack>
       </Group>

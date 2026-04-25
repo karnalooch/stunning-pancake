@@ -7,7 +7,6 @@ import { AntiCheat } from './modules/anti-cheat/AntiCheat';
 import { Users } from './modules/users/Users';
 import { DesignerProvider } from './providers/DesignerProvider';
 import { RoleGuard } from './core/guards/RoleGuard';
-import { useAuth } from './core/auth/useAuth';
 
 // Dummy views for remaining modules
 const PlaceholderView = ({ title }: { title: string }) => (
