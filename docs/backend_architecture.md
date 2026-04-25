@@ -2,8 +2,8 @@
 > Last Updated: 2026-04-24 | **Hyperscale Edition** (Post Milestone 5)
 
 ## 1. Telemetry Core: FastAPI + Redis Pipeline
+> **Architectural Synergy**: We use a dual-framework approach. **Django (DRF)** handles the complex business logic, auth (Admin/Moderator), and relational data, while **FastAPI** provides a high-performance, async ingestion layer for GPS streams.
 
-The primary data ingestion path is a high-throughput async stack designed for 10,000+ concurrent GPS streams.
 
 ### Data Flow (Current)
 ```
@@ -33,7 +33,9 @@ MOBILE (30s batch) → FastAPI :8001 → Redis Pipeline → TimescaleDB Hypertab
 | **3. BRouter** | Viterbi HMM map-matching (OSM) | ~200ms | Off-road GPS fraud |
 | **4. Plugin** | `core/plugin_registry.py` hooks | custom | Domain-specific rules |
 
-**Key design**: Each layer only runs if the previous passes. 90%+ of cheats are caught at Layer 1 (zero cost), making the expensive BRouter call rare.
+**Key design**: Each layer only runs if the previous passes. 90%+ of cheats are caught at Layer 1 (zero cost).
+- **Z-Score Anomaly**: Layer 1.5 utilizes statistical Z-scores (via NumPy/Pandas) to flag sudden tempo spikes inconsistent with the user's fatigue profile.
+
 
 ---
 
@@ -123,3 +125,24 @@ backend/
     ├── services.py           ← Atomic redemption + balance
     └── stripe_service.py     ← Stripe B2C/B2B/Portal/Webhook
 ```
+
+---
+
+## 9. Observability & Monitoring (Prometheus & Grafana)
+
+A proactive observability stack is essential for visualizing the internal state of the business engine.
+- **Metrics Engine**: **Prometheus** scraping the FastAPI `/metrics` endpoint. Collecting Counters (RPS), Gauges (active connections), Histograms (latency percentiles like P95/P99), and Summaries.
+- **Visualization**: **Grafana** dashboards visualizing infrastructure and business logic.
+  - **Heatmaps**: Identifying "tail latency" and performance segment distribution.
+  - **Per-Task Monitoring**: Tracking resource usage per specific business pipeline stage.
+  - **Geomaps**: Utilizing Grafana Geomaps and Performance Co-Pilot (PCP) to map performance metrics to physical geographic coordinates.
+
+## 10. Future Strategic Optimizations
+
+The following optimizations are planned for implementation to enhance data integrity and processing efficiency:
+- **Signal Cleaning (DBSCAN)**: Implementing Density-Based Spatial Clustering of Applications with Noise to identify and remove noise points from raw GPS data at the ingestion layer.
+- **Trajectory Similarity Analysis**: Utilizing **Fréchet distance** and **Hausdorff distance** to detect route duplication or sophisticated spoofing patterns.
+- **GIST Indexing**: All spatial columns must be indexed using GIST to ensure sub-millisecond query times.
+- **ST_Subdivide**: Large city polygons or long tracks are divided into smaller fragments (MBRs) to maximize index efficiency and reduce query time from minutes to seconds.
+- **Geometry Simplification**: Use algorithms like **Douglas-Peucker** to store simplified versions of tracks.
+- **Spoofing Detection (IMU Correlation)**: Analyzing acceleration discrepancies between GPS data and physical IMU (accelerometer) data to detect "drag-off" attacks.

@@ -8,25 +8,35 @@ A modern, high-precision B2B/B2C sports platform designed for city-wide competit
 -   **High-Precision Telemetry**: Kalman-filtered GPS tracks with Haversine distance calculations and Viterbi HMM Map Matching.
 -   **Moderator Command Center**: Real-time track visualization via MapLibre GL, automated flagging, and one-click activity review.
 -   **City-Scale Rankings**: Instantaneous leaderboard updates using Redis Sorted Sets and PostGIS Materialized Views.
--   **Offline-First Mobile Tracking**: Low-latency, battery-optimized recording with background sync.
+-   **Offline-First Mobile Tracking**: Low-latency, battery-optimized recording with background sync (Local-first).
 
-## 🛠 Tech Canon (Permissive Stack)
+---
+
+## 🗺 Project Blueprint (Developer Entry Point)
+
+👉 **[PROJECT BLUEPRINT 2025/2026](./docs/blueprint.md)** — **READ THIS FIRST**. It contains the consolidated architecture, Iron Rules, and the "Hyper-Performance" technical roadmap.
+
+
+## 🛠 Tech Canon (Hyper-Performance 2025/2026)
 
 -   **Backend**: Python 3.12 (Django 4.2 LTS / FastAPI)
--   **Mobile**: React Native 0.76 (TypeScript)
--   **Admin Panel**: React 19 + Vite + TypeScript
--   **Databases**: PostgreSQL + PostGIS + TimescaleDB + Redis
+-   **Mobile**: React Native 0.78+ (Tamagui v4 + Skia + PowerSync)
+-   **Admin Panel**: Next.js 15+ (React Server Components + Tailwind v4 + deck.gl)
+-   **Databases**: PostgreSQL (PostGIS + TimescaleDB) + Redis + SQLite (Local-first)
 -   **Telemetry Core**: Traccar (Apache 2.0)
--   **Map Engine**: MapLibre GL + BRouter (MIT)
+-   **Map Engine**: Mapbox SDK (Mobile) / MapLibre (Web)
 -   **Communication**: Matrix Protocol (Apache 2.0)
 
-## 📂 Documentation
 
--   **[Project Constitution](./docs/constitution.md)** — Mission, identity, and the "Safety Constitution".
--   **[Milestone 2: Engine V2 & Anti-Cheat](./docs/milestone2_engine_v2.md)** — Deep dive into the current implementation.
--   **[Business & Anti-Cheat Logic](./docs/business_and_anticheat.md)** — Commercialization paths and verification layers.
--   **[Developer Quick Start](./docs/developer_quickstart.md)** — Setup your environment in 5 minutes.
--   **[AI Toolkit Standards](./docs/ai_toolkit_constitution.md)** — AI Quality and Safety rules.
+## 📂 Documentation Hierarchy
+
+-   **[Project Blueprint](./docs/blueprint.md)** — Consolidated 2025/2026 Strategy.
+-   **[Project Constitution](./docs/constitution.md)** — Iron Rules (§0) and Mission.
+-   **[Mobile Architecture](./docs/mobile_architecture.md)** — Skia & Local-first details.
+-   **[Admin Architecture](./docs/admin_architecture.md)** — RSC & WebGL data visualization.
+-   **[Backend Architecture](./docs/backend_architecture.md)** — High-throughput engine details.
+-   **[User Journey](./docs/user_journey.md)** — The Athlete's path to conversion.
+
 
 ## 🚀 Quick Start
 
