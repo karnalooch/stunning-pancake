@@ -9,7 +9,12 @@ import { ScatterplotLayer } from '@deck.gl/layers';
 import Map from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
+import { useAuth } from '../../core/auth/useAuth';
+import { motion } from 'framer-motion';
+
 export const AntiCheat = () => {
+  const { user } = useAuth();
+
   const { data: anomalies, isLoading } = useQuery({
     queryKey: ['anomalies'],
     queryFn: TelemetryApi.getAnomalies,
@@ -38,40 +43,46 @@ export const AntiCheat = () => {
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-        <WinWindow title="Anti-Cheat Command Center — Global Status">
+        <WinWindow title={user?.role === 'GLOBAL_OWNER' ? "Anti-Cheat Command Center — Global Status" : `Integrity Monitor — ${user?.username}'s Instance`}>
           <Stack gap="lg">
-            <Group justify="space-between" p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-              <Group>
-                <Shield color="var(--color-win-accent-dark)" />
-                <Stack gap={0}>
-                  <Text size="sm" fw={700}>Kinematic Filter</Text>
-                  <Text size="xs" c="dimmed">Layer 1: Velocity Bounds Check</Text>
-                </Stack>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium glow-blue" style={{ borderRadius: '12px' }}>
+                <Group>
+                  <Shield color="#60cdff" size={24} />
+                  <Stack gap={0}>
+                    <Text size="sm" fw={800} tt="uppercase">Kinematic Filter</Text>
+                    <Text size="xs" c="dimmed">Layer 1: Velocity Bounds Check</Text>
+                  </Stack>
+                </Group>
+                <Switch defaultChecked color="blue" size="md" />
               </Group>
-              <Switch defaultChecked color="green" />
-            </Group>
+            </motion.div>
 
-            <Group justify="space-between" p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-              <Group>
-                <Cpu color="var(--color-win-accent-dark)" />
-                <Stack gap={0}>
-                  <Text size="sm" fw={700}>BRouter Viterbi Matching</Text>
-                  <Text size="xs" c="dimmed">Layer 2: Topological Path Validation</Text>
-                </Stack>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium glow-lime" style={{ borderRadius: '12px' }}>
+                <Group>
+                  <Cpu color="var(--mantine-primary-color-filled)" size={24} />
+                  <Stack gap={0}>
+                    <Text size="sm" fw={800} tt="uppercase">BRouter Viterbi</Text>
+                    <Text size="xs" c="dimmed">Layer 2: Topological Path Validation</Text>
+                  </Stack>
+                </Group>
+                <Switch defaultChecked color="lime" size="md" />
               </Group>
-              <Switch defaultChecked color="green" />
-            </Group>
+            </motion.div>
 
-            <Group justify="space-between" p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-              <Group>
-                <Activity color="var(--color-win-accent-dark)" />
-                <Stack gap={0}>
-                  <Text size="sm" fw={700}>ML Anomaly Detection</Text>
-                  <Text size="xs" c="dimmed">Layer 3: Biomechanical Fingerprint</Text>
-                </Stack>
+            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
+              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium" style={{ borderRadius: '12px' }}>
+                <Group>
+                  <Activity color="#ffcc00" size={24} />
+                  <Stack gap={0}>
+                    <Text size="sm" fw={800} tt="uppercase">ML Biometrics</Text>
+                    <Text size="xs" c="dimmed">Layer 3: Behavioral Fingerprinting</Text>
+                  </Stack>
+                </Group>
+                <Switch color="yellow" size="md" />
               </Group>
-              <Switch color="blue" />
-            </Group>
+            </motion.div>
           </Stack>
         </WinWindow>
 

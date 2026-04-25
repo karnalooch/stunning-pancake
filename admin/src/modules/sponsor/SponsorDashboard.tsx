@@ -3,6 +3,8 @@ import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress } from '@mantine/c
 import { WinWindow } from '../../core/Layout';
 import { Gift, Store, Users, Eye } from 'lucide-react';
 import { Metric, Flex, BarChart } from '@tremor/react';
+import { motion } from 'framer-motion';
+
 
 const SPONSOR_DATA = [
   { name: 'Redeemed', 'Vouchers': 420 },
@@ -22,45 +24,32 @@ export const SponsorDashboard = () => {
       </Group>
 
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xl">
-        <Box p="lg" className="fluent-acrylic stat-card-premium glow-blue">
-          <Flex alignItems="start">
-            <Stack gap={0}>
-              <Group gap="xs">
-                <Store size={14} color="#60cdff" />
-                <Text size="xs" tt="uppercase" fw={700} c="dimmed">Your POIs</Text>
-              </Group>
-              <Metric style={{ color: 'white', fontWeight: 900 }}>12</Metric>
-            </Stack>
-            <Badge variant="light" color="blue" size="sm">ACTIVE</Badge>
-          </Flex>
-          <Progress value={100} color="blue" mt="md" size="xs" />
-        </Box>
-
-        <Box p="lg" className="fluent-acrylic stat-card-premium glow-lime">
-          <Flex alignItems="start">
-            <Stack gap={0}>
-              <Group gap="xs">
-                <Gift size={14} color="var(--mantine-primary-color-filled)" />
-                <Text size="xs" tt="uppercase" fw={700} c="dimmed">Vouchers Distributed</Text>
-              </Group>
-              <Metric style={{ color: 'white', fontWeight: 900 }}>1,842</Metric>
-            </Stack>
-          </Flex>
-          <Progress value={65} color="lime" mt="md" size="xs" />
-        </Box>
-
-        <Box p="lg" className="fluent-acrylic stat-card-premium">
-          <Flex alignItems="start">
-            <Stack gap={0}>
-              <Group gap="xs">
-                <Eye size={14} color="#ffcc00" />
-                <Text size="xs" tt="uppercase" fw={700} c="dimmed">Impressions</Text>
-              </Group>
-              <Metric style={{ color: 'white', fontWeight: 900 }}>42.1K</Metric>
-            </Stack>
-          </Flex>
-          <Progress value={88} color="amber" mt="md" size="xs" />
-        </Box>
+        {[
+          { icon: <Store size={14} color="#60cdff" />, label: 'Your POIs', value: '12', badge: 'ACTIVE', color: 'blue', progress: 100, glow: 'glow-blue' },
+          { icon: <Gift size={14} color="var(--mantine-primary-color-filled)" />, label: 'Vouchers Distributed', value: '1,842', badge: '65%', color: 'lime', progress: 65, glow: 'glow-lime' },
+          { icon: <Eye size={14} color="#ffcc00" />, label: 'Impressions', value: '42.1K', badge: 'TOP 5%', color: 'amber', progress: 88, glow: '' },
+        ].map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+          >
+            <Box p="lg" className={`fluent-acrylic stat-card-premium ${stat.glow}`}>
+              <Flex alignItems="start">
+                <Stack gap={0}>
+                  <Group gap="xs">
+                    {stat.icon}
+                    <Text size="xs" tt="uppercase" fw={700} c="dimmed">{stat.label}</Text>
+                  </Group>
+                  <Metric style={{ color: 'white', fontWeight: 900 }}>{stat.value}</Metric>
+                </Stack>
+                <Badge variant="light" color={stat.color} size="sm">{stat.badge}</Badge>
+              </Flex>
+              <Progress value={stat.progress} color={stat.color} mt="md" size="xs" />
+            </Box>
+          </motion.div>
+        ))}
       </SimpleGrid>
 
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" style={{ flex: 1 }}>

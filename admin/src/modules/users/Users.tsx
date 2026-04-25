@@ -1,7 +1,8 @@
-import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid } from '@mantine/core';
+import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal } from '@mantine/core';
 import { useState } from 'react';
 import { WinWindow } from '../../core/Layout';
-import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye } from 'lucide-react';
+import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus } from 'lucide-react';
+import { useAuth } from '../../core/auth/useAuth';
 
 const MOCK_USERS = [
   { id: 'U-9921', name: 'Alex Runner', email: 'alex@example.com', tenant: 'Warsaw Runners', status: 'Active', flags: 0 },
@@ -11,22 +12,44 @@ const MOCK_USERS = [
 ];
 
 export const Users = () => {
+  const { user } = useAuth();
   const [selectedUser, setSelectedUser] = useState<typeof MOCK_USERS[0] | null>(null);
+  const [inviteModalOpened, setInviteModalOpened] = useState(false);
+
+  const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
+  const isTenantAdmin = user?.role === 'TENANT_ADMIN';
+
+  const windowTitle = isGlobalOwner 
+    ? "User Audit Suite — Global Registry" 
+    : `Instance Management — ${user?.username}'s City`;
+
 
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
-      <WinWindow title="User Audit Suite — Global Registry">
+      <WinWindow title={windowTitle}>
         <Stack gap="md">
           <Group justify="space-between">
             <TextInput 
-              placeholder="Global Search (ID, Email, Name)..." 
+              placeholder={isGlobalOwner ? "Global Search (ID, Email, Name)..." : "Search within city..."} 
               leftSection={<Search size={14} />}
               style={{ width: '400px' }}
               className="fluent-acrylic"
             />
-            <Button leftSection={<UserCog size={16} />} variant="light" color="gray">
-              Batch Actions
-            </Button>
+            <Group>
+              {(isGlobalOwner || isTenantAdmin) && (
+                <Button 
+                  leftSection={<UserPlus size={16} />} 
+                  variant="filled" 
+                  color="blue"
+                  onClick={() => setInviteModalOpened(true)}
+                >
+                  Invite Moderator
+                </Button>
+              )}
+              <Button leftSection={<UserCog size={16} />} variant="light" color="gray">
+                Batch Actions
+              </Button>
+            </Group>
           </Group>
 
           <Table verticalSpacing="sm" highlightOnHover>
@@ -151,6 +174,27 @@ export const Users = () => {
           </Stack>
         )}
       </Drawer>
+      </Drawer>
+
+      <Modal
+        opened={inviteModalOpened}
+        onClose={() => setInviteModalOpened(false)}
+        title={<Text fw={700}>Invite New Staff / Moderator</Text>}
+        centered
+        className="fluent-acrylic"
+        styles={{ content: { borderRadius: '12px', background: 'rgba(32,32,32,0.95)', border: '1px solid rgba(255,255,255,0.1)' } }}
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            This will send an invitation to join your city as a **Tenant Moderator**. They will have access to Anti-Cheat and local moderation.
+          </Text>
+          <TextInput label="Email Address" placeholder="moderator@city.gov" required />
+          <TextInput label="Full Name" placeholder="Jan Kowalski" />
+          <Button fullWidth onClick={() => setInviteModalOpened(false)} color="blue" mt="md">
+            Send Invitation Token
+          </Button>
+        </Stack>
+      </Modal>
     </Box>
   );
 };
