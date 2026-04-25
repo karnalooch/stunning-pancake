@@ -17,15 +17,16 @@
 ## Phase 2: Mobile Engine Upgrade (Weeks 3-5)
 *Goal: Achieve 120FPS and local-first reactivity.*
 
-- [ ] **Framework & Core**:
-    - [ ] Upgrade to React Native 0.78 (Bridgeless Mode).
-    - [ ] Install and configure **Tamagui v4** (optimizing compiler).
-- [ ] **Visuals & UI**:
-    - [ ] Integrate **React Native Skia** for charts and gamification.
-    - [ ] Implement **Mapbox SDK** with 3D Terrain and custom layers.
-- [ ] **State & Sync**:
-    - [ ] Refactor state management to **Legend-State** (micro-observables).
-    - [ ] Integrate **PowerSync Client** for zero-latency local-first data access.
+- [x] **Framework & Core**:
+    - [x] Upgrade to React Native 0.78 (Bridgeless Mode).
+    - [x] Install and configure **Tamagui v4** (optimizing compiler).
+- [x] **Visuals & UI**:
+    - [x] Integrate **React Native Skia** for charts and gamification.
+    - [x] Implement **Mapbox SDK** with 3D Terrain and custom layers.
+- [x] **State & Sync**:
+    - [x] Refactor state management to **Legend-State** (micro-observables).
+    - [x] Integrate **PowerSync Client** for zero-latency local-first data access.
+
 
 ## Phase 3: Admin & Analytics Overhaul (Weeks 6-8)
 *Goal: Migrate to Next.js 15 and WebGL big-data visualization.*
