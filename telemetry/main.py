@@ -111,9 +111,12 @@ async def startup() -> None:
             await conn.execute(
                 "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
             )
-            logger.info("timescaledb: hypertable gps_points ready")
+            # Add spatial index for PostGIS performance
+            await conn.execute("CREATE INDEX IF NOT EXISTS idx_gps_points_geom ON gps_points USING GIST (ST_SetSRID(ST_MakePoint(lon, lat), 4326));")
+            logger.info("timescaledb: hypertable gps_points ready with spatial index")
         except Exception as exc:
             logger.warning("timescaledb hypertable creation skipped: %s", exc)
+
 
     logger.info("telemetry service started — pool ready")
     # Start Traccar → Redis bridge as background task
@@ -360,6 +363,32 @@ async def ingest_batch(batch: BatchPacket) -> dict:
     })
 
     return {"status": "accepted", "inserted": len(rows)}
+
+
+@app.post("/api/telemetry/ingest/stream", status_code=202)
+async def ingest_stream(batch: BatchPacket) -> dict:
+    """
+    High-performance streaming endpoint for PowerSync/Mobile clients.
+    Uses PostgreSQL binary copy for maximum ingestion speed.
+    """
+    pool = await get_pool()
+    rows = [
+        (
+            p.timestamp, p.device_id, p.user_id,
+            p.lat, p.lon, p.speed_ms, p.accuracy_m, p.activity_id,
+        )
+        for p in batch.packets
+    ]
+    
+    async with pool.acquire() as conn:
+        # Using copy_records_to_table for even faster ingestion than executemany
+        await conn.copy_records_to_table(
+            'gps_points',
+            records=rows,
+            columns=['time', 'device_id', 'user_id', 'lat', 'lon', 'speed_ms', 'accuracy_m', 'activity_id']
+        )
+
+    return {"status": "stream_accepted", "count": len(rows)}
 
 
 @app.get("/api/telemetry/live")

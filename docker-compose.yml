@@ -145,6 +145,21 @@ services:
     depends_on:
       - backend
 
+  # PowerSync — Local-first synchronization engine (Constitution §24.2)
+  powersync:
+    image: powersync/powersync:latest
+    container_name: sport_powersync
+    restart: always
+    environment:
+      POWERSYNC_DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      POWERSYNC_REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      POWERSYNC_JWT_SECRET: ${POWERSYNC_JWT_SECRET:-super-secret-powersync-key}
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+      - redis
+
   # Celery Worker — Async tasks: BRouter validation, notifications (Phase 7)
   celery_worker:
     build: ./backend
