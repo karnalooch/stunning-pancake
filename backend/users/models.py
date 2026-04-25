@@ -1,30 +1,19 @@
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-class User(AbstractUser):
-    ROLE_CHOICES = (
-        ('GLOBAL_ADMIN', 'Superuser / Global Admin'),
-        ('LOCAL_ADMIN', 'Tenant Admin / Coordinator'),
-        ('MODERATOR', 'Moderator / Support'),
-        ('USER', 'Athlete / User'),
-    )
-    
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='USER')
-    is_premium = models.BooleanField(default=False)
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
-    bio = models.TextField(max_length=500, blank=True)
-    
-    # B2B association (Tenant ID)
-    tenant_id = models.CharField(max_length=100, null=True, blank=True, help_text="ID of the city or company")
+class Role(models.TextChoices):
+    GLOBAL_OWNER = 'GLOBAL_OWNER', 'Global Owner'
+    TENANT_ADMIN = 'TENANT_ADMIN', 'Tenant Admin / Owner'
+    TENANT_MODERATOR = 'TENANT_MODERATOR', 'Moderator'
+    ATHLETE = 'ATHLETE', 'Athlete'
+    SPONSOR = 'SPONSOR', 'Sponsor'
 
-    def __str__(self):
-        return f"{self.username} ({self.get_role_display()})"
-
-class TenantProfile(models.Model):
+class Tenant(models.Model):
     """
     White-Label configuration for B2B tenants (cities, companies).
     """
-    tenant_id = models.CharField(max_length=100, unique=True)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     
     # Branding
@@ -32,10 +21,11 @@ class TenantProfile(models.Model):
     primary_color = models.CharField(max_length=7, default='#00d2ff')
     secondary_color = models.CharField(max_length=7, default='#92fe9d')
     
-    # Configuration
+    # Configuration & Feature Toggles
     is_active = models.BooleanField(default=True)
     max_users = models.IntegerField(default=1000)
-
+    has_heatmap_analytics = models.BooleanField(default=False, help_text="Feature toggle for advanced heatmap analytics")
+    
     # Phase 8: White-Label and per-tenant normalization rules
     white_label_domain = models.CharField(
         max_length=200, blank=True,
@@ -49,16 +39,19 @@ class TenantProfile(models.Model):
             'allowed_sports, push_notification_key, etc.'
         ),
     )
-    # Example config_json:
-    # {
-    #   "normalization_factor": 1.2,
-    #   "require_brouter": true,
-    #   "allowed_sports": ["RUN", "BIKE"],
-    #   "fcm_server_key": "...",
-    # }
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
 
+class User(AbstractUser):
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.ATHLETE)
+    tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    
+    is_premium = models.BooleanField(default=False)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    bio = models.TextField(max_length=500, blank=True)
+
+    def __str__(self):
+        return f"{self.username} ({self.get_role_display()})"
