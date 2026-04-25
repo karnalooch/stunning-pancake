@@ -1,178 +1,79 @@
-# OPERATIONAL IMPLEMENTATION PLAN: SPORT PLATFORM
+# IMPLEMENTATION PLAN: Hyper-Performance Modernization 2025/2026
 
-This document tracks the engineering milestones and real-time progress of the SPORT platform development.
+## Phase 1: Infrastructure & Data Foundation (Weeks 1-2)
+*Goal: Prepare the high-throughput pipeline and local-first syncing.*
 
----
+- [x] **Database Modernization**:
+    - [x] Configure TimescaleDB Hypertables for the `activities_telemetry` table.
+    - [x] Implement PostGIS `ST_Subdivide` on the road network graph for faster geofencing.
+- [x] **PowerSync Integration**:
+    - [x] Deploy PowerSync Service (Docker).
+    - [x] Define sync rules between PostgreSQL and mobile SQLite.
+- [x] **FastAPI Ingestion**:
+    - [x] Finalize the async `/api/telemetry/ingest/stream` endpoint.
+    - [x] Implement Redis pub/sub for real-time leaderboard updates.
 
-## 🏁 Milestone 1: Core Foundation & Telemetry ✅ COMPLETED
-**Objective**: Establish the "Permissive Stack" and basic GPS ingestion.
 
-- **Infrastructure**: ✅ Docker stack with PostGIS, Redis, Traccar, and BRouter.
-- **Backend**: ✅ Django scaffold with `activities` and `users` modules.
-- **Telemetry Ingestion**: ✅ Traccar integration with basic position storage.
-- **Anti-Cheat Layer 0**: ✅ Basic BRouter topological validation.
-- **Admin Panel**: ✅ Base React/Vite dashboard with MapLibre GL.
-- **Authentication**: ✅ JWT integration with rotatable tokens.
+## Phase 2: Mobile Engine Upgrade (Weeks 3-5)
+*Goal: Achieve 120FPS and local-first reactivity.*
 
----
+- [x] **Framework & Core**:
+    - [x] Upgrade to React Native 0.78 (Bridgeless Mode).
+    - [x] Install and configure **Tamagui v4** (optimizing compiler).
+- [x] **Visuals & UI**:
+    - [x] Integrate **React Native Skia** for charts and gamification.
+    - [x] Implement **Mapbox SDK** with 3D Terrain and custom layers.
+- [x] **State & Sync**:
+    - [x] Refactor state management to **Legend-State** (micro-observables).
+    - [x] Integrate **PowerSync Client** for zero-latency local-first data access.
 
-## 🚀 Milestone 2: Engine V2 & Anti-Cheat ✅ COMPLETED
-**Objective**: High-performance telemetry pipeline, kinematic anti-cheat, and moderator oversight.
 
-### 2.1 Advanced Telemetry Pipeline
-- **Redis Direct Bridge**: ✅ Traccar pushes positions directly to Redis Pub/Sub (bypassing HTTP).
-- **FastAPI Ingestion**: ✅ High-throughput batch ingestion for mobile telemetry.
-- **TimescaleDB**: ✅ GPS points stored in hypertables for time-series optimization.
+## Phase 3: Admin & Analytics Overhaul (Weeks 6-8)
+*Goal: Migrate to Next.js 15 and WebGL big-data visualization.*
 
-### 2.2 3-Layer Anti-Cheat System
-- **Layer 1: Fast Selection Gate**: ✅ O(N) kinematic pre-filter (Teleport, Accel, Motor Fingerprint, Straight-line).
-- **Layer 2: V-max Heuristics**: ✅ Biomechanical speed ceiling checks per sport.
-- **Layer 3: BRouter/Viterbi**: ✅ HMM-based Map Matching (Viterbi algorithm) for topological snapping.
+- [x] **Architecture Migration**:
+    - [x] Initialize **Next.js 15 (App Router)** for the `admin/` folder.
+    - [x] Migrate component logic to **React Server Components (RSC)**.
+- [x] **UI & Data Vis**:
+    - [x] Implement **shadcn/ui** with the Obsidian design system.
+    - [x] Integrate **deck.gl** for high-density GPS track rendering (WebGL).
+- [x] **BI Layer**:
+    - [x] Deploy **Cube.js** for headless business intelligence.
+    - [x] Create Tremor-based KPI dashboards for Club Moderators.
 
-### 2.3 Moderator Command Center
-- **Split-screen Review**: ✅ Moderator interface for flagged activities with map visualization.
-- **Materialized Views**: ✅ `city_rankings_mv` in PostGIS for high-performance ranking aggregation.
-- **Sport Plugins**: ✅ `pluggy`-based validator hooks for RUN/BIKE disciplines.
 
-### 2.4 Mobile Engine V2
-- **Haversine Core**: ✅ Real-time distance and pace calculation on-device (Flutter).
-- **MMKV Buffering**: ✅ High-speed local persistence for offline-first tracking.
+## Phase 4: User Journey & Security Hardening (Weeks 9-10)
+*Goal: Polish the onboarding and ensure absolute privacy.*
 
----
+- [x] **Auth & Onboarding**:
+    - [x] Implement **Passkeys (FIDO2)** for passwordless login.
+    - [x] Build the 3-minute TTV onboarding flow with progressive disclosure.
+- [x] **Privacy Guard**:
+    - [x] Finalize on-device **Privacy Zones v2** (masking before sync).
+    - [x] Audit Sentry PII stripping for GPS coordinates.
 
-## 🛠 Milestone 3: Production Hardening & Social Sync ✅ COMPLETED
-**Objective**: Matrix integration, background stability, and security hardening.
+## Phase 5: Advanced Operational Control & Branding (Weeks 11-12)
+*Goal: Enable granular performance management and real-time branding.*
 
-- **Matrix Async Sync**: ✅ All Matrix operations moved to Celery `notifications` queue (`clubs/tasks.py`).
-- **Matrix Member Invites**: ✅ `invite_member_to_matrix_async` fires when ClubMembership becomes ACTIVE.
-- **Background Tracking v3**: ✅ `GpsSyncManager` upgraded — elevation gain, pace (sec/km), battery-adaptive accuracy (<20% → `MEDIUM`), `onError` boundary.
-- **Sentry — Django**: ✅ Active via `core/sentry.py` + `settings.py` (Django + Celery + Redis integrations).
-- **Sentry — FastAPI**: ✅ `FastApiIntegration` + `HttpxIntegration` added to `telemetry/main.py`.
-- **Sentry — Mobile**: ✅ `sentry_service.dart` created with GPS-stripping `beforeSend` hook (Constitution §10.1). Wired into `GpsSyncManager`.
-- **Privacy Zones v2**: ✅ Dynamic-radius masking (HOME=250m / WORK=150m / CUSTOM=75m), density boost ×1.5 if ≥3 zones nearby, segment gap bridging via linear interpolation.
-- **CI/CD Hardening**: ✅ Trivy CVE scanner added for backend/admin/mobile → SARIF to GitHub Security tab. Python bumped to 3.12. All action versions updated to v4/v5.
-- **Dependabot v2**: ✅ Expanded to 4 ecosystems (backend, telemetry, admin, mobile). `security-patches` auto-group for admin.
+- [x] **Dynamic Performance Tuning**:
+    - [x] Implement **Data Ingestion Throttling** (adjust GPS polling resolution on the fly).
+    - [x] Add server-side controls for telemetry processing depth (Quality vs. Performance).
+- [x] **Live Hyper-Edit Mode (Designer System)**:
+    - [x] Implement `DesignerProvider` for persistent UI state management (Admin/Web).
+    - [x] Integrate `@dnd-kit` for real-time dashboard layout reordering.
+    - [x] Build `EditableText` system for in-flight content modification.
+    - [x] **Mobile HUD Designer**: Implement long-press HUD customization with MMKV persistence.
+- [ ] **Adaptive Integrity**:
+    - [ ] Build a UI for real-time **Anti-Cheat Sensitivity** adjustment (Kinematics & ML thresholds).
+- [ ] **White-Label Engine**:
+    - [ ] Implement **Remote Asset Injection** for Logos, Sponsorship Overlays, and Splash Screens.
+- [ ] **Outdoor HUD Optimization**:
+    - [ ] Create a **High-Contrast HUD** mode for mobile (direct sunlight accessibility).
 
----
-
-## 💰 Milestone 4: Scale & Monetization ✅ COMPLETED
-**Objective**: Multi-tenancy, payments, and marketplace.
-
-- **Stripe Integration**: ✅ `StripeService` — B2C/B2B checkout sessions, Customer Portal, webhook with signature verification.
-- **Voucher Marketplace**: ✅ `rewards` Django app — Sponsor, VoucherPool, Voucher, PointsLedger models. Atomic redemption via `SELECT FOR UPDATE` (race-condition safe). REST API: `/api/rewards/*`.
-- **Points Pipeline**: ✅ `RewardsService.award_for_activity` wired into Celery task — points auto-awarded on activity verification (10 pts/km, idempotent).
-- **Multi-Tenancy (RLS)**: ✅ `core/rls.py` — PostgreSQL Row Level Security policies on 5 tables with `set_tenant_context()` helper.
-- **OGC API Moving Features**: ✅ `/api/ogc/` — Conformance declaration, collections listing, paginated trajectory export in MF-JSON format.
-
----
-
-## 🎯 Milestone 5: AI & Premium Analytics ✅ COMPLETED
-**Objective**: Machine learning anomaly detection, predictive leaderboards, and premium insights.
-
-- **ML Anomaly Detector**: ✅ `activities/ml_anomaly.py` — IsolationForest on 8 kinematic features. Layer 1.5 in Celery pipeline. Fails open (no false positives). Includes `train_and_save_model()` for offline training. `scikit-learn==1.4.2` + `numpy==1.26.4` added to requirements.
-- **Performance Predictions**: ✅ `activities/analytics.py` — Riegel's formula (per activity type), linear regression trend with R², ACWR injury risk calculator. Zero external deps (stdlib only).
-- **Heatmap API**: ✅ `activities/heatmap.py` — Zoom-adaptive grid binning, bbox filtering, PostGIS `bboverlaps`. Returns weighted GeoJSON polygons at `/api/activities/heatmap/`.
-- **Analytics Endpoint**: ✅ `/api/activities/analytics/` — Combined: trend, ACWR, race predictions (5K/10K/HM/Marathon). Premium user endpoint.
 
 ---
 
-## 🛡 Milestone 6: Hardening & Global Ecosystem Expansion 🏗 IN PROGRESS
-**Objective**: Robust data isolation, wearable integration, and GIS interoperability.
-
-### 6.1 Database Isolation (RLS Hardening)
-- **Zero-Trust RLS**: ✅ **COMPLETED** — Move all multi-tenant logic from Django to PostgreSQL RLS policies.
-- **Security Audit UI**: ✅ **COMPLETED** — Real-time monitoring of tenant isolation and policy enforcement using **Tremor** and **shadcn/ui**.
-
-### 6.2 Wearable & Health SDKs
-- **Garmin Connect**: ✅ **COMPLETED** — Integration for direct activity import.
-- **Apple HealthKit / Google Health Connect**: ✅ **COMPLETED** — Native mobile app integration for HRV and biometric data ingestion.
-- **Biometric Data Studio**: ✅ **COMPLETED** — Immersive visualization of health metrics using **Three.js** and **Framer Motion** for data-fusion insights.
-
-### 6.3 GIS & Interoperability
-- **OGC API Features**: ✅ **COMPLETED** — Paginated GeoJSON export for municipal GIS tools.
-- **Live GIS Dashboard**: ✅ **COMPLETED** — **deck.gl**-powered real-time spatial visualization for city coordinators.
-- **Dynamic Geofencing**: ✅ **COMPLETED** — Automated event "corridors" activation/deactivation.
-
-### 6.4 Community Moderation
-- **Decentralized Mod Tools**: ✅ **COMPLETED** — Next-gen moderation interface built with **shadcn/ui** and **Mantine**.
-    - ✅ **Initial Scaffold Completed**: `CityModeratorDashboard.tsx` created with base metrics and layout.
-- **Community RBAC**: ✅ **COMPLETED** — RBAC Level 3 Expansion with localized "City Moderator" dashboards.
-
----
-
-## 🎨 Milestone 7: Frontend Visual Evolution & Immersive UI 🏗 PLANNED
-**Objective**: Overhaul the Admin Panel and User interfaces with modern component architectures and high-performance graphics.
-
-### 7.1 Modern Component Architecture
-*   **shadcn/ui & Radix**: ✅ **COMPLETED** — Migration from traditional UI kits to **CLI-managed** "copy-paste" components for full source control.
-*   **Mantine Integration**: ✅ **COMPLETED** — Layouts and grids using Mantine core.
-*   **Tremor Dashboards**: ✅ **COMPLETED** — `BentoAnalytics.tsx` implemented with AreaCharts and Metrics.
-
-### 7.2 Graphics & Visualization Engine
-*   **deck.gl "Comet" Trails**: ✅ **COMPLETED** — Advanced GPU-accelerated rendering of millions of GPS points with temporal effects.
-*   **Three.js / R3F Scenes**: ✅ **COMPLETED** — `GlobePreview.tsx` created for immersive 3D spatial context.
-*   **PixiJS HUD**: ✅ **COMPLETED** — High-performance 2D overlays for real-time moderator monitoring.
-
-### 7.3 Experience & Animation
-*   **Framer Motion Orchestration**: ✅ **COMPLETED** — Motion-enhanced bento grids and state transitions.
-*   **Micro-interactions**: ✅ **COMPLETED** — Subtle visual feedback for all administrative actions and data updates.
-
----
-
----
-
-## 📱 Milestone 8: Mobile Immersive Overhaul (Android & iOS) 🏗 PLANNED
-**Objective**: Bring the "New Era" visual language to the mobile applications using Flutter's high-performance rendering.
-
-### 8.1 Impeller Graphics & Shaders
-*   **Impeller Engine**: 🏗 Enabling the new rendering backend for butter-smooth 120 FPS animations on both Android and iOS.
-*   **Custom Fragment Shaders**: 🏗 Real-time "comet" trail effects for GPS tracks using GLSL/SPIR-V.
-
-### 8.2 Motion & Interaction
-*   **Rive Integration**: 🏗 State-machine based vector animations for interactive UI elements.
-*   **Fluid Transitions**: 🏗 Hero animations and staggered bento-grid layouts on mobile.
-
-### 8.3 Cross-Platform Parity
-*   **iOS/Android Native Modules**: 🏗 Unified background tracking and HealthKit/HealthConnect integration.
-*   **Glassmorphism UI**: 🏗 Implementing the platform's signature "Obsidian" design system in Flutter.
-
----
-
-## 📊 Progress Summary
-- **Total Progress**: ✅ **88%** | **EXPANDING**
-- **Platform Status**: ✅ **PRODUCTION READY** | 🏗 **MOBILE OVERHAUL (Android & iOS)**
-
-### Architecture Fingerprint (Final)
-| Layer | Technology | Status |
-| :--- | :--- | :--- |
-| **Backend** | Django + Citus | ✅ Stable |
-| **Telemetry** | FastAPI + Redis Cluster | ✅ Scaled |
-| **Admin UI** | React 19 + New Era | ✅ 100% |
-| **Mobile** | Flutter (Cross-platform) | ✅ **CI/CD ACTIVE (GitHub Actions)** |
-
-### Architecture Fingerprint (Final)
-| Layer | Technology | Status |
-|:---|:---|:---|
-| Mobile | React Native 0.76 + MMKV + react-native-background-geolocation | ✅ |
-| Telemetry | FastAPI + asyncpg + TimescaleDB + Redis Pipeline | ✅ |
-| Anti-Cheat | Fast Gate → IsolationForest → V-max → BRouter Viterbi | ✅ |
-| Backend | Django 4.2 + DRF + Celery + PostGIS + Redis | ✅ |
-| Rewards | Stripe + Voucher Marketplace + PointsLedger | ✅ |
-| Analytics | Heatmap API + Riegel + ACWR + Trend | ✅ |
-| Social | Matrix E2EE (async Celery provisioning) | ✅ |
-| Security | Trivy CI + Dependabot + PostgreSQL RLS | ✅ |
-| Observability | Sentry (Django + FastAPI + Mobile) | ✅ |
-
----
-
-## 🔥 Scaling Validation: Stress Test 2025 (Edition VII)
-**Target Volume**: Massive-scale gamification for 200+ local governments.
-
-- **Active Users**: **184,000+** (92k Cyclists + 92k Runners).
-- **Total Distance**: **38,000,000 km**.
-- **Concurrent Ingestion**: **10,000+ req/sec** via FastAPI + Redis Pipeline.
-- **Leaderboard Performance**: Redis sorted sets maintaining real-time rankings for 200 cities simultaneously (<5ms latency).
-- **Anti-Cheat Throughput**: ML Anomaly Detector (Isolation Forest) processing 50+ tracks/sec in Celery `default` queue.
-- **Data Integrity**: TimescaleDB handling multi-terabyte trajectory storage with RLS isolation.
-
-**Status**: 🚀 **READY FOR RECORD-BREAKING LOADS**
+## Technical Debt & Optimization (Ongoing)
+- [ ] **ML Optimization**: Refine Z-score anomaly detection logic in `ml_retrain.py`.
+- [ ] **Battery Audit**: Stress test `react-native-background-geolocation` in background/pocket scenarios.
+- [ ] **Legal Audit**: Verify RODO/VAT OSS compliance in the tax generation module.
