@@ -96,6 +96,16 @@ services:
       - db
       - redis
 
+  # Public Landing Page (Port 3000 — The "Miracle" View)
+  web:
+    build: ./web
+    container_name: sport_web
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
   # 1. Global Admin Application (Port 3001)
   global_admin:
     build:
