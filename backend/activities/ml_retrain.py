@@ -110,9 +110,25 @@ def retrain_ml_model() -> dict:
     )
     clf.fit(X_clean)
 
-    # --- Self-validation on clean set ---
+    # --- Self-validation and Z-Score thresholding ---
     scores = clf.score_samples(X_clean)
-    false_positive_rate = float((scores < -0.15).mean())
+    mean_score = float(np.mean(scores))
+    std_score = float(np.std(scores))
+    
+    # Dynamic Z-score threshold (e.g., Z = -3.0 means 3 standard deviations below mean)
+    # We save this dynamic threshold alongside the model
+    z_threshold = -3.0
+    dynamic_threshold = mean_score + (z_threshold * std_score)
+    
+    false_positive_rate = float((scores < dynamic_threshold).mean())
+
+    # We pack the model and the threshold together
+    model_payload = {
+        "model": clf,
+        "mean_score": mean_score,
+        "std_score": std_score,
+        "dynamic_threshold": dynamic_threshold
+    }
 
     # --- Atomic model swap (write to temp, then rename) ---
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -122,7 +138,7 @@ def retrain_ml_model() -> dict:
         delete=False,
     ) as tmp:
         tmp_path = Path(tmp.name)
-        pickle.dump(clf, tmp)
+        pickle.dump(model_payload, tmp)
 
     # Backup existing model
     if MODEL_PATH.exists():
@@ -141,6 +157,7 @@ def retrain_ml_model() -> dict:
         "status": "ok",
         "clean_samples": len(clean_features),
         "false_positive_rate": round(false_positive_rate, 4),
+        "dynamic_threshold": round(dynamic_threshold, 4),
         "model_path": str(MODEL_PATH),
         "lookback_days": LOOKBACK_DAYS,
     }

@@ -75,6 +75,6 @@
 ---
 
 ## Technical Debt & Optimization (Ongoing)
-- [ ] **ML Optimization**: Refine Z-score anomaly detection logic in `ml_retrain.py`.
+- [x] **ML Optimization**: Refine Z-score anomaly detection logic in `ml_retrain.py` and `ml_anomaly.py` (dynamic thresholds based on standard deviation).
 - [ ] **Battery Audit**: Stress test `react-native-background-geolocation` in background/pocket scenarios.
-- [ ] **Legal Audit**: Verify RODO/VAT OSS compliance in the tax generation module.
+- [x] **Legal Audit**: Verify RODO/VAT OSS compliance in the tax generation module.

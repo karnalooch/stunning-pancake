@@ -28,7 +28,11 @@ class PaymentService:
                 mode='subscription',
                 success_url=settings.FRONTEND_URL + '/success?session_id={CHECKOUT_SESSION_ID}',
                 cancel_url=settings.FRONTEND_URL + '/cancel',
-                metadata={'user_id': user.id}
+                metadata={'user_id': user.id},
+                # VAT OSS / RODO Compliance: Enable automatic tax calculation based on customer IP/address
+                automatic_tax={'enabled': True},
+                customer_update={'address': 'auto', 'name': 'auto'},
+                tax_id_collection={'enabled': True}
             )
             return session.url
         except Exception as e:

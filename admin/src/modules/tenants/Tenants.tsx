@@ -1,6 +1,7 @@
 import { Box, Table, Badge, Group, Text, Button, ActionIcon, TextInput, Stack, SimpleGrid } from '@mantine/core';
 import { WinWindow } from '../../core/Layout';
 import { Search, Plus, MoreVertical, ExternalLink } from 'lucide-react';
+import { WhiteLabelEngine } from './WhiteLabelEngine';
 
 const MOCK_TENANTS = [
   { id: 1, name: 'Siedlce City Council', region: 'Masovian, PL', status: 'Active', users: '42,102', revenue: '$12,400' },
@@ -83,6 +84,10 @@ export const Tenants = () => {
           </Box>
         </WinWindow>
       </SimpleGrid>
+
+      <WinWindow title="Branding Configuration">
+        <WhiteLabelEngine />
+      </WinWindow>
     </Box>
   );
 };

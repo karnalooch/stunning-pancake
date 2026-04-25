@@ -33,14 +33,13 @@ logger = logging.getLogger(__name__)
 # Path where the trained IsolationForest model is stored
 MODEL_PATH = Path(os.getenv("ML_MODEL_PATH", "/app/models/anomaly_detector.pkl"))
 
-# Anomaly score threshold: scores below this are considered anomalous
-# IsolationForest returns score in (-1, 0] where more negative = more anomalous
+# Default anomaly score threshold (fallback if not dynamically trained)
 ANOMALY_THRESHOLD = float(os.getenv("ML_ANOMALY_THRESHOLD", "-0.15"))
 
 # Minimum track length for ML analysis (too few points = unreliable)
 MIN_POINTS_FOR_ML = 20
 
-_model = None   # Lazy-loaded
+_model_payload = None   # Lazy-loaded dict containing model and thresholds
 _model_loaded = False
 _model_lock = threading.Lock()
 
@@ -130,15 +129,15 @@ def extract_features(points: list["GpsPoint"]) -> list[float] | None:
 # ---------------------------------------------------------------------------
 
 def _load_model():
-    """Lazily loads the IsolationForest model from disk (Thread-safe)."""
-    global _model, _model_loaded
+    """Lazily loads the IsolationForest model payload from disk (Thread-safe)."""
+    global _model_payload, _model_loaded
     
     if _model_loaded:
-        return _model
+        return _model_payload
 
     with _model_lock:
         if _model_loaded:
-            return _model
+            return _model_payload
             
         _model_loaded = True
         if not MODEL_PATH.exists():
@@ -147,19 +146,28 @@ def _load_model():
 
         try:
             import joblib
-            _model = joblib.load(MODEL_PATH)
+            payload = joblib.load(MODEL_PATH)
+            if not isinstance(payload, dict):
+                # Backwards compatibility for older pickled models
+                _model_payload = {"model": payload, "dynamic_threshold": ANOMALY_THRESHOLD}
+            else:
+                _model_payload = payload
             logger.info("ml_anomaly: model loaded from %s (joblib)", MODEL_PATH)
         except ImportError:
             # Fallback to pickle if joblib is not available yet
             import pickle
             with open(MODEL_PATH, "rb") as f:
-                _model = pickle.load(f)
+                payload = pickle.load(f)
+                if not isinstance(payload, dict):
+                    _model_payload = {"model": payload, "dynamic_threshold": ANOMALY_THRESHOLD}
+                else:
+                    _model_payload = payload
             logger.warning("ml_anomaly: loaded via pickle (joblib recommended)")
         except Exception as exc:
             logger.error("ml_anomaly: failed to load model err=%s", exc)
-            _model = None
+            _model_payload = None
 
-    return _model
+    return _model_payload
 
 
 def train_and_save_model(clean_tracks: list[list["GpsPoint"]], output_path: Path | None = None) -> None:
@@ -198,10 +206,22 @@ def train_and_save_model(clean_tracks: list[list["GpsPoint"]], output_path: Path
     )
     clf.fit(X)
 
+    scores = clf.score_samples(X)
+    mean_score = float(np.mean(scores))
+    std_score = float(np.std(scores))
+    dynamic_threshold = mean_score + (-3.0 * std_score)
+
+    model_payload = {
+        "model": clf,
+        "mean_score": mean_score,
+        "std_score": std_score,
+        "dynamic_threshold": dynamic_threshold
+    }
+
     save_path = output_path or MODEL_PATH
     save_path.parent.mkdir(parents=True, exist_ok=True)
     with open(save_path, "wb") as f:
-        pickle.dump(clf, f)
+        pickle.dump(model_payload, f)
 
     logger.info("ml_anomaly.train: model saved to %s (trained on %d tracks)", save_path, len(feature_matrix))
 
@@ -210,33 +230,30 @@ def train_and_save_model(clean_tracks: list[list["GpsPoint"]], output_path: Path
 # Inference
 # ---------------------------------------------------------------------------
 
-def ml_anomaly_score(points: list["GpsPoint"]) -> float | None:
+def ml_anomaly_score(points: list["GpsPoint"]) -> tuple[float | None, float | None]:
     """
-    Returns an anomaly score for a GPS track using the IsolationForest model.
-
-    Scores:
-        > 0      — normal human movement
-        0 to -0.15 — borderline (monitor)
-        < -0.15  — anomalous (likely non-human)
+    Returns an anomaly score and the dynamic threshold for a GPS track using the IsolationForest model.
 
     Returns:
-        Float score, or None if model is unavailable or track is too short.
+        Tuple (score, threshold). None if model is unavailable or track is too short.
     """
-    model = _load_model()
-    if model is None:
-        return None
+    payload = _load_model()
+    if payload is None:
+        return None, None
 
     feats = extract_features(points)
     if feats is None:
-        return None
+        return None, None
 
     try:
         import numpy as np
+        model = payload["model"]
+        threshold = payload.get("dynamic_threshold", ANOMALY_THRESHOLD)
         score = float(model.score_samples(np.array([feats]))[0])
-        return score
+        return score, threshold
     except Exception as exc:
         logger.error("ml_anomaly.score: err=%s", exc)
-        return None
+        return None, None
 
 
 def is_ml_anomaly(points: list["GpsPoint"]) -> bool:
@@ -253,11 +270,11 @@ def is_ml_anomaly(points: list["GpsPoint"]) -> bool:
     Returns:
         True if anomalous, False if clean or model unavailable.
     """
-    score = ml_anomaly_score(points)
-    if score is None:
+    score, threshold = ml_anomaly_score(points)
+    if score is None or threshold is None:
         return False   # Fail open: no model = no rejection
 
-    is_anom = score < ANOMALY_THRESHOLD
+    is_anom = score < threshold
     if is_anom:
-        logger.info("ml_anomaly.flagged score=%.4f threshold=%.4f", score, ANOMALY_THRESHOLD)
+        logger.info("ml_anomaly.flagged score=%.4f threshold=%.4f", score, threshold)
     return is_anom
