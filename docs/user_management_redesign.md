@@ -1,112 +1,116 @@
 # RE-DESIGN LOGIKI UŻYTKOWNIKÓW I ZARZĄDZANIA (USER MANAGEMENT V2)
 
-Ten dokument opisuje nową architekturę zarządzania użytkownikami, system ról (RBAC), oraz powiązanie z systemem Multi-Tenant (B2B2C) na platformie SPORT.
+Ten dokument opisuje zaktualizowaną architekturę zarządzania użytkownikami, system ról (RBAC), oraz powiązanie z systemem Multi-Tenant (B2B2C) na platformie SPORT. System to teraz ekosystem składający się z Instancji (Tenants) – gdzie Instancją może być "Miasto X" lub "Firma Y".
 
-## 1. Hierarchia Ról i Tożsamość (Identity)
+## A. Hierarchia Ról i Uprawnienia (Logika Biznesowa)
 
-Zamiast płaskiej struktury, wdrażamy pełny model Role-Based Access Control (RBAC) oparty na JWT oraz PostgreSQL Row-Level Security (RLS).
+Oto podział ról w ekosystemie:
 
-### Typy Kont (Roles)
-1.  **Global Admin (Platform Owner)**:
-    - Pełny dostęp do całego klastra i wszystkich schematów bazy.
-    - Tworzenie i usuwanie Tenantów (miast/klientów B2B).
-    - Zarządzanie globalnymi regułami Anti-Cheat.
-2.  **Tenant Admin (Klient B2B)**:
-    - Dostęp **ograniczony do jednego Tenanta** (np. *Urząd Miasta Siedlce*).
-    - Zarządzanie subskrypcjami użytkowników wewnątrz własnego Tenanta.
-    - Widzi tylko anonimizowane globalne statystyki, ale pełne dane swoich użytkowników.
-3.  **Moderator (Pracownik Tenanta)**:
-    - Dostęp tylko do wyznaczonych modułów (np. akceptacja tras, obsługa zgłoszeń Anti-Cheat).
-    - Nie może zmieniać ustawień finansowych Tenanta.
-4.  **End User (Athlete / B2C)**:
-    - Zwykły użytkownik aplikacji mobilnej.
-    - Może należeć do **wielu Tenantów** (np. biega dla "Siedlce City" i jest w firmowej lidze "Corp Health").
+1. **GLOBAL_OWNER (Właściciel / Platform Owner)**
+   - **Co widzi:** Wszystko ("God Mode").
+   - **Uprawnienia:** Tworzenie nowych Instancji (dodawanie miast/firm), globalna analityka całej aplikacji, zarządzanie subskrypcjami i płatnościami (Stripe), banowanie całych organizacji, dostęp do logów i telemetrii systemu.
+
+2. **TENANT_ADMIN (Integratorzy / Prezydenci Miast / Właściciele Firm)**
+   - **Co widzi:** Tylko dane przypisane do swojej Instancji (swojego miasta/firmy).
+   - **Uprawnienia:** Zapraszanie Moderatorów, tworzenie lokalnych wydarzeń/wyzwań (np. "Rowerowy Maj w Warszawie"), podgląd zagregowanych statystyk (heatmaps), przydzielanie ról w obrębie swojej instancji.
+
+3. **TENANT_MODERATOR (Wsparcie / Obsługa lokalna)**
+   - **Co widzi:** To samo co Tenant Admin, ale bez dostępu do ustawień rozliczeniowych i zarządzania innymi użytkownikami administracyjnymi.
+   - **Uprawnienia:** Obsługa systemu Anti-Cheat (weryfikacja podejrzanych tras BRouterem), moderowanie zgłoszeń od użytkowników z danego miasta/firmy, akceptowanie wyników z konkretnych eventów.
+
+4. **ATHLETE (Użytkownicy / Rowerzyści / Biegacze)**
+   - **Co widzi:** Własne statystyki, rankingi miast/klubów, w których bierze udział.
+   - **Uprawnienia:** Nagrywanie tras, dołączanie do wyzwań, definiowanie swoich "Stref Prywatności" (Privacy Zones), zgłaszanie oszustw u innych. Może należeć do wielu instancji.
+
+5. **SPONSOR (Właściciele firm zewnętrznych)**
+   - **Co widzi:** Specjalny "Sponsor Dashboard" powiązany z wydarzeniem, które sponsorują.
+   - **Uprawnienia:** Tworzenie nagród/voucherów (Rewards), dodawanie swoich sklepów do mapy (POI), podgląd anonimowych statystyk (ile osób wykorzystało voucher).
 
 ---
 
-## 2. Model Bazodanowy (PostgreSQL)
+## B. Implementacja w Kodzie (Czytelność i Struktura)
 
-Wprowadzamy tabelę łącznikową (Junction Table), aby umożliwić relację Many-to-Many między Użytkownikami a Tenantami.
+Aby kod był czysty, twardo oddzielamy warstwę uprawnień od logiki biznesowej.
 
-```mermaid
-erDiagram
-    USERS ||--o{ USER_TENANTS : "has"
-    TENANTS ||--o{ USER_TENANTS : "contains"
-    
-    USERS {
-        uuid id PK
-        string email
-        string password_hash
-        jsonb preferences
-        timestamp last_login
-    }
-    
-    TENANTS {
-        uuid id PK
-        string name
-        string branding_json
-        string status
-    }
-    
-    USER_TENANTS {
-        uuid user_id FK
-        uuid tenant_id FK
-        string role "ENUM: ADMIN, MODERATOR, ATHLETE"
-        timestamp joined_at
-    }
+### 1. Backend (Python / Django)
+Stosujemy model bazy danych oparty na architekturze Multi-Tenant z tabelą pośredniczącą/kluczem obcym.
+
+**Katalogi i nazewnictwo (Django):**
+```text
+backend/
+├── users/
+│   ├── models.py        # CustomUser, Tenant, TenantProfile, UserRole
+│   ├── permissions.py   # Klasy: IsGlobalOwner, IsTenantAdmin, IsModerator
+│   └── views.py
+├── events/
+│   ├── models.py        # Event (posiada klucz obcy do Tenant)
+│   └── views.py
 ```
 
-### Izolacja Danych (Postgres RLS)
-Dla zapewnienia najwyższego bezpieczeństwa (multi-tenancy), włączamy **Row-Level Security**.
-Każde zapytanie z backendu (Django/FastAPI) ustawia lokalną zmienną sesji `sport.current_tenant_id`.
+**Przykład logiki ról (models.py):**
+```python
+from django.db import models
+from django.contrib.auth.models import AbstractUser
 
-```sql
--- Przykład polisy RLS dla tabeli 'activities'
-ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+class Role(models.TextChoices):
+    GLOBAL_OWNER = 'GLOBAL_OWNER', 'Właściciel'
+    TENANT_ADMIN = 'TENANT_ADMIN', 'Prezydent / Właściciel Firmy'
+    TENANT_MODERATOR = 'TENANT_MODERATOR', 'Moderator'
+    ATHLETE = 'ATHLETE', 'Sportowiec'
+    SPONSOR = 'SPONSOR', 'Sponsor'
 
-CREATE POLICY tenant_isolation_policy ON activities
-    USING (tenant_id = current_setting('sport.current_tenant_id')::uuid);
+class Tenant(models.Model):
+    name = models.CharField(max_length=255) # np. "Miasto Poznań", "Korporacja X"
+    is_active = models.BooleanField(default=True)
+
+class User(AbstractUser):
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.ATHLETE)
+    tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True)
+    is_premium = models.BooleanField(default=False)
+```
+
+**Customowe uprawnienia (permissions.py):**
+```python
+from rest_framework import permissions
+
+class IsTenantAdmin(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user.role == 'TENANT_ADMIN'
+        
+    def has_object_permission(self, request, view, obj):
+        # Sprawdź czy edytowany obiekt (np. Event) należy do miasta tego Admina!
+        return obj.tenant_id == request.user.tenant_id
+```
+
+### 2. Frontend (TypeScript / React)
+W aplikacji webowej i mobilnej używamy Context API lub Zustanda (Zustand) do trzymania informacji o użytkowniku, aby warunkowo renderować widoki.
+
+**Struktura katalogów (TypeScript):**
+```text
+admin/src/
+├── core/
+│   ├── auth/          # Logika logowania, dekodowanie JWT
+│   └── guards/        # ProtectedRoute.tsx (np. <RoleGuard requiredRole="TENANT_ADMIN">)
+├── modules/
+│   ├── global-admin/  # Widoki TYLKO dla Ciebie (GLOBAL_OWNER)
+│   ├── tenant-admin/  # Widoki dla Prezydentów/Firm
+│   └── sponsor/       # Dashboardy dla sponsorów
 ```
 
 ---
 
-## 3. Przepływ Uwierzytelniania (Authentication Flow)
+## C. Dobre Praktyki i Pro-tipy Architektoniczne
 
-1. **Logowanie (Mobile/Web)**: Użytkownik podaje email/hasło lub używa OAuth (Apple/Google).
-2. **Generowanie Tokena (JWT)**:
-   - Backend sprawdza poświadczenia.
-   - W Payloadzie JWT znajduje się struktura:
-     ```json
-     {
-       "sub": "user_uuid",
-       "global_role": "NONE",
-       "tenants": [
-         { "id": "tenant_1_uuid", "role": "ATHLETE" },
-         { "id": "tenant_2_uuid", "role": "MODERATOR" }
-       ]
-     }
-     ```
-3. **Autoryzacja (Middleware)**:
-   - Gdy użytkownik (lub Admin) wchodzi w kontekst danego Tenanta (np. przegląda dashboard Siedlec), Middleware weryfikuje JWT.
-   - Wstrzykuje `tenant_id` do sesji bazy danych (Dla RLS).
+W architekturze takich systemów stosujemy poniższe wzorce, aby zapobiec pułapkom w przyszłości:
 
----
+### 1. Baza Danych: Row-Level Security (RLS) w PostgreSQL
+Skoro obsługujemy różne miasta i firmy, błąd w kodzie mógłby pokazać dane biegaczy z "Firmy A" szefowi z "Firmy B". PostGIS i PostgreSQL wspierają RLS. 
+Na poziomie bazy danych zakładamy regułę: *"Użytkownik X może odpytywać tylko wiersze, gdzie `tenant_id` zgadza się z jego `tenant_id`"*. Nawet w przypadku, gdy zapomnimy dodać filtru w widoku Django, baza danych twardo zablokuje wyciek danych.
 
-## 4. Logika Aplikacji Admin (Front-end)
+### 2. Funkcja "Zaszywania się" (Impersonation / Login As)
+Jako GLOBAL_OWNER często pada potrzeba weryfikacji problemów zgłaszanych przez wsparcie (np. "Panie Łukaszu, na moim panelu prezydenta nie widzę wczorajszego biegu").
+Konieczna jest implementacja funkcji "Zaloguj jako" (w Django to bardzo proste). Pozwala to wejść do panelu, widząc dokładnie to samo, co widzi dany `TENANT_ADMIN`, bez znania jego hasła, z poziomu jednego przycisku.
 
-Aplikacja Adminowa (Vite + React) używa zmiennej `VITE_APP_MODE`, ale logowanie jest jedno.
-Po zalogowaniu:
-- Jeśli `global_role === 'GLOBAL_ADMIN'`, pokazujemy widok **Global Admin**.
-- Jeśli użytkownik ma przypisanego Tenanta z rolą `ADMIN` lub `MODERATOR`, ładujemy mu widok **Tenant Admin / Moderator**.
-
-Dzięki temu **ta sama baza kodu (admin/)** obsługuje wszystkich administratorów, dynamicznie renderując dozwolone moduły na podstawie JWT.
-
----
-
-## 5. Impersonation Mode (Tryb Audytu)
-
-Global Admin posiada możliwość "wejścia w buty" dowolnego użytkownika lub Tenant Admina w celu debugowania:
-1. Global Admin wywołuje endpoint `/api/auth/impersonate/`.
-2. Otrzymuje specjalny krótko-żyjący JWT (`audited: true`).
-3. Każda akcja w trybie impersonacji jest zapisywana w `AuditLogs` z flagą `performed_by_global_admin_id`.
-4. Tenant (jeśli dotyczy) otrzymuje powiadomienie bezpieczeństwa o audycie konta.
+### 3. Feature Toggles (Flagi) na poziomie Instancji (Tenant)
+Tak jak flagujemy płatne funkcje na obiekcie użytkownika (`is_premium`), robimy to samo dla całych instancji.
+Jeśli "Miasto Warszawa" zapłaci za wyższy pakiet, włączamy w ich `TenantProfile` flagę np. `has_heatmap_analytics = True`. Front-end (React) pobiera te ustawienia przy logowaniu i automatycznie wygeneruje lub ukryje dedykowane moduły i opcje w bocznym menu dla wszystkich moderatorów z Warszawy.
