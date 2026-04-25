@@ -9,6 +9,7 @@ import { Users } from './modules/users/Users';
 import { DesignerProvider } from './providers/DesignerProvider';
 import { RoleGuard } from './core/guards/RoleGuard';
 import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
+import { LandingPage } from './modules/public/LandingPage';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MeshBackground = () => (
@@ -59,6 +60,8 @@ export default function App() {
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
                 >
                   <Routes>
+                    <Route path="/landing" element={<LandingPage />} />
+                    
                     {/* GLOBAL OWNER ROUTES */}
                     <Route element={<RoleGuard allowedRoles={['GLOBAL_OWNER']} />}>
                       <Route path="/" element={<Dashboard mode={mode} />} />

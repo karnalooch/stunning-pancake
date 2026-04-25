@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button, Alert } from 'react-native';
+import { StyleSheet, Text, View, Button, Alert, TextInput, TouchableOpacity } from 'react-native';
+
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import MapView, { Polyline } from 'react-native-maps';
@@ -28,8 +29,20 @@ TaskManager.defineTask(LOCATION_TASK_NAME, ({ data, error }: any) => {
 });
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [isTracking, setIsTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<any>(null);
+  const [isHighContrast, setIsHighContrast] = useState(false);
+
+
+  const theme = {
+    bg: isHighContrast ? '#000000' : 'rgba(0,0,0,0.8)',
+    accent: isHighContrast ? '#00FF00' : '#2563EB',
+    text: isHighContrast ? '#FFFFFF' : 'white',
+    border: isHighContrast ? '#FFFFFF' : 'transparent',
+  };
+
 
   useEffect(() => {
     (async () => {
@@ -68,8 +81,61 @@ export default function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.container, { backgroundColor: '#0a0a0a', justifyContent: 'center', padding: 40 }]}>
+        <Text style={{ color: 'white', fontSize: 32, fontWeight: '900', marginBottom: 40, textAlign: 'center' }}>
+          SPORT<Text style={{ color: '#2563EB' }}>.</Text>
+        </Text>
+        
+        <Text style={{ color: 'white', fontSize: 18, marginBottom: 20, fontWeight: '600' }}>
+          {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+        </Text>
+
+        <TextInput 
+          placeholder="Email Address" 
+          placeholderTextColor="#666"
+          style={styles.input} 
+        />
+        <TextInput 
+          placeholder="Password" 
+          placeholderTextColor="#666"
+          secureTextEntry 
+          style={styles.input} 
+        />
+        
+        {authMode === 'register' && (
+           <TextInput 
+             placeholder="Full Name" 
+             placeholderTextColor="#666"
+             style={styles.input} 
+           />
+        )}
+
+        <TouchableOpacity 
+          style={styles.authButton} 
+          onPress={() => setIsAuthenticated(true)}
+        >
+          <Text style={{ color: 'white', fontWeight: 'bold', textAlign: 'center' }}>
+            {authMode === 'login' ? 'SIGN IN' : 'REGISTER'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          onPress={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+          style={{ mt: 20 }}
+        >
+          <Text style={{ color: '#2563EB', textAlign: 'center', marginTop: 20 }}>
+            {authMode === 'login' ? "Don't have an account? Sign up" : "Already have an account? Login"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+
       <MapView 
         style={styles.map}
         initialRegion={{
@@ -83,15 +149,22 @@ export default function App() {
       >
         <Polyline 
           coordinates={routeCoordinates} 
-          strokeColor="#2563EB" 
-          strokeWidth={4} 
+          strokeColor={theme.accent} 
+          strokeWidth={isHighContrast ? 8 : 4} 
         />
       </MapView>
 
-      <View style={styles.hud}>
-        <Text style={styles.hudText}>
-          Status: {isTracking ? "RECORDING" : "IDLE"}
-        </Text>
+      <View style={[styles.hud, { backgroundColor: theme.bg, borderColor: theme.border, borderWidth: isHighContrast ? 2 : 0 }]}>
+        <Group horizontal style={{ justifyContent: 'space-between', width: '100%' }}>
+           <Text style={[styles.hudText, { color: theme.text }]}>
+             {isTracking ? "RECORDING" : "IDLE"}
+           </Text>
+           <Button 
+             title={isHighContrast ? "STANDARD" : "OUTDOOR"} 
+             color="#555" 
+             onPress={() => setIsHighContrast(!isHighContrast)} 
+           />
+        </Group>
         <Button 
           title={isTracking ? "STOP & SAVE" : "START ACTIVITY"} 
           color={isTracking ? "#DC2626" : "#10B981"}
@@ -101,6 +174,10 @@ export default function App() {
     </View>
   );
 }
+
+const Group = ({ children, horizontal, style }: any) => (
+  <View style={[{ flexDirection: horizontal ? 'row' : 'column' }, style]}>{children}</View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -125,5 +202,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center'
+  },
+  input: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 15,
+    color: 'white',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#333'
+  },
+  authButton: {
+    backgroundColor: '#2563EB',
+    padding: 18,
+    borderRadius: 8,
+    marginTop: 10
   }
 });

@@ -2,12 +2,39 @@ import React, { useState } from 'react';
 import { Box, Card, Text, Group, Button, ColorInput, FileInput, Stack, Divider, Badge } from '@mantine/core';
 import { Palette, Image as ImageIcon, Smartphone } from 'lucide-react';
 
-export const WhiteLabelEngine: React.FC = () => {
+import { useAuth } from '../../core/auth/useAuth';
+import { notifications } from '@mantine/notifications';
+
+interface WhiteLabelEngineProps {
+  tenantId?: string;
+}
+
+export const WhiteLabelEngine: React.FC<WhiteLabelEngineProps> = ({ tenantId }) => {
+  const { token } = useAuth();
   const [primaryColor, setPrimaryColor] = useState('#2563EB');
   const [secondaryColor, setSecondaryColor] = useState('#10B981');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleDeploy = () => {
-    console.log("Deploying branding to Edge CDN...", { primaryColor, secondaryColor });
+  const handleDeploy = async () => {
+    if (!tenantId) return;
+    setIsSubmitting(true);
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/branding/${tenantId}/update/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ primary_color: primaryColor, secondary_color: secondaryColor })
+      });
+      if (response.ok) {
+        console.log("Deployed branding to Edge CDN...");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -87,7 +114,7 @@ export const WhiteLabelEngine: React.FC = () => {
         </Box>
       </Stack>
 
-      <Button fullWidth color="indigo" onClick={handleDeploy} mt="xl">
+      <Button fullWidth color="indigo" onClick={handleDeploy} mt="xl" loading={isSubmitting}>
         Inject Assets to Production
       </Button>
     </Card>

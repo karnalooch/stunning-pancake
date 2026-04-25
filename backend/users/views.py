@@ -58,7 +58,33 @@ class TenantBrandingView(generics.RetrieveAPIView):
         except Tenant.DoesNotExist:
             return Response({"error": "tenant not found"}, status=status.HTTP_404_NOT_FOUND)
 
+class TenantUpdateView(generics.UpdateAPIView):
+    """
+    Update branding and configuration for a tenant.
+    Only GLOBAL_OWNER or the TENANT_ADMIN of that specific tenant can use this.
+    """
+    from .models import Tenant
+    queryset = Tenant.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def put(self, request, *args, **kwargs):
+        tenant = self.get_object()
+        # Permission check: Global Owner or Tenant Admin of this tenant
+        if request.user.role != 'GLOBAL_OWNER' and (request.user.role != 'TENANT_ADMIN' or request.user.tenant_id != tenant.id):
+            return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
+            
+        tenant.primary_color = request.data.get('primary_color', tenant.primary_color)
+        tenant.secondary_color = request.data.get('secondary_color', tenant.secondary_color)
+        tenant.save()
+        
+        return Response({
+            "status": "success",
+            "primary_color": tenant.primary_color,
+            "secondary_color": tenant.secondary_color
+        })
+
 class ImpersonateUserView(generics.GenericAPIView):
+
     """
     Allows a GLOBAL_OWNER to request an access token for another user
     without knowing their password. Useful for support/debugging.

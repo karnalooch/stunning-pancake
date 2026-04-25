@@ -21,14 +21,15 @@ export const AntiCheat = () => {
     refetchInterval: 5000 // Refetch every 5 seconds
   });
 
-  // Example Deck.GL layers (Static mock for demonstration)
+  // Dynamic Deck.GL layers connected to live anomalies
   const layers = [
     new ScatterplotLayer({
       id: 'scatter-layer',
-      data: [{position: [22.29, 52.17], size: 100, color: [255, 0, 0]}],
-      getPosition: d => d.position,
-      getFillColor: d => d.color,
-      getRadius: d => d.size,
+      data: anomalies || [],
+      getPosition: (d: any) => [22.29 + (Math.random() - 0.5) * 0.05, 52.17 + (Math.random() - 0.5) * 0.05], // Simulating spatial distribution around Siedlce for demo
+      getFillColor: (d: any) => d.score > 0.9 ? [255, 0, 0, 200] : [255, 204, 0, 200],
+      getRadius: (d: any) => d.score * 50,
+      pickable: true,
     })
   ];
 
