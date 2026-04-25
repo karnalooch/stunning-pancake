@@ -35,7 +35,7 @@ This document tracks the engineering milestones and real-time progress of the SP
 - **Sport Plugins**: ✅ `pluggy`-based validator hooks for RUN/BIKE disciplines.
 
 ### 2.4 Mobile Engine V2
-- **Haversine Core**: ✅ Real-time distance and pace calculation on-device (React Native).
+- **Haversine Core**: ✅ Real-time distance and pace calculation on-device (Flutter).
 - **MMKV Buffering**: ✅ High-speed local persistence for offline-first tracking.
 
 ---
@@ -48,7 +48,7 @@ This document tracks the engineering milestones and real-time progress of the SP
 - **Background Tracking v3**: ✅ `GpsSyncManager` upgraded — elevation gain, pace (sec/km), battery-adaptive accuracy (<20% → `MEDIUM`), `onError` boundary.
 - **Sentry — Django**: ✅ Active via `core/sentry.py` + `settings.py` (Django + Celery + Redis integrations).
 - **Sentry — FastAPI**: ✅ `FastApiIntegration` + `HttpxIntegration` added to `telemetry/main.py`.
-- **Sentry — Mobile**: ✅ `SentryService.ts` created with GPS-stripping `beforeSend` hook (Constitution §10.1). Wired into `GpsSyncManager._handleError`.
+- **Sentry — Mobile**: ✅ `sentry_service.dart` created with GPS-stripping `beforeSend` hook (Constitution §10.1). Wired into `GpsSyncManager`.
 - **Privacy Zones v2**: ✅ Dynamic-radius masking (HOME=250m / WORK=150m / CUSTOM=75m), density boost ×1.5 if ≥3 zones nearby, segment gap bridging via linear interpolation.
 - **CI/CD Hardening**: ✅ Trivy CVE scanner added for backend/admin/mobile → SARIF to GitHub Security tab. Python bumped to 3.12. All action versions updated to v4/v5.
 - **Dependabot v2**: ✅ Expanded to 4 ecosystems (backend, telemetry, admin, mobile). `security-patches` auto-group for admin.
@@ -119,10 +119,36 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ---
 
+---
+
+## 📱 Milestone 8: Mobile Immersive Overhaul (Android & iOS) 🏗 PLANNED
+**Objective**: Bring the "New Era" visual language to the mobile applications using Flutter's high-performance rendering.
+
+### 8.1 Impeller Graphics & Shaders
+*   **Impeller Engine**: 🏗 Enabling the new rendering backend for butter-smooth 120 FPS animations on both Android and iOS.
+*   **Custom Fragment Shaders**: 🏗 Real-time "comet" trail effects for GPS tracks using GLSL/SPIR-V.
+
+### 8.2 Motion & Interaction
+*   **Rive Integration**: 🏗 State-machine based vector animations for interactive UI elements.
+*   **Fluid Transitions**: 🏗 Hero animations and staggered bento-grid layouts on mobile.
+
+### 8.3 Cross-Platform Parity
+*   **iOS/Android Native Modules**: 🏗 Unified background tracking and HealthKit/HealthConnect integration.
+*   **Glassmorphism UI**: 🏗 Implementing the platform's signature "Obsidian" design system in Flutter.
+
+---
+
 ## 📊 Progress Summary
-- **Total Progress**: ✅ **100%** | **VISION COMPLETE**
-- **Platform Status**: ✅ **PRODUCTION READY** | ✅ **BATTLE TESTED**
-- **Platform Status**: ✅ **PRODUCTION READY** | 🏗 **EXPANDING**
+- **Total Progress**: ✅ **88%** | **EXPANDING**
+- **Platform Status**: ✅ **PRODUCTION READY** | 🏗 **MOBILE OVERHAUL (Android & iOS)**
+
+### Architecture Fingerprint (Final)
+| Layer | Technology | Status |
+| :--- | :--- | :--- |
+| **Backend** | Django + Citus | ✅ Stable |
+| **Telemetry** | FastAPI + Redis Cluster | ✅ Scaled |
+| **Admin UI** | React 19 + New Era | ✅ 100% |
+| **Mobile** | Flutter (Cross-platform) | 🏗 Overhaul |
 
 ### Architecture Fingerprint (Final)
 | Layer | Technology | Status |

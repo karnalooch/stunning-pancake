@@ -24,7 +24,7 @@ SPORT is a **high-performance sport gamification platform** built for massive-sc
 
 | Layer | Technology | Role |
 | :--- | :--- | :--- |
-| **Mobile** | React Native 0.76, Expo, MMKV | GPS tracking, offline-first, UI |
+| **Mobile** | Flutter 3.x, Riverpod, Impeller | GPS tracking (Android/iOS), immersive UI |
 | **Telemetry** | FastAPI, asyncpg, Redis Pipeline | High-speed GPS ingestion (<1ms) |
 | **Backend** | Django 4.2 LTS, DRF, Celery | Business logic, RBAC, REST API |
 | **Database (Dev)** | TimescaleDB + PostGIS | Time-series GPS, spatial queries |
@@ -178,7 +178,7 @@ stunning-pancake/
 │   ├── users/          ← Auth, profiles, RBAC
 │   └── rewards/        ← Stripe, Vouchers, Points Ledger
 ├── telemetry/          ← FastAPI GPS ingestion microservice (Sentry-integrated)
-├── mobile/             ← React Native app (GpsSyncManager v3, SentryService)
+├── user/               ← Flutter Mobile App (Android & iOS)
 ├── admin/              ← React 19 dashboard (**deck.gl**, **Tremor**, **shadcn/ui**)
 ├── infrastructure/     ← BRouter, Traccar configs
 ├── docker-compose.yml          ← Standard stack
