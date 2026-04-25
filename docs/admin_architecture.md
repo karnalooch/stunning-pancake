@@ -17,12 +17,12 @@ The source code under `admin/src/` follows a domain-driven modular structure to 
 Contains the application shell, global routing logic, and centralized theme configuration.
 
 ### 2.2 Modules (`src/modules/`)
-Each directory contains the views and logic for a specific business domain:
-*   `analytics/`: BI dashboards and usage statistics.
-*   `anti-cheat/`: Integrity monitoring and anomaly lists.
-*   `moderation/`: Interactive track review and moderation tools.
-*   `social/`: Management of clubs, challenges, and events.
-*   `tracking/`: Real-time map-based athlete tracking.
+Each directory contains the views and logic for a specific business domain, now being refactored for the **New Era Visual Stack**:
+*   `analytics/`: BI dashboards and usage statistics powered by **Tremor**.
+*   `anti-cheat/`: Integrity monitoring with real-time **PixiJS** overlays.
+*   `moderation/`: Interactive track review using **deck.gl** and **shadcn/ui**.
+*   `social/`: Management of clubs, challenges, and events with **Mantine** forms.
+*   `tracking/`: Real-time map-based athlete tracking with **deck.gl** "comet" trails.
 
 ### 2.3 Shared (`src/shared/`)
 Reusable assets across all modules:
