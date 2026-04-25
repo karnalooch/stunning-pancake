@@ -58,4 +58,4 @@ podman-compose up -d --build
 ```
 
 ---
-*Status: Production Ready | Architecture Version: 2.1.0*
+*Status: Visual Overhaul (New Era) IN PROGRESS | Architecture Version: 2.2.0*

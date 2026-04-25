@@ -94,6 +94,7 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ### 6.4 Community Moderation
 - **Decentralized Mod Tools**: 🏗 **IN PROGRESS** — Next-gen moderation interface built with **shadcn/ui** and **Mantine**.
+    - ✅ **Initial Scaffold Completed**: `CityModeratorDashboard.tsx` created with base metrics and layout.
 - **Community RBAC**: 🏗 RBAC Level 3 Expansion with localized "City Moderator" dashboards.
 
 ---
