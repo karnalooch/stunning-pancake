@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView, AnomalyListView
+from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView, AnomalyListView, POIViewSet
+
 from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .leaderboard_views import city_leaderboard, my_rank
@@ -9,6 +10,8 @@ from .heatmap import heatmap_view, analytics_summary_view
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')
 router.register(r'privacy-zones', PrivacyZoneViewSet, basename='privacy-zone')
+router.register(r'pois', POIViewSet, basename='poi')
+
 
 urlpatterns = [
     path('', include(router.urls)),

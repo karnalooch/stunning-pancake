@@ -1,6 +1,10 @@
-﻿from rest_framework import serializers
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import Activity, PrivacyZone
+from .models import Activity, PrivacyZone, POI
+
+class POISerializer(serializers.ModelSerializer):
+    class Meta:
+        model = POI
+        fields = ('id', 'name', 'latitude', 'longitude', 'category', 'description')
+
 
 class ActivitySerializer(serializers.ModelSerializer):
     """

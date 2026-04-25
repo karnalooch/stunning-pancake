@@ -2,8 +2,9 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
-from .models import Activity, PrivacyZone, Voucher
-from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer
+from .models import Activity, PrivacyZone, Voucher, POI
+from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer, POISerializer
+
 from .services import TelemetryService
 from .social import SocialSharingService
 
@@ -136,3 +137,52 @@ class AnomalyListView(generics.GenericAPIView):
         
         anomalies = AntiCheatEngine.get_recent_anomalies(tenant_id=tenant_id, limit=50)
         return Response(anomalies)
+
+class LeaderboardView(generics.GenericAPIView):
+    """
+    Returns ranking of users based on total distance or points.
+    Can be filtered by tenant (city).
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self):
+        from django.db.models import Sum
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        scope = self.request.query_params.get('scope', 'CITY')
+        
+        qs = User.objects.filter(role='ATHLETE')
+        if scope == 'CITY' and self.request.user.tenant_id:
+            qs = qs.filter(tenant_id=self.request.user.tenant_id)
+            
+        ranking = qs.annotate(
+            total_distance=Sum('activity__distance')
+        ).order_by('-total_distance')[:100]
+        
+        result = []
+        for i, u in enumerate(ranking):
+            result.append({
+                "rank": i + 1,
+                "username": u.username,
+                "points": int((u.total_distance or 0) / 10), # 1 XP per 10m
+                "is_me": u.id == self.request.user.id
+            })
+            
+        return Response(result)
+
+class POIViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for retrieving sponsor POIs.
+    """
+    queryset = POI.objects.all()
+    serializer_class = POISerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        # Optionally filter by tenant/city
+        tenant_id = self.request.user.tenant_id
+        if tenant_id:
+            return self.queryset.filter(tenant_id=tenant_id)
+        return self.queryset
+
