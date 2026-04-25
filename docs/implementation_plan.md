@@ -81,11 +81,12 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ### 6.1 Database Isolation (RLS Hardening)
 - **Zero-Trust RLS**: 🏗 Move all multi-tenant logic from Django to PostgreSQL RLS policies.
-- **Audit Logging**: 🏗 DB-level audit triggers for all administrative actions.
+- **Security Audit UI**: 🏗 Real-time monitoring of tenant isolation and policy enforcement using **Tremor** and **shadcn/ui**.
 
 ### 6.2 Wearable & Health SDKs
 - **Garmin Connect**: 🏗 Integration for direct activity import.
 - **Apple HealthKit / Google Health Connect**: 🏗 Native mobile app integration for HRV and biometric data ingestion.
+- **Biometric Data Studio**: 🏗 Immersive visualization of health metrics using **Three.js** and **Framer Motion** for data-fusion insights.
 
 ### 6.3 GIS & Interoperability
 - **OGC API Features**: 🏗 Paginated GeoJSON export for municipal GIS tools.

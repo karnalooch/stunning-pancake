@@ -20,9 +20,11 @@ Contains the application shell, global routing logic, and centralized theme conf
 Each directory contains the views and logic for a specific business domain, now being refactored for the **New Era Visual Stack**:
 *   `analytics/`: BI dashboards and usage statistics powered by **Tremor**.
 *   `anti-cheat/`: Integrity monitoring with real-time **PixiJS** overlays.
+*   `security/`: Real-time RLS audit and tenant isolation monitoring using **Tremor**.
 *   `moderation/`: Interactive track review using **deck.gl** and **shadcn/ui**.
 *   `social/`: Management of clubs, challenges, and events with **Mantine** forms.
 *   `tracking/`: Real-time map-based athlete tracking with **deck.gl** "comet" trails.
+*   `health/`: Biometric data studio with **Three.js** visualizations of wearable metrics.
 
 ### 2.3 Shared (`src/shared/`)
 Reusable assets across all modules:
