@@ -49,8 +49,20 @@ class Activity(models.Model):
 class PrivacyZone(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     center = models.PointField(srid=4326)
-    radius = models.FloatField(help_text="Radius in meters")
+    radius = models.FloatField(help_text="Base radius in meters")
     label = models.CharField(max_length=100, default="Home")
+
+    def get_effective_radius(self) -> float:
+        """
+        Implementation of Privacy Zones v2: Density Boost.
+        If there are 3 or more zones within 1km, the radius is boosted by 1.5x.
+        """
+        nearby_count = PrivacyZone.objects.filter(
+            user=self.user,
+            center__distance_lte=(self.center, 1000)
+        ).count()
+        
+        return self.radius * 1.5 if nearby_count >= 3 else self.radius
 
     def __str__(self):
         return f"{self.user.username} Privacy Zone: {self.label}"

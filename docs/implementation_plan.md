@@ -31,15 +31,16 @@
 ## Phase 3: Admin & Analytics Overhaul (Weeks 6-8)
 *Goal: Migrate to Next.js 15 and WebGL big-data visualization.*
 
-- [ ] **Architecture Migration**:
-    - [ ] Initialize **Next.js 15 (App Router)** for the `admin/` folder.
-    - [ ] Migrate component logic to **React Server Components (RSC)**.
-- [ ] **UI & Data Vis**:
-    - [ ] Implement **shadcn/ui** with the Obsidian design system.
-    - [ ] Integrate **deck.gl** for high-density GPS track rendering (WebGL).
-- [ ] **BI Layer**:
-    - [ ] Deploy **Cube.js** for headless business intelligence.
-    - [ ] Create Tremor-based KPI dashboards for Club Moderators.
+- [x] **Architecture Migration**:
+    - [x] Initialize **Next.js 15 (App Router)** for the `admin/` folder.
+    - [x] Migrate component logic to **React Server Components (RSC)**.
+- [x] **UI & Data Vis**:
+    - [x] Implement **shadcn/ui** with the Obsidian design system.
+    - [x] Integrate **deck.gl** for high-density GPS track rendering (WebGL).
+- [x] **BI Layer**:
+    - [x] Deploy **Cube.js** for headless business intelligence.
+    - [x] Create Tremor-based KPI dashboards for Club Moderators.
+
 
 ## Phase 4: User Journey & Security Hardening (Weeks 9-10)
 *Goal: Polish the onboarding and ensure absolute privacy.*
