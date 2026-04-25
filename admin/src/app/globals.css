@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui;
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui;
+}
+
+@layer base {
+  body {
+    @apply bg-[#050505] text-white;
+  }
+}
+
+/* Obsidian Design System Utilities */
+@layer components {
+  .glass-panel {
+    @apply bg-black/40 backdrop-blur-xl border border-white/5;
+  }
+  
+  .neon-glow-cyan {
+    @apply shadow-[0_0_20px_rgba(0,242,255,0.3)];
+  }
+  
+  .neon-glow-purple {
+    @apply shadow-[0_0_20px_rgba(112,0,255,0.3)];
+  }
+}
+
+/* Custom Tremor Overrides for Obsidian */
+.tremor-Card-root {
+  @apply bg-black/40! backdrop-blur-md! border-white/5! shadow-2xl!;
+}
+
+.tremor-Title-root {
+  @apply text-white! font-display!;
+}
+
+.tremor-Text-root {
+  @apply text-gray-400!;
+}
