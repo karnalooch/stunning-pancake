@@ -179,7 +179,7 @@ stunning-pancake/
 │   └── rewards/        ← Stripe, Vouchers, Points Ledger
 ├── telemetry/          ← FastAPI GPS ingestion microservice (Sentry-integrated)
 ├── mobile/             ← React Native app (GpsSyncManager v3, SentryService)
-├── admin/              ← React 19 dashboard (MapLibre, heatmap, moderation)
+├── admin/              ← React 19 dashboard (**deck.gl**, **Tremor**, **shadcn/ui**)
 ├── infrastructure/     ← BRouter, Traccar configs
 ├── docker-compose.yml          ← Standard stack
 └── docker-compose.scale.yml    ← Hyperscale override (Citus + Redis Cluster)
