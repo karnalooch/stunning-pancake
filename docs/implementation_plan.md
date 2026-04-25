@@ -3,15 +3,16 @@
 ## Phase 1: Infrastructure & Data Foundation (Weeks 1-2)
 *Goal: Prepare the high-throughput pipeline and local-first syncing.*
 
-- [ ] **Database Modernization**:
-    - [ ] Configure TimescaleDB Hypertables for the `activities_telemetry` table.
-    - [ ] Implement PostGIS `ST_Subdivide` on the road network graph for faster geofencing.
-- [ ] **PowerSync Integration**:
-    - [ ] Deploy PowerSync Service (Docker).
-    - [ ] Define sync rules between PostgreSQL and mobile SQLite.
-- [ ] **FastAPI Ingestion**:
-    - [ ] Finalize the async `/api/telemetry/ingest/stream` endpoint.
-    - [ ] Implement Redis pub/sub for real-time leaderboard updates.
+- [x] **Database Modernization**:
+    - [x] Configure TimescaleDB Hypertables for the `activities_telemetry` table.
+    - [x] Implement PostGIS `ST_Subdivide` on the road network graph for faster geofencing.
+- [x] **PowerSync Integration**:
+    - [x] Deploy PowerSync Service (Docker).
+    - [x] Define sync rules between PostgreSQL and mobile SQLite.
+- [x] **FastAPI Ingestion**:
+    - [x] Finalize the async `/api/telemetry/ingest/stream` endpoint.
+    - [x] Implement Redis pub/sub for real-time leaderboard updates.
+
 
 ## Phase 2: Mobile Engine Upgrade (Weeks 3-5)
 *Goal: Achieve 120FPS and local-first reactivity.*
