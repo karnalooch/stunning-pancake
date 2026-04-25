@@ -10,6 +10,7 @@ class Activity(models.Model):
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activities')
+    tenant = models.ForeignKey('users.Tenant', on_delete=models.CASCADE, related_name='activities', null=True, blank=True)
     type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
@@ -61,11 +62,11 @@ class POI(models.Model):
     """
     name = models.CharField(max_length=200)
     location = models.PointField(srid=4326)
-    tenant_id = models.CharField(max_length=100)
+    tenant = models.ForeignKey('users.Tenant', on_delete=models.CASCADE, related_name='pois', null=True, blank=True)
     description = models.TextField(blank=True)
     
     def __str__(self):
-        return f"{self.name} ({self.tenant_id})"
+        return f"{self.name} ({self.tenant.name if self.tenant else 'No Tenant'})"
 
 class Voucher(models.Model):
     """

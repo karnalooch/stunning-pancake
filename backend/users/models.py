@@ -55,3 +55,20 @@ class User(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
+
+class AuditLog(models.Model):
+    """
+    Logs sensitive actions, specifically those taken during impersonation sessions.
+    """
+    impersonator_id = models.IntegerField(help_text="ID of the GLOBAL_OWNER who initiated the impersonation")
+    target_user_id = models.IntegerField(help_text="ID of the user who was impersonated")
+    action = models.CharField(max_length=255)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    status_code = models.IntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"Audit: {self.impersonator_id} as {self.target_user_id} - {self.action}"
