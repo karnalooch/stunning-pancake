@@ -1,0 +1,23 @@
+<svg width="160" height="40" viewBox="0 0 160 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Run -->
+  <g transform="translate(10, 8)">
+    <path d="M13 4V8M13 8L10 12M13 8L16 12M10 12L7 16M16 12L19 16M12 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="13" cy="2" r="1.5" fill="currentColor"/>
+  </g>
+  <!-- Bike -->
+  <g transform="translate(50, 8)">
+    <circle cx="5" cy="15" r="4" stroke="currentColor" stroke-width="2"/>
+    <circle cx="19" cy="15" r="4" stroke="currentColor" stroke-width="2"/>
+    <path d="M5 15L12 8L19 15M12 8V12" stroke="currentColor" stroke-width="2"/>
+  </g>
+  <!-- Swim -->
+  <g transform="translate(90, 8)">
+    <path d="M2 12C5 9 7 9 10 12C13 15 15 15 18 12M2 18C5 15 7 15 10 18C13 21 15 21 18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- Gym -->
+  <g transform="translate(130, 8)">
+    <rect x="2" y="10" width="4" height="8" rx="1" fill="currentColor"/>
+    <rect x="18" y="10" width="4" height="8" rx="1" fill="currentColor"/>
+    <path d="M6 14H18" stroke="currentColor" stroke-width="2"/>
+  </g>
+</svg>

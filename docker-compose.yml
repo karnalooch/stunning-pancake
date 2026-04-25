@@ -48,7 +48,6 @@ services:
       - "5000-5150:5000-5150/udp"
     volumes:
       - ./infrastructure/traccar/conf/traccar.xml:/opt/traccar/conf/traccar.xml:ro
-      - ./infrastructure/traccar/logs:/opt/traccar/logs
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -97,13 +96,52 @@ services:
       - db
       - redis
 
-  # Admin Dashboard (React/Vite)
-  admin:
-    build: ./admin
-    container_name: sport_admin
+  # Public Landing Page (Port 3000 — The "Miracle" View)
+  web:
+    build: ./web
+    container_name: sport_web
     restart: always
     ports:
       - "3000:80"
+    depends_on:
+      - backend
+
+  # 1. Global Admin Application (Port 3001)
+  global_admin:
+    build:
+      context: ./admin
+      args:
+        - VITE_APP_MODE=GLOBAL_ADMIN
+    container_name: sport_global_admin
+    restart: always
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  # 2. Tenant Admin Application (Port 3002)
+  tenant_admin:
+    build:
+      context: ./admin
+      args:
+        - VITE_APP_MODE=LOCAL_ADMIN
+    container_name: sport_tenant_admin
+    restart: always
+    ports:
+      - "3002:80"
+    depends_on:
+      - backend
+
+  # 3. Moderator Application (Port 3003)
+  moderator:
+    build:
+      context: ./admin
+      args:
+        - VITE_APP_MODE=MODERATOR
+    container_name: sport_moderator
+    restart: always
+    ports:
+      - "3003:80"
     depends_on:
       - backend
 

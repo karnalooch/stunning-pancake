@@ -229,7 +229,8 @@ async def _traccar_redis_bridge() -> None:
                         "lat":       lat,
                         "lon":       lon,
                         "speed_ms":  speed_ms,
-                        "ts":        ts
+                        "ts":        ts,
+                        "activity_type": "BIKE" if "BIKE" in device_id else "RUN" # Default for Traccar legacy bridge
                     })
 
                 except (KeyError, ValueError, json.JSONDecodeError) as exc:
@@ -253,6 +254,7 @@ class GpsPacket(BaseModel):
     speed_ms: float = Field(0.0, ge=0, description="Speed in m/s")
     accuracy_m: float = Field(5.0, ge=0, description="GPS accuracy in metres")
     activity_id: int | None = Field(None, description="Active SPORT activity ID")
+    activity_type: str | None = Field(None, description="RUN, BIKE, etc.")
     timestamp: float = Field(
         default_factory=time.time,
         description="Unix timestamp (auto-set if omitted)",
@@ -310,6 +312,7 @@ async def ingest_packet(packet: GpsPacket) -> dict:
         "lon": packet.lon,
         "speed_ms": packet.speed_ms,
         "activity_id": packet.activity_id,
+        "activity_type": packet.activity_type,
     })
 
     return {"status": "accepted"}
@@ -352,6 +355,7 @@ async def ingest_batch(batch: BatchPacket) -> dict:
         "lon": last.lon,
         "speed_ms": last.speed_ms,
         "activity_id": last.activity_id,
+        "activity_type": last.activity_type,
         "batch_size": len(batch.packets),
     })
 

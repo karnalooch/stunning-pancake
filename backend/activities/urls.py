@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView
-from .admin_views import GlobalActivityListView, TenantActivityListView
+from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .leaderboard_views import city_leaderboard, my_rank
 from .heatmap import heatmap_view, analytics_summary_view
@@ -14,6 +14,7 @@ urlpatterns = [
     path('', include(router.urls)),
     path('admin/all/', GlobalActivityListView.as_view(), name='global-activities'),
     path('admin/tenant/', TenantActivityListView.as_view(), name='tenant-activities'),
+    path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
     path('vouchers/redeem/<str:code>/', VoucherRedeemView.as_view(), name='voucher-redeem'),
     path('telemetry/live/', TelemetryLiveView.as_view(), name='telemetry-live'),
     # Phase 9: Payments

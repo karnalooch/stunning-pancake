@@ -38,6 +38,20 @@ A modern, high-precision B2B/B2C sports platform designed for city-wide competit
 -   **[User Journey](./docs/user_journey.md)** — The Athlete's path to conversion.
 
 
+## 🛠 Testing & Simulation
+
+The platform includes two simulation layers:
+1. **Headless Simulator**: `infrastructure/simulators/multi_athlete_sim.py` — High-scale background simulation (10+ athletes on real OSM paths).
+2. **Admin UI Plugin (New)**: A floating "User Simulator" widget in the Admin Dashboard.
+   - **Start/Stop**: Simulate a single mobile device session.
+   - **Anomalies**: Instantly trigger "Warp Speed" or "Teleport" to test Anti-Cheat detection logic.
+   - **Types**: Toggle between Runner and Cyclist to verify UI color coding and analytics.
+
+To use the UI Simulator:
+1. Open Admin Dashboard (`localhost:3000`).
+2. Click the **📱 Sim** button in the bottom-right corner.
+3. Select an athlete profile and hit **START SESSION**.
+
 ## 🚀 Quick Start
 
 If you are a developer joining the project:
