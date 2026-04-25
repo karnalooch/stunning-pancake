@@ -22,13 +22,14 @@ A modern, high-precision B2B/B2C sports platform designed for city-wide competit
 
 ## 📂 Documentation
 
--   **[Project Constitution](./docs/constitution.md)** — Mission, identity, and the "Safety Constitution".
--   **[Milestone 2: Engine V2 & Anti-Cheat](./docs/milestone2_engine_v2.md)** — Deep dive into the current implementation.
--   **[Architectural Whitepaper (The Canon)](./docs/sport_architecture_whitepaper.md)** — Core strategies: PostGIS, TimescaleDB, BRouter, Android Doze, RLS.
--   **[Business & Anti-Cheat Logic](./docs/business_and_anticheat.md)** — Commercialization paths and verification layers.
--   **[Developer Quick Start](./docs/developer_quickstart.md)** — Setup your environment in 5 minutes.
--   **[User Management V2 (RBAC/RLS)](./docs/user_management_redesign.md)** — Architecture for identity, roles, and Multi-Tenant logic.
--   **[AI Toolkit Standards](./docs/ai_toolkit_constitution.md)** — AI Quality and Safety rules.
+-   **[Project Constitution](./docs/guides/constitution.md)** — Mission, identity, and the "Safety Constitution".
+-   **[Implementation Plan: User Management & Architecture](./docs/planning/implementation_plan_user_management.md)** — Step-by-step plan to align the codebase with the new RBAC/RLS architecture.
+-   **[Milestone 2: Engine V2 & Anti-Cheat](./docs/planning/milestone2_engine_v2.md)** — Deep dive into the current implementation.
+-   **[Architectural Whitepaper (The Canon)](./docs/architecture/sport_architecture_whitepaper.md)** — Core strategies: PostGIS, TimescaleDB, BRouter, Android Doze, RLS.
+-   **[Business & Anti-Cheat Logic](./docs/architecture/business_and_anticheat.md)** — Commercialization paths and verification layers.
+-   **[Developer Quick Start](./docs/guides/developer_quickstart.md)** — Setup your environment in 5 minutes.
+-   **[User Management V2 (RBAC/RLS)](./docs/architecture/user_management_redesign.md)** — Architecture for identity, roles, and Multi-Tenant logic.
+-   **[AI Toolkit Standards](./docs/guides/ai_toolkit_constitution.md)** — AI Quality and Safety rules.
 
 ## 🛠 Testing & Simulation
 
