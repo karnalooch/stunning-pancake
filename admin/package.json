@@ -9,9 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "next": "15.0.0",
-    "react": "19.0.0-rc-66a323a-20241028",
-    "react-dom": "19.0.0-rc-66a323a-20241028",
+    "next": "latest",
+    "react": "rc",
+    "react-dom": "rc",
     "tailwindcss": "^4.0.0-alpha.25",
     "lucide-react": "^0.453.0",
     "deck.gl": "^9.3.1",
