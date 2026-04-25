@@ -1,162 +1,162 @@
-# Strategie Architektoniczne i Implementacyjne dla Skalowalnych Systemów Mobilno-Webowych w Ekosystemie Sportowym i Miejskim
+# Architectural and Implementation Strategies for Scalable Mobile-Web Systems in the Sports and Urban Ecosystem
 
-Współczesny krajobraz inżynierii oprogramowania dla sektora sportowego oraz inteligentnych miast wymaga paradygmatu, który łączy rygorystyczną analitykę danych geoprzestrzennych z elastycznością interfejsów użytkownika. Wybór stosu technologicznego opartego na językach **Python** i **TypeScript** definiuje nowoczesne podejście do budowy systemów, które muszą sprostać wyzwaniom wysokiej współbieżności, restrykcyjnym mechanizmom oszczędzania energii w systemach mobilnych oraz złożonym wymaganiom prawnym w zakresie ochrony danych wrażliwych. Synergia tych dwóch technologii pozwala na precyzyjne rozdzielenie ciężkiej logiki biznesowej i procesów matematycznych od reaktywnych i stabilnych środowisk klienckich, co w kontekście skalowalności stanowi fundament sukcesu rynkowego.
+The modern software engineering landscape for the sports sector and smart cities requires a paradigm that combines rigorous geospatial data analytics with the flexibility of user interfaces. Choosing a technology stack based on **Python** and **TypeScript** defines a modern approach to building systems that must meet the challenges of high concurrency, restrictive energy-saving mechanisms in mobile systems, and complex legal requirements regarding the protection of sensitive data. The synergy of these two technologies allows for the precise separation of heavy business logic and mathematical processes from reactive and stable client environments, which in the context of scalability is the foundation of market success.
 
-## Architektura Backendowa: Python jako Fundament Analityczny
+## Backend Architecture: Python as the Analytical Foundation
 
-Wybór języka Python jako głównego silnika backendowego jest podyktowany dojrzałością bibliotek geoprzestrzennych oraz elastycznością frameworków takich jak Django i FastAPI. Django, dzięki wbudowanemu systemowi zarządzania rolami i administracji, skraca proces wdrożenia paneli zarządczych o rzędy wielkości, oferując gotowe mechanizmy autoryzacji i moderacji. Z kolei FastAPI pozycjonuje się jako optymalne rozwiązanie dla punktów końcowych wymagających minimalnych opóźnień podczas procesowania strumieni danych GPS przesyłanych co 30 sekund przez tysiące urządzeń mobilnych.
+The choice of Python as the main backend engine is dictated by the maturity of geospatial libraries and the flexibility of frameworks such as Django and FastAPI. Django, thanks to its built-in role management and administration system, shortens the implementation process of management panels by orders of magnitude, offering ready-made authorization and moderation mechanisms. FastAPI, on the other hand, positions itself as an optimal solution for endpoints requiring minimal latency when processing GPS data streams sent every 30 seconds by thousands of mobile devices.
 
-### Integracja PostGIS i TimescaleDB w Przetwarzaniu Geoprzestrzennym
+### Integration of PostGIS and TimescaleDB in Geospatial Processing
 
-Sercem systemu składowania danych w profesjonalnych projektach mapowych jest PostgreSQL z rozszerzeniem **PostGIS**. Pozwala ono na wyjście poza standardowe systemy współrzędnych i operowanie na typach `GEOGRAPHY` (SRID 4326), które uwzględniają sferoidalny kształt Ziemi, co jest krytyczne dla precyzyjnych obliczeń dystansu na długich trasach. Wdrożenie indeksowania przestrzennego opartego na strukturze R-drzewa (R-tree) pozwala na błyskawiczne wykonywanie operacji geofencingu, takich jak weryfikacja, czy dany punkt GPS znajduje się wewnątrz granic administracyjnych miasta (funkcja `ST_Within`).
+The heart of the data storage system in professional map projects is PostgreSQL with the **PostGIS** extension. It allows stepping outside standard coordinate systems and operating on `GEOGRAPHY` types (SRID 4326), which take into account the spheroidal shape of the Earth, which is critical for precise distance calculations on long routes. The implementation of spatial indexing based on an R-tree structure allows for instant execution of geofencing operations, such as verifying whether a given GPS point is located within the administrative boundaries of a city (the `ST_Within` function).
 
-Zastosowanie **TimescaleDB** w połączeniu z PostGIS tworzy "supermoc" bazy danych, umożliwiając śledzenie "gdzie" i "kiedy" w sposób zoptymalizowany pod kątem szeregów czasowych. Mechanizm hypertables pozwala na partycjonowanie danych GPS według czasu, co zapobiega degradacji wydajności wraz ze wzrostem wolumenu danych historycznych.
+The use of **TimescaleDB** in conjunction with PostGIS creates a database "superpower," allowing for tracking "where" and "when" in a way optimized for time series. The hypertables mechanism allows GPS data to be partitioned by time, which prevents performance degradation as the volume of historical data grows.
 
-| Funkcjonalność | PostGIS (Geography) | TimescaleDB (Hypertable) | Wartość Biznesowa |
+| Functionality | PostGIS (Geography) | TimescaleDB (Hypertable) | Business Value |
 | :--- | :--- | :--- | :--- |
-| Przechowywanie śladu | `LINESTRING` / `GEOMETRY` | Partycjonowanie czasowe | Optymalizacja odczytu historii |
-| Geofencing | `ST_Intersects`, `ST_Contains` | Indeksowanie szeregów | Weryfikacja stref w czasie rzeczywistym |
-| Analityka prędkości | Obliczenia sferoidalne | Agregacje okienkowe | Wykrywanie oszustw (środek transportu) |
-| Dashboard Moderator | Indeks GIST | SkipScan | Natychmiastowy dostęp do ostatnich pozycji |
+| Track Storage | `LINESTRING` / `GEOMETRY` | Time partitioning | Optimization of reading history |
+| Geofencing | `ST_Intersects`, `ST_Contains` | Time series indexing | Real-time zone verification |
+| Speed Analytics | Spheroidal calculations | Window aggregations | Fraud detection (mode of transport) |
+| Moderator Dashboard | GIST Index | SkipScan | Instant access to recent positions |
 
-### Optymalizacja i Kompresja Trajektorii GPS
+### GPS Trajectory Optimization and Compression
 
-Masowe dane GPS generują znaczne obciążenie pamięciowe i obliczeniowe. Analiza wykazuje, że surowe dane wymagają filtracji szumów wynikających z niestabilności sygnału satelitarnego, co realizuje się poprzez algorytmy map-matching oraz filtrowanie Kalmanowskie. Implementacja kompresji trajektorii, np. poprzez **algorytm Douglasa-Peuckera**, pozwala na usunięcie punktów o niskim znaczeniu informacyjnym bez utraty geometrycznej wierności trasy, co drastycznie redukuje koszty składowania w chmurze.
+Massive GPS data generates significant memory and computational load. Analysis shows that raw data requires filtering out noise resulting from satellite signal instability, which is achieved through map-matching algorithms and Kalman filtering. Implementing trajectory compression, e.g., via the **Douglas-Peucker algorithm**, allows for the removal of points of low informational importance without losing the geometric fidelity of the route, drastically reducing cloud storage costs.
 
-Biblioteki takie jak GeoPandas i Shapely umożliwiają backendową weryfikację integralności trasy. System może automatycznie odrzucać segmenty, w których prędkość chwilowa sugeruje użycie samochodu zamiast roweru, co stanowi pierwszą linię obrony przed manipulacjami wynikami.
+Libraries such as GeoPandas and Shapely enable backend verification of route integrity. The system can automatically reject segments where the instantaneous speed suggests using a car instead of a bicycle, which constitutes the first line of defense against result manipulation.
 
 ---
 
-## Algorytmiczna Weryfikacja Tras: Integracja BRouter
+## Algorithmic Route Verification: BRouter Integration
 
-Systemy sportowe oparte na rankingach miast muszą posiadać zaawansowane mechanizmy anty-cheat. Jednym z najbardziej wiarygodnych narzędzi do tego celu jest algorytm **BRouter**, który bazuje na danych OpenStreetMap (OSM) oraz globalnych modelach elewacji (SRTM).
+Sports systems based on city rankings must have advanced anti-cheat mechanisms. One of the most reliable tools for this purpose is the **BRouter** algorithm, which is based on OpenStreetMap (OSM) data and global elevation models (SRTM).
 
-### Logika Algorytmu 2-Pass i Adaptive Cost-Cutoff
+### 2-Pass Algorithm Logic and Adaptive Cost-Cutoff
 
-BRouter implementuje hybrydowe podejście do wyznaczania tras, łącząc algorytmy Dijkstry i A* (A-Star). Kluczowym elementem jest proces 2-przejściowy: pierwsze przejście wykorzystuje wysoki współczynnik heurystyczny do szybkiego oszacowania kosztu trasy, natomiast drugie przejście (Dijkstra) stosuje tzw. **adaptive cost-cutoff**. Dowolna ścieżka, której odległość w linii prostej do celu sugeruje koszt wyższy niż oszacowane maksimum, jest natychmiast odrzucana, co pozwala na weryfikację nawet bardzo długich tras w czasie rzeczywistym.
+BRouter implements a hybrid approach to routing, combining Dijkstra and A* (A-Star) algorithms. A key element is the 2-pass process: the first pass uses a high heuristic coefficient to quickly estimate the route cost, while the second pass (Dijkstra) uses the so-called **adaptive cost-cutoff**. Any path whose straight-line distance to the destination suggests a cost higher than the estimated maximum is immediately rejected, allowing for the verification of even very long routes in real time.
 
-W kontekście weryfikacji trasy sportowca, system porównuje przesłany ślad GPX z trasą wygenerowaną przez BRouter dla danego profilu (np. `fastbike` lub `trekking`). Rozbieżności w profilu wysokościowym lub czasie przejazdu są sygnałem dla moderatora do ręcznej inspekcji.
+In the context of verifying an athlete's route, the system compares the submitted GPX track with the route generated by BRouter for a given profile (e.g., `fastbike` or `trekking`). Discrepancies in the elevation profile or travel time are a signal for the moderator to conduct a manual inspection.
 
-| Element Algorytmu | Parametr | Zastosowanie w Anti-Cheat |
+| Algorithm Element | Parameter | Use in Anti-Cheat |
 | :--- | :--- | :--- |
-| Pass 1 Coefficient | Heurystyka (np. 1.5) | Szybka estymacja idealnej trasy |
-| Adaptive Cutoff | Próg kosztu | Efektywne odrzucanie nierealnych śladów |
-| Elevation Hysteresis| Bufor wysokości | Wykrywanie nienaturalnego tempa podjazdów |
-| Turn Costs | Koszt manewrów | Weryfikacja płynności ruchu rowerowego |
+| Pass 1 Coefficient | Heuristic (e.g., 1.5) | Rapid estimation of the ideal route |
+| Adaptive Cutoff | Cost threshold | Effective rejection of unrealistic tracks |
+| Elevation Hysteresis| Elevation buffer | Detection of unnatural climbing pace |
+| Turn Costs | Maneuver cost | Verification of bicycle movement fluidity |
 
-Integracja z Pythonem odbywa się poprzez lokalny serwer HTTP (BRouter-server), do którego backend przesyła żądania REST z zestawem punktów. Pozwala to na pełną automatyzację procesu zatwierdzania tras bez angażowania zasobów ludzkich w 95% przypadków.
+Integration with Python typically occurs via a local HTTP server (BRouter-server), to which the backend sends REST requests with a set of points. This allows for the full automation of the route approval process without involving human resources in 95% of cases.
 
 ---
 
-## Frontend: TypeScript jako Gwarant Stabilności Typologicznej
+## Frontend: TypeScript as the Guarantor of Typological Stability
 
-Zastosowanie języka TypeScript w panelu admina (React/Next.js) oraz aplikacji mobilnej (React Native) umożliwia współdzielenie modeli danych, co eliminuje błędy wynikające z niespójności struktur API. TypeScript zapewnia przewidywalność w zarządzaniu złożonymi stanami, takimi jak wielowarstwowe mapy czy dynamiczne listy tras do moderacji.
+Using TypeScript in the admin panel (React/Next.js) and the mobile application (React Native) allows for the sharing of data models, which eliminates errors resulting from inconsistencies in API structures. TypeScript ensures predictability in managing complex states, such as multi-layered maps or dynamic lists of routes for moderation.
 
-### Zarządzanie Stanem i Wizualizacja Mapowa
+### State Management and Map Visualization
 
-Dla paneli administracyjnych obsługujących tysiące zgłoszeń, optymalnym rozwiązaniem jest **TanStack Query** (React Query). Biblioteka ta automatyzuje procesy keszowania, de-duplikacji żądań oraz synchronizacji stanu tła, co przekłada się na płynność interfejsu moderatora. 
+For administration panels handling thousands of submissions, the optimal solution is **TanStack Query** (React Query). This library automates caching processes, request de-duplication, and background state synchronization, which translates into the fluidity of the moderator's interface. 
 
-Do wizualizacji danych geograficznych w przeglądarce rekomenduje się **MapLibre GL JS** – otwartoźródłowy fork Mapbox GL JS v1, który oferuje wysoką wydajność renderowania wektorowego przy użyciu WebGL bez restrykcyjnych opłat licencyjnych. Wybór silnika mapowego musi uwzględniać stosunek kosztów do możliwości customizacji. Mapbox oferuje najbardziej zaawansowane narzędzia do projektowania kartograficznego (Mapbox Studio), natomiast Google Maps pozostaje liderem w zakresie dokładności danych o punktach zainteresowania (POI) i usługi Street View.
+For the visualization of geographic data in the browser, **MapLibre GL JS** is recommended – an open-source fork of Mapbox GL JS v1, which offers high vector rendering performance using WebGL without restrictive licensing fees. The choice of the map engine must consider the cost-to-customization ratio. Mapbox offers the most advanced cartographic design tools (Mapbox Studio), while Google Maps remains the leader in terms of points of interest (POI) accuracy and Street View services.
 
-| Platforma Mapowa | Model Kosztowy | Zalety | Przeznaczenie |
+| Map Platform | Cost Model | Advantages | Purpose |
 | :--- | :--- | :--- | :--- |
-| MapLibre GL JS | Open Source ($0) | Brak lock-inu, pełna kontrola | Customowe dashboardy, heatmaps |
-| Mapbox | Tiered (50k free) | Mapbox Studio, 3D terrain | Aplikacje premium, wizualizacje 3D |
-| Google Maps | Pay-as-you-go | Najlepsze dane POI, Street View | Lokalizatory firm, nawigacja miejska |
+| MapLibre GL JS | Open Source ($0) | No lock-in, full control | Custom dashboards, heatmaps |
+| Mapbox | Tiered (50k free) | Mapbox Studio, 3D terrain | Premium apps, 3D visualizations |
+| Google Maps | Pay-as-you-go | Best POI data, Street View | Company locators, city navigation |
 
 ---
 
-## Ekosystem Mobilny: Wyzwania Background Geolocation na Androidzie
+## Mobile Ecosystem: Background Geolocation Challenges on Android
 
-Krytycznym elementem sukcesu aplikacji jest niezawodne nagrywanie trasy w tle. Nowoczesne wersje systemu Android (14 i 15) wprowadzają agresywne ograniczenia w celu ochrony baterii, co bezpośrednio wpływa na precyzję zbierania danych GPS.
+A critical element of the application's success is reliable route recording in the background. Modern versions of the Android system (14 and 15) introduce aggressive restrictions to protect the battery, which directly affects the accuracy of GPS data collection.
 
-### Doze Mode i OEM Task Killers
-Gdy urządzenie pozostaje nieruchome z wyłączonym ekranem, wchodzi w tryb Doze, który zawiesza dostęp do sieci i ignoruje blokady procesora (wake locks). Dodatkowo, systemy takie jak Android 15 przydzielają aplikacje do koszyków (App Standby Buckets), gdzie kategoria "Restricted" może niemal całkowicie zablokować pracę w tle.
+### Doze Mode and OEM Task Killers
+When the device remains stationary with the screen off, it enters Doze mode, which suspends network access and ignores CPU wake locks. Additionally, systems like Android 15 assign applications to App Standby Buckets, where the "Restricted" category can almost completely block background work.
 
-Aby zapewnić ciągłość śledzenia, niezbędne jest:
-1. **Użycie Foreground Service** z jawnym typem `foregroundServiceType="location"`. Od Androida 14 usługi te podlegają rygorystycznym limitom czasowym (np. 6h na dobę), co wymusza optymalizację cykli pracy.
-2. **Wykorzystanie specjalistycznych bibliotek** (np. `react-native-background-geolocation`), które posiadają natywne implementacje Fused Location Provider, automatycznie przełączając się między GPS a siecią Wi-Fi/komórkową.
-3. **Edukacja użytkownika** w celu wyłączenia optymalizacji baterii dla aplikacji (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).
+To ensure tracking continuity, it is essential to:
+1. **Use a Foreground Service** with an explicit `foregroundServiceType="location"`. As of Android 14, these services are subject to strict time limits (e.g., 6h per day), forcing the optimization of work cycles.
+2. **Utilize specialized libraries** (e.g., `react-native-background-geolocation`) that have native implementations of the Fused Location Provider, automatically switching between GPS and Wi-Fi/cellular networks.
+3. **Educate the user** to disable battery optimization for the application (`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`).
 
-Szczególnym wyzwaniem są modyfikacje systemowe producentów takich jak Xiaomi czy Huawei, którzy stosują własne mechanizmy zabijania procesów w tle. Architektura musi zakładać nagłą śmierć procesu i umożliwiać szybki "zimny start" (cold start), odbudowując graf zależności w czasie poniżej 400ms.
+A particular challenge are system modifications by manufacturers such as Xiaomi or Huawei, who use their own mechanisms to kill background processes. The architecture must anticipate the sudden death of the process and allow for a quick "cold start," rebuilding the dependency graph in under 400ms.
 
 ---
 
-## Bezpieczeństwo i Prywatność Danych: RODO i Privacy Zones
+## Data Security and Privacy: GDPR and Privacy Zones
 
-Dane o lokalizacji są uznawane za wrażliwe dane zdrowotne zgodnie z Art. 9 RODO. Wymusza to transparentność oraz odpowiednie mechanizmy anonimizacji.
+Location data is considered sensitive health data under Article 9 of the GDPR. This forces transparency and appropriate anonymization mechanisms.
 
-### Vulnerabilities Endpoint Privacy Zones (EPZ)
-Implementacja "Stref Prywatności" (ukrywanie startu i końca trasy wokół domu) jest standardem. Jednak analiza wykazała, że tradycyjne kołowe strefy są podatne na ataki regresyjne. Jeśli API ujawnia dystans całkowity z wysoką precyzją, atakujący może matematycznie wyznaczyć brakujący segment i zlokalizować dom użytkownika.
+### Vulnerabilities in Endpoint Privacy Zones (EPZ)
+The implementation of "Privacy Zones" (hiding the start and end of a route around the home) is a standard. However, analysis has shown that traditional circular zones are susceptible to regression attacks. If the API reveals the total distance with high precision, an attacker can mathematically determine the missing segment and locate the user's home.
 
-Rekomendowane strategie mitygacji:
-1. Zaokrąglanie danych o dystansie w publicznych profilach do 100 metrów.
-2. Stosowanie nieregularnych, geometrycznych kształtów stref zamiast prostych okręgów.
-3. Wdrażanie mechanizmów różnicowej prywatności (differential privacy) w agregowanych mapach cieplnych.
+Recommended mitigation strategies:
+1. Rounding distance data in public profiles to 100 meters.
+2. Using irregular, geometric zone shapes instead of simple circles.
+3. Implementing differential privacy mechanisms in aggregated heatmaps.
 
-| Mechanizm Ochrony | Opis | Poziom Bezpieczeństwa | Wpływ na UX |
+| Protection Mechanism | Description | Security Level | Impact on UX |
 | :--- | :--- | :--- | :--- |
-| Kołowa Strefa (EPZ) | Ukrywa ślad w promieniu X metrów | Średni (podatny na analizę metadanych) | Niski |
-| Nieregularna Strefa | Kształt dopasowany do siatki ulic | Wysoki | Średni |
-| Przesunięcie Dystansu | Dodanie szumu do metadanych API | Bardzo wysoki | Średni |
-| Anonimizacja Agregatów | Usuwanie unikalnych śladów z heatmaps | Krytyczny dla miast | Brak |
+| Circular Zone (EPZ) | Hides the track within an X-meter radius | Medium (metadata analysis) | Low |
+| Irregular Zone | Shape fitted to the street grid | High | Medium |
+| Distance Shift | Adding noise to API metadata | Very high | Medium |
+| Aggregate Anonymization| Removing unique tracks from heatmaps | Critical for cities | None |
 
 ---
 
-## Architektura Multi-Tenant i Row-Level Security
+## Multi-Tenant Architecture and Row-Level Security
 
-Skalowalność systemu dla wielu miast i firm wymaga izolacji danych na poziomie bazy danych. Najbezpieczniejszym modelem w PostgreSQL jest **Row-Level Security (RLS)**.
+The scalability of the system for multiple cities and companies requires data isolation at the database level. The safest model in PostgreSQL is **Row-Level Security (RLS)**.
 
-### Implementacja RLS w Ekosystemie Django
-RLS zapobiega wyciekom danych w sytuacjach, gdy programista zapomni dodać filtr `tenant_id` w zapytaniu ORM.
+### RLS Implementation in the Django Ecosystem
+RLS prevents data leaks in situations where a developer forgets to add a `tenant_id` filter in an ORM query.
 
-**Zalety podejścia RLS:**
-- **Fail-closed by default**: Brak ustawionego kontekstu najemcy skutkuje zwróceniem pustego zbioru danych.
-- **Uproszczenie kodu**: Widoki w Django nie muszą zawierać powtarzalnych filtrów, co poprawia czytelność.
-- **Wydajność**: Baza danych optymalizuje plan zapytania pod kątem konkretnej instancji na poziomie silnika DB.
+**Advantages of the RLS approach:**
+- **Fail-closed by default**: Lack of a set tenant context results in an empty dataset being returned.
+- **Code simplification**: Django views do not need to contain repetitive filters, improving readability.
+- **Performance**: The database optimizes the query plan for a specific instance at the DB engine level.
 
-Stosowanie bibliotek takich jak `django-rls-tenants` pozwala na automatyzację tworzenia polityk podczas migracji bazy danych oraz bezpieczne zarządzanie kontekstem w zadaniach asynchronicznych (Celery).
+Using libraries such as `django-rls-tenants` allows for the automation of policy creation during database migrations and safe context management in asynchronous tasks (Celery).
 
 ---
 
-## Psychologia Grywalizacji i Retencja Użytkowników
+## Gamification Psychology and User Retention
 
-Aplikacja sportowa musi pełnić rolę motywatora. Rankingi (leaderboards) są najpotężniejszym narzędziem budowania nawyków, o ile są zaprojektowane zgodnie z zasadami psychologii behawioralnej.
+A sports application must act as a motivator. Leaderboards are the most powerful tool for habit building, provided they are designed according to the principles of behavioral psychology.
 
-### Budowa Zaangażowania poprzez Rankingi i Odznaki
-Kluczowe jest stosowanie rankingów dynamicznych i segmentowanych (lokalnych). Użytkownik widzący siebie na 10,000 miejscu globalnie czuje demotywację, ale ten sam użytkownik na 3 miejscu w swojej firmie lub dzielnicy zyskuje silny bodziec do działania. Regularne resety rankingów zapobiegają zmęczeniu liderów.
+### Building Engagement through Rankings and Badges
+It is crucial to use dynamic and segmented (local) rankings. A user seeing themselves in 10,000th place globally feels demotivated, but the same user in 3rd place in their company or district gains a strong incentive to act. Regular ranking resets prevent leader fatigue.
 
-Odznaki (badges) działają najlepiej, gdy pełnią funkcję reputacyjną i są trudne do zdobycia. 
+Badges work best when they serve a reputational function and are hard to obtain. 
 
-| Mechanika | Cel Psychologiczny | Implementacja Techniczna |
+| Mechanic | Psychological Goal | Technical Implementation |
 | :--- | :--- | :--- |
-| Serie (Streaks) | Awersja do straty | Tabela `user_daily_activity` + Redis |
-| Mikro-rankingi | Porównanie społeczne | PostGIS (geofencing) + Agregacje SQL |
-| Odznaki | Poczucie mistrzostwa | System Feature Toggles / Achievements |
-| Wyzwania Społeczne | Budowanie wspólnoty | Moduł Events w architekturze multi-tenant |
+| Streaks | Loss aversion | `user_daily_activity` table + Redis |
+| Micro-rankings | Social comparison | PostGIS (geofencing) + SQL Aggregations |
+| Badges | Sense of mastery | System Feature Toggles / Achievements |
+| Social Challenges | Community building | Events module in multi-tenant architecture |
 
 ---
 
-## Strategia Rozwoju i Płatności: Feature Toggles
+## Development and Monetization Strategy: Feature Toggles
 
-Wprowadzenie płatnych funkcji (Premium) oraz pakietów dla miast wymaga elastycznego systemu przełączników funkcji (**Feature Toggles**). 
+The introduction of paid features (Premium) and packages for cities requires a flexible system of **Feature Toggles**. 
 
-- **User-level flags**: `is_premium` dla biegaczy/rowerzystów.
-- **Tenant-level flags**: `has_heatmap_analytics` dla miast, które wykupiły pakiety planistyczne.
-- **Role-level permissions**: Rozbudowany system uprawnień od Global Ownera po Sponsora, zarządzany poprzez middleware w Pythonie oraz Guards w TypeScript.
+- **User-level flags**: `is_premium` for runners/cyclists.
+- **Tenant-level flags**: `has_heatmap_analytics` for cities that have purchased planning packages.
+- **Role-level permissions**: An extensive permissions system from Global Owner to Sponsor, managed via middleware in Python and Guards in TypeScript.
 
-Niezbędnym narzędziem operacyjnym jest funkcja **"Zaloguj jako" (Impersonation)**, która pozwala właścicielowi systemu na błyskawiczne diagnozowanie problemów zgłaszanych przez administratorów miejskich.
+An essential operational tool is the **"Login as" (Impersonation)** feature, which allows the system owner to instantly diagnose problems reported by city administrators.
 
 ---
 
-## Podsumowanie i Wnioski Strategiczne
+## Summary and Strategic Conclusions
 
-Projektowanie skalowalnego ekosystemu w domenie sportu to proces balansowania między wydajnością matematyczną backendu a restrykcjami systemowymi urządzeń końcowych. Wybór duetu **Python i TypeScript**, wsparty narzędziami takimi jak PostGIS, BRouter oraz mechanizmami RLS, zapewnia stabilność.
+Designing a scalable ecosystem in the domain of sports is a process of balancing the mathematical performance of the backend with the system restrictions of end devices. The choice of the **Python and TypeScript** duo, supported by tools such as PostGIS, BRouter, and RLS mechanisms, provides stability.
 
-**Kluczowe czynniki sukcesu to:**
-1. **Niezawodność zbierania danych**: Pokonanie barier oszczędzania energii w Androidzie.
-2. **Integralność rankingów**: Wykorzystanie algorytmów BRouter do automatycznej eliminacji oszustw.
-3. **Prywatność przez projekt (Privacy by Design)**: Zaawansowane metody anonimizacji.
-4. **Bezpieczna multitenancja**: Izolacja danych w warstwie bazy danych poprzez PostgreSQL RLS.
+**Key success factors are:**
+1. **Reliability of data collection**: Overcoming battery-saving barriers in Android.
+2. **Ranking integrity**: Using BRouter algorithms to automatically eliminate cheating.
+3. **Privacy by Design**: Advanced anonymization methods.
+4. **Secure multitenancy**: Data isolation in the database layer via PostgreSQL RLS.
 
-Tak skonstruowana architektura nie tylko realizuje bieżące potrzeby biznesowe, ale jest przygotowana na przyszłe rozszerzenia (integracja wearables, analityka predykcyjna ruchu miejskiego).
+Such an architecture not only fulfills current business needs but is prepared for future expansions (wearables integration, advanced predictive analytics of city traffic).

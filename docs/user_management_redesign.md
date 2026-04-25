@@ -1,66 +1,66 @@
-# RE-DESIGN LOGIKI UŻYTKOWNIKÓW I ZARZĄDZANIA (USER MANAGEMENT V2)
+# USER MANAGEMENT & LOGIC REDESIGN (USER MANAGEMENT V2)
 
-Ten dokument opisuje zaktualizowaną architekturę zarządzania użytkownikami, system ról (RBAC), oraz powiązanie z systemem Multi-Tenant (B2B2C) na platformie SPORT. System to teraz ekosystem składający się z Instancji (Tenants) – gdzie Instancją może być "Miasto X" lub "Firma Y".
+This document describes the updated architecture for user management, the Role-Based Access Control (RBAC) system, and its connection to the Multi-Tenant (B2B2C) system on the SPORT platform. The system is now an ecosystem consisting of Instances (Tenants) – where an Instance can be "City X" or "Company Y".
 
-## A. Hierarchia Ról i Uprawnienia (Logika Biznesowa)
+## A. Role Hierarchy and Permissions (Business Logic)
 
-Oto podział ról w ekosystemie:
+Here is the breakdown of roles within the ecosystem:
 
-1. **GLOBAL_OWNER (Właściciel / Platform Owner)**
-   - **Co widzi:** Wszystko ("God Mode").
-   - **Uprawnienia:** Tworzenie nowych Instancji (dodawanie miast/firm), globalna analityka całej aplikacji, zarządzanie subskrypcjami i płatnościami (Stripe), banowanie całych organizacji, dostęp do logów i telemetrii systemu.
+1. **GLOBAL_OWNER (Platform Owner)**
+   - **Visibility:** Everything ("God Mode").
+   - **Permissions:** Creating new Instances (adding cities/companies), global analytics of the entire application, subscription and payment management (Stripe), banning entire organizations, access to system logs and telemetry.
 
-2. **TENANT_ADMIN (Integratorzy / Prezydenci Miast / Właściciele Firm)**
-   - **Co widzi:** Tylko dane przypisane do swojej Instancji (swojego miasta/firmy).
-   - **Uprawnienia:** Zapraszanie Moderatorów, tworzenie lokalnych wydarzeń/wyzwań (np. "Rowerowy Maj w Warszawie"), podgląd zagregowanych statystyk (heatmaps), przydzielanie ról w obrębie swojej instancji.
+2. **TENANT_ADMIN (Integrators / City Mayors / Company Owners)**
+   - **Visibility:** Only data assigned to their Instance (their city/company).
+   - **Permissions:** Inviting Moderators, creating local events/challenges (e.g., "Cycling May in Warsaw"), viewing aggregated statistics (heatmaps), assigning roles within their instance.
 
-3. **TENANT_MODERATOR (Wsparcie / Obsługa lokalna)**
-   - **Co widzi:** To samo co Tenant Admin, ale bez dostępu do ustawień rozliczeniowych i zarządzania innymi użytkownikami administracyjnymi.
-   - **Uprawnienia:** Obsługa systemu Anti-Cheat (weryfikacja podejrzanych tras BRouterem), moderowanie zgłoszeń od użytkowników z danego miasta/firmy, akceptowanie wyników z konkretnych eventów.
+3. **TENANT_MODERATOR (Support / Local Staff)**
+   - **Visibility:** Same as Tenant Admin, but without access to billing settings and the management of other administrative users.
+   - **Permissions:** Handling the Anti-Cheat system (verifying suspicious routes via BRouter), moderating reports from users in the given city/company, accepting results from specific events.
 
-4. **ATHLETE (Użytkownicy / Rowerzyści / Biegacze)**
-   - **Co widzi:** Własne statystyki, rankingi miast/klubów, w których bierze udział.
-   - **Uprawnienia:** Nagrywanie tras, dołączanie do wyzwań, definiowanie swoich "Stref Prywatności" (Privacy Zones), zgłaszanie oszustw u innych. Może należeć do wielu instancji.
+4. **ATHLETE (End Users / Cyclists / Runners)**
+   - **Visibility:** Own statistics, rankings of cities/clubs they participate in.
+   - **Permissions:** Recording routes, joining challenges, defining their "Privacy Zones", reporting fraud by others. Can belong to multiple instances.
 
-5. **SPONSOR (Właściciele firm zewnętrznych)**
-   - **Co widzi:** Specjalny "Sponsor Dashboard" powiązany z wydarzeniem, które sponsorują.
-   - **Uprawnienia:** Tworzenie nagród/voucherów (Rewards), dodawanie swoich sklepów do mapy (POI), podgląd anonimowych statystyk (ile osób wykorzystało voucher).
+5. **SPONSOR (External Company Owners)**
+   - **Visibility:** A special "Sponsor Dashboard" tied to the event they are sponsoring.
+   - **Permissions:** Creating rewards/vouchers (Rewards), adding their stores to the map (POI), viewing anonymous statistics (how many people used a voucher).
 
 ---
 
-## B. Implementacja w Kodzie (Czytelność i Struktura)
+## B. Code Implementation (Readability and Structure)
 
-Aby kod był czysty, twardo oddzielamy warstwę uprawnień od logiki biznesowej.
+To keep the code clean, we strictly separate the authorization layer from the business logic.
 
 ### 1. Backend (Python / Django)
-Stosujemy model bazy danych oparty na architekturze Multi-Tenant z tabelą pośredniczącą/kluczem obcym.
+We use a database model based on a Multi-Tenant architecture with a junction table/foreign key.
 
-**Katalogi i nazewnictwo (Django):**
+**Directories and Naming Conventions (Django):**
 ```text
 backend/
 ├── users/
 │   ├── models.py        # CustomUser, Tenant, TenantProfile, UserRole
-│   ├── permissions.py   # Klasy: IsGlobalOwner, IsTenantAdmin, IsModerator
+│   ├── permissions.py   # Classes: IsGlobalOwner, IsTenantAdmin, IsModerator
 │   └── views.py
 ├── events/
-│   ├── models.py        # Event (posiada klucz obcy do Tenant)
+│   ├── models.py        # Event (has a foreign key to Tenant)
 │   └── views.py
 ```
 
-**Przykład logiki ról (models.py):**
+**Role Logic Example (models.py):**
 ```python
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class Role(models.TextChoices):
-    GLOBAL_OWNER = 'GLOBAL_OWNER', 'Właściciel'
-    TENANT_ADMIN = 'TENANT_ADMIN', 'Prezydent / Właściciel Firmy'
+    GLOBAL_OWNER = 'GLOBAL_OWNER', 'Global Owner'
+    TENANT_ADMIN = 'TENANT_ADMIN', 'Tenant Admin / Owner'
     TENANT_MODERATOR = 'TENANT_MODERATOR', 'Moderator'
-    ATHLETE = 'ATHLETE', 'Sportowiec'
+    ATHLETE = 'ATHLETE', 'Athlete'
     SPONSOR = 'SPONSOR', 'Sponsor'
 
 class Tenant(models.Model):
-    name = models.CharField(max_length=255) # np. "Miasto Poznań", "Korporacja X"
+    name = models.CharField(max_length=255) # e.g., "City of Poznan", "Corp X"
     is_active = models.BooleanField(default=True)
 
 class User(AbstractUser):
@@ -69,7 +69,7 @@ class User(AbstractUser):
     is_premium = models.BooleanField(default=False)
 ```
 
-**Customowe uprawnienia (permissions.py):**
+**Custom Permissions (permissions.py):**
 ```python
 from rest_framework import permissions
 
@@ -78,39 +78,39 @@ class IsTenantAdmin(permissions.BasePermission):
         return request.user.role == 'TENANT_ADMIN'
         
     def has_object_permission(self, request, view, obj):
-        # Sprawdź czy edytowany obiekt (np. Event) należy do miasta tego Admina!
+        # Check if the edited object (e.g., Event) belongs to this Admin's city!
         return obj.tenant_id == request.user.tenant_id
 ```
 
 ### 2. Frontend (TypeScript / React)
-W aplikacji webowej i mobilnej używamy Context API lub Zustanda (Zustand) do trzymania informacji o użytkowniku, aby warunkowo renderować widoki.
+In the web and mobile applications, we use the Context API or Zustand to hold user information in order to conditionally render views.
 
-**Struktura katalogów (TypeScript):**
+**Directory Structure (TypeScript):**
 ```text
 admin/src/
 ├── core/
-│   ├── auth/          # Logika logowania, dekodowanie JWT
-│   └── guards/        # ProtectedRoute.tsx (np. <RoleGuard requiredRole="TENANT_ADMIN">)
+│   ├── auth/          # Login logic, JWT decoding
+│   └── guards/        # ProtectedRoute.tsx (e.g., <RoleGuard requiredRole="TENANT_ADMIN">)
 ├── modules/
-│   ├── global-admin/  # Widoki TYLKO dla Ciebie (GLOBAL_OWNER)
-│   ├── tenant-admin/  # Widoki dla Prezydentów/Firm
-│   └── sponsor/       # Dashboardy dla sponsorów
+│   ├── global-admin/  # Views ONLY for you (GLOBAL_OWNER)
+│   ├── tenant-admin/  # Views for Mayors/Companies
+│   └── sponsor/       # Dashboards for sponsors
 ```
 
 ---
 
-## C. Dobre Praktyki i Pro-tipy Architektoniczne
+## C. Architectural Best Practices and Pro-Tips
 
-W architekturze takich systemów stosujemy poniższe wzorce, aby zapobiec pułapkom w przyszłości:
+In the architecture of such systems, we apply the following patterns to prevent future pitfalls:
 
-### 1. Baza Danych: Row-Level Security (RLS) w PostgreSQL
-Skoro obsługujemy różne miasta i firmy, błąd w kodzie mógłby pokazać dane biegaczy z "Firmy A" szefowi z "Firmy B". PostGIS i PostgreSQL wspierają RLS. 
-Na poziomie bazy danych zakładamy regułę: *"Użytkownik X może odpytywać tylko wiersze, gdzie `tenant_id` zgadza się z jego `tenant_id`"*. Nawet w przypadku, gdy zapomnimy dodać filtru w widoku Django, baza danych twardo zablokuje wyciek danych.
+### 1. Database: Row-Level Security (RLS) in PostgreSQL
+Since we serve different cities and companies, a bug in the code could expose data of runners from "Company A" to the boss of "Company B". PostGIS and PostgreSQL support RLS. 
+At the database level, we set a rule: *"User X can only query rows where `tenant_id` matches their `tenant_id`"*. Even if we forget to add a filter in a Django view, the database will strictly block the data leak.
 
-### 2. Funkcja "Zaszywania się" (Impersonation / Login As)
-Jako GLOBAL_OWNER często pada potrzeba weryfikacji problemów zgłaszanych przez wsparcie (np. "Panie Łukaszu, na moim panelu prezydenta nie widzę wczorajszego biegu").
-Konieczna jest implementacja funkcji "Zaloguj jako" (w Django to bardzo proste). Pozwala to wejść do panelu, widząc dokładnie to samo, co widzi dany `TENANT_ADMIN`, bez znania jego hasła, z poziomu jednego przycisku.
+### 2. "Login As" Feature (Impersonation)
+As the GLOBAL_OWNER, there is often a need to verify issues reported by support (e.g., "Mr. Luke, I don't see yesterday's run on my mayor's panel").
+Implementing a "Login as" feature is necessary (it's very simple in Django). It allows you to enter the panel, seeing exactly what the given `TENANT_ADMIN` sees, without knowing their password, with the click of a single button.
 
-### 3. Feature Toggles (Flagi) na poziomie Instancji (Tenant)
-Tak jak flagujemy płatne funkcje na obiekcie użytkownika (`is_premium`), robimy to samo dla całych instancji.
-Jeśli "Miasto Warszawa" zapłaci za wyższy pakiet, włączamy w ich `TenantProfile` flagę np. `has_heatmap_analytics = True`. Front-end (React) pobiera te ustawienia przy logowaniu i automatycznie wygeneruje lub ukryje dedykowane moduły i opcje w bocznym menu dla wszystkich moderatorów z Warszawy.
+### 3. Feature Toggles at the Instance (Tenant) Level
+Just as we flag paid features on a user object (`is_premium`), we do the same for entire instances.
+If the "City of Warsaw" pays for a higher tier, we enable a flag in their `TenantProfile`, e.g., `has_heatmap_analytics = True`. The front-end (React) fetches these settings upon login and automatically generates or hides dedicated modules and options in the sidebar for all moderators from Warsaw.
