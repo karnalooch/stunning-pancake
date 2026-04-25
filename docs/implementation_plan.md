@@ -89,10 +89,12 @@ This document tracks the engineering milestones and real-time progress of the SP
 
 ### 6.3 GIS & Interoperability
 - **OGC API Features**: 🏗 Paginated GeoJSON export for municipal GIS tools.
+- **Live GIS Dashboard**: 🏗 **deck.gl**-powered real-time spatial visualization for city coordinators.
 - **Dynamic Geofencing**: 🏗 Automated event "corridors" activation/deactivation.
 
 ### 6.4 Community Moderation
-- **Decentralized Mod Tools**: 🏗 Tools for city-specific "Community Moderators" (RBAC Level 3 Expansion).
+- **Decentralized Mod Tools**: 🏗 Next-gen moderation interface built with **shadcn/ui** and **Mantine**.
+- **Community RBAC**: 🏗 RBAC Level 3 Expansion with localized "City Moderator" dashboards.
 
 ---
 
