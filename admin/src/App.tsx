@@ -1,5 +1,6 @@
 import { Box } from '@mantine/core';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Sidebar, Taskbar, WinWindow } from './core/Layout';
 import { Dashboard } from './modules/dashboard/Dashboard';
 import { Tenants } from './modules/tenants/Tenants';
@@ -21,11 +22,14 @@ const PlaceholderView = ({ title }: { title: string }) => (
   </WinWindow>
 );
 
+const queryClient = new QueryClient();
+
 export default function App() {
   const mode = import.meta.env.VITE_APP_MODE || 'DEVELOPMENT';
   
   return (
-    <DesignerProvider>
+    <QueryClientProvider client={queryClient}>
+      <DesignerProvider>
       <BrowserRouter>
         <Box h="100vh" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Box style={{ flex: 1, display: 'flex', gap: '20px', padding: '20px', overflow: 'hidden' }}>
@@ -57,5 +61,6 @@ export default function App() {
         </Box>
       </BrowserRouter>
     </DesignerProvider>
+    </QueryClientProvider>
   );
 }

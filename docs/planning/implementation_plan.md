@@ -63,8 +63,9 @@
     - [x] Integrate `@dnd-kit` for real-time dashboard layout reordering.
     - [x] Build `EditableText` system for in-flight content modification.
     - [x] **Mobile HUD Designer**: Implement long-press HUD customization with MMKV persistence.
-- [ ] **Adaptive Integrity**:
-    - [ ] Build a UI for real-time **Anti-Cheat Sensitivity** adjustment (Kinematics & ML thresholds).
+- [x] **Adaptive Integrity**:
+    - [x] Build a UI for real-time **Anti-Cheat Sensitivity** adjustment (Kinematics & ML thresholds).
+    - [x] Integrate **Deck.gl** and real-time backend API polling (Axios + Tanstack Query).
 - [ ] **White-Label Engine**:
     - [ ] Implement **Remote Asset Injection** for Logos, Sponsorship Overlays, and Splash Screens.
 - [ ] **Outdoor HUD Optimization**:

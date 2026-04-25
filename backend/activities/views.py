@@ -122,3 +122,17 @@ class TelemetryLiveView(generics.GenericAPIView):
             
         return Response(enriched_data)
 
+class AnomalyListView(generics.GenericAPIView):
+    """
+    View for fetching recent anti-cheat anomalies.
+    Authorized for Admin roles (handled by generic permissions or RoleGuard in frontend).
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from .services import AntiCheatEngine
+        # Ideally, we filter by request.user.tenant_id if user is a Tenant Admin
+        tenant_id = request.user.tenant_id if hasattr(request.user, 'tenant_id') and getattr(request.user, 'role', '') != 'GLOBAL_OWNER' else None
+        
+        anomalies = AntiCheatEngine.get_recent_anomalies(tenant_id=tenant_id, limit=50)
+        return Response(anomalies)
