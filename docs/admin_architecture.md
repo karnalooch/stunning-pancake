@@ -26,11 +26,24 @@ Each directory contains the views and logic for a specific business domain:
 
 ### 2.3 Shared (`src/shared/`)
 Reusable assets across all modules:
-*   `components/`: UI library (TopBar, Sidebar, MapTrackViewer).
-*   `hooks/`: Shared React hooks (Auth, API fetching).
+*   `components/`: UI library based on **shadcn/ui** and **Mantine** (TopBar, Sidebar, MapTrackViewer).
+*   `hooks/`: Shared React hooks (Auth, API fetching, `useForm` from Mantine).
 *   `types/`: Centralized TypeScript definitions.
 
-## 3. Security & Code Splitting
+## 3. Visual & Graphics Stack
+The Admin interface uses a cutting-edge visual stack to ensure a premium user experience and high-performance data visualization.
+
+### 3.1 Component Architecture
+*   **shadcn/ui**: Core components (buttons, inputs, dialogs) are integrated directly into the `src/shared/components/` directory using the **shadcn-ui CLI** for granular control over the source code.
+*   **Tremor**: Powering the `analytics/` module for high-density data dashboards and KPI cards.
+*   **Framer Motion**: Standard for all micro-animations and smooth state transitions.
+
+### 3.2 High-Performance Rendering
+*   **deck.gl**: Used in the `tracking/` and `moderation/` modules for rendering millions of GPS points and animated "comet" trails.
+*   **Three.js / R3F**: Utilized for 3D visualizations of cities and sport equipment in specialized views.
+*   **MapLibre GL**: Base map engine, integrated with custom WebGL layers from deck.gl for geospatial visualization.
+
+## 4. Security & Code Splitting
 By using build-time flags, Vite performs **tree-shaking** to physically remove code associated with other modes. For instance, the Moderator's bundle does not contain the logic for financial transactions or tenant configuration, reducing the attack surface.
 
 ## 4. Development Workflow

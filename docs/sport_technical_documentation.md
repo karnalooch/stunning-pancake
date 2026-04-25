@@ -31,7 +31,10 @@ SPORT is a **high-performance sport gamification platform** built for massive-sc
 | **Database (Prod)** | Citus 12.1 (1 coordinator + 3 workers) | Distributed sharding, 32 shards/table |
 | **Cache (Dev)** | Redis 7 standalone | Leaderboards, pub/sub |
 | **Cache (Prod)** | Redis Cluster (3 masters + 3 replicas) | Distributed cache, 3× read throughput |
-| **Admin** | React 19, Vite, MapLibre GL | Dashboard, moderator panel, heatmaps |
+| **Admin UI** | React 19, Vite, **shadcn/ui**, **Mantine** | Modern component architecture, full source control |
+| **Analytics UI** | **Tremor**, **Magic UI** | Dashboard KPI cards, "Wow" effects, bento grids |
+| **Graphics** | **Three.js**, **PixiJS**, **deck.gl** | 3D visualization, high-perf 2D, geospatial routes |
+| **Animations** | **Framer Motion** | Micro-interactions, page transitions |
 | **Messaging** | Matrix E2EE (async Celery provisioning) | Club chat, notifications |
 | **Observability** | Sentry (Django + FastAPI + Mobile) | Error tracking, performance profiling |
 
@@ -134,6 +137,32 @@ GET /api/infra/health/        → Combined Redis + Citus status
 GET /api/infra/health/redis/  → Cluster topology + latency
 GET /api/infra/health/citus/  → Node list + shard distribution
 ```
+
+---
+
+---
+
+## 🎨 Visual Layer & Graphics Engines (New Era)
+
+Responding to the need for a modern, high-performance visual layer, the SPORT platform utilizes a dual-approach: modular component libraries for UI and specialized rendering engines for low-level graphics.
+
+### Modern UI Component Libraries (React/Next.js)
+Traditional NPM package libraries are phased out in favor of "copy-paste" and modular solutions managed via CLI:
+*   **shadcn/ui**: The new standard. Built on Radix UI (logic/accessibility) and Tailwind CSS (styling). Components are managed via **CLI**, which allows copying source code directly into the project for full ownership and customization.
+*   **Mantine**: Comprehensive toolkit with 100+ components and custom hooks (e.g., `useForm`), ideal for rapid but stable feature development.
+*   **Tremor**: Specialized engine for analytical dashboards. Optimized for large numerical datasets, offering high-performance charts and KPI cards.
+*   **Magic UI & Aceternity UI**: Focused on the "Wow" factor. Advanced Framer Motion animations (particle effects, bento grids, interactive backgrounds) for modern landing pages.
+
+### 2D and 3D Graphics Engines
+For "antigravity" visualizations beyond standard UI, WebGL and WebGPU engines are employed:
+
+| Engine / Library | Type | Key Advantage | Project Application |
+| :--- | :--- | :--- | :--- |
+| **Three.js** | 3D | Massive ecosystem, flexibility | 3D city/globe visualization, 3D equipment models |
+| **Babylon.js** | 3D | Stability, built-in physics | Advanced simulations, mini-games, complex lighting |
+| **PixiJS** | 2D | Extreme 2D performance | Dynamic icons, user HUD, animated overlays |
+| **deck.gl** | Geospatial | Millions of GPS points | Animated route trails (TripsLayer), large scale heatmaps |
+| **Framer Motion** | Animations | Declarative React style | UI micro-interactions, page transitions |
 
 ---
 
