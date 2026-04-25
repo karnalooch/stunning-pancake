@@ -93,7 +93,7 @@ This document tracks the engineering milestones and real-time progress of the SP
 - **Dynamic Geofencing**: 🏗 Automated event "corridors" activation/deactivation.
 
 ### 6.4 Community Moderation
-- **Decentralized Mod Tools**: 🏗 Next-gen moderation interface built with **shadcn/ui** and **Mantine**.
+- **Decentralized Mod Tools**: 🏗 **IN PROGRESS** — Next-gen moderation interface built with **shadcn/ui** and **Mantine**.
 - **Community RBAC**: 🏗 RBAC Level 3 Expansion with localized "City Moderator" dashboards.
 
 ---
