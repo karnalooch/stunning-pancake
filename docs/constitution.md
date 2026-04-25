@@ -437,3 +437,28 @@ WprowadziliÅ›my rygorystycznÄ… walidacjÄ™ sygnaÅ‚u przed zapisem do bazy:
 - **Akcje manualne**: Approve / Reject / Ban User â€” bezpoÅ›rednio z mapy.
 - **RBAC**: DostÄ™pny tylko dla rÃ³l `GLOBAL_ADMIN` i `LOCAL_MODERATOR`.
 - **Komponenty**: `ModeratorView.tsx`, `MapTrackViewer.tsx` (`admin/src/`).
+
+## 25. STANDARD ESTETYCZNY: CUD
+*Niniejszy rozdzia³ definiuje DNA wizualne projektu SPORT. Odstêpstwo od tych zasad jest traktowane jako b³¹d krytyczny (Critical Bug).*
+
+### 25.1. Specyfikacja Glassmorphism i Aura
+- **Deep Glass**: ackdrop-filter: blur(20px). T³o musi byæ pó³przezroczyste (rgba 20, 20, 20, 0.7).
+- **Inner Glow**: Ka¿dy panel musi posiadaæ wewnêtrzny cieñ inset 0 0 20px rgba(0, 242, 255, 0.05).
+- **Aura Gradients**: Wykorzystanie palety:
+  - **Primary Cyan**: #00f2ff
+  - **Neon Purple**: #7000ff
+  - **Safety Orange**: #ffaa00 (tylko dla alertów)
+  - **Background**: Deep Obsidian (#050505)
+
+### 25.2. Standard Wykresów i Analityki
+- **Radar Charts**: Wype³nienie gradientowe (Cyan to Purple) z poœwiat¹. Linie siatki o widocznoœci 10%.
+- **Integrity Gauge**: Gradient liniowy (Red -> Yellow -> Cyan). Wskazówka musi rzucaæ cieñ typu neon-glow.
+- **Sensor Analysis**: Ostre, cienkie linie z efektem 'glow' (drop-shadow).
+
+### 25.3. Interaktywnoœæ Map
+- **Geofencing**: Obrysy poligonów musz¹ mieæ stroke-width: 2px i efekt pulsuj¹cego neonu.
+- **Telemetry Trails**: Œlad trasy musi byæ gradientowy (od starego punktu do nowego) z poœwiat¹.
+
+### 25.4. Polityka Zero Tolerancji dla "Kaszany"
+- Funkcjonalnoœæ bez estetyki premium jest uznawana za niegotow¹.
+- Ka¿dy komponent musi przejœæ walidacjê wizualn¹ Gemini (Nano Banana) pod k¹tem zgodnoœci z mockupami.

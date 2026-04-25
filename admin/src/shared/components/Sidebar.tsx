@@ -1,20 +1,29 @@
+import { 
+  Activity, 
+  Trophy, 
+  Users, 
+  Search, 
+  ShieldCheck, 
+  BarChart3 
+} from 'lucide-react';
+
 export type ViewId = 'live' | 'events' | 'clubs' | 'anticheat' | 'analytics' | 'moderator';
 
 export interface NavItem {
   id: ViewId;
   label: string;
-  icon: string;
+  icon: any;
   /** Roles that can see this nav item. Empty = visible to all. */
   allowedRoles?: string[];
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'live',      label: 'Live Tracking', icon: '📡' },
-  { id: 'events',    label: 'Events',        icon: '🏆' },
-  { id: 'clubs',     label: 'Clubs',         icon: '👥' },
-  { id: 'anticheat', label: 'Anti-Cheat',    icon: '🔍', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN', 'MODERATOR'] },
-  { id: 'moderator', label: 'Moderator',     icon: '🛡️', allowedRoles: ['GLOBAL_ADMIN', 'MODERATOR'] },
-  { id: 'analytics', label: 'Analytics',     icon: '📈', allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN'] },
+  { id: 'live',      label: 'Live',       icon: Activity },
+  { id: 'events',    label: 'Events',     icon: Trophy },
+  { id: 'clubs',     label: 'Clubs',      icon: Users },
+  { id: 'anticheat', label: 'Anti-Cheat', icon: Search,      allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN', 'MODERATOR'] },
+  { id: 'moderator', label: 'Moderator',  icon: ShieldCheck, allowedRoles: ['GLOBAL_ADMIN', 'MODERATOR'] },
+  { id: 'analytics', label: 'Analytics',  icon: BarChart3,   allowedRoles: ['GLOBAL_ADMIN', 'LOCAL_ADMIN'] },
 ];
 
 interface SidebarProps {
@@ -25,7 +34,6 @@ interface SidebarProps {
 
 /**
  * Modular Sidebar — dynamically renders nav items based on user RBAC role.
- * New modules register here by adding an entry to NAV_ITEMS.
  */
 export const Sidebar = ({ activeView, onViewChange, userRole }: SidebarProps) => {
   const visibleItems = NAV_ITEMS.filter(
@@ -34,27 +42,21 @@ export const Sidebar = ({ activeView, onViewChange, userRole }: SidebarProps) =>
 
   return (
     <aside id="admin-sidebar" style={{
-      width: '72px',
-      background: 'var(--bg-card)',
-      borderRight: '1px solid var(--border)',
+      width: '80px',
+      background: 'rgba(11, 14, 20, 0.4)',
+      borderRight: '1px solid var(--border-glass)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      paddingTop: '20px',
-      gap: '8px',
+      paddingTop: '24px',
+      gap: '12px',
       flexShrink: 0,
+      backdropFilter: 'blur(var(--blur))'
     }}>
-      {/* Logo mark */}
-      <div style={{
-        width: '42px', height: '42px', borderRadius: '12px',
-        background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '18px', fontWeight: 800, color: '#fff',
-        marginBottom: '24px', flexShrink: 0,
-      }}>S</div>
-
       {visibleItems.map((item) => {
         const isActive = activeView === item.id;
+        const Icon = item.icon;
+        
         return (
           <button
             key={item.id}
@@ -62,31 +64,32 @@ export const Sidebar = ({ activeView, onViewChange, userRole }: SidebarProps) =>
             title={item.label}
             onClick={() => onViewChange(item.id)}
             style={{
-              width: '52px', height: '52px',
-              borderRadius: '14px',
+              width: '56px', height: '56px',
+              borderRadius: '16px',
               border: 'none',
               cursor: 'pointer',
               display: 'flex', flexDirection: 'column',
               alignItems: 'center', justifyContent: 'center',
-              gap: '3px', fontSize: '20px',
+              gap: '4px',
               background: isActive
-                ? 'rgba(0, 210, 255, 0.15)'
+                ? 'rgba(0, 209, 255, 0.1)'
                 : 'transparent',
-              outline: isActive
-                ? '1px solid rgba(0, 210, 255, 0.4)'
+              border: isActive 
+                ? '1px solid var(--border-active)' 
                 : '1px solid transparent',
-              transition: 'all 0.2s ease',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              color: isActive ? 'var(--primary)' : 'var(--text-muted)',
             }}
-            onMouseEnter={(e) => {
-              if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)';
-            }}
-            onMouseLeave={(e) => {
-              if (!isActive) (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-            }}
+            className="glow-on-hover"
           >
-            <span>{item.icon}</span>
-            <span style={{ fontSize: '8px', color: isActive ? 'var(--primary)' : 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.3px' }}>
-              {item.label.split(' ')[0].toUpperCase()}
+            <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+            <span style={{ 
+              fontSize: '9px', 
+              fontWeight: 800, 
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase'
+            }}>
+              {item.label}
             </span>
           </button>
         );

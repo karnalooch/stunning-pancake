@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import App from './App';
+import App from './core/App';
 
 describe('Admin Dashboard Smoke Test', () => {
   it('renders the command center branding', () => {

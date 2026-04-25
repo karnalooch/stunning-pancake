@@ -3,14 +3,16 @@ import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface MapTrackViewerProps {
-  routePath: any; // GeoJSON LineString
+  routePath: any;      // Raw GPS Data (GeoJSON LineString)
+  validatedPath?: any;  // BRouter Validated Data (Optional)
   isVerified?: boolean;
 }
 
 /**
- * Reusable MapLibre component for viewing a single activity track.
+ * High-Fidelity Map Renderer for Anti-Cheat Verification.
+ * Supports 'Glow' effects and dual-track comparison.
  */
-export const MapTrackViewer = ({ routePath, isVerified }: MapTrackViewerProps) => {
+export const MapTrackViewer = ({ routePath, validatedPath, isVerified }: MapTrackViewerProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
 
@@ -38,52 +40,96 @@ export const MapTrackViewer = ({ routePath, isVerified }: MapTrackViewerProps) =
     mapRef.current = map;
 
     map.on('load', () => {
+      // 1. Render RAW TRACK (GPX) - Red with Glow
       if (routePath) {
-        // Add the route source
-        map.addSource('route', {
-          type: 'geojson',
-          data: routePath,
-        });
-
-        // Add the route layer
+        map.addSource('route-raw', { type: 'geojson', data: routePath });
+        
+        // Outer Glow
         map.addLayer({
-          id: 'route-line',
+          id: 'route-raw-glow',
           type: 'line',
-          source: 'route',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
+          source: 'route-raw',
           paint: {
-            'line-color': isVerified ? '#92fe9d' : '#ff4d4d',
-            'line-width': 5,
-            'line-opacity': 0.8,
-          },
+            'line-color': '#FF4B4B',
+            'line-width': 12,
+            'line-blur': 8,
+            'line-opacity': 0.3
+          }
         });
 
-        // Zoom to fit the route
-        try {
-          const coordinates = routePath.coordinates;
-          const bounds = coordinates.reduce((acc: maplibregl.LngLatBounds, coord: [number, number]) => {
-            return acc.extend(coord);
-          }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
+        // Core Line
+        map.addLayer({
+          id: 'route-raw-core',
+          type: 'line',
+          source: 'route-raw',
+          paint: {
+            'line-color': '#FF4B4B',
+            'line-width': 3,
+            'line-opacity': 0.9
+          }
+        });
+      }
 
-          map.fitBounds(bounds, { padding: 40 });
-        } catch (e) {
-          console.error("Failed to fit bounds", e);
-        }
+      // 2. Render VALIDATED TRACK (BRouter) - Electric Blue with Glow
+      if (validatedPath) {
+        map.addSource('route-valid', { type: 'geojson', data: validatedPath });
+
+        // Outer Glow
+        map.addLayer({
+          id: 'route-valid-glow',
+          type: 'line',
+          source: 'route-valid',
+          paint: {
+            'line-color': '#00D1FF',
+            'line-width': 10,
+            'line-blur': 6,
+            'line-opacity': 0.4
+          }
+        });
+
+        // Core Line
+        map.addLayer({
+          id: 'route-valid-core',
+          type: 'line',
+          source: 'route-valid',
+          paint: {
+            'line-color': '#00D1FF',
+            'line-width': 3,
+            'line-opacity': 1
+          }
+        });
+      }
+
+      // 3. Auto-fit bounds
+      const allCoords = [
+        ...(routePath?.coordinates || []),
+        ...(validatedPath?.coordinates || [])
+      ];
+
+      if (allCoords.length > 0) {
+        const bounds = allCoords.reduce((acc: maplibregl.LngLatBounds, coord: [number, number]) => {
+          return acc.extend(coord);
+        }, new maplibregl.LngLatBounds(allCoords[0], allCoords[0]));
+
+        map.fitBounds(bounds, { padding: 60 });
       }
     });
 
     return () => {
       map.remove();
     };
-  }, [routePath, isVerified]);
+  }, [routePath, validatedPath, isVerified]);
 
   return (
     <div 
       ref={mapContainer} 
-      style={{ width: '100%', height: '100%', borderRadius: '12px', border: '1px solid var(--border)' }} 
+      style={{ 
+        width: '100%', 
+        height: '100%', 
+        borderRadius: 'var(--radius-lg)', 
+        border: '1px solid var(--border-glass)',
+        boxShadow: 'inset 0 0 40px rgba(0,0,0,0.5)'
+      }} 
     />
   );
 };
