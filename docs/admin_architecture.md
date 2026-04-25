@@ -3,15 +3,15 @@
 ## 1. Technical Stack
 The Management Panel is built using the **Obsidian** design system (Technical Blue / Glassmorphism) with an ultra-modern 2025/2026 enterprise stack.
 
-- **Framework**: **Next.js 15+ (App Router)** leveraging **React Server Components (RSC)** for maximum edge-rendering performance and zero client-side waterfalls.
-- **Styling**: **Tailwind CSS v4** + **shadcn/ui** — utility-first precision with beautiful, highly accessible headless UI components.
+- **Framework**: **Vite + React 19** — high-performance Single Page Application (SPA) optimized for complex WebGL rendering and real-time data streams.
+- **Styling**: **Tailwind CSS v4** + **Mantine v7** — high-fidelity enterprise UI components with full support for the Obsidian design system.
 - **Analytics Visualization**: **Tremor** (dashboard metrics) + **Apache ECharts** (complex data models).
 - **State Management**: **Zustand** (UI State) + **TanStack Query v5** (caching & mutations).
 - **Designer System**: **@dnd-kit** for real-time layout orchestration and persistence.
 - **Geospatial Engine**: **MapLibre GL JS** combined with **deck.gl**. This WebGL-powered data visualization stack allows rendering millions of GPS telemetry points and spatial anomalies at 60FPS.
 
 ## 2. Multi-App Deployment (The 3-Container Strategy)
-To ensure maximum security and isolation, the SPORT administrative interface is split into three independent web applications. While they share the same codebase, they are compiled into distinct bundles at build time.
+To ensure maximum security and isolation, the SPORT administrative interface is split into three independent web applications. While they share the same codebase, they are compiled into distinct bundles at build time using the **Vite** build engine.
 
 ### 2.1 Application Modes (`VITE_APP_MODE`)
 The deployment mode is locked via environment variables during the build process:
@@ -23,7 +23,7 @@ The deployment mode is locked via environment variables during the build process
 A high-performance interface for reviewing flagged activities.
 - **Split-screen Layout**: Flagged activities list (left) + Detailed Track Map (right).
 - **Interactive Map**: Renders the problematic track via `deck.gl` overlays with anomaly markers (speed violations, teleport points).
-- **Action Suit**: One-click Approve, Reject, or Ban User via Server Actions.
+- **Action Suit**: One-click Approve, Reject, or Ban User via Backend API endpoints.
 
 ## 4. Hyper-Edit Mode (Live Designer)
 The platform features an "In-Flight" editing system that allows administrators to customize the interface without code changes.
@@ -39,16 +39,16 @@ The platform features an "In-Flight" editing system that allows administrators t
 
 ## 5. Modular Directory Structure
 The source code under `admin/src/` follows a domain-driven modular structure:
-- **`src/core/`**: Shell, routing, and theme configuration.
+- **`src/core/`**: Shell, routing (React Router 7), and theme configuration.
 - **`src/providers/`**: Context providers (Auth, Designer, Query).
 - **`src/shared/components/`**: Atomic UI library (EditableText, DraggableWidget, StatsCard).
 - **`src/modules/`**: Business domains (analytics, anti-cheat, tracking).
 
 ## 6. Security & RBAC
-The panel enforces Role-Based Access Control via Next.js middleware and secure Server Actions:
+The panel enforces Role-Based Access Control via Client-side Route Guards and strict Backend API validation:
 - **`GLOBAL_ADMIN`**: Full system oversight and tenant management.
 - **`MODERATOR`**: Focused access to the Anti-Cheat and verification suite.
 - **`TENANT_ADMIN`**: Scoped access to city/corporate data.
 
 ---
-*Status: PRODUCTION READY (Hyper-Edit Enabled) | Architecture Version: 3.1.0*
+*Status: PRODUCTION READY (Vite SPA) | Architecture Version: 3.2.0*

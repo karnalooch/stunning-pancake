@@ -147,15 +147,25 @@ class ConnectionManager:
         logger.info("ws.disconnected total=%d", len(self._connections))
 
     async def broadcast(self, payload: dict) -> None:
-        """Sends JSON payload to all connected clients."""
+        """Sends JSON payload to all connected clients in parallel."""
+        if not self._connections:
+            return
+
+        # Parallelize sending to prevent one slow consumer from blocking the event loop
+        tasks = [ws.send_json(payload) for ws in self._connections]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Cleanup dead connections
         dead: list[WebSocket] = []
-        for ws in self._connections:
-            try:
-                await ws.send_json(payload)
-            except Exception:
+        for ws, result in zip(self._connections, results):
+            if isinstance(result, Exception):
                 dead.append(ws)
+        
         for ws in dead:
-            self._connections.remove(ws)
+            try:
+                self._connections.remove(ws)
+            except ValueError:
+                pass
 
 
 manager = ConnectionManager()
@@ -172,11 +182,13 @@ manager = ConnectionManager()
 async def _traccar_redis_bridge() -> None:
     """
     Subscribes to the Redis pub/sub channel that Traccar writes to.
-    On each message, writes to TimescaleDB and broadcasts via WebSocket.
-
-    Traccar publishes JSON: { deviceId, lat, lon, speed, timestamp }
+    Optimized: Batches DB inserts and parallelizes WebSocket broadcasts.
     """
     import aioredis  # type: ignore[import]
+
+    batch_buffer: list[tuple] = []
+    MAX_BATCH_SIZE = 50
+    last_flush = time.time()
 
     while True:
         try:
@@ -190,48 +202,38 @@ async def _traccar_redis_bridge() -> None:
                     continue
                 try:
                     data = json.loads(message["data"])
-                    device_id  = str(data.get("deviceId", data.get("id", "unknown")))
-                    
-                    # Traccar uses full names for latitude/longitude in forwarding
+                    device_id = str(data.get("deviceId", data.get("id", "unknown")))
                     lat = float(data.get("latitude", data.get("lat", 0)))
                     lon = float(data.get("longitude", data.get("lon", 0)))
-                    
-                    # Speed is usually in knots in Traccar raw data, but let's assume m/s if it was converted,
-                    # or knots (0.514444 m/s) if raw. Standard forwarding often sends knots.
-                    speed_raw = float(data.get("speed", 0))
-                    speed_ms = speed_raw * 0.514444 # Convert knots to m/s
-                    
-                    # Timestamp: fixTime is preferred (time of GPS lock)
+                    speed_ms = float(data.get("speed", 0)) * 0.514444
                     ts_ms = data.get("fixTime", data.get("deviceTime", data.get("serverTime")))
                     ts = float(ts_ms) / 1000.0 if ts_ms else time.time()
 
-                    # Log for debugging (only in non-prod or high log level)
-                    logger.debug("traccar_bridge: pos device=%s lat=%.6f lon=%.6f speed=%.1f", 
-                                 device_id, lat, lon, speed_ms)
+                    # Add to buffer
+                    batch_buffer.append((ts, device_id, lat, lon, speed_ms))
 
-                    # Write to TimescaleDB
-                    pool = await get_pool()
-                    async with pool.acquire() as conn:
-                        await conn.execute(
-                            """
-                            INSERT INTO gps_points
-                                (time, device_id, lat, lon, speed_ms)
-                            VALUES (to_timestamp($1), $2, $3, $4, $5)
-                            ON CONFLICT DO NOTHING
-                            """,
-                            ts, device_id, lat, lon, speed_ms,
-                        )
+                    # Flush if buffer full or timeout reached
+                    if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 1.0):
+                        if batch_buffer:
+                            pool = await get_pool()
+                            async with pool.acquire() as conn:
+                                await conn.executemany(
+                                    "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+                                    batch_buffer
+                                )
+                            batch_buffer = []
+                            last_flush = time.time()
 
-                    # Broadcast to Admin Dashboard (live map)
-                    await manager.broadcast({
-                        "type":      "position_update",
+                    # Broadcast (parallelized via manager)
+                    asyncio.create_task(manager.broadcast({
+                        "type": "position_update",
                         "device_id": device_id,
-                        "lat":       lat,
-                        "lon":       lon,
-                        "speed_ms":  speed_ms,
-                        "ts":        ts,
-                        "activity_type": "BIKE" if "BIKE" in device_id else "RUN" # Default for Traccar legacy bridge
-                    })
+                        "lat": lat,
+                        "lon": lon,
+                        "speed_ms": speed_ms,
+                        "ts": ts,
+                        "activity_type": "BIKE" if "BIKE" in device_id else "RUN"
+                    }))
 
                 except (KeyError, ValueError, json.JSONDecodeError) as exc:
                     logger.warning("traccar_bridge: malformed message err=%s", exc)

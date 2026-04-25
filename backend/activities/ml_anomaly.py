@@ -21,6 +21,7 @@ import math
 import os
 import pickle
 import statistics
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -41,6 +42,7 @@ MIN_POINTS_FOR_ML = 20
 
 _model = None   # Lazy-loaded
 _model_loaded = False
+_model_lock = threading.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -128,24 +130,34 @@ def extract_features(points: list["GpsPoint"]) -> list[float] | None:
 # ---------------------------------------------------------------------------
 
 def _load_model():
-    """Lazily loads the IsolationForest model from disk."""
+    """Lazily loads the IsolationForest model from disk (Thread-safe)."""
     global _model, _model_loaded
+    
     if _model_loaded:
         return _model
 
-    _model_loaded = True
-    if not MODEL_PATH.exists():
-        logger.info("ml_anomaly: model file not found at %s — ML check disabled", MODEL_PATH)
-        return None
+    with _model_lock:
+        if _model_loaded:
+            return _model
+            
+        _model_loaded = True
+        if not MODEL_PATH.exists():
+            logger.info("ml_anomaly: model file not found at %s — ML check disabled", MODEL_PATH)
+            return None
 
-    try:
-        import pickle
-        with open(MODEL_PATH, "rb") as f:
-            _model = pickle.load(f)
-        logger.info("ml_anomaly: model loaded from %s", MODEL_PATH)
-    except Exception as exc:
-        logger.error("ml_anomaly: failed to load model err=%s", exc)
-        _model = None
+        try:
+            import joblib
+            _model = joblib.load(MODEL_PATH)
+            logger.info("ml_anomaly: model loaded from %s (joblib)", MODEL_PATH)
+        except ImportError:
+            # Fallback to pickle if joblib is not available yet
+            import pickle
+            with open(MODEL_PATH, "rb") as f:
+                _model = pickle.load(f)
+            logger.warning("ml_anomaly: loaded via pickle (joblib recommended)")
+        except Exception as exc:
+            logger.error("ml_anomaly: failed to load model err=%s", exc)
+            _model = None
 
     return _model
 
