@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Use your computer's IP address if testing on a real device
-const BASE_URL = 'http://10.0.2.2:8000'; // Android emulator default loopback
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
 
 const api = axios.create({
   baseURL: BASE_URL,

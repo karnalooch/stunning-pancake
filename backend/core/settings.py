@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'events',
     'clubs',
     'rewards',
+    'core',
 ]
 
 SITE_ID = 1
