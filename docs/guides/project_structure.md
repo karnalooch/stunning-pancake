@@ -1,4 +1,4 @@
-# PROJECT STRUCTURE: SPORT PLATFORM (MILESTONE 2)
+# PROJECT STRUCTURE: SPORT PLATFORM (MILESTONE 9 - GOLD MASTER)
 
 ```text
 stunning-pancake/
@@ -6,58 +6,36 @@ stunning-pancake/
 │   └── workflows/
 │       └── ci.yml              ← Automated testing (Ruff, Pytest, ESLint)
 │
-├── backend/                    ← Django Core (Port 8000)
+├── backend/                    ← Django Core (Sovereign Engine)
 │   ├── core/                   ← System settings & Plugin Registry
-│   ├── activities/             ← The "Signal Processing" Heart
-│   │   ├── signal_processing.py ← Layer 1 & 2 Anti-Cheat logic
-│   │   ├── viterbi_matching.py  ← HMM Map Matching core
-│   │   └── tasks.py            ← Celery pipeline orchestration
+│   ├── activities/             ← The "Signal Processing" Heart (Anti-Cheat)
 │   ├── events/                 ← Competitions & Leaderboards
-│   ├── clubs/                  ← Matrix-integrated social clubs
-│   └── users/                  ← Identity & RBAC
+│   ├── users/                  ← Identity & RBAC
+│   └── Dockerfile              ← Non-root production image
 │
-├── telemetry/                  ← FastAPI Ingestion Engine (Port 8001)
-│   └── main.py                 ← Redis Direct Bridge + WebSocket Live
-│
-├── admin/                      ← React Admin Dashboard (Split into 3 apps)
+├── admin/                      ← Owner Command Center (Next.js 15)
 │   ├── src/
-│   │   ├── core/               ← Main App & Routing
-│   │   ├── modules/            # Business Domains (Analytics, Anti-Cheat, etc.)
-│   │   └── shared/             # Common UI components (Sidebar, TopBar)
-│   └── package.json            ← Vite + TypeScript configuration
+│   │   ├── modules/            ← Business Domains (Analytics, Anti-Cheat)
+│   │   └── core/               ← App Shell & Auth Logic
+│   └── Dockerfile              ← Nginx-hardened production image
 │
-├── user/                       ← React Native Mobile App (Athlete App)
-│   └── src/
-│       ├── services/
-│       │   └── GpsSyncManager.ts ← Haversine tracking & MMKV buffering
-│       └── screens/
-│           ├── ActiveSessionScreen.tsx ← Live session telemetry
-│           └── LeaderboardScreen.tsx   ← Real-time rank visualization
+├── mobile/                     ← Athlete App (Expo 54 / RN 0.81)
+│   ├── src/                    ← Shared business logic
+│   └── app.json                ← Expo configuration
 │
-├── docs/                       ← Engineering & Business Documentation
-│   ├── constitution.md         ← Core principles & Safety Constitution
-│   ├── architecture_report.md  ← RBAC & Multi-tenant technical spec
-│   └── adr/                    ← Architecture Decision Records
+├── infrastructure/             ← Cloud-Native Orchestration
+│   └── kubernetes/             ← K8s manifests (Owner-centric)
+│       └── base/               ← Deployment, Service, Ingress, HPA
 │
-└── docker-compose.yml          ← Integrated development environment (11+ services)```
+├── docs/                       ← Knowledge Base (Constitution, Audits)
+│
+├── dev.ps1                     ← Automated Development Engine
+├── setup-environment.ps1       ← Disaster Recovery & Bootstrap
+└── skaffold.yaml               ← Continuous Delivery Config
+```
 
-## Core Architecture Principles
-
-| Principle | Implementation |
-|:---|:---|
-| **Signal Truth Layer** | 3-Layer validation: Fast Gate → V-max → BRouter |
-| **Telemetry Ingestion** | Traccar → Redis Pub/Sub → FastAPI → WebSocket/TimescaleDB |
-| **Scalable Rankings** | Redis Sorted Sets (Live) + PostGIS Materialized Views (Official) |
-| **Modularity** | `pluggy`-based sport validators & Matrix-integrated social clubs |
-| **Offline-First** | MMKV-based local buffering with adaptive background sync |
-
-## Key Directories Breakdown
-
-### `/backend/activities`
-This is where the mathematical brain of the project lives. It handles coordinate smoothing, distance calculations, and the anti-cheat heuristics.
-
-### `/admin/src/views`
-The control panels for different user roles. `ModeratorView` is the primary interface for managing system integrity in Milestone 2.
-
-### `/user/src/services`
-The client-side telemetry engine. Responsible for battery-aware GPS polling and real-time metric derivation.
+### Key Architectural Decisions (v2.1):
+1. **Container Sovereignty**: Every component runs as a non-privileged user (UID 1001/101).
+2. **K8s First**: Docker-compose is deprecated in favor of Kubernetes (Kind/Podman).
+3. **Agentic Ready**: Integrated `geminicli` for continuous code evolution and security auditing.
+4. **Data Isolation**: Citus/PostgreSQL handled as infrastructure services, protecting the core SPORT IP.
