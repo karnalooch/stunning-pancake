@@ -8,9 +8,6 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
-      },
-      "env": {
-        "BACKGROUND_GEOLOCATION_LICENSE": ""
       }
     },
     "production": {}

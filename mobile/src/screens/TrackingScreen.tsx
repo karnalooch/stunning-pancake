@@ -1,14 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Alert } from 'react-native';
 import * as Location from 'expo-location';
-import MapView, { Marker, Callout } from 'react-native-maps';
-import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
-import { observer, useObservable } from '@legendapp/state/react';
+import MapLibreGL from '@maplibre/maplibre-react-native';
 
-import { POIService } from '../services/api';
-import { GpsSyncManager } from '../services/GpsSyncManager';
-import { Theme } from '../theme/Theme';
+// Initialize MapLibre
+MapLibreGL.setAccessToken(null);
 
 const GEOFENCE_TASK_NAME = 'poi-geofence-task';
 
@@ -92,21 +88,28 @@ export const TrackingScreen = observer(() => {
 
   return (
     <View style={styles.container}>
-      <MapView 
+      <MapLibreGL.MapView 
         style={styles.map}
-        initialRegion={{
-          latitude: state.currentLocation.latitude.get(),
-          longitude: state.currentLocation.longitude.get(),
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
-        }}
-        showsUserLocation={true}
-        followsUserLocation={state.isTracking.get()}
+        styleURL="https://demotiles.maplibre.org/style.json"
+        logoEnabled={false}
+        attributionEnabled={false}
       >
+        <MapLibreGL.Camera
+          zoomLevel={14}
+          centerCoordinate={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
+          followUserLocation={state.isTracking.get()}
+        />
+        <MapLibreGL.UserLocation 
+          visible={true}
+          animated={true}
+          renderMode="gps"
+        />
+
         {state.pois.get().map((poi: any) => (
-          <Marker 
+          <MapLibreGL.PointAnnotation 
             key={poi.id}
-            coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
+            id={poi.id.toString()}
+            coordinate={[poi.longitude, poi.latitude]}
           >
              <TamaView 
                width={36} 
@@ -122,15 +125,10 @@ export const TrackingScreen = observer(() => {
                 poi.category === 'SHOP' ? <ShoppingBagIcon size={16} color="white" /> :
                 <BikeIcon size={16} color="white" />}
              </TamaView>
-             <Callout tooltip>
-               <YStack backgroundColor="#111" padding="$3" borderRadius="$4" width={200} borderWidth={1} borderColor="#333">
-                 <TamaText color="white" fontWeight="800" fontSize={14}>{poi.name}</TamaText>
-                 <TamaText color="$gray10" fontSize={11} marginTop="$1">{poi.description || 'Sponsor Reward Point'}</TamaText>
-               </YStack>
-             </Callout>
-          </Marker>
+             <MapLibreGL.Callout title={poi.name} />
+          </MapLibreGL.PointAnnotation>
         ))}
-      </MapView>
+      </MapLibreGL.MapView>
 
       <YStack 
         position="absolute" 
