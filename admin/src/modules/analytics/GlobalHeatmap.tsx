@@ -61,7 +61,7 @@ export const GlobalHeatmap = () => {
         layers={layers}
       >
         <Map
-          mapStyle="https://demotiles.maplibre.org/style.json"
+          mapStyle="https://tiles.openfreemap.org/styles/dark"
         />
       </DeckGL>
     </Card>

@@ -35,7 +35,7 @@ export const SponsorHeatmap = () => {
         controller={true}
         layers={layers}
       >
-        <Map mapStyle="https://demotiles.maplibre.org/style.json" />
+        <Map mapStyle="https://tiles.openfreemap.org/styles/dark" />
       </DeckGL>
     </Card>
   );

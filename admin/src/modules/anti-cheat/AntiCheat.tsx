@@ -136,7 +136,7 @@ export const AntiCheat = () => {
             layers={layers}
             style={{ position: 'absolute', top: '0px', left: '0px', width: '100%', height: '100%', borderRadius: '8px' }}
           >
-            <Map mapStyle="https://demotiles.maplibre.org/style.json" />
+            <Map mapStyle="https://tiles.openfreemap.org/styles/dark" />
           </DeckGL>
           <Box 
             style={{ 
