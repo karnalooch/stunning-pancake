@@ -6,14 +6,11 @@ import { motion } from 'framer-motion';
 import { useDisclosure } from '@mantine/hooks';
 import { StatCard } from './components/StatCard';
 import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
-import { StatCard } from './components/StatCard';
-import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
-import { CityAnalytics } from '../analytics/CityAnalytics';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
+import { CityAnalytics } from '../analytics/CityAnalytics';
 import { ModeratorWorklist } from './ModeratorWorklist';
-
-
 import { InstanceWizard } from '../tenants/InstanceWizard';
+
 import { useAuth } from '../../core/auth/useAuth';
 
 export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {

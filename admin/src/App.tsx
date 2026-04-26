@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MantineProvider, Box } from '@mantine/core';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { theme } from './theme';
+import { theme } from './theme/index';
+
 import { DesignerProvider } from './providers/DesignerProvider';
 import { Layout } from './core/Layout';
 import { Dashboard } from './modules/dashboard/Dashboard';

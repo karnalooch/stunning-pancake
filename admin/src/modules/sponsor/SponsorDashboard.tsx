@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress } from '@mantine/core';
+import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress, ScrollArea, Card } from '@mantine/core';
+
 import { WinWindow } from '../../core/Layout';
 import { Gift, Store, Users, Eye } from 'lucide-react';
 import { Metric, Flex, BarChart } from '@tremor/react';

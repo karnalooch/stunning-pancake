@@ -14,7 +14,9 @@
     "axios": "^1.15.2",
     "expo": "~54.0.33",
     "expo-location": "~19.0.8",
+    "expo-notifications": "~0.31.5",
     "expo-status-bar": "~3.0.9",
+
     "expo-task-manager": "~14.0.9",
     "lucide-react-native": "^1.11.0",
     "react": "19.1.0",

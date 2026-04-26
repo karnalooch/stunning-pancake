@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, TextInput, ColorInput, Button, Stack, Group, Text, Step, Stepper, Box } from '@mantine/core';
+import { Modal, TextInput, ColorInput, Button, Stack, Group, Text, Stepper, Box } from '@mantine/core';
 import { Building2, Palette, ShieldCheck, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
 
