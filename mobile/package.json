@@ -19,7 +19,7 @@
     "@tamagui/config": "2.0.0-rc.41",
     "@types/react": "~19.2.10",
     "axios": "^1.15.2",
-    "eas-cli": "^18.8.1",
+    "eas-cli": "18.8.1",
     "expo": "^55.0.0",
     "expo-location": "~55.1.8",
     "expo-notifications": "~55.0.20",
@@ -42,10 +42,21 @@
   "devDependencies": {
     "@expo/ngrok": "^4.1.3",
     "@tamagui/babel-plugin": "^2.0.0-rc.41",
-    "@types/react": "~19.1.0",
+    "@types/react": "~19.2.10",
     "babel-plugin-transform-inline-environment-variables": "^0.4.4",
     "react-native-svg-transformer": "^1.5.3",
     "typescript": "~5.9.2"
+  },
+  "overrides": {
+    "node-forge": "1.4.0",
+    "xmldom": "0.8.10",
+    "minimatch": "10.0.1",
+    "tar": "7.5.13",
+    "yaml": "2.8.3",
+    "uuid": "14.0.0",
+    "ajv": "8.20.0",
+    "postcss": "8.5.12",
+    "glob": "13.0.6"
   },
   "private": true
 }
