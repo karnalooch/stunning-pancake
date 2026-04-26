@@ -41,6 +41,8 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        - name: DATABASE_URL
+          value: postgres://sport_app:sportpass@db-service:5432/sport
         - name: CELERY_BROKER_URL
           valueFrom:
             configMapKeyRef:

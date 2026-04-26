@@ -1,23 +1,30 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Share } from 'react-native';
+import React, { useEffect } from 'react';
+import { Share } from 'react-native';
 import { Activity, TrendingUp, Share2 } from 'lucide-react-native';
-
+import { YStack, XStack, Text as TamaText, H1, H2, Paragraph, ScrollView, Button as TamaButton } from 'tamagui';
+import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService } from '../services/api';
 
-export const ActivitiesScreen = () => {
-  const [activities, setActivities] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+const ActivityIcon = Activity as any;
+const TrendingIcon = TrendingUp as any;
+const ShareIcon = Share2 as any;
 
-  React.useEffect(() => {
+export const ActivitiesScreen = observer(() => {
+  const state = useObservable({
+    activities: [] as any[],
+    loading: true
+  });
+
+  useEffect(() => {
     const fetchHistory = async () => {
       try {
-        setLoading(true);
+        state.loading.set(true);
         const data = await ActivityService.getHistory();
-        setActivities(data);
+        state.activities.set(data);
       } catch (e) {
         console.error("History fetch error:", e);
       } finally {
-        setLoading(false);
+        state.loading.set(false);
       }
     };
     fetchHistory();
@@ -34,50 +41,38 @@ export const ActivitiesScreen = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <YStack flex={1} backgroundColor="$background" paddingTop="$10" paddingHorizontal="$4">
+      <XStack justifyContent="space-between" alignItems="center" marginBottom="$8">
+        <TamaText fontWeight="900" fontSize={28} color="white">History</TamaText>
+        <TrendingIcon size={24} color="#00D1FF" />
+      </XStack>
 
-      <View style={styles.header}>
-        <Text style={styles.title}>History</Text>
-        <TrendingUp size={24} color="#00D1FF" />
-      </View>
+      <ScrollView>
+        <YStack gap="$4" paddingBottom="$10">
+          {state.activities.get().map((act: any) => (
+            <XStack key={act.id} backgroundColor="$gray1" padding="$4" borderRadius="$4" alignItems="center" gap="$4">
+              <YStack backgroundColor="$gray2" padding="$2.5" borderRadius="$3" alignItems="center" justifyContent="center">
+                <ActivityIcon size={20} color="#00D1FF" />
+              </YStack>
+              
+              <YStack flex={1}>
+                <TamaText color="white" fontWeight="700" fontSize={16}>{act.type} SESSION</TamaText>
+                <TamaText color="$gray10" fontSize={12} marginTop="$1">
+                  {new Date(act.start_time).toLocaleDateString()} • {(act.distance / 1000).toFixed(2)} km
+                </TamaText>
+              </YStack>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {activities.map((act) => (
-          <TouchableOpacity key={act.id} style={styles.card}>
-            <View style={styles.iconBox}>
-              <Activity size={20} color="#00D1FF" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>{act.type} SESSION</Text>
-              <Text style={styles.cardSubtitle}>
-                {new Date(act.start_time).toLocaleDateString()} • {(act.distance / 1000).toFixed(2)} km
-              </Text>
-            </View>
-            <View style={styles.scoreBadge}>
-              <Text style={styles.scoreText}>{Math.round(act.verification_score * 100)}%</Text>
-            </View>
-            <TouchableOpacity onPress={() => handleShare(act)}>
-               <Share2 size={18} color="#00D1FF" />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        ))}
+              <YStack backgroundColor="rgba(0, 209, 255, 0.1)" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$2">
+                <TamaText color="#00D1FF" fontSize={10} fontWeight="900">{Math.round(act.verification_score * 100)}%</TamaText>
+              </YStack>
+
+              <TamaButton chromeless padding="$2" onPress={() => handleShare(act)}>
+                 <ShareIcon size={18} color="#00D1FF" />
+              </TamaButton>
+            </XStack>
+          ))}
+        </YStack>
       </ScrollView>
-    </View>
+    </YStack>
   );
-};
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 60, paddingHorizontal: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 },
-  title: { color: 'white', fontSize: 28, fontWeight: '900' },
-  list: { gap: 12 },
-  card: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', 
-    padding: 16, borderRadius: 16, gap: 16 
-  },
-  iconBox: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1a1a1a', alignItems: 'center', justifyContent: 'center' },
-  cardTitle: { color: 'white', fontWeight: '700', fontSize: 16 },
-  cardSubtitle: { color: '#666', fontSize: 12, marginTop: 4 },
-  scoreBadge: { backgroundColor: 'rgba(0, 209, 255, 0.1)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  scoreText: { color: '#00D1FF', fontSize: 10, fontWeight: '900' }
 });

@@ -20,7 +20,7 @@ export const StatCard: React.FC<StatCardProps> = ({ label, value, badge, color, 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
-      <Card p="lg" radius="xl" className="fluent-acrylic glow-cyan" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+      <Card p="lg" radius="xl" className="fluent-acrylic glow-cyan stat-card-premium" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
         <Group justify="space-between" align="start">
           <Stack gap={0}>
             <Group gap="xs" mb={4}>

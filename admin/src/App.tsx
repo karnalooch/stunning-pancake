@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MantineProvider, Box } from '@mantine/core';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MantineProvider, Box, Text, Title, Button } from '@mantine/core';
+import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { theme } from './theme/index';
 
 import { DesignerProvider } from './providers/DesignerProvider';
@@ -15,6 +15,7 @@ import { LandingPage } from './modules/public/LandingPage';
 import { GlobalLoader } from './core/components/GlobalLoader';
 import { TenantLoader } from './core/components/TenantLoader';
 import { LoginPage } from './core/auth/LoginPage';
+import { useAuth } from './core/auth/useAuth';
 
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,24 +25,40 @@ const MeshBackground = () => (
       position: 'fixed',
       inset: 0,
       zIndex: -1,
-      background: 'radial-gradient(circle at 50% 50%, #0a0a0a 0%, #000 100%)',
+      background: '#050505',
       overflow: 'hidden'
     }}
   >
     <motion.div
       animate={{ 
-        scale: [1, 1.2, 1],
-        rotate: [0, 90, 0],
+        scale: [1, 1.1, 1],
+        opacity: [0.3, 0.5, 0.3],
       }}
-      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+      transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
       style={{
         position: 'absolute',
-        top: '-50%',
-        left: '-50%',
-        width: '200%',
-        height: '200%',
-        background: 'radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.08) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(16, 185, 129, 0.05) 0%, transparent 50%)',
-        filter: 'blur(80px)'
+        top: '10%',
+        left: '10%',
+        width: '80%',
+        height: '80%',
+        background: 'radial-gradient(circle at 50% 50%, rgba(0, 209, 255, 0.1) 0%, transparent 70%)',
+        filter: 'blur(120px)'
+      }}
+    />
+    <motion.div
+      animate={{ 
+        scale: [1.2, 1, 1.2],
+        opacity: [0.2, 0.4, 0.2],
+      }}
+      transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      style={{
+        position: 'absolute',
+        bottom: '10%',
+        right: '10%',
+        width: '80%',
+        height: '80%',
+        background: 'radial-gradient(circle at 50% 50%, rgba(176, 102, 255, 0.08) 0%, transparent 70%)',
+        filter: 'blur(120px)'
       }}
     />
   </Box>
@@ -50,7 +67,7 @@ const MeshBackground = () => (
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [tenantLoading, setTenantLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, login, user } = useAuth();
 
   useEffect(() => {
     // Simulate platform core boot sequence
@@ -61,7 +78,15 @@ export default function App() {
   const handleLogin = () => {
     setTenantLoading(true);
     setTimeout(() => {
-      setIsAuthenticated(true);
+      // Seed a mock Global Owner session
+      login("mock-jwt-token", {
+        id: 1,
+        username: "GlobalOperator",
+        role: "GLOBAL_OWNER",
+        tenantId: "global-hq",
+        tenantFlags: { has_heatmap_analytics: true },
+        isImpersonated: false
+      });
       setTenantLoading(false);
     }, 2000);
   };
@@ -71,22 +96,25 @@ export default function App() {
     <MantineProvider defaultColorScheme="dark" theme={theme}>
       <GlobalLoader visible={loading} />
       <TenantLoader visible={tenantLoading} />
-      <DesignerProvider>
+      
+      {/* Diagnostic Overlay (Hidden in production usually, but good for debug) */}
+      <Box style={{ position: 'fixed', bottom: 5, left: 5, zIndex: 9999, pointerEvents: 'none' }}>
+         <Text size="8px" c="dimmed">AUTH: {isAuthenticated ? 'YES' : 'NO'} | ROLE: {user?.role || 'NONE'} | PATH: {window.location.hash}</Text>
+      </Box>
 
-        <BrowserRouter>
+      <DesignerProvider>
+        <HashRouter>
           <MeshBackground />
           <AnimatePresence mode="wait">
             {!isAuthenticated ? (
               <Routes>
-                <Route path="*" element={<LoginPage onLogin={handleLogin} />} />
+                <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+                <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             ) : (
-
               <Routes>
-                {/* Public Landing Page */}
                 <Route path="/" element={<LandingPage />} />
-                
-                <Route path="/admin" element={<Layout />}>
+                <Route path="/owner" element={<Layout />}>
                   <Route index element={<Navigate to="dashboard" replace />} />
                   <Route 
                     path="dashboard" 
@@ -129,11 +157,18 @@ export default function App() {
                     } 
                   />
                 </Route>
-                <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
+                <Route path="/unauthorized" element={
+                  <Box p={50} ta="center">
+                    <Title order={1} c="red">Access Denied</Title>
+                    <Text>Your operator level is insufficient for this zone.</Text>
+                    <Button mt="xl" component={Link} to="/">Return to Base</Button>
+                  </Box>
+                } />
+                <Route path="*" element={<Navigate to="/owner/dashboard" replace />} />
               </Routes>
             )}
           </AnimatePresence>
-        </BrowserRouter>
+        </HashRouter>
       </DesignerProvider>
     </MantineProvider>
   );

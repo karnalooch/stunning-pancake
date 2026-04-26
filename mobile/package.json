@@ -27,7 +27,13 @@
     "react-native-mmkv": "^2.12.2",
     "react-native-background-geolocation": "^4.16.1",
     "@sentry/react-native": "^5.22.0",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.12",
+    "tamagui": "2.0.0-rc.41",
+    "@tamagui/config": "2.0.0-rc.41",
+    "@shopify/react-native-skia": "^1.5.0",
+    "@rnmapbox/maps": "^10.1.34",
+    "@legendapp/state": "3.0.0-beta.46",
+    "@powersync/react-native": "^1.0.0"
 
   },
   "devDependencies": {

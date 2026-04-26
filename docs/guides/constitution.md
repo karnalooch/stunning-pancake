@@ -28,11 +28,17 @@ Platforma SPORT to wysokowydajny ekosystem B2B/B2C zbudowany na fundamentach **P
 ## 3. AGENTIC WORKFLOW & PROTOKOŁY
 
 ### IV. Współpraca z AI (Agentic Engineering)
-*   **Zasada 7 (AI-First):** Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu do audytów i ewolucji kodu.
+*   **Zasada 7 (AI-First):** Narzędzie **Gemini CLI** (alias: `geminicli`, binarka: `gemini.cmd`) jest nienaruszalnym elementem ekosystemu. 
+    *   *Path (Windows):* `C:\Users\akarn\AppData\Roaming\npm\gemini.cmd`.
+    *   *Usage:* Używane do audytów, generowania raportów i ewolucji kodu.
 *   **Zasada 8 (Heavy Duty Analysis):** Złożone zadania delegowane do **Gemini CLI** (model: `gemini-3.1-pro-preview`). Integracja wyników 1:1.
 
-### V. Zarządzanie Postępem (Milestone Integrity)
-*   **Zasada 9 (Protocol):** Każdy Milestone kończy się cyklem: **Aktualizacja Dokumentacji -> Commit -> Push**.
+### V. Zarządzanie Postępem (The Milestone Loop)
+*   **Zasada 9 (Protocol):** Każdy Milestone MUSI zakończyć się następującą sekwencją:
+    1.  **Audit:** Uruchomienie `gemini -p "Analyze state... and generate report"` dla bieżącego etapu.
+    2.  **Documentation:** Wpis do `docs/audits/code_and_docs_audit.md` oraz aktualizacja planu implementacji.
+    3.  **Commit:** `git commit -m "milestone: ..."` z jasnym odniesieniem do wersji.
+    4.  **Push:** Synchronizacja ze zdalnym repozytorium.
 
 ### VI. Disaster Recovery (Plan Ratunkowy)
 W przypadku awarii sprzętu:

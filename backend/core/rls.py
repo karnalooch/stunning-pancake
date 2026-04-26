@@ -1,109 +1,76 @@
-"""
-Multi-Tenancy: PostgreSQL Row Level Security (Milestone 4)
-===========================================================
-Constitution §19: White-Label Commercialization
-
-Applies RLS policies to Activity and Event tables so that:
-- Each tenant can only read their own data via the API.
-- Superuser (Django backend) bypasses RLS for admin operations.
-
-Usage (run once in production):
-    docker compose exec backend python manage.py shell
-    from core.rls import apply_rls_policies
-    apply_rls_policies()
-
-Note: RLS is enforced at the PostgreSQL level — even a compromised
-Django process cannot leak cross-tenant data.
-"""
-from __future__ import annotations
-
 import logging
-
 from django.db import connection
 
 logger = logging.getLogger(__name__)
 
-# Tables to protect with RLS
-RLS_TABLES = [
+# Tables that have a direct tenant_id column
+DIRECT_RLS_TABLES = [
     "activities_activity",
-    "events_event",
-    "events_participation",
-    "rewards_voucherpool",
-    "rewards_voucher",
+    "activities_poi",
 ]
 
-# The DB role used by Django in production
+# Tables that require a join (e.g. via POI)
+LINKED_RLS_TABLES = {
+    "activities_voucher": "poi_id IN (SELECT id FROM activities_poi WHERE tenant_id = %s)"
+}
+
 APP_ROLE = "sport_app"
 
-
-def apply_rls_policies() -> None:
-    """
-    Enables RLS on all multi-tenant tables and creates isolation policies.
-
-    Policies:
-        - SELECT: users see only rows matching their tenant_id
-          (or all rows if tenant_id is empty/null — global data).
-        - INSERT/UPDATE/DELETE: enforced to own tenant.
-
-    The Django superuser role bypasses RLS (BYPASSRLS privilege),
-    allowing Admin Panel and Celery workers unrestricted access.
-    """
+def apply_rls_policies():
     with connection.cursor() as cursor:
-        for table in RLS_TABLES:
-            logger.info("rls.applying table=%s", table)
-            _apply_for_table(cursor, table)
+        # 1. Direct RLS
+        for table in DIRECT_RLS_TABLES:
+            logger.info(f"Applying RLS to {table}")
+            cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
+            cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
+            # Drop old legacy policies if they exist
+            cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation_policy ON {table};")
+            cursor.execute(f"DROP POLICY IF EXISTS poi_tenant_isolation_policy ON {table};")
+            
+            cursor.execute(f"""
+                CREATE POLICY tenant_isolation ON {table}
+                FOR ALL
+                TO {APP_ROLE}
+                USING (
+                    tenant_id IS NULL
+                    OR (
+                        current_setting('app.tenant_id', TRUE) != '' 
+                        AND tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
+                    )
+                );
+            """)
 
-    logger.info("rls.all_policies_applied tables=%d", len(RLS_TABLES))
+        # 2. Linked RLS (Vouchers)
+        for table, condition_template in LINKED_RLS_TABLES.items():
+            logger.info(f"Applying Linked RLS to {table}")
+            cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
+            cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
+            cursor.execute(f"DROP POLICY IF EXISTS voucher_tenant_isolation_policy ON {table};")
+            
+            # Note: For linked tables, we check the tenant_id of the parent record
+            cursor.execute(f"""
+                CREATE POLICY tenant_isolation ON {table}
+                FOR ALL
+                TO {APP_ROLE}
+                USING (
+                    current_setting('app.tenant_id', TRUE) = ''
+                    OR EXISTS (
+                        SELECT 1 FROM activities_poi p 
+                        WHERE p.id = {table}.poi_id 
+                        AND p.tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
+                    )
+                );
+            """)
 
+    logger.info("RLS policies applied.")
 
-def _apply_for_table(cursor, table: str) -> None:
-    """Enables RLS and creates isolation policy for a single table."""
-
-    # Enable RLS on the table
-    cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
-
-    # Drop existing policy (idempotent)
-    cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
-
-    # Create isolation policy:
-    # - Row is visible if its tenant_id matches the current session setting,
-    #   OR if it has no tenant_id (global/public record).
-    cursor.execute(f"""
-        CREATE POLICY tenant_isolation ON {table}
-        FOR ALL
-        TO {APP_ROLE}
-        USING (
-            tenant_id IS NULL
-            OR tenant_id = ''
-            OR tenant_id = current_setting('app.tenant_id', TRUE)
-        );
-    """)
-    logger.debug("rls.policy_created table=%s", table)
-
-
-def set_tenant_context(tenant_id: str) -> None:
-    """
-    Sets the current PostgreSQL session's tenant context.
-
-    Call this at the start of a database connection session
-    (e.g. in Django middleware or a Celery task beat).
-
-    Args:
-        tenant_id: The active tenant identifier.
-    """
+def set_tenant_context(tenant_id: str):
     with connection.cursor() as cursor:
-        cursor.execute(
-            "SELECT set_config('app.tenant_id', %s, FALSE);",
-            [tenant_id],
-        )
+        cursor.execute("SELECT set_config('app.tenant_id', %s, FALSE);", [str(tenant_id)])
 
-
-def remove_rls_policies() -> None:
-    """
-    Removes all RLS policies (for rollback or testing).
-    """
+def remove_rls_policies():
     with connection.cursor() as cursor:
-        for table in RLS_TABLES:
+        all_tables = DIRECT_RLS_TABLES + list(LINKED_RLS_TABLES.keys())
+        for table in all_tables:
             cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
             cursor.execute(f"ALTER TABLE {table} DISABLE ROW LEVEL SECURITY;")
-    logger.info("rls.all_policies_removed")

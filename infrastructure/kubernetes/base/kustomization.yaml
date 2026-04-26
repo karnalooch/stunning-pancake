@@ -6,6 +6,10 @@ resources:
   - owner.yaml
   - ingress.yaml
   - scaling-config.yaml
+  - redis.yaml
+  - database.yaml
+  - telemetry.yaml
+  - traccar.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: sport-platform
@@ -17,4 +21,7 @@ images:
     newTag: gold-master-v2.1
   - name: sport-owner
     newName: localhost/sport-owner
+    newTag: gold-master-v2.1
+  - name: sport-telemetry
+    newName: localhost/sport-telemetry
     newTag: gold-master-v2.1

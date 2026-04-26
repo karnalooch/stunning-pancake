@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, Alert, TextInput, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
+import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton, H1, Paragraph } from 'tamagui';
+import { observer, useObservable } from '@legendapp/state/react';
+import tamaguiConfig from './tamagui.config';
 
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
 import { Theme } from './src/theme/Theme';
@@ -18,86 +21,115 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 
 const GEOFENCE_TASK_NAME = 'poi-geofence-task';
 
-TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data: { eventType, region }, error }: any) => {
-  if (error) return;
-  if (eventType === Location.GeofencingEventType.Enter) {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "🎁 Reward Nearby!",
-        body: `You just entered the ${region.identifier} zone. Stop by to claim your reward!`,
-        data: { poi: region.identifier },
-      },
-      trigger: null,
-    });
-  }
-});
-
+const HomeIcon = Home as any;
+const HistoryIcon = History as any;
+const GiftIcon = Gift as any;
+const UserIcon = User as any;
+const TrophyIcon = Trophy as any;
 
 const Tab = createBottomTabNavigator();
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+export default observer(function App() {
+  const auth = useObservable({
+    isAuthenticated: false,
+    mode: 'login' as 'login' | 'register'
+  });
 
-  if (!isAuthenticated) {
+  const renderContent = () => {
+    if (!auth.isAuthenticated.get()) {
+      return (
+        <YStack flex={1} backgroundColor="$background" justifyContent="center" padding="$6" gap="$4">
+          <H1 textAlign="center" fontWeight="900" color="$white">
+            SPORT<TamaText color="$blue10">.</TamaText>
+          </H1>
+          
+          <YStack gap="$2" marginBottom="$4">
+            <H1 fontSize={24} color="$white">
+              {auth.mode.get() === 'login' ? 'Welcome Back' : 'Create Account'}
+            </H1>
+            <Paragraph color="$gray10">
+              The high-performance sports engine.
+            </Paragraph>
+          </YStack>
+
+          <Input 
+            size="$5"
+            placeholder="Email" 
+            backgroundColor="$gray1" 
+            borderWidth={1} 
+            borderColor="$gray4"
+            hoverStyle={{ borderColor: '$blue10' }}
+            focusStyle={{ borderColor: '$blue10' }}
+          />
+          <Input 
+            size="$5"
+            placeholder="Password" 
+            secureTextEntry 
+            backgroundColor="$gray1" 
+            borderWidth={1} 
+            borderColor="$gray4"
+          />
+
+          <TamaButton 
+            marginTop="$2"
+            size="$5"
+            backgroundColor="$blue10"
+            onPress={() => auth.isAuthenticated.set(true)}
+          >
+            <TamaText fontWeight="900" color="white">
+              {auth.mode.get() === 'login' ? 'SIGN IN' : 'REGISTER'}
+            </TamaText>
+          </TamaButton>
+
+          <TamaButton 
+            chromeless
+            onPress={() => auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login')}
+          >
+            <TamaText color="$gray10" textAlign="center">
+              {auth.mode.get() === 'login' ? "New here? Join the movement" : "Already a member? Login"}
+            </TamaText>
+          </TamaButton>
+        </YStack>
+      );
+    }
+
     return (
-      <View style={styles.authContainer}>
-        <Text style={styles.logo}>SPORT<Text style={{ color: Theme.colors.primary }}>.</Text></Text>
-        <Text style={styles.authTitle}>{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</Text>
-        <TextInput placeholder="Email" placeholderTextColor="#666" style={styles.input} />
-        <TextInput placeholder="Password" placeholderTextColor="#666" secureTextEntry style={styles.input} />
-        <TouchableOpacity style={styles.button} onPress={() => setIsAuthenticated(true)}>
-          <Text style={styles.buttonText}>{authMode === 'login' ? 'SIGN IN' : 'REGISTER'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}>
-          <Text style={styles.toggleText}>
-            {authMode === 'login' ? "New here? Join the movement" : "Already a member? Login"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={({ route }) => ({
+            headerShown: false,
+            tabBarStyle: { 
+              backgroundColor: Theme.colors.card, 
+              borderTopWidth: 0,
+              height: 90,
+              paddingBottom: 30
+            },
+            tabBarActiveTintColor: Theme.colors.primary,
+            tabBarInactiveTintColor: Theme.colors.textMuted,
+            tabBarIcon: ({ color, size }) => {
+              if (route.name === 'Home') return <HomeIcon size={size} color={color} />;
+              if (route.name === 'History') return <HistoryIcon size={size} color={color} />;
+              if (route.name === 'Ranking') return <TrophyIcon size={size} color={color} />;
+              if (route.name === 'Rewards') return <GiftIcon size={size} color={color} />;
+              if (route.name === 'Profile') return <UserIcon size={size} color={color} />;
+            },
+          })}
+        >
+          <Tab.Screen name="Home" component={TrackingScreen} />
+          <Tab.Screen name="History" component={ActivitiesScreen} />
+          <Tab.Screen name="Ranking" component={LeaderboardScreen} />
+          <Tab.Screen name="Rewards" component={RewardsScreen} />
+          <Tab.Screen name="Profile">
+            {() => <ProfileScreen onLogout={() => auth.isAuthenticated.set(false)} />}
+          </Tab.Screen>
+        </Tab.Navigator>
+      </NavigationContainer>
     );
-  }
+  };
 
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarStyle: { 
-            backgroundColor: Theme.colors.card, 
-            borderTopWidth: 0,
-            height: 90,
-            paddingBottom: 30
-          },
-          tabBarActiveTintColor: Theme.colors.primary,
-          tabBarInactiveTintColor: Theme.colors.textMuted,
-          tabBarIcon: ({ color, size }) => {
-            if (route.name === 'Home') return <Home size={size} color={color} />;
-            if (route.name === 'History') return <History size={size} color={color} />;
-            if (route.name === 'Ranking') return <Trophy size={size} color={color} />;
-            if (route.name === 'Rewards') return <Gift size={size} color={color} />;
-            if (route.name === 'Profile') return <User size={size} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen name="Home" component={TrackingScreen} />
-        <Tab.Screen name="History" component={ActivitiesScreen} />
-        <Tab.Screen name="Ranking" component={LeaderboardScreen} />
-        <Tab.Screen name="Rewards" component={RewardsScreen} />
-        <Tab.Screen name="Profile">
-          {() => <ProfileScreen onLogout={() => setIsAuthenticated(false)} />}
-        </Tab.Screen>
-      </Tab.Navigator>
-    </NavigationContainer>
+    <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+      {renderContent()}
+    </TamaguiProvider>
   );
-}
-
-const styles = StyleSheet.create({
-  authContainer: { flex: 1, backgroundColor: Theme.colors.background, justifyContent: 'center', padding: 40 },
-  logo: { color: 'white', fontSize: 42, fontWeight: '900', textAlign: 'center', marginBottom: 40 },
-  authTitle: { color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 20 },
-  input: { backgroundColor: '#111', padding: 16, borderRadius: 12, color: 'white', marginBottom: 16, borderWidth: 1, borderColor: '#222' },
-  button: { backgroundColor: Theme.colors.primary, padding: 18, borderRadius: 12, marginTop: 10 },
-  buttonText: { color: 'white', fontWeight: '900', textAlign: 'center' },
-  toggleText: { color: '#666', textAlign: 'center', marginTop: 24, fontSize: 13 }
 });

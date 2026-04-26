@@ -1,25 +1,36 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Alert, TouchableOpacity } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View, Alert } from 'react-native';
 import * as Location from 'expo-location';
-import MapView, { Polyline, Marker, Callout } from 'react-native-maps';
-import { Shield, Zap, Sun, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
+import MapView, { Marker, Callout } from 'react-native-maps';
+import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
+import { observer, useObservable } from '@legendapp/state/react';
+
 import { POIService } from '../services/api';
-import { GpsSyncManager, TrackingStats } from '../services/GpsSyncManager';
+import { GpsSyncManager } from '../services/GpsSyncManager';
 import { Theme } from '../theme/Theme';
 
 const GEOFENCE_TASK_NAME = 'poi-geofence-task';
 
-export const TrackingScreen = () => {
-  const [isTracking, setIsTracking] = useState(false);
-  const [currentLocation, setCurrentLocation] = useState<any>(null);
-  const [pois, setPois] = useState<any[]>([]);
-  const [stats, setStats] = useState<TrackingStats>({
-    distanceM: 0,
-    paceSecPerKm: 0,
-    elevationGainM: 0,
-    speedMs: 0,
-    batteryPct: 1.0,
-    pendingPoints: 0
+const ShieldIcon = Shield as any;
+const ZapIcon = Zap as any;
+const CoffeeIcon = Coffee as any;
+const ShoppingBagIcon = ShoppingBag as any;
+const BikeIcon = Bike as any;
+
+export const TrackingScreen = observer(() => {
+  const state = useObservable({
+    isTracking: false,
+    currentLocation: { latitude: 52.17, longitude: 22.29 } as any,
+    pois: [] as any[],
+    stats: {
+      distanceM: 0,
+      paceSecPerKm: 0,
+      elevationGainM: 0,
+      speedMs: 0,
+      batteryPct: 1.0,
+      pendingPoints: 0
+    }
   });
 
   const syncManager = useRef<GpsSyncManager>(new GpsSyncManager("DEVICE-GM-2026", 1));
@@ -29,11 +40,11 @@ export const TrackingScreen = () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
       let location = await Location.getCurrentPositionAsync({});
-      setCurrentLocation(location.coords);
+      state.currentLocation.set(location.coords);
 
       try {
         const poiData = await POIService.getPOIs();
-        setPois(poiData);
+        state.pois.set(poiData);
         
         const regions = poiData.map((poi: any) => ({
           identifier: poi.name,
@@ -52,15 +63,15 @@ export const TrackingScreen = () => {
     })();
 
     syncManager.current.setUpdateCallback((newStats) => {
-      setStats(newStats);
+      state.stats.set(newStats);
     });
   }, []);
 
   const toggleTracking = async () => {
-    if (isTracking) {
+    if (state.isTracking.get()) {
       await syncManager.current.stopTracking();
-      setIsTracking(false);
-      Alert.alert("Activity Saved", "Telemetry pushed to city nodes via GpsSyncManager.");
+      state.isTracking.set(false);
+      Alert.alert("Activity Saved", "Telemetry pushed to city nodes.");
     } else {
       let { status } = await Location.requestBackgroundPermissionsAsync();
       if (status !== 'granted') {
@@ -68,7 +79,7 @@ export const TrackingScreen = () => {
         return;
       }
       await syncManager.current.startTracking(Math.floor(Math.random() * 1000));
-      setIsTracking(true);
+      state.isTracking.set(true);
     }
   };
 
@@ -84,97 +95,96 @@ export const TrackingScreen = () => {
       <MapView 
         style={styles.map}
         initialRegion={{
-          latitude: currentLocation?.latitude || 52.17,
-          longitude: currentLocation?.longitude || 22.29,
+          latitude: state.currentLocation.latitude.get(),
+          longitude: state.currentLocation.longitude.get(),
           latitudeDelta: 0.02,
           longitudeDelta: 0.02,
         }}
         showsUserLocation={true}
-        followsUserLocation={isTracking}
+        followsUserLocation={state.isTracking.get()}
       >
-        {pois.map((poi) => (
+        {state.pois.get().map((poi: any) => (
           <Marker 
             key={poi.id}
             coordinate={{ latitude: poi.latitude, longitude: poi.longitude }}
           >
-             <View style={styles.poiMarker}>
-               {poi.category === 'COFFEE' ? <Coffee size={16} color="white" /> : 
-                poi.category === 'SHOP' ? <ShoppingBag size={16} color="white" /> :
-                <Bike size={16} color="white" />}
-             </View>
+             <TamaView 
+               width={36} 
+               height={36} 
+               borderRadius={18} 
+               backgroundColor="#00D1FF" 
+               borderWidth={3} 
+               borderColor="white" 
+               alignItems="center" 
+               justifyContent="center"
+             >
+               {poi.category === 'COFFEE' ? <CoffeeIcon size={16} color="white" /> : 
+                poi.category === 'SHOP' ? <ShoppingBagIcon size={16} color="white" /> :
+                <BikeIcon size={16} color="white" />}
+             </TamaView>
              <Callout tooltip>
-               <View style={styles.callout}>
-                 <Text style={styles.calloutTitle}>{poi.name}</Text>
-                 <Text style={styles.calloutDesc}>{poi.description || 'Sponsor Reward Point'}</Text>
-               </View>
+               <YStack backgroundColor="#111" padding="$3" borderRadius="$4" width={200} borderWidth={1} borderColor="#333">
+                 <TamaText color="white" fontWeight="800" fontSize={14}>{poi.name}</TamaText>
+                 <TamaText color="$gray10" fontSize={11} marginTop="$1">{poi.description || 'Sponsor Reward Point'}</TamaText>
+               </YStack>
              </Callout>
           </Marker>
         ))}
       </MapView>
 
-      <View style={styles.hud}>
-        <View style={styles.header}>
-           <Text style={styles.status}>
-             {isTracking ? "CYAN-PRECISION TRACKING" : "READY TO START"}
-           </Text>
-           <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Zap size={18} color={Theme.colors.primary} />
-              <Shield size={18} color={Theme.colors.primary} />
-           </View>
-        </View>
+      <YStack 
+        position="absolute" 
+        bottom={30} 
+        left={20} 
+        right={20} 
+        padding="$6" 
+        borderRadius="$6" 
+        backgroundColor="rgba(10,10,10,0.85)" 
+        borderWidth={1} 
+        borderColor="rgba(255,255,255,0.1)"
+        gap="$4"
+      >
+        <XStack justifyContent="space-between" alignItems="center">
+           <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="white">
+             {state.isTracking.get() ? "CYAN-PRECISION TRACKING" : "READY TO START"}
+           </TamaText>
+           <XStack gap="$2">
+              <ZapIcon size={18} color="#00D1FF" />
+              <ShieldIcon size={18} color="#00D1FF" />
+           </XStack>
+        </XStack>
 
-        <View style={styles.statsRow}>
-          <View>
-            <Text style={styles.statLabel}>DISTANCE</Text>
-            <Text style={styles.statValue}>{(stats.distanceM / 1000).toFixed(2)} km</Text>
-          </View>
-          <View>
-            <Text style={styles.statLabel}>PACE</Text>
-            <Text style={styles.statValue}>{formatPace(stats.paceSecPerKm)}</Text>
-          </View>
-          <View>
-            <Text style={styles.statLabel}>SYNC</Text>
-            <Text style={[styles.statValue, { fontSize: 18 }]}>{stats.pendingPoints} pts</Text>
-          </View>
-        </View>
+        <XStack justifyContent="space-between" alignItems="flex-end">
+          <YStack>
+            <TamaText color="$gray10" fontSize={10} fontWeight="700">DISTANCE</TamaText>
+            <H1 fontWeight="900" color="white">{(state.stats.distanceM.get() / 1000).toFixed(2)}<TamaText fontSize={14} color="$gray10">km</TamaText></H1>
+          </YStack>
+          <YStack>
+            <TamaText color="$gray10" fontSize={10} fontWeight="700">PACE</TamaText>
+            <H1 fontWeight="900" color="white">{formatPace(state.stats.paceSecPerKm.get())}</H1>
+          </YStack>
+          <YStack alignItems="flex-end">
+            <TamaText color="$gray10" fontSize={10} fontWeight="700">SYNC</TamaText>
+            <TamaText fontSize={24} fontWeight="900" color="white">{state.stats.pendingPoints.get()} pts</TamaText>
+          </YStack>
+        </XStack>
 
-        <TouchableOpacity 
-          style={[styles.mainButton, { backgroundColor: isTracking ? "#DC2626" : Theme.colors.primary }]}
+        <TamaButton 
+          size="$5"
+          borderRadius="$4"
+          backgroundColor={state.isTracking.get() ? "#DC2626" : "#00D1FF"}
           onPress={toggleTracking} 
         >
-          <Text style={styles.buttonText}>
-            {isTracking ? "STOP & SYNC" : "START SESSION"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
+            {state.isTracking.get() ? "STOP & SYNC" : "START SESSION"}
+          </TamaText>
+        </TamaButton>
+      </YStack>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  map: { width: '100%', height: '100%' },
-  hud: {
-    position: 'absolute', bottom: 30, left: 20, right: 20,
-    padding: 24, borderRadius: 24, backgroundColor: 'rgba(10,10,10,0.9)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)'
-  },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  status: { fontSize: 11, fontWeight: '900', letterSpacing: 2, color: 'white' },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
-  statLabel: { color: '#666', fontSize: 10, fontWeight: '700', marginBottom: 4 },
-  statValue: { fontSize: 26, fontWeight: '900', color: 'white' },
-  mainButton: { padding: 18, borderRadius: 16, alignItems: 'center', shadowColor: '#00D1FF', shadowOpacity: 0.3, shadowRadius: 10, elevation: 10 },
-  buttonText: { color: 'white', fontWeight: '900', fontSize: 14, letterSpacing: 1.5 },
-  poiMarker: { 
-    width: 36, height: 36, borderRadius: 18, backgroundColor: '#00D1FF', 
-    borderWidth: 3, borderColor: 'white', alignItems: 'center', justifyContent: 'center',
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5
-  },
-  callout: { 
-    backgroundColor: '#111', padding: 12, borderRadius: 12, width: 200, 
-    borderWidth: 1, borderColor: '#333' 
-  },
-  calloutTitle: { color: 'white', fontWeight: '800', fontSize: 14 },
-  calloutDesc: { color: '#666', fontSize: 11, marginTop: 4 }
+  map: { width: '100%', height: '100%' }
 });

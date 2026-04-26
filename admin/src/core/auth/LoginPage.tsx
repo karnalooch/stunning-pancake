@@ -68,10 +68,10 @@ export const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
               <ShieldCheck size={32} color="#2563EB" />
             </Box>
             <Title order={2} style={{ color: 'white', fontWeight: 900, letterSpacing: '-1px' }}>
-              SPORT<Text span c="blue">.</Text> Admin
+              SPORT<Text span c="blue">.</Text> Owner
             </Title>
             <Text size="xs" c="dimmed" style={{ letterSpacing: '1px', textTransform: 'uppercase' }}>
-              Secure Infrastructure Login
+              Strategic Operations Login
             </Text>
           </Stack>
 

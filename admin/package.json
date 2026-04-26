@@ -3,14 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron-main.cjs",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "test": "vitest",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"vite\" \"cross-env NODE_ENV=development wait-on http://localhost:5173 && electron .\"",
+    "build:exe": "npm run build && electron-builder --win --x64 --dir"
   },
   "dependencies": {
     "@deck.gl/layers": "^9.3.1",
@@ -58,16 +61,43 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.1",
+    "cross-env": "^7.0.3",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "jsdom": "^29.0.2",
-    "tailwindcss": "^4.2.4",
+    "tailwindcss": "^3.4.15",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5"
+    "vite": "^6.0.1",
+    "vitest": "^4.1.5",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.sport.owner",
+    "productName": "SPORT Owner OS",
+    "directories": {
+      "output": "dist-exe"
+    },
+    "files": [
+      "dist/**/*",
+      "electron-main.cjs",
+      "electron-preload.cjs",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable"
+    },
+    "asar": true,
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true
+    }
   }
 }

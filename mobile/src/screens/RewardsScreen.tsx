@@ -1,6 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { Gift, MapPin, Tag } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, H1, H2, Paragraph, ScrollView, Card, Button as TamaButton } from 'tamagui';
+
+const GiftIcon = Gift as any;
+const MapPinIcon = MapPin as any;
+const TagIcon = Tag as any;
 
 const MOCK_REWARDS = [
   { id: 1, shop: 'Eco Coffee', offer: '-20% on any Latte', cost: '500 XP' },
@@ -10,61 +14,41 @@ const MOCK_REWARDS = [
 
 export const RewardsScreen = () => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Rewards</Text>
+    <YStack flex={1} backgroundColor="$background" paddingTop="$10" paddingHorizontal="$4">
+      <TamaText fontWeight="900" fontSize={28} color="white" marginBottom="$6">Rewards</TamaText>
       
-      <View style={styles.pointsCard}>
-        <View>
-          <Text style={styles.pointsLabel}>AVAILABLE BALANCE</Text>
-          <Text style={styles.pointsValue}>1,842 XP</Text>
-        </View>
-        <Gift size={32} color="white" opacity={0.5} />
-      </View>
+      <XStack backgroundColor="$blue10" padding="$6" borderRadius="$6" justifyContent="space-between" alignItems="center" marginBottom="$8">
+        <YStack>
+          <TamaText color="rgba(255,255,255,0.7)" fontSize={10} fontWeight="800" letterSpacing={1}>AVAILABLE BALANCE</TamaText>
+          <TamaText color="white" fontSize={32} fontWeight="900" marginTop="$1">1,842 XP</TamaText>
+        </YStack>
+        <GiftIcon size={32} color="white" opacity={0.5} />
+      </XStack>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {MOCK_REWARDS.map((reward) => (
-          <TouchableOpacity key={reward.id} style={styles.card}>
-            <View style={styles.rewardIcon}>
-              <Tag size={20} color="white" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.shopName}>{reward.shop}</Text>
-              <Text style={styles.offer}>{reward.offer}</Text>
-              <View style={styles.locationRow}>
-                <MapPin size={12} color="#666" />
-                <Text style={styles.locationText}>Siedlce, Center</Text>
-              </View>
-            </View>
-            <View style={styles.costBadge}>
-              <Text style={styles.costText}>{reward.cost}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+      <ScrollView>
+        <YStack gap="$4">
+          {MOCK_REWARDS.map((reward) => (
+            <XStack key={reward.id} backgroundColor="$gray1" padding="$4" borderRadius="$4" alignItems="center" gap="$4" borderLeftWidth={4} borderLeftColor="$blue10">
+              <YStack backgroundColor="$gray2" padding="$2.5" borderRadius="$3" alignItems="center" justifyContent="center">
+                <TagIcon size={20} color="white" />
+              </YStack>
+              
+              <YStack flex={1}>
+                <TamaText color="$gray10" fontSize={10} fontWeight="800" textTransform="uppercase">{reward.shop}</TamaText>
+                <TamaText color="white" fontWeight="800" fontSize={16} marginVertical="$0.5">{reward.offer}</TamaText>
+                <XStack alignItems="center" gap="$1">
+                  <MapPinIcon size={12} color="$gray8" />
+                  <TamaText color="$gray8" fontSize={11}>Siedlce, Center</TamaText>
+                </XStack>
+              </YStack>
+
+              <YStack backgroundColor="$gray3" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$2">
+                <TamaText color="white" fontSize={11} fontWeight="900">{reward.cost}</TamaText>
+              </YStack>
+            </XStack>
+          ))}
+        </YStack>
       </ScrollView>
-    </View>
+    </YStack>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 60, paddingHorizontal: 20 },
-  title: { color: 'white', fontSize: 28, fontWeight: '900', marginBottom: 24 },
-  pointsCard: { 
-    backgroundColor: '#2563EB', padding: 24, borderRadius: 20, 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 30
-  },
-  pointsLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '800', letterSpacing: 1 },
-  pointsValue: { color: 'white', fontSize: 32, fontWeight: '900', marginTop: 4 },
-  list: { gap: 16 },
-  card: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', 
-    padding: 16, borderRadius: 16, gap: 16, borderLeftWidth: 4, borderLeftColor: '#2563EB'
-  },
-  rewardIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#1a1a1a', alignItems: 'center', justifyContent: 'center' },
-  shopName: { color: '#666', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
-  offer: { color: 'white', fontWeight: '800', fontSize: 16, marginVertical: 2 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  locationText: { color: '#444', fontSize: 11 },
-  costBadge: { backgroundColor: '#222', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  costText: { color: 'white', fontSize: 11, fontWeight: '900' }
-});

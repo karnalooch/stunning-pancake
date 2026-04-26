@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @theme {
   --color-primary: #00D1FF;
@@ -59,4 +61,29 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-cyan-main);
+}
+
+/* SPORT OS Effects */
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+.glitch-hover:hover {
+  animation: glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite;
+  text-shadow: 2px 0 #00d1ff, -2px 0 #b066ff;
+}
+
+.stat-card-premium {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card-premium:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(0, 209, 255, 0.3) !important;
+  transform: translateY(-5px);
 }

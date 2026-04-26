@@ -22,10 +22,13 @@ export function initSentry(): void {
     tracesSampleRate: ENV === 'production' ? 0.1 : 1.0,
 
     beforeSend(event) {
-      if (event.breadcrumbs?.values) {
-        event.breadcrumbs.values = event.breadcrumbs.values.filter(
-          (b) => !b.message?.includes('GPS') && !b.message?.includes('lat='),
-        );
+      if (event.breadcrumbs) {
+        const crumbs = event.breadcrumbs as any;
+        if (crumbs.values) {
+          crumbs.values = crumbs.values.filter(
+            (b: any) => !b.message?.includes('GPS') && !b.message?.includes('lat='),
+          );
+        }
       }
       return event;
     },

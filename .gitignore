@@ -1,4 +1,4 @@
-﻿# Logs
+# Logs
 *.log
 infrastructure/traccar/logs/*
 
@@ -22,6 +22,13 @@ Thumbs.db
 # Binaries / large data
 SPORT Admin-win32-x64/
 infrastructure/brouter/segments4/
+telemetry-sync.tar
+dev-sync.tar
+admin/dist-exe/
+*.tar
+*.exe
+*.asar
+infrastructure/traccar/logs/
 
 # IDE
 .vscode/settings.json

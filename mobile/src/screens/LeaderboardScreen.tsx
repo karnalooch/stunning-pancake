@@ -1,129 +1,123 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Trophy, Medal, Crown, TrendingUp } from 'lucide-react-native';
+import React, { useEffect } from 'react';
+import { Trophy, Crown } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, H1, H2, Paragraph, ScrollView, Circle, Button as TamaButton } from 'tamagui';
+import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService } from '../services/api';
 
-export const LeaderboardScreen = () => {
-  const [category, setCategory] = useState<'CITY' | 'GLOBAL'>('CITY');
-  const [ranking, setRanking] = useState<any[]>([]);
-  const [myRank, setMyRank] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+const TrophyIcon = Trophy as any;
+const CrownIcon = Crown as any;
 
-  React.useEffect(() => {
+export const LeaderboardScreen = observer(() => {
+  const state = useObservable({
+    category: 'CITY' as 'CITY' | 'GLOBAL',
+    ranking: [] as any[],
+    myRank: null as any,
+    loading: true
+  });
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
-        setLoading(true);
-        const data = await ActivityService.getLeaderboard('siedlce'); // Hardcoded city for demo
-        setRanking(data.leaderboard || []);
+        state.loading.set(true);
+        const data = await ActivityService.getLeaderboard('siedlce');
+        state.ranking.set(data.leaderboard || []);
         
         const rankData = await ActivityService.getMyRank('siedlce');
-        setMyRank(rankData);
+        state.myRank.set(rankData);
       } catch (e) {
         console.error("Failed to fetch ranking", e);
       } finally {
-        setLoading(false);
+        state.loading.set(false);
       }
     };
     fetchData();
-  }, [category]);
-
+  }, [state.category.get()]);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Rankings</Text>
-        <Trophy size={28} color="#FBBF24" />
-      </View>
+    <YStack flex={1} backgroundColor="$background" paddingTop="$10">
+      <XStack justifyContent="space-between" paddingHorizontal="$4" alignItems="center" marginBottom="$4">
+        <TamaText fontWeight="900" fontSize={28} color="white">Rankings</TamaText>
+        <TrophyIcon size={28} color="#FBBF24" />
+      </XStack>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tab, category === 'CITY' && styles.activeTab]}
-          onPress={() => setCategory('CITY')}
+      <XStack paddingHorizontal="$4" gap="$2" marginBottom="$6">
+        <TamaButton 
+          size="$3" 
+          borderRadius="$10" 
+          backgroundColor={state.category.get() === 'CITY' ? "$blue10" : "$gray1"}
+          onPress={() => state.category.set('CITY')}
         >
-          <Text style={[styles.tabText, category === 'CITY' && styles.activeTabText]}>Siedlce</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tab, category === 'GLOBAL' && styles.activeTab]}
-          onPress={() => setCategory('GLOBAL')}
+          <TamaText fontWeight="800" fontSize={13} color={state.category.get() === 'CITY' ? "white" : "$gray10"}>Siedlce</TamaText>
+        </TamaButton>
+        <TamaButton 
+          size="$3" 
+          borderRadius="$10" 
+          backgroundColor={state.category.get() === 'GLOBAL' ? "$blue10" : "$gray1"}
+          onPress={() => state.category.set('GLOBAL')}
         >
-          <Text style={[styles.tabText, category === 'GLOBAL' && styles.activeTabText]}>Global</Text>
-        </TouchableOpacity>
-      </View>
+          <TamaText fontWeight="800" fontSize={13} color={state.category.get() === 'GLOBAL' ? "white" : "$gray10"}>Global</TamaText>
+        </TamaButton>
+      </XStack>
 
-      <View style={styles.topThree}>
-        <View style={styles.topUser}>
-           <Text style={styles.rankNum}>2</Text>
-           <View style={[styles.avatar, { borderColor: '#94A3B8' }]}><Text style={styles.avatarText}>{ranking[1]?.username?.[0] || '?'}</Text></View>
-           <Text style={styles.topName}>{ranking[1]?.username || '...'}</Text>
-           <Text style={styles.topPoints}>{ranking[1]?.score_km || 0} km</Text>
-        </View>
-        <View style={[styles.topUser, { marginTop: -20 }]}>
-           <Crown size={24} color="#FBBF24" style={{ marginBottom: 4 }} />
-           <View style={[styles.avatar, { borderColor: '#FBBF24', width: 80, height: 80, borderRadius: 40 }]}>
-             <Text style={[styles.avatarText, { fontSize: 32 }]}>{ranking[0]?.username?.[0] || '?'}</Text>
-           </View>
-           <Text style={[styles.topName, { fontWeight: '900' }]}>{ranking[0]?.username || '...'}</Text>
-           <Text style={[styles.topPoints, { color: '#FBBF24' }]}>{ranking[0]?.score_km || 0} km</Text>
-        </View>
-        <View style={styles.topUser}>
-           <Text style={styles.rankNum}>3</Text>
-           <View style={[styles.avatar, { borderColor: '#B45309' }]}><Text style={styles.avatarText}>{ranking[2]?.username?.[0] || '?'}</Text></View>
-           <Text style={styles.topName}>{ranking[2]?.username || '...'}</Text>
-           <Text style={styles.topPoints}>{ranking[2]?.score_km || 0} km</Text>
-        </View>
-      </View>
+      <XStack justifyContent="center" alignItems="flex-end" gap="$4" marginBottom="$8">
+        {/* Rank 2 */}
+        <YStack alignItems="center">
+           <TamaText color="$gray10" fontWeight="900" marginBottom="$1">2</TamaText>
+           <Circle size={60} borderWidth={3} borderColor="$gray8" backgroundColor="$gray1">
+             <TamaText color="white" fontSize={24} fontWeight="900">{state.ranking[1]?.username?.get()?.[0] || '?'}</TamaText>
+           </Circle>
+           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{state.ranking[1]?.username?.get() || '...'}</TamaText>
+           <TamaText color="$gray10" fontSize={11} fontWeight="800">{state.ranking[1]?.score_km?.get() || 0} km</TamaText>
+        </YStack>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {ranking.slice(3).map((item: any, i: number) => (
-          <View key={item.user_id} style={styles.rankRow}>
-            <Text style={styles.rowRank}>#{i + 4}</Text>
-            <View style={styles.rowAvatar}><Text style={styles.rowAvatarText}>{item.username?.[0]}</Text></View>
-            <Text style={styles.rowName}>{item.username}</Text>
-            <View style={{ flex: 1, alignItems: 'flex-end' }}>
-               <Text style={styles.rowPoints}>{item.score_km} km</Text>
-            </View>
-          </View>
-        ))}
+        {/* Rank 1 */}
+        <YStack alignItems="center" marginTop="$-5">
+           <CrownIcon size={24} color="#FBBF24" style={{ marginBottom: 4 }} />
+           <Circle size={80} borderWidth={3} borderColor="#FBBF24" backgroundColor="$gray1">
+             <TamaText color="white" fontSize={32} fontWeight="900">{state.ranking[0]?.username?.get()?.[0] || '?'}</TamaText>
+           </Circle>
+           <TamaText color="white" marginTop="$2" fontSize={15} fontWeight="900">{state.ranking[0]?.username?.get() || '...'}</TamaText>
+           <TamaText color="#FBBF24" fontSize={11} fontWeight="800">{state.ranking[0]?.score_km?.get() || 0} km</TamaText>
+        </YStack>
+
+        {/* Rank 3 */}
+        <YStack alignItems="center">
+           <TamaText color="$gray10" fontWeight="900" marginBottom="$1">3</TamaText>
+           <Circle size={60} borderWidth={3} borderColor="#B45309" backgroundColor="$gray1">
+             <TamaText color="white" fontSize={24} fontWeight="900">{state.ranking[2]?.username?.get()?.[0] || '?'}</TamaText>
+           </Circle>
+           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{state.ranking[2]?.username?.get() || '...'}</TamaText>
+           <TamaText color="$gray10" fontSize={11} fontWeight="800">{state.ranking[2]?.score_km?.get() || 0} km</TamaText>
+        </YStack>
+      </XStack>
+
+      <ScrollView flex={1} paddingHorizontal="$4" paddingBottom="$10">
+        <YStack gap="$2" paddingBottom="$10">
+          {state.ranking.get().slice(3).map((item: any, i: number) => (
+            <XStack key={item.user_id} alignItems="center" paddingVertical="$3" borderBottomWidth={1} borderBottomColor="$gray1">
+              <TamaText color="$gray8" width={40} fontWeight="900" fontSize={12}>#{i + 4}</TamaText>
+              <Circle size={32} backgroundColor="$gray2" marginRight="$3">
+                <TamaText color="white" fontSize={10} fontWeight="800">{item.username?.[0]}</TamaText>
+              </Circle>
+              <TamaText color="white" fontWeight="600" fontSize={14}>{item.username}</TamaText>
+              <YStack flex={1} alignItems="flex-end">
+                <TamaText color="white" fontWeight="800" fontSize={12}>{item.score_km} km</TamaText>
+              </YStack>
+            </XStack>
+          ))}
+        </YStack>
       </ScrollView>
 
-      <View style={styles.myRank}>
-         <Text style={styles.rowRank}>#{myRank?.rank || '?'}</Text>
-         <View style={[styles.rowAvatar, { backgroundColor: '#2563EB' }]}><Text style={styles.rowAvatarText}>ME</Text></View>
-         <Text style={styles.rowName}>You (Current Stats)</Text>
-         <View style={{ flex: 1, alignItems: 'flex-end' }}>
-            <Text style={styles.rowPoints}>{myRank?.score_km || 0} km</Text>
-         </View>
-      </View>
-    </View>
+      <XStack position="absolute" bottom={0} left={0} right={0} backgroundColor="$gray1" padding="$5" borderTopWidth={1} borderTopColor="$gray2" alignItems="center">
+         <TamaText color="$gray8" width={40} fontWeight="900" fontSize={12}>#{state.myRank?.rank?.get() || '?'}</TamaText>
+         <Circle size={32} backgroundColor="$blue10" marginRight="$3">
+           <TamaText color="white" fontSize={10} fontWeight="800">ME</TamaText>
+         </Circle>
+         <TamaText color="white" fontWeight="600" fontSize={14}>You (Current Stats)</TamaText>
+         <YStack flex={1} alignItems="flex-end">
+            <TamaText color="white" fontWeight="800" fontSize={12}>{state.myRank?.score_km?.get() || 0} km</TamaText>
+         </YStack>
+      </XStack>
+    </YStack>
   );
-};
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000', paddingTop: 60 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 },
-  title: { color: 'white', fontSize: 28, fontWeight: '900' },
-  tabContainer: { flexDirection: 'row', paddingHorizontal: 20, gap: 10, marginBottom: 30 },
-  tab: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 20, backgroundColor: '#111' },
-  activeTab: { backgroundColor: '#2563EB' },
-  tabText: { color: '#666', fontWeight: '800', fontSize: 13 },
-  activeTabText: { color: 'white' },
-  topThree: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 20, marginBottom: 40 },
-  topUser: { alignItems: 'center' },
-  avatar: { width: 60, height: 60, borderRadius: 30, borderWidth: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: '#111' },
-  avatarText: { color: 'white', fontSize: 24, fontWeight: '900' },
-  rankNum: { color: '#666', fontWeight: '900', marginBottom: 4 },
-  topName: { color: 'white', marginTop: 10, fontSize: 13, fontWeight: '700' },
-  topPoints: { color: '#666', fontSize: 11, fontWeight: '800', marginTop: 2 },
-  list: { paddingHorizontal: 20, paddingBottom: 120 },
-  rankRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#111' },
-  rowRank: { color: '#444', width: 40, fontWeight: '900', fontSize: 12 },
-  rowAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#222', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  rowAvatarText: { color: 'white', fontSize: 10, fontWeight: '800' },
-  rowName: { color: 'white', fontWeight: '600', fontSize: 14 },
-  rowPoints: { color: 'white', fontWeight: '800', fontSize: 12 },
-  myRank: { 
-    position: 'absolute', bottom: 0, left: 0, right: 0, 
-    backgroundColor: '#111', padding: 20, borderTopWidth: 1, borderTopColor: '#222',
-    flexDirection: 'row', alignItems: 'center'
-  }
 });

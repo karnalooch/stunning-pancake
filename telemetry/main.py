@@ -184,7 +184,7 @@ async def _traccar_redis_bridge() -> None:
     Subscribes to the Redis pub/sub channel that Traccar writes to.
     Optimized: Batches DB inserts and parallelizes WebSocket broadcasts.
     """
-    import aioredis  # type: ignore[import]
+    import redis.asyncio as redis_lib
 
     batch_buffer: list[tuple] = []
     MAX_BATCH_SIZE = 50
@@ -192,7 +192,7 @@ async def _traccar_redis_bridge() -> None:
 
     while True:
         try:
-            redis = await aioredis.from_url(REDIS_URL)
+            redis = await redis_lib.from_url(REDIS_URL)
             pubsub = redis.pubsub()
             await pubsub.subscribe(TRACCAR_CHANNEL)
             logger.info("traccar_bridge: subscribed to channel=%s", TRACCAR_CHANNEL)

@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-traccar
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport
+      tier: traccar
+  template:
+    metadata:
+      labels:
+        app: sport
+        tier: traccar
+    spec:
+      containers:
+      - name: traccar
+        image: traccar/traccar:latest
+        ports:
+        - containerPort: 8082
+        - containerPort: 5000-5150
+          protocol: TCP
+        - containerPort: 5000-5150
+          protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traccar-service
+spec:
+  selector:
+    app: sport
+    tier: traccar
+  ports:
+  - name: web
+    protocol: TCP
+    port: 8082
+    targetPort: 8082
+  - name: osmand
+    protocol: TCP
+    port: 5055
+    targetPort: 5055

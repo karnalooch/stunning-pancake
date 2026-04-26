@@ -9,12 +9,12 @@ export const Sidebar = ({ mode }: { mode: string }) => {
   const { user } = useAuth();
 
   const navItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/admin/dashboard', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <Building2 size={18} />, label: 'Tenants & Branding', path: '/admin/white-label', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <Users size={18} />, label: 'Users', path: '/admin/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/admin/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
-    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/admin/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
-    { icon: <Settings size={18} />, label: 'Settings', path: '/admin/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
+    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/owner/dashboard', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <Building2 size={18} />, label: 'Tenants & Branding', path: '/owner/white-label', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <Users size={18} />, label: 'Users', path: '/owner/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/owner/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
+    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/owner/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
+    { icon: <Settings size={18} />, label: 'Settings', path: '/owner/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
   ];
 
   const visibleItems = navItems.filter(item => user && item.roles.includes(item.roles.includes(user.role) ? user.role : ''));
@@ -28,10 +28,10 @@ export const Sidebar = ({ mode }: { mode: string }) => {
       style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
     >
       <Group mb="xl" px="sm">
-        <Box w={32} h={32} bg="var(--color-cyan-main)" style={{ borderRadius: '6px' }} />
+        <Box w={32} h={32} bg="var(--color-cyan-main)" style={{ borderRadius: '6px', boxShadow: '0 0 15px rgba(0, 209, 255, 0.4)' }} />
         <Stack gap={0}>
-          <Text size="sm" fw={800} style={{ letterSpacing: '-0.02em' }}>SPORT OS</Text>
-          <Text size="xs" c="dimmed">{mode}</Text>
+          <Text size="sm" fw={900} style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>Owner OS</Text>
+          <Text size="xs" c="dimmed" fw={600} style={{ letterSpacing: '0.1em' }}>{mode}</Text>
         </Stack>
       </Group>
 

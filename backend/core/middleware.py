@@ -16,11 +16,11 @@ class TenantRLSMiddleware:
             # Set the Postgres session variable for RLS
             with connection.cursor() as cursor:
                 # UUIDs must be cast to text for set_config
-                cursor.execute(f"SELECT set_config('sport.current_tenant_id', '{str(request.user.tenant_id)}', false);")
+                cursor.execute(f"SELECT set_config('app.tenant_id', '{str(request.user.tenant_id)}', false);")
         else:
             # Clear it out if unauthenticated or no tenant (e.g. GLOBAL_OWNER)
             with connection.cursor() as cursor:
-                cursor.execute("SELECT set_config('sport.current_tenant_id', '', false);")
+                cursor.execute("SELECT set_config('app.tenant_id', '', false);")
 
         response = self.get_response(request)
         return response

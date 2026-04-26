@@ -56,7 +56,7 @@ export const LandingPage = () => {
             </Text>
             
             <Group gap="md">
-              <Button size="xl" radius="md" color="blue" component={Link} to="/login" rightSection={<Zap size={18} />}>
+              <Button size="xl" radius="md" color="blue" component={Link} to="/owner" rightSection={<Zap size={18} />}>
                 Launch Platform
               </Button>
               <Button size="xl" radius="md" variant="outline" color="gray" leftSection={<Globe size={18} />}>

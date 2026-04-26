@@ -1,13 +1,16 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
   plugins: [
-    react(),
-    tailwindcss()
+    react()
   ],
+  build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 2000,
+  },
   test: {
     environment: 'jsdom',
     globals: true

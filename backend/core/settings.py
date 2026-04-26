@@ -74,15 +74,13 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': 'sport_db',
-        'USER': 'sport_user',
-        'PASSWORD': 'sport_secure_pass_42a8b9f',
-        'HOST': 'db',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.getenv('DATABASE_URL', 'postgres://sport_user:sport_secure_pass_42a8b9f@db:5432/sport_db'),
+        engine='django.contrib.gis.db.backends.postgis'
+    )
 }
 
 AUTH_PASSWORD_VALIDATORS = [

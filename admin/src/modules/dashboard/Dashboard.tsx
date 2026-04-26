@@ -29,9 +29,9 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
       
       <Group justify="space-between" mb="xl">
         <Stack gap={0}>
-          <Title className="text-gradient" style={{ fontSize: '36px', fontWeight: 900 }}>
+          <Title className="text-gradient glitch-hover" style={{ fontSize: '36px', fontWeight: 900, cursor: 'default' }}>
             <EditableText 
-              initialValue={isGlobalOwner ? "Global Command Center" : `${user?.tenantId?.toUpperCase() || 'City'} Terminal`} 
+              initialValue={isGlobalOwner ? "Global Owner Console" : `${user?.tenantId?.toUpperCase() || 'Tenant'} Console`} 
               size="xl" weight={900} 
             />
           </Title>
