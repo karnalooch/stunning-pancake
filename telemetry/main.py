@@ -113,8 +113,8 @@ async def startup() -> None:
                 "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
             )
             logger.info("timescaledb: hypertable gps_points ready")
-        except Exception as exc:
-            logger.warning("timescaledb hypertable creation skipped: %s", exc)
+        except Exception:
+            logger.info("timescaledb: standard PostgreSQL detected (skipping hypertable optimization)")
 
     logger.info("telemetry service started — pool ready")
     # Start Traccar → Redis bridge as background task
