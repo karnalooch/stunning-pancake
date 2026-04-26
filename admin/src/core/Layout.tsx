@@ -9,13 +9,14 @@ export const Sidebar = ({ mode }: { mode: string }) => {
   const { user } = useAuth();
 
   const navItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/', roles: ['GLOBAL_OWNER'] },
-    { icon: <Building2 size={18} />, label: 'Tenants', path: '/tenants', roles: ['GLOBAL_OWNER'] },
-    { icon: <Users size={18} />, label: 'Users', path: '/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
-    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
-    { icon: <Settings size={18} />, label: 'Settings', path: '/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
+    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/admin/dashboard', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <Building2 size={18} />, label: 'Tenants & Branding', path: '/admin/white-label', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <Users size={18} />, label: 'Users', path: '/admin/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/admin/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
+    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/admin/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
+    { icon: <Settings size={18} />, label: 'Settings', path: '/admin/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
   ];
+
 
   const visibleItems = navItems.filter(item => user && item.roles.includes(user.role));
 

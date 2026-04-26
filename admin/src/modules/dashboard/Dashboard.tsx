@@ -6,13 +6,25 @@ import { motion } from 'framer-motion';
 import { useDisclosure } from '@mantine/hooks';
 import { StatCard } from './components/StatCard';
 import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
+import { StatCard } from './components/StatCard';
+import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
+import { CityAnalytics } from '../analytics/CityAnalytics';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
-import { InstanceWizard } from '../tenants/InstanceWizard';
+import { ModeratorWorklist } from './ModeratorWorklist';
 
+
+import { InstanceWizard } from '../tenants/InstanceWizard';
+import { useAuth } from '../../core/auth/useAuth';
 
 export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
+  const { user } = useAuth();
   const { isEditMode, toggleEditMode } = useDesigner();
   const [wizardOpened, { open, close }] = useDisclosure(false);
+  
+  const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
+  const isModerator = user?.role === 'TENANT_MODERATOR';
+
+
 
   return (
     <Box p="xl" style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%', overflowY: 'auto' }}>
@@ -21,9 +33,14 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
       <Group justify="space-between" mb="xl">
         <Stack gap={0}>
           <Title className="text-gradient" style={{ fontSize: '36px', fontWeight: 900 }}>
-            <EditableText initialValue="Global Command Center" size="xl" weight={900} />
+            <EditableText 
+              initialValue={isGlobalOwner ? "Global Command Center" : `${user?.tenantId?.toUpperCase() || 'City'} Terminal`} 
+              size="xl" weight={900} 
+            />
           </Title>
-          <Text size="xs" c="dimmed">Operational status for all platform nodes</Text>
+          <Text size="xs" c="dimmed">
+            {isGlobalOwner ? 'Operational status for all platform nodes' : `Local node performance metrics`}
+          </Text>
         </Stack>
         <Group>
           <Button 
@@ -34,16 +51,19 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
           >
             {isEditMode ? 'Exit Designer Mode' : 'Enter Designer Mode'}
           </Button>
-          <Button 
-            size="md" 
-            radius="md" 
-            color="blue" 
-            leftSection={<Plus size={20} />}
-            onClick={open}
-          >
-            Deploy New Instance
-          </Button>
+          {isGlobalOwner && (
+            <Button 
+              size="md" 
+              radius="md" 
+              color="blue" 
+              leftSection={<Plus size={20} />}
+              onClick={open}
+            >
+              Deploy New Instance
+            </Button>
+          )}
         </Group>
+
       </Group>
 
       <SimpleGrid cols={{ base: 1, md: 4 }} spacing="xl" mb="xl">
@@ -53,24 +73,35 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
         <StatCard icon={<TrendingUp size={20} />} label="Global Revenue" value="$428k" badge="+8.4%" color="indigo" progress={45} />
       </SimpleGrid>
 
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.2 }}
-        style={{ marginBottom: '24px' }}
-      >
-        <SystemIntelligence />
-      </motion.div>
+      {isGlobalOwner ? (
+        <>
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            style={{ marginBottom: '24px' }}
+          >
+            <SystemIntelligence />
+          </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ delay: 0.4 }}
-      >
-        <GlobalHeatmap />
-      </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.4 }}
+          >
+            <GlobalHeatmap />
+          </motion.div>
+        </>
+      ) : isModerator ? (
+        <ModeratorWorklist />
+      ) : (
+        <CityAnalytics cityId={user?.tenantId || 'siedlce'} />
+      )}
+
+
+
     </Box>
   );
 };

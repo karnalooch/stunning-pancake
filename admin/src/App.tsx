@@ -12,7 +12,9 @@ import { RoleGuard } from './core/guards/RoleGuard';
 import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
 import { LandingPage } from './modules/public/LandingPage';
 import { GlobalLoader } from './core/components/GlobalLoader';
+import { TenantLoader } from './core/components/TenantLoader';
 import { LoginPage } from './core/auth/LoginPage';
+
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MeshBackground = () => (
@@ -46,6 +48,7 @@ const MeshBackground = () => (
 
 export default function App() {
   const [loading, setLoading] = useState(true);
+  const [tenantLoading, setTenantLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -54,18 +57,30 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  const handleLogin = () => {
+    setTenantLoading(true);
+    setTimeout(() => {
+      setIsAuthenticated(true);
+      setTenantLoading(false);
+    }, 2000);
+  };
+
+
   return (
     <MantineProvider defaultColorScheme="dark" theme={theme}>
       <GlobalLoader visible={loading} />
+      <TenantLoader visible={tenantLoading} />
       <DesignerProvider>
+
         <BrowserRouter>
           <MeshBackground />
           <AnimatePresence mode="wait">
             {!isAuthenticated ? (
               <Routes>
-                <Route path="*" element={<LoginPage onLogin={() => setIsAuthenticated(true)} />} />
+                <Route path="*" element={<LoginPage onLogin={handleLogin} />} />
               </Routes>
             ) : (
+
               <Routes>
                 {/* Public Landing Page */}
                 <Route path="/" element={<LandingPage />} />
