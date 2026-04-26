@@ -1,0 +1,31 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": {
+    "backend": {
+      "source": {
+        "root": "backend"
+      },
+      "build": {
+        "builder": "DOCKERFILE"
+      },
+      "deploy": {
+        "numReplicas": 1,
+        "sleepApplication": false,
+        "restartPolicy": "ALWAYS"
+      }
+    },
+    "telemetry": {
+      "source": {
+        "root": "telemetry"
+      },
+      "build": {
+        "builder": "DOCKERFILE"
+      },
+      "deploy": {
+        "numReplicas": 1,
+        "sleepApplication": false,
+        "restartPolicy": "ALWAYS"
+      }
+    }
+  }
+}
