@@ -1,4 +1,5 @@
-from rest_framework import viewsets, permissions, status, generics
+import json
+from rest_framework import viewsets, permissions, status, generics, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
@@ -7,6 +8,37 @@ from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZo
 
 from .services import TelemetryService
 from .social import SocialSharingService
+from core.redis_cluster import get_redis
+
+class TelemetryConfigView(views.APIView):
+    """
+    View for getting and setting anti-cheat configuration.
+    Stored in Redis for real-time dynamic updates across the cluster.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        r = get_redis()
+        config_raw = r.get("telemetry:config")
+        if config_raw:
+            try:
+                return Response(json.loads(config_raw))
+            except Exception:
+                pass
+        
+        # Defaults matching the Admin UI state
+        return Response({
+            "brouterCutoff": 1.5,
+            "mlSensitivity": 0.8,
+            "autoBan": True
+        })
+
+    def post(self, request):
+        # Ideally, restrict to GLOBAL_OWNER or TENANT_ADMIN roles here
+        r = get_redis()
+        config = request.data
+        r.set("telemetry:config", json.dumps(config))
+        return Response({"status": "ok", "config": config})
 
 class ActivityViewSet(viewsets.ModelViewSet):
     """

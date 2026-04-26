@@ -30,11 +30,21 @@ def process_activity_async(self, activity_id: int) -> dict:
     Optimized async pipeline for a completed activity.
     Implements Milestone 2 'Lightweight Heuristics' (Constitution §24.3).
     """
+    import json
+    from core.redis_cluster import get_redis
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
     from activities.leaderboards import LeaderboardService
     from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother, fast_rejection_gate
     from django.contrib.gis.geos import LineString
+
+    # Fetch dynamic config
+    r = get_redis()
+    config_raw = r.get("telemetry:config")
+    config = json.loads(config_raw) if config_raw else {}
+    brouter_multiplier = config.get("brouterCutoff", 1.5)
+    ml_sensitivity = config.get("mlSensitivity", 0.8)
+    auto_ban = config.get("autoBan", True)
 
     try:
         activity = Activity.objects.select_related('user').get(pk=activity_id)
@@ -55,9 +65,8 @@ def process_activity_async(self, activity_id: int) -> dict:
 
     # --- Step 2: FAST SELECTION GATE (Layer 1 Anti-Cheat) ---
     # O(N) pure math — no DB, no network. Catches trams, cars, GPS spoofs.
-    # Runs on RAW points before Kalman to detect spoofed clean-looking tracks.
     gate = fast_rejection_gate(raw_points, activity.type)
-    if not gate["passed"]:
+    if not gate["passed"] and auto_ban:
         logger.warning(
             "activity.rejected_gate activity_id=%d reason=%s details=%s",
             activity_id, gate["reason"], gate["details"]
@@ -75,10 +84,9 @@ def process_activity_async(self, activity_id: int) -> dict:
         }
 
     # --- Step 2.5: ML ANOMALY DETECTOR (Layer 1.5 — Milestone 5) ---
-    # IsolationForest on 8 kinematic features. Fails open (no false positives).
     try:
         from activities.ml_anomaly import is_ml_anomaly
-        if is_ml_anomaly(raw_points):
+        if is_ml_anomaly(raw_points, sensitivity=ml_sensitivity) and auto_ban:
             logger.warning("activity.rejected_ml activity_id=%d", activity_id)
             Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
             try:
@@ -89,25 +97,22 @@ def process_activity_async(self, activity_id: int) -> dict:
             return {"status": "rejected_ml", "reason": "isolation_forest_anomaly"}
     except Exception as exc:
         logger.warning("ml_anomaly.skip activity_id=%d err=%s", activity_id, exc)
-        # Fail open — proceed to V-max
 
     # --- Step 3: Lightweight V-max Heuristics (Layer 2 Anti-Cheat) ---
     smoother = GpsKalmanSmoother()
     smoothed = smoother.smooth(raw_points)
     analysis = analyze_anomalies(smoothed, activity.type)
 
-    if analysis["is_suspicious"]:
+    if analysis["is_suspicious"] and auto_ban:
         logger.warning(
             "activity.rejected_early activity_id=%d reason=%s",
             activity_id, analysis["reason"]
         )
-        # Persist rejection immediately
         Activity.objects.filter(pk=activity_id).update(
             is_verified=False,
             verification_score=0.0
         )
         
-        # Fire suspicious hook & Matrix alert
         try:
             from core.plugin_registry import registry
             registry.fire('activity.suspicious', activity=activity, anomaly_ratio=analysis["anomaly_ratio"])
@@ -149,13 +154,15 @@ def process_activity_async(self, activity_id: int) -> dict:
         if gps_dist > 0:
             ratio = abs(b_dist - gps_dist) / gps_dist
             verification_score = 1.0 - ratio
-            is_verified = ratio < 0.15
+            
+            # Use dynamic tolerance: base 0.10 * multiplier (e.g. 1.5x = 0.15)
+            tolerance = 0.10 * brouter_multiplier
+            is_verified = ratio < tolerance
 
     # --- Step 5: Plugin-based validation (Sport specific) ---
     if is_verified:
         try:
             from core.plugin_registry import registry
-            # Fire validate_activity hooks. If any returns False, we reject.
             plugin_results = registry.fire('validate_activity', activity=activity, processing_result=processing)
             if False in plugin_results:
                 logger.warning("activity.rejected_by_plugin activity_id=%d", activity_id)

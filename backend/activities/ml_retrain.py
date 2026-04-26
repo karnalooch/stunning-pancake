@@ -150,7 +150,7 @@ def retrain_ml_model() -> dict:
 
     # Invalidate in-memory singleton so next call reloads from disk
     import activities.ml_anomaly as ml_mod
-    ml_mod._model = None
+    ml_mod._model_payload = None
     ml_mod._model_loaded = False
 
     result = {

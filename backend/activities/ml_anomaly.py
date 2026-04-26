@@ -256,7 +256,7 @@ def ml_anomaly_score(points: list["GpsPoint"]) -> tuple[float | None, float | No
         return None, None
 
 
-def is_ml_anomaly(points: list["GpsPoint"]) -> bool:
+def is_ml_anomaly(points: list["GpsPoint"], sensitivity: float = 1.0) -> bool:
     """
     Returns True if the track is statistically anomalous.
 
@@ -266,6 +266,8 @@ def is_ml_anomaly(points: list["GpsPoint"]) -> bool:
 
     Args:
         points: List of GPS points from the track.
+        sensitivity: Multiplier for the threshold (0.1 to 2.0). 
+                     1.0 is balanced, <1.0 is aggressive, >1.0 is forgiving.
 
     Returns:
         True if anomalous, False if clean or model unavailable.
@@ -274,7 +276,12 @@ def is_ml_anomaly(points: list["GpsPoint"]) -> bool:
     if score is None or threshold is None:
         return False   # Fail open: no model = no rejection
 
-    is_anom = score < threshold
+    # sensitivity mapping: if sensitivity is 0.5 (aggressive), we want threshold to be higher (closer to 0)
+    # if sensitivity is 1.5 (forgiving), we want threshold to be lower (further from 0)
+    # Isolation Forest scores are in range [-1, 0]. Threshold is around -0.15.
+    effective_threshold = threshold * (2.0 - sensitivity)
+
+    is_anom = score < effective_threshold
     if is_anom:
-        logger.info("ml_anomaly.flagged score=%.4f threshold=%.4f", score, threshold)
+        logger.info("ml_anomaly.flagged score=%.4f threshold=%.4f effective=%.4f", score, threshold, effective_threshold)
     return is_anom

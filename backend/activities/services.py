@@ -253,30 +253,6 @@ class AntiCheatEngine:
     """
     
     @staticmethod
-    def verify_track(activity):
-        """
-        Runs the 3-Layer verification process on an incoming GPX/Telemetry track.
-        """
-        kinematic_score = random.uniform(0.1, 1.0)
-        brouter_score = random.uniform(0.1, 1.0)
-        ml_score = random.uniform(0.1, 1.0)
-        
-        final_score = (kinematic_score * 0.3) + (brouter_score * 0.5) + (ml_score * 0.2)
-        is_verified = final_score < 0.8
-        
-        activity.verification_score = final_score
-        activity.is_verified = is_verified
-        activity.save()
-        
-        return {
-            "score": final_score,
-            "kinematic": kinematic_score,
-            "brouter": brouter_score,
-            "ml": ml_score,
-            "is_valid": is_verified
-        }
-
-    @staticmethod
     def get_recent_anomalies(tenant_id=None, limit=20):
         from .models import Activity
         qs = Activity.objects.filter(is_verified=False)

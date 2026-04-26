@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView, AnomalyListView, POIViewSet
+from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView, AnomalyListView, POIViewSet, TelemetryConfigView
 
 from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
@@ -21,6 +21,7 @@ urlpatterns = [
     path('vouchers/redeem/<str:code>/', VoucherRedeemView.as_view(), name='voucher-redeem'),
     path('telemetry/live/', TelemetryLiveView.as_view(), name='telemetry-live'),
     path('telemetry/anomalies/', AnomalyListView.as_view(), name='telemetry-anomalies'),
+    path('telemetry/config/', TelemetryConfigView.as_view(), name='telemetry-config'),
     # Phase 9: Payments
     path('payments/checkout/', CreateCheckoutSessionView.as_view(), name='checkout'),
     path('payments/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),

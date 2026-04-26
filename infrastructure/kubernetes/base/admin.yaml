@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-admin
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sport
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: sport
+        tier: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: nginx
+        image: sport-admin:latest
+        securityContext:
+          allowPrivilegeEscalation: false
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sport-admin-service
+spec:
+  selector:
+    app: sport
+    tier: frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
