@@ -2,8 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: sport-config
-spec:
-  data:
+data:
     CELERY_BROKER_URL: "redis://redis-service:6379/0"
     EXPO_PUBLIC_TELEMETRY_URL: "https://api.sport-platform.com"
 ---

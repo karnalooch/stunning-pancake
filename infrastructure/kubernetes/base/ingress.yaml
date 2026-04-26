@@ -9,7 +9,7 @@ spec:
   tls:
   - hosts:
     - api.sport-platform.com
-    - admin.sport-platform.com
+    - owner.sport-platform.com
     secretName: sport-tls-certs
   rules:
   - host: api.sport-platform.com
@@ -22,13 +22,13 @@ spec:
             name: sport-backend-service
             port:
               number: 80
-  - host: admin.sport-platform.com
+  - host: owner.sport-platform.com
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: sport-admin-service
+            name: sport-owner-service
             port:
               number: 80
