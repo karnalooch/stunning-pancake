@@ -112,7 +112,7 @@ export const TrackingScreen = observer(() => {
                width={36} 
                height={36} 
                borderRadius={18} 
-               backgroundColor="#00D1FF" 
+               backgroundColor={Theme.colors.primary} 
                borderWidth={3} 
                borderColor="white" 
                alignItems="center" 
@@ -149,8 +149,8 @@ export const TrackingScreen = observer(() => {
              {state.isTracking.get() ? "CYAN-PRECISION TRACKING" : "READY TO START"}
            </TamaText>
            <XStack gap="$2">
-              <ZapIcon size={18} color="#00D1FF" />
-              <ShieldIcon size={18} color="#00D1FF" />
+              <ZapIcon size={18} color={Theme.colors.primary} />
+              <ShieldIcon size={18} color={Theme.colors.primary} />
            </XStack>
         </XStack>
 
@@ -172,7 +172,7 @@ export const TrackingScreen = observer(() => {
         <TamaButton 
           size="$5"
           borderRadius="$4"
-          backgroundColor={state.isTracking.get() ? "#DC2626" : "#00D1FF"}
+          backgroundColor={state.isTracking.get() ? "#DC2626" : Theme.colors.primary}
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">

@@ -33,6 +33,8 @@
 | **Stripe SDK** | MIT | ✅ Permisywna |
 | **Matrix / nio** | Apache 2.0 | ✅ Permisywna |
 
+> **Uwaga dotycząca Citus AGPL**: Wdrożenie SaaS jako usługa (użytkownicy uzyskują dostęp przez API, brak dystrybuowanego kodu) jest zgodne z AGPL. Tylko wbudowanie Citusa *wewnątrz* dystrybuowanego produktu wymagałoby licencji komercyjnej.
+
 ---
 
 ## 3. Audyt Integralności Anti-Cheat
@@ -110,4 +112,4 @@
 
 **Podsumowanie Audytu**: Platforma SPORT osiągnęła **pełną dojrzałość produkcyjną** we wszystkich 5 kamieniach milowych z **zerowym zaległym długiem technicznym**. Bezpieczeństwo jest egzekwowane na każdej warstwie (JWT, RBAC, RLS, obserwowalność bez PII, weryfikacja kluczy E2EE). Infrastruktura została zwalidowana pod kątem **184 000+ aktywnych użytkowników** i **38M km** rocznie dla **200 najemców miejskich**. Warstwa ML anti-cheat działa na syntetycznej bazie i jest skonfigurowana do samodoskonalenia się w każdy poniedziałek o 03:00 za pośrednictwem Celery Beat. Lokalizacja w tle w systemach Android i iOS jest w pełni skonfigurowana.
 
-> **Następny przegląd**: Rutynowy — 90 dni po uruchomieniu.
+> **Next review**: Routine — 90 days post-launch.
