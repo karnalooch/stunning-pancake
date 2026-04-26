@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { TelemetryApi } from '../../api/client';
 import DeckGL from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import Map from 'react-map-gl/maplibre';
+import { Map } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 import { useAuth } from '../../core/auth/useAuth';
