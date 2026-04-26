@@ -80,15 +80,7 @@ A FULL PLATFORM AUDIT was conducted on **2026-04-26** based on the criteria defi
 
 ---
 
-## 6. ML System Audit
-
-| Check | Status | Notes |
-| :--- | :--- | :--- |
-| **Baseline Model** | ✅ READY | `scripts/train_baseline_model.py` — 5,000 synthetic tracks (45% runners, 45% cyclists, 10% walkers) |
-| **Auto-Bootstrap** | ✅ READY | `scripts/bootstrap_model.sh` — trains model on container start if none exists |
-| **Fail-Open Design** | ✅ VERIFIED | `is_ml_anomaly()` returns `False` if model unavailable — zero false positives |
-| **Self-Validation** | ✅ VERIFIED | Training script reports self-flagging rate (<5% expected on clean data) |
-| **Smoke Test** | ✅ VERIFIED | Car at 90km/h flagged, average runner passes |
+## 6. ML System Audit\n\n| Check | Status | Notes |\n| :--- | :--- | :--- |\n| **Baseline Model** | ✅ READY | `scripts/train_baseline_model.py` — 5,000 synthetic tracks (45% runners, 45% cyclists, 10% walkers) |\n| **Auto-Bootstrap** | ✅ READY | `scripts/bootstrap_model.sh` — trains model on container start if none exists |\n| **Fail-Open Design** | ✅ VERIFIED | `is_ml_anomaly()` returns `False` if model unavailable — zero false positives |\n| **Self-Validation** | ✅ VERIFIED | Training script reports self-flagging rate (<5% expected on clean data) |\n| **Smoke Test** | ✅ VERIFIED | Car at 90km/h flagged, average runner passes |
 
 ---
 
@@ -112,8 +104,6 @@ A FULL PLATFORM AUDIT was conducted on **2026-04-26** based on the criteria defi
 |:---|:---|:---|:---|
 | 1 | **Matrix E2EE cross-client key verification** | ~~HIGH~~ RESOLVED | ✅ `core/matrix_e2ee_verify.py` — SAS emoji verification, Redis state machine, 4 REST endpoints |
 | 2 | **ML Model refinement** | ~~MEDIUM~~ RESOLVED | ✅ `activities/ml_retrain.py` — weekly Celery Beat retrain, atomic model swap, Sentry metrics |
-
-> **No outstanding technical debt.** All known items resolved in production code.
 
 ---
 

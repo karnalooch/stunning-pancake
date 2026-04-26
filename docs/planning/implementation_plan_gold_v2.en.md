@@ -28,14 +28,13 @@
 - [x] **PowerSync Integration**: Define sync rules for mobile SQLite.
 - [x] **FastAPI Ingestion**: Stabilize async stream with Redis.
 
-## Phase 4: Mobile Engine Upgrade (IN-PROGRESS / COMPLETED)
-*Goal: Achieve 60-120FPS and local-first reactivity for the athlete app.*
+## Phase 4: Mobile Engine Upgrade (CURRENT IN-PROGRESS)
+*Goal: Achieve 120FPS and local-first reactivity for the athlete app.*
 
 - [x] **Framework & Core**: Upgrade to React Native 0.81 (Bridgeless Mode).
-- [x] **Styling**: Configure Tamagui v4 and Inter Typography.
-- [x] **State & Sync**: Refactor state management to **Legend-State** (60FPS HUD achieved).
+- [/] **Styling**: Configure Tamagui v4 and Inter Typography.
 - [ ] **Visuals & UI**: Integrate React Native Skia for charts and Mapbox SDK with 3D Terrain.
-- [ ] **PowerSync Integration**: Full mobile client integration with PowerSync.
+- [ ] **State & Sync**: Refactor state management to Legend-State and integrate PowerSync Client.
 
 ## Phase 5: Advanced Operational Control (UPCOMING)
 *Goal: Enable granular performance management and real-time branding.*
