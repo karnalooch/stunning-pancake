@@ -44,7 +44,7 @@ export const CityAnalytics = ({ cityId }: { cityId: string }) => {
             controller={true}
             layers={layers}
           >
-            <Map mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" />
+            <Map mapStyle="https://demotiles.maplibre.org/style.json" />
           </DeckGL>
         </Card>
 
