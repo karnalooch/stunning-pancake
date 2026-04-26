@@ -1,66 +1,76 @@
 # ⚖️ KONSTYTUCJA PLATFORMY SPORT (v2.1 Gold Master)
 > "Sovereignty through Code. Performance through Discipline."
 
-## 1. MISJA I TOŻSAMOŚĆ (Mission & Identity)
-Platforma SPORT to wysokowydajny ekosystem B2B/B2C zbudowany na fundamentach **Permissive Open Source** (MIT/Apache 2.0). Naszym celem jest dostarczenie precyzyjnej telemetrii, grywalizacji i narzędzi społecznościowych przy zachowaniu pełnej wolności komercyjnej (White-Label) i absolutnej prywatności użytkownika.
+---
+
+## 🏗️ FILAR I: ARCHITEKTURA I TECHNOLOGIA (The Core Directives)
+
+### 1.1 Strategia "Power Couple"
+| Komponent | Technologia | Cel |
+| :--- | :--- | :--- |
+| **Rdzeń (Backend)** | Python (Django/FastAPI) | Szybkość logiczna i ML |
+| **Interfejs (Front/Mobile)** | TypeScript (React 19 / RN 0.81) | Typowanie i wydajność UI |
+| **Design System** | Tamagui / Mantine v7 | Spójność Cyber-Monolith |
+| **Orkiestracja** | Kubernetes (Kind/Podman) | Cloud-Native Parity |
+
+*   **Zasada Izolacji SaaS:** Baza (PostgreSQL/Citus) to usługa zewnętrzna. Kod SPORT jest wolny od copyleft (GPL).
+*   **Suwerenność Ownera:** Nadrzędny `Owner Panel` do zarządzania całą siecią miast i korporacji.
+
+### 1.2 Wydajność i Jakość
+*   **Mandat 60 FPS:** Telemetria MUSZĄ działać na GPU (Skia). Maksymalny czas wątku UI: **16ms**.
+*   **Zero-Regression QA:** Naprawa błędu wymaga testu reprodukującego ZANIM powstanie poprawka.
+*   **Ewolucja API:** Obowiązek kompatybilności wstecznej i semantycznego wersjonowania (SemVer).
 
 ---
 
-## 2. FILARY INŻYNIERYJNE (The Core Directives)
+## 🤖 FILAR II: AGENTIC WORKFLOW (AI-First Protocols)
 
-### I. Strategia Technologiczna ("Power Couple")
-*   **Zasada 1:** Rdzeń to unifikacja: **Python (Backend)** + **TypeScript (Frontend/Mobile)**. Nienaruszalny stos: Next.js 15, RN 0.81, Mantine v7, Skia, Django/FastAPI, Kubernetes.
-*   **Zasada 2 (Izolacja SaaS):** Baza danych (PostgreSQL/Citus) to usługa zewnętrzna. Kod SPORT pozostaje czysty i chroniony przed infekcją copyleft (GPL).
-*   **Zasada 3 (Suwerenność Ownera):** Najwyższy poziom to **Platform Owner**. Zarządzanie przez odizolowany `Owner Panel`, nadrzędny wobec administracji miast.
+### 2.1 Gemini CLI (Narzędzie Nadrzędne)
+*   **Tożsamość:** Alias `geminicli`, binarka `gemini.cmd`.
+*   **Ścieżka (Win):** `C:\Users\akarn\AppData\Roaming\npm\gemini.cmd`
+*   **Zastosowanie:** Audyty, ewolucja kodu, generowanie raportów. Złożone zadania delegowane do modelu `gemini-3.1-pro-preview`.
 
-### II. Bezpieczeństwo i Prawo
-*   **Zasada 4 (Zgodność):** 100% zgodności z RODO/GDPR oraz przepisami skarbowymi (VAT OSS/JPK).
-*   **Zasada 5 (Privacy-by-Design):** Bezpieczeństwo finansowe (PCI DSS) i prywatność lokalizacji są priorytetem najwyższego rzędu (Article 10).
-
-### III. Jakość i Wydajność (Enterprise Standard)
-*   **Zasada 10 (Cloud-Native Parity):** Lokalny klaster (Kind/Podman) = Produkcja (1:1). Rygorystyczne limity zasobów.
-*   **Zasada 11 (Ewolucja API):** Obowiązek kompatybilności wstecznej i semantycznego wersjonowania.
-*   **Zasada 12 (Mandat 60 FPS):** Telemetria i wykresy MUSZĄ działać na GPU (Skia). Maksymalny czas wątku UI: 16ms.
-*   **Zasada 13 (Zero-Regression QA):** Naprawa błędu wymaga testu reprodukującego ZANIM powstanie poprawka.
+### 2.2 Higiena Pracy Hybrydowej (Zasada 14)
+*   **Junior/Senior Split:** `Flash` (Szkielety/UI), `Pro` (Logika/Optymalizacja).
+*   **Performance Markers:** Kod krytyczny (Legend-State) MUSI posiadać komentarz `[PERFORMANCE CRITICAL]`.
+*   **Sanity Check:** Każda zmiana Flasha w logice wymaga weryfikacji `tsc` lub Audytu Pro.
 
 ---
 
-## 3. AGENTIC WORKFLOW & PROTOKOŁY
+## 🔄 FILAR III: CYKL ŻYCIA PROJEKTU (The Milestone Loop)
 
-### IV. Współpraca z AI (Agentic Engineering)
-*   **Zasada 7 (AI-First):** Narzędzie **Gemini CLI** (alias: `geminicli`, binarka: `gemini.cmd`) jest nienaruszalnym elementem ekosystemu. 
-    *   *Path (Windows):* `C:\Users\akarn\AppData\Roaming\npm\gemini.cmd`.
-    *   *Usage:* Używane do audytów, generowania raportów i ewolucji kodu.
-*   **Zasada 8 (Heavy Duty Analysis):** Złożone zadania delegowane do **Gemini CLI** (model: `gemini-3.1-pro-preview`). Integracja wyników 1:1.
-*   **Zasada 14 (Model Hybrid Hygiene):** Przy pracy hybrydowej (Flash + Pro) obowiązuje rygor prewencji:
-    *   **Junior/Senior Split:** Flash służy do szkieletów (boilerplate/UI), Pro do logiki i optymalizacji.
-    *   **Performance Markers:** Kod krytyczny (np. Legend-State) MUSI posiadać komentarz `[PERFORMANCE CRITICAL]`, aby uniknąć błędnej refaktoryzacji przez lżejsze modele.
-    *   **Sanity Check:** Każda zmiana Flasha w logice rdzenia wymaga weryfikacji przez `tsc` lub Audyt modelem Pro.
+Każdy Kamień Milowy MUSI zakończyć się następującą sekwencją:
+1.  **Audit:** `gemini -p "Analyze state... and generate report"` (Analiza stanu).
+2.  **Documentation:** Wpis do `docs/audits/code_and_docs_audit.md`.
+3.  **Commit:** `git commit -m "milestone: ..."` (Jasne odniesienie do wersji).
+4.  **Push:** Synchronizacja ze zdalnym repozytorium.
 
-### V. Zarządzanie Postępem (The Milestone Loop)
-*   **Zasada 9 (Protocol):** Każdy Milestone MUSI zakończyć się następującą sekwencją:
-    1.  **Audit:** Uruchomienie `gemini -p "Analyze state... and generate report"` dla bieżącego etapu.
-    2.  **Documentation:** Wpis do `docs/audits/code_and_docs_audit.md` oraz aktualizacja planu implementacji.
-    3.  **Commit:** `git commit -m "milestone: ..."` z jasnym odniesieniem do wersji.
-    4.  **Push:** Synchronizacja ze zdalnym repozytorium.
+---
 
-### VI. Disaster Recovery (Plan Ratunkowy)
-W przypadku awarii sprzętu:
-1. **Bootstrap:** Uruchom `.\setup-environment.ps1` (instalacja narzędzi).
+## 🛡️ FILAR IV: BEZPIECZEŃSTWO I ZGODNOŚĆ
+
+*   **Privacy-by-Design:** Absolutny priorytet prywatności lokalizacji (Article 10) oraz PCI DSS.
+*   **Zgodność:** 100% zgodności z RODO/GDPR i przepisami skarbowymi (VAT OSS/JPK).
+*   **Non-Root:** Kontenery MUSZĄ działać jako nie-root (UID 1001/101).
+
+---
+
+## 🎨 ESTETYKA "CYBER-MONOLITH"
+
+*   **Kolory:** Primary: **Cyan (#00D1FF)**, Accent: **Purple (#B066FF)**.
+*   **Styl:** Mica/Fluent, Glassmorphism, Spring Animations.
+
+---
+
+## 🚨 DISASTER RECOVERY (Plan Ratunkowy)
+1. **Bootstrap:** `.\setup-environment.ps1` (Instalacja narzędzi).
 2. **Klaster:** `kind create cluster --name kind-cluster`.
-3. **Start:** `.\dev.ps1` (automatyczna odbudowa świata).
+3. **Start:** `.\dev.ps1` (Automatyczna odbudowa świata).
 
 ---
 
-## 4. ESTETYKA "CYBER-MONOLITH"
-Obowiązkowy fundament wizualny:
-*   **Primary:** Cyan (#00D1FF)
-*   **Accent:** Purple (#B066FF)
-*   **Style:** Mica/Fluent, Glassmorphism, Spring Animations.
-
----
-
-## 5. REJESTR KAMIENI MILOWYCH (Milestone Tracker)
-- [x] **v2.1 Gold Master (K8s & Security):** Pełna orkiestracja + Audyt 0-podatności. (Zakończone)
-- [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA. (Zakończone)
+## 🏁 REJESTR KAMIENI MILOWYCH (Milestone Tracker)
+- [x] **v2.1 Gold Master (K8s & Security):** Pełna orkiestracja + Audyt 0-podatności.
+- [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA.
+- [x] **Phase 4 Mobile Upgrade:** Migracja na Tamagui + Legend-State.
 - [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze. (W toku)
