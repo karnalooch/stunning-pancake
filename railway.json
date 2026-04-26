@@ -6,7 +6,8 @@
         "root": "backend"
       },
       "build": {
-        "builder": "DOCKERFILE"
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile"
       },
       "deploy": {
         "numReplicas": 1,
@@ -19,7 +20,8 @@
         "root": "telemetry"
       },
       "build": {
-        "builder": "DOCKERFILE"
+        "builder": "DOCKERFILE",
+        "dockerfilePath": "Dockerfile"
       },
       "deploy": {
         "numReplicas": 1,
