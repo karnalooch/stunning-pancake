@@ -25,7 +25,7 @@ export const AntiCheat = () => {
   const layers = [
     new ScatterplotLayer({
       id: 'scatter-layer',
-      data: anomalies || [],
+      data: Array.isArray(anomalies) ? anomalies : [],
       getPosition: (d: any) => [22.29 + (Math.random() - 0.5) * 0.05, 52.17 + (Math.random() - 0.5) * 0.05], // Simulating spatial distribution around Siedlce for demo
       getFillColor: (d: any) => d.score > 0.9 ? [255, 0, 0, 200] : [255, 204, 0, 200],
       getRadius: (d: any) => d.score * 50,
@@ -92,10 +92,10 @@ export const AntiCheat = () => {
             <Stack gap="xs">
               {isLoading ? (
                 <Group justify="center" p="xl"><Loader2 className="animate-spin" /></Group>
-              ) : anomalies?.length === 0 ? (
+              ) : !Array.isArray(anomalies) || anomalies.length === 0 ? (
                 <Text size="sm" c="dimmed" p="md">No anomalies detected.</Text>
               ) : (
-                anomalies?.map((item: any) => (
+                anomalies.map((item: any) => (
                   <Group 
                     key={item.id} 
                     p="xs" 
