@@ -8,19 +8,31 @@ Te zasady są nadrzędne wobec wszystkich innych wytycznych technicznych i opera
     *   **Frontend/Mobile:** TypeScript (React / React Native Expo 54) – spójność UI i współdzielenie logiki.
     *   Stos technologiczny: **Next.js 15, RN 0.81, Mantine v7, Skia, PowerSync, Django/FastAPI, Kubernetes (K8s)** stanowi nienaruszalny fundament silnika.
 
-2.  **Zasada Izolacji Stosu Danych (Data Stack Isolation)**: Każdy moduł platformy SPORT musi komunikować się z warstwą danych wyłącznie poprzez standardowe API sieciowe i protokoły (np. PostgreSQL Wire Protocol). Zabrania się ścisłego wiązania (tight coupling) kodu źródłowego aplikacji z wewnętrznymi bibliotekami komponentów objętych licencją AGPL (np. Citus). Komponenty te muszą być traktowane jako niezależne usługi infrastrukturalne, co gwarantuje pełną ochronę własności intelektualnej kodu SPORT w każdym modelu dystrybucji (SaaS i On-Premise).
+2.  **Zasada Izolacji Stosu Danych (SaaS Integrity):** Citus i PostgreSQL są traktowane jako zewnętrzne usługi systemowe. Kod platformy SPORT (Backend/Owner) pozostaje w 100% zamknięty i chroniony przed "infekcją" AGPL.
 
-3.  **Zgodność z Prawem**: Cały projekt, od logiki backendu po interfejs użytkownika, musi być w 100% zgodny z obowiązującymi przepisami prawa (w szczególności RODO/GDPR oraz przepisami skarbowymi VAT OSS/JPK).
+3.  **Zasada Suwerenności Ownera (Sovereign Control):** Najwyższym poziomem dostępu jest **Platform Owner** (Ty). Zarządzanie systemem odbywa się przez dedykowany `Owner Panel`, odseparowany od ról administracyjnych miast.
 
-4.  **Prywatność i Bezpieczeństwo Ponad Wszystko**: Bezpieczeństwo transakcji finansowych (PCI DSS) oraz absolutna prywatność danych lokalizacyjnych użytkownika są priorytetem najwyższego rzędu. Każda funkcja musi być projektowana przez pryzmat *Privacy-by-Design* (Article 10).
+4.  **Zgodność z Prawem**: Cały projekt, od logiki backendu po interfejs użytkownika, musi być w 100% zgodny z obowiązującymi przepisami prawa (w szczególności RODO/GDPR oraz przepisami skarbowymi VAT OSS/JPK).
 
-5.  **Identytet Wizualny "Cyber-Monolith"**: Obowiązkowym schematem kolorystycznym platformy jest **Cyan (#00D1FF)** jako kolor podstawowy oraz **Purple (#B066FF)** jako kolor akcentowy. Wszystkie moduły white-label muszą respektować ten fundament wizualny.
+5.  **Prywatność i Bezpieczeństwo Ponad Wszystko**: Bezpieczeństwo transakcji finansowych (PCI DSS) oraz absolutna prywatność danych lokalizacyjnych użytkownika są priorytetem najwyższego rzędu. Każda funkcja musi być projektowana przez pryzmat *Privacy-by-Design* (Article 10).
+
+6.  **Identytet Wizualny "Cyber-Monolith"**: Obowiązkowym schematem kolorystycznym platformy jest **Cyan (#00D1FF)** jako kolor podstawowy oraz **Purple (#B066FF)** jako kolor akcentowy. Wszystkie moduły white-label muszą respektować ten fundament wizualny.
+7.  **Zasada Agentic Engineering (AI-First Development)**: Projekt jest rozwijany we współpracy z autonomicznymi subagentami. Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu, służącym do automatyzacji, audytów i ewolucji kodu w czasie rzeczywistym.
+8.  **Protokół Milestone Integrity**: Każde zakończenie Kamienia Milowego (Milestone) MUSI zostać sfinalizowane przez subagenta w trzech krokach: (1) Pełna aktualizacja dokumentacji (docs/), (2) Commit zmian, (3) Push do repozytorium zdalnego.
 
 
-## 0.1 Milestone Tracker
-- **Milestone 6: Hyper-Performance Foundation (Completed: 2026-04-25)**: Ustanowienie stosu technologicznego 2025/2026 jako oficjalnego fundamentu silnika „SPORT”.
-- **Milestone 7: Gold Master Alignment (Completed: 2026-04-26)**: Pełna unifikacja dokumentacji strategicznej z implementacją TypeScript. Usunięcie długu technologicznego związanego z legacy Flutter.
-- **Milestone 8: Enterprise Cluster Orchestration (Completed: 2026-04-26)**: Wdrożenie pełnej orkiestracji Kubernetes (K8s) z automatycznym skalowaniem (HPA), samoleczeniem i izolacją bezpieczeństwa.
+### Status Kamieni Milowych (v2.1):
+- [x] **Unifikacja Mobile:** Expo 54 + RN 0.81 (Zakończone)
+- [x] **Orkiestracja K8s:** Triple-Redundant Backend + Sovereign Owner Panel (Zakończone)
+- [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze (W toku)
+
+
+## 0.2 Disaster Recovery (Odzyskiwanie Systemu)
+W przypadku utraty środowiska pracy, proces odtworzenia pełnej mocy deweloperskiej jest zautomatyzowany:
+1. **Klonowanie:** Pobierz repozytorium z kodem.
+2. **Bootstrap:** Uruchom `.\setup-environment.ps1` (zainstaluje Podmana, K8s, Skaffolda).
+3. **Klaster:** Uruchom Podman Desktop, a następnie `kind create cluster --name kind-cluster`.
+4. **Start:** Uruchom `.\dev.ps1` – system sam zbuduje obrazy i postawi infrastrukturę.
 
 ## 1. Mission and Identity
 A B2B/B2C sports platform built 100% on **Permissive Open Source** foundations and a rigorous **Safety Constitution** (AI Quality Standards). The project aims to provide advanced telemetry, gamification, and social tools while maintaining full commercial freedom (White-Label) without the risk of copyleft (GPL) infection. Licensing for all frontend/mobile modules is **MIT**.

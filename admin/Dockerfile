@@ -17,7 +17,14 @@ RUN npm run build
 
 # Use Nginx to serve the static files
 FROM nginx:alpine
+
+# Configure nginx to run as non-root on 8080
+RUN sed -i 's/listen \(.*\)80;/listen 8080;/' /etc/nginx/conf.d/default.conf && \
+    sed -i '/user  nginx;/d' /etc/nginx/nginx.conf && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+
+USER 101
 COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

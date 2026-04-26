@@ -1,0 +1,20 @@
+apiVersion: skaffold/v2beta28
+kind: Config
+metadata:
+  name: sport-platform
+build:
+  local:
+    push: false
+  artifacts:
+    - image: localhost/sport-backend
+      context: backend
+      docker:
+        dockerfile: Dockerfile
+    - image: localhost/sport-owner
+      context: admin
+      docker:
+        dockerfile: Dockerfile
+deploy:
+  kustomize:
+    paths:
+      - infrastructure/kubernetes/base

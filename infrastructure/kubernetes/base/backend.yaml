@@ -28,10 +28,12 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       securityContext:
         runAsNonRoot: true
+        runAsUser: 1001
         fsGroup: 2000
       containers:
       - name: django
         image: sport-backend:latest
+        imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
