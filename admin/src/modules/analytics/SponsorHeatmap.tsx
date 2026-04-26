@@ -35,7 +35,7 @@ export const SponsorHeatmap = () => {
         controller={true}
         layers={layers}
       >
-        <Map mapStyle="https://tiles.openfreemap.org/styles/dark" />
+        <Map mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" />
       </DeckGL>
     </Card>
   );

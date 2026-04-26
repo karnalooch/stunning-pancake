@@ -61,7 +61,7 @@ export const GlobalHeatmap = () => {
         layers={layers}
       >
         <Map
-          mapStyle="https://tiles.openfreemap.org/styles/dark"
+          mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         />
       </DeckGL>
     </Card>
