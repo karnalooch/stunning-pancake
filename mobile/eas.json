@@ -10,7 +10,6 @@
         "buildType": "apk"
       },
       "env": {
-        "MAPBOX_DOWNLOAD_TOKEN": "sk.ey...",
         "BACKGROUND_GEOLOCATION_LICENSE": ""
       }
     },

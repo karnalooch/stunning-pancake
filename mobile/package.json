@@ -13,7 +13,6 @@
     "@powersync/react-native": "^1.0.0",
     "@react-navigation/bottom-tabs": "^7.15.10",
     "@react-navigation/native": "^7.2.2",
-    "@rnmapbox/maps": "^10.1.34",
     "@sentry/react-native": "~7.11.0",
     "@shopify/react-native-skia": "2.4.18",
     "@tamagui/config": "2.0.0-rc.41",

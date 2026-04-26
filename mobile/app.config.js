@@ -59,13 +59,6 @@ export default ({ config }) => {
     "plugins": [
       "@sentry/react-native",
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsImpl": "mapbox",
-          "RNMapboxMapsDownloadToken": process.env.MAPBOX_DOWNLOAD_TOKEN || "sk.ey..."
-        }
-      ],
-      [
         "react-native-background-geolocation",
         {
           "license": process.env.BACKGROUND_GEOLOCATION_LICENSE || ""
