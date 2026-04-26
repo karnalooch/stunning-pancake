@@ -39,7 +39,8 @@ export const LandingPage = () => {
         />
         
         <Container size="lg" style={{ position: 'relative', zIndex: 1 }}>
-          <Stack align="center" gap="xl" textAlign="center">
+          <Stack align="center" gap="xl" ta="center">
+
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
               <Badge variant="dot" color="blue" size="lg" p="md">V2.0 NEXT-GEN UPDATE</Badge>
             </motion.div>

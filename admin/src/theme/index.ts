@@ -1,4 +1,5 @@
-import { createTheme, MantineColorsTuple } from '@mantine/core';
+import { createTheme, type MantineColorsTuple } from '@mantine/core';
+
 
 // Based on assets/branding/design_tokens.json
 const primaryCyan: MantineColorsTuple = [

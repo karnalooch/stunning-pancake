@@ -1,4 +1,4 @@
-import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal } from '@mantine/core';
+import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal, ScrollArea } from '@mantine/core';
 import { useState } from 'react';
 import { WinWindow } from '../../core/Layout';
 import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus } from 'lucide-react';
@@ -17,7 +17,6 @@ export const Users = () => {
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
-  const isTenantAdmin = user?.role === 'TENANT_ADMIN';
 
   const windowTitle = isGlobalOwner 
     ? "User Audit Suite — Global Registry" 
@@ -36,16 +35,14 @@ export const Users = () => {
               className="fluent-acrylic"
             />
             <Group>
-              {(isGlobalOwner || isTenantAdmin) && (
-                <Button 
-                  leftSection={<UserPlus size={16} />} 
-                  variant="filled" 
-                  color="blue"
-                  onClick={() => setInviteModalOpened(true)}
-                >
-                  Invite Moderator
-                </Button>
-              )}
+              <Button 
+                leftSection={<UserPlus size={16} />} 
+                variant="filled" 
+                color="cyan"
+                onClick={() => setInviteModalOpened(true)}
+              >
+                Invite Staff
+              </Button>
               <Button leftSection={<UserCog size={16} />} variant="light" color="gray">
                 Batch Actions
               </Button>
@@ -76,7 +73,7 @@ export const Users = () => {
                   <Table.Td><Text size="sm">{user.tenant}</Text></Table.Td>
                   <Table.Td>
                     <Badge 
-                      color={user.status === 'Active' ? 'green' : user.status === 'Suspicious' ? 'yellow' : 'red'} 
+                      color={user.status === 'Active' ? 'cyan' : user.status === 'Suspicious' ? 'yellow' : 'red'} 
                       variant="light"
                       size="xs"
                     >
@@ -92,7 +89,7 @@ export const Users = () => {
                   </Table.Td>
                   <Table.Td>
                     <Group gap={0} justify="flex-end">
-                      <ActionIcon variant="subtle" color="blue" onClick={() => setSelectedUser(user)}>
+                      <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(user)}>
                         <Eye size={16} />
                       </ActionIcon>
                       <ActionIcon variant="subtle" color="gray"><MoreVertical size={16} /></ActionIcon>
@@ -135,13 +132,13 @@ export const Users = () => {
                 {[1, 2, 3].map((i) => (
                   <Group key={i} p="sm" className="fluent-acrylic" style={{ borderRadius: '6px' }} justify="space-between">
                     <Group>
-                      <Activity size={16} color="var(--color-win-accent-dark)" />
+                      <Activity size={16} color="#00D1FF" />
                       <Stack gap={0}>
                         <Text size="sm">Morning Run - 5.2km</Text>
                         <Text size="xs" c="dimmed">Today, 06:30 AM</Text>
                       </Stack>
                     </Group>
-                    <Badge color="green" variant="light">Valid</Badge>
+                    <Badge color="cyan" variant="light">Valid</Badge>
                   </Group>
                 ))}
               </Stack>
@@ -174,7 +171,6 @@ export const Users = () => {
           </Stack>
         )}
       </Drawer>
-      </Drawer>
 
       <Modal
         opened={inviteModalOpened}
@@ -190,7 +186,7 @@ export const Users = () => {
           </Text>
           <TextInput label="Email Address" placeholder="moderator@city.gov" required />
           <TextInput label="Full Name" placeholder="Jan Kowalski" />
-          <Button fullWidth onClick={() => setInviteModalOpened(false)} color="blue" mt="md">
+          <Button fullWidth onClick={() => setInviteModalOpened(false)} color="cyan" mt="md">
             Send Invitation Token
           </Button>
         </Stack>

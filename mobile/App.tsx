@@ -18,10 +18,10 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 
 const GEOFENCE_TASK_NAME = 'poi-geofence-task';
 
-TaskManager.defineTask(GEOFENCE_TASK_NAME, ({ data: { eventType, region }, error }: any) => {
+TaskManager.defineTask(GEOFENCE_TASK_NAME, async ({ data: { eventType, region }, error }: any) => {
   if (error) return;
   if (eventType === Location.GeofencingEventType.Enter) {
-    Notifications.scheduleNotificationAsync({
+    await Notifications.scheduleNotificationAsync({
       content: {
         title: "🎁 Reward Nearby!",
         body: `You just entered the ${region.identifier} zone. Stop by to claim your reward!`,
@@ -31,6 +31,7 @@ TaskManager.defineTask(GEOFENCE_TASK_NAME, ({ data: { eventType, region }, error
     });
   }
 });
+
 
 const Tab = createBottomTabNavigator();
 

@@ -1,7 +1,7 @@
 import { Box, Group, Stack, Text } from '@mantine/core';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Square, Gift } from 'lucide-react';
-import { useAuth } from '../auth/useAuth';
+import { useAuth } from './auth/useAuth';
 import { motion } from 'framer-motion';
 
 export const Sidebar = ({ mode }: { mode: string }) => {
@@ -17,9 +17,7 @@ export const Sidebar = ({ mode }: { mode: string }) => {
     { icon: <Settings size={18} />, label: 'Settings', path: '/admin/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
   ];
 
-
-  const visibleItems = navItems.filter(item => user && item.roles.includes(user.role));
-
+  const visibleItems = navItems.filter(item => user && item.roles.includes(item.roles.includes(user.role) ? user.role : ''));
 
   return (
     <Box 
@@ -30,14 +28,14 @@ export const Sidebar = ({ mode }: { mode: string }) => {
       style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
     >
       <Group mb="xl" px="sm">
-        <Box w={32} h={32} bg="var(--color-win-accent-dark)" style={{ borderRadius: '6px' }} />
+        <Box w={32} h={32} bg="var(--color-cyan-main)" style={{ borderRadius: '6px' }} />
         <Stack gap={0}>
           <Text size="sm" fw={800} style={{ letterSpacing: '-0.02em' }}>SPORT OS</Text>
           <Text size="xs" c="dimmed">{mode}</Text>
         </Stack>
       </Group>
 
-      {visibleItems.map((item) => {
+      {navItems.filter(item => user && item.roles.includes(user.role)).map((item) => {
         const active = location.pathname === item.path;
         return (
           <Link to={item.path} key={item.label} style={{ textDecoration: 'none', color: 'inherit' }}>
@@ -46,12 +44,12 @@ export const Sidebar = ({ mode }: { mode: string }) => {
               style={{ 
                 borderRadius: '6px', 
                 cursor: 'pointer',
-                background: active ? 'rgba(255,255,255,0.08)' : 'transparent',
-                border: active ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                background: active ? 'rgba(0, 209, 255, 0.1)' : 'transparent',
+                border: active ? '1px solid rgba(0, 209, 255, 0.2)' : '1px solid transparent',
                 transition: 'background 0.2s ease'
               }}
             >
-              <Box style={{ color: active ? 'var(--color-win-accent-dark)' : 'rgba(255,255,255,0.6)' }}>
+              <Box style={{ color: active ? 'var(--color-cyan-main)' : 'rgba(255,255,255,0.6)' }}>
                 {item.icon}
               </Box>
               <Text size="sm" fw={active ? 700 : 400}>{item.label}</Text>
@@ -63,12 +61,26 @@ export const Sidebar = ({ mode }: { mode: string }) => {
   );
 };
 
+export const Layout = () => {
+  return (
+    <Box style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: '#000' }}>
+      <Sidebar mode="PRO EDITION" />
+      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', overflow: 'hidden' }}>
+        <Box style={{ flex: 1, overflow: 'auto' }}>
+          <Outlet />
+        </Box>
+        <Taskbar />
+      </Box>
+    </Box>
+  );
+};
+
 export const Taskbar = () => (
   <Box 
     className="fluent-acrylic" 
     h={48} 
     mx="xl" 
-    mb="md"
+    mt="md"
     style={{ 
       borderRadius: '12px',
       display: 'flex',
@@ -79,7 +91,7 @@ export const Taskbar = () => (
     }}
   >
     <Group gap="xs">
-      <Box w={28} h={28} bg="var(--color-win-accent-dark)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
+      <Box w={28} h={28} bg="var(--color-cyan-main)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
       <Box w={28} h={28} bg="rgba(255,255,255,0.05)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
       <Box w={28} h={28} bg="rgba(255,255,255,0.05)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
     </Group>
@@ -102,7 +114,7 @@ export const WinWindow = ({ title, children }: { title: string | React.ReactNode
       <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.1)', userSelect: 'none' }}>
         <Box style={{ opacity: 0.9 }}>
           {typeof title === 'string' ? (
-            <Text size="xs" fw={700} style={{ fontFamily: 'var(--font-segoe)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</Text>
+            <Text size="xs" fw={700} style={{ fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</Text>
           ) : (
             title
           )}
