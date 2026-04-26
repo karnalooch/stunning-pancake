@@ -20,12 +20,17 @@ Te zasady są nadrzędne wobec wszystkich innych wytycznych technicznych i opera
 7.  **Zasada Agentic Engineering (AI-First Development)**: Projekt jest rozwijany we współpracy z autonomicznymi subagentami. Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu, służącym do automatyzacji, audytów i ewolucji kodu w czasie rzeczywistym.
 8.  **Standard Hybrydowej Analizy (Heavy Duty Workflow)**: W przypadku złożonych zadań architektonicznych lub refaktoryzacji, agent deleguje pracę do zewnętrznej instancji **Gemini CLI** (model: `gemini-3.1-pro-preview`). Wyniki z CLI muszą być integrowane 1:1, zachowując spójność logiczną silnika SPORT.
 9.  **Protokół Milestone Integrity**: Każde zakończenie Kamienia Milowego (Milestone) MUSI zostać sfinalizowane przez subagenta w trzech krokach: (1) Pełna aktualizacja dokumentacji (docs/), (2) Commit zmian, (3) Push do repozytorium zdalnego.
+10. **Parzystość Środowisk (Cloud-Native Parity)**: Lokalny klaster deweloperski (Kind/Podman) musi być architektonicznie identyczny (1:1) z produkcją. Wszystkie testy i wdrożenia odbywają się w kontenerach z rygorystycznymi limitami zasobów.
+11. **Ewolucja API (Semantic Compatibility)**: Backend gwarantuje kompatybilność wsteczną dla aplikacji mobilnych i frontendu. Zmiany niszczące (breaking changes) wymagają wersjonowania API i okresu przejściowego dla starych klientów.
+12. **Mandat Wydajnościowy (High-Frequency UI)**: Wszystkie elementy wizualne wymagające wysokiej częstotliwości odświeżania (telemetria, wykresy) MUSZĄ działać bezpośrednio na GPU (Skia/Reanimated). Dopuszczalny czas odpowiedzi głównego wątku UI nie może przekroczyć 16ms (mandat 60 FPS).
+13. **Wymóg Piramidy Jakości (Zero-Regression QA)**: Każdy błąd produkcyjny wymaga napisania testu reprodukującego (Playwright/Pytest) ZANIM zostanie wdrożona poprawka. Krytyczne ścieżki biznesowe muszą posiadać pełne pokrycie testami E2E.
 
 
 ### Status Kamieni Milowych (v2.1):
 - [x] **Unifikacja Mobile:** Expo 54 + RN 0.81 (Zakończone)
 - [x] **Orkiestracja K8s:** Triple-Redundant Backend + Sovereign Owner Panel (Zakończone)
 - [x] **Security Fortress & Recovery:** 0 podatności + Skrypt Bootstrap (Zakończone)
+- [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA (Zakończone)
 - [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze (W toku)
 
 
