@@ -18,12 +18,14 @@ Te zasady są nadrzędne wobec wszystkich innych wytycznych technicznych i opera
 
 6.  **Identytet Wizualny "Cyber-Monolith"**: Obowiązkowym schematem kolorystycznym platformy jest **Cyan (#00D1FF)** jako kolor podstawowy oraz **Purple (#B066FF)** jako kolor akcentowy. Wszystkie moduły white-label muszą respektować ten fundament wizualny.
 7.  **Zasada Agentic Engineering (AI-First Development)**: Projekt jest rozwijany we współpracy z autonomicznymi subagentami. Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu, służącym do automatyzacji, audytów i ewolucji kodu w czasie rzeczywistym.
-8.  **Protokół Milestone Integrity**: Każde zakończenie Kamienia Milowego (Milestone) MUSI zostać sfinalizowane przez subagenta w trzech krokach: (1) Pełna aktualizacja dokumentacji (docs/), (2) Commit zmian, (3) Push do repozytorium zdalnego.
+8.  **Standard Hybrydowej Analizy (Heavy Duty Workflow)**: W przypadku złożonych zadań architektonicznych lub refaktoryzacji, agent deleguje pracę do zewnętrznej instancji **Gemini CLI** (model: `gemini-3.1-pro-preview`). Wyniki z CLI muszą być integrowane 1:1, zachowując spójność logiczną silnika SPORT.
+9.  **Protokół Milestone Integrity**: Każde zakończenie Kamienia Milowego (Milestone) MUSI zostać sfinalizowane przez subagenta w trzech krokach: (1) Pełna aktualizacja dokumentacji (docs/), (2) Commit zmian, (3) Push do repozytorium zdalnego.
 
 
 ### Status Kamieni Milowych (v2.1):
 - [x] **Unifikacja Mobile:** Expo 54 + RN 0.81 (Zakończone)
 - [x] **Orkiestracja K8s:** Triple-Redundant Backend + Sovereign Owner Panel (Zakończone)
+- [x] **Security Fortress & Recovery:** 0 podatności + Skrypt Bootstrap (Zakończone)
 - [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze (W toku)
 
 
