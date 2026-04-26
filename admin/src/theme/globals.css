@@ -1,106 +1,62 @@
-/* src/theme/globals.css */
 @import "tailwindcss";
 
 @theme {
-  /* Windows 11 Accent Colors */
-  --color-win-accent-light: #005fb8;
-  --color-win-accent-dark: #60cdff;
-  --color-win-bg: #f3f3f3;
-  --color-win-bg-dark: #202020;
-  
-  --font-segoe: "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, Arial, sans-serif;
+  --color-primary: #00D1FF;
+  --color-secondary: #B066FF;
+  --color-background-dark: #0B0E14;
+  --color-background-dark-secondary: #1A1F26;
 }
 
 :root {
-  --mantine-font-family: var(--font-segoe);
-  --mantine-radius-default: 8px; /* Win11 standard radius */
-  --mantine-primary-color-filled: var(--color-win-accent-dark);
-}
-
-[data-mantine-color-scheme="dark"] {
-  --mantine-color-body: var(--color-win-bg-dark);
-  --mantine-color-text: #ffffff;
-}
-
-[data-mantine-color-scheme="light"] {
-  --mantine-color-body: var(--color-win-bg);
-  --mantine-color-text: #000000;
-  --mantine-primary-color-filled: var(--color-win-accent-light);
+  --mantine-primary-color: #00D1FF;
+  --color-cyan-main: #00D1FF;
+  --color-purple-main: #B066FF;
 }
 
 body {
+  background-color: var(--color-background-dark);
+  color: white;
+  font-family: 'Inter', sans-serif;
   margin: 0;
-  background-color: var(--color-win-bg-dark); /* Default dark */
-  font-family: var(--font-segoe);
-  /* Windows 11 Bloom / Mica background simulation */
-  background-image: radial-gradient(circle at top left, rgba(96, 205, 255, 0.15), transparent 40%),
-                    radial-gradient(circle at bottom right, rgba(96, 205, 255, 0.05), transparent 40%);
-  background-attachment: fixed;
-  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Fluent Acrylic Surface Utility */
+/* Cyber-Monolith V3.1 (Unified Branding) */
 .fluent-acrylic {
-  background: rgba(32, 32, 32, 0.45);
-  backdrop-filter: blur(40px) saturate(150%);
-  -webkit-backdrop-filter: blur(40px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(26, 31, 38, 0.6) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.fluent-acrylic:hover {
-  background: rgba(45, 45, 45, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-}
-
-/* Premium Gradient Text */
 .text-gradient {
-  background: linear-gradient(135deg, #60cdff 0%, #005fb8 100%);
+  background: linear-gradient(135deg, var(--color-cyan-main) 0%, var(--color-purple-main) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  font-weight: 800;
 }
 
-/* Cyber Glow Effect */
-.glow-blue {
-  box-shadow: 0 0 15px rgba(96, 205, 255, 0.3);
+.glow-cyan {
+  box-shadow: 0 0 30px rgba(0, 209, 255, 0.15);
 }
 
-.glow-lime {
-  box-shadow: 0 0 15px rgba(190, 230, 0, 0.3);
+.glow-purple {
+  box-shadow: 0 0 30px rgba(176, 102, 255, 0.15);
 }
 
-/* Animated Background for Stats */
-@keyframes mesh-gradient {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* Custom Scrollbar for God Mode */
+::-webkit-scrollbar {
+  width: 6px;
 }
 
-.stat-card-premium {
-  position: relative;
-  overflow: hidden;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.stat-card-premium::after {
-  content: "";
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(96, 205, 255, 0.05) 0%, transparent 70%);
-  pointer-events: none;
-  animation: mesh-gradient 10s infinite linear;
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
 }
 
-[data-mantine-color-scheme="light"] .fluent-acrylic {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-cyan-main);
 }
-

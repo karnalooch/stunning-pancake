@@ -82,9 +82,10 @@ class VoucherRedeemView(generics.UpdateAPIView):
 class TelemetryLiveView(generics.GenericAPIView):
     """
     Proxy view for fetching live telemetry from Traccar.
-    Authorized for Admin roles.
+    Authorized for Admin and Moderator roles.
     """
-    permission_classes = (permissions.AllowAny,)
+    permission_classes = (permissions.IsAuthenticated,)
+
 
     def get(self, request):
         positions = TelemetryService.get_live_positions()
@@ -145,7 +146,8 @@ class LeaderboardView(generics.GenericAPIView):
     """
     permission_classes = (permissions.IsAuthenticated,)
 
-    def get(self):
+    def get(self, request):
+
         from django.db.models import Sum
         from django.contrib.auth import get_user_model
         User = get_user_model()

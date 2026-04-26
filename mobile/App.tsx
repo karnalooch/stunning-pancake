@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, Alert, TextInput, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Alert, TextInput, TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import * as Notifications from 'expo-notifications';
@@ -7,6 +7,7 @@ import * as TaskManager from 'expo-task-manager';
 import * as Location from 'expo-location';
 
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
+import { Theme } from './src/theme/Theme';
 
 // Screens
 import { TrackingScreen } from './src/screens/TrackingScreen';
@@ -40,7 +41,7 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <View style={styles.authContainer}>
-        <Text style={styles.logo}>SPORT<Text style={{ color: '#2563EB' }}>.</Text></Text>
+        <Text style={styles.logo}>SPORT<Text style={{ color: Theme.colors.primary }}>.</Text></Text>
         <Text style={styles.authTitle}>{authMode === 'login' ? 'Welcome Back' : 'Create Account'}</Text>
         <TextInput placeholder="Email" placeholderTextColor="#666" style={styles.input} />
         <TextInput placeholder="Password" placeholderTextColor="#666" secureTextEntry style={styles.input} />
@@ -62,13 +63,13 @@ export default function App() {
         screenOptions={({ route }) => ({
           headerShown: false,
           tabBarStyle: { 
-            backgroundColor: '#0a0a0a', 
+            backgroundColor: Theme.colors.card, 
             borderTopWidth: 0,
             height: 90,
             paddingBottom: 30
           },
-          tabBarActiveTintColor: '#2563EB',
-          tabBarInactiveTintColor: '#444',
+          tabBarActiveTintColor: Theme.colors.primary,
+          tabBarInactiveTintColor: Theme.colors.textMuted,
           tabBarIcon: ({ color, size }) => {
             if (route.name === 'Home') return <Home size={size} color={color} />;
             if (route.name === 'History') return <History size={size} color={color} />;
@@ -91,11 +92,11 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  authContainer: { flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 40 },
+  authContainer: { flex: 1, backgroundColor: Theme.colors.background, justifyContent: 'center', padding: 40 },
   logo: { color: 'white', fontSize: 42, fontWeight: '900', textAlign: 'center', marginBottom: 40 },
   authTitle: { color: 'white', fontSize: 18, fontWeight: '700', marginBottom: 20 },
   input: { backgroundColor: '#111', padding: 16, borderRadius: 12, color: 'white', marginBottom: 16, borderWidth: 1, borderColor: '#222' },
-  button: { backgroundColor: '#2563EB', padding: 18, borderRadius: 12, marginTop: 10 },
+  button: { backgroundColor: Theme.colors.primary, padding: 18, borderRadius: 12, marginTop: 10 },
   buttonText: { color: 'white', fontWeight: '900', textAlign: 'center' },
   toggleText: { color: '#666', textAlign: 'center', marginTop: 24, fontSize: 13 }
 });
