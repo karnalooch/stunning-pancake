@@ -94,6 +94,7 @@ async def startup() -> None:
     pool = await get_pool()
     # Ensure hypertable exists (idempotent)
     async with pool.acquire() as conn:
+        await conn.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS gps_points (
                 time        TIMESTAMPTZ     NOT NULL,
