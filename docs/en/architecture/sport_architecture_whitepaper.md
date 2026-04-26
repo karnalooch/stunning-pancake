@@ -121,7 +121,7 @@ Using libraries such as `django-rls-tenants` allows for the automation of policy
 
 ## Gamification Psychology and User Retention
 
-A sports application must act as a motivator. Leaderboards are the most powerful tool for habit building, provided they are designed according to the principles of behavioral psychology.
+ A sports application must act as a motivator. Leaderboards are the most powerful tool for habit building, provided they are designed according to the principles of behavioral psychology.
 
 ### Building Engagement through Rankings and Badges
 It is crucial to use dynamic and segmented (local) rankings. A user seeing themselves in 10,000th place globally feels demotivated, but the same user in 3rd place in their company or district gains a strong incentive to act. Regular ranking resets prevent leader fatigue.
