@@ -33,3 +33,6 @@ infrastructure/traccar/logs/
 # IDE
 .vscode/settings.json
 .kilo/plans/1777069031707-glowing-comet.md
+LINK_DO_APLIKACJI.txt
+.gitignore
+QR_KOD.png
