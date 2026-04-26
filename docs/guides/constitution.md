@@ -1,45 +1,56 @@
-# PROJECT CONSTITUTION: "SPORT" (v2.1 Gold Master)
+# ⚖️ KONSTYTUCJA PLATFORMY SPORT (v2.1 Gold Master)
+> "Sovereignty through Code. Performance through Discipline."
 
-## 0. Żelazne Zasady (Core Directives)
-Te zasady są nadrzędne wobec wszystkich innych wytycznych technicznych i operacyjnych:
+## 1. MISJA I TOŻSAMOŚĆ (Mission & Identity)
+Platforma SPORT to wysokowydajny ekosystem B2B/B2C zbudowany na fundamentach **Permissive Open Source** (MIT/Apache 2.0). Naszym celem jest dostarczenie precyzyjnej telemetrii, grywalizacji i narzędzi społecznościowych przy zachowaniu pełnej wolności komercyjnej (White-Label) i absolutnej prywatności użytkownika.
 
-1.  **Strategia "Power Couple" (Python + TypeScript)**: Rdzeń systemu opiera się na unifikacji stosu technologicznego.
-    *   **Backend:** Python (Django/FastAPI) – siła analityczna i AI.
-    *   **Frontend/Mobile:** TypeScript (React / React Native Expo 54) – spójność UI i współdzielenie logiki.
-    *   Stos technologiczny: **Next.js 15, RN 0.81, Mantine v7, Skia, PowerSync, Django/FastAPI, Kubernetes (K8s)** stanowi nienaruszalny fundament silnika.
+---
 
-2.  **Zasada Izolacji Stosu Danych (SaaS Integrity):** Citus i PostgreSQL są traktowane jako zewnętrzne usługi systemowe. Kod platformy SPORT (Backend/Owner) pozostaje w 100% zamknięty i chroniony przed "infekcją" AGPL.
+## 2. FILARY INŻYNIERYJNE (The Core Directives)
 
-3.  **Zasada Suwerenności Ownera (Sovereign Control):** Najwyższym poziomem dostępu jest **Platform Owner** (Ty). Zarządzanie systemem odbywa się przez dedykowany `Owner Panel`, odseparowany od ról administracyjnych miast.
+### I. Strategia Technologiczna ("Power Couple")
+*   **Zasada 1:** Rdzeń to unifikacja: **Python (Backend)** + **TypeScript (Frontend/Mobile)**. Nienaruszalny stos: Next.js 15, RN 0.81, Mantine v7, Skia, Django/FastAPI, Kubernetes.
+*   **Zasada 2 (Izolacja SaaS):** Baza danych (PostgreSQL/Citus) to usługa zewnętrzna. Kod SPORT pozostaje czysty i chroniony przed infekcją copyleft (GPL).
+*   **Zasada 3 (Suwerenność Ownera):** Najwyższy poziom to **Platform Owner**. Zarządzanie przez odizolowany `Owner Panel`, nadrzędny wobec administracji miast.
 
-4.  **Zgodność z Prawem**: Cały projekt, od logiki backendu po interfejs użytkownika, musi być w 100% zgodny z obowiązującymi przepisami prawa (w szczególności RODO/GDPR oraz przepisami skarbowymi VAT OSS/JPK).
+### II. Bezpieczeństwo i Prawo
+*   **Zasada 4 (Zgodność):** 100% zgodności z RODO/GDPR oraz przepisami skarbowymi (VAT OSS/JPK).
+*   **Zasada 5 (Privacy-by-Design):** Bezpieczeństwo finansowe (PCI DSS) i prywatność lokalizacji są priorytetem najwyższego rzędu (Article 10).
 
-5.  **Prywatność i Bezpieczeństwo Ponad Wszystko**: Bezpieczeństwo transakcji finansowych (PCI DSS) oraz absolutna prywatność danych lokalizacyjnych użytkownika są priorytetem najwyższego rzędu. Każda funkcja musi być projektowana przez pryzmat *Privacy-by-Design* (Article 10).
+### III. Jakość i Wydajność (Enterprise Standard)
+*   **Zasada 10 (Cloud-Native Parity):** Lokalny klaster (Kind/Podman) = Produkcja (1:1). Rygorystyczne limity zasobów.
+*   **Zasada 11 (Ewolucja API):** Obowiązek kompatybilności wstecznej i semantycznego wersjonowania.
+*   **Zasada 12 (Mandat 60 FPS):** Telemetria i wykresy MUSZĄ działać na GPU (Skia). Maksymalny czas wątku UI: 16ms.
+*   **Zasada 13 (Zero-Regression QA):** Naprawa błędu wymaga testu reprodukującego ZANIM powstanie poprawka.
 
-6.  **Identytet Wizualny "Cyber-Monolith"**: Obowiązkowym schematem kolorystycznym platformy jest **Cyan (#00D1FF)** jako kolor podstawowy oraz **Purple (#B066FF)** jako kolor akcentowy. Wszystkie moduły white-label muszą respektować ten fundament wizualny.
-7.  **Zasada Agentic Engineering (AI-First Development)**: Projekt jest rozwijany we współpracy z autonomicznymi subagentami. Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu, służącym do automatyzacji, audytów i ewolucji kodu w czasie rzeczywistym.
-8.  **Standard Hybrydowej Analizy (Heavy Duty Workflow)**: W przypadku złożonych zadań architektonicznych lub refaktoryzacji, agent deleguje pracę do zewnętrznej instancji **Gemini CLI** (model: `gemini-3.1-pro-preview`). Wyniki z CLI muszą być integrowane 1:1, zachowując spójność logiczną silnika SPORT.
-9.  **Protokół Milestone Integrity**: Każde zakończenie Kamienia Milowego (Milestone) MUSI zostać sfinalizowane przez subagenta w trzech krokach: (1) Pełna aktualizacja dokumentacji (docs/), (2) Commit zmian, (3) Push do repozytorium zdalnego.
-10. **Parzystość Środowisk (Cloud-Native Parity)**: Lokalny klaster deweloperski (Kind/Podman) musi być architektonicznie identyczny (1:1) z produkcją. Wszystkie testy i wdrożenia odbywają się w kontenerach z rygorystycznymi limitami zasobów.
-11. **Ewolucja API (Semantic Compatibility)**: Backend gwarantuje kompatybilność wsteczną dla aplikacji mobilnych i frontendu. Zmiany niszczące (breaking changes) wymagają wersjonowania API i okresu przejściowego dla starych klientów.
-12. **Mandat Wydajnościowy (High-Frequency UI)**: Wszystkie elementy wizualne wymagające wysokiej częstotliwości odświeżania (telemetria, wykresy) MUSZĄ działać bezpośrednio na GPU (Skia/Reanimated). Dopuszczalny czas odpowiedzi głównego wątku UI nie może przekroczyć 16ms (mandat 60 FPS).
-13. **Wymóg Piramidy Jakości (Zero-Regression QA)**: Każdy błąd produkcyjny wymaga napisania testu reprodukującego (Playwright/Pytest) ZANIM zostanie wdrożona poprawka. Krytyczne ścieżki biznesowe muszą posiadać pełne pokrycie testami E2E.
+---
 
+## 3. AGENTIC WORKFLOW & PROTOKOŁY
 
-### Status Kamieni Milowych (v2.1):
-- [x] **Unifikacja Mobile:** Expo 54 + RN 0.81 (Zakończone)
-- [x] **Orkiestracja K8s:** Triple-Redundant Backend + Sovereign Owner Panel (Zakończone)
-- [x] **Security Fortress & Recovery:** 0 podatności + Skrypt Bootstrap (Zakończone)
-- [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA (Zakończone)
-- [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze (W toku)
+### IV. Współpraca z AI (Agentic Engineering)
+*   **Zasada 7 (AI-First):** Narzędzie `geminicli` jest nienaruszalnym elementem ekosystemu do audytów i ewolucji kodu.
+*   **Zasada 8 (Heavy Duty Analysis):** Złożone zadania delegowane do **Gemini CLI** (model: `gemini-3.1-pro-preview`). Integracja wyników 1:1.
 
+### V. Zarządzanie Postępem (Milestone Integrity)
+*   **Zasada 9 (Protocol):** Każdy Milestone kończy się cyklem: **Aktualizacja Dokumentacji -> Commit -> Push**.
 
-## 0.2 Disaster Recovery (Odzyskiwanie Systemu)
-W przypadku utraty środowiska pracy, proces odtworzenia pełnej mocy deweloperskiej jest zautomatyzowany:
-1. **Klonowanie:** Pobierz repozytorium z kodem.
-2. **Bootstrap:** Uruchom `.\setup-environment.ps1` (zainstaluje Podmana, K8s, Skaffolda).
-3. **Klaster:** Uruchom Podman Desktop, a następnie `kind create cluster --name kind-cluster`.
-4. **Start:** Uruchom `.\dev.ps1` – system sam zbuduje obrazy i postawi infrastrukturę.
+### VI. Disaster Recovery (Plan Ratunkowy)
+W przypadku awarii sprzętu:
+1. **Bootstrap:** Uruchom `.\setup-environment.ps1` (instalacja narzędzi).
+2. **Klaster:** `kind create cluster --name kind-cluster`.
+3. **Start:** `.\dev.ps1` (automatyczna odbudowa świata).
 
-## 1. Mission and Identity
-A B2B/B2C sports platform built 100% on **Permissive Open Source** foundations and a rigorous **Safety Constitution** (AI Quality Standards). The project aims to provide advanced telemetry, gamification, and social tools while maintaining full commercial freedom (White-Label) without the risk of copyleft (GPL) infection. Licensing for all frontend/mobile modules is **MIT**.
+---
+
+## 4. ESTETYKA "CYBER-MONOLITH"
+Obowiązkowy fundament wizualny:
+*   **Primary:** Cyan (#00D1FF)
+*   **Accent:** Purple (#B066FF)
+*   **Style:** Mica/Fluent, Glassmorphism, Spring Animations.
+
+---
+
+## 5. REJESTR KAMIENI MILOWYCH (Milestone Tracker)
+- [x] **v2.1 Gold Master (K8s & Security):** Pełna orkiestracja + Audyt 0-podatności. (Zakończone)
+- [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA. (Zakończone)
+- [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze. (W toku)
