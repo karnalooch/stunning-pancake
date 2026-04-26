@@ -90,7 +90,7 @@ export const TrackingScreen = observer(() => {
     <View style={styles.container}>
       <MapLibreGL.MapView 
         style={styles.map}
-        styleURL="https://demotiles.maplibre.org/style.json"
+        styleURL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         logoEnabled={false}
         attributionEnabled={false}
       >
@@ -103,7 +103,17 @@ export const TrackingScreen = observer(() => {
           visible={true}
           animated={true}
           renderMode="gps"
-        />
+        >
+          <MapLibreGL.CircleLayer
+            id="user-location-circle"
+            style={{
+              circleRadius: 8,
+              circleColor: '#00D1FF',
+              circleStrokeWidth: 3,
+              circleStrokeColor: 'rgba(0, 209, 255, 0.3)',
+            }}
+          />
+        </MapLibreGL.UserLocation>
 
         {state.pois.get().map((poi: any) => (
           <MapLibreGL.PointAnnotation 
