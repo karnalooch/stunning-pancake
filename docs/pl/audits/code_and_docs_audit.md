@@ -105,3 +105,27 @@ System jest strukturalnie solidny i idealnie pasuje do wizji Gold Master v2.1. S
 
 ## 7. Wniosek z Audytu
 Faza 4 została zakończona. Platforma posiada teraz mobilne doświadczenie o wysokiej wierności, które pasuje do estetyki \"Cyber-Monolith\" i standardów wydajności. Infrastruktura jest stabilna i przenośna. System jest gotowy na **Fazę 5: Globalny Rollout (Pierwsza Instancja Miejska)**.
+
+---
+
+## 8. Kamień Milowy v2.2-SECURITY: Audyt Bezpieczeństwa i Zależności (Baseline)
+**Data:** 2026-04-27
+**Audytor:** Gemini CLI (Manual Integration & Baseline Audit)
+
+### 8.1. Status Bezpieczeństwa Zależności
+- **Status:** **OSTRZEŻENIE (WARNING)**
+- **Odkrycia:** Przeprowadzono głęboki audyt bezpieczeństwa bez użycia DOM, identyfikując łącznie **53 unikalne podatności** (Security Advisories).
+- **Szczegóły audytu:**
+  - **Admin Panel (`admin/`):** 25 unikalnych advisories. Krytyczne luki w `electron` (18) oraz `tar` (6).
+  - **Mobile App (`mobile/`):** 23 unikalne advisories. Problemy w `node-forge` (7), `xmldom` (4) oraz `minimatch` (3).
+  - **Telemetry & Backend:** 4 podatności (m.in. `starlette` i `python-dotenv`).
+  - **Internal Tools (`.kilo/`):** 1 podatność w bibliotece `uuid`.
+
+### 8.2. Zgodność z Konstytucją
+- **Zasada 1 (Safety First):** **RYZYKO.** Liczba luk w frameworku Electron oraz bibliotekach systemowych wymaga natychmiastowej interwencji przed Fazą 5.
+- **Zasada 7 (AI-First Protocols):** **POTWIERDZONO.** Audyt został przeprowadzony zgodnie z protokołem przy użyciu narzędzi Gemini CLI oraz manualnej weryfikacji agentycznej.
+
+### 8.3. Wniosek z Audytu v2.2
+Platforma osiągnęła "Security Baseline", co pozwala na precyzyjne zaplanowanie procesu utwardzania (hardening). Ze względu na dużą liczbę luk w Electronie i stosie mobilnym, zaleca się przeprowadzenie sesji `audit fix --force` w kontrolowanym środowisku przed wdrożeniem produkcyjnym.
+
+**Następny krok:** Stabilizacja i uszczelnienie zależności (Security Hardening Phase).
