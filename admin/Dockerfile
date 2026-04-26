@@ -11,20 +11,20 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Build the project
-ARG VITE_APP_MODE
+ARG VITE_APP_MODE=GLOBAL_ADMIN
+ARG VITE_API_URL
 ENV VITE_APP_MODE=$VITE_APP_MODE
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Use Nginx to serve the static files
 FROM nginx:alpine
 
-# Configure nginx to run as non-root on 8080
-RUN sed -i 's/listen \(.*\)80;/listen 8080;/' /etc/nginx/conf.d/default.conf && \
-    sed -i '/user  nginx;/d' /etc/nginx/nginx.conf && \
-    touch /var/run/nginx.pid && \
-    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /etc/nginx/conf.d
+# Configure nginx to run as non-root on the dynamic $PORT
+# We use a template for nginx config to substitute $PORT
+RUN printf "server {\n  listen %s;\n  location / {\n    root /usr/share/nginx/html;\n    index index.html index.htm;\n    try_files \$uri \$uri/ /index.html;\n  }\n}\n" '${PORT}' > /etc/nginx/conf.d/default.conf.template
 
-USER 101
 COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+
+# We use a wrapper to substitute the port in nginx config at runtime
+CMD /bin/sh -c "envsubst '\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"
