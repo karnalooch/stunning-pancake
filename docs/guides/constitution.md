@@ -32,6 +32,10 @@ Platforma SPORT to wysokowydajny ekosystem B2B/B2C zbudowany na fundamentach **P
     *   *Path (Windows):* `C:\Users\akarn\AppData\Roaming\npm\gemini.cmd`.
     *   *Usage:* Używane do audytów, generowania raportów i ewolucji kodu.
 *   **Zasada 8 (Heavy Duty Analysis):** Złożone zadania delegowane do **Gemini CLI** (model: `gemini-3.1-pro-preview`). Integracja wyników 1:1.
+*   **Zasada 14 (Model Hybrid Hygiene):** Przy pracy hybrydowej (Flash + Pro) obowiązuje rygor prewencji:
+    *   **Junior/Senior Split:** Flash służy do szkieletów (boilerplate/UI), Pro do logiki i optymalizacji.
+    *   **Performance Markers:** Kod krytyczny (np. Legend-State) MUSI posiadać komentarz `[PERFORMANCE CRITICAL]`, aby uniknąć błędnej refaktoryzacji przez lżejsze modele.
+    *   **Sanity Check:** Każda zmiana Flasha w logice rdzenia wymaga weryfikacji przez `tsc` lub Audyt modelem Pro.
 
 ### V. Zarządzanie Postępem (The Milestone Loop)
 *   **Zasada 9 (Protocol):** Każdy Milestone MUSI zakończyć się następującą sekwencją:
