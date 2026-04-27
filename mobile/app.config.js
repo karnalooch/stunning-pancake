@@ -1,26 +1,5 @@
-import { withProjectBuildGradle } from '@expo/config-plugins';
-
-const withCustomMavenRepos = (config) => {
-  return withProjectBuildGradle(config, (config) => {
-    if (config.modResults.language === 'groovy') {
-      const contents = config.modResults.contents;
-      const transistorMaven = "maven { url 'https://customer-ra.transistorsoft.com/dist/android/maven' }";
-      
-      if (!contents.includes('customer-ra.transistorsoft.com')) {
-        config.modResults.contents = contents.replace(
-          /allprojects\s*\{\s*repositories\s*\{/,
-          `allprojects {
-    repositories {
-        ${transistorMaven}`
-        );
-      }
-    }
-    return config;
-  });
-};
-
 export default ({ config }) => {
-  return withCustomMavenRepos({
+  return {
     ...config,
     "name": "mobile",
     "slug": "mobile",
@@ -41,7 +20,14 @@ export default ({ config }) => {
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sport.athlete",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location",
+          "fetch"
+        ]
+      }
     },
     "android": {
       "package": "com.sport.athlete",
@@ -49,7 +35,14 @@ export default ({ config }) => {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -62,11 +55,12 @@ export default ({ config }) => {
     "plugins": [
       "@sentry/react-native",
       [
-        "react-native-background-geolocation",
+        "expo-location",
         {
-          "license": process.env.BACKGROUND_GEOLOCATION_LICENSE || ""
+          "locationAlwaysAndWhenInUsePermission": "Allow SPORT to use your location even in the background.",
+          "isAndroidBackgroundLocationEnabled": true
         }
       ]
     ]
-  });
+  };
 };

@@ -13,6 +13,12 @@ config.resolver = {
   ...resolver,
   assetExts: resolver.assetExts.filter((ext) => ext !== 'svg'),
   sourceExts: [...resolver.sourceExts, 'svg'],
+  blockList: [
+    /.*\/android\/.*/,
+    /.*\/ios\/.*/,
+    /.*\/build\/.*/,
+    /.*\.native-test.*/,
+  ],
 };
 
 module.exports = config;

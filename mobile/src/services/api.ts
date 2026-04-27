@@ -10,6 +10,28 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use(request => {
+  console.log('--- API REQUEST ---');
+  console.log(`${request.method?.toUpperCase()} ${request.url}`);
+  if (request.data) console.log('Data:', JSON.stringify(request.data));
+  return request;
+});
+
+api.interceptors.response.use(
+  response => {
+    console.log('--- API RESPONSE ---');
+    console.log(`Status: ${response.status}`);
+    return response;
+  },
+  error => {
+    console.log('--- API ERROR ---');
+    console.log(`Status: ${error.response?.status}`);
+    console.log(`Message: ${error.message}`);
+    if (error.response?.data) console.log('Response Data:', JSON.stringify(error.response.data));
+    return Promise.reject(error);
+  }
+);
+
 export const setAuthToken = (token: string | null) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;

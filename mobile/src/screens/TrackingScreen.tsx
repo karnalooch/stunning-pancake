@@ -5,13 +5,31 @@ import MapLibreGL from '@maplibre/maplibre-react-native';
 import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
 import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
+import { MMKV } from 'react-native-mmkv';
 
 import { POIService } from '../services/api';
 import { GpsSyncManager } from '../services/GpsSyncManager';
 import { Theme } from '../theme/Theme';
 
-// Initialize MapLibre
-MapLibreGL.setAccessToken(null);
+let storage: any;
+const getStorage = () => {
+  if (storage) return storage;
+  try {
+    storage = new MMKV();
+    return storage;
+  } catch (e) {
+    console.error("MMKV initialization failed in TrackingScreen. Falling back to mock.", e);
+    storage = {
+      getString: (key: string) => null,
+      set: (key: string, value: any) => {},
+      delete: (key: string) => {},
+    };
+    return storage;
+  }
+};
+
+// Initialize MapLibre (No token needed)
+// MapLibreGL.setAccessToken(null);
 
 const GEOFENCE_TASK_NAME = 'poi-geofence-task';
 
@@ -40,11 +58,11 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
   useEffect(() => {
     // Generate or retrieve persistent Device ID
-    const storage = new MMKV();
-    let deviceId = storage.getString('device_id');
+    const store = getStorage();
+    let deviceId = store.getString('device_id');
     if (!deviceId) {
       deviceId = `DEV-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
-      storage.set('device_id', deviceId);
+      store.set('device_id', deviceId);
     }
 
     syncManager.current = new GpsSyncManager(deviceId, user?.id || null);
@@ -110,57 +128,63 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
   return (
     <View style={styles.container}>
-      <MapLibreGL.MapView 
-        style={styles.map}
-        styleURL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        logoEnabled={false}
-        attributionEnabled={false}
-      >
-        <MapLibreGL.Camera
-          zoomLevel={14}
-          centerCoordinate={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
-          followUserLocation={state.isTracking.get()}
-        />
-        <MapLibreGL.UserLocation 
-          visible={true}
-          animated={true}
-          renderMode="gps"
+      {(!MapLibreGL || !MapLibreGL.MapView) ? (
+        <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
+          <TamaText color="$gray10" fontSize={12} letterSpacing={2} fontWeight="900">HYPERSCALE MAP ENGINE OFFLINE</TamaText>
+        </YStack>
+      ) : (
+        <MapLibreGL.MapView 
+          style={styles.map}
+          styleURL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+          logoEnabled={false}
+          attributionEnabled={false}
         >
-          <MapLibreGL.CircleLayer
-            id="user-location-circle"
-            style={{
-              circleRadius: 8,
-              circleColor: '#00D1FF',
-              circleStrokeWidth: 3,
-              circleStrokeColor: 'rgba(0, 209, 255, 0.3)',
-            }}
+          <MapLibreGL.Camera
+            zoomLevel={14}
+            centerCoordinate={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
+            followUserLocation={state.isTracking.get()}
           />
-        </MapLibreGL.UserLocation>
-
-        {state.pois.get().map((poi: any) => (
-          <MapLibreGL.PointAnnotation 
-            key={poi.id}
-            id={poi.id.toString()}
-            coordinate={[poi.longitude, poi.latitude]}
+          <MapLibreGL.UserLocation 
+            visible={true}
+            animated={true}
+            renderMode="gps"
           >
-             <TamaView 
-               width={36} 
-               height={36} 
-               borderRadius={18} 
-               backgroundColor={Theme.colors.primary} 
-               borderWidth={3} 
-               borderColor="white" 
-               alignItems="center" 
-               justifyContent="center"
-             >
-               {poi.category === 'COFFEE' ? <CoffeeIcon size={16} color="white" /> : 
-                poi.category === 'SHOP' ? <ShoppingBagIcon size={16} color="white" /> :
-                <BikeIcon size={16} color="white" />}
-             </TamaView>
-             <MapLibreGL.Callout title={poi.name} />
-          </MapLibreGL.PointAnnotation>
-        ))}
-      </MapLibreGL.MapView>
+            <MapLibreGL.CircleLayer
+              id="user-location-circle"
+              style={{
+                circleRadius: 8,
+                circleColor: '#00D1FF',
+                circleStrokeWidth: 3,
+                circleStrokeColor: 'rgba(0, 209, 255, 0.3)',
+              }}
+            />
+          </MapLibreGL.UserLocation>
+
+          {state.pois.get().map((poi: any) => (
+            <MapLibreGL.PointAnnotation 
+              key={poi.id}
+              id={poi.id.toString()}
+              coordinate={[poi.longitude, poi.latitude]}
+            >
+               <TamaView 
+                 width={36} 
+                 height={36} 
+                 borderRadius={18} 
+                 backgroundColor={Theme.colors.primary} 
+                 borderWidth={3} 
+                 borderColor="white" 
+                 alignItems="center" 
+                 justifyContent="center"
+               >
+                 {poi.category === 'COFFEE' ? <CoffeeIcon size={16} color="white" /> : 
+                  poi.category === 'SHOP' ? <ShoppingBagIcon size={16} color="white" /> :
+                  <BikeIcon size={16} color="white" />}
+               </TamaView>
+               <MapLibreGL.Callout title={poi.name} />
+            </MapLibreGL.PointAnnotation>
+          ))}
+        </MapLibreGL.MapView>
+      )}
 
       {/* Grupetto Badge Overlay */}
       <XStack 
