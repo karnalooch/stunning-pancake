@@ -71,10 +71,10 @@ PEŁNY AUDYT PLATFORMY został przeprowadzony dnia **2026-04-26** w oparciu o kr
 
 | Kontrola | Implementacja | Status |
 | :--- | :--- | :--- |
-| **Lokalizacja w Tle Android** | `ACCESS_BACKGROUND_LOCATION` + `FOREGROUND_SERVICE_LOCATION` + `WAKE_LOCK` w `app.json` | ✅ SKONFIGUROWANE |
+| **Lokalizacja w Tle Android** | `ACCESS_BACKGROUND_LOCATION` + `FOREGROUND_SERVICE_LOCATION` + `FOREGROUND_SERVICE` w `app.config.js` | ✅ SKONFIGUROWANE |
 | **Tryby Tła iOS** | `UIBackgroundModes: [location, fetch]` w `infoPlist` | ✅ SKONFIGUROWANE |
-| **Wyłączenie Optymalizacji Baterii** | Zadeklarowane uprawnienie `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | ✅ SKONFIGUROWANE |
-| **Uzasadnienie Uprawnień w Tle** | Tekst okna dialogowego skonfigurowany w pluginie `react-native-background-geolocation` | ✅ SKONFIGUROWANE |
+| **Mechanizm Śledzenia** | Expo Location + Task Manager (Zastąpiono TransistorSoft) | ✅ SKONFIGUROWANE |
+| **Uzasadnienie Uprawnień w Tle** | Tekst okna dialogowego skonfigurowany w pluginie `expo-location` | ✅ SKONFIGUROWANE |
 | **Strefy Prywatności v2** | Maskowanie na urządzeniu przed uploadem, zwiększenie gęstości, mostkowanie segmentów | ✅ AKTYWNE |
 | **Sentry PII Guard** | Usuwanie GPS w `beforeSend`, zerowe współrzędne w raportach o błędach | ✅ AKTYWNE |
 
