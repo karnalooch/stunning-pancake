@@ -1,4 +1,4 @@
-const { withProjectBuildGradle } = require('@expo/config-plugins');
+import { withProjectBuildGradle } from '@expo/config-plugins';
 
 const withCustomMavenRepos = (config) => {
   return withProjectBuildGradle(config, (config) => {
