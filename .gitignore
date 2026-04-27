@@ -1,43 +1,64 @@
-# Logs
-*.log
-infrastructure/traccar/logs/*
+# --- SPORT PLATFORM GITIGNORE ---
 
-# Python
+# 🔒 Secrets & Environment
+.env
+.env.local
+.env.*.local
+mobile/.env
+google-services.json
+GoogleService-Info.plist
+mobile/google-services.json
+mobile/GoogleService-Info.plist
+
+# 📦 Dependencies
+node_modules/
+mobile/node_modules/
+admin/node_modules/
+.kilo/node_modules/
+
+# 🏗️ Build Artifacts
+dist/
+dist-exe/
+admin/dist/
+admin/dist-exe/
+mobile/dist/
+mobile/android/
+mobile/ios/
+*.exe
+*.asar
+*.tar
+web-build/
+
+# 🐍 Python
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
+venv/
 .venv/
 env/
-venv/
+.env/
 
-# Node
-node_modules/
-dist/
-.env
+# 📊 Logs & Telemetry
+*.log
+infrastructure/traccar/logs/*
+infrastructure/simulators/*.log
+simulator_output.log
 
-# OS
+# 💻 IDEs & Editor
+.idea/
+.vscode/
+*.swp
+*.swo
 .DS_Store
 Thumbs.db
 
-# Binaries / large data
-SPORT Admin-win32-x64/
+# 🗺️ Infrastructure & Cache
+.expo/
+.tamagui/
 infrastructure/brouter/segments4/
-telemetry-sync.tar
-dev-sync.tar
-admin/dist-exe/
-*.tar
-*.exe
-*.asar
-infrastructure/traccar/logs/
-
-# IDE
-.vscode/settings.json
-.kilo/plans/1777069031707-glowing-comet.md
-LINK_DO_APLIKACJI.txt
-.gitignore
-QR_KOD.png
 infrastructure/brouter/brouter-src
+mobile/expo-env.d.ts
 
-# Firebase
-google-services.json
-GoogleService-Info.plist
+# 📄 Project Specific
+QR_KOD.png
+LINK_DO_APLIKACJI.txt
