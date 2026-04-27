@@ -2,6 +2,13 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Alert } from 'react-native';
 import * as Location from 'expo-location';
 import MapLibreGL from '@maplibre/maplibre-react-native';
+import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
+import { observer, useObservable } from '@legendapp/state/react';
+
+import { POIService } from '../services/api';
+import { GpsSyncManager } from '../services/GpsSyncManager';
+import { Theme } from '../theme/Theme';
 
 // Initialize MapLibre
 MapLibreGL.setAccessToken(null);

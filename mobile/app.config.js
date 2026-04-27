@@ -4,11 +4,8 @@ const withCustomMavenRepos = (config) => {
   return withProjectBuildGradle(config, (config) => {
     if (config.modResults.language === 'groovy') {
       const contents = config.modResults.contents;
-      const transistorMaven = `
-        maven {
-            url 'https://customer-ra.transistorsoft.com/dist/android/maven'
-        }
-      `;
+      const transistorMaven = "maven { url 'https://customer-ra.transistorsoft.com/dist/android/maven' }";
+      
       if (!contents.includes('customer-ra.transistorsoft.com')) {
         config.modResults.contents = contents.replace(
           /allprojects\s*\{\s*repositories\s*\{/,
@@ -31,7 +28,7 @@ export default ({ config }) => {
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
