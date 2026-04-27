@@ -184,7 +184,7 @@ export const TrackingScreen = observer(() => {
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
-            {state.isTracking.get() ? "STOP & SYNC" : "JADZIEM MIŚKI! 🚲"}
+            {state.isTracking.get() ? "STOP & SYNC" : "START RIDE"}
           </TamaText>
         </TamaButton>
       </YStack>

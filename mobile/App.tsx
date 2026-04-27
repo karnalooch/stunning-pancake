@@ -48,7 +48,7 @@ export default observer(function App() {
               {auth.mode.get() === 'login' ? 'Grupetto Siedlce' : 'Join Grupetto'}
             </H1>
             <Paragraph color="$gray10">
-              Jadziem Miśki! 🚲
+              The power of the group. 🚲
             </Paragraph>
           </YStack>
 
