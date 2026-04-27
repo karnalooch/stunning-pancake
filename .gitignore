@@ -36,3 +36,8 @@ infrastructure/traccar/logs/
 LINK_DO_APLIKACJI.txt
 .gitignore
 QR_KOD.png
+infrastructure/brouter/brouter-src
+
+# Firebase
+google-services.json
+GoogleService-Info.plist

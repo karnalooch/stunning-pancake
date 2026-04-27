@@ -22,6 +22,7 @@ export default ({ config }) => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sport.athlete",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -31,6 +32,7 @@ export default ({ config }) => {
     },
     "android": {
       "package": "com.sport.athlete",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -50,10 +52,13 @@ export default ({ config }) => {
     "extra": {
       "eas": {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
-      }
+      },
+      "EXPO_PUBLIC_API_URL": "https://backend-production-cba8.up.railway.app",
+      "EXPO_PUBLIC_TELEMETRY_URL": "https://telemetry-production-cba8.up.railway.app"
     },
     "plugins": [
-      "@sentry/react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/crashlytics",
       [
         "expo-location",
         {

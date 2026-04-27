@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { firebaseCapture } from './FirebaseService';
 
 // Use your computer's IP address if testing on a real device
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
@@ -25,6 +26,7 @@ api.interceptors.response.use(
   },
   error => {
     console.log('--- API ERROR ---');
+    firebaseCapture(error, 'API_INTERCEPTOR_ERROR');
     console.log(`Status: ${error.response?.status}`);
     console.log(`Message: ${error.message}`);
     if (error.response?.data) console.log('Response Data:', JSON.stringify(error.response.data));
@@ -57,7 +59,9 @@ export const ActivityService = {
 
 export const AuthService = {
   login: async (credentials: any) => {
-    const response = await api.post('/api/users/login/', credentials);
+    // Backend uses api/auth/token/ for JWT. 
+    // Credentials should contain 'username' (which is email) and 'password'.
+    const response = await api.post('/api/auth/token/', credentials);
     return response.data;
   },
   register: async (data: any) => {
@@ -65,7 +69,8 @@ export const AuthService = {
     return response.data;
   },
   getProfile: async () => {
-    const response = await api.get('/api/users/me/');
+    // Endpoint in users/urls.py is 'profile/'
+    const response = await api.get('/api/users/profile/');
     return response.data;
   }
 };

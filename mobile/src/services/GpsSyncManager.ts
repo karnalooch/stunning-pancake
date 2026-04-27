@@ -10,7 +10,7 @@ import { MMKV } from 'react-native-mmkv';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import axios from 'axios';
-import { sentryCapture } from './SentryService';
+import { firebaseCapture } from './FirebaseService';
 
 const TELEMETRY_URL = process.env.EXPO_PUBLIC_TELEMETRY_URL ?? 'http://localhost:8001';
 const BATCH_INTERVAL_MS = 30_000;
@@ -105,7 +105,7 @@ async function uploadBatch(points: GpsPoint[], attempt = 1): Promise<void> {
 // Global task definition
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
   if (error) {
-    sentryCapture(error);
+    firebaseCapture(error, 'BACKGROUND_LOCATION_TASK_ERROR');
     return;
   }
   

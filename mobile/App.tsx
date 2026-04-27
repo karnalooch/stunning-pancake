@@ -11,6 +11,7 @@ import tamaguiConfig from './tamagui.config';
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
 import { Theme } from './src/theme/Theme';
 import { AuthService, setAuthToken } from './src/services/api';
+import { initFirebase } from './src/services/FirebaseService';
 
 // Screens
 import { TrackingScreen } from './src/screens/TrackingScreen';
@@ -64,6 +65,7 @@ export default observer(function App() {
   });
 
   useEffect(() => {
+    initFirebase();
     const store = getStorage();
     const token = store.getString('auth_token');
     if (token) {

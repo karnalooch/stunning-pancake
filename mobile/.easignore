@@ -1,0 +1,14 @@
+node_modules/
+android/
+ios/
+.expo/
+dist/
+web-build/
+build/
+bin/
+obj/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision

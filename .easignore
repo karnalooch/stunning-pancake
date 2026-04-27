@@ -1,0 +1,11 @@
+mobile/node_modules/
+mobile/android/
+mobile/ios/
+mobile/.expo/
+mobile/dist/
+infrastructure/
+telemetry/
+admin/
+docs/
+.git/
+node_modules/
