@@ -21,7 +21,7 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 
 // Initialize MMKV lazily to avoid JSI issues on module load
 let storage: any;
-const BYPASS_AUTH = true; // Set to true for automated testing of internal screens
+const BYPASS_AUTH = false; // Set to true for automated testing of internal screens
 const getStorage = () => {
   if (storage) return storage;
   try {

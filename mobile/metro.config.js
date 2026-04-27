@@ -16,7 +16,6 @@ config.resolver = {
   blockList: [
     /.*\/android\/.*/,
     /.*\/ios\/.*/,
-    /.*\/build\/.*/,
     /.*\.native-test.*/,
   ],
 };
