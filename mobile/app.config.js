@@ -25,6 +25,12 @@ export default ({ config }) => {
     "name": "mobile",
     "slug": "mobile",
     "version": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
