@@ -45,10 +45,10 @@ export default observer(function App() {
           
           <YStack gap="$2" marginBottom="$4">
             <H1 fontSize={24} color="$white">
-              {auth.mode.get() === 'login' ? 'Welcome Back' : 'Create Account'}
+              {auth.mode.get() === 'login' ? 'Grupetto Siedlce' : 'Join Grupetto'}
             </H1>
             <Paragraph color="$gray10">
-              The high-performance sports engine.
+              Jadziem Miśki! 🚲
             </Paragraph>
           </YStack>
 

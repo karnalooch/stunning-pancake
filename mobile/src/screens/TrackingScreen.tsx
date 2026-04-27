@@ -154,7 +154,7 @@ export const TrackingScreen = observer(() => {
       >
         <XStack justifyContent="space-between" alignItems="center">
            <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="white">
-             {state.isTracking.get() ? "CYAN-PRECISION TRACKING" : "READY TO START"}
+             {state.isTracking.get() ? "CYAN-PRECISION TRACKING" : "GRUPETTO READY"}
            </TamaText>
            <XStack gap="$2">
               <ZapIcon size={18} color={Theme.colors.primary} />
@@ -184,7 +184,7 @@ export const TrackingScreen = observer(() => {
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
-            {state.isTracking.get() ? "STOP & SYNC" : "START SESSION"}
+            {state.isTracking.get() ? "STOP & SYNC" : "JADZIEM MIŚKI! 🚲"}
           </TamaText>
         </TamaButton>
       </YStack>
