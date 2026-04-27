@@ -180,68 +180,151 @@ manager = ConnectionManager()
 # The bridge consumes from Redis and broadcasts to WebSocket clients + writes DB.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Traccar → Redis pub/sub bridge (Constitution §24.1 Architecture Fix)
+# ---------------------------------------------------------------------------
+
 async def _traccar_redis_bridge() -> None:
     """
     Subscribes to the Redis pub/sub channel that Traccar writes to.
-    Optimized: Batches DB inserts and parallelizes WebSocket broadcasts.
+    Optimized: Uses a persistent connection and handles reconnections gracefully.
     """
     import redis.asyncio as redis_lib
+    from redis.exceptions import ConnectionError, TimeoutError
 
     batch_buffer: list[tuple] = []
     MAX_BATCH_SIZE = 50
     last_flush = time.time()
 
+    logger.info("traccar_bridge: initializing connection pool to %s", REDIS_URL)
+    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
+
     while True:
         try:
-            redis = await redis_lib.from_url(REDIS_URL)
-            pubsub = redis.pubsub()
-            await pubsub.subscribe(TRACCAR_CHANNEL)
-            logger.info("traccar_bridge: subscribed to channel=%s", TRACCAR_CHANNEL)
+            async with client.pubsub() as pubsub:
+                await pubsub.subscribe(TRACCAR_CHANNEL)
+                logger.info("traccar_bridge: active subscription on %s", TRACCAR_CHANNEL)
 
-            async for message in pubsub.listen():
-                if message["type"] != "message":
-                    continue
-                try:
-                    data = json.loads(message["data"])
-                    device_id = str(data.get("deviceId", data.get("id", "unknown")))
-                    lat = float(data.get("latitude", data.get("lat", 0)))
-                    lon = float(data.get("longitude", data.get("lon", 0)))
-                    speed_ms = float(data.get("speed", 0)) * 0.514444
-                    ts_ms = data.get("fixTime", data.get("deviceTime", data.get("serverTime")))
-                    ts = float(ts_ms) / 1000.0 if ts_ms else time.time()
+                async for message in pubsub.listen():
+                    if message["type"] != "message":
+                        continue
+                    
+                    try:
+                        # Handle potential double-encoding or raw strings
+                        raw_data = message["data"]
+                        data = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
+                        
+                        # Robust field mapping (Traccar varies by protocol)
+                        device_id = str(data.get("deviceId", data.get("id", data.get("deviceid", "unknown"))))
+                        lat = float(data.get("latitude", data.get("lat", 0)))
+                        lon = float(data.get("longitude", data.get("lon", 0)))
+                        
+                        # Unit conversion: Traccar sends knots for some protocols
+                        speed_raw = float(data.get("speed", 0))
+                        speed_ms = speed_raw * 0.514444 if speed_raw > 0 else 0
+                        
+                        # Timestamp resolution
+                        ts_ms = data.get("fixTime", data.get("deviceTime", data.get("serverTime")))
+                        ts = float(ts_ms) / 1000.0 if ts_ms else time.time()
 
-                    # Add to buffer
-                    batch_buffer.append((ts, device_id, lat, lon, speed_ms))
+                        # Add to batch buffer
+                        batch_buffer.append((ts, device_id, lat, lon, speed_ms))
 
-                    # Flush if buffer full or timeout reached
-                    if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 1.0):
-                        if batch_buffer:
-                            pool = await get_pool()
-                            async with pool.acquire() as conn:
-                                await conn.executemany(
-                                    "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
-                                    batch_buffer
-                                )
-                            batch_buffer = []
-                            last_flush = time.time()
+                        # Flush logic
+                        if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 2.0):
+                            if batch_buffer:
+                                pool = await get_pool()
+                                async with pool.acquire() as conn:
+                                    await conn.executemany(
+                                        "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+                                        batch_buffer
+                                    )
+                                logger.debug("traccar_bridge: flushed %d points", len(batch_buffer))
+                                batch_buffer = []
+                                last_flush = time.time()
 
-                    # Broadcast (parallelized via manager)
-                    asyncio.create_task(manager.broadcast({
-                        "type": "position_update",
-                        "device_id": device_id,
-                        "lat": lat,
-                        "lon": lon,
-                        "speed_ms": speed_ms,
-                        "ts": ts,
-                        "activity_type": "BIKE" if "BIKE" in device_id else "RUN"
-                    }))
+                        # Broadcast to UI
+                        asyncio.create_task(manager.broadcast({
+                            "type": "position_update",
+                            "device_id": device_id,
+                            "lat": lat,
+                            "lon": lon,
+                            "speed_ms": round(speed_ms, 2),
+                            "ts": ts,
+                            "activity_type": "BIKE" if speed_ms > 4 else "RUN" # Heuristic for Grupetto
+                        }))
 
-                except (KeyError, ValueError, json.JSONDecodeError) as exc:
-                    logger.warning("traccar_bridge: malformed message err=%s", exc)
+                    except Exception as e:
+                        logger.warning("traccar_bridge: skip malformed packet: %s", e)
 
-        except Exception as exc:
-            logger.error("traccar_bridge: connection lost err=%s — reconnecting in 5s", exc)
+        except (ConnectionError, TimeoutError, asyncio.CancelledError) as exc:
+            logger.error("traccar_bridge: connectivity issue (%s). Re-sync in 5s...", type(exc).__name__)
             await asyncio.sleep(5)
+        except Exception as exc:
+            logger.critical("traccar_bridge: unexpected failure: %s", exc)
+            await asyncio.sleep(10)
+
+
+# ---------------------------------------------------------------------------
+# Traccar HTTP Forwarding (Fallback for JSON/URL-encoded)
+# ---------------------------------------------------------------------------
+
+from fastapi import Request
+
+@app.post("/api/telemetry/traccar/forward", status_code=202)
+async def traccar_http_forward(request: Request):
+    """
+    Accepts data from Traccar's 'forward.url' (HTTP JSON or URL-encoded).
+    Constitution §24.1: Fallback for devices that cannot use Redis.
+    """
+    content_type = request.headers.get("Content-Type", "")
+    
+    try:
+        if "application/json" in content_type:
+            data = await request.json()
+        else:
+            # Handle URL-encoded or raw form data
+            form_data = await request.form()
+            data = dict(form_data)
+
+        # Traccar forward can send a single object or an array
+        packets = data if isinstance(data, list) else [data]
+        
+        pool = await get_pool()
+        rows = []
+        for p in packets:
+            device_id = str(p.get("deviceId", p.get("id", "unknown")))
+            lat = float(p.get("latitude", p.get("lat", 0)))
+            lon = float(p.get("longitude", p.get("lon", 0)))
+            speed_ms = float(p.get("speed", 0)) * 0.514444
+            ts_ms = p.get("fixTime", p.get("deviceTime", time.time()*1000))
+            ts = float(ts_ms) / 1000.0
+            
+            rows.append((ts, device_id, lat, lon, speed_ms))
+
+        if rows:
+            async with pool.acquire() as conn:
+                await conn.executemany(
+                    "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5)",
+                    rows
+                )
+            
+            # Broadcast the latest one
+            last = rows[-1]
+            await manager.broadcast({
+                "type": "position_update",
+                "device_id": last[1],
+                "lat": last[2],
+                "lon": last[3],
+                "speed_ms": last[4],
+                "source": "http_forward"
+            })
+
+        return {"status": "success", "count": len(rows)}
+    except Exception as e:
+        logger.error("traccar_http_forward: failed to parse: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 # ---------------------------------------------------------------------------

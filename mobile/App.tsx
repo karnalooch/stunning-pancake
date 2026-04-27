@@ -1,16 +1,15 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import * as Notifications from 'expo-notifications';
-import * as TaskManager from 'expo-task-manager';
-import * as Location from 'expo-location';
-import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton, H1, Paragraph } from 'tamagui';
+import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton, H1, Paragraph, Spinner } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
+import { MMKV } from 'react-native-mmkv';
 import tamaguiConfig from './tamagui.config';
 
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
 import { Theme } from './src/theme/Theme';
+import { AuthService, setAuthToken } from './src/services/api';
 
 // Screens
 import { TrackingScreen } from './src/screens/TrackingScreen';
@@ -19,7 +18,8 @@ import { RewardsScreen } from './src/screens/RewardsScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 
-const GEOFENCE_TASK_NAME = 'poi-geofence-task';
+const storage = new MMKV();
+const Tab = createBottomTabNavigator();
 
 const HomeIcon = Home as any;
 const HistoryIcon = History as any;
@@ -27,66 +27,209 @@ const GiftIcon = Gift as any;
 const UserIcon = User as any;
 const TrophyIcon = Trophy as any;
 
-const Tab = createBottomTabNavigator();
-
 export default observer(function App() {
   const auth = useObservable({
     isAuthenticated: false,
-    mode: 'login' as 'login' | 'register'
+    isLoading: true,
+    isSubmitting: false,
+    mode: 'login' as 'login' | 'register',
+    email: '',
+    username: '',
+    password: '',
+    confirmPassword: '',
+    user: null as any
   });
+
+  useEffect(() => {
+    const token = storage.getString('auth_token');
+    if (token) {
+      setAuthToken(token);
+      AuthService.getProfile()
+        .then(user => {
+          auth.user.set(user);
+          auth.isAuthenticated.set(true);
+        })
+        .catch(() => {
+          storage.delete('auth_token');
+          setAuthToken(null);
+        })
+        .finally(() => auth.isLoading.set(false));
+    } else {
+      auth.isLoading.set(false);
+    }
+  }, []);
+
+  const handleAuth = async () => {
+    // Validation
+    if (!auth.email.get() || !auth.password.get()) {
+      Alert.alert("Missing Info", "Please fill in all required fields.");
+      return;
+    }
+
+    if (auth.mode.get() === 'register') {
+      if (!auth.username.get()) {
+        Alert.alert("Missing Info", "Choose a pilot name (username).");
+        return;
+      }
+      if (auth.password.get() !== auth.confirmPassword.get()) {
+        Alert.alert("Mismatch", "Passwords do not match.");
+        return;
+      }
+    }
+
+    auth.isSubmitting.set(true);
+    try {
+      let data;
+      if (auth.mode.get() === 'login') {
+        data = await AuthService.login({ 
+          username: auth.email.get(), 
+          password: auth.password.get() 
+        });
+      } else {
+        data = await AuthService.register({
+          email: auth.email.get(),
+          username: auth.username.get(),
+          password: auth.password.get(),
+          tenant_id: 'siedlce-city' // Default for Grupetto Siedlce testers
+        });
+      }
+
+      if (data.access || data.token) {
+        const token = data.access || data.token;
+        storage.set('auth_token', token);
+        setAuthToken(token);
+        const user = await AuthService.getProfile();
+        auth.user.set(user);
+        auth.isAuthenticated.set(true);
+        
+        if (auth.mode.get() === 'register') {
+          Alert.alert("Welcome!", "Your account is ready. Welcome to Grupetto Siedlce.");
+        }
+      }
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.detail || e.response?.data?.username?.[0] || e.response?.data?.email?.[0] || "Auth service temporarily unavailable.";
+      Alert.alert("Operation Failed", errorMsg);
+    } finally {
+      auth.isSubmitting.set(false);
+    }
+  };
+
+  const handleLogout = () => {
+    storage.delete('auth_token');
+    setAuthToken(null);
+    auth.user.set(null);
+    auth.isAuthenticated.set(false);
+    auth.email.set('');
+    auth.password.set('');
+  };
+
+  if (auth.isLoading.get()) {
+    return (
+      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+        <YStack flex={1} backgroundColor="$background" justifyContent="center" alignItems="center">
+          <Spinner size="large" color="$blue10" />
+          <TamaText marginTop="$4" color="$gray10" letterSpacing={2} fontSize={10} fontWeight="900">BOOTING SPORT CORE...</TamaText>
+        </YStack>
+      </TamaguiProvider>
+    );
+  }
 
   const renderContent = () => {
     if (!auth.isAuthenticated.get()) {
       return (
         <YStack flex={1} backgroundColor="$background" justifyContent="center" padding="$6" gap="$4">
-          <H1 textAlign="center" fontWeight="900" color="$white">
-            SPORT<TamaText color="$blue10">.</TamaText>
-          </H1>
+          <YStack alignItems="center" marginBottom="$6">
+            <H1 fontSize={42} fontWeight="900" color="$white" letterSpacing={-2}>
+              SPORT<TamaText color="$blue10">.</TamaText>
+            </H1>
+            <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={4}>HYPERSCALE PERFORMANCE</TamaText>
+          </YStack>
           
           <YStack gap="$2" marginBottom="$4">
-            <H1 fontSize={24} color="$white">
-              {auth.mode.get() === 'login' ? 'Grupetto Siedlce' : 'Join Grupetto'}
+            <H1 fontSize={24} color="$white" fontWeight="900">
+              {auth.mode.get() === 'login' ? 'Grupetto Siedlce' : 'New Pilot'}
             </H1>
-            <Paragraph color="$gray10">
-              The power of the group. 🚲
+            <Paragraph color="$gray10" fontSize={14}>
+              {auth.mode.get() === 'login' 
+                ? 'Authorized access only. Gear up.' 
+                : 'Enter your credentials to join the group.'}
             </Paragraph>
           </YStack>
 
-          <Input 
-            size="$5"
-            placeholder="Email" 
-            backgroundColor="$gray1" 
-            borderWidth={1} 
-            borderColor="$gray4"
-            hoverStyle={{ borderColor: '$blue10' }}
-            focusStyle={{ borderColor: '$blue10' }}
-          />
-          <Input 
-            size="$5"
-            placeholder="Password" 
-            secureTextEntry 
-            backgroundColor="$gray1" 
-            borderWidth={1} 
-            borderColor="$gray4"
-          />
+          <YStack gap="$3">
+            {auth.mode.get() === 'register' && (
+              <Input 
+                size="$5"
+                placeholder="Username (Pilot Name)" 
+                backgroundColor="$gray1" 
+                borderWidth={1} 
+                borderColor="$gray4"
+                value={auth.username.get()}
+                onChangeText={(t) => auth.username.set(t)}
+                autoCapitalize="none"
+              />
+            )}
+            <Input 
+              size="$5"
+              placeholder="Email or Username" 
+              backgroundColor="$gray1" 
+              borderWidth={1} 
+              borderColor="$gray4"
+              value={auth.email.get()}
+              onChangeText={(t) => auth.email.set(t)}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Input 
+              size="$5"
+              placeholder="Password" 
+              secureTextEntry 
+              backgroundColor="$gray1" 
+              borderWidth={1} 
+              borderColor="$gray4"
+              value={auth.password.get()}
+              onChangeText={(t) => auth.password.set(t)}
+            />
+            {auth.mode.get() === 'register' && (
+              <Input 
+                size="$5"
+                placeholder="Confirm Password" 
+                secureTextEntry 
+                backgroundColor="$gray1" 
+                borderWidth={1} 
+                borderColor="$gray4"
+                value={auth.confirmPassword.get()}
+                onChangeText={(t) => auth.confirmPassword.set(t)}
+              />
+            )}
+          </YStack>
 
           <TamaButton 
-            marginTop="$2"
+            marginTop="$4"
             size="$5"
             backgroundColor="$blue10"
-            onPress={() => auth.isAuthenticated.set(true)}
+            onPress={handleAuth}
+            disabled={auth.isSubmitting.get()}
+            pressStyle={{ opacity: 0.8, scale: 0.98 }}
           >
-            <TamaText fontWeight="900" color="white">
-              {auth.mode.get() === 'login' ? 'SIGN IN' : 'REGISTER'}
-            </TamaText>
+            {auth.isSubmitting.get() ? <Spinner color="white" /> : (
+              <TamaText fontWeight="900" color="white" letterSpacing={1.5}>
+                {auth.mode.get() === 'login' ? 'AUTHORIZE' : 'INITIALIZE ACCOUNT'}
+              </TamaText>
+            )}
           </TamaButton>
 
           <TamaButton 
             chromeless
-            onPress={() => auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login')}
+            onPress={() => {
+              auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login');
+              // Clear sensitive fields when switching modes
+              auth.password.set('');
+              auth.confirmPassword.set('');
+            }}
           >
-            <TamaText color="$gray10" textAlign="center">
-              {auth.mode.get() === 'login' ? "New here? Join the movement" : "Already a member? Login"}
+            <TamaText color="$gray10" textAlign="center" fontSize={13}>
+              {auth.mode.get() === 'login' ? "New athlete? Register here" : "Already registered? Sign in"}
             </TamaText>
           </TamaButton>
         </YStack>
@@ -115,12 +258,14 @@ export default observer(function App() {
             },
           })}
         >
-          <Tab.Screen name="Home" component={TrackingScreen} />
+          <Tab.Screen name="Home">
+            {() => <TrackingScreen user={auth.user.get()} />}
+          </Tab.Screen>
           <Tab.Screen name="History" component={ActivitiesScreen} />
           <Tab.Screen name="Ranking" component={LeaderboardScreen} />
           <Tab.Screen name="Rewards" component={RewardsScreen} />
           <Tab.Screen name="Profile">
-            {() => <ProfileScreen onLogout={() => auth.isAuthenticated.set(false)} />}
+            {() => <ProfileScreen onLogout={handleLogout} />}
           </Tab.Screen>
         </Tab.Navigator>
       </NavigationContainer>
@@ -133,3 +278,5 @@ export default observer(function App() {
     </TamaguiProvider>
   );
 });
+
+

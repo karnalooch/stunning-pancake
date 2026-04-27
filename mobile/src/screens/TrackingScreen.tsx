@@ -21,7 +21,7 @@ const CoffeeIcon = Coffee as any;
 const ShoppingBagIcon = ShoppingBag as any;
 const BikeIcon = Bike as any;
 
-export const TrackingScreen = observer(() => {
+export const TrackingScreen = observer(({ user }: { user: any }) => {
   const state = useObservable({
     isTracking: false,
     currentLocation: { latitude: 52.17, longitude: 22.29 } as any,
@@ -36,9 +36,19 @@ export const TrackingScreen = observer(() => {
     }
   });
 
-  const syncManager = useRef<GpsSyncManager>(new GpsSyncManager("DEVICE-GM-2026", 1));
+  const syncManager = useRef<GpsSyncManager | null>(null);
 
   useEffect(() => {
+    // Generate or retrieve persistent Device ID
+    const storage = new MMKV();
+    let deviceId = storage.getString('device_id');
+    if (!deviceId) {
+      deviceId = `DEV-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+      storage.set('device_id', deviceId);
+    }
+
+    syncManager.current = new GpsSyncManager(deviceId, user?.id || null);
+
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') return;
@@ -65,23 +75,28 @@ export const TrackingScreen = observer(() => {
       }
     })();
 
-    syncManager.current.setUpdateCallback((newStats) => {
-      state.stats.set(newStats);
-    });
-  }, []);
+    if (syncManager.current) {
+      syncManager.current.setUpdateCallback((newStats) => {
+        state.stats.set(newStats);
+      });
+    }
+  }, [user]);
 
   const toggleTracking = async () => {
+    if (!syncManager.current) return;
+
     if (state.isTracking.get()) {
       await syncManager.current.stopTracking();
       state.isTracking.set(false);
-      Alert.alert("Activity Saved", "Telemetry pushed to city nodes.");
+      Alert.alert("Ride Complete", "Your track has been synced with Grupetto HQ.");
     } else {
       let { status } = await Location.requestBackgroundPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Background location permission denied');
         return;
       }
-      await syncManager.current.startTracking(Math.floor(Math.random() * 1000));
+      // Start tracking with a new session ID
+      await syncManager.current.startTracking(Math.floor(Date.now() / 1000));
       state.isTracking.set(true);
     }
   };
@@ -147,6 +162,24 @@ export const TrackingScreen = observer(() => {
         ))}
       </MapLibreGL.MapView>
 
+      {/* Grupetto Badge Overlay */}
+      <XStack 
+        position="absolute" 
+        top={60} 
+        left={20} 
+        paddingVertical="$2" 
+        paddingHorizontal="$4" 
+        borderRadius="$10" 
+        backgroundColor="rgba(0, 209, 255, 0.2)" 
+        borderWidth={1} 
+        borderColor="#00D1FF"
+        alignItems="center"
+        gap="$2"
+      >
+        <BikeIcon size={14} color="#00D1FF" />
+        <TamaText fontSize={12} fontWeight="900" color="#00D1FF" letterSpacing={1}>GRUPETTO SIEDLCE</TamaText>
+      </XStack>
+
       <YStack 
         position="absolute" 
         bottom={30} 
@@ -161,7 +194,7 @@ export const TrackingScreen = observer(() => {
       >
         <XStack justifyContent="space-between" alignItems="center">
            <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="white">
-             {state.isTracking.get() ? "CYAN-PRECISION TRACKING" : "GRUPETTO READY"}
+             {state.isTracking.get() ? "CYAN-PRECISION ACTIVE" : `READY, ${user?.username?.toUpperCase() || 'RIDER'}`}
            </TamaText>
            <XStack gap="$2">
               <ZapIcon size={18} color={Theme.colors.primary} />
@@ -179,8 +212,8 @@ export const TrackingScreen = observer(() => {
             <H1 fontWeight="900" color="white">{formatPace(state.stats.paceSecPerKm.get())}</H1>
           </YStack>
           <YStack alignItems="flex-end">
-            <TamaText color="$gray10" fontSize={10} fontWeight="700">SYNC</TamaText>
-            <TamaText fontSize={24} fontWeight="900" color="white">{state.stats.pendingPoints.get()} pts</TamaText>
+            <TamaText color="$gray10" fontSize={10} fontWeight="700">BUFFER</TamaText>
+            <TamaText fontSize={24} fontWeight="900" color="white">{state.stats.pendingPoints.get()}</TamaText>
           </YStack>
         </XStack>
 
@@ -191,13 +224,14 @@ export const TrackingScreen = observer(() => {
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
-            {state.isTracking.get() ? "STOP & SYNC" : "START RIDE"}
+            {state.isTracking.get() ? "STOP & FINISH" : "START SESSION"}
           </TamaText>
         </TamaButton>
       </YStack>
     </View>
   );
 });
+
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
