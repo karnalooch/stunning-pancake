@@ -51,14 +51,14 @@
   },
   "overrides": {
     "node-forge": "1.4.0",
-    "xmldom": "0.8.10",
-    "minimatch": "10.0.1",
     "tar": "7.5.13",
     "yaml": "2.8.3",
     "uuid": "14.0.0",
     "ajv": "8.20.0",
     "postcss": "8.5.12",
-    "glob": "13.0.6"
+    "@xmldom/xmldom": ">=0.8.14",
+    "minimatch": ">=10.0.1",
+    "diff": ">=7.0.0"
   },
   "private": true
 }
