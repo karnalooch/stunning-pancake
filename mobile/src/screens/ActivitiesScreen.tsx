@@ -30,6 +30,8 @@ export const ActivitiesScreen = observer(() => {
     fetchHistory();
   }, []);
 
+  const activities = (state.activities.get() || []) as any[];
+
   const handleShare = async (act: any) => {
     try {
       await Share.share({
@@ -49,7 +51,7 @@ export const ActivitiesScreen = observer(() => {
 
       <ScrollView>
         <YStack gap="$4" paddingBottom="$10">
-          {state.activities.get().map((act: any) => (
+          {activities.map((act: any) => (
             <XStack key={act.id} backgroundColor="$gray1" padding="$4" borderRadius="$4" alignItems="center" gap="$4">
               <YStack backgroundColor="$gray2" padding="$2.5" borderRadius="$3" alignItems="center" justifyContent="center">
                 <ActivityIcon size={20} color="#00D1FF" />

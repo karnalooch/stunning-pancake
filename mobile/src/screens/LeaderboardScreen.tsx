@@ -33,6 +33,7 @@ export const LeaderboardScreen = observer(() => {
     fetchData();
   }, [state.category.get()]);
 
+  const category = state.category.get();
   const ranking = (state.ranking.get() || []) as any[];
   const myRank = state.myRank.get();
 
@@ -47,18 +48,18 @@ export const LeaderboardScreen = observer(() => {
         <TamaButton 
           size="$3" 
           borderRadius="$10" 
-          backgroundColor={state.category.get() === 'CITY' ? "$blue10" : "$gray1"}
+          backgroundColor={category === 'CITY' ? "$blue10" : "$gray1"}
           onPress={() => state.category.set('CITY')}
         >
-          <TamaText fontWeight="800" fontSize={13} color={state.category.get() === 'CITY' ? "white" : "$gray10"}>Siedlce</TamaText>
+          <TamaText fontWeight="800" fontSize={13} color={category === 'CITY' ? "white" : "$gray10"}>Siedlce</TamaText>
         </TamaButton>
         <TamaButton 
           size="$3" 
           borderRadius="$10" 
-          backgroundColor={state.category.get() === 'GLOBAL' ? "$blue10" : "$gray1"}
+          backgroundColor={category === 'GLOBAL' ? "$blue10" : "$gray1"}
           onPress={() => state.category.set('GLOBAL')}
         >
-          <TamaText fontWeight="800" fontSize={13} color={state.category.get() === 'GLOBAL' ? "white" : "$gray10"}>Global</TamaText>
+          <TamaText fontWeight="800" fontSize={13} color={category === 'GLOBAL' ? "white" : "$gray10"}>Global</TamaText>
         </TamaButton>
       </XStack>
 

@@ -91,6 +91,8 @@ export default observer(function App() {
     user: null as any
   });
 
+  const isLoading = auth.isLoading.get();
+
   useEffect(() => {
     initFirebase();
     const store = getStorage();
@@ -171,6 +173,12 @@ export default observer(function App() {
   const renderContent = () => {
     const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
     const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
+    const mode = auth.mode.get();
+    const username = auth.username.get();
+    const email = auth.email.get();
+    const password = auth.password.get();
+    const confirmPassword = auth.confirmPassword.get();
+    const isSubmitting = auth.isSubmitting.get();
 
     if (!isAuth) {
       return (
@@ -184,24 +192,24 @@ export default observer(function App() {
           
           <YStack gap="$2" marginBottom="$4">
             <H1 fontSize={24} color="$white" fontWeight="900">
-              {auth.mode.get() === 'login' ? 'Grupetto Siedlce' : 'New Pilot'}
+              {mode === 'login' ? 'Grupetto Siedlce' : 'New Pilot'}
             </H1>
             <Paragraph color="$gray10" fontSize={14}>
-              {auth.mode.get() === 'login' 
+              {mode === 'login' 
                 ? 'Authorized access only. Gear up.' 
                 : 'Enter your credentials to join the group.'}
             </Paragraph>
           </YStack>
 
           <YStack gap="$3">
-            {auth.mode.get() === 'register' && (
+            {mode === 'register' && (
               <Input 
                 size="$5"
                 placeholder="Username (Pilot Name)" 
                 backgroundColor="$gray1" 
                 borderWidth={1} 
                 borderColor="$gray4"
-                value={auth.username.get()}
+                value={username}
                 onChangeText={(t) => auth.username.set(t)}
                 autoCapitalize="none"
               />
@@ -212,7 +220,7 @@ export default observer(function App() {
               backgroundColor="$gray1" 
               borderWidth={1} 
               borderColor="$gray4"
-              value={auth.email.get()}
+              value={email}
               onChangeText={(t) => auth.email.set(t)}
               autoCapitalize="none"
               keyboardType="email-address"
@@ -224,10 +232,10 @@ export default observer(function App() {
               backgroundColor="$gray1" 
               borderWidth={1} 
               borderColor="$gray4"
-              value={auth.password.get()}
+              value={password}
               onChangeText={(t) => auth.password.set(t)}
             />
-            {auth.mode.get() === 'register' && (
+            {mode === 'register' && (
               <Input 
                 size="$5"
                 placeholder="Confirm Password" 
@@ -235,7 +243,7 @@ export default observer(function App() {
                 backgroundColor="$gray1" 
                 borderWidth={1} 
                 borderColor="$gray4"
-                value={auth.confirmPassword.get()}
+                value={confirmPassword}
                 onChangeText={(t) => auth.confirmPassword.set(t)}
               />
             )}
@@ -246,12 +254,12 @@ export default observer(function App() {
             size="$5"
             backgroundColor="$blue10"
             onPress={handleAuth}
-            disabled={auth.isSubmitting.get()}
+            disabled={isSubmitting}
             pressStyle={{ opacity: 0.8, scale: 0.98 }}
           >
-            {auth.isSubmitting.get() ? <Spinner color="white" /> : (
+            {isSubmitting ? <Spinner color="white" /> : (
               <TamaText fontWeight="900" color="white" letterSpacing={1.5}>
-                {auth.mode.get() === 'login' ? 'AUTHORIZE' : 'INITIALIZE ACCOUNT'}
+                {mode === 'login' ? 'AUTHORIZE' : 'INITIALIZE ACCOUNT'}
               </TamaText>
             )}
           </TamaButton>
@@ -259,14 +267,14 @@ export default observer(function App() {
           <TamaButton 
             chromeless
             onPress={() => {
-              auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login');
+              auth.mode.set(mode === 'login' ? 'register' : 'login');
               // Clear sensitive fields when switching modes
               auth.password.set('');
               auth.confirmPassword.set('');
             }}
           >
             <TamaText color="$gray10" textAlign="center" fontSize={13}>
-              {auth.mode.get() === 'login' ? "New athlete? Register here" : "Already registered? Sign in"}
+              {mode === 'login' ? "New athlete? Register here" : "Already registered? Sign in"}
             </TamaText>
           </TamaButton>
         </YStack>
@@ -323,7 +331,7 @@ export default observer(function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-          {auth.isLoading.get() ? (
+          {isLoading ? (
             <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
               <Spinner size="large" color="$blue10" />
               <TamaText marginTop="$4" color="$gray10" letterSpacing={2} fontSize={10} fontWeight="900">BOOTING SPORT CORE...</TamaText>

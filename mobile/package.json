@@ -7,13 +7,13 @@
     "android": "eas build --platform android --profile development",
     "ios": "eas build --platform ios --profile development",
     "web": "expo start --web",
-    "deploy:mobile": "eas update --branch production --message 'Update via Antigravity'",
-    "build:dev:android": "eas build --platform android --profile development",
-    "build:dev:ios": "eas build --platform ios --profile development",
-    "build:preview:android": "eas build --platform android --profile preview",
-    "build:preview:ios": "eas build --platform ios --profile preview",
-    "build:prod:android": "eas build --platform android --profile production",
-    "build:prod:ios": "eas build --platform ios --profile production"
+    "deploy:mobile": "npx eas update --branch production --message 'Update via Antigravity'",
+    "build:dev:android": "npx eas build --platform android --profile development",
+    "build:dev:ios": "npx eas build --platform ios --profile development",
+    "build:preview:android": "npx eas build --platform android --profile preview",
+    "build:preview:ios": "npx eas build --platform ios --profile preview",
+    "build:prod:android": "npx eas build --platform android --profile production",
+    "build:prod:ios": "npx eas build --platform ios --profile production"
   },
   "dependencies": {
     "@legendapp/state": "3.0.0-beta.46",

@@ -25,7 +25,7 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
         const profile = await AuthService.getProfile();
         state.user.set(profile);
         const zoneData = await PrivacyService.getZones();
-        state.zones.set(zoneData);
+        state.zones.set(Array.isArray(zoneData) ? zoneData : (zoneData.features || []));
       } catch (e) {
         console.error(e);
       }
@@ -45,6 +45,7 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
 
   const user = state.user.get();
   const zones = state.zones.get() || [];
+  const isIncognito = state.isIncognito.get();
 
   return (
     <YStack flex={1} backgroundColor="$background" paddingTop="$10">
@@ -71,7 +72,7 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
             </XStack>
             <Switch 
               size="$3" 
-              checked={state.isIncognito.get()} 
+              checked={isIncognito} 
               onCheckedChange={(val) => state.isIncognito.set(val)}
             >
               <Switch.Thumb />
@@ -90,20 +91,25 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
               No zones defined. Add your home or office to mask your starts and finishes.
             </TamaText>
           ) : (
-            zones.filter(Boolean).map((zone: any) => (
-              <XStack key={zone.id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
-                <XStack alignItems="center" gap="$3">
-                  <MapPinIcon size={18} color="$gray10" />
-                  <YStack>
-                    <TamaText color="white" fontWeight="700" fontSize={14}>{zone.name || 'Unnamed Zone'}</TamaText>
-                    <TamaText color="$gray10" fontSize={11}>{zone.radius || 200}m Radius</TamaText>
-                  </YStack>
+            zones.filter(Boolean).map((zone: any) => {
+              const id = zone.id;
+              const name = zone.properties?.label || zone.label || zone.name || 'Unnamed Zone';
+              const radius = zone.properties?.radius || zone.radius || 200;
+              return (
+                <XStack key={id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
+                  <XStack alignItems="center" gap="$3">
+                    <MapPinIcon size={18} color="$gray10" />
+                    <YStack>
+                      <TamaText color="white" fontWeight="700" fontSize={14}>{name}</TamaText>
+                      <TamaText color="$gray10" fontSize={11}>{radius}m Radius</TamaText>
+                    </YStack>
+                  </XStack>
+                  <TamaButton chromeless onPress={() => handleDeleteZone(id)}>
+                    <TrashIcon size={18} color="$red10" />
+                  </TamaButton>
                 </XStack>
-                <TamaButton chromeless onPress={() => handleDeleteZone(zone.id)}>
-                  <TrashIcon size={18} color="$red10" />
-                </TamaButton>
-              </XStack>
-            ))
+              );
+            })
           )}
         </YStack>
 

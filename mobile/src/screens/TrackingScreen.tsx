@@ -54,6 +54,11 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     }
   });
 
+  const isTracking = state.isTracking.get();
+  const currentLocation = state.currentLocation.get();
+  const pois = state.pois.get() || [];
+  const stats = state.stats.get();
+
   const syncManager = useRef<GpsSyncManager | null>(null);
 
   useEffect(() => {
@@ -148,8 +153,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         >
           <Camera
             zoom={14}
-            center={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
-            trackUserLocation={state.isTracking.get() ? "default" : undefined}
+            center={[currentLocation?.longitude || 22.29, currentLocation?.latitude || 52.17]}
+            trackUserLocation={isTracking ? "default" : undefined}
           />
           <UserLocation 
             animated={true}
@@ -166,7 +171,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             />
           </UserLocation>
 
-          {state.pois.get().map((poi: any) => (
+          {pois.map((poi: any) => (
             <ViewAnnotation 
               key={poi.id}
               id={poi.id.toString()}
@@ -224,7 +229,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       >
         <XStack justifyContent="space-between" alignItems="center">
            <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="white">
-             {state.isTracking.get() ? "CYAN-PRECISION ACTIVE" : `READY, ${user?.username?.toUpperCase() || 'RIDER'}`}
+             {isTracking ? "CYAN-PRECISION ACTIVE" : `READY, ${user?.username?.toUpperCase() || 'RIDER'}`}
            </TamaText>
            <XStack gap="$2">
               <ZapIcon size={18} color="#3B82F6" />
@@ -235,26 +240,26 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         <XStack justifyContent="space-between" alignItems="flex-end">
           <YStack>
             <TamaText color="$gray10" fontSize={10} fontWeight="700">DISTANCE</TamaText>
-            <H1 fontWeight="900" color="white">{(state.stats.distanceM.get() / 1000).toFixed(2)}<TamaText fontSize={14} color="$gray10">km</TamaText></H1>
+            <H1 fontWeight="900" color="white">{((stats?.distanceM || 0) / 1000).toFixed(2)}<TamaText fontSize={14} color="$gray10">km</TamaText></H1>
           </YStack>
           <YStack>
             <TamaText color="$gray10" fontSize={10} fontWeight="700">PACE</TamaText>
-            <H1 fontWeight="900" color="white">{formatPace(state.stats.paceSecPerKm.get())}</H1>
+            <H1 fontWeight="900" color="white">{formatPace(stats?.paceSecPerKm || 0)}</H1>
           </YStack>
           <YStack alignItems="flex-end">
             <TamaText color="$gray10" fontSize={10} fontWeight="700">BUFFER</TamaText>
-            <TamaText fontSize={24} fontWeight="900" color="white">{state.stats.pendingPoints.get()}</TamaText>
+            <TamaText fontSize={24} fontWeight="900" color="white">{stats?.pendingPoints || 0}</TamaText>
           </YStack>
         </XStack>
 
         <TamaButton 
           size="$5"
           borderRadius="$10"
-          backgroundColor={state.isTracking.get() ? "#EF4444" : "#3B82F6"}
+          backgroundColor={isTracking ? "#EF4444" : "#3B82F6"}
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
-            {state.isTracking.get() ? "STOP & FINISH" : "START SESSION"}
+            {isTracking ? "STOP & FINISH" : "START SESSION"}
           </TamaText>
         </TamaButton>
       </YStack>

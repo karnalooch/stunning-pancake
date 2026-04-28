@@ -20,7 +20,7 @@ export default ({ config }) => {
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -74,7 +74,8 @@ export default ({ config }) => {
           "locationAlwaysAndWhenInUsePermission": "Allow SPORT to use your location even in the background.",
           "isAndroidBackgroundLocationEnabled": true
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ]
   };
 };
