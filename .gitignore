@@ -5,10 +5,6 @@
 .env.local
 .env.*.local
 mobile/.env
-google-services.json
-GoogleService-Info.plist
-mobile/google-services.json
-mobile/GoogleService-Info.plist
 
 # 📦 Dependencies
 node_modules/

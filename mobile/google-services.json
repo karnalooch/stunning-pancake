@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1044492798312",
+    "project_id": "device-streaming-e10ed2f3",
+    "storage_bucket": "device-streaming-e10ed2f3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1044492798312:android:ed2cbc5e2b7c29f632eedd",
+        "android_client_info": {
+          "package_name": "com.sport.athlete"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfiH5hG5J6m-feBxpZ3dTVwoUGFO3ja20"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

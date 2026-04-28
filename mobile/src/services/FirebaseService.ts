@@ -13,7 +13,7 @@ export function initFirebase(): void {
       crashlytics().setAttribute('app_version', '2.1.0');
       crashlytics().setAttribute('platform', Platform.OS);
       _initialized = true;
-      console.log(`[Firebase] Crashlytics Initialized dynamically`);
+      console.log(`[Firebase] Crashlytics Initialized successfully`);
     }
   } catch (e) {
     console.log(`[Firebase Mock] Native Firebase module not available.`);
