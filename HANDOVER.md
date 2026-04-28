@@ -56,8 +56,10 @@ docker-compose exec backend python seed_data.py
 The mobile app supports two types of updates:
 1. **Native Builds (APK/iOS)**: Required when adding new native libraries (e.g., Bluetooth, specialized sensors) or changing app icons/splash screens.
    - Command: `cd mobile; npm run build:android` (profile: `preview`).
+   - Local APK: `app-release.apk` (generated for custom native modules).
 2. **OTA Updates (Over-The-Air)**: Instant updates for UI changes, bug fixes, or logic updates without resubmitting to stores.
    - Command: `cd mobile; eas update --branch production --message "Update UI theme"`.
+   - Troubleshooting: See [Resolving Workspace Code Issues](./docs/pl/guides/resolving_workspace_code_issues.md) for detailed technical fixes.
 
 ## 📈 Future Roadmap
 - [x] **Firebase Integration**: Transitioned from Sentry to Firebase for client and server production observability.
