@@ -53,7 +53,7 @@ export default ({ config }) => {
       "eas": {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
       },
-      "EXPO_PUBLIC_API_URL": "https://docker-backend-production-123c.up.railway.app",
+      "EXPO_PUBLIC_API_URL": "http://docker-backend-production-123c.up.railway.app:8000",
       "EXPO_PUBLIC_TELEMETRY_URL": "http://docker-telemetry-production.up.railway.app:8080"
     },
     "plugins": [
