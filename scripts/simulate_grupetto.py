@@ -5,7 +5,7 @@ import asyncio
 import httpx
 
 # Configuration
-TELEMETRY_URL = "http://docker-telemetry-production.up.railway.app:8080/api/telemetry/traccar/forward"
+TELEMETRY_URL = "https://docker-telemetry-production-123c.up.railway.app/api/telemetry/traccar/forward"
 NUM_ATHLETES = 10
 SIEDLCE_CENTER = (52.1672, 22.2906) # Lat, Lon
 
