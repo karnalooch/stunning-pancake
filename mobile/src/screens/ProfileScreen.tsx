@@ -85,7 +85,7 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
       </YStack>
 
       <ScrollView paddingHorizontal="$4" paddingBottom="$10">
-        {(user?.role === 'GLOBAL_OWNER' || user?.role === 'TENANT_ADMIN') && (
+        {(user?.role === 'GLOBAL_OWNER' || user?.role === 'TENANT_ADMIN' || user?.role === 'TENANT_MODERATOR') && (
           <YStack gap="$2" marginBottom="$6">
             <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>OPERATIONS CONTROL</TamaText>
             <YStack backgroundColor="rgba(59, 130, 246, 0.1)" padding="$4" borderRadius="$4" gap="$4" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
