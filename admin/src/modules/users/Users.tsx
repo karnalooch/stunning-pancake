@@ -146,7 +146,7 @@ export const Users = () => {
 
             <Box>
               <Text fw={600} mb="sm" c="red">Security Warnings</Text>
-              {selectedUser.flags > 0 ? (
+              {selectedUser && selectedUser.flags > 0 ? (
                 <Group p="sm" style={{ background: 'rgba(255,0,0,0.1)', borderRadius: '6px', border: '1px solid rgba(255,0,0,0.2)' }}>
                   <ShieldAlert size={20} color="red" />
                   <Stack gap={0}>

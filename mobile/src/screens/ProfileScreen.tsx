@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
+import * as Updates from 'expo-updates';
 import { User, Shield, MapPin, LogOut, Trash2, Plus } from 'lucide-react-native';
 import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
@@ -89,7 +90,7 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
               No zones defined. Add your home or office to mask your starts and finishes.
             </TamaText>
           ) : (
-            zones.map((zone: any) => (
+            zones.filter(Boolean).map((zone: any) => (
               <XStack key={zone.id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
                 <XStack alignItems="center" gap="$3">
                   <MapPinIcon size={18} color="$gray10" />
@@ -117,6 +118,10 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
           <LogOutIcon size={20} color="$red10" />
           <TamaText color="$red10" fontWeight="900" fontSize={14} letterSpacing={1}>Log Out</TamaText>
         </TamaButton>
+
+        <TamaText color="$gray8" fontSize={10} textAlign="center" marginTop="$4" marginBottom="$8">
+          {Updates.isEmbeddedLaunch ? `Embedded Build (${Updates.runtimeVersion || '1.0.0'})` : `EAS Update: ${Updates.updateId?.substring(0, 8) || 'N/A'} (${Updates.runtimeVersion || '1.0.0'})`}
+        </TamaText>
       </ScrollView>
     </YStack>
   );
