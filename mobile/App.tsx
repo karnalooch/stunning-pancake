@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
+import { StyleSheet, View, Alert, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton, H1, Paragraph, Spinner } from 'tamagui';
@@ -65,12 +65,12 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     if (this.state.hasError) {
       return (
         <View style={{ flex: 1, backgroundColor: '#0B0E14', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <YStack alignItems="center" marginBottom="$4">
-            <TamaText color="#DC2626" fontSize={24} fontWeight="900" letterSpacing={1}>CRITICAL ERROR</TamaText>
-          </YStack>
-          <Paragraph color="$gray10" textAlign="center" fontSize={14} marginBottom="$6" paddingHorizontal="$4">
+          <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ color: '#DC2626', fontSize: 24, fontWeight: '900', letterSpacing: 1 }}>CRITICAL ERROR</Text>
+          </View>
+          <Text style={{ color: '#9CA3AF', textAlign: 'center', fontSize: 14, paddingHorizontal: 16 }}>
             {this.state.error?.toString() || "Unknown JS Exception"}
-          </Paragraph>
+          </Text>
         </View>
       );
     }

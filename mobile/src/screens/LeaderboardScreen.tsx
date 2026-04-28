@@ -33,9 +33,12 @@ export const LeaderboardScreen = observer(() => {
     fetchData();
   }, [state.category.get()]);
 
+  const ranking = (state.ranking.get() || []) as any[];
+  const myRank = state.myRank.get();
+
   return (
     <YStack flex={1} backgroundColor="$background" paddingTop="$10">
-      <XStack justifyContent="space-between" paddingHorizontal="$4" alignItems="center" marginBottom="$4">
+      <XStack paddingHorizontal="$4" justifyContent="space-between" alignItems="center" marginBottom="$4">
         <TamaText fontWeight="900" fontSize={28} color="white">Rankings</TamaText>
         <TrophyIcon size={28} color="#FBBF24" />
       </XStack>
@@ -64,36 +67,36 @@ export const LeaderboardScreen = observer(() => {
         <YStack alignItems="center">
            <TamaText color="$gray10" fontWeight="900" marginBottom="$1">2</TamaText>
            <Circle size={60} borderWidth={3} borderColor="$gray8" backgroundColor="$gray1">
-             <TamaText color="white" fontSize={24} fontWeight="900">{state.ranking[1]?.username?.get()?.[0] || '?'}</TamaText>
+             <TamaText color="white" fontSize={24} fontWeight="900">{ranking[1]?.username?.[0] || '?'}</TamaText>
            </Circle>
-           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{state.ranking[1]?.username?.get() || '...'}</TamaText>
-           <TamaText color="$gray10" fontSize={11} fontWeight="800">{state.ranking[1]?.score_km?.get() || 0} km</TamaText>
+           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{ranking[1]?.username || '...'}</TamaText>
+           <TamaText color="$gray10" fontSize={11} fontWeight="800">{ranking[1]?.score_km || 0} km</TamaText>
         </YStack>
 
         {/* Rank 1 */}
         <YStack alignItems="center" marginTop="$-5">
            <CrownIcon size={24} color="#FBBF24" style={{ marginBottom: 4 }} />
            <Circle size={80} borderWidth={3} borderColor="#FBBF24" backgroundColor="$gray1">
-             <TamaText color="white" fontSize={32} fontWeight="900">{state.ranking[0]?.username?.get()?.[0] || '?'}</TamaText>
+             <TamaText color="white" fontSize={32} fontWeight="900">{ranking[0]?.username?.[0] || '?'}</TamaText>
            </Circle>
-           <TamaText color="white" marginTop="$2" fontSize={15} fontWeight="900">{state.ranking[0]?.username?.get() || '...'}</TamaText>
-           <TamaText color="#FBBF24" fontSize={11} fontWeight="800">{state.ranking[0]?.score_km?.get() || 0} km</TamaText>
+           <TamaText color="white" marginTop="$2" fontSize={15} fontWeight="900">{ranking[0]?.username || '...'}</TamaText>
+           <TamaText color="#FBBF24" fontSize={11} fontWeight="800">{ranking[0]?.score_km || 0} km</TamaText>
         </YStack>
 
         {/* Rank 3 */}
         <YStack alignItems="center">
            <TamaText color="$gray10" fontWeight="900" marginBottom="$1">3</TamaText>
            <Circle size={60} borderWidth={3} borderColor="#B45309" backgroundColor="$gray1">
-             <TamaText color="white" fontSize={24} fontWeight="900">{state.ranking[2]?.username?.get()?.[0] || '?'}</TamaText>
+             <TamaText color="white" fontSize={24} fontWeight="900">{ranking[2]?.username?.[0] || '?'}</TamaText>
            </Circle>
-           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{state.ranking[2]?.username?.get() || '...'}</TamaText>
-           <TamaText color="$gray10" fontSize={11} fontWeight="800">{state.ranking[2]?.score_km?.get() || 0} km</TamaText>
+           <TamaText color="white" marginTop="$2" fontSize={13} fontWeight="700">{ranking[2]?.username || '...'}</TamaText>
+           <TamaText color="$gray10" fontSize={11} fontWeight="800">{ranking[2]?.score_km || 0} km</TamaText>
         </YStack>
       </XStack>
 
       <ScrollView flex={1} paddingHorizontal="$4" paddingBottom="$10">
         <YStack gap="$2" paddingBottom="$10">
-          {state.ranking.get().slice(3).map((item: any, i: number) => (
+          {ranking.slice(3).map((item: any, i: number) => (
             <XStack key={item.user_id} alignItems="center" paddingVertical="$3" borderBottomWidth={1} borderBottomColor="$gray1">
               <TamaText color="$gray8" width={40} fontWeight="900" fontSize={12}>#{i + 4}</TamaText>
               <Circle size={32} backgroundColor="$gray2" marginRight="$3">
@@ -109,13 +112,13 @@ export const LeaderboardScreen = observer(() => {
       </ScrollView>
 
       <XStack position="absolute" bottom={0} left={0} right={0} backgroundColor="$gray1" padding="$5" borderTopWidth={1} borderTopColor="$gray2" alignItems="center">
-         <TamaText color="$gray8" width={40} fontWeight="900" fontSize={12}>#{state.myRank?.rank?.get() || '?'}</TamaText>
+         <TamaText color="$gray8" width={40} fontWeight="900" fontSize={12}>#{myRank?.rank || '?'}</TamaText>
          <Circle size={32} backgroundColor="$blue10" marginRight="$3">
            <TamaText color="white" fontSize={10} fontWeight="800">ME</TamaText>
          </Circle>
          <TamaText color="white" fontWeight="600" fontSize={14}>You (Current Stats)</TamaText>
          <YStack flex={1} alignItems="flex-end">
-            <TamaText color="white" fontWeight="800" fontSize={12}>{state.myRank?.score_km?.get() || 0} km</TamaText>
+            <TamaText color="white" fontWeight="800" fontSize={12}>{myRank?.score_km || 0} km</TamaText>
          </YStack>
       </XStack>
     </YStack>

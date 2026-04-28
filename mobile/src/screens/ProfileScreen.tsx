@@ -42,16 +42,19 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
     ]);
   };
 
+  const user = state.user.get();
+  const zones = state.zones.get() || [];
+
   return (
     <YStack flex={1} backgroundColor="$background" paddingTop="$10">
       <TamaText paddingHorizontal="$4" fontWeight="900" fontSize={28} color="white" marginBottom="$4">Profile</TamaText>
 
       <YStack alignItems="center" marginBottom="$8">
         <Circle size={100} backgroundColor="$gray1" borderWidth={1} borderColor="$gray4" marginBottom="$4">
-          <TamaText color="white" fontSize={42} fontWeight="900">{state.user?.username?.get()?.[0]?.toUpperCase() || 'U'}</TamaText>
+          <TamaText color="white" fontSize={42} fontWeight="900">{user?.username?.[0]?.toUpperCase() || 'U'}</TamaText>
         </Circle>
-        <TamaText color="white" fontSize={22} fontWeight="900">{state.user?.username?.get() || 'Loading...'}</TamaText>
-        <TamaText color="$gray10" fontSize={14} marginTop="$1">{state.user?.email?.get() || 'athlete@sport.com'}</TamaText>
+        <TamaText color="white" fontSize={22} fontWeight="900">{user?.username || 'Loading...'}</TamaText>
+        <TamaText color="$gray10" fontSize={14} marginTop="$1">{user?.email || 'athlete@sport.com'}</TamaText>
       </YStack>
 
       <ScrollView paddingHorizontal="$4" paddingBottom="$10">
@@ -81,12 +84,12 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
             <TamaButton size="$2" circular backgroundColor="$blue10" icon={<PlusIcon size={16} color="white" />} />
           </XStack>
           
-          {state.zones.get().length === 0 ? (
+          {zones.length === 0 ? (
             <TamaText color="$gray10" fontSize={12} textAlign="center" paddingVertical="$4" fontStyle="italic">
               No zones defined. Add your home or office to mask your starts and finishes.
             </TamaText>
           ) : (
-            state.zones.get().map((zone: any) => (
+            zones.map((zone: any) => (
               <XStack key={zone.id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
                 <XStack alignItems="center" gap="$3">
                   <MapPinIcon size={18} color="$gray10" />
