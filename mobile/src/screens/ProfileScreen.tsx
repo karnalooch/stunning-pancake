@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import * as Updates from 'expo-updates';
 import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, Slider } from 'tamagui';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService } from '../services/api';
 
@@ -88,7 +88,7 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
         {(user?.role === 'GLOBAL_OWNER' || user?.role === 'TENANT_ADMIN' || user?.role === 'TENANT_MODERATOR') && (
           <YStack gap="$2" marginBottom="$6">
             <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>OPERATIONS CONTROL</TamaText>
-            <YStack backgroundColor="rgba(59, 130, 246, 0.1)" padding="$4" borderRadius="$4" gap="$4" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
+            <YStack backgroundColor="rgba(59, 130, 246, 0.1)" padding="$4" borderRadius="$4" gap="$4">
               <XStack justifyContent="space-between" alignItems="center">
                 <XStack alignItems="center" gap="$3">
                   <ZapIcon size={20} color="#3B82F6" />
@@ -99,17 +99,22 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
                 </XStack>
                 <TamaText color="$blue10" fontWeight="900">{(integritySensitivity * 100).toFixed(0)}%</TamaText>
               </XStack>
-              <Slider 
-                value={[integritySensitivity * 100]} 
-                onValueChange={(val) => state.integritySensitivity.set(val[0] / 100)}
-                max={100} 
-                step={5}
-              >
-                <Slider.Track backgroundColor="$gray4">
-                  <Slider.ActiveTrack backgroundColor="$blue10" />
-                </Slider.Track>
-                <Slider.Thumb index={0} circular elevation="$4" />
-              </Slider>
+              
+              <XStack gap="$2" marginTop="$2">
+                {[0.25, 0.5, 0.75, 1.0].map((val) => (
+                  <TamaButton 
+                    key={val}
+                    flex={1} 
+                    size="$2" 
+                    backgroundColor={integritySensitivity === val ? "$blue10" : "$gray2"}
+                    onPress={() => state.integritySensitivity.set(val)}
+                  >
+                    <TamaText color="white" fontSize={10} fontWeight="700">
+                      {val === 1.0 ? 'MAX' : `${(val * 100)}%`}
+                    </TamaText>
+                  </TamaButton>
+                ))}
+              </XStack>
             </YStack>
           </YStack>
         )}
@@ -120,66 +125,57 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
             <XStack alignItems="center" gap="$3">
               <ShieldIcon size={20} color="#00D1FF" />
               <YStack>
-                <TamaText color="white" fontWeight="700" fontSize={14}>Global Incognito</TamaText>
-                <TamaText color="$gray10" fontSize={11}>Mask all tracks by default</TamaText>
+                <TamaText color="white" fontWeight="700" fontSize={14}>Incognito Mode</TamaText>
+                <TamaText color="$gray10" fontSize={11}>Hide from leaderboards</TamaText>
               </YStack>
             </XStack>
             <Switch 
-              size="$3" 
+              size="$2" 
               checked={isIncognito} 
               onCheckedChange={(val) => state.isIncognito.set(val)}
             >
-              <Switch.Thumb />
+              <Switch.Thumb animation="quick" />
             </Switch>
           </XStack>
         </YStack>
 
-        <YStack gap="$4">
+        <YStack gap="$2" marginBottom="$6">
           <XStack justifyContent="space-between" alignItems="center">
             <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={1}>PRIVACY ZONES</TamaText>
-            <TamaButton size="$2" circular backgroundColor="$blue10" icon={<PlusIcon size={16} color="white" />} />
+            <TamaButton size="$2" circular icon={PlusIcon} backgroundColor="$blue10" />
           </XStack>
           
-          {zones.length === 0 ? (
-            <TamaText color="$gray10" fontSize={12} textAlign="center" paddingVertical="$4" fontStyle="italic">
-              No zones defined. Add your home or office to mask your starts and finishes.
-            </TamaText>
-          ) : (
-            zones.filter(Boolean).map((zone: any) => {
-              const id = zone.id;
-              const name = zone.properties?.label || zone.label || zone.name || 'Unnamed Zone';
-              const radius = zone.properties?.radius || zone.radius || 200;
-              return (
-                <XStack key={id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
-                  <XStack alignItems="center" gap="$3">
-                    <MapPinIcon size={18} color="$gray10" />
-                    <YStack>
-                      <TamaText color="white" fontWeight="700" fontSize={14}>{name}</TamaText>
-                      <TamaText color="$gray10" fontSize={11}>{radius}m Radius</TamaText>
-                    </YStack>
-                  </XStack>
-                  <TamaButton chromeless onPress={() => handleDeleteZone(id)}>
-                    <TrashIcon size={18} color="$red10" />
-                  </TamaButton>
-                </XStack>
-              );
-            })
+          {zones.map((zone: any) => (
+            <XStack key={zone.id} justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
+              <XStack alignItems="center" gap="$3">
+                <MapPinIcon size={20} color="$blue10" />
+                <YStack>
+                  <TamaText color="white" fontWeight="700" fontSize={14}>{zone.properties?.label || 'Unnamed Zone'}</TamaText>
+                  <TamaText color="$gray10" fontSize={11}>{zone.properties?.radius || 200}m radius</TamaText>
+                </YStack>
+              </XStack>
+              <TamaButton size="$2" circular icon={TrashIcon} chromeless onPress={() => handleDeleteZone(zone.id)} />
+            </XStack>
+          ))}
+          {zones.length === 0 && (
+            <TamaText color="$gray10" fontSize={12} textAlign="center" marginTop="$4">No privacy zones active.</TamaText>
           )}
         </YStack>
 
-        <TamaButton 
-          marginTop="$6"
-          backgroundColor="transparent"
-          alignItems="center" 
-          justifyContent="center" 
-          gap="$3" 
-          onPress={onLogout}
-        >
-          <LogOutIcon size={20} color="$red10" />
-          <TamaText color="$red10" fontWeight="900" fontSize={14} letterSpacing={1}>Log Out</TamaText>
-        </TamaButton>
+        <YStack gap="$2" marginTop="$4">
+          <TamaButton 
+            backgroundColor="$red10" 
+            icon={LogOutIcon} 
+            onPress={onLogout}
+          >
+            <TamaText color="white" fontWeight="700">LOGOUT</TamaText>
+          </TamaButton>
+        </YStack>
 
-        <TamaText color="$gray8" fontSize={10} textAlign="center" marginTop="$4" marginBottom="$8">
+        <TamaText color="$gray8" fontSize={10} textAlign="center" marginTop="$10">
+          SPORT CORE v2.4-STABILITY
+        </TamaText>
+        <TamaText color="$gray8" fontSize={9} textAlign="center" marginTop="$1">
           {Updates.isEmbeddedLaunch ? `Embedded Build (${Updates.runtimeVersion || '1.0.0'})` : `EAS Update: ${Updates.updateId?.substring(0, 8) || 'N/A'} (${Updates.runtimeVersion || '1.0.0'})`}
         </TamaText>
       </ScrollView>

@@ -198,7 +198,7 @@ export default observer(function App() {
             <H1 fontSize={42} fontWeight="900" color="$white" letterSpacing={-2}>
               SPORT<TamaText color="$blue10">.</TamaText>
             </H1>
-            <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={4}>HYPERSCALE PERFORMANCE</TamaText>
+            <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={4}>HYPERSCALE PERFORMANCE v2.4</TamaText>
           </YStack>
           
           <YStack gap="$2" marginBottom="$4">
