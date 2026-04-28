@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import * as Updates from 'expo-updates';
-import { User, Shield, MapPin, LogOut, Trash2, Plus } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle } from 'tamagui';
+import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, Slider } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService } from '../services/api';
 
@@ -11,12 +11,15 @@ const PlusIcon = Plus as any;
 const MapPinIcon = MapPin as any;
 const TrashIcon = Trash2 as any;
 const LogOutIcon = LogOut as any;
+const ZapIcon = Zap as any;
+const ActivityIcon = Activity as any;
 
 export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: any, onLogout: () => void }) => {
   const state = useObservable({
     user: initialUser || null,
     zones: [] as any[],
     isIncognito: false,
+    integritySensitivity: 0.5,
   });
 
   useEffect(() => {
@@ -48,6 +51,7 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
   const user = state.user.get();
   const zones = state.zones.get() || [];
   const isIncognito = state.isIncognito.get();
+  const integritySensitivity = state.integritySensitivity.get();
 
   const handleRefresh = async () => {
     try {
@@ -81,6 +85,35 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
       </YStack>
 
       <ScrollView paddingHorizontal="$4" paddingBottom="$10">
+        {(user?.role === 'GLOBAL_OWNER' || user?.role === 'TENANT_ADMIN') && (
+          <YStack gap="$2" marginBottom="$6">
+            <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>OPERATIONS CONTROL</TamaText>
+            <YStack backgroundColor="rgba(59, 130, 246, 0.1)" padding="$4" borderRadius="$4" gap="$4" borderWidth={1} borderColor="rgba(59, 130, 246, 0.2)">
+              <XStack justifyContent="space-between" alignItems="center">
+                <XStack alignItems="center" gap="$3">
+                  <ZapIcon size={20} color="#3B82F6" />
+                  <YStack>
+                    <TamaText color="white" fontWeight="700" fontSize={14}>Integrity Guard</TamaText>
+                    <TamaText color="$gray10" fontSize={11}>Anti-Cheat sensitivity level</TamaText>
+                  </YStack>
+                </XStack>
+                <TamaText color="$blue10" fontWeight="900">{(integritySensitivity * 100).toFixed(0)}%</TamaText>
+              </XStack>
+              <Slider 
+                value={[integritySensitivity * 100]} 
+                onValueChange={(val) => state.integritySensitivity.set(val[0] / 100)}
+                max={100} 
+                step={5}
+              >
+                <Slider.Track backgroundColor="$gray4">
+                  <Slider.ActiveTrack backgroundColor="$blue10" />
+                </Slider.Track>
+                <Slider.Thumb index={0} circular elevation="$4" />
+              </Slider>
+            </YStack>
+          </YStack>
+        )}
+
         <YStack gap="$2" marginBottom="$6">
           <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={1}>PRIVACY SETTINGS</TamaText>
           <XStack justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">

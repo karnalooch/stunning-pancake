@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Alert, Linking } from 'react-native';
+import { StyleSheet, View, Alert, Linking, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { Map, Camera, UserLocation, Layer, ViewAnnotation, Callout } from '@maplibre/maplibre-react-native';
 import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
@@ -9,6 +9,7 @@ import { MMKV } from 'react-native-mmkv';
 
 import { POIService } from '../services/api';
 import { GpsSyncManager } from '../services/GpsSyncManager';
+import { BrandingService } from '../services/BrandingService';
 import { Theme } from '../theme/Theme';
 
 let storage: any;
@@ -60,6 +61,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
   const stats = state.stats.get();
 
   const syncManager = useRef<GpsSyncManager | null>(null);
+  const branding = BrandingService.getCurrentBranding();
 
   useEffect(() => {
     // Generate or retrieve persistent Device ID
@@ -211,8 +213,14 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         alignItems="center"
         gap="$2"
       >
-        <BikeIcon size={14} color="#3B82F6" />
-        <TamaText fontSize={12} fontWeight="900" color="#3B82F6" letterSpacing={1}>GRUPETTO SIEDLCE</TamaText>
+        {branding?.logo_url ? (
+          <Image source={{ uri: branding.logo_url }} style={{ width: 16, height: 16 }} resizeMode="contain" />
+        ) : (
+          <BikeIcon size={14} color="#3B82F6" />
+        )}
+        <TamaText fontSize={12} fontWeight="900" color="#3B82F6" letterSpacing={1}>
+          {branding?.name?.toUpperCase() || 'GRUPETTO SIEDLCE'}
+        </TamaText>
       </XStack>
 
       <YStack 
