@@ -310,7 +310,7 @@ export default observer(function App() {
           <Tab.Screen name="Ranking" component={LeaderboardScreen} />
           <Tab.Screen name="Rewards" component={RewardsScreen} />
           <Tab.Screen name="Profile">
-            {() => <ProfileScreen onLogout={handleLogout} />}
+            {() => <ProfileScreen user={user} onLogout={handleLogout} />}
           </Tab.Screen>
         </Tab.Navigator>
       </NavigationContainer>

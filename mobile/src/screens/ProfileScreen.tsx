@@ -12,9 +12,9 @@ const MapPinIcon = MapPin as any;
 const TrashIcon = Trash2 as any;
 const LogOutIcon = LogOut as any;
 
-export const ProfileScreen = observer(({ onLogout }: any) => {
+export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: any, onLogout: () => void }) => {
   const state = useObservable({
-    user: null as any,
+    user: initialUser || null,
     zones: [] as any[],
     isIncognito: false,
   });
@@ -23,11 +23,13 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
     const fetchData = async () => {
       try {
         const profile = await AuthService.getProfile();
-        state.user.set(profile);
+        if (profile) {
+          state.user.set(profile);
+        }
         const zoneData = await PrivacyService.getZones();
         state.zones.set(Array.isArray(zoneData) ? zoneData : (zoneData.features || []));
       } catch (e) {
-        console.error(e);
+        console.error("Profile fetch failed:", e);
       }
     };
     fetchData();
@@ -47,16 +49,35 @@ export const ProfileScreen = observer(({ onLogout }: any) => {
   const zones = state.zones.get() || [];
   const isIncognito = state.isIncognito.get();
 
+  const handleRefresh = async () => {
+    try {
+      const profile = await AuthService.getProfile();
+      if (profile && (profile.email || profile.username)) {
+        state.user.set(profile);
+      }
+    } catch (e) {
+      console.error("Refresh failed", e);
+    }
+  };
+
   return (
     <YStack flex={1} backgroundColor="$background" paddingTop="$10">
-      <TamaText paddingHorizontal="$4" fontWeight="900" fontSize={28} color="white" marginBottom="$4">Profile</TamaText>
+      <XStack justifyContent="space-between" alignItems="center" paddingHorizontal="$4" marginBottom="$4">
+        <TamaText fontWeight="900" fontSize={28} color="white">Profile</TamaText>
+        <TamaButton size="$2" chromeless onPress={handleRefresh}>
+          <TamaText color="$blue10" fontSize={12} fontWeight="700">REFRESH</TamaText>
+        </TamaButton>
+      </XStack>
 
       <YStack alignItems="center" marginBottom="$8">
         <Circle size={100} backgroundColor="$gray1" borderWidth={1} borderColor="$gray4" marginBottom="$4">
-          <TamaText color="white" fontSize={42} fontWeight="900">{user?.username?.[0]?.toUpperCase() || 'U'}</TamaText>
+          <TamaText color="white" fontSize={42} fontWeight="900">
+            {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
+          </TamaText>
         </Circle>
-        <TamaText color="white" fontSize={22} fontWeight="900">{user?.username || 'Loading...'}</TamaText>
-        <TamaText color="$gray10" fontSize={14} marginTop="$1">{user?.email || 'athlete@sport.com'}</TamaText>
+        <TamaText color="white" fontSize={22} fontWeight="900">{user?.username || user?.email || 'Pilot'}</TamaText>
+        <TamaText color="$gray10" fontSize={14} marginTop="$1">{user?.email || 'No email provided'}</TamaText>
+        {!user && <TamaText color="$red10" fontSize={12} marginTop="$2">Data Sync Error</TamaText>}
       </YStack>
 
       <ScrollView paddingHorizontal="$4" paddingBottom="$10">
