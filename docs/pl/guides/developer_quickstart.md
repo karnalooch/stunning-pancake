@@ -114,10 +114,37 @@ celery -A core worker -Q critical,default -l info
 cd admin && npm install && npm run dev   # HMR na :5173
 ```
 
-### Mobile (React Native)
-```bash
-cd mobile && npm install && npx expo start
-```
+### Mobile (Expo / React Native) — Workflow "Zero Local Builds"
+
+Od teraz aplikacja mobilna używa wyłącznie **EAS Build** (Expo Application Services) do generowania paczek natywnych. **Zero lokalnych buildów** na Twojej maszynie!
+
+#### 💻 Uruchomienie na nowej maszynie / po formacie:
+1. **Wymagania**: Upewnij się, że masz Node.js oraz zainstalowane globalnie narzędzie EAS CLI:
+   ```bash
+   npm install -g eas-cli
+   ```
+2. **Zależności**: Pobierz paczki w katalogu `mobile/` (foldery `node_modules` są w `.gitignore`, ale przepisy `package.json` i `lock` są w repozytorium):
+   ```bash
+   cd mobile
+   npm install
+   ```
+3. **Logowanie do Expo**: Uruchom `eas login` i zaloguj się na swoje konto programisty.
+
+#### 🚀 Przepływ pracy na co dzień:
+* **Uruchomienie serwera deweloperskiego (Metro):**
+  ```bash
+  npm start
+  ```
+* **Budowanie nowej paczki deweloperskiej w chmurze (EAS):**
+  ```bash
+  npm run android   # Zleca build na Androida w EAS
+  npm run ios       # Zleca build na iOS w EAS
+  ```
+
+W pliku `package.json` masz również dostęp do dedykowanych komend:
+* `npm run build:dev:android` / `ios`
+* `npm run build:preview:android` / `ios`
+* `npm run build:prod:android` / `ios`
 
 ---
 
