@@ -12,7 +12,7 @@ import * as TaskManager from 'expo-task-manager';
 import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
 
-const TELEMETRY_URL = process.env.EXPO_PUBLIC_TELEMETRY_URL ?? 'http://localhost:8001';
+const TELEMETRY_URL = process.env.EXPO_PUBLIC_TELEMETRY_URL ?? 'https://docker-telemetry-production-123c.up.railway.app';
 const BATCH_INTERVAL_MS = 30_000;
 const MAX_BUFFER_SIZE = 500;
 const MAX_RETRIES = 5;

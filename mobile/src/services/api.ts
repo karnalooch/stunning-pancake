@@ -2,7 +2,7 @@ import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
 
 // Use your computer's IP address if testing on a real device
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://docker-backend-production-123c.up.railway.app';
 
 const api = axios.create({
   baseURL: BASE_URL,
