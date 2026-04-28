@@ -11,6 +11,7 @@ import tamaguiConfig from './tamagui.config';
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
 import { Theme } from './src/theme/Theme';
 import { AuthService, setAuthToken } from './src/services/api';
+import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
 
 // Screens
@@ -100,9 +101,14 @@ export default observer(function App() {
     if (token) {
       setAuthToken(token);
       AuthService.getProfile()
-        .then(user => {
+        .then(async user => {
           auth.user.set(user);
           auth.isAuthenticated.set(true);
+          
+          if (user.tenant_id) {
+            const branding = await BrandingService.getBranding(user.tenant_id);
+            if (branding) BrandingService.applyBranding(branding);
+          }
         })
         .catch(() => {
           store.delete('auth_token');
@@ -157,6 +163,11 @@ export default observer(function App() {
         const user = await AuthService.getProfile();
         auth.user.set(user);
         auth.isAuthenticated.set(true);
+
+        if (user.tenant_id) {
+          const branding = await BrandingService.getBranding(user.tenant_id);
+          if (branding) BrandingService.applyBranding(branding);
+        }
         
         if (auth.mode.get() === 'register') {
           Alert.alert("Welcome!", "Your account is ready. Welcome to Grupetto Siedlce.");

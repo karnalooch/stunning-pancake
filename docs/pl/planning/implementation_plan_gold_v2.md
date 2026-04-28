@@ -39,15 +39,15 @@
 ## Faza 5: Zaawansowana Kontrola Operacyjna (W TOKU)
 *Cel: Umożliwienie granularnego zarządzania wydajnością i brandingu w czasie rzeczywistym.*
 
-- [ ] **Dynamiczne Dostrajanie Wydajności**: Implementacja dławienia przyjmowania danych (dostosowywanie rozdzielczości odpytywania GPS w locie).
+- [x] **Dynamiczne Dostrajanie Wydajności**: Implementacja dławienia przyjmowania danych (dostosowywanie rozdzielczości odpytywania GPS w locie).
 - [x] **Aktualizacje Over-The-Air (OTA)**:
     - [x] Konfiguracja `eas update` i przypisanie kanałów (`production`, `preview`).
     - [x] Wdrożenie `expo-updates` do obsługi automatycznego sprawdzania nowej wersji przy starcie oraz wyświetlanie wersji EAS w interfejsie.
 - [x] **Zaawansowany System Motywów**:
     - [x] Implementacja założeń brandingu „Grupetto Siedlce” w `src/theme/Theme.ts`.
-- [ ] **Dynamiczne Zarządzanie Wyglądem (B2B)**:
-    - [ ] Integracja z endpointem `/api/users/branding/` dla każdego Najemcy.
-    - [ ] Mapowanie kolorów API na tokeny Tamagui w czasie rzeczywistym.
+- [x] **Dynamiczne Zarządzanie Wyglądem (B2B)**:
+    - [x] Integracja z endpointem `/api/users/branding/` dla każdego Najemcy.
+    - [x] Mapowanie kolorów API na tokeny Tamagui w czasie rzeczywistym.
 - [ ] **Silnik White-Label**: Implementacja Zdalnego Wstrzykiwania Zasobów dla Logotypów, Nakładek Sponsorskich i Ekranów Powitalnych (Splash Screens).
 - [ ] **Adaptacyjna Integralność**: Zbudowanie UI do regulacji czułości Anti-Cheat w czasie rzeczywistym (progi Kinematyki i ML).
 

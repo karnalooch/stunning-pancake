@@ -18,6 +18,18 @@ const MAX_BUFFER_SIZE = 500;
 const MAX_RETRIES = 5;
 const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 
+export enum PollingResolution {
+  HYPERSCALE = 'HYPERSCALE', // 1s / 2m
+  BALANCED = 'BALANCED',     // 5s / 10m
+  POWER_SAVE = 'POWER_SAVE'  // 15s / 30m
+}
+
+const RESOLUTION_CONFIG = {
+  [PollingResolution.HYPERSCALE]: { distanceInterval: 2, deferredUpdatesInterval: 1000, accuracy: Location.Accuracy.BestForNavigation },
+  [PollingResolution.BALANCED]: { distanceInterval: 10, deferredUpdatesInterval: 5000, accuracy: Location.Accuracy.High },
+  [PollingResolution.POWER_SAVE]: { distanceInterval: 30, deferredUpdatesInterval: 15000, accuracy: Location.Accuracy.Balanced },
+};
+
 // Lazy storage initialization
 let _storage: MMKV | null = null;
 function getStorage() {
@@ -205,7 +217,7 @@ export class GpsSyncManager {
     });
   }
 
-  async startTracking(activityId: number): Promise<void> {
+  async startTracking(activityId: number, resolution: PollingResolution = PollingResolution.BALANCED): Promise<void> {
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== 'granted') throw new Error('Foreground location permission not granted');
 
@@ -220,7 +232,8 @@ export class GpsSyncManager {
         deviceId: this._deviceId,
         userId: this._userId,
         lastCoord: null,
-        lastAltitude: null
+        lastAltitude: null,
+        resolution
       }));
       
       storage.set('current_stats', JSON.stringify({
@@ -231,13 +244,12 @@ export class GpsSyncManager {
       }));
     }
 
+    const config = RESOLUTION_CONFIG[resolution];
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-      accuracy: Location.Accuracy.High,
-      distanceInterval: 5,
-      deferredUpdatesInterval: 5000,
+      ...config,
       foregroundService: {
         notificationTitle: 'SPORT — Tracking Active',
-        notificationBody: 'Your route is being recorded with Cyan-precision',
+        notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
         notificationColor: '#00FFFF'
       }
     });
@@ -250,6 +262,29 @@ export class GpsSyncManager {
     this._statsCheckTimer = setInterval(() => {
       this._emitStats();
     }, 2000);
+  }
+
+  async setResolution(resolution: PollingResolution): Promise<void> {
+    const storage = getStorage();
+    if (!storage) return;
+    const state = JSON.parse(storage.getString('tracking_state') || '{}');
+    if (!state.isTracking) return;
+
+    console.log(`[GPS] Tuning performance: Switching to ${resolution}`);
+    
+    // Update stored state
+    storage.set('tracking_state', JSON.stringify({ ...state, resolution }));
+
+    // Restart updates with new config
+    const config = RESOLUTION_CONFIG[resolution];
+    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+      ...config,
+      foregroundService: {
+        notificationTitle: 'SPORT — Tracking Active',
+        notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
+        notificationColor: '#00FFFF'
+      }
+    });
   }
 
   async stopTracking(): Promise<void> {
