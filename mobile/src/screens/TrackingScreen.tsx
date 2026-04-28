@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Alert } from 'react-native';
+import { StyleSheet, View, Alert, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { Map, Camera, UserLocation, Layer, ViewAnnotation, Callout } from '@maplibre/maplibre-react-native';
 import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
@@ -110,7 +110,14 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     } else {
       let { status } = await Location.requestBackgroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Background location permission denied');
+        Alert.alert(
+          'Background Permission Required',
+          'To track your ride in the background, please set Location permission to "Allow all the time" in system settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
         return;
       }
       // Start tracking with a new session ID
