@@ -12,7 +12,8 @@ export default ({ config }) => {
     "slug": "mobile",
     "version": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
+      "channel": "production"
     },
     "runtimeVersion": {
       "policy": "appVersion"
