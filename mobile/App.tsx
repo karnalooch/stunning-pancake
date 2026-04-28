@@ -51,6 +51,33 @@ const GiftIcon = Gift as any;
 const UserIcon = User as any;
 const TrophyIcon = Trophy as any;
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0B0E14', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View alignItems="center" marginBottom="$4">
+            <TamaText color="#DC2626" fontSize={24} fontWeight="900" letterSpacing={1}>CRITICAL ERROR</TamaText>
+          </View>
+          <Paragraph color="$gray10" textAlign="center" fontSize={14} marginBottom="$6" paddingHorizontal="$4">
+            {this.state.error?.toString() || "Unknown JS Exception"}
+          </Paragraph>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default observer(function App() {
   const auth = useObservable({
     isAuthenticated: false,
@@ -293,16 +320,18 @@ export default observer(function App() {
   };
 
   return (
-    <SafeAreaProvider>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-        {auth.isLoading.get() ? (
-          <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
-            <Spinner size="large" color="$blue10" />
-            <TamaText marginTop="$4" color="$gray10" letterSpacing={2} fontSize={10} fontWeight="900">BOOTING SPORT CORE...</TamaText>
-          </YStack>
-        ) : renderContent()}
-      </TamaguiProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+          {auth.isLoading.get() ? (
+            <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
+              <Spinner size="large" color="$blue10" />
+              <TamaText marginTop="$4" color="$gray10" letterSpacing={2} fontSize={10} fontWeight="900">BOOTING SPORT CORE...</TamaText>
+            </YStack>
+          ) : renderContent()}
+        </TamaguiProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 });
 
