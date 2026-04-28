@@ -1,4 +1,11 @@
+const fs = require('fs');
+const path = require('path');
+
 export default ({ config }) => {
+  const hasAndroidGoogleServices = fs.existsSync(path.resolve(__dirname, './google-services.json'));
+  const hasIosGoogleServices = fs.existsSync(path.resolve(__dirname, './GoogleService-Info.plist'));
+  const enableFirebase = hasAndroidGoogleServices || hasIosGoogleServices;
+
   return {
     ...config,
     "name": "mobile",
@@ -22,7 +29,7 @@ export default ({ config }) => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sport.athlete",
-      "googleServicesFile": process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? "./GoogleService-Info.plist" : undefined,
+      "googleServicesFile": hasIosGoogleServices ? "./GoogleService-Info.plist" : undefined,
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -32,7 +39,7 @@ export default ({ config }) => {
     },
     "android": {
       "package": "com.sport.athlete",
-      "googleServicesFile": process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? "./google-services.json" : undefined,
+      "googleServicesFile": hasAndroidGoogleServices ? "./google-services.json" : undefined,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -57,7 +64,7 @@ export default ({ config }) => {
       "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app"
     },
     "plugins": [
-      ...(process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? [
+      ...(enableFirebase ? [
         "@react-native-firebase/app",
         "@react-native-firebase/crashlytics"
       ] : []),
