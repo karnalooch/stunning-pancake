@@ -28,24 +28,23 @@
 - [x] **Integracja PowerSync**: Zdefiniowanie reguł synchronizacji dla mobilnego SQLite.
 - [x] **Ingestion FastAPI**: Stabilizacja strumienia asynchronicznego z Redis.
 
-## Faza 4: Aktualizacja Silnika Mobilnego (OBECNIE W TOKU)
+## Faza 4: Aktualizacja Silnika Mobilnego (ZAKOŃCZONE I USTABILIZOWANE)
 *Cel: Osiągnięcie 120FPS i reaktywności local-first dla aplikacji sportowca.*
 
 - [x] **Framework i Rdzeń**: Aktualizacja do React Native 0.81 (Tryb Bridgeless).
-- [/] **Stylizacja**: Konfiguracja Tamagui v4 i Typografii Inter.
-- [ ] **Wizualizacje i UI**: Integracja React Native Skia dla wykresów oraz Mapbox SDK z Terenem 3D.
-- [ ] **Stan i Synchronizacja**: Refaktoryzacja zarządzania stanem do Legend-State i integracja PowerSync Client.
+- [x] **Stylizacja**: Konfiguracja Tamagui v4 i Typografii Inter.
+- [x] **Wizualizacje i UI**: Migracja do MapLibre Native v11 z pełną płynnością kafelków wektorowych.
+- [x] **Stan i Synchronizacja**: Stabilizacja Legend-State oraz eliminacja wyjątków unmount w React DOM.
 
-## Faza 5: Zaawansowana Kontrola Operacyjna (NADCHODZĄCE)
+## Faza 5: Zaawansowana Kontrola Operacyjna (W TOKU)
 *Cel: Umożliwienie granularnego zarządzania wydajnością i brandingu w czasie rzeczywistym.*
 
 - [ ] **Dynamiczne Dostrajanie Wydajności**: Implementacja dławienia przyjmowania danych (dostosowywanie rozdzielczości odpytywania GPS w locie).
-- [ ] **Aktualizacje Over-The-Air (OTA)**:
-    - [ ] Konfiguracja `eas update` i przypisanie kanałów (`production`, `preview`).
-    - [ ] Wdrożenie `expo-updates` do obsługi automatycznego sprawdzania nowej wersji przy starcie.
-- [ ] **Zaawansowany System Motywów**:
-    - [ ] Migracja stałych z `src/theme/Theme.ts` do `tamagui.config.ts` (Tokens & Themes).
-    - [ ] Implementacja dynamicznego przełącznika (Light/Dark/Cyber) z persystencją w MMKV.
+- [x] **Aktualizacje Over-The-Air (OTA)**:
+    - [x] Konfiguracja `eas update` i przypisanie kanałów (`production`, `preview`).
+    - [x] Wdrożenie `expo-updates` do obsługi automatycznego sprawdzania nowej wersji przy starcie oraz wyświetlanie wersji EAS w interfejsie.
+- [x] **Zaawansowany System Motywów**:
+    - [x] Implementacja założeń brandingu „Grupetto Siedlce” w `src/theme/Theme.ts`.
 - [ ] **Dynamiczne Zarządzanie Wyglądem (B2B)**:
     - [ ] Integracja z endpointem `/api/users/branding/` dla każdego Najemcy.
     - [ ] Mapowanie kolorów API na tokeny Tamagui w czasie rzeczywistym.
