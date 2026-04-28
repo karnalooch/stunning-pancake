@@ -193,3 +193,29 @@ CITUS POSTGRESQL (1 koordynator + 3 workerów)
 | `ML_ANOMALY_THRESHOLD` | Próg odrzucenia | `-0.15` |
 
 Pełna referencja: zobacz `.env.example`
+
+---
+
+## 8. 🧠 Baza Wiedzy (Knowledge Base) — Czego się tu nauczysz?
+
+Ten projekt to świetny poligon doświadczalny dla zaawansowanych technologii backendowych i mobilnych. Oto krótkie wyjaśnienie najważniejszych pojęć, z którymi się tu zetkniesz:
+
+### 🔒 PostgreSQL RLS (Row Level Security)
+* **Co to jest?** Bezpieczeństwo na poziomie wiersza w bazie danych. Zamiast polegać tylko na kodzie aplikacji (np. `WHERE user_id = X`), sama baza danych pilnuje, aby dany użytkownik / organizacja nie mogła zobaczyć danych innego klienta (Multi-Tenancy).
+* **Zastosowanie**: Pełna izolacja danych miast i sponsorów.
+
+### 🤖 IsolationForest (Machine Learning)
+* **Co to jest?** Algorytm uczenia maszynowego służący do wykrywania anomalii (outlierów). Działa poprzez izolowanie punktów danych. Im szybciej dany punkt można wyizolować, tym bardziej jest on nietypowy.
+* **Zastosowanie**: Moduł Anti-Cheat analizuje tempo, tętno i nachylenie trasy, szukając oszustów.
+
+### 🗺️ BRouter (Topological Routing)
+* **Co to jest?** Silnik routingu OpenStreetMap. Nie sprawdza tylko odległości w linii prostej, ale analizuje rzeczywistą siatkę dróg, ścieżek rowerowych i chodników.
+* **Zastosowanie**: Weryfikacja, czy biegacz/rowerzysta nie "przelatywał" przez budynki lub rzeki.
+
+### ⏱️ TimescaleDB & PostGIS
+* **Co to jest?** Rozszerzenia do PostgreSQL. TimescaleDB optymalizuje bazę pod dane szeregów czasowych (ciągły strumień punktów GPS), a PostGIS dodaje zaawansowane operacje przestrzenne.
+* **Zastosowanie**: Błyskawiczna analiza tras, obliczanie prędkości i rysowanie śladów użytkowników.
+
+### 📱 MMKV & GpsSyncManager (Mobile)
+* **Co to jest?** MMKV to ekstremalnie szybka lokalna baza klucz-wartość dla React Native (zastępująca wolne AsyncStorage). GpsSyncManager zarządza zbieraniem punktów GPS w tle.
+* **Zastosowanie**: Oszczędzanie baterii telefonu i zapisywanie trasy offline, aby wysłać ją partiami po odzyskaniu zasięgu.
