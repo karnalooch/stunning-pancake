@@ -1,6 +1,7 @@
 {
   "build": {
     "development": {
+      "node": "22.13.0",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
@@ -10,7 +11,7 @@
       }
     },
     "preview": {
-      "node": "22.11.0",
+      "node": "22.13.0",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -22,6 +23,7 @@
       }
     },
     "production": {
+      "node": "22.13.0",
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://docker-backend-production-123c.up.railway.app",
