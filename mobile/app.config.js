@@ -22,6 +22,7 @@ export default ({ config }) => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sport.athlete",
+      "googleServicesFile": process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? "./GoogleService-Info.plist" : undefined,
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -31,6 +32,7 @@ export default ({ config }) => {
     },
     "android": {
       "package": "com.sport.athlete",
+      "googleServicesFile": process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? "./google-services.json" : undefined,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
@@ -55,6 +57,10 @@ export default ({ config }) => {
       "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app"
     },
     "plugins": [
+      ...(process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true' ? [
+        "@react-native-firebase/app",
+        "@react-native-firebase/crashlytics"
+      ] : []),
       [
         "expo-location",
         {
