@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View, Alert } from 'react-native';
 import * as Location from 'expo-location';
-import MapLibreGL from '@maplibre/maplibre-react-native';
+import { Map, Camera, UserLocation, Layer, ViewAnnotation, Callout } from '@maplibre/maplibre-react-native';
 import { Shield, Zap, Coffee, ShoppingBag, Bike } from 'lucide-react-native';
 import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
@@ -128,29 +128,28 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
   return (
     <View style={styles.container}>
-      {(!MapLibreGL || !MapLibreGL.MapView) ? (
+      {(!Map) ? (
         <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
           <TamaText color="$gray10" fontSize={12} letterSpacing={2} fontWeight="900">HYPERSCALE MAP ENGINE OFFLINE</TamaText>
         </YStack>
       ) : (
-        <MapLibreGL.MapView 
+        <Map 
           style={styles.map}
-          styleURL="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-          logoEnabled={false}
-          attributionEnabled={false}
+          mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+          logo={false}
+          attribution={false}
         >
-          <MapLibreGL.Camera
-            zoomLevel={14}
-            centerCoordinate={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
-            followUserLocation={state.isTracking.get()}
+          <Camera
+            zoom={14}
+            center={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
+            trackUserLocation={state.isTracking.get() ? "default" : undefined}
           />
-          <MapLibreGL.UserLocation 
-            visible={true}
+          <UserLocation 
             animated={true}
-            renderMode="gps"
           >
-            <MapLibreGL.CircleLayer
+            <Layer
               id="user-location-circle"
+              type="circle"
               style={{
                 circleRadius: 8,
                 circleColor: '#00D1FF',
@@ -158,13 +157,13 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
                 circleStrokeColor: 'rgba(0, 209, 255, 0.3)',
               }}
             />
-          </MapLibreGL.UserLocation>
+          </UserLocation>
 
           {state.pois.get().map((poi: any) => (
-            <MapLibreGL.PointAnnotation 
+            <ViewAnnotation 
               key={poi.id}
               id={poi.id.toString()}
-              coordinate={[poi.longitude, poi.latitude]}
+              lngLat={[poi.longitude, poi.latitude]}
             >
                <TamaView 
                  width={36} 
@@ -180,10 +179,10 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
                   poi.category === 'SHOP' ? <ShoppingBagIcon size={16} color="white" /> :
                   <BikeIcon size={16} color="white" />}
                </TamaView>
-               <MapLibreGL.Callout title={poi.name} />
-            </MapLibreGL.PointAnnotation>
+               <Callout title={poi.name} />
+            </ViewAnnotation>
           ))}
-        </MapLibreGL.MapView>
+        </Map>
       )}
 
       {/* Grupetto Badge Overlay */}

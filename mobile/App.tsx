@@ -65,9 +65,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     if (this.state.hasError) {
       return (
         <View style={{ flex: 1, backgroundColor: '#0B0E14', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View alignItems="center" marginBottom="$4">
+          <YStack alignItems="center" marginBottom="$4">
             <TamaText color="#DC2626" fontSize={24} fontWeight="900" letterSpacing={1}>CRITICAL ERROR</TamaText>
-          </View>
+          </YStack>
           <Paragraph color="$gray10" textAlign="center" fontSize={14} marginBottom="$6" paddingHorizontal="$4">
             {this.state.error?.toString() || "Unknown JS Exception"}
           </Paragraph>

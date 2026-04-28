@@ -27,23 +27,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPExceptio
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-# Sentry — Milestone 3 Observability
-_sentry_dsn = os.getenv("SENTRY_DSN", "")
-if _sentry_dsn:
-    try:
-        import sentry_sdk
-        from sentry_sdk.integrations.fastapi import FastApiIntegration
-        from sentry_sdk.integrations.httpx import HttpxIntegration
-        sentry_sdk.init(
-            dsn=_sentry_dsn,
-            integrations=[FastApiIntegration(), HttpxIntegration()],
-            traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.05")),
-            send_default_pii=False,
-            environment=os.getenv("SENTRY_ENVIRONMENT", "development"),
-            release=os.getenv("SENTRY_RELEASE", "local"),
-        )
-    except ImportError:
-        pass  # sentry-sdk not installed — silent degradation
+
 
 logger = logging.getLogger("telemetry")
 logging.basicConfig(level=logging.INFO)
