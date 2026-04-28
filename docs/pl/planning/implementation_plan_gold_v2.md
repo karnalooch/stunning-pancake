@@ -40,6 +40,15 @@
 *Cel: Umożliwienie granularnego zarządzania wydajnością i brandingu w czasie rzeczywistym.*
 
 - [ ] **Dynamiczne Dostrajanie Wydajności**: Implementacja dławienia przyjmowania danych (dostosowywanie rozdzielczości odpytywania GPS w locie).
+- [ ] **Aktualizacje Over-The-Air (OTA)**:
+    - [ ] Konfiguracja `eas update` i przypisanie kanałów (`production`, `preview`).
+    - [ ] Wdrożenie `expo-updates` do obsługi automatycznego sprawdzania nowej wersji przy starcie.
+- [ ] **Zaawansowany System Motywów**:
+    - [ ] Migracja stałych z `src/theme/Theme.ts` do `tamagui.config.ts` (Tokens & Themes).
+    - [ ] Implementacja dynamicznego przełącznika (Light/Dark/Cyber) z persystencją w MMKV.
+- [ ] **Dynamiczne Zarządzanie Wyglądem (B2B)**:
+    - [ ] Integracja z endpointem `/api/users/branding/` dla każdego Najemcy.
+    - [ ] Mapowanie kolorów API na tokeny Tamagui w czasie rzeczywistym.
 - [ ] **Silnik White-Label**: Implementacja Zdalnego Wstrzykiwania Zasobów dla Logotypów, Nakładek Sponsorskich i Ekranów Powitalnych (Splash Screens).
 - [ ] **Adaptacyjna Integralność**: Zbudowanie UI do regulacji czułości Anti-Cheat w czasie rzeczywistym (progi Kinematyki i ML).
 

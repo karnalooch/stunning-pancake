@@ -50,9 +50,19 @@ docker-compose exec backend python seed_data.py
 
 ---
 
+---
+
+## 📱 Mobile Deployment & Maintenance
+The mobile app supports two types of updates:
+1. **Native Builds (APK/iOS)**: Required when adding new native libraries (e.g., Bluetooth, specialized sensors) or changing app icons/splash screens.
+   - Command: `cd mobile; npm run build:android` (profile: `preview`).
+2. **OTA Updates (Over-The-Air)**: Instant updates for UI changes, bug fixes, or logic updates without resubmitting to stores.
+   - Command: `cd mobile; eas update --branch production --message "Update UI theme"`.
+
 ## 📈 Future Roadmap
-- [ ] Integration with Wearable SDKs (Garmin, Apple Watch).
-- [ ] AI-Generated personalized challenge recommendations.
-- [ ] Real-time city-wide heatmaps for urban planning.
+- [x] **Firebase Integration**: Transitioned from Sentry to Firebase Crashlytics for production monitoring.
+- [ ] **OTA & Dynamic UI**: Implement a fully remote-controlled appearance system (themes/logos) via EAS Update.
+- [ ] **Integration with Wearable SDKs**: Garmin, Apple Watch, and Strava sync.
+- [ ] **AI-Generated Challenges**: Personalized athlete goals based on performance history.
 
 **Built with pride by your AI Coding Assistant.**
