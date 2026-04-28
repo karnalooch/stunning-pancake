@@ -200,14 +200,14 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         paddingVertical="$2" 
         paddingHorizontal="$4" 
         borderRadius="$10" 
-        backgroundColor="rgba(0, 209, 255, 0.2)" 
+        backgroundColor="rgba(30, 58, 138, 0.35)" 
         borderWidth={1} 
-        borderColor="#00D1FF"
+        borderColor="#3B82F6"
         alignItems="center"
         gap="$2"
       >
-        <BikeIcon size={14} color="#00D1FF" />
-        <TamaText fontSize={12} fontWeight="900" color="#00D1FF" letterSpacing={1}>GRUPETTO SIEDLCE</TamaText>
+        <BikeIcon size={14} color="#3B82F6" />
+        <TamaText fontSize={12} fontWeight="900" color="#3B82F6" letterSpacing={1}>GRUPETTO SIEDLCE</TamaText>
       </XStack>
 
       <YStack 
@@ -217,9 +217,9 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         right={20} 
         padding="$6" 
         borderRadius="$6" 
-        backgroundColor="rgba(10,10,10,0.85)" 
+        backgroundColor="rgba(15, 23, 42, 0.85)" 
         borderWidth={1} 
-        borderColor="rgba(255,255,255,0.1)"
+        borderColor="rgba(59, 130, 246, 0.3)"
         gap="$4"
       >
         <XStack justifyContent="space-between" alignItems="center">
@@ -227,8 +227,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
              {state.isTracking.get() ? "CYAN-PRECISION ACTIVE" : `READY, ${user?.username?.toUpperCase() || 'RIDER'}`}
            </TamaText>
            <XStack gap="$2">
-              <ZapIcon size={18} color={Theme.colors.primary} />
-              <ShieldIcon size={18} color={Theme.colors.primary} />
+              <ZapIcon size={18} color="#3B82F6" />
+              <ShieldIcon size={18} color="#3B82F6" />
            </XStack>
         </XStack>
 
@@ -249,8 +249,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
         <TamaButton 
           size="$5"
-          borderRadius="$4"
-          backgroundColor={state.isTracking.get() ? "#DC2626" : Theme.colors.primary}
+          borderRadius="$10"
+          backgroundColor={state.isTracking.get() ? "#EF4444" : "#3B82F6"}
           onPress={toggleTracking} 
         >
           <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
