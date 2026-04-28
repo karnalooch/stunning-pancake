@@ -73,4 +73,5 @@ Każdy Kamień Milowy MUSI zakończyć się następującą sekwencją:
 - [x] **v2.1 Gold Master (K8s & Security):** Pełna orkiestracja + Audyt 0-podatności.
 - [x] **Enterprise Quality Standards:** Mandat 60 FPS + Zero-Regression QA.
 - [x] **Phase 4 Mobile Upgrade:** Migracja na Tamagui + Legend-State.
+- [x] **Phase 5 Stability & Custom Branding (Kwiecień 2026):** Migracja Firebase, MapLibre Native v11, Grupetto Siedlce Look & Feel, EAS OTA Updates.
 - [ ] **Global Rollout:** Pierwsza instancja miejska w klastrze. (W toku)

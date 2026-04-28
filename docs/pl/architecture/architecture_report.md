@@ -58,5 +58,11 @@ Po udanej modularyzacji ekosystemu Admina, projekt przechodzi w fazę **Utwardza
 *   **Cel**: Pełna implementacja **OGC API - Features** oraz **Moving Features**.
 *   **Cel końcowy**: Umożliwienie partnerom miejskim integracji ich narzędzi GIS (QGIS, ArcGIS) bezpośrednio ze strumieniem telemetrii SPORT.
 
+#### 6.4 Ostatnie Usprawnienia i Stabilizacja (Kwiecień 2026)
+*   **Migracja Telemetrii**: Usunięto framework Sentry z backendu i aplikacji mobilnej na rzecz natywnego Firebase Crashlytics.
+*   **Modernizacja Map**: Mapy w aplikacji mobilnej zostały zmigrowane z klasycznego MapView na MapLibre Native v11, poprawiając płynność i obsługę kafelków wektorowych.
+*   **Poprawki UX i Lokalizacji**: Zaimplementowano bezpieczną ścieżkę obsługi odrzucenia uprawnień do lokalizacji w tle (Background GPS Permission) z bezpośrednim przekierowaniem do ustawień systemowych systemu operacyjnego.
+*   **Branding i Stylistyka**: Wdrożono nową identyfikację wizualną opartą o design „Grupetto Siedlce” z dynamicznym wykorzystaniem tokenów stylu Navy/Sky i Glassmorphismu.
+
 ---
-*Aktualizacja: 2026-04-24 | Arch-Ref: SPORT-PHASE-6-ROADMAP*
+*Aktualizacja: 2026-04-28 | Arch-Ref: SPORT-PHASE-6-STABILITY*

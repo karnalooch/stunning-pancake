@@ -60,8 +60,10 @@ The mobile app supports two types of updates:
    - Command: `cd mobile; eas update --branch production --message "Update UI theme"`.
 
 ## 📈 Future Roadmap
-- [x] **Firebase Integration**: Transitioned from Sentry to Firebase Crashlytics for production monitoring.
-- [ ] **OTA & Dynamic UI**: Implement a fully remote-controlled appearance system (themes/logos) via EAS Update.
+- [x] **Firebase Integration**: Transitioned from Sentry to Firebase for client and server production observability.
+- [x] **OTA & Dynamic UI**: Implemented remote deployment framework via EAS Updates (`production` / `preview` branches) and successfully rolled out the initial OTA fix sequence.
+- [x] **MapLibre Native v11**: Fully upgraded tracking maps to MapLibre v11.
+- [x] **Stability and RBAC**: Resolved React DOM proxy unmount exceptions for smooth dashboard/user flows.
 - [ ] **Integration with Wearable SDKs**: Garmin, Apple Watch, and Strava sync.
 - [ ] **AI-Generated Challenges**: Personalized athlete goals based on performance history.
 
