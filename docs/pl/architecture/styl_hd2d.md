@@ -3,7 +3,10 @@
 **Zatwierdzono przez:** Właściciel Projektu SPORT
 **Status:** OBOWIĄZUJĄCY
 
-Niniejszy aneks do Konstytucji SPORT definiuje nowy fundament wizualny oraz zasady projektowania interfejsu użytkownika.
+> [!IMPORTANT]
+> Niniejsze wytyczne dotyczą **WYŁĄCZNIE warstwy mobilnej** (aplikacji dla sportowca). Portal B2B/B2C Owner (Admin) zachowuje swój dotychczasowy styl korporacyjny Cyber-Monolith V3.
+
+Niniejszy aneks do Konstytucji SPORT definiuje nowy fundament wizualny oraz zasady projektowania interfejsu użytkownika dla aplikacji mobilnej.
 
 ---
 
