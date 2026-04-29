@@ -6,6 +6,7 @@ import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton,
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as Updates from 'expo-updates';
 import tamaguiConfig from './tamagui.config';
 
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
@@ -80,6 +81,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default observer(function App() {
+  const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
+
   const auth = useObservable({
     isAuthenticated: false,
     isLoading: true,
@@ -93,6 +96,12 @@ export default observer(function App() {
   });
 
   const isLoading = auth.isLoading.get();
+
+  useEffect(() => {
+    if (isUpdateAvailable) {
+      Updates.reloadAsync();
+    }
+  }, [isUpdateAvailable]);
 
   useEffect(() => {
     initFirebase();
@@ -342,7 +351,17 @@ export default observer(function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
-          {isLoading ? (
+          {isDownloading ? (
+            <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
+              <Spinner size="large" color="$blue10" />
+              <TamaText marginTop="$4" color="$blue10" letterSpacing={2} fontSize={12} fontWeight="900">
+                DOWNLOADING SECURE UPDATE...
+              </TamaText>
+              <TamaText marginTop="$2" color="$gray10" fontSize={10}>
+                PLEASE STAND BY
+              </TamaText>
+            </YStack>
+          ) : isLoading ? (
             <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
               <Spinner size="large" color="$blue10" />
               <TamaText marginTop="$4" color="$gray10" letterSpacing={2} fontSize={10} fontWeight="900">BOOTING SPORT CORE...</TamaText>
