@@ -206,19 +206,19 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         left={20} 
         paddingVertical="$2" 
         paddingHorizontal="$4" 
-        borderRadius="$10" 
-        backgroundColor="rgba(30, 58, 138, 0.35)" 
-        borderWidth={1} 
-        borderColor="#3B82F6"
+        borderRadius="$2" 
+        backgroundColor="rgba(5, 5, 5, 0.6)" 
+        borderWidth={2} 
+        borderColor="$primary"
         alignItems="center"
         gap="$2"
       >
         {branding?.logo_url ? (
           <Image source={{ uri: branding.logo_url }} style={{ width: 16, height: 16 }} resizeMode="contain" />
         ) : (
-          <BikeIcon size={14} color="#3B82F6" />
+          <BikeIcon size={14} color={Theme.colors.primary} />
         )}
-        <TamaText fontSize={12} fontWeight="900" color="#3B82F6" letterSpacing={1}>
+        <TamaText fontSize={12} fontWeight="900" color="$primary" letterSpacing={2}>
           {branding?.name?.toUpperCase() || 'GRUPETTO SIEDLCE'}
         </TamaText>
       </XStack>
@@ -229,44 +229,45 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         left={20} 
         right={20} 
         padding="$6" 
-        borderRadius="$6" 
-        backgroundColor="rgba(15, 23, 42, 0.85)" 
-        borderWidth={1} 
-        borderColor="rgba(59, 130, 246, 0.3)"
+        borderRadius="$2" 
+        backgroundColor="$background" 
+        borderWidth={2} 
+        borderColor="$primary"
         gap="$4"
       >
         <XStack justifyContent="space-between" alignItems="center">
-           <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="white">
+           <TamaText fontSize={11} fontWeight="900" letterSpacing={2} color="$primary">
              {isTracking ? "CYAN-PRECISION ACTIVE" : `READY, ${user?.username?.toUpperCase() || 'RIDER'}`}
            </TamaText>
            <XStack gap="$2">
-              <ZapIcon size={18} color="#3B82F6" />
-              <ShieldIcon size={18} color="#3B82F6" />
+              <ZapIcon size={18} color={Theme.colors.primary} />
+              <ShieldIcon size={18} color={Theme.colors.primary} />
            </XStack>
         </XStack>
 
         <XStack justifyContent="space-between" alignItems="flex-end">
           <YStack>
-            <TamaText color="$gray10" fontSize={10} fontWeight="700">DISTANCE</TamaText>
-            <H1 fontWeight="900" color="white">{((stats?.distanceM || 0) / 1000).toFixed(2)}<TamaText fontSize={14} color="$gray10">km</TamaText></H1>
+            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>DISTANCE</TamaText>
+            <H1 fontWeight="900" color="white" fontSize={38}>{((stats?.distanceM || 0) / 1000).toFixed(2)}<TamaText fontSize={16} color="$textMuted">km</TamaText></H1>
           </YStack>
           <YStack>
-            <TamaText color="$gray10" fontSize={10} fontWeight="700">PACE</TamaText>
-            <H1 fontWeight="900" color="white">{formatPace(stats?.paceSecPerKm || 0)}</H1>
+            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>PACE</TamaText>
+            <H1 fontWeight="900" color="white" fontSize={38}>{formatPace(stats?.paceSecPerKm || 0)}</H1>
           </YStack>
           <YStack alignItems="flex-end">
-            <TamaText color="$gray10" fontSize={10} fontWeight="700">BUFFER</TamaText>
-            <TamaText fontSize={24} fontWeight="900" color="white">{stats?.pendingPoints || 0}</TamaText>
+            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>BUFFER</TamaText>
+            <TamaText fontSize={32} fontWeight="900" color="$primary">{stats?.pendingPoints || 0}</TamaText>
           </YStack>
         </XStack>
 
         <TamaButton 
-          size="$5"
-          borderRadius="$10"
-          backgroundColor={isTracking ? "#EF4444" : "#3B82F6"}
+          size="$6"
+          borderRadius="$0"
+          backgroundColor={isTracking ? "#FF0000" : "$primary"}
           onPress={toggleTracking} 
+          pressStyle={{ opacity: 0.9, scale: 0.98 }}
         >
-          <TamaText fontWeight="900" fontSize={14} letterSpacing={1.5} color="white">
+          <TamaText fontWeight="900" fontSize={16} letterSpacing={2} color={isTracking ? "white" : "black"}>
             {isTracking ? "STOP & FINISH" : "START SESSION"}
           </TamaText>
         </TamaButton>

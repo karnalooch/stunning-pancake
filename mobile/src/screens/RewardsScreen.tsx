@@ -55,23 +55,25 @@ export const RewardsScreen = () => {
           icon={loading ? <Spinner color="white" /> : <RefreshIcon size={16} color="white" />} 
           onPress={fetchData} 
           size="$3"
-          backgroundColor="rgba(255,255,255,0.1)"
+          backgroundColor="$card"
+          borderWidth={1}
+          borderColor="$primary"
         />
       </XStack>
       
-      <XStack backgroundColor="$blue10" padding="$6" borderRadius="$6" justifyContent="space-between" alignItems="center" marginBottom="$8">
+      <XStack backgroundColor="$primary" padding="$6" borderRadius="$0" justifyContent="space-between" alignItems="center" marginBottom="$8">
         <YStack>
-          <TamaText color="rgba(255,255,255,0.7)" fontSize={10} fontWeight="800" letterSpacing={1}>AVAILABLE BALANCE</TamaText>
-          <TamaText color="white" fontSize={32} fontWeight="900" marginTop="$1">
+          <TamaText color="black" fontSize={10} fontWeight="900" letterSpacing={1.5}>AVAILABLE BALANCE</TamaText>
+          <TamaText color="black" fontSize={32} fontWeight="900" marginTop="$1">
             {loading ? '...' : balance.toLocaleString()} XP
           </TamaText>
         </YStack>
-        <GiftIcon size={32} color="white" opacity={0.5} />
+        <GiftIcon size={32} color="black" opacity={0.8} />
       </XStack>
 
       {error && (
-        <YStack backgroundColor="$red5" padding="$4" borderRadius="$4" marginBottom="$4">
-          <TamaText color="white" fontSize={12} fontWeight="700">{error}</TamaText>
+        <YStack backgroundColor="$error" padding="$4" borderRadius="$0" marginBottom="$4">
+          <TamaText color="white" fontSize={12} fontWeight="800">{error}</TamaText>
         </YStack>
       )}
 
@@ -79,40 +81,41 @@ export const RewardsScreen = () => {
         <YStack gap="$4" paddingBottom="$10">
           {loading && pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
-              <Spinner size="large" color="$blue10" />
-              <TamaText color="$gray10" marginTop="$4">Syncing with blockchain...</TamaText>
+              <Spinner size="large" color="$primary" />
+              <TamaText color="$primary" marginTop="$4" fontWeight="800">SYNCING DATA...</TamaText>
             </YStack>
           ) : pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
-              <TamaText color="$gray10">No rewards available in your area yet.</TamaText>
+              <TamaText color="$textMuted">No rewards available in your area yet.</TamaText>
             </YStack>
           ) : (
             pools.map((pool) => (
-              <XStack key={pool.id} backgroundColor="$gray1" padding="$4" borderRadius="$4" alignItems="center" gap="$4" borderLeftWidth={4} borderLeftColor="$blue10">
-                <YStack backgroundColor="$gray2" padding="$2.5" borderRadius="$3" alignItems="center" justifyContent="center">
-                  <TagIcon size={20} color="white" />
+              <XStack key={pool.id} backgroundColor="$card" padding="$4" borderRadius="$0" alignItems="center" gap="$4" borderWidth={2} borderColor="$card" borderLeftWidth={6} borderLeftColor="$primary">
+                <YStack backgroundColor="$background" padding="$2.5" borderRadius="$0" alignItems="center" justifyContent="center" borderWidth={1} borderColor="$textMuted">
+                  <TagIcon size={20} color={Theme.colors.primary} />
                 </YStack>
                 
                 <YStack flex={1}>
-                  <TamaText color="$gray10" fontSize={10} fontWeight="800" textTransform="uppercase">{pool.sponsor_name}</TamaText>
-                  <TamaText color="white" fontWeight="800" fontSize={16} marginVertical="$0.5">{pool.title}</TamaText>
+                  <TamaText color="$primary" fontSize={10} fontWeight="900" textTransform="uppercase" letterSpacing={1}>{pool.sponsor_name}</TamaText>
+                  <TamaText color="white" fontWeight="900" fontSize={16} marginVertical="$0.5">{pool.title}</TamaText>
                   <XStack alignItems="center" gap="$1">
-                    <MapPinIcon size={12} color="$gray8" />
-                    <TamaText color="$gray8" fontSize={11}>Available: {pool.available}</TamaText>
+                    <MapPinIcon size={12} color="$textMuted" />
+                    <TamaText color="$textMuted" fontSize={11} fontWeight="700">Stock: {pool.available}</TamaText>
                   </XStack>
                 </YStack>
 
                 <YStack alignItems="flex-end" gap="$2">
-                  <YStack backgroundColor="$gray3" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$2">
-                    <TamaText color="white" fontSize={11} fontWeight="900">{pool.points_required} XP</TamaText>
+                  <YStack backgroundColor="$background" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$0" borderWidth={1} borderColor="$secondary">
+                    <TamaText color="$secondary" fontSize={11} fontWeight="900">{pool.points_required} XP</TamaText>
                   </YStack>
                   <TamaButton 
                     size="$2" 
-                    theme="active" 
+                    backgroundColor="$primary"
                     onPress={() => handleRedeem(pool.id)}
                     disabled={balance < pool.points_required || pool.available === 0}
+                    borderRadius="$0"
                   >
-                    <TamaText color="white" fontSize={10} fontWeight="900">REDEEM</TamaText>
+                    <TamaText color="black" fontSize={10} fontWeight="900">REDEEM</TamaText>
                   </TamaButton>
 
                 </YStack>

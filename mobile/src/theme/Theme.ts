@@ -1,13 +1,14 @@
 export const Theme = {
   colors: {
-    primary: '#3B82F6', // Brand Sky Blue
-    secondary: '#1E3A8A', // Navy Blue
-    background: '#0F172A', // Brand Ink
-    card: '#1E293B', // Slate Surface
+    primary: '#00F0FF', // Action Cyan (High Visibility)
+    secondary: '#FFF200', // Solar Yellow (Alerts/Zones)
+    background: '#050505', // Void Black (Deep Contrast)
+    card: '#121212', // Darker Surface for HD-2D
     text: '#FFFFFF',
-    textMuted: '#94A3B8',
-    success: '#10B981',
-    error: '#EF4444',
+    textMuted: '#A0A0A0',
+    success: '#00FF41', // Matrix Green
+    error: '#FF0000', // Pure Red
+    outline: '#000000', // 1px Outline Color
   },
   spacing: {
     xs: 4,
@@ -17,8 +18,8 @@ export const Theme = {
     xl: 32,
   },
   borderRadius: {
-    md: 12,
-    lg: 20,
-    xl: 30,
+    none: 0, // Pixel-art often uses no radius
+    md: 8,
+    lg: 12,
   }
 };
