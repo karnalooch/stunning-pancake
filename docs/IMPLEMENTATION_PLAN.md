@@ -7,7 +7,7 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
 - **Cel**: Stabilny potok danych i izolacja najemców.
 - **Kluczowe**: TimescaleDB Hypertables, PostgreSQL RLS, FastAPI Ingestion.
 
-### Faza 2: Portal Owner (Cyber-Monolith) (STABILNE)
+### Faza 2: Portal Owner (Nowoczesny Light Mode) (STABILNE)
 - **Cel**: Zarządzanie ekosystemem B2B2C.
 - **Kluczowe**: Vite 6, React 19, Tremor Analytics, Shard Management.
 
@@ -15,13 +15,22 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
 - **Cel**: Doświadczenie 120FPS i Solar-Ready UI.
 - **Kluczowe**: React Native Bridgeless, Skia, Tamagui, Legend-State.
 
-### Faza 4: Ekosystem i Integracje (W TOKU)
-- **Cel**: Otwarcie na zewnętrzne API i sprzęt wearable.
+### Faza 4: Ekosystem i Integracje (ZAKOŃCZONE / REWORK V3.0 W TOKU)
+- **Cel**: Otwarcie na zewnętrzne API i sprzęt wearable oraz wdrożenie manifestu wizualnego V3.0.
 - **Kluczowe**: 
-  - [ ] **Immersyjny Onboarding**: Animowany Splash, Athlete QR.
-  - [ ] **Live-Ghost**: WebSocket Ingestion z Geofiltrowaniem.
-  - [ ] **Wearable Hub**: Integracja z Garmin, Strava, HealthKit.
-  - [ ] **Stripe Connect**: Logika wypłat multi-sponsor.
+  - [x] **Immersyjny Onboarding Experience**:
+    - [x] Animated Pulse Splash.
+    - [x] Permissions Step (GPS/Motion).
+    - [x] Integrations Hub (One-Tap Strava/Garmin).
+    - [x] Data Validation (Biometria).
+    - [x] QR Identity Generation.
+  - [x] **Solar-Ready HD-2D UI (Mobile Gaming Aesthetic)**:
+    - [x] Stylistyka retro-gamingowa inspirowana *Metal Slug*, *Dave the Diver*, *Octopath Traveler*.
+    - [x] 1px Black Outlines (Sprite-style) i Pixel Art.
+    - [x] High-Noon Contrast (12:1 ratio) dla trybu Solar Mode.
+  - [x] **Live-Ghost**: WebSocket Ingestion z Geofiltrowaniem (Real-time Privacy Zones).
+  - [x] **Wearable Hub**: Integracja z Strava & Garmin (Sync Engine).
+  - [x] **Stripe Connect**: Logika wypłat Express dla sportowców.
 
 ### Faza 5: AI i Autonomia (PLANOWANE)
 - **Cel**: Proaktywna inteligencja.

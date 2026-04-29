@@ -132,6 +132,62 @@ class StripeService:
             logger.error("stripe.portal_error customer=%s err=%s", stripe_customer_id, exc)
             return None
 
+    # --- STRIPE CONNECT (Milestone 4: Multi-Sponsor Payouts) ---
+
+    @classmethod
+    def create_connect_account(cls, user_id: int, email: str, refresh_url: str, return_url: str) -> dict | None:
+        """
+        Creates a Stripe Express account and an onboarding link for an athlete.
+        """
+        if not _IS_CONFIGURED:
+            return {"url": f"{return_url}?mock=1", "account_id": "acct_mock"}
+
+        try:
+            # 1. Create the Express account
+            account = stripe.Account.create(
+                type="express",
+                email=email,
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
+                },
+                metadata={"user_id": str(user_id)}
+            )
+
+            # 2. Create an Account Link for onboarding
+            account_link = stripe.AccountLink.create(
+                account=account.id,
+                refresh_url=refresh_url,
+                return_url=return_url,
+                type="account_onboarding",
+            )
+
+            return {"url": account_link.url, "account_id": account.id}
+        except stripe.StripeError as exc:
+            logger.error("stripe.connect_error user=%d err=%s", user_id, exc)
+            return None
+
+    @classmethod
+    def create_transfer(cls, amount_cents: int, destination_acct: str, description: str = "Reward payout") -> str | None:
+        """
+        Transfers funds from the platform to a connected athlete account.
+        """
+        if not _IS_CONFIGURED:
+            logger.info("stripe.transfer_mock amount=%d to=%s", amount_cents, destination_acct)
+            return "tr_mock_123"
+
+        try:
+            transfer = stripe.Transfer.create(
+                amount=amount_cents,
+                currency="usd",
+                destination=destination_acct,
+                description=description,
+            )
+            return transfer.id
+        except stripe.StripeError as exc:
+            logger.error("stripe.transfer_error to=%s err=%s", destination_acct, exc)
+            return None
+
     @classmethod
     def handle_webhook(cls, payload: bytes, sig_header: str) -> dict:
         """

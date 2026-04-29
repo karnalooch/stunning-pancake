@@ -91,3 +91,33 @@ class Voucher(models.Model):
     def __str__(self):
         return f"{self.code} - {self.poi.name}"
 
+class WearableIntegration(models.Model):
+    """
+    Stores OAuth credentials for external wearable services (Milestone 4).
+    """
+    SERVICE_CHOICES = (
+        ('STRAVA', 'Strava'),
+        ('GARMIN', 'Garmin'),
+        ('APPLE', 'Apple HealthKit'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wearables')
+    service = models.CharField(max_length=20, choices=SERVICE_CHOICES)
+    
+    # OAuth 2.0
+    access_token = models.TextField()
+    refresh_token = models.TextField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    
+    # External ID
+    external_id = models.CharField(max_length=200, null=True, blank=True)
+    
+    is_active = models.BooleanField(default=True)
+    last_sync = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ('user', 'service')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.service}"
+

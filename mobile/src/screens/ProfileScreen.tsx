@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import * as Updates from 'expo-updates';
-import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle } from 'tamagui';
+import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity, QrCode } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, View } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService } from '../services/api';
+import QRCode from 'react-native-qrcode-svg';
 
 const ShieldIcon = Shield as any;
 const PlusIcon = Plus as any;
@@ -13,6 +14,7 @@ const TrashIcon = Trash2 as any;
 const LogOutIcon = LogOut as any;
 const ZapIcon = Zap as any;
 const ActivityIcon = Activity as any;
+const QrIcon = QrCode as any;
 
 export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: any, onLogout: () => void }) => {
   const state = useObservable({
@@ -20,6 +22,7 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
     zones: [] as any[],
     isIncognito: false,
     integritySensitivity: 0.5,
+    showQR: false,
   });
 
   useEffect(() => {
@@ -52,6 +55,7 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
   const zones = state.zones.get() || [];
   const isIncognito = state.isIncognito.get();
   const integritySensitivity = state.integritySensitivity.get();
+  const showQR = state.showQR.get();
 
   const handleRefresh = async () => {
     try {
@@ -73,18 +77,77 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
         </TamaButton>
       </XStack>
 
-      <YStack alignItems="center" marginBottom="$8">
-        <Circle size={100} backgroundColor="$gray1" borderWidth={1} borderColor="$gray4" marginBottom="$4">
-          <TamaText color="white" fontSize={42} fontWeight="900">
-            {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
-          </TamaText>
-        </Circle>
-        <TamaText color="white" fontSize={22} fontWeight="900">{user?.username || user?.email || 'Pilot'}</TamaText>
-        <TamaText color="$gray10" fontSize={14} marginTop="$1">{user?.email || 'No email provided'}</TamaText>
-        {!user && <TamaText color="$red10" fontSize={12} marginTop="$2">Data Sync Error</TamaText>}
+      <YStack alignItems="center" marginBottom="$6">
+        <XStack gap="$6" alignItems="center" paddingHorizontal="$6">
+          <Circle size={80} backgroundColor="$gray1" borderWidth={1} borderColor="$gray4">
+            <TamaText color="white" fontSize={32} fontWeight="900">
+              {user?.username?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || '?'}
+            </TamaText>
+          </Circle>
+          
+          <YStack flex={1}>
+            <TamaText color="white" fontSize={22} fontWeight="900">{user?.username || user?.email || 'Pilot'}</TamaText>
+            <TamaText color="$gray10" fontSize={12}>{user?.email || 'No email provided'}</TamaText>
+            <XStack gap="$2" marginTop="$2">
+              <View backgroundColor="$blue10" paddingVertical="$1" paddingHorizontal="$2" borderRadius="$1">
+                <TamaText color="white" fontSize={8} fontWeight="900">ATHLETE_ID: {user?.id || 'PENDING'}</TamaText>
+              </View>
+              {user?.is_premium && (
+                <View backgroundColor="$yellow10" paddingVertical="$1" paddingHorizontal="$2" borderRadius="$1">
+                  <TamaText color="black" fontSize={8} fontWeight="900">PREMIUM</TamaText>
+                </View>
+              )}
+            </XStack>
+          </YStack>
+        </XStack>
       </YStack>
 
       <ScrollView paddingHorizontal="$4" paddingBottom="$10">
+        {/* Athlete QR Section */}
+        <YStack gap="$2" marginBottom="$6">
+          <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>ATHLETE QR ID</TamaText>
+          <YStack 
+            backgroundColor="$gray1" 
+            padding="$4" 
+            borderRadius="$4" 
+            alignItems="center"
+            borderWidth={1}
+            borderColor={showQR ? "$blue10" : "$gray4"}
+          >
+            {showQR ? (
+              <YStack alignItems="center" gap="$4">
+                <View backgroundColor="white" padding="$3" borderRadius="$2">
+                  <QRCode 
+                    value={`sport_v1:pilot:${user?.id || 'unknown'}`} 
+                    size={160}
+                    color="#0B0E14"
+                    backgroundColor="white"
+                  />
+                </View>
+                <TamaText color="$gray10" fontSize={10} textAlign="center">
+                  Scan this code at smart-checkpoints or for pilot identification.
+                </TamaText>
+                <TamaButton size="$3" onPress={() => state.showQR.set(false)} backgroundColor="$gray3">
+                  <TamaText color="white" fontWeight="700">HIDE QR</TamaText>
+                </TamaButton>
+              </YStack>
+            ) : (
+              <XStack justifyContent="space-between" alignItems="center" width="100%">
+                <XStack alignItems="center" gap="$3">
+                  <QrIcon size={20} color="#00D1FF" />
+                  <YStack>
+                    <TamaText color="white" fontWeight="700" fontSize={14}>Identity Scan</TamaText>
+                    <TamaText color="$gray10" fontSize={11}>Show your athlete QR token</TamaText>
+                  </YStack>
+                </XStack>
+                <TamaButton size="$3" onPress={() => state.showQR.set(true)} backgroundColor="$blue10">
+                  <TamaText color="white" fontWeight="900">REVEAL</TamaText>
+                </TamaButton>
+              </XStack>
+            )}
+          </YStack>
+        </YStack>
+
         {(user?.role === 'GLOBAL_OWNER' || user?.role === 'TENANT_ADMIN' || user?.role === 'TENANT_MODERATOR') && (
           <YStack gap="$2" marginBottom="$6">
             <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>OPERATIONS CONTROL</TamaText>
@@ -117,10 +180,50 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
               </XStack>
             </YStack>
           </YStack>
-        )}
+          </YStack>
 
-        <YStack gap="$2" marginBottom="$6">
+          <YStack gap="$2" marginBottom="$6">
+          <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>WEARABLE ECOSYSTEM</TamaText>
+          <YStack backgroundColor="$gray1" padding="$4" borderRadius="$4" gap="$4">
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$3">
+                <ZapIcon size={20} color="#FC4C02" />
+                <YStack>
+                  <TamaText color="white" fontWeight="700" fontSize={14}>Strava</TamaText>
+                  <TamaText color="$gray10" fontSize={11}>Sync rides and runs automatically</TamaText>
+                </YStack>
+              </XStack>
+              <TamaButton 
+                size="$2" 
+                backgroundColor="#FC4C02" 
+                onPress={() => Alert.alert("OAuth Redirect", "Redirecting to Strava...")}
+              >
+                <TamaText color="white" fontWeight="900" fontSize={10}>CONNECT</TamaText>
+              </TamaButton>
+            </XStack>
+
+            <XStack justifyContent="space-between" alignItems="center">
+              <XStack alignItems="center" gap="$3">
+                <View backgroundColor="#007CC3" width={20} height={20} borderRadius={10} />
+                <YStack>
+                  <TamaText color="white" fontWeight="700" fontSize={14}>Garmin Connect</TamaText>
+                  <TamaText color="$gray10" fontSize={11}>Direct sync from your watch</TamaText>
+                </YStack>
+              </XStack>
+              <TamaButton 
+                size="$2" 
+                backgroundColor="#007CC3"
+                onPress={() => Alert.alert("OAuth Redirect", "Redirecting to Garmin...")}
+              >
+                <TamaText color="white" fontWeight="900" fontSize={10}>CONNECT</TamaText>
+              </TamaButton>
+            </XStack>
+          </YStack>
+          </YStack>
+
+          <YStack gap="$2" marginBottom="$6">
           <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={1}>PRIVACY SETTINGS</TamaText>
+
           <XStack justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
             <XStack alignItems="center" gap="$3">
               <ShieldIcon size={20} color="#00D1FF" />

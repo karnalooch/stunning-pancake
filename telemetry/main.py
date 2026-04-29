@@ -7,7 +7,7 @@ Responsibility:
 - High-throughput ingestion of OSMand-protocol GPS packets from Traccar.
 - Async WebSocket broadcast to Admin Dashboard (live map).
 - Write GPS points into TimescaleDB hypertable (gps_points).
-- Fire Kalman smoothing on batch commit.
+- Real-time Geo-filtering for user privacy zones.
 
 Run (dev):
     uvicorn telemetry.main:app --host 0.0.0.0 --port 8001 --reload
@@ -21,25 +21,24 @@ import logging
 import os
 import time
 from typing import Any
+from math import radians, cos, sin, asin, sqrt
 
 import asyncpg
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-
-
 logger = logging.getLogger("telemetry")
 logging.basicConfig(level=logging.INFO)
 
 # ---------------------------------------------------------------------------
-# App
+# App Configuration
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
     title="SPORT Telemetry Engine",
     description="High-performance GPS ingestion and live broadcast service (Constitution §24.1)",
-    version="1.0.0",
+    version="1.1.0",
     docs_url="/api/telemetry/docs",
     openapi_url="/api/telemetry/openapi.json",
 )
@@ -52,31 +51,151 @@ app.add_middleware(
 )
 
 # ---------------------------------------------------------------------------
-# Database connection pool (TimescaleDB / PostgreSQL)
+# Infrastructure (DB & Redis)
 # ---------------------------------------------------------------------------
 
-# Fail fast — DATABASE_URL must be set via .env / docker-compose
-DB_DSN = os.environ["DATABASE_URL"]  # raises KeyError if missing
-
-# Redis for Traccar pub/sub bridge
-REDIS_URL  = os.getenv("REDIS_URL", "redis://redis:6379/0")
+DB_DSN = os.environ["DATABASE_URL"]
+REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 TRACCAR_CHANNEL = os.getenv("TRACCAR_REDIS_CHANNEL", "traccar:positions")
+ZONE_UPDATE_CHANNEL = "privacy_zones:updates"
 
 _pool: asyncpg.Pool | None = None
 
+# Local cache for privacy zones: {user_id: [ {lat, lon, radius, id}, ... ]}
+_privacy_zones: dict[int, list[dict]] = {}
 
 async def get_pool() -> asyncpg.Pool:
-    """Returns (or creates) the shared asyncpg connection pool."""
     global _pool
     if _pool is None:
         _pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
     return _pool
 
+# ---------------------------------------------------------------------------
+# Geospatial Helpers
+# ---------------------------------------------------------------------------
+
+def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Haversine formula to calculate distance in meters."""
+    R = 6371000  # Earth radius in meters
+    dLat = radians(lat2 - lat1)
+    dLon = radians(lon2 - lon1)
+    lat1 = radians(lat1)
+    lat2 = radians(lat2)
+    a = sin(dLat/2)**2 + cos(lat1)*cos(lat2)*sin(dLon/2)**2
+    c = 2*asin(sqrt(a))
+    return R * c
+
+def is_in_privacy_zone(user_id: int | None, lat: float, lon: float) -> bool:
+    """Checks if a point is within any of the user's privacy zones (Live-Ghost Phase 4)."""
+    if user_id is None or user_id not in _privacy_zones:
+        return False
+    
+    for zone in _privacy_zones[user_id]:
+        if calculate_distance(lat, lon, zone['lat'], zone['lon']) <= zone['radius']:
+            return True
+    return False
+
+# ---------------------------------------------------------------------------
+# Background Tasks
+# ---------------------------------------------------------------------------
+
+async def _privacy_zones_sync() -> None:
+    """Listens for privacy zone updates from Django via Redis."""
+    import redis.asyncio as redis_lib
+    logger.info("privacy_zones_sync: initializing listener on %s", ZONE_UPDATE_CHANNEL)
+    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
+    
+    while True:
+        try:
+            async with client.pubsub() as pubsub:
+                await pubsub.subscribe(ZONE_UPDATE_CHANNEL)
+                async for message in pubsub.listen():
+                    if message["type"] != "message": continue
+                    data = json.loads(message["data"])
+                    uid = int(data["user_id"])
+                    
+                    if data["type"] == "ZONE_UPDATE":
+                        if uid not in _privacy_zones: _privacy_zones[uid] = []
+                        zone = {
+                            'lat': float(data['lat']), 
+                            'lon': float(data['lon']), 
+                            'radius': float(data['radius']), 
+                            'id': data['zone_id']
+                        }
+                        # Remove existing version of this zone if present
+                        _privacy_zones[uid] = [z for z in _privacy_zones[uid] if z.get('id') != data['zone_id']]
+                        _privacy_zones[uid].append(zone)
+                        logger.info("privacy_zones: updated zone %d for user %d", data['zone_id'], uid)
+                    elif data["type"] == "ZONE_DELETE":
+                        if uid in _privacy_zones:
+                            _privacy_zones[uid] = [z for z in _privacy_zones[uid] if z.get('id') != data['zone_id']]
+                            logger.info("privacy_zones: deleted zone %d for user %d", data['zone_id'], uid)
+
+        except Exception as e:
+            logger.error("privacy_zones_sync: connection error (%s). Retrying in 5s...", e)
+            await asyncio.sleep(5)
+
+async def _traccar_redis_bridge() -> None:
+    """Consumes Traccar positions from Redis and broadcasts to UI."""
+    import redis.asyncio as redis_lib
+    batch_buffer: list[tuple] = []
+    MAX_BATCH_SIZE = 50
+    last_flush = time.time()
+    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
+
+    while True:
+        try:
+            async with client.pubsub() as pubsub:
+                await pubsub.subscribe(TRACCAR_CHANNEL)
+                async for message in pubsub.listen():
+                    if message["type"] != "message": continue
+                    try:
+                        data = json.loads(message["data"]) if isinstance(message["data"], str) else message["data"]
+                        device_id = str(data.get("deviceId", "unknown"))
+                        lat = float(data.get("latitude", 0))
+                        lon = float(data.get("longitude", 0))
+                        speed_ms = float(data.get("speed", 0)) * 0.514444
+                        ts = float(data.get("fixTime", time.time()*1000)) / 1000.0
+
+                        # Traccar doesn't usually have user_id in the packet, needs resolution
+                        # For now, bridge points are always stored but might skip broadcast if filtered
+                        # (Filtering here requires device_id -> user_id mapping, which we can add later)
+
+                        batch_buffer.append((ts, device_id, lat, lon, speed_ms))
+
+                        if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 2.0):
+                            if batch_buffer:
+                                pool = await get_pool()
+                                async with pool.acquire() as conn:
+                                    await conn.executemany(
+                                        "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+                                        batch_buffer
+                                    )
+                                batch_buffer = []
+                                last_flush = time.time()
+
+                        await manager.broadcast({
+                            "type": "position_update",
+                            "device_id": device_id,
+                            "lat": lat,
+                            "lon": lon,
+                            "speed_ms": round(speed_ms, 2),
+                            "ts": ts,
+                            "source": "traccar_bridge"
+                        })
+                    except Exception as e:
+                        logger.warning("traccar_bridge: skip malformed packet: %s", e)
+        except Exception as e:
+            logger.error("traccar_bridge: error: %s", e)
+            await asyncio.sleep(5)
+
+# ---------------------------------------------------------------------------
+# Lifecycle
+# ---------------------------------------------------------------------------
 
 @app.on_event("startup")
 async def startup() -> None:
     pool = await get_pool()
-    # Ensure hypertable exists (idempotent)
     async with pool.acquire() as conn:
         await conn.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
         await conn.execute("""
@@ -91,287 +210,82 @@ async def startup() -> None:
                 activity_id INTEGER
             );
         """)
-        # Convert to TimescaleDB hypertable (no-op if already converted)
         try:
-            await conn.execute(
-                "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
-            )
-            logger.info("timescaledb: hypertable gps_points ready")
-        except Exception:
-            logger.info("timescaledb: standard PostgreSQL detected (skipping hypertable optimization)")
+            await conn.execute("SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);")
+        except: pass
 
-    logger.info("telemetry service started — pool ready")
-    # Start Traccar → Redis bridge as background task
+    # Load initial privacy zones
+    try:
+        async with pool.acquire() as conn:
+            rows = await conn.fetch("SELECT user_id, ST_Y(center::geometry) as lat, ST_X(center::geometry) as lon, radius, id FROM activities_privacyzone")
+            for r in rows:
+                uid = int(r['user_id'])
+                if uid not in _privacy_zones: _privacy_zones[uid] = []
+                _privacy_zones[uid].append({'lat': r['lat'], 'lon': r['lon'], 'radius': r['radius'], 'id': r['id']})
+        logger.info("privacy_zones: loaded %d zones for %d users", len(rows), len(_privacy_zones))
+    except Exception as e:
+        logger.warning("privacy_zones: initial load skipped (table missing or empty): %s", e)
+
     asyncio.create_task(_traccar_redis_bridge())
-    logger.info("traccar_redis_bridge: listener started on channel=%s", TRACCAR_CHANNEL)
-
+    asyncio.create_task(_privacy_zones_sync())
+    logger.info("telemetry engine fully operational")
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
-    if _pool:
-        await _pool.close()
-
+    if _pool: await _pool.close()
 
 # ---------------------------------------------------------------------------
-# WebSocket connection manager (live map broadcast)
+# WebSocket Management
 # ---------------------------------------------------------------------------
 
 class ConnectionManager:
-    """Manages active WebSocket connections for live map clients."""
-
     def __init__(self) -> None:
         self._connections: list[WebSocket] = []
-
     async def connect(self, ws: WebSocket) -> None:
         await ws.accept()
         self._connections.append(ws)
-        logger.info("ws.connected total=%d", len(self._connections))
-
     def disconnect(self, ws: WebSocket) -> None:
-        self._connections.remove(ws)
-        logger.info("ws.disconnected total=%d", len(self._connections))
-
+        if ws in self._connections: self._connections.remove(ws)
     async def broadcast(self, payload: dict) -> None:
-        """Sends JSON payload to all connected clients in parallel."""
-        if not self._connections:
-            return
-
-        # Parallelize sending to prevent one slow consumer from blocking the event loop
+        if not self._connections: return
         tasks = [ws.send_json(payload) for ws in self._connections]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Cleanup dead connections
-        dead: list[WebSocket] = []
-        for ws, result in zip(self._connections, results):
-            if isinstance(result, Exception):
-                dead.append(ws)
-        
-        for ws in dead:
-            try:
-                self._connections.remove(ws)
-            except ValueError:
-                pass
-
+        dead = [ws for ws, res in zip(self._connections, results) if isinstance(res, Exception)]
+        for ws in dead: self.disconnect(ws)
 
 manager = ConnectionManager()
-
-
-# ---------------------------------------------------------------------------
-# Traccar → Redis pub/sub bridge (Constitution §24.1 Architecture Fix)
-# ---------------------------------------------------------------------------
-# Traccar publishes positions to Redis channel 'traccar:positions' instead of
-# sending HTTP webhooks to Django. This prevents cascading failures under load.
-# The bridge consumes from Redis and broadcasts to WebSocket clients + writes DB.
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
-# Traccar → Redis pub/sub bridge (Constitution §24.1 Architecture Fix)
-# ---------------------------------------------------------------------------
-
-async def _traccar_redis_bridge() -> None:
-    """
-    Subscribes to the Redis pub/sub channel that Traccar writes to.
-    Optimized: Uses a persistent connection and handles reconnections gracefully.
-    """
-    import redis.asyncio as redis_lib
-    from redis.exceptions import ConnectionError, TimeoutError
-
-    batch_buffer: list[tuple] = []
-    MAX_BATCH_SIZE = 50
-    last_flush = time.time()
-
-    logger.info("traccar_bridge: initializing connection pool to %s", REDIS_URL)
-    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
-
-    while True:
-        try:
-            async with client.pubsub() as pubsub:
-                await pubsub.subscribe(TRACCAR_CHANNEL)
-                logger.info("traccar_bridge: active subscription on %s", TRACCAR_CHANNEL)
-
-                async for message in pubsub.listen():
-                    if message["type"] != "message":
-                        continue
-                    
-                    try:
-                        # Handle potential double-encoding or raw strings
-                        raw_data = message["data"]
-                        data = json.loads(raw_data) if isinstance(raw_data, str) else raw_data
-                        
-                        # Robust field mapping (Traccar varies by protocol)
-                        device_id = str(data.get("deviceId", data.get("id", data.get("deviceid", "unknown"))))
-                        lat = float(data.get("latitude", data.get("lat", 0)))
-                        lon = float(data.get("longitude", data.get("lon", 0)))
-                        
-                        # Unit conversion: Traccar sends knots for some protocols
-                        speed_raw = float(data.get("speed", 0))
-                        speed_ms = speed_raw * 0.514444 if speed_raw > 0 else 0
-                        
-                        # Timestamp resolution
-                        ts_ms = data.get("fixTime", data.get("deviceTime", data.get("serverTime")))
-                        ts = float(ts_ms) / 1000.0 if ts_ms else time.time()
-
-                        # Add to batch buffer
-                        batch_buffer.append((ts, device_id, lat, lon, speed_ms))
-
-                        # Flush logic
-                        if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 2.0):
-                            if batch_buffer:
-                                pool = await get_pool()
-                                async with pool.acquire() as conn:
-                                    await conn.executemany(
-                                        "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
-                                        batch_buffer
-                                    )
-                                logger.debug("traccar_bridge: flushed %d points", len(batch_buffer))
-                                batch_buffer = []
-                                last_flush = time.time()
-
-                        # Broadcast to UI
-                        asyncio.create_task(manager.broadcast({
-                            "type": "position_update",
-                            "device_id": device_id,
-                            "lat": lat,
-                            "lon": lon,
-                            "speed_ms": round(speed_ms, 2),
-                            "ts": ts,
-                            "activity_type": "BIKE" if speed_ms > 4 else "RUN" # Heuristic for Grupetto
-                        }))
-
-                    except Exception as e:
-                        logger.warning("traccar_bridge: skip malformed packet: %s", e)
-
-        except (ConnectionError, TimeoutError, asyncio.CancelledError) as exc:
-            logger.error("traccar_bridge: connectivity issue (%s). Re-sync in 5s...", type(exc).__name__)
-            await asyncio.sleep(5)
-        except Exception as exc:
-            logger.critical("traccar_bridge: unexpected failure: %s", exc)
-            await asyncio.sleep(10)
-
-
-# ---------------------------------------------------------------------------
-# Traccar HTTP Forwarding (Fallback for JSON/URL-encoded)
-# ---------------------------------------------------------------------------
-
-from fastapi import Request
-
-@app.post("/api/telemetry/traccar/forward", status_code=202)
-async def traccar_http_forward(request: Request):
-    """
-    Accepts data from Traccar's 'forward.url' (HTTP JSON or URL-encoded).
-    Constitution §24.1: Fallback for devices that cannot use Redis.
-    """
-    content_type = request.headers.get("Content-Type", "")
-    
-    try:
-        if "application/json" in content_type:
-            data = await request.json()
-        else:
-            # Handle URL-encoded or raw form data
-            form_data = await request.form()
-            data = dict(form_data)
-
-        # Traccar forward can send a single object or an array
-        packets = data if isinstance(data, list) else [data]
-        
-        pool = await get_pool()
-        rows = []
-        for p in packets:
-            device_id = str(p.get("deviceId", p.get("id", "unknown")))
-            lat = float(p.get("latitude", p.get("lat", 0)))
-            lon = float(p.get("longitude", p.get("lon", 0)))
-            speed_ms = float(p.get("speed", 0)) * 0.514444
-            ts_ms = p.get("fixTime", p.get("deviceTime", time.time()*1000))
-            ts = float(ts_ms) / 1000.0
-            
-            rows.append((ts, device_id, lat, lon, speed_ms))
-
-        if rows:
-            async with pool.acquire() as conn:
-                await conn.executemany(
-                    "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5)",
-                    rows
-                )
-            
-            # Broadcast the latest one
-            last = rows[-1]
-            await manager.broadcast({
-                "type": "position_update",
-                "device_id": last[1],
-                "lat": last[2],
-                "lon": last[3],
-                "speed_ms": last[4],
-                "source": "http_forward"
-            })
-
-        return {"status": "success", "count": len(rows)}
-    except Exception as e:
-        logger.error("traccar_http_forward: failed to parse: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
-class GpsPacket(BaseModel):
-    """Single GPS packet (OSMand-compatible)."""
-    device_id: str = Field(..., description="Traccar device identifier")
-    user_id: int | None = Field(None, description="SPORT user ID (resolved by Django)")
-    lat: float = Field(..., ge=-90, le=90)
-    lon: float = Field(..., ge=-180, le=180)
-    speed_ms: float = Field(0.0, ge=0, description="Speed in m/s")
-    accuracy_m: float = Field(5.0, ge=0, description="GPS accuracy in metres")
-    activity_id: int | None = Field(None, description="Active SPORT activity ID")
-    activity_type: str | None = Field(None, description="RUN, BIKE, etc.")
-    timestamp: float = Field(
-        default_factory=time.time,
-        description="Unix timestamp (auto-set if omitted)",
-    )
-
-
-class BatchPacket(BaseModel):
-    """Batch of GPS packets (sent every ~30s from mobile)."""
-    packets: list[GpsPacket] = Field(..., min_length=1, max_length=500)
-
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
+class GpsPacket(BaseModel):
+    device_id: str
+    user_id: int | None = None
+    lat: float
+    lon: float
+    speed_ms: float = 0.0
+    accuracy_m: float = 5.0
+    activity_id: int | None = None
+    timestamp: float = Field(default_factory=time.time)
+
+class BatchPacket(BaseModel):
+    packets: list[GpsPacket]
+
 @app.get("/api/telemetry/health")
 async def health() -> dict:
-    """Liveness probe."""
-    return {"status": "ok", "service": "telemetry"}
-
+    return {"status": "ok", "zones_cached": len(_privacy_zones)}
 
 @app.post("/api/telemetry/ingest", status_code=202)
 async def ingest_packet(packet: GpsPacket) -> dict:
-    """
-    Accepts a single GPS packet and:
-    1. Writes it to the TimescaleDB hypertable.
-    2. Broadcasts it to connected WebSocket clients (live map).
+    if is_in_privacy_zone(packet.user_id, packet.lat, packet.lon):
+        return {"status": "dropped_privacy"}
 
-    Returns:
-        202 Accepted — fire-and-forget pattern.
-    """
     pool = await get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
-            """
-            INSERT INTO gps_points
-                (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id)
-            VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)
-            """,
-            packet.timestamp,
-            packet.device_id,
-            packet.user_id,
-            packet.lat,
-            packet.lon,
-            packet.speed_ms,
-            packet.accuracy_m,
-            packet.activity_id,
+            "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
+            packet.timestamp, packet.device_id, packet.user_id, packet.lat, packet.lon, packet.speed_ms, packet.accuracy_m, packet.activity_id
         )
 
     await manager.broadcast({
@@ -381,146 +295,127 @@ async def ingest_packet(packet: GpsPacket) -> dict:
         "lat": packet.lat,
         "lon": packet.lon,
         "speed_ms": packet.speed_ms,
-        "activity_id": packet.activity_id,
-        "activity_type": packet.activity_type,
+        "activity_id": packet.activity_id
     })
-
     return {"status": "accepted"}
-
 
 @app.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
-    """
-    Accepts a batch of GPS packets (GPS Batching — Constitution §9.3).
-    Writes all to TimescaleDB in a single COPY transaction.
-
-    Returns:
-        202 Accepted with count of inserted records.
-    """
     pool = await get_pool()
-    rows = [
-        (
-            p.timestamp, p.device_id, p.user_id,
-            p.lat, p.lon, p.speed_ms, p.accuracy_m, p.activity_id,
-        )
-        for p in batch.packets
-    ]
-    async with pool.acquire() as conn:
-        await conn.executemany(
-            """
-            INSERT INTO gps_points
-                (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id)
-            VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)
-            """,
-            rows,
-        )
-
-    # Broadcast the last position from the batch
-    last = batch.packets[-1]
-    await manager.broadcast({
-        "type": "position_update",
-        "device_id": last.device_id,
-        "user_id": last.user_id,
-        "lat": last.lat,
-        "lon": last.lon,
-        "speed_ms": last.speed_ms,
-        "activity_id": last.activity_id,
-        "activity_type": last.activity_type,
-        "batch_size": len(batch.packets),
-    })
-
-    return {"status": "accepted", "inserted": len(rows)}
-
-
-@app.get("/api/telemetry/live")
-async def get_live_positions(
-    device_id: str | None = Query(None, description="Filter by device"),
-    limit: int = Query(50, ge=1, le=500),
-) -> list[dict]:
-    """
-    Returns the latest GPS positions from TimescaleDB.
-    Used by Admin Dashboard map when WebSocket is unavailable.
-    """
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        if device_id:
-            rows = await conn.fetch(
-                """
-                SELECT time, device_id, user_id, lat, lon, speed_ms
-                FROM gps_points
-                WHERE device_id = $1
-                ORDER BY time DESC LIMIT $2
-                """,
-                device_id, limit,
+    rows = []
+    dropped = 0
+    for p in batch.packets:
+        if is_in_privacy_zone(p.user_id, p.lat, p.lon):
+            dropped += 1
+            continue
+        rows.append((p.timestamp, p.device_id, p.user_id, p.lat, p.lon, p.speed_ms, p.accuracy_m, p.activity_id))
+    
+    if rows:
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
+                rows
             )
-        else:
-            rows = await conn.fetch(
-                """
-                SELECT DISTINCT ON (device_id)
-                    time, device_id, user_id, lat, lon, speed_ms
-                FROM gps_points
-                ORDER BY device_id, time DESC
-                LIMIT $1
-                """,
-                limit,
-            )
+        
+        last = batch.packets[-1]
+        await manager.broadcast({
+            "type": "position_update",
+            "device_id": last.device_id,
+            "user_id": last.user_id,
+            "lat": last.lat,
+            "lon": last.lon,
+            "speed_ms": last.speed_ms,
+            "activity_id": last.activity_id,
+            "batch_size": len(rows)
+        })
 
-    return [dict(r) for r in rows]
-
-
-@app.get("/api/telemetry/history/{device_id}")
-async def get_device_history(
-    device_id: str,
-    since_unix: float = Query(..., description="Start timestamp (unix epoch)"),
-    until_unix: float | None = Query(None, description="End timestamp (unix epoch)"),
-) -> list[dict]:
-    """
-    Returns full GPS history for a device within a time window.
-    Leverages TimescaleDB's time-range optimizations.
-    """
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        if until_unix:
-            rows = await conn.fetch(
-                """
-                SELECT time, lat, lon, speed_ms, accuracy_m, activity_id
-                FROM gps_points
-                WHERE device_id = $1
-                  AND time BETWEEN to_timestamp($2) AND to_timestamp($3)
-                ORDER BY time ASC
-                """,
-                device_id, since_unix, until_unix,
-            )
-        else:
-            rows = await conn.fetch(
-                """
-                SELECT time, lat, lon, speed_ms, accuracy_m, activity_id
-                FROM gps_points
-                WHERE device_id = $1
-                  AND time >= to_timestamp($2)
-                ORDER BY time ASC
-                """,
-                device_id, since_unix,
-            )
-
-    return [dict(r) for r in rows]
-
+    return {"status": "accepted", "inserted": len(rows), "dropped_privacy": dropped}
 
 # ---------------------------------------------------------------------------
-# WebSocket endpoint (live map)
+# WebSockets
 # ---------------------------------------------------------------------------
 
 @app.websocket("/ws/telemetry/live")
 async def websocket_live(ws: WebSocket) -> None:
-    """
-    WebSocket endpoint for the Admin Dashboard live map.
-    Clients connect and receive real-time position_update events.
-    """
     await manager.connect(ws)
     try:
         while True:
-            # Keep the connection alive; data is pushed via manager.broadcast
             await asyncio.sleep(30)
             await ws.send_json({"type": "ping"})
     except WebSocketDisconnect:
         manager.disconnect(ws)
+
+@app.websocket("/ws/telemetry/ingest")
+async def websocket_ingest(ws: WebSocket) -> None:
+    await ws.accept()
+    logger.info("ws.ingest: mobile client connected")
+    try:
+        while True:
+            data = await ws.receive_json()
+            packets = data if isinstance(data, list) else [data]
+            rows = []
+            for p in packets:
+                try:
+                    uid = p.get("user_id")
+                    lat, lon = float(p["lat"]), float(p["lon"])
+                    
+                    if is_in_privacy_zone(uid, lat, lon):
+                        continue
+                    
+                    rows.append((
+                        float(p.get("timestamp", time.time())),
+                        str(p["device_id"]),
+                        uid,
+                        lat, lon,
+                        float(p.get("speed_ms", 0)),
+                        5.0,
+                        p.get("activity_id")
+                    ))
+                except: continue
+
+            if rows:
+                pool = await get_pool()
+                async with pool.acquire() as conn:
+                    await conn.executemany(
+                        "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
+                        rows
+                    )
+                # Broadcast the latest
+                last = rows[-1]
+                await manager.broadcast({
+                    "type": "position_update",
+                    "device_id": last[1],
+                    "user_id": last[2],
+                    "lat": last[3],
+                    "lon": last[4],
+                    "speed_ms": last[5],
+                    "source": "ws_ingest"
+                })
+    except WebSocketDisconnect:
+        logger.info("ws.ingest: mobile client disconnected")
+    except Exception as e:
+        logger.error("ws.ingest: unexpected error: %s", e)
+
+# ---------------------------------------------------------------------------
+# Query Endpoints (History, Live)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/telemetry/live")
+async def get_live_positions(device_id: str | None = None, limit: int = 50) -> list[dict]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        if device_id:
+            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 ORDER BY time DESC LIMIT $2", device_id, limit)
+        else:
+            rows = await conn.fetch("SELECT DISTINCT ON (device_id) * FROM gps_points ORDER BY device_id, time DESC LIMIT $1", limit)
+    return [dict(r) for r in rows]
+
+@app.get("/api/telemetry/history/{device_id}")
+async def get_device_history(device_id: str, since_unix: float, until_unix: float | None = None) -> list[dict]:
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        if until_unix:
+            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 AND time BETWEEN to_timestamp($2) AND to_timestamp($3) ORDER BY time ASC", device_id, since_unix, until_unix)
+        else:
+            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 AND time >= to_timestamp($2) ORDER BY time ASC", device_id, since_unix)
+    return [dict(r) for r in rows]

@@ -1,6 +1,10 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, TelemetryLiveView, AnomalyListView, POIViewSet, TelemetryConfigView
+from .views import (
+    ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, 
+    TelemetryLiveView, AnomalyListView, POIViewSet, TelemetryConfigView,
+    StravaAuthView, StravaCallbackView, WearableSyncView
+)
 
 from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
@@ -22,6 +26,12 @@ urlpatterns = [
     path('telemetry/live/', TelemetryLiveView.as_view(), name='telemetry-live'),
     path('telemetry/anomalies/', AnomalyListView.as_view(), name='telemetry-anomalies'),
     path('telemetry/config/', TelemetryConfigView.as_view(), name='telemetry-config'),
+    # Wearables (Milestone 4)
+    path('wearables/strava/auth/', StravaAuthView.as_view(), name='strava-auth'),
+    path('wearables/strava/callback/', StravaCallbackView.as_view(), name='strava-callback'),
+    path('wearables/garmin/auth/', GarminAuthView.as_view(), name='garmin-auth'),
+    path('wearables/garmin/callback/', GarminCallbackView.as_view(), name='garmin-callback'),
+    path('wearables/sync/', WearableSyncView.as_view(), name='wearable-sync'),
     # Phase 9: Payments
     path('payments/checkout/', CreateCheckoutSessionView.as_view(), name='checkout'),
     path('payments/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),

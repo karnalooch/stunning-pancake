@@ -26,6 +26,9 @@ class Tenant(models.Model):
     max_users = models.IntegerField(default=1000)
     has_heatmap_analytics = models.BooleanField(default=False, help_text="Feature toggle for advanced heatmap analytics")
     
+    # Stripe Integration (Milestone 4)
+    stripe_account_id = models.CharField(max_length=100, null=True, blank=True, help_text="Connected account ID for sponsor payouts")
+
     # Phase 8: White-Label and per-tenant normalization rules
     white_label_domain = models.CharField(
         max_length=200, blank=True,
@@ -52,6 +55,10 @@ class User(AbstractUser):
     is_premium = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(max_length=500, blank=True)
+
+    # Stripe (Milestone 4)
+    stripe_customer_id = models.CharField(max_length=100, null=True, blank=True)
+    stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"

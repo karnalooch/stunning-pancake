@@ -8,7 +8,97 @@ from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZo
 
 from .services import TelemetryService
 from .social import SocialSharingService
+from .wearables import StravaService, GarminService
 from core.redis_cluster import get_redis
+
+class StravaAuthView(views.APIView):
+    """
+    Returns the Strava OAuth authorization URL.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        url = StravaService.get_auth_url(request.user.id)
+        return Response({"auth_url": url})
+
+class StravaCallbackView(views.APIView):
+    """
+    Handles the Strava OAuth callback.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        code = request.query_params.get('code')
+        user_id = request.query_params.get('state')
+        
+        if not code or not user_id:
+            return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=user_id)
+            integration = StravaService.exchange_code(user, code)
+            if integration:
+                # In a real app, redirect back to the mobile app using deep linking
+                return Response({"status": "success", "message": "Strava connected. Your activities will sync soon."})
+        except User.DoesNotExist:
+            pass
+            
+        return Response({"error": "connection failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+class GarminAuthView(views.APIView):
+    """
+    Returns the Garmin OAuth authorization URL.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        url = GarminService.get_auth_url(request.user.id)
+        return Response({"auth_url": url})
+
+class GarminCallbackView(views.APIView):
+    """
+    Handles the Garmin OAuth callback.
+    """
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        code = request.query_params.get('code')
+        user_id = request.query_params.get('state')
+        
+        if not code or not user_id:
+            return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            user = User.objects.get(pk=user_id)
+            integration = GarminService.exchange_code(user, code)
+            if integration:
+                return Response({"status": "success", "message": "Garmin connected."})
+        except User.DoesNotExist:
+            pass
+            
+        return Response({"error": "connection failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+class WearableSyncView(views.APIView):
+    """
+    Triggers a manual sync for all active wearable integrations.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        integrations = request.user.wearables.filter(is_active=True)
+        results = {}
+        for integration in integrations:
+            if integration.service == 'STRAVA':
+                count = StravaService.sync_activities(integration)
+                results['STRAVA'] = count
+            elif integration.service == 'GARMIN':
+                count = GarminService.sync_activities(integration)
+                results['GARMIN'] = count
+        return Response({"status": "sync complete", "results": results})
 
 class TelemetryConfigView(views.APIView):
     """
@@ -219,4 +309,3 @@ class POIViewSet(viewsets.ReadOnlyModelViewSet):
         if tenant_id:
             return self.queryset.filter(tenant_id=tenant_id)
         return self.queryset
-

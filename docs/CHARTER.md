@@ -37,4 +37,4 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 - **Rdzeń**: Python (Django/FastAPI).
 - **Mobile**: React Native (Skia, Tamagui, Legend-State).
 - **Data**: PostgreSQL (Citus) + Redis Cluster.
-- **Design**: Solar-Ready HD-2D (Mobile) / Cyber-Monolith (Web).
+- **Design**: Nowoczesny Light Mode (Web/Admin) / Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler) dla Mobile.
