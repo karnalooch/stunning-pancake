@@ -25,7 +25,7 @@ const MeshBackground = () => (
       position: 'fixed',
       inset: 0,
       zIndex: -1,
-      background: '#050505',
+      background: '#F8FAFC',
       overflow: 'hidden'
     }}
   >
@@ -110,7 +110,7 @@ export default function App() {
 
 
   return (
-    <MantineProvider defaultColorScheme="dark" theme={theme}>
+    <MantineProvider defaultColorScheme="light" theme={theme}>
       <GlobalLoader visible={loading} />
       <TenantLoader visible={tenantLoading} />
       
@@ -137,7 +137,7 @@ export default function App() {
                     path="dashboard" 
                     element={
                       <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
-                        <Dashboard mode="dark" />
+                        <Dashboard mode="light" />
                       </RoleGuard>
                     } 
                   />

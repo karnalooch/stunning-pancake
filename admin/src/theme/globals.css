@@ -5,8 +5,8 @@
 @theme {
   --color-primary: #00D1FF;
   --color-secondary: #B066FF;
-  --color-background-dark: #0B0E14;
-  --color-background-dark-secondary: #1A1F26;
+  --color-background-dark: #F8FAFC; /* Light background */
+  --color-background-dark-secondary: #F1F5F9; /* Light secondary background */
 }
 
 :root {
@@ -17,18 +17,18 @@
 
 body {
   background-color: var(--color-background-dark);
-  color: white;
+  color: #0F172A; /* Dark text */
   font-family: 'Inter', sans-serif;
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Cyber-Monolith V3.1 (Unified Branding) */
+/* Cyber-Monolith V3.1 (Unified Branding) - Light Mode */
 .fluent-acrylic {
-  background: rgba(26, 31, 38, 0.6) !important;
+  background: rgba(255, 255, 255, 0.8) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
 }
 
 .text-gradient {
@@ -55,7 +55,7 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
 }
 
@@ -63,7 +63,7 @@ body {
   background: var(--color-cyan-main);
 }
 
-/* SPORT OS Effects */
+/* SPORT OS Effects - Light Mode */
 @keyframes glitch {
   0% { transform: translate(0); }
   20% { transform: translate(-2px, 2px); }
@@ -83,7 +83,7 @@ body {
 }
 
 .stat-card-premium:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
   border-color: rgba(0, 209, 255, 0.3) !important;
   transform: translateY(-5px);
 }
