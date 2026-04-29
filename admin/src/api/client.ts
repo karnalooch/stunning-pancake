@@ -20,6 +20,17 @@ apiClient.interceptors.request.use((config) => {
 });
 
 // API Services
+export const AdminApi = {
+  getUsers: async () => {
+    const { data } = await apiClient.get('/users/all/');
+    return data;
+  },
+  getTenants: async () => {
+    const { data } = await apiClient.get('/users/tenants/all/');
+    return data;
+  }
+};
+
 export const TelemetryApi = {
   getAnomalies: async () => {
     const { data } = await apiClient.get('/activities/telemetry/anomalies/');

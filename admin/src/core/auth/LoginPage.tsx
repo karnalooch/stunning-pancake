@@ -3,15 +3,17 @@ import { Box, Paper, TextInput, PasswordInput, Button, Title, Text, Stack, Group
 import { motion } from 'framer-motion';
 import { ShieldCheck, ArrowRight, Lock } from 'lucide-react';
 
-export const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
+export const LoginPage = ({ onLogin }: { onLogin: (u: string, p: string) => void }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogin = () => {
     setLoading(true);
-    setTimeout(() => {
-      onLogin();
-      setLoading(false);
-    }, 1500);
+    onLogin(username, password);
+    // We remove the setTimeout since it's async in App.tsx
+    // and state resets based on component unmount on success.
+    setTimeout(() => setLoading(false), 1000);
   };
 
   return (
@@ -80,6 +82,8 @@ export const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
               label="Operator ID"
               placeholder="admin@sport.com"
               radius="md"
+              value={username}
+              onChange={(e) => setUsername(e.currentTarget.value)}
               styles={{
                 input: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' },
                 label: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: 700 }
@@ -89,6 +93,8 @@ export const LoginPage = ({ onLogin }: { onLogin: () => void }) => {
               label="Access Token"
               placeholder="••••••••"
               radius="md"
+              value={password}
+              onChange={(e) => setPassword(e.currentTarget.value)}
               styles={{
                 input: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' },
                 label: { color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: 700 }

@@ -1,16 +1,28 @@
+import { useState, useEffect } from 'react';
 import { Box, Table, Badge, Group, Text, Button, ActionIcon, TextInput, Stack, SimpleGrid } from '@mantine/core';
 import { WinWindow } from '../../core/Layout';
 import { Search, Plus, MoreVertical, ExternalLink } from 'lucide-react';
 import { WhiteLabelEngine } from './WhiteLabelEngine';
-
-const MOCK_TENANTS = [
-  { id: 1, name: 'Siedlce City Council', region: 'Masovian, PL', status: 'Active', users: '42,102', revenue: '$12,400' },
-  { id: 2, name: 'Warsaw Runners Club', region: 'Warsaw, PL', status: 'Active', users: '128,500', revenue: '$45,000' },
-  { id: 3, name: 'Berlin Health Corp', region: 'Berlin, DE', status: 'Pending', users: '0', revenue: '$0' },
-  { id: 4, name: 'Gdansk Sports Hub', region: 'Pomeranian, PL', status: 'Suspended', users: '15,200', revenue: '$3,200' },
-];
+import { AdminApi } from '../../api/client';
 
 export const Tenants = () => {
+  const [tenantsList, setTenantsList] = useState<any[]>([]);
+
+  useEffect(() => {
+    AdminApi.getTenants()
+      .then(data => {
+        const mapped = data.map((t: any) => ({
+          id: t.id,
+          name: t.name,
+          region: 'Global Operation',
+          status: t.is_active ? 'Active' : 'Inactive',
+          users: 'N/A',
+          revenue: '$0'
+        }));
+        setTenantsList(mapped);
+      })
+      .catch(err => console.error("Failed to load tenants:", err));
+  }, []);
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       <WinWindow title="Tenant Management — Platform Registry">
@@ -39,7 +51,7 @@ export const Tenants = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {MOCK_TENANTS.map((tenant) => (
+              {tenantsList.map((tenant) => (
                 <Table.Tr key={tenant.id}>
                   <Table.Td>
                     <Group gap="sm">

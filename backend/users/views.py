@@ -114,3 +114,16 @@ class ImpersonateUserView(generics.GenericAPIView):
             })
         except User.DoesNotExist:
             return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+
+class TenantListView(generics.ListAPIView):
+    from .serializers import TenantSerializer
+    from .models import Tenant
+    queryset = Tenant.objects.all()
+    serializer_class = TenantSerializer
+    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+

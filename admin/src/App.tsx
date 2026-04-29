@@ -64,6 +64,8 @@ const MeshBackground = () => (
   </Box>
 );
 
+import { apiClient } from './api/client';
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [tenantLoading, setTenantLoading] = useState(false);
@@ -75,20 +77,35 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  const handleLogin = () => {
+  const handleLogin = async (username, password) => {
     setTenantLoading(true);
-    setTimeout(() => {
-      // Seed a mock Global Owner session
-      login("mock-jwt-token", {
-        id: 1,
-        username: "GlobalOperator",
-        role: "GLOBAL_OWNER",
-        tenantId: "global-hq",
-        tenantFlags: { has_heatmap_analytics: true },
+    try {
+      const res = await apiClient.post('/auth/token/', { username, password });
+      const { access, refresh } = res.data;
+      
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      
+      const profileRes = await apiClient.get('/users/profile/', {
+        headers: { Authorization: `Bearer ${access}` }
+      });
+      
+      const profileData = profileRes.data;
+      
+      login(access, {
+        id: profileData.id,
+        username: profileData.username,
+        role: profileData.role,
+        tenantId: profileData.tenant_id || null,
+        tenantFlags: profileData.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
         isImpersonated: false
       });
+    } catch (error) {
+      console.error("Login failed:", error);
+      alert("Invalid Operator ID or Access Token.");
+    } finally {
       setTenantLoading(false);
-    }, 2000);
+    }
   };
 
 

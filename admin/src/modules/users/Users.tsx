@@ -1,20 +1,32 @@
 import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal, ScrollArea } from '@mantine/core';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WinWindow } from '../../core/Layout';
 import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
-
-const MOCK_USERS = [
-  { id: 'U-9921', name: 'Alex Runner', email: 'alex@example.com', tenant: 'Warsaw Runners', status: 'Active', flags: 0 },
-  { id: 'U-9922', name: 'Sarah Cyclist', email: 'sarah@example.com', tenant: 'Berlin Health Corp', status: 'Suspicious', flags: 2 },
-  { id: 'U-9923', name: 'Mike Sprinter', email: 'mike@example.com', tenant: 'Siedlce City', status: 'Banned', flags: 5 },
-  { id: 'U-9924', name: 'Emma Walker', email: 'emma@example.com', tenant: 'Warsaw Runners', status: 'Active', flags: 0 },
-];
+import { AdminApi } from '../../api/client';
 
 export const Users = () => {
   const { user } = useAuth();
-  const [selectedUser, setSelectedUser] = useState<typeof MOCK_USERS[0] | null>(null);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
+
+  useEffect(() => {
+    AdminApi.getUsers()
+      .then(data => {
+        // Map real user data fields
+        const mapped = data.map((u: any) => ({
+          id: `U-${u.id}`,
+          name: u.username,
+          email: u.email || `${u.username}@sport-platform.com`,
+          tenant: u.tenant_name || 'Global HQ',
+          status: u.role === 'ATHLETE' ? 'Active' : 'Staff',
+          flags: 0
+        }));
+        setUsersList(mapped);
+      })
+      .catch(err => console.error("Failed to load users:", err));
+  }, []);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
 
@@ -61,7 +73,7 @@ export const Users = () => {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {MOCK_USERS.map((user) => (
+              {usersList.map((user) => (
                 <Table.Tr key={user.id}>
                   <Table.Td><Text size="sm" ff="monospace" c="dimmed">{user.id}</Text></Table.Td>
                   <Table.Td>

@@ -1,14 +1,21 @@
-﻿from rest_framework import serializers
-from .models import User
+from rest_framework import serializers
+from .models import User, Tenant
+
+class TenantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tenant
+        fields = ('id', 'name', 'primary_color', 'secondary_color', 'is_active')
 
 class UserSerializer(serializers.ModelSerializer):
     """
     Serializer for User objects.
     Includes role-based visibility and tenant identification.
     """
+    tenant_name = serializers.CharField(source='tenant.name', read_only=True, default='')
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'avatar', 'bio')
+        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'tenant_name', 'avatar', 'bio')
         read_only_fields = ('id', 'role')
 
 class RegisterSerializer(serializers.ModelSerializer):
