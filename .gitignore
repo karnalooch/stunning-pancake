@@ -23,6 +23,7 @@ mobile/ios/
 *.exe
 *.asar
 *.tar
+*.class
 web-build/
 
 # 🐍 Python
