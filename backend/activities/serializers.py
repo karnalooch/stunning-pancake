@@ -3,6 +3,9 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import Activity, PrivacyZone, POI
 
 class POISerializer(serializers.ModelSerializer):
+    latitude = serializers.FloatField(source='location.y', read_only=True)
+    longitude = serializers.FloatField(source='location.x', read_only=True)
+
     class Meta:
         model = POI
         fields = ('id', 'name', 'latitude', 'longitude', 'category', 'description')

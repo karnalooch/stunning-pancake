@@ -56,6 +56,15 @@ def city_leaderboard(request: Request, city_id: str) -> Response:
 
     last_updated = LeaderboardService.get_last_recalculated(city_id, scope=scope)
 
+    # Contract Enrichment: Add usernames to the leaderboard entries
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user_ids = [e["user_id"] for e in top]
+    users_map = {str(u.id): u.username for u in User.objects.filter(id__in=user_ids)}
+    
+    for entry in top:
+        entry["username"] = users_map.get(str(entry["user_id"]), "Unknown Pilot")
+
     return Response(
         {
             "city_id": city_id,

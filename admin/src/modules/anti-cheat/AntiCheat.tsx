@@ -12,9 +12,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useAuth } from '../../core/auth/useAuth';
 import { motion } from 'framer-motion';
 
-export const AntiCheat = () => {
-  const { user } = useAuth();
-
+import React, { useMemo } from 'react';
+import { Box, Group, Stack, Text, Badge, Switch, SimpleGrid, ScrollArea } from '@mantine/core';
+import { WinWindow } from '../../core/Layout';
+...
   const { data: anomalies, isLoading } = useQuery({
     queryKey: ['anomalies'],
     queryFn: TelemetryApi.getAnomalies,
@@ -22,7 +23,7 @@ export const AntiCheat = () => {
   });
 
   // Dynamic Deck.GL layers connected to live anomalies
-  const layers = [
+  const layers = useMemo(() => [
     new ScatterplotLayer({
       id: 'scatter-layer',
       data: Array.isArray(anomalies) ? anomalies : [],
@@ -31,7 +32,7 @@ export const AntiCheat = () => {
       getRadius: (d: any) => d.score * 50,
       pickable: true,
     })
-  ];
+  ], [anomalies]);
 
   const INITIAL_VIEW_STATE = {
     longitude: 22.29, // Siedlce

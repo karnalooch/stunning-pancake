@@ -42,5 +42,35 @@ export const TelemetryApi = {
   getLivePositions: async () => {
     const { data } = await apiClient.get('/activities/telemetry/live/');
     return data;
+  },
+  getConfig: async () => {
+    const { data } = await apiClient.get('/activities/telemetry/config/');
+    return data;
+  },
+  updateConfig: async (config: any) => {
+    const { data } = await apiClient.post('/activities/telemetry/config/', config);
+    return data;
+  }
+};
+
+export const RewardsApi = {
+  getPools: async () => {
+    const { data } = await apiClient.get('/rewards/pools/');
+    return data;
+  },
+  getBalance: async () => {
+    const { data } = await apiClient.get('/rewards/balance/');
+    return data;
+  },
+  getSponsorStats: async () => {
+    const { data } = await apiClient.get('/rewards/sponsor-stats/');
+    return data;
+  }
+};
+
+export const BrandingApi = {
+  getBranding: async (tenantId: string) => {
+    const { data } = await apiClient.get(`/users/branding/${tenantId}/`);
+    return data;
   }
 };

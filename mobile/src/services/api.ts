@@ -89,6 +89,21 @@ export const PrivacyService = {
   }
 };
 
+export const RewardsService = {
+  getBalance: async () => {
+    const response = await api.get('/api/rewards/balance/');
+    return response.data;
+  },
+  getPools: async () => {
+    const response = await api.get('/api/rewards/pools/');
+    return response.data;
+  },
+  redeemVoucher: async (poolId: number) => {
+    const response = await api.post(`/api/rewards/redeem/${poolId}/`);
+    return response.data;
+  }
+};
+
 export const POIService = {
   getPOIs: async () => {
     const response = await api.get('/api/activities/pois/');

@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
-import { Box, Card, Text, Slider, Switch, Group, Button, Badge } from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Box, Card, Text, Slider, Switch, Group, Button, Badge, Loader } from '@mantine/core';
+import { TelemetryApi } from '../../api/client';
 
 export const AdaptiveIntegrity: React.FC = () => {
   const [brouterCutoff, setBrouterCutoff] = useState<number>(1.5);
   const [mlSensitivity, setMlSensitivity] = useState<number>(0.8);
   const [autoBan, setAutoBan] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [saving, setSaving] = useState<boolean>(false);
   
-  const handleSave = () => {
-    console.log("Saving Adaptive Integrity Settings:", { brouterCutoff, mlSensitivity, autoBan });
-    // TODO: Send to backend /api/telemetry/config
+  useEffect(() => {
+    TelemetryApi.getConfig()
+      .then(config => {
+        if (config.brouterCutoff) setBrouterCutoff(config.brouterCutoff);
+        if (config.mlSensitivity) setMlSensitivity(config.mlSensitivity);
+        if (config.autoBan !== undefined) setAutoBan(config.autoBan);
+      })
+      .catch(err => console.error("Integrity: Fetch config failed", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await TelemetryApi.updateConfig({ brouterCutoff, mlSensitivity, autoBan });
+      // In a real app we'd use notifications.show() from Mantine
+      alert("Platform integrity parameters updated across cluster.");
+    } catch (err) {
+      alert("Failed to propagate configuration.");
+    } finally {
+      setSaving(false);
+    }
   };
+
+  if (loading) return <Box p="xl" style={{ display: 'flex', justifyContent: 'center' }}><Loader /></Box>;
 
   return (
     <Card shadow="sm" p="lg" radius="md" withBorder>

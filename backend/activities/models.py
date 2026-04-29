@@ -60,8 +60,16 @@ class POI(models.Model):
     """
     Point of Interest (Sponsor Location).
     """
+    CATEGORY_CHOICES = (
+        ('COFFEE', 'Coffee Shop'),
+        ('SHOP', 'Retail Store'),
+        ('BIKE', 'Bike Shop/Service'),
+        ('OTHER', 'Other'),
+    )
+
     name = models.CharField(max_length=200)
     location = models.PointField(srid=4326)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='OTHER')
     tenant = models.ForeignKey('users.Tenant', on_delete=models.CASCADE, related_name='pois', null=True, blank=True)
     description = models.TextField(blank=True)
     

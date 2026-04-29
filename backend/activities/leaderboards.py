@@ -167,13 +167,13 @@ class LeaderboardService:
             scope: Leaderboard scope.
 
         Returns:
-            List of dicts with 'user_id', 'score', 'rank'.
+            List of dicts with 'user_id', 'score_km', 'rank'.
         """
         key = cls._key(scope, entity_id)
         try:
             rows = cls._get_redis().zrevrange(key, 0, limit - 1, withscores=True)
             return [
-                {"user_id": uid, "score": round(score, 3), "rank": i + 1}
+                {"user_id": uid, "score_km": round(score, 3), "rank": i + 1}
                 for i, (uid, score) in enumerate(rows)
             ]
         except Exception as exc:

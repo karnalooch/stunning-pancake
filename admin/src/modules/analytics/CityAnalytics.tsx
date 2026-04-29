@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, Text, Group, Stack, SimpleGrid, Box, Badge } from '@mantine/core';
 import { BarChart, DonutChart } from '@tremor/react';
 import { MapPin, Zap, Ticket, Users } from 'lucide-react';
@@ -13,24 +13,24 @@ const VOUCHER_DATA = [
 ];
 
 export const CityAnalytics = ({ cityId }: { cityId: string }) => {
-  // Local points of activity for the city
-  const data = Array.from({ length: 100 }).map(() => ({
+  // Local points of activity for the city - memoized to be pure
+  const data = useMemo(() => Array.from({ length: 100 }).map(() => ({
     COORDINATES: [22.29 + Math.random() * 0.02, 52.16 + Math.random() * 0.02],
     RADIUS: 50 + Math.random() * 100
-  }));
+  })), [cityId]);
 
-  const layers = [
+  const layers = useMemo(() => [
     new ScatterplotLayer({
       id: 'scatterplot-layer',
       data,
-      getPosition: d => d.COORDINATES,
-      getRadius: d => d.RADIUS,
+      getPosition: (d: any) => d.COORDINATES,
+      getRadius: (d: any) => d.RADIUS,
       getFillColor: [37, 99, 235, 140],
       stroked: true,
       lineWidthMinPixels: 1,
       getLineColor: [255, 255, 255]
     })
-  ];
+  ], [data]);
 
   return (
     <Stack gap="xl">

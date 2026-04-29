@@ -22,6 +22,14 @@ class Sponsor(models.Model):
     A company or organization that provides rewards for platform participants.
     Linked to a specific tenant (city/corporation) or global.
     """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sponsor_profile",
+        help_text="User who manages this sponsor profile."
+    )
     name = models.CharField(max_length=200)
     logo_url = models.URLField(blank=True)
     website = models.URLField(blank=True)

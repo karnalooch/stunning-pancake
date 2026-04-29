@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Text, Stack, Title } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../auth/useAuth';
+import { BrandingApi } from '../../api/client';
 
 export const TenantLoader = ({ visible }: { visible: boolean }) => {
   const { user } = useAuth();
+  const [primaryColor, setPrimaryColor] = useState('#2563EB');
   const tenantName = user?.tenantId || 'Platform';
-  const primaryColor = '#2563EB'; // Could fetch from user.tenantFlags/branding
+
+  useEffect(() => {
+    if (user?.tenantId) {
+      BrandingApi.getBranding(user.tenantId)
+        .then(data => {
+          if (data.primary_color) setPrimaryColor(data.primary_color);
+        })
+        .catch(err => console.error("Loader: Branding fetch failed", err));
+    }
+  }, [user?.tenantId]);
 
   return (
     <AnimatePresence>

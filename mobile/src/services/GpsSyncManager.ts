@@ -50,14 +50,14 @@ function getStorage() {
 }
 
 interface GpsPoint {
-  deviceId: string;
-  userId: number | null;
-  activityId: number | null;
+  device_id: string;
+  user_id: number | null;
+  activity_id: number | null;
   lat: number;
   lon: number;
-  altitudeM: number;
-  speedMs: number;
-  accuracyM: number;
+  altitude_m: number;
+  speed_ms: number;
+  accuracy_m: number;
   timestamp: number;
 }
 
@@ -165,14 +165,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       }));
 
       appendToBuffer({
-        deviceId: state.deviceId,
-        userId: state.userId,
-        activityId: state.activityId,
+        device_id: state.deviceId,
+        user_id: state.userId,
+        activity_id: state.activityId,
         lat: loc.coords.latitude,
         lon: loc.coords.longitude,
-        altitudeM: loc.coords.altitude ?? 0,
-        speedMs: loc.coords.speed ?? 0,
-        accuracyM: loc.coords.accuracy ?? 5,
+        altitude_m: loc.coords.altitude ?? 0,
+        speed_ms: loc.coords.speed ?? 0,
+        accuracy_m: loc.coords.accuracy ?? 5,
         timestamp: loc.timestamp / 1000,
       });
     });

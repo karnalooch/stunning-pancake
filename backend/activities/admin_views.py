@@ -63,19 +63,22 @@ class AdminDashboardStatsView(APIView):
     """
     Returns high-level platform KPIs for the admin dashboard.
     """
-    permission_classes = (permissions.AllowAny,) # Should be IsAdminRole in prod
+    permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def get(self, request):
         User = get_user_model()
         total_users = User.objects.count()
         total_activities = Activity.objects.count()
         total_distance = Activity.objects.aggregate(Sum('distance'))['distance__sum'] or 0
-        total_calories = 0 # Field not yet in model
+        total_distance_km = float(total_distance / 1000.0)
+        
+        # Approximate calories: 50 kcal per km (cycling/running mix)
+        total_calories = int(total_distance_km * 50)
 
         return Response({
             "total_users": total_users,
             "total_activities": total_activities,
-            "total_distance_km": float(total_distance / 1000.0), # Convert m to km
+            "total_distance_km": total_distance_km,
             "total_calories": total_calories,
             "new_users_today": total_users
         })

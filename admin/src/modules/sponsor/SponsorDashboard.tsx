@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress, ScrollArea, Card } from '@mantine/core';
+import React, { useEffect, useState } from 'react';
+import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress, ScrollArea, Card, Spinner } from '@mantine/core';
 
 import { WinWindow } from '../../core/Layout';
 import { Gift, Store, Users, Eye } from 'lucide-react';
@@ -7,16 +7,27 @@ import { Metric, Flex, BarChart } from '@tremor/react';
 import { motion } from 'framer-motion';
 import { SponsorHeatmap } from '../analytics/SponsorHeatmap';
 import { BrainCircuit, Sparkles } from 'lucide-react';
-
-
-
-const SPONSOR_DATA = [
-  { name: 'Redeemed', 'Vouchers': 420 },
-  { name: 'Active', 'Vouchers': 1200 },
-  { name: 'Expired', 'Vouchers': 85 },
-];
+import { RewardsApi } from '../../api/client';
 
 export const SponsorDashboard = () => {
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    RewardsApi.getSponsorStats()
+      .then(data => setStats(data))
+      .catch(err => console.error("Sponsor: Fetch stats failed", err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) return <Box p="xl"><Spinner /></Box>;
+
+  const SPONSOR_CHART_DATA = stats ? [
+    { name: 'Redeemed', 'Vouchers': stats.redeemed_count },
+    { name: 'Active', 'Vouchers': stats.active_vouchers },
+    { name: 'Expired', 'Vouchers': stats.expired_vouchers },
+  ] : [];
+
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       <Group justify="space-between">
@@ -29,9 +40,9 @@ export const SponsorDashboard = () => {
 
       <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xl">
         {[
-          { icon: <Store size={14} color="#60cdff" />, label: 'Your POIs', value: '12', badge: 'ACTIVE', color: 'blue', progress: 100, glow: 'glow-blue' },
-          { icon: <Gift size={14} color="var(--mantine-primary-color-filled)" />, label: 'Vouchers Distributed', value: '1,842', badge: '65%', color: 'lime', progress: 65, glow: 'glow-lime' },
-          { icon: <Eye size={14} color="#ffcc00" />, label: 'Impressions', value: '42.1K', badge: 'TOP 5%', color: 'amber', progress: 88, glow: '' },
+          { icon: <Store size={14} color="#60cdff" />, label: 'Your POIs', value: stats?.poi_count || '0', badge: 'ACTIVE', color: 'blue', progress: 100, glow: 'glow-blue' },
+          { icon: <Gift size={14} color="var(--mantine-primary-color-filled)" />, label: 'Vouchers Distributed', value: stats?.vouchers_distributed?.toLocaleString() || '0', badge: `${Math.round((stats?.redemption_rate || 0) * 100)}%`, color: 'lime', progress: (stats?.redemption_rate || 0) * 100, glow: 'glow-lime' },
+          { icon: <Eye size={14} color="#ffcc00" />, label: 'Impressions', value: stats?.impressions?.toLocaleString() || '0', badge: 'LIVE', color: 'amber', progress: 88, glow: '' },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -61,7 +72,7 @@ export const SponsorDashboard = () => {
           <Stack h="100%">
             <BarChart
               className="h-48 mt-4"
-              data={SPONSOR_DATA}
+              data={SPONSOR_CHART_DATA}
               index="name"
               categories={["Vouchers"]}
               colors={["violet"]}
