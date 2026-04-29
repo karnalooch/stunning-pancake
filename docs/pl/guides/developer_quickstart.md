@@ -146,7 +146,21 @@ W pliku `package.json` masz również dostęp do dedykowanych komend:
 * `npm run build:preview:android` / `ios`
 * `npm run build:prod:android` / `ios`
 
+#### 🔄 Aktualizacje OTA (Over-The-Air) z dowolnej maszyny
+
+Cały system Expo (EAS Update) opiera się na chmurze, co oznacza, że możesz wysyłać aktualizacje OTA do zainstalowanej aplikacji z dowolnego komputera (np. przenosząc pracę z biura do domu).
+
+Aby to zadziałało na nowym stanowisku:
+1. **Zainstaluj projekt**: Sklonuj repozytorium i uruchom `npm install` w katalogu `mobile/`.
+2. **Zaloguj się do Expo**: Uruchom `npx eas-cli login` i zaloguj się na swoje konto (`karnalooch`).
+3. **Wypuść aktualizację**: Użyj skryptu `npm run deploy:mobile`.
+
+**Kluczowe elementy konfiguracji (już wdrożone w repozytorium):**
+* **`projectId`**: Zdefiniowane w `mobile/app.config.js` kieruje ruch do właściwej aplikacji w chmurze Expo.
+* **Zgodność wersji**: Aktualizacja zadziała tylko wtedy, gdy `version` w kodzie (np. `1.0.0`) zgadza się z wersją skompilowaną w docelowej aplikacji APK.
+
 ---
+
 
 ## 6. Przegląd Architektury (Pełny Potok)
 
