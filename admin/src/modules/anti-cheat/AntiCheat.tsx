@@ -13,9 +13,10 @@ import { useAuth } from '../../core/auth/useAuth';
 import { motion } from 'framer-motion';
 
 import React, { useMemo } from 'react';
-import { Box, Group, Stack, Text, Badge, Switch, SimpleGrid, ScrollArea } from '@mantine/core';
-import { WinWindow } from '../../core/Layout';
-...
+
+export const AntiCheat = () => {
+  const { user } = useAuth();
+
   const { data: anomalies, isLoading } = useQuery({
     queryKey: ['anomalies'],
     queryFn: TelemetryApi.getAnomalies,
