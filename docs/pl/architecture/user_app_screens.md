@@ -1,48 +1,69 @@
-# Kluczowe Ekrany Aplikacji Użytkownika (Dopamine Loops & UX)
+# Ekrany Aplikacji Mobilnej (Cyber-Monolith V3)
 
-Zgodnie z "Konstytucją SPORT", interfejs musi wspierać estetykę Glassmorphism oraz natychmiastową reaktywność (Legend-State). Poniżej znajduje się zestawienie kluczowych ekranów, które budują pętlę dopaminową użytkownika.
+Niniejszy dokument opisuje architekturę wizualną i funkcjonalną kluczowych ekranów aplikacji SPORT. Interfejs musi wspierać estetykę Glassmorphism oraz natychmiastową reaktywność (Legend-State).
 
-## 1. Dashboard "Centrum Dowodzenia" (Home)
-To jest pierwszy ekran po zalogowaniu. Używamy tu układu Bento Grid.
+## 1. Ekran Główny: Dashboard (The Hub)
+Centrum dowodzenia sportowca. Skupienie na aktualnych postępach i motywacji.
+- **Header:** Dynamiczne powitanie, status synchronizacji (PowerSync), avatar z rangą.
+- **Bento Grid Stats (Skia):**
+  - Kafelki z tygodniowym dystansem, spędzonym czasem i spalonymi kaloriami.
+  - Wykres trendu objętości (12 tygodni) renderowany w Skia.
+- **Active Challenge Card:** Najważniejsze trwające wydarzenie miejskie/korporacyjne z paskiem postępu.
+- **Quick Action Button:** Wielki, pulsujący przycisk "START" z efektem glassmorphismu.
+- **Dopamine Feed:** Mini-lista ostatnich odznak lub sukcesów znajomych z klanu.
 
-- **Widget ACWR (Acute/Chronic Workload Ratio):** Wizualizacja Skia pokazująca ryzyko kontuzji (Zielony/Żółty/Czerwony).
-- **Ostatnia Aktywność:** Karta z mini-mapą (MapLibre static) i statystykami.
-- **Postęp Celu Tygodniowego:** Pierścień postępu z płynną animacją Framer Motion.
-- **Szybki Start:** Pływający przycisk (FAB) "START" w kolorze Cyan (`#00D1FF`) z efektem poświaty.
+## 2. Ekran Sesji: Tracking (The Engine)
+Najbardziej wydajny ekran. Personalizowany HUD nałożony na mapę wektorową.
+- **MapLayer (MapLibre v11):**
+  - Ciemny motyw "Dark Matter".
+  - Ścieżka rysowana w czasie rzeczywistym z poświatą (Glowing Track).
+- **Hyper-Edit HUD (Tamagui):**
+  - Użytkownik może przytrzymać metrykę, aby ją zmienić (Tempo, Prędkość, Wysokość, Tętno).
+  - Technologia: Legend-State aktualizuje te wartości bez rerenderowania całej mapy (60+ FPS).
+- **Control Drawer:** Wysuwany dół z przyciskiem Pause/Stop (zabezpieczony przed przypadkowym dotknięciem - Long Press).
+- **Privacy Indicator:** Ikona informująca, czy użytkownik znajduje się obecnie w Strefie Prywatności (GPS nie jest wtedy logowany do serwera).
 
-## 2. HUD Sesji (Tracking Screen)
-Najważniejszy ekran pod kątem technologicznym (Zasada 12: 60 FPS).
+## 3. Ekran Społeczności: Leaderboards & Social
+Miejsce rywalizacji i komunikacji. Multi-tenant context (Miasto/Klub).
+- **Segmented Control:** Przełącznik między "Miasto", "Klub", "Global".
+- **Rankings List:**
+  - Wykorzystanie FlashList dla płynnego przewijania tysięcy pozycji.
+  - Moja pozycja zawsze przypięta na dole (Sticky).
+- **Matrix Chat Entry:** Skrót do czatu klanowego (E2EE) z ostatnią wiadomością.
+- **Event Map:** Miniatura mapy z "Hotspotami", gdzie aktualnie trenuje najwięcej osób (deck.gl).
 
-- **Mapa Full-Screen:** MapLibre Native v11 z warstwą "Dark Matter".
-- **Dynamiczny HUD:** Konfigurowalne kafelki (Designer Mode) — użytkownik może przytrzymać i zamienić "Tempo" na "Przewyższenie".
-- **Live Metrics:** Dane renderowane przez React Native Skia, aby ominąć mostek Reacta przy aktualizacjach co 1s.
-- **Przycisk Blokady/Pauzy:** Zabezpieczony przed przypadkowym dotknięciem (Long Press).
+## 4. Ekran Historii: Activities & Analytics
+Archiwum i weryfikacja. Dowód integralności tras.
+- **List View:** Filtrowanie według sportu (Bieg/Rower).
+- **Status Badges:**
+  - Verified (Zielony)
+  - Flagged (Pomarańczowy - podejrzenie oszustwa)
+  - Processing (Szary)
+- **Activity Detail (Expandable):**
+  - Mini-mapa trasy.
+  - Statystyki biomechaniczne (V-max check, cadency).
+  - Przycisk "Share to Social" (generowanie karty graficznej z mapą).
 
-## 3. Analiza Po Treningu (Activity Summary)
-Moment "Aha!" i celebracja sukcesu.
+## 5. Ekran Nagród: Marketplace (The Vault)
+Grywalizacja zamieniona na realną wartość.
+- **Points Ledger:** Stan punktów "SPORT" z animacją licznika.
+- **Voucher Cards:** Lista dostępnych nagród od sponsorów (np. "Darmowa Kawa", "Zniżka 20%").
+- **QR Vault:** Miejsce, gdzie przechowywane są już odebrane kody do pokazania w sklepie.
+- **Sponsor POI:** Mapa pobliskich punktów, gdzie można odebrać nagrody.
 
-- **Heatmapa Trasy:** Wizualizacja prędkości na śladzie GPS (od fioletu do cyjanu).
-- **Karta Społecznościowa:** Przycisk "Generuj Kartę Instagram" z nałożonymi statystykami i mapą.
-- **Werdykt Anti-Cheat:** Mała, zielona tarcza z napisem "Zweryfikowano" (buduje zaufanie do sprawiedliwości rankingu).
-- **Punkty & Nagrody:** Licznik zdobytych punktów animowany w stylu slot-machine.
+## 6. Ekran Profilu i Ustawień (The Fortress)
+Zarządzanie tożsamością i prywatnością.
+- **Biometric Identity:** Status Passkeys/FaceID.
+- **Privacy Zones Manager (V2):**
+  - Interaktywna mapa do definiowania stref (Dom, Praca).
+  - Suwak promienia maskowania.
+- **Device Sync:** Zarządzanie połączeniem z Garmin/Apple Health.
+- **Tenant Context:** Informacja o tym, pod jakie miasto/korporację podpięty jest profil (Branding wstrzykiwany dynamicznie).
 
-## 4. Rankingi Miejskie i Globalne (Leaderboards)
-Szybkość dostępu dzięki Redis Sorted Sets.
+---
 
-- **Sticky "Me":** Twoja pozycja zawsze widoczna na dole ekranu, nawet podczas przewijania.
-- **Filtry Terytorialne:** Przełącznik: Moja Firma / Moje Miasto / Globalnie.
-- **Avatar Rank:** Miniatury zawodników z obwódkami zależnymi od rangi (np. neonowy cyjan dla Top 10).
-
-## 5. Portfel Nagród (Rewards Marketplace)
-Miejsce monetyzacji i realnej wartości.
-
-- **Katalog Voucherów:** Kafelki sponsorów (np. "Grupetto Siedlce - Kawa za 100 pkt").
-- **Kod QR:** Generowany dynamicznie po kliknięciu "Odbierz" (atomowa transakcja `SELECT FOR UPDATE` na backendzie).
-- **Saldo Punktów:** Wielki, szklany widget na górze ekranu.
-
-## 6. Strażnik Prywatności (Sovereign Settings)
-Realizacja Artykułu 10 Konstytucji.
-
-- **Mapa Stref:** Interaktywne definiowanie okręgów wokół Domu/Pracy.
-- **Ghost Mode:** Przełącznik całkowitego ukrywania śladu (pozostawia tylko dystans w rankingu).
-- **Eksport Danych (GDPR):** Jeden przycisk generujący paczkę JSON ze wszystkimi trasami.
+## Detale Techniczne UI (Cyber-Monolith V3)
+- **Kolory:** Tło: `#050505`, Primary: `#00D1FF` (Cyan), Accent: `#B066FF` (Purple).
+- **Typografia:** Inter (Variable Font) dla maksymalnej czytelności.
+- **Efekty:** BackdropFilter (blur) na wszystkich panelach nakładanych na mapę.
+- **Haptyka:** Delikatne wibracje przy start/stop sesji oraz przy zdobywaniu punktów.
