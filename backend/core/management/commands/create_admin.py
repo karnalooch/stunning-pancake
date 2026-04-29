@@ -12,7 +12,12 @@ class Command(BaseCommand):
         password = os.getenv('DJANGO_SUPERUSER_PASSWORD', 'Sport2026!')
 
         if not User.objects.filter(username=username).exists():
-            User.objects.create_superuser(username=username, email=email, password=password)
+            user = User.objects.create_superuser(username=username, email=email, password=password)
+            user.role = 'GLOBAL_OWNER'
+            user.save()
             self.stdout.write(self.style.SUCCESS(f'Successfully created superuser: {username}'))
         else:
-            self.stdout.write(self.style.WARNING(f'Superuser {username} already exists'))
+            user = User.objects.get(username=username)
+            user.role = 'GLOBAL_OWNER'
+            user.save()
+            self.stdout.write(self.style.WARNING(f'Superuser {username} already exists, role elevated to GLOBAL_OWNER'))
