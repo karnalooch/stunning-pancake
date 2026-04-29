@@ -14,6 +14,7 @@ import { Theme } from './src/theme/Theme';
 import { AuthService, setAuthToken } from './src/services/api';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
+import { ThemeService } from './src/services/ThemeService';
 
 // Components
 import { SplashScreen } from './src/components/SplashScreen';
@@ -210,6 +211,8 @@ export default observer(function App() {
     const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
     const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
     const isOnboarded = auth.isOnboarded.get();
+    const themeMode = ThemeService.themeMode.get();
+    const isSolar = themeMode === 'solar';
 
     if (!isAuth) {
       // ... (Auth UI remains same)
@@ -225,13 +228,14 @@ export default observer(function App() {
           screenOptions={({ route }) => ({
             headerShown: false,
             tabBarStyle: { 
-              backgroundColor: Theme.colors.card, 
-              borderTopWidth: 0,
+              backgroundColor: isSolar ? '#FFFFFF' : Theme.colors.card, 
+              borderTopWidth: isSolar ? 1 : 0,
+              borderTopColor: '#EEEEEE',
               height: 90,
               paddingBottom: 30
             },
-            tabBarActiveTintColor: Theme.colors.primary,
-            tabBarInactiveTintColor: Theme.colors.textMuted,
+            tabBarActiveTintColor: isSolar ? '#FF0000' : Theme.colors.primary,
+            tabBarInactiveTintColor: isSolar ? '#999999' : Theme.colors.textMuted,
             tabBarIcon: ({ color, size }) => {
               if (route.name === 'Home') return <HomeIcon size={size} color={color} />;
               if (route.name === 'History') return <HistoryIcon size={size} color={color} />;
@@ -268,7 +272,7 @@ export default observer(function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <TamaguiProvider config={tamaguiConfig} defaultTheme="dark">
+        <TamaguiProvider config={tamaguiConfig} defaultTheme={ThemeService.themeMode.get()}>
           {isDownloading ? (
             <SplashScreen 
               message="DOWNLOADING SECURE UPDATE..." 

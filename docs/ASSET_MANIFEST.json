@@ -1,0 +1,43 @@
+{
+  "version": "3.0.0",
+  "project": "SPORT",
+  "manifest": {
+    "branding": {
+      "tokens": "assets/branding/design_tokens.json",
+      "logos": [
+        "assets/branding/logo_full_dark.svg",
+        "assets/branding/logo_full_light.svg",
+        "assets/branding/logo_icon.svg",
+        "assets/branding/logo_minimal.svg"
+      ]
+    },
+    "mobile": {
+      "icons": [
+        "assets/mobile/icons_disciplines.svg",
+        "assets/mobile/icons_navigation.svg",
+        "assets/mobile/icons_stats.svg"
+      ],
+      "images": [
+        "mobile/assets/icon.png",
+        "mobile/assets/adaptive-icon.png",
+        "mobile/assets/splash-icon.png"
+      ]
+    },
+    "admin": {
+      "icons": [
+        "assets/admin/icons_admin.svg",
+        "admin/public/icons.svg"
+      ],
+      "favicon": "admin/public/favicon.svg"
+    },
+    "docs": {
+      "architecture": "docs/assets/system_architecture.png",
+      "mockups": "assets/mobile/mockups/"
+    }
+  },
+  "aesthetic": {
+    "style": "HD-2D",
+    "features": ["Solar Mode", "1px Outlines", "High Contrast"],
+    "target_contrast": "12:1"
+  }
+}

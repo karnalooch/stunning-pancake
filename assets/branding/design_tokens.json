@@ -3,23 +3,34 @@
     "primary": {
       "main": "#00D1FF",
       "light": "#66E3FF",
-      "dark": "#00A3C7"
+      "dark": "#00A3C7",
+      "octopathGold": "#D4A373"
     },
     "secondary": {
       "main": "#B066FF",
       "light": "#D199FF",
-      "dark": "#8A3BFF"
+      "dark": "#8A3BFF",
+      "metalSlugOrange": "#FF6B35"
     },
     "accent": {
       "success": "#00FF94",
       "warning": "#FFB800",
-      "error": "#FF4B4B"
+      "error": "#FF4B4B",
+      "matrixCyan": "#2EC4B6"
     },
     "background": {
       "dark": "#0B0E14",
       "darkSecondary": "#1A1F26",
       "light": "#F8FAFC",
-      "lightSecondary": "#FFFFFF"
+      "lightSecondary": "#FFFFFF",
+      "daveDeepSea": "#0B1D33"
+    },
+    "solar": {
+      "background": "#FFFFFF",
+      "text": "#000000",
+      "primary": "#000000",
+      "accent": "#FF0000",
+      "contrastRatio": "12:1"
     },
     "text": {
       "dark": {
@@ -34,8 +45,16 @@
       }
     }
   },
+  "hd2d": {
+    "borderWidth": "1px",
+    "outlineColor": "#000000",
+    "pixelScale": 2,
+    "borderRadius": "0px",
+    "shadow": "4px 4px 0px rgba(0,0,0,1)"
+  },
   "typography": {
     "fontFamily": "'Inter', sans-serif",
+    "pixelFont": "'Press Start 2P', cursive",
     "scales": {
       "h1": {
         "fontSize": "32px",

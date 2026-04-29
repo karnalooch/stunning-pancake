@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Dimensions, Alert } from 'react-native';
-import { YStack, XStack, Text, Button, H1, View, Input, Label, Circle } from 'tamagui';
+import { YStack, XStack, Text, H1, View, Input, Label, ScrollView } from 'tamagui';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
   withTiming, 
-  withSpring,
-  withSequence,
-  withDelay,
-  Easing,
   FadeIn,
   FadeOut,
   SlideInRight
 } from 'react-native-reanimated';
-import { Shield, Zap, MapPin, Activity, QrCode, ArrowRight, Check, Wifi } from 'lucide-react-native';
+import { Shield, Zap, MapPin, ArrowRight, Check, Wifi } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Location from 'expo-location';
+
+import { RetroCard } from '../components/RetroCard';
+import { HD2DButton } from '../components/HD2DButton';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,10 +22,6 @@ interface OnboardingProps {
   user: any;
   onFinish: (data: any) => void;
 }
-
-const ACTION_CYAN = '#FF6B35'; // Metal Slug Orange (Legacy name)
-const SOLAR_YELLOW = '#D4A373'; // Octopath Gold (Legacy name)
-const VOID_BLACK = '#0B1D33'; // Dave the Diver Deep Blue (Legacy name)
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
   const [step, setStep] = useState(0);
@@ -61,23 +56,29 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   };
 
   return (
-    <YStack flex={1} backgroundColor={VOID_BLACK} padding="$6" paddingTop="$12">
-      {/* HUD Progress Bar */}
-      <XStack height={4} backgroundColor="#111" width="100%" marginBottom="$8" borderWidth={1} borderColor="#222">
-        <Animated.View style={[{ height: '100%', backgroundColor: ACTION_CYAN }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
-           <View position="absolute" right={0} width={2} height={10} backgroundColor={ACTION_CYAN} top={-3} />
-        </Animated.View>
-      </XStack>
+    <YStack flex={1} backgroundColor="$background" padding="$4" paddingTop="$12">
+      {/* RPG-Style HUD Progress */}
+      <YStack marginBottom="$6" gap="$2">
+        <XStack justifyContent="space-between" alignItems="center">
+           <Text color="$primary" fontFamily="$pixel" fontSize={8}>CHARACTER_INIT</Text>
+           <Text color="$primary" fontFamily="$pixel" fontSize={8}>{Math.round(progress.value * 100)}%</Text>
+        </XStack>
+        <XStack height={8} backgroundColor="#111" width="100%" borderWidth={1} borderColor="$hd2d.outlineColor">
+          <Animated.View style={[{ height: '100%', backgroundColor: '$primary' }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
+             <View position="absolute" right={0} width={2} height={12} backgroundColor="$primary" top={-2} />
+          </Animated.View>
+        </XStack>
+      </YStack>
 
-      <View flex={1}>
+      <ScrollView flex={1} showsVerticalScrollIndicator={false}>
         {renderStep()}
-      </View>
+      </ScrollView>
 
-      <XStack justifyContent="space-between" alignItems="center" marginTop="$4">
-        <Text color="$gray10" fontSize={10} ff="monospace" letterSpacing={2}>
-          STAGE_01 // LEVEL_0{step + 1}
+      <XStack justifyContent="space-between" alignItems="center" marginTop="$4" paddingBottom="$4">
+        <Text color="$color" opacity={0.5} fontSize={8} fontFamily="$pixel">
+          STG_01 // LVL_0{step + 1}
         </Text>
-        <Text color="$gray10" fontSize={10} ff="monospace">MISSION_START</Text>
+        <Text color="$color" opacity={0.5} fontSize={8} fontFamily="$pixel">SPORT_OS v3.0</Text>
       </XStack>
     </YStack>
   );
@@ -95,25 +96,24 @@ const PermissionsStep = ({ onNext }: any) => {
   };
 
   return (
-    <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1, justifyContent: 'center' }}>
-      <YStack gap="$6" alignItems="center">
-        <View borderWidth={2} borderColor={ACTION_CYAN} padding="$6">
-           <MapPin size={48} color={ACTION_CYAN} />
+    <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
+      <RetroCard gap="$6" alignItems="center">
+        <View borderWidth={2} borderColor="$accent" padding="$6" backgroundColor="$background">
+           <MapPin size={48} color="$accent" />
         </View>
-        <YStack gap="$2" alignItems="center">
-          <H1 color="white" fontWeight="900" textAlign="center" letterSpacing={2}>NEURAL_LINK</H1>
-          <Text color="$gray10" textAlign="center" fontSize={14}>Enable GPS for real-time telemetry and geofencing.</Text>
+        <YStack gap="$4" alignItems="center">
+          <Text color="$color" fontSize={18} fontFamily="$pixel" textAlign="center">NEURAL_LINK</Text>
+          <Text color="$color" textAlign="center" fontSize={12} opacity={0.8}>
+            Enable GPS for real-time telemetry and character localization.
+          </Text>
         </YStack>
-        <Button 
-          backgroundColor={ACTION_CYAN} 
-          borderRadius={0} 
+        <HD2DButton 
+          label="AUTHORIZE ACCESS"
           width="100%" 
           onPress={requestPerms}
-          pressStyle={{ scale: 0.98 }}
-        >
-          <Text color="black" fontWeight="900" letterSpacing={2}>AUTHORIZE ACCESS</Text>
-        </Button>
-      </YStack>
+          theme="green"
+        />
+      </RetroCard>
     </Animated.View>
   );
 };
@@ -121,15 +121,14 @@ const PermissionsStep = ({ onNext }: any) => {
 const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
   const connect = (service: string) => {
     setFormData({ ...formData, [`${service}Connected`]: true });
-    // Simulate data fetch
     Alert.alert(`${service} Connected`, "Biometric data synchronized successfully.");
   };
 
   return (
-    <Animated.View entering={SlideInRight} style={{ flex: 1, justifyContent: 'center' }}>
-      <YStack gap="$6">
-        <H1 color="white" fontWeight="900" letterSpacing={2}>EXTERNAL_CORE</H1>
-        <Text color="$gray10" fontSize={14}>Connect your wearable for One-Tap onboarding.</Text>
+    <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
+      <RetroCard gap="$6">
+        <Text color="$color" fontSize={18} fontFamily="$pixel">EXTERNAL_CORE</Text>
+        <Text color="$color" fontSize={12} opacity={0.8}>Connect your wearable for One-Tap attribute sync.</Text>
         
         <YStack gap="$3">
           <IntegrationCard 
@@ -148,113 +147,107 @@ const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
           />
         </YStack>
 
-        <Button 
-          backgroundColor="transparent" 
-          borderWidth={1} 
-          borderColor="$gray8" 
-          borderRadius={0}
+        <HD2DButton 
+          label="SKIP FOR NOW"
           onPress={onNext}
-        >
-          <Text color="white" fontWeight="900" letterSpacing={2}>SKIP FOR NOW</Text>
-        </Button>
-      </YStack>
+          backgroundColor="transparent"
+          borderWidth={1}
+        />
+      </RetroCard>
     </Animated.View>
   );
 };
 
 const IntegrationCard = ({ label, icon, connected, onPress, color }: any) => (
   <XStack 
-    backgroundColor="#111" 
+    backgroundColor="$background" 
     padding="$4" 
     alignItems="center" 
     justifyContent="space-between"
     borderWidth={1}
-    borderColor={connected ? color : '#222'}
+    borderColor={connected ? color : '$hd2d.outlineColor'}
     onPress={onPress}
   >
     <XStack gap="$4" alignItems="center">
       <View backgroundColor={color} padding="$2">{icon}</View>
-      <Text color="white" fontWeight="900" letterSpacing={1}>{label}</Text>
+      <Text color="$color" fontSize={12} fontFamily="$pixel">{label}</Text>
     </XStack>
-    {connected ? <Check color={ACTION_CYAN} /> : <ArrowRight color="#444" />}
+    {connected ? <Check color="$accent" /> : <ArrowRight color="$color" opacity={0.3} />}
   </XStack>
 );
 
 const DataValidationStep = ({ formData, setFormData, onNext }: any) => {
   return (
-    <Animated.View entering={SlideInRight} style={{ flex: 1, justifyContent: 'center' }}>
-      <YStack gap="$6">
-        <H1 color="white" fontWeight="900" letterSpacing={2}>BIOMETRIC_SYNC</H1>
-        <Text color="$gray10" fontSize={14}>Verify your physical parameters for power calculation.</Text>
+    <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
+      <RetroCard gap="$6">
+        <Text color="$color" fontSize={18} fontFamily="$pixel">BIOMETRIC_SYNC</Text>
+        <Text color="$color" fontSize={12} opacity={0.8}>Verify physical parameters for power calculation.</Text>
         
         <YStack gap="$4">
           <YStack gap="$2">
-            <Label color="$gray10" fontSize={10} fontWeight="900">WEIGHT (KG)</Label>
+            <Label color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>WEIGHT (KG)</Label>
             <Input 
               value={formData.weight} 
               onChangeText={(t) => setFormData({...formData, weight: t})}
-              backgroundColor="#111" borderRadius={0} color="white" fontWeight="900"
+              backgroundColor="$background" borderRadius={0} color="$color" borderWidth={1} borderColor="$hd2d.outlineColor"
             />
           </YStack>
           <YStack gap="$2">
-            <Label color="$gray10" fontSize={10} fontWeight="900">HEIGHT (CM)</Label>
+            <Label color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>HEIGHT (CM)</Label>
             <Input 
               value={formData.height} 
               onChangeText={(t) => setFormData({...formData, height: t})}
-              backgroundColor="#111" borderRadius={0} color="white" fontWeight="900"
+              backgroundColor="$background" borderRadius={0} color="$color" borderWidth={1} borderColor="$hd2d.outlineColor"
             />
           </YStack>
         </YStack>
 
-        <Button backgroundColor={ACTION_CYAN} borderRadius={0} onPress={onNext}>
-          <Text color="black" fontWeight="900" letterSpacing={2}>VALIDATE DATA</Text>
-        </Button>
-      </YStack>
+        <HD2DButton label="VALIDATE DATA" onPress={onNext} theme="green" />
+      </RetroCard>
     </Animated.View>
   );
 };
 
 const AntiCheatStep = ({ onNext }: any) => (
-  <Animated.View entering={SlideInRight} style={{ flex: 1, justifyContent: 'center' }}>
-    <YStack gap="$6" alignItems="center">
-      <View borderWidth={2} borderColor={SOLAR_YELLOW} padding="$6">
-         <Shield size={48} color={SOLAR_YELLOW} />
+  <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
+    <RetroCard gap="$6" alignItems="center">
+      <View borderWidth={2} borderColor="$primary" padding="$6" backgroundColor="$background">
+         <Shield size={48} color="$primary" />
       </View>
-      <YStack gap="$2" alignItems="center">
-        <H1 color={SOLAR_YELLOW} fontWeight="900" textAlign="center" letterSpacing={2}>INTEGRITY_CHECK</H1>
-        <Text color="$gray10" textAlign="center" fontSize={14}>Our Viterbi Anti-Cheat engine is rygorous. Ensure your GPS is calibrated before every mission.</Text>
+      <YStack gap="$4" alignItems="center">
+        <Text color="$primary" fontSize={18} fontFamily="$pixel" textAlign="center">INTEGRITY</Text>
+        <Text color="$color" textAlign="center" fontSize={12} opacity={0.8}>
+          Our Viterbi Anti-Cheat engine is rigorous. Calibrate GPS before every mission.
+        </Text>
       </YStack>
-      <Button backgroundColor={SOLAR_YELLOW} borderRadius={0} width="100%" onPress={onNext}>
-        <Text color="black" fontWeight="900" letterSpacing={2}>I ACKNOWLEDGE</Text>
-      </Button>
-    </YStack>
+      <HD2DButton label="I ACKNOWLEDGE" width="100%" onPress={onNext} theme="green" />
+    </RetroCard>
   </Animated.View>
 );
 
 const IdentityStep = ({ user, onNext }: any) => (
-  <Animated.View entering={FadeIn} style={{ flex: 1, justifyContent: 'center' }}>
-    <YStack gap="$8" alignItems="center">
+  <Animated.View entering={FadeIn} style={{ flex: 1 }}>
+    <RetroCard gap="$8" alignItems="center">
       <YStack gap="$2" alignItems="center">
-        <H1 color="white" fontWeight="900" letterSpacing={2}>PILOT_IDENTITY</H1>
-        <Text color="$gray10" fontSize={12} textAlign="center">Scan at city checkpoints for mission verification.</Text>
+        <Text color="$color" fontSize={18} fontFamily="$pixel">PILOT_ID</Text>
+        <Text color="$color" fontSize={10} opacity={0.6} textAlign="center">Scan at checkpoints for verification.</Text>
       </YStack>
 
-      <View backgroundColor="white" padding="$4" borderRadius={0} borderWidth={4} borderColor={ACTION_CYAN}>
+      <View backgroundColor="white" padding="$4" borderRadius={0} borderWidth={4} borderColor="$accent">
         <QRCode 
           value={`sport_v1:pilot:${user?.id || 'unknown'}`} 
-          size={180}
-          color="#050505"
+          size={160}
+          color="#000000"
         />
       </YStack>
 
-      <YStack alignItems="center">
-         <Text color={ACTION_CYAN} fontWeight="900" fontSize={18} ff="monospace">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</Text>
-         <Text color="$gray10" fontSize={10} ff="monospace">ID: {user?.id?.substring(0, 8) || '####'}</Text>
+      <YStack alignItems="center" gap="$2">
+         <Text color="$accent" fontSize={14} fontFamily="$pixel">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</Text>
+         <Text color="$color" fontSize={8} opacity={0.5} fontFamily="$pixel">UID: {user?.id?.substring(0, 8) || '####'}</Text>
       </YStack>
 
-      <Button backgroundColor={ACTION_CYAN} borderRadius={0} width="100%" onPress={onNext}>
-        <Text color="black" fontWeight="900" letterSpacing={2}>INITIALIZE MISSION</Text>
-      </Button>
-    </YStack>
+      <HD2DButton label="INITIALIZE MISSION" width="100%" onPress={onNext} theme="green" />
+    </RetroCard>
   </Animated.View>
 );
+

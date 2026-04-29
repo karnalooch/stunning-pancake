@@ -5,6 +5,7 @@ import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity, QrCode } fro
 import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, View } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService } from '../services/api';
+import { ThemeService } from '../services/ThemeService';
 import QRCode from 'react-native-qrcode-svg';
 
 const ShieldIcon = Shield as any;
@@ -180,9 +181,9 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
               </XStack>
             </YStack>
           </YStack>
-          </YStack>
+        )}
 
-          <YStack gap="$2" marginBottom="$6">
+        <YStack gap="$2" marginBottom="$6">
           <TamaText color="$blue10" fontSize={10} fontWeight="800" letterSpacing={1}>WEARABLE ECOSYSTEM</TamaText>
           <YStack backgroundColor="$gray1" padding="$4" borderRadius="$4" gap="$4">
             <XStack justifyContent="space-between" alignItems="center">
@@ -238,11 +239,30 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
               onCheckedChange={(val) => state.isIncognito.set(val)}
             >
               <Switch.Thumb />
-            </Switch>
+              </Switch>
+              </XStack>
+              </YStack>
 
+              <YStack gap="$2" marginBottom="$6">
+              <TamaText color="$gray10" fontSize={10} fontWeight="800" letterSpacing={1}>APPEARANCE</TamaText>
+              <XStack justifyContent="space-between" alignItems="center" backgroundColor="$gray1" padding="$4" borderRadius="$4">
+              <XStack alignItems="center" gap="$3">
+                <ZapIcon size={20} color={ThemeService.themeMode.get() === 'solar' ? "#FF0000" : "#D4A373"} />
+                <YStack>
+                  <TamaText color="white" fontWeight="700" fontSize={14}>Solar Mode</TamaText>
+                  <TamaText color="$gray10" fontSize={11}>High-contrast for outdoor use</TamaText>
+                </YStack>
+              </XStack>
+              <Switch 
+                size="$2" 
+                checked={ThemeService.themeMode.get() === 'solar'} 
+                onCheckedChange={() => ThemeService.toggleTheme()}
+              >
+                <Switch.Thumb />
+              </Switch>
+              </XStack>
+              </YStack>
 
-          </XStack>
-        </YStack>
 
         <YStack gap="$2" marginBottom="$6">
           <XStack justifyContent="space-between" alignItems="center">

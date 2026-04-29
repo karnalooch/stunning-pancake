@@ -1,17 +1,17 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View, Alert, Linking, Image, Dimensions } from 'react-native';
+import { StyleSheet, Alert, Dimensions } from 'react-native';
 import * as Location from 'expo-location';
-import { Map, Camera, UserLocation, Layer, ViewAnnotation, Callout } from '@maplibre/maplibre-react-native';
-import { Shield, Zap, Coffee, ShoppingBag, Bike, Crosshair, Cpu } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H1, Paragraph, View as TamaView } from 'tamagui';
+import { Map, Camera, UserLocation, Layer } from '@maplibre/maplibre-react-native';
+import { Shield, Zap, Crosshair, Cpu, Heart } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, useTheme, ScrollView } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
-import { Svg, Rect, Path } from 'react-native-svg';
 
 import { POIService } from '../services/api';
 import { GpsSyncManager } from '../services/GpsSyncManager';
-import { BrandingService } from '../services/BrandingService';
-import { Theme } from '../theme/Theme';
+import { HD2DButton } from '../components/HD2DButton';
+import { PixelStats } from '../components/PixelStats';
+import { RetroCard } from '../components/RetroCard';
 
 const { width, height } = Dimensions.get('window');
 
@@ -32,35 +32,42 @@ const getStorage = () => {
   }
 };
 
-const GEOFENCE_TASK_NAME = 'poi-geofence-task';
-
 const ShieldIcon = Shield as any;
 const ZapIcon = Zap as any;
-const CoffeeIcon = Coffee as any;
-const ShoppingBagIcon = ShoppingBag as any;
-const BikeIcon = Bike as any;
-const CrosshairIcon = Crosshair as any;
 const CpuIcon = Cpu as any;
+const HeartIcon = Heart as any;
 
-const HudMetric = ({ label, value, unit, color = "#00F0FF" }: any) => (
-  <YStack gap="$1">
-    <TamaText fontSize={10} fontWeight="900" color="$gray10" letterSpacing={1}>{label.toUpperCase()}</TamaText>
-    <XStack alignItems="baseline" gap="$1">
-      <TamaText 
-        fontSize={28} 
-        fontWeight="900" 
-        color={color} 
-        ff="monospace"
-        style={{ textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 0 }}
-      >
-        {value}
-      </TamaText>
-      <TamaText fontSize={12} fontWeight="800" color="$gray10">{unit}</TamaText>
-    </XStack>
-  </YStack>
-);
+const HudMetric = observer(({ label, value, unit, color = "$accent" }: { label: string, value: any, unit: string, color?: any }) => {
+  // Handle observable, function getter, or static value
+  let displayValue;
+  if (typeof value === 'function') {
+    displayValue = value();
+  } else if (value && typeof value.get === 'function') {
+    displayValue = value.get();
+  } else {
+    displayValue = value;
+  }
+  
+  return (
+    <YStack gap="$1">
+      <TamaText fontFamily="$pixel" fontSize={8} color="$color" opacity={0.7} letterSpacing={1}>{label.toUpperCase()}</TamaText>
+      <XStack alignItems="baseline" gap="$1">
+        <TamaText 
+          fontSize={24} 
+          fontWeight="900" 
+          color={color} 
+          fontFamily="$pixel"
+        >
+          {displayValue}
+        </TamaText>
+        <TamaText fontSize={10} fontWeight="800" color="$color" opacity={0.6}>{unit}</TamaText>
+      </XStack>
+    </YStack>
+  );
+});
 
 export const TrackingScreen = observer(({ user }: { user: any }) => {
+  const theme = useTheme();
   const state = useObservable({
     isTracking: false,
     currentLocation: { latitude: 52.17, longitude: 22.29 } as any,
@@ -71,17 +78,14 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       elevationGainM: 0,
       speedMs: 0,
       batteryPct: 1.0,
-      pendingPoints: 0
-    }
+      pendingPoints: 0,
+      heartRate: 75
+    },
+    speedHistory: [0, 0, 0, 0, 0, 0, 0] as number[],
+    hrHistory: [72, 75, 74, 78, 80, 79, 75] as number[]
   });
 
-  const isTracking = state.isTracking.get();
-  const currentLocation = state.currentLocation.get();
-  const pois = state.pois.get() || [];
-  const stats = state.stats.get();
-
   const syncManager = useRef<GpsSyncManager | null>(null);
-  const branding = BrandingService.getCurrentBranding();
 
   useEffect(() => {
     const store = getStorage();
@@ -105,7 +109,16 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
     if (syncManager.current) {
       syncManager.current.setUpdateCallback((newStats) => {
-        state.stats.set(newStats);
+        state.stats.set({ ...newStats, heartRate: 70 + Math.floor(Math.random() * 20) });
+        
+        // Update history for PixelStats
+        const currentSpeed = newStats.speedMs * 3.6;
+        const newSpeedHistory = [...state.speedHistory.get().slice(1), currentSpeed];
+        state.speedHistory.set(newSpeedHistory);
+        
+        const currentHR = state.stats.heartRate.get();
+        const newHRHistory = [...state.hrHistory.get().slice(1), currentHR];
+        state.hrHistory.set(newHRHistory);
       });
     }
   }, [user]);
@@ -131,124 +144,141 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Pre-calculate pace observable to avoid re-renders of the whole screen
+  // Actually, let's just pass the values.
+
   return (
-    <View style={styles.container}>
-      <Map 
-        style={styles.map}
-        mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        logo={false}
-        attribution={false}
+    <YStack flex={1} backgroundColor="$background">
+      {/* MAP CONTAINER with RetroCard Style */}
+      <RetroCard 
+        margin="$4" 
+        marginTop="$12" 
+        height={height * 0.4} 
+        padding={0} 
+        overflow="hidden"
+        borderColor="$hd2d.outlineColor"
       >
-        <Camera
-          zoom={15}
-          center={[currentLocation?.longitude || 22.29, currentLocation?.latitude || 52.17]}
-          trackUserLocation={isTracking ? "default" : undefined}
-        />
-        <UserLocation animated={true}>
-          <Layer
-            id="user-location-pixel"
-            type="circle"
-            style={{
-              circleRadius: 10,
-              circleColor: '#00F0FF',
-              circleStrokeWidth: 2,
-              circleStrokeColor: '#000000',
-            }}
+        <Map 
+          style={styles.map}
+          mapStyle={theme.name === 'solar' ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json" : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"}
+          logo={false}
+          attribution={false}
+        >
+          <Camera
+            zoom={15}
+            center={[state.currentLocation.longitude.get(), state.currentLocation.latitude.get()]}
+            trackUserLocation={state.isTracking.get() ? "default" : undefined}
           />
-        </UserLocation>
-      </Map>
+          <UserLocation animated={true}>
+            <Layer
+              id="user-location-pixel"
+              type="circle"
+              style={{
+                circleRadius: 8,
+                circleColor: theme.accent.get(),
+                circleStrokeWidth: 2,
+                circleStrokeColor: '#000000',
+              }}
+            />
+          </UserLocation>
+        </Map>
+      </RetroCard>
 
-      {/* Cyberpunk HUD Grid Overlay (Subtle) */}
-      <View style={StyleSheet.absoluteFill} pointerEvents="none">
-        <Svg width={width} height={height} opacity={0.1}>
-          {Array.from({ length: 15 }).map((_, i) => (
-            <Rect key={`h-${i}`} x="0" y={(height / 15) * i} width={width} height="0.5" fill="#00F0FF" />
-          ))}
-        </Svg>
-      </View>
-
-      {/* TOP HUD: System Status */}
+      {/* SYSTEM HUD OVERLAY */}
       <XStack 
         position="absolute" 
         top={50} 
         left={0} 
         right={0} 
         justifyContent="space-between" 
-        paddingHorizontal="$4"
+        paddingHorizontal="$6"
       >
-        <YStack backgroundColor="#050505" padding="$2" borderWidth={1} borderColor="$cyan">
-           <TamaText fontSize={8} fontWeight="900" color="$cyan" ff="monospace">DEVICE_ID: {syncManager.current?.['_deviceId'] || 'N/A'}</TamaText>
-           <TamaText fontSize={8} fontWeight="900" color="$cyan" ff="monospace">SYS_STATUS: {isTracking ? 'STREAMING' : 'IDLE'}</TamaText>
+        <YStack backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
+           <TamaText fontSize={8} color="$accent" fontFamily="$pixel">DEVICE_ID: {syncManager.current?.['_deviceId'] || 'N/A'}</TamaText>
+           <TamaText fontSize={8} color="$accent" fontFamily="$pixel">SYS_STATUS: {state.isTracking.get() ? 'STREAMING' : 'IDLE'}</TamaText>
         </YStack>
-        <XStack gap="$2" alignItems="center" backgroundColor="#050505" padding="$2" borderWidth={1} borderColor="$cyan">
-           <CpuIcon size={12} color="#00F0FF" />
-           <TamaText fontSize={8} fontWeight="900" color="$cyan" ff="monospace">BATT: {Math.round(stats.batteryPct * 100)}%</TamaText>
+        <XStack gap="$2" alignItems="center" backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
+           <CpuIcon size={12} color={theme.accent.get()} />
+           <TamaText fontSize={8} color="$accent" fontFamily="$pixel">BATT: {Math.round(state.stats.batteryPct.get() * 100)}%</TamaText>
         </XStack>
       </XStack>
 
-      {/* LEFT HUD: Crosshair Info */}
-      <YStack position="absolute" top={height/2 - 50} left={20} gap="$2">
-        <CrosshairIcon size={24} color="#00F0FF" />
-        <View width={1} height={40} backgroundColor="#00F0FF" marginLeft={12} opacity={0.5} />
-      </YStack>
-
-      {/* MAIN HUD BOTTOM PANEL */}
-      <YStack 
-        position="absolute" 
-        bottom={20} 
-        left={20} 
-        right={20} 
-        backgroundColor="rgba(5, 5, 5, 0.9)" 
-        borderWidth={2} 
-        borderColor="$cyan"
-        padding="$4"
-        gap="$4"
-      >
-        {/* Decorative corner brackets */}
-        <View position="absolute" top={-2} left={-2} width={10} height={10} borderTopWidth={3} borderLeftWidth={3} borderColor="$cyan" />
-        <View position="absolute" top={-2} right={-2} width={10} height={10} borderTopWidth={3} borderRightWidth={3} borderColor="$cyan" />
-        <View position="absolute" bottom={-2} left={-2} width={10} height={10} borderBottomWidth={3} borderLeftWidth={3} borderColor="$cyan" />
-        <View position="absolute" bottom={-2} right={-2} width={10} height={10} borderBottomWidth={3} borderRightWidth={3} borderColor="$cyan" />
-
-        <XStack justifyContent="space-between" alignItems="center">
-          <H1 fontSize={14} fontWeight="900" color="white" letterSpacing={2}>
-            {isTracking ? "ACTIVE MISSION" : "READY PILOT"}
-          </H1>
-          <XStack gap="$3">
-            <ZapIcon size={18} color="#FFF200" />
-            <ShieldIcon size={18} color="#00FF41" />
+      {/* METRICS HUD */}
+      <ScrollView flex={1} paddingHorizontal="$4">
+        <YStack gap="$4" paddingBottom="$10">
+          <XStack justifyContent="space-between">
+            <RetroCard flex={1} marginRight="$2" padding="$3">
+              <HudMetric 
+                label="Speed" 
+                value={() => (state.stats.speedMs.get() * 3.6).toFixed(1)} 
+                unit="KM/H" 
+                color="$primary" 
+              />
+              <PixelStats data={state.speedHistory} width={width * 0.35} height={60} label="SPD_TRK" />
+            </RetroCard>
+            
+            <RetroCard flex={1} marginLeft="$2" padding="$3">
+              <XStack gap="$2" alignItems="center">
+                <HeartIcon size={12} color={theme.error.get()} />
+                <HudMetric 
+                  label="Heart" 
+                  value={state.stats.heartRate} 
+                  unit="BPM" 
+                  color="$error" 
+                />
+              </XStack>
+              <PixelStats data={state.hrHistory} width={width * 0.35} height={60} label="HR_LIVE" />
+            </RetroCard>
           </XStack>
-        </XStack>
 
-        <XStack justifyContent="space-between" paddingVertical="$2">
-          <HudMetric label="Distance" value={((stats?.distanceM || 0) / 1000).toFixed(2)} unit="KM" />
-          <HudMetric label="Pace" value={formatPace(stats?.paceSecPerKm || 0)} unit="/KM" color="#FFF200" />
-          <HudMetric label="Speed" value={(stats?.speedMs * 3.6).toFixed(1)} unit="KMH" />
-        </XStack>
+          <RetroCard padding="$4">
+            <XStack justifyContent="space-between">
+              <HudMetric 
+                label="Distance" 
+                value={() => ((state.stats.distanceM.get() || 0) / 1000).toFixed(2)} 
+                unit="KM" 
+                color="$secondary" 
+              />
+              <HudMetric 
+                label="Pace" 
+                value={() => formatPace(state.stats.paceSecPerKm.get() || 0)} 
+                unit="/KM" 
+                color="$accent" 
+              />
+            </XStack>
+          </RetroCard>
 
-        <TamaButton 
-          size="$6"
-          borderRadius={0}
-          backgroundColor={isTracking ? "#FF0000" : "#00F0FF"}
-          onPress={toggleTracking}
-          pressStyle={{ opacity: 0.8, scale: 0.98 }}
-          borderWidth={2}
-          borderColor="#000"
-        >
-          <TamaText fontWeight="900" fontSize={18} letterSpacing={4} color="black">
-            {isTracking ? "ABORT & SYNC" : "ENGAGE"}
-          </TamaText>
-        </TamaButton>
+          <XStack gap="$3" justifyContent="center" alignItems="center" paddingVertical="$2">
+            <ZapIcon size={20} color={theme.primary.get()} />
+            <TamaText fontFamily="$pixel" fontSize={10} color="$color">PERFORMANCE STABLE</TamaText>
+            <ShieldIcon size={20} color={theme.success.get()} />
+          </XStack>
 
-        <TamaText textAlign="center" fontSize={8} fontWeight="900" color="$gray8" letterSpacing={1}>
-          ANTIGRAVITY DATASTREAM v2.4 // {new Date().toLocaleTimeString()}
-        </TamaText>
-      </YStack>
-    </View>
+          <HD2DButton 
+            onPress={toggleTracking}
+            theme={state.isTracking.get() ? 'red' : 'green'}
+            label={state.isTracking.get() ? "ABORT & SYNC" : "INITIALIZE MISSION"}
+            height={60}
+          />
+        </YStack>
+      </ScrollView>
+
+      {/* FOOTER v3.0 */}
+      <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.4} paddingVertical="$2" fontFamily="$pixel">
+        SOLAR_READY HUD v3.0 // HD-2D ENGINE
+      </TamaText>
+    </YStack>
+  );
+});
+
+      {/* FOOTER v3.0 */}
+      <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.4} paddingVertical="$2" fontFamily="$pixel">
+        SOLAR_READY HUD v3.0 // HD-2D ENGINE
+      </TamaText>
+    </YStack>
   );
 });
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#050505' },
   map: { width: '100%', height: '100%' }
 });
