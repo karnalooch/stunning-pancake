@@ -13,12 +13,23 @@ const INITIAL_VIEW_STATE = {
   bearing: 0
 };
 
+import { useState, useEffect } from 'react';
+import { apiClient } from '../../api/client';
+
 export const GlobalHeatmap = () => {
-  // Mocking high-density global activity data
-  const data = Array.from({ length: 500 }).map(() => ({
-    COORDINATES: [19.1 + Math.random() * 5, 51.9 + Math.random() * 2],
-    WEIGHT: Math.random() * 10
-  }));
+  const [data, setData] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiClient.get('/activities/telemetry/live/')
+      .then(res => {
+        const mapped = res.data.map((p: any) => ({
+          COORDINATES: [p.lng, p.lat],
+          WEIGHT: p.speed ? p.speed * 5 : 10
+        }));
+        setData(mapped);
+      })
+      .catch(err => console.error("Failed to load live positions:", err));
+  }, []);
 
   const layers = [
     new HeatmapLayer({
