@@ -11,6 +11,7 @@ import { POIService } from '../services/api';
 import { GpsSyncManager } from '../services/GpsSyncManager';
 import { BrandingService } from '../services/BrandingService';
 import { Theme } from '../theme/Theme';
+import { SkiaMetrics } from '../components/SkiaMetrics';
 
 let storage: any;
 const getStorage = () => {
@@ -143,7 +144,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
   return (
     <View style={styles.container}>
       {(!Map) ? (
-        <YStack flex={1} backgroundColor="#0B0E14" justifyContent="center" alignItems="center">
+        <YStack flex={1} backgroundColor="$background" justifyContent="center" alignItems="center">
           <TamaText color="$gray10" fontSize={12} letterSpacing={2} fontWeight="900">HYPERSCALE MAP ENGINE OFFLINE</TamaText>
         </YStack>
       ) : (
@@ -206,7 +207,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         left={20} 
         paddingVertical="$2" 
         paddingHorizontal="$4" 
-        borderRadius="$2" 
+        borderRadius="$0" 
         backgroundColor="rgba(5, 5, 5, 0.6)" 
         borderWidth={2} 
         borderColor="$primary"
@@ -229,7 +230,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         left={20} 
         right={20} 
         padding="$6" 
-        borderRadius="$2" 
+        borderRadius="$0" 
         backgroundColor="$background" 
         borderWidth={2} 
         borderColor="$primary"
@@ -245,25 +246,16 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
            </XStack>
         </XStack>
 
-        <XStack justifyContent="space-between" alignItems="flex-end">
-          <YStack>
-            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>DISTANCE</TamaText>
-            <H1 fontWeight="900" color="white" fontSize={38}>{((stats?.distanceM || 0) / 1000).toFixed(2)}<TamaText fontSize={16} color="$textMuted">km</TamaText></H1>
-          </YStack>
-          <YStack>
-            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>PACE</TamaText>
-            <H1 fontWeight="900" color="white" fontSize={38}>{formatPace(stats?.paceSecPerKm || 0)}</H1>
-          </YStack>
-          <YStack alignItems="flex-end">
-            <TamaText color="$textMuted" fontSize={10} fontWeight="800" letterSpacing={1}>BUFFER</TamaText>
-            <TamaText fontSize={32} fontWeight="900" color="$primary">{stats?.pendingPoints || 0}</TamaText>
-          </YStack>
-        </XStack>
+        <SkiaMetrics 
+          distanceKm={((stats?.distanceM || 0) / 1000).toFixed(2)} 
+          pace={formatPace(stats?.paceSecPerKm || 0)} 
+          buffer={stats?.pendingPoints || 0} 
+        />
 
         <TamaButton 
           size="$6"
           borderRadius="$0"
-          backgroundColor={isTracking ? "#FF0000" : "$primary"}
+          backgroundColor={isTracking ? "$red10" : "$primary"}
           onPress={toggleTracking} 
           pressStyle={{ opacity: 0.9, scale: 0.98 }}
         >
