@@ -62,6 +62,11 @@
     - [ ] Implementacja WebSocket w FastAPI z geofiltrowaniem opartym na Geohash i Redis.
     - [ ] Egzekwowanie stref prywatności (Privacy v2) z celowym jitterem po stronie serwera.
     - [ ] Priorytetyzacja "Top 10 Duchów" (Kluby, Znajomi, Zasięg 5km) i dynamiczne renderowanie MapLibre.
+- [ ] **Ekosystem UI/UX (Cyber-Monolith V3)**:
+    - [ ] **Dashboard (The Hub):** Układ Bento Grid z wykresem trendu Skia i Dopamine Feed.
+    - [ ] **Tracking (The Engine):** Hyper-Edit HUD (Tamagui), Glowing Track (MapLibre) i Legend-State.
+    - [ ] **Społeczność i Historia:** Sticky Leaderboards (FlashList) oraz Archiwum z weryfikacją Anti-Cheat.
+    - [ ] **Marketplace i Fortress:** Portfel z kodami QR (SELECT FOR UPDATE) i Strażnik Prywatności v2.
 - [ ] **Publiczne API / SDK dla Deweloperów**: Umożliwienie klientom korporacyjnym budowania niestandardowych rozwiązań na bazie silnika ingestii SPORT.
 - [ ] **Hub Integracji Wearable**: Natywne wsparcie dla dwukierunkowej synchronizacji z Garmin, Strava, Apple Watch (HealthKit) oraz WearOS (Google Fit).
 - [ ] **Stripe Connect Multi-Sponsor**: Zaawansowana logika wypłat dla złożonych dystrybucji nagród B2B2C.
