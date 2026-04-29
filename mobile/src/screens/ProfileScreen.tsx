@@ -134,8 +134,10 @@ export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: 
               checked={isIncognito} 
               onCheckedChange={(val) => state.isIncognito.set(val)}
             >
-              <Switch.Thumb animation="quick" />
+              <Switch.Thumb />
             </Switch>
+
+
           </XStack>
         </YStack>
 

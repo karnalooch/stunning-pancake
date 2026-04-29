@@ -109,13 +109,12 @@ export const RewardsScreen = () => {
                   <TamaButton 
                     size="$2" 
                     theme="active" 
-                    fontSize={10} 
-                    fontWeight="900"
                     onPress={() => handleRedeem(pool.id)}
                     disabled={balance < pool.points_required || pool.available === 0}
                   >
-                    REDEEM
+                    <TamaText color="white" fontSize={10} fontWeight="900">REDEEM</TamaText>
                   </TamaButton>
+
                 </YStack>
               </XStack>
             ))
