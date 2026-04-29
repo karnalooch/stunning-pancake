@@ -3903,3 +3903,52 @@ Zgodnie z Mandatem 60 FPS:
 - Tylko 10 priorytetowych obiektów JSON przekazywanych jest do warstwy graficznej MapLibre.
 - **Kolorystyka markerów:** Dynamiczne rozró¿nianie typów powi¹zañ (np. obwódka Cyan `#00D1FF` dla klubu, Purple `#B066FF` dla obcych).
 
+# Kluczowe Ekrany Aplikacji U¿ytkownika (Dopamine Loops & UX)
+
+Zgodnie z "Konstytucj¹ SPORT", interfejs musi wspieraæ estetykê Glassmorphism oraz natychmiastow¹ reaktywnoœæ (Legend-State). Poni¿ej znajduje siê zestawienie kluczowych ekranów, które buduj¹ pêtlê dopaminow¹ u¿ytkownika.
+
+## 1. Dashboard "Centrum Dowodzenia" (Home)
+To jest pierwszy ekran po zalogowaniu. U¿ywamy tu uk³adu Bento Grid.
+
+- **Widget ACWR (Acute/Chronic Workload Ratio):** Wizualizacja Skia pokazuj¹ca ryzyko kontuzji (Zielony/¯ó³ty/Czerwony).
+- **Ostatnia Aktywnoœæ:** Karta z mini-map¹ (MapLibre static) i statystykami.
+- **Postêp Celu Tygodniowego:** Pierœcieñ postêpu z p³ynn¹ animacj¹ Framer Motion.
+- **Szybki Start:** P³ywaj¹cy przycisk (FAB) "START" w kolorze Cyan (`#00D1FF`) z efektem poœwiaty.
+
+## 2. HUD Sesji (Tracking Screen)
+Najwa¿niejszy ekran pod k¹tem technologicznym (Zasada 12: 60 FPS).
+
+- **Mapa Full-Screen:** MapLibre Native v11 z warstw¹ "Dark Matter".
+- **Dynamiczny HUD:** Konfigurowalne kafelki (Designer Mode) — u¿ytkownik mo¿e przytrzymaæ i zamieniæ "Tempo" na "Przewy¿szenie".
+- **Live Metrics:** Dane renderowane przez React Native Skia, aby omin¹æ mostek Reacta przy aktualizacjach co 1s.
+- **Przycisk Blokady/Pauzy:** Zabezpieczony przed przypadkowym dotkniêciem (Long Press).
+
+## 3. Analiza Po Treningu (Activity Summary)
+Moment "Aha!" i celebracja sukcesu.
+
+- **Heatmapa Trasy:** Wizualizacja prêdkoœci na œladzie GPS (od fioletu do cyjanu).
+- **Karta Spo³ecznoœciowa:** Przycisk "Generuj Kartê Instagram" z na³o¿onymi statystykami i map¹.
+- **Werdykt Anti-Cheat:** Ma³a, zielona tarcza z napisem "Zweryfikowano" (buduje zaufanie do sprawiedliwoœci rankingu).
+- **Punkty & Nagrody:** Licznik zdobytych punktów animowany w stylu slot-machine.
+
+## 4. Rankingi Miejskie i Globalne (Leaderboards)
+Szybkoœæ dostêpu dziêki Redis Sorted Sets.
+
+- **Sticky "Me":** Twoja pozycja zawsze widoczna na dole ekranu, nawet podczas przewijania.
+- **Filtry Terytorialne:** Prze³¹cznik: Moja Firma / Moje Miasto / Globalnie.
+- **Avatar Rank:** Miniatury zawodników z obwódkami zale¿nymi od rangi (np. neonowy cyjan dla Top 10).
+
+## 5. Portfel Nagród (Rewards Marketplace)
+Miejsce monetyzacji i realnej wartoœci.
+
+- **Katalog Voucherów:** Kafelki sponsorów (np. "Grupetto Siedlce - Kawa za 100 pkt").
+- **Kod QR:** Generowany dynamicznie po klikniêciu "Odbierz" (atomowa transakcja `SELECT FOR UPDATE` na backendzie).
+- **Saldo Punktów:** Wielki, szklany widget na górze ekranu.
+
+## 6. Stra¿nik Prywatnoœci (Sovereign Settings)
+Realizacja Artyku³u 10 Konstytucji.
+
+- **Mapa Stref:** Interaktywne definiowanie okrêgów wokó³ Domu/Pracy.
+- **Ghost Mode:** Prze³¹cznik ca³kowitego ukrywania œladu (pozostawia tylko dystans w rankingu).
+- **Eksport Danych (GDPR):** Jeden przycisk generuj¹cy paczkê JSON ze wszystkimi trasami.
+
