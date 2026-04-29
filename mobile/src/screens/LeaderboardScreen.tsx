@@ -6,6 +6,7 @@ import { ActivityService } from '../services/api';
 
 import { RetroCard } from '../components/RetroCard';
 import { HD2DButton } from '../components/HD2DButton';
+import { AthleteSprite } from '../components/AthleteSprite';
 
 const TrophyIcon = Trophy as any;
 const CrownIcon = Crown as any;
@@ -72,9 +73,7 @@ export const LeaderboardScreen = observer(() => {
           <YStack alignItems="center">
              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={8} marginBottom="$1">2nd</TamaText>
              <RetroCard padding="$2" alignItems="center" borderColor="#C0C0C0">
-               <Circle size={50} backgroundColor="$background">
-                 <TamaText color="white" fontSize={18} fontWeight="900">{ranking[1]?.username?.[0] || '?'}</TamaText>
-               </Circle>
+               <AthleteSprite type="cyclist" state="action" size={50} color="#C0C0C0" />
                <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>{ranking[1]?.username || '...'}</TamaText>
                <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">{ranking[1]?.score_km || 0}KM</TamaText>
              </RetroCard>
@@ -84,9 +83,7 @@ export const LeaderboardScreen = observer(() => {
           <YStack alignItems="center">
              <CrownIcon size={20} color={theme.primary.get()} style={{ marginBottom: 4 }} />
              <RetroCard padding="$3" alignItems="center" borderColor={theme.primary.get()} scale={1.1}>
-               <Circle size={60} backgroundColor="$background" borderWidth={2} borderColor={theme.primary.get()}>
-                 <TamaText color={theme.primary.get()} fontSize={24} fontWeight="900">{ranking[0]?.username?.[0] || '?'}</TamaText>
-               </Circle>
+               <AthleteSprite type="elite" state="action" size={60} />
                <TamaText color="$color" marginTop="$2" fontSize={12} fontFamily="$pixel" numberOfLines={1} maxWidth={80}>{ranking[0]?.username || '...'}</TamaText>
                <TamaText color={theme.primary.get()} fontSize={8} fontFamily="$pixel">{ranking[0]?.score_km || 0}KM</TamaText>
              </RetroCard>
@@ -96,9 +93,7 @@ export const LeaderboardScreen = observer(() => {
           <YStack alignItems="center">
              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={8} marginBottom="$1">3rd</TamaText>
              <RetroCard padding="$2" alignItems="center" borderColor="#CD7F32">
-               <Circle size={50} backgroundColor="$background">
-                 <TamaText color="white" fontSize={18} fontWeight="900">{ranking[2]?.username?.[0] || '?'}</TamaText>
-               </Circle>
+               <AthleteSprite type="runner" state="action" size={50} color="#CD7F32" />
                <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>{ranking[2]?.username || '...'}</TamaText>
                <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">{ranking[2]?.score_km || 0}KM</TamaText>
              </RetroCard>
@@ -111,9 +106,7 @@ export const LeaderboardScreen = observer(() => {
               <XStack alignItems="center" justifyContent="space-between">
                 <XStack alignItems="center" gap="$3">
                   <TamaText color="$color" opacity={0.4} fontFamily="$pixel" fontSize={10} width={30}>#{i + 4}</TamaText>
-                  <Circle size={32} backgroundColor="$background" borderWidth={1} borderColor="$hd2d.outlineColor">
-                    <TamaText color="$color" fontSize={10} fontWeight="900">{item.username?.[0]}</TamaText>
-                  </Circle>
+                  <AthleteSprite type={i % 2 === 0 ? 'runner' : 'cyclist'} state="idle" size={32} />
                   <YStack>
                     <TamaText color="$color" fontSize={12} fontWeight="800">{item.username}</TamaText>
                     <TamaText color="$primary" fontFamily="$pixel" fontSize={8}>{item.score_km} KM</TamaText>
@@ -145,9 +138,7 @@ export const LeaderboardScreen = observer(() => {
         <XStack alignItems="center" justifyContent="space-between">
            <XStack alignItems="center" gap="$3">
              <TamaText color="$primary" fontFamily="$pixel" fontSize={10} width={40}>#{myRank?.rank || '?'}</TamaText>
-             <Circle size={36} backgroundColor="$primary" borderWidth={1} borderColor="#000">
-               <TamaText color="black" fontSize={10} fontWeight="900">ME</TamaText>
-             </Circle>
+             <AthleteSprite type="runner" state="idle" size={36} color={theme.primary.get()} />
              <YStack>
                <TamaText color="$color" fontSize={14} fontWeight="900">YOU (ACTIVE)</TamaText>
                <TamaText color="$primary" fontFamily="$pixel" fontSize={10}>{myRank?.score_km || 0} KM</TamaText>

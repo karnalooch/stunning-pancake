@@ -12,6 +12,7 @@ import { GpsSyncManager } from '../services/GpsSyncManager';
 import { HD2DButton } from '../components/HD2DButton';
 import { PixelStats } from '../components/PixelStats';
 import { RetroCard } from '../components/RetroCard';
+import { AthleteSprite } from '../components/AthleteSprite';
 
 const { width, height } = Dimensions.get('window');
 
@@ -144,9 +145,6 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Pre-calculate pace observable to avoid re-renders of the whole screen
-  // Actually, let's just pass the values.
-
   return (
     <YStack flex={1} backgroundColor="$background">
       {/* MAP CONTAINER with RetroCard Style */}
@@ -192,11 +190,31 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         right={0} 
         justifyContent="space-between" 
         paddingHorizontal="$6"
+        alignItems="flex-start"
       >
-        <YStack backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
-           <TamaText fontSize={8} color="$accent" fontFamily="$pixel">DEVICE_ID: {syncManager.current?.['_deviceId'] || 'N/A'}</TamaText>
-           <TamaText fontSize={8} color="$accent" fontFamily="$pixel">SYS_STATUS: {state.isTracking.get() ? 'STREAMING' : 'IDLE'}</TamaText>
+        <YStack gap="$2">
+          <YStack backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
+            <TamaText fontSize={8} color="$accent" fontFamily="$pixel">DEVICE_ID: {syncManager.current?.['_deviceId'] || 'N/A'}</TamaText>
+            <TamaText fontSize={8} color="$accent" fontFamily="$pixel">SYS_STATUS: {state.isTracking.get() ? 'STREAMING' : 'IDLE'}</TamaText>
+          </YStack>
+          
+          {/* ANIMATED MISSION PILOT */}
+          <YStack 
+            backgroundColor="$background" 
+            padding="$2" 
+            borderWidth={1} 
+            borderColor="$hd2d.outlineColor" 
+            alignItems="center"
+          >
+            <AthleteSprite 
+              type="runner" 
+              state={state.stats.speedMs.get() > 0.5 ? 'action' : 'idle'} 
+              size={40} 
+            />
+            <TamaText fontSize={6} color="$color" marginTop="$1" fontFamily="$pixel">PILOT_ACTIVE</TamaText>
+          </YStack>
         </YStack>
+
         <XStack gap="$2" alignItems="center" backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
            <CpuIcon size={12} color={theme.accent.get()} />
            <TamaText fontSize={8} color="$accent" fontFamily="$pixel">BATT: {Math.round(state.stats.batteryPct.get() * 100)}%</TamaText>
@@ -262,14 +280,6 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
           />
         </YStack>
       </ScrollView>
-
-      {/* FOOTER v3.0 */}
-      <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.4} paddingVertical="$2" fontFamily="$pixel">
-        SOLAR_READY HUD v3.0 // HD-2D ENGINE
-      </TamaText>
-    </YStack>
-  );
-});
 
       {/* FOOTER v3.0 */}
       <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.4} paddingVertical="$2" fontFamily="$pixel">

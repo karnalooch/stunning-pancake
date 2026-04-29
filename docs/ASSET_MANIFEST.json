@@ -15,7 +15,10 @@
       "icons": [
         "assets/mobile/icons_disciplines.svg",
         "assets/mobile/icons_navigation.svg",
-        "assets/mobile/icons_stats.svg"
+        "assets/mobile/icons_stats.svg",
+        "assets/mobile/icons_rewards_hd2d.svg",
+        "assets/mobile/icons_hud_hd2d.svg",
+        "assets/mobile/icons_integrations_hd2d.svg"
       ],
       "images": [
         "mobile/assets/icon.png",

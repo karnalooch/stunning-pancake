@@ -12,6 +12,7 @@ import Animated, {
   interpolate
 } from 'react-native-reanimated';
 import { Svg, Path, Rect } from 'react-native-svg';
+import { AthleteSprite } from './AthleteSprite';
 
 const { width, height } = Dimensions.get('window');
 
@@ -73,7 +74,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
   return (
     <YStack flex={1} backgroundColor="#0B1D33" justifyContent="center" alignItems="center">
-      {/* Cyberpunk Grid Background Background (Optional/Subtle) */}
+      {/* Cyberpunk Grid Background */}
       <View position="absolute" opacity={0.05}>
         <Svg width={width} height={height}>
           {Array.from({ length: 20 }).map((_, i) => (
@@ -86,27 +87,31 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       </View>
 
       <Animated.View style={[styles.logoContainer, logoStyle]}>
-        {/* Logo Icon Mockup using SVG */}
-        <Svg width="120" height="120" viewBox="0 0 48 46" fill="none">
-          <Path 
-            fill="#FF6B35" 
-            d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" 
-          />
+        {/* HD-2D Shield Logo Icon */}
+        <Svg width="120" height="120" viewBox="0 0 100 100">
+          <Path d="M20 10H80V20H90V60H80V70H70V80H60V90H40V80H30V70H20V60H10V20H20V10Z" fill="#D4A373" stroke="#000000" strokeWidth="2"/>
+          <Path d="M30 20H70V30H80V50H70V60H60V70H40V60H30V50H20V30H30V20Z" fill="#FF6B35" stroke="#000000" strokeWidth="1"/>
+          <Rect x="45" y="35" width="10" height="10" fill="#FFFFFF" stroke="#000000" strokeWidth="1"/>
         </Svg>
         
         {/* Scanning Line Effect */}
         <Animated.View style={[styles.scanLine, scanStyle]} />
       </Animated.View>
 
-      <YStack marginTop="$8" alignItems="center" gap="$2">
-        <Animated.View style={textStyle}>
-          <Text color="#FF6B35" letterSpacing={4} fontSize={12} fontWeight="900" textAlign="center">
-            {message}
+      <YStack marginTop="$10" alignItems="center" gap="$4">
+        {/* LOADING SPRITE */}
+        <AthleteSprite type="runner" state="action" size={60} />
+        
+        <YStack alignItems="center" gap="$2">
+          <Animated.View style={textStyle}>
+            <Text color="$primary" letterSpacing={4} fontSize={12} fontWeight="900" textAlign="center" fontFamily="$pixel">
+              {message}
+            </Text>
+          </Animated.View>
+          <Text color="$color" opacity={0.4} fontSize={10} fontWeight="800" letterSpacing={2} fontFamily="$pixel">
+            {subMessage}
           </Text>
-        </Animated.View>
-        <Text color="#444" fontSize={10} fontWeight="800" letterSpacing={2}>
-          {subMessage}
-        </Text>
+        </YStack>
       </YStack>
 
       {/* Version & Build Tags in Corners */}

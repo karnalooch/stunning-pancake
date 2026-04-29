@@ -90,5 +90,9 @@ Zasoby definiujące strukturę wymiany danych.
 | **Sync Rules** | Reguły synchronizacji danych między usługami. | `backend/sync_rules.yaml` |
 | **GeoJSON/MF-JSON** | Standardy trajektorii i Geofencing (w kodzie). | `backend/activities/ogc_views.py` |
 | **QR Logic** | System identyfikacji zawodników. | `docs/compliance/RCP.md` |
+| **Rewards Icons** | Ikony XP, voucherów i sponsorów (HD-2D). | `assets/mobile/icons_rewards_hd2d.svg` | SVG |
+| **HUD Icons** | Status GPS, tętno (Pixel Heart), bateria (HD-2D). | `assets/mobile/icons_hud_hd2d.svg` | SVG |
+| **Integrations** | Zpixelizowane logotypy Strava i Garmin. | `assets/mobile/icons_integrations_hd2d.svg` | SVG |
+| **Sprite Library** | Biblioteka postaci sportowców (Runner, Cyclist, Ghost, Elite). | `assets/mobile/sprites_athletes_hd2d.svg` | SVG |
 | **Asset Manifest** | Maszynowa mapa wszystkich zasobów projektu (JSON). | `docs/ASSET_MANIFEST.json` | JSON |
 | **HD-2D Guide** | Szablony i wytyczne dla stylu HD-2D (outlines, kolory). | `assets/mobile/icons_hd2d_placeholders.svg` | SVG |
