@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Group, Stack, Title, Text, Button, SimpleGrid } from '@mantine/core';
 import { useDesigner, EditableText } from '../../providers/DesignerProvider';
+import { apiClient } from '../../api/client';
 import { Settings2, Users, Radio, ShieldCheck, TrendingUp, Plus } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useDisclosure } from '@mantine/hooks';
@@ -17,6 +18,18 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
   const { user } = useAuth();
   const { isEditMode, toggleEditMode } = useDesigner();
   const [wizardOpened, { open, close }] = useDisclosure(false);
+  const [stats, setStats] = useState<{
+    total_users: number;
+    total_activities: number;
+    total_distance_km: number;
+    total_calories: number;
+  } | null>(null);
+  
+  useEffect(() => {
+    apiClient.get('/activities/admin/stats/')
+      .then(res => setStats(res.data))
+      .catch(err => console.error("Stats fetch error:", err));
+  }, []);
   
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
   const isModerator = user?.role === 'TENANT_MODERATOR';
@@ -64,10 +77,10 @@ export const Dashboard: React.FC<{ mode: 'light' | 'dark' }> = ({ mode }) => {
       </Group>
 
       <SimpleGrid cols={{ base: 1, md: 4 }} spacing="xl" mb="xl">
-        <StatCard icon={<Users size={20} />} label="Total Athletes" value="1,042,981" badge="+12%" color="blue" progress={72} glow="glow-blue" />
-        <StatCard icon={<Radio size={20} />} label="Active Packets" value="241,082" badge="LIVE" color="lime" progress={84} glow="glow-lime" />
-        <StatCard icon={<ShieldCheck size={20} />} label="Fraud Prevented" value="12,402" badge="SECURE" color="red" progress={98} />
-        <StatCard icon={<TrendingUp size={20} />} label="Global Revenue" value="$428k" badge="+8.4%" color="indigo" progress={45} />
+        <StatCard icon={<Users size={20} />} label="Total Athletes" value={stats ? stats.total_users.toLocaleString() : '...'} badge="+12%" color="blue" progress={72} glow="glow-blue" />
+        <StatCard icon={<Radio size={20} />} label="Total Activities" value={stats ? stats.total_activities.toLocaleString() : '...'} badge="LIVE" color="lime" progress={84} glow="glow-lime" />
+        <StatCard icon={<ShieldCheck size={20} />} label="Total Distance" value={stats ? `${stats.total_distance_km.toFixed(1)} km` : '...'} badge="SECURE" color="red" progress={98} />
+        <StatCard icon={<TrendingUp size={20} />} label="Calories Burned" value={stats ? stats.total_calories.toLocaleString() : '...'} badge="+8.4%" color="indigo" progress={45} />
       </SimpleGrid>
 
       {isGlobalOwner ? (
