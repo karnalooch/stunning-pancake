@@ -11,7 +11,7 @@ Rygorystycznie dobrane komponenty gwarantujące bezpieczeństwo biznesowe:
 - **Wizualizacja Map**: MapLibre GL (BSD-2/MIT).
 - **Komunikacja**: Matrix (Apache 2.0).
 - **Grywalizacja**: Redis (BSD-3-Clause).
-- **Interfejsy**: Flutter / React Native Bridgeless.
+- **Interfejs mobilny**: React Native Bridgeless (Tamagui, Skia, Legend-State).
 
 ## 3. Wizja Wizualna (UX/UI Manifesto)
 
