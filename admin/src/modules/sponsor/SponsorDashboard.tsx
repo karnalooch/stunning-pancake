@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress, ScrollArea, Card, Spinner } from '@mantine/core';
+import { Box, SimpleGrid, Group, Stack, Text, Badge, Progress, ScrollArea, Card, Loader } from '@mantine/core';
 
 import { WinWindow } from '../../core/Layout';
 import { Gift, Store, Users, Eye } from 'lucide-react';
@@ -20,7 +20,7 @@ export const SponsorDashboard = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <Box p="xl"><Spinner /></Box>;
+  if (loading) return <Box p="xl"><Loader /></Box>;
 
   const SPONSOR_CHART_DATA = stats ? [
     { name: 'Redeemed', 'Vouchers': stats.redeemed_count },

@@ -9,3 +9,6 @@ admin/
 docs/
 .git/
 node_modules/
+backend/
+web/
+
