@@ -5,9 +5,10 @@ Niniejszy dokument opisuje architekturę wizualną i funkcjonalną kluczowych ek
 ## 1. Ekran Główny: Dashboard (The Hub)
 Centrum dowodzenia sportowca. Skupienie na aktualnych postępach i motywacji.
 - **Header:** Dynamiczne powitanie, status synchronizacji (PowerSync), avatar z rangą.
-- **Bento Grid Stats (Skia):**
-  - Kafelki z tygodniowym dystansem, spędzonym czasem i spalonymi kaloriami.
-  - Wykres trendu objętości (12 tygodni) renderowany w Skia.
+- **Bento 2.0 Architecture (Skia & Tamagui):**
+  - **Dynamic Grid:** Modularny układ kafelków o różnych proporcjach (1x1, 2x1, 2x2).
+  - **Micro-Interactions:** Każdy kafel reaguje na dotyk efektem poświaty (Cyan) i lekkim sprężynowaniem (Spring).
+  - **Wykresy Skia:** Wykres trendu objętości (12 tygodni) oraz wskaźnik ACWR renderowane bezpośrednio przez GPU za pomocą React Native Skia.
 - **Active Challenge Card:** Najważniejsze trwające wydarzenie miejskie/korporacyjne z paskiem postępu.
 - **Quick Action Button:** Wielki, pulsujący przycisk "START" z efektem glassmorphismu.
 - **Dopamine Feed:** Mini-lista ostatnich odznak lub sukcesów znajomych z klanu.
