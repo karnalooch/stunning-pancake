@@ -24,9 +24,9 @@ interface OnboardingProps {
   onFinish: (data: any) => void;
 }
 
-const ACTION_CYAN = '#00F0FF';
-const SOLAR_YELLOW = '#FFF200';
-const VOID_BLACK = '#050505';
+const ACTION_CYAN = '#FF6B35'; // Metal Slug Orange (Legacy name)
+const SOLAR_YELLOW = '#D4A373'; // Octopath Gold (Legacy name)
+const VOID_BLACK = '#0B1D33'; // Dave the Diver Deep Blue (Legacy name)
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
   const [step, setStep] = useState(0);
@@ -75,9 +75,9 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
 
       <XStack justifyContent="space-between" alignItems="center" marginTop="$4">
         <Text color="$gray10" fontSize={10} ff="monospace" letterSpacing={2}>
-          PHASE_04 // STEP_0{step + 1}
+          STAGE_01 // LEVEL_0{step + 1}
         </Text>
-        <Text color="$gray10" fontSize={10} ff="monospace">SPORT_V2.4_BOOTLOADER</Text>
+        <Text color="$gray10" fontSize={10} ff="monospace">MISSION_START</Text>
       </XStack>
     </YStack>
   );

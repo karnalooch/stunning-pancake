@@ -1,13 +1,13 @@
 export const Theme = {
   colors: {
-    primary: '#00F0FF', // Action Cyan (High Visibility)
-    secondary: '#FFF200', // Solar Yellow (Alerts/Zones)
-    background: '#050505', // Void Black (Deep Contrast)
-    card: '#121212', // Darker Surface for HD-2D
-    text: '#FFFFFF',
-    textMuted: '#A0A0A0',
-    success: '#00FF41', // Matrix Green
-    error: '#FF0000', // Pure Red
+    primary: '#D4A373', // Octopath Gold
+    secondary: '#FF6B35', // Metal Slug Orange
+    background: '#0B1D33', // Dave the Diver Deep Sea
+    card: '#1A2A3A', // Darker Blue Surface
+    text: '#F4F1DE', // Cream White
+    textMuted: '#8E9AA6', // Slate Gray
+    success: '#2EC4B6', // Teal
+    error: '#E71D36', // Crimson
     outline: '#000000', // 1px Outline Color
   },
   spacing: {

@@ -72,15 +72,15 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   }));
 
   return (
-    <YStack flex={1} backgroundColor="#050505" justifyContent="center" alignItems="center">
+    <YStack flex={1} backgroundColor="#0B1D33" justifyContent="center" alignItems="center">
       {/* Cyberpunk Grid Background Background (Optional/Subtle) */}
       <View position="absolute" opacity={0.05}>
         <Svg width={width} height={height}>
           {Array.from({ length: 20 }).map((_, i) => (
-            <Rect key={`h-${i}`} x="0" y={(height / 20) * i} width={width} height="1" fill="#00F0FF" />
+            <Rect key={`h-${i}`} x="0" y={(height / 20) * i} width={width} height="1" fill="#1A2A3A" />
           ))}
           {Array.from({ length: 10 }).map((_, i) => (
-            <Rect key={`v-${i}`} x={(width / 10) * i} y="0" width="1" height={height} fill="#00F0FF" />
+            <Rect key={`v-${i}`} x={(width / 10) * i} y="0" width="1" height={height} fill="#1A2A3A" />
           ))}
         </Svg>
       </View>
@@ -89,7 +89,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         {/* Logo Icon Mockup using SVG */}
         <Svg width="120" height="120" viewBox="0 0 48 46" fill="none">
           <Path 
-            fill="#00F0FF" 
+            fill="#FF6B35" 
             d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z" 
           />
         </Svg>
@@ -100,7 +100,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
       <YStack marginTop="$8" alignItems="center" gap="$2">
         <Animated.View style={textStyle}>
-          <Text color="#00F0FF" letterSpacing={4} fontSize={12} fontWeight="900" textAlign="center">
+          <Text color="#FF6B35" letterSpacing={4} fontSize={12} fontWeight="900" textAlign="center">
             {message}
           </Text>
         </Animated.View>
@@ -127,15 +127,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0, 240, 255, 0.2)',
-    backgroundColor: 'rgba(0, 240, 255, 0.05)',
+    borderColor: 'rgba(255, 107, 53, 0.2)',
+    backgroundColor: 'rgba(255, 107, 53, 0.05)',
   },
   scanLine: {
     position: 'absolute',
     width: '120%',
     height: 2,
-    backgroundColor: '#00F0FF',
-    shadowColor: '#00F0FF',
+    backgroundColor: '#FF6B35',
+    shadowColor: '#FF6B35',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 10,
