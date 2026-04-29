@@ -1,14 +1,28 @@
 # MAPA ŚCIEŻKI UŻYTKOWNIKA (USER JOURNEY): Platforma "SPORT"
 > Strategiczna ścieżka budowania nawyku i konwersji
 
-## Faza 1: Odkrywanie i Onboarding (AIDA - Od Świadomości do Działania)
-*Cel: Czas do uzyskania wartości (Time-to-Value) poniżej 3 minut*
+## Faza 1: Odkrywanie i Onboarding (Cyber-Monolith Experience)
+*Cel: Immersyjny start i czas do uzyskania wartości (Time-to-Value) poniżej 3 minut*
 
-- **Doświadczenie Landing Page**: Koncentracja na emocjach ("Poczuj wolność") zamiast na specyfikacji technicznej.
-- **Social Sign-In**: Rejestracja jednym dotknięciem przez Apple ID (obowiązkowe) i Google.
-- **Progressive Disclosure**: Prośba o dane biometryczne tylko wtedy, gdy są potrzebne do pierwszej analizy, a nie przy zakładaniu konta.
-- **Uprawnienia Kontekstowe**: Wyzwalanie monitów o dostęp do GPS i HealthKit dopiero w momencie rozpoczęcia pierwszej aktywności.
-- **Passwordless**: Włączenie **Passkeys** (FIDO2) dla bezproblemowych powrotów do aplikacji.
+### 1.1 Animated Splash & Launch
+- **Immersyjny Start**: Pulsujące logo z przejściem do kreatora. Animacje oparte na Reanimated (Mobile) lub Framer Motion (Web) zapewniające płynność 60 FPS.
+- **Kreator Pierwszego Uruchomienia**: Aktywowany przy pierwszym starcie aplikacji, prowadzący użytkownika przez proces konfiguracji "krok po kroku".
+
+### 1.2 Uprawnienia i Integracje
+- **Zgody Systemowe**: Czytelna prośba o dostęp do GPS i powiadomień.
+- **Integrations Hub**: Grid "One-Tap" dla kluczowych platform: Garmin, Strava, Intervals.icu, Google oraz Facebook.
+- **Zgody Licencyjne**: Akceptacja regulaminów i licencji firm trzecich w nowoczesnym, czytelnym formacie.
+
+### 1.3 Zbieranie i Walidacja Danych
+- **Automatyczny Import**: Pobieranie danych biometrycznych (imię, waga, wzrost, wiek) z połączonych kont.
+- **Wpisywanie Ręczne**: Alternatywna ścieżka dla użytkowników bez zewnętrznych integracji.
+- **Walidacja Anti-Cheat**: Ekran weryfikacji danych z przypomnieniem o kalibracji – budowanie świadomości rygorystyczności systemu.
+- **Edycja Danych**: Możliwość szybkiej korekty zaimportowanych informacji przed finalizacją profilu.
+
+### 1.4 Tożsamość i Powitanie
+- **QR Identity**: Generowanie estetycznego, unikalnego kodu QR sportowca, służącego do weryfikacji na zawodach i w punktach partnerskich.
+- **Ekran Powitalny**: Finałowa animacja "SPORT APP Ready", budująca napięcie i gotowość do pierwszego treningu.
+- **Estetyka**: Navy Blue, Cyan, Glassmorphism (rozmyte tła kart) – charakter "Premium Cyber-Monolith".
 
 ---
 

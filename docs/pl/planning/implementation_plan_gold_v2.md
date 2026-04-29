@@ -54,6 +54,14 @@
 ## Faza 6: Ekosystem Enterprise i Integracje
 *Cel: Otwarcie platformy na zewnętrznych deweloperów i sprzęt wearable.*
 
+- [ ] **Immersyjny Onboarding (Onboarding Flow)**:
+    - [ ] Animowany ekran Splash (60 FPS) oraz systemowe zgody na GPS.
+    - [ ] Ekran integracji (Garmin, Strava, Intervals.icu, Google, FB) i walidacji danych.
+    - [ ] Generowanie Athlete QR Identity do weryfikacji offline.
+- [ ] **System Pozycji Czasu Rzeczywistego (Live-Ghost Architecture)**:
+    - [ ] Implementacja WebSocket w FastAPI z geofiltrowaniem opartym na Geohash i Redis.
+    - [ ] Egzekwowanie stref prywatności (Privacy v2) z celowym jitterem po stronie serwera.
+    - [ ] Priorytetyzacja "Top 10 Duchów" (Kluby, Znajomi, Zasięg 5km) i dynamiczne renderowanie MapLibre.
 - [ ] **Publiczne API / SDK dla Deweloperów**: Umożliwienie klientom korporacyjnym budowania niestandardowych rozwiązań na bazie silnika ingestii SPORT.
 - [ ] **Hub Integracji Wearable**: Natywne wsparcie dla dwukierunkowej synchronizacji z Garmin, Strava, Apple Watch (HealthKit) oraz WearOS (Google Fit).
 - [ ] **Stripe Connect Multi-Sponsor**: Zaawansowana logika wypłat dla złożonych dystrybucji nagród B2B2C.

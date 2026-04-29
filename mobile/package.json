@@ -11,6 +11,7 @@
     "build:dev:android": "npx eas build --platform android --profile development",
     "build:dev:ios": "npx eas build --platform ios --profile development",
     "build:preview:android": "npx eas build --platform android --profile preview",
+    "build:local:preview:android": "npx expo prebuild --clean -p android && cd android && .\\gradlew.bat assembleRelease",
     "build:preview:ios": "npx eas build --platform ios --profile preview",
     "build:prod:android": "npx eas build --platform android --profile production",
     "build:prod:ios": "npx eas build --platform ios --profile production"
