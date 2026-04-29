@@ -1,6 +1,6 @@
-# Ekrany Aplikacji Mobilnej (Cyber-Monolith V3)
+# Ekrany Aplikacji Mobilnej (Styl Hybrydowy HD-2D)
 
-Niniejszy dokument opisuje architekturę wizualną i funkcjonalną kluczowych ekranów aplikacji SPORT. Interfejs musi wspierać estetykę Glassmorphism oraz natychmiastową reaktywność (Legend-State).
+Niniejszy dokument opisuje architekturę wizualną i funkcjonalną kluczowych ekranów aplikacji SPORT, opartą na stylu Hybrydowym HD-2D oraz natychmiastowej reaktywności (Legend-State).
 
 ## 1. Ekran Główny: Dashboard (The Hub)
 Centrum dowodzenia sportowca. Skupienie na aktualnych postępach i motywacji.
@@ -63,8 +63,8 @@ Zarządzanie tożsamością i prywatnością.
 
 ---
 
-## Detale Techniczne UI (Cyber-Monolith V3)
-- **Kolory:** Tło: `#050505`, Primary: `#00D1FF` (Cyan), Accent: `#B066FF` (Purple).
-- **Typografia:** Inter (Variable Font) dla maksymalnej czytelności.
-- **Efekty:** BackdropFilter (blur) na wszystkich panelach nakładanych na mapę.
-- **Haptyka:** Delikatne wibracje przy start/stop sesji oraz przy zdobywaniu punktów.
+## Detale Techniczne UI (Styl Hybrydowy HD-2D)
+- **Kolory ("High-Noon Invectus"):** Action Cyan (`#00F0FF`), Solar Yellow (`#FFF200`), Void Black (`#050505`).
+- **Typografia ("Titan-Pixel"):** Customowy, gruby font pixelowy o wysokiej gęstości (X-height).
+- **Assety:** Pixel-artowe grafiki .webp z 1-pikselowym czarnym outline'em.
+- **Haptyka:** Precyzyjne wibracje (Taptic Engine) przy zmianach stanów animacji.

@@ -62,7 +62,7 @@
     - [ ] Implementacja WebSocket w FastAPI z geofiltrowaniem opartym na Geohash i Redis.
     - [ ] Egzekwowanie stref prywatności (Privacy v2) z celowym jitterem po stronie serwera.
     - [ ] Priorytetyzacja "Top 10 Duchów" (Kluby, Znajomi, Zasięg 5km) i dynamiczne renderowanie MapLibre.
-- [ ] **Ekosystem UI/UX (Cyber-Monolith V3)**:
+- [ ] **Ekosystem UI/UX (Styl Hybrydowy HD-2D)**:
     - [ ] **Dashboard (The Hub):** Układ Bento 2.0 Architecture z wykresem trendu Skia i dynamicznym powitaniem.
     - [ ] **Tracking (The Engine):** Hyper-Edit HUD (Tamagui), Glowing Track (MapLibre) i Legend-State.
     - [ ] **Społeczność i Historia:** Sticky Leaderboards (FlashList) oraz Archiwum z weryfikacją Anti-Cheat.
