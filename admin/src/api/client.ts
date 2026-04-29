@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // The base URL should ideally come from env vars, pointing to our Django backend
-const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+let baseURL = import.meta.env.VITE_API_URL || 'https://docker-backend-production-123c.up.railway.app/api';
+if (!baseURL.startsWith('http://') && !baseURL.startsWith('https://')) {
+  baseURL = `https://${baseURL}`;
+}
 
 export const apiClient = axios.create({
   baseURL,
