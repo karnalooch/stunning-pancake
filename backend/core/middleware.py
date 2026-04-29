@@ -45,7 +45,7 @@ class ImpersonationAuditMiddleware:
                 if is_impersonated:
                     impersonator_id = request.auth.get('impersonator_id')
                     target_user_id = request.user.id
-                    action = f"{request.method} {request.path}"
+                    action = f"Impersonated Action: {request.method} {request.path}"
                     
                     AuditLog.objects.create(
                         impersonator_id=impersonator_id,
@@ -54,6 +54,18 @@ class ImpersonationAuditMiddleware:
                         ip_address=self.get_client_ip(request),
                         status_code=response.status_code
                     )
+
+        # 2. Admin Logging (Every move for GLOBAL_OWNER and TENANT_ADMIN)
+        if request.user.is_authenticated:
+            if getattr(request.user, 'role', None) in ['GLOBAL_OWNER', 'TENANT_ADMIN']:
+                action = f"Admin Action: {request.method} {request.path}"
+                AuditLog.objects.create(
+                    impersonator_id=request.user.id,
+                    target_user_id=request.user.id,
+                    action=action,
+                    ip_address=self.get_client_ip(request),
+                    status_code=response.status_code
+                )
 
         return response
 
