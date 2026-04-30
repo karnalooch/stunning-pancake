@@ -26,7 +26,11 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
     - [x] QR Identity Generation.
     - [x] **HD-2D Character Interaction System**:
       - [x] Implementacja `PopUpDialog` z fizyką sprężynową i efektem typewriter.
-      - [ ] Integracja cut-scenek z triggerami GPS.
+      - [ ] **Trigger Engine Logic**:
+        - [ ] System kolejkowania wiadomości (Queue Manager).
+        - [ ] Reagowanie na Milestone'y (1km, 5km, 10km).
+        - [ ] Integracja z Anti-Cheat (Ghost alerts).
+        - [ ] Wyzwalacze sytuacyjne (Low Battery, GPS Lost).
   - [x] **Solar-Ready HD-2D UI (Mobile Gaming Aesthetic)**:
     - [x] Stylistyka retro-gamingowa inspirowana *Metal Slug*, *Dave the Diver*, *Octopath Traveler*.
     - [x] 1px Black Outlines (Sprite-style) i Pixel Art.

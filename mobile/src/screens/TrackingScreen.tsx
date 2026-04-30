@@ -13,6 +13,7 @@ import { HD2DButton } from '../components/HD2DButton';
 import { PixelStats } from '../components/PixelStats';
 import { RetroCard } from '../components/RetroCard';
 import { AthleteSprite } from '../components/AthleteSprite';
+import { PopUpDialog } from '../components/PopUpDialog';
 
 const { width, height } = Dimensions.get('window');
 
@@ -85,7 +86,18 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       heartRate: 75
     },
     speedHistory: [0, 0, 0, 0, 0, 0, 0] as number[],
-    hrHistory: [72, 75, 74, 78, 80, 79, 75] as number[]
+    hrHistory: [72, 75, 74, 78, 80, 79, 75] as number[],
+    dialog: {
+      visible: false,
+      message: '',
+      title: 'SYSTEM_MSG',
+      character: 'runner'
+    },
+    milestonesReached: {
+      km1: false,
+      km5: false,
+      km10: false
+    }
   });
 
   const syncManager = useRef<GpsSyncManager | null>(null);
@@ -125,18 +137,43 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       });
     }
   }, [user]);
+  
+  const triggerDialog = (message: string, character: string = 'runner', title: string = 'ATHLETE_COM') => {
+    state.dialog.set({
+      visible: true,
+      message,
+      title,
+      character
+    });
+    // Auto-hide after 6 seconds
+    setTimeout(() => {
+      state.dialog.visible.set(false);
+    }, 6000);
+  };
+
+  useEffect(() => {
+    const dist = state.stats.distanceM.get();
+    if (dist >= 1000 && !state.milestonesReached.km1.get()) {
+      state.milestonesReached.km1.set(true);
+      triggerDialog("1KM completed! You're warming up nicely.", 'runner', 'MILESTONE');
+    } else if (dist >= 5000 && !state.milestonesReached.km5.get()) {
+      state.milestonesReached.km5.set(true);
+      triggerDialog("5KM! Incredible stamina! You're crushing it.", 'elite', 'LEVEL_UP');
+    }
+  }, [state.stats.distanceM.get()]);
 
   const toggleTracking = async () => {
     if (!syncManager.current) return;
     if (state.isTracking.get()) {
       await syncManager.current.stopTracking();
       state.isTracking.set(false);
-      Alert.alert("Session Complete", "Telemetry uploaded to SPORT CORE.");
+      triggerDialog("Session ended. Calculating rewards and syncing performance...", 'elite', 'MISSION_COMPLETE');
     } else {
       let { status } = await Location.requestBackgroundPermissionsAsync();
       if (status !== 'granted') return;
       await syncManager.current.startTracking(Math.floor(Date.now() / 1000));
       state.isTracking.set(true);
+      triggerDialog("Session started! Let's hit the road and earn some XP.", 'runner', 'MISSION_START');
     }
   };
 
@@ -287,6 +324,18 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.4} paddingVertical="$2" fontFamily="$pixel">
         SOLAR_READY HUD v3.0 // HD-2D ENGINE
       </TamaText>
+
+      {/* Character PopUp Layer */}
+      <PopUpDialog 
+        visible={state.dialog.visible.get()}
+        message={state.dialog.message.get()}
+        title={state.dialog.title.get()}
+        sprite={
+          state.dialog.character.get() === 'ghost' 
+            ? require('../../assets/generated/ghost_sprite.png') 
+            : require('../../assets/generated/runner_sprite.png')
+        }
+      />
     </YStack>
   );
 });
