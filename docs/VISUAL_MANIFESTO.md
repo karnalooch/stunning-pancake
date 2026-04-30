@@ -16,5 +16,27 @@ Wszystkie zasoby graficzne muszą spełniać następujące rygorystyczne kryteri
 - **Kompozycja**: Izolacja na czystym białym tle (do późniejszego wycięcia/przezroczystości).
 
 
+## 3. Lista Wygenerowanych Zasobów (v3.0)
+Zasoby znajdują się w lokalizacji: `assets/generated/`
+
+| Nazwa Pliku |
+|:---|
+| `nav_home.png` |
+| `nav_history.png` | 
+| `nav_ranking.png` | 
+| `nav_rewards.png` | 
+| `nav_profile.png` | 
+| `icon_activity.png` | 
+| `icon_trending.png` | 
+| `icon_share.png` | 
+| `icon_crown.png` | 
+| `icon_swords.png` | 
+| `icon_shield.png` | 
+| `icon_zap.png` |
+| `icon_mappin.png` | 
+| `icon_qrcode.png` |
+| `icon_crosshair.png`| 
+| `icon_logout.png` | 
+
 ---
 *Manifest zatwierdzony dla Fazy 4 wdrożenia (Solar-Ready HD-2D UI).*
