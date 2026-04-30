@@ -5,7 +5,7 @@ Platforma wykorzystuje konteneryzację do zapewnienia spójności między środo
 
 ### Wymagania:
 - Docker + Docker Compose.
-- Python 3.11+, Node.js 20+.
+- Python 3.12+, Node.js 20+.
 - PowerShell (do skryptu `dev.ps1`).
 
 ### Szybki Start:

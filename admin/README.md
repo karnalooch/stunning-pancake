@@ -1,73 +1,46 @@
-# React + TypeScript + Vite
+# SPORT Owner OS — Admin Panel
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
+The Owner Command Center (SPORT Owner OS) — a sovereign, cross-platform admin panel built with Vite + Electron for complete platform control.
 
-Currently, two official plugins are available:
+## Tech Stack
+- **UI**: React 19, Mantine 9, Tailwind CSS 3
+- **Visuals**: deck.gl 9, PixiJS 8, Three.js 0.184, Maplibre GL 5
+- **Charts**: Recharts 3, Tremor 3
+- **Desktop**: Electron 41 (Windows portable `.exe`)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Quick Start
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Dev Server
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Electron Dev (Vite + Electron)
+```bash
+npm run electron:dev
 ```
+
+### Production Build
+```bash
+npm run build
+```
+
+### Windows Executable
+```bash
+npm run build:exe
+```
+Output: `dist-exe/SPORT Owner OS.exe`
+
+## Access
+- **Local**: `http://localhost:3000`
+- **Login**: `global_owner` / `admin123`
+- **API Docs**: `http://localhost:8000/api/schema/swagger-ui/`
+
+## Features
+- Multi-tenant dashboard with real-time telemetry
+- Live-Ghost athlete tracking via WebSocket
+- Anti-cheat moderation panel
+- City/competition management
+- Sponsor reward marketplace
+- White-label branding injection

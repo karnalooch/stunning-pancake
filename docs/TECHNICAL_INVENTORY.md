@@ -38,7 +38,6 @@ Skrypty do walidacji wydajności i logiki biznesowej.
 | Zasób | Opis | Lokalizacja |
 | :--- | :--- | :--- |
 | **Sync Rules** | Reguły synchronizacji między usługami. | `backend/sync_rules.yaml` |
-| **GeoJSON Engine** | Standardy trajektorii i Geofencing. | `backend/activities/ogc_views.py` |
 | **QR Engine** | System identyfikacji i check-pointów. | `mobile/src/screens/ProfileScreen.tsx` |
 
 ---

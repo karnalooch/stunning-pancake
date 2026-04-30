@@ -12,7 +12,7 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 ## 2. Cele i KPI (SMART)
 - **Wydajność**: Ingestia 10,000+ żądań/sek (FastAPI + Redis).
 - **UX**: Stałe 60 FPS w aplikacji mobilnej przy renderowaniu mapy i HUD.
-- **Weryfikacja**: 5-warstwowy system Anti-Cheat redukujący fałszywe wyniki o 95%.
+- **Weryfikacja**: 4-warstwowy system Anti-Cheat redukujący fałszywe wyniki o 95%.
 - **Dostępność**: Solar Mode (kontrast 12:1) umożliwiający pracę w pełnym słońcu.
 
 ## 3. Wysokopoziomowy Zakres (MVP vs Full)

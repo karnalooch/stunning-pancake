@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "project": "SPORT",
   "manifest": {
     "branding": {
@@ -12,19 +12,8 @@
       ]
     },
     "mobile": {
-      "icons": [
-        "assets/mobile/icons_disciplines.svg",
-        "assets/mobile/icons_navigation.svg",
-        "assets/mobile/icons_stats.svg",
-        "assets/mobile/icons_rewards_hd2d.svg",
-        "assets/mobile/icons_hud_hd2d.svg",
-        "assets/mobile/icons_integrations_hd2d.svg"
-      ],
-      "images": [
-        "mobile/assets/icon.png",
-        "mobile/assets/adaptive-icon.png",
-        "mobile/assets/splash-icon.png"
-      ]
+      "icons": [],
+      "images": []
     },
     "admin": {
       "icons": [
@@ -35,7 +24,22 @@
     },
     "docs": {
       "architecture": "docs/assets/system_architecture.png",
-      "mockups": "assets/mobile/mockups/"
+      "mockups": [
+        "docs/assets/admin_dashboard_live_view.png",
+        "docs/assets/admin_events_management.png",
+        "docs/assets/admin_panel_mockup.png",
+        "docs/assets/anticheat_detail_mockup.png",
+        "docs/assets/brand_wellness_app.png",
+        "docs/assets/city_analytics_mockup.png",
+        "docs/assets/city_battle_mockup.png",
+        "docs/assets/club_challenge_mockup.png",
+        "docs/assets/community_view_mockup.png",
+        "docs/assets/hr_wellness_dashboard.png",
+        "docs/assets/sponsor_dashboard.png",
+        "docs/assets/live/global.png",
+        "docs/assets/live/moderator.png",
+        "docs/assets/live/tenant.png"
+      ]
     }
   },
   "aesthetic": {
