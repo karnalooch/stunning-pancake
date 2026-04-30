@@ -15,8 +15,11 @@ class TenantRLSMiddleware:
         if request.user.is_authenticated and hasattr(request.user, 'tenant_id') and request.user.tenant_id:
             # Set the Postgres session variable for RLS
             with connection.cursor() as cursor:
-                # UUIDs must be cast to text for set_config
-                cursor.execute(f"SELECT set_config('app.tenant_id', '{str(request.user.tenant_id)}', false);")
+                # UUIDs must be cast to text for set_config; use parameterized query to prevent SQL injection
+                cursor.execute(
+                    "SELECT set_config('app.tenant_id', %s, false);",
+                    [str(request.user.tenant_id)]
+                )
         else:
             # Clear it out if unauthenticated or no tenant (e.g. GLOBAL_OWNER)
             with connection.cursor() as cursor:
@@ -30,42 +33,63 @@ class ImpersonationAuditMiddleware:
     """
     Detects if the incoming request is performed via an impersonated token
     and logs mutating requests (POST, PUT, PATCH, DELETE) to the AuditLog table.
+
+    Fixes applied:
+    - Block 2 (admin logging) now only logs mutating requests (POST, PUT, PATCH, DELETE),
+      preventing audit log flooding from GET/HEAD/OPTIONS requests.
+    - Block 2 skips logging if the request was already logged as an impersonated action,
+      preventing duplicate entries.
+    - Uses ForeignKey-based fields (impersonator, target_user) instead of raw integer fields.
+    - Populates tenant_id from the request user's tenant for multi-tenant filtering.
     """
+    MUTATING_METHODS = {'POST', 'PUT', 'PATCH', 'DELETE'}
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # We process the request first, then log if successful (or log attempts)
         response = self.get_response(request)
 
-        if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            # Assume JWT Auth adds token payload to request.auth
-            if hasattr(request, 'auth') and hasattr(request.auth, 'get'):
-                is_impersonated = request.auth.get('impersonated', False)
-                if is_impersonated:
-                    impersonator_id = request.auth.get('impersonator_id')
-                    target_user_id = request.user.id
-                    action = f"Impersonated Action: {request.method} {request.path}"
-                    
-                    AuditLog.objects.create(
-                        impersonator_id=impersonator_id,
-                        target_user_id=target_user_id,
-                        action=action,
-                        ip_address=self.get_client_ip(request),
-                        status_code=response.status_code
-                    )
+        # Determine auth state once
+        is_authenticated = request.user.is_authenticated if hasattr(request, 'user') else False
+        user_role = getattr(request.user, 'role', None) if is_authenticated else None
+        tenant_id = str(request.user.tenant_id) if is_authenticated and request.user.tenant_id else None
 
-        # 2. Admin Logging (Every move for GLOBAL_OWNER and TENANT_ADMIN)
-        if request.user.is_authenticated:
-            if getattr(request.user, 'role', None) in ['GLOBAL_OWNER', 'TENANT_ADMIN']:
-                action = f"Admin Action: {request.method} {request.path}"
-                AuditLog.objects.create(
-                    impersonator_id=request.user.id,
-                    target_user_id=request.user.id,
-                    action=action,
-                    ip_address=self.get_client_ip(request),
-                    status_code=response.status_code
-                )
+        has_auth = hasattr(request, 'auth')
+        auth_is_dict = has_auth and hasattr(request.auth, 'get')
+        is_impersonated = request.auth.get('impersonated', False) if auth_is_dict else False
+
+        # Only log mutating requests
+        if request.method not in self.MUTATING_METHODS:
+            return response
+
+        # Block 1: Impersonation logging
+        logged_as_impersonation = False
+        if auth_is_dict and is_impersonated:
+            impersonator_id = request.auth.get('impersonator_id')
+            action = f"Impersonated Action: {request.method} {request.path}"
+
+            AuditLog.objects.create(
+                impersonator_id=impersonator_id,
+                target_user_id=request.user.id,
+                action=action,
+                ip_address=self.get_client_ip(request),
+                status_code=response.status_code,
+                tenant_id=tenant_id,
+            )
+            logged_as_impersonation = True
+
+        # Block 2: Admin logging — only for mutating requests, skip if already logged as impersonation
+        if is_authenticated and user_role in ('GLOBAL_OWNER', 'TENANT_ADMIN') and not logged_as_impersonation:
+            action = f"Admin Action: {request.method} {request.path}"
+            AuditLog.objects.create(
+                impersonator_id=request.user.id,
+                target_user_id=request.user.id,
+                action=action,
+                ip_address=self.get_client_ip(request),
+                status_code=response.status_code,
+                tenant_id=tenant_id,
+            )
 
         return response
 

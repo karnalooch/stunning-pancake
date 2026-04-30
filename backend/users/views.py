@@ -2,8 +2,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
-from .serializers import UserSerializer, RegisterSerializer
-from .models import User
+from .serializers import UserSerializer, RegisterSerializer, TenantSerializer, AuditLogSerializer
+from .models import User, Tenant, AuditLog
 from .permissions import IsGlobalOwner
 
 class RegisterView(generics.CreateAPIView):
@@ -46,7 +46,6 @@ class TenantBrandingView(generics.RetrieveAPIView):
     permission_classes = (permissions.AllowAny,)
     
     def get(self, request, tenant_id):
-        from .models import Tenant
         try:
             tenant = Tenant.objects.get(id=tenant_id, is_active=True)
             return Response({
@@ -63,7 +62,6 @@ class TenantUpdateView(generics.UpdateAPIView):
     Update branding and configuration for a tenant.
     Only GLOBAL_OWNER or the TENANT_ADMIN of that specific tenant can use this.
     """
-    from .models import Tenant
     queryset = Tenant.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
     
@@ -121,9 +119,26 @@ class UserListView(generics.ListAPIView):
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
 
 class TenantListView(generics.ListAPIView):
-    from .serializers import TenantSerializer
-    from .models import Tenant
     queryset = Tenant.objects.all()
     serializer_class = TenantSerializer
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+
+class AuditLogListView(generics.ListAPIView):
+    """
+    Returns audit log entries. Only GLOBAL_OWNER can access.
+    Supports ?limit=N query param to cap results.
+    """
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
+    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        limit = self.request.query_params.get('limit')
+        if limit:
+            try:
+                qs = qs[:int(limit)]
+            except ValueError:
+                pass
+        return qs
 

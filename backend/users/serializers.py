@@ -1,10 +1,22 @@
 from rest_framework import serializers
-from .models import User, Tenant
+from .models import User, Tenant, AuditLog
 
 class TenantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
         fields = ('id', 'name', 'primary_color', 'secondary_color', 'is_active')
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    """
+    Serializer for AuditLog entries.
+    Includes nested username fields for readability.
+    """
+    impersonator_username = serializers.CharField(source='impersonator.username', read_only=True, default=None)
+    target_user_username = serializers.CharField(source='target_user.username', read_only=True, default=None)
+
+    class Meta:
+        model = AuditLog
+        fields = '__all__'
 
 class UserSerializer(serializers.ModelSerializer):
     """

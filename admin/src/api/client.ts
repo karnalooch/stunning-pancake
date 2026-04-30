@@ -31,6 +31,15 @@ export const AdminApi = {
   getTenants: async () => {
     const { data } = await apiClient.get('/users/tenants/all/');
     return data;
+  },
+  getAuditLogs: async (limit?: number) => {
+    const params = limit ? { limit } : {};
+    const { data } = await apiClient.get('/users/audit-log/', { params });
+    return data;
+  },
+  impersonateUser: async (targetUserId: number) => {
+    const { data } = await apiClient.post(`/users/impersonate/${targetUserId}/`);
+    return data;
   }
 };
 
