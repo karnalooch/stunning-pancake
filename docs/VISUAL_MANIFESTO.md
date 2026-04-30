@@ -18,24 +18,24 @@ Wszystkie zasoby graficzne muszą spełniać następujące rygorystyczne kryteri
 ## 3. Lista Wygenerowanych Zasobów (v3.0)
 Zasoby znajdują się w lokalizacji: `assets/generated/`
 
-| Nazwa Pliku | Opis Wizualny | Przeznaczenie |
-|:---|:---|:---|
-| `nav_home.png` | Rustykalny dom/tawerna (drewno i kamień) | Główny ekran (Home) |
-| `nav_history.png` | Steampunkowy mosiężny stoper z trybami | Historia aktywności |
-| `nav_ranking.png` | Złoty wieniec laurowy na podium | Rankingi i Leaderboardy |
-| `nav_rewards.png` | Skrzynia skarbów z błękitnym światłem | Sklep z nagrodami |
-| `nav_profile.png` | Sylwetka pilota w metalowej ramie | Profil użytkownika |
-| `icon_activity.png` | Linia EKG z błękitną energią Matrix | Podsumowanie treningu |
-| `icon_trending.png" | Mechaniczna metalowa strzałka w górę | Trendy i postępy |
-| `icon_share.png` | Mapa węzłów sieci (pulsujące połączenia) | Udostępnianie wyników |
-| `icon_crown.png` | Ciężka żelazna korona z rubinami | Zdobyte tytuły / MVP |
-| `icon_swords.png` | Skrzyżowane miecze (battle-worn) | Wyzwania i pojedynki |
-| `icon_shield.png` | Tytanowa tarcza z rdzeniem energetycznym | Bezpieczeństwo / Anti-Cheat |
-| `icon_zap.png` | Poszarpany żółty piorun (high voltage) | Power-upy / Energia |
-| `icon_mappin.png` | Neonowy pin mapy z radarem | Lokalizacja i punkty POI |
-| `icon_qrcode.png` | Stylizowana kostka danych (cyfrowa matryca) | Athlete QR Identity |
-| `icon_crosshair.png`| Czerwony mechaniczny celownik HUD | Tracking GPS / Cel misji |
-| `icon_logout.png` | Przemysłowe drzwi śluzy powietrznej | Wylogowanie |
+| Nazwa Pliku |
+|:---|
+| `nav_home.png` |
+| `nav_history.png` | 
+| `nav_ranking.png` | 
+| `nav_rewards.png` | 
+| `nav_profile.png` | 
+| `icon_activity.png` | 
+| `icon_trending.png` | 
+| `icon_share.png` | 
+| `icon_crown.png` | 
+| `icon_swords.png` | 
+| `icon_shield.png` | 
+| `icon_zap.png` |
+| `icon_mappin.png` | 
+| `icon_qrcode.png` |
+| `icon_crosshair.png`| 
+| `icon_logout.png` | 
 
 ---
 *Manifest zatwierdzony dla Fazy 4 wdrożenia (Solar-Ready HD-2D UI).*
