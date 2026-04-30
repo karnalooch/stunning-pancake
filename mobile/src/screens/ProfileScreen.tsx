@@ -2,11 +2,14 @@ import React, { useEffect } from 'react';
 import { Alert } from 'react-native';
 import * as Updates from 'expo-updates';
 import { User, Shield, MapPin, LogOut, Trash2, Plus, Zap, Activity, QrCode } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, View } from 'tamagui';
+import { YStack, XStack, Text as TamaText, Button as TamaButton, H2, Paragraph, ScrollView, Switch, Circle, View, useTheme } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService } from '../services/api';
 import { ThemeService } from '../services/ThemeService';
 import QRCode from 'react-native-qrcode-svg';
+
+import { RetroCard } from '../components/RetroCard';
+import { HD2DButton } from '../components/HD2DButton';
 
 const ShieldIcon = Shield as any;
 const PlusIcon = Plus as any;
@@ -18,6 +21,7 @@ const ActivityIcon = Activity as any;
 const QrIcon = QrCode as any;
 
 export const ProfileScreen = observer(({ user: initialUser, onLogout }: { user: any, onLogout: () => void }) => {
+  const theme = useTheme();
   const state = useObservable({
     user: initialUser || null,
     zones: [] as any[],

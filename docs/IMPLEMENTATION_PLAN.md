@@ -26,11 +26,11 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
     - [x] QR Identity Generation.
     - [x] **HD-2D Character Interaction System**:
       - [x] Implementacja `PopUpDialog` z fizyką sprężynową i efektem typewriter.
-      - [ ] **Trigger Engine Logic**:
-        - [ ] System kolejkowania wiadomości (Queue Manager).
-        - [ ] Reagowanie na Milestone'y (1km, 5km, 10km).
-        - [ ] Integracja z Anti-Cheat (Ghost alerts).
-        - [ ] Wyzwalacze sytuacyjne (Low Battery, GPS Lost).
+      - [x] **Trigger Engine Logic**:
+        - [x] System kolejkowania wiadomości (TriggerEngine — Priority Queue z cooldown i dedup).
+        - [x] Reagowanie na Milestone'y (1km, 5km, 10km, 21.1km, 42.2km — MilestoneTracker).
+        - [ ] Integracja z Anti-Cheat (Ghost alerts — wymaga backend hookup).
+        - [x] Wyzwalacze sytuacyjne (Low Battery, GPS Lost, Pace Drop, HR Zone — AvatarTrainerService).
   - [x] **Solar-Ready HD-2D UI (Mobile Gaming Aesthetic)**:
     - [x] Stylistyka retro-gamingowa inspirowana *Metal Slug*, *Dave the Diver*, *Octopath Traveler*.
     - [x] 1px Black Outlines (Sprite-style) i Pixel Art.

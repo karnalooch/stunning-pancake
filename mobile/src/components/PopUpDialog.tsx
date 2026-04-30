@@ -58,7 +58,7 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
       }, 40);
       return () => clearInterval(interval);
     } else {
-      offset.value = withSpring(400);
+      offset.value = withSpring(400, { damping: 14, stiffness: 100 });
       setDisplayText('');
     }
   }, [visible, message]);
@@ -68,7 +68,7 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
       { translateY: offset.value + float.value },
       { scale: 1.05 }
     ],
-    opacity: offset.value === 400 ? 0 : 1
+    opacity: offset.value > 350 ? 0 : 1
   }));
 
   return (
@@ -127,7 +127,7 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
 
         {/* Character Sprite Container */}
         {sprite && (
-          <View style={{ shadowColor: 'black', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }}>
+          <View style={{ shadowColor: 'black', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 }}>
             <Image 
               source={sprite} 
               width={130} 

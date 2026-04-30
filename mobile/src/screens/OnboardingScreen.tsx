@@ -239,7 +239,7 @@ const IdentityStep = ({ user, onNext }: any) => (
           size={160}
           color="#000000"
         />
-      </YStack>
+      </View>
 
       <YStack alignItems="center" gap="$2">
          <Text color="$accent" fontSize={14} fontFamily="$pixel">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</Text>

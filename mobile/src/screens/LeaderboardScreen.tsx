@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Image } from 'react-native';
 import { Crown, Swords } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, useTheme } from 'tamagui';
+import { YStack, XStack, Text as TamaText, ScrollView, useTheme, View } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService } from '../services/api';
 

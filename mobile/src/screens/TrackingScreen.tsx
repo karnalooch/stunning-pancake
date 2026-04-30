@@ -9,6 +9,8 @@ import { MMKV } from 'react-native-mmkv';
 
 import { POIService } from '../services/api';
 import { GpsSyncManager } from '../services/GpsSyncManager';
+import { triggerEngine } from '../services/TriggerEngine';
+import { avatarTrainer } from '../services/AvatarTrainerService';
 import { HD2DButton } from '../components/HD2DButton';
 import { PixelStats } from '../components/PixelStats';
 import { RetroCard } from '../components/RetroCard';
@@ -16,12 +18,6 @@ import { AthleteSprite } from '../components/AthleteSprite';
 import { PopUpDialog } from '../components/PopUpDialog';
 
 const { width, height } = Dimensions.get('window');
-
-const MILESTONES = {
-  KM1: 1000,
-  KM5: 5000,
-  KM10: 10000
-};
 
 const ASSETS = {
   heart: require('../../assets/generated/hud_heart.png'),
@@ -98,26 +94,16 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     },
     speedHistory: [0, 0, 0, 0, 0, 0, 0] as number[],
     hrHistory: [72, 75, 74, 78, 80, 79, 75] as number[],
-    dialog: {
-      visible: false,
-      message: '',
-      title: 'SYSTEM_MSG',
-      character: 'runner'
-    },
-    dialogQueue: [] as any[],
-    milestonesReached: {
-      km1: false,
-      km5: false,
-      km10: false
-    }
   });
 
+  // Dialog state from TriggerEngine (centralized)
+  const dialogState = triggerEngine.state.currentDialog;
+
   const syncManager = useRef<GpsSyncManager | null>(null);
-  const dialogTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
-      if (dialogTimeout.current) clearTimeout(dialogTimeout.current);
+      triggerEngine.destroy();
     };
   }, []);
 
@@ -143,75 +129,44 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
     if (syncManager.current) {
       syncManager.current.setUpdateCallback((newStats) => {
-        state.stats.set({ ...newStats, heartRate: 70 + Math.floor(Math.random() * 20) });
+        const heartRate = 70 + Math.floor(Math.random() * 20);
+        state.stats.set({ ...newStats, heartRate });
         
         // Update history for PixelStats
         const currentSpeed = newStats.speedMs * 3.6;
         const newSpeedHistory = [...state.speedHistory.get().slice(1), currentSpeed];
         state.speedHistory.set(newSpeedHistory);
         
-        const currentHR = state.stats.heartRate.get();
-        const newHRHistory = [...state.hrHistory.get().slice(1), currentHR];
+        const newHRHistory = [...state.hrHistory.get().slice(1), heartRate];
         state.hrHistory.set(newHRHistory);
+
+        // Feed the Avatar Trainer with real-time context
+        avatarTrainer.update({
+          distanceM: newStats.distanceM,
+          speedMs: newStats.speedMs,
+          paceSecPerKm: newStats.paceSecPerKm,
+          heartRate,
+          batteryPct: newStats.batteryPct,
+          elevationGainM: newStats.elevationGainM,
+          gpsAccuracyM: 5, // TODO: pipe actual accuracy from location
+          elapsedSec: 0,   // TODO: calculate from session start
+        });
       });
     }
   }, [user]);
   
-  const triggerDialog = (message: string, character: string = 'runner', title: string = 'ATHLETE_COM') => {
-    // Add to queue
-    state.dialogQueue.push({ message, character, title });
-    
-    // If not showing anything, show first from queue
-    if (!state.dialog.visible.get()) {
-      processQueue();
-    }
-  };
-
-  const processQueue = () => {
-    const queue = state.dialogQueue.get();
-    if (queue.length === 0) return;
-
-    const next = queue[0];
-    state.dialogQueue.set(queue.slice(1));
-    
-    state.dialog.set({
-      visible: true,
-      message: next.message,
-      title: next.title,
-      character: next.character
-    });
-
-    if (dialogTimeout.current) clearTimeout(dialogTimeout.current);
-    dialogTimeout.current = setTimeout(() => {
-      state.dialog.visible.set(false);
-      // Wait for exit animation before showing next
-      setTimeout(() => processQueue(), 500);
-    }, 5000);
-  };
-
-  useEffect(() => {
-    const dist = state.stats.distanceM.get();
-    if (dist >= MILESTONES.KM1 && !state.milestonesReached.km1.get()) {
-      state.milestonesReached.km1.set(true);
-      triggerDialog("1KM completed! You're warming up nicely.", 'runner', 'MILESTONE');
-    } else if (dist >= MILESTONES.KM5 && !state.milestonesReached.km5.get()) {
-      state.milestonesReached.km5.set(true);
-      triggerDialog("5KM! Incredible stamina! You're crushing it.", 'elite', 'LEVEL_UP');
-    }
-  }, [state.stats.distanceM.get()]);
-
   const toggleTracking = async () => {
     if (!syncManager.current) return;
     if (state.isTracking.get()) {
       await syncManager.current.stopTracking();
       state.isTracking.set(false);
-      triggerDialog("Session ended. Calculating rewards and syncing performance...", 'elite', 'MISSION_COMPLETE');
+      avatarTrainer.endSession();
     } else {
       let { status } = await Location.requestBackgroundPermissionsAsync();
       if (status !== 'granted') return;
       await syncManager.current.startTracking(Math.floor(Date.now() / 1000));
       state.isTracking.set(true);
-      triggerDialog("Session started! Let's hit the road and earn some XP.", 'runner', 'MISSION_START');
+      avatarTrainer.startSession();
     }
   };
 
@@ -293,7 +248,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         </YStack>
 
         <XStack gap="$2" alignItems="center" backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
-           <Image source={hudGps} style={{ width: 14, height: 14 }} resizeMode="contain" />
+           <Image source={ASSETS.gps} style={{ width: 14, height: 14 }} resizeMode="contain" />
            <TamaText fontSize={8} color="$accent" fontFamily="$pixel">BATT: {Math.round(state.stats.batteryPct.get() * 100)}%</TamaText>
         </XStack>
       </XStack>
@@ -314,7 +269,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             
             <RetroCard flex={1} marginLeft="$2" padding="$3">
               <XStack gap="$2" alignItems="center">
-                <Image source={hudHeart} style={{ width: 14, height: 14 }} resizeMode="contain" />
+                <Image source={ASSETS.heart} style={{ width: 14, height: 14 }} resizeMode="contain" />
                 <HudMetric 
                   label="Heart" 
                   value={state.stats.heartRate} 
@@ -363,13 +318,13 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         SOLAR_READY HUD v3.0 // HD-2D ENGINE
       </TamaText>
 
-      {/* Character PopUp Layer */}
+      {/* Character PopUp Layer — driven by TriggerEngine */}
       <PopUpDialog 
-        visible={state.dialog.visible.get()}
-        message={state.dialog.message.get()}
-        title={state.dialog.title.get()}
+        visible={dialogState.visible.get()}
+        message={dialogState.message.get()}
+        title={dialogState.title.get()}
         sprite={
-          state.dialog.character.get() === 'ghost' 
+          dialogState.character.get() === 'ghost' 
             ? ASSETS.sprites.ghost 
             : ASSETS.sprites.runner
         }
