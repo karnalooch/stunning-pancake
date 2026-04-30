@@ -37,4 +37,17 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 - **Rdzeń**: Python (Django/FastAPI).
 - **Mobile**: React Native (Skia, Tamagui, Legend-State).
 - **Data**: PostgreSQL (Citus) + Redis Cluster.
-- **Design**: Nowoczesny Light Mode (Web/Admin) / Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler) dla Mobile.
+- **Design**: Nowoczesny Light Mode (Web/Admin) / Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler) dla Mobile...
+
+
+
+Czym jest ta aplikacja?
+
+To jest aplikacja sportowa z elementami grywalizacji, która zbiera dane telemetryczne (GPS, czujniki) od użytkowników, przetwarza je i prezentuje w formie wizualnej, zbliżonej do gier komputerowych. System umożliwia organizację wydarzeń sportowych online oraz zbieranie danych, które mogą być analizowane i wizualizowane.
+
+Jakie są główne funkcje?
+
+Zbieranie i przetwarzanie danych telemetrycznych (GPS, czujniki).
+Organizację wydarzeń sportowych online.
+Wizualizację danych w formie graficznej.
+System może również obejmować analizę tych danych i prezentację wyników w atrakcyjnej formie.
