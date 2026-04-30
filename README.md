@@ -29,6 +29,7 @@ The platform will be available at `localhost` with automated port-forwarding.
 -   **[📜 Constitution](./docs/CHARTER.md)** — Mission, Identity, and Core Directives (Agentic Engineering).
 -   **[Architectural Whitepaper](./docs/diagrams/architecture_c4.md)** — Core strategies: PostGIS, TimescaleDB, BRouter, RLS.
 -   **[Visual Manifesto](./docs/VISUAL_MANIFESTO.md)** — HD-2D aesthetic SSOT and asset registry.
+-   **[🧪 LLM Upgrade Test Plan](./docs/PLAN_TESTOWY_LLM_UPGRADE.md)** — Comprehensive testing strategy for Avatar Trainer and System Intelligence AI.
 -   **[Setup Guide](./setup-environment.ps1)** — Automated environment bootstrap.
 
 ## ⚖️ License
