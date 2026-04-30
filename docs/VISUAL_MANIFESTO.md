@@ -1,71 +1,62 @@
 # MANIFEST WIZUALNY (VISUAL MANIFESTO) — SPORT V3.0
 
 ## 1. Filozofia Estetyki: HD-2D Gaming Fusion
-Projekt SPORT to wysokowydajna platforma grywalizacji przeznaczona dla **rowerzystów i biegaczy**. Odchodzi ona od klasycznego stylu "Neon Black" na rzecz immersyjnej estetyki retro-gamingowej w standardzie HD-2D. Interfejs ma budzić skojarzenia z wysokobudżetowymi produkcjami pixel-artowymi, łącząc czytelność techniczną z artystycznym detalem.
+Projekt SPORT to wysokowydajna platforma grywalizacji przeznaczona dla **rowerzystów i biegaczy**. Odchodzi ona od klasycznego stylu "Neon Black" na rzecz immersyjnej estetyki retro-gamingowej w standardzie HD-2D.
 
 ### Kluczowe Inspiracje:
-- **Octopath Traveler**: Miękki bloom, kinowe oświetlenie, efekt tilt-shift (głębia ostrości) oraz dynamiczne cieniowanie.
-- **Metal Slug**: Ekstremalny detal przemysłowy, "mięsiste" (chunky) kształty i ręcznie dopracowane klatki animacji.
+- **Octopath Traveler**: Miękki bloom, kinowe oświetlenie, efekt tilt-shift oraz dynamiczne cieniowanie.
+- **Metal Slug**: Ekstremalny detal przemysłowy, "mięsiste" (chunky) kształty i ręcznie dopracowane sprite'y.
 - **Dave the Diver**: Żywa, morska paleta kolorów (Vibrant Maritime), błękity głębinowe i soczyste akcenty.
 
 ## 2. Standard Techniczny Assetów
-Wszystkie zasoby graficzne muszą spełniać następujące rygorystyczne kryteria:
+Wszystkie zasoby graficzne muszą spełniać następujące kryteria:
 - **Styl**: Masterpiece high-fidelity HD-2D sprite.
 - **Obrysy**: Pixel-perfect, 1px ostre czarne krawędzie (crisp black outlines).
-- **Kolorystyka**: 32-bit color, wysoki kontrast (zoptymalizowany pod Solar Mode).
-- **Kompozycja**: Izolacja na czystym białym tle (do późniejszego wycięcia/przezroczystości).
+- **Kolorystyka**: 32-bit color, wysoki kontrast (Solar Mode optimized).
+- **Kompozycja**: Izolacja na czystym białym tle.
 
 ## 3. Dynamika i Animacje (Interaction Patterns)
-Interfejs SPORT V3.0 ożywa dzięki systemowi dynamicznych interakcji inspirowanych grami przygodowymi.
+Interfejs ożywa dzięki systemowi dynamicznych interakcji inspirowanych grami.
 
 ### 3.1. System "Character Cut-ins"
-Kluczowe powiadomienia i gratulacje są przekazywane przez sprite'y postaci (np. Duch, Elitarny Zawodnik) wyskakujące zza krawędzi ekranu.
-- **Fizyka**: Wykorzystanie animacji typu `Spring` (sprężyna) dla uzyskania efektu dynamicznego "wskoczenia" na scenę.
-- **Idle State**: Postacie po pojawieniu się wykonują zapętloną animację "pływania" (Floating Idle) góra-dół (2000ms cykl).
-- **Dialogi**: Tekst pojawia się z efektem "Typewriter" (maszyna do pisania), podkreślając retro-gamingowy charakter.
+Kluczowe powiadomienia są przekazywane przez sprite'y postaci wyskakujące zza krawędzi ekranu.
+- **Fizyka**: Animacje typu `Spring` dla efektu dynamicznego "wskoczenia".
+- **Idle State**: Postacie wykonują zapętloną animację "pływania" (Floating Idle).
+- **Dialogi**: Tekst z efektem "Typewriter" (maszyna do pisania).
 
 ### 3.2. Mikro-interakcje HD-2D
-- **Button Press**: Każdy przycisk przy naciśnięciu przesuwa się o 2px w dół (efekt mechanicznego kliknięcia).
-- **Shadows**: Cienie są twarde, bez rozmycia (`shadowRadius: 0`), przesunięte o stałą wartość (np. 4px 4px), co potęguje wrażenie pikselowej głębi.
-- **Glitch Effects**: Subtelne efekty zakłóceń (chromatic aberration) przy przejściach między etapami misji.
+- **Button Press**: Przesunięcie o 2px w dół (efekt mechanicznego kliknięcia).
+- **Shadows**: Twarde cienie (`shadowRadius: 0`), przesunięcie 4px 4px.
 
+## 4. Rejestr Zasobów Wizualnych
 
-## 3. Lista Wygenerowanych Zasobów (v3.0)
-Zasoby znajdują się w lokalizacji: `assets/generated/`
+### 4.1. Branding i Design Tokens
+| Zasób | Opis | Lokalizacja |
+| :--- | :--- | :--- |
+| **Design Tokens** | Definicja kolorów, typografii (Solar Mode) | `assets/branding/design_tokens.json` |
+| **Logo (Dark/Light)**| Pełne logo w wariantach jasnym i ciemnym | `assets/branding/logo_full_*.svg` |
+| **Sygnet / Icon** | Uproszczona ikona logo | `assets/branding/logo_icon.svg` |
 
-| Nazwa Pliku | Przeznaczenie / Opis |
-|:---|:---|
-| **Pasek Nawigacji** | |
-| `nav_home.png` | Ekran Główny (Tawerna) |
-| `nav_history.png` | Historia Treningów (Stoper) | 
-| `nav_ranking.png` | Rankingi (Podium) | 
-| `nav_rewards.png` | Nagrody (Skrzynia) | 
-| `nav_profile.png` | Profil Sportowca | 
-| **Interfejs (HUD & Statystyki)** | |
-| `icon_activity.png` | Podsumowanie aktywności (Matrix EKG) | 
-| `icon_trending.png` | Trendy i postępy | 
-| `icon_zap.png` | Power-upy / Energia |
-| `icon_mappin.png` | Lokalizacja POI | 
-| `icon_qrcode.png` | Identyfikacja zawodnika |
-| `icon_crosshair.png`| Tracking GPS | 
-| `hud_heart.png` | Tętno (Pixel Heart) |
-| `hud_gps.png` | Status sygnału GPS |
-| `hud_battery.png` | Stan baterii urządzenia |
-| **Postacie i Obiekty (Sprites)** | |
-| `runner_sprite.png` | Zawodnik: Biegacz |
-| `cyclist_sprite.png` | Zawodnik: Rowerzysta |
-| `ghost_sprite.png` | Przeciwnik / Duch (Ghost Mode) |
-| `elite_sprite.png` | Zawodnik: Poziom Elitarny |
-| `reward_trophy.png` | Puchar / Trofeum |
-| `reward_xp.png` | Ikona Punktów Doświadczenia (XP) |
-| **Systemowe i Integracje** | |
-| `icon_share.png` | Udostępnianie wyników | 
-| `icon_crown.png` | MVP / Mistrz | 
-| `icon_swords.png` | Rywalizacja / Pojedynek | 
-| `icon_shield.png` | Ochrona Anti-Cheat | 
-| `icon_logout.png` | Wylogowanie | 
-| `icon_strava.png` | Integracja Strava |
-| `icon_garmin.png` | Integracja Garmin |
+### 4.2. Zasoby Wygenerowane (HD-2D V3.0)
+Zlokalizowane w: `mobile/assets/generated/`
+
+| Nazwa Pliku | Kategoria | Przeznaczenie |
+| :--- | :--- | :--- |
+| `nav_home.png` | Navigation | Ekran Główny (Tawerna) |
+| `nav_history.png` | Navigation | Historia Treningów (Stoper) |
+| `nav_ranking.png` | Navigation | Rankingi (Podium) |
+| `nav_rewards.png` | Navigation | Nagrody (Skrzynia) |
+| `nav_profile.png` | Navigation | Profil Sportowca |
+| `hud_heart.png` | HUD | Tętno (Pixel Heart) |
+| `hud_gps.png` | HUD | Status sygnału GPS |
+| `hud_battery.png` | HUD | Stan baterii |
+| `runner_sprite.png`| Sprites | Zawodnik: Biegacz |
+| `cyclist_sprite.png`| Sprites | Zawodnik: Rowerzysta |
+| `ghost_sprite.png` | Sprites | Przeciwnik / Duch (Ghost Mode) |
+| `elite_sprite.png` | Sprites | Zawodnik: Poziom Elitarny |
+| `reward_trophy.png` | Rewards | Puchar / Trofeum |
+| `icon_strava.png` | Systems | Integracja Strava |
+| `icon_garmin.png` | Systems | Integracja Garmin |
 
 ---
-*Manifest zatwierdzony dla Fazy 4 wdrożenia (Solar-Ready HD-2D UI).*
+*Dokument stanowi jedyne źródło prawdy (SSOT) dla warstwy wizualnej projektu.*
