@@ -18,45 +18,37 @@ Wszystkie zasoby graficzne muszą spełniać następujące kryteria:
 ## 3. Dynamika i Animacje (Interaction Patterns)
 Interfejs ożywa dzięki systemowi dynamicznych interakcji inspirowanych grami.
 
-### 3.1. System "Character Cut-ins"
-Kluczowe powiadomienia są przekazywane przez sprite'y postaci wyskakujące zza krawędzi ekranu.
-- **Fizyka**: Animacje typu `Spring` dla efektu dynamicznego "wskoczenia".
-- **Idle State**: Postacie wykonują zapętloną animację "pływania" (Floating Idle).
-- **Dialogi**: Tekst z efektem "Typewriter" (maszyna do pisania).
+### 3.1. System "Character Cut-ins" (PopUpDialog)
+Kluczowe powiadomienia, questy i komunikaty systemowe są przekazywane przez dynamiczny komponent `PopUpDialog.tsx`.
+- **Mechanika Wejścia**: Animacja `Spring` (damping: 14, stiffness: 100) — postać "wskakuje" z dołu ekranu.
+- **Efekt Ożywienia**: Zapętlone "pływanie" (`Floating Idle`) o amplitudzie 8px, nadające postaciom organiczny charakter.
+- **Narracja**: System `Typewriter` (40ms per char) z migającym kursorem `_` w kolorze akcentowym (`#D4A373`).
+- **Design**: Ramki z twardymi cieniami (4px offset) i pikselowymi narożnikami (`#FF6B35`).
 
 ### 3.2. Mikro-interakcje HD-2D
-- **Button Press**: Przesunięcie o 2px w dół (efekt mechanicznego kliknięcia).
-- **Shadows**: Twarde cienie (`shadowRadius: 0`), przesunięcie 4px 4px.
+- **Przycisk (HD2DButton)**: Symulacja mechanicznego przełącznika — przesunięcie o 2px w dół przy dotyku.
+- **Karty (RetroCard)**: Kontenery z obramowaniem 1px i brakiem zaokrągleń (Radius: 0).
 
-## 4. Rejestr Zasobów Wizualnych
+## 4. Rejestr Zasobów Wizualnych (STATUS: CLEAN SLATE)
+*Uwaga: Folder `assets/generated/` został wyczyszczony. Poniższa lista stanowi kolejkę do generowania.*
 
-### 4.1. Branding i Design Tokens
-| Zasób | Opis | Lokalizacja |
-| :--- | :--- | :--- |
-| **Design Tokens** | Definicja kolorów, typografii (Solar Mode) | `assets/branding/design_tokens.json` |
-| **Logo (Dark/Light)**| Pełne logo w wariantach jasnym i ciemnym | `assets/branding/logo_full_*.svg` |
-| **Sygnet / Icon** | Uproszczona ikona logo | `assets/branding/logo_icon.svg` |
-
-### 4.2. Zasoby Wygenerowane (HD-2D V3.0)
-Zlokalizowane w: `mobile/assets/generated/`
-
-| Nazwa Pliku | Kategoria | Przeznaczenie |
-| :--- | :--- | :--- |
-| `nav_home.png` | Navigation | Ekran Główny (Tawerna) |
-| `nav_history.png` | Navigation | Historia Treningów (Stoper) |
-| `nav_ranking.png` | Navigation | Rankingi (Podium) |
-| `nav_rewards.png` | Navigation | Nagrody (Skrzynia) |
-| `nav_profile.png` | Navigation | Profil Sportowca |
-| `hud_heart.png` | HUD | Tętno (Pixel Heart) |
-| `hud_gps.png` | HUD | Status sygnału GPS |
-| `hud_battery.png` | HUD | Stan baterii |
-| `runner_sprite.png`| Sprites | Zawodnik: Biegacz |
-| `cyclist_sprite.png`| Sprites | Zawodnik: Rowerzysta |
-| `ghost_sprite.png` | Sprites | Przeciwnik / Duch (Ghost Mode) |
-| `elite_sprite.png` | Sprites | Zawodnik: Poziom Elitarny |
-| `reward_trophy.png` | Rewards | Puchar / Trofeum |
-| `icon_strava.png` | Systems | Integracja Strava |
-| `icon_garmin.png` | Systems | Integracja Garmin |
+| Nazwa Pliku | Kategoria | Status | Przeznaczenie |
+| :--- | :--- | :--- | :--- |
+| `nav_home.png` | Navigation | 🛑 MISSING | Ekran Główny |
+| `nav_history.png` | Navigation | 🛑 MISSING | Historia Treningów |
+| `nav_ranking.png` | Navigation | 🛑 MISSING | Rankingi |
+| `nav_rewards.png` | Navigation | 🛑 MISSING | Nagrody |
+| `nav_profile.png` | Navigation | 🛑 MISSING | Profil Sportowca |
+| `hud_heart.png` | HUD | 🛑 MISSING | Tętno |
+| `hud_gps.png` | HUD | 🛑 MISSING | Status GPS |
+| `hud_battery.png` | HUD | 🛑 MISSING | Stan baterii |
+| `runner_sprite.png`| Sprites | 🛑 MISSING | Postać: Biegacz |
+| `cyclist_sprite.png`| Sprites | 🛑 MISSING | Postać: Kolarz |
+| `ghost_sprite.png` | Sprites | 🛑 MISSING | Postać: Duch |
+| `elite_sprite.png` | Sprites | 🛑 MISSING | Postać: Elite |
+| `reward_trophy.png` | Rewards | 🛑 MISSING | Trofea |
+| `icon_strava.png` | Systems | 🛑 MISSING | Strava |
+| `icon_garmin.png` | Systems | 🛑 MISSING | Garmin |
 
 ---
 *Dokument stanowi jedyne źródło prawdy (SSOT) dla warstwy wizualnej projektu.*
