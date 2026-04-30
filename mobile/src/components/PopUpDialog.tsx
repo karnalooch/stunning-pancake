@@ -126,14 +126,16 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
         </YStack>
 
         {/* Character Sprite Container */}
-        <View style={{ shadowColor: 'black', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }}>
-          <Image 
-            source={sprite} 
-            width={130} 
-            height={130} 
-            resizeMode="contain"
-          />
-        </View>
+        {sprite && (
+          <View style={{ shadowColor: 'black', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 0.5, shadowRadius: 5 }}>
+            <Image 
+              source={sprite} 
+              width={130} 
+              height={130} 
+              resizeMode="contain"
+            />
+          </View>
+        )}
       </XStack>
     </Animated.View>
   );

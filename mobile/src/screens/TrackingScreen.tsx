@@ -17,9 +17,20 @@ import { PopUpDialog } from '../components/PopUpDialog';
 
 const { width, height } = Dimensions.get('window');
 
-// Asset imports for HUD
-const hudHeart = require('../../assets/generated/hud_heart.png');
-const hudGps = require('../../assets/generated/hud_gps.png');
+const MILESTONES = {
+  KM1: 1000,
+  KM5: 5000,
+  KM10: 10000
+};
+
+const ASSETS = {
+  heart: require('../../assets/generated/hud_heart.png'),
+  gps: require('../../assets/generated/hud_gps.png'),
+  sprites: {
+    runner: require('../../assets/generated/runner_sprite.png'),
+    ghost: require('../../assets/generated/ghost_sprite.png'),
+  }
+};
 
 let storage: any;
 const getStorage = () => {
@@ -93,6 +104,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       title: 'SYSTEM_MSG',
       character: 'runner'
     },
+    dialogQueue: [] as any[],
     milestonesReached: {
       km1: false,
       km5: false,
@@ -101,6 +113,13 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
   });
 
   const syncManager = useRef<GpsSyncManager | null>(null);
+  const dialogTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (dialogTimeout.current) clearTimeout(dialogTimeout.current);
+    };
+  }, []);
 
   useEffect(() => {
     const store = getStorage();
@@ -139,24 +158,43 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
   }, [user]);
   
   const triggerDialog = (message: string, character: string = 'runner', title: string = 'ATHLETE_COM') => {
+    // Add to queue
+    state.dialogQueue.push({ message, character, title });
+    
+    // If not showing anything, show first from queue
+    if (!state.dialog.visible.get()) {
+      processQueue();
+    }
+  };
+
+  const processQueue = () => {
+    const queue = state.dialogQueue.get();
+    if (queue.length === 0) return;
+
+    const next = queue[0];
+    state.dialogQueue.set(queue.slice(1));
+    
     state.dialog.set({
       visible: true,
-      message,
-      title,
-      character
+      message: next.message,
+      title: next.title,
+      character: next.character
     });
-    // Auto-hide after 6 seconds
-    setTimeout(() => {
+
+    if (dialogTimeout.current) clearTimeout(dialogTimeout.current);
+    dialogTimeout.current = setTimeout(() => {
       state.dialog.visible.set(false);
-    }, 6000);
+      // Wait for exit animation before showing next
+      setTimeout(() => processQueue(), 500);
+    }, 5000);
   };
 
   useEffect(() => {
     const dist = state.stats.distanceM.get();
-    if (dist >= 1000 && !state.milestonesReached.km1.get()) {
+    if (dist >= MILESTONES.KM1 && !state.milestonesReached.km1.get()) {
       state.milestonesReached.km1.set(true);
       triggerDialog("1KM completed! You're warming up nicely.", 'runner', 'MILESTONE');
-    } else if (dist >= 5000 && !state.milestonesReached.km5.get()) {
+    } else if (dist >= MILESTONES.KM5 && !state.milestonesReached.km5.get()) {
       state.milestonesReached.km5.set(true);
       triggerDialog("5KM! Incredible stamina! You're crushing it.", 'elite', 'LEVEL_UP');
     }
@@ -332,8 +370,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         title={state.dialog.title.get()}
         sprite={
           state.dialog.character.get() === 'ghost' 
-            ? require('../../assets/generated/ghost_sprite.png') 
-            : require('../../assets/generated/runner_sprite.png')
+            ? ASSETS.sprites.ghost 
+            : ASSETS.sprites.runner
         }
       />
     </YStack>
