@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
-import { Trophy, Crown, Swords } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, Circle, useTheme } from 'tamagui';
+import { Image } from 'react-native';
+import { Crown, Swords } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, ScrollView, useTheme } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService } from '../services/api';
 
@@ -8,9 +9,10 @@ import { RetroCard } from '../components/RetroCard';
 import { HD2DButton } from '../components/HD2DButton';
 import { AthleteSprite } from '../components/AthleteSprite';
 
-const TrophyIcon = Trophy as any;
 const CrownIcon = Crown as any;
 const SwordsIcon = Swords as any;
+
+const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
 export const LeaderboardScreen = observer(() => {
   const theme = useTheme();
@@ -47,7 +49,7 @@ export const LeaderboardScreen = observer(() => {
     <YStack flex={1} backgroundColor="$background" paddingTop="$10">
       <XStack paddingHorizontal="$4" justifyContent="space-between" alignItems="center" marginBottom="$4">
         <TamaText fontFamily="$pixel" fontSize={18} color="$color">RANKINGS</TamaText>
-        <TrophyIcon size={24} color={theme.primary.get()} />
+        <Image source={rewardTrophy} style={{ width: 28, height: 28 }} resizeMode="contain" />
       </XStack>
 
       <XStack paddingHorizontal="$4" gap="$2" marginBottom="$6">

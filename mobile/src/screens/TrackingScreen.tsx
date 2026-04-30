@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Alert, Dimensions } from 'react-native';
+import { StyleSheet, Alert, Dimensions, Image } from 'react-native';
 import * as Location from 'expo-location';
 import { Map, Camera, UserLocation, Layer } from '@maplibre/maplibre-react-native';
-import { Shield, Zap, Crosshair, Cpu, Heart } from 'lucide-react-native';
+import { Shield, Zap, Crosshair } from 'lucide-react-native';
 import { YStack, XStack, Text as TamaText, useTheme, ScrollView } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
@@ -15,6 +15,10 @@ import { RetroCard } from '../components/RetroCard';
 import { AthleteSprite } from '../components/AthleteSprite';
 
 const { width, height } = Dimensions.get('window');
+
+// Asset imports for HUD
+const hudHeart = require('../../assets/generated/hud_heart.png');
+const hudGps = require('../../assets/generated/hud_gps.png');
 
 let storage: any;
 const getStorage = () => {
@@ -35,8 +39,6 @@ const getStorage = () => {
 
 const ShieldIcon = Shield as any;
 const ZapIcon = Zap as any;
-const CpuIcon = Cpu as any;
-const HeartIcon = Heart as any;
 
 const HudMetric = observer(({ label, value, unit, color = "$accent" }: { label: string, value: any, unit: string, color?: any }) => {
   // Handle observable, function getter, or static value
@@ -216,7 +218,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         </YStack>
 
         <XStack gap="$2" alignItems="center" backgroundColor="$background" padding="$2" borderWidth={1} borderColor="$hd2d.outlineColor">
-           <CpuIcon size={12} color={theme.accent.get()} />
+           <Image source={hudGps} style={{ width: 14, height: 14 }} resizeMode="contain" />
            <TamaText fontSize={8} color="$accent" fontFamily="$pixel">BATT: {Math.round(state.stats.batteryPct.get() * 100)}%</TamaText>
         </XStack>
       </XStack>
@@ -237,7 +239,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             
             <RetroCard flex={1} marginLeft="$2" padding="$3">
               <XStack gap="$2" alignItems="center">
-                <HeartIcon size={12} color={theme.error.get()} />
+                <Image source={hudHeart} style={{ width: 14, height: 14 }} resizeMode="contain" />
                 <HudMetric 
                   label="Heart" 
                   value={state.stats.heartRate} 

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Gift, MapPin, Tag, RefreshCcw } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, H1, H2, Paragraph, ScrollView, Card, Button as TamaButton, Spinner } from 'tamagui';
+import { Image } from 'react-native';
+import { MapPin, Tag, RefreshCcw } from 'lucide-react-native';
+import { YStack, XStack, Text as TamaText, ScrollView, Button as TamaButton, Spinner } from 'tamagui';
 import { RewardsService } from '../services/api';
 
-const GiftIcon = Gift as any;
 const MapPinIcon = MapPin as any;
 const TagIcon = Tag as any;
 const RefreshIcon = RefreshCcw as any;
+
+const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
 export const RewardsScreen = () => {
   const [pools, setPools] = useState<any[]>([]);
@@ -68,7 +70,7 @@ export const RewardsScreen = () => {
             {loading ? '...' : balance.toLocaleString()} XP
           </TamaText>
         </YStack>
-        <GiftIcon size={32} color="black" opacity={0.8} />
+        <Image source={rewardTrophy} style={{ width: 48, height: 48 }} resizeMode="contain" />
       </XStack>
 
       {error && (
@@ -91,8 +93,8 @@ export const RewardsScreen = () => {
           ) : (
             pools.map((pool) => (
               <XStack key={pool.id} backgroundColor="$card" padding="$4" borderRadius="$0" alignItems="center" gap="$4" borderWidth={2} borderColor="$card" borderLeftWidth={6} borderLeftColor="$primary">
-                <YStack backgroundColor="$background" padding="$2.5" borderRadius="$0" alignItems="center" justifyContent="center" borderWidth={1} borderColor="$textMuted">
-                  <TagIcon size={20} color={Theme.colors.primary} />
+                <YStack backgroundColor="$background" padding="$2" borderRadius="$0" alignItems="center" justifyContent="center" borderWidth={1} borderColor="$textMuted">
+                  <Image source={rewardTrophy} style={{ width: 24, height: 24 }} resizeMode="contain" />
                 </YStack>
                 
                 <YStack flex={1}>
