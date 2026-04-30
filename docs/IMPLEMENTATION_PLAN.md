@@ -16,7 +16,7 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
 - **Kluczowe**: React Native Bridgeless, Skia, Tamagui, Legend-State.
 
 ### Faza 4: Ekosystem i Integracje (ZAKOŃCZONE / REWORK V3.0 W TOKU)
-- **Cel**: Otwarcie na zewnętrzne API i sprzęt wearable oraz wdrożenie manifestu wizualnego V3.0.
+- **Cel**: Otwarcie na zewnętrzne API i sprzęt wearable oraz wdrożenie manifestu wizualnego V3.0 (zobacz [VISUAL_MANIFESTO.md](./VISUAL_MANIFESTO.md)).
 - **Kluczowe**: 
   - [x] **Immersyjny Onboarding Experience**:
     - [x] Animated Pulse Splash.

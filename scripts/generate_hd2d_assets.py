@@ -2,7 +2,10 @@ import os
 import requests
 import json
 import time
+import shutil
+import base64
 from pathlib import Path
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -12,24 +15,37 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 OUTPUT_DIR = Path("assets/generated")
+BACKUP_DIR = Path("assets/backups")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 
-# HD-2D Expert Aesthetic Prompt Template
-# Combining the tilt-shift lighting of Octopath, the industrial sprite detail of Metal Slug, 
-# and the clean, vibrant maritime aesthetic of Dave the Diver.
+# HD-2D Expert Aesthetic Prompt Template (Optimized for Nano Banana Pro)
 HD2D_STYLE_BASE = (
     "Masterpiece high-fidelity HD-2D sprite, pixel-perfect 1px crisp black outlines. "
-    "Aesthetic: A fusion of Octopath Traveler (soft bloom, dynamic lighting), "
-    "Metal Slug (hand-drawn industrial detail, chunky bold shapes), "
-    "and Dave the Diver (clean vibrant maritime colors). "
-    "Technical: Professional game asset, 32-bit color depth, hand-placed pixels, "
-    "no blurry gradients, high contrast, isolated on a pure white background for transparency mask. "
+    "Aesthetic: A fusion of Octopath Traveler (soft bloom, cinematic lighting, tilt-shift), "
+    "Metal Slug (extreme industrial sprite detail, hand-drawn chunky aesthetic), "
+    "and Dave the Diver (vibrant maritime color palette). "
+    "Technical: Professional game asset, hand-placed pixels, 32-bit color, "
+    "high contrast, isolated on a pure white background. "
 )
+
+def backup_existing_assets():
+    """Moves existing PNG files to a timestamped backup folder."""
+    existing_files = list(OUTPUT_DIR.glob("*.png"))
+    if not existing_files:
+        return
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    session_backup = BACKUP_DIR / f"backup_{timestamp}"
+    session_backup.mkdir(parents=True, exist_ok=True)
+
+    print(f"Backing up {len(existing_files)} assets to {session_backup}...")
+    for file in existing_files:
+        shutil.move(str(file), str(session_backup / file.name))
 
 def generate_with_openai(prompt_desc, filename, size="1024x1024"):
     """Generates a raster image using OpenAI's DALL-E 3 API."""
     if not OPENAI_API_KEY:
-        print("Error: OPENAI_API_KEY not found.")
         return
     
     filepath = OUTPUT_DIR / filename
@@ -53,7 +69,7 @@ def generate_with_openai(prompt_desc, filename, size="1024x1024"):
 
 def generate_with_google(prompt_desc, filename):
     """
-    Generates a raster image using Google's Imagen API (via Gemini API / AI Studio).
+    Generates a raster image using Google's Nano Banana Pro (Gemini 3 Pro Image).
     """
     if not GOOGLE_API_KEY:
         print("Error: GOOGLE_API_KEY not found.")
@@ -64,37 +80,51 @@ def generate_with_google(prompt_desc, filename):
         print(f"Skipping {filename} (already exists).")
         return
 
-    print(f"Generating (Google Imagen): {filename}...")
+    print(f"Generating (Nano Banana Pro): {filename}...")
     full_prompt = f"{HD2D_STYLE_BASE} {prompt_desc}"
 
-    # Standard Gemini API / AI Studio endpoint for Imagen 4.0
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key={GOOGLE_API_KEY}"
+    # Nano Banana Pro (Gemini 3 Pro Image) generateContent endpoint
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent?key={GOOGLE_API_KEY}"
     
     headers = {"Content-Type": "application/json"}
     payload = {
-        "instances": [{"prompt": full_prompt}],
-        "parameters": {
-            "sampleCount": 1,
-            "aspectRatio": "1:1"
+        "contents": [
+            {
+                "parts": [{"text": full_prompt}]
+            }
+        ],
+        "generationConfig": {
+            "responseModalities": ["TEXT", "IMAGE"],
+            "imageConfig": {
+                "aspectRatio": "1:1",
+                "imageSize": "2K",
+                "numberOfImages": 1
+            }
         }
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=90)
+        response = requests.post(url, headers=headers, json=payload, timeout=120)
         response.raise_for_status()
         
-        # Google returns base64 data usually
         data = response.json()
-        if 'predictions' in data and len(data['predictions']) > 0:
-            import base64
-            img_b64 = data['predictions'][0]['bytesBase64Encoded']
-            with open(filepath, 'wb') as handler:
-                handler.write(base64.b64decode(img_b64))
-            print(f"Successfully saved to {filepath}")
+        if 'candidates' in data and len(data['candidates']) > 0:
+            parts = data['candidates'][0]['content']['parts']
+            image_found = False
+            for part in parts:
+                if 'inlineData' in part:
+                    img_b64 = part['inlineData']['data']
+                    with open(filepath, 'wb') as handler:
+                        handler.write(base64.b64decode(img_b64))
+                    print(f"Successfully saved to {filepath}")
+                    image_found = True
+                    break
+            if not image_found:
+                print(f"Google Response missing image data (Thinking occurred?): {data}")
         else:
-            print(f"Google Response missing predictions: {data}")
+            print(f"Google Response missing candidates: {data}")
     except Exception as e:
-        print(f"Google Imagen Failed: {e}")
+        print(f"Google Nano Banana Failed: {e}")
     
 def save_image(url, filename):
     img_data = requests.get(url).content
@@ -104,6 +134,9 @@ def save_image(url, filename):
     print(f"Successfully saved to {filepath}")
 
 if __name__ == "__main__":
+    # Create backup of previous session
+    backup_existing_assets()
+
     # Comprehensive UI Spriting for Mobile App (V3.0) - Refined Expert Prompts
     mobile_assets = [
         ("A rustic tavern-style house icon, wood and stone texture, UI navigation", "nav_home.png"),
@@ -127,10 +160,10 @@ if __name__ == "__main__":
     ]
 
     if GOOGLE_API_KEY:
-        print("Starting Batch Generation (Google Imagen)...")
+        print("Starting Batch Generation (Nano Banana Pro)...")
         for prompt, filename in mobile_assets:
             generate_with_google(prompt, filename)
-            time.sleep(5) # Avoid rate limits
+            time.sleep(10) # Thinking models may need more time between calls
     elif OPENAI_API_KEY:
         print("Starting Batch Generation (OpenAI DALL-E 3)...")
         for prompt, filename in mobile_assets:
