@@ -27,7 +27,7 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 - [ ] `HR_ZONE_UP` — wejście w wyższą strefę tętna
 - [ ] `HR_ZONE_DOWN` — zejście do niższej strefy tętna
 - [ ] `PERSONAL_BEST` — nowy rekord życiowy
-- [ ] `FIRST_ACTIVITY` — pierwsza aktywność dnia
+- [ ] `FIRST_ACTIVITY` — pierwsza aktywność dnia 
 
 #### 1.3 Poprawność interpolacji zmiennych (Template Variables)
 - [ ] `{pct}` — procent baterii (np. "18%")

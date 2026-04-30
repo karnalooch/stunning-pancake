@@ -144,7 +144,7 @@ export const LeaderboardScreen = observer(() => {
         <XStack alignItems="center" justifyContent="space-between">
            <XStack alignItems="center" gap="$3">
              <TamaText color="$primary" fontFamily="$pixel" fontSize={10} width={40}>#{myRank?.rank || '?'}</TamaText>
-             <AthleteSprite type="runner" state="idle" size={36} color={theme.primary.get()} />
+             <AthleteSprite type="runner" state="idle" size={36} />
              <YStack>
                <TamaText color="$color" fontSize={14} fontWeight="900">YOU (ACTIVE)</TamaText>
                <TamaText color="$primary" fontFamily="$pixel" fontSize={10}>{myRank?.score_km || 0} KM</TamaText>

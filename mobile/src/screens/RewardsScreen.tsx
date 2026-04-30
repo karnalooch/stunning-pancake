@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Image } from 'react-native';
 import { MapPin, Tag, RefreshCcw } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, Button as TamaButton, Spinner } from 'tamagui';
+import { YStack, XStack, Text as TamaText, ScrollView, Button as TamaButton, Spinner, View } from 'tamagui';
 import { RewardsService } from '../services/api';
 
 const MapPinIcon = MapPin as any;

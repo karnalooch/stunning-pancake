@@ -8,6 +8,7 @@ from core.matrix_e2ee_verify import (
     initiate_verification, accept_verification,
     confirm_verification, verification_status,
 )
+from core.llm_proxy import llm_proxy
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,7 +30,9 @@ urlpatterns = [
     path('api/matrix/verify/initiate/', initiate_verification, name='matrix-verify-initiate'),
     path('api/matrix/verify/accept/',   accept_verification,   name='matrix-verify-accept'),
     path('api/matrix/verify/confirm/',  confirm_verification,  name='matrix-verify-confirm'),
-    path('api/matrix/verify/status/',   verification_status,   name='matrix-verify-status'),
+    path('api/matrix/verify/status/',   verification_status,  name='matrix-verify-status'),
+    # LLM Proxy — hides API key from mobile client (v0.1.0-beta.1)
+    path('api/llm/proxy/', llm_proxy, name='llm-proxy'),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     # Phase 2: JWT Auth

@@ -25,6 +25,9 @@ import { firebaseCapture } from './FirebaseService';
 
 // ─── Configuration ────────────────────────────────────────────────
 
+const BACKEND_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
+const PROXY_URL = BACKEND_URL ? `${BACKEND_URL}/api/llm/proxy` : '';
+
 const DEFAULT_CONFIG = {
   apiKey: process.env.EXPO_PUBLIC_LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
   apiUrl: process.env.EXPO_PUBLIC_LLM_API_URL ?? 'https://api.openai.com/v1',
@@ -135,17 +138,25 @@ export class LlmCoachService {
   private _cache: Map<string, string> = new Map();
   private _circuit: CircuitState = { failures: 0, openUntil: 0 };
   private _rateLimits: Map<string, RateLimitEntry> = new Map();
+  private _useProxy: boolean;
 
   constructor(config?: LlmCoachConfig) {
     this._config = { ...DEFAULT_CONFIG, ...config } as Required<LlmCoachConfig>;
 
+    // Use backend proxy when available (hides API key from mobile bundle)
+    this._useProxy = !!PROXY_URL && !this._config.apiKey;
+
+    const baseURL = this._useProxy ? BACKEND_URL : this._config.apiUrl;
+
     this._client = axios.create({
-      baseURL: this._config.apiUrl,
+      baseURL,
       timeout: this._config.timeoutMs,
-      headers: {
-        'Authorization': `Bearer ${this._config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: this._useProxy
+        ? { 'Content-Type': 'application/json' }
+        : {
+            'Authorization': `Bearer ${this._config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
     });
   }
 

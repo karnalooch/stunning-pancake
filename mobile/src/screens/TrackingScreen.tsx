@@ -190,7 +190,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
       >
         <Map 
           style={styles.map}
-          mapStyle={theme.name === 'solar' ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json" : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"}
+          mapStyle={(theme.name as any) === 'solar' ? "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json" : "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"}
           logo={false}
           attribution={false}
         >
@@ -301,7 +301,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
           <XStack gap="$3" justifyContent="center" alignItems="center" paddingVertical="$2">
             <ZapIcon size={20} color={theme.primary.get()} />
             <TamaText fontFamily="$pixel" fontSize={10} color="$color">PERFORMANCE STABLE</TamaText>
-            <ShieldIcon size={20} color={theme.success.get()} />
+            <ShieldIcon size={20} color={theme.success?.get() ?? '#00FF00'} />
           </XStack>
 
           <HD2DButton 

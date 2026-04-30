@@ -1,5 +1,5 @@
 function Start-SportDev {
-    Write-Host "[START] Uruchamiam SPORT Dev Engine v2.1..." -ForegroundColor Green
+    Write-Host "[START] Uruchamiam SPORT Dev Engine v0.1.0-beta.1..." -ForegroundColor Green
 
 # --- DODANE PRZEZ GEMINI CLI: AUTOMATYCZNE TUNELE ---
 Write-Host "[INIT] Inicjalizacja tuneli (Port Forward)..." -ForegroundColor Cyan
