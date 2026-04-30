@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, 
     TelemetryLiveView, AnomalyListView, POIViewSet, TelemetryConfigView,
-    StravaAuthView, StravaCallbackView, WearableSyncView
+    StravaAuthView, StravaCallbackView, GarminAuthView, GarminCallbackView,
+    WearableSyncView
 )
 
 from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
