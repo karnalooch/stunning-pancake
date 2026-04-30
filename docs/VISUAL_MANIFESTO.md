@@ -19,24 +19,39 @@ Wszystkie zasoby graficzne muszą spełniać następujące rygorystyczne kryteri
 ## 3. Lista Wygenerowanych Zasobów (v3.0)
 Zasoby znajdują się w lokalizacji: `assets/generated/`
 
-| Nazwa Pliku |
-|:---|
-| `nav_home.png` |
-| `nav_history.png` | 
-| `nav_ranking.png` | 
-| `nav_rewards.png` | 
-| `nav_profile.png` | 
-| `icon_activity.png` | 
-| `icon_trending.png` | 
-| `icon_share.png` | 
-| `icon_crown.png` | 
-| `icon_swords.png` | 
-| `icon_shield.png` | 
-| `icon_zap.png` |
-| `icon_mappin.png` | 
-| `icon_qrcode.png` |
-| `icon_crosshair.png`| 
-| `icon_logout.png` | 
+| Nazwa Pliku | Przeznaczenie / Opis |
+|:---|:---|
+| **Pasek Nawigacji** | |
+| `nav_home.png` | Ekran Główny (Tawerna) |
+| `nav_history.png` | Historia Treningów (Stoper) | 
+| `nav_ranking.png` | Rankingi (Podium) | 
+| `nav_rewards.png` | Nagrody (Skrzynia) | 
+| `nav_profile.png` | Profil Pilota | 
+| **Interfejs (HUD & Statystyki)** | |
+| `icon_activity.png` | Podsumowanie aktywności (Matrix EKG) | 
+| `icon_trending.png` | Trendy i postępy | 
+| `icon_zap.png` | Power-upy / Energia |
+| `icon_mappin.png` | Lokalizacja POI | 
+| `icon_qrcode.png` | Identyfikacja zawodnika |
+| `icon_crosshair.png`| Tracking GPS | 
+| `hud_heart.png` | Tętno (Pixel Heart) |
+| `hud_gps.png` | Status sygnału GPS |
+| `hud_battery.png` | Stan baterii urządzenia |
+| **Postacie i Obiekty (Sprites)** | |
+| `runner_sprite.png` | Zawodnik: Biegacz |
+| `cyclist_sprite.png` | Zawodnik: Rowerzysta |
+| `ghost_sprite.png` | Przeciwnik / Duch (Ghost Mode) |
+| `elite_sprite.png` | Zawodnik: Poziom Elitarny |
+| `reward_trophy.png` | Puchar / Trofeum |
+| `reward_xp.png` | Ikona Punktów Doświadczenia (XP) |
+| **Systemowe i Integracje** | |
+| `icon_share.png` | Udostępnianie wyników | 
+| `icon_crown.png` | MVP / Mistrz | 
+| `icon_swords.png` | Rywalizacja / Pojedynek | 
+| `icon_shield.png` | Ochrona Anti-Cheat | 
+| `icon_logout.png` | Wylogowanie | 
+| `icon_strava.png` | Integracja Strava |
+| `icon_garmin.png` | Integracja Garmin |
 
 ---
 *Manifest zatwierdzony dla Fazy 4 wdrożenia (Solar-Ready HD-2D UI).*
