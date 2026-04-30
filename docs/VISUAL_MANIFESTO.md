@@ -26,7 +26,7 @@ Zasoby znajdują się w lokalizacji: `assets/generated/`
 | `nav_history.png` | Historia Treningów (Stoper) | 
 | `nav_ranking.png` | Rankingi (Podium) | 
 | `nav_rewards.png` | Nagrody (Skrzynia) | 
-| `nav_profile.png` | Profil Pilota | 
+| `nav_profile.png` | Profil Sportowca | 
 | **Interfejs (HUD & Statystyki)** | |
 | `icon_activity.png` | Podsumowanie aktywności (Matrix EKG) | 
 | `icon_trending.png` | Trendy i postępy | 
