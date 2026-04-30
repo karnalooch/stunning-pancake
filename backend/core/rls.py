@@ -16,8 +16,24 @@ LINKED_RLS_TABLES = {
 
 APP_ROLE = "sport_app"
 
+def ensure_app_role():
+    """Create the application role if it doesn't exist (used for RLS policies)."""
+    with connection.cursor() as cursor:
+        cursor.execute(f"""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '{APP_ROLE}') THEN
+                    CREATE ROLE {APP_ROLE};
+                END IF;
+            END
+            $$;
+        """)
+
 def apply_rls_policies():
     with connection.cursor() as cursor:
+        # Ensure the role exists before creating policies that reference it
+        ensure_app_role()
+
         # 1. Direct RLS
         for table in DIRECT_RLS_TABLES:
             logger.info(f"Applying RLS to {table}")

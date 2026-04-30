@@ -9,6 +9,15 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunSQL(
             sql='''
+                -- 0. Ensure the application role exists (needed for RLS policy TO clauses)
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'sport_app') THEN
+                        CREATE ROLE sport_app;
+                    END IF;
+                END
+                $$;
+
                 -- 1. Direct RLS: activities_activity
                 ALTER TABLE activities_activity ENABLE ROW LEVEL SECURITY;
                 DROP POLICY IF EXISTS tenant_isolation ON activities_activity;
