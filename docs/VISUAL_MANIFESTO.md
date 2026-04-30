@@ -15,6 +15,20 @@ Wszystkie zasoby graficzne muszą spełniać następujące rygorystyczne kryteri
 - **Kolorystyka**: 32-bit color, wysoki kontrast (zoptymalizowany pod Solar Mode).
 - **Kompozycja**: Izolacja na czystym białym tle (do późniejszego wycięcia/przezroczystości).
 
+## 3. Dynamika i Animacje (Interaction Patterns)
+Interfejs SPORT V3.0 ożywa dzięki systemowi dynamicznych interakcji inspirowanych grami przygodowymi.
+
+### 3.1. System "Character Cut-ins"
+Kluczowe powiadomienia i gratulacje są przekazywane przez sprite'y postaci (np. Duch, Elitarny Zawodnik) wyskakujące zza krawędzi ekranu.
+- **Fizyka**: Wykorzystanie animacji typu `Spring` (sprężyna) dla uzyskania efektu dynamicznego "wskoczenia" na scenę.
+- **Idle State**: Postacie po pojawieniu się wykonują zapętloną animację "pływania" (Floating Idle) góra-dół (2000ms cykl).
+- **Dialogi**: Tekst pojawia się z efektem "Typewriter" (maszyna do pisania), podkreślając retro-gamingowy charakter.
+
+### 3.2. Mikro-interakcje HD-2D
+- **Button Press**: Każdy przycisk przy naciśnięciu przesuwa się o 2px w dół (efekt mechanicznego kliknięcia).
+- **Shadows**: Cienie są twarde, bez rozmycia (`shadowRadius: 0`), przesunięte o stałą wartość (np. 4px 4px), co potęguje wrażenie pikselowej głębi.
+- **Glitch Effects**: Subtelne efekty zakłóceń (chromatic aberration) przy przejściach między etapami misji.
+
 
 ## 3. Lista Wygenerowanych Zasobów (v3.0)
 Zasoby znajdują się w lokalizacji: `assets/generated/`

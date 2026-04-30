@@ -24,6 +24,9 @@ Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje
     - [x] Integrations Hub (One-Tap Strava/Garmin).
     - [x] Data Validation (Biometria).
     - [x] QR Identity Generation.
+    - [x] **HD-2D Character Interaction System**:
+      - [x] Implementacja `PopUpDialog` z fizyką sprężynową i efektem typewriter.
+      - [ ] Integracja cut-scenek z triggerami GPS.
   - [x] **Solar-Ready HD-2D UI (Mobile Gaming Aesthetic)**:
     - [x] Stylistyka retro-gamingowa inspirowana *Metal Slug*, *Dave the Diver*, *Octopath Traveler*.
     - [x] 1px Black Outlines (Sprite-style) i Pixel Art.
