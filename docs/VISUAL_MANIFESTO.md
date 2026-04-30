@@ -1,7 +1,7 @@
 # MANIFEST WIZUALNY (VISUAL MANIFESTO) — SPORT V3.0
 
 ## 1. Filozofia Estetyki: HD-2D Gaming Fusion
-Projekt SPORT odchodzi od klasycznego stylu "Neon Black" na rzecz immersyjnej estetyki retro-gamingowej w standardzie HD-2D. Interfejs ma budzić skojarzenia z wysokobudżetowymi produkcjami pixel-artowymi, łącząc czytelność techniczną z artystycznym detalem.
+Projekt SPORT to wysokowydajna platforma grywalizacji przeznaczona dla **rowerzystów i biegaczy**. Odchodzi ona od klasycznego stylu "Neon Black" na rzecz immersyjnej estetyki retro-gamingowej w standardzie HD-2D. Interfejs ma budzić skojarzenia z wysokobudżetowymi produkcjami pixel-artowymi, łącząc czytelność techniczną z artystycznym detalem.
 
 ### Kluczowe Inspiracje:
 - **Octopath Traveler**: Miękki bloom, kinowe oświetlenie, efekt tilt-shift (głębia ostrości) oraz dynamiczne cieniowanie.
@@ -26,7 +26,7 @@ Zasoby znajdują się w lokalizacji: `assets/generated/`
 | `nav_rewards.png` | Skrzynia skarbów z błękitnym światłem | Sklep z nagrodami |
 | `nav_profile.png` | Sylwetka pilota w metalowej ramie | Profil użytkownika |
 | `icon_activity.png` | Linia EKG z błękitną energią Matrix | Podsumowanie treningu |
-| `icon_trending.png` | Mechaniczna metalowa strzałka w górę | Trendy i postępy |
+| `icon_trending.png" | Mechaniczna metalowa strzałka w górę | Trendy i postępy |
 | `icon_share.png` | Mapa węzłów sieci (pulsujące połączenia) | Udostępnianie wyników |
 | `icon_crown.png` | Ciężka żelazna korona z rubinami | Zdobyte tytuły / MVP |
 | `icon_swords.png` | Skrzyżowane miecze (battle-worn) | Wyzwania i pojedynki |
