@@ -1,4 +1,4 @@
-# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v3.0)
+# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v0.1.0-beta.1)
 
 Congratulations! You are now the owner of a state-of-the-art, multi-tenant sports ecosystem. This guide provides instructions on how to launch, seed, and present the platform.
 

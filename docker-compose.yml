@@ -112,6 +112,10 @@ services:
       context: ./admin
       args:
         - VITE_APP_MODE=GLOBAL_ADMIN
+        - VITE_API_URL
+        - VITE_LLM_API_KEY
+        - VITE_LLM_API_URL
+        - VITE_LLM_MODEL
     container_name: sport_global_admin
     restart: always
     ports:
@@ -125,6 +129,10 @@ services:
       context: ./admin
       args:
         - VITE_APP_MODE=LOCAL_ADMIN
+        - VITE_API_URL
+        - VITE_LLM_API_KEY
+        - VITE_LLM_API_URL
+        - VITE_LLM_MODEL
     container_name: sport_tenant_admin
     restart: always
     ports:
@@ -138,6 +146,10 @@ services:
       context: ./admin
       args:
         - VITE_APP_MODE=MODERATOR
+        - VITE_API_URL
+        - VITE_LLM_API_KEY
+        - VITE_LLM_API_URL
+        - VITE_LLM_MODEL
     container_name: sport_moderator
     restart: always
     ports:

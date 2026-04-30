@@ -320,15 +320,31 @@ export class LlmCoachService {
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
-        const response = await this._client.post('/chat/completions', {
-          model: this._config.model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt },
-          ],
-          max_tokens: this._config.maxTokens,
-          temperature: this._config.temperature,
-        });
+        let response;
+
+        if (this._useProxy) {
+          // Route through backend proxy — API key stays server-side
+          response = await this._client.post('/api/llm/proxy/', {
+            model: this._config.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            max_tokens: this._config.maxTokens,
+            temperature: this._config.temperature,
+          });
+        } else {
+          // Direct API call (development with EXPO_PUBLIC_LLM_API_KEY)
+          response = await this._client.post('/chat/completions', {
+            model: this._config.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            max_tokens: this._config.maxTokens,
+            temperature: this._config.temperature,
+          });
+        }
 
         const content = response.data?.choices?.[0]?.message?.content;
         if (!content || typeof content !== 'string') {
