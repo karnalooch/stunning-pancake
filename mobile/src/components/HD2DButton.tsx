@@ -49,7 +49,7 @@ export const HD2DButton: React.FC<HD2DButtonProps> = React.memo(({ children, lab
       elevation={4}
 
       pressStyle={{
-        backgroundColor: '$primary',
+        backgroundColor: theme.primary.get(),
         opacity: 0.9,
         scale: 0.97,
         shadowOffset: { width: 2, height: 2 },

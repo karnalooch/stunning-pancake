@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Dimensions, Alert } from 'react-native';
-import { YStack, XStack, Text, H1, View, Input, Label, ScrollView } from 'tamagui';
+import { YStack, XStack, Text, H1, View, Input, Label, ScrollView, useTheme } from 'tamagui';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -24,6 +24,7 @@ interface OnboardingProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
+  const theme = useTheme();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     weight: '75',
@@ -64,8 +65,8 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
            <Text color="$primary" fontFamily="$pixel" fontSize={8}>{Math.round(progress.value * 100)}%</Text>
         </XStack>
         <XStack height={8} backgroundColor="#111" width="100%" borderWidth={1} borderColor="$hd2d.outlineColor">
-          <Animated.View style={[{ height: '100%', backgroundColor: '$primary' }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
-             <View position="absolute" right={0} width={2} height={12} backgroundColor="$primary" top={-2} />
+          <Animated.View style={[{ height: '100%', backgroundColor: theme.primary.get() }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
+             <View position="absolute" right={0} width={2} height={12} backgroundColor={theme.primary.get()} top={-2} />
           </Animated.View>
         </XStack>
       </YStack>
