@@ -21,6 +21,7 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { firebaseCapture } from './FirebaseService';
 
 // ─── Configuration ────────────────────────────────────────────────
 
@@ -157,9 +158,12 @@ export class LlmCoachService {
    * @returns The generated message, or null if LLM is unavailable
    */
   async generateMessage(ctx: CoachPromptContext): Promise<string | null> {
+    const startTs = Date.now();
+
     // Circuit breaker check
     if (this._isCircuitOpen()) {
       console.log('[LlmCoach] Circuit breaker OPEN — skipping LLM call');
+      firebaseCapture(new Error('Circuit breaker open'), 'LLM_CIRCUIT_OPEN');
       return null;
     }
 
@@ -174,7 +178,11 @@ export class LlmCoachService {
     if (this._config.cacheEnabled) {
       const cached = this._cache.get(cacheKey);
       if (cached) {
+        const latency = Date.now() - startTs;
         console.log(`[LlmCoach] Cache hit: ${ctx.category}`);
+        if (latency > 10) {
+          firebaseCapture(new Error(`Cache latency: ${latency}ms`), 'LLM_CACHE_HIT');
+        }
         return cached;
       }
     }
@@ -182,7 +190,8 @@ export class LlmCoachService {
     // LLM call with retry
     try {
       const message = await this._callLlm(ctx);
-      
+      const latency = Date.now() - startTs;
+
       // Cache the successful response
       if (this._config.cacheEnabled) {
         this._cache.set(cacheKey, message);
@@ -191,9 +200,27 @@ export class LlmCoachService {
       // Reset circuit on success
       this._circuit.failures = 0;
 
+      // Monitor latency P95/P99 thresholds
+      if (latency > 450) {
+        firebaseCapture(
+          new Error(`LLM latency P95 breach: ${latency}ms for ${ctx.personality}/${ctx.category}`),
+          'LLM_LATENCY_HIGH',
+        );
+      } else if (latency > 1900) {
+        firebaseCapture(
+          new Error(`LLM latency P99 breach: ${latency}ms — approaching timeout`),
+          'LLM_LATENCY_CRITICAL',
+        );
+      }
+
       return message;
     } catch (err: any) {
-      console.warn(`[LlmCoach] LLM call failed: ${err.message}`);
+      const latency = Date.now() - startTs;
+      console.warn(`[LlmCoach] LLM call failed after ${latency}ms: ${err.message}`);
+      firebaseCapture(
+        err instanceof Error ? err : new Error(String(err)),
+        `LLM_CALL_FAILURE_${ctx.personality}_${ctx.category}`,
+      );
       this._recordFailure();
       return null;
     }

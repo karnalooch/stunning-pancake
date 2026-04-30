@@ -24,7 +24,7 @@
  */
 
 import { observable } from '@legendapp/state';
-import { triggerEngine, TriggerPriority } from './TriggerEngine';
+import { triggerEngine, TriggerPriority, TriggerCategory as EngineTriggerCategory } from './TriggerEngine';
 import { llmCoach, TriggerCategory } from './LlmCoachService';
 import { MilestoneTracker } from './MilestoneTracker';
 
@@ -425,7 +425,7 @@ export class AvatarTrainerService {
     title: string;
     character: 'runner' | 'cyclist' | 'ghost' | 'elite';
     priority: TriggerPriority;
-    triggerCategory: 'MILESTONE' | 'SYSTEM' | 'SECURITY' | 'CELEBRATION' | 'COACHING' | 'MOTIVATIONAL' | 'LIFECYCLE';
+    triggerCategory: EngineTriggerCategory;
     variables: Record<string, string>;
     duration?: number;
   }): Promise<void> {

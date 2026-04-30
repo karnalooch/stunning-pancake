@@ -9,7 +9,7 @@
  */
 
 import { AvatarTrainerService, SessionContext } from '../../src/services/AvatarTrainerService';
-import { TriggerEngine } from '../../src/services/TriggerEngine';
+import { TriggerEngine, triggerEngine } from '../../src/services/TriggerEngine';
 import { LlmCoachService } from '../../src/services/LlmCoachService';
 
 // Mock LlmCoachService to return null (forcing fallback to static templates)
@@ -417,7 +417,7 @@ describe('AvatarTrainerService', () => {
     test('should not push duplicate triggers during LLM generation', async () => {
       // Make LLM slow
       const { llmCoach } = require('../../src/services/LlmCoachService');
-      let resolveLlm: (val: any) => void;
+      let resolveLlm: ((val: any) => void) = () => {};
       (llmCoach.generateMessage as jest.Mock).mockImplementation(
         () => new Promise(resolve => { resolveLlm = resolve; })
       );
