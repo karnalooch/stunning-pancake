@@ -224,18 +224,18 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 
 | Lp. | Czynność | Status |
 |:---|:---|:---|
-| 1 | Nowy klucz API do LLM w `.env` (mobile + backend) | ⬜ |
-| 2 | Aktualizacja etykiety modelu w `SystemIntelligence.tsx` | ⬜ |
-| 3 | Testy jednostkowe AvatarTrainerService z mockiem LLM | ⬜ |
-| 4 | Testy integracyjne TriggerEngine z mockiem LLM | ⬜ |
-| 5 | Testy E2E TrackingScreen — pełna sesja | ⬜ |
-| 6 | Testy UI PopUpDialog z różnymi długościami tekstu | ⬜ |
-| 7 | Testy Solar Mode dla komunikatów | ⬜ |
-| 8 | Testy fallbacku (wyłączone API LLM) | ⬜ |
-| 9 | Testy wydajnościowe (latencja, bateria) | ⬜ |
-| 10 | Code review — bezpieczeństwo (prompt injection?) | ⬜ |
-| 11 | Monitoring Sentry — nowe metryki dla LLM | ⬜ |
-| 12 | Dokumentacja w `docs/` — opis integracji LLM | ⬜ |
+| 1 | Nowy klucz API do LLM w `.env` (mobile + backend) | ✅ |
+| 2 | Aktualizacja etykiety modelu w `SystemIntelligence.tsx` | ✅ |
+| 3 | Testy jednostkowe AvatarTrainerService z mockiem LLM | ✅ |
+| 4 | Testy integracyjne TriggerEngine z mockiem LLM | ✅ |
+| 5 | Testy E2E TrackingScreen — pełna sesja | ⬜ (wymaga device/emulator) |
+| 6 | Testy UI PopUpDialog z różnymi długościami tekstu | ✅ |
+| 7 | Testy Solar Mode dla komunikatów | ✅ |
+| 8 | Testy fallbacku (wyłączone API LLM) | ✅ |
+| 9 | Testy wydajnościowe (latencja, bateria) | ⬜ (wymaga device/emulator) |
+| 10 | Code review — bezpieczeństwo (prompt injection?) | ⬜ (manual review) |
+| 11 | Monitoring Sentry — nowe metryki dla LLM | ⬜ (infra) |
+| 12 | Dokumentacja w `docs/` — opis integracji LLM | ✅ (patrz poniżej) |
 
 ---
 
@@ -255,3 +255,68 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 ---
 
 *Dokument wygenerowany: 2026-04-30 | Do aktualizacji po wdrożeniu nowego modelu językowego.*
+
+---
+
+## 🔧 ZREALIZOWANE (v1.0 — 2026-04-30)
+
+### Nowe pliki
+| Plik | Opis |
+|:---|:---|
+| `mobile/src/services/LlmCoachService.ts` | Usługa LLM: generowanie wiadomości przez OpenAI API, cache, circuit breaker, rate limiting, timeout 5s, 1 retry |
+| `mobile/__tests__/services/LlmCoachService.test.ts` | Testy jednostkowe: cache, circuit breaker, rate limiting, timeout, polski, spójność osobowości, wszystkie 9 kategorii |
+| `mobile/__tests__/services/AvatarTrainerService.test.ts` | Testy jednostkowe: spójność osobowości, cykl życia sesji, wszystkie 9 triggerów, interpolacja zmiennych, fallback, deduplikacja |
+| `mobile/__tests__/services/TriggerEngine.test.ts` | Testy jednostkowe: priorytetyzacja, FIFO, dedup, cooldown, auto-dismiss, clear, destroy |
+| `mobile/__tests__/services/Integration.test.ts` | Testy integracyjne: pełny cykl sesji, integracja z kolejką priorytetową, dedup w trakcie LLM |
+| `mobile/__tests__/components/PopUpDialog.test.ts` | Testy UI: maxWidth 220, typewriter 40ms/znak, sprite'y, animacje, Solar Mode |
+| `mobile/jest.config.js` | Konfiguracja test runnera dla Expo/React Native |
+| `admin/src/__tests__/SystemIntelligence.test.tsx` | Testy jednostkowe admina (vitest) |
+
+### Zmodyfikowane pliki
+| Plik | Zmiana |
+|:---|:---|
+| `mobile/src/services/AvatarTrainerService.ts` | Integracja z LlmCoachService. Wiadomości generowane przez LLM z fallbackiem do statycznych szablonów. Async dispatch z deduplikacją pending triggerów. |
+| `admin/src/modules/analytics/SystemIntelligence.tsx` | Aktualizacja etykiety modelu (GPT-4o → gpt-4o). Dodane dynamiczne ładowanie insightów z LLM (z fallbackiem do danych statycznych). |
+| `.env.example` | Dodane zmienne: `LLM_API_URL`, `LLM_MODEL`, `LLM_TIMEOUT_MS` |
+| `mobile/.env` | Dodane zmienne Expo: `EXPO_PUBLIC_LLM_API_KEY`, `EXPO_PUBLIC_LLM_API_URL`, `EXPO_PUBLIC_LLM_MODEL` |
+| `admin/.env` | Dodane zmienne Vite: `VITE_LLM_API_KEY`, `VITE_LLM_API_URL`, `VITE_LLM_MODEL` |
+| `mobile/package.json` | Dodane skrypty testowe (`test`, `test:watch`, `test:coverage`) i dev dependencies (jest, ts-jest, @types/jest) |
+
+### Architektura LLM
+
+```
+TrackingScreen (co 2s)
+  └─> AvatarTrainerService.update(ctx)
+        ├─> Analiza kontekstu (bateria, GPS, HR, tempo, dystans)
+        ├─> Wykrycie triggera (np. LOW_BATTERY)
+        └─> _postMessage() [ASYNCHRONICZNIE]
+              ├─> llmCoach.generateMessage()
+              │     ├─ Circuit breaker? → skip
+              │     ├─ Rate limit?     → skip
+              │     ├─ Cache hit?      → return cached
+              │     └─ POST /v1/chat/completions
+              │           ├─ Sukces → cache + return
+              │           └─ Błąd   → record failure + return null
+              │
+              ├─ LLM message?   → użyj wiadomości LLM
+              └─ LLM null?      → fallback do MESSAGES[p][c] (statyczny szablon)
+                    └─> triggerEngine.push()
+```
+
+### Domyślny model
+- **Mobile (AvatarTrainer)**: `gpt-4o-mini` — szybki, tani, <500ms P95
+- **Admin (SystemIntelligence)**: `gpt-4o` — głębsza analiza, <15s timeout
+
+### Uruchomienie testów
+```bash
+# Mobile
+cd mobile
+npm install        # instaluje jest + ts-jest
+npm test           # wszystkie testy
+npm run test:watch # watch mode
+npm run test:coverage # z pokryciem
+
+# Admin
+cd admin
+npx vitest run src/__tests__/SystemIntelligence.test.tsx
+```

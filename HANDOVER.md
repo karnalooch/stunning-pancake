@@ -1,4 +1,4 @@
-# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v2.0)
+# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v3.0)
 
 Congratulations! You are now the owner of a state-of-the-art, multi-tenant sports ecosystem. This guide provides instructions on how to launch, seed, and present the platform.
 
@@ -33,9 +33,10 @@ docker-compose exec backend python seed_data.py
 ## 🛠️ Tech Stack Architecture
 - **Backend**: Django + FastAPI (Python Powerhouse)
 - **Database**: PostgreSQL + TimescaleDB (Time-series optimization for GPS)
-- **Admin**: React + Mantine + Framer Motion (Visual Magic)
-- **Mobile**: Expo + React Native (Cross-platform)
+- **Admin**: React + Mantine + Framer Motion (Visual Magic) + LLM AI Analytics
+- **Mobile**: Expo + React Native + LLM Avatar Trainer (personality-driven coaching)
 - **Anti-Cheat**: BRouter (OSM Routing) + Scikit-Learn (ML Anomalies)
+- **AI/LLM**: OpenAI-compatible API (gpt-4o-mini for mobile, gpt-4o for admin) — personality-driven coaching, anomaly detection, strategic insights
 
 ## 🎨 Role-Based Access Control (RBAC)
 1. **GLOBAL_OWNER**: Access to all tenants, billing, and system telemetry.
@@ -65,7 +66,8 @@ The mobile app supports two types of updates:
 - [x] **OTA & Dynamic UI**: Implemented remote deployment framework via EAS Updates (`production` / `preview` branches) and successfully rolled out the initial OTA fix sequence.
 - [x] **MapLibre Native v11**: Fully upgraded tracking maps to MapLibre v11.
 - [x] **Stability and RBAC**: Resolved React DOM proxy unmount exceptions for smooth dashboard/user flows.
+- [x] **LLM Coach & System Intelligence**: Personality-driven Avatar Trainer (Drill Sergeant / Motivator / Analyst) with dynamic LLM coaching, circuit breaker, caching, and graceful fallback to static templates. Admin AI dashboard with real-time strategic insights.
 - [ ] **Integration with Wearable SDKs**: Garmin, Apple Watch, and Strava sync.
-- [ ] **AI-Generated Challenges**: Personalized athlete goals based on performance history.
+- [ ] **AI-Generated Challenges**: Personalized athlete goals based on performance history (foundation laid by LLM Coach).
 
 **Built with pride by your AI Coding Assistant.**

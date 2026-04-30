@@ -6,6 +6,12 @@
  * Monitors real-time session data (speed, HR, pace, battery, GPS) and
  * fires contextual coaching triggers through TriggerEngine.
  * 
+ * LLM Upgrade (2026-04-30):
+ *   - Dynamic message generation via LlmCoachService (gpt-4o-mini)
+ *   - Graceful fallback to static templates on LLM failure
+ *   - Per-session LLM response cache
+ *   - Pending-trigger deduplication during async LLM calls
+ * 
  * Personality profiles:
  *   - DRILL_SERGEANT: Direct, demanding, military tone
  *   - MOTIVATOR: Encouraging, positive, celebratory
@@ -19,11 +25,13 @@
 
 import { observable } from '@legendapp/state';
 import { triggerEngine, TriggerPriority } from './TriggerEngine';
+import { llmCoach, TriggerCategory } from './LlmCoachService';
 import { MilestoneTracker } from './MilestoneTracker';
 
 // ─── Types ───────────────────────────────────────────────────────
 
-export type AvatarPersonality = 'DRILL_SERGEANT' | 'MOTIVATOR' | 'ANALYST';
+export type { AvatarPersonality } from './LlmCoachService';
+import type { AvatarPersonality } from './LlmCoachService';
 
 export type AvatarState = 'IDLE' | 'OBSERVING' | 'COACHING' | 'CELEBRATING';
 
@@ -54,7 +62,7 @@ interface AvatarInternalState {
   firstActivityOfDay: boolean;
 }
 
-// ─── Message Templates ──────────────────────────────────────────
+// ─── Message Templates (Fallback) ────────────────────────────────
 
 const MESSAGES: Record<AvatarPersonality, Record<string, string[]>> = {
   DRILL_SERGEANT: {
@@ -159,10 +167,18 @@ const MESSAGES: Record<AvatarPersonality, Record<string, string[]>> = {
   },
 };
 
-// ─── Helper: Pick random from array ─────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────
 
 function pickRandom(arr: string[]): string {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function interpolateVars(text: string, vars: Record<string, string>): string {
+  let result = text;
+  for (const [key, value] of Object.entries(vars)) {
+    result = result.replace(`{${key}}`, value);
+  }
+  return result;
 }
 
 function getHRZone(hr: number): string {
@@ -196,6 +212,8 @@ export class AvatarTrainerService {
 
   private _checkInterval: ReturnType<typeof setInterval> | null = null;
   private _lastContext: SessionContext | null = null;
+  private _pendingLlmTriggers: Set<string> = new Set();
+  private _destroyed: boolean = false;
 
   // ─── Configuration ─────────────────────
 
@@ -221,46 +239,46 @@ export class AvatarTrainerService {
     this.state.lastPaceCheckMs.set(Date.now());
     this.milestones.reset();
 
-    const personality = this.state.personality.get();
+    // Clear LLM cache for fresh session
+    llmCoach.clearCache();
 
     // First activity of day trigger
     if (this.state.firstActivityOfDay.get()) {
       this.state.firstActivityOfDay.set(false);
-      triggerEngine.push({
+      this._postMessage({
+        category: 'FIRST_ACTIVITY',
         id: 'first-activity-day',
-        message: pickRandom(MESSAGES[personality].FIRST_ACTIVITY),
         title: 'DAILY_BOOT',
         character: 'runner',
         priority: TriggerPriority.LOW,
-        category: 'MOTIVATIONAL',
+        triggerCategory: 'MOTIVATIONAL',
+        variables: {},
       });
     }
 
     // Session start trigger
-    triggerEngine.push({
+    this._postMessage({
+      category: 'SESSION_START',
       id: 'session-start',
-      message: pickRandom(MESSAGES[personality].SESSION_START),
       title: 'MISSION_START',
       character: 'runner',
       priority: TriggerPriority.LOW,
-      category: 'LIFECYCLE',
+      triggerCategory: 'LIFECYCLE',
+      variables: {},
     });
   }
 
   endSession(): void {
-    const personality = this.state.personality.get();
-    const avgSpeed = this.state.avgSpeedMs.get() * 3.6;
+    const avgSpeed = (this.state.avgSpeedMs.get() * 3.6).toFixed(1);
 
-    let msg = pickRandom(MESSAGES[personality].SESSION_END);
-    msg = msg.replace('{avgSpeed}', avgSpeed.toFixed(1));
-
-    triggerEngine.push({
+    this._postMessage({
+      category: 'SESSION_END',
       id: 'session-end',
-      message: msg,
       title: 'MISSION_COMPLETE',
       character: 'elite',
       priority: TriggerPriority.LOW,
-      category: 'LIFECYCLE',
+      triggerCategory: 'LIFECYCLE',
+      variables: { avgSpeed },
     });
 
     this.state.sessionActive.set(false);
@@ -275,7 +293,7 @@ export class AvatarTrainerService {
   // ─── Real-time Update (call every 2s from GpsSyncManager callback) ────
 
   update(ctx: SessionContext): void {
-    if (!this.state.sessionActive.get()) return;
+    if (!this.state.sessionActive.get() || this._destroyed) return;
 
     this._lastContext = ctx;
     const personality = this.state.personality.get();
@@ -297,33 +315,33 @@ export class AvatarTrainerService {
     // ── Low Battery (<20%) ──
     if (ctx.batteryPct < 0.2 && !this.state.lowBatteryAlerted.get()) {
       this.state.lowBatteryAlerted.set(true);
-      let msg = pickRandom(MESSAGES[personality].LOW_BATTERY);
-      msg = msg.replace('{pct}', `${Math.round(ctx.batteryPct * 100)}`);
-      msg = msg.replace('{est}', `${Math.round(ctx.batteryPct * 60)}`);
+      const pct = `${Math.round(ctx.batteryPct * 100)}`;
+      const est = `${Math.round(ctx.batteryPct * 60)}`;
 
-      triggerEngine.push({
+      this._postMessage({
+        category: 'LOW_BATTERY',
         id: 'low-battery',
-        message: msg,
         title: 'POWER_CRITICAL',
         character: 'ghost',
         priority: TriggerPriority.CRITICAL,
-        category: 'SYSTEM',
+        triggerCategory: 'SYSTEM',
+        variables: { pct, est },
       });
     }
 
     // ── GPS Lost (accuracy > 50m) ──
     if (ctx.gpsAccuracyM > 50 && !this.state.gpsLostAlerted.get()) {
       this.state.gpsLostAlerted.set(true);
-      let msg = pickRandom(MESSAGES[personality].GPS_LOST);
-      msg = msg.replace('{acc}', ctx.gpsAccuracyM.toFixed(0));
+      const acc = ctx.gpsAccuracyM.toFixed(0);
 
-      triggerEngine.push({
+      this._postMessage({
+        category: 'GPS_LOST',
         id: 'gps-lost',
-        message: msg,
         title: 'SIGNAL_LOST',
         character: 'ghost',
         priority: TriggerPriority.CRITICAL,
-        category: 'SYSTEM',
+        triggerCategory: 'SYSTEM',
+        variables: { acc },
       });
     } else if (ctx.gpsAccuracyM <= 20) {
       // Reset GPS alert when signal recovers
@@ -341,16 +359,14 @@ export class AvatarTrainerService {
           this.state.paceDropAlerted.set(true);
           this.state.state.set('COACHING');
 
-          let msg = pickRandom(MESSAGES[personality].PACE_DROP);
-          msg = msg.replace('{dropPct}', dropPct.toFixed(0));
-
-          triggerEngine.push({
+          this._postMessage({
+            category: 'PACE_DROP',
             id: 'pace-drop',
-            message: msg,
             title: 'PACE_ALERT',
             character: 'elite',
             priority: TriggerPriority.MEDIUM,
-            category: 'COACHING',
+            triggerCategory: 'COACHING',
+            variables: { dropPct: dropPct.toFixed(0) },
           });
 
           // Reset pace alert after 2 minutes
@@ -366,18 +382,19 @@ export class AvatarTrainerService {
       this.state.lastHRZone.set(currentZone);
       const goingUp = parseInt(currentZone) > parseInt(lastZone);
 
-      const template = goingUp ? MESSAGES[personality].HR_ZONE_UP : MESSAGES[personality].HR_ZONE_DOWN;
-      let msg = pickRandom(template);
-      msg = msg.replace('{zone}', currentZone);
-      msg = msg.replace('{hr}', ctx.heartRate.toString());
+      const category: TriggerCategory = goingUp ? 'HR_ZONE_UP' : 'HR_ZONE_DOWN';
 
-      triggerEngine.push({
+      this._postMessage({
+        category,
         id: `hr-zone-${currentZone}`,
-        message: msg,
         title: goingUp ? 'HR_ESCALATION' : 'HR_RECOVERY',
         character: goingUp ? 'elite' : 'runner',
         priority: TriggerPriority.MEDIUM,
-        category: 'COACHING',
+        triggerCategory: 'COACHING',
+        variables: {
+          zone: currentZone,
+          hr: ctx.heartRate.toString(),
+        },
       });
     }
 
@@ -387,25 +404,98 @@ export class AvatarTrainerService {
       this.state.personalBestDistanceM.set(ctx.distanceM);
       this.state.state.set('CELEBRATING');
 
-      let msg = pickRandom(MESSAGES[personality].PERSONAL_BEST);
-      msg = msg.replace('{dist}', (ctx.distanceM / 1000).toFixed(2));
-
-      triggerEngine.push({
+      this._postMessage({
+        category: 'PERSONAL_BEST',
         id: 'personal-best',
-        message: msg,
         title: 'RECORD_BROKEN',
         character: 'elite',
         priority: TriggerPriority.HIGH,
-        category: 'CELEBRATION',
+        triggerCategory: 'CELEBRATION',
+        variables: { dist: (ctx.distanceM / 1000).toFixed(2) },
         duration: 7_000,
       });
+    }
+  }
+
+  // ─── Message Dispatch (LLM-first with template fallback) ───────
+
+  private async _postMessage(params: {
+    category: TriggerCategory;
+    id: string;
+    title: string;
+    character: 'runner' | 'cyclist' | 'ghost' | 'elite';
+    priority: TriggerPriority;
+    triggerCategory: 'MILESTONE' | 'SYSTEM' | 'SECURITY' | 'CELEBRATION' | 'COACHING' | 'MOTIVATIONAL' | 'LIFECYCLE';
+    variables: Record<string, string>;
+    duration?: number;
+  }): Promise<void> {
+    const { category, id, title, character, priority, triggerCategory, variables, duration } = params;
+
+    // Deduplication: skip if already pending an LLM generation for this trigger
+    if (this._pendingLlmTriggers.has(id)) return;
+    this._pendingLlmTriggers.add(id);
+
+    try {
+      if (this._destroyed) return;
+
+      const personality = this.state.personality.get();
+
+      // Attempt LLM generation
+      const llmMessage = await llmCoach.generateMessage({
+        personality,
+        category,
+        variables,
+      });
+
+      if (this._destroyed) return;
+
+      // If LLM returned a message, use it; otherwise fall back to template
+      let message: string;
+      if (llmMessage) {
+        message = llmMessage;
+      } else {
+        const template = pickRandom(MESSAGES[personality][category]);
+        message = interpolateVars(template, variables);
+      }
+
+      triggerEngine.push({
+        id,
+        message,
+        title,
+        character,
+        priority,
+        category: triggerCategory,
+        duration,
+      });
+    } catch (err) {
+      // Ultimate fallback: even if the async logic fails, push a template message
+      if (this._destroyed) return;
+
+      const personality = this.state.personality.get();
+      const template = pickRandom(MESSAGES[personality][category]);
+      const message = interpolateVars(template, variables);
+
+      triggerEngine.push({
+        id,
+        message,
+        title,
+        character,
+        priority,
+        category: triggerCategory,
+        duration,
+      });
+    } finally {
+      this._pendingLlmTriggers.delete(id);
     }
   }
 
   // ─── Cleanup ───────────────────────────
 
   destroy(): void {
+    this._destroyed = true;
     if (this._checkInterval) clearInterval(this._checkInterval);
+    this._pendingLlmTriggers.clear();
+    llmCoach.destroy();
     triggerEngine.destroy();
   }
 }

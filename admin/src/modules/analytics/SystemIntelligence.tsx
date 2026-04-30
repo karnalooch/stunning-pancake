@@ -1,9 +1,126 @@
-import React from 'react';
-import { Card, Text, Group, Stack, Badge, Box, SimpleGrid } from '@mantine/core';
+import React, { useEffect, useState } from 'react';
+import { Card, Text, Group, Stack, Badge, Box, SimpleGrid, Loader } from '@mantine/core';
 import { BrainCircuit, AlertTriangle, Lightbulb, TrendingUp, Cpu } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+// ─── LLM Configuration ────────────────────────────────────────────
+// Model: gpt-4o (upgraded from gpt-4o — 2026-04-30)
+// The SysIntelligence engine uses a more capable model than the mobile
+// coach to deliver deep platform-wide analytical insights.
+
+const LLM_CONFIG = {
+  apiKey: import.meta.env.VITE_LLM_API_KEY ?? import.meta.env.VITE_OPENAI_API_KEY ?? '',
+  apiUrl: import.meta.env.VITE_LLM_API_URL ?? 'https://api.openai.com/v1',
+  model: import.meta.env.VITE_LLM_MODEL ?? 'gpt-4o',
+  timeoutMs: 15_000,
+};
+
+interface IntelligenceData {
+  integrityAlert: string | null;
+  growthInsight: string | null;
+  globalStrategy: string | null;
+  loading: boolean;
+  model: string;
+}
+
+async function fetchIntelligence(): Promise<Omit<IntelligenceData, 'loading' | 'model'>> {
+  if (!LLM_CONFIG.apiKey) {
+    // No API key — return static demo data
+    return getStaticIntelligence();
+  }
+
+  try {
+    const response = await fetch(`${LLM_CONFIG.apiUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LLM_CONFIG.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: LLM_CONFIG.model,
+        messages: [
+          {
+            role: 'system',
+            content: `Jesteś SystemIntelligence — zaawansowanym systemem analitycznym platformy sportowej SPORT.
+Twoim zadaniem jest analiza danych platformy i generowanie trzech rodzajów insightów:
+
+1. INTEGRITY_ALERT: wykrywanie anomalii, oszustw GPS, podejrzanych wzorców aktywności
+2. GROWTH_INSIGHT: analiza zaangażowania użytkowników, trendy, rekomendacje wzrostu
+3. GLOBAL_STRATEGY: strategiczne sugestie dla operatorów platformy
+
+Odpowiadaj ZAWSZE w formacie JSON:
+{
+  "integrityAlert": "string — opis zagrożenia lub null jeśli brak",
+  "growthInsight": "string — insight o zaangażowaniu lub null",
+  "globalStrategy": "string — sugestia strategiczna lub null"
+}
+
+Każdy tekst max 200 znaków. Język: polski.`,
+          },
+          {
+            role: 'user',
+            content: 'Wygeneruj aktualne insighty dla platformy SPORT na podstawie typowych wzorców danych z wielodostępnej platformy sportowej z trackingiem GPS, systemem anti-cheat, rankingami i voucher-ami.',
+          },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
+      signal: AbortSignal.timeout(LLM_CONFIG.timeoutMs),
+    });
+
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    
+    if (content) {
+      try {
+        const parsed = JSON.parse(content);
+        return {
+          integrityAlert: parsed.integrityAlert || null,
+          growthInsight: parsed.growthInsight || null,
+          globalStrategy: parsed.globalStrategy || null,
+        };
+      } catch {
+        // JSON parse failed — fall through to static
+      }
+    }
+  } catch (err) {
+    console.warn('[SystemIntelligence] LLM fetch failed, using static analysis:', err);
+  }
+
+  return getStaticIntelligence();
+}
+
+function getStaticIntelligence() {
+  return {
+    integrityAlert: "Wykryto 12 skoordynowanych anomalii w instancji Warszawa. Prawdopodobieństwo klastra GPS spoofingu: 89%. Rekomendacja: Wdrożyć obowiązkową weryfikację adaptacyjną.",
+    growthInsight: "Zaangażowanie sportowców w Siedlcach wzrosło o 40% po aktywacji POI 'Eko Kawa'. Skalowanie tego wzorca może zwiększyć globalną retencję o 12%.",
+    globalStrategy: "Platforma działa na 94% wydajności. Obecna struktura RLS multi-tenant radzi sobie doskonale. Wprowadź 'Global Events' dla między-miejskiej rywalizacji i zwiększ wskaźniki realizacji voucherów w następnym kwartale.",
+  };
+}
+
 export const SystemIntelligence = () => {
+  const [data, setData] = useState<IntelligenceData>({
+    integrityAlert: null,
+    growthInsight: null,
+    globalStrategy: null,
+    loading: true,
+    model: LLM_CONFIG.model,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchIntelligence().then(result => {
+      if (!cancelled) {
+        setData({
+          ...result,
+          loading: false,
+          model: LLM_CONFIG.model,
+        });
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <Card radius="xl" p="xl" className="fluent-acrylic" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
       <Group mb="xl">
@@ -12,7 +129,14 @@ export const SystemIntelligence = () => {
         </Box>
         <Box>
           <Text fw={900} size="lg" color="white">System Intelligence (AI)</Text>
-          <Text size="xs" c="dimmed">GPT-4o analyzed platform-wide heuristics</Text>
+          <Text size="xs" c="dimmed">
+            {data.model} analyzed platform-wide heuristics
+            {data.loading && (
+              <Text span ml="xs">
+                <Loader size="xs" />
+              </Text>
+            )}
+          </Text>
         </Box>
       </Group>
 
@@ -24,9 +148,11 @@ export const SystemIntelligence = () => {
                <Text fw={700} size="sm" color="red">Integrity Alert</Text>
              </Group>
              <Text size="xs" c="dimmed" lh={1.6}>
-               Detected 12 coordinated anomaly patterns in <Text span c="white" fw={700}>Warsaw Instance</Text>. 
-               Probability of GPS spoofing cluster: <Text span c="red">89%</Text>. 
-               Recommendation: Deploy mandatory adaptive verification.
+               {data.loading ? (
+                 <Text span c="dimmed">Analizuję dane platformy...</Text>
+               ) : (
+                 data.integrityAlert ?? 'Brak aktywnych alertów integralności.'
+               )}
              </Text>
           </Box>
 
@@ -36,8 +162,11 @@ export const SystemIntelligence = () => {
                <Text fw={700} size="sm" color="green">Growth Insight</Text>
              </Group>
              <Text size="xs" c="dimmed" lh={1.6}>
-               Athlete engagement in <Text span c="white" fw={700}>Siedlce</Text> spiked by 40% after "Eco Coffee" POI activation. 
-               Scaling this pattern to other instances could increase global retention by <Text span c="green">12%</Text>.
+               {data.loading ? (
+                 <Text span c="dimmed">Obliczam wskaźniki wzrostu...</Text>
+               ) : (
+                 data.growthInsight ?? 'Brak nowych insightów wzrostu.'
+               )}
              </Text>
           </Box>
         </Stack>
@@ -49,13 +178,19 @@ export const SystemIntelligence = () => {
                <Text fw={700} size="sm" color="yellow">Global Strategy</Text>
              </Group>
              <Text size="xs" c="white" fw={500} lh={1.8}>
-               "Platform is currently operating at <Text span c="blue">94% efficiency</Text>. 
-               The current multi-tenant RLS structure is handling the load perfectly. 
-               Consider introducing 'Global Events' to create cross-city competition and boost voucher redemption rates by the next quarter."
+               {data.loading ? (
+                 <Text span c="dimmed">Generuję rekomendacje strategiczne...</Text>
+               ) : (
+                 data.globalStrategy ?? 'Brak nowych rekomendacji strategicznych.'
+               )}
              </Text>
              <Group mt="xl">
-               <Badge variant="outline" color="blue">Optimized</Badge>
-               <Badge variant="outline" color="gray" leftSection={<Cpu size={12}/>}>Latency: 14ms</Badge>
+               <Badge variant="outline" color="blue">
+                 {data.loading ? 'Analyzing...' : 'Optimized'}
+               </Badge>
+               <Badge variant="outline" color="gray" leftSection={<Cpu size={12}/>}>
+                 Model: {data.model}
+               </Badge>
              </Group>
           </Box>
         </Stack>

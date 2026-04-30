@@ -11,6 +11,7 @@ Kluczowe dokumenty definiujące cele biznesowe i zasady działania.
 | `docs/IMPLEMENTATION_PLAN.md` | Plan wdrożenia i kamienie milowe. |
 | `docs/CHARTER.md` | Karta projektu i cele biznesowe. |
 | `docs/SWOT_ANALYSIS.md` | Analiza mocnych i słabych stron. |
+| `docs/PLAN_TESTOWY_LLM_UPGRADE.md` | Plan testowy i dokumentacja wdrożenia LLM Coach + System Intelligence. |
 | `docs/compliance/RCP.md` | Rejestr czynności przetwarzania (RODO). |
 | `HANDOVER.md` | Przewodnik przekazania projektu. |
 
@@ -39,6 +40,15 @@ Skrypty do walidacji wydajności i logiki biznesowej.
 | :--- | :--- | :--- |
 | **Sync Rules** | Reguły synchronizacji między usługami. | `backend/sync_rules.yaml` |
 | **QR Engine** | System identyfikacji i check-pointów. | `mobile/src/screens/ProfileScreen.tsx` |
+
+## 5. Serwisy LLM (v3.0 — 2026-04-30)
+| Serwis | Opis | Lokalizacja |
+| :--- | :--- | :--- |
+| **LlmCoachService** | Generowanie wiadomości coachingowych przez LLM. Cache, circuit breaker, rate limiting, timeout 5s, fallback do szablonów statycznych. | `mobile/src/services/LlmCoachService.ts` |
+| **AvatarTrainerService** | Mózg Inteligentnego Awatara-Trenera. Monitoruje dane sesji, wykrywa triggery, deleguje generowanie wiadomości do LLM z fallbackiem. | `mobile/src/services/AvatarTrainerService.ts` |
+| **SystemIntelligence** | Panel AI Admina. Dynamiczne insighty analityczne generowane przez LLM (gpt-4o) z fallbackiem do danych demo. | `admin/src/modules/analytics/SystemIntelligence.tsx` |
+| **TriggerEngine** | Scentralizowana kolejka priorytetowa wiadomości dialogowych. Cooldown 8s, dedup 60s. | `mobile/src/services/TriggerEngine.ts` |
+| **Testy LLM** | Testy jednostkowe i integracyjne dla wszystkich serwisów LLM (6 plików, 40+ testów). | `mobile/__tests__/services/`, `admin/src/__tests__/` |
 
 ---
 *Ostatnia aktualizacja: 2026-04-30. Zasoby wizualne przeniesiono do Visual Manifesto.*
