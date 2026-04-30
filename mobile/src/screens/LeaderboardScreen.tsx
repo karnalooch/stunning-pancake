@@ -71,31 +71,35 @@ export const LeaderboardScreen = observer(() => {
 
       <ScrollView flex={1} paddingHorizontal="$4" showsVerticalScrollIndicator={false}>
         <XStack justifyContent="center" alignItems="flex-end" gap="$2" marginBottom="$8" marginTop="$4">
-          {/* Rank 2 */}
+          {/* Rank 2 - SILVER */}
           <YStack alignItems="center">
-             <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={8} marginBottom="$1">2nd</TamaText>
-             <RetroCard padding="$2" alignItems="center" borderColor="#C0C0C0">
-               <AthleteSprite type="cyclist" state="action" size={50} color="#C0C0C0" />
+             <View backgroundColor="#C0C0C0" paddingHorizontal="$2" borderWidth={1} borderColor="black" marginBottom="$1">
+               <TamaText color="black" fontFamily="$pixel" fontSize={7}>RANK_02</TamaText>
+             </View>
+             <RetroCard padding="$2" alignItems="center" borderColor="#C0C0C0" borderBottomWidth={4}>
+               <AthleteSprite type="cyclist" state="action" size={45} />
                <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>{ranking[1]?.username || '...'}</TamaText>
                <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">{ranking[1]?.score_km || 0}KM</TamaText>
              </RetroCard>
           </YStack>
 
-          {/* Rank 1 */}
+          {/* Rank 1 - GOLD */}
           <YStack alignItems="center">
              <CrownIcon size={20} color={theme.primary.get()} style={{ marginBottom: 4 }} />
-             <RetroCard padding="$3" alignItems="center" borderColor={theme.primary.get()} scale={1.1}>
-               <AthleteSprite type="elite" state="action" size={60} />
+             <RetroCard padding="$3" alignItems="center" borderColor={theme.primary.get()} scale={1.1} borderBottomWidth={6}>
+               <AthleteSprite type="elite" state="action" size={55} />
                <TamaText color="$color" marginTop="$2" fontSize={12} fontFamily="$pixel" numberOfLines={1} maxWidth={80}>{ranking[0]?.username || '...'}</TamaText>
-               <TamaText color={theme.primary.get()} fontSize={8} fontFamily="$pixel">{ranking[0]?.score_km || 0}KM</TamaText>
+               <TamaText color={theme.primary.get()} fontSize={8} fontFamily="$pixel">{ranking[0]?.score_km || 0}KM_MAX</TamaText>
              </RetroCard>
           </YStack>
 
-          {/* Rank 3 */}
+          {/* Rank 3 - BRONZE */}
           <YStack alignItems="center">
-             <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={8} marginBottom="$1">3rd</TamaText>
-             <RetroCard padding="$2" alignItems="center" borderColor="#CD7F32">
-               <AthleteSprite type="runner" state="action" size={50} color="#CD7F32" />
+             <View backgroundColor="#CD7F32" paddingHorizontal="$2" borderWidth={1} borderColor="black" marginBottom="$1">
+               <TamaText color="black" fontFamily="$pixel" fontSize={7}>RANK_03</TamaText>
+             </View>
+             <RetroCard padding="$2" alignItems="center" borderColor="#CD7F32" borderBottomWidth={3}>
+               <AthleteSprite type="runner" state="action" size={45} />
                <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>{ranking[2]?.username || '...'}</TamaText>
                <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">{ranking[2]?.score_km || 0}KM</TamaText>
              </RetroCard>

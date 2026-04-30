@@ -10,6 +10,9 @@ const RefreshIcon = RefreshCcw as any;
 
 const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
+import { RetroCard } from '../components/RetroCard';
+import { HD2DButton } from '../components/HD2DButton';
+
 export const RewardsScreen = () => {
   const [pools, setPools] = useState<any[]>([]);
   const [balance, setBalance] = useState<number>(0);
@@ -41,7 +44,6 @@ export const RewardsScreen = () => {
   const handleRedeem = async (poolId: number) => {
     try {
       await RewardsService.redeemVoucher(poolId);
-      // Refresh balance and pools
       fetchData();
     } catch (e) {
       alert("Redemption failed. Insufficient points or out of stock.");
@@ -51,77 +53,97 @@ export const RewardsScreen = () => {
   return (
     <YStack flex={1} backgroundColor="$background" paddingTop="$10" paddingHorizontal="$4">
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-        <TamaText fontWeight="900" fontSize={28} color="white">Rewards</TamaText>
-        <TamaButton 
+        <TamaText fontFamily="$pixel" fontSize={24} color="$color">MARKETPLACE</TamaText>
+        <HD2DButton 
           circular 
-          icon={loading ? <Spinner color="white" /> : <RefreshIcon size={16} color="white" />} 
+          label={loading ? "..." : "R"}
           onPress={fetchData} 
           size="$3"
-          backgroundColor="$card"
-          borderWidth={1}
-          borderColor="$primary"
         />
       </XStack>
       
-      <XStack backgroundColor="$primary" padding="$6" borderRadius="$0" justifyContent="space-between" alignItems="center" marginBottom="$8">
+      <RetroCard 
+        backgroundColor="$primary" 
+        padding="$6" 
+        justifyContent="space-between" 
+        alignItems="center" 
+        marginBottom="$8"
+        borderColor="black"
+      >
         <YStack>
-          <TamaText color="black" fontSize={10} fontWeight="900" letterSpacing={1.5}>AVAILABLE BALANCE</TamaText>
-          <TamaText color="black" fontSize={32} fontWeight="900" marginTop="$1">
+          <TamaText color="black" fontSize={8} fontWeight="900" letterSpacing={1.5} fontFamily="$pixel">AVAILABLE_CREDITS</TamaText>
+          <TamaText color="black" fontSize={28} fontWeight="900" marginTop="$2" fontFamily="$pixel">
             {loading ? '...' : balance.toLocaleString()} XP
           </TamaText>
         </YStack>
         <Image source={rewardTrophy} style={{ width: 48, height: 48 }} resizeMode="contain" />
-      </XStack>
+      </RetroCard>
 
       {error && (
-        <YStack backgroundColor="$error" padding="$4" borderRadius="$0" marginBottom="$4">
-          <TamaText color="white" fontSize={12} fontWeight="800">{error}</TamaText>
-        </YStack>
+        <RetroCard theme="red" padding="$4" marginBottom="$4">
+          <TamaText color="white" fontSize={10} fontWeight="800" fontFamily="$pixel">{error}</TamaText>
+        </RetroCard>
       )}
 
-      <ScrollView>
+      <ScrollView showsVerticalScrollIndicator={false}>
         <YStack gap="$4" paddingBottom="$10">
           {loading && pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
               <Spinner size="large" color="$primary" />
-              <TamaText color="$primary" marginTop="$4" fontWeight="800">SYNCING DATA...</TamaText>
+              <TamaText color="$primary" marginTop="$4" fontWeight="800" fontFamily="$pixel">SYNCING...</TamaText>
             </YStack>
           ) : pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
-              <TamaText color="$textMuted">No rewards available in your area yet.</TamaText>
+              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={10}>NO_REWARDS_IN_SECTOR</TamaText>
             </YStack>
           ) : (
             pools.map((pool) => (
-              <XStack key={pool.id} backgroundColor="$card" padding="$4" borderRadius="$0" alignItems="center" gap="$4" borderWidth={2} borderColor="$card" borderLeftWidth={6} borderLeftColor="$primary">
-                <YStack backgroundColor="$background" padding="$2" borderRadius="$0" alignItems="center" justifyContent="center" borderWidth={1} borderColor="$textMuted">
-                  <Image source={rewardTrophy} style={{ width: 24, height: 24 }} resizeMode="contain" />
-                </YStack>
+              <RetroCard 
+                key={pool.id} 
+                flexDirection="row" 
+                padding="$3" 
+                alignItems="center" 
+                gap="$4" 
+              >
+                <View 
+                  backgroundColor="$background" 
+                  padding="$2" 
+                  borderWidth={1} 
+                  borderColor="$hd2d.outlineColor"
+                  alignItems="center" 
+                  justifyContent="center"
+                >
+                  <Image source={rewardTrophy} style={{ width: 20, height: 20 }} resizeMode="contain" />
+                </View>
                 
                 <YStack flex={1}>
-                  <TamaText color="$primary" fontSize={10} fontWeight="900" textTransform="uppercase" letterSpacing={1}>{pool.sponsor_name}</TamaText>
-                  <TamaText color="white" fontWeight="900" fontSize={16} marginVertical="$0.5">{pool.title}</TamaText>
+                  <TamaText color="$primary" fontSize={8} fontWeight="900" textTransform="uppercase" fontFamily="$pixel">{pool.sponsor_name}</TamaText>
+                  <TamaText color="$color" fontWeight="900" fontSize={14} marginVertical="$1">{pool.title}</TamaText>
                   <XStack alignItems="center" gap="$1">
-                    <MapPinIcon size={12} color="$textMuted" />
-                    <TamaText color="$textMuted" fontSize={11} fontWeight="700">Stock: {pool.available}</TamaText>
+                    <MapPinIcon size={10} color="$color" opacity={0.5} />
+                    <TamaText color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>STOCK: {pool.available}</TamaText>
                   </XStack>
                 </YStack>
 
                 <YStack alignItems="flex-end" gap="$2">
-                  <YStack backgroundColor="$background" paddingHorizontal="$2" paddingVertical="$1" borderRadius="$0" borderWidth={1} borderColor="$secondary">
-                    <TamaText color="$secondary" fontSize={11} fontWeight="900">{pool.points_required} XP</TamaText>
-                  </YStack>
-                  <TamaButton 
+                  <View 
+                    backgroundColor="$background" 
+                    paddingHorizontal="$2" 
+                    paddingVertical="$1" 
+                    borderWidth={1} 
+                    borderColor="$secondary"
+                  >
+                    <TamaText color="$secondary" fontSize={9} fontWeight="900" fontFamily="$pixel">{pool.points_required} XP</TamaText>
+                  </View>
+                  <HD2DButton 
                     size="$2" 
-                    backgroundColor="$primary"
+                    label="REDEEM"
                     onPress={() => handleRedeem(pool.id)}
                     disabled={balance < pool.points_required || pool.available === 0}
-                    borderRadius="$0"
-                  >
-                    <TamaText color="black" fontSize={10} fontWeight="900">REDEEM</TamaText>
-                  </TamaButton>
-
+                    theme={balance >= pool.points_required ? 'green' : 'red'}
+                  />
                 </YStack>
-              </XStack>
+              </RetroCard>
             ))
           )}
         </YStack>
