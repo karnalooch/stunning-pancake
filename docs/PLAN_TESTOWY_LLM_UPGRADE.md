@@ -233,9 +233,9 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 | 7 | Testy Solar Mode dla komunikatów | ✅ |
 | 8 | Testy fallbacku (wyłączone API LLM) | ✅ |
 | 9 | Testy wydajnościowe (latencja, bateria) | ⬜ (wymaga device/emulator) |
-| 10 | Code review — bezpieczeństwo (prompt injection?) | ⬜ (manual review) |
-| 11 | Monitoring Sentry — nowe metryki dla LLM | ⬜ (infra) |
-| 12 | Dokumentacja w `docs/` — opis integracji LLM | ✅ (patrz poniżej) |
+| 10 | Code review — bezpieczeństwo (prompt injection?) | ✅ (API key po stronie serwera — proxy `POST /api/llm/proxy/`) |
+| 11 | Monitoring Sentry — nowe metryki dla LLM | ✅ (Firebase Crashlytics + breadcrumbs + latency P95/P99) |
+| 12 | Dokumentacja w `docs/` — opis integracji LLM | ✅ (patrz poniżej + `CHANGELOG.md` + `BETA_TESTER_GUIDE.md`) |
 
 ---
 
@@ -258,7 +258,7 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 
 ---
 
-## 🔧 ZREALIZOWANE (v1.0 — 2026-04-30)
+## 🔧 ZREALIZOWANE (v0.1.0-beta.1 — Closed Beta, 2026-04-30)
 
 ### Nowe pliki
 | Plik | Opis |
@@ -276,11 +276,28 @@ Dla każdej z 3 osobowości — **DRILL_SERGEANT**, **MOTIVATOR**, **ANALYST** �
 | Plik | Zmiana |
 |:---|:---|
 | `mobile/src/services/AvatarTrainerService.ts` | Integracja z LlmCoachService. Wiadomości generowane przez LLM z fallbackiem do statycznych szablonów. Async dispatch z deduplikacją pending triggerów. |
+| `mobile/src/services/LlmCoachService.ts` | Obsługa backend proxy (`/api/llm/proxy/`). Monitoring Firebase z latency P95/P99. Circuit breaker, cache, rate limiting. |
 | `admin/src/modules/analytics/SystemIntelligence.tsx` | Aktualizacja etykiety modelu (GPT-4o → gpt-4o). Dodane dynamiczne ładowanie insightów z LLM (z fallbackiem do danych statycznych). |
+| `backend/core/llm_proxy.py` | Nowy endpoint `POST /api/llm/proxy/` — klucz API OpenAI po stronie serwera, nigdy nie eksponowany w mobile bundle. |
+| `backend/core/urls.py` | Dodana ścieżka `/api/llm/proxy/`. |
+| `mobile/src/services/FirebaseService.ts` | Firebase Crashlytics warunkowo na native platformach, console fallback w dev. |
+| `docker-compose.yml` | Dodane `VITE_LLM_API_KEY`, `VITE_LLM_API_URL`, `VITE_LLM_MODEL` jako build args do 3 serwisów admina. |
 | `.env.example` | Dodane zmienne: `LLM_API_URL`, `LLM_MODEL`, `LLM_TIMEOUT_MS` |
 | `mobile/.env` | Dodane zmienne Expo: `EXPO_PUBLIC_LLM_API_KEY`, `EXPO_PUBLIC_LLM_API_URL`, `EXPO_PUBLIC_LLM_MODEL` |
 | `admin/.env` | Dodane zmienne Vite: `VITE_LLM_API_KEY`, `VITE_LLM_API_URL`, `VITE_LLM_MODEL` |
-| `mobile/package.json` | Dodane skrypty testowe (`test`, `test:watch`, `test:coverage`) i dev dependencies (jest, ts-jest, @types/jest) |
+| `mobile/package.json` | Dodane skrypty testowe (`test`, `test:watch`, `test:coverage`) i dev dependencies (jest, ts-jest, @types/jest). Wersja: `0.1.0-beta.1`. |
+| `package.json` (root) | Wersja: `0.1.0-beta.1`. |
+| `dev.ps1` | Wersja: `v0.1.0-beta.1`. |
+| `README.md`, `HANDOVER.md` | Wersja: `v0.1.0-beta.1`. Dodane linki do CHANGELOG, BETA_TESTER_GUIDE. Sekcja Production Deploy. |
+| `CHANGELOG.md` | Nowy plik — pełny changelog dla v0.1.0-beta.1. |
+| `docs/BETA_TESTER_GUIDE.md` | Nowy plik — instrukcje dla beta testerów. |
+
+### Fixy błędów TypeScript
+| Plik | Fix |
+|:---|:---|
+| `mobile/src/screens/LeaderboardScreen.tsx` | Usunięty niepoprawny prop `color` z `AthleteSprite`. |
+| `mobile/src/screens/RewardsScreen.tsx` | Dodany brakujący import `View` z `tamagui`. |
+| `mobile/src/screens/TrackingScreen.tsx` | Fix typów dla `theme.name` i `theme.success`. |
 
 ### Architektura LLM
 
@@ -304,8 +321,29 @@ TrackingScreen (co 2s)
 ```
 
 ### Domyślny model
-- **Mobile (AvatarTrainer)**: `gpt-4o-mini` — szybki, tani, <500ms P95
+- **Mobile (AvatarTrainer)**: `gpt-4o-mini` — szybki, tani, <500ms P95, routowany przez backend proxy
 - **Admin (SystemIntelligence)**: `gpt-4o` — głębsza analiza, <15s timeout
+
+### Deploy (Closed Beta — 2026-04-30)
+| Środowisko | Status | Mechanizm |
+|:---|:---|:---|
+| **Mobile (OTA)** | ✅ Published — `production` branch | `eas update --branch production` |
+| **Backend** | ✅ Railway auto-deploy | GitHub push → `backend/Dockerfile` |
+| **Admin** | ✅ Railway auto-deploy | GitHub push → `admin/Dockerfile` |
+| **Tag** | `v0.1.0-beta.1` | `git tag -a v0.1.0-beta.1` |
+| **Expo OTA ID** | `5c3262ab-f27a-4211-91a9-182aa3b819ce` | [Dashboard](https://expo.dev/accounts/karnalooch/projects/mobile/updates/5c3262ab-f27a-4211-91a9-182aa3b819ce) |
+
+### Backend LLM Proxy Flow
+```
+Mobile (LlmCoachService)
+  ├─ EXPO_PUBLIC_LLM_API_KEY set?
+  │   ├─ YES → Direct POST /v1/chat/completions (dev)
+  │   └─ NO  → Proxy POST /api/llm/proxy/ (production)
+  │             └─ Backend (Railway)
+  │                   ├─ OPENAI_API_KEY set?
+  │                   ├─ YES → Forward to OpenAI → return response
+  │                   └─ NO  → 503 (mobile falls back to static templates)
+```
 
 ### Uruchomienie testów
 ```bash

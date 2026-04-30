@@ -29,10 +29,30 @@ The platform will be available at `localhost` with automated port-forwarding.
 ## 📂 Documentation & Guides
 
 -   **[📜 Constitution](./docs/CHARTER.md)** — Mission, Identity, and Core Directives (Agentic Engineering).
+-   **[📦 Changelog](./CHANGELOG.md)** — Release notes for v0.1.0-beta.1 and all previous versions.
+-   **[🧪 Beta Tester Guide](./docs/BETA_TESTER_GUIDE.md)** — Closed beta testing instructions, access credentials, and test scenarios.
 -   **[Architectural Whitepaper](./docs/diagrams/architecture_c4.md)** — Core strategies: PostGIS, TimescaleDB, BRouter, RLS.
 -   **[Visual Manifesto](./docs/VISUAL_MANIFESTO.md)** — HD-2D aesthetic SSOT and asset registry.
 -   **[🤖 LLM Coach & System Intelligence](./docs/PLAN_TESTOWY_LLM_UPGRADE.md)** — LLM-powered Avatar Trainer (personality-driven coaching) and Admin AI analytics. Includes test suite, architecture, and deployment checklist.
 -   **[Setup Guide](./setup-environment.ps1)** — Automated environment bootstrap.
+
+## 🚢 Production Deploy
+
+| Service | URL |
+|:---|:---|
+| **Mobile (Expo OTA)** | `eas update --branch production` — channel: `production` |
+| **Backend (Railway)** | `https://docker-backend-production-123c.up.railway.app` |
+| **Telemetry (Railway)** | `https://docker-telemetry-production-123c.up.railway.app` |
+| **OTA Dashboard** | [expo.dev → mobile project](https://expo.dev/accounts/karnalooch/projects/mobile) |
+
+```bash
+# Mobile OTA deploy
+cd mobile
+eas update --branch production --message "bugfix: ..."
+
+# Backend deploy — auto via Railway GitHub integration
+git push
+```
 
 ## ⚖️ License
 Built 100% on **Permissive Open Source** foundations (MIT, Apache 2.0, BSD).
