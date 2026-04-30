@@ -16,22 +16,21 @@ Fundament graficzny systemu, definiujący wygląd wszystkich platform (Admin, Mo
 ## 2. Zasoby Interfejsu i Media (UI/UX)
 Ikony, sprite'y i zasoby natywne wykorzystywane bezpośrednio w kodzie aplikacji.
 
-### Aplikacja Mobilna (`mobile/assets/`, `assets/mobile/`)
+### Aplikacja Mobilna (`mobile/assets/`)
 | Zasób | Opis | Lokalizacja / Plik | Format |
 | :--- | :--- | :--- | :--- |
-| **App Icon** | Główna ikona aplikacji mobilnej. | `mobile/assets/icon.png` | PNG |
-| **Adaptive Icon** | Ikona adaptacyjna dla systemu Android. | `mobile/assets/adaptive-icon.png` | PNG |
-| **Splash Screen** | Ikona ekranu powitalnego (Animated Pulse Splash). | `mobile/assets/splash-icon.png` | PNG |
-| **Disciplines** | Ikony dyscyplin sportowych. | `assets/mobile/icons_disciplines.svg` | SVG |
-| **Navigation** | Ikony paska nawigacji. | `assets/mobile/icons_navigation.svg` | SVG |
-| **Stats** | Ikony statystyk i metryk. | `assets/mobile/icons_stats.svg` | SVG |
+| **App Icon** | Główna ikona aplikacji (Gaming Style). | `mobile/assets/icon.png` | PNG |
+| **Adaptive Icon** | Ikona adaptacyjna Android. | `mobile/assets/adaptive-icon.png` | PNG |
+| **Splash Screen** | Ikona ekranu powitalnego. | `mobile/assets/splash-icon.png` | PNG |
+| **HD-2D Navigation** | Ikony paska nawigacji (v3.0). | `mobile/assets/generated/nav_*.png` | PNG |
+| **HD-2D Sprites** | Sprite'y zawodników (Runner, Cyclist, Ghost). | `mobile/assets/generated/*_sprite.png` | PNG |
+| **HD-2D HUD** | Ikony statusu GPS, Heart Rate, Battery. | `mobile/assets/generated/hud_*.png` | PNG |
 
-### Panel Administracyjny (`admin/public/`, `assets/admin/`)
+### Panel Administracyjny (`admin/public/`)
 | Zasób | Opis | Lokalizacja / Plik | Format |
 | :--- | :--- | :--- | :--- |
-| **Favicon** | Ikona strony dla panelu admina. | `admin/public/favicon.svg` | SVG |
-| **UI Icons** | Ikony interfejsu panelu zarządczego. | `admin/public/icons.svg` | SVG |
-| **Admin Sprite** | Specyficzne ikony administracyjne. | `assets/admin/icons_admin.svg` | SVG |
+| **Favicon** | Ikona strony (Light Mode). | `admin/public/favicon.svg` | SVG |
+| **UI Icons** | Ikony interfejsu panelu admina. | `admin/public/icons.svg` | SVG |
 
 ## 3. Wizualizacje Dokumentacyjne i Makiety (`docs/assets/`, `assets/*/mockups/`)
 Zasoby wspierające zrozumienie architektury oraz prezentujące finalny design (High-Fidelity).
@@ -82,17 +81,26 @@ Skrypty i dane pozwalające na walidację wydajności i logiki biznesowej.
 | `traccar_sim_v2.py` | Zaawansowana symulacja protokołu Traccar. |
 | `scripts/simulate_grupetto.py` | Symulacja scenariusza "Grupetto Siedlce". |
 
-## 7. Dane Funkcjonalne i Metadane
-Zasoby definiujące strukturę wymiany danych.
+## 7. Rejestr Zasobów Wygenerowanych (HD-2D V3.0)
+Zasoby wygenerowane za pomocą AI Toolkit, zoptymalizowane pod Solar Mode.
 
-| Zasób | Opis | Lokalizacja |
+| Nazwa Pliku | Kategoria | Opis |
 | :--- | :--- | :--- |
-| **Sync Rules** | Reguły synchronizacji danych między usługami. | `backend/sync_rules.yaml` |
-| **GeoJSON/MF-JSON** | Standardy trajektorii i Geofencing (w kodzie). | `backend/activities/ogc_views.py` |
-| **QR Logic** | System identyfikacji zawodników. | `docs/compliance/RCP.md` |
-| **Rewards Icons** | Ikony XP, voucherów i sponsorów (HD-2D). | `assets/mobile/icons_rewards_hd2d.svg` | SVG |
-| **HUD Icons** | Status GPS, tętno (Pixel Heart), bateria (HD-2D). | `assets/mobile/icons_hud_hd2d.svg` | SVG |
-| **Integrations** | Zpixelizowane logotypy Strava i Garmin. | `assets/mobile/icons_integrations_hd2d.svg` | SVG |
-| **Sprite Library** | Biblioteka postaci sportowców (Runner, Cyclist, Ghost, Elite). | `assets/mobile/sprites_athletes_hd2d.svg` | SVG |
-| **Asset Manifest** | Maszynowa mapa wszystkich zasobów projektu (JSON). | `docs/ASSET_MANIFEST.json` | JSON |
-| **HD-2D Guide** | Szablony i wytyczne dla stylu HD-2D (outlines, kolory). | `assets/mobile/icons_hd2d_placeholders.svg` | SVG |
+| `nav_home.png` | Navigation | Ekran Główny (Tawerna) |
+| `nav_history.png` | Navigation | Historia Treningów (Stoper) |
+| `nav_ranking.png` | Navigation | Rankingi (Podium) |
+| `nav_rewards.png` | Navigation | Nagrody (Skrzynia) |
+| `nav_profile.png` | Navigation | Profil Sportowca |
+| `hud_heart.png` | HUD | Tętno (Pixel Heart) |
+| `hud_gps.png` | HUD | Status sygnału GPS |
+| `hud_battery.png` | HUD | Stan baterii |
+| `runner_sprite.png`| Sprites | Zawodnik: Biegacz |
+| `cyclist_sprite.png`| Sprites | Zawodnik: Rowerzysta |
+| `ghost_sprite.png` | Sprites | Przeciwnik / Duch (Ghost Mode) |
+| `elite_sprite.png` | Sprites | Zawodnik: Poziom Elitarny |
+| `reward_trophy.png` | Rewards | Puchar / Trofeum |
+| `icon_strava.png` | Systems | Integracja Strava |
+| `icon_garmin.png` | Systems | Integracja Garmin |
+
+---
+*Rejestr zsynchronizowany z [VISUAL_MANIFESTO.md](./VISUAL_MANIFESTO.md) (Wersja 3.0).*
