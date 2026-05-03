@@ -10,16 +10,12 @@ import * as Updates from 'expo-updates';
 import tamaguiConfig from './tamagui.config';
 
 import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
-import { Theme } from './src/theme/Theme';
 import { AuthService, setAuthToken } from './src/services/api';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
 import { ThemeService } from './src/services/ThemeService';
 
-// Components
 import { SplashScreen } from './src/components/SplashScreen';
-
-// Screens
 import { TrackingScreen } from './src/screens/TrackingScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { ActivitiesScreen } from './src/screens/ActivitiesScreen';
@@ -27,17 +23,15 @@ import { RewardsScreen } from './src/screens/RewardsScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 
-// Initialize MMKV lazily to avoid JSI issues on module load
 let storage: any;
-const BYPASS_AUTH = false; // Set to true for automated testing of internal screens
+const BYPASS_AUTH = false;
 const getStorage = () => {
   if (storage) return storage;
   try {
     storage = new MMKV();
     return storage;
   } catch (e) {
-    console.error("MMKV initialization failed. Falling back to mock storage.", e);
-    // Mock storage for dev/emergency
+    console.error('MMKV init failed', e);
     storage = {
       getString: (key: string) => null,
       set: (key: string, value: any) => {},
@@ -58,25 +52,29 @@ const GiftIcon = Gift as any;
 const UserIcon = User as any;
 const TrophyIcon = Trophy as any;
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+// Octopath HD-2D colors (match tamagui.config.ts)
+const OCTOPATH = {
+  card: '#3D3020',
+  primary: '#D4A373',
+  textMuted: '#8B7355',
+  background: '#2D2418',
+};
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
   static getDerivedStateFromError(error: any) {
     return { hasError: true, error };
   }
-
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, backgroundColor: '#0B0E14', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <View style={{ alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ color: '#DC2626', fontSize: 24, fontWeight: '900', letterSpacing: 1 }}>CRITICAL ERROR</Text>
-          </View>
-          <Text style={{ color: '#9CA3AF', textAlign: 'center', fontSize: 14, paddingHorizontal: 16 }}>
-            {this.state.error?.toString() || "Unknown JS Exception"}
+        <View style={{ flex: 1, backgroundColor: OCTOPATH.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: OCTOPATH.primary, fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
+          <Text style={{ color: OCTOPATH.textMuted, textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
+            {this.state.error?.toString() || 'Unknown JS Exception'}
           </Text>
         </View>
       );
@@ -98,10 +96,8 @@ export default observer(function App() {
     username: '',
     password: '',
     confirmPassword: '',
-    user: null as any
+    user: null as any,
   });
-
-  const isLoading = auth.isLoading.get();
 
   useEffect(() => {
     if (isUpdateAvailable) {
@@ -119,13 +115,11 @@ export default observer(function App() {
     if (token) {
       setAuthToken(token);
       AuthService.getProfile()
-        .then(async user => {
+        .then(async (user) => {
           auth.user.set(user);
           auth.isAuthenticated.set(true);
-          
           if (user.tenant_id) {
-            const branding = await BrandingService.getBranding(user.tenant_id);
-            if (branding) BrandingService.applyBranding(branding);
+            BrandingService.fetch(user.tenant_id);
           }
         })
         .catch(() => {
@@ -142,121 +136,66 @@ export default observer(function App() {
     const store = getStorage();
     store.set('onboarding_complete', 'true');
     auth.isOnboarded.set(true);
-    // Here we could also push data back to backend
   };
 
   const handleAuth = async () => {
-    // ... validation remains same
     if (!auth.email.get() || !auth.password.get()) {
-      Alert.alert("Missing Info", "Please fill in all required fields.");
+      Alert.alert('Missing Info', 'Please fill in all required fields.');
       return;
     }
-    // ...
-
     if (auth.mode.get() === 'register') {
       if (!auth.username.get()) {
-        Alert.alert("Missing Info", "Choose a pilot name (username).");
+        Alert.alert('Missing Info', 'Choose a pilot name (username).');
         return;
       }
       if (auth.password.get() !== auth.confirmPassword.get()) {
-        Alert.alert("Mismatch", "Passwords do not match.");
+        Alert.alert('Mismatch', 'Passwords do not match.');
         return;
       }
     }
 
     auth.isSubmitting.set(true);
     try {
-      let data;
       if (auth.mode.get() === 'login') {
-        data = await AuthService.login({ 
-          username: auth.email.get(), 
-          password: auth.password.get() 
-        });
+        const data = await AuthService.login(auth.email.get(), auth.password.get());
+        if (data.access) {
+          const store = getStorage();
+          store.set('auth_token', data.access);
+          setAuthToken(data.access);
+          const user = await AuthService.getProfile();
+          auth.user.set(user);
+          auth.isAuthenticated.set(true);
+          if (user.tenant_id) {
+            BrandingService.fetch(user.tenant_id);
+          }
+        }
       } else {
-        data = await AuthService.register({
+        await AuthService.register({
           email: auth.email.get(),
           username: auth.username.get(),
           password: auth.password.get(),
-          tenant_id: 'siedlce-city' // Default for Grupetto Siedlce testers
+          tenant_id: 'siedlce-city',
         });
-      }
-
-      if (data.access || data.token) {
-        const token = data.access || data.token;
-        const store = getStorage();
-        store.set('auth_token', token);
-        setAuthToken(token);
-        const user = await AuthService.getProfile();
-        auth.user.set(user);
-        auth.isAuthenticated.set(true);
-
-        if (user.tenant_id) {
-          const branding = await BrandingService.getBranding(user.tenant_id);
-          if (branding) BrandingService.applyBranding(branding);
+        // Auto-login after register
+        const data = await AuthService.login(auth.email.get(), auth.password.get());
+        if (data.access) {
+          const store = getStorage();
+          store.set('auth_token', data.access);
+          setAuthToken(data.access);
+          const user = await AuthService.getProfile();
+          auth.user.set(user);
+          auth.isAuthenticated.set(true);
+          if (user.tenant_id) {
+            BrandingService.fetch(user.tenant_id);
+          }
         }
-        
-        if (auth.mode.get() === 'register') {
-          Alert.alert("Welcome!", "Your account is ready. Welcome to Grupetto Siedlce.");
-        }
+        Alert.alert('Welcome!', 'Your account is ready. Welcome to Grupetto Siedlce.');
       }
     } catch (e: any) {
-      const errorMsg = e.response?.data?.detail || e.response?.data?.username?.[0] || e.response?.data?.email?.[0] || "Auth service temporarily unavailable.";
-      Alert.alert("Operation Failed", errorMsg);
+      Alert.alert('Operation Failed', e?.message || 'Auth service unavailable.');
     } finally {
       auth.isSubmitting.set(false);
     }
-  };
-
-  const renderContent = () => {
-    const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
-    const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
-    const isOnboarded = auth.isOnboarded.get();
-    const themeMode = ThemeService.themeMode.get();
-    const isSolar = themeMode === 'solar';
-
-    if (!isAuth) {
-      // ... (Auth UI remains same)
-    }
-
-    if (!isOnboarded) {
-      return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
-    }
-
-    return (
-      <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            headerShown: false,
-            tabBarStyle: { 
-              backgroundColor: isSolar ? '#FFFFFF' : Theme.colors.card, 
-              borderTopWidth: isSolar ? 1 : 0,
-              borderTopColor: '#EEEEEE',
-              height: 90,
-              paddingBottom: 30
-            },
-            tabBarActiveTintColor: isSolar ? '#FF0000' : Theme.colors.primary,
-            tabBarInactiveTintColor: isSolar ? '#999999' : Theme.colors.textMuted,
-            tabBarIcon: ({ color, size }) => {
-              if (route.name === 'Home') return <HomeIcon size={size} color={color} />;
-              if (route.name === 'History') return <HistoryIcon size={size} color={color} />;
-              if (route.name === 'Ranking') return <TrophyIcon size={size} color={color} />;
-              if (route.name === 'Rewards') return <GiftIcon size={size} color={color} />;
-              if (route.name === 'Profile') return <UserIcon size={size} color={color} />;
-            },
-          })}
-        >
-          <Tab.Screen name="Home">
-            {() => <TrackingScreen user={user} />}
-          </Tab.Screen>
-          <Tab.Screen name="History" component={ActivitiesScreen} />
-          <Tab.Screen name="Ranking" component={LeaderboardScreen} />
-          <Tab.Screen name="Rewards" component={RewardsScreen} />
-          <Tab.Screen name="Profile">
-            {() => <ProfileScreen user={user} onLogout={handleLogout} />}
-          </Tab.Screen>
-        </Tab.Navigator>
-      </NavigationContainer>
-    );
   };
 
   const handleLogout = () => {
@@ -269,22 +208,180 @@ export default observer(function App() {
     auth.password.set('');
   };
 
+  const renderAuthUI = () => {
+    const mode = auth.mode.get();
+    const isSolar = ThemeService.themeMode.get() === 'solar';
+    const bg = isSolar ? '#FFF8E7' : OCTOPATH.background;
+    const textColor = isSolar ? '#2D2418' : '#F5E6CC';
+    const inputBg = isSolar ? '#F5E6CC' : OCTOPATH.card;
+    const inputBorder = isSolar ? '#2D2418' : OCTOPATH.primary;
+
+    return (
+      <YStack flex={1} backgroundColor={bg} justifyContent="center" padding="$6" gap="$4">
+        <YStack alignItems="center" marginBottom="$6">
+          <TamaText fontFamily="$pixel" fontSize={28} color={textColor}>SPORT</TamaText>
+          <TamaText fontFamily="$pixel" fontSize={10} color={isSolar ? '#8B7355' : OCTOPATH.primary} marginTop="$2">
+            {mode === 'login' ? 'MISSION LOGIN' : 'NEW PILOT REGISTRATION'}
+          </TamaText>
+        </YStack>
+
+        {mode === 'register' && (
+          <Input
+            placeholder="PILOT_NAME"
+            value={auth.username.get()}
+            onChangeText={(v) => auth.username.set(v)}
+            backgroundColor={inputBg}
+            borderColor={inputBorder}
+            borderWidth={1}
+            color={textColor}
+            fontFamily="$pixel"
+            fontSize={12}
+          />
+        )}
+
+        <Input
+          placeholder="EMAIL / OPERATOR ID"
+          value={auth.email.get()}
+          onChangeText={(v) => auth.email.set(v)}
+          autoCapitalize="none"
+          backgroundColor={inputBg}
+          borderColor={inputBorder}
+          borderWidth={1}
+          color={textColor}
+          fontFamily="$pixel"
+          fontSize={12}
+        />
+
+        <Input
+          placeholder="ACCESS TOKEN"
+          value={auth.password.get()}
+          onChangeText={(v) => auth.password.set(v)}
+          secureTextEntry
+          backgroundColor={inputBg}
+          borderColor={inputBorder}
+          borderWidth={1}
+          color={textColor}
+          fontFamily="$pixel"
+          fontSize={12}
+        />
+
+        {mode === 'register' && (
+          <Input
+            placeholder="CONFIRM ACCESS TOKEN"
+            value={auth.confirmPassword.get()}
+            onChangeText={(v) => auth.confirmPassword.set(v)}
+            secureTextEntry
+            backgroundColor={inputBg}
+            borderColor={inputBorder}
+            borderWidth={1}
+            color={textColor}
+            fontFamily="$pixel"
+            fontSize={12}
+          />
+        )}
+
+        <TamaButton
+          backgroundColor={OCTOPATH.primary}
+          onPress={handleAuth}
+          disabled={auth.isSubmitting.get()}
+          borderWidth={1}
+          borderColor="#000000"
+          borderRadius={0}
+          paddingVertical="$4"
+        >
+          {auth.isSubmitting.get() ? (
+            <Spinner color="black" />
+          ) : (
+            <TamaText fontFamily="$pixel" fontSize={14} color="black">
+              {mode === 'login' ? 'AUTHORIZE' : 'REGISTER PILOT'}
+            </TamaText>
+          )}
+        </TamaButton>
+
+        <TamaButton
+          backgroundColor="transparent"
+          onPress={() => auth.mode.set(mode === 'login' ? 'register' : 'login')}
+          borderRadius={0}
+        >
+          <TamaText fontFamily="$pixel" fontSize={10} color={OCTOPATH.primary}>
+            {mode === 'login' ? 'NEW PILOT? REGISTER' : 'EXISTING PILOT? LOGIN'}
+          </TamaText>
+        </TamaButton>
+      </YStack>
+    );
+  };
+
+  const renderContent = () => {
+    const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
+    const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
+    const isOnboarded = auth.isOnboarded.get();
+    const isSolar = ThemeService.themeMode.get() === 'solar';
+
+    if (!isAuth) return renderAuthUI();
+    if (!isOnboarded) return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
+
+    return (
+      <NavigationContainer>
+        <Tab.Navigator
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: {
+              backgroundColor: isSolar ? '#FFF8E7' : OCTOPATH.card,
+              borderTopWidth: 1,
+              borderTopColor: isSolar ? '#2D2418' : OCTOPATH.primary,
+              height: 90,
+              paddingBottom: 30,
+            },
+            tabBarActiveTintColor: isSolar ? '#2D2418' : OCTOPATH.primary,
+            tabBarInactiveTintColor: isSolar ? '#8B7355' : OCTOPATH.textMuted,
+            tabBarIcon: ({ color, size }: { color: string; size: number }) => null,
+          }}
+        >
+          <Tab.Screen
+            name="Home"
+            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <HomeIcon size={size} color={color} /> }}
+          >
+            {() => <TrackingScreen user={user} />}
+          </Tab.Screen>
+          <Tab.Screen
+            name="History"
+            component={ActivitiesScreen}
+            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <HistoryIcon size={size} color={color} /> }}
+          />
+          <Tab.Screen
+            name="Ranking"
+            component={LeaderboardScreen}
+            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <TrophyIcon size={size} color={color} /> }}
+          />
+          <Tab.Screen
+            name="Rewards"
+            component={RewardsScreen}
+            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <GiftIcon size={size} color={color} /> }}
+          />
+          <Tab.Screen
+            name="Profile"
+            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <UserIcon size={size} color={color} /> }}
+          >
+            {() => <ProfileScreen user={user} onLogout={handleLogout} />}
+          </Tab.Screen>
+        </Tab.Navigator>
+      </NavigationContainer>
+    );
+  };
+
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <TamaguiProvider config={tamaguiConfig} defaultTheme={ThemeService.themeMode.get()}>
           {isDownloading ? (
-            <SplashScreen 
-              message="DOWNLOADING SECURE UPDATE..." 
-              subMessage="CONNECTING TO ANTIGRAVITY EDGE" 
-            />
-          ) : isLoading ? (
+            <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
+          ) : auth.isLoading.get() ? (
             <SplashScreen />
-          ) : renderContent()}
+          ) : (
+            renderContent()
+          )}
         </TamaguiProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
 });
-
-

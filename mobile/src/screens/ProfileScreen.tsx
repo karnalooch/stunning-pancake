@@ -78,7 +78,7 @@ export const ProfileScreen = observer(
           <TamaText fontFamily="$pixel" fontSize={24} color="$color">
             PROFILE_DATA
           </TamaText>
-          <HD2DButton size="$2" label="REFRESH" onPress={() => state.profile.set({ ...p })} />
+          <HD2DButton size="$2" label="REFRESH" onPress={() => state.profile.set(p ? { ...p } : null)} />
         </XStack>
 
         {/* Avatar + Identity */}
