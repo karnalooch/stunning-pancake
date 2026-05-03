@@ -1,73 +1,93 @@
-# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v0.1.0-beta.1)
+# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v0.1.0-beta.2)
 
-Congratulations! You are now the owner of a state-of-the-art, multi-tenant sports ecosystem. This guide provides instructions on how to launch, seed, and present the platform.
+This guide provides instructions on how to launch, seed, and present the platform.
 
-## 🚀 5-Minute Launch Guide
+## 🚀 Launch Guide
 
-### 1. Prerequisite Checklist
-- **Docker & Docker Compose** (Latest version)
-- **Node.js 20+**
-- **Python 3.12+**
+### 1. Prerequisites
+- **Docker & Docker Compose** (latest)
+- **Node.js 20+** (for mobile/admin dev)
+- **Python 3.12+** (for backend dev)
 
-### 2. Ignition Command
-Run the full stack (Database, Redis, Backend, Admin) using Docker:
+### 2. Start Platform
 ```bash
+cp .env.example .env
+# Fill in .env with your values (OPENAI_API_KEY required for LLM features)
 docker-compose up --build -d
 ```
 
-### 3. Initialize & Seed (The "Magic" Step)
-To populate the platform with Cities, Sponsors, and Athletes for a live demo:
+### 3. Access Points
+| Service | URL | Login |
+|---|---|---|
+| **Global Admin** | `http://localhost:3001` | `global_owner` / `admin123` |
+| **Tenant Admin** | `http://localhost:3002` | `siedlce_admin` / `siedlce123` |
+| **Moderator** | `http://localhost:3003` | — |
+| **Backend API** | `http://localhost:8000` | — |
+| **API Docs** | `http://localhost:8000/api/docs/` | — |
+
+### 4. Production (Railway)
+```
+https://docker-backend-production-123c.up.railway.app
+```
+Login: `global_owner` / `admin123` or `admin@sport.com` / `Sport2026!`
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology | Status |
+|---|---|---|
+| Backend API | Django + DRF + SimpleJWT | ✅ Deployed |
+| Telemetry ingest | FastAPI (separate microservice) | ⚠️ Dev only |
+| Database | PostgreSQL + PostGIS | ✅ Deployed |
+| Async tasks | Celery + Redis | ⚠️ Dev only |
+| Admin panel | React + Mantine v9 + Tremor + Framer Motion | ✅ Deployed |
+| Mobile | Expo + React Native + Tamagui + Skia | ⚠️ Dev only |
+| Anti-Cheat | Kinematic Gate → V-max → BRouter → Viterbi HMM | ✅ Layers 1-2 |
+| AI/LLM | OpenAI-compatible (proxy via backend) | ✅ Deployed |
+| Multi-tenant | PostgreSQL RLS | ✅ Deployed |
+
+---
+
+## 🎨 Role-Based Access (RBAC)
+1. **GLOBAL_OWNER** — All tenants, billing, system telemetry
+2. **TENANT_ADMIN** — City/company management, moderator invitations
+3. **TENANT_MODERATOR** — Anti-Cheat verification, user management
+4. **SPONSOR** — POI performance, reward distribution
+5. **ATHLETE** — GPS tracking, stats, rewards (mobile)
+
+---
+
+## 🔒 Security
+- **RLS (Row Level Security)** — PostgreSQL policies enforce data isolation at the database level
+- **JWT with token blacklist** — Access 60min, Refresh 30 days
+- **Impersonation audit** — All GLOBAL_OWNER admin actions are logged
+- **LLM API key** — Never exposed to clients (server-side proxy)
+
+---
+
+## 📱 Mobile
+
 ```bash
-# Enter the backend container
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python seed_data.py
+cd mobile
+npm install
+npx expo start
+# APK build: npm run build:preview:android
+# OTA update: eas update --branch production --message "..."
 ```
 
-### 4. Access Points
-- **Admin Dashboard**: `http://localhost:3000` (Login: `global_owner` / `admin123`)
-- **API Documentation**: `http://localhost:8000/api/schema/swagger-ui/`
-- **Public Landing Page**: `http://localhost:3000/landing`
+Required env: `EXPO_PUBLIC_API_URL` (backend URL)
 
 ---
 
-## 🛠️ Tech Stack Architecture
-- **Backend**: Django + FastAPI (Python Powerhouse)
-- **Database**: PostgreSQL + TimescaleDB (Time-series optimization for GPS)
-- **Admin**: React + Mantine + Framer Motion (Visual Magic) + LLM AI Analytics
-- **Mobile**: Expo + React Native + LLM Avatar Trainer (personality-driven coaching)
-- **Anti-Cheat**: BRouter (OSM Routing) + Scikit-Learn (ML Anomalies)
-- **AI/LLM**: OpenAI-compatible API (gpt-4o-mini for mobile, gpt-4o for admin) — personality-driven coaching, anomaly detection, strategic insights
+## 📈 Roadmap
 
-## 🎨 Role-Based Access Control (RBAC)
-1. **GLOBAL_OWNER**: Access to all tenants, billing, and system telemetry.
-2. **TENANT_ADMIN**: City/Company management, moderator invitation.
-3. **TENANT_MODERATOR**: Anti-Cheat verification and user management.
-4. **SPONSOR**: Dashboard for POI performance and reward distribution.
-5. **ATHLETE**: GPS tracking, stats, and rewards (Mobile focus).
-
-## 🔒 Security & Privacy
-- **RLS (Row Level Security)**: PostgreSQL policies enforce data isolation between tenants at the database level.
-- **Privacy Zones v2**: Automatic track masking (segment bridging) to protect user home/work addresses.
-
----
-
----
-
-## 📱 Mobile Deployment & Maintenance
-The mobile app supports two types of updates:
-1. **Native Builds (APK/iOS)**: Required when adding new native libraries (e.g., Bluetooth, specialized sensors) or changing app icons/splash screens.
-   - Command: `cd mobile; npm run build:android` (profile: `preview`).
-   - Local APK: `app-release.apk` (generated for custom native modules).
-2. **OTA Updates (Over-The-Air)**: Instant updates for UI changes, bug fixes, or logic updates without resubmitting to stores.
-   - Command: `cd mobile; eas update --branch production --message "Update UI theme"`.
-
-## 📈 Future Roadmap
-- [x] **Firebase Integration**: Transitioned from Sentry to Firebase for client and server production observability.
-- [x] **OTA & Dynamic UI**: Implemented remote deployment framework via EAS Updates (`production` / `preview` branches) and successfully rolled out the initial OTA fix sequence.
-- [x] **MapLibre Native v11**: Fully upgraded tracking maps to MapLibre v11.
-- [x] **Stability and RBAC**: Resolved React DOM proxy unmount exceptions for smooth dashboard/user flows.
-- [x] **LLM Coach & System Intelligence**: Personality-driven Avatar Trainer (Drill Sergeant / Motivator / Analyst) with dynamic LLM coaching, circuit breaker, caching, and graceful fallback to static templates. Admin AI dashboard with real-time strategic insights.
-- [ ] **Integration with Wearable SDKs**: Garmin, Apple Watch, and Strava sync.
-- [ ] **AI-Generated Challenges**: Personalized athlete goals based on performance history (foundation laid by LLM Coach).
-
-**Built with pride by your AI Coding Assistant.**
+- [x] JWT auth + RBAC + RLS
+- [x] 4-layer Anti-Cheat (Kinematic → V-max → BRouter → Viterbi)
+- [x] LLM Coach + System Intelligence
+- [x] HD-2D visual system (mobile)
+- [x] Admin panel (Mantine v9)
+- [ ] Celery workers on production
+- [ ] FastAPI telemetry on production
+- [ ] Wearable SDK integrations (Garmin, Strava)
+- [ ] AI-generated challenges

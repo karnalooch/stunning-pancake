@@ -60,3 +60,5 @@ mobile/expo-env.d.ts
 QR_KOD.png
 LINK_DO_APLIKACJI.txt
 mobile/screenshot_*
+.playwright-mcp/
+*.html

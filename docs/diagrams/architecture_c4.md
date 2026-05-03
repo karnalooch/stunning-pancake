@@ -1,76 +1,98 @@
-# SYSTEM ARCHITECTURE — MODEL C4
+# SYSTEM ARCHITECTURE — MODEL C4 (v0.1.0-beta.2)
+
+> Legenda: ✅ = deployed on production | ⚠️ = dev only | 📋 = planned
 
 ## 1. Context Diagram (Diagram Kontekstowy)
 ```mermaid
 graph TD
-    User((Sportowiec)) -->|Używa aplikacji| MobileApp[Aplikacja SPORT Mobile]
-    Admin((Administrator)) -->|Zarządza/Moderuje| AdminPanel[Panel Admina SPORT]
+    User((Sportowiec)) -->|Mobile App| MobileApp[Aplikacja SPORT Mobile ⚠️]
+    Admin((Administrator)) -->|Admin Panel| AdminPanel[Panel Admina SPORT ✅]
     
-    MobileApp -->|Wysyła telemetrię| Backend[Rdzeń Systemu SPORT]
-    AdminPanel -->|Zarządza danymi| Backend
+    MobileApp -->|REST API| Backend[Rdzeń Systemu SPORT ✅]
+    AdminPanel -->|REST API| Backend
     
-    Backend -->|Pobiera dane mapowe| OSM[OpenStreetMap]
-    Backend -->|Weryfikuje trasy| BRouter[Silnik BRouter]
-    Backend -->|Przetwarza płatności| Stripe[Stripe API]
-    Backend -->|Synchronizuje dane| Wearables[Garmin/Strava Cloud]
+    Backend -->|Map Data| OSM[OpenStreetMap]
+    Backend -->|Route Validation| BRouter[Silnik BRouter ⚠️ dev]
+    Backend -->|Payments| Stripe[Stripe API ⚠️ stub]
+    Backend -->|Sync| Wearables[Garmin/Strava 📋 planned]
 ```
 
 ## 2. Container Diagram (Diagram Kontenerów)
 ```mermaid
 graph TB
-    subgraph "Urządzenie Mobilne"
-        App[React Native App]
-        DB_Local[(PowerSync SQLite)]
-        App --- DB_Local
+    subgraph "Urządzenie Mobilne ⚠️ dev"
+        App[React Native + Expo]
+        DB_Local[(MMKV Storage)]
     end
 
     subgraph "Cloud Infrastructure"
-        LB[Load Balancer]
-        
-        subgraph "Ingestion Layer"
-            FastAPI[FastAPI Telemetry]
-            Redis[(Redis Cluster)]
+        subgraph "Business Layer ✅"
+            Django[Django REST API]
         end
         
-        subgraph "Business Layer"
-            Django[Django Core]
-            Celery[Celery Workers]
+        subgraph "Telemetry ⚠️ dev only"
+            FastAPI[FastAPI Ingestion]
         end
         
-        subgraph "Data Store"
-            Citus[(Citus PostgreSQL)]
+        subgraph "Data Store ✅"
+            Postgres[(PostgreSQL + PostGIS)]
+            Redis[(Redis)]
         end
     end
 
-    App -->|WebSocket/REST| LB
-    LB --> FastAPI
-    LB --> Django
-    FastAPI --> Redis
-    Django --> Citus
-    Celery --> Citus
-    Celery --> Redis
+    App -->|REST| Django
+    Django --> Postgres
+    Django --> Redis
+    FastAPI --> Postgres
 ```
 
 ## 3. Data Model (ERD) — Uproszczony
 ```mermaid
 erDiagram
-    ATHLETE ||--o{ PARTICIPATION : joins
-    ATHLETE {
-        string id
+    USER ||--o{ ACTIVITY : records
+    USER {
+        int id
         string username
-        string tenant_id
+        string role
+        uuid tenant_id
     }
-    COMPETITION ||--o{ PARTICIPATION : hosts
-    COMPETITION {
-        string id
-        string title
-        datetime start_date
+    TENANT ||--o{ USER : belongs_to
+    TENANT {
+        uuid id
+        string name
+        string primary_color
     }
-    PARTICIPATION ||--o{ ACTIVITY : records
     ACTIVITY {
-        string id
+        int id
+        int user_id
+        uuid tenant_id
         float distance
         float verification_score
-        json telemetry_blob
+    }
+    POI ||--o{ VOUCHER : offers
+    POI {
+        int id
+        uuid tenant_id
+        string name
+        point location
+    }
+    VOUCHER {
+        int id
+        int poi_id
+        string code
+        string discount_value
     }
 ```
+
+## 4. Deployment (Railway) — stan faktyczny
+
+| Komponent | Port | Status |
+|---|---|---|
+| Django REST API | 8000 | ✅ `docker-backend-production-123c.up.railway.app` |
+| FastAPI Telemetry | 8001 | ⚠️ Dev only, not on Railway |
+| PostgreSQL | 5432 | ✅ Railway managed DB |
+| Redis | 6379 | ✅ Railway managed |
+| Celery Worker | — | ⚠️ Dev only |
+| Celery Beat | — | ⚠️ Dev only |
+| BRouter | 17777 | ⚠️ Dev only (local docker) |
+| Traccar | 8082 | ⚠️ Dev only (local docker) |

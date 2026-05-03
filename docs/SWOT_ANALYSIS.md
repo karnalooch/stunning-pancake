@@ -1,15 +1,17 @@
-# ANALIZA SWOT — Platforma SPORT
+# ANALIZA SWOT — Platforma SPORT (v0.1.0-beta.2)
 
 ## S (Strengths - Mocne Strony)
-- **Wydajność**: Silnik telemetrii FastAPI + Citus zdolny obsłużyć 10k RPS.
-- **Anti-Cheat**: Unikalny, 5-warstwowy system walidacji (ML + Topologia).
-- **UX Mobilny**: Solar-Ready HD-2D zapewniający widoczność w ekstremalnym słońcu.
+- **Wydajność**: Django + Redis zdolne obsłużyć bieżący ruch. FastAPI + Citus zaplanowane na skalowanie.
+- **Anti-Cheat**: 4-warstwowy system walidacji (Kinematic Gate → V-max → BRouter → Viterbi HMM). Warstwy 1-2 działają na produkcji.
+- **UX Mobilny**: Solar-Ready HD-2D z estetyką retro-gamingową i 1px outline.
 - **Architektura**: Czysty podział na B2B White-Label i Ingestion Layer.
+- **Multi-tenant RLS**: Izolacja danych na poziomie PostgreSQL.
 
 ## W (Weaknesses - Słabe Strony)
-- **Zależność Solowa**: Cała wiedza o systemie w rękach jednego dewelopera (rozwiązanie: obecna dokumentacja).
+- **Zależność od jednego AI developera**: Cały kod generowany przez Gemini CLI (obecnie reworkowany).
 - **Brak Płatności Lokalnych**: Ograniczenie do Stripe (brak BLIK na etapie MVP).
-- **Zasoby Graficzne**: Wymagająca estetyka HD-2D wymagająca dedykowanych assetów pixel-art.
+- **Zasoby Graficzne**: Estetyka HD-2D wymaga dedykowanych assetów pixel-art.
+- **Niepełne testy backendu**: Tylko testy systemowe i mock, brak integracyjnych.
 
 ## O (Opportunities - Szanse)
 - **Rynek Corporate Wellness**: Rosnące zapotrzebowanie na grywalizację zdrowia w firmach.
@@ -19,4 +21,4 @@
 ## T (Threats - Zagrożenia)
 - **Zmiany w API GPS**: Restrykcje iOS/Android dotyczące trackingu w tle.
 - **Konkurencja**: Giganci jak Strava (rozwiązanie: focus na lokalną grywalizację B2B).
-- **Skalowanie Kosztów**: Koszty klastrów Redis/Citus przy nagłym wzroście ruchu.
+- **Skalowanie Kosztów**: Koszty infrastruktury przy nagłym wzroście ruchu (obecnie single-node).

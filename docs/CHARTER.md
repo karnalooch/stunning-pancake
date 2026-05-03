@@ -1,4 +1,4 @@
-# KONSTYTUCJA PROJEKTU (PROJECT CHARTER) — SPORT
+# KONSTYTUCJA PROJEKTU (PROJECT CHARTER) — SPORT v0.1.0-beta.2
 
 > "Kontrakt ze samym sobą: Suwerenność poprzez kod, wydajność poprzez dyscyplinę."
 
@@ -10,18 +10,18 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 - Dla Sportowców: Immersyjna gra w świecie rzeczywistym z gwarancją uczciwości wyników.
 
 ## 2. Cele i KPI (SMART)
-- **Wydajność**: Ingestia 10,000+ żądań/sek (FastAPI + Redis).
-- **UX**: Stałe 60 FPS w aplikacji mobilnej przy renderowaniu mapy i HUD.
-- **Weryfikacja**: 4-warstwowy system Anti-Cheat redukujący fałszywe wyniki o 95%.
+- **Wydajność**: Stabilna obsługa ruchu beta testerów (Django + Redis).
+- **UX**: Płynne 60 FPS w aplikacji mobilnej przy renderowaniu HUD (Skia GPU).
+- **Weryfikacja**: 4-warstwowy system Anti-Cheat (Kinematic Gate → V-max → BRouter → Viterbi HMM).
 - **Dostępność**: Solar Mode (kontrast 12:1) umożliwiający pracę w pełnym słońcu.
 
 ## 3. Wysokopoziomowy Zakres (MVP vs Full)
 ### W zakresie (In-Scope):
 - Mobilny tracking GPS (iOS/Android).
-- Silnik walidacji tras (BRouter/OSM).
-- Panel Admina (Cyber-Monolith) do moderacji i BI.
+- Silnik walidacji tras (BRouter/OSM) — warstwy 1-2 na produkcji.
+- Panel Admina (Mantine v9 + Tremor) do moderacji i BI.
 - System nagród (Voucher Marketplace).
-- Integracje Wearable (Garmin/Strava).
+- Integracje Wearable (Garmin/Strava) — stub, do implementacji.
 
 ### Poza zakresem (Out-of-Scope):
 - Własny sprzęt wearable (wyłącznie integracje).
@@ -31,15 +31,15 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 ## 4. Rejestr Ryzyk i Ciągłość
 - **Techniczne**: Przerwy w dostawie GPS (rozwiązanie: Offline-First SQLite).
 - **Prawne**: RODO/GDPR (rozwiązanie: Privacy Zones v2, maskowanie na urządzeniu).
-- **Operacyjne**: Awaria bazy Citus (rozwiązanie: Replikacja + Runbooki odzyskiwania).
+- **Operacyjne**: Awaria bazy (rozwiązanie: Replikacja + Runbooki odzyskiwania).
 
 ## 5. Strategia Technologiczna
-- **Rdzeń**: Python (Django/FastAPI).
-- **Mobile**: React Native (Skia, Tamagui, Legend-State).
-- **Data**: PostgreSQL (Citus) + Redis Cluster.
-- **Design**: Nowoczesny Light Mode (Web/Admin) / Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler) dla Mobile...
+- **Rdzeń**: Django (REST API) + FastAPI (telemetria — dev only).
+- **Mobile**: React Native (Expo, Tamagui, Skia, Legend-State).
+- **Data**: PostgreSQL + PostGIS + Redis.
+- **Design**: Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler).
 
-
+---
 
 Czym jest ta aplikacja?
 

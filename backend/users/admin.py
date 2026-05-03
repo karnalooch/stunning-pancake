@@ -1,12 +1,30 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.translation import gettext_lazy as _
 from .models import User, Tenant, AuditLog
 
 
 @admin.register(User)
-class UserAdmin(admin.ModelAdmin):
+class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'email', 'role', 'tenant', 'is_active')
-    list_filter = ('role', 'tenant', 'is_active')
+    list_filter = ('role', 'tenant', 'is_active', 'is_staff', 'is_superuser')
     search_fields = ('username', 'email')
+
+    fieldsets = (
+        (None, {'fields': ('username', 'password')}),
+        (_('Personal info'), {'fields': ('first_name', 'last_name', 'email')}),
+        (_('SPORT Role & Tenant'), {'fields': ('role', 'tenant', 'is_premium')}),
+        (_('Permissions'), {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        (_('Stripe'), {'fields': ('stripe_customer_id', 'stripe_connect_id')}),
+        (_('Important dates'), {'fields': ('last_login', 'date_joined')}),
+    )
+
+    add_fieldsets = (
+        (None, {
+            'classes': ('wide',),
+            'fields': ('username', 'email', 'password1', 'password2', 'role', 'tenant'),
+        }),
+    )
 
 
 @admin.register(Tenant)

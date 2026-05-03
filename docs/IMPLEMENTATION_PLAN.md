@@ -1,55 +1,48 @@
-# PLAN IMPLEMENTACJI (IMPLEMENTATION PLAN) — SPORT Gold Master v2.1
+# PLAN IMPLEMENTACJI (IMPLEMENTATION PLAN) — SPORT v0.1.0-beta.2
 
-## 1. Strategia Etapowa (Phased Rollout)
-Projekt realizowany jest w modelu przyrostowym, gdzie każda kolejna faza buduje na stabilnym fundamencie poprzedniej.
+## 1. Status Fazy (na dzień 2026-05-03)
 
-### Faza 1: Fundament i Inwestia (ZAKOŃCZONE)
-- **Cel**: Stabilny potok danych i izolacja najemców.
-- **Kluczowe**: TimescaleDB Hypertables, PostgreSQL RLS, FastAPI Ingestion.
+### Faza 1: Fundament (✅ STABILNE)
+- PostgreSQL + PostGIS + RLS
+- Django REST API + SimpleJWT
+- RBAC (5 ról)
 
-### Faza 2: Portal Owner (Nowoczesny Light Mode) (STABILNE)
-- **Cel**: Zarządzanie ekosystemem B2B2C.
-- **Kluczowe**: Vite 6, React 19, Tremor Analytics, Shard Management.
+### Faza 2: Panel Admina (✅ STABILNE)
+- Vite 6 + React 19 + Mantine v9 + Tremor
+- 3 instancje: Global Admin (3001), Tenant Admin (3002), Moderator (3003)
 
-### Faza 3: Silnik Mobilny (Hyper-Performance) (ZAKOŃCZONE)
-- **Cel**: Doświadczenie 120FPS i Solar-Ready UI.
-- **Kluczowe**: React Native Bridgeless, Skia, Tamagui, Legend-State.
+### Faza 3: Mobile (⚠️ DEV)
+- Expo + React Native
+- Skia GPU rendering, Tamagui UI, Legend-State
+- MapLibre v11
+- HD-2D visual system (1px outline, 4px hard shadow, Press Start 2P font)
+- LLM Avatar Trainer (9 trigger categories, 3 personalities)
 
-### Faza 4: Ekosystem i Integracje (ZAKOŃCZONE / REWORK V3.0 W TOKU)
-- **Cel**: Otwarcie na zewnętrzne API i sprzęt wearable oraz wdrożenie manifestu wizualnego V3.0 (zobacz [VISUAL_MANIFESTO.md](./VISUAL_MANIFESTO.md)).
-- **Kluczowe**: 
-  - [x] **Immersyjny Onboarding Experience**:
-    - [x] Animated Pulse Splash.
-    - [x] Permissions Step (GPS/Motion).
-    - [x] Integrations Hub (One-Tap Strava/Garmin).
-    - [x] Data Validation (Biometria).
-    - [x] QR Identity Generation.
-    - [x] **HD-2D Character Interaction System**:
-      - [x] Implementacja `PopUpDialog` z fizyką sprężynową i efektem typewriter.
-      - [x] **Trigger Engine Logic**:
-        - [x] System kolejkowania wiadomości (TriggerEngine — Priority Queue z cooldown i dedup).
-        - [x] Reagowanie na Milestone'y (1km, 5km, 10km, 21.1km, 42.2km — MilestoneTracker).
-        - [ ] Integracja z Anti-Cheat (Ghost alerts — wymaga backend hookup).
-        - [x] Wyzwalacze sytuacyjne (Low Battery, GPS Lost, Pace Drop, HR Zone — AvatarTrainerService).
-  - [x] **Solar-Ready HD-2D UI (Mobile Gaming Aesthetic)**:
-    - [x] Stylistyka retro-gamingowa inspirowana *Metal Slug*, *Dave the Diver*, *Octopath Traveler*.
-    - [x] 1px Black Outlines (Sprite-style) i Pixel Art.
-    - [x] High-Noon Contrast (12:1 ratio) dla trybu Solar Mode.
-  - [x] **Live-Ghost**: WebSocket Ingestion z Geofiltrowaniem (Real-time Privacy Zones).
-  - [x] **Wearable Hub**: Integracja z Strava & Garmin (Sync Engine).
-  - [x] **Stripe Connect**: Logika wypłat Express dla sportowców.
+### Faza 4: Ekosystem (⚠️ CZĘŚCIOWO)
+- [x] LLM Coach (DRILL_SERGEANT / MOTIVATOR / ANALYST)
+- [x] System Intelligence (Admin AI dashboard)
+- [x] TriggerEngine (priority queue, cooldown, dedup)
+- [x] HD-2D Character Interaction System
+- [x] Solar-Ready UI (12:1 contrast)
+- [x] GPS Tracking + Offline Buffer (MMKV)
+- [ ] Celery workers on production
+- [ ] FastAPI telemetry on production
+- [ ] Wearable SDK (Garmin/Strava) — stub exists
 
-### Faza 5: AI i Autonomia (PLANOWANE)
-- **Cel**: Proaktywna inteligencja.
-- **Kluczowe**: AI Predictive Coach (ACWR), Autonomiczne Klastry Miejskie.
+### Faza 5: AI i Skalowanie (📋 PLANOWANE)
+- Citus sharding (kod gotowy, nie wdrożony)
+- FastAPI telemetry production deploy
+- Redis Cluster
+- AI Predictive Coach (ACWR)
+- AI-Generated Challenges
 
 ## 2. Metryki Sukcesu (Definition of Done)
-- **Techniczne**: Pokrycie testami >80%, brak błędów krytycznych w Sentry, latencja API <50ms (P95).
-- **Produktowe**: Onboarding < 3 minuty, stabilne 60 FPS w HUD.
-- **Biznesowe**: Poprawna separacja danych najemców (RLS Audit).
+- **Techniczne**: Pokrycie testami >80%, brak błędów krytycznych, API latencja <200ms
+- **Produktowe**: Onboarding < 3 min, stabilne 60 FPS w HUD
+- **Biznesowe**: Poprawna separacja danych najemców (RLS Audit)
 
 ## 3. Kamienie Milowe (Milestones)
-- **M1**: Stabilne Ingestion (10k RPS).
-- **M2**: Certyfikacja Anti-Cheat (Warstwy 1-4).
-- **M3**: Launch "Grupetto Siedlce" (Pilot B2B).
-- **M4**: Publiczne API / SDK.
+- **M1**: Stabilne API + Auth ✅
+- **M2**: Anti-Cheat (Warstwy 1-4) ⚠️ (1-2 na produkcji)
+- **M3**: Pilot B2B "Grupetto Siedlce" 📋
+- **M4**: Public API / SDK 📋
