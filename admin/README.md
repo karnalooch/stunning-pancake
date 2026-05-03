@@ -1,7 +1,7 @@
-# SPORT Owner OS — Admin Panel
+# SPORT Admin Panel
 
 ## Overview
-The Owner Command Center (SPORT Owner OS) — a sovereign, cross-platform admin panel built with Vite + Electron for complete platform control.
+Professional admin panel for the SPORT platform — built with Vite, React 19, and Mantine 9. Manages users, tenants, anti-cheat, sponsors, and branding across all instances.
 
 ## Tech Stack
 - **UI**: React 19, Mantine 9, Tailwind CSS 3
@@ -30,7 +30,7 @@ npm run build
 ```bash
 npm run build:exe
 ```
-Output: `dist-exe/SPORT Owner OS.exe`
+Output: `dist-exe/SPORT Admin.exe`
 
 ## Access
 - **Local**: `http://localhost:3000`

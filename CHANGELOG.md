@@ -40,7 +40,7 @@
 ### Added — Phase 7: Polish & Stability
 - **Bridgeless (New Architecture)** — `newArchEnabled: true` in `app.config.js`
 - **Global error handling** — admin API client 401→logout, 403/5xx→Mantine notifications, mobile Alert.alert wrapping
-- **Stub cleanup** — `InstanceWizard` "Deploy" → yellow "Coming in v0.3" notification
+- **Admin panel full redesign** — stripped sci-fi cyberpunk (Taskbar, WinWindow, fake CPU stats, GOD_MODE), replaced with clean Windows 11 professional theme (AppShell sidebar, PageHeader, unified Card+withBorder, slate/blue palette). Removed DesignerProvider, GlobalLoader, TenantLoader, InstanceWizard (6 dead files). Net: −1400 lines.
 - **DB performance indexes** — `activities_activity`: `tenant+is_verified`, `tenant+created_at`, `user+tenant`
 - **Citus sharding** — ready-to-use: `apply_citus_sharding()`, `add_citus_worker()`, `rebalance_shards()`, 4 distributed + 6 reference tables
 
