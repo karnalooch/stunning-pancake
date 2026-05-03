@@ -133,8 +133,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             ? 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
             : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
         }
-        logoEnabled={false}
-        attributionEnabled={false}
+        logo={false}
+        attribution={false}
       >
         <Camera
           zoom={15}

@@ -40,7 +40,7 @@ export const GameCard: React.FC<GameCardProps> = ({
       shadowOffset={{ width: 6, height: 6 }}
       shadowOpacity={1}
       shadowRadius={0}
-      elevation={8}
+      style={{ elevation: 8 }}
       {...props}
     >
       {/* Inner highlight line to simulate 3D inset */}

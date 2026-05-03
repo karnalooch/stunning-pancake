@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Pressable, Image } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { PixelText } from './PixelText';
+import { PixelText } from '../components/arcade/PixelText';
 import * as Haptics from 'expo-haptics';
 
 const NAV_ICONS: Record<string, any> = {

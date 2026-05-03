@@ -28,8 +28,8 @@ export const ProfileScreen = observer(
     const fetchWearableStatus = async () => {
       try {
         const status = await WearableService.getStatus();
-        state.stravaStatus.set(status.strava);
-        state.garminStatus.set(status.garmin);
+        state.stravaStatus.set(status.strava as any);
+        state.garminStatus.set(status.garmin as any);
       } catch (e) {
         console.warn('[Profile] Wearable status failed:', e);
       }
@@ -283,7 +283,5 @@ export const ProfileScreen = observer(
         </ScrollView>
       </YStack>
     );
-  },
-);
   },
 );
