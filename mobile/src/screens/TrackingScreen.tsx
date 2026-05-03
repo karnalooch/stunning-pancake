@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { StyleSheet, Alert, Dimensions, Pressable } from 'react-native';
 import * as Location from 'expo-location';
-import { Map, Camera, UserLocation, Layer, ShapeSource, CircleLayer } from '@maplibre/maplibre-react-native';
+import { Map, Camera, UserLocation, Layer, GeoJSONSource } from '@maplibre/maplibre-react-native';
 import { YStack, Text as TamaText, useTheme } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
@@ -243,8 +243,8 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             />
           </UserLocation>
           {state.pois.get().length > 0 && (
-            <ShapeSource id="pois-source" shape={poiFeatures as any}>
-              <CircleLayer
+            <GeoJSONSource id="pois-source" shape={poiFeatures as any}>
+              <Layer type="circle"
                 id="pois-circle"
                 style={{
                   circleRadius: 6,
@@ -254,7 +254,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
                   circleOpacity: 0.9,
                 }}
               />
-            </ShapeSource>
+            </GeoJSONSource>
           )}
         </Map>
 
