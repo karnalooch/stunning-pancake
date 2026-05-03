@@ -7,6 +7,7 @@ import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Updates from 'expo-updates';
+import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import tamaguiConfig from './tamagui.config';
 
 import { Image } from 'react-native';
@@ -81,6 +82,10 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 export default observer(function App() {
+  const [fontsLoaded] = useFonts({
+    'Press Start 2P': PressStart2P_400Regular,
+  });
+
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
 
   const auth = useObservable({
@@ -334,7 +339,7 @@ export default observer(function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <TamaguiProvider config={tamaguiConfig} defaultTheme={ThemeService.themeMode.get()}>
-          {isDownloading ? (
+          {isDownloading || !fontsLoaded ? (
             <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
           ) : auth.isLoading.get() ? (
             <SplashScreen />
