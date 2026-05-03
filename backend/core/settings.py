@@ -78,11 +78,15 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 import dj_database_url
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'postgres://sport_user:sport_secure_pass_42a8b9f@db:5432/sport_db'),
-        engine='django.contrib.gis.db.backends.postgis'
+_database_url = os.getenv('DATABASE_URL')
+if not _database_url:
+    raise RuntimeError(
+        'DATABASE_URL environment variable is required. '
+        'Set it in Railway → Backend service → Variables.'
     )
+
+DATABASES = {
+    'default': dj_database_url.parse(_database_url, engine='django.contrib.gis.db.backends.postgis')
 }
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -129,8 +133,8 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_LOGIN_METHODS = {'email', 'username'}
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_EMAIL_VERIFICATION = 'optional'
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
