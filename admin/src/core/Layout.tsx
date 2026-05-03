@@ -1,144 +1,103 @@
 import { useEffect } from 'react';
-import { Box, Group, Stack, Text } from '@mantine/core';
+import { AppShell, NavLink, Text, Group, Box, Stack, ActionIcon, Avatar } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Square, Gift } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
-import { motion } from 'framer-motion';
 import { setGlobalErrorHandler } from '../api/client';
 
-export const Sidebar = ({ mode }: { mode: string }) => {
-  const location = useLocation();
-  const { user } = useAuth();
-
-  const navItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/owner/dashboard', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <Building2 size={18} />, label: 'Tenants & Branding', path: '/owner/white-label', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <Users size={18} />, label: 'Users', path: '/owner/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
-    { icon: <ShieldAlert size={18} />, label: 'Anti-Cheat', path: '/owner/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
-    { icon: <Gift size={18} />, label: 'Sponsorship', path: '/owner/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
-    { icon: <Settings size={18} />, label: 'Settings', path: '/owner/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
-  ];
-
-  const userRole = user?.role ?? '';
-  const filteredItems = navItems.filter(item => item.roles.includes(userRole));
-
-  return (
-    <Box 
-      className="fluent-acrylic" 
-      w={260} 
-      h="100%" 
-      p="md" 
-      style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-    >
-      <Group mb="xl" px="sm">
-        <Box w={32} h={32} bg="var(--color-cyan-main)" style={{ borderRadius: '6px', boxShadow: '0 0 15px rgba(0, 209, 255, 0.4)' }} />
-        <Stack gap={0}>
-          <Text size="sm" fw={900} style={{ letterSpacing: '0.05em', textTransform: 'uppercase' }}>Owner OS</Text>
-          <Text size="xs" c="dimmed" fw={600} style={{ letterSpacing: '0.1em' }}>{mode}</Text>
-        </Stack>
-      </Group>
-
-      {filteredItems.map((item) => {
-        const active = location.pathname === item.path;
-        return (
-          <Link to={item.path} key={item.label} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <Group 
-              p="xs" 
-              style={{ 
-                borderRadius: '6px', 
-                cursor: 'pointer',
-                background: active ? 'rgba(0, 209, 255, 0.1)' : 'transparent',
-                border: active ? '1px solid rgba(0, 209, 255, 0.2)' : '1px solid transparent',
-                transition: 'background 0.2s ease'
-              }}
-            >
-              <Box style={{ color: active ? 'var(--color-cyan-main)' : 'rgba(255,255,255,0.6)' }}>
-                {item.icon}
-              </Box>
-              <Text size="sm" fw={active ? 700 : 400}>{item.label}</Text>
-            </Group>
-          </Link>
-        );
-      })}
-    </Box>
-  );
-};
+const navItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/owner/dashboard', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
+  { icon: Building2, label: 'Tenants & Branding', path: '/owner/white-label', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+  { icon: Users, label: 'Users', path: '/owner/users', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+  { icon: ShieldAlert, label: 'Anti-Cheat', path: '/owner/anti-cheat', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'] },
+  { icon: Gift, label: 'Sponsorship', path: '/owner/sponsor', roles: ['GLOBAL_OWNER', 'SPONSOR'] },
+  { icon: Settings, label: 'Settings', path: '/owner/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
+];
 
 export const Layout = () => {
+  const location = useLocation();
+  const { user, logout } = useAuth();
+  const userRole = user?.role ?? '';
+
   useEffect(() => {
     setGlobalErrorHandler((title, msg) => {
-      notifications.show({ title, message: msg, color: 'red', autoClose: 5000 });
+      notifications.show({ title, message: msg, color: 'red' });
     });
     return () => setGlobalErrorHandler(() => {});
   }, []);
 
+  const filteredNav = navItems.filter((item) => item.roles.includes(userRole));
+
   return (
-    <Box style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: '#000' }}>
-      <Sidebar mode="PRO EDITION" />
-      <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', overflow: 'hidden' }}>
-        <Box style={{ flex: 1, overflow: 'auto' }}>
+    <AppShell
+      navbar={{ width: 250 }}
+      padding={0}
+      style={{ background: 'var(--surface-secondary)' }}
+    >
+      <AppShell.Navbar p="md" style={{ borderRight: '1px solid var(--border)', background: 'var(--surface)' }}>
+        <AppShell.Section>
+          <Group gap="xs" mb="xl" px="sm">
+            <Box
+              w={32}
+              h={32}
+              bg="var(--accent)"
+              style={{ borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Text fw={800} size="sm" c="white">S</Text>
+            </Box>
+            <Stack gap={0}>
+              <Text fw={700} size="sm">SPORT</Text>
+              <Text size="xs" c="dimmed">Admin Panel</Text>
+            </Stack>
+          </Group>
+        </AppShell.Section>
+
+        <AppShell.Section grow>
+          <Stack gap={2}>
+            {filteredNav.map((item) => {
+              const active = location.pathname === item.path;
+              return (
+                <NavLink
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  label={item.label}
+                  leftSection={<item.icon size={18} />}
+                  active={active}
+                  variant="light"
+                  color="blue"
+                />
+              );
+            })}
+          </Stack>
+        </AppShell.Section>
+
+        <AppShell.Section>
+          <Box py="sm" px="sm" style={{ borderTop: '1px solid var(--border)' }}>
+            <Group justify="space-between" align="center">
+              <Group gap="xs">
+                <Avatar size={28} radius="sm" color="blue">
+                  {user?.username?.[0]?.toUpperCase() || 'A'}
+                </Avatar>
+                <Stack gap={0}>
+                  <Text size="xs" fw={600}>{user?.username || 'Admin'}</Text>
+                  <Text size="xs" c="dimmed">{userRole.replace('_', ' ')}</Text>
+                </Stack>
+              </Group>
+              <ActionIcon variant="subtle" color="gray" onClick={logout} title="Logout">
+                <LogOut size={16} />
+              </ActionIcon>
+            </Group>
+          </Box>
+        </AppShell.Section>
+      </AppShell.Navbar>
+
+      <AppShell.Main>
+        <Box p="xl" style={{ height: '100%' }}>
           <Outlet />
         </Box>
-        <Taskbar />
-      </Box>
-    </Box>
+      </AppShell.Main>
+    </AppShell>
   );
 };
-
-export const Taskbar = () => (
-  <Box 
-    className="fluent-acrylic" 
-    h={48} 
-    mx="xl" 
-    mt="md"
-    style={{ 
-      borderRadius: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '0 16px',
-      boxShadow: '0 -4px 20px rgba(0,0,0,0.3)'
-    }}
-  >
-    <Group gap="xs">
-      <Box w={28} h={28} bg="var(--color-cyan-main)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
-      <Box w={28} h={28} bg="rgba(255,255,255,0.05)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
-      <Box w={28} h={28} bg="rgba(255,255,255,0.05)" style={{ borderRadius: '4px', cursor: 'pointer' }} />
-    </Group>
-    
-    <Group gap="md">
-      <Text size="xs" ff="monospace" c="dimmed">CPU: 12% | RAM: 1.2GB</Text>
-      <Text size="xs" fw={600}>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-    </Group>
-  </Box>
-);
-
-export const WinWindow = ({ title, children }: { title: string | React.ReactNode; children: React.ReactNode }) => (
-  <motion.div
-    initial={{ scale: 0.98, opacity: 0 }}
-    animate={{ scale: 1, opacity: 1 }}
-    transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-    style={{ height: '100%', width: '100%' }}
-  >
-    <Box className="fluent-acrylic" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <Group justify="space-between" px="md" py="xs" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.1)', userSelect: 'none' }}>
-        <Box style={{ opacity: 0.9 }}>
-          {typeof title === 'string' ? (
-            <Text size="xs" fw={700} style={{ fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</Text>
-          ) : (
-            title
-          )}
-        </Box>
-        <Group gap={12}>
-          <Box w={12} h={1} bg="white" style={{ cursor: 'pointer', opacity: 0.5 }} />
-          <Square size={10} style={{ opacity: 0.5, cursor: 'pointer' }} />
-          <Text size="xs" fw={400} style={{ cursor: 'pointer', opacity: 0.5, marginLeft: '4px' }}>✕</Text>
-        </Group>
-      </Group>
-      <Box p="md" style={{ flex: 1, overflow: 'auto' }}>
-        {children}
-      </Box>
-    </Box>
-  </motion.div>
-);

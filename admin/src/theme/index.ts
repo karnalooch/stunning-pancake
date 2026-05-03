@@ -1,54 +1,42 @@
-import { createTheme, type MantineColorsTuple } from '@mantine/core';
+import { createTheme, defaultVariantColorsResolver, VariantColorsResolver } from '@mantine/core';
 
-
-// Based on assets/branding/design_tokens.json
-const primaryCyan: MantineColorsTuple = [
-  '#e0fbff',
-  '#b3f4ff',
-  '#66e3ff',
-  '#00d1ff', // Main
-  '#00a3c7', // Dark
-  '#007a94',
-  '#005161',
-  '#00282e',
-  '#001417',
-  '#000000',
-];
-
-const secondaryPurple: MantineColorsTuple = [
-  '#f3ebff',
-  '#e2d1ff',
-  '#d199ff',
-  '#b066ff', // Main
-  '#8a3bff', // Dark
-  '#6b1aff',
-  '#5100e6',
-  '#3600b3',
-  '#1b0080',
-  '#00004d',
-];
+const variantColorResolver: VariantColorsResolver = (input) => {
+  const defaultResolved = defaultVariantColorsResolver(input);
+  return defaultResolved;
+};
 
 export const theme = createTheme({
-  primaryColor: 'cyan',
-  colors: {
-    cyan: primaryCyan,
-    purple: secondaryPurple,
-  },
-  fontFamily: 'Inter, sans-serif',
+  primaryColor: 'blue',
+  primaryShade: 6,
+  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+  fontFamilyMonospace: 'JetBrains Mono, Fira Code, monospace',
   headings: {
     fontFamily: 'Inter, sans-serif',
-    fontWeight: '700',
+    fontWeight: '600',
+    sizes: {
+      h1: { fontSize: '28px', lineHeight: '1.3' },
+      h2: { fontSize: '22px', lineHeight: '1.35' },
+      h3: { fontSize: '18px', lineHeight: '1.4' },
+    },
   },
+  defaultRadius: 'md',
   components: {
     Card: {
-      defaultProps: {
-        radius: 'xl',
-      },
+      defaultProps: { radius: 'md', padding: 'lg' },
     },
     Button: {
-      defaultProps: {
-        radius: 'md',
-      },
+      defaultProps: { radius: 'md' },
+      styles: { root: { fontWeight: 600 } },
+    },
+    Badge: {
+      defaultProps: { radius: 'sm' },
+    },
+    Table: {
+      defaultProps: { verticalSpacing: 'xs', highlightOnHover: true },
+    },
+    Modal: {
+      defaultProps: { radius: 'lg', overlayProps: { blur: 4 } },
     },
   },
+  other: { surfaceColor: '#F8FAFC' },
 });

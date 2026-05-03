@@ -1,80 +1,40 @@
-import React from 'react';
-import { Box, Card, Text, Group, Badge } from '@mantine/core';
-import DeckGL from '@deck.gl/react';
-import { HeatmapLayer } from '@deck.gl/aggregation-layers';
-import { Map } from 'react-map-gl/maplibre';
-import { Globe, Zap } from 'lucide-react';
-
-const INITIAL_VIEW_STATE = {
-  longitude: 19.1451,
-  latitude: 51.9194,
-  zoom: 5.5,
-  pitch: 45,
-  bearing: 0
-};
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, Text, Group, Badge, Stack, Box, Divider } from '@mantine/core';
+import { Map } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
-export const GlobalHeatmap = () => {
-  const [data, setData] = useState<any[]>([]);
+export const GlobalHeatmap: React.FC = () => {
+  const [positions, setPositions] = useState<any[]>([]);
 
   useEffect(() => {
     apiClient.get('/activities/telemetry/live/')
-      .then(res => {
-        const mapped = res.data.map((p: any) => ({
-          COORDINATES: [p.lng, p.lat],
-          WEIGHT: p.speed ? p.speed * 5 : 10
-        }));
-        setData(mapped);
-      })
-      .catch(err => console.error("Failed to load live positions:", err));
+      .then(res => setPositions(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {});
   }, []);
 
-  const layers = [
-    new HeatmapLayer({
-      id: 'heatmap-layer',
-      data,
-      getPosition: d => d.COORDINATES,
-      getWeight: d => d.WEIGHT,
-      radiusPixels: 40,
-      intensity: 1,
-      threshold: 0.05,
-      colorRange: [
-        [37, 99, 235], [16, 185, 129], [251, 191, 36], [220, 38, 38]
-      ]
-    })
-  ];
-
   return (
-    <Card p={0} radius="xl" className="fluent-acrylic" style={{ height: '600px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-      <Box p="lg" style={{ position: 'absolute', zIndex: 10, top: 0, left: 0 }}>
-        <Group>
-          <Box p="xs" bg="rgba(0,0,0,0.8)" style={{ borderRadius: '12px' }}>
-             <Globe size={20} color="#2563EB" />
-          </Box>
-          <Box>
-            <Text fw={900} size="lg" color="white">Global Activity Heatmap</Text>
-            <Text size="xs" c="dimmed">Real-time telemetry across all 200+ instances</Text>
-          </Box>
-        </Group>
-      </Box>
-
-      <Box style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 10 }}>
-        <Badge variant="filled" color="indigo" size="lg" leftSection={<Zap size={14} />}>
-          LIVE SYNC ACTIVE
-        </Badge>
-      </Box>
-
-      <DeckGL
-        initialViewState={INITIAL_VIEW_STATE}
-        controller={true}
-        layers={layers}
-      >
-        <Map
-          mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        />
-      </DeckGL>
+    <Card withBorder>
+      <Group mb="md">
+        <Map size={18} />
+        <Text fw={600}>Live Activity</Text>
+        <Badge variant="light" color="green">{positions.length} active</Badge>
+      </Group>
+      <Divider mb="md" />
+      {positions.length === 0 ? (
+        <Text size="sm" c="dimmed" py="md" ta="center">No live activity detected.</Text>
+      ) : (
+        <Stack gap="xs">
+          {positions.map((pos: any, i: number) => (
+            <Group key={i} p="xs" style={{ borderRadius: 6, background: 'var(--surface-secondary)' }} justify="space-between">
+              <Text size="sm" fw={500}>{pos.name || `Athlete ${pos.deviceId}`}</Text>
+              <Group gap="xs">
+                <Text size="xs" c="dimmed">{pos.speed?.toFixed(1) || 0} km/h</Text>
+                <Badge size="xs" variant="light" color="blue">Live</Badge>
+              </Group>
+            </Group>
+          ))}
+        </Stack>
+      )}
     </Card>
   );
 };

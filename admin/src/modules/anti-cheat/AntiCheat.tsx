@@ -1,166 +1,88 @@
-import { Box, Group, Stack, Text, Badge, Switch, SimpleGrid, ScrollArea } from '@mantine/core';
-import { WinWindow } from '../../core/Layout';
-import { Shield, AlertTriangle, Cpu, Activity, Loader2 } from 'lucide-react';
-import { AdaptiveIntegrity } from './AdaptiveIntegrity';
-import { useQuery } from '@tanstack/react-query';
-import { TelemetryApi } from '../../api/client';
-import DeckGL from '@deck.gl/react';
-import { ScatterplotLayer } from '@deck.gl/layers';
-import { Map } from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
+import React, { useState, useEffect } from 'react';
+import { Card, Text, Group, Switch, Stack, Box, Divider, Slider, Badge } from '@mantine/core';
+import { ShieldAlert, Activity } from 'lucide-react';
+import { apiClient } from '../../api/client';
+import { PageHeader } from '../../core/components/PageHeader';
 
-import { useAuth } from '../../core/auth/useAuth';
-import { motion } from 'framer-motion';
+export const AntiCheat: React.FC = () => {
+  const [config, setConfig] = useState({ brouterCutoff: 1.5, mlSensitivity: 0.8, autoBan: true });
+  const [anomalies, setAnomalies] = useState<any[]>([]);
 
-import React, { useMemo } from 'react';
+  useEffect(() => {
+    apiClient.get('/activities/telemetry/config/').then(res => setConfig(res.data)).catch(() => {});
+    apiClient.get('/activities/telemetry/anomalies/').then(res => setAnomalies(res.data || [])).catch(() => {});
+  }, []);
 
-export const AntiCheat = () => {
-  const { user } = useAuth();
-
-  const { data: anomalies, isLoading } = useQuery({
-    queryKey: ['anomalies'],
-    queryFn: TelemetryApi.getAnomalies,
-    refetchInterval: 5000 // Refetch every 5 seconds
-  });
-
-  // Dynamic Deck.GL layers connected to live anomalies
-  const layers = useMemo(() => [
-    new ScatterplotLayer({
-      id: 'scatter-layer',
-      data: Array.isArray(anomalies) ? anomalies : [],
-      getPosition: (d: any) => [22.29 + (Math.random() - 0.5) * 0.05, 52.17 + (Math.random() - 0.5) * 0.05], // Simulating spatial distribution around Siedlce for demo
-      getFillColor: (d: any) => d.score > 0.9 ? [255, 0, 0, 200] : [255, 204, 0, 200],
-      getRadius: (d: any) => d.score * 50,
-      pickable: true,
-    })
-  ], [anomalies]);
-
-  const INITIAL_VIEW_STATE = {
-    longitude: 22.29, // Siedlce
-    latitude: 52.17,
-    zoom: 13,
-    pitch: 45,
-    bearing: 0
+  const updateConfig = async (key: string, value: any) => {
+    const updated = { ...config, [key]: value };
+    setConfig(updated);
+    try {
+      await apiClient.post('/activities/telemetry/config/', updated);
+    } catch {}
   };
 
   return (
-    <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
-      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
-        <WinWindow title={user?.role === 'GLOBAL_OWNER' ? "Anti-Cheat Command Center — Global Status" : `Integrity Monitor — ${user?.username}'s Instance`}>
-          <Stack gap="lg">
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium glow-blue" style={{ borderRadius: '12px' }}>
-                <Group>
-                  <Shield color="#60cdff" size={24} />
-                  <Stack gap={0}>
-                    <Text size="sm" fw={800} tt="uppercase">Kinematic Filter</Text>
-                    <Text size="xs" c="dimmed">Layer 1: Velocity Bounds Check</Text>
-                  </Stack>
-                </Group>
-                <Switch defaultChecked color="blue" size="md" />
-              </Group>
-            </motion.div>
+    <Box>
+      <PageHeader title="Anti-Cheat" subtitle="Integrity monitoring and configuration" />
 
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
-              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium glow-lime" style={{ borderRadius: '12px' }}>
-                <Group>
-                  <Cpu color="var(--mantine-primary-color-filled)" size={24} />
-                  <Stack gap={0}>
-                    <Text size="sm" fw={800} tt="uppercase">BRouter Viterbi</Text>
-                    <Text size="xs" c="dimmed">Layer 2: Topological Path Validation</Text>
-                  </Stack>
-                </Group>
-                <Switch defaultChecked color="lime" size="md" />
-              </Group>
-            </motion.div>
+      <Stack gap="xl">
+        <Card withBorder>
+          <Group mb="md">
+            <ShieldAlert size={18} />
+            <Text fw={600}>Detection Filters</Text>
+          </Group>
+          <Divider mb="md" />
+          <Stack gap="md">
+            <Group justify="space-between">
+              <Stack gap={0}>
+                <Text size="sm" fw={500}>BRouter Topological Validation</Text>
+                <Text size="xs" c="dimmed">Cutoff ratio for GPS vs map distance</Text>
+              </Stack>
+              <Slider value={config.brouterCutoff} onChange={(v) => updateConfig('brouterCutoff', v)} min={1.0} max={3.0} step={0.1} w={200} marks={[{ value: 1.5, label: '1.5' }, { value: 2.0, label: '2.0' }, { value: 3.0, label: '3.0' }]} />
+            </Group>
 
-            <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}>
-              <Group justify="space-between" p="md" className="fluent-acrylic stat-card-premium" style={{ borderRadius: '12px' }}>
-                <Group>
-                  <Activity color="#ffcc00" size={24} />
-                  <Stack gap={0}>
-                    <Text size="sm" fw={800} tt="uppercase">ML Biometrics</Text>
-                    <Text size="xs" c="dimmed">Layer 3: Behavioral Fingerprinting</Text>
-                  </Stack>
-                </Group>
-                <Switch color="yellow" size="md" />
-              </Group>
-            </motion.div>
+            <Group justify="space-between">
+              <Stack gap={0}>
+                <Text size="sm" fw={500}>ML Sensitivity</Text>
+                <Text size="xs" c="dimmed">IsolationForest anomaly threshold</Text>
+              </Stack>
+              <Slider value={config.mlSensitivity} onChange={(v) => updateConfig('mlSensitivity', v)} min={0.5} max={1.0} step={0.05} w={200} marks={[{ value: 0.5, label: '0.5' }, { value: 0.8, label: '0.8' }, { value: 1.0, label: '1.0' }]} />
+            </Group>
+
+            <Group justify="space-between">
+              <Stack gap={0}>
+                <Text size="sm" fw={500}>Auto-Ban</Text>
+                <Text size="xs" c="dimmed">Automatically ban confirmed cheaters</Text>
+              </Stack>
+              <Switch checked={config.autoBan} onChange={(e) => updateConfig('autoBan', e.currentTarget.checked)} />
+            </Group>
           </Stack>
-        </WinWindow>
+        </Card>
 
-        <WinWindow title="Real-time Anomaly Stream">
-          <ScrollArea h={300}>
+        <Card withBorder>
+          <Group mb="md">
+            <Activity size={18} />
+            <Text fw={600}>Recent Anomalies</Text>
+            <Badge color="orange" variant="light">{anomalies.length}</Badge>
+          </Group>
+          <Divider mb="md" />
+          {anomalies.length === 0 ? (
+            <Text size="sm" c="dimmed" py="md" ta="center">No anomalies detected.</Text>
+          ) : (
             <Stack gap="xs">
-              {isLoading ? (
-                <Group justify="center" p="xl"><Loader2 className="animate-spin" /></Group>
-              ) : !Array.isArray(anomalies) || anomalies.length === 0 ? (
-                <Text size="sm" c="dimmed" p="md">No anomalies detected.</Text>
-              ) : (
-                anomalies.map((item: any) => (
-                  <Group 
-                    key={item.id} 
-                    p="xs" 
-                    style={{ 
-                      borderBottom: '1px solid rgba(255,255,255,0.05)',
-                      background: item.score > 0.9 ? 'rgba(255,0,0,0.05)' : 'transparent'
-                    }}
-                  >
-                    <AlertTriangle size={16} color={item.score > 0.9 ? '#ff4d4d' : '#ffcc00'} />
-                    <Stack gap={0} style={{ flex: 1 }}>
-                      <Text size="sm" fw={600}>{item.user} — {item.type}</Text>
-                      <Text size="xs" c="dimmed">{item.time} | Global Score: {item.score}</Text>
-                    </Stack>
-                    <Badge size="xs" variant="filled" color={item.score > 0.9 ? 'red' : 'yellow'}>FLAGGED</Badge>
-                  </Group>
-                ))
-              )}
+              {anomalies.slice(0, 10).map((a: any, i: number) => (
+                <Group key={i} p="sm" style={{ borderRadius: 8, background: 'var(--surface-secondary)' }} justify="space-between">
+                  <Stack gap={0}>
+                    <Text size="sm" fw={500}>{a.user}</Text>
+                    <Text size="xs" c="dimmed">{a.type} · Score: {a.score}</Text>
+                  </Stack>
+                  <Badge color="orange" variant="light">Flagged</Badge>
+                </Group>
+              ))}
             </Stack>
-          </ScrollArea>
-        </WinWindow>
-      </SimpleGrid>
-
-      <WinWindow title="Viterbi HMM Map Matching Visualization">
-        <Box 
-          h={400} 
-          style={{ 
-            background: 'rgba(0,0,0,0.3)', 
-            borderRadius: '8px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            position: 'relative'
-          }}
-        >
-          <DeckGL
-            initialViewState={INITIAL_VIEW_STATE}
-            controller={true}
-            layers={layers}
-            style={{ position: 'absolute', top: '0px', left: '0px', width: '100%', height: '100%', borderRadius: '8px' }}
-          >
-            <Map mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json" />
-          </DeckGL>
-          <Box 
-            style={{ 
-              position: 'absolute', 
-              top: 20, 
-              right: 20, 
-              padding: '10px', 
-              background: 'rgba(0,0,0,0.7)', 
-              borderRadius: '4px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              zIndex: 10
-            }}
-          >
-            <Text size="xs" fw={800} c="white">DECK.GL VIEWPORT</Text>
-            <Text size="xs" c="dimmed">Live BRouter Matrix</Text>
-          </Box>
-        </Box>
-      </WinWindow>
-
-      <WinWindow title="Adaptive Operations Control">
-        <AdaptiveIntegrity />
-      </WinWindow>
+          )}
+        </Card>
+      </Stack>
     </Box>
   );
 };
