@@ -10,8 +10,8 @@ import { ArcadeButton } from '../components/arcade/ArcadeButton';
 import { AthleteSprite } from '../components/AthleteSprite';
 
 const GRADE_ICONS: Record<string, any> = {
-  S: require('../../assets/generated/grade_s.png'),
-  A: require('../../assets/generated/grade_a.png'),
+  S: undefined,
+  A: undefined,
 };
 
 const verificationGrade = (score: number): { label: string; color: string } => {
