@@ -238,13 +238,12 @@ const IdentityStep = ({ user, onNext }: any) => (
         <QRCode 
           value={`sport_v1:pilot:${user?.id || 'unknown'}`} 
           size={160}
-          color="#000000"
-        />
+          color="#000000" backgroundColor="#FFFFFF" />
       </View>
 
       <YStack alignItems="center" gap="$2">
          <Text color="$accent" fontSize={14} fontFamily="$pixel">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</Text>
-         <Text color="$color" fontSize={8} opacity={0.5} fontFamily="$pixel">UID: {user?.id?.substring(0, 8) || '####'}</Text>
+         <Text color="$color" fontSize={8} opacity={0.5} fontFamily="$pixel">UID: {String(user?.id || '').slice(0, 8) || '####'}</Text>
       </YStack>
 
       <HD2DButton label="INITIALIZE MISSION" width="100%" onPress={onNext} theme="green" />
