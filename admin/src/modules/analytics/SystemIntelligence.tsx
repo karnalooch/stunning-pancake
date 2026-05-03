@@ -2,18 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Card, Text, Group, Stack, Badge, Box, SimpleGrid, Loader } from '@mantine/core';
 import { BrainCircuit, AlertTriangle, Lightbulb, TrendingUp, Cpu } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { apiClient } from '../../api/client';
 
-// ─── LLM Configuration ────────────────────────────────────────────
-// Model: gpt-4o (upgraded from gpt-4o — 2026-04-30)
-// The SysIntelligence engine uses a more capable model than the mobile
-// coach to deliver deep platform-wide analytical insights.
+// ─── System Intelligence Configuration ─────────────────────────
+// LLM calls are routed through the backend proxy (/api/llm/proxy/)
+// so the API key NEVER leaves the server. Safe for production.
 
-const LLM_CONFIG = {
-  apiKey: import.meta.env.VITE_LLM_API_KEY ?? import.meta.env.VITE_OPENAI_API_KEY ?? '',
-  apiUrl: import.meta.env.VITE_LLM_API_URL ?? 'https://api.openai.com/v1',
-  model: import.meta.env.VITE_LLM_MODEL ?? 'gpt-4o',
-  timeoutMs: 15_000,
-};
+const MODEL_NAME = import.meta.env.VITE_LLM_MODEL || 'gpt-4o';
+const TIMEOUT_MS = 15_000;
 
 interface IntelligenceData {
   integrityAlert: string | null;
@@ -24,20 +20,10 @@ interface IntelligenceData {
 }
 
 async function fetchIntelligence(): Promise<Omit<IntelligenceData, 'loading' | 'model'>> {
-  if (!LLM_CONFIG.apiKey) {
-    // No API key — return static demo data
-    return getStaticIntelligence();
-  }
-
   try {
-    const response = await fetch(`${LLM_CONFIG.apiUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LLM_CONFIG.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: LLM_CONFIG.model,
+    const response = await apiClient.post(
+      '/llm/proxy/',
+      {
         messages: [
           {
             role: 'system',
@@ -59,18 +45,20 @@ Każdy tekst max 200 znaków. Język: polski.`,
           },
           {
             role: 'user',
-            content: 'Wygeneruj aktualne insighty dla platformy SPORT na podstawie typowych wzorców danych z wielodostępnej platformy sportowej z trackingiem GPS, systemem anti-cheat, rankingami i voucher-ami.',
+            content:
+              'Wygeneruj aktualne insighty dla platformy SPORT na podstawie typowych wzorców danych z wielodostępnej platformy sportowej z trackingiem GPS, systemem anti-cheat, rankingami i voucher-ami.',
           },
         ],
+        model: MODEL_NAME,
         max_tokens: 400,
         temperature: 0.7,
-      }),
-      signal: AbortSignal.timeout(LLM_CONFIG.timeoutMs),
-    });
+      },
+      { timeout: TIMEOUT_MS },
+    );
 
-    const data = await response.json();
-    const content = data?.choices?.[0]?.message?.content;
-    
+    const payload = response.data?.data || response.data;
+    const content = payload?.choices?.[0]?.message?.content;
+
     if (content) {
       try {
         const parsed = JSON.parse(content);
@@ -84,7 +72,7 @@ Każdy tekst max 200 znaków. Język: polski.`,
       }
     }
   } catch (err) {
-    console.warn('[SystemIntelligence] LLM fetch failed, using static analysis:', err);
+    console.warn('[SystemIntelligence] LLM proxy fetch failed:', err);
   }
 
   return getStaticIntelligence();
@@ -92,9 +80,12 @@ Każdy tekst max 200 znaków. Język: polski.`,
 
 function getStaticIntelligence() {
   return {
-    integrityAlert: "Wykryto 12 skoordynowanych anomalii w instancji Warszawa. Prawdopodobieństwo klastra GPS spoofingu: 89%. Rekomendacja: Wdrożyć obowiązkową weryfikację adaptacyjną.",
-    growthInsight: "Zaangażowanie sportowców w Siedlcach wzrosło o 40% po aktywacji POI 'Eko Kawa'. Skalowanie tego wzorca może zwiększyć globalną retencję o 12%.",
-    globalStrategy: "Platforma działa na 94% wydajności. Obecna struktura RLS multi-tenant radzi sobie doskonale. Wprowadź 'Global Events' dla między-miejskiej rywalizacji i zwiększ wskaźniki realizacji voucherów w następnym kwartale.",
+    integrityAlert:
+      'Wykryto 12 skoordynowanych anomalii w instancji Warszawa. Prawdopodobieństwo klastra GPS spoofingu: 89%. Rekomendacja: Wdrożyć obowiązkową weryfikację adaptacyjną.',
+    growthInsight:
+      "Zaangażowanie sportowców w Siedlcach wzrosło o 40% po aktywacji POI 'Eko Kawa'. Skalowanie tego wzorca może zwiększyć globalną retencję o 12%.",
+    globalStrategy:
+      'Platforma działa na 94% wydajności. Obecna struktura RLS multi-tenant radzi sobie doskonale. Wprowadź Global Events dla między-miejskiej rywalizacji i zwiększ wskaźniki realizacji voucherów w następnym kwartale.',
   };
 }
 
@@ -104,21 +95,19 @@ export const SystemIntelligence = () => {
     growthInsight: null,
     globalStrategy: null,
     loading: true,
-    model: LLM_CONFIG.model,
+    model: MODEL_NAME,
   });
 
   useEffect(() => {
     let cancelled = false;
-    fetchIntelligence().then(result => {
+    fetchIntelligence().then((result) => {
       if (!cancelled) {
-        setData({
-          ...result,
-          loading: false,
-          model: LLM_CONFIG.model,
-        });
+        setData({ ...result, loading: false, model: MODEL_NAME });
       }
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -128,7 +117,9 @@ export const SystemIntelligence = () => {
           <BrainCircuit size={24} color="#2563EB" />
         </Box>
         <Box>
-          <Text fw={900} size="lg" color="white">System Intelligence (AI)</Text>
+          <Text fw={900} size="lg" color="white">
+            System Intelligence (AI)
+          </Text>
           <Text size="xs" c="dimmed">
             {data.model} analyzed platform-wide heuristics
             {data.loading && (
@@ -143,55 +134,75 @@ export const SystemIntelligence = () => {
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl">
         <Stack gap="md">
           <Box p="md" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-             <Group mb="xs">
-               <AlertTriangle size={18} color="#EF4444" />
-               <Text fw={700} size="sm" color="red">Integrity Alert</Text>
-             </Group>
-             <Text size="xs" c="dimmed" lh={1.6}>
-               {data.loading ? (
-                 <Text span c="dimmed">Analizuję dane platformy...</Text>
-               ) : (
-                 data.integrityAlert ?? 'Brak aktywnych alertów integralności.'
-               )}
-             </Text>
+            <Group mb="xs">
+              <AlertTriangle size={18} color="#EF4444" />
+              <Text fw={700} size="sm" color="red">
+                Integrity Alert
+              </Text>
+            </Group>
+            <Text size="xs" c="dimmed" lh={1.6}>
+              {data.loading ? (
+                <Text span c="dimmed">
+                  Analizuję dane platformy...
+                </Text>
+              ) : (
+                data.integrityAlert ?? 'Brak aktywnych alertów integralności.'
+              )}
+            </Text>
           </Box>
 
           <Box p="md" style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
-             <Group mb="xs">
-               <TrendingUp size={18} color="#10B981" />
-               <Text fw={700} size="sm" color="green">Growth Insight</Text>
-             </Group>
-             <Text size="xs" c="dimmed" lh={1.6}>
-               {data.loading ? (
-                 <Text span c="dimmed">Obliczam wskaźniki wzrostu...</Text>
-               ) : (
-                 data.growthInsight ?? 'Brak nowych insightów wzrostu.'
-               )}
-             </Text>
+            <Group mb="xs">
+              <TrendingUp size={18} color="#10B981" />
+              <Text fw={700} size="sm" color="green">
+                Growth Insight
+              </Text>
+            </Group>
+            <Text size="xs" c="dimmed" lh={1.6}>
+              {data.loading ? (
+                <Text span c="dimmed">
+                  Obliczam wskaźniki wzrostu...
+                </Text>
+              ) : (
+                data.growthInsight ?? 'Brak nowych insightów wzrostu.'
+              )}
+            </Text>
           </Box>
         </Stack>
 
         <Stack gap="md">
-          <Box p="md" style={{ background: 'rgba(37, 99, 235, 0.05)', borderRadius: '16px', border: '1px solid rgba(37, 99, 235, 0.2)', height: '100%' }}>
-             <Group mb="xs">
-               <Lightbulb size={18} color="#FBBF24" />
-               <Text fw={700} size="sm" color="yellow">Global Strategy</Text>
-             </Group>
-             <Text size="xs" c="white" fw={500} lh={1.8}>
-               {data.loading ? (
-                 <Text span c="dimmed">Generuję rekomendacje strategiczne...</Text>
-               ) : (
-                 data.globalStrategy ?? 'Brak nowych rekomendacji strategicznych.'
-               )}
-             </Text>
-             <Group mt="xl">
-               <Badge variant="outline" color="blue">
-                 {data.loading ? 'Analyzing...' : 'Optimized'}
-               </Badge>
-               <Badge variant="outline" color="gray" leftSection={<Cpu size={12}/>}>
-                 Model: {data.model}
-               </Badge>
-             </Group>
+          <Box
+            p="md"
+            style={{
+              background: 'rgba(37, 99, 235, 0.05)',
+              borderRadius: '16px',
+              border: '1px solid rgba(37, 99, 235, 0.2)',
+              height: '100%',
+            }}
+          >
+            <Group mb="xs">
+              <Lightbulb size={18} color="#FBBF24" />
+              <Text fw={700} size="sm" color="yellow">
+                Global Strategy
+              </Text>
+            </Group>
+            <Text size="xs" c="white" fw={500} lh={1.8}>
+              {data.loading ? (
+                <Text span c="dimmed">
+                  Generuję rekomendacje strategiczne...
+                </Text>
+              ) : (
+                data.globalStrategy ?? 'Brak nowych rekomendacji strategicznych.'
+              )}
+            </Text>
+            <Group mt="xl">
+              <Badge variant="outline" color="blue">
+                {data.loading ? 'Analyzing...' : 'Optimized'}
+              </Badge>
+              <Badge variant="outline" color="gray" leftSection={<Cpu size={12} />}>
+                Model: {data.model}
+              </Badge>
+            </Group>
           </Box>
         </Stack>
       </SimpleGrid>

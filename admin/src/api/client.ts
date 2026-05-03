@@ -1,28 +1,38 @@
 import axios from 'axios';
+import { useAuth } from '../core/auth/useAuth';
 
-// The base URL should ideally come from env vars, pointing to our Django backend
-let baseURL = import.meta.env.VITE_API_URL || 'https://docker-backend-production-123c.up.railway.app/api';
+let baseURL = import.meta.env.VITE_API_URL || '/api';
 if (!baseURL.startsWith('http://') && !baseURL.startsWith('https://')) {
   baseURL = `https://${baseURL}`;
 }
 
 export const apiClient = axios.create({
   baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor to inject JWT token if it exists in localStorage or Zustand
+// Interceptor reads token from Zustand store (not localStorage)
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = useAuth.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// API Services
+// Response interceptor — auto-logout on 401
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      useAuth.getState().logout();
+    }
+    return Promise.reject(error);
+  }
+);
+
+// ─── API Services ──────────────────────────────────────────────
+
 export const AdminApi = {
   getUsers: async () => {
     const { data } = await apiClient.get('/users/all/');
@@ -40,7 +50,7 @@ export const AdminApi = {
   impersonateUser: async (targetUserId: number) => {
     const { data } = await apiClient.post(`/users/impersonate/${targetUserId}/`);
     return data;
-  }
+  },
 };
 
 export const TelemetryApi = {
@@ -56,10 +66,10 @@ export const TelemetryApi = {
     const { data } = await apiClient.get('/activities/telemetry/config/');
     return data;
   },
-  updateConfig: async (config: any) => {
+  updateConfig: async (config: Record<string, unknown>) => {
     const { data } = await apiClient.post('/activities/telemetry/config/', config);
     return data;
-  }
+  },
 };
 
 export const RewardsApi = {
@@ -74,12 +84,12 @@ export const RewardsApi = {
   getSponsorStats: async () => {
     const { data } = await apiClient.get('/rewards/sponsor-stats/');
     return data;
-  }
+  },
 };
 
 export const BrandingApi = {
   getBranding: async (tenantId: string) => {
     const { data } = await apiClient.get(`/users/branding/${tenantId}/`);
     return data;
-  }
+  },
 };
