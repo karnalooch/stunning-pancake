@@ -22,14 +22,9 @@ import { ActivitiesScreen } from './src/screens/ActivitiesScreen';
 import { RewardsScreen } from './src/screens/RewardsScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
-
-const NAV_ICONS = {
-  home: require('./assets/generated/nav_home.png'),
-  history: require('./assets/generated/nav_history.png'),
-  ranking: require('./assets/generated/nav_ranking.png'),
-  rewards: require('./assets/generated/nav_rewards.png'),
-  profile: require('./assets/generated/nav_profile.png'),
-};
+import { GameTabBar } from './src/navigation/GameTabBar';
+import { PixelText } from './src/components/arcade/PixelText';
+import { ArcadeButton } from './src/components/arcade/ArcadeButton';
 
 let storage: any;
 const BYPASS_AUTH = false;
@@ -212,103 +207,96 @@ export default observer(function App() {
 
   const renderAuthUI = () => {
     const mode = auth.mode.get();
-    const isSolar = ThemeService.themeMode.get() === 'solar';
-    const bg = isSolar ? '#FFF8E7' : OCTOPATH.background;
-    const textColor = isSolar ? '#2D2418' : '#F5E6CC';
-    const inputBg = isSolar ? '#F5E6CC' : OCTOPATH.card;
-    const inputBorder = isSolar ? '#2D2418' : OCTOPATH.primary;
 
     return (
-      <YStack flex={1} backgroundColor={bg} justifyContent="center" padding="$6" gap="$4">
-        <YStack alignItems="center" marginBottom="$6">
-          <TamaText fontFamily="$pixel" fontSize={28} color={textColor}>SPORT</TamaText>
-          <TamaText fontFamily="$pixel" fontSize={10} color={isSolar ? '#8B7355' : OCTOPATH.primary} marginTop="$2">
+      <YStack flex={1} backgroundColor="#0B1D33" justifyContent="center" padding="$6" gap="$6">
+        <YStack alignItems="center" marginBottom="$4">
+          <PixelText size={36} color="#D4A373" shadow>SPORT</PixelText>
+          <PixelText size={10} color="#7BA05B" style={{ marginTop: 8 }}>
             {mode === 'login' ? 'MISSION LOGIN' : 'NEW PILOT REGISTRATION'}
-          </TamaText>
+          </PixelText>
         </YStack>
 
-        {mode === 'register' && (
-          <Input
-            placeholder="PILOT_NAME"
-            value={auth.username.get()}
-            onChangeText={(v) => auth.username.set(v)}
-            backgroundColor={inputBg}
-            borderColor={inputBorder}
-            borderWidth={1}
-            color={textColor}
-            fontFamily="$pixel"
-            fontSize={12}
-          />
-        )}
-
-        <Input
-          placeholder="EMAIL / OPERATOR ID"
-          value={auth.email.get()}
-          onChangeText={(v) => auth.email.set(v)}
-          autoCapitalize="none"
-          backgroundColor={inputBg}
-          borderColor={inputBorder}
-          borderWidth={1}
-          color={textColor}
-          fontFamily="$pixel"
-          fontSize={12}
-        />
-
-        <Input
-          placeholder="ACCESS TOKEN"
-          value={auth.password.get()}
-          onChangeText={(v) => auth.password.set(v)}
-          secureTextEntry
-          backgroundColor={inputBg}
-          borderColor={inputBorder}
-          borderWidth={1}
-          color={textColor}
-          fontFamily="$pixel"
-          fontSize={12}
-        />
-
-        {mode === 'register' && (
-          <Input
-            placeholder="CONFIRM ACCESS TOKEN"
-            value={auth.confirmPassword.get()}
-            onChangeText={(v) => auth.confirmPassword.set(v)}
-            secureTextEntry
-            backgroundColor={inputBg}
-            borderColor={inputBorder}
-            borderWidth={1}
-            color={textColor}
-            fontFamily="$pixel"
-            fontSize={12}
-          />
-        )}
-
-        <TamaButton
-          backgroundColor={OCTOPATH.primary}
-          onPress={handleAuth}
-          disabled={auth.isSubmitting.get()}
-          borderWidth={1}
-          borderColor="#000000"
-          borderRadius={0}
-          paddingVertical="$4"
-        >
-          {auth.isSubmitting.get() ? (
-            <Spinner color="black" />
-          ) : (
-            <TamaText fontFamily="$pixel" fontSize={14} color="black">
-              {mode === 'login' ? 'AUTHORIZE' : 'REGISTER PILOT'}
-            </TamaText>
+        <YStack gap="$4">
+          {mode === 'register' && (
+            <Input
+              placeholder="PILOT_NAME"
+              value={auth.username.get()}
+              onChangeText={(v) => auth.username.set(v)}
+              backgroundColor="#2B303A"
+              borderColor="#D4A373"
+              borderWidth={2}
+              color="#F5E6CC"
+              fontFamily="$pixel"
+              fontSize={12}
+              borderRadius={0}
+              paddingVertical="$3"
+            />
           )}
-        </TamaButton>
 
-        <TamaButton
-          backgroundColor="transparent"
-          onPress={() => auth.mode.set(mode === 'login' ? 'register' : 'login')}
-          borderRadius={0}
-        >
-          <TamaText fontFamily="$pixel" fontSize={10} color={OCTOPATH.primary}>
-            {mode === 'login' ? 'NEW PILOT? REGISTER' : 'EXISTING PILOT? LOGIN'}
-          </TamaText>
-        </TamaButton>
+          <Input
+            placeholder="EMAIL / OPERATOR ID"
+            value={auth.email.get()}
+            onChangeText={(v) => auth.email.set(v)}
+            autoCapitalize="none"
+            backgroundColor="#2B303A"
+            borderColor="#D4A373"
+            borderWidth={2}
+            color="#F5E6CC"
+            fontFamily="$pixel"
+            fontSize={12}
+            borderRadius={0}
+            paddingVertical="$3"
+          />
+
+          <Input
+            placeholder="ACCESS TOKEN"
+            value={auth.password.get()}
+            onChangeText={(v) => auth.password.set(v)}
+            secureTextEntry
+            backgroundColor="#2B303A"
+            borderColor="#D4A373"
+            borderWidth={2}
+            color="#F5E6CC"
+            fontFamily="$pixel"
+            fontSize={12}
+            borderRadius={0}
+            paddingVertical="$3"
+          />
+
+          {mode === 'register' && (
+            <Input
+              placeholder="CONFIRM ACCESS TOKEN"
+              value={auth.confirmPassword.get()}
+              onChangeText={(v) => auth.confirmPassword.set(v)}
+              secureTextEntry
+              backgroundColor="#2B303A"
+              borderColor="#D4A373"
+              borderWidth={2}
+              color="#F5E6CC"
+              fontFamily="$pixel"
+              fontSize={12}
+              borderRadius={0}
+              paddingVertical="$3"
+            />
+          )}
+        </YStack>
+
+        <YStack gap="$4" marginTop="$4">
+          <ArcadeButton
+            variant="gold"
+            onPress={handleAuth}
+            disabled={auth.isSubmitting.get()}
+            label={auth.isSubmitting.get() ? 'CONNECTING...' : (mode === 'login' ? 'AUTHORIZE' : 'REGISTER PILOT')}
+          />
+
+          <ArcadeButton
+            variant="ghost"
+            onPress={() => auth.mode.set(mode === 'login' ? 'register' : 'login')}
+            label={mode === 'login' ? 'NEW PILOT? REGISTER' : 'EXISTING PILOT? LOGIN'}
+            size="sm"
+          />
+        </YStack>
       </YStack>
     );
   };
@@ -325,45 +313,16 @@ export default observer(function App() {
     return (
       <NavigationContainer>
         <Tab.Navigator
-          screenOptions={{
-            headerShown: false,
-            tabBarStyle: {
-              backgroundColor: isSolar ? '#FFF8E7' : OCTOPATH.card,
-              borderTopWidth: 1,
-              borderTopColor: isSolar ? '#2D2418' : OCTOPATH.primary,
-              height: 90,
-              paddingBottom: 30,
-            },
-            tabBarActiveTintColor: isSolar ? '#2D2418' : OCTOPATH.primary,
-            tabBarInactiveTintColor: isSolar ? '#8B7355' : OCTOPATH.textMuted,
-            tabBarIcon: ({ color, size }: { color: string; size: number }) => null,
-          }}
+          tabBar={(props) => <GameTabBar {...props} />}
+          screenOptions={{ headerShown: false }}
         >
-          <Tab.Screen
-            name="Home"
-            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.home} style={{ width: size, height: size }} resizeMode="contain" /> }}
-          >
+          <Tab.Screen name="Home">
             {() => <TrackingScreen user={user} />}
           </Tab.Screen>
-          <Tab.Screen
-            name="History"
-            component={ActivitiesScreen}
-            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.history} style={{ width: size, height: size }} resizeMode="contain" /> }}
-          />
-          <Tab.Screen
-            name="Ranking"
-            component={LeaderboardScreen}
-            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.ranking} style={{ width: size, height: size }} resizeMode="contain" /> }}
-          />
-          <Tab.Screen
-            name="Rewards"
-            component={RewardsScreen}
-            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.rewards} style={{ width: size, height: size }} resizeMode="contain" /> }}
-          />
-          <Tab.Screen
-            name="Profile"
-            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.profile} style={{ width: size, height: size }} resizeMode="contain" /> }}
-          >
+          <Tab.Screen name="History" component={ActivitiesScreen} />
+          <Tab.Screen name="Ranking" component={LeaderboardScreen} />
+          <Tab.Screen name="Rewards" component={RewardsScreen} />
+          <Tab.Screen name="Profile">
             {() => <ProfileScreen user={user} onLogout={handleLogout} />}
           </Tab.Screen>
         </Tab.Navigator>

@@ -1,6 +1,6 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { YStack, XStack, Text as TamaText } from 'tamagui';
+import { YStack, XStack } from 'tamagui';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,6 +9,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { observer } from '@legendapp/state/react';
+import { PixelText } from './arcade/PixelText';
 
 interface GameHUDProps {
   visible: boolean;
@@ -21,7 +22,7 @@ interface GameHUDProps {
   elapsedSec: number;
 }
 
-const formatTime = (sec: number) => {
+export const formatTime = (sec: number) => {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
@@ -50,9 +51,9 @@ const ScrollingDigit = ({ value }: { value: string }) => {
 
   return (
     <Animated.View style={animStyle}>
-      <TamaText fontFamily="$pixel" fontSize={20} color="#D4A373" fontWeight="900">
+      <PixelText size={20} color="#D4A373" shadow>
         {value}
-      </TamaText>
+      </PixelText>
     </Animated.View>
   );
 };
@@ -65,7 +66,6 @@ export const GameHUD = observer(
     paceFormatted,
     speedKmh,
     heartRate,
-    isTracking,
     elapsedSec,
   }: GameHUDProps) => {
     const opacity = useSharedValue(1);
@@ -93,8 +93,8 @@ export const GameHUD = observer(
       <Pressable onPress={onTap} style={styles.tapArea}>
         <Animated.View style={[styles.hudContainer, hudStyle]}>
           <XStack
-            backgroundColor="rgba(0,0,0,0.75)"
-            borderWidth={2}
+            backgroundColor="rgba(11, 29, 51, 0.9)" // Deep Sea Dark
+            borderWidth={3}
             borderColor="#D4A373"
             padding="$3"
             gap="$4"
@@ -102,28 +102,28 @@ export const GameHUD = observer(
             style={styles.hudBox}
           >
             <YStack alignItems="center" minWidth={70}>
-              <XStack gap={0}>{digits.map((d, i) => (d === '.' ? <TamaText key={i} fontFamily="$pixel" fontSize={16} color="#D4A373">.</TamaText> : <ScrollingDigit key={i} value={d} />))}</XStack>
-              <TamaText fontFamily="$pixel" fontSize={7} color="#D4A373" opacity={0.7}>KM</TamaText>
+              <XStack gap={0}>{digits.map((d, i) => (d === '.' ? <PixelText key={i} size={16} color="#D4A373">.</PixelText> : <ScrollingDigit key={i} value={d} />))}</XStack>
+              <PixelText size={7} color="#D4A373" style={{ opacity: 0.7, marginTop: 4 }}>KM</PixelText>
             </YStack>
 
-            <YStack borderLeftWidth={1} borderColor="#D4A373" paddingLeft="$3">
-              <TamaText fontFamily="$pixel" fontSize={10} color="#7BA05B">{paceFormatted}</TamaText>
-              <TamaText fontFamily="$pixel" fontSize={7} color="#7BA05B" opacity={0.7}>PACE /KM</TamaText>
+            <YStack borderLeftWidth={2} borderColor="#D4A373" paddingLeft="$3">
+              <PixelText size={10} color="#7BA05B">{paceFormatted}</PixelText>
+              <PixelText size={7} color="#7BA05B" style={{ opacity: 0.7, marginTop: 2 }}>PACE /KM</PixelText>
               <XStack gap="$3" marginTop="$2">
                 <YStack>
-                  <TamaText fontFamily="$pixel" fontSize={10} color="#FFFFFF">{speedKmh.toFixed(1)}</TamaText>
-                  <TamaText fontFamily="$pixel" fontSize={6} color="#FFFFFF" opacity={0.5}>KM/H</TamaText>
+                  <PixelText size={10} color="#FFFFFF" shadow>{speedKmh.toFixed(1)}</PixelText>
+                  <PixelText size={6} color="#FFFFFF" style={{ opacity: 0.5, marginTop: 2 }}>KM/H</PixelText>
                 </YStack>
                 <YStack>
-                  <TamaText fontFamily="$pixel" fontSize={10} color="#EF4444">{heartRate}</TamaText>
-                  <TamaText fontFamily="$pixel" fontSize={6} color="#EF4444" opacity={0.5}>BPM</TamaText>
+                  <PixelText size={10} color="#EF4444" shadow>{heartRate}</PixelText>
+                  <PixelText size={6} color="#EF4444" style={{ opacity: 0.5, marginTop: 2 }}>BPM</PixelText>
                 </YStack>
               </XStack>
             </YStack>
 
-            <YStack borderLeftWidth={1} borderColor="#D4A373" paddingLeft="$3">
-              <TamaText fontFamily="$pixel" fontSize={12} color="#FFFFFF">{formatTime(elapsedSec)}</TamaText>
-              <TamaText fontFamily="$pixel" fontSize={6} color="#FFFFFF" opacity={0.5}>ELAPSED</TamaText>
+            <YStack borderLeftWidth={2} borderColor="#D4A373" paddingLeft="$3">
+              <PixelText size={12} color="#FFFFFF" shadow>{formatTime(elapsedSec)}</PixelText>
+              <PixelText size={6} color="#FFFFFF" style={{ opacity: 0.5, marginTop: 4 }}>ELAPSED</PixelText>
             </YStack>
           </XStack>
         </Animated.View>
@@ -135,7 +135,7 @@ export const GameHUD = observer(
 const styles = StyleSheet.create({
   tapArea: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 90, // Above the Start Mission button
     left: 20,
     right: 20,
     zIndex: 100,
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   hudContainer: {},
   hudBox: {
     shadowColor: '#000',
-    shadowOffset: { width: 4, height: 4 },
+    shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 8,

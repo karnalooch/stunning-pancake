@@ -9,7 +9,9 @@ import { MMKV } from 'react-native-mmkv';
 import { GpsSyncManager } from '../services/GpsSyncManager';
 import { triggerEngine } from '../services/TriggerEngine';
 import { avatarTrainer } from '../services/AvatarTrainerService';
-import { HD2DButton } from '../components/HD2DButton';
+import { GameCard } from '../components/arcade/GameCard';
+import { PixelText } from '../components/arcade/PixelText';
+import { ArcadeButton } from '../components/arcade/ArcadeButton';
 import { PopUpDialog } from '../components/PopUpDialog';
 import { GameHUD } from '../components/GameHUD';
 
@@ -156,15 +158,15 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
 
       <YStack
         position="absolute"
-        bottom={40}
+        bottom={20}
         left={20}
         right={20}
       >
-        <HD2DButton
+        <ArcadeButton
           onPress={toggleTracking}
-          theme={isTracking ? 'red' : 'green'}
+          variant={isTracking ? 'red' : 'green'}
           label={isTracking ? 'ABORT & SYNC' : 'START MISSION'}
-          height={56}
+          size="lg"
         />
       </YStack>
 

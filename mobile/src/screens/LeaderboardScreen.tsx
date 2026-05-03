@@ -1,21 +1,17 @@
 import React, { useEffect } from 'react';
 import { Image, Alert } from 'react-native';
-import { Crown, Swords } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, useTheme, View } from 'tamagui';
+import { YStack, XStack, ScrollView, View } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService, LeaderboardEntry } from '../services/api';
 
-import { RetroCard } from '../components/RetroCard';
-import { HD2DButton } from '../components/HD2DButton';
+import { GameCard } from '../components/arcade/GameCard';
+import { PixelText } from '../components/arcade/PixelText';
+import { ArcadeButton } from '../components/arcade/ArcadeButton';
 import { AthleteSprite } from '../components/AthleteSprite';
-
-const CrownIcon = Crown as any;
-const SwordsIcon = Swords as any;
 
 const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
 export const LeaderboardScreen = observer(() => {
-  const theme = useTheme();
   const state = useObservable({
     category: 'CITY' as 'CITY' | 'GLOBAL',
     ranking: [] as LeaderboardEntry[],
@@ -41,109 +37,107 @@ export const LeaderboardScreen = observer(() => {
   const myRank = state.myRank.get();
 
   return (
-    <YStack flex={1} backgroundColor="$background" paddingTop="$10">
+    <YStack flex={1} backgroundColor="#0B1D33" paddingTop="$10">
       <XStack paddingHorizontal="$4" justifyContent="space-between" alignItems="center" marginBottom="$4">
-        <TamaText fontFamily="$pixel" fontSize={18} color="$color">RANKINGS</TamaText>
+        <PixelText size={18} color="#D4A373" shadow>HIGH_SCORES</PixelText>
         <Image source={rewardTrophy} style={{ width: 28, height: 28 }} resizeMode="contain" />
       </XStack>
 
       {/* Podium TOP 3 — Metal Slug style */}
-      <XStack justifyContent="center" alignItems="flex-end" gap="$2" marginBottom="$4" marginTop="$2">
+      <XStack justifyContent="center" alignItems="flex-end" gap="$2" marginBottom="$6" marginTop="$4" paddingHorizontal="$4">
         {/* Silver */}
-        <YStack alignItems="center">
-          <View backgroundColor="$silver" paddingHorizontal="$2" borderWidth={1} borderColor="$outlineColor" marginBottom="$1">
-            <TamaText color="black" fontFamily="$pixel" fontSize={7}>RANK_02</TamaText>
+        <YStack alignItems="center" flex={1}>
+          <View backgroundColor="#C0C0C0" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
+            <PixelText color="#000000" size={7}>RANK_02</PixelText>
           </View>
-          <RetroCard padding="$2" alignItems="center" borderColor="$silver" borderBottomWidth={4}>
+          <GameCard variant="metal" padding={8} width="100%" alignItems="center" borderBottomWidth={4}>
             <AthleteSprite type="cyclist" state="action" size={45} />
-            <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>
+            <PixelText color="#FFFFFF" marginTop="$2" size={10} shadow numberOfLines={1}>
               {ranking[1]?.username || '---'}
-            </TamaText>
-            <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">
+            </PixelText>
+            <PixelText color="#9CA3AF" size={8} marginTop="$1">
               {ranking[1]?.points || 0}PTS
-            </TamaText>
-          </RetroCard>
+            </PixelText>
+          </GameCard>
         </YStack>
 
         {/* Gold */}
-        <YStack alignItems="center">
-          <CrownIcon size={20} color={theme.primary.get()} style={{ marginBottom: 4 }} />
-          <RetroCard padding="$3" alignItems="center" borderColor="$primary" borderBottomWidth={6}>
-            <AthleteSprite type="elite" state="action" size={55} />
-            <TamaText color="$color" marginTop="$2" fontSize={12} fontFamily="$pixel" numberOfLines={1} maxWidth={80}>
+        <YStack alignItems="center" flex={1.2}>
+          <View backgroundColor="#D4A373" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
+            <PixelText color="#000000" size={7}>RANK_01</PixelText>
+          </View>
+          <GameCard variant="dark" padding={12} width="100%" alignItems="center" borderBottomWidth={6}>
+            <AthleteSprite type="elite" state="action" size={60} />
+            <PixelText color="#FFFFFF" marginTop="$2" size={12} shadow numberOfLines={1}>
               {ranking[0]?.username || '---'}
-            </TamaText>
-            <TamaText color="$primary" fontSize={8} fontFamily="$pixel">
-              {ranking[0]?.points || 0}PTS_MAX
-            </TamaText>
-          </RetroCard>
+            </PixelText>
+            <PixelText color="#D4A373" size={10} marginTop="$1">
+              {ranking[0]?.points || 0} MAX
+            </PixelText>
+          </GameCard>
         </YStack>
 
         {/* Bronze */}
-        <YStack alignItems="center">
-          <View backgroundColor="#CD7F32" paddingHorizontal="$2" borderWidth={1} borderColor="$outlineColor" marginBottom="$1">
-            <TamaText color="black" fontFamily="$pixel" fontSize={7}>RANK_03</TamaText>
+        <YStack alignItems="center" flex={1}>
+          <View backgroundColor="#CD7F32" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
+            <PixelText color="#000000" size={7}>RANK_03</PixelText>
           </View>
-          <RetroCard padding="$2" alignItems="center" borderColor="#CD7F32" borderBottomWidth={3}>
+          <GameCard variant="parchment" padding={8} width="100%" alignItems="center" borderBottomWidth={4}>
             <AthleteSprite type="runner" state="action" size={45} />
-            <TamaText color="$color" marginTop="$2" fontSize={10} fontFamily="$pixel" numberOfLines={1} maxWidth={70}>
+            <PixelText color="#000000" marginTop="$2" size={10} numberOfLines={1}>
               {ranking[2]?.username || '---'}
-            </TamaText>
-            <TamaText color="$color" opacity={0.6} fontSize={8} fontFamily="$pixel">
+            </PixelText>
+            <PixelText color="#8B7355" size={8} marginTop="$1">
               {ranking[2]?.points || 0}PTS
-            </TamaText>
-          </RetroCard>
+            </PixelText>
+          </GameCard>
         </YStack>
       </XStack>
 
       {/* Rest of ranking */}
       <ScrollView flex={1} paddingHorizontal="$4" showsVerticalScrollIndicator={false}>
-        <YStack gap="$3" paddingBottom="$20">
+        <YStack gap="$3" paddingBottom="$30">
           {ranking.slice(3, 15).map((item, i) => (
-            <RetroCard key={i} padding="$3">
+            <GameCard key={i} variant="dark" padding={12}>
               <XStack alignItems="center" justifyContent="space-between">
                 <XStack alignItems="center" gap="$3">
-                  <TamaText color="$color" opacity={0.4} fontFamily="$pixel" fontSize={10} width={30}>
+                  <PixelText color="#9CA3AF" size={10} width={30}>
                     #{i + 4}
-                  </TamaText>
+                  </PixelText>
                   <AthleteSprite type={i % 2 === 0 ? 'runner' : 'cyclist'} state="idle" size={32} />
                   <YStack>
-                    <TamaText color="$color" fontSize={12} fontWeight="800">{item.username}</TamaText>
-                    <TamaText color="$primary" fontFamily="$pixel" fontSize={8}>{item.points} PTS</TamaText>
+                    <PixelText color="#FFFFFF" size={12} shadow>{item.username}</PixelText>
+                    <PixelText color="#D4A373" size={8} marginTop="$1">{item.points} PTS</PixelText>
                   </YStack>
                 </XStack>
-                <HD2DButton label="VS" size="$2" paddingHorizontal="$3" />
+                <ArcadeButton label="VS" size="sm" variant="red" fullWidth={false} onPress={() => {}} />
               </XStack>
-            </RetroCard>
+            </GameCard>
           ))}
         </YStack>
       </ScrollView>
 
       {/* Fixed My Rank HUD */}
-      <RetroCard
+      <GameCard
+        variant="metal"
         position="absolute"
-        bottom={0}
-        left={0}
-        right={0}
-        backgroundColor="$backgroundStrong"
-        padding="$4"
-        borderTopWidth={2}
-        borderColor="$primary"
+        bottom={0} left={0} right={0}
+        padding={16}
       >
         <XStack alignItems="center" justifyContent="space-between">
           <XStack alignItems="center" gap="$3">
-            <TamaText color="$primary" fontFamily="$pixel" fontSize={10} width={40}>
+            <PixelText color="#D4A373" size={12} width={40}>
               #{myRank?.rank || '?'}
-            </TamaText>
+            </PixelText>
             <AthleteSprite type="runner" state="idle" size={36} />
             <YStack>
-              <TamaText color="$color" fontSize={14} fontWeight="900">YOU (ACTIVE)</TamaText>
-              <TamaText color="$primary" fontFamily="$pixel" fontSize={10}>{myRank?.points || 0} PTS</TamaText>
+              <PixelText color="#FFFFFF" size={14} shadow>YOU (P1)</PixelText>
+              <PixelText color="#D4A373" size={10} marginTop="$1">{myRank?.points || 0} PTS</PixelText>
             </YStack>
           </XStack>
-          <HD2DButton label="PROFILE" theme="green" size="$3" />
+          <ArcadeButton label="PROFILE" variant="blue" size="sm" fullWidth={false} onPress={() => {}} />
         </XStack>
-      </RetroCard>
+      </GameCard>
     </YStack>
   );
 });

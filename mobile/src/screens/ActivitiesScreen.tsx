@@ -1,23 +1,28 @@
 import React, { useEffect } from 'react';
-import { Share } from 'react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, useTheme, View } from 'tamagui';
+import { Share, Image } from 'react-native';
+import { YStack, XStack, ScrollView, View } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService, ActivityItem } from '../services/api';
 
-import { RetroCard } from '../components/RetroCard';
-import { HD2DButton } from '../components/HD2DButton';
+import { GameCard } from '../components/arcade/GameCard';
+import { PixelText } from '../components/arcade/PixelText';
+import { ArcadeButton } from '../components/arcade/ArcadeButton';
 import { AthleteSprite } from '../components/AthleteSprite';
 
+const GRADE_ICONS: Record<string, any> = {
+  S: require('../../assets/generated/grade_s.png'),
+  A: require('../../assets/generated/grade_a.png'),
+};
+
 const verificationGrade = (score: number): { label: string; color: string } => {
-  if (score >= 0.95) return { label: 'S', color: '#D4A373' };
-  if (score >= 0.85) return { label: 'A', color: '#7BA05B' };
-  if (score >= 0.70) return { label: 'B', color: '#60A5FA' };
-  if (score >= 0.50) return { label: 'C', color: '#FFB800' };
-  return { label: 'D', color: '#EF4444' };
+  if (score >= 0.95) return { label: 'S', color: '#D4A373' }; // Gold
+  if (score >= 0.85) return { label: 'A', color: '#7BA05B' }; // Green
+  if (score >= 0.70) return { label: 'B', color: '#60A5FA' }; // Blue
+  if (score >= 0.50) return { label: 'C', color: '#FFB800' }; // Yellow
+  return { label: 'D', color: '#EF4444' }; // Red
 };
 
 export const ActivitiesScreen = observer(() => {
-  const theme = useTheme();
   const state = useObservable({
     activities: [] as ActivityItem[],
     loading: true,
@@ -54,89 +59,86 @@ export const ActivitiesScreen = observer(() => {
   };
 
   return (
-    <YStack flex={1} backgroundColor="$background" paddingTop="$10" paddingHorizontal="$4">
+    <YStack flex={1} backgroundColor="#0B1D33" paddingTop="$10" paddingHorizontal="$4">
       <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-        <TamaText fontFamily="$pixel" fontSize={18} color="$color">QUEST_LOG</TamaText>
-        <TamaText fontFamily="$pixel" fontSize={8} color="$primary">
+        <PixelText size={18} color="#D4A373" shadow>QUEST_LOG</PixelText>
+        <PixelText size={8} color="#7BA05B">
           {activities.length} MISSIONS RECORDED
-        </TamaText>
+        </PixelText>
       </XStack>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        <YStack gap="$3" paddingBottom="$10">
+        <YStack gap="$4" paddingBottom="$10">
           {state.loading.get() && activities.length === 0 && (
             <YStack padding="$10" alignItems="center">
               <AthleteSprite type="runner" state="action" size={60} />
-              <TamaText color="$primary" fontFamily="$pixel" fontSize={10} marginTop="$4">
+              <PixelText size={10} color="#D4A373" style={{ marginTop: 16 }}>
                 SCANNING SESSION LOGS...
-              </TamaText>
+              </PixelText>
             </YStack>
           )}
 
           {!state.loading.get() && activities.length === 0 && (
             <YStack padding="$10" alignItems="center">
               <AthleteSprite type="ghost" state="idle" size={60} />
-              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={10} marginTop="$4">
+              <PixelText size={10} color="#9CA3AF" style={{ marginTop: 16 }}>
                 NO MISSIONS COMPLETED YET
-              </TamaText>
-              <TamaText color="$primary" fontFamily="$pixel" fontSize={8} marginTop="$2">
-                PRESS "START MISSION" TO BEGIN
-              </TamaText>
+              </PixelText>
+              <PixelText size={8} color="#7BA05B" style={{ marginTop: 8 }}>
+                GO TO HOME TO BEGIN
+              </PixelText>
             </YStack>
           )}
 
           {activities.map((act) => {
             const grade = verificationGrade(act.verification_score || 0);
             return (
-              <RetroCard key={act.id} padding="$3">
+              <GameCard key={act.id} variant="metal" padding={12}>
                 <XStack alignItems="center" gap="$3">
                   <View
-                    backgroundColor="$backgroundStrong"
-                    padding="$2"
+                    backgroundColor="#0B1D33"
                     borderWidth={2}
                     borderColor={grade.color}
                     alignItems="center"
                     justifyContent="center"
-                    minWidth={44}
-                    minHeight={44}
+                    width={48}
+                    height={48}
                   >
-                    <TamaText
-                      color={grade.color}
-                      fontWeight="900"
-                      fontSize={18}
-                      fontFamily="$pixel"
-                    >
-                      {grade.label}
-                    </TamaText>
+                    {GRADE_ICONS[grade.label] ? (
+                      <Image source={GRADE_ICONS[grade.label]} style={{ width: 32, height: 32 }} resizeMode="contain" />
+                    ) : (
+                      <PixelText color={grade.color} size={20} shadow>
+                        {grade.label}
+                      </PixelText>
+                    )}
                   </View>
 
                   <YStack flex={1}>
-                    <TamaText color="$color" fontWeight="900" fontSize={14} fontFamily="$pixel">
+                    <PixelText size={12} color="#FFFFFF" shadow>
                       {act.type?.toUpperCase() || 'UNKNOWN'} MISSION
-                    </TamaText>
-                    <TamaText color="$color" fontSize={10} opacity={0.6} fontFamily="$pixel" marginTop="$1">
-                      {new Date(act.start_time).toLocaleDateString()} ·{' '}
-                      {((act.distance || 0) / 1000).toFixed(2)} KM
-                    </TamaText>
+                    </PixelText>
+                    <PixelText size={8} color="#9CA3AF" style={{ marginTop: 6 }}>
+                      {new Date(act.start_time).toLocaleDateString()} · {((act.distance || 0) / 1000).toFixed(2)} KM
+                    </PixelText>
                   </YStack>
 
-                  <HD2DButton
-                    size="$2"
-                    label="↗"
+                  <ArcadeButton
+                    size="sm"
+                    label="SHARE"
+                    variant="blue"
+                    fullWidth={false}
                     onPress={() => handleShare(act)}
-                    backgroundColor="transparent"
-                    paddingHorizontal="$2"
                   />
                 </XStack>
-              </RetroCard>
+              </GameCard>
             );
           })}
         </YStack>
       </ScrollView>
 
-      <TamaText textAlign="center" fontSize={8} color="$color" opacity={0.3} paddingVertical="$2" fontFamily="$pixel">
+      <PixelText size={8} color="#9CA3AF" style={{ textAlign: 'center', opacity: 0.5, paddingVertical: 12 }}>
         QUEST LOG · RPG CHARACTER SHEET v2.0
-      </TamaText>
+      </PixelText>
     </YStack>
   );
 });
