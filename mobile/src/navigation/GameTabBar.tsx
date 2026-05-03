@@ -5,11 +5,11 @@ import { PixelText } from '../components/arcade/PixelText';
 import * as Haptics from 'expo-haptics';
 
 const NAV_ICONS: Record<string, any> = {
-  Home: require('../../../assets/generated/nav_home.png'),
-  History: require('../../../assets/generated/nav_history.png'),
-  Ranking: require('../../../assets/generated/nav_ranking.png'),
-  Rewards: require('../../../assets/generated/nav_rewards.png'),
-  Profile: require('../../../assets/generated/nav_profile.png'),
+  Home: require('../../assets/generated/nav_home.png'),
+  History: require('../../assets/generated/nav_history.png'),
+  Ranking: require('../../assets/generated/nav_ranking.png'),
+  Rewards: require('../../assets/generated/nav_rewards.png'),
+  Profile: require('../../assets/generated/nav_profile.png'),
 };
 
 export const GameTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
