@@ -10,7 +10,7 @@ export default ({ config }) => {
     ...config,
     "name": "mobile",
     "slug": "mobile",
-    "version": "0.1.0-beta.1",
+    "version": "0.2.0-rc.1",
     "updates": {
       "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
       "channel": "production"
