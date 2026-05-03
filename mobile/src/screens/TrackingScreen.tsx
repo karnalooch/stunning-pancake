@@ -234,50 +234,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             <Layer
               id="user-location-pixel"
               type="circle"
-              style={{
-                circleRadius: 8,
-                circleColor: theme.accent.get(),
-                circleStrokeWidth: 2,
-                circleStrokeColor: '#000000',
-              }}
-            />
-          </UserLocation>
-          {state.pois.get().length > 0 && (
-            <GeoJSONSource id="pois-source" shape={poiFeatures as any}>
-              <Layer type="circle"
-                id="pois-circle"
-                style={{
-                  circleRadius: 6,
-                  circleColor: theme.primary.get(),
-                  circleStrokeWidth: 2,
-                  circleStrokeColor: '#000000',
-                  circleOpacity: 0.9,
-                }}
-              />
-            </GeoJSONSource>
-          )}
-        </Map>
-
-        {/* Octopath Vignette Overlay */}
-        <YStack
-          position="absolute"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          pointerEvents="none"
-          zIndex={2}
-          backgroundColor="transparent"
-        >
-          <YStack
-            position="absolute"
-            top={0}
-            left={0}
-            width={width}
-            height={60}
-            style={{
-              background: 'linear-gradient(to bottom, rgba(45,36,24,0.9), rgba(45,36,24,0))',
-            }}
+              style={{ backgroundColor: 'rgba(45,36,24,0.6)' }}
           />
           <YStack
             position="absolute"
@@ -285,9 +242,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             left={0}
             width={width}
             height={60}
-            style={{
-              background: 'linear-gradient(to top, rgba(45,36,24,0.9), rgba(45,36,24,0))',
-            }}
+            style={{ backgroundColor: 'rgba(45,36,24,0.6)' }}
           />
           <YStack
             position="absolute"
@@ -295,9 +250,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             top={0}
             width={40}
             height={height}
-            style={{
-              background: 'linear-gradient(to right, rgba(45,36,24,0.5), rgba(45,36,24,0))',
-            }}
+            style={{ backgroundColor: 'rgba(45,36,24,0.6)' }}
           />
           <YStack
             position="absolute"
@@ -305,9 +258,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
             top={0}
             width={40}
             height={height}
-            style={{
-              background: 'linear-gradient(to left, rgba(45,36,24,0.5), rgba(45,36,24,0))',
-            }}
+            style={{ backgroundColor: 'rgba(45,36,24,0.6)' }}
           />
         </YStack>
 
