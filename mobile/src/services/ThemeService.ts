@@ -16,13 +16,13 @@ function getStorage(): MMKV | null {
   }
 }
 
-export type ThemeMode = 'dark' | 'solar';
+export type ThemeMode = 'octopath' | 'solar';
 
-// Initialize with stored value or default to 'dark'
+// Initialize with stored value or default to 'octopath'
 function getInitialTheme(): ThemeMode {
   const storage = getStorage();
-  if (!storage) return 'dark';
-  return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'dark';
+  if (!storage) return 'octopath';
+  return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'octopath';
 }
 
 export const ThemeService = {
@@ -30,7 +30,7 @@ export const ThemeService = {
   
   toggleTheme: () => {
     const current = ThemeService.themeMode.get();
-    const next = current === 'dark' ? 'solar' : 'dark';
+    const next = current === 'octopath' ? 'solar' : 'octopath';
     ThemeService.themeMode.set(next);
     const storage = getStorage();
     if (storage) storage.set(THEME_STORAGE_KEY, next);

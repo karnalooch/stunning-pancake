@@ -30,21 +30,31 @@ const pixelFont = createFont({
   letterSpacing: { 4: 0, 7: 0 },
 });
 
-// ─── Color Palette: Dave the Diver × Metal Slug × Octopath ─────
-// Deep Sea (tła) / Ocean Teal (akcenty) / Coral (CTA)
-// Gold (podium) / Warning Red / Pixel Black (obrysy)
+// ─── Color Palette: Octopath Traveler (primary) × Metal Slug (HUD) ─
+// Octopath: warm gold, parchment brown, soft forest green, sepia bronze — fantasy RPG warmth
+// Metal Slug: pixel black outlines, chunky UI, industrial contrast
 const hd2dColors = {
-  deepBlue: '#0A1628',
-  oceanTeal: '#00D4AA',
-  coral: '#FF6B35',
-  warmGold: '#D4A373',
-  pixelBlack: '#000000',
-  solarWhite: '#FFF8E7',
-  solarBlack: '#111111',
-  warning: '#EF4444',
-  success: '#10B981',
-  silver: '#A0A0A0',
-  void: '#060E1A',
+  // Octopath Traveler — core palette
+  parchment: '#2D2418',      // Dark warm brown (background)
+  deepBrown: '#1A1410',      // Deeper shadow brown
+  panel: '#3D3020',          // Surface brown (cards, panels)
+  goldAmber: '#D4A373',      // Octopath gold (primary accent)
+  goldLight: '#EDD9B0',      // Bright gold (highlight)
+  forestGreen: '#7BA05B',    // Soft forest green (success, growth)
+  deepShadow: '#2D3A54',     // Night sky blue (contrast accent)
+  cream: '#F5E6CC',          // Warm parchment cream (text on dark)
+  sepia: '#8B7355',          // Bronze/sepia (secondary)
+  woodBorder: '#5C4020',     // Dark wood (outline/border)
+  // Metal Slug — HUD / industrial accents
+  pixelBlack: '#000000',     // Pure black outlines
+  industrial: '#4A4A4A',     // Metal Slug grey
+  // Solar Mode
+  solarCream: '#FFF8E7',     // Parchment white (solar bg)
+  solarBrown: '#2D2418',     // Dark brown (solar text)
+  // Semantic
+  warning: '#E8A840',        // Amber warning
+  error: '#CC4444',          // Soft red error
+  silver: '#A0A0A0',         // Silver podium
 };
 
 // ─── Tokens ────────────────────────────────────────────────────
@@ -52,24 +62,28 @@ const tokens = createTokens({
   ...config.tokens,
   color: {
     ...config.tokens.color,
-    primary: hd2dColors.warmGold,
-    secondary: hd2dColors.coral,
-    accent: hd2dColors.oceanTeal,
-    background: hd2dColors.deepBlue,
-    backgroundStrong: hd2dColors.void,
-    color: '#FFFFFF',
-    error: hd2dColors.warning,
-    success: hd2dColors.success,
-    gold: hd2dColors.warmGold,
-    coral: hd2dColors.coral,
-    teal: hd2dColors.oceanTeal,
+    primary: hd2dColors.goldAmber,
+    secondary: hd2dColors.sepia,
+    accent: hd2dColors.forestGreen,
+    background: hd2dColors.parchment,
+    backgroundStrong: hd2dColors.deepBrown,
+    color: hd2dColors.cream,
+    error: hd2dColors.error,
+    warning: hd2dColors.warning,
+    success: hd2dColors.forestGreen,
+    gold: hd2dColors.goldAmber,
+    amber: hd2dColors.goldLight,
+    sepia: hd2dColors.sepia,
+    forest: hd2dColors.forestGreen,
     silver: hd2dColors.silver,
     // Semantic aliases
-    deepBlue: hd2dColors.deepBlue,
-    oceanTeal: hd2dColors.oceanTeal,
+    parchment: hd2dColors.parchment,
+    deepBrown: hd2dColors.deepBrown,
+    panel: hd2dColors.panel,
+    cream: hd2dColors.cream,
     pixelBlack: hd2dColors.pixelBlack,
-    solarWhite: hd2dColors.solarWhite,
-    solarBlack: hd2dColors.solarBlack,
+    solarCream: hd2dColors.solarCream,
+    solarBrown: hd2dColors.solarBrown,
   },
   radius: {
     none: 0,
@@ -99,42 +113,52 @@ const tamaguiConfig = createTamagui({
   tokens,
   themes: {
     ...config.themes,
-    // Deep Sea — default dark theme (Dave the Diver)
-    deep: {
+    // Octopath — warm fantasy parchment (default dark theme)
+    octopath: {
       ...config.themes.dark,
-      background: hd2dColors.deepBlue,
-      backgroundStrong: hd2dColors.void,
-      color: '#FFFFFF',
-      primary: hd2dColors.warmGold,
-      secondary: hd2dColors.coral,
-      accent: hd2dColors.oceanTeal,
-      error: hd2dColors.warning,
-      success: hd2dColors.success,
-      gold: hd2dColors.warmGold,
-      coral: hd2dColors.coral,
-      teal: hd2dColors.oceanTeal,
+      background: hd2dColors.parchment,
+      backgroundStrong: hd2dColors.deepBrown,
+      color: hd2dColors.cream,
+      primary: hd2dColors.goldAmber,
+      secondary: hd2dColors.sepia,
+      accent: hd2dColors.forestGreen,
+      error: hd2dColors.error,
+      warning: hd2dColors.warning,
+      success: hd2dColors.forestGreen,
+      gold: hd2dColors.goldAmber,
+      amber: hd2dColors.goldLight,
+      sepia: hd2dColors.sepia,
+      forest: hd2dColors.forestGreen,
       silver: hd2dColors.silver,
-      outlineColor: hd2dColors.pixelBlack,
+      panel: hd2dColors.panel,
+      cream: hd2dColors.cream,
+      parchment: hd2dColors.parchment,
+      outlineColor: hd2dColors.woodBorder,
     },
-    // Solar — high-noon outdoor mode (12:1 contrast)
+    // Solar — high-noon parchment (12:1 contrast outdoor mode)
     solar: {
       ...config.themes.light,
-      background: hd2dColors.solarWhite,
-      backgroundStrong: '#FFFFFF',
-      color: hd2dColors.solarBlack,
-      primary: hd2dColors.solarBlack,
-      secondary: hd2dColors.solarBlack,
-      accent: '#000080',
-      error: '#CC0000',
-      success: '#006600',
-      gold: '#B8860B',
-      coral: '#CC3300',
-      teal: '#006666',
+      background: hd2dColors.solarCream,
+      backgroundStrong: '#FFF0D4',
+      color: hd2dColors.solarBrown,
+      primary: '#6B4226',
+      secondary: '#4A3520',
+      accent: '#3D6B2E',
+      error: '#AA0000',
+      warning: '#8B6914',
+      success: '#2E6B1E',
+      gold: '#8B6914',
+      amber: '#B8860B',
+      sepia: '#6B4226',
+      forest: '#3D6B2E',
       silver: '#666666',
+      panel: '#F5E6CC',
+      cream: hd2dColors.solarBrown,
+      parchment: hd2dColors.solarCream,
       outlineColor: hd2dColors.pixelBlack,
     },
   },
-  defaultTheme: 'deep',
+  defaultTheme: 'octopath',
 });
 
 export type AppConfig = typeof tamaguiConfig;
