@@ -1,35 +1,36 @@
-import axios from 'axios';
-import { Theme } from '../theme/Theme';
-
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://docker-backend-production-123c.up.railway.app';
+import { api } from './api';
 
 export interface TenantBranding {
   name: string;
   primary_color: string;
   secondary_color: string;
   logo_url: string | null;
-  splash_url: string | null;
 }
 
 let currentBranding: TenantBranding | null = null;
 
 export const BrandingService = {
-  getBranding: async (tenantId: string): Promise<TenantBranding | null> => {
+  fetch: async (tenantId: string): Promise<TenantBranding | null> => {
     try {
-      const response = await axios.get(`${BASE_URL}/api/users/tenant/${tenantId}/branding/`);
-      currentBranding = response.data;
-      return currentBranding;
+      const data = await api
+        .get(`/api/users/branding/${tenantId}/`)
+        .then((r) => r.data);
+      currentBranding = data;
+      return data;
     } catch (e) {
-      console.error(`[Branding] Failed to fetch branding for ${tenantId}:`, e);
+      console.warn(`[Branding] Failed to fetch branding for ${tenantId}:`, e);
       return null;
     }
   },
 
-  getCurrentBranding: () => currentBranding,
+  getCurrent: (): TenantBranding | null => currentBranding,
 
-  applyBranding: (branding: TenantBranding) => {
-    console.log(`[Branding] Applying styles for ${branding.name}`);
-    if (branding.primary_color) Theme.colors.primary = branding.primary_color;
-    if (branding.secondary_color) Theme.colors.secondary = branding.secondary_color;
-  }
+  // Apply branding to Tamagui theme — to be called after fetch
+  colors: (): { primary: string; secondary: string } | null => {
+    if (!currentBranding) return null;
+    return {
+      primary: currentBranding.primary_color,
+      secondary: currentBranding.secondary_color,
+    };
+  },
 };

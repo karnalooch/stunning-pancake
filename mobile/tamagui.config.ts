@@ -1,7 +1,7 @@
-import { createTamagui, createFont, createTokens } from 'tamagui'
-import { config } from '@tamagui/config/v3'
+import { createTamagui, createFont, createTokens } from 'tamagui';
+import { config } from '@tamagui/config/v3';
 
-// HD-2D Pixel Font Configuration
+// ─── HD-2D Pixel Font: Press Start 2P ─────────────────────────
 const pixelFont = createFont({
   family: 'Press Start 2P',
   size: {
@@ -26,29 +26,50 @@ const pixelFont = createFont({
     8: 34,
     true: 18,
   },
-  weight: {
-    4: '400',
-    7: '400', // Only one weight for pixel font
-  },
-  letterSpacing: {
-    4: 0,
-    7: 0,
-  },
-})
+  weight: { 4: '400', 7: '400' },
+  letterSpacing: { 4: 0, 7: 0 },
+});
 
-// HD-2D Pixel Tokens
+// ─── Color Palette: Dave the Diver × Metal Slug × Octopath ─────
+// Deep Sea (tła) / Ocean Teal (akcenty) / Coral (CTA)
+// Gold (podium) / Warning Red / Pixel Black (obrysy)
+const hd2dColors = {
+  deepBlue: '#0A1628',
+  oceanTeal: '#00D4AA',
+  coral: '#FF6B35',
+  warmGold: '#D4A373',
+  pixelBlack: '#000000',
+  solarWhite: '#FFF8E7',
+  solarBlack: '#111111',
+  warning: '#EF4444',
+  success: '#10B981',
+  silver: '#A0A0A0',
+  void: '#060E1A',
+};
+
+// ─── Tokens ────────────────────────────────────────────────────
 const tokens = createTokens({
   ...config.tokens,
   color: {
     ...config.tokens.color,
-    primary: '#D4A373', // Octopath Gold
-    secondary: '#FF6B35', // Metal Slug Orange
-    accent: '#2EC4B6', // Matrix Cyan
-    background: '#0B1D33', // Dave the Diver Deep Sea
-    void: '#0B1D33',
-    matrix: '#2EC4B6',
-    octopath: '#D4A373',
-    metalSlug: '#FF6B35',
+    primary: hd2dColors.warmGold,
+    secondary: hd2dColors.coral,
+    accent: hd2dColors.oceanTeal,
+    background: hd2dColors.deepBlue,
+    backgroundStrong: hd2dColors.void,
+    color: '#FFFFFF',
+    error: hd2dColors.warning,
+    success: hd2dColors.success,
+    gold: hd2dColors.warmGold,
+    coral: hd2dColors.coral,
+    teal: hd2dColors.oceanTeal,
+    silver: hd2dColors.silver,
+    // Semantic aliases
+    deepBlue: hd2dColors.deepBlue,
+    oceanTeal: hd2dColors.oceanTeal,
+    pixelBlack: hd2dColors.pixelBlack,
+    solarWhite: hd2dColors.solarWhite,
+    solarBlack: hd2dColors.solarBlack,
   },
   radius: {
     none: 0,
@@ -58,50 +79,68 @@ const tokens = createTokens({
     lg: 0,
     true: 0,
   },
-  // Custom HD2D tokens for easy access
   hd2d: {
     borderWidth: 1,
-    outlineColor: '#000000',
+    outlineColor: hd2dColors.pixelBlack,
     pixelScale: 2,
     shadow: '4px 4px 0px rgba(0,0,0,1)',
-  }
-})
+  },
+});
 
+// ─── Themes ────────────────────────────────────────────────────
 const tamaguiConfig = createTamagui({
   ...config,
   fonts: {
     ...config.fonts,
     heading: pixelFont,
-    body: config.fonts.body, // Keep standard body font or replace if needed
+    body: config.fonts.body,
     pixel: pixelFont,
   },
   tokens,
   themes: {
     ...config.themes,
-    dark: {
+    // Deep Sea — default dark theme (Dave the Diver)
+    deep: {
       ...config.themes.dark,
-      background: '#0B1D33', // daveDeepSea
+      background: hd2dColors.deepBlue,
+      backgroundStrong: hd2dColors.void,
       color: '#FFFFFF',
-      primary: '#D4A373',
-      secondary: '#FF6B35',
-      accent: '#2EC4B6',
+      primary: hd2dColors.warmGold,
+      secondary: hd2dColors.coral,
+      accent: hd2dColors.oceanTeal,
+      error: hd2dColors.warning,
+      success: hd2dColors.success,
+      gold: hd2dColors.warmGold,
+      coral: hd2dColors.coral,
+      teal: hd2dColors.oceanTeal,
+      silver: hd2dColors.silver,
+      outlineColor: hd2dColors.pixelBlack,
     },
+    // Solar — high-noon outdoor mode (12:1 contrast)
     solar: {
       ...config.themes.light,
-      background: '#FFFFFF',
-      color: '#000000',
-      primary: '#000000',
-      secondary: '#000000',
-      accent: '#000080', // Dark Navy for 16:1 contrast on White
-    }
+      background: hd2dColors.solarWhite,
+      backgroundStrong: '#FFFFFF',
+      color: hd2dColors.solarBlack,
+      primary: hd2dColors.solarBlack,
+      secondary: hd2dColors.solarBlack,
+      accent: '#000080',
+      error: '#CC0000',
+      success: '#006600',
+      gold: '#B8860B',
+      coral: '#CC3300',
+      teal: '#006666',
+      silver: '#666666',
+      outlineColor: hd2dColors.pixelBlack,
+    },
   },
-  defaultTheme: 'dark',
-})
+  defaultTheme: 'deep',
+});
 
-export type AppConfig = typeof tamaguiConfig
+export type AppConfig = typeof tamaguiConfig;
 
 declare module 'tamagui' {
   interface TamaguiCustomConfig extends AppConfig {}
 }
 
-export default tamaguiConfig
+export default tamaguiConfig;

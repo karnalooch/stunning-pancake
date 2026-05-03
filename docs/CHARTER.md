@@ -37,7 +37,24 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 - **Rdzeń**: Django (REST API) + FastAPI (telemetria — dev only).
 - **Mobile**: React Native (Expo, Tamagui, Skia, Legend-State).
 - **Data**: PostgreSQL + PostGIS + Redis.
-- **Design**: Solar-Ready HD-2D z estetyką retro-gamingową (Metal Slug, Dave the Diver, Octopath Traveler).
+
+## 6. Manifest Wizualny (SSOT: `docs/VISUAL_MANIFESTO.md`)
+
+Platforma SPORT odrzuca klasyczne UI na rzecz immersyjnej estetyki **HD-2D Gaming Fusion**, łączącej trzy style retro-gamingowe:
+
+| Inspiracja | Co wnosimy |
+|---|---|
+| **Octopath Traveler** | Miękki bloom, kinowe oświetlenie, efekt tilt-shift, dynamiczne cieniowanie, floating idle animations |
+| **Metal Slug** | "Mięsiste" (chunky) pikselowe kształty, industrialny detal, 1px ostre obrysy, 4px twarde cienie, mechaniczne przyciski (2px press) |
+| **Dave the Diver** | Żywa morska paleta (deep blues, vibrant accents), soczyste akcenty, przyjazna atmosfera eksploracji |
+
+### Zasady żelazne:
+- **Radius: 0** — żadnych zaokrągleń. Wszystko prostokątne.
+- **Outline: 1px solid black** — każdy element ma czarny obrys.
+- **Shadow: 4px offset, blur 0** — twarde cienie, bez rozmycia.
+- **Font**: Press Start 2P (pixel-perfect).
+- **Animacje**: Spring physics (damping 14, stiffness 100), typewriter 40ms/znak, floating idle ±8px.
+- **Kontrast**: Solar Mode 12:1 — czytelność w pełnym słońcu.
 
 ---
 

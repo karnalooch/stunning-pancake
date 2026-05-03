@@ -1,39 +1,46 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { firebaseCapture } from './FirebaseService';
 
-// Use your computer's IP address if testing on a real device
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://docker-backend-production-123c.up.railway.app';
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || 'https://docker-backend-production-123c.up.railway.app';
 
-const api = axios.create({
+// ─── Typed API client ──────────────────────────────────────────
+export const api = axios.create({
   baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 15_000,
 });
 
-api.interceptors.request.use(request => {
-  console.log('--- API REQUEST ---');
-  console.log(`${request.method?.toUpperCase()} ${request.url}`);
-  if (request.data) console.log('Data:', JSON.stringify(request.data));
-  return request;
-});
+// Request logger (dev only — strips in production builds)
+if (__DEV__) {
+  api.interceptors.request.use((req) => {
+    console.log(`[API] ${req.method?.toUpperCase()} ${req.url}`);
+    return req;
+  });
+}
 
+// Response normalizer — unwraps { ok: true, data: {...} } from backend
 api.interceptors.response.use(
-  response => {
-    console.log('--- API RESPONSE ---');
-    console.log(`Status: ${response.status}`);
-    return response;
+  (res) => {
+    const body = res.data;
+    if (body && typeof body === 'object' && 'ok' in body && 'data' in body) {
+      return { ...res, data: body.data };
+    }
+    return res;
   },
-  error => {
-    console.log('--- API ERROR ---');
-    firebaseCapture(error, 'API_INTERCEPTOR_ERROR');
-    console.log(`Status: ${error.response?.status}`);
-    console.log(`Message: ${error.message}`);
-    if (error.response?.data) console.log('Response Data:', JSON.stringify(error.response.data));
-    return Promise.reject(error);
-  }
+  (error: AxiosError<{ error?: string; detail?: string }>) => {
+    const msg =
+      error.response?.data?.error ||
+      error.response?.data?.detail ||
+      error.message ||
+      'Network error';
+    console.warn(`[API] ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${msg}`);
+    firebaseCapture(error, 'API_ERROR');
+    return Promise.reject(new Error(msg));
+  },
 );
 
+// ─── Auth token ────────────────────────────────────────────────
 export const setAuthToken = (token: string | null) => {
   if (token) {
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -42,75 +49,76 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
+// ─── Typed services ────────────────────────────────────────────
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email: string;
+  role: string;
+  tenant_id: string | null;
+  tenant_name: string;
+  avatar: string | null;
+  bio: string;
+}
+
+export interface ActivityItem {
+  id: number;
+  type: string;
+  start_time: string;
+  end_time: string | null;
+  distance: number;
+  duration: string | null;
+  is_verified: boolean;
+  verification_score: number;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  username: string;
+  points: number;
+  is_me: boolean;
+}
+
+export interface RewardPool {
+  id: number;
+  title: string;
+  description: string;
+  points_required: number;
+  sponsor_name: string;
+  available: number;
+}
+
 export const ActivityService = {
-  getHistory: async () => {
-    const response = await api.get('/api/activities/sessions/');
-    return response.data;
-  },
-  getLeaderboard: async (cityId: string) => {
-    const response = await api.get(`/api/activities/leaderboard/${cityId}/`);
-    return response.data;
-  },
-  getMyRank: async (cityId: string) => {
-    const response = await api.get(`/api/activities/leaderboard/${cityId}/me/`);
-    return response.data;
-  },
+  getHistory: () => api.get<ActivityItem[]>('/api/activities/sessions/').then((r) => r.data),
+  getLeaderboard: (cityId: string) =>
+    api.get<LeaderboardEntry[]>(`/api/activities/leaderboard/${cityId}/`).then((r) => r.data),
 };
 
 export const AuthService = {
-  login: async (credentials: any) => {
-    // Backend uses api/auth/token/ for JWT. 
-    // Credentials should contain 'username' (which is email) and 'password'.
-    const response = await api.post('/api/auth/token/', credentials);
-    return response.data;
-  },
-  register: async (data: any) => {
-    const response = await api.post('/api/users/register/', data);
-    return response.data;
-  },
-  getProfile: async () => {
-    // Endpoint in users/urls.py is 'profile/'
-    const response = await api.get('/api/users/profile/');
-    return response.data;
-  }
+  login: (username: string, password: string) =>
+    api.post<{ access: string; refresh: string }>('/api/auth/token/', { username, password }).then((r) => r.data),
+  register: (data: { username: string; email: string; password: string; tenant_id?: string }) =>
+    api.post('/api/users/register/', data).then((r) => r.data),
+  getProfile: () => api.get<UserProfile>('/api/users/profile/').then((r) => r.data),
 };
 
 export const PrivacyService = {
-  getZones: async () => {
-    const response = await api.get('/api/activities/privacy-zones/');
-    return response.data;
-  },
-  createZone: async (zone: any) => {
-    const response = await api.post('/api/activities/privacy-zones/', zone);
-    return response.data;
-  },
-  deleteZone: async (id: string) => {
-    await api.delete(`/api/activities/privacy-zones/${id}/`);
-  }
+  getZones: () => api.get('/api/activities/privacy-zones/').then((r) => r.data),
+  createZone: (zone: { label: string; center: [number, number]; radius: number }) =>
+    api.post('/api/activities/privacy-zones/', zone).then((r) => r.data),
+  deleteZone: (id: string) => api.delete(`/api/activities/privacy-zones/${id}/`),
 };
 
 export const RewardsService = {
-  getBalance: async () => {
-    const response = await api.get('/api/rewards/balance/');
-    return response.data;
-  },
-  getPools: async () => {
-    const response = await api.get('/api/rewards/pools/');
-    return response.data;
-  },
-  redeemVoucher: async (poolId: number) => {
-    const response = await api.post(`/api/rewards/redeem/${poolId}/`);
-    return response.data;
-  }
+  getBalance: () => api.get<{ points: number }>('/api/rewards/balance/').then((r) => r.data),
+  getPools: () => api.get<RewardPool[]>('/api/rewards/pools/').then((r) => r.data),
+  redeemVoucher: (poolId: number) =>
+    api.post(`/api/rewards/redeem/${poolId}/`).then((r) => r.data),
 };
 
 export const POIService = {
-  getPOIs: async () => {
-    const response = await api.get('/api/activities/pois/');
-    return response.data;
-  }
+  getPOIs: () => api.get('/api/activities/pois/').then((r) => r.data),
 };
-
-
 
 export default api;
