@@ -26,6 +26,10 @@
     },
     "production": {
       "node": "22.13.0",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
