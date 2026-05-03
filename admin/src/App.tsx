@@ -15,6 +15,7 @@ import { LandingPage } from './modules/public/LandingPage';
 import { GlobalLoader } from './core/components/GlobalLoader';
 import { TenantLoader } from './core/components/TenantLoader';
 import { LoginPage } from './core/auth/LoginPage';
+import { SettingsScreen } from './modules/settings/SettingsScreen';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
@@ -173,6 +174,14 @@ export default function App() {
                     element={
                       <RoleGuard allowedRoles={['GLOBAL_OWNER', 'SPONSOR']}>
                         <SponsorDashboard />
+                      </RoleGuard>
+                    }
+                  />
+                  <Route
+                    path="settings"
+                    element={
+                      <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                        <SettingsScreen />
                       </RoleGuard>
                     }
                   />

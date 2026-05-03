@@ -17,7 +17,8 @@ export const Sidebar = ({ mode }: { mode: string }) => {
     { icon: <Settings size={18} />, label: 'Settings', path: '/owner/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] }
   ];
 
-  const visibleItems = navItems.filter(item => user && item.roles.includes(item.roles.includes(user.role) ? user.role : ''));
+  const userRole = user?.role ?? '';
+  const filteredItems = navItems.filter(item => item.roles.includes(userRole));
 
   return (
     <Box 
@@ -35,7 +36,7 @@ export const Sidebar = ({ mode }: { mode: string }) => {
         </Stack>
       </Group>
 
-      {navItems.filter(item => user && item.roles.includes(user.role)).map((item) => {
+      {filteredItems.map((item) => {
         const active = location.pathname === item.path;
         return (
           <Link to={item.path} key={item.label} style={{ textDecoration: 'none', color: 'inherit' }}>
