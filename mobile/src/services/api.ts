@@ -2,7 +2,7 @@ import axios, { AxiosError } from 'axios';
 import { firebaseCapture } from './FirebaseService';
 
 const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://docker-backend-production-123c.up.railway.app';
+  process.env.EXPO_PUBLIC_API_URL || 'https://backend-production-55c7.up.railway.app';
 
 // ─── Typed API client ──────────────────────────────────────────
 export const api = axios.create({

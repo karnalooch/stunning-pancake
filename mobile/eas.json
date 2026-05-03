@@ -6,7 +6,7 @@
       "distribution": "internal",
       "channel": "development",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://docker-backend-production-123c.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
         "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
       }
@@ -19,7 +19,7 @@
       },
       "channel": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://docker-backend-production-123c.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
         "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
       }
@@ -28,7 +28,7 @@
       "node": "22.13.0",
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://docker-backend-production-123c.up.railway.app",
+        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
         "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
       }
