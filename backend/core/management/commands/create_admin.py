@@ -26,7 +26,11 @@ class Command(BaseCommand):
             user.save()
             self.stdout.write(self.style.SUCCESS(f'Created superuser: {username}'))
         else:
-            self.stdout.write(self.style.WARNING(f'Superuser already exists: {username}'))
+            user.role = 'GLOBAL_OWNER'
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+            self.stdout.write(self.style.WARNING(f'Superuser already exists, role sync: {username}'))
 
         # 2. Global Owner (seed_data.py convention): global_owner / admin123
         owner_username = os.getenv('GLOBAL_OWNER_USERNAME', 'global_owner')
@@ -37,17 +41,12 @@ class Command(BaseCommand):
             username=owner_username,
             defaults={'email': owner_email},
         )
+        owner.set_password(owner_password)
+        owner.role = 'GLOBAL_OWNER'
+        owner.is_staff = True
+        owner.is_superuser = True
+        owner.save()
         if created:
-            owner.set_password(owner_password)
-            owner.role = 'GLOBAL_OWNER'
-            owner.is_staff = True
-            owner.is_superuser = True
-            owner.save()
             self.stdout.write(self.style.SUCCESS(f'Created global owner: {owner_username}'))
         else:
-            # Ensure role is always GLOBAL_OWNER even if user already existed
-            owner.role = 'GLOBAL_OWNER'
-            owner.is_staff = True
-            owner.is_superuser = True
-            owner.save()
-            self.stdout.write(self.style.WARNING(f'Global owner already exists: {owner_username}'))
+            self.stdout.write(self.style.WARNING(f'Global owner already exists, password reset: {owner_username}'))
