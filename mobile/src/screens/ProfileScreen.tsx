@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking } from 'react-native';
 import { Shield, MapPin, LogOut, Trash2, Zap, QrCode, Activity } from 'lucide-react-native';
 import { YStack, XStack, Text as TamaText, ScrollView, Switch, View, useTheme } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
-import { AuthService, PrivacyService, UserProfile } from '../services/api';
+import { AuthService, PrivacyService, UserProfile, WearableService } from '../services/api';
 import { ThemeService } from '../services/ThemeService';
 import QRCode from 'react-native-qrcode-svg';
 import { RetroCard } from '../components/RetroCard';
@@ -30,7 +30,20 @@ export const ProfileScreen = observer(
       isIncognito: false,
       integritySensitivity: 0.5,
       showQR: false,
+      stravaStatus: { connected: false, last_sync: null as string | null },
+      garminStatus: { connected: false, last_sync: null as string | null },
+      wearablesLoading: false,
     });
+
+    const fetchWearableStatus = async () => {
+      try {
+        const status = await WearableService.getStatus();
+        state.stravaStatus.set(status.strava);
+        state.garminStatus.set(status.garmin);
+      } catch (e) {
+        console.warn('[Profile] Wearable status failed:', e);
+      }
+    };
 
     useEffect(() => {
       (async () => {
@@ -39,11 +52,54 @@ export const ProfileScreen = observer(
           if (profile) state.profile.set(profile);
           const zones = await PrivacyService.getZones();
           state.zones.set(Array.isArray(zones) ? zones : zones?.features ?? []);
+          await fetchWearableStatus();
         } catch (e) {
           console.warn('[Profile] Fetch failed:', e);
         }
       })();
     }, []);
+
+    const handleConnectStrava = async () => {
+      try {
+        const { auth_url } = await WearableService.getStravaAuthUrl();
+        Linking.openURL(auth_url).catch(() => {
+          Alert.alert('Error', 'Could not open Strava authorization.');
+        });
+        setTimeout(fetchWearableStatus, 5000);
+      } catch (e: any) {
+        Alert.alert('Error', e?.message || 'Failed to get Strava auth URL.');
+      }
+    };
+
+    const handleConnectGarmin = async () => {
+      try {
+        const { auth_url } = await WearableService.getGarminAuthUrl();
+        Linking.openURL(auth_url).catch(() => {
+          Alert.alert('Error', 'Could not open Garmin authorization.');
+        });
+        setTimeout(fetchWearableStatus, 5000);
+      } catch (e: any) {
+        Alert.alert('Error', e?.message || 'Failed to get Garmin auth URL.');
+      }
+    };
+
+    const handleSyncWearables = async () => {
+      state.wearablesLoading.set(true);
+      try {
+        const result = await WearableService.sync();
+        await fetchWearableStatus();
+        const imported = (result?.results?.STRAVA || 0) + (result?.results?.GARMIN || 0);
+        if (imported > 0) {
+          Alert.alert('Sync Complete', `Imported ${imported} new activities.`);
+        } else {
+          Alert.alert('Sync Complete', 'No new activities found.');
+        }
+      } catch (e: any) {
+        Alert.alert('Sync Failed', e?.message || 'Could not sync.');
+      } finally {
+        state.wearablesLoading.set(false);
+      }
+    };
 
     const handleDeleteZone = (id: string) => {
       Alert.alert('Delete Zone', 'Remove this privacy zone?', [
@@ -192,7 +248,7 @@ export const ProfileScreen = observer(
             </YStack>
           )}
 
-          {/* Wearable — coming soon */}
+          {/* Wearable */}
           <YStack gap="$2" marginBottom="$6">
             <TamaText color="$primary" fontSize={10} fontWeight="800" letterSpacing={1} fontFamily="$pixel">
               WEARABLE ECOSYSTEM
@@ -201,17 +257,49 @@ export const ProfileScreen = observer(
               <XStack justifyContent="space-between" alignItems="center">
                 <XStack alignItems="center" gap="$3">
                   <View width={20} height={20} backgroundColor="#FF6B35" borderWidth={1} borderColor="black" />
-                  <TamaText color="$color" fontWeight="700" fontSize={14} fontFamily="$pixel">Strava</TamaText>
+                  <YStack>
+                    <TamaText color="$color" fontWeight="700" fontSize={14} fontFamily="$pixel">Strava</TamaText>
+                    {state.stravaStatus.connected.get() && (
+                      <TamaText color="$primary" fontSize={8} fontFamily="$pixel">
+                        CONNECTED · {state.stravaStatus.last_sync?.get() || 'Never synced'}
+                      </TamaText>
+                    )}
+                  </YStack>
                 </XStack>
-                <TamaText color="$color" opacity={0.4} fontSize={10} fontFamily="$pixel">COMING SOON</TamaText>
+                <HD2DButton
+                  size="$2"
+                  label={state.stravaStatus.connected.get() ? 'SYNC' : 'CONNECT'}
+                  theme={state.stravaStatus.connected.get() ? 'green' : 'blue'}
+                  onPress={state.stravaStatus.connected.get() ? handleSyncWearables : handleConnectStrava}
+                />
               </XStack>
               <XStack justifyContent="space-between" alignItems="center">
                 <XStack alignItems="center" gap="$3">
                   <View width={20} height={20} backgroundColor="#007CC3" borderWidth={1} borderColor="black" />
-                  <TamaText color="$color" fontWeight="700" fontSize={14} fontFamily="$pixel">Garmin</TamaText>
+                  <YStack>
+                    <TamaText color="$color" fontWeight="700" fontSize={14} fontFamily="$pixel">Garmin</TamaText>
+                    {state.garminStatus.connected.get() && (
+                      <TamaText color="$primary" fontSize={8} fontFamily="$pixel">
+                        CONNECTED · {state.garminStatus.last_sync?.get() || 'Never synced'}
+                      </TamaText>
+                    )}
+                  </YStack>
                 </XStack>
-                <TamaText color="$color" opacity={0.4} fontSize={10} fontFamily="$pixel">COMING SOON</TamaText>
+                <HD2DButton
+                  size="$2"
+                  label={state.garminStatus.connected.get() ? 'SYNC' : 'CONNECT'}
+                  theme={state.garminStatus.connected.get() ? 'green' : 'blue'}
+                  onPress={state.garminStatus.connected.get() ? handleSyncWearables : handleConnectGarmin}
+                />
               </XStack>
+              {(state.stravaStatus.connected.get() || state.garminStatus.connected.get()) && (
+                <HD2DButton
+                  label="SYNC ALL WEARABLES"
+                  theme="green"
+                  height={40}
+                  onPress={handleSyncWearables}
+                />
+              )}
             </RetroCard>
           </YStack>
 

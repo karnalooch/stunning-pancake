@@ -1,4 +1,4 @@
-# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v0.1.0-beta.2)
+# 🏁 SPORT PLATFORM — HANDOVER GUIDE (v0.2.0-rc.1)
 
 This guide provides instructions on how to launch, seed, and present the platform.
 

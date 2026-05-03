@@ -7,10 +7,11 @@ from .views import (
     WearableSyncView
 )
 
-from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView
+from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, ActivityApproveView, ActivityRejectView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .leaderboard_views import city_leaderboard, my_rank
 from .heatmap import heatmap_view, analytics_summary_view
+from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')
@@ -23,6 +24,8 @@ urlpatterns = [
     path('admin/all/', GlobalActivityListView.as_view(), name='global-activities'),
     path('admin/tenant/', TenantActivityListView.as_view(), name='tenant-activities'),
     path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
+    path('admin/approve/<int:activity_id>/', ActivityApproveView.as_view(), name='admin-approve'),
+    path('admin/reject/<int:activity_id>/', ActivityRejectView.as_view(), name='admin-reject'),
     path('vouchers/redeem/<str:code>/', VoucherRedeemView.as_view(), name='voucher-redeem'),
     path('telemetry/live/', TelemetryLiveView.as_view(), name='telemetry-live'),
     path('telemetry/anomalies/', AnomalyListView.as_view(), name='telemetry-anomalies'),
@@ -42,4 +45,8 @@ urlpatterns = [
     # Milestone 5: Premium Analytics
     path('heatmap/', heatmap_view, name='heatmap'),
     path('analytics/', analytics_summary_view, name='analytics-summary'),
+    # Beta Feedback (RC v0.2)
+    path('beta-feedback/', BetaFeedbackCreateView.as_view(), name='beta-feedback-create'),
+    path('beta-feedback/list/', BetaFeedbackListView.as_view(), name='beta-feedback-list'),
+    path('beta-feedback/<int:feedback_id>/resolve/', BetaFeedbackResolveView.as_view(), name='beta-feedback-resolve'),
 ]

@@ -9,7 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Updates from 'expo-updates';
 import tamaguiConfig from './tamagui.config';
 
-import { Home, History, Gift, User, Trophy } from 'lucide-react-native';
+import { Image } from 'react-native';
 import { AuthService, setAuthToken } from './src/services/api';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
@@ -22,6 +22,14 @@ import { ActivitiesScreen } from './src/screens/ActivitiesScreen';
 import { RewardsScreen } from './src/screens/RewardsScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
+
+const NAV_ICONS = {
+  home: require('./assets/generated/nav_home.png'),
+  history: require('./assets/generated/nav_history.png'),
+  ranking: require('./assets/generated/nav_ranking.png'),
+  rewards: require('./assets/generated/nav_rewards.png'),
+  profile: require('./assets/generated/nav_profile.png'),
+};
 
 let storage: any;
 const BYPASS_AUTH = false;
@@ -45,12 +53,6 @@ const getStorage = () => {
 };
 
 const Tab = createBottomTabNavigator();
-
-const HomeIcon = Home as any;
-const HistoryIcon = History as any;
-const GiftIcon = Gift as any;
-const UserIcon = User as any;
-const TrophyIcon = Trophy as any;
 
 // Octopath HD-2D colors (match tamagui.config.ts)
 const OCTOPATH = {
@@ -339,28 +341,28 @@ export default observer(function App() {
         >
           <Tab.Screen
             name="Home"
-            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <HomeIcon size={size} color={color} /> }}
+            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.home} style={{ width: size, height: size }} resizeMode="contain" /> }}
           >
             {() => <TrackingScreen user={user} />}
           </Tab.Screen>
           <Tab.Screen
             name="History"
             component={ActivitiesScreen}
-            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <HistoryIcon size={size} color={color} /> }}
+            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.history} style={{ width: size, height: size }} resizeMode="contain" /> }}
           />
           <Tab.Screen
             name="Ranking"
             component={LeaderboardScreen}
-            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <TrophyIcon size={size} color={color} /> }}
+            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.ranking} style={{ width: size, height: size }} resizeMode="contain" /> }}
           />
           <Tab.Screen
             name="Rewards"
             component={RewardsScreen}
-            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <GiftIcon size={size} color={color} /> }}
+            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.rewards} style={{ width: size, height: size }} resizeMode="contain" /> }}
           />
           <Tab.Screen
             name="Profile"
-            options={{ tabBarIcon: ({ color, size }: { color: string; size: number }) => <UserIcon size={size} color={color} /> }}
+            options={{ tabBarIcon: ({ size }: { color: string; size: number }) => <Image source={NAV_ICONS.profile} style={{ width: size, height: size }} resizeMode="contain" /> }}
           >
             {() => <ProfileScreen user={user} onLogout={handleLogout} />}
           </Tab.Screen>

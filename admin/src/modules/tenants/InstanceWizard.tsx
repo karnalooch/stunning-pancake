@@ -2,11 +2,21 @@ import React, { useState } from 'react';
 import { Modal, TextInput, ColorInput, Button, Stack, Group, Text, Stepper, Box } from '@mantine/core';
 import { Building2, Palette, ShieldCheck, Rocket } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { notifications } from '@mantine/notifications';
 
 export const InstanceWizard = ({ opened, onClose }: any) => {
   const [active, setActive] = useState(0);
   const nextStep = () => setActive((current) => (current < 3 ? current + 1 : current));
   const prevStep = () => setActive((current) => (current > 0 ? current - 1 : current));
+
+  const handleDeploy = () => {
+    notifications.show({
+      title: 'Coming in v0.3',
+      message: 'Instance provisioning via API will be available in the next release.',
+      color: 'yellow',
+    });
+    onClose();
+  };
 
   return (
     <Modal 
@@ -63,7 +73,7 @@ export const InstanceWizard = ({ opened, onClose }: any) => {
         {active < 3 ? (
           <Button color="cyan" onClick={nextStep} radius="md">Continue</Button>
         ) : (
-          <Button color="cyan" radius="md" onClick={onClose}>Deploy Instance</Button>
+          <Button color="cyan" radius="md" onClick={handleDeploy}>Deploy Instance</Button>
         )}
       </Group>
     </Modal>

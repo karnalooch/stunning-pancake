@@ -31,7 +31,10 @@ class Activity(models.Model):
         indexes = [
             models.Index(fields=['user', 'start_time']),
             models.Index(fields=['type', 'is_verified']),
-            models.Index(fields=['created_at']),  # Phase 10: time-range queries
+            models.Index(fields=['created_at']),
+            models.Index(fields=['tenant', 'is_verified']),
+            models.Index(fields=['tenant', 'created_at']),
+            models.Index(fields=['user', 'tenant']),
         ]
 
     def save(self, *args, **kwargs):

@@ -1,5 +1,64 @@
 # CHANGELOG — SPORT Platform
 
+## v0.2.0-rc.1 (2026-05-03) — Release Candidate
+
+### Added — Phase 1: Real Data
+- **Admin stats endpoint** (`/api/activities/admin/stats/`) — per-tenant breakdown (users, activities, distance_km, verified_pct), new users/activities last 7d, verification stats
+- **Seed 55+ demo activities** (`python manage.py seed_activities`) — realistic GPS LineString tracks (loop & out-and-back), mixed verification scores (60% verified, 25% suspicious, 15% rejected), 6 POIs, 13 vouchers across 10 athletes in 2 tenants
+
+### Added — Phase 2: Flows That Work
+- **User management** — `POST /api/users/create/`, `DELETE /api/users/<id>/delete/` with role+tenant selection, audit-logged
+- **Invitation flow** — `POST /api/users/invitation/` generates temp credentials + sends email via SendGrid
+- **Activity moderation** — `POST /api/activities/admin/approve/<id>/`, `POST /api/activities/admin/reject/<id>/`
+- **Admin Users page** — Create/Delete/Invite modals with role selector and tenant picker, functional delete with confirmation
+- **WhiteLabel engine** — Fixed API URL, added success/error notifications, auto-loads current branding on mount
+- **POI markers** on MapLibre map with `CircleLayer` (theme-aware colors)
+- **Leaderboard fix** — correctly extracts `.leaderboard` array from API response envelope
+- **Role normalization** — `IsAdminRole` uses `GLOBAL_OWNER`/`TENANT_ADMIN`/`TENANT_MODERATOR` (matching DB values)
+
+### Added — Phase 3: Game Vibe
+- **TrackingScreen redesign** — map 90%+ screen height, HUD auto-hides after 3s (tap to restore), Metal Slug industrial border (2px black + 1px gold inner), Octopath vignette gradient on map edges, spring animations (damping 14, stiffness 100)
+- **GameHUD component** — score-style jumping digits for distance, pace/speed/HR/elapsed metrics, semi-transparent black background with gold border
+- **Quest Log (ActivitiesScreen)** — S/A/B/C/D verification grade badges, "MISSION" terminology, pixel-art loading states
+- **Item Shop (RewardsScreen)** — "BUY" button theme, AthleteSprite loading/empty states, XP guidance text
+- **Tab bar** — replaced lucide-react-native icons with generated pixel-art PNGs (nav_home, nav_history, nav_ranking, nav_rewards, nav_profile)
+- **Beta Feedback** — `BetaFeedback` model + `POST /api/activities/beta-feedback/`, `GET .../list/`, `POST .../<id>/resolve/`
+- **11 pixel-art assets specified** — timer, pace, distance, shield badge, S/A grades, 4 border corners, mission start button (Metal Slug style)
+
+### Added — Phase 4-5: Strava & Garmin
+- **StravaService** — `get_status()`, full token refresh, activity sync with activity-type mapping (`Ride`→`BIKE`, `Run`→`RUN`, `Walk`→`WALK`)
+- **GarminService** — full OAuth2 implementation (`get_auth_url`, `exchange_code`, `refresh_token`, `sync_activities`), Garmin Connect API integration
+- **Wearable status endpoint** — `GET /api/activities/wearables/sync/` returns `{strava, garmin}` connection status
+- **Mobile ProfileScreen** — real CONNECT/SYNC buttons replacing "COMING SOON" stubs, status display with last sync timestamp, `Linking.openURL` for OAuth flow
+
+### Added — Phase 6: Infrastructure
+- **EmailService (SendGrid)** — `send_password_reset()`, `send_invitation()`, `send_beta_acknowledgment()` with HD-2D themed HTML templates
+- **Password reset** — `POST /api/users/password/reset/` (request token), `POST /api/users/password/reset/confirm/` (apply new password)
+- **Nginx production config** — `infrastructure/nginx/conf.d/default.conf` with `/api/` → backend, `/ws/` → telemetry, `/` → admin
+- **Railway deployment configs** — `backend/`, `admin/`, `telemetry/railway.json`
+
+### Added — Phase 7: Polish & Stability
+- **Bridgeless (New Architecture)** — `newArchEnabled: true` in `app.config.js`
+- **Global error handling** — admin API client 401→logout, 403/5xx→Mantine notifications, mobile Alert.alert wrapping
+- **Stub cleanup** — `InstanceWizard` "Deploy" → yellow "Coming in v0.3" notification
+- **DB performance indexes** — `activities_activity`: `tenant+is_verified`, `tenant+created_at`, `user+tenant`
+- **Citus sharding** — ready-to-use: `apply_citus_sharding()`, `add_citus_worker()`, `rebalance_shards()`, 4 distributed + 6 reference tables
+
+### Fixed
+- `IsAdminRole` properly reads `GLOBAL_OWNER`/`TENANT_ADMIN`/`TENANT_MODERATOR` (was `GLOBAL_ADMIN`/`OWNER`/`LOCAL_MODERATOR`)
+- `new_users_today` now shows actual today count (was copying `total_users`)
+- WhiteLabel API URL double-`/api` prefix bug in `handleDeploy` fixed
+- Activity queryset `tenant_id` filter in `TenantActivityListView` (was filtering by `user__tenant_id`)
+- Leaderboard mobile response unwrapping — extracts `.leaderboard` array from envelope
+
+### Known Issues
+- 11 pixel-art assets listed in `docs/ASSET_MANIFEST.json` need manual generation (PNG, 32×32, Metal Slug style)
+- Seed data must be run manually on Railway: `python manage.py seed_activities --clear`
+- `@tremor/react` peer dependency conflict (React 19 vs React 18) — workaround: `--legacy-peer-deps`
+- Garmin OAuth fallback uses mock token when `GARMIN_CLIENT_ID` is unset (demo mode)
+
+---
+
 ## v0.1.0-beta.1 (2026-04-30) — Closed Beta
 
 ### Added

@@ -20,12 +20,25 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor — auto-logout on 401
+// Response interceptor — auto-logout on 401, global error notifications
+let _notifyError: ((title: string, msg: string) => void) | null = null;
+export const setGlobalErrorHandler = (handler: (title: string, msg: string) => void) => {
+  _notifyError = handler;
+};
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       useAuth.getState().logout();
+      return Promise.reject(error);
+    }
+    if (error.response?.status === 403) {
+      if (_notifyError) _notifyError('Access Denied', 'You do not have permission to perform this action.');
+      return Promise.reject(error);
+    }
+    if (error.response?.status && error.response.status >= 500) {
+      if (_notifyError) _notifyError('Server Error', `The server encountered an error (${error.response.status}). Please try again.`);
     }
     return Promise.reject(error);
   }
@@ -51,6 +64,18 @@ export const AdminApi = {
     const { data } = await apiClient.post(`/users/impersonate/${targetUserId}/`);
     return data;
   },
+  createUser: async (userData: { username: string; email: string; password: string; role?: string; tenant_id?: string }) => {
+    const { data } = await apiClient.post('/users/create/', userData);
+    return data;
+  },
+  deleteUser: async (userId: number) => {
+    const { data } = await apiClient.delete(`/users/${userId}/delete/`);
+    return data;
+  },
+  sendInvitation: async (invitationData: { email: string; name: string; role?: string; tenant_id?: string }) => {
+    const { data } = await apiClient.post('/users/invitation/', invitationData);
+    return data;
+  },
 };
 
 export const TelemetryApi = {
@@ -68,6 +93,14 @@ export const TelemetryApi = {
   },
   updateConfig: async (config: Record<string, unknown>) => {
     const { data } = await apiClient.post('/activities/telemetry/config/', config);
+    return data;
+  },
+  approveActivity: async (activityId: number) => {
+    const { data } = await apiClient.post(`/activities/admin/approve/${activityId}/`);
+    return data;
+  },
+  rejectActivity: async (activityId: number) => {
+    const { data } = await apiClient.post(`/activities/admin/reject/${activityId}/`);
     return data;
   },
 };

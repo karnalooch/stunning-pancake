@@ -100,6 +100,13 @@ class WearableSyncView(views.APIView):
                 results['GARMIN'] = count
         return Response({"status": "sync complete", "results": results})
 
+    def get(self, request):
+        """Returns wearable connection status for all services."""
+        return Response({
+            'strava': StravaService.get_status(request.user),
+            'garmin': GarminService.get_status(request.user),
+        })
+
 class TelemetryConfigView(views.APIView):
     """
     View for getting and setting anti-cheat configuration.

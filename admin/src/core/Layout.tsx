@@ -1,8 +1,11 @@
+import { useEffect } from 'react';
 import { Box, Group, Stack, Text } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Square, Gift } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { motion } from 'framer-motion';
+import { setGlobalErrorHandler } from '../api/client';
 
 export const Sidebar = ({ mode }: { mode: string }) => {
   const location = useLocation();
@@ -63,6 +66,13 @@ export const Sidebar = ({ mode }: { mode: string }) => {
 };
 
 export const Layout = () => {
+  useEffect(() => {
+    setGlobalErrorHandler((title, msg) => {
+      notifications.show({ title, message: msg, color: 'red', autoClose: 5000 });
+    });
+    return () => setGlobalErrorHandler(() => {});
+  }, []);
+
   return (
     <Box style={{ display: 'flex', height: '100vh', width: '100vw', overflow: 'hidden', background: '#000' }}>
       <Sidebar mode="PRO EDITION" />

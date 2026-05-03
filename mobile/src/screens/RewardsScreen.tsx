@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image } from 'react-native';
-import { MapPin, Tag } from 'lucide-react-native';
-import { YStack, XStack, Text as TamaText, ScrollView, Spinner, View } from 'tamagui';
+import { YStack, XStack, Text as TamaText, ScrollView, View } from 'tamagui';
 import { RewardsService, RewardPool } from '../services/api';
 
 import { RetroCard } from '../components/RetroCard';
 import { HD2DButton } from '../components/HD2DButton';
+import { AthleteSprite } from '../components/AthleteSprite';
 
-const MapPinIcon = MapPin as any;
-const TagIcon = Tag as any;
 const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
 export const RewardsScreen = () => {
@@ -86,12 +84,14 @@ export const RewardsScreen = () => {
         <YStack gap="$4" paddingBottom="$10">
           {loading && pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
-              <Spinner size="large" color="$primary" />
-              <TamaText color="$primary" marginTop="$4" fontWeight="800" fontFamily="$pixel">SYNCING...</TamaText>
+              <AthleteSprite type="elite" state="action" size={60} />
+              <TamaText color="$primary" marginTop="$4" fontWeight="800" fontFamily="$pixel">SCANNING MARKETPLACE...</TamaText>
             </YStack>
           ) : pools.length === 0 ? (
             <YStack padding="$10" alignItems="center">
-              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={10}>NO_REWARDS_IN_SECTOR</TamaText>
+              <AthleteSprite type="cyclist" state="idle" size={60} />
+              <TamaText color="$color" opacity={0.5} fontFamily="$pixel" fontSize={10} marginTop="$4">NO_REWARDS_IN_SECTOR</TamaText>
+              <TamaText color="$primary" fontFamily="$pixel" fontSize={8} marginTop="$2">COMPLETE MISSIONS TO EARN XP</TamaText>
             </YStack>
           ) : (
             pools.map((pool) => (
@@ -105,10 +105,7 @@ export const RewardsScreen = () => {
                     {pool.sponsor_name}
                   </TamaText>
                   <TamaText color="$color" fontWeight="900" fontSize={14} marginVertical="$1">{pool.title}</TamaText>
-                  <XStack alignItems="center" gap="$1">
-                    <MapPinIcon size={10} color="$color" opacity={0.5} />
-                    <TamaText color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>STOCK: {pool.available}</TamaText>
-                  </XStack>
+                  <TamaText color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>STOCK: {pool.available}</TamaText>
                 </YStack>
 
                 <YStack alignItems="flex-end" gap="$2">
@@ -117,7 +114,7 @@ export const RewardsScreen = () => {
                   </View>
                   <HD2DButton
                     size="$2"
-                    label="REDEEM"
+                    label="BUY"
                     onPress={() => handleRedeem(pool.id)}
                     disabled={balance < pool.points_required || pool.available === 0}
                     theme={balance >= pool.points_required ? 'green' : 'red'}

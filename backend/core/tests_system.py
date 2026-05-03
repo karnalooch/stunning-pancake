@@ -37,7 +37,7 @@ def moderator_user(db, tenant):
         username="moderator", 
         email="mod@test.com", 
         password="password123",
-        role="LOCAL_MODERATOR",
+        role="TENANT_MODERATOR",
         tenant_id=tenant.id
     )
 

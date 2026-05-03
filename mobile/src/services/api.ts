@@ -78,6 +78,8 @@ export interface LeaderboardEntry {
   username: string;
   points: number;
   is_me: boolean;
+  user_id?: string | number;
+  score_km?: number;
 }
 
 export interface RewardPool {
@@ -89,10 +91,26 @@ export interface RewardPool {
   available: number;
 }
 
+export interface POI {
+  id: number;
+  name: string;
+  latitude: number;
+  longitude: number;
+  category: string;
+  description: string;
+}
+
 export const ActivityService = {
   getHistory: () => api.get<ActivityItem[]>('/api/activities/sessions/').then((r) => r.data),
   getLeaderboard: (cityId: string) =>
-    api.get<LeaderboardEntry[]>(`/api/activities/leaderboard/${cityId}/`).then((r) => r.data),
+    api.get<any>(`/api/activities/leaderboard/${cityId}/`).then((r) => {
+      const data = r.data;
+      if (Array.isArray(data)) return data as LeaderboardEntry[];
+      if (data && Array.isArray(data.leaderboard)) return data.leaderboard as LeaderboardEntry[];
+      return [];
+    }),
+  getMyRank: (cityId: string) =>
+    api.get<any>(`/api/activities/leaderboard/${cityId}/me/`).then((r) => r.data),
 };
 
 export const AuthService = {
@@ -119,6 +137,16 @@ export const RewardsService = {
 
 export const POIService = {
   getPOIs: () => api.get('/api/activities/pois/').then((r) => r.data),
+};
+
+export const WearableService = {
+  getStravaAuthUrl: () => api.get<{ auth_url: string }>('/api/activities/wearables/strava/auth/').then((r) => r.data),
+  getGarminAuthUrl: () => api.get<{ auth_url: string }>('/api/activities/wearables/garmin/auth/').then((r) => r.data),
+  getStatus: () =>
+    api.get<{ strava: { connected: boolean; last_sync?: string }; garmin: { connected: boolean; last_sync?: string } }>(
+      '/api/activities/wearables/sync/',
+    ).then((r) => r.data),
+  sync: () => api.post('/api/activities/wearables/sync/').then((r) => r.data),
 };
 
 export default api;

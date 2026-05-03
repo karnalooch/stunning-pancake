@@ -13,6 +13,56 @@ from .serializers import (
 from .models import User, Tenant, AuditLog
 from .permissions import IsGlobalOwner
 from core.api_response import success, error
+from core.email_service import EmailService
+
+
+class PasswordResetRequestView(generics.GenericAPIView):
+    """Request a password reset token via email."""
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        email = request.data.get('email', '').strip()
+        if not email:
+            return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            # Generate a simple reset token (in production, use django.contrib.auth.tokens)
+            import secrets
+            token = secrets.token_urlsafe(32)
+            from django.core.cache import cache
+            cache.set(f'password_reset:{token}', user.id, timeout=1800)  # 30 min
+
+            EmailService.send_password_reset(email, token)
+            return success(message="If an account exists, a reset email has been sent.")
+        except User.DoesNotExist:
+            return success(message="If an account exists, a reset email has been sent.")
+
+
+class PasswordResetConfirmView(generics.GenericAPIView):
+    """Confirm password reset with token and new password."""
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        token = request.data.get('token', '').strip()
+        new_password = request.data.get('new_password', '').strip()
+
+        if not token or len(new_password) < 8:
+            return error("Invalid token or password too short.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        from django.core.cache import cache
+        user_id = cache.get(f'password_reset:{token}')
+        if not user_id:
+            return error("Invalid or expired reset token.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(pk=user_id)
+            user.set_password(new_password)
+            user.save()
+            cache.delete(f'password_reset:{token}')
+            return success(message="Password reset successful.")
+        except User.DoesNotExist:
+            return error("User not found.", status_code=status.HTTP_404_NOT_FOUND)
 
 
 class RegisterView(generics.CreateAPIView):
@@ -174,3 +224,135 @@ class AuditLogListView(generics.ListAPIView):
             except (ValueError, TypeError):
                 pass
         return qs
+
+
+class UserCreateView(generics.CreateAPIView):
+    """Admin creates a new user with role + tenant assignment."""
+    serializer_class = RegisterSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        user_role = getattr(request.user, 'role', None)
+        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+            return error("Only admins can create users.", status_code=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.save()
+        role = request.data.get('role', 'ATHLETE')
+        if role in dict(Role.choices):
+            user.role = role
+        tenant_id = request.data.get('tenant_id')
+        if tenant_id:
+            try:
+                user.tenant = Tenant.objects.get(id=tenant_id)
+            except Tenant.DoesNotExist:
+                pass
+        user.save()
+
+        AuditLog.objects.create(
+            impersonator=request.user,
+            target_user=user,
+            tenant_id=str(user.tenant_id) if user.tenant_id else None,
+            action=f"Created user {user.username} with role {user.role}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+            status_code=201,
+        )
+
+        return success(
+            data=UserSerializer(user).data,
+            message=f"User {user.username} created.",
+            status_code=status.HTTP_201_CREATED,
+        )
+
+
+class UserDeleteView(generics.DestroyAPIView):
+    """Admin deletes a user."""
+    queryset = User.objects.all()
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def delete(self, request, *args, **kwargs):
+        user_role = getattr(request.user, 'role', None)
+        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+            return error("Only admins can delete users.", status_code=status.HTTP_403_FORBIDDEN)
+
+        try:
+            target = User.objects.get(pk=kwargs['pk'])
+            AuditLog.objects.create(
+                impersonator=request.user,
+                target_user=target,
+                tenant_id=str(target.tenant_id) if target.tenant_id else None,
+                action=f"Deleted user {target.username} (role: {target.role})",
+                ip_address=request.META.get('REMOTE_ADDR'),
+                status_code=200,
+            )
+            username = target.username
+            target.delete()
+            return success(message=f"User {username} deleted.")
+        except User.DoesNotExist:
+            return error("User not found.", status_code=status.HTTP_404_NOT_FOUND)
+
+
+class InvitationTokenView(generics.GenericAPIView):
+    """Admin sends an invitation token to invite a new moderator/staff."""
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        user_role = getattr(request.user, 'role', None)
+        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+            return error("Only admins can send invitations.", status_code=status.HTTP_403_FORBIDDEN)
+
+        email = request.data.get('email')
+        name = request.data.get('name', '')
+        role = request.data.get('role', 'TENANT_MODERATOR')
+        tenant_id = request.data.get('tenant_id', getattr(request.user, 'tenant_id', None))
+
+        if not email:
+            return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        temp_password = User.objects.make_random_password(length=12)
+        username = email.split('@')[0]
+        base_username = username
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            username = f"{base_username}{counter}"
+            counter += 1
+
+        tenant = None
+        tenant_name = ''
+        if tenant_id:
+            try:
+                tenant = Tenant.objects.get(id=tenant_id)
+                tenant_name = tenant.name
+            except Tenant.DoesNotExist:
+                pass
+
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=temp_password,
+            first_name=name or '',
+            role=role if role in dict(Role.choices) else 'TENANT_MODERATOR',
+            tenant=tenant,
+        )
+
+        AuditLog.objects.create(
+            impersonator=request.user,
+            target_user=user,
+            tenant_id=str(tenant_id) if tenant_id else None,
+            action=f"Invited user {email} as {role} to tenant {tenant_id}",
+            ip_address=request.META.get('REMOTE_ADDR'),
+            status_code=201,
+        )
+
+        EmailService.send_invitation(email, username, temp_password, tenant_name)
+
+        return success(data={
+            "username": username,
+            "email": email,
+            "temporary_password": temp_password,
+            "role": role,
+            "message": f"Invitation created and email sent to {email}.",
+        })

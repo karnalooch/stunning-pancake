@@ -1,25 +1,46 @@
-import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal, ScrollArea, Tabs, Code } from '@mantine/core';
+import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal, ScrollArea, Tabs, Select, PasswordInput } from '@mantine/core';
 import { useState, useEffect } from 'react';
-import { WinWindow } from '../../core/Layout';
-import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus, ClipboardList, AlertTriangle } from 'lucide-react';
+import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus, ClipboardList, Trash2, Send } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
 import { AdminApi } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 
 export const Users = () => {
   const { user } = useAuth();
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [tenantsList, setTenantsList] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
+  const [createModalOpened, setCreateModalOpened] = useState(false);
+  const [deleteConfirmOpened, setDeleteConfirmOpened] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
   const [impersonating, setImpersonating] = useState(false);
   const [impersonateError, setImpersonateError] = useState<string | null>(null);
   const [impersonateResult, setImpersonateResult] = useState<any | null>(null);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [inviteResult, setInviteResult] = useState<any | null>(null);
 
-  useEffect(() => {
+  // Create user form state
+  const [createForm, setCreateForm] = useState({
+    username: '',
+    email: '',
+    password: '',
+    role: 'ATHLETE',
+    tenant_id: '',
+  });
+
+  // Invite form state
+  const [inviteForm, setInviteForm] = useState({
+    email: '',
+    name: '',
+    role: 'TENANT_MODERATOR',
+  });
+
+  const fetchUsers = () => {
     AdminApi.getUsers()
       .then(data => {
-        // Map real user data fields
         const mapped = data.map((u: any) => ({
           id: u.id,
           displayId: `U-${u.id}`,
@@ -33,8 +54,9 @@ export const Users = () => {
         setUsersList(mapped);
       })
       .catch(err => console.error("Failed to load users:", err));
-  }, []);
+  };
 
+  useEffect(() => { fetchUsers(); }, []);
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
       setAuditLogLoading(true);
@@ -42,11 +64,13 @@ export const Users = () => {
         .then(data => setAuditLogs(data))
         .catch(err => console.error("Failed to load audit logs:", err))
         .finally(() => setAuditLogLoading(false));
+      AdminApi.getTenants()
+        .then(data => setTenantsList(data))
+        .catch(() => {});
     }
   }, [user]);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
-
   const windowTitle = isGlobalOwner
     ? "User Audit Suite — Global Registry"
     : `Instance Management — ${user?.username}'s City`;
@@ -58,7 +82,6 @@ export const Users = () => {
     try {
       const result = await AdminApi.impersonateUser(targetUserId);
       setImpersonateResult(result);
-      // Store the access token so the admin can use it
       localStorage.setItem('impersonation_token', result.access);
       localStorage.setItem('impersonated_user', JSON.stringify({
         username: result.impersonated_user,
@@ -71,6 +94,70 @@ export const Users = () => {
     }
   };
 
+  const handleCreateUser = async () => {
+    if (!createForm.username || !createForm.email || !createForm.password) {
+      notifications.show({ title: 'Missing fields', message: 'Username, email, and password are required.', color: 'red' });
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await AdminApi.createUser({
+        username: createForm.username,
+        email: createForm.email,
+        password: createForm.password,
+        role: createForm.role,
+        tenant_id: createForm.tenant_id || undefined,
+      });
+      notifications.show({ title: 'User Created', message: `${createForm.username} added successfully.`, color: 'green' });
+      setCreateModalOpened(false);
+      setCreateForm({ username: '', email: '', password: '', role: 'ATHLETE', tenant_id: '' });
+      fetchUsers();
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to create user.', color: 'red' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteTarget) return;
+    setActionLoading(true);
+    try {
+      await AdminApi.deleteUser(deleteTarget.id);
+      notifications.show({ title: 'User Deleted', message: `${deleteTarget.name} removed.`, color: 'orange' });
+      setDeleteConfirmOpened(false);
+      setDeleteTarget(null);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to delete user.', color: 'red' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendInvitation = async () => {
+    if (!inviteForm.email) {
+      notifications.show({ title: 'Missing email', message: 'Email address is required.', color: 'red' });
+      return;
+    }
+    setActionLoading(true);
+    setInviteResult(null);
+    try {
+      const result = await AdminApi.sendInvitation({
+        email: inviteForm.email,
+        name: inviteForm.name,
+        role: inviteForm.role,
+        tenant_id: user?.tenantId || undefined,
+      });
+      setInviteResult(result);
+      notifications.show({ title: 'Invitation Sent', message: `Token for ${inviteForm.email} generated.`, color: 'cyan' });
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to send invitation.', color: 'red' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
@@ -87,148 +174,118 @@ export const Users = () => {
         </Tabs.List>
 
         <Tabs.Panel value="users" pt="md">
-          <WinWindow title={windowTitle}>
-            <Stack gap="md">
-              <Group justify="space-between">
-                <TextInput
-                  placeholder={isGlobalOwner ? "Global Search (ID, Email, Name)..." : "Search within city..."}
-                  leftSection={<Search size={14} />}
-                  style={{ width: '400px' }}
-                  className="fluent-acrylic"
-                />
-                <Group>
-                  <Button
-                    leftSection={<UserPlus size={16} />}
-                    variant="filled"
-                    color="cyan"
-                    onClick={() => setInviteModalOpened(true)}
-                  >
-                    Invite Staff
-                  </Button>
-                  <Button leftSection={<UserCog size={16} />} variant="light" color="gray">
-                    Batch Actions
-                  </Button>
-                </Group>
+          <Stack gap="md">
+            <Group justify="space-between">
+              <TextInput
+                placeholder={isGlobalOwner ? "Global Search (ID, Email, Name)..." : "Search within city..."}
+                leftSection={<Search size={14} />}
+                style={{ width: '400px' }}
+                className="fluent-acrylic"
+              />
+              <Group>
+                <Button
+                  leftSection={<UserPlus size={16} />}
+                  variant="filled"
+                  color="cyan"
+                  onClick={() => setCreateModalOpened(true)}
+                >
+                  Create User
+                </Button>
+                <Button
+                  leftSection={<Send size={16} />}
+                  variant="light"
+                  color="violet"
+                  onClick={() => setInviteModalOpened(true)}
+                >
+                  Invite Staff
+                </Button>
               </Group>
+            </Group>
 
-              <Table verticalSpacing="sm" highlightOnHover>
-                <Table.Thead>
-                  <Table.Tr>
-                    <Table.Th>User ID</Table.Th>
-                    <Table.Th>Name / Email</Table.Th>
-                    <Table.Th>Tenant</Table.Th>
-                    <Table.Th>Status</Table.Th>
-                    <Table.Th>Security Flags</Table.Th>
-                    <Table.Th></Table.Th>
+            <Table verticalSpacing="sm" highlightOnHover>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>User ID</Table.Th>
+                  <Table.Th>Name / Email</Table.Th>
+                  <Table.Th>Tenant</Table.Th>
+                  <Table.Th>Role</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th></Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {usersList.map((u) => (
+                  <Table.Tr key={u.id}>
+                    <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
+                    <Table.Td>
+                      <Stack gap={0}>
+                        <Text size="sm" fw={600}>{u.name}</Text>
+                        <Text size="xs" c="dimmed">{u.email}</Text>
+                      </Stack>
+                    </Table.Td>
+                    <Table.Td><Text size="sm">{u.tenant}</Text></Table.Td>
+                    <Table.Td><Badge color={u.role === 'GLOBAL_OWNER' ? 'red' : u.role === 'TENANT_ADMIN' ? 'blue' : u.role === 'TENANT_MODERATOR' ? 'violet' : 'cyan'} variant="light" size="xs">{u.role}</Badge></Table.Td>
+                    <Table.Td>
+                      <Badge color={u.status === 'Active' ? 'cyan' : 'yellow'} variant="light" size="xs">{u.status}</Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap={0} justify="flex-end">
+                        <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
+                        <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }}>
+                          <Trash2 size={14} />
+                        </ActionIcon>
+                      </Group>
+                    </Table.Td>
                   </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                  {usersList.map((user) => (
-                    <Table.Tr key={user.id}>
-                      <Table.Td><Text size="sm" ff="monospace" c="dimmed">{user.displayId}</Text></Table.Td>
-                      <Table.Td>
-                        <Stack gap={0}>
-                          <Text size="sm" fw={600}>{user.name}</Text>
-                          <Text size="xs" c="dimmed">{user.email}</Text>
-                        </Stack>
-                      </Table.Td>
-                      <Table.Td><Text size="sm">{user.tenant}</Text></Table.Td>
-                      <Table.Td>
-                        <Badge
-                          color={user.status === 'Active' ? 'cyan' : user.status === 'Suspicious' ? 'yellow' : 'red'}
-                          variant="light"
-                          size="xs"
-                        >
-                          {user.status}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        {user.flags > 0 ? (
-                          <Badge color="red" variant="dot" size="sm">{user.flags} Flags</Badge>
-                        ) : (
-                          <Text size="sm" c="dimmed">-</Text>
-                        )}
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={0} justify="flex-end">
-                          <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(user)}>
-                            <Eye size={16} />
-                          </ActionIcon>
-                          <ActionIcon variant="subtle" color="gray"><MoreVertical size={16} /></ActionIcon>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  ))}
-                </Table.Tbody>
-              </Table>
-            </Stack>
-          </WinWindow>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </Stack>
         </Tabs.Panel>
 
         {isGlobalOwner && (
           <Tabs.Panel value="audit" pt="md">
-            <WinWindow title="Audit Log — Recent 50 Entries">
-              <Stack gap="md">
-                {auditLogLoading ? (
-                  <Text c="dimmed">Loading audit logs...</Text>
-                ) : auditLogs.length === 0 ? (
-                  <Text c="dimmed">No audit log entries found.</Text>
-                ) : (
-                  <ScrollArea style={{ height: '600px' }}>
-                    <Table verticalSpacing="xs" highlightOnHover>
-                      <Table.Thead>
-                        <Table.Tr>
-                          <Table.Th>Timestamp</Table.Th>
-                          <Table.Th>Action</Table.Th>
-                          <Table.Th>Impersonator</Table.Th>
-                          <Table.Th>Target User</Table.Th>
-                          <Table.Th>Tenant</Table.Th>
-                          <Table.Th>Status</Table.Th>
-                          <Table.Th>IP</Table.Th>
+            <Stack gap="md">
+              {auditLogLoading ? (
+                <Text c="dimmed">Loading audit logs...</Text>
+              ) : auditLogs.length === 0 ? (
+                <Text c="dimmed">No audit log entries found.</Text>
+              ) : (
+                <ScrollArea style={{ height: '600px' }}>
+                  <Table verticalSpacing="xs" highlightOnHover>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>Timestamp</Table.Th>
+                        <Table.Th>Action</Table.Th>
+                        <Table.Th>Impersonator</Table.Th>
+                        <Table.Th>Target User</Table.Th>
+                        <Table.Th>Tenant</Table.Th>
+                        <Table.Th>Status</Table.Th>
+                        <Table.Th>IP</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {auditLogs.map((log: any, idx: number) => (
+                        <Table.Tr key={log.id || idx}>
+                          <Table.Td><Text size="xs" ff="monospace">{new Date(log.timestamp).toLocaleString()}</Text></Table.Td>
+                          <Table.Td><Text size="xs" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>{log.action}</Text></Table.Td>
+                          <Table.Td><Text size="xs">{log.impersonator_username || log.impersonator || '-'}</Text></Table.Td>
+                          <Table.Td><Text size="xs">{log.target_user_username || log.target_user || '-'}</Text></Table.Td>
+                          <Table.Td><Text size="xs" ff="monospace">{log.tenant_id || '-'}</Text></Table.Td>
+                          <Table.Td><Badge size="xs" color={log.status_code < 400 ? 'cyan' : 'red'} variant="light">{log.status_code}</Badge></Table.Td>
+                          <Table.Td><Text size="xs" ff="monospace">{log.ip_address || '-'}</Text></Table.Td>
                         </Table.Tr>
-                      </Table.Thead>
-                      <Table.Tbody>
-                        {auditLogs.map((log: any, idx: number) => (
-                          <Table.Tr key={log.id || idx}>
-                            <Table.Td>
-                              <Text size="xs" ff="monospace">
-                                {new Date(log.timestamp).toLocaleString()}
-                              </Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="xs" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>
-                                {log.action}
-                              </Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="xs">{log.impersonator_username || log.impersonator || '-'}</Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="xs">{log.target_user_username || log.target_user || '-'}</Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="xs" ff="monospace">{log.tenant_id || '-'}</Text>
-                            </Table.Td>
-                            <Table.Td>
-                              <Badge size="xs" color={log.status_code < 400 ? 'cyan' : 'red'} variant="light">
-                                {log.status_code}
-                              </Badge>
-                            </Table.Td>
-                            <Table.Td>
-                              <Text size="xs" ff="monospace">{log.ip_address || '-'}</Text>
-                            </Table.Td>
-                          </Table.Tr>
-                        ))}
-                      </Table.Tbody>
-                    </Table>
-                  </ScrollArea>
-                )}
-              </Stack>
-            </WinWindow>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </ScrollArea>
+              )}
+            </Stack>
           </Tabs.Panel>
         )}
       </Tabs>
 
+      {/* User Detail Drawer */}
       <Drawer
         opened={!!selectedUser}
         onClose={() => {
@@ -239,91 +296,36 @@ export const Users = () => {
         position="right"
         size="lg"
         title={<Text fw={700}>Deep-Dive Telemetry: {selectedUser?.name}</Text>}
-        styles={{
-          content: { background: 'var(--mantine-color-body)' },
-          header: { background: 'transparent' }
-        }}
+        styles={{ content: { background: 'var(--mantine-color-body)' }, header: { background: 'transparent' } }}
       >
         {selectedUser && (
           <Stack gap="xl">
             <SimpleGrid cols={2}>
               <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-                <Text size="xs" c="dimmed" tt="uppercase">Last Known Location</Text>
-                <Text size="md" fw={600}>52.1672° N, 22.2906° E</Text>
+                <Text size="xs" c="dimmed" tt="uppercase">Username</Text>
+                <Text size="md" fw={600}>{selectedUser.name}</Text>
               </Box>
               <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
-                <Text size="xs" c="dimmed" tt="uppercase">Device Fingerprint</Text>
-                <Text size="md" fw={600} ff="monospace">iPhone14,2 (iOS 17.4)</Text>
+                <Text size="xs" c="dimmed" tt="uppercase">Role</Text>
+                <Badge color={selectedUser.role === 'GLOBAL_OWNER' ? 'red' : 'cyan'}>{selectedUser.role}</Badge>
               </Box>
             </SimpleGrid>
 
             <Box>
-              <Text fw={600} mb="sm">Recent Activities</Text>
-              <Stack gap="sm">
-                {[1, 2, 3].map((i) => (
-                  <Group key={i} p="sm" className="fluent-acrylic" style={{ borderRadius: '6px' }} justify="space-between">
-                    <Group>
-                      <Activity size={16} color="#00D1FF" />
-                      <Stack gap={0}>
-                        <Text size="sm">Morning Run - 5.2km</Text>
-                        <Text size="xs" c="dimmed">Today, 06:30 AM</Text>
-                      </Stack>
-                    </Group>
-                    <Badge color="cyan" variant="light">Valid</Badge>
-                  </Group>
-                ))}
-              </Stack>
-            </Box>
-
-            <Box>
-              <Text fw={600} mb="sm" c="red">Security Warnings</Text>
-              {selectedUser && selectedUser.flags > 0 ? (
-                <Group p="sm" style={{ background: 'rgba(255,0,0,0.1)', borderRadius: '6px', border: '1px solid rgba(255,0,0,0.2)' }}>
-                  <ShieldAlert size={20} color="red" />
-                  <Stack gap={0}>
-                    <Text size="sm" fw={600} c="red">V-max violation detected</Text>
-                    <Text size="xs" c="red" opacity={0.8}>Speed exceeded biological limits (45km/h sustained) on segment 14.</Text>
-                  </Stack>
-                </Group>
-              ) : (
-                <Text size="sm" c="dimmed">No security flags raised.</Text>
-              )}
-            </Box>
-
-            {/* Impersonation Section */}
-            <Box>
               <Text fw={600} mb="sm" c="orange">Impersonation (Audited Action)</Text>
               {impersonateResult ? (
-                <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px', border: '1px solid rgba(0,255,0,0.2)' }}>
-                  <Text size="sm" c="green">✅ Impersonation successful!</Text>
+                <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
+                  <Text size="sm" c="green">Impersonation successful!</Text>
                   <Text size="xs" c="dimmed">
-                    Token for <b>{impersonateResult.impersonated_user}</b> ({impersonateResult.impersonated_role}) has been stored.
-                  </Text>
-                  <Text size="xs" c="dimmed" ff="monospace" style={{ wordBreak: 'break-all' }}>
-                    Access: {impersonateResult.access?.substring(0, 40)}...
+                    Token for <b>{impersonateResult.impersonated_user}</b> ({impersonateResult.impersonated_role}) stored.
                   </Text>
                   <Button size="xs" variant="light" color="red" onClick={() => {
                     localStorage.removeItem('impersonation_token');
                     localStorage.removeItem('impersonated_user');
                     setImpersonateResult(null);
-                  }}>
-                    Clear Impersonation Token
-                  </Button>
-                </Stack>
-              ) : impersonateError ? (
-                <Stack gap="sm" p="sm" style={{ background: 'rgba(255,0,0,0.08)', borderRadius: '6px', border: '1px solid rgba(255,0,0,0.2)' }}>
-                  <Group>
-                    <AlertTriangle size={16} color="red" />
-                    <Text size="sm" c="red">❌ {impersonateError}</Text>
-                  </Group>
+                  }}>Clear Impersonation Token</Button>
                 </Stack>
               ) : (
-                <Text size="xs" c="dimmed" mb="sm">
-                  This will generate a JWT token for <b>{selectedUser.name}</b> without knowing their password.
-                  All actions performed with this token will be logged in the audit trail.
-                </Text>
-              )}
-              {!impersonateResult && (
                 <Button
                   color="red"
                   variant="light"
@@ -332,7 +334,7 @@ export const Users = () => {
                   loading={impersonating}
                   onClick={() => handleImpersonate(selectedUser.id)}
                 >
-                  {impersonating ? 'Generating Token...' : 'Impersonate User (Audited Action)'}
+                  {impersonating ? 'Generating Token...' : 'Impersonate User'}
                 </Button>
               )}
             </Box>
@@ -340,23 +342,57 @@ export const Users = () => {
         )}
       </Drawer>
 
-      <Modal
-        opened={inviteModalOpened}
-        onClose={() => setInviteModalOpened(false)}
-        title={<Text fw={700}>Invite New Staff / Moderator</Text>}
-        centered
-        className="fluent-acrylic"
-        styles={{ content: { borderRadius: '12px', background: 'rgba(32,32,32,0.95)', border: '1px solid rgba(255,255,255,0.1)' } }}
-      >
+      {/* Create User Modal */}
+      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title={<Text fw={700}>Create New User</Text>} centered size="md">
         <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            This will send an invitation to join your city as a **Tenant Moderator**. They will have access to Anti-Cheat and local moderation.
-          </Text>
-          <TextInput label="Email Address" placeholder="moderator@city.gov" required />
-          <TextInput label="Full Name" placeholder="Jan Kowalski" />
-          <Button fullWidth onClick={() => setInviteModalOpened(false)} color="cyan" mt="md">
-            Send Invitation Token
-          </Button>
+          <TextInput label="Username" value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} required />
+          <TextInput label="Email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
+          <PasswordInput label="Password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
+          <Select label="Role" value={createForm.role} onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })} data={[
+            { value: 'ATHLETE', label: 'Athlete' },
+            { value: 'TENANT_MODERATOR', label: 'Moderator' },
+            { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+            { value: 'SPONSOR', label: 'Sponsor' },
+          ]} />
+          {isGlobalOwner && (
+            <Select label="Tenant" value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: any) => ({ value: String(t.id), label: t.name }))} clearable />
+          )}
+          <Button fullWidth onClick={handleCreateUser} color="cyan" loading={actionLoading}>Create User</Button>
+        </Stack>
+      </Modal>
+
+      {/* Invite Modal */}
+      <Modal opened={inviteModalOpened} onClose={() => { setInviteModalOpened(false); setInviteResult(null); }} title={<Text fw={700}>Invite Staff / Moderator</Text>} centered size="md">
+        <Stack gap="md">
+          <TextInput label="Email Address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="moderator@city.gov" required />
+          <TextInput label="Full Name" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="Jan Kowalski" />
+          <Select label="Role" value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })} data={[
+            { value: 'TENANT_MODERATOR', label: 'Moderator' },
+            { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+          ]} />
+          {inviteResult ? (
+            <Stack gap="xs" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
+              <Text size="sm" c="green">Invitation created!</Text>
+              <Text size="xs">Username: <b>{inviteResult.username}</b></Text>
+              <Text size="xs">Password: <b>{inviteResult.temporary_password}</b></Text>
+              <Text size="xs" c="dimmed">Share these credentials securely with the user.</Text>
+            </Stack>
+          ) : (
+            <Button fullWidth onClick={handleSendInvitation} color="violet" loading={actionLoading}>
+              Generate Invitation Token
+            </Button>
+          )}
+        </Stack>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal opened={deleteConfirmOpened} onClose={() => setDeleteConfirmOpened(false)} title={<Text fw={700} c="red">Delete User?</Text>} centered size="sm">
+        <Stack gap="md">
+          <Text size="sm">Are you sure you want to permanently delete <b>{deleteTarget?.name}</b> ({deleteTarget?.email})?</Text>
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setDeleteConfirmOpened(false)}>Cancel</Button>
+            <Button color="red" onClick={handleDeleteUser} loading={actionLoading}>Delete</Button>
+          </Group>
         </Stack>
       </Modal>
     </Box>

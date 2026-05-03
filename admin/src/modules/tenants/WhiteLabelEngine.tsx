@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Box, Card, Text, Group, Button, ColorInput, FileInput, Stack, Divider, Badge } from '@mantine/core';
+import React, { useState, useEffect } from 'react';
+import { Box, Card, Text, Group, Button, ColorInput, FileInput, Stack, Divider, Badge, TextInput } from '@mantine/core';
 import { Palette, Image as ImageIcon, Smartphone } from 'lucide-react';
 
 import { useAuth } from '../../core/auth/useAuth';
+import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
 interface WhiteLabelEngineProps {
@@ -10,28 +11,41 @@ interface WhiteLabelEngineProps {
 }
 
 export const WhiteLabelEngine: React.FC<WhiteLabelEngineProps> = ({ tenantId }) => {
-  const { token } = useAuth();
+  const { user } = useAuth();
   const [primaryColor, setPrimaryColor] = useState('#2563EB');
   const [secondaryColor, setSecondaryColor] = useState('#10B981');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const effectiveTenantId = tenantId || user?.tenantId;
+
+  useEffect(() => {
+    if (effectiveTenantId) {
+      apiClient.get(`/users/branding/${effectiveTenantId}/`)
+        .then(res => {
+          if (res.data?.primary_color) setPrimaryColor(res.data.primary_color);
+          if (res.data?.secondary_color) setSecondaryColor(res.data.secondary_color);
+        })
+        .catch(() => {});
+    }
+  }, [effectiveTenantId]);
+
   const handleDeploy = async () => {
-    if (!tenantId) return;
+    if (!effectiveTenantId) {
+      notifications.show({ title: 'Error', message: 'No tenant selected.', color: 'red' });
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/branding/${tenantId}/update/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ primary_color: primaryColor, secondary_color: secondaryColor })
+      await apiClient.put(`/users/branding/${effectiveTenantId}/update/`, {
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
       });
-      if (response.ok) {
-        console.log("Deployed branding to Edge CDN...");
-      }
-    } catch (e) {
-      console.error(e);
+      notifications.show({
+        title: 'Branding Deployed',
+        message: `Colors synced to ${effectiveTenantId}. Mobile apps will update on next launch.`,
+        color: 'green',
+      });
+    } catch (e: any) {
+      notifications.show({ title: 'Deploy Failed', message: e?.message || 'Network error.', color: 'red' });
     } finally {
       setIsSubmitting(false);
     }
@@ -115,7 +129,7 @@ export const WhiteLabelEngine: React.FC<WhiteLabelEngineProps> = ({ tenantId }) 
       </Stack>
 
       <Button fullWidth color="indigo" onClick={handleDeploy} mt="xl" loading={isSubmitting}>
-        Inject Assets to Production
+        Deploy Branding to Edge CDN
       </Button>
     </Card>
   );

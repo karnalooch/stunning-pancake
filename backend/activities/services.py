@@ -265,9 +265,12 @@ class AntiCheatEngine:
         for a in anomalies:
             result.append({
                 "id": f"AN-{a.id}",
+                "activity_id": a.id,
                 "user": a.user.username,
                 "type": a.type,
                 "score": round(a.verification_score, 2),
-                "time": a.start_time.isoformat()
+                "time": a.start_time.isoformat(),
+                "distance": a.distance,
+                "duration": str(a.duration) if a.duration else None
             })
         return result
