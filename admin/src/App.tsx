@@ -62,11 +62,18 @@ export default function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/owner" element={<Layout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<Dashboard />} />
+              <Route
+                path="dashboard"
+                element={
+                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR']}>
+                    <Dashboard />
+                  </RoleGuard>
+                }
+              />
               <Route
                 path="anti-cheat"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_MODERATOR']}>
+                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR']}>
                     <AntiCheat />
                   </RoleGuard>
                 }

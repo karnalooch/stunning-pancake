@@ -7,6 +7,7 @@ import { useAuth } from '../../core/auth/useAuth';
 import { ModeratorWorklist } from './ModeratorWorklist';
 import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
+import { CityAnalytics } from '../analytics/CityAnalytics';
 
 interface TenantRow {
   tenant_id: string; tenant_name: string; users: number; activities: number;
@@ -104,6 +105,7 @@ export const Dashboard: React.FC = () => {
         </Stack>
       )}
       {isModerator && <ModeratorWorklist />}
+      {!isGlobalOwner && !isModerator && <CityAnalytics cityId={user?.tenantId || undefined} />}
     </Box>
   );
 };
