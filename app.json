@@ -1,5 +1,15 @@
 {
   "expo": {
+    "name": "SPORT",
+    "slug": "sport",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "updates": {
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "extra": {
       "eas": {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
