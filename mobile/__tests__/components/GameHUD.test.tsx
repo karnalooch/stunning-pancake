@@ -4,7 +4,7 @@
  * RC v0.2: Tests auto-hide behavior, tap-to-restore,
  * scrolling digit animation logic, and metric formatting.
  *
- * Note: Full render tests require native mocks for reanimated and tamagui.
+ * Note: Full render tests require native mocks for reanimated.
  * These tests focus on the component's business logic.
  *
  * Run: npm test -- __tests__/components/GameHUD.test.ts
@@ -24,12 +24,6 @@ jest.mock('react-native-reanimated', () => ({
   },
 }));
 
-jest.mock('tamagui', () => ({
-  YStack: 'YStack',
-  XStack: 'XStack',
-  Text: 'Text',
-  View: 'View',
-}));
 
 // Import the formatTime function extracted from GameHUD for testing
 const formatTime = (sec: number) => {

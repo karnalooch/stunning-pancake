@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
-import { Image } from 'react-native';
-import { View } from 'tamagui';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withRepeat, 
-  withTiming, 
+import { Image, View } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
   withSequence,
   Easing
 } from 'react-native-reanimated';
@@ -26,9 +25,9 @@ const spriteMaps = {
   elite: require('../../assets/generated/runner_sprite.png'), // Fallback to runner for now
 };
 
-export const AthleteSprite: React.FC<AthleteSpriteProps> = ({ 
-  type, 
-  state, 
+export const AthleteSprite: React.FC<AthleteSpriteProps> = ({
+  type,
+  state,
   size = 60
 }) => {
   const bounce = useSharedValue(0);
@@ -68,9 +67,9 @@ export const AthleteSprite: React.FC<AthleteSpriteProps> = ({
 
   return (
     <Animated.View style={[{ width: size, height: size }, animatedStyle]}>
-      <Image 
-        source={spriteMaps[type]} 
-        style={{ width: '100%', height: '100%' }} 
+      <Image
+        source={spriteMaps[type]}
+        style={{ width: '100%', height: '100%' }}
         resizeMode="contain"
       />
     </Animated.View>

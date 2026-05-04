@@ -1,9 +1,10 @@
 import React, { useMemo, memo } from 'react';
-import { useTheme } from 'tamagui';
 import { Canvas, Rect, Group, Text, matchFont } from '@shopify/react-native-skia';
 import { Platform, View } from 'react-native';
 import { observer } from '@legendapp/state/react';
 import { useIsFocused } from '@react-navigation/native';
+import { useUnistyles, UnistylesRuntime } from '../theme/unistyles';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 interface PixelStatsProps {
   data?: any; // Can be number[] or Legend-State observable
@@ -17,28 +18,26 @@ interface PixelStatsProps {
  * Built with React Native Skia for stable 60 FPS rendering.
  * Optimized with React.memo and Legend-State for minimal re-renders.
  */
-export const PixelStats: React.FC<PixelStatsProps> = memo(observer(({ 
-  data = [45, 82, 55, 95, 70, 40, 65], 
-  height = 130, 
+export const PixelStats: React.FC<PixelStatsProps> = memo(observer(({
+  data = [45, 82, 55, 95, 70, 40, 65],
+  height = 130,
   width = 280,
   label = "PILOT_PERFORMANCE"
 }) => {
-  const theme = useTheme();
+  useUnistyles();
+  const themeName = UnistylesRuntime.themeName ?? 'octopath';
+  const t = themeName === 'octopath' ? tokens.octopath : tokens.solar;
   const isFocused = useIsFocused();
-  
+
   // Resolve data if it's an observable
   const resolvedData = typeof data?.get === 'function' ? data.get() : data;
   const dataPoints = Array.isArray(resolvedData) ? resolvedData : [];
 
-  // Colors from design_tokens.json
-  const octopathGold = "#D4A373";
-  const matrixCyan = "#2EC4B6";
-  
-  // Adaptive colors based on theme
-  const primaryColor = theme.primary?.get() || octopathGold;
-  const accentColor = theme.accent?.get() || matrixCyan;
-  const textColor = theme.color?.get() || "#FFFFFF";
-  const outlineColor = "#000000";
+  // Adaptive colors based on active Unistyles theme
+  const primaryColor = themeName === 'octopath' ? tokens.primitive.goldAmber : '#6B4226';
+  const accentColor = themeName === 'octopath' ? '#2EC4B6' : '#3D6B2E';
+  const textColor = t.text;
+  const outlineColor = '#000000';
 
   const padding = 12;
   const chartHeight = height - 45;
@@ -48,12 +47,12 @@ export const PixelStats: React.FC<PixelStatsProps> = memo(observer(({
   const maxVal = Math.max(...dataPoints, 1);
 
   // Fallback to monospace for retro feel if Press Start 2P is unavailable in Skia
-  const systemFontFamily = Platform.select({ 
-    ios: 'Courier', 
-    android: 'monospace', 
-    default: 'serif' 
+  const systemFontFamily = Platform.select({
+    ios: 'Courier',
+    android: 'monospace',
+    default: 'serif'
   });
-  
+
   const font = useMemo(() => matchFont({
     fontFamily: systemFontFamily,
     fontSize: 10,
@@ -77,7 +76,7 @@ export const PixelStats: React.FC<PixelStatsProps> = memo(observer(({
             const barHeight = (val / maxVal) * chartHeight;
             const x = padding + index * (barWidth + barGap);
             const y = height - barHeight - 20;
-            
+
             return (
               <Group key={index}>
                 {/* Bar Fill */}
@@ -111,23 +110,23 @@ export const PixelStats: React.FC<PixelStatsProps> = memo(observer(({
             );
           })}
         </Group>
-        
+
         {/* X-Axis Baseline (Sprite-style) */}
-        <Rect 
-          x={padding} 
-          y={height - 20} 
-          width={chartWidth} 
-          height={2} 
-          color={outlineColor} 
+        <Rect
+          x={padding}
+          y={height - 20}
+          width={chartWidth}
+          height={2}
+          color={outlineColor}
         />
-        
+
         {/* Footer Info */}
-        <Text 
-          x={padding} 
-          y={height - 5} 
-          text={`BATT_LEVEL: 100% | STATUS: OPTIMAL`} 
-          font={font} 
-          color={textColor} 
+        <Text
+          x={padding}
+          y={height - 5}
+          text={`BATT_LEVEL: 100% | STATUS: OPTIMAL`}
+          font={font}
+          color={textColor}
           opacity={0.5}
         />
       </Canvas>

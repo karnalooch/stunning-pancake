@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Dimensions } from 'react-native';
-import { YStack, Text, H1, View } from 'tamagui';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withRepeat, 
+import { StyleSheet, Dimensions, View, Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
   withSequence,
   withDelay,
   Easing,
@@ -21,9 +20,9 @@ interface SplashScreenProps {
   subMessage?: string;
 }
 
-export const SplashScreen: React.FC<SplashScreenProps> = ({ 
-  message = "INITIALIZING SPORT CORE...", 
-  subMessage = "NEO-RETRO ATHLETICISM V3.0" 
+export const SplashScreen: React.FC<SplashScreenProps> = ({
+  message = "INITIALIZING SPORT CORE...",
+  subMessage = "NEO-RETRO ATHLETICISM V3.0"
 }) => {
   const logoScale = useSharedValue(0.9);
   const logoOpacity = useSharedValue(0);
@@ -40,7 +39,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       true
     );
     logoOpacity.value = withTiming(1, { duration: 800 });
-    
+
     scanPos.value = withRepeat(
       withTiming(150, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
       -1,
@@ -73,9 +72,9 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
   }));
 
   return (
-    <YStack flex={1} backgroundColor="#0B1D33" justifyContent="center" alignItems="center">
+    <View style={styles.root}>
       {/* Cyberpunk Grid Background */}
-      <View position="absolute" opacity={0.05}>
+      <View style={styles.gridOverlay}>
         <Svg width={width} height={height}>
           {Array.from({ length: 20 }).map((_, i) => (
             <Rect key={`h-${i}`} x="0" y={(height / 20) * i} width={width} height="1" fill="#1A2A3A" />
@@ -89,43 +88,53 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       <Animated.View style={[styles.logoContainer, logoStyle]}>
         {/* HD-2D Shield Logo Icon */}
         <Svg width="120" height="120" viewBox="0 0 100 100">
-          <Path d="M20 10H80V20H90V60H80V70H70V80H60V90H40V80H30V70H20V60H10V20H20V10Z" fill="#D4A373" stroke="#000000" strokeWidth="2"/>
-          <Path d="M30 20H70V30H80V50H70V60H60V70H40V60H30V50H20V30H30V20Z" fill="#FF6B35" stroke="#000000" strokeWidth="1"/>
-          <Rect x="45" y="35" width="10" height="10" fill="#FFFFFF" stroke="#000000" strokeWidth="1"/>
+          <Path d="M20 10H80V20H90V60H80V70H70V80H60V90H40V80H30V70H20V60H10V20H20V10Z" fill="#D4A373" stroke="#000000" strokeWidth="2" />
+          <Path d="M30 20H70V30H80V50H70V60H60V70H40V60H30V50H20V30H30V20Z" fill="#FF6B35" stroke="#000000" strokeWidth="1" />
+          <Rect x="45" y="35" width="10" height="10" fill="#FFFFFF" stroke="#000000" strokeWidth="1" />
         </Svg>
-        
+
         {/* Scanning Line Effect */}
         <Animated.View style={[styles.scanLine, scanStyle]} />
       </Animated.View>
 
-      <YStack marginTop="$10" alignItems="center" gap="$4">
+      <View style={styles.centerSection}>
         {/* LOADING SPRITE */}
         <AthleteSprite type="runner" state="action" size={60} />
-        
-        <YStack alignItems="center" gap="$2">
+
+        <View style={styles.messageBlock}>
           <Animated.View style={textStyle}>
-            <Text color="$primary" letterSpacing={4} fontSize={12} fontWeight="900" textAlign="center" fontFamily="$pixel">
+            <Text style={styles.messageText}>
               {message}
             </Text>
           </Animated.View>
-          <Text color="$color" opacity={0.4} fontSize={10} fontWeight="800" letterSpacing={2} fontFamily="$pixel">
+          <Text style={styles.subMessageText}>
             {subMessage}
           </Text>
-        </YStack>
-      </YStack>
+        </View>
+      </View>
 
       {/* Version & Build Tags in Corners */}
-      <View position="absolute" top={60} left={30}>
-        <Text color="#333" fontSize={10} ff="monospace">SYS_STATUS: ACTIVE</Text>
+      <View style={styles.topLeftTag}>
+        <Text style={styles.tagText}>SYS_STATUS: ACTIVE</Text>
       </View>
-      <View position="absolute" bottom={40} right={30}>
-        <Text color="#333" fontSize={10} ff="monospace">LOAD_ADDR: 0x0B0E14</Text>
+      <View style={styles.bottomRightTag}>
+        <Text style={styles.tagText}>LOAD_ADDR: 0x0B0E14</Text>
       </View>
-    </YStack>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#0B1D33',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridOverlay: {
+    position: 'absolute',
+    opacity: 0.05,
+  },
   logoContainer: {
     width: 150,
     height: 150,
@@ -145,5 +154,45 @@ const styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowRadius: 10,
     elevation: 10,
-  }
+  },
+  centerSection: {
+    marginTop: 40,
+    alignItems: 'center',
+    gap: 16,
+  },
+  messageBlock: {
+    alignItems: 'center',
+    gap: 8,
+  },
+  messageText: {
+    color: '#D4A373',
+    letterSpacing: 4,
+    fontSize: 12,
+    fontWeight: '900',
+    textAlign: 'center',
+    fontFamily: 'PressStart2P',
+  },
+  subMessageText: {
+    color: '#F5E6CC',
+    opacity: 0.4,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 2,
+    fontFamily: 'PressStart2P',
+  },
+  topLeftTag: {
+    position: 'absolute',
+    top: 60,
+    left: 30,
+  },
+  bottomRightTag: {
+    position: 'absolute',
+    bottom: 40,
+    right: 30,
+  },
+  tagText: {
+    color: '#333',
+    fontSize: 10,
+    fontFamily: 'monospace',
+  },
 });

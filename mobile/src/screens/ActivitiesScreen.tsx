@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
-import { Share, Image } from 'react-native';
-import { YStack, XStack, ScrollView, View } from 'tamagui';
+import { Share, Image, View } from 'react-native';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService, ActivityItem } from '../services/api';
 
-import { GameCard } from '../components/arcade/GameCard';
-import { PixelText } from '../components/arcade/PixelText';
-import { ArcadeButton } from '../components/arcade/ArcadeButton';
+import { Column } from '../components/Column';
+import { Row } from '../components/Row';
+import { ScrollContainer } from '../components/ScrollContainer';
+import { GameCard } from '../components/GameCard';
+import { PixelText } from '../components/PixelText';
+import { ArcadeButton } from '../components/ArcadeButton';
 import { AthleteSprite } from '../components/AthleteSprite';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 const GRADE_ICONS: Record<string, any> = {
   S: undefined,
@@ -15,11 +18,11 @@ const GRADE_ICONS: Record<string, any> = {
 };
 
 const verificationGrade = (score: number): { label: string; color: string } => {
-  if (score >= 0.95) return { label: 'S', color: '#D4A373' }; // Gold
-  if (score >= 0.85) return { label: 'A', color: '#7BA05B' }; // Green
-  if (score >= 0.70) return { label: 'B', color: '#60A5FA' }; // Blue
-  if (score >= 0.50) return { label: 'C', color: '#FFB800' }; // Yellow
-  return { label: 'D', color: '#EF4444' }; // Red
+  if (score >= 0.95) return { label: 'S', color: tokens.semantic.primary }; // Gold
+  if (score >= 0.85) return { label: 'A', color: tokens.semantic.success }; // Green
+  if (score >= 0.70) return { label: 'B', color: tokens.octopath.buttonBlueBg }; // Blue
+  if (score >= 0.50) return { label: 'C', color: tokens.semantic.warning }; // Yellow
+  return { label: 'D', color: tokens.semantic.error }; // Red
 };
 
 export const ActivitiesScreen = observer(() => {
@@ -59,86 +62,88 @@ export const ActivitiesScreen = observer(() => {
   };
 
   return (
-    <YStack flex={1} backgroundColor="#0B1D33" paddingTop="$10" paddingHorizontal="$4">
-      <XStack justifyContent="space-between" alignItems="center" marginBottom="$6">
-        <PixelText size={18} color="#D4A373" shadow>QUEST_LOG</PixelText>
-        <PixelText size={8} color="#7BA05B">
+    <Column flex={1} style={{ backgroundColor: tokens.octopath.background, paddingTop: 40 }} paddingHorizontal={16}>
+      <Row justifyContent="space-between" alignItems="center" style={{ marginBottom: 24 }}>
+        <PixelText size="lg" color="primary" shadow>QUEST_LOG</PixelText>
+        <PixelText size="xs" color="success" style={{ fontSize: 8 }}>
           {activities.length} MISSIONS RECORDED
         </PixelText>
-      </XStack>
+      </Row>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <YStack gap="$4" paddingBottom="$10">
+      <ScrollContainer showsVerticalScrollIndicator={false}>
+        <Column gap={16} style={{ paddingBottom: 40 }}>
           {state.loading.get() && activities.length === 0 && (
-            <YStack padding="$10" alignItems="center">
+            <Column style={{ padding: 40 }} alignItems="center">
               <AthleteSprite type="runner" state="action" size={60} />
-              <PixelText size={10} color="#D4A373" style={{ marginTop: 16 }}>
+              <PixelText size="xs" color="primary" style={{ marginTop: 16 }}>
                 SCANNING SESSION LOGS...
               </PixelText>
-            </YStack>
+            </Column>
           )}
 
           {!state.loading.get() && activities.length === 0 && (
-            <YStack padding="$10" alignItems="center">
+            <Column style={{ padding: 40 }} alignItems="center">
               <AthleteSprite type="ghost" state="idle" size={60} />
-              <PixelText size={10} color="#9CA3AF" style={{ marginTop: 16 }}>
+              <PixelText size="xs" color="muted" style={{ marginTop: 16 }}>
                 NO MISSIONS COMPLETED YET
               </PixelText>
-              <PixelText size={8} color="#7BA05B" style={{ marginTop: 8 }}>
+              <PixelText size="xs" color="success" style={{ fontSize: 8, marginTop: 8 }}>
                 GO TO HOME TO BEGIN
               </PixelText>
-            </YStack>
+            </Column>
           )}
 
           {activities.map((act) => {
             const grade = verificationGrade(act.verification_score || 0);
             return (
               <GameCard key={act.id} variant="metal" padding={12}>
-                <XStack alignItems="center" gap="$3">
+                <Row alignItems="center" gap={12}>
                   <View
-                    backgroundColor="#0B1D33"
-                    borderWidth={2}
-                    borderColor={grade.color}
-                    alignItems="center"
-                    justifyContent="center"
-                    width={48}
-                    height={48}
+                    style={{
+                      backgroundColor: tokens.octopath.background,
+                      borderWidth: 2,
+                      borderColor: grade.color,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 48,
+                      height: 48,
+                    }}
                   >
                     {GRADE_ICONS[grade.label] ? (
                       <Image source={GRADE_ICONS[grade.label]} style={{ width: 32, height: 32 }} resizeMode="contain" />
                     ) : (
-                      <PixelText color={grade.color} size={20} shadow>
+                      <PixelText size="xl" color={grade.color === tokens.semantic.primary ? 'primary' : grade.color === tokens.semantic.success ? 'success' : grade.color === tokens.semantic.warning ? 'warning' : grade.color === tokens.semantic.error ? 'error' : 'text'} shadow style={{ fontSize: 20 }}>
                         {grade.label}
                       </PixelText>
                     )}
                   </View>
 
-                  <YStack flex={1}>
-                    <PixelText size={12} color="#FFFFFF" shadow>
+                  <Column flex={1}>
+                    <PixelText size="sm" color="inverse" shadow>
                       {act.type?.toUpperCase() || 'UNKNOWN'} MISSION
                     </PixelText>
-                    <PixelText size={8} color="#9CA3AF" style={{ marginTop: 6 }}>
+                    <PixelText size="xs" color="muted" style={{ fontSize: 8, marginTop: 6 }}>
                       {new Date(act.start_time).toLocaleDateString()} · {((act.distance || 0) / 1000).toFixed(2)} KM
                     </PixelText>
-                  </YStack>
+                  </Column>
 
                   <ArcadeButton
                     size="sm"
                     label="SHARE"
-                    variant="blue"
+                    variant="secondary"
                     fullWidth={false}
                     onPress={() => handleShare(act)}
                   />
-                </XStack>
+                </Row>
               </GameCard>
             );
           })}
-        </YStack>
-      </ScrollView>
+        </Column>
+      </ScrollContainer>
 
-      <PixelText size={8} color="#9CA3AF" style={{ textAlign: 'center', opacity: 0.5, paddingVertical: 12 }}>
+      <PixelText size="xs" color="muted" style={{ fontSize: 8, textAlign: 'center', opacity: 0.5, paddingVertical: 12 }}>
         QUEST LOG · RPG CHARACTER SHEET v2.0
       </PixelText>
-    </YStack>
+    </Column>
   );
 });

@@ -2,13 +2,11 @@ import React, { useEffect } from 'react';
 import { StyleSheet, View, Alert, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { TamaguiProvider, YStack, Text as TamaText, Input, Button as TamaButton, H1, Paragraph, Spinner } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
-import tamaguiConfig from './tamagui.config';
 
 import { Image } from 'react-native';
 import { AuthService, setAuthToken } from './src/services/api';
@@ -24,8 +22,12 @@ import { RewardsScreen } from './src/screens/RewardsScreen';
 import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { GameTabBar } from './src/navigation/GameTabBar';
-import { PixelText } from './src/components/arcade/PixelText';
-import { ArcadeButton } from './src/components/arcade/ArcadeButton';
+import { PixelText } from './src/components/PixelText';
+import { ArcadeButton } from './src/components/ArcadeButton';
+import { Column } from './src/components/Column';
+import { RetroInput } from './src/components/RetroInput';
+import { ThemeProvider } from './src/theme/ThemeProvider';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 let storage: any;
 const BYPASS_AUTH = false;
@@ -38,9 +40,9 @@ const getStorage = () => {
     console.error('MMKV init failed', e);
     storage = {
       getString: (key: string) => null,
-      set: (key: string, value: any) => {},
-      delete: (key: string) => {},
-      clearAll: () => {},
+      set: (key: string, value: any) => { },
+      delete: (key: string) => { },
+      clearAll: () => { },
       getAllKeys: () => [],
       contains: (key: string) => false,
     };
@@ -49,14 +51,6 @@ const getStorage = () => {
 };
 
 const Tab = createBottomTabNavigator();
-
-// Octopath HD-2D colors (match tamagui.config.ts)
-const OCTOPATH = {
-  card: '#3D3020',
-  primary: '#D4A373',
-  textMuted: '#8B7355',
-  background: '#2D2418',
-};
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: any }> {
   constructor(props: any) {
@@ -69,9 +63,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   render() {
     if (this.state.hasError) {
       return (
-        <View style={{ flex: 1, backgroundColor: OCTOPATH.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ color: OCTOPATH.primary, fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
-          <Text style={{ color: OCTOPATH.textMuted, textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
+        <View style={{ flex: 1, backgroundColor: tokens.octopath.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: tokens.semantic.primary, fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
+          <Text style={{ color: tokens.octopath.textMuted, textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
             {this.state.error?.toString() || 'Unknown JS Exception'}
           </Text>
         </View>
@@ -214,82 +208,50 @@ export default observer(function App() {
     const mode = auth.mode.get();
 
     return (
-      <YStack flex={1} backgroundColor="#0B1D33" justifyContent="center" padding="$6" gap="$6">
-        <YStack alignItems="center" marginBottom="$4">
-          <PixelText size={36} color="#D4A373" shadow>SPORT</PixelText>
-          <PixelText size={10} color="#7BA05B" style={{ marginTop: 8 }}>
+      <Column flex={1} style={{ backgroundColor: tokens.octopath.background, justifyContent: 'center' }} padding={24} gap={24}>
+        <Column alignItems="center" style={{ marginBottom: 16 }}>
+          <PixelText size="2xl" color="primary" shadow style={{ fontSize: 36 }}>SPORT</PixelText>
+          <PixelText size="xs" color="success" style={{ marginTop: 8 }}>
             {mode === 'login' ? 'MISSION LOGIN' : 'NEW PILOT REGISTRATION'}
           </PixelText>
-        </YStack>
+        </Column>
 
-        <YStack gap="$4">
+        <Column gap={16}>
           {mode === 'register' && (
-            <Input
+            <RetroInput
               placeholder="PILOT_NAME"
               value={auth.username.get()}
-              onChangeText={(v) => auth.username.set(v)}
-              backgroundColor="#2B303A"
-              borderColor="#D4A373"
-              borderWidth={2}
-              color="#F5E6CC"
-              fontFamily="$pixel"
-              fontSize={12}
-              borderRadius={0}
-              paddingVertical="$3"
+              onChangeText={(v: string) => auth.username.set(v)}
             />
           )}
 
-          <Input
+          <RetroInput
             placeholder="EMAIL / OPERATOR ID"
             value={auth.email.get()}
-            onChangeText={(v) => auth.email.set(v)}
+            onChangeText={(v: string) => auth.email.set(v)}
             autoCapitalize="none"
-            backgroundColor="#2B303A"
-            borderColor="#D4A373"
-            borderWidth={2}
-            color="#F5E6CC"
-            fontFamily="$pixel"
-            fontSize={12}
-            borderRadius={0}
-            paddingVertical="$3"
           />
 
-          <Input
+          <RetroInput
             placeholder="ACCESS TOKEN"
             value={auth.password.get()}
-            onChangeText={(v) => auth.password.set(v)}
+            onChangeText={(v: string) => auth.password.set(v)}
             secureTextEntry
-            backgroundColor="#2B303A"
-            borderColor="#D4A373"
-            borderWidth={2}
-            color="#F5E6CC"
-            fontFamily="$pixel"
-            fontSize={12}
-            borderRadius={0}
-            paddingVertical="$3"
           />
 
           {mode === 'register' && (
-            <Input
+            <RetroInput
               placeholder="CONFIRM ACCESS TOKEN"
               value={auth.confirmPassword.get()}
-              onChangeText={(v) => auth.confirmPassword.set(v)}
+              onChangeText={(v: string) => auth.confirmPassword.set(v)}
               secureTextEntry
-              backgroundColor="#2B303A"
-              borderColor="#D4A373"
-              borderWidth={2}
-              color="#F5E6CC"
-              fontFamily="$pixel"
-              fontSize={12}
-              borderRadius={0}
-              paddingVertical="$3"
             />
           )}
-        </YStack>
+        </Column>
 
-        <YStack gap="$4" marginTop="$4">
+        <Column gap={16} style={{ marginTop: 16 }}>
           <ArcadeButton
-            variant="gold"
+            variant="primary"
             onPress={handleAuth}
             disabled={auth.isSubmitting.get()}
             label={auth.isSubmitting.get() ? 'CONNECTING...' : (mode === 'login' ? 'AUTHORIZE' : 'REGISTER PILOT')}
@@ -301,8 +263,8 @@ export default observer(function App() {
             label={mode === 'login' ? 'NEW PILOT? REGISTER' : 'EXISTING PILOT? LOGIN'}
             size="sm"
           />
-        </YStack>
-      </YStack>
+        </Column>
+      </Column>
     );
   };
 
@@ -338,7 +300,7 @@ export default observer(function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <TamaguiProvider config={tamaguiConfig} defaultTheme={ThemeService.themeMode.get()}>
+        <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'octopath' | 'solar'}>
           {isDownloading || !fontsLoaded ? (
             <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
           ) : auth.isLoading.get() ? (
@@ -346,7 +308,7 @@ export default observer(function App() {
           ) : (
             renderContent()
           )}
-        </TamaguiProvider>
+        </ThemeProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );

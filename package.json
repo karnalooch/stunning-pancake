@@ -13,7 +13,9 @@
     "build:preview:android": "eas build --platform android --profile preview",
     "build:preview:ios": "eas build --platform ios --profile preview",
     "build:prod:android": "eas build --platform android --profile production",
-    "build:prod:ios": "eas build --platform ios --profile production"
+    "build:prod:ios": "eas build --platform ios --profile production",
+    "tokens:build": "npx tsx shared/tokens/build.ts",
+    "tokens:check": "npx tsx shared/tokens/build.ts --check"
   },
   "dependencies": {
     "@legendapp/state": "3.0.0-beta.46",

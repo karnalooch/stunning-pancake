@@ -113,7 +113,8 @@ describe('LlmCoachService', () => {
       },
     };
 
-    service = new LlmCoachService({ apiKey: 'test-key', rateLimitMs: 15_000 });
+    // Disable cache so rate-limit is tested (cache would otherwise serve the response)
+    service = new LlmCoachService({ apiKey: 'test-key', rateLimitMs: 15_000, cacheEnabled: false });
     const postMock = (service as any)._client.post as jest.Mock;
     postMock.mockResolvedValue(mockResponse);
 
@@ -299,7 +300,8 @@ describe('LlmCoachService', () => {
       },
     };
 
-    service = new LlmCoachService({ apiKey: 'test-key', cacheEnabled: true });
+    // Disable rate limit so the second call (after cache clear) makes a real API call
+    service = new LlmCoachService({ apiKey: 'test-key', cacheEnabled: true, rateLimitMs: 0 });
     const postMock = (service as any)._client.post as jest.Mock;
     postMock.mockResolvedValue(mockResponse);
 

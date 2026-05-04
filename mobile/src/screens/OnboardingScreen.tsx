@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Dimensions, Alert } from 'react-native';
-import { YStack, XStack, Text, H1, View, Input, Label, ScrollView, useTheme } from 'tamagui';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
+import { StyleSheet, Dimensions, Alert, View, Pressable } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
   FadeIn,
   FadeOut,
   SlideInRight
@@ -13,8 +12,14 @@ import { Shield, Zap, MapPin, ArrowRight, Check, Wifi } from 'lucide-react-nativ
 import QRCode from 'react-native-qrcode-svg';
 import * as Location from 'expo-location';
 
-import { RetroCard } from '../components/RetroCard';
-import { HD2DButton } from '../components/HD2DButton';
+import { Column } from '../components/Column';
+import { Row } from '../components/Row';
+import { PixelText } from '../components/PixelText';
+import { RetroInput } from '../components/RetroInput';
+import { ScrollContainer } from '../components/ScrollContainer';
+import { GameCard } from '../components/GameCard';
+import { ArcadeButton } from '../components/ArcadeButton';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,7 +29,6 @@ interface OnboardingProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
-  const theme = useTheme();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     weight: '75',
@@ -57,31 +61,31 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   };
 
   return (
-    <YStack flex={1} backgroundColor="$background" padding="$4" paddingTop="$12">
+    <Column flex={1} style={{ backgroundColor: tokens.primitive.parchment, paddingTop: 48 }} padding={16}>
       {/* RPG-Style HUD Progress */}
-      <YStack marginBottom="$6" gap="$2">
-        <XStack justifyContent="space-between" alignItems="center">
-           <Text color="$primary" fontFamily="$pixel" fontSize={8}>CHARACTER_INIT</Text>
-           <Text color="$primary" fontFamily="$pixel" fontSize={8}>{Math.round(progress.value * 100)}%</Text>
-        </XStack>
-        <XStack height={8} backgroundColor="#111" width="100%" borderWidth={1} borderColor="$hd2d.outlineColor">
-          <Animated.View style={[{ height: '100%', backgroundColor: theme.primary.get() }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
-             <View position="absolute" right={0} width={2} height={12} backgroundColor={theme.primary.get()} top={-2} />
+      <Column gap={8} style={{ marginBottom: 24 }}>
+        <Row justifyContent="space-between" alignItems="center">
+          <PixelText size="xs" color="primary" style={{ fontSize: 8 }}>CHARACTER_INIT</PixelText>
+          <PixelText size="xs" color="primary" style={{ fontSize: 8 }}>{Math.round(progress.value * 100)}%</PixelText>
+        </Row>
+        <Row style={{ height: 8, backgroundColor: tokens.primitive.pixelBlack, width: '100%', borderWidth: 1, borderColor: tokens.primitive.pixelBlack } as any}>
+          <Animated.View style={[{ height: '100%', backgroundColor: tokens.semantic.primary }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
+            <View style={{ position: 'absolute', right: 0, width: 2, height: 12, backgroundColor: tokens.semantic.primary, top: -2 }} />
           </Animated.View>
-        </XStack>
-      </YStack>
+        </Row>
+      </Column>
 
-      <ScrollView flex={1} showsVerticalScrollIndicator={false}>
+      <ScrollContainer style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {renderStep()}
-      </ScrollView>
+      </ScrollContainer>
 
-      <XStack justifyContent="space-between" alignItems="center" marginTop="$4" paddingBottom="$4">
-        <Text color="$color" opacity={0.5} fontSize={8} fontFamily="$pixel">
+      <Row justifyContent="space-between" alignItems="center" style={{ marginTop: 16, paddingBottom: 16 }}>
+        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>
           STG_01 // LVL_0{step + 1}
-        </Text>
-        <Text color="$color" opacity={0.5} fontSize={8} fontFamily="$pixel">SPORT_OS v3.0</Text>
-      </XStack>
-    </YStack>
+        </PixelText>
+        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>SPORT_OS v3.0</PixelText>
+      </Row>
+    </Column>
   );
 };
 
@@ -98,23 +102,22 @@ const PermissionsStep = ({ onNext }: any) => {
 
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
-      <RetroCard gap="$6" alignItems="center">
-        <View borderWidth={2} borderColor="$accent" padding="$6" backgroundColor="$background">
-           <MapPin size={48} color="$accent" />
+      <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
+        <View style={{ borderWidth: 2, borderColor: tokens.semantic.success, padding: 24, backgroundColor: tokens.primitive.parchment }}>
+          <MapPin size={48} color={tokens.semantic.success} />
         </View>
-        <YStack gap="$4" alignItems="center">
-          <Text color="$color" fontSize={18} fontFamily="$pixel" textAlign="center">NEURAL_LINK</Text>
-          <Text color="$color" textAlign="center" fontSize={12} opacity={0.8}>
+        <Column gap={16} alignItems="center">
+          <PixelText size="lg" color="text" style={{ textAlign: 'center' }}>NEURAL_LINK</PixelText>
+          <PixelText size="sm" color="text" style={{ textAlign: 'center', opacity: 0.8 }}>
             Enable GPS for real-time telemetry and character localization.
-          </Text>
-        </YStack>
-        <HD2DButton 
+          </PixelText>
+        </Column>
+        <ArcadeButton
           label="AUTHORIZE ACCESS"
-          width="100%" 
           onPress={requestPerms}
-          theme="green"
+          variant="success"
         />
-      </RetroCard>
+      </GameCard>
     </Animated.View>
   );
 };
@@ -127,127 +130,121 @@ const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
 
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-      <RetroCard gap="$6">
-        <Text color="$color" fontSize={18} fontFamily="$pixel">EXTERNAL_CORE</Text>
-        <Text color="$color" fontSize={12} opacity={0.8}>Connect your wearable for One-Tap attribute sync.</Text>
-        
-        <YStack gap="$3">
-          <IntegrationCard 
-            label="STRAVA" 
-            icon={<Zap color="white" />} 
-            connected={formData.stravaConnected} 
-            onPress={() => connect('strava')}
-            color="#FC4C02"
-          />
-          <IntegrationCard 
-            label="GARMIN" 
-            icon={<Wifi color="white" />} 
-            connected={formData.garminConnected} 
-            onPress={() => connect('garmin')}
-            color="#007CC3"
-          />
-        </YStack>
+      <GameCard variant="parchment" style={{ gap: 24 }}>
+        <PixelText size="lg" color="text">EXTERNAL_CORE</PixelText>
+        <PixelText size="sm" color="text" style={{ opacity: 0.8 }}>Connect your wearable for One-Tap attribute sync.</PixelText>
 
-        <HD2DButton 
+        <Column gap={12}>
+          <IntegrationCard
+            label="STRAVA"
+            icon={<Zap color="white" />}
+            connected={formData.stravaConnected}
+            onPress={() => connect('strava')}
+            color={tokens.semantic.error}
+          />
+          <IntegrationCard
+            label="GARMIN"
+            icon={<Wifi color="white" />}
+            connected={formData.garminConnected}
+            onPress={() => connect('garmin')}
+            color={tokens.octopath.buttonBlueBg}
+          />
+        </Column>
+
+        <ArcadeButton
           label="SKIP FOR NOW"
           onPress={onNext}
-          backgroundColor="transparent"
-          borderWidth={1}
+          variant="ghost"
         />
-      </RetroCard>
+      </GameCard>
     </Animated.View>
   );
 };
 
 const IntegrationCard = ({ label, icon, connected, onPress, color }: any) => (
-  <XStack 
-    backgroundColor="$background" 
-    padding="$4" 
-    alignItems="center" 
-    justifyContent="space-between"
-    borderWidth={1}
-    borderColor={connected ? color : '$hd2d.outlineColor'}
-    onPress={onPress}
-  >
-    <XStack gap="$4" alignItems="center">
-      <View backgroundColor={color} padding="$2">{icon}</View>
-      <Text color="$color" fontSize={12} fontFamily="$pixel">{label}</Text>
-    </XStack>
-    {connected ? <Check color="$accent" /> : <ArrowRight color="$color" opacity={0.3} />}
-  </XStack>
+  <Pressable onPress={onPress}>
+    <Row
+      style={{ backgroundColor: tokens.primitive.parchment, padding: 16, borderWidth: 1, borderColor: connected ? color : tokens.primitive.pixelBlack } as any}
+      alignItems="center"
+      justifyContent="space-between"
+    >
+      <Row gap={16} alignItems="center">
+        <View style={{ backgroundColor: color, padding: 8 }}>{icon}</View>
+        <PixelText size="sm" color="text">{label}</PixelText>
+      </Row>
+      {connected ? <Check color={tokens.semantic.success} /> : <ArrowRight color={tokens.octopath.text} opacity={0.3} />}
+    </Row>
+  </Pressable>
 );
 
 const DataValidationStep = ({ formData, setFormData, onNext }: any) => {
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-      <RetroCard gap="$6">
-        <Text color="$color" fontSize={18} fontFamily="$pixel">BIOMETRIC_SYNC</Text>
-        <Text color="$color" fontSize={12} opacity={0.8}>Verify physical parameters for power calculation.</Text>
-        
-        <YStack gap="$4">
-          <YStack gap="$2">
-            <Label color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>WEIGHT (KG)</Label>
-            <Input 
-              value={formData.weight} 
-              onChangeText={(t) => setFormData({...formData, weight: t})}
-              backgroundColor="$background" borderRadius={0} color="$color" borderWidth={1} borderColor="$hd2d.outlineColor"
-            />
-          </YStack>
-          <YStack gap="$2">
-            <Label color="$color" fontSize={8} fontFamily="$pixel" opacity={0.6}>HEIGHT (CM)</Label>
-            <Input 
-              value={formData.height} 
-              onChangeText={(t) => setFormData({...formData, height: t})}
-              backgroundColor="$background" borderRadius={0} color="$color" borderWidth={1} borderColor="$hd2d.outlineColor"
-            />
-          </YStack>
-        </YStack>
+      <GameCard variant="parchment" style={{ gap: 24 }}>
+        <PixelText size="lg" color="text">BIOMETRIC_SYNC</PixelText>
+        <PixelText size="sm" color="text" style={{ opacity: 0.8 }}>Verify physical parameters for power calculation.</PixelText>
 
-        <HD2DButton label="VALIDATE DATA" onPress={onNext} theme="green" />
-      </RetroCard>
+        <Column gap={16}>
+          <Column gap={8}>
+            <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>WEIGHT (KG)</PixelText>
+            <RetroInput
+              value={formData.weight}
+              onChangeText={(t: string) => setFormData({ ...formData, weight: t })}
+            />
+          </Column>
+          <Column gap={8}>
+            <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>HEIGHT (CM)</PixelText>
+            <RetroInput
+              value={formData.height}
+              onChangeText={(t: string) => setFormData({ ...formData, height: t })}
+            />
+          </Column>
+        </Column>
+
+        <ArcadeButton label="VALIDATE DATA" onPress={onNext} variant="success" />
+      </GameCard>
     </Animated.View>
   );
 };
 
 const AntiCheatStep = ({ onNext }: any) => (
   <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-    <RetroCard gap="$6" alignItems="center">
-      <View borderWidth={2} borderColor="$primary" padding="$6" backgroundColor="$background">
-         <Shield size={48} color="$primary" />
+    <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
+      <View style={{ borderWidth: 2, borderColor: tokens.semantic.primary, padding: 24, backgroundColor: tokens.primitive.parchment }}>
+        <Shield size={48} color={tokens.semantic.primary} />
       </View>
-      <YStack gap="$4" alignItems="center">
-        <Text color="$primary" fontSize={18} fontFamily="$pixel" textAlign="center">INTEGRITY</Text>
-        <Text color="$color" textAlign="center" fontSize={12} opacity={0.8}>
+      <Column gap={16} alignItems="center">
+        <PixelText size="lg" color="primary" style={{ textAlign: 'center' }}>INTEGRITY</PixelText>
+        <PixelText size="sm" color="text" style={{ textAlign: 'center', opacity: 0.8 }}>
           Our Viterbi Anti-Cheat engine is rigorous. Calibrate GPS before every mission.
-        </Text>
-      </YStack>
-      <HD2DButton label="I ACKNOWLEDGE" width="100%" onPress={onNext} theme="green" />
-    </RetroCard>
+        </PixelText>
+      </Column>
+      <ArcadeButton label="I ACKNOWLEDGE" onPress={onNext} variant="success" />
+    </GameCard>
   </Animated.View>
 );
 
 const IdentityStep = ({ user, onNext }: any) => (
   <Animated.View entering={FadeIn} style={{ flex: 1 }}>
-    <RetroCard gap="$8" alignItems="center">
-      <YStack gap="$2" alignItems="center">
-        <Text color="$color" fontSize={18} fontFamily="$pixel">PILOT_ID</Text>
-        <Text color="$color" fontSize={10} opacity={0.6} textAlign="center">Scan at checkpoints for verification.</Text>
-      </YStack>
+    <GameCard variant="parchment" style={{ alignItems: 'center', gap: 32 }}>
+      <Column gap={8} alignItems="center">
+        <PixelText size="lg" color="text">PILOT_ID</PixelText>
+        <PixelText size="xs" color="muted" style={{ textAlign: 'center' }}>Scan at checkpoints for verification.</PixelText>
+      </Column>
 
-      <View backgroundColor="white" padding="$4" borderRadius={0} borderWidth={4} borderColor="$accent">
-        <QRCode 
-          value={`sport_v1:pilot:${user?.id || 'unknown'}`} 
+      <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 0, borderWidth: 4, borderColor: tokens.semantic.success }}>
+        <QRCode
+          value={`sport_v1:pilot:${user?.id || 'unknown'}`}
           size={160}
-          color="#000000" backgroundColor="#FFFFFF" />
+          color={tokens.primitive.pixelBlack} backgroundColor="#FFFFFF" />
       </View>
 
-      <YStack alignItems="center" gap="$2">
-         <Text color="$accent" fontSize={14} fontFamily="$pixel">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</Text>
-         <Text color="$color" fontSize={8} opacity={0.5} fontFamily="$pixel">UID: {String(user?.id || '').slice(0, 8) || '####'}</Text>
-      </YStack>
+      <Column alignItems="center" gap={8}>
+        <PixelText size="md" color="success">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</PixelText>
+        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>UID: {String(user?.id || '').slice(0, 8) || '####'}</PixelText>
+      </Column>
 
-      <HD2DButton label="INITIALIZE MISSION" width="100%" onPress={onNext} theme="green" />
-    </RetroCard>
+      <ArcadeButton label="INITIALIZE MISSION" onPress={onNext} variant="success" />
+    </GameCard>
   </Animated.View>
 );
-

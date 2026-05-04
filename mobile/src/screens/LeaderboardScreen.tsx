@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
-import { Image, Alert } from 'react-native';
-import { YStack, XStack, ScrollView, View } from 'tamagui';
+import { Image, Alert, View } from 'react-native';
 import { observer, useObservable } from '@legendapp/state/react';
 import { ActivityService, LeaderboardEntry } from '../services/api';
 
-import { GameCard } from '../components/arcade/GameCard';
-import { PixelText } from '../components/arcade/PixelText';
-import { ArcadeButton } from '../components/arcade/ArcadeButton';
+import { Column } from '../components/Column';
+import { Row } from '../components/Row';
+import { ScrollContainer } from '../components/ScrollContainer';
+import { GameCard } from '../components/GameCard';
+import { PixelText } from '../components/PixelText';
+import { ArcadeButton } from '../components/ArcadeButton';
 import { AthleteSprite } from '../components/AthleteSprite';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 const rewardTrophy = require('../../assets/generated/reward_trophy.png');
 
@@ -37,107 +40,106 @@ export const LeaderboardScreen = observer(() => {
   const myRank = state.myRank.get();
 
   return (
-    <YStack flex={1} backgroundColor="#0B1D33" paddingTop="$10">
-      <XStack paddingHorizontal="$4" justifyContent="space-between" alignItems="center" marginBottom="$4">
-        <PixelText size={18} color="#D4A373" shadow>HIGH_SCORES</PixelText>
+    <Column flex={1} style={{ backgroundColor: tokens.octopath.background, paddingTop: 40 }}>
+      <Row paddingHorizontal={16} justifyContent="space-between" alignItems="center" style={{ marginBottom: 16 }}>
+        <PixelText size="lg" color="primary" shadow>HIGH_SCORES</PixelText>
         <Image source={rewardTrophy} style={{ width: 28, height: 28 }} resizeMode="contain" />
-      </XStack>
+      </Row>
 
       {/* Podium TOP 3 — Metal Slug style */}
-      <XStack justifyContent="center" alignItems="flex-end" gap="$2" marginBottom="$6" marginTop="$4" paddingHorizontal="$4">
+      <Row justifyContent="center" alignItems="flex-end" gap={8} style={{ marginBottom: 24, marginTop: 16 }} paddingHorizontal={16}>
         {/* Silver */}
-        <YStack alignItems="center" flex={1}>
-          <View backgroundColor="#C0C0C0" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
-            <PixelText color="#000000" size={7}>RANK_02</PixelText>
+        <Column alignItems="center" flex={1}>
+          <View style={{ backgroundColor: tokens.primitive.silver, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: tokens.primitive.pixelBlack, marginBottom: 4 }}>
+            <PixelText color="inverse" size="xs" style={{ fontSize: 7 }}>RANK_02</PixelText>
           </View>
-          <GameCard variant="metal" padding={8} width="100%" alignItems="center" borderBottomWidth={4}>
+          <GameCard variant="metal" padding={8} style={{ width: '100%', alignItems: 'center', borderBottomWidth: 4 }}>
             <AthleteSprite type="cyclist" state="action" size={45} />
-            <PixelText color="#FFFFFF" marginTop="$2" size={10} shadow numberOfLines={1}>
+            <PixelText color="inverse" size="xs" shadow style={{ marginTop: 8 }} numberOfLines={1}>
               {ranking[1]?.username || '---'}
             </PixelText>
-            <PixelText color="#9CA3AF" size={8} marginTop="$1">
+            <PixelText color="muted" size="xs" style={{ fontSize: 8, marginTop: 4 }}>
               {ranking[1]?.points || 0}PTS
             </PixelText>
           </GameCard>
-        </YStack>
+        </Column>
 
         {/* Gold */}
-        <YStack alignItems="center" flex={1.2}>
-          <View backgroundColor="#D4A373" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
-            <PixelText color="#000000" size={7}>RANK_01</PixelText>
+        <Column alignItems="center" flex={1.2}>
+          <View style={{ backgroundColor: tokens.semantic.primary, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: tokens.primitive.pixelBlack, marginBottom: 4 }}>
+            <PixelText color="inverse" size="xs" style={{ fontSize: 7 }}>RANK_01</PixelText>
           </View>
-          <GameCard variant="dark" padding={12} width="100%" alignItems="center" borderBottomWidth={6}>
+          <GameCard variant="dark" padding={12} style={{ width: '100%', alignItems: 'center', borderBottomWidth: 6 }}>
             <AthleteSprite type="elite" state="action" size={60} />
-            <PixelText color="#FFFFFF" marginTop="$2" size={12} shadow numberOfLines={1}>
+            <PixelText color="inverse" size="sm" shadow style={{ marginTop: 8 }} numberOfLines={1}>
               {ranking[0]?.username || '---'}
             </PixelText>
-            <PixelText color="#D4A373" size={10} marginTop="$1">
+            <PixelText color="primary" size="xs" style={{ marginTop: 4 }}>
               {ranking[0]?.points || 0} MAX
             </PixelText>
           </GameCard>
-        </YStack>
+        </Column>
 
         {/* Bronze */}
-        <YStack alignItems="center" flex={1}>
-          <View backgroundColor="#CD7F32" paddingHorizontal="$2" paddingVertical="$1" borderWidth={2} borderColor="#000000" marginBottom="$1">
-            <PixelText color="#000000" size={7}>RANK_03</PixelText>
+        <Column alignItems="center" flex={1}>
+          <View style={{ backgroundColor: tokens.semantic.warning, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 2, borderColor: tokens.primitive.pixelBlack, marginBottom: 4 }}>
+            <PixelText color="inverse" size="xs" style={{ fontSize: 7 }}>RANK_03</PixelText>
           </View>
-          <GameCard variant="parchment" padding={8} width="100%" alignItems="center" borderBottomWidth={4}>
+          <GameCard variant="parchment" padding={8} style={{ width: '100%', alignItems: 'center', borderBottomWidth: 4 }}>
             <AthleteSprite type="runner" state="action" size={45} />
-            <PixelText color="#000000" marginTop="$2" size={10} numberOfLines={1}>
+            <PixelText color="text" size="xs" style={{ marginTop: 8 }} numberOfLines={1}>
               {ranking[2]?.username || '---'}
             </PixelText>
-            <PixelText color="#8B7355" size={8} marginTop="$1">
+            <PixelText color="muted" size="xs" style={{ fontSize: 8, marginTop: 4 }}>
               {ranking[2]?.points || 0}PTS
             </PixelText>
           </GameCard>
-        </YStack>
-      </XStack>
+        </Column>
+      </Row>
 
       {/* Rest of ranking */}
-      <ScrollView flex={1} paddingHorizontal="$4" showsVerticalScrollIndicator={false}>
-        <YStack gap="$3" paddingBottom="$30">
+      <ScrollContainer style={{ flex: 1 }} paddingHorizontal={16} showsVerticalScrollIndicator={false}>
+        <Column gap={12} style={{ paddingBottom: 120 }}>
           {ranking.slice(3, 15).map((item, i) => (
             <GameCard key={i} variant="dark" padding={12}>
-              <XStack alignItems="center" justifyContent="space-between">
-                <XStack alignItems="center" gap="$3">
-                  <PixelText color="#9CA3AF" size={10} width={30}>
+              <Row alignItems="center" justifyContent="space-between">
+                <Row alignItems="center" gap={12}>
+                  <PixelText color="muted" size="xs" style={{ width: 30 }}>
                     #{i + 4}
                   </PixelText>
                   <AthleteSprite type={i % 2 === 0 ? 'runner' : 'cyclist'} state="idle" size={32} />
-                  <YStack>
-                    <PixelText color="#FFFFFF" size={12} shadow>{item.username}</PixelText>
-                    <PixelText color="#D4A373" size={8} marginTop="$1">{item.points} PTS</PixelText>
-                  </YStack>
-                </XStack>
-                <ArcadeButton label="VS" size="sm" variant="red" fullWidth={false} onPress={() => {}} />
-              </XStack>
+                  <Column>
+                    <PixelText color="inverse" size="sm" shadow>{item.username}</PixelText>
+                    <PixelText color="primary" size="xs" style={{ fontSize: 8, marginTop: 4 }}>{item.points} PTS</PixelText>
+                  </Column>
+                </Row>
+                <ArcadeButton label="VS" size="sm" variant="danger" fullWidth={false} onPress={() => { }} />
+              </Row>
             </GameCard>
           ))}
-        </YStack>
-      </ScrollView>
+        </Column>
+      </ScrollContainer>
 
       {/* Fixed My Rank HUD */}
       <GameCard
         variant="metal"
-        position="absolute"
-        bottom={0} left={0} right={0}
         padding={16}
+        style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
       >
-        <XStack alignItems="center" justifyContent="space-between">
-          <XStack alignItems="center" gap="$3">
-            <PixelText color="#D4A373" size={12} width={40}>
+        <Row alignItems="center" justifyContent="space-between">
+          <Row alignItems="center" gap={12}>
+            <PixelText color="primary" size="sm" style={{ width: 40 }}>
               #{myRank?.rank || '?'}
             </PixelText>
             <AthleteSprite type="runner" state="idle" size={36} />
-            <YStack>
-              <PixelText color="#FFFFFF" size={14} shadow>YOU (P1)</PixelText>
-              <PixelText color="#D4A373" size={10} marginTop="$1">{myRank?.points || 0} PTS</PixelText>
-            </YStack>
-          </XStack>
-          <ArcadeButton label="PROFILE" variant="blue" size="sm" fullWidth={false} onPress={() => {}} />
-        </XStack>
+            <Column>
+              <PixelText color="inverse" size="md" shadow>YOU (P1)</PixelText>
+              <PixelText color="primary" size="xs" style={{ marginTop: 4 }}>{myRank?.points || 0} PTS</PixelText>
+            </Column>
+          </Row>
+          <ArcadeButton label="PROFILE" variant="secondary" size="sm" fullWidth={false} onPress={() => { }} />
+        </Row>
       </GameCard>
-    </YStack>
+    </Column>
   );
 });

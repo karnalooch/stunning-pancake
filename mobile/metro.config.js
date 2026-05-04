@@ -19,6 +19,10 @@ config.resolver = {
     /.*\/ios\/.*/,
     /.*\.native-test.*/,
   ],
+  extraNodeModules: {
+    ...resolver.extraNodeModules,
+    '@tokens': path.resolve(__dirname, '../shared/tokens'),
+  },
   resolveRequest: (context, moduleName, platform) => {
     if (moduleName === 'lucide-react-native') {
       return {
@@ -29,5 +33,10 @@ config.resolver = {
     return context.resolveRequest(context, moduleName, platform);
   },
 };
+
+config.watchFolders = [
+  ...(config.watchFolders || []),
+  path.resolve(__dirname, '../shared'),
+];
 
 module.exports = config;

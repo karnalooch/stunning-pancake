@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withRepeat, 
+import { Image, Text, View, StyleSheet } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withRepeat,
   withTiming,
   Easing
 } from 'react-native-reanimated';
-import { Image, XStack, YStack, Text, View } from 'tamagui';
 
 interface PopUpDialogProps {
   visible: boolean;
@@ -22,12 +22,12 @@ interface PopUpDialogProps {
  * Inspired by Dave the Diver and Octopath Traveler interaction systems.
  * Features spring-based entry and floating idle animation.
  */
-export const PopUpDialog: React.FC<PopUpDialogProps> = ({ 
-  visible, 
-  sprite, 
-  message, 
+export const PopUpDialog: React.FC<PopUpDialogProps> = ({
+  visible,
+  sprite,
+  message,
   title = "SYSTEM_MSG",
-  onFinish 
+  onFinish
 }) => {
   const offset = useSharedValue(400);
   const float = useSharedValue(0);
@@ -37,7 +37,7 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
     if (visible) {
       // Entrance animation
       offset.value = withSpring(0, { damping: 14, stiffness: 100 });
-      
+
       // Floating idle animation
       float.value = withRepeat(
         withTiming(-8, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
@@ -73,70 +73,128 @@ export const PopUpDialog: React.FC<PopUpDialogProps> = ({
 
   return (
     <Animated.View style={[{ position: 'absolute', bottom: 40, right: 20, zIndex: 1000 }, animatedStyle]}>
-      <XStack alignItems="flex-end" gap="$2">
-        <YStack maxWidth={220} marginBottom="$12">
+      <View style={dialogStyles.row}>
+        <View style={dialogStyles.column}>
           {/* Header/Title Plate */}
-          <View 
-            backgroundColor="#D4A373" 
-            paddingHorizontal="$2" 
-            alignSelf="flex-start"
-            borderWidth={1}
-            borderColor="black"
-          >
-            <Text color="black" fontWeight="900" fontSize={10} ff="monospace">
+          <View style={dialogStyles.titlePlate}>
+            <Text style={dialogStyles.titleText}>
               {title}
             </Text>
           </View>
 
           {/* Main Dialog Box */}
-          <YStack 
-            backgroundColor="#0B1D33" 
-            padding="$4" 
-            borderWidth={2} 
-            borderColor="#D4A373"
-            elevation={10}
-            shadowColor="black"
-            shadowOffset={{ width: 4, height: 4 }}
-            shadowOpacity={1}
-            shadowRadius={0}
-          >
-            <Text color="white" fontWeight="900" fontSize={14} ff="monospace" lineHeight={20}>
+          <View style={dialogStyles.dialogBox}>
+            <Text style={dialogStyles.messageText}>
               {displayText}
-              <Text color="#D4A373" fontWeight="900">_</Text>
+              <Text style={dialogStyles.cursor}>_</Text>
             </Text>
 
             {/* Accent Pixel Corners */}
-            <View position="absolute" top={-2} left={-2} width={6} height={6} backgroundColor="#FF6B35" />
-            <View position="absolute" bottom={-2} right={-2} width={6} height={6} backgroundColor="#FF6B35" />
-          </YStack>
+            <View style={dialogStyles.cornerTopLeft} />
+            <View style={dialogStyles.cornerBottomRight} />
+          </View>
 
           {/* Dialog Tail */}
-          <View 
-            position="absolute" 
-            bottom={-8} 
-            right={30} 
-            width={16} 
-            height={16} 
-            backgroundColor="#0B1D33" 
-            borderRightWidth={2}
-            borderBottomWidth={2}
-            borderColor="#D4A373"
-            rotate="45deg"
-          />
-        </YStack>
+          <View style={dialogStyles.tail} />
+        </View>
 
         {/* Character Sprite Container */}
         {sprite && (
-          <View style={{ shadowColor: 'black', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 }}>
-            <Image 
-              source={sprite} 
-              width={130} 
-              height={130} 
+          <View style={dialogStyles.spriteContainer}>
+            <Image
+              source={sprite}
+              style={dialogStyles.spriteImage}
               resizeMode="contain"
             />
           </View>
         )}
-      </XStack>
+      </View>
     </Animated.View>
   );
 };
+
+const dialogStyles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  column: {
+    maxWidth: 220,
+    marginBottom: 48,
+  },
+  titlePlate: {
+    backgroundColor: '#D4A373',
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'black',
+  },
+  titleText: {
+    color: 'black',
+    fontWeight: '900',
+    fontSize: 10,
+    fontFamily: 'monospace',
+  },
+  dialogBox: {
+    backgroundColor: '#0B1D33',
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#D4A373',
+    elevation: 10,
+    shadowColor: 'black',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+  },
+  messageText: {
+    color: 'white',
+    fontWeight: '900',
+    fontSize: 14,
+    fontFamily: 'monospace',
+    lineHeight: 20,
+  },
+  cursor: {
+    color: '#D4A373',
+    fontWeight: '900',
+  },
+  cornerTopLeft: {
+    position: 'absolute',
+    top: -2,
+    left: -2,
+    width: 6,
+    height: 6,
+    backgroundColor: '#FF6B35',
+  },
+  cornerBottomRight: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 6,
+    height: 6,
+    backgroundColor: '#FF6B35',
+  },
+  tail: {
+    position: 'absolute',
+    bottom: -8,
+    right: 30,
+    width: 16,
+    height: 16,
+    backgroundColor: '#0B1D33',
+    borderRightWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: '#D4A373',
+    transform: [{ rotate: '45deg' }],
+  },
+  spriteContainer: {
+    shadowColor: 'black',
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 4,
+  },
+  spriteImage: {
+    width: 130,
+    height: 130,
+  },
+});

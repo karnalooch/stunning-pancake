@@ -20,13 +20,13 @@ export enum TriggerPriority {
   LOW = 1,        // Motivational, lifecycle
 }
 
-export type TriggerCategory = 
-  | 'MILESTONE' 
-  | 'SYSTEM' 
-  | 'SECURITY' 
-  | 'CELEBRATION' 
-  | 'COACHING' 
-  | 'MOTIVATIONAL' 
+export type TriggerCategory =
+  | 'MILESTONE'
+  | 'SYSTEM'
+  | 'SECURITY'
+  | 'CELEBRATION'
+  | 'COACHING'
+  | 'MOTIVATIONAL'
   | 'LIFECYCLE';
 
 export interface TriggerMessage {
@@ -134,6 +134,7 @@ export class TriggerEngine {
 
   /**
    * Clear entire queue and dismiss current dialog.
+   * Also resets dedup window and cooldown state for clean test isolation.
    */
   clear(): void {
     if (this._dismissTimer) clearTimeout(this._dismissTimer);
@@ -141,6 +142,8 @@ export class TriggerEngine {
     this.state.queue.set([]);
     this.state.currentDialog.visible.set(false);
     this.state.isProcessing.set(false);
+    this.state.recentTriggerIds.set([]);
+    this.state.lastDismissTime.set(0);
   }
 
   /**
@@ -160,7 +163,8 @@ export class TriggerEngine {
       const wait = COOLDOWN_MS - elapsed;
       this._processTimer = setTimeout(() => this._processNext(), wait);
     } else {
-      this._processNext();
+      // Defer to next tick so push() doesn't synchronously consume queue items
+      this._processTimer = setTimeout(() => this._processNext(), 0);
     }
   }
 

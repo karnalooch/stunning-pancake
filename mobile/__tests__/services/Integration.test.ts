@@ -26,7 +26,12 @@ jest.mock('../../src/services/LlmCoachService', () => ({
   },
 }));
 
-const flushPromises = () => new Promise(resolve => setImmediate(resolve));
+// Flush microtask queue without advancing fake timers.
+// Multiple resolutions handle chained async promises (e.g. _postMessage → llmCoach.generateMessage → triggerEngine.push).
+const flushPromises = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
 describe('Integration: AvatarTrainerService + TriggerEngine', () => {
   let trainer: AvatarTrainerService;
@@ -130,8 +135,8 @@ describe('Integration: AvatarTrainerService + TriggerEngine', () => {
     trainer.startSession();
     await flushPromises();
 
-    // Start processing
-    jest.runAllTimers();
+    // Fire only the processing timer (not the auto-dismiss)
+    jest.advanceTimersByTime(0);
 
     // A dialog should be visible
     expect(triggerEngine.state.currentDialog.visible.get()).toBe(true);

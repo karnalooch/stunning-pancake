@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
-import { YStack, XStack } from 'tamagui';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,7 +8,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 import { observer } from '@legendapp/state/react';
-import { PixelText } from './arcade/PixelText';
+import { PixelText } from './PixelText';
 
 interface GameHUDProps {
   visible: boolean;
@@ -51,7 +50,7 @@ const ScrollingDigit = ({ value }: { value: string }) => {
 
   return (
     <Animated.View style={animStyle}>
-      <PixelText size={20} color="#D4A373" shadow>
+      <PixelText size="xl" color="primary" shadow style={{ fontSize: 20, color: '#D4A373' }}>
         {value}
       </PixelText>
     </Animated.View>
@@ -92,40 +91,38 @@ export const GameHUD = observer(
     return (
       <Pressable onPress={onTap} style={styles.tapArea}>
         <Animated.View style={[styles.hudContainer, hudStyle]}>
-          <XStack
-            backgroundColor="rgba(11, 29, 51, 0.9)" // Deep Sea Dark
-            borderWidth={3}
-            borderColor="#D4A373"
-            padding="$3"
-            gap="$4"
-            alignItems="center"
-            style={styles.hudBox}
+          <View
+            style={[
+              styles.hudRow,
+              styles.hudBox,
+              { backgroundColor: 'rgba(11, 29, 51, 0.9)', borderColor: '#D4A373' },
+            ]}
           >
-            <YStack alignItems="center" minWidth={70}>
-              <XStack gap={0}>{digits.map((d, i) => (d === '.' ? <PixelText key={i} size={16} color="#D4A373">.</PixelText> : <ScrollingDigit key={i} value={d} />))}</XStack>
-              <PixelText size={7} color="#D4A373" style={{ opacity: 0.7, marginTop: 4 }}>KM</PixelText>
-            </YStack>
+            <View style={[styles.hudColumn, { minWidth: 70, alignItems: 'center' }]}>
+              <View style={styles.hudRow}>{digits.map((d, i) => (d === '.' ? <PixelText key={i} size="lg" color="primary" style={{ fontSize: 16, color: '#D4A373' }}>.</PixelText> : <ScrollingDigit key={i} value={d} />))}</View>
+              <PixelText size="xs" color="primary" style={{ fontSize: 7, color: '#D4A373', opacity: 0.7, marginTop: 4 }}>KM</PixelText>
+            </View>
 
-            <YStack borderLeftWidth={2} borderColor="#D4A373" paddingLeft="$3">
-              <PixelText size={10} color="#7BA05B">{paceFormatted}</PixelText>
-              <PixelText size={7} color="#7BA05B" style={{ opacity: 0.7, marginTop: 2 }}>PACE /KM</PixelText>
-              <XStack gap="$3" marginTop="$2">
-                <YStack>
-                  <PixelText size={10} color="#FFFFFF" shadow>{speedKmh.toFixed(1)}</PixelText>
-                  <PixelText size={6} color="#FFFFFF" style={{ opacity: 0.5, marginTop: 2 }}>KM/H</PixelText>
-                </YStack>
-                <YStack>
-                  <PixelText size={10} color="#EF4444" shadow>{heartRate}</PixelText>
-                  <PixelText size={6} color="#EF4444" style={{ opacity: 0.5, marginTop: 2 }}>BPM</PixelText>
-                </YStack>
-              </XStack>
-            </YStack>
+            <View style={[styles.hudColumn, { borderLeftWidth: 2, borderColor: '#D4A373', paddingLeft: 12 }]}>
+              <PixelText size="sm" color="success" style={{ fontSize: 10 }}>{paceFormatted}</PixelText>
+              <PixelText size="xs" color="success" style={{ fontSize: 7, opacity: 0.7, marginTop: 2 }}>PACE /KM</PixelText>
+              <View style={[styles.hudRow, { marginTop: 8, gap: 12 }]}>
+                <View>
+                  <PixelText size="sm" color="text" shadow style={{ fontSize: 10, color: '#FFFFFF' }}>{speedKmh.toFixed(1)}</PixelText>
+                  <PixelText size="xs" color="text" style={{ fontSize: 6, color: '#FFFFFF', opacity: 0.5, marginTop: 2 }}>KM/H</PixelText>
+                </View>
+                <View>
+                  <PixelText size="sm" color="error" shadow style={{ fontSize: 10 }}>{heartRate}</PixelText>
+                  <PixelText size="xs" color="error" style={{ fontSize: 6, opacity: 0.5, marginTop: 2 }}>BPM</PixelText>
+                </View>
+              </View>
+            </View>
 
-            <YStack borderLeftWidth={2} borderColor="#D4A373" paddingLeft="$3">
-              <PixelText size={12} color="#FFFFFF" shadow>{formatTime(elapsedSec)}</PixelText>
-              <PixelText size={6} color="#FFFFFF" style={{ opacity: 0.5, marginTop: 4 }}>ELAPSED</PixelText>
-            </YStack>
-          </XStack>
+            <View style={[styles.hudColumn, { borderLeftWidth: 2, borderColor: '#D4A373', paddingLeft: 12 }]}>
+              <PixelText size="md" color="text" shadow style={{ fontSize: 12, color: '#FFFFFF' }}>{formatTime(elapsedSec)}</PixelText>
+              <PixelText size="xs" color="text" style={{ fontSize: 6, color: '#FFFFFF', opacity: 0.5, marginTop: 4 }}>ELAPSED</PixelText>
+            </View>
+          </View>
         </Animated.View>
       </Pressable>
     );
@@ -141,7 +138,17 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   hudContainer: {},
+  hudRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hudColumn: {
+    flexDirection: 'column',
+  },
   hudBox: {
+    borderWidth: 3,
+    padding: 12,
+    gap: 16,
     shadowColor: '#000',
     shadowOffset: { width: 6, height: 6 },
     shadowOpacity: 1,

@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
-import { Alert, Linking } from 'react-native';
-import { YStack, XStack, ScrollView, View } from 'tamagui';
+import { Alert, Linking, View } from 'react-native';
 import { observer, useObservable } from '@legendapp/state/react';
 import { AuthService, PrivacyService, UserProfile, WearableService } from '../services/api';
 import QRCode from 'react-native-qrcode-svg';
 
-import { GameCard } from '../components/arcade/GameCard';
-import { PixelText } from '../components/arcade/PixelText';
-import { ArcadeButton } from '../components/arcade/ArcadeButton';
+import { Column } from '../components/Column';
+import { Row } from '../components/Row';
+import { ScrollContainer } from '../components/ScrollContainer';
+import { GameCard } from '../components/GameCard';
+import { PixelText } from '../components/PixelText';
+import { ArcadeButton } from '../components/ArcadeButton';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 interface Zone {
   id: string;
@@ -115,173 +118,175 @@ export const ProfileScreen = observer(
     const showQR = state.showQR.get();
 
     return (
-      <YStack flex={1} backgroundColor="#0B1D33" paddingTop="$10">
-        <XStack justifyContent="space-between" alignItems="center" paddingHorizontal="$4" marginBottom="$4">
-          <PixelText size={18} color="#D4A373" shadow>CHARACTER_SHEET</PixelText>
+      <Column flex={1} style={{ backgroundColor: tokens.octopath.background, paddingTop: 40 }}>
+        <Row justifyContent="space-between" alignItems="center" paddingHorizontal={16} style={{ marginBottom: 16 }}>
+          <PixelText size="lg" color="primary" shadow>CHARACTER_SHEET</PixelText>
           <ArcadeButton size="sm" variant="ghost" label="REFRESH" fullWidth={false} onPress={() => state.profile.set(p ? { ...p } : null)} />
-        </XStack>
+        </Row>
 
         {/* Avatar + Identity */}
-        <YStack alignItems="center" marginBottom="$6">
-          <XStack gap="$6" alignItems="center" paddingHorizontal="$6">
+        <Column alignItems="center" style={{ marginBottom: 24 }}>
+          <Row gap={24} alignItems="center" paddingHorizontal={24}>
             <View
-              width={80}
-              height={80}
-              backgroundColor="#2B303A"
-              borderWidth={3}
-              borderColor="#D4A373"
-              alignItems="center"
-              justifyContent="center"
+              style={{
+                width: 80,
+                height: 80,
+                backgroundColor: tokens.octopath.surface,
+                borderWidth: 3,
+                borderColor: tokens.semantic.primary,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <PixelText color="#D4A373" size={32} shadow>
+              <PixelText color="primary" size="2xl" shadow>
                 {p?.username?.[0]?.toUpperCase() || '?'}
               </PixelText>
             </View>
 
-            <YStack flex={1}>
-              <PixelText color="#FFFFFF" size={18} shadow>
+            <Column flex={1}>
+              <PixelText color="text" size="lg" shadow>
                 {p?.username || 'Pilot'}
               </PixelText>
-              <PixelText color="#9CA3AF" size={10} style={{ marginTop: 4 }}>
+              <PixelText color="muted" size="xs" style={{ marginTop: 4 }}>
                 {p?.email || ''}
               </PixelText>
-              <XStack gap="$2" marginTop="$3">
-                <View backgroundColor="#D4A373" paddingVertical={4} paddingHorizontal={8} borderWidth={2} borderColor="#000000">
-                  <PixelText color="#000000" size={8}>
+              <Row gap={8} style={{ marginTop: 12 }}>
+                <View style={{ backgroundColor: tokens.semantic.primary, paddingVertical: 4, paddingHorizontal: 8, borderWidth: 2, borderColor: tokens.primitive.pixelBlack }}>
+                  <PixelText color="inverse" size="xs" style={{ fontSize: 8 }}>
                     ID: {String(p?.id ?? '---').slice(0, 8)}
                   </PixelText>
                 </View>
-              </XStack>
-            </YStack>
-          </XStack>
-        </YStack>
+              </Row>
+            </Column>
+          </Row>
+        </Column>
 
-        <ScrollView paddingHorizontal="$4" paddingBottom="$10" showsVerticalScrollIndicator={false}>
+        <ScrollContainer paddingHorizontal={16} showsVerticalScrollIndicator={false} style={{ paddingBottom: 40 }}>
           {/* QR Identity */}
-          <YStack gap="$2" marginBottom="$6">
-            <PixelText color="#D4A373" size={10} shadow>PILOT_TOKEN_QR</PixelText>
-            <GameCard variant="metal" padding={16} alignItems="center">
+          <Column gap={8} style={{ marginBottom: 24 }}>
+            <PixelText color="primary" size="xs" shadow>PILOT_TOKEN_QR</PixelText>
+            <GameCard variant="metal" padding={16} style={{ alignItems: 'center' }}>
               {showQR ? (
-                <YStack alignItems="center" gap="$4">
-                  <View backgroundColor="#FFFFFF" padding={12} borderWidth={4} borderColor="#000000">
+                <Column alignItems="center" gap={16}>
+                  <View style={{ backgroundColor: '#FFFFFF', padding: 12, borderWidth: 4, borderColor: tokens.primitive.pixelBlack }}>
                     <QRCode
                       value={`sport:pilot:${p?.id || 'unknown'}`}
                       size={160}
-                      color="#000000"
+                      color={tokens.primitive.pixelBlack}
                       backgroundColor="#FFFFFF"
                     />
                   </View>
-                  <PixelText color="#9CA3AF" size={8} style={{ textAlign: 'center' }}>
+                  <PixelText color="muted" size="xs" style={{ fontSize: 8, textAlign: 'center' }}>
                     SCAN AT CHECKPOINTS FOR VERIFICATION
                   </PixelText>
-                  <ArcadeButton label="HIDE QR" onPress={() => state.showQR.set(false)} variant="red" size="sm" />
-                </YStack>
+                  <ArcadeButton label="HIDE QR" onPress={() => state.showQR.set(false)} variant="danger" size="sm" />
+                </Column>
               ) : (
-                <XStack justifyContent="space-between" alignItems="center" width="100%">
-                  <YStack>
-                    <PixelText color="#FFFFFF" size={12} shadow>IDENTITY SCAN</PixelText>
-                    <PixelText color="#9CA3AF" size={8} style={{ marginTop: 4 }}>SHOW ATHLETE TOKEN</PixelText>
-                  </YStack>
-                  <ArcadeButton label="REVEAL" onPress={() => state.showQR.set(true)} variant="blue" size="sm" fullWidth={false} />
-                </XStack>
+                <Row justifyContent="space-between" alignItems="center" style={{ width: '100%' }}>
+                  <Column>
+                    <PixelText color="text" size="sm" shadow>IDENTITY SCAN</PixelText>
+                    <PixelText color="muted" size="xs" style={{ fontSize: 8, marginTop: 4 }}>SHOW ATHLETE TOKEN</PixelText>
+                  </Column>
+                  <ArcadeButton label="REVEAL" onPress={() => state.showQR.set(true)} variant="secondary" size="sm" fullWidth={false} />
+                </Row>
               )}
             </GameCard>
-          </YStack>
+          </Column>
 
           {/* Wearables */}
-          <YStack gap="$2" marginBottom="$6">
-            <PixelText color="#D4A373" size={10} shadow>WEARABLE_LINK</PixelText>
+          <Column gap={8} style={{ marginBottom: 24 }}>
+            <PixelText color="primary" size="xs" shadow>WEARABLE_LINK</PixelText>
             <GameCard variant="dark" padding={16}>
-              <YStack gap="$4">
-                <XStack justifyContent="space-between" alignItems="center">
-                  <XStack alignItems="center" gap="$3">
-                    <View width={24} height={24} backgroundColor="#FC4C02" borderWidth={2} borderColor="#000000" />
-                    <YStack>
-                      <PixelText color="#FFFFFF" size={12} shadow>STRAVA</PixelText>
+              <Column gap={16}>
+                <Row justifyContent="space-between" alignItems="center">
+                  <Row alignItems="center" gap={12}>
+                    <View style={{ width: 24, height: 24, backgroundColor: tokens.semantic.error, borderWidth: 2, borderColor: tokens.primitive.pixelBlack }} />
+                    <Column>
+                      <PixelText color="text" size="sm" shadow>STRAVA</PixelText>
                       {state.stravaStatus.connected.get() && (
-                        <PixelText color="#7BA05B" size={8} style={{ marginTop: 4 }}>
+                        <PixelText color="success" size="xs" style={{ fontSize: 8, marginTop: 4 }}>
                           LINKED · {state.stravaStatus.last_sync?.get() || 'NO SYNC'}
                         </PixelText>
                       )}
-                    </YStack>
-                  </XStack>
+                    </Column>
+                  </Row>
                   <ArcadeButton
                     size="sm"
                     label={state.stravaStatus.connected.get() ? 'SYNC' : 'CONNECT'}
-                    variant={state.stravaStatus.connected.get() ? 'green' : 'blue'}
+                    variant={state.stravaStatus.connected.get() ? 'success' : 'secondary'}
                     fullWidth={false}
                     onPress={state.stravaStatus.connected.get() ? handleSyncWearables : handleConnectStrava}
                   />
-                </XStack>
+                </Row>
 
-                <XStack justifyContent="space-between" alignItems="center">
-                  <XStack alignItems="center" gap="$3">
-                    <View width={24} height={24} backgroundColor="#007CC3" borderWidth={2} borderColor="#000000" />
-                    <YStack>
-                      <PixelText color="#FFFFFF" size={12} shadow>GARMIN</PixelText>
+                <Row justifyContent="space-between" alignItems="center">
+                  <Row alignItems="center" gap={12}>
+                    <View style={{ width: 24, height: 24, backgroundColor: tokens.octopath.buttonBlueBg, borderWidth: 2, borderColor: tokens.primitive.pixelBlack }} />
+                    <Column>
+                      <PixelText color="text" size="sm" shadow>GARMIN</PixelText>
                       {state.garminStatus.connected.get() && (
-                        <PixelText color="#7BA05B" size={8} style={{ marginTop: 4 }}>
+                        <PixelText color="success" size="xs" style={{ fontSize: 8, marginTop: 4 }}>
                           LINKED · {state.garminStatus.last_sync?.get() || 'NO SYNC'}
                         </PixelText>
                       )}
-                    </YStack>
-                  </XStack>
+                    </Column>
+                  </Row>
                   <ArcadeButton
                     size="sm"
                     label={state.garminStatus.connected.get() ? 'SYNC' : 'CONNECT'}
-                    variant={state.garminStatus.connected.get() ? 'green' : 'blue'}
+                    variant={state.garminStatus.connected.get() ? 'success' : 'secondary'}
                     fullWidth={false}
                     onPress={state.garminStatus.connected.get() ? handleSyncWearables : handleConnectGarmin}
                   />
-                </XStack>
+                </Row>
 
                 {(state.stravaStatus.connected.get() || state.garminStatus.connected.get()) && (
                   <View style={{ marginTop: 8 }}>
                     <ArcadeButton
                       label="SYNC ALL WEARABLES"
-                      variant="green"
+                      variant="success"
                       size="sm"
                       onPress={handleSyncWearables}
                     />
                   </View>
                 )}
-              </YStack>
+              </Column>
             </GameCard>
-          </YStack>
+          </Column>
 
           {/* Privacy Zones */}
-          <YStack gap="$2" marginBottom="$6">
-            <PixelText color="#9CA3AF" size={10}>PRIVACY_ZONES</PixelText>
-            <YStack gap="$3">
+          <Column gap={8} style={{ marginBottom: 24 }}>
+            <PixelText color="muted" size="xs">PRIVACY_ZONES</PixelText>
+            <Column gap={12}>
               {zones.map((zone: Zone) => (
                 <GameCard key={zone.id} variant="metal" padding={12}>
-                  <XStack justifyContent="space-between" alignItems="center">
-                    <YStack>
-                      <PixelText color="#FFFFFF" size={12} shadow>
+                  <Row justifyContent="space-between" alignItems="center">
+                    <Column>
+                      <PixelText color="text" size="sm" shadow>
                         {zone.properties?.label || 'ZONE'}
                       </PixelText>
-                      <PixelText color="#9CA3AF" size={8} style={{ marginTop: 4 }}>
+                      <PixelText color="muted" size="xs" style={{ fontSize: 8, marginTop: 4 }}>
                         {zone.properties?.radius || 200}M RADIUS
                       </PixelText>
-                    </YStack>
-                    <ArcadeButton label="DEL" variant="red" size="sm" fullWidth={false} onPress={() => handleDeleteZone(zone.id)} />
-                  </XStack>
+                    </Column>
+                    <ArcadeButton label="DEL" variant="danger" size="sm" fullWidth={false} onPress={() => handleDeleteZone(zone.id)} />
+                  </Row>
                 </GameCard>
               ))}
               {zones.length === 0 && (
-                <PixelText color="#9CA3AF" size={8} style={{ textAlign: 'center', marginTop: 12 }}>
+                <PixelText color="muted" size="xs" style={{ fontSize: 8, textAlign: 'center', marginTop: 12 }}>
                   NO_PRIVACY_ZONES_DEFINED
                 </PixelText>
               )}
-            </YStack>
-          </YStack>
+            </Column>
+          </Column>
 
           {/* Logout */}
-          <YStack gap="$2" marginTop="$4" paddingBottom="$10">
-            <ArcadeButton variant="red" label="ABORT SESSION" onPress={onLogout} size="lg" />
-          </YStack>
-        </ScrollView>
-      </YStack>
+          <Column gap={8} style={{ marginTop: 16, paddingBottom: 40 }}>
+            <ArcadeButton variant="danger" label="ABORT SESSION" onPress={onLogout} size="lg" />
+          </Column>
+        </ScrollContainer>
+      </Column>
     );
   },
 );

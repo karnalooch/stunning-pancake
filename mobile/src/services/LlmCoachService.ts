@@ -154,9 +154,9 @@ export class LlmCoachService {
       headers: this._useProxy
         ? { 'Content-Type': 'application/json' }
         : {
-            'Authorization': `Bearer ${this._config.apiKey}`,
-            'Content-Type': 'application/json',
-          },
+          'Authorization': `Bearer ${this._config.apiKey}`,
+          'Content-Type': 'application/json',
+        },
     });
   }
 
@@ -178,13 +178,7 @@ export class LlmCoachService {
       return null;
     }
 
-    // Rate limit check
-    if (!this._checkRateLimit(ctx.category)) {
-      console.log(`[LlmCoach] Rate limited: ${ctx.category}`);
-      return null;
-    }
-
-    // Cache check
+    // Cache check (before rate limit — cache hits don't consume rate limit)
     const cacheKey = this._buildCacheKey(ctx);
     if (this._config.cacheEnabled) {
       const cached = this._cache.get(cacheKey);
@@ -196,6 +190,12 @@ export class LlmCoachService {
         }
         return cached;
       }
+    }
+
+    // Rate limit check
+    if (!this._checkRateLimit(ctx.category)) {
+      console.log(`[LlmCoach] Rate limited: ${ctx.category}`);
+      return null;
     }
 
     // LLM call with retry
@@ -301,7 +301,7 @@ export class LlmCoachService {
   private async _callLlm(ctx: CoachPromptContext): Promise<string> {
     const personalityProfile = PERSONALITY_PROFILES[ctx.personality];
     const categoryContext = CATEGORY_CONTEXTS[ctx.category];
-    
+
     // Interpolate variables into category context
     let interpolatedContext = categoryContext;
     for (const [key, value] of Object.entries(ctx.variables)) {

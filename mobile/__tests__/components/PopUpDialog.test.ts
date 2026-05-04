@@ -4,8 +4,8 @@
  * Tests typewriter effect, maxWidth constraint, message
  * length limits, and character sprite assignment.
  * 
- * Note: Full render tests require native mocks for 
- * react-native-reanimated and tamagui. These tests focus
+ * Note: Full render tests require native mocks for
+ * react-native-reanimated. These tests focus
  * on the component's business logic constraints.
  * 
  * Run: npm test -- __tests__/components/PopUpDialog.test.ts
@@ -25,15 +25,6 @@ jest.mock('react-native-reanimated', () => ({
   },
 }));
 
-// Mock tamagui
-jest.mock('tamagui', () => ({
-  Image: 'Image',
-  XStack: 'XStack',
-  YStack: 'YStack',
-  Text: 'Text',
-  View: 'View',
-}));
-
 import React from 'react';
 import { PopUpDialog } from '../../src/components/PopUpDialog';
 
@@ -46,7 +37,7 @@ describe('PopUpDialog', () => {
 
     // A typical LLM message (150 chars max)
     const longMessage = 'Tempo spadło o 27% poniżej średniej sesji. Skoryguj kadencję i utrzymuj równomierny oddech. Masz jeszcze dużo paliwa w baku!';
-    
+
     // Character count check (150 max per LLM constraint)
     expect(longMessage.length).toBeLessThanOrEqual(150);
 
@@ -63,10 +54,10 @@ describe('PopUpDialog', () => {
 
     // Maximum time for typewriter to complete
     const maxTypewriterMs = TYPEWRITER_SPEED_MS * MAX_MESSAGE_LENGTH;
-    
+
     // Should be <5 seconds (5000ms) for max length
     expect(maxTypewriterMs).toBe(6000); // 40 * 150 = 6000ms
-    
+
     // For typical message (80 chars), typewriter takes ~3.2s
     const typicalLength = 80;
     const typicalMs = TYPEWRITER_SPEED_MS * typicalLength;
@@ -77,7 +68,7 @@ describe('PopUpDialog', () => {
 
   test('should have sprite types: runner, cyclist, ghost, elite', () => {
     const validSprites = ['runner', 'cyclist', 'ghost', 'elite'];
-    
+
     // Verify the component accepts these sprite types
     // (In TrackingScreen, only runner and ghost have actual assets)
     validSprites.forEach(sprite => {

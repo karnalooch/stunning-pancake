@@ -2,18 +2,18 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { StyleSheet, Alert, Dimensions } from 'react-native';
 import * as Location from 'expo-location';
 import { Map, Camera, UserLocation } from '@maplibre/maplibre-react-native';
-import { YStack, Text as TamaText, useTheme } from 'tamagui';
 import { observer, useObservable } from '@legendapp/state/react';
 import { MMKV } from 'react-native-mmkv';
 
 import { GpsSyncManager } from '../services/GpsSyncManager';
 import { triggerEngine } from '../services/TriggerEngine';
 import { avatarTrainer } from '../services/AvatarTrainerService';
-import { GameCard } from '../components/arcade/GameCard';
-import { PixelText } from '../components/arcade/PixelText';
-import { ArcadeButton } from '../components/arcade/ArcadeButton';
+import { Column } from '../components/Column';
+import { ArcadeButton } from '../components/ArcadeButton';
 import { PopUpDialog } from '../components/PopUpDialog';
 import { GameHUD } from '../components/GameHUD';
+import { UnistylesRuntime } from '../theme/unistyles';
+import { colors as tokens } from '@tokens/generated/restyle-colors';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,13 +28,12 @@ let storage: any;
 const getStorage = () => {
   if (storage) return storage;
   try { storage = new MMKV(); return storage; } catch (e) {
-    storage = { getString: (k: string) => null, set: (k: string, v: any) => {}, delete: (k: string) => {} };
+    storage = { getString: (k: string) => null, set: (k: string, v: any) => { }, delete: (k: string) => { } };
     return storage;
   }
 };
 
 export const TrackingScreen = observer(({ user }: { user: any }) => {
-  const theme = useTheme();
   const [hudVisible, setHudVisible] = useState(true);
   const [elapsedSec, setElapsedSec] = useState(0);
   const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,7 +58,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
     return () => {
       triggerEngine.destroy();
       if (hudTimerRef.current) clearTimeout(hudTimerRef.current);
-      if (syncManager.current) syncManager.current.stopTracking().catch(() => {});
+      if (syncManager.current) syncManager.current.stopTracking().catch(() => { });
     };
   }, []);
 
@@ -78,7 +77,7 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         if (status !== 'granted') return;
         const location = await Location.getCurrentPositionAsync({});
         state.currentLocation.set(location.coords);
-      } catch (e) {}
+      } catch (e) { }
     })();
     if (syncManager.current) {
       syncManager.current.setUpdateCallback((newStats) => {
@@ -125,11 +124,11 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
   const distanceKm = (stats.distanceM || 0) / 1000;
 
   return (
-    <YStack flex={1} backgroundColor="#000">
+    <Column flex={1} style={{ backgroundColor: tokens.primitive.pixelBlack }}>
       <Map
         style={StyleSheet.absoluteFill}
         mapStyle={
-          (theme.name as any) === 'solar'
+          UnistylesRuntime.themeName === 'solar'
             ? 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
             : 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
         }
@@ -156,19 +155,21 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         />
       )}
 
-      <YStack
-        position="absolute"
-        bottom={20}
-        left={20}
-        right={20}
+      <Column
+        style={{
+          position: 'absolute',
+          bottom: 20,
+          left: 20,
+          right: 20,
+        }}
       >
         <ArcadeButton
           onPress={toggleTracking}
-          variant={isTracking ? 'red' : 'green'}
+          variant={isTracking ? 'danger' : 'success'}
           label={isTracking ? 'ABORT & SYNC' : 'START MISSION'}
           size="lg"
         />
-      </YStack>
+      </Column>
 
       <PopUpDialog
         visible={dialogState.visible.get()}
@@ -176,6 +177,6 @@ export const TrackingScreen = observer(({ user }: { user: any }) => {
         title={dialogState.title.get()}
         sprite={dialogState.character.get() === 'ghost' ? ASSETS.sprites.ghost : ASSETS.sprites.runner}
       />
-    </YStack>
+    </Column>
   );
 });
