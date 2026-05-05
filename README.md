@@ -60,3 +60,6 @@ git push
 Built 100% on **Permissive Open Source** foundations (MIT, Apache 2.0, BSD).
 
 **Designed and implemented by Antigravity & geminicli (Agentic Engineering Paradigm).**
+
+---
+*Deployment Status: Correcting git author configuration to resolve Vercel block.*
