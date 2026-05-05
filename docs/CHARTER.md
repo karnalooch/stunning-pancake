@@ -45,8 +45,6 @@ Platforma SPORT odrzuca klasyczne UI na rzecz immersyjnej estetyki **HD-2D Gamin
 | Inspiracja | Co wnosimy |
 |---|---|
 | **Octopath Traveler** | Miękki bloom, kinowe oświetlenie, efekt tilt-shift, dynamiczne cieniowanie, floating idle animations |
-| **Metal Slug** | "Mięsiste" (chunky) pikselowe kształty, industrialny detal, 1px ostre obrysy, 4px twarde cienie, mechaniczne przyciski (2px press) |
-| **Dave the Diver** | Żywa morska paleta (deep blues, vibrant accents), soczyste akcenty, przyjazna atmosfera eksploracji |
 
 ### Zasady żelazne:
 - **Radius: 0** — żadnych zaokrągleń. Wszystko prostokątne.
