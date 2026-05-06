@@ -21,13 +21,14 @@ import { MMKV } from 'react-native-mmkv';
 import { StyleSheet, UnistylesRuntime } from './unistyles';
 import { octopathTheme } from './octopath';
 import { solarTheme } from './solar';
+import { stitchTheme } from './stitch';
 import { BrandingService } from '../services/BrandingService';
-import type { AppTheme } from './unistyles';
+import type { AppTheme, StitchTheme } from './unistyles';
 
 // ─── Constants ────────────────────────────────────────────────────
 
 const THEME_STORAGE_KEY = 'theme_mode';
-export type ThemeMode = 'octopath' | 'solar';
+export type ThemeMode = 'octopath' | 'solar' | 'stitch';
 
 // ─── MMKV (lazy, crash-safe) ──────────────────────────────────────
 
@@ -45,8 +46,8 @@ function getStorage(): MMKV | null {
 
 function getPersistedTheme(): ThemeMode {
     const storage = getStorage();
-    if (!storage) return 'octopath';
-    return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'octopath';
+    if (!storage) return 'stitch';
+    return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'stitch';
 }
 
 function persistTheme(mode: ThemeMode): void {
@@ -104,6 +105,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
             themes: {
                 octopath: octopathTheme as AppTheme,
                 solar: solarTheme as AppTheme,
+                stitch: stitchTheme as StitchTheme,
             },
             breakpoints: {
                 portrait: 0,

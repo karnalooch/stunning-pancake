@@ -46,11 +46,6 @@ export interface AppTheme {
         /** 27 solar (light) theme colors */
         solar: SolarColors;
     };
-    /**
-     * Optional tenant branding overrides injected at runtime.
-     * When BrandingService provides overrides, they land here
-     * and can be consumed via theme.colors.branding?.primary etc.
-     */
     branding?: {
         primary: string;
         secondary: string;
@@ -61,12 +56,64 @@ export interface AppTheme {
     };
 }
 
+// ─── Stitch Theme (flat, standalone palette) ──────────────────────
+
+export interface StitchTheme {
+    colors: {
+        background: string;
+        surface: string;
+        onBackground: string;
+        onSurface: string;
+        primary: string;
+        primaryContainer: string;
+        primaryFixed: string;
+        onPrimary: string;
+        onPrimaryContainer: string;
+        onPrimaryFixed: string;
+        secondary: string;
+        secondaryContainer: string;
+        secondaryFixed: string;
+        onSecondary: string;
+        onSecondaryContainer: string;
+        tertiary: string;
+        tertiaryContainer: string;
+        tertiaryFixed: string;
+        onTertiary: string;
+        onTertiaryContainer: string;
+        error: string;
+        errorContainer: string;
+        onError: string;
+        onErrorContainer: string;
+        surfaceContainerLowest: string;
+        surfaceContainerLow: string;
+        surfaceContainer: string;
+        surfaceContainerHigh: string;
+        surfaceContainerHighest: string;
+        outline: string;
+        outlineVariant: string;
+        parchment: string;
+        goldAmber: string;
+        hudBackground: string;
+        hudSurface: string;
+        hudText: string;
+        hudMetric: string;
+        hudAccent: string;
+        hudWarning: string;
+        hudError: string;
+    };
+    branding?: {
+        primary: string;
+        secondary: string;
+    };
+}
+
 // ─── Augment UnistylesThemes for global type safety ───────────────
 
 declare module 'react-native-unistyles' {
     interface UnistylesThemes {
         octopath: AppTheme;
         solar: AppTheme;
+        stitch: StitchTheme;
     }
 }
 
