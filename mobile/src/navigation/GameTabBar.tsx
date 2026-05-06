@@ -1,41 +1,58 @@
+/**
+ * GameTabBar — STITCH BottomNavBar (Unistyles-integrated)
+ * 
+ * 4-tab navigation: RIDE, COMPETE, EXPLORE, PROFILE.
+ * Fully reactive to stitch theme via Unistyles useUnistyles().
+ */
+
 import React from 'react';
-import { View, Pressable, Image } from 'react-native';
+import { View, Pressable, Text } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { PixelText } from '../components/arcade/PixelText';
+import { useUnistyles } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const NAV_ICONS: Record<string, any> = {
-  Home: undefined,
-  History: undefined,
-  Ranking: undefined,
-  Rewards: undefined,
-  Profile: undefined,
-};
+const TABS = [
+  { name: 'Ride', icon: '🚴', label: 'RIDE' },
+  { name: 'Compete', icon: '🏆', label: 'COMPETE' },
+  { name: 'Explore', icon: '🗺️', label: 'EXPLORE' },
+  { name: 'Profile', icon: '👤', label: 'PROFILE' },
+];
 
-export const GameTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+export const GameTabBar: React.FC<BottomTabBarProps> = ({
+  state,
+  descriptors,
+  navigation,
+}) => {
+  useUnistyles(); // subscribe to theme changes for reactivity
+  const c = stitchTheme.colors;
+
   return (
-    <View style={{
-      flexDirection: 'row',
-      backgroundColor: '#0B1D33', // Deep Sea Dark
-      borderTopWidth: 3,
-      borderTopColor: '#D4A373', // Gold
-      height: 75,
-      paddingBottom: 20, // safe area offset approximation
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: 1,
-      shadowRadius: 0,
-      elevation: 20,
-    }}>
+    <View
+      style={{
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingBottom: 20,
+        paddingTop: 8,
+        height: 80,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        borderTopWidth: 4,
+        borderTopColor: c.onBackground,
+        shadowColor: c.onBackground,
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 1,
+        shadowRadius: 0,
+        elevation: 20,
+      }}
+    >
       {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const label = options.tabBarLabel !== undefined
-            ? options.tabBarLabel
-            : options.title !== undefined
-            ? options.title
-            : route.name;
-
         const isFocused = state.index === index;
+        const tabConfig = TABS[index] || {
+          icon: '📍',
+          label: (route.name as string),
+        };
 
         const onPress = () => {
           const event = navigation.emit({
@@ -43,50 +60,53 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, na
             target: route.key,
             canPreventDefault: true,
           });
-
           if (!isFocused && !event.defaultPrevented) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
             navigation.navigate(route.name);
           }
         };
-
-        const iconSource = NAV_ICONS[route.name as keyof typeof NAV_ICONS];
 
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            style={{
-              flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
-              paddingTop: 10,
-              // Background highlight for focused tab
-              backgroundColor: isFocused ? 'rgba(212, 163, 115, 0.15)' : 'transparent',
-              borderTopWidth: isFocused ? 2 : 0,
-              borderTopColor: '#D4A373',
-              marginTop: isFocused ? -3 : 0, // pull up slightly
-            }}
+            style={({ pressed }) => [
+              {
+                flex: 1,
+                alignItems: 'center' as const,
+                justifyContent: 'center' as const,
+                paddingHorizontal: 4,
+                paddingVertical: 4,
+                borderRadius: 8,
+                opacity: pressed ? 0.8 : 1,
+              },
+              isFocused && {
+                backgroundColor: c.primaryContainer,
+                borderWidth: 2,
+                borderColor: c.onBackground,
+                transform: [{ translateY: -2 }],
+                shadowColor: c.onBackground,
+                shadowOffset: { width: 2, height: 2 },
+                shadowOpacity: 1,
+                shadowRadius: 0,
+                elevation: 4,
+              },
+            ]}
           >
-            {iconSource ? (
-              <Image 
-                source={iconSource} 
-                style={{ 
-                  width: 24, 
-                  height: 24, 
-                  opacity: isFocused ? 1 : 0.4,
-                  tintColor: isFocused ? undefined : '#8B7355' // Muted gold if not focused
-                }} 
-                resizeMode="contain" 
-              />
-            ) : null}
-            <PixelText 
-              color={isFocused ? '#D4A373' : '#8B7355'} 
-              size={8} 
-              style={{ marginTop: 4 }}
+            <Text style={{ fontSize: 20, marginBottom: 2, opacity: isFocused ? 1 : 0.5 }}>
+              {tabConfig.icon}
+            </Text>
+            <Text
+              style={{
+                fontSize: 10,
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                color: isFocused ? c.onPrimaryContainer : c.secondary,
+              }}
             >
-              {label as string}
-            </PixelText>
+              {tabConfig.label}
+            </Text>
           </Pressable>
         );
       })}

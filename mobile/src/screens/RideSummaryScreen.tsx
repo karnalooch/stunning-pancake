@@ -8,20 +8,10 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUnistyles } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
+const C = stitchTheme.colors;
 import * as Haptics from 'expo-haptics';
-
-const C = {
-    background: '#f8faf0',
-    parchment: '#F5F5DC',
-    onBackground: '#191d17',
-    primary: '#3b6a24',
-    primaryContainer: '#76a95b',
-    tertiary: '#a13d3e',
-    secondary: '#5e604d',
-    outline: '#72796b',
-    surfaceVariant: '#e1e3da',
-    goldAmber: '#FFB800',
-};
 
 const s = StyleSheet.create({
     container: { flex: 1, backgroundColor: C.background },
@@ -65,7 +55,7 @@ const s = StyleSheet.create({
     statUnit: { fontSize: 14, fontWeight: '500', color: C.outline },
     elevationBar: { flexDirection: 'row', gap: 2, marginTop: 12 },
     elevBlockFilled: { width: 16, height: 24, backgroundColor: C.tertiary, borderWidth: 2, borderColor: C.onBackground },
-    elevBlockEmpty: { width: 16, height: 24, backgroundColor: C.surfaceVariant, borderWidth: 2, borderColor: C.onBackground },
+    elevBlockEmpty: { width: 16, height: 24, backgroundColor: C.surfaceContainerHighest, borderWidth: 2, borderColor: C.onBackground },
     ctaBtn: {
         backgroundColor: C.goldAmber, borderRadius: 8, borderWidth: 4, borderColor: C.onBackground,
         paddingVertical: 16, paddingHorizontal: 24, alignItems: 'center', marginTop: 16, width: '100%',

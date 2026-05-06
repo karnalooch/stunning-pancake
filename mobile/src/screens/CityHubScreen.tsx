@@ -8,20 +8,11 @@
 import React from 'react';
 import { View, Text, ScrollView, Image, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUnistyles } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const C = {
-    background: '#f8faf0',
-    parchment: '#F5F5DC',
-    surface: '#f8faf0',
-    onBackground: '#191d17',
-    primary: '#3b6a24',
-    primaryContainer: '#76a95b',
-    tertiary: '#a13d3e',
-    secondary: '#5e604d',
-    outline: '#72796b',
-    onPrimary: '#ffffff',
-};
+const C = stitchTheme.colors;
 const shadow = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
 const shadowSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
 

@@ -7,17 +7,13 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUnistyles } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const C = {
-    background: '#f8faf0', parchment: '#F5F5DC', onBackground: '#191d17',
-    primary: '#3b6a24', primaryContainer: '#76a95b', primaryFixed: '#bbf29b',
-    secondary: '#5e604d', tertiary: '#a13d3e', outline: '#72796b',
-    surfaceContainer: '#edefe5', surfaceVariant: '#e1e3da', onPrimary: '#ffffff',
-    gold: '#FFD700',
-};
+const C = stitchTheme.colors;
 const sh = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
 const shSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
 
@@ -50,7 +46,7 @@ const s = StyleSheet.create({
     statValue: { fontSize: 24, fontWeight: '700', color: C.onBackground, marginTop: 8, textAlign: 'right' },
     statUnit: { fontSize: 14, color: C.outline },
     // Map
-    mapSection: { backgroundColor: C.surfaceVariant, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, overflow: 'hidden' },
+    mapSection: { backgroundColor: C.surfaceContainerHighest, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, overflow: 'hidden' },
     mapHeader: { backgroundColor: C.surfaceContainer, padding: 10, borderBottomWidth: 2, borderBottomColor: C.onBackground },
     mapHeaderText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', color: C.onBackground },
     mapArea: { height: 250, backgroundColor: C.primaryContainer, justifyContent: 'center', alignItems: 'center' },
@@ -157,7 +153,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 <Text style={[s.statLabel, { marginBottom: 8, paddingLeft: 4, borderLeftWidth: 4, borderLeftColor: C.primary }]}>Achievements</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.achSection}>
                     <View style={[s.achCard, shSm]}>
-                        <View style={[s.achIcon, { backgroundColor: C.gold }]}>
+                        <View style={[s.achIcon, { backgroundColor: C.goldAmber }]}>
                             <Text style={{ fontSize: 20 }}>🏆</Text>
                         </View>
                         <Text style={[s.achTitle, { color: C.secondary }]}>Segment KOM</Text>
@@ -204,7 +200,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                     <Text style={[s.actionText, { color: C.onPrimary }]}>📤  SHARE RIDE</Text>
                 </Pressable>
                 <Pressable
-                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.surfaceVariant }, sh, pressed && { transform: [{ translateY: 2 }] }]}
+                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.surfaceContainerHighest }, sh, pressed && { transform: [{ translateY: 2 }] }]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { }); onDownload?.(); }}
                 >
                     <Text style={[s.actionText, { color: C.onBackground }]}>⬇️  DOWNLOAD FIT</Text>

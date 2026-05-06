@@ -21,25 +21,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
+import { useUnistyles } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 
-// ─── STITCH Design Tokens (hard-coded during Phase 1) ─────────────
-const C = {
-    background: '#f8faf0',
-    surface: '#f8faf0',
-    parchment: '#F5F5DC',
-    onBackground: '#191d17',
-    primary: '#3b6a24',
-    primaryContainer: '#76a95b',
-    primaryFixed: '#bbf29b',
-    secondary: '#5e604d',
-    tertiary: '#a13d3e',
-    outline: '#72796b',
-    outlineVariant: '#c2c9b9',
-    surfaceContainerLow: '#f3f5eb',
-    surfaceContainerHigh: '#e7e9df',
-    goldAmber: '#FFB800',
-};
+const C = stitchTheme.colors;
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -283,6 +269,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     liveSpeed = 0,
     liveDistance = 0,
 }) => {
+    useUnistyles(); // subscribe to stitch theme changes
     const [pressed, setPressed] = useState(false);
 
     const handleStartRide = useCallback(() => {
