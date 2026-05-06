@@ -1,5 +1,29 @@
 # CHANGELOG — SPORT Platform
 
+## v0.3.0-dev (2026-05-06) — STITCH Mobile Redesign Begins
+
+### Security — Phase A Audit
+- **Dependency scan**: 0 CVEs in backend (pip-audit) and admin (npm audit); 5 LOW in mobile test deps only
+- **SAST (Bandit)**: 5 MEDIUM findings — all missing timeouts in wearables.py → **ALL FIXED**
+- **Secret scanning**: 0 API key leaks (detect-secrets + manual regex)
+- **Config hardening**: CORS restricted to whitelist (was `CORS_ALLOW_ALL_ORIGINS=True`), DRF rate limiting added (anon 30/min, user 300/min, login 5/min), 5× `timeout=` added to Strava/Garmin API calls
+- **Report**: `reports/PHASE_A_REPORT.md`
+
+### Docs — Mobile Design SSOT
+- **Renamed**: `docs/DESIGN.md` → `docs/designmobile.md` — updated Section 10 with 15 STITCH screen design decisions extracted from HTML mockups
+- **New**: `plans/screen-architecture-plan.md` — 4-tab navigation (RIDE, COMPETE, EXPLORE, PROFILE) + Settings stack, Expo Router structure
+- **New**: `plans/security-audit-plan.md` — 3-phase security strategy (A: static audit, B: code review, C: full pentest)
+- **Cleanup**: Removed 14 superseded V3.0 mobile design files (VISUAL_MANIFESTO.md, MOBILE_UI_PLAN.md, AUDIT_V3_MOBILE_REPORT.md, old mockups, debug screenshots)
+
+### Mobile — STITCH Phase 1 Screens (P0)
+- **RideDashboardScreen**: Pre-ride landing with hero card (active ride / idle states), metric tiles grid, weekly load bar chart
+- **RideSummaryScreen**: Post-ride celebration — achievement badge, S/A/B/C/D rank, stats bento, elevation progress bar, BACK TO HUB CTA
+- **CityHubScreen**: City competition dashboard — City of the Week banner, City Wars VS bar, local leaderboard, nearby quests
+- **ActivityDetailScreen**: Ride deep-dive — header info card, stats bento, route map placeholder, achievements carousel, performance chart, Share/Download FIT buttons
+- **ActiveRideHUDScreen**: Pending — refactor of existing TrackingScreen
+
+---
+
 ## v0.2.0-rc.1 (2026-05-03) — Release Candidate
 
 ### Added — Phase 1: Real Data
