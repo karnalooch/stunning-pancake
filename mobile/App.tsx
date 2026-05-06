@@ -17,10 +17,13 @@ import { ThemeService } from './src/services/ThemeService';
 import { SplashScreen } from './src/components/SplashScreen';
 import { TrackingScreen } from './src/screens/TrackingScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { ActivitiesScreen } from './src/screens/ActivitiesScreen';
-import { RewardsScreen } from './src/screens/RewardsScreen';
-import { LeaderboardScreen } from './src/screens/LeaderboardScreen';
-import { ProfileScreen } from './src/screens/ProfileScreen';
+import { RideDashboardScreen } from './src/screens/RideDashboardScreen';
+import { ActiveRideHUDScreen } from './src/screens/ActiveRideHUDScreen';
+import { RideSummaryScreen } from './src/screens/RideSummaryScreen';
+import { CityHubScreen } from './src/screens/CityHubScreen';
+import { GlobalLeaderboardScreen } from './src/screens/GlobalLeaderboardScreen';
+import { AthleteProfileScreen } from './src/screens/AthleteProfileScreen';
+import { MarketplaceScreen } from './src/screens/MarketplaceScreen';
 import { GameTabBar } from './src/navigation/GameTabBar';
 import { PixelText } from './src/components/PixelText';
 import { ArcadeButton } from './src/components/ArcadeButton';
@@ -283,14 +286,21 @@ export default observer(function App() {
           tabBar={(props) => <GameTabBar {...props} />}
           screenOptions={{ headerShown: false }}
         >
-          <Tab.Screen name="Home">
-            {() => <TrackingScreen user={user} />}
+          <Tab.Screen name="Ride">
+            {() => <RideDashboardScreen user={user} />}
           </Tab.Screen>
-          <Tab.Screen name="History" component={ActivitiesScreen} />
-          <Tab.Screen name="Ranking" component={LeaderboardScreen} />
-          <Tab.Screen name="Rewards" component={RewardsScreen} />
+          <Tab.Screen name="Compete">
+            {() => <CityHubScreen user={user} />}
+          </Tab.Screen>
+          <Tab.Screen name="Explore">
+            {() => <MarketplaceScreen />}
+          </Tab.Screen>
           <Tab.Screen name="Profile">
-            {() => <ProfileScreen user={user} onLogout={handleLogout} />}
+            {() => <AthleteProfileScreen user={user} onLogout={handleLogout} />}
+          </Tab.Screen>
+          {/* Keep legacy screen for tracking */}
+          <Tab.Screen name="Tracking" options={{ tabBarStyle: { display: 'none' } }}>
+            {() => <ActiveRideHUDScreen user={user} />}
           </Tab.Screen>
         </Tab.Navigator>
       </NavigationContainer>
