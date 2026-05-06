@@ -51,7 +51,7 @@ class StravaService:
             'client_secret': STRAVA_CLIENT_SECRET,
             'code': code,
             'grant_type': 'authorization_code'
-        })
+        }, timeout=15)
 
         if response.status_code == 200:
             data = response.json()
@@ -83,7 +83,7 @@ class StravaService:
             'client_secret': STRAVA_CLIENT_SECRET,
             'refresh_token': integration.refresh_token,
             'grant_type': 'refresh_token'
-        })
+        }, timeout=15)
 
         if response.status_code == 200:
             data = response.json()
@@ -108,7 +108,8 @@ class StravaService:
         response = requests.get(
             "https://www.strava.com/api/v3/athlete/activities",
             headers={'Authorization': f'Bearer {token}'},
-            params={'after': after, 'per_page': 100}
+            params={'after': after, 'per_page': 100},
+            timeout=30,
         )
 
         if response.status_code != 200:
@@ -187,7 +188,8 @@ class GarminService:
                 'code': code,
                 'grant_type': 'authorization_code',
             },
-            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            timeout=15,
         )
 
         if response.status_code == 200:
@@ -233,7 +235,8 @@ class GarminService:
                 'refresh_token': integration.refresh_token,
                 'grant_type': 'refresh_token',
             },
-            headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            timeout=15,
         )
 
         if response.status_code == 200:

@@ -116,6 +116,15 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/minute',
+        'user': '300/minute',
+        'login': '5/minute',
+    },
 }
 
 SIMPLE_JWT = {
@@ -143,7 +152,18 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS — restricted to known domains (was: CORS_ALLOW_ALL_ORIGINS = True)
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://localhost:3003',
+    'http://localhost:8000',
+    'http://localhost:8081',
+    'https://sport-admin.vercel.app',
+    'https://sport-platform.com',
+]
+CORS_ALLOW_CREDENTIALS = True
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'SPORT API - Global Platform',
