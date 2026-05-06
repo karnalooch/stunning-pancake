@@ -38,7 +38,7 @@ export interface GameCardProps extends Omit<ViewProps, 'style'> {
 
 // ─── Theme Key ──────────────────────────────────────────────────────
 
-type ThemeKey = 'octopath' | 'solar';
+type ThemeKey = 'octopath' | 'solar' | 'stitch';
 
 // ─── Color Resolver ─────────────────────────────────────────────────
 

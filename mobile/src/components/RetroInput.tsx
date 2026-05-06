@@ -37,7 +37,7 @@ export interface RetroInputProps
 
 // ─── Theme Key ──────────────────────────────────────────────────────
 
-type ThemeKey = 'octopath' | 'solar';
+type ThemeKey = 'octopath' | 'solar' | 'stitch';
 
 // ─── Color Resolver ─────────────────────────────────────────────────
 

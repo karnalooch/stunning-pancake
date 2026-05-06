@@ -71,7 +71,7 @@ interface ColorSet {
     text: string; // label text color
 }
 
-type ThemeKey = 'octopath' | 'solar';
+type ThemeKey = 'octopath' | 'solar' | 'stitch';
 
 function resolveColors(
     variant: ArcadeButtonVariant,

@@ -93,7 +93,7 @@ const SIZE_STYLES: Record<PixelTextSize, TextProps['style']> = {
 
 // ─── Color Resolver ─────────────────────────────────────────────────
 
-type ThemeKey = 'octopath' | 'solar';
+type ThemeKey = 'octopath' | 'solar' | 'stitch';
 
 /** Resolve a color variant to the correct theme group and return a style object. */
 function resolveColor(
