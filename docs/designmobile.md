@@ -2,8 +2,9 @@
 
 > **App**: Velo Quest — Cycling Performance Platform with HD-2D Retro Pixel-Art Aesthetics
 > **Design Language**: Solar White + Forest Green, retro-gaming UI (Space Grotesk / VT323)
-> **This Document**: Single Source of Truth (SSOT) for all visual design tokens, component patterns, layout conventions, and interaction behaviors derived from 14+ screen mockups.
+> **This Document**: Single Source of Truth (SSOT) for all visual design tokens, component patterns, layout conventions, and interaction behaviors derived from 15 STITCH screen mockups.
 > **Audience**: Designers and developers maintaining visual consistency across the application.
+> **Implementation**: Theme registered as `stitch` in [`mobile/src/theme/stitch.ts`](../mobile/src/theme/stitch.ts) — the **primary visual theme** of the mobile app (replaces octopath/solar). Registered via Unistyles in [`mobile/src/theme/ThemeProvider.tsx`](../mobile/src/theme/ThemeProvider.tsx).
 
 ---
 
