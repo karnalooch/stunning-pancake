@@ -1,0 +1,8 @@
+// STITCH Phase 3 — ClubsDirectoryScreen
+import React from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useUnistyles } from "../theme/unistyles";
+import { stitchTheme } from "../theme/stitch";
+const c = stitchTheme.colors;
+export const ClubsDirectoryScreen: React.FC = () => { useUnistyles(); return (<SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top"]}><View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}><Text style={{ fontSize: 24, fontWeight: "700", color: c.primary }}>Clubs Directory</Text><Text style={{ fontSize: 14, color: c.secondary, marginTop: 8 }}>Squad Discovery</Text></View></SafeAreaView>); };
