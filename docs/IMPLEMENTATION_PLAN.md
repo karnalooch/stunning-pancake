@@ -15,7 +15,6 @@
 - Expo + React Native
 - Skia GPU rendering, Tamagui UI, Legend-State
 - MapLibre v11
-- HD-2D visual system (1px outline, 4px hard shadow, Press Start 2P font)
 - LLM Avatar Trainer (9 trigger categories, 3 personalities)
 
 ### Faza 4: Ekosystem (⚠️ CZĘŚCIOWO)
