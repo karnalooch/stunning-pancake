@@ -19,16 +19,14 @@ import React, {
 } from 'react';
 import { MMKV } from 'react-native-mmkv';
 import { StyleSheet, UnistylesRuntime } from './unistyles';
-import { octopathTheme } from './octopath';
-import { solarTheme } from './solar';
 import { stitchTheme } from './stitch';
 import { BrandingService } from '../services/BrandingService';
-import type { AppTheme, StitchTheme } from './unistyles';
+import type { StitchTheme } from './unistyles';
 
 // ─── Constants ────────────────────────────────────────────────────
 
 const THEME_STORAGE_KEY = 'theme_mode';
-export type ThemeMode = 'octopath' | 'solar' | 'stitch';
+export type ThemeMode = 'stitch';
 
 // ─── MMKV (lazy, crash-safe) ──────────────────────────────────────
 
@@ -62,12 +60,7 @@ interface ThemeContextValue {
     themeMode: ThemeMode;
     /** Switch theme and persist */
     setThemeMode: (mode: ThemeMode) => void;
-    /** Toggle between octopath ↔ solar */
-    toggleThemeMode: () => void;
-    /** True when dark theme (octopath) is active */
-    isOctopath: boolean;
-    /** True when light theme (solar) is active */
-    isSolar: boolean;
+    
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -103,8 +96,6 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
                 initialTheme: initial,
             },
             themes: {
-                octopath: octopathTheme as AppTheme,
-                solar: solarTheme as AppTheme,
                 stitch: stitchTheme as StitchTheme,
             },
             breakpoints: {
@@ -127,11 +118,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
         persistTheme(mode);
     };
 
-    const toggleThemeMode = () => {
-        setThemeMode(themeMode === 'octopath' ? 'solar' : 'octopath');
-    };
-
-    // Keep UnistylesRuntime in sync on external changes
+        // Keep UnistylesRuntime in sync on external changes
     useEffect(() => {
         UnistylesRuntime.setTheme(themeMode);
     }, [themeMode]);
@@ -140,10 +127,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
         () => ({
             themeMode,
             setThemeMode,
-            toggleThemeMode,
-            isOctopath: themeMode === 'octopath',
-            isSolar: themeMode === 'solar',
-        }),
+            }),
         [themeMode],
     );
 
@@ -181,7 +165,7 @@ function applyBrandingOverrides(branding: {
     primary: string;
     secondary: string;
 }): void {
-    const themes = [octopathTheme, solarTheme] as AppTheme[];
+    const themes = [stitchTheme] as any[];
     for (const theme of themes) {
         theme.branding = {
             primary: branding.primary,
@@ -199,8 +183,8 @@ export function refreshBranding(): void {
     if (branding) {
         applyBrandingOverrides(branding);
     } else {
-        const themes = [octopathTheme, solarTheme] as AppTheme[];
-        for (const theme of themes) {
+        const themes = [stitchTheme] as any[];
+    for (const theme of themes) {
             delete theme.branding;
         }
     }

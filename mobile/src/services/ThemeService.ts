@@ -36,7 +36,7 @@ function getStorage(): MMKV | null {
   }
 }
 
-export type ThemeMode = 'octopath' | 'solar';
+export type ThemeMode = 'stitch';
 
 // Initialize with stored value or default to 'octopath'
 function getInitialTheme(): ThemeMode {

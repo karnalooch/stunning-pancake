@@ -11,7 +11,6 @@ import Animated, {
   interpolate
 } from 'react-native-reanimated';
 import { Svg, Path, Rect } from 'react-native-svg';
-import { AthleteSprite } from './AthleteSprite';
 
 const { width, height } = Dimensions.get('window');
 
@@ -98,9 +97,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
       </Animated.View>
 
       <View style={styles.centerSection}>
-        {/* LOADING SPRITE */}
-        <AthleteSprite type="runner" state="action" size={60} />
-
+        {/* SPRITE REMOVED TO ADAPT TO NEW THEME */}
         <View style={styles.messageBlock}>
           <Animated.View style={textStyle}>
             <Text style={styles.messageText}>
