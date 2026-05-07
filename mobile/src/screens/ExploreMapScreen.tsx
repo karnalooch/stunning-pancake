@@ -2,7 +2,8 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useUnistyles } from "../theme/unistyles";
+import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
-const c = stitchTheme.colors;
-export const ExploreMapScreen: React.FC = () => { useUnistyles(); return (<SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top"]}><View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}><Text style={{ fontSize: 24, fontWeight: "700", color: c.primary }}>Explore Map</Text><Text style={{ fontSize: 14, color: c.secondary, marginTop: 8 }}>MapLibre Placeholder</Text></View></SafeAreaView>); };
+export const ExploreMapScreen: React.FC = () => { const { theme } = useStyles();
+    const c = theme.colors as any;
+    const C = theme.colors as any; return (<SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={["top"]}><View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}><Text style={{ fontSize: 24, fontWeight: "700", color: c.primary }}>Explore Map</Text><Text style={{ fontSize: 14, color: c.secondary, marginTop: 8 }}>MapLibre Placeholder</Text></View></SafeAreaView>); };

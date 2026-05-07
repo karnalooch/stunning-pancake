@@ -19,7 +19,7 @@ import { RetroInput } from '../components/RetroInput';
 import { ScrollContainer } from '../components/ScrollContainer';
 import { GameCard } from '../components/GameCard';
 import { ArcadeButton } from '../components/ArcadeButton';
-import { colors as tokens } from '@tokens/generated/restyle-colors';
+import { useStyles } from 'react-native-unistyles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,6 +29,9 @@ interface OnboardingProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
+  const { theme } = useStyles();
+  const C = theme.colors as any;
+
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState({
     weight: '75',
@@ -51,26 +54,26 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
 
   const renderStep = () => {
     switch (step) {
-      case 0: return <PermissionsStep onNext={nextStep} />;
-      case 1: return <IntegrationsStep formData={formData} setFormData={setFormData} onNext={nextStep} />;
-      case 2: return <DataValidationStep formData={formData} setFormData={setFormData} onNext={nextStep} />;
-      case 3: return <AntiCheatStep onNext={nextStep} />;
-      case 4: return <IdentityStep user={user} onNext={nextStep} />;
+      case 0: return <PermissionsStep onNext={nextStep} C={C} />;
+      case 1: return <IntegrationsStep formData={formData} setFormData={setFormData} onNext={nextStep} C={C} />;
+      case 2: return <DataValidationStep formData={formData} setFormData={setFormData} onNext={nextStep} C={C} />;
+      case 3: return <AntiCheatStep onNext={nextStep} C={C} />;
+      case 4: return <IdentityStep user={user} onNext={nextStep} C={C} />;
       default: return null;
     }
   };
 
   return (
-    <Column flex={1} style={{ backgroundColor: tokens.primitive.parchment, paddingTop: 48 }} padding={16}>
+    <Column flex={1} style={{ backgroundColor: C.background, paddingTop: 48 }} padding={16}>
       {/* RPG-Style HUD Progress */}
       <Column gap={8} style={{ marginBottom: 24 }}>
         <Row justifyContent="space-between" alignItems="center">
-          <PixelText size="xs" color="primary" style={{ fontSize: 8 }}>CHARACTER_INIT</PixelText>
-          <PixelText size="xs" color="primary" style={{ fontSize: 8 }}>{Math.round(progress.value * 100)}%</PixelText>
+          <PixelText size="xs" color={C.primary} style={{ fontSize: 8, color: C.primary }}>CHARACTER_INIT</PixelText>
+          <PixelText size="xs" color={C.primary} style={{ fontSize: 8, color: C.primary }}>{Math.round(progress.value * 100)}%</PixelText>
         </Row>
-        <Row style={{ height: 8, backgroundColor: tokens.primitive.pixelBlack, width: '100%', borderWidth: 1, borderColor: tokens.primitive.pixelBlack } as any}>
-          <Animated.View style={[{ height: '100%', backgroundColor: tokens.semantic.primary }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
-            <View style={{ position: 'absolute', right: 0, width: 2, height: 12, backgroundColor: tokens.semantic.primary, top: -2 }} />
+        <Row style={{ height: 8, backgroundColor: C.onBackground, width: '100%', borderWidth: 1, borderColor: C.onBackground } as any}>
+          <Animated.View style={[{ height: '100%', backgroundColor: C.primary }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
+            <View style={{ position: 'absolute', right: 0, width: 2, height: 12, backgroundColor: C.primary, top: -2 }} />
           </Animated.View>
         </Row>
       </Column>
@@ -89,7 +92,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   );
 };
 
-const PermissionsStep = ({ onNext }: any) => {
+const PermissionsStep = ({ onNext, C }: any) => {
   const requestPerms = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status === 'granted') {
@@ -103,26 +106,26 @@ const PermissionsStep = ({ onNext }: any) => {
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
       <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
-        <View style={{ borderWidth: 2, borderColor: tokens.semantic.success, padding: 24, backgroundColor: tokens.primitive.parchment }}>
-          <MapPin size={48} color={tokens.semantic.success} />
+        <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
+          <MapPin size={48} color={C.primary} />
         </View>
         <Column gap={16} alignItems="center">
-          <PixelText size="lg" color="text" style={{ textAlign: 'center' }}>NEURAL_LINK</PixelText>
-          <PixelText size="sm" color="text" style={{ textAlign: 'center', opacity: 0.8 }}>
+          <PixelText size="lg" color={C.onBackground} style={{ textAlign: 'center', color: C.onBackground }}>NEURAL_LINK</PixelText>
+          <PixelText size="sm" color={C.onBackground} style={{ textAlign: 'center', opacity: 0.8, color: C.onBackground }}>
             Enable GPS for real-time telemetry and character localization.
           </PixelText>
         </Column>
         <ArcadeButton
           label="AUTHORIZE ACCESS"
           onPress={requestPerms}
-          variant="success"
+          variant="primary"
         />
       </GameCard>
     </Animated.View>
   );
 };
 
-const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
+const IntegrationsStep = ({ formData, setFormData, onNext, C }: any) => {
   const connect = (service: string) => {
     setFormData({ ...formData, [`${service}Connected`]: true });
     Alert.alert(`${service} Connected`, "Biometric data synchronized successfully.");
@@ -131,8 +134,8 @@ const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
       <GameCard variant="parchment" style={{ gap: 24 }}>
-        <PixelText size="lg" color="text">EXTERNAL_CORE</PixelText>
-        <PixelText size="sm" color="text" style={{ opacity: 0.8 }}>Connect your wearable for One-Tap attribute sync.</PixelText>
+        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>EXTERNAL_CORE</PixelText>
+        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>Connect your wearable for One-Tap attribute sync.</PixelText>
 
         <Column gap={12}>
           <IntegrationCard
@@ -140,14 +143,16 @@ const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
             icon={<Zap color="white" />}
             connected={formData.stravaConnected}
             onPress={() => connect('strava')}
-            color={tokens.semantic.error}
+            color={C.error}
+            C={C}
           />
           <IntegrationCard
             label="GARMIN"
             icon={<Wifi color="white" />}
             connected={formData.garminConnected}
             onPress={() => connect('garmin')}
-            color={tokens.octopath.buttonBlueBg}
+            color={C.secondary}
+            C={C}
           />
         </Column>
 
@@ -161,23 +166,23 @@ const IntegrationsStep = ({ formData, setFormData, onNext }: any) => {
   );
 };
 
-const IntegrationCard = ({ label, icon, connected, onPress, color }: any) => (
+const IntegrationCard = ({ label, icon, connected, onPress, color, C }: any) => (
   <Pressable onPress={onPress}>
     <Row
-      style={{ backgroundColor: tokens.primitive.parchment, padding: 16, borderWidth: 1, borderColor: connected ? color : tokens.primitive.pixelBlack } as any}
+      style={{ backgroundColor: C.parchment, padding: 16, borderWidth: 1, borderColor: connected ? color : C.onBackground } as any}
       alignItems="center"
       justifyContent="space-between"
     >
       <Row gap={16} alignItems="center">
         <View style={{ backgroundColor: color, padding: 8 }}>{icon}</View>
-        <PixelText size="sm" color="text">{label}</PixelText>
+        <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>{label}</PixelText>
       </Row>
-      {connected ? <Check color={tokens.semantic.success} /> : <ArrowRight color={tokens.octopath.text} opacity={0.3} />}
+      {connected ? <Check color={C.primary} /> : <ArrowRight color={C.onBackground} opacity={0.3} />}
     </Row>
   </Pressable>
 );
 
-const DataValidationStep = ({ formData, setFormData, onNext }: any) => {
+const DataValidationStep = ({ formData, setFormData, onNext, C }: any) => {
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
       <GameCard variant="parchment" style={{ gap: 24 }}>
@@ -207,41 +212,41 @@ const DataValidationStep = ({ formData, setFormData, onNext }: any) => {
   );
 };
 
-const AntiCheatStep = ({ onNext }: any) => (
+const AntiCheatStep = ({ onNext, C }: any) => (
   <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
     <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
-      <View style={{ borderWidth: 2, borderColor: tokens.semantic.primary, padding: 24, backgroundColor: tokens.primitive.parchment }}>
-        <Shield size={48} color={tokens.semantic.primary} />
+      <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
+        <Shield size={48} color={C.primary} />
       </View>
       <Column gap={16} alignItems="center">
-        <PixelText size="lg" color="primary" style={{ textAlign: 'center' }}>INTEGRITY</PixelText>
-        <PixelText size="sm" color="text" style={{ textAlign: 'center', opacity: 0.8 }}>
+        <PixelText size="lg" color={C.primary} style={{ textAlign: 'center', color: C.primary }}>INTEGRITY</PixelText>
+        <PixelText size="sm" color={C.onBackground} style={{ textAlign: 'center', opacity: 0.8, color: C.onBackground }}>
           Our Viterbi Anti-Cheat engine is rigorous. Calibrate GPS before every mission.
         </PixelText>
       </Column>
-      <ArcadeButton label="I ACKNOWLEDGE" onPress={onNext} variant="success" />
+      <ArcadeButton label="I ACKNOWLEDGE" onPress={onNext} variant="primary" />
     </GameCard>
   </Animated.View>
 );
 
-const IdentityStep = ({ user, onNext }: any) => (
+const IdentityStep = ({ user, onNext, C }: any) => (
   <Animated.View entering={FadeIn} style={{ flex: 1 }}>
     <GameCard variant="parchment" style={{ alignItems: 'center', gap: 32 }}>
       <Column gap={8} alignItems="center">
-        <PixelText size="lg" color="text">PILOT_ID</PixelText>
-        <PixelText size="xs" color="muted" style={{ textAlign: 'center' }}>Scan at checkpoints for verification.</PixelText>
+        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>PILOT_ID</PixelText>
+        <PixelText size="xs" color={C.secondary} style={{ textAlign: 'center', color: C.secondary }}>Scan at checkpoints for verification.</PixelText>
       </Column>
 
-      <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 0, borderWidth: 4, borderColor: tokens.semantic.success }}>
+      <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 0, borderWidth: 4, borderColor: C.primary }}>
         <QRCode
           value={`sport_v1:pilot:${user?.id || 'unknown'}`}
           size={160}
-          color={tokens.primitive.pixelBlack} backgroundColor="#FFFFFF" />
+          color={C.onBackground} backgroundColor="#FFFFFF" />
       </View>
 
       <Column alignItems="center" gap={8}>
-        <PixelText size="md" color="success">{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</PixelText>
-        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>UID: {String(user?.id || '').slice(0, 8) || '####'}</PixelText>
+        <PixelText size="md" color={C.primary} style={{ color: C.primary }}>{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</PixelText>
+        <PixelText size="xs" color={C.secondary} style={{ fontSize: 8, color: C.secondary }}>UID: {String(user?.id || '').slice(0, 8) || '####'}</PixelText>
       </Column>
 
       <ArcadeButton label="INITIALIZE MISSION" onPress={onNext} variant="success" />

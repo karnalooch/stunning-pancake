@@ -8,12 +8,13 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUnistyles } from '../theme/unistyles';
+import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
-const C = stitchTheme.colors;
 import * as Haptics from 'expo-haptics';
 
-const s = StyleSheet.create({
+const stylesheet = StyleSheet.create(theme => {
+    const C = theme.colors as any;
+    return {
     container: { flex: 1, backgroundColor: C.background },
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -62,6 +63,7 @@ const s = StyleSheet.create({
     },
     ctaText: { fontSize: 24, fontWeight: '700', color: C.onBackground, textTransform: 'uppercase' },
     shadow: { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 },
+    };
 });
 
 interface RideSummaryScreenProps {

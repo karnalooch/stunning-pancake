@@ -22,6 +22,11 @@
 - **ActivityDetailScreen**: Ride deep-dive — header info card, stats bento, route map placeholder, achievements carousel, performance chart, Share/Download FIT buttons
 - **ActiveRideHUDScreen**: Pending — refactor of existing TrackingScreen
 
+### Mobile — Technical Debt & Refactoring
+- **Absolute Unistyles Refactoring**: Eliminated the static `const C = stitchTheme.colors` anti-pattern across all 16 screens. Implemented dynamic `StyleSheet.create(theme => ...)` and `useStyles()` hooks ensuring instant theme reactivity and fixing state propagation issues.
+- **Dead Code Elimination**: Removed deprecated screens (`TrackingScreen.tsx`, `ProfileScreen.tsx`, `RewardsScreen.tsx`, `LeaderboardScreen.tsx`, `ActivitiesScreen.tsx`) that were superseded by STITCH Phase 1 screens.
+- **Docs Cleanup**: Removed duplicate `docs/design_mobile.md`.
+
 ---
 
 ## v0.2.0-rc.1 (2026-05-03) — Release Candidate

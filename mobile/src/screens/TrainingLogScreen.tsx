@@ -2,11 +2,13 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useUnistyles } from "../theme/unistyles";
+import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 
-const c = stitchTheme.colors;
-const s = StyleSheet.create({
+const stylesheet = StyleSheet.create(theme => {
+    const c = theme.colors as any;
+    const C = theme.colors as any;
+    return {
     container: { flex: 1, backgroundColor: c.background },
     header: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground, backgroundColor: c.surface },
     headerTitle: { fontSize: 24, fontWeight: "700", color: c.primary, textTransform: "uppercase" },
@@ -14,10 +16,14 @@ const s = StyleSheet.create({
     label: { fontSize: 10, fontWeight: "700", color: c.secondary, textTransform: "uppercase" },
     name: { fontSize: 18, fontWeight: "700", color: c.onBackground, marginTop: 4 },
     metric: { fontSize: 22, fontWeight: "700", color: c.primary, marginTop: 6 },
+
+    };
 });
 
 export const TrainingLogScreen: React.FC = () => {
-    useUnistyles();
+    const { styles: s, theme } = useStyles(stylesheet);
+    const c = theme.colors as any;
+    const C = theme.colors as any;
     return (
         <SafeAreaView style={s.container} edges={["top"]}>
             <View style={s.header}><Text style={s.headerTitle}>Training Log</Text></View>

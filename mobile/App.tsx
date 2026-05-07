@@ -15,14 +15,13 @@ import { initFirebase } from './src/services/FirebaseService';
 import { ThemeService } from './src/services/ThemeService';
 
 import { SplashScreen } from './src/components/SplashScreen';
-import { TrackingScreen } from './src/screens/TrackingScreen';
-import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { RideDashboardScreen } from './src/screens/RideDashboardScreen';
 import { ActiveRideHUDScreen } from './src/screens/ActiveRideHUDScreen';
 import { RideSummaryScreen } from './src/screens/RideSummaryScreen';
 import { CityHubScreen } from './src/screens/CityHubScreen';
 import { GlobalLeaderboardScreen } from './src/screens/GlobalLeaderboardScreen';
 import { AthleteProfileScreen } from './src/screens/AthleteProfileScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
+import { RideDashboardScreen } from './src/screens/RideDashboardScreen';
 import { MarketplaceScreen } from './src/screens/MarketplaceScreen';
 import { GameTabBar } from './src/navigation/GameTabBar';
 import { PixelText } from './src/components/PixelText';
@@ -30,7 +29,7 @@ import { ArcadeButton } from './src/components/ArcadeButton';
 import { Column } from './src/components/Column';
 import { RetroInput } from './src/components/RetroInput';
 import { ThemeProvider } from './src/theme/ThemeProvider';
-import { colors as tokens } from '@tokens/generated/restyle-colors';
+import { useStyles, UnistylesRuntime } from 'react-native-unistyles';
 
 let storage: any;
 const BYPASS_AUTH = false;
@@ -65,10 +64,11 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
   render() {
     if (this.state.hasError) {
+      const C = UnistylesRuntime.theme.colors as any; // Fallback for class component
       return (
-        <View style={{ flex: 1, backgroundColor: tokens.octopath.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ color: tokens.semantic.primary, fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
-          <Text style={{ color: tokens.octopath.textMuted, textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
+        <View style={{ flex: 1, backgroundColor: C.background || '#f8faf0', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: C.error || '#ba1a1a', fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
+          <Text style={{ color: C.onBackground || '#191d17', textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
             {this.state.error?.toString() || 'Unknown JS Exception'}
           </Text>
         </View>
@@ -209,12 +209,14 @@ export default observer(function App() {
 
   const renderAuthUI = () => {
     const mode = auth.mode.get();
+    const { theme } = useStyles();
+    const C = theme.colors as any;
 
     return (
-      <Column flex={1} style={{ backgroundColor: tokens.octopath.background, justifyContent: 'center' }} padding={24} gap={24}>
+      <Column flex={1} style={{ backgroundColor: C.background, justifyContent: 'center' }} padding={24} gap={24}>
         <Column alignItems="center" style={{ marginBottom: 16 }}>
-          <PixelText size="2xl" color="primary" shadow style={{ fontSize: 36 }}>SPORT</PixelText>
-          <PixelText size="xs" color="success" style={{ marginTop: 8 }}>
+          <PixelText size="2xl" color={C.primary} style={{ fontSize: 36, color: C.primary }}>SPORT</PixelText>
+          <PixelText size="xs" color={C.secondary} style={{ marginTop: 8, color: C.secondary }}>
             {mode === 'login' ? 'MISSION LOGIN' : 'NEW PILOT REGISTRATION'}
           </PixelText>
         </Column>

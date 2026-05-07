@@ -8,15 +8,16 @@
 import React from 'react';
 import { View, Text, ScrollView, Image, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUnistyles } from '../theme/unistyles';
+import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const C = stitchTheme.colors;
 const shadow = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
 const shadowSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
 
-const s = StyleSheet.create({
+const stylesheet = StyleSheet.create(theme => {
+    const C = theme.colors as any;
+    return {
     container: { flex: 1, backgroundColor: C.background },
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -71,6 +72,7 @@ const s = StyleSheet.create({
     },
     questDist: { fontSize: 10, color: C.secondary },
     questTime: { fontSize: 18, fontWeight: '700', color: C.onBackground, marginTop: 4 },
+    };
 });
 
 const LEADERBOARD = [

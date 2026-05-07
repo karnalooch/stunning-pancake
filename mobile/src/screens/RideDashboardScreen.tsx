@@ -21,15 +21,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
-import { useUnistyles } from '../theme/unistyles';
+import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 
-const C = stitchTheme.colors;
-
 // ─── Styles ────────────────────────────────────────────────────────
 
-const s = StyleSheet.create({
+const stylesheet = StyleSheet.create(theme => {
+    const C = theme.colors as any;
+    return {
     container: {
         flex: 1,
         backgroundColor: C.background,
@@ -234,17 +234,18 @@ const s = StyleSheet.create({
     ctaContainer: {
         paddingBottom: 24,
     },
-});
-
-// ─── Helper: Pixel Shadow ──────────────────────────────────────────
-
-const pixelShadow = {
+    // ── Helper: Pixel Shadow ──
+    pixelShadow: {
     shadowColor: C.onBackground,
     shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 0,
     elevation: 8,
-};
+},
+    };
+});
+
+// ─── Helper: Pixel Shadow ──────────────────────────────────────────
 
 // ─── Constants ─────────────────────────────────────────────────────
 
@@ -269,7 +270,8 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     liveSpeed = 0,
     liveDistance = 0,
 }) => {
-    useUnistyles(); // subscribe to stitch theme changes
+    const { styles: s, theme } = useStyles(stylesheet);
+    const C = theme.colors as any;
     const [pressed, setPressed] = useState(false);
 
     const handleStartRide = useCallback(() => {
@@ -291,7 +293,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     return (
         <SafeAreaView style={s.container} edges={['top']}>
             {/* TopAppBar */}
-            <View style={[s.header, pixelShadow]}>
+            <View style={[s.header, s.pixelShadow]}>
                 <View style={s.headerLeft}>
                     <View style={s.avatar}>
                         <Image
@@ -319,7 +321,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
             {/* Content */}
             <ScrollView style={s.scroll} contentContainerStyle={s.content}>
                 {/* Hero Card — Active Ride or Idle */}
-                <View style={[s.heroCard, pixelShadow]}>
+                <View style={[s.heroCard, s.pixelShadow]}>
                     {isRecording ? (
                         <>
                             <Text style={s.heroGreeting}>CURRENT RIDE</Text>
@@ -370,19 +372,19 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 <View style={s.section}>
                     <Text style={s.sectionHeader}>Last Ride Stats</Text>
                     <View style={s.metricGrid}>
-                        <View style={[s.metricTile, pixelShadow]}>
+                        <View style={[s.metricTile, s.pixelShadow]}>
                             <Text style={s.metricLabel}>Power</Text>
                             <Text style={s.metricValue}>285<Text style={s.metricUnit}> W</Text></Text>
                         </View>
-                        <View style={[s.metricTile, pixelShadow]}>
+                        <View style={[s.metricTile, s.pixelShadow]}>
                             <Text style={s.metricLabel}>Heart Rate</Text>
                             <Text style={s.metricValue}>155<Text style={s.metricUnit}> bpm</Text></Text>
                         </View>
-                        <View style={[s.metricTile, pixelShadow]}>
+                        <View style={[s.metricTile, s.pixelShadow]}>
                             <Text style={s.metricLabel}>Cadence</Text>
                             <Text style={s.metricValue}>82<Text style={s.metricUnit}> rpm</Text></Text>
                         </View>
-                        <View style={[s.metricTile, pixelShadow]}>
+                        <View style={[s.metricTile, s.pixelShadow]}>
                             <Text style={s.metricLabel}>Distance</Text>
                             <Text style={s.metricValue}>42.5<Text style={s.metricUnit}> km</Text></Text>
                         </View>
@@ -390,7 +392,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 </View>
 
                 {/* Weekly Load */}
-                <View style={[s.weeklyCard, pixelShadow]}>
+                <View style={[s.weeklyCard, s.pixelShadow]}>
                     <Text style={s.sectionHeader}>Weekly Load</Text>
                     <View style={s.chartContainer}>
                         {weeklyBars.map((h, i) => (
