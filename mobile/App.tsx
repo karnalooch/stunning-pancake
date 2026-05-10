@@ -64,11 +64,17 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
   render() {
     if (this.state.hasError) {
-      const C = UnistylesRuntime.theme.colors as any; // Fallback for class component
+      // Safe color extraction — UnistylesRuntime may not be initialized yet
+      let colors: Record<string, string> = {};
+      try {
+        colors = (UnistylesRuntime as any).theme?.colors || {};
+      } catch { }
+      const fallback = { background: '#f8faf0', error: '#ba1a1a', onBackground: '#191d17' };
+      const C = { ...fallback, ...colors };
       return (
-        <View style={{ flex: 1, backgroundColor: C.background || '#f8faf0', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ color: C.error || '#ba1a1a', fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
-          <Text style={{ color: C.onBackground || '#191d17', textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
+        <View style={{ flex: 1, backgroundColor: C.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: C.error, fontSize: 24, fontWeight: '900' }}>CRITICAL ERROR</Text>
+          <Text style={{ color: C.onBackground, textAlign: 'center', fontSize: 14, paddingHorizontal: 16, marginTop: 8 }}>
             {this.state.error?.toString() || 'Unknown JS Exception'}
           </Text>
         </View>
@@ -277,7 +283,7 @@ export default observer(function App() {
     const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
     const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
     const isOnboarded = auth.isOnboarded.get();
-    const isSolar = ThemeService.themeMode.get() === 'solar';
+    const isStitch = ThemeService.themeMode.get() === 'stitch';
 
     if (!isAuth) return renderAuthUI();
     if (!isOnboarded) return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
@@ -312,7 +318,7 @@ export default observer(function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'octopath' | 'solar'}>
+        <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'stitch'}>
           {isDownloading || !fontsLoaded ? (
             <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
           ) : auth.isLoading.get() ? (

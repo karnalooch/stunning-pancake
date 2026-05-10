@@ -38,11 +38,11 @@ function getStorage(): MMKV | null {
 
 export type ThemeMode = 'stitch';
 
-// Initialize with stored value or default to 'octopath'
+// Initialize with stored value or default to 'stitch'
 function getInitialTheme(): ThemeMode {
   const storage = getStorage();
-  if (!storage) return 'octopath';
-  return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'octopath';
+  if (!storage) return 'stitch';
+  return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'stitch';
 }
 
 /**
@@ -60,13 +60,12 @@ export const ThemeService = {
    * @deprecated Use `toggleThemeMode()` from `useThemeMode()` instead.
    */
   toggleTheme: () => {
+    // Only one theme (stitch) exists; toggle is a no-op
     const current = ThemeService.themeMode.get();
-    const next = current === 'octopath' ? 'solar' : 'octopath';
-    ThemeService.themeMode.set(next);
-    // Sync with Unistyles runtime (new system)
-    try { UnistylesRuntime.setTheme(next); } catch (_) { /* Unistyles may not be initialized yet */ }
+    ThemeService.themeMode.set('stitch');
+    try { UnistylesRuntime.setTheme('stitch'); } catch (_) { /* Unistyles may not be initialized yet */ }
     const storage = getStorage();
-    if (storage) storage.set(THEME_STORAGE_KEY, next);
+    if (storage) storage.set(THEME_STORAGE_KEY, 'stitch');
   },
 
   /**
