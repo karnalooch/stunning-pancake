@@ -1565,14 +1565,14 @@ interface CyclistSpriteProps {
 | **Marketplace** | Shop / Rewards | Sklep z nagrodami |
 | **Connected Devices** | Devices / Sensors | Wearables |
 | **Privacy Zones** | Privacy Zones | Strefy prywatności |
-| **Solar Mode** | — (unikalne dla SPORT) | Tryb wysokiego kontrastu |
-| **City Hub** | — (unikalne dla SPORT) | Panel rywalizacji miasta |
-| **City Wars** | — (unikalne dla SPORT) | Ranking między miastami |
+| **Solar Mode** | — (unikalne dla 4VELO) | Tryb wysokiego kontrastu |
+| **City Hub** | — (unikalne dla 4VELO) | Panel rywalizacji miasta |
+| **City Wars** | — (unikalne dla 4VELO) | Ranking między miastami |
 
 ### 8.3 Zasady Nazewnictwa
 
 1. **Pierwszeństwo mają terminy z Garmin/Strava** — użytkownicy kolarstwa je znają
-2. **Unikalne terminy SPORT** tylko dla funkcji bez odpowiednika (City Hub, City Wars, Solar Mode, Anti-Cheat Grade)
+2. **Unikalne terminy 4VELO** tylko dla funkcji bez odpowiednika (City Hub, City Wars, Solar Mode, Anti-Cheat Grade)
 3. **Przyciski i akcje** — czasowniki: "Start Ride", "Save Activity", "Join Club", "Challenge Club"
 4. **Zakładki** — rzeczowniki: "Ride", "Train", "Compete", "Explore", "Profile"
 5. **Jednostki** — metryczne (km, m, km/h, °C), z opcją imperial w Settings
@@ -1638,7 +1638,7 @@ interface CyclistSpriteProps {
 |:-------|:-------------|:----------|
 | **Liczba ekranów** | 5 | 18+ |
 | **Nawigacja** | 5 zakładek, płaska | 5 zakładek + stack navigatory |
-| **Nazewnictwo** | RPG-gaming (QUEST LOG, CHARACTER SHEET) | Branżowe Garmin/Strava + unikalne SPORT |
+| **Nazewnictwo** | RPG-gaming (QUEST LOG, CHARACTER SHEET) | Branżowe Garmin/Strava + unikalne 4VELO |
 | **City Competition** | Brak dedykowanego ekranu | CityHub + GlobalLeaderboard + Events |
 | **Kluby** | Backend tylko | Pełna obsługa UI (4 ekrany) |
 | **Activity Detail** | Nie istnieje | Pełny ekran z mapą, splitami, wykresami |
@@ -1650,6 +1650,6 @@ interface CyclistSpriteProps {
 
 ---
 
-*Dokument stanowi kompletny plan redesignu aplikacji mobilnej SPORT pod kryptonimem STITCH.*  
+*Dokument stanowi kompletny plan redesignu aplikacji mobilnej 4VELO pod kryptonimem STITCH.*  
 *Wszystkie nazwy plików, ścieżki i komponenty są zgodne z istniejącą strukturą projektu.*  
 *Kolorystyka pominięta zgodnie z założeniami — obowiązuje istniejący system tokenów w `mobile/src/theme/`.*

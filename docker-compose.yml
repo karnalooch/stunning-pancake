@@ -4,7 +4,7 @@ services:
   # Database: TimescaleDB + PostGIS (Constitution §24.3 — Time-Series Hypertables)
   db:
     image: timescale/timescaledb-ha:pg15-latest
-    container_name: sport_db
+    container_name: 4velo_db
     restart: always
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?err_POSTGRES_DB_not_set}
@@ -18,7 +18,7 @@ services:
   # Redis for high-speed caching and leaderboard Sorted Sets
   redis:
     image: redis:7-alpine
-    container_name: sport_redis
+    container_name: 4velo_redis
     restart: always
     ports:
       - "6379:6379"
@@ -26,21 +26,17 @@ services:
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
     build: ./infrastructure/brouter/brouter-src
-    container_name: sport_brouter
+    container_name: 4velo_brouter
     restart: always
     ports:
       - "17777:17777"
     volumes:
       - ./infrastructure/brouter/segments4:/segments4:ro
 
-
-
-
-
   # Traccar for real-time telemetry collection
   traccar:
     image: traccar/traccar:latest
-    container_name: sport_traccar
+    container_name: 4velo_traccar
     restart: always
     ports:
       - "8082:8082"
@@ -60,7 +56,7 @@ services:
   # Backend API (Django)
   backend:
     build: ./backend
-    container_name: sport_backend
+    container_name: 4velo_backend
     restart: always
     command: sh -c "python manage.py makemigrations users activities && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
@@ -84,7 +80,7 @@ services:
   # Telemetry Microservice (FastAPI — Constitution §24.1)
   telemetry:
     build: ./telemetry
-    container_name: sport_telemetry
+    container_name: 4velo_telemetry
     restart: always
     ports:
       - "8001:8001"
@@ -106,7 +102,7 @@ services:
         - VITE_LLM_API_KEY
         - VITE_LLM_API_URL
         - VITE_LLM_MODEL
-    container_name: sport_global_admin
+    container_name: 4velo_global_admin
     restart: always
     ports:
       - "3001:80"
@@ -123,7 +119,7 @@ services:
         - VITE_LLM_API_KEY
         - VITE_LLM_API_URL
         - VITE_LLM_MODEL
-    container_name: sport_tenant_admin
+    container_name: 4velo_tenant_admin
     restart: always
     ports:
       - "3002:80"
@@ -140,7 +136,7 @@ services:
         - VITE_LLM_API_KEY
         - VITE_LLM_API_URL
         - VITE_LLM_MODEL
-    container_name: sport_moderator
+    container_name: 4velo_moderator
     restart: always
     ports:
       - "3003:80"
@@ -150,7 +146,7 @@ services:
   # Celery Worker — Async tasks: BRouter validation, notifications (Phase 7)
   celery_worker:
     build: ./backend
-    container_name: sport_celery_worker
+    container_name: 4velo_celery_worker
     restart: always
     command: celery -A core worker -Q critical,notifications -l info --concurrency=4
     environment:
@@ -169,7 +165,7 @@ services:
   # Celery Beat — periodic task scheduler
   celery_beat:
     build: ./backend
-    container_name: sport_celery_beat
+    container_name: 4velo_celery_beat
     restart: always
     command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:

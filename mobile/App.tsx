@@ -215,7 +215,7 @@ export default observer(function App() {
     return (
       <Column flex={1} style={{ backgroundColor: C.background, justifyContent: 'center' }} padding={24} gap={24}>
         <Column alignItems="center" style={{ marginBottom: 16 }}>
-          <PixelText size="2xl" color={C.primary} style={{ fontSize: 36, color: C.primary }}>SPORT</PixelText>
+          <PixelText size="2xl" color={C.primary} style={{ fontSize: 36, color: C.primary }}>4VELO</PixelText>
           <PixelText size="xs" color={C.secondary} style={{ marginTop: 8, color: C.secondary }}>
             {mode === 'login' ? 'MISSION LOGIN' : 'NEW PILOT REGISTRATION'}
           </PixelText>

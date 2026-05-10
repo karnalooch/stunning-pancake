@@ -40,8 +40,8 @@ function getStorage() {
       console.error('MMKV init failed in GpsSyncManager. Falling back to mock.', e);
       _storage = {
         getString: (key: string) => null,
-        set: (key: string, value: any) => {},
-        delete: (key: string) => {},
+        set: (key: string, value: any) => { },
+        delete: (key: string) => { },
       } as any;
       return _storage;
     }
@@ -120,7 +120,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     firebaseCapture(error, 'BACKGROUND_LOCATION_TASK_ERROR');
     return;
   }
-  
+
   const storage = getStorage();
   if (!storage) {
     // If MMKV is not ready yet (JSI issue), we wait 500ms and try once more
@@ -132,12 +132,12 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     const { locations } = data as { locations: Location.LocationObject[] };
     const safeStorage = getStorage()!;
     const state = JSON.parse(safeStorage.getString('tracking_state') || '{}');
-    
+
     if (!state.isTracking || !state.activityId) return;
 
     locations.forEach(loc => {
       const currentStats = JSON.parse(safeStorage.getString('current_stats') || '{"distanceM":0,"elevationGainM":0}');
-      
+
       let distanceIncrement = 0;
       if (state.lastCoord) {
         distanceIncrement = calculateDistance(state.lastCoord, [loc.coords.longitude, loc.coords.latitude]);
@@ -183,10 +183,10 @@ function calculateDistance(p1: [number, number], p2: [number, number]): number {
   const R = 6371e3;
   const dLat = (p2[1] - p1[1]) * Math.PI / 180;
   const dLon = (p2[0] - p1[0]) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(p1[1] * Math.PI / 180) * Math.cos(p2[1] * Math.PI / 180) *
-            Math.sin(dLon/2) * Math.sin(dLon/2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(p1[1] * Math.PI / 180) * Math.cos(p2[1] * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export class GpsSyncManager {
@@ -235,7 +235,7 @@ export class GpsSyncManager {
         lastAltitude: null,
         resolution
       }));
-      
+
       storage.set('current_stats', JSON.stringify({
         distanceM: 0,
         elevationGainM: 0,
@@ -248,7 +248,7 @@ export class GpsSyncManager {
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       ...config,
       foregroundService: {
-        notificationTitle: 'SPORT — Tracking Active',
+        notificationTitle: '4VELO — Tracking Active',
         notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
         notificationColor: '#00FFFF'
       }
@@ -271,7 +271,7 @@ export class GpsSyncManager {
     if (!state.isTracking) return;
 
     console.log(`[GPS] Tuning performance: Switching to ${resolution}`);
-    
+
     // Update stored state
     storage.set('tracking_state', JSON.stringify({ ...state, resolution }));
 
@@ -280,7 +280,7 @@ export class GpsSyncManager {
     await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
       ...config,
       foregroundService: {
-        notificationTitle: 'SPORT — Tracking Active',
+        notificationTitle: '4VELO — Tracking Active',
         notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
         notificationColor: '#00FFFF'
       }
@@ -290,7 +290,7 @@ export class GpsSyncManager {
   async stopTracking(): Promise<void> {
     if (this._batchTimer) clearInterval(this._batchTimer);
     if (this._statsCheckTimer) clearInterval(this._statsCheckTimer);
-    
+
     const remaining = loadBuffer();
     if (remaining.length > 0) await uploadBatch(remaining);
 

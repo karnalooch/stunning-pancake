@@ -35,7 +35,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <Card withBorder w={400} shadow="sm">
           <Stack gap="lg">
             <Stack gap={4} align="center">
-              <Text fw={800} size="xl">SPORT Platform</Text>
+              <Text fw={800} size="xl">4VELO Platform</Text>
               <Text size="sm" c="dimmed">Admin Panel</Text>
             </Stack>
 
@@ -43,7 +43,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               <Stack gap="md">
                 <TextInput
                   label="Email or Username"
-                  placeholder="admin@sport.com"
+                  placeholder="admin@4velo.app"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

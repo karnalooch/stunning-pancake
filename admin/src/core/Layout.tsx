@@ -24,7 +24,7 @@ export const Layout = () => {
     setGlobalErrorHandler((title, msg) => {
       notifications.show({ title, message: msg, color: 'red' });
     });
-    return () => setGlobalErrorHandler(() => {});
+    return () => setGlobalErrorHandler(() => { });
   }, []);
 
   const filteredNav = navItems.filter((item) => item.roles.includes(userRole));
@@ -47,7 +47,7 @@ export const Layout = () => {
               <Text fw={800} size="sm" c="white">S</Text>
             </Box>
             <Stack gap={0}>
-              <Text fw={700} size="sm">SPORT</Text>
+              <Text fw={700} size="sm">4VELO</Text>
               <Text size="xs" c="dimmed">Admin Panel</Text>
             </Stack>
           </Group>

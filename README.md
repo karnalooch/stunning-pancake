@@ -1,4 +1,4 @@
-# 🏆 SPORT — High-Performance Sports Platform (v0.2.0-rc.1)
+# 🏆 4VELO — High-Performance Sports Platform (v0.2.0-rc.1)
 
 A state-of-the-art, high-precision B2B/B2C sports ecosystem designed for city-wide competitions, corporate wellness, and elite telemetry analysis.
 

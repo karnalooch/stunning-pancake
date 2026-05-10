@@ -1,9 +1,9 @@
-# KONSTYTUCJA PROJEKTU (PROJECT CHARTER) — SPORT v0.1.0-beta.2
+# KONSTYTUCJA PROJEKTU (PROJECT CHARTER) — 4VELO v0.1.0-beta.2
 
 > "Kontrakt ze samym sobą: Suwerenność poprzez kod, wydajność poprzez dyscyplinę."
 
 ## 1. Uzasadnienie Biznesowe
-SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje problem niskiego zaangażowania w wyzwania miejskie i korporacyjne poprzez dostarczenie telemetrii czasu rzeczywistego, zaawansowanego systemu Anti-Cheat oraz immersyjnego interfejsu HD-2D.
+4VELO to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje problem niskiego zaangażowania w wyzwania miejskie i korporacyjne poprzez dostarczenie telemetrii czasu rzeczywistego, zaawansowanego systemu Anti-Cheat oraz immersyjnego interfejsu HD-2D.
 
 **Propozycja wartości:** 
 - Dla Miast/Korporacji: Gotowy ekosystem do aktywizacji mieszkańców/pracowników z pełnym brandingiem (White-Label).
@@ -40,7 +40,7 @@ SPORT to wysokowydajna platforma grywalizacji sportowej B2B/B2C. Rozwiązuje pro
 
 ## 6. Manifest Wizualny (SSOT: `docs/VISUAL_MANIFESTO.md`)
 
-Platforma SPORT odrzuca klasyczne UI na rzecz immersyjnej estetyki **HD-2D Gaming Fusion**, łączącej trzy style retro-gamingowe:
+Platforma 4VELO odrzuca klasyczne UI na rzecz immersyjnej estetyki **HD-2D Gaming Fusion**, łączącej trzy style retro-gamingowe:
 
 | Inspiracja | Co wnosimy |
 |---|---|

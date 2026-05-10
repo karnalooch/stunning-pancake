@@ -1,7 +1,6 @@
 import { api } from './api';
-import { octopathTheme } from '../theme/octopath';
-import { solarTheme } from '../theme/solar';
-import type { AppTheme } from '../theme/unistyles';
+import { stitchTheme } from '../theme/stitch';
+import type { StitchTheme } from '../theme/unistyles';
 
 export interface TenantBranding {
   name: string;
@@ -24,7 +23,7 @@ function applyOverrides(branding: TenantBranding): void {
     primary: branding.primary_color,
     secondary: branding.secondary_color,
   };
-  const themes: AppTheme[] = [octopathTheme, solarTheme];
+  const themes: StitchTheme[] = [stitchTheme];
   for (const theme of themes) {
     theme.branding = override;
   }
@@ -32,7 +31,7 @@ function applyOverrides(branding: TenantBranding): void {
 
 /** Remove branding overrides from both themes */
 function clearOverrides(): void {
-  const themes: AppTheme[] = [octopathTheme, solarTheme];
+  const themes: StitchTheme[] = [stitchTheme];
   for (const theme of themes) {
     delete theme.branding;
   }

@@ -5,8 +5,8 @@ services:
     image: postgis/postgis:15-3.3
     restart: always
     environment:
-      POSTGRES_DB: sport_db
-      POSTGRES_USER: sport_user
+      POSTGRES_DB: 4velo_db
+      POSTGRES_USER: 4velo_user
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -28,14 +28,14 @@ services:
       - db
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile.prod
     restart: always
     environment:
       DEBUG: 0
       SECRET_KEY: ${SECRET_KEY}
-      DATABASE_URL: postgres://sport_user:${DB_PASSWORD}@db:5432/sport_db
+      DATABASE_URL: postgres://4velo_user:${DB_PASSWORD}@db:5432/4velo_db
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - db

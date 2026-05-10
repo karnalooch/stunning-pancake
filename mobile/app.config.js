@@ -8,7 +8,7 @@ export default ({ config }) => {
 
   return {
     ...config,
-    "name": "mobile",
+    "name": "4VELO",
     "slug": "mobile",
     "version": "0.2.0-rc.1",
     "updates": {
@@ -72,7 +72,7 @@ export default ({ config }) => {
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow SPORT to use your location even in the background.",
+          "locationAlwaysAndWhenInUsePermission": "Allow 4VELO to use your location even in the background.",
           "isAndroidBackgroundLocationEnabled": true
         }
       ],

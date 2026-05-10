@@ -1,4 +1,18 @@
-# CHANGELOG — SPORT Platform
+# CHANGELOG — 4VELO Platform
+
+## v0.3.1-dev (2026-05-10) — Rebranding to 4VELO
+
+### Changed
+- **Rebranding**: Project renamed from "SPORT" to **4VELO** across the entire stack
+- **Branding**: Logo SVGs updated to display "4VELO"
+- **Mobile**: App display name changed to "4VELO" (visible on home screen), splash screen, login title, notification titles all updated
+- **Admin**: Product name changed to "4VELO Owner OS", all UI labels updated
+- **Backend**: API title, project name, email templates all updated
+- **Docker**: All container names prefixed with `4velo_` instead of `sport_`
+- **Documentation**: README, CHARTER, CHANGELOG header, HANDOVER, design docs updated
+
+### Fixed
+- **EAS Build**: Reverted Android package name to `com.sport.athlete` to maintain Firebase `google-services.json` compatibility
 
 ## v0.3.0-dev (2026-05-06) — STITCH Mobile Redesign Begins
 

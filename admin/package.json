@@ -79,8 +79,8 @@
     "wait-on": "^8.0.5"
   },
   "build": {
-    "appId": "com.sport.owner",
-    "productName": "SPORT Owner OS",
+    "appId": "com.fourvelo.owner",
+    "productName": "4VELO Owner OS",
     "directories": {
       "output": "dist-exe"
     },

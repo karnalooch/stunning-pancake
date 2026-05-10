@@ -20,7 +20,7 @@ interface SplashScreenProps {
 }
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({
-  message = "INITIALIZING SPORT CORE...",
+  message = "INITIALIZING 4VELO CORE...",
   subMessage = "NEO-RETRO ATHLETICISM V3.0"
 }) => {
   const logoScale = useSharedValue(0.9);

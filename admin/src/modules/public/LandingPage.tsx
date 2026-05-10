@@ -30,31 +30,31 @@ export const LandingPage = () => {
     <Box style={{ background: '#0a0a0a', minHeight: '100vh', overflowX: 'hidden' }}>
       {/* Hero Section */}
       <Box style={{ position: 'relative', paddingTop: '120px', paddingBottom: '100px' }}>
-        <Box 
-          style={{ 
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, 
+        <Box
+          style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
             background: 'radial-gradient(circle at 50% 50%, rgba(37, 99, 235, 0.15) 0%, transparent 50%)',
-            zIndex: 0 
-          }} 
+            zIndex: 0
+          }}
         />
-        
+
         <Container size="lg" style={{ position: 'relative', zIndex: 1 }}>
           <Stack align="center" gap="xl" ta="center">
 
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
               <Badge variant="dot" color="blue" size="lg" p="md">V2.0 NEXT-GEN UPDATE</Badge>
             </motion.div>
-            
+
             <Title order={1} style={{ fontSize: '72px', fontWeight: 900, letterSpacing: '-2px', color: 'white' }}>
               The <span className="text-gradient">Future</span> of Urban Fitness
             </Title>
-            
+
             <Text size="xl" c="dimmed" maw={700} style={{ fontSize: '20px' }}>
-              Multi-tenant ecosystem for cities and companies. 
-              Combat fraud with ML, reward athletes with local POIs, 
+              Multi-tenant ecosystem for cities and companies.
+              Combat fraud with ML, reward athletes with local POIs,
               and build a healthy community with zero technical overhead.
             </Text>
-            
+
             <Group gap="md">
               <Button size="xl" radius="md" color="blue" component={Link} to="/owner" rightSection={<Zap size={18} />}>
                 Launch Platform
@@ -70,19 +70,19 @@ export const LandingPage = () => {
       {/* Features Grid */}
       <Container size="lg" py={100}>
         <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xl">
-          <FeatureCard 
+          <FeatureCard
             icon={Building2}
             title="City White-Labeling"
             description="Remote asset injection for logos, splash screens, and colors. Your city, your brand, our engine."
             delay={0.1}
           />
-          <FeatureCard 
+          <FeatureCard
             icon={ShieldCheck}
             title="ML Anti-Cheat"
             description="3-Layer verification pipeline (Kinematics, BRouter & ML) ensuring 99.9% data integrity."
             delay={0.2}
           />
-          <FeatureCard 
+          <FeatureCard
             icon={Gift}
             title="Reward Engine"
             description="Connect local sponsors directly to athletes. Vouchers, POIs, and dynamic reward cycles."
@@ -118,8 +118,8 @@ export const LandingPage = () => {
       {/* Footer */}
       <Container size="lg" py="xl">
         <Group justify="space-between" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '40px' }}>
-          <Text fw={900} size="lg" className="text-gradient">SPORT.</Text>
-          <Text size="xs" c="dimmed">© 2026 SPORT Platform. Built with Python & TypeScript.</Text>
+          <Text fw={900} size="lg" className="text-gradient">4VELO.</Text>
+          <Text size="xs" c="dimmed">© 2026 4VELO Platform. Built with Python & TypeScript.</Text>
         </Group>
       </Container>
     </Box>

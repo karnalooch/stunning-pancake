@@ -166,7 +166,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'SPORT API - Global Platform',
+    'TITLE': '4VELO API - Global Platform',
     'DESCRIPTION': 'High-performance telemetry and competition engine for cities and corporations.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

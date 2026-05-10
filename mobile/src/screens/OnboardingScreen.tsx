@@ -86,7 +86,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
         <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>
           STG_01 // LVL_0{step + 1}
         </PixelText>
-        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>SPORT_OS v3.0</PixelText>
+        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>4VELO_OS v1.0</PixelText>
       </Row>
     </Column>
   );
@@ -99,7 +99,7 @@ const PermissionsStep = ({ onNext, C }: any) => {
       await Location.requestBackgroundPermissionsAsync();
       onNext();
     } else {
-      Alert.alert("Permission Required", "SPORT requires GPS to track your performance.");
+      Alert.alert("Permission Required", "4VELO requires GPS to track your performance.");
     }
   };
 
@@ -239,7 +239,7 @@ const IdentityStep = ({ user, onNext, C }: any) => (
 
       <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 0, borderWidth: 4, borderColor: C.primary }}>
         <QRCode
-          value={`sport_v1:pilot:${user?.id || 'unknown'}`}
+          value={`4velo_v1:pilot:${user?.id || 'unknown'}`}
           size={160}
           color={C.onBackground} backgroundColor="#FFFFFF" />
       </View>

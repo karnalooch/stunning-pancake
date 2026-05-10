@@ -1,7 +1,7 @@
 [project]
-name = "sport-backend"
+name = "4velo-backend"
 version = "2.0.0"
-description = "SPORT Platform — Django Backend"
+description = "4VELO Platform — Django Backend"
 requires-python = ">=3.11"
 
 [tool.ruff]
