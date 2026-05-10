@@ -1,8 +1,8 @@
 // STITCH Phase 1 — ActiveRideHUDScreen (refaktor TrackingScreen)
 // Solar White cards over map background per docs/mockups/02-active-ride-hud.html
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { useStyles } from 'react-native-unistyles';
+import { View, Text, Pressable } from "react-native";
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 import * as Haptics from "expo-haptics";
 const stylesheet = StyleSheet.create(theme => {

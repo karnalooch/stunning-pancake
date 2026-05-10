@@ -1,5 +1,15 @@
 # CHANGELOG — 4VELO Platform
 
+## v0.3.1-dev (2026-05-10) — Rebranding to 4VELO + Crash Fixes
+
+### Fixed
+- **Root cause of `Property 'C' doesn't exist` crash**: `CityHubScreen.tsx` and `ActivityDetailScreen.tsx` had `C.onBackground` at module-level (outside component) → TypeError during `loadModuleImplementation`
+- **StyleSheet imports**: All 13 screens — `StyleSheet` now imported from `react-native-unistyles` (supports `(theme) => {}` callback). React Native's `StyleSheet.create()` does not support callbacks.
+- **App.tsx**: `useStyles()` hook moved from `renderAuthUI()` (regular function) to component level — React hooks must be called at component top-level
+- **OnboardingScreen.tsx**: Removed unused `StyleSheet` import from `react-native`
+- **ThemeService.tsx**: All fallback values corrected from `'octopath'`/`'solar'` to `'stitch'` (the only registered theme)
+- **App.tsx ErrorBoundary**: Safe color extraction with try-catch and hardcoded fallback colors
+
 ## v0.3.1-dev (2026-05-10) — Rebranding to 4VELO
 
 ### Changed

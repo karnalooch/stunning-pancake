@@ -1,6 +1,6 @@
 // STITCH Phase 3 — ExploreMapScreen
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";

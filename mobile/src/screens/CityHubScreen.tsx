@@ -6,18 +6,19 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Image, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const shadow = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
-const shadowSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
-
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as any;
+    const shadow = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
+    const shadowSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
     return {
+    shadow,
+    shadowSm,
     container: { flex: 1, backgroundColor: C.background },
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -84,9 +85,13 @@ const LEADERBOARD = [
 export const CityHubScreen: React.FC<{
     user?: { username: string } | null;
     onStartQuest?: (id: string) => void;
-}> = ({ user, onStartQuest }) => (
+}> = ({ user, onStartQuest }) => {
+    const { styles: s, theme } = useStyles(stylesheet);
+    const C = theme.colors as any;
+
+    return (
     <SafeAreaView style={s.container} edges={['top']}>
-        <View style={[s.header, shadow]}>
+        <View style={[s.header, s.shadow]}>
             <View style={s.hdrLeft}>
                 <View style={s.avatar} />
                 <Text style={s.hdrTitle}>QUEST VELOS</Text>
@@ -97,7 +102,7 @@ export const CityHubScreen: React.FC<{
         </View>
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
             {/* City of the Week */}
-            <View style={[s.banner, shadow]}>
+            <View style={[s.banner, s.shadow]}>
                 <View style={s.bannerImg}>
                     <Image
                         source={{ uri: 'https://lh3.googleusercontent.com/aida/ADBb0uiczyRDBQ4c5mPx4rIVMa6HfRg2mYd1VMp-K5oYsFRboHNqhxn2GOln_t5Boubvn28vcEOm_z4QAY_k_psM7QD3CyUtctHYM6XOQzy8MP4uzFlZbA1WPK1NUAHgon9DQ1-q3X-lvSjpn_Qu6t7RvublIJB7QrHPzV4c4aXnzUbc73M0ZeS50sqOcQgK8xCPrYPOeEmneM9R39cDg2jTCpB7skzw2Cn30_TnPs_fWv5I4fqeMGvcGzAO3nM' }}
@@ -111,7 +116,7 @@ export const CityHubScreen: React.FC<{
             </View>
 
             {/* City Wars */}
-            <View style={[s.vsCard, shadow]}>
+            <View style={[s.vsCard, s.shadow]}>
                 <View style={s.vsHeader}>
                     <Text style={{ fontSize: 20 }}>⚔️</Text>
                     <Text style={s.vsTitle}>City Wars</Text>
@@ -135,13 +140,13 @@ export const CityHubScreen: React.FC<{
             </View>
 
             {/* Top Riders */}
-            <View style={[s.vsCard, shadow]}>
+            <View style={[s.vsCard, s.shadow]}>
                 <View style={s.vsHeader}>
                     <Text style={{ fontSize: 20 }}>🏆</Text>
                     <Text style={s.vsTitle}>Top Riders</Text>
                 </View>
                 {LEADERBOARD.map((r) => (
-                    <View key={r.rank} style={[s.lbRow, r.isYou && { backgroundColor: C.primaryContainer, transform: [{ translateY: -2 }] }, shadowSm]}>
+                    <View key={r.rank} style={[s.lbRow, r.isYou && { backgroundColor: C.primaryContainer, transform: [{ translateY: -2 }] }, s.shadowSm]}>
                         <Text style={[s.lbRank, { color: r.rank === 1 ? C.primary : C.secondary }]}>{r.rank}</Text>
                         <Text style={s.lbName}>{r.name}</Text>
                         <Text style={[s.lbScore, { color: r.isYou ? C.onBackground : C.onBackground }]}>{r.score}</Text>
@@ -150,7 +155,7 @@ export const CityHubScreen: React.FC<{
             </View>
 
             {/* Nearby Quests */}
-            <View style={[s.vsCard, shadow]}>
+            <View style={[s.vsCard, s.shadow]}>
                 <View style={s.vsHeader}>
                     <Text style={{ fontSize: 20 }}>🗺️</Text>
                     <Text style={s.vsTitle}>Nearby Quests</Text>
@@ -174,4 +179,5 @@ export const CityHubScreen: React.FC<{
             <View style={{ height: 80 }} />
         </ScrollView>
     </SafeAreaView>
-);
+    );
+};

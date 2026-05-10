@@ -7,18 +7,19 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
-const sh = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
-const shSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
-
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as any;
+    const sh = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
+    const shSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
     return {
+    sh,
+    shSm,
     container: { flex: 1, backgroundColor: C.background },
     header: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -99,9 +100,13 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     elevation = 850,
     avgSpeed = 24.2,
     onBack, onShare, onDownload,
-}) => (
+}) => {
+    const { styles: s, theme } = useStyles(stylesheet);
+    const C = theme.colors as any;
+
+    return (
     <SafeAreaView style={s.container} edges={['top']}>
-        <View style={[s.header, sh]}>
+        <View style={[s.header, s.sh]}>
             <Pressable onPress={onBack}>
                 <Text style={s.hdrBack}>←</Text>
             </Pressable>
@@ -110,7 +115,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
         </View>
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
             {/* Info Card */}
-            <View style={[s.infoCard, sh]}>
+            <View style={[s.infoCard, s.sh]}>
                 <View style={s.infoDate}>
                     <Text style={{ fontSize: 16 }}>📅</Text>
                     <Text style={s.infoDateText}>{date}</Text>
@@ -130,7 +135,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                     { label: 'Elevation', value: `+${elevation}`, unit: 'm' },
                     { label: 'Avg Speed', value: `${avgSpeed}`, unit: 'km/h' },
                 ].map((st, i) => (
-                    <View key={i} style={[s.statTile, shSm]}>
+                    <View key={i} style={[s.statTile, s.shSm]}>
                         <Text style={s.statLabel}>{st.label}</Text>
                         <Text style={s.statValue}>{st.value}<Text style={s.statUnit}> {st.unit}</Text></Text>
                     </View>
@@ -138,7 +143,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             </View>
 
             {/* Route Map */}
-            <View style={[s.mapSection, sh]}>
+            <View style={[s.mapSection, s.sh]}>
                 <View style={s.mapHeader}>
                     <Text style={s.mapHeaderText}>🗺️  Route</Text>
                 </View>
@@ -154,14 +159,14 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             <View>
                 <Text style={[s.statLabel, { marginBottom: 8, paddingLeft: 4, borderLeftWidth: 4, borderLeftColor: C.primary }]}>Achievements</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.achSection}>
-                    <View style={[s.achCard, shSm]}>
+                    <View style={[s.achCard, s.shSm]}>
                         <View style={[s.achIcon, { backgroundColor: C.goldAmber }]}>
                             <Text style={{ fontSize: 20 }}>🏆</Text>
                         </View>
                         <Text style={[s.achTitle, { color: C.secondary }]}>Segment KOM</Text>
                         <Text style={[s.achName, { color: C.onBackground }]}>Pine Climb</Text>
                     </View>
-                    <View style={[s.achCard, shSm]}>
+                    <View style={[s.achCard, s.shSm]}>
                         <View style={[s.achIcon, { backgroundColor: C.primaryFixed }]}>
                             <Text style={{ fontSize: 20 }}>⭐</Text>
                         </View>
@@ -172,7 +177,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             </View>
 
             {/* Performance Chart */}
-            <View style={[s.chartCard, sh]}>
+            <View style={[s.chartCard, s.sh]}>
                 <View style={s.chartHeader}>
                     <Text style={[s.statLabel, { color: C.onBackground }]}>Performance</Text>
                     <View style={s.chartLegend}>
@@ -196,13 +201,13 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             {/* Action Buttons */}
             <View style={s.actions}>
                 <Pressable
-                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.primary }, sh, pressed && { transform: [{ translateY: 2 }] }]}
+                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.primary }, s.sh, pressed && { transform: [{ translateY: 2 }] }]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { }); onShare?.(); }}
                 >
                     <Text style={[s.actionText, { color: C.onPrimary }]}>📤  SHARE RIDE</Text>
                 </Pressable>
                 <Pressable
-                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.surfaceContainerHighest }, sh, pressed && { transform: [{ translateY: 2 }] }]}
+                    style={({ pressed }) => [s.actionBtn, { backgroundColor: C.surfaceContainerHighest }, s.sh, pressed && { transform: [{ translateY: 2 }] }]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { }); onDownload?.(); }}
                 >
                     <Text style={[s.actionText, { color: C.onBackground }]}>⬇️  DOWNLOAD FIT</Text>
@@ -212,4 +217,5 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             <View style={{ height: 80 }} />
         </ScrollView>
     </SafeAreaView>
-);
+    );
+};

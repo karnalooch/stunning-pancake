@@ -1,8 +1,8 @@
 // STITCH Phase 1 — AthleteProfileScreen (refaktor ProfileScreen)
 import React from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 import * as Haptics from "expo-haptics";
 const stylesheet = StyleSheet.create(theme => {

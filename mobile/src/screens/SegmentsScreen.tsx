@@ -1,8 +1,8 @@
 // STITCH Phase 3 — SegmentsScreen
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 const stylesheet = StyleSheet.create(theme => {
     const c = theme.colors as any;

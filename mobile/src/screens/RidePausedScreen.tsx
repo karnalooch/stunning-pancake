@@ -1,7 +1,7 @@
 // STITCH Phase 2 — RidePausedScreen (modal overlay)
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import { useStyles } from 'react-native-unistyles';
+import { View, Text, Pressable } from "react-native";
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 const stylesheet = StyleSheet.create(theme => {
     const c = theme.colors as any;

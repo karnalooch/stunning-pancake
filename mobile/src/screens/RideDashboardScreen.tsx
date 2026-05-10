@@ -15,13 +15,12 @@ import {
     ScrollView,
     Pressable,
     Image,
-    StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 

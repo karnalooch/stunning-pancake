@@ -6,9 +6,9 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useStyles } from 'react-native-unistyles';
+import { StyleSheet, useStyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
@@ -80,7 +80,11 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
     elevation = 850,
     rank = 'S',
     onBackToHub,
-}) => (
+}) => {
+    const { styles: s, theme } = useStyles(stylesheet);
+    const C = theme.colors as any;
+
+    return (
     <SafeAreaView style={s.container} edges={['top']}>
         <View style={[s.header, s.shadow]}>
             <View style={{ width: 40 }} />
@@ -136,4 +140,5 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
             <View style={{ height: 80 }} />
         </ScrollView>
     </SafeAreaView>
-);
+    );
+};

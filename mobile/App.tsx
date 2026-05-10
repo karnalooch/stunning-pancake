@@ -90,6 +90,7 @@ export default observer(function App() {
   });
 
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
+  const { theme } = useStyles();
 
   const auth = useObservable({
     isAuthenticated: false,
@@ -213,10 +214,8 @@ export default observer(function App() {
     auth.password.set('');
   };
 
-  const renderAuthUI = () => {
+  const renderAuthUI = (C: Record<string, string>) => {
     const mode = auth.mode.get();
-    const { theme } = useStyles();
-    const C = theme.colors as any;
 
     return (
       <Column flex={1} style={{ backgroundColor: C.background, justifyContent: 'center' }} padding={24} gap={24}>
@@ -285,7 +284,7 @@ export default observer(function App() {
     const isOnboarded = auth.isOnboarded.get();
     const isStitch = ThemeService.themeMode.get() === 'stitch';
 
-    if (!isAuth) return renderAuthUI();
+    if (!isAuth) return renderAuthUI((theme.colors as any) as Record<string, string>);
     if (!isOnboarded) return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
 
     return (
