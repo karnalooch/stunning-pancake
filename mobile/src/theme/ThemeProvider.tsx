@@ -60,7 +60,7 @@ interface ThemeContextValue {
     themeMode: ThemeMode;
     /** Switch theme and persist */
     setThemeMode: (mode: ThemeMode) => void;
-    
+
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -86,24 +86,8 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
         () => initialTheme ?? getPersistedTheme(),
     );
 
-    // ── Bootstrap Unistyles (once) ────────────────────────────────
+    // ── Bootstrap Unistyles (configure called in index.ts at module level) ──
     useEffect(() => {
-        const persisted = getPersistedTheme();
-        const initial = initialTheme ?? persisted;
-
-        StyleSheet.configure({
-            settings: {
-                initialTheme: initial,
-            },
-            themes: {
-                stitch: stitchTheme as StitchTheme,
-            },
-            breakpoints: {
-                portrait: 0,
-                landscape: 576,
-            },
-        });
-
         // Sync branding overrides if available
         const branding = BrandingService.colors();
         if (branding) {
@@ -118,7 +102,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
         persistTheme(mode);
     };
 
-        // Keep UnistylesRuntime in sync on external changes
+    // Keep UnistylesRuntime in sync on external changes
     useEffect(() => {
         UnistylesRuntime.setTheme(themeMode);
     }, [themeMode]);
@@ -127,7 +111,7 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
         () => ({
             themeMode,
             setThemeMode,
-            }),
+        }),
         [themeMode],
     );
 
@@ -184,7 +168,7 @@ export function refreshBranding(): void {
         applyBrandingOverrides(branding);
     } else {
         const themes = [stitchTheme] as any[];
-    for (const theme of themes) {
+        for (const theme of themes) {
             delete theme.branding;
         }
     }
