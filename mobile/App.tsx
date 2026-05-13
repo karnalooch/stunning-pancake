@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Alert, Text } from 'react-native';
+import { View, Alert, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { observer, useObservable } from '@legendapp/state/react';
@@ -29,7 +29,7 @@ import { ArcadeButton } from './src/components/ArcadeButton';
 import { Column } from './src/components/Column';
 import { RetroInput } from './src/components/RetroInput';
 import { ThemeProvider } from './src/theme/ThemeProvider';
-import { useStyles, UnistylesRuntime } from 'react-native-unistyles';
+import { useUnistyles, UnistylesRuntime } from 'react-native-unistyles';
 
 let storage: any;
 const BYPASS_AUTH = false;
@@ -84,13 +84,20 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
-export default observer(function App() {
+// ─── AppContent — rendered INSIDE ThemeProvider so useStyles() is valid ──────
+//
+// IMPORTANT: `useStyles()` from react-native-unistyles MUST be called inside a
+// component that is a descendant of <ThemeProvider>. Previously it was called
+// directly inside App() before ThemeProvider was rendered, causing the crash:
+//   "no theme has been selected yet"
+//
+const AppContent = observer(function AppContent() {
   const [fontsLoaded] = useFonts({
     'Press Start 2P': PressStart2P_400Regular,
   });
 
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
-  const { theme } = useStyles();
+  const { theme } = useUnistyles(); // ✅ safe — we are inside ThemeProvider
 
   const auth = useObservable({
     isAuthenticated: false,
@@ -282,7 +289,6 @@ export default observer(function App() {
     const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
     const user = auth.user.get() || (BYPASS_AUTH ? { id: 'test-pilot', username: 'TestPilot_Auto' } : null);
     const isOnboarded = auth.isOnboarded.get();
-    const isStitch = ThemeService.themeMode.get() === 'stitch';
 
     if (!isAuth) return renderAuthUI((theme.colors as any) as Record<string, string>);
     if (!isOnboarded) return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
@@ -315,16 +321,26 @@ export default observer(function App() {
   };
 
   return (
+    <>
+      {isDownloading || !fontsLoaded ? (
+        <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
+      ) : auth.isLoading.get() ? (
+        <SplashScreen />
+      ) : (
+        renderContent()
+      )}
+    </>
+  );
+});
+
+// ─── App — Root component: sets up providers, then renders AppContent ─────────
+export default observer(function App() {
+  return (
     <ErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'stitch'}>
-          {isDownloading || !fontsLoaded ? (
-            <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
-          ) : auth.isLoading.get() ? (
-            <SplashScreen />
-          ) : (
-            renderContent()
-          )}
+          {/* AppContent lives inside ThemeProvider so useStyles() works correctly */}
+          <AppContent />
         </ThemeProvider>
       </SafeAreaProvider>
     </ErrorBoundary>

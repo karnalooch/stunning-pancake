@@ -9,7 +9,7 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useStyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
@@ -101,7 +101,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     avgSpeed = 24.2,
     onBack, onShare, onDownload,
 }) => {
-    const { styles: s, theme } = useStyles(stylesheet);
+    const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
 
     return (

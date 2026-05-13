@@ -2,7 +2,7 @@
 import React from "react";
 import { View, Text, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet, useStyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 
 const stylesheet = StyleSheet.create(theme => {
@@ -21,7 +21,7 @@ const stylesheet = StyleSheet.create(theme => {
 });
 
 export const TrainingLogScreen: React.FC = () => {
-    const { styles: s, theme } = useStyles(stylesheet);
+    const { theme } = useUnistyles(); const s = stylesheet;
     const c = theme.colors as any;
     const C = theme.colors as any;
     return (

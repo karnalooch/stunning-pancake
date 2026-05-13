@@ -8,7 +8,7 @@
 import React from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useStyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
@@ -81,7 +81,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
     rank = 'S',
     onBackToHub,
 }) => {
-    const { styles: s, theme } = useStyles(stylesheet);
+    const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
 
     return (

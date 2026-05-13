@@ -2,7 +2,7 @@
 // Solar White cards over map background per docs/mockups/02-active-ride-hud.html
 import React, { useState } from "react";
 import { View, Text, Pressable } from "react-native";
-import { StyleSheet, useStyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 import * as Haptics from "expo-haptics";
 const stylesheet = StyleSheet.create(theme => {
@@ -14,6 +14,6 @@ const stylesheet = StyleSheet.create(theme => {
     };
 });
 interface Props { user?: any; onPause?: () => void; onStop?: () => void }
-export const ActiveRideHUDScreen: React.FC<Props> = ({ user, onPause, onStop }) => { const { styles: s, theme } = useStyles(stylesheet);
+export const ActiveRideHUDScreen: React.FC<Props> = ({ user, onPause, onStop }) => { const { theme } = useUnistyles(); const s = stylesheet;
     const c = theme.colors as any;
     const C = theme.colors as any; return (<View style={s.ct}><View style={s.map}><Text style={{ fontSize: 14, color: c.secondary }}>MapLibre Live Map</Text></View><View style={s.overlay}><View style={{ paddingTop: 48 }}><View style={s.speedCard}><Text style={s.sl}>Current Speed</Text><Text style={s.sv}>32.8<Text style={s.su}> km/h</Text></Text></View><View style={s.row}><View style={s.mCard}><Text style={s.ml}>Distance</Text><Text style={s.mv}>18.5<Text style={s.mu}> km</Text></Text></View><View style={s.mCard}><Text style={s.ml}>HR</Text><Text style={[s.mv, { color: c.tertiary }]}>155<Text style={s.mu}> bpm</Text></Text></View><View style={s.mCard}><Text style={s.ml}>Time</Text><Text style={s.mv}>35:22</Text></View></View></View><Pressable style={({ pressed }) => [s.pauseBtn, pressed && { opacity: 0.8 }]} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { }); onPause?.(); }}><Text style={s.pauseT}>⏸ PAUSE RIDE</Text></Pressable></View></View>); };

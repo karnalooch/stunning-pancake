@@ -8,7 +8,7 @@
 import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useStyles } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 
@@ -24,7 +24,7 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
   descriptors,
   navigation,
 }) => {
-  const { theme } = useStyles();
+  const { theme } = useUnistyles();
     const c = theme.colors as any;
     const C = theme.colors as any;
   return (

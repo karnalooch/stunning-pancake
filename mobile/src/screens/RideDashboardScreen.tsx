@@ -20,7 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
-import { StyleSheet, useStyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 
@@ -269,7 +269,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     liveSpeed = 0,
     liveDistance = 0,
 }) => {
-    const { styles: s, theme } = useStyles(stylesheet);
+    const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
     const [pressed, setPressed] = useState(false);
 

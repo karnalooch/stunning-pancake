@@ -19,7 +19,7 @@ import { RetroInput } from '../components/RetroInput';
 import { ScrollContainer } from '../components/ScrollContainer';
 import { GameCard } from '../components/GameCard';
 import { ArcadeButton } from '../components/ArcadeButton';
-import { useStyles } from 'react-native-unistyles';
+import { useUnistyles } from 'react-native-unistyles';
 
 const { width, height } = Dimensions.get('window');
 
@@ -29,7 +29,7 @@ interface OnboardingProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
-  const { theme } = useStyles();
+  const { theme } = useUnistyles();
   const C = theme.colors as any;
 
   const [step, setStep] = useState(0);
