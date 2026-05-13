@@ -8,12 +8,17 @@ The SPORT platform needs to handle both high-frequency telemetry ingestion and c
 
 ## Decision
 We adopted the **"Power Couple" Strategy**:
-- **Python (Django/FastAPI)**: Used for the core backend, heavy data processing, AI model orchestration, and telemetry ingestion. Python was chosen for its mature data science ecosystem and rapid development speed for complex logic.
-- **TypeScript (React/React Native)**: Used for all frontend interfaces (Web Admin & Mobile App). TypeScript ensures type safety across the application layer and a high-quality UI/UX.
-- **Shared Schemas**: We use JSON-based contracts between the mobile app and backend to ensure consistency.
-- **Telemetry Proxy**: The mobile app communicates with a dedicated telemetry endpoint optimized for high-volume batch ingestion, separate from the main business API.
+
+### Core Pillars
+1. **Python Ecosystem (Backend)**: Django is our source of truth for user data and security. We leverage its ORM for complex relationships and its AI-readiness for orchestrating Gemini/GPT models.
+2. **TypeScript Ecosystem (Frontend)**: React Native (Mobile) and React (Admin) handle all user interactions.
+3. **LLM Proxying**: Mobile clients NEVER call OpenAI/Gemini APIs directly in production. All requests are routed through a Python proxy (`/api/llm/proxy/`). This allows us to:
+    - Rotate API keys without pushing app updates.
+    - Implement server-side content filtering.
+    - Inject secret system prompts that shouldn't be exposed in the mobile bundle.
+4. **Telemetry Segregation**: Telemetry data (GPS, HR) is pushed to a high-throughput FastAPI service optimized for TimescaleDB, preventing heavy ingest loads from slowing down the main Django business API.
 
 ## Consequences
-- **Positive**: Best-of-breed tools for each domain (Data vs UI).
-- **Positive**: Scalability. Ingestion can be scaled independently from the user-facing web server.
-- **Negative**: Overhead of maintaining two language stacks and ensuring API contract synchronization.
+- **Positive**: Enhanced Security. API keys are strictly server-side.
+- **Positive**: Data Integrity. Shared JSON schemas ensure that a "Ride" object looks identical in Python and TypeScript.
+- **Negative**: DevOps Overhead. Deploying both a Django monolith and a FastAPI telemetry stream requires robust container orchestration (Docker Compose / Kubernetes).

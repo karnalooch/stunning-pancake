@@ -8,11 +8,28 @@ The core value of the SPORT app is accurate ride/run tracking. This data must be
 
 ## Decision
 We migrated to **Expo Location + Expo Task Manager** for background tracking.
-- **Background Task**: A named task (`BACKGROUND_LOCATION_TASK`) handles incoming GPS coordinates.
-- **Buffering Strategy**: Coordinates are buffered in MMKV (`gps_buffer`) and uploaded in batches every 30 seconds to the telemetry endpoint to save battery.
-- **Dynamic Resolution**: We support multiple "Polling Resolutions" (HYPERSCALE, BALANCED, POWER_SAVE) to allow users to trade accuracy for battery life.
+
+### Data Flow Architecture
+```mermaid
+graph TD
+    A[GPS Satellite] --> B[Expo Location]
+    B --> C[Background Task Handler]
+    C --> D[MMKV gps_buffer]
+    D --> E[Batch Ingestor - 30s timer]
+    E --> F[Telemetry API /batch]
+    F --> G[PostgreSQL / TimescaleDB]
+```
+
+### Key Mechanisms
+1. **Background Task**: A named task (`BACKGROUND_LOCATION_TASK`) is registered via `TaskManager.defineTask`. It remains active even if the main UI thread is suspended.
+2. **Buffering Strategy**: Coordinates are appended to a JSON array in MMKV. This avoids holding large objects in memory.
+3. **Dynamic Resolution**: 
+    - **HYPERSCALE**: 2m / 1s interval (Race mode).
+    - **BALANCED**: 10m / 5s interval (Standard ride).
+    - **POWER_SAVE**: 30m / 15s interval (Ultra-endurance).
+4. **Foreground Service**: On Android, we maintain a persistent notification via `foregroundService` configuration to prevent the OS from killing the location task during long activities.
 
 ## Consequences
-- **Positive**: Reduced app bundle size and less complex native dependency management.
-- **Positive**: Full control over the ingestion pipeline and batching logic.
-- **Requirement**: Users must grant "Always Allow" location permissions for the background task to function reliably.
+- **Positive**: Full control over the ingestion pipeline. We can tune precision vs battery consumption on-the-fly.
+- **Positive**: Resilience. The batching logic handles intermittent 5G/LTE connectivity loss by persisting the buffer until a successful HTTP 201 is received.
+- **Requirement**: Users must be educated on granting "Always Allow" location permissions, as "While Using App" will kill the session shortly after locking the screen.

@@ -8,11 +8,20 @@ The project aims for a unique "STITCH" aesthetic: a blend of high-end Solar Whit
 
 ## Decision
 We utilize **React Native Unistyles** as our theme engine.
-- **Design Tokens**: All colors and spacing are centralized in `src/theme/stitch.ts`.
-- **Hybrid Components**: We build custom components like `ArcadeButton` and `PixelText` that consume the theme tokens but apply unique retro styling logic (e.g., hard shadows, pixel-perfect borders).
-- **HUD Specifics**: A dedicated sub-palette (`hudBackground`, `hudMetric`) is defined for the active tracking screens to ensure high contrast and readability under direct sunlight.
+
+### Design Principles
+- **The "Stitch" Palette**: A base of Solar White (`#f8faf0`) with Forest Green (`#3b6a24`) as the primary action color. 
+- **Typography**: 
+    - **Space Grotesk**: Used for all UI elements, labels, and titles to provide a modern, high-performance look.
+    - **VT323 (Pixel Font)**: Used strictly for real-time metrics on the HUD to reinforce the retro/arcade game aesthetic.
+- **HUD Specifics**: A dedicated high-contrast sub-palette (`hudBackground`, `hudMetric`) is used during active tracking. Backgrounds shift to deep greens/blacks (`#0d1b0f`) to maximize readability in outdoor conditions.
+
+### Pixel-Perfect Components
+Components like `ArcadeButton` implement a "Pixel Border" logic:
+- Double border approach: Inner border for the 3D effect, outer border for the arcade feel.
+- Hard shadows: We avoid Gaussian blurs in favor of offset solid color blocks (`#191d17`) to maintain the "Stitch" character.
 
 ## Consequences
 - **Positive**: Unique brand identity that stands out from generic fitness apps.
-- **Positive**: High performace styling engine with support for dynamic theme switching (future dark mode).
-- **Constraint**: Custom retro components require more manual styling effort compared to using a standard library like NativePaper.
+- **Positive**: High performace styling engine with support for dynamic theme switching.
+- **Constraint**: The "Pixel" aesthetic requires careful testing on high-DPI screens to ensure lines don't look blurry (solved by using pixel-ratio-aware Unistyles scaling).

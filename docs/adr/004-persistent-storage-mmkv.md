@@ -8,11 +8,30 @@ A sports application requires high-performance, synchronous access to local data
 
 ## Decision
 We use **MMKV** (`react-native-mmkv`) as our primary key-value storage engine.
-- **Synchronous API**: Allows instant reads/writes during high-frequency telemetry events.
-- **Multi-Instance**: Separate instances are used for different domains (e.g., `theme_mode`, `gps-buffer`).
-- **Dev Fallback**: Since MMKV relies on JSI (JavaScript Interface), it fails in remote debugger environments (like Chrome Debugger). We implement a "Lazy MMKV" pattern with a mock object fallback in services to prevent crashes during development.
+
+### Implementation: The "Lazy Storage" Pattern
+To avoid "JSI Runtime not ready" crashes—particularly during the Android background task initialization or when the app is launched via a deep link—we implement a lazy accessor pattern in all services.
+
+```typescript
+let _storage: MMKV | null = null;
+function getStorage() {
+  if (!_storage) {
+    try {
+      _storage = new MMKV({ id: 'app-buffer' });
+    } catch (e) {
+      // Fallback for Remote Debugging (non-JSI environment)
+      return { set: () => {}, getString: () => null, ...mockStorage };
+    }
+  }
+  return _storage;
+}
+```
+
+### Strategic Usage
+- **Telemetry Buffering**: GpsSyncManager appends points to a `gps_buffer` string in MMKV. This ensures no data is lost if the app process is killed between network batches.
+- **Background Safety**: By using MMKV in `expo-task-manager` callbacks, we achieve thread-safe persistence that is significantly more reliable than `AsyncStorage` or `SQLite` in low-memory background states.
 
 ## Consequences
 - **Positive**: Blazing fast data persistence (~30x faster than AsyncStorage).
-- **Positive**: Reliability in background tasks (Expo Task Manager) where asynchronous bridges can be unstable.
-- **Negative**: Requires careful handling of the "Runtime not ready" error during the app's initialization phase (solved by lazy initialization in `getStorage()` helpers).
+- **Positive**: Reliability in background tasks (Expo Task Manager).
+- **Negative**: Development Friction. Since MMKV is a C++ JSI module, it cannot be used with the "Remote Debugger" (Chrome). Developers must use "Flipper" or "React Native Debugger" with New Architecture / JSI support enabled, or rely on console logs from the device.
