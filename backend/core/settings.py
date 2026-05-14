@@ -73,6 +73,7 @@ INSTALLED_APPS = [
     'clubs',
     'rewards',
     'core',
+    'django_celery_beat',
 ]
 
 SITE_ID = 1
