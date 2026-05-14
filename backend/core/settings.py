@@ -199,6 +199,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:8081',
     'https://sport-admin.vercel.app',
     'https://sport-platform.com',
+    'https://admin-production-083b.up.railway.app',
 ]
 CORS_ALLOW_CREDENTIALS = True
 
