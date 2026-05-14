@@ -39,6 +39,8 @@ if not DEBUG and SECRET_KEY == _DEFAULT_UNSAFE:
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Security hardening — HTTPS enforcement (disabled in DEBUG for local dev)
+# Railway terminates HTTPS at the load balancer — check X-Forwarded-Proto
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = not DEBUG
 SECURE_HSTS_SECONDS = 604800 if not DEBUG else 0  # 1 week (ramp up to 1 year after confirming stable HTTPS)
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
