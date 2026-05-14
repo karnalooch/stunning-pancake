@@ -39,8 +39,8 @@ OAUTH_STATE_TTL = int(os.getenv('OAUTH_STATE_TTL', '600'))
 def _store_oauth_state(user_id):
     """Store a one-time nonce → user_id mapping in Redis for OAuth CSRF protection.
 
-    Returns the nonce to be used as the 'state' parameter, or falls back to
-    returning the raw user_id if Redis is unavailable (with a warning log).
+    Returns the nonce to be used as the 'state' parameter.
+    Raises RuntimeError if Redis is unavailable — we fail closed for security.
     """
     nonce = secrets.token_urlsafe(32)
     try:
@@ -48,11 +48,8 @@ def _store_oauth_state(user_id):
         r.setex(f"oauth:state:{nonce}", OAUTH_STATE_TTL, str(user_id))
         return nonce
     except Exception:
-        logger.warning(
-            "Redis unavailable for OAuth state storage — falling back to raw user_id. "
-            "This weakens CSRF protection."
-        )
-        return str(user_id)
+        logger.error("Redis unavailable for OAuth state storage — cannot generate secure nonce.")
+        raise RuntimeError("OAuth state storage unavailable. Retry later.")
 
 
 def _resolve_oauth_state(nonce):
@@ -130,7 +127,8 @@ class StravaService:
         if response.status_code == 200:
             data = response.json()
             integration.access_token = data['access_token']
-            integration.refresh_token = data.get('refresh_token', integration.decrypted_refresh_token)
+            if 'refresh_token' in data:
+                integration.refresh_token = data['refresh_token']
             integration.expires_at = timezone.now() + timedelta(seconds=data['expires_in'])
             integration.save()
             return integration.decrypted_access_token
@@ -284,8 +282,10 @@ class GarminService:
 
         if response.status_code == 200:
             data = response.json()
-            integration.access_token = data.get('access_token', integration.decrypted_access_token)
-            integration.refresh_token = data.get('refresh_token', integration.decrypted_refresh_token)
+            if 'access_token' in data:
+                integration.access_token = data['access_token']
+            if 'refresh_token' in data:
+                integration.refresh_token = data['refresh_token']
             integration.expires_at = timezone.now() + timedelta(seconds=data.get('expires_in', 3600))
             integration.save()
             return integration.decrypted_access_token

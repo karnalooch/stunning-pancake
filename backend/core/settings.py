@@ -10,6 +10,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsafe-key-for-dev')
 DEBUG = os.getenv('DEBUG', '0') == '1'
+if not DEBUG and SECRET_KEY == 'default-unsafe-key-for-dev':
+    raise RuntimeError(
+        "SECRET_KEY must be set in production. "
+        "Set the SECRET_KEY environment variable."
+    )
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Security hardening — HTTPS enforcement (disabled in DEBUG for local dev)
@@ -18,7 +23,6 @@ SECURE_HSTS_SECONDS = 604800 if not DEBUG else 0  # 1 week (ramp up to 1 year af
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 X_FRAME_OPTIONS = 'DENY'

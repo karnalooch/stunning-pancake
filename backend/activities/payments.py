@@ -45,6 +45,9 @@ class PaymentService:
         Handles Stripe webhooks (e.g., subscription created, payment failed).
         """
         endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
+        if not endpoint_secret:
+            logger.error("STRIPE_WEBHOOK_SECRET not configured — rejecting webhook")
+            return False
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
         except stripe.error.SignatureVerificationError as e:

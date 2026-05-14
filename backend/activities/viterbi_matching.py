@@ -125,12 +125,18 @@ def _generate_candidates(
             ))
     # If nothing within radius, return the single nearest candidate
     if not candidates:
-        nearest = min(road_points, key=lambda rp: haversine_m(obs.lat, obs.lon, rp.lat, rp.lon))
-        idx = road_points.index(nearest)
+        best_idx = 0
+        best_dist = float('inf')
+        for idx, rp in enumerate(road_points):
+            d = haversine_m(obs.lat, obs.lon, rp.lat, rp.lon)
+            if d < best_dist:
+                best_idx = idx
+                best_dist = d
+        nearest = road_points[best_idx]
         candidates.append(RoadCandidate(
             lat=nearest.lat, lon=nearest.lon,
-            road_idx=idx,
-            dist_to_obs=haversine_m(obs.lat, obs.lon, nearest.lat, nearest.lon),
+            road_idx=best_idx,
+            dist_to_obs=best_dist,
         ))
     return sorted(candidates, key=lambda c: c.dist_to_obs)
 

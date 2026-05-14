@@ -28,6 +28,7 @@ Pipeline (Milestone 2+):
 """
 import math
 import logging
+import os
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -210,8 +211,6 @@ def total_distance_m(points: list[GpsPoint]) -> float:
 #   WHEELCHAIR: World record 100m = ~8 m/s sprint; marathon ~7 m/s
 # ---------------------------------------------------------------------------
 
-import os
-
 VMAX_MS: dict[str, float] = {
     "RUN":         12.0,   # m/s — ~43 km/h, sprint burst
     "BIKE":        25.0,   # m/s — ~90 km/h
@@ -287,6 +286,7 @@ def fast_rejection_gate(
     for i in range(1, len(points)):
         dt = points[i].timestamp - points[i - 1].timestamp
         if dt <= 0:
+            prev_speed = None  # Reset to avoid stale acceleration calc
             continue
 
         dist = haversine_m(

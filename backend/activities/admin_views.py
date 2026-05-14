@@ -88,24 +88,28 @@ class AdminDashboardStatsView(APIView):
         total_verified = Activity.objects.filter(is_verified=True).count()
         verified_pct = round((total_verified / total_activities * 100), 1) if total_activities > 0 else 0.0
 
-        per_tenant_stats = []
-        for tenant in Tenant.objects.filter(is_active=True):
-            tenant_users = User.objects.filter(tenant=tenant).count()
-            tenant_activities = Activity.objects.filter(tenant=tenant)
-            tenant_act_count = tenant_activities.count()
-            tenant_distance = tenant_activities.aggregate(Sum('distance'))['distance__sum'] or 0
-            tenant_verified = tenant_activities.filter(is_verified=True).count()
-            tenant_verification_rate = round((tenant_verified / tenant_act_count * 100), 1) if tenant_act_count > 0 else 0.0
+        tenant_qs = Tenant.objects.filter(is_active=True).annotate(
+            user_count=Count('users'),
+            activity_count=Count('activities'),
+            total_distance=Sum('activities__distance'),
+            verified_count=Count('activities', filter=Q(activities__is_verified=True)),
+        )
 
+        per_tenant_stats = []
+        for t in tenant_qs:
+            act_count = t.activity_count or 0
+            dist = t.total_distance or 0
+            verified = t.verified_count or 0
+            ver_rate = round((verified / act_count * 100), 1) if act_count > 0 else 0.0
             per_tenant_stats.append({
-                "tenant_id": str(tenant.id),
-                "tenant_name": tenant.name,
-                "users": tenant_users,
-                "activities": tenant_act_count,
-                "distance_km": round(float(tenant_distance / 1000.0), 1),
-                "verified_pct": tenant_verification_rate,
-                "primary_color": tenant.primary_color,
-                "secondary_color": tenant.secondary_color,
+                "tenant_id": str(t.id),
+                "tenant_name": t.name,
+                "users": t.user_count,
+                "activities": act_count,
+                "distance_km": round(float(dist / 1000.0), 1),
+                "verified_pct": ver_rate,
+                "primary_color": t.primary_color,
+                "secondary_color": t.secondary_color,
             })
 
         return Response({

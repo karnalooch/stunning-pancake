@@ -8,10 +8,14 @@ class TenantRLSMiddleware:
     session variable 'sport.current_tenant_id' so that Row-Level Security (RLS)
     policies can enforce data isolation at the database level.
     """
+    SKIP_PATHS = ('/static/', '/media/', '/health/', '/favicon.ico', '/docs/', '/schema/')
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
+        if any(request.path.startswith(p) for p in self.SKIP_PATHS):
+            return self.get_response(request)
         if request.user.is_authenticated and hasattr(request.user, 'tenant_id') and request.user.tenant_id:
             # Set the Postgres session variable for RLS
             with connection.cursor() as cursor:

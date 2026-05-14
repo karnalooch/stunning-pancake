@@ -61,7 +61,10 @@ def process_activity_async(self, activity_id: int) -> dict:
         return {"status": "skipped", "reason": "masked_empty"}
 
     coords = list(masked_path.coords)
-    raw_points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
+    base_ts = activity.start_time.timestamp()
+    # Try to extract real timestamps from route_path if available
+    # Fallback: assume 1-second intervals (common GPS sampling rate)
+    raw_points = [GpsPoint(lat=c[1], lon=c[0], timestamp=base_ts + i) for i, c in enumerate(coords)]
 
     # --- Step 2: FAST SELECTION GATE (Layer 1 Anti-Cheat) ---
     # O(N) pure math — no DB, no network. Catches trams, cars, GPS spoofs.

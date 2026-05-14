@@ -161,6 +161,7 @@ def analytics_summary_view(request: Request) -> Response:
     """
     from datetime import date, timedelta
     from django.db.models import Sum
+    from django.db.models.functions import TruncWeek, TruncDay
     from activities.models import Activity
     from activities.analytics import trend_analysis, predict_race_time, training_load
 
@@ -168,30 +169,34 @@ def analytics_summary_view(request: Request) -> Response:
     today = date.today()
 
     # Build weekly loads for last 12 weeks
+    weekly_qs = Activity.objects.filter(
+        user=user, is_verified=True,
+        start_time__date__gte=today - timedelta(weeks=12),
+    ).annotate(week=TruncWeek('start_time')).values('week').annotate(
+        km=Sum('distance')
+    ).order_by('week')
+
+    weekly_loads_map = {row['week'].date(): (row['km'] or 0) / 1000.0 for row in weekly_qs}
     weekly_loads = []
     for week_offset in range(11, -1, -1):
-        week_start = today - timedelta(weeks=week_offset + 1)
-        week_end = today - timedelta(weeks=week_offset)
-        km_sum = Activity.objects.filter(
-            user=user,
-            is_verified=True,
-            start_time__date__gte=week_start,
-            start_time__date__lt=week_end,
-        ).aggregate(total=Sum("distance"))["total"] or 0
-        weekly_loads.append({"week_start": week_start.isoformat(), "km": km_sum / 1000.0})
+        week_start = (today - timedelta(weeks=week_offset + 1))
+        weekly_loads.append({"week_start": week_start.isoformat(), "km": weekly_loads_map.get(week_start, 0.0)})
 
     trend = trend_analysis(weekly_loads)
 
     # Build daily km for last 28 days (for ACWR)
+    daily_qs = Activity.objects.filter(
+        user=user, is_verified=True,
+        start_time__date__gte=today - timedelta(days=28),
+    ).annotate(day=TruncDay('start_time')).values('day').annotate(
+        km=Sum('distance')
+    ).order_by('day')
+
+    daily_km_map = {row['day'].date(): (row['km'] or 0) / 1000.0 for row in daily_qs}
     daily_km: dict[date, float] = {}
     for i in range(28):
         day = today - timedelta(days=i)
-        km = Activity.objects.filter(
-            user=user,
-            is_verified=True,
-            start_time__date=day,
-        ).aggregate(total=Sum("distance"))["total"] or 0
-        daily_km[day] = km / 1000.0
+        daily_km[day] = daily_km_map.get(day, 0.0)
 
     acwr = training_load(daily_km)
 
