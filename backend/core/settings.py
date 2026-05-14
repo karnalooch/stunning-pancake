@@ -245,7 +245,7 @@ CELERY_TASK_QUEUE_MAX_PRIORITY = 10
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
-    # ML model retraining — every Monday at 03:00 Warsaw (lowest load window)
+    # ML model retraining — every Monday at 03:00 Warsaw
     'ml-model-retrain-weekly': {
         'task': 'activities.tasks.retrain_ml_model',
         'schedule': crontab(hour=3, minute=0, day_of_week=1),
@@ -255,6 +255,25 @@ CELERY_BEAT_SCHEDULE = {
     'refresh-city-rankings-mv': {
         'task': 'activities.tasks.refresh_city_rankings_mv',
         'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'default'},
+    },
+    # Weekly leaderboard digest — every Monday at 09:00
+    'weekly-leaderboard-digest': {
+        'task': 'activities.tasks.send_leaderboard_digest',
+        'schedule': crontab(hour=9, minute=0, day_of_week=1),
+        'args': ('global', 10),
+        'options': {'queue': 'notifications'},
+    },
+    # City leaderboard recalculate — every 15 minutes
+    'city-leaderboard-recalculate': {
+        'task': 'activities.tasks.recalculate_city_leaderboard',
+        'schedule': crontab(minute='*/15'),
+        'options': {'queue': 'default'},
+    },
+    # Daily event cleanup — every day at 02:00
+    'daily-event-cleanup': {
+        'task': 'events.tasks.close_expired_events',
+        'schedule': crontab(hour=2, minute=0),
         'options': {'queue': 'default'},
     },
 }
