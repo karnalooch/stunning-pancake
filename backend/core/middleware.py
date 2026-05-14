@@ -1,6 +1,7 @@
 import json
 from django.db import connection
 from users.models import AuditLog
+from users.rbac_models import UserRole
 
 class TenantRLSMiddleware:
     """
@@ -29,8 +30,19 @@ class TenantRLSMiddleware:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT set_config('app.tenant_id', '', false);")
 
+        # Set RBAC context
+        self._set_rbac_context(request)
+
         response = self.get_response(request)
         return response
+
+    def _set_rbac_context(self, request):
+        """Set RBAC permissions in request for use in views."""
+        if request.user.is_authenticated and hasattr(request.user, 'get_permissions'):
+            tenant_id = getattr(request.user, 'tenant_id', None)
+            request.user_permissions = request.user.get_permissions(tenant_id)
+        else:
+            request.user_permissions = set()
 
 
 class ImpersonationAuditMiddleware:

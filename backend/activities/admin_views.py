@@ -9,21 +9,10 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Activity
 from .serializers import ActivitySerializer
 from users.models import Tenant
+from users.permissions import IsAdminOrModerator
 
-
-class IsAdminRole(permissions.BasePermission):
-    """
-    Allows access only to Global Owners, Tenant Admins, or Tenant Moderators.
-    Matches the actual User.Role choices defined in users/models.py.
-    """
-    ALLOWED_ROLES = ('GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR')
-
-    def has_permission(self, request, view):
-        return (
-            request.user and
-            request.user.is_authenticated and
-            getattr(request.user, 'role', None) in self.ALLOWED_ROLES
-        )
+# Keep IsAdminRole as an alias for backward compatibility
+IsAdminRole = IsAdminOrModerator
 
 
 class ActivityPagination(PageNumberPagination):
