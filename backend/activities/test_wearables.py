@@ -123,8 +123,7 @@ class TestStravaService:
             assert strava_integration.is_active is False
 
     def test_sync_activities_imports_runs(self, user, strava_integration):
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"):
-            with patch("requests.get") as mock_get:
+        with patch.object(StravaService, "refresh_token", return_value="valid_token"), patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
                     {
@@ -153,20 +152,19 @@ class TestStravaService:
             start_time="2026-05-01T10:00:00+00:00", distance=8500,
             is_verified=True, verification_score=1.0,
         )
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"):
-            with patch("requests.get") as mock_get:
-                mock_get.return_value.status_code = 200
-                mock_get.return_value.json.return_value = [
-                    {
-                        "type": "Run",
-                        "start_date": "2026-05-01T10:00:00Z",
-                        "distance": 8500,
-                        "moving_time": 2400,
-                        "elapsed_time": 2500,
-                    },
-                ]
-                count = StravaService.sync_activities(strava_integration)
-                assert count == 0  # duplicate skipped
+        with patch.object(StravaService, "refresh_token", return_value="valid_token"), patch("requests.get") as mock_get:
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = [
+                {
+                    "type": "Run",
+                    "start_date": "2026-05-01T10:00:00Z",
+                    "distance": 8500,
+                    "moving_time": 2400,
+                    "elapsed_time": 2500,
+                },
+            ]
+            count = StravaService.sync_activities(strava_integration)
+            assert count == 0  # duplicate skipped
 
 
 # ---------------------------------------------------------------------------
@@ -183,12 +181,11 @@ class TestGarminService:
             assert "state=7" in url
 
     def test_exchange_code_mock_fallback(self, user):
-        with patch("activities.wearables.GARMIN_CLIENT_ID", "mock"):
-            with patch("activities.wearables.GARMIN_CLIENT_SECRET", "mock"):
-                integration = GarminService.exchange_code(user, "code")
-                assert integration is not None
-                assert integration.access_token == "mock_garmin_token"
-                assert integration.is_active is True
+        with patch("activities.wearables.GARMIN_CLIENT_ID", "mock"), patch("activities.wearables.GARMIN_CLIENT_SECRET", "mock"):
+            integration = GarminService.exchange_code(user, "code")
+            assert integration is not None
+            assert integration.access_token == "mock_garmin_token"
+            assert integration.is_active is True
 
     def test_get_status_connected(self, user, garmin_integration):
         status = GarminService.get_status(user)
@@ -204,30 +201,32 @@ class TestGarminService:
             assert count == 0  # mock mode, no actual API call
 
     def test_sync_activities_maps_types_correctly(self, user, garmin_integration):
-        with patch.object(GarminService, "refresh_token", return_value="valid"):
-            with patch("requests.get") as mock_get:
-                mock_get.return_value.status_code = 200
-                mock_get.return_value.json.return_value = [
-                    {
-                        "activityType": {"typeKey": "running"},
-                        "startTimeInSeconds": 1714000000000,
-                        "distance": 500000,  # cm? will be *100 = 5000m
-                        "duration": 1800,
-                    },
-                    {
-                        "activityType": {"typeKey": "road_biking"},
-                        "startTimeInSeconds": 1714002000000,
-                        "distance": 1500000,
-                        "duration": 2700,
-                    },
-                ]
-                # We need GARMIN_CLIENT_ID to be set for the real API to be called
-                with patch("activities.wearables.GARMIN_CLIENT_ID", "real_client"):
-                    with patch("activities.wearables.GARMIN_CLIENT_SECRET", "real_secret"):
-                        count = GarminService.sync_activities(garmin_integration)
-                        assert count == 2
-                        assert Activity.objects.filter(user=user, type="RUN").exists()
-                        assert Activity.objects.filter(user=user, type="BIKE").exists()
+        with (
+            patch.object(GarminService, "refresh_token", return_value="valid"),
+            patch("requests.get") as mock_get,
+            patch("activities.wearables.GARMIN_CLIENT_ID", "real_client"),
+            patch("activities.wearables.GARMIN_CLIENT_SECRET", "real_secret"),
+        ):
+            mock_get.return_value.status_code = 200
+            mock_get.return_value.json.return_value = [
+                {
+                    "activityType": {"typeKey": "running"},
+                    "startTimeInSeconds": 1714000000000,
+                    "distance": 500000,  # cm? will be *100 = 5000m
+                    "duration": 1800,
+                },
+                {
+                    "activityType": {"typeKey": "road_biking"},
+                    "startTimeInSeconds": 1714002000000,
+                    "distance": 1500000,
+                    "duration": 2700,
+                },
+            ]
+            # We need GARMIN_CLIENT_ID to be set for the real API to be called
+            count = GarminService.sync_activities(garmin_integration)
+            assert count == 2
+            assert Activity.objects.filter(user=user, type="RUN").exists()
+            assert Activity.objects.filter(user=user, type="BIKE").exists()
 
     def test_map_activity_type(self):
         assert GarminService._map_activity_type("running") == "RUN"

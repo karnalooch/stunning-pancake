@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.api_response import error, success
 from core.email_service import EmailService
 
-from .models import AuditLog, Tenant, User
+from .models import AuditLog, Role, Tenant, User
 from .permissions import IsGlobalOwner
 from .serializers import (
     AuditLogSerializer,

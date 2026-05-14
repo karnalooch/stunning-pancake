@@ -11,6 +11,10 @@ Handles:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rewards.models import Voucher
 
 from django.db import transaction
 from django.utils import timezone

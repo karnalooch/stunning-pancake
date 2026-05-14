@@ -7,6 +7,11 @@ requires-python = ">=3.11"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+exclude = [
+    "*/migrations/*.py",  # auto-generated Django migrations
+]
+
+[tool.ruff.lint]
 select = [
     "E",    # pycodestyle errors
     "W",    # pycodestyle warnings
@@ -23,7 +28,16 @@ ignore = [
     "B008",  # do not perform function calls in default arguments (Django signals pattern)
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.per-file-ignores]
+# Standalone scripts that must call django.setup() before model imports
+"apply_rls.py" = ["E402"]
+"run_tests.py" = ["E402"]
+"seed_data.py" = ["E402"]
+"test_rls.py" = ["E402"]
+# Django settings with conditional/deferred imports
+"core/settings.py" = ["E402"]
+
+[tool.ruff.lint.isort]
 known-first-party = ["activities", "clubs", "core", "events", "users"]
 combine-as-imports = true
 

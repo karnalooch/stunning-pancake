@@ -131,7 +131,8 @@ def process_activity_async(self, activity_id: int) -> dict:
                 f"🚨 [LIGHTWEIGHT] Rejected #{activity_id} ({activity.type}) by {activity.user.username}. "
                 f"Reason: {analysis['reason']}"
             )
-        except Exception: pass
+        except Exception:
+            pass
 
         return {
             "status": "rejected_early",
@@ -200,7 +201,8 @@ def process_activity_async(self, activity_id: int) -> dict:
                 user=activity.user, km=activity.distance / 1000.0,
                 tenant_id=activity.user.tenant_id
             )
-        except Exception: pass
+        except Exception:
+            pass
 
         # Milestone 4: Award points for verified activity
         try:

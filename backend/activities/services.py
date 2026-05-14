@@ -3,6 +3,8 @@ import os
 import requests
 from django.contrib.gis.geos import LineString, Point
 
+from .models import PrivacyZone
+
 
 class BRouterService:
     """
@@ -51,7 +53,6 @@ class BRouterService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-from .models import PrivacyZone
 
 # Privacy Zone v2 — Default radii per zone type (metres)
 _ZONE_RADII_M: dict[str, float] = {

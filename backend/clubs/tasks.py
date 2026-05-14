@@ -57,7 +57,7 @@ def provision_matrix_room_async(self, club_id: int) -> dict:
         )
     except Exception as exc:
         logger.error("provision_matrix_room: unexpected error club_id=%d err=%s", club_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     if room_id:
         Club.objects.filter(pk=club_id).update(matrix_room_id=room_id)
@@ -94,7 +94,7 @@ def send_matrix_notification_async(self, room_id: str, message: str) -> dict:
         success = MatrixProvisioner.send_notification(room_id, message)
     except Exception as exc:
         logger.error("send_matrix_notification: error room=%s err=%s", room_id, exc)
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     if success:
         logger.info("send_matrix_notification: sent room=%s", room_id)
@@ -134,7 +134,7 @@ def invite_member_to_matrix_async(self, room_id: str, matrix_user_id: str, club_
             "invite_member: error room=%s user=%s err=%s",
             room_id, matrix_user_id, exc,
         )
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
     if success:
         logger.info("invite_member: sent room=%s user=%s", room_id, matrix_user_id)

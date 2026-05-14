@@ -28,6 +28,7 @@ Pipeline (Milestone 2+):
 """
 import logging
 import math
+import os
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)
@@ -209,8 +210,6 @@ def total_distance_m(points: list[GpsPoint]) -> float:
 #   WALK:       Competitive walking world record ~4.2 m/s
 #   WHEELCHAIR: World record 100m = ~8 m/s sprint; marathon ~7 m/s
 # ---------------------------------------------------------------------------
-
-import os
 
 VMAX_MS: dict[str, float] = {
     "RUN":         12.0,   # m/s — ~43 km/h, sprint burst
