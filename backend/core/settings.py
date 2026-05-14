@@ -8,13 +8,34 @@ init_sentry()  # Phase 10: Observability
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'default-unsafe-key-for-dev')
+# SECRET_KEY: prefer explicit env var, auto-generate on Railway/Heroku-like platforms
+# when one isn't set, so deploys don't crash.  Logging warns the operator.
+_DEFAULT_UNSAFE = 'default-unsafe-key-for-dev'
+SECRET_KEY = os.getenv('SECRET_KEY', _DEFAULT_UNSAFE)
 DEBUG = os.getenv('DEBUG', '0') == '1'
-if not DEBUG and SECRET_KEY == 'default-unsafe-key-for-dev':
-    raise RuntimeError(
-        "SECRET_KEY must be set in production. "
-        "Set the SECRET_KEY environment variable."
+
+if not DEBUG and SECRET_KEY == _DEFAULT_UNSAFE:
+    # Railway / Heroku / Render — auto-generate a random key so the app CAN start.
+    # This invalidates existing sessions/JWT tokens, but that's acceptable for a
+    # one-time deploy.  The operator should set SECRET_KEY explicitly.
+    _on_paas = bool(
+        os.getenv('RAILWAY_SERVICE_NAME')
+        or os.getenv('DYNO')
+        or os.getenv('RENDER')
     )
+    if _on_paas:
+        import secrets
+        SECRET_KEY = secrets.token_urlsafe(50)
+        import warnings
+        warnings.warn(
+            "⚠️  SECRET_KEY auto-generated for this deploy. "
+            "Set SECRET_KEY variable in Railway to persist sessions/JWT across restarts."
+        )
+    else:
+        raise RuntimeError(
+            "SECRET_KEY must be set in production. "
+            "Set the SECRET_KEY environment variable."
+        )
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
 # Security hardening — HTTPS enforcement (disabled in DEBUG for local dev)
