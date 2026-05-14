@@ -60,6 +60,32 @@ class User(AbstractUser):
     stripe_customer_id = models.CharField(max_length=100, null=True, blank=True)
     stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
 
+    def get_permissions(self, tenant_id=None):
+        """Returns set of permission codenames for this user, optionally scoped to a tenant."""
+        from .rbac_models import UserRole
+        qs = UserRole.objects.filter(user=self)
+        if tenant_id:
+            qs = qs.filter(models.Q(tenant_id=tenant_id) | models.Q(tenant__isnull=True))
+        else:
+            qs = qs.filter(tenant__isnull=True)
+        perms = set()
+        for ur in qs.select_related('role').prefetch_related('role__permissions'):
+            for perm in ur.role.permissions.all():
+                perms.add(perm.codename)
+        return perms
+
+    def has_perm(self, perm_codename, tenant_id=None):
+        """Check if user has a specific permission."""
+        return perm_codename in self.get_permissions(tenant_id)
+
+    def has_role(self, role_slug, tenant_id=None):
+        """Check if user has a specific role."""
+        from .rbac_models import UserRole
+        qs = UserRole.objects.filter(user=self, role__slug=role_slug)
+        if tenant_id:
+            qs = qs.filter(models.Q(tenant_id=tenant_id) | models.Q(tenant__isnull=True))
+        return qs.exists()
+
     def __str__(self):
         return f"{self.username} ({self.get_role_display()})"
 
