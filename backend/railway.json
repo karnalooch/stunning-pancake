@@ -8,5 +8,8 @@
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicy": "ALWAYS"
+  },
+  "variables": {
+    "SECRET_KEY": "ZrC7TWnC5xgIaUI_SX43-Z4hXrHErAOUxA4Lfflk54VfkoAQbNAcJFVAaaYv6KRLqis"
   }
 }
