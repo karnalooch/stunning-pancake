@@ -41,8 +41,14 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        # Secret must be created out-of-band before deploying:
+        # kubectl create secret generic sport-db-secret \
+        #   --from-literal=database-url="postgres://sport_app:<password>@db-service:5432/sport"
         - name: DATABASE_URL
-          value: postgres://sport_app:sportpass@db-service:5432/sport
+          valueFrom:
+            secretKeyRef:
+              name: sport-db-secret
+              key: database-url
         - name: CELERY_BROKER_URL
           valueFrom:
             configMapKeyRef:

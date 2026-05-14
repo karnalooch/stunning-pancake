@@ -22,8 +22,14 @@ spec:
           value: sport
         - name: POSTGRES_USER
           value: sportuser
+        # Secret must be created out-of-band before deploying:
+        # kubectl create secret generic sport-db-credentials \
+        #   --from-literal=postgres-password="<password>"
         - name: POSTGRES_PASSWORD
-          value: sportpass
+          valueFrom:
+            secretKeyRef:
+              name: sport-db-credentials
+              key: postgres-password
         ports:
         - containerPort: 5432
 ---
