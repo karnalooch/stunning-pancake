@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import Activity, PrivacyZone, POI
+
+from .models import POI, Activity, PrivacyZone
+
 
 class POISerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(source='location.y', read_only=True)
@@ -19,8 +21,8 @@ class ActivitySerializer(serializers.ModelSerializer):
     class Meta:
         model = Activity
         fields = (
-            'id', 'user', 'type', 'start_time', 'end_time', 
-            'distance', 'duration', 'is_verified', 
+            'id', 'user', 'type', 'start_time', 'end_time',
+            'distance', 'duration', 'is_verified',
             'verification_score', 'route_path'
         )
         read_only_fields = ('id', 'user', 'is_verified', 'verification_score')

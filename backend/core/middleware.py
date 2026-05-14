@@ -1,6 +1,7 @@
-import json
 from django.db import connection
+
 from users.models import AuditLog
+
 
 class TenantRLSMiddleware:
     """

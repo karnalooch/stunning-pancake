@@ -2,6 +2,7 @@ import os
 import sys
 from types import ModuleType
 
+
 # Mock GDAL to bypass checks on systems without GDAL/GEOS
 class _MockModule(ModuleType):
     pass
@@ -22,7 +23,7 @@ sys.modules['django.contrib.gis.gdal'] = mock_gdal
 mock_gdal_error = ModuleType('django.contrib.gis.gdal.error')
 mock_gdal_error.GDALException = type('GDALException', (Exception,), {})
 sys.modules['django.contrib.gis.gdal.error'] = mock_gdal_error
-setattr(mock_gdal, 'error', mock_gdal_error)
+mock_gdal.error = mock_gdal_error
 
 mock_libgdal = ModuleType('django.contrib.gis.gdal.libgdal')
 mock_libgdal.lgdal = ModuleType('lgdal')
@@ -63,6 +64,7 @@ for _mod in (
 
 # Mock dj_database_url config to swap engine to SQLite
 import dj_database_url
+
 original_config = dj_database_url.config
 def mocked_config(*args, **kwargs):
     cfg = original_config(*args, **kwargs)
@@ -77,9 +79,11 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
 os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/0')
 os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-ci')
 import django
+
 django.setup()
 
 from django.core.management import execute_from_command_line
+
 if __name__ == '__main__':
     sys.argv = ['manage.py', 'test']
     execute_from_command_line(sys.argv)

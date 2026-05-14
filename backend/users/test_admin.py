@@ -4,11 +4,11 @@ P0 Tests — User CRUD, Invitation, Audit Logging
 RC v0.2 critical paths: create/delete users, invitations, audit trail.
 """
 import pytest
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
-from users.models import Tenant, AuditLog
+from django.urls import reverse
+from rest_framework.test import APIClient
+
+from users.models import AuditLog, Tenant
 
 User = get_user_model()
 

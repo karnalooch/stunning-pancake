@@ -2,7 +2,8 @@
 Django Admin registration for Rewards & Voucher Marketplace.
 """
 from django.contrib import admin
-from rewards.models import Sponsor, VoucherPool, Voucher, PointsLedger
+
+from rewards.models import PointsLedger, Sponsor, Voucher, VoucherPool
 
 
 @admin.register(Sponsor)

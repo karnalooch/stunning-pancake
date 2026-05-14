@@ -3,13 +3,15 @@ P1 Tests — StravaService & GarminService
 ===========================================
 RC v0.2: OAuth token exchange, activity sync, status, token refresh.
 """
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import timedelta
-from django.utils import timezone
+from unittest.mock import patch
+
+import pytest
 from django.contrib.auth import get_user_model
-from activities.models import WearableIntegration, Activity
-from activities.wearables import StravaService, GarminService
+from django.utils import timezone
+
+from activities.models import Activity, WearableIntegration
+from activities.wearables import GarminService, StravaService
 from users.models import Tenant
 
 User = get_user_model()
@@ -146,7 +148,7 @@ class TestStravaService:
                 assert Activity.objects.filter(user=user, type="BIKE").exists()
 
     def test_sync_activities_skips_duplicates(self, user, strava_integration):
-        existing = Activity.objects.create(
+        Activity.objects.create(
             user=user, tenant=user.tenant, type="RUN",
             start_time="2026-05-01T10:00:00+00:00", distance=8500,
             is_verified=True, verification_score=1.0,

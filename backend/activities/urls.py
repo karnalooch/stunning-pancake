@@ -1,17 +1,31 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import (
-    ActivityViewSet, PrivacyZoneViewSet, VoucherRedeemView, 
-    TelemetryLiveView, AnomalyListView, POIViewSet, TelemetryConfigView,
-    StravaAuthView, StravaCallbackView, GarminAuthView, GarminCallbackView,
-    WearableSyncView
-)
 
-from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, ActivityApproveView, ActivityRejectView
-from .payments_views import CreateCheckoutSessionView, StripeWebhookView
-from .leaderboard_views import city_leaderboard, my_rank
-from .heatmap import heatmap_view, analytics_summary_view
+from .admin_views import (
+    ActivityApproveView,
+    ActivityRejectView,
+    AdminDashboardStatsView,
+    GlobalActivityListView,
+    TenantActivityListView,
+)
 from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
+from .heatmap import analytics_summary_view, heatmap_view
+from .leaderboard_views import city_leaderboard, my_rank
+from .payments_views import CreateCheckoutSessionView, StripeWebhookView
+from .views import (
+    ActivityViewSet,
+    AnomalyListView,
+    GarminAuthView,
+    GarminCallbackView,
+    POIViewSet,
+    PrivacyZoneViewSet,
+    StravaAuthView,
+    StravaCallbackView,
+    TelemetryConfigView,
+    TelemetryLiveView,
+    VoucherRedeemView,
+    WearableSyncView,
+)
 
 router = DefaultRouter()
 router.register(r'sessions', ActivityViewSet, basename='activity')

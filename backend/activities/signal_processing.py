@@ -26,8 +26,8 @@ Pipeline (Milestone 2+):
     ▼
   [5] Viterbi HMM map matching
 """
-import math
 import logging
+import math
 from dataclasses import dataclass, field
 
 logger = logging.getLogger(__name__)

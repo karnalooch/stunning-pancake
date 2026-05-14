@@ -20,7 +20,6 @@ All computation is pure Python + statistics stdlib — no ML deps required.
 from __future__ import annotations
 
 import logging
-import math
 import statistics
 from datetime import date, timedelta
 from typing import TypedDict

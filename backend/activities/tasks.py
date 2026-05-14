@@ -13,6 +13,7 @@ Optimized Pipeline:
 from __future__ import annotations
 
 import logging
+
 from celery import shared_task
 
 logger = logging.getLogger(__name__)
@@ -31,12 +32,20 @@ def process_activity_async(self, activity_id: int) -> dict:
     Implements Milestone 2 'Lightweight Heuristics' (Constitution §24.3).
     """
     import json
-    from core.redis_cluster import get_redis
+
+    from django.contrib.gis.geos import LineString
+
+    from activities.leaderboards import LeaderboardService
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
-    from activities.leaderboards import LeaderboardService
-    from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother, fast_rejection_gate
-    from django.contrib.gis.geos import LineString
+    from activities.signal_processing import (
+        GpsKalmanSmoother,
+        GpsPoint,
+        analyze_anomalies,
+        fast_rejection_gate,
+        process_gps_track,
+    )
+    from core.redis_cluster import get_redis
 
     # Fetch dynamic config
     r = get_redis()
@@ -112,7 +121,7 @@ def process_activity_async(self, activity_id: int) -> dict:
             is_verified=False,
             verification_score=0.0
         )
-        
+
         try:
             from core.plugin_registry import registry
             registry.fire('activity.suspicious', activity=activity, anomaly_ratio=analysis["anomaly_ratio"])
@@ -154,7 +163,7 @@ def process_activity_async(self, activity_id: int) -> dict:
         if gps_dist > 0:
             ratio = abs(b_dist - gps_dist) / gps_dist
             verification_score = 1.0 - ratio
-            
+
             # Use dynamic tolerance: base 0.10 * multiplier (e.g. 1.5x = 0.15)
             tolerance = 0.10 * brouter_multiplier
             is_verified = ratio < tolerance
@@ -230,8 +239,9 @@ def send_leaderboard_digest(city_id: str, top_n: int = 10) -> None:
 @shared_task(queue="default", name="activities.tasks.recalculate_city_leaderboard")
 def recalculate_city_leaderboard(city_id: str) -> None:
     from django.db.models import Sum
-    from activities.models import Activity
+
     from activities.leaderboards import LeaderboardService
+    from activities.models import Activity
     qs = Activity.objects.filter(is_verified=True, user__tenant_id=city_id).values("user_id").annotate(total_km=Sum("distance"))
     scores = {row["user_id"]: round((row["total_km"] or 0) / 1000.0, 3) for row in qs}
     if scores:

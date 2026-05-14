@@ -11,6 +11,7 @@ Handles:
 from __future__ import annotations
 
 import logging
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -34,8 +35,9 @@ class RewardsService:
         Returns:
             Total points balance (can be negative on admin corrections).
         """
-        from rewards.models import PointsLedger
         from django.db.models import Sum
+
+        from rewards.models import PointsLedger
 
         total = PointsLedger.objects.filter(user_id=user_id).aggregate(
             total=Sum("delta")
@@ -89,7 +91,7 @@ class RewardsService:
 
     @classmethod
     @transaction.atomic
-    def redeem_voucher(cls, user_id: int, pool_id: int) -> "Voucher | None":
+    def redeem_voucher(cls, user_id: int, pool_id: int) -> Voucher | None:
         """
         Atomically redeems one voucher from a pool for the user.
 
@@ -102,7 +104,7 @@ class RewardsService:
         Returns:
             The redeemed Voucher instance, or None on failure.
         """
-        from rewards.models import VoucherPool, Voucher, PointsLedger
+        from rewards.models import PointsLedger, Voucher, VoucherPool
 
         try:
             pool = VoucherPool.objects.get(pk=pool_id)

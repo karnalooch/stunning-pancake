@@ -61,7 +61,7 @@ def city_leaderboard(request: Request, city_id: str) -> Response:
     User = get_user_model()
     user_ids = [e["user_id"] for e in top]
     users_map = {str(u.id): u.username for u in User.objects.filter(id__in=user_ids)}
-    
+
     for entry in top:
         entry["username"] = users_map.get(str(entry["user_id"]), "Unknown Pilot")
 

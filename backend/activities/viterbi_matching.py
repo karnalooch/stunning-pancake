@@ -22,8 +22,8 @@ Reference:
 """
 from __future__ import annotations
 
-import math
 import logging
+import math
 from dataclasses import dataclass
 
 from .signal_processing import GpsPoint, haversine_m
@@ -192,7 +192,7 @@ def viterbi_match(
         viterbi_t: list[float] = []
         backptr_t: list[int] = []
 
-        for j, curr_c in enumerate(curr_cands):
+        for _j, curr_c in enumerate(curr_cands):
             best_prob = -math.inf
             best_prev = 0
 

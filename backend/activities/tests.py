@@ -3,23 +3,22 @@ Unit Tests — GPS Signal Processing
 =====================================
 Tests for Kalman filter, Viterbi map-matching, and kinematic anomaly detection.
 """
-import math
 import pytest
+
 from activities.signal_processing import (
-    GpsPoint,
     GpsKalmanSmoother,
-    haversine_m,
-    total_distance_m,
-    detect_speed_anomalies,
-    process_gps_track,
+    GpsPoint,
     ProcessingResult,
+    detect_speed_anomalies,
+    haversine_m,
+    process_gps_track,
+    total_distance_m,
 )
 from activities.viterbi_matching import (
-    viterbi_match,
     emission_probability,
     transition_probability,
+    viterbi_match,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -113,7 +112,7 @@ class TestGpsKalmanSmoother:
     def test_timestamps_preserved(self, noisy_track):
         smoother = GpsKalmanSmoother()
         result = smoother.smooth(noisy_track)
-        for orig, smoothed in zip(noisy_track, result):
+        for orig, smoothed in zip(noisy_track, result, strict=False):
             assert smoothed.timestamp == orig.timestamp
 
     def test_smoothing_reduces_variance(self, noisy_track):
@@ -179,7 +178,7 @@ class TestViterbiMatching:
 
     def test_timestamps_preserved(self, straight_track, road_points):
         result = viterbi_match(straight_track, road_points)
-        for orig, matched in zip(straight_track, result):
+        for orig, matched in zip(straight_track, result, strict=False):
             assert matched.timestamp == orig.timestamp
 
     def test_matched_points_near_road(self, straight_track, road_points):

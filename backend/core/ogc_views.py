@@ -14,7 +14,6 @@ Endpoints:
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes

@@ -22,7 +22,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from rewards.models import VoucherPool, Voucher, Sponsor
+from rewards.models import Sponsor, Voucher, VoucherPool
 from rewards.services import RewardsService
 from rewards.stripe_service import StripeService
 
@@ -88,7 +88,7 @@ def sponsor_stats_view(request: Request) -> Response:
     pools = sponsor.pools.all()
     total_vouchers = Voucher.objects.filter(pool__in=pools).count()
     redeemed_vouchers = Voucher.objects.filter(pool__in=pools, user__isnull=False).count()
-    
+
     # Deriving stats from real data
     return Response({
         "poi_count": sponsor.pools.count(), # Simplifying POIs as pools for now

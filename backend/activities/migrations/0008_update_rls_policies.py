@@ -1,5 +1,6 @@
 from django.db import migrations
 
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -23,14 +24,14 @@ class Migration(migrations.Migration):
                 DROP POLICY IF EXISTS tenant_isolation ON activities_activity;
                 DROP POLICY IF EXISTS tenant_isolation_policy ON activities_activity;
                 DROP POLICY IF EXISTS poi_tenant_isolation_policy ON activities_activity;
-                
+
                 CREATE POLICY tenant_isolation ON activities_activity
                 FOR ALL
                 TO sport_app
                 USING (
                     tenant_id IS NULL
                     OR (
-                        current_setting('app.tenant_id', TRUE) != '' 
+                        current_setting('app.tenant_id', TRUE) != ''
                         AND tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );
@@ -40,14 +41,14 @@ class Migration(migrations.Migration):
                 DROP POLICY IF EXISTS tenant_isolation ON activities_poi;
                 DROP POLICY IF EXISTS tenant_isolation_policy ON activities_poi;
                 DROP POLICY IF EXISTS poi_tenant_isolation_policy ON activities_poi;
-                
+
                 CREATE POLICY tenant_isolation ON activities_poi
                 FOR ALL
                 TO sport_app
                 USING (
                     tenant_id IS NULL
                     OR (
-                        current_setting('app.tenant_id', TRUE) != '' 
+                        current_setting('app.tenant_id', TRUE) != ''
                         AND tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );
@@ -56,15 +57,15 @@ class Migration(migrations.Migration):
                 ALTER TABLE activities_voucher ENABLE ROW LEVEL SECURITY;
                 DROP POLICY IF EXISTS tenant_isolation ON activities_voucher;
                 DROP POLICY IF EXISTS voucher_tenant_isolation_policy ON activities_voucher;
-                
+
                 CREATE POLICY tenant_isolation ON activities_voucher
                 FOR ALL
                 TO sport_app
                 USING (
                     current_setting('app.tenant_id', TRUE) = ''
                     OR EXISTS (
-                        SELECT 1 FROM activities_poi p 
-                        WHERE p.id = activities_voucher.poi_id 
+                        SELECT 1 FROM activities_poi p
+                        WHERE p.id = activities_voucher.poi_id
                         AND p.tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );

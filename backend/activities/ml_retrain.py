@@ -58,8 +58,8 @@ def retrain_ml_model() -> dict:
         logger.error("ml_retrain: scikit-learn not installed — skipping")
         return {"status": "skipped", "reason": "scikit-learn not installed"}
 
-    from activities.models import Activity
     from activities.ml_anomaly import extract_features
+    from activities.models import Activity
     from activities.signal_processing import GpsPoint
 
     cutoff = timezone.now() - timedelta(days=LOOKBACK_DAYS)
@@ -114,12 +114,12 @@ def retrain_ml_model() -> dict:
     scores = clf.score_samples(X_clean)
     mean_score = float(np.mean(scores))
     std_score = float(np.std(scores))
-    
+
     # Dynamic Z-score threshold (e.g., Z = -3.0 means 3 standard deviations below mean)
     # We save this dynamic threshold alongside the model
     z_threshold = -3.0
     dynamic_threshold = mean_score + (z_threshold * std_score)
-    
+
     false_positive_rate = float((scores < dynamic_threshold).mean())
 
     # We pack the model and the threshold together

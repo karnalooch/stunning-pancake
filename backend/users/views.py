@@ -1,19 +1,22 @@
-from rest_framework import generics, permissions, status
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema
+import contextlib
+
 from django.contrib.auth import update_session_auth_hash
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, permissions, status
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from core.api_response import error, success
+from core.email_service import EmailService
+
+from .models import AuditLog, Tenant, User
+from .permissions import IsGlobalOwner
 from .serializers import (
-    UserSerializer,
-    RegisterSerializer,
-    TenantSerializer,
     AuditLogSerializer,
     PasswordChangeSerializer,
+    RegisterSerializer,
+    TenantSerializer,
+    UserSerializer,
 )
-from .models import User, Tenant, AuditLog
-from .permissions import IsGlobalOwner
-from core.api_response import success, error
-from core.email_service import EmailService
 
 
 class PasswordResetRequestView(generics.GenericAPIView):
@@ -219,10 +222,8 @@ class AuditLogListView(generics.ListAPIView):
         qs = super().get_queryset()
         limit = self.request.query_params.get('limit')
         if limit:
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 qs = qs[:int(limit)]
-            except (ValueError, TypeError):
-                pass
         return qs
 
 
@@ -246,10 +247,8 @@ class UserCreateView(generics.CreateAPIView):
             user.role = role
         tenant_id = request.data.get('tenant_id')
         if tenant_id:
-            try:
+            with contextlib.suppress(Tenant.DoesNotExist):
                 user.tenant = Tenant.objects.get(id=tenant_id)
-            except Tenant.DoesNotExist:
-                pass
         user.save()
 
         AuditLog.objects.create(

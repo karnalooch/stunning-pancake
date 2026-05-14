@@ -1,12 +1,13 @@
-import random
 import math
+import random
 from datetime import timedelta
 
+from django.contrib.gis.geos import LineString, Point
 from django.core.management.base import BaseCommand
-from django.contrib.gis.geos import Point, LineString
 from django.utils import timezone
-from users.models import User, Tenant, Role
-from activities.models import Activity, POI, Voucher
+
+from activities.models import POI, Activity, Voucher
+from users.models import Role, Tenant, User
 
 
 def generate_loop_gps(center_lon, center_lat, radius_km=1.5, jitter=0.0003, num_points=50):
@@ -33,25 +34,22 @@ def generate_out_and_back_gps(start_lon, start_lat, bearing_deg, distance_km=3.0
     coords = []
     earth_radius_km = 6371.0
     bearing_rad = math.radians(bearing_deg)
-    
+
     for i in range(num_points):
         fraction = i / (num_points - 1)
-        if fraction <= 0.5:
-            d = distance_km * (fraction * 2)
-        else:
-            d = distance_km * ((1 - fraction) * 2)
-        
+        d = distance_km * (fraction * 2) if fraction <= 0.5 else distance_km * ((1 - fraction) * 2)
+
         dlat = (d * math.cos(bearing_rad)) / earth_radius_km * (180 / math.pi)
         dlon = (d * math.sin(bearing_rad)) / (earth_radius_km * math.cos(math.radians(start_lat))) * (180 / math.pi)
-        
+
         if fraction > 0.5:
             dlat = -dlat
             dlon = -dlon
-        
+
         lat = start_lat + dlat + random.uniform(-jitter, jitter)
         lon = start_lon + dlon + random.uniform(-jitter, jitter)
         coords.append((lon, lat))
-    
+
     return coords
 
 
@@ -182,7 +180,7 @@ class Command(BaseCommand):
         ACTIVITY_TYPES = ['RUN', 'BIKE', 'WALK']
         activity_weights = [0.5, 0.25, 0.25]  # More running than other types
         now = timezone.now()
-        
+
         # Predefined track generators for variety
         loop_generators = [
             lambda: generate_loop_gps(*SIEDLCE_PARK, radius_km=0.8, num_points=45),
@@ -210,13 +208,13 @@ class Command(BaseCommand):
 
         for athlete, count in activity_counts:
             tenant = athlete.tenant
-            for i in range(count):
+            for _i in range(count):
                 days_ago = random.randint(0, 30)
                 hours_ago = random.randint(6, 20)
                 start_time = now - timedelta(days=days_ago, hours=hours_ago)
 
                 activity_type = random.choices(ACTIVITY_TYPES, weights=activity_weights, k=1)[0]
-                
+
                 # Distance depends on type
                 if activity_type == 'RUN':
                     distance = random.randint(3000, 12000)
@@ -255,7 +253,7 @@ class Command(BaseCommand):
                 except Exception:
                     route_path = None
 
-                activity = Activity.objects.create(
+                Activity.objects.create(
                     user=athlete,
                     tenant=tenant,
                     type=activity_type,
@@ -270,7 +268,7 @@ class Command(BaseCommand):
                 activities_created += 1
 
         self.stdout.write(self.style.SUCCESS(f'Created {activities_created} demo activities'))
-        
+
         # ── 7. Summary ──
         total_users = User.objects.count()
         total_act = Activity.objects.count()

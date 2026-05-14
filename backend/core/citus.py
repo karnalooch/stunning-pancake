@@ -55,7 +55,7 @@ REFERENCE_TABLES: list[str] = [
 ]
 
 # Number of shards per distributed table (recommended: 2× worker count)
-SHARD_COUNT = int(32)
+SHARD_COUNT = 32
 
 
 def enable_citus_extension() -> None:
@@ -149,7 +149,7 @@ def citus_cluster_status() -> list[dict]:
             ORDER BY groupid, nodeid;
         """)
         cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
 
 def citus_shard_status() -> list[dict]:
@@ -168,7 +168,7 @@ def citus_shard_status() -> list[dict]:
             ORDER BY table_name;
         """)
         cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+        return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
 
 
 def rebalance_shards() -> None:

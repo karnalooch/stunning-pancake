@@ -19,7 +19,6 @@ Endpoints (wired in core/urls.py):
 from __future__ import annotations
 
 import logging
-import math
 from collections import defaultdict
 
 from rest_framework.decorators import api_view, permission_classes
@@ -55,8 +54,9 @@ def heatmap_view(request: Request) -> Response:
         zoom     — Map zoom level hint (influences cell_size, 1–18)
         tenant   — Tenant ID filter (default: all tenants)
     """
-    from activities.models import Activity
     from django.contrib.gis.geos import Polygon
+
+    from activities.models import Activity
 
     bbox_raw = request.query_params.get("bbox", "")
     activity_type = request.query_params.get("type", "")
@@ -160,9 +160,11 @@ def analytics_summary_view(request: Request) -> Response:
         - training_load: ACWR injury risk score
     """
     from datetime import date, timedelta
+
     from django.db.models import Sum
+
+    from activities.analytics import predict_race_time, training_load, trend_analysis
     from activities.models import Activity
-    from activities.analytics import trend_analysis, predict_race_time, training_load
 
     user = request.user
     today = date.today()

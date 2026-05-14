@@ -1,23 +1,25 @@
 import os
-import django
 import random
+
+import django
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
 from users.models import User  # noqa: E402
 
+
 def seed_athletes():
     first_names = ["Adam", "Ewa", "Piotr", "Anna", "Marek", "Katarzyna", "Tomasz", "Magdalena", "Krzysztof", "Zofia"]
     last_names = ["Kowalski", "Nowak", "Wisniewski", "Wojcik", "Kaminski", "Lewandowski", "Zielinski", "Szymanski", "Wozniak", "Dabrowski"]
-    
+
     for i in range(10):
         username = f"athlete_{i+1:03d}"
         if not User.objects.filter(username=username).exists():
             first_name = random.choice(first_names)
             last_name = random.choice(last_names)
             email = f"{username}@example.com"
-            
+
             user = User.objects.create_user(
                 username=username,
                 email=email,

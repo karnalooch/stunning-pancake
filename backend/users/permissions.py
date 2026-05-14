@@ -1,5 +1,7 @@
 from rest_framework import permissions
+
 from .models import Role
+
 
 class IsGlobalOwner(permissions.BasePermission):
     """
@@ -14,7 +16,7 @@ class IsTenantAdmin(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.role == Role.TENANT_ADMIN
-        
+
     def has_object_permission(self, request, view, obj):
         # The object being accessed must belong to the admin's tenant.
         # Ensure the object has a `tenant_id` attribute.

@@ -1,8 +1,10 @@
-from typing import Optional
 import logging
+
 from django.db import transaction
-from .models import Event, Participation, Achievement
+
 from activities.leaderboards import LeaderboardService
+
+from .models import Achievement, Event, Participation
 
 logger = logging.getLogger(__name__)
 
@@ -22,8 +24,8 @@ class EventProgressService:
         user,
         km: float,
         elevation_m: float = 0.0,
-        tenant_id: Optional[str] = None,
-        club_id: Optional[int] = None,
+        tenant_id: str | None = None,
+        club_id: int | None = None,
     ) -> None:
         """
         Updates all active events the user qualifies for.
@@ -66,7 +68,7 @@ class EventProgressService:
         )
 
     @staticmethod
-    def _user_qualifies(event: Event, tenant_id: Optional[str], club_id: Optional[int]) -> bool:
+    def _user_qualifies(event: Event, tenant_id: str | None, club_id: int | None) -> bool:
         """Returns True if user's tenant/club matches the event scope."""
         if event.event_type == 'INTER_TENANT':
             return tenant_id in (event.tenant_id, event.opponent_tenant_id)

@@ -1,14 +1,17 @@
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
-from core.ogc_views import ogc_conformance, ogc_collections, ogc_collection_items, ogc_single_item
-from core.infra_views import redis_health_view, citus_health_view, infra_health_view
-from core.matrix_e2ee_verify import (
-    initiate_verification, accept_verification,
-    confirm_verification, verification_status,
-)
+
+from core.infra_views import citus_health_view, infra_health_view, redis_health_view
 from core.llm_proxy import llm_proxy
+from core.matrix_e2ee_verify import (
+    accept_verification,
+    confirm_verification,
+    initiate_verification,
+    verification_status,
+)
+from core.ogc_views import ogc_collection_items, ogc_collections, ogc_conformance, ogc_single_item
 
 urlpatterns = [
     path('admin/', admin.site.urls),

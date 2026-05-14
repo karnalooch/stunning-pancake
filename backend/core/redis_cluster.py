@@ -29,7 +29,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -65,10 +64,7 @@ def get_redis():
     if _client is not None:
         return _client
 
-    if CLUSTER_MODE:
-        _client = _build_cluster_client()
-    else:
-        _client = _build_standalone_client()
+    _client = _build_cluster_client() if CLUSTER_MODE else _build_standalone_client()
 
     return _client
 

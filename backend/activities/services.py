@@ -1,7 +1,8 @@
 import os
 
 import requests
-from django.contrib.gis.geos import Point, LineString
+from django.contrib.gis.geos import LineString, Point
+
 
 class BRouterService:
     """
@@ -22,19 +23,19 @@ class BRouterService:
             'WALK': 'foot-all',
             'WHEELCHAIR': 'wheelchair'
         }
-        
+
         profile = profile_map.get(activity_type, 'foot-all')
-        
+
         # Format coordinates for BRouter (lon,lat|lon,lat...)
         coord_str = "|".join([f"{c[0]},{c[1]}" for c in coordinates])
-        
+
         params = {
             'lonlats': coord_str,
             'profile': profile,
             'alternativeidx': 0,
             'format': 'geojson'
         }
-        
+
         try:
             response = requests.get(cls.BASE_URL, params=params, timeout=10)
             if response.status_code == 200:
@@ -245,22 +246,21 @@ class TelemetryService:
         except Exception:
             return []
 
-import random
 
 class AntiCheatEngine:
     """
     Core engine for verifying telemetry tracks using Kinematics and BRouter topological mapping.
     """
-    
+
     @staticmethod
     def get_recent_anomalies(tenant_id=None, limit=20):
         from .models import Activity
         qs = Activity.objects.filter(is_verified=False)
         if tenant_id:
             qs = qs.filter(tenant_id=tenant_id)
-            
+
         anomalies = qs.order_by('-created_at')[:limit]
-        
+
         result = []
         for a in anomalies:
             result.append({

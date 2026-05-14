@@ -1,7 +1,9 @@
-import stripe
-import os
 import logging
+import os
+
+import stripe
 from django.conf import settings
+
 from users.models import User
 
 logger = logging.getLogger(__name__)
@@ -59,6 +61,6 @@ class PaymentService:
             user_id = session['metadata']['user_id']
             # Update user subscription status in DB
             User.objects.filter(id=user_id).update(is_premium=True)
-            
+
         return True
 

@@ -1,4 +1,5 @@
 import logging
+
 from django.db import connection
 
 logger = logging.getLogger(__name__)
@@ -42,7 +43,7 @@ def apply_rls_policies():
             # Drop old legacy policies if they exist
             cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation_policy ON {table};")
             cursor.execute(f"DROP POLICY IF EXISTS poi_tenant_isolation_policy ON {table};")
-            
+
             cursor.execute(f"""
                 CREATE POLICY tenant_isolation ON {table}
                 FOR ALL
@@ -50,19 +51,19 @@ def apply_rls_policies():
                 USING (
                     tenant_id IS NULL
                     OR (
-                        current_setting('app.tenant_id', TRUE) != '' 
+                        current_setting('app.tenant_id', TRUE) != ''
                         AND tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );
             """)
 
         # 2. Linked RLS (Vouchers)
-        for table, condition_template in LINKED_RLS_TABLES.items():
+        for table, _condition_template in LINKED_RLS_TABLES.items():
             logger.info(f"Applying Linked RLS to {table}")
             cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
             cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
             cursor.execute(f"DROP POLICY IF EXISTS voucher_tenant_isolation_policy ON {table};")
-            
+
             # Note: For linked tables, we check the tenant_id of the parent record
             cursor.execute(f"""
                 CREATE POLICY tenant_isolation ON {table}
@@ -71,8 +72,8 @@ def apply_rls_policies():
                 USING (
                     current_setting('app.tenant_id', TRUE) = ''
                     OR EXISTS (
-                        SELECT 1 FROM activities_poi p 
-                        WHERE p.id = {table}.poi_id 
+                        SELECT 1 FROM activities_poi p
+                        WHERE p.id = {table}.poi_id
                         AND p.tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );

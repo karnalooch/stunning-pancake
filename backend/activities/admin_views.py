@@ -1,14 +1,17 @@
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from django.db.models import Sum, Count, Q
-from django.utils import timezone
 from datetime import timedelta
+
+from django.contrib.auth import get_user_model
+from django.db.models import Sum
+from django.utils import timezone
+from rest_framework import generics, permissions, status
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from users.models import Tenant
+
 from .models import Activity
 from .serializers import ActivitySerializer
-from users.models import Tenant
 
 
 class IsAdminRole(permissions.BasePermission):

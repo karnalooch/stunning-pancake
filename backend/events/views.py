@@ -5,20 +5,19 @@ REST endpoints for the Events Engine (Constitution §21).
 Includes OGC API — Moving Features compatible output (Constitution §24.4).
 """
 import logging
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from .models import Event, Participation, Achievement
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .models import Achievement, Event, Participation
 from .serializers import (
-    EventSerializer,
-    ParticipationSerializer,
     AchievementSerializer,
-    EventLeaderboardSerializer,
+    EventSerializer,
 )
-from .services import EventProgressService, EventNormalizationService
+from .services import EventNormalizationService
 
 logger = logging.getLogger(__name__)
 

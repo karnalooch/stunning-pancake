@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
-from .models import Event, Participation, Achievement
+
+from .models import Achievement, Event, Participation
 
 
 @admin.register(Event)

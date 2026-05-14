@@ -26,8 +26,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import pluggy
 
@@ -298,8 +299,9 @@ class VoucherHotspotPlugin:
             return {"vouchers_awarded": 0}
 
         try:
-            from activities.models import POI, Voucher
             from django.contrib.gis.measure import Distance as D
+
+            from activities.models import POI, Voucher
 
             if not activity.route_path:
                 return {"vouchers_awarded": 0}
@@ -353,7 +355,7 @@ class RunValidatorPlugin:
     def validate_activity(self, activity: Any, processing_result: Any) -> bool:
         if activity.type != "RUN":
             return True
-        
+
         # Example: Reject runs with impossibly high elevation gain per km
         # (Very simple biomechanical heuristic)
         if hasattr(processing_result, 'total_elevation_gain'):
@@ -385,7 +387,7 @@ class BikeValidatorPlugin:
     def validate_activity(self, activity: Any, processing_result: Any) -> bool:
         if activity.type != "BIKE":
             return True
-        
+
         # Example: Biking usually follows road networks more strictly
         # We could check the map-matching confidence here.
         return True

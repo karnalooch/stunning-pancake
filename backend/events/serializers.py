@@ -2,7 +2,8 @@
 Events Serializers — SPORT Platform
 """
 from rest_framework import serializers
-from .models import Event, Participation, Achievement
+
+from .models import Achievement, Event, Participation
 
 
 class EventSerializer(serializers.ModelSerializer):

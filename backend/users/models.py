@@ -1,6 +1,8 @@
 import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+
 
 class Role(models.TextChoices):
     GLOBAL_OWNER = 'GLOBAL_OWNER', 'Global Owner'
@@ -15,17 +17,17 @@ class Tenant(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
-    
+
     # Branding
     logo = models.ImageField(upload_to='tenants/logos/', null=True, blank=True)
     primary_color = models.CharField(max_length=7, default='#00d2ff')
     secondary_color = models.CharField(max_length=7, default='#92fe9d')
-    
+
     # Configuration & Feature Toggles
     is_active = models.BooleanField(default=True)
     max_users = models.IntegerField(default=1000)
     has_heatmap_analytics = models.BooleanField(default=False, help_text="Feature toggle for advanced heatmap analytics")
-    
+
     # Stripe Integration (Milestone 4)
     stripe_account_id = models.CharField(max_length=100, null=True, blank=True, help_text="Connected account ID for sponsor payouts")
 
@@ -51,7 +53,7 @@ class Tenant(models.Model):
 class User(AbstractUser):
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.ATHLETE)
     tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
-    
+
     is_premium = models.BooleanField(default=False)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(max_length=500, blank=True)

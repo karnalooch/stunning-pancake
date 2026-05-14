@@ -4,14 +4,14 @@ Routes OpenAI-compatible LLM requests through the backend server
 to prevent API key exposure in the mobile client bundle.
 """
 
-import os
 import json
 import logging
+import os
+
 import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ def llm_proxy(request):
     """
     POST /api/llm/proxy/
     Body: { "messages": [...], "model": "gpt-4o-mini", "max_tokens": 80, "temperature": 0.9 }
-    
+
     Proxies the request to the configured LLM API.
     The API key NEVER leaves the server.
     """

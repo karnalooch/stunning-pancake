@@ -29,12 +29,9 @@ import hashlib
 import hmac
 import json
 import logging
-import os
 import secrets
 import time
 
-from django.db import models
-from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request

@@ -3,15 +3,15 @@ P0 Tests — Admin Dashboard Stats & Activity Moderation
 =======================================================
 RC v0.2 critical paths: stats endpoint, approve/reject flow.
 """
+
 import pytest
-from unittest.mock import patch, MagicMock
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework import status
 from rest_framework.test import APIClient
-from django.contrib.auth import get_user_model
-from users.models import Tenant
+
 from activities.models import Activity
+from users.models import Tenant
 
 User = get_user_model()
 

@@ -1,10 +1,11 @@
-import pytest
-import httpx
 import asyncio
 import os
 
+import httpx
+import pytest
+
 # --- Configuration for SIT ---
-# In SIT, we test the interaction between services. 
+# In SIT, we test the interaction between services.
 # We assume they are reachable at these URLs (as configured in .env or docker-compose)
 BACKEND_URL = os.getenv("VITE_API_URL", "http://localhost:8000")
 TELEMETRY_URL = os.getenv("TELEMETRY_URL", "http://localhost:8001")
@@ -23,7 +24,7 @@ async def test_backend_telemetry_handshake():
                 resp = await client.get(f"{BACKEND_URL}/api/activities/health/")
         except Exception:
             pytest.skip("Backend not reachable for integration test")
-        
+
         # 2. Check Telemetry Health
         try:
             tele_resp = await client.get(f"{TELEMETRY_URL}/api/telemetry/health")
@@ -35,7 +36,7 @@ async def test_backend_telemetry_handshake():
 @pytest.mark.asyncio
 async def test_e2e_telemetry_flow_simulation():
     """
-    Simulates a full flow: 
+    Simulates a full flow:
     Mobile Ingest -> Telemetry Ingest -> Redis Broadcast.
     """
     async with httpx.AsyncClient() as client:
@@ -47,7 +48,7 @@ async def test_e2e_telemetry_flow_simulation():
             "speed_ms": 10.5,
             "timestamp": 1777423200.0
         }
-        
+
         try:
             resp = await client.post(f"{TELEMETRY_URL}/api/telemetry/ingest", json=payload)
             # Should be 202 Accepted

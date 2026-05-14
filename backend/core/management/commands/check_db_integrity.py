@@ -1,7 +1,8 @@
-import sys
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from events.models import Participation, Event
+from django.core.management.base import BaseCommand
+
+from events.models import Participation
+
 
 class Command(BaseCommand):
     help = 'Checks database integrity between users and participations.'
@@ -14,7 +15,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Starting database integrity check (env={env})..."))
 
         User = get_user_model()
-        
+
         # 1. Check for orphaned participations
         orphaned_participations = Participation.objects.exclude(user_id__in=User.objects.values_list('id', flat=True))
         if orphaned_participations.exists():
@@ -33,7 +34,7 @@ class Command(BaseCommand):
                 # For INTER_TENANT, check opponent as well
                 if event.event_type == 'INTER_TENANT' and user.tenant_id == event.opponent_tenant_id:
                     continue
-                    
+
                 self.stdout.write(self.style.WARNING(
                     f"Tenant mismatch: User {user.username} (tenant={user.tenant_id}) "
                     f"participates in Event {event.title} (tenant={event.tenant_id})"

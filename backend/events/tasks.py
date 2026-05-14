@@ -6,6 +6,7 @@ Celery Beat tasks for automated event lifecycle management.
 from __future__ import annotations
 
 import logging
+
 from celery import shared_task
 from django.utils import timezone
 
@@ -20,8 +21,8 @@ def close_expired_events() -> None:
 
     Also resets the Redis leaderboard for completed events to free memory.
     """
-    from events.models import Event
     from activities.leaderboards import LeaderboardService
+    from events.models import Event
 
     now = timezone.now()
     expired = Event.objects.filter(status='ACTIVE', end_date__lt=now)
@@ -47,8 +48,8 @@ def publish_scheduled_events() -> None:
     Transitions PUBLISHED events to ACTIVE when their start_date arrives.
     Runs every 5 minutes (add to beat_schedule if needed).
     """
-    from events.models import Event
     from core.matrix_provisioner import MatrixProvisioner
+    from events.models import Event
 
     now = timezone.now()
     to_activate = Event.objects.filter(status='PUBLISHED', start_date__lte=now)

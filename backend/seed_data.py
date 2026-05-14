@@ -1,16 +1,19 @@
 import os
+
 import django
-import uuid
 from django.contrib.gis.geos import Point
 
 # Setup Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from users.models import User, Tenant, Role
-from activities.models import Activity, POI, Voucher
-from django.utils import timezone
 from datetime import timedelta
+
+from django.utils import timezone
+
+from activities.models import POI, Activity, Voucher
+from users.models import Role, Tenant, User
+
 
 def seed():
     print("🌱 Seeding SPORT Platform...")
@@ -62,7 +65,7 @@ def seed():
         poi=coffee_poi,
         code='COFFEE-20',
         defaults={
-            'discount_value': '20%', 
+            'discount_value': '20%',
             'expiry_date': timezone.now() + timedelta(days=30)
         }
     )

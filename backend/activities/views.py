@@ -1,15 +1,23 @@
 import json
-from rest_framework import viewsets, permissions, status, generics, views
+
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, permissions, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
-from .models import Activity, PrivacyZone, Voucher, POI
-from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer, POISerializer
 
+from core.redis_cluster import get_redis
+
+from .models import POI, Activity, PrivacyZone, Voucher
+from .serializers import (
+    ActivityCreateSerializer,
+    ActivitySerializer,
+    POISerializer,
+    PrivacyZoneSerializer,
+)
 from .services import TelemetryService
 from .social import SocialSharingService
-from .wearables import StravaService, GarminService
-from core.redis_cluster import get_redis
+from .wearables import GarminService, StravaService
+
 
 class StravaAuthView(views.APIView):
     """
@@ -30,7 +38,7 @@ class StravaCallbackView(views.APIView):
     def get(self, request):
         code = request.query_params.get('code')
         user_id = request.query_params.get('state')
-        
+
         if not code or not user_id:
             return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -44,7 +52,7 @@ class StravaCallbackView(views.APIView):
                 return Response({"status": "success", "message": "Strava connected. Your activities will sync soon."})
         except User.DoesNotExist:
             pass
-            
+
         return Response({"error": "connection failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 class GarminAuthView(views.APIView):
@@ -66,7 +74,7 @@ class GarminCallbackView(views.APIView):
     def get(self, request):
         code = request.query_params.get('code')
         user_id = request.query_params.get('state')
-        
+
         if not code or not user_id:
             return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -79,7 +87,7 @@ class GarminCallbackView(views.APIView):
                 return Response({"status": "success", "message": "Garmin connected."})
         except User.DoesNotExist:
             pass
-            
+
         return Response({"error": "connection failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 class WearableSyncView(views.APIView):
@@ -122,7 +130,7 @@ class TelemetryConfigView(views.APIView):
                 return Response(json.loads(config_raw))
             except Exception:
                 pass
-        
+
         # Defaults matching the Admin UI state
         return Response({
             "brouterCutoff": 1.5,
@@ -200,7 +208,7 @@ class VoucherRedeemView(generics.UpdateAPIView):
             voucher.redeemed_by = request.user
             voucher.save()
             return Response({
-                "status": "voucher redeemed", 
+                "status": "voucher redeemed",
                 "value": voucher.discount_value,
                 "poi": voucher.poi.name
             })
@@ -219,25 +227,25 @@ class TelemetryLiveView(generics.GenericAPIView):
     def get(self, request):
         positions = TelemetryService.get_live_positions()
         devices = TelemetryService.get_devices()
-        
+
         # Ensure we have lists to work with
         if not isinstance(positions, list):
             positions = []
         if not isinstance(devices, list):
             devices = []
-            
+
         # Merge device names and types into positions for better UI
         device_info = {d.get('id'): {'name': d.get('name'), 'type': d.get('category')} for d in devices if isinstance(d, dict)}
-        
+
         enriched_data = []
         for pos in positions:
             if not isinstance(pos, dict):
                 continue
-                
+
             device_id = pos.get('deviceId')
             if device_id is None:
                 continue
-            
+
             info = device_info.get(device_id, {})
             enriched_data.append({
                 "deviceId": device_id,
@@ -250,7 +258,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                 "lastUpdate": pos.get('deviceTime')
             })
 
-            
+
         return Response(enriched_data)
 
 class AnomalyListView(generics.GenericAPIView):
@@ -264,7 +272,7 @@ class AnomalyListView(generics.GenericAPIView):
         from .services import AntiCheatEngine
         # Ideally, we filter by request.user.tenant_id if user is a Tenant Admin
         tenant_id = request.user.tenant_id if hasattr(request.user, 'tenant_id') and getattr(request.user, 'role', '') != 'GLOBAL_OWNER' else None
-        
+
         anomalies = AntiCheatEngine.get_recent_anomalies(tenant_id=tenant_id, limit=50)
         return Response(anomalies)
 
@@ -277,20 +285,20 @@ class LeaderboardView(generics.GenericAPIView):
 
     def get(self, request):
 
-        from django.db.models import Sum
         from django.contrib.auth import get_user_model
+        from django.db.models import Sum
         User = get_user_model()
-        
+
         scope = self.request.query_params.get('scope', 'CITY')
-        
+
         qs = User.objects.filter(role='ATHLETE')
         if scope == 'CITY' and self.request.user.tenant_id:
             qs = qs.filter(tenant_id=self.request.user.tenant_id)
-            
+
         ranking = qs.annotate(
             total_distance=Sum('activity__distance')
         ).order_by('-total_distance')[:100]
-        
+
         result = []
         for i, u in enumerate(ranking):
             result.append({
@@ -299,7 +307,7 @@ class LeaderboardView(generics.GenericAPIView):
                 "points": int((u.total_distance or 0) / 10), # 1 XP per 10m
                 "is_me": u.id == self.request.user.id
             })
-            
+
         return Response(result)
 
 class POIViewSet(viewsets.ReadOnlyModelViewSet):

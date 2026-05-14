@@ -10,12 +10,14 @@ Handles:
 """
 
 import logging
-import requests
 import os
-from django.utils import timezone
 from datetime import timedelta
-from .models import WearableIntegration, Activity
+
+import requests
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+from .models import Activity, WearableIntegration
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -318,7 +320,7 @@ class GarminService:
             'trail_running': 'RUN',
             'cycling': 'BIKE',
         }
-        return mapping.get(type_key.lower(), None)
+        return mapping.get(type_key.lower())
 
     @classmethod
     def get_status(cls, user):
