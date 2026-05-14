@@ -8,7 +8,7 @@ from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZo
 
 from .services import TelemetryService
 from .social import SocialSharingService
-from .wearables import StravaService, GarminService
+from .wearables import StravaService, GarminService, _resolve_oauth_state
 from core.redis_cluster import get_redis
 
 class StravaAuthView(views.APIView):
@@ -29,10 +29,14 @@ class StravaCallbackView(views.APIView):
 
     def get(self, request):
         code = request.query_params.get('code')
-        user_id = request.query_params.get('state')
+        nonce = request.query_params.get('state')
         
-        if not code or not user_id:
+        if not code or not nonce:
             return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = _resolve_oauth_state(nonce)
+        if not user_id:
+            return Response({"error": "invalid or expired state"}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.contrib.auth import get_user_model
         User = get_user_model()
@@ -65,10 +69,14 @@ class GarminCallbackView(views.APIView):
 
     def get(self, request):
         code = request.query_params.get('code')
-        user_id = request.query_params.get('state')
+        nonce = request.query_params.get('state')
         
-        if not code or not user_id:
+        if not code or not nonce:
             return Response({"error": "missing code or state"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_id = _resolve_oauth_state(nonce)
+        if not user_id:
+            return Response({"error": "invalid or expired state"}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.contrib.auth import get_user_model
         User = get_user_model()

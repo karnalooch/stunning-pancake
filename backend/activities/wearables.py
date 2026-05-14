@@ -10,12 +10,14 @@ Handles:
 """
 
 import logging
+import secrets
 import requests
 import os
 from django.utils import timezone
 from datetime import timedelta
 from .models import WearableIntegration, Activity
 from django.contrib.auth import get_user_model
+from core.redis_cluster import get_redis
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -30,17 +32,57 @@ GARMIN_REDIRECT_URI = os.getenv('GARMIN_REDIRECT_URI', 'https://sport-platform.c
 
 GARMIN_API_BASE = 'https://connectapi.garmin.com'
 
+# OAuth state nonce TTL in seconds (default 10 minutes)
+OAUTH_STATE_TTL = int(os.getenv('OAUTH_STATE_TTL', '600'))
+
+
+def _store_oauth_state(user_id):
+    """Store a one-time nonce → user_id mapping in Redis for OAuth CSRF protection.
+
+    Returns the nonce to be used as the 'state' parameter, or falls back to
+    returning the raw user_id if Redis is unavailable (with a warning log).
+    """
+    nonce = secrets.token_urlsafe(32)
+    try:
+        r = get_redis()
+        r.setex(f"oauth:state:{nonce}", OAUTH_STATE_TTL, str(user_id))
+        return nonce
+    except Exception:
+        logger.warning(
+            "Redis unavailable for OAuth state storage — falling back to raw user_id. "
+            "This weakens CSRF protection."
+        )
+        return str(user_id)
+
+
+def _resolve_oauth_state(nonce):
+    """Resolve an OAuth state nonce to a user_id via Redis.
+
+    Returns the user_id as a string, or None if the nonce is invalid/expired.
+    Fails closed: returns None when Redis is unavailable to prevent CSRF bypass.
+    """
+    try:
+        r = get_redis()
+        user_id = r.get(f"oauth:state:{nonce}")
+        if user_id:
+            r.delete(f"oauth:state:{nonce}")
+        return user_id
+    except Exception:
+        logger.warning("Redis unavailable for OAuth state resolution — rejecting for security.")
+        return None
+
 
 class StravaService:
     @staticmethod
     def get_auth_url(user_id):
+        nonce = _store_oauth_state(user_id)
         return (
             f"https://www.strava.com/oauth/authorize?"
             f"client_id={STRAVA_CLIENT_ID}&"
             f"response_type=code&"
             f"redirect_uri={STRAVA_REDIRECT_URI}&"
             f"scope=read,activity:read_all&"
-            f"state={user_id}&"
+            f"state={nonce}&"
             f"approval_prompt=force"
         )
 
@@ -76,22 +118,22 @@ class StravaService:
     @staticmethod
     def refresh_token(integration):
         if integration.expires_at and integration.expires_at > timezone.now() + timedelta(minutes=5):
-            return integration.access_token
+            return integration.decrypted_access_token
 
         response = requests.post("https://www.strava.com/oauth/token", data={
             'client_id': STRAVA_CLIENT_ID,
             'client_secret': STRAVA_CLIENT_SECRET,
-            'refresh_token': integration.refresh_token,
+            'refresh_token': integration.decrypted_refresh_token,
             'grant_type': 'refresh_token'
         }, timeout=15)
 
         if response.status_code == 200:
             data = response.json()
             integration.access_token = data['access_token']
-            integration.refresh_token = data.get('refresh_token', integration.refresh_token)
+            integration.refresh_token = data.get('refresh_token', integration.decrypted_refresh_token)
             integration.expires_at = timezone.now() + timedelta(seconds=data['expires_in'])
             integration.save()
-            return integration.access_token
+            return integration.decrypted_access_token
         else:
             logger.error(f"Strava token refresh failed for user {integration.user.id}")
             integration.is_active = False
@@ -169,12 +211,13 @@ class StravaService:
 class GarminService:
     @staticmethod
     def get_auth_url(user_id):
+        nonce = _store_oauth_state(user_id)
         return (
             f"https://connect.garmin.com/oauthConfirm?"
             f"client_id={GARMIN_CLIENT_ID}&"
             f"response_type=code&"
             f"redirect_uri={GARMIN_REDIRECT_URI}&"
-            f"state={user_id}&"
+            f"state={nonce}&"
             f"scope=activity:read"
         )
 
@@ -224,15 +267,15 @@ class GarminService:
 
     @staticmethod
     def refresh_token(integration):
-        if not integration.refresh_token:
-            return integration.access_token
+        if not integration.decrypted_refresh_token:
+            return integration.decrypted_access_token
 
         response = requests.post(
             f"{GARMIN_API_BASE}/oauth-service/oauth/token",
             data={
                 'client_id': GARMIN_CLIENT_ID,
                 'client_secret': GARMIN_CLIENT_SECRET,
-                'refresh_token': integration.refresh_token,
+                'refresh_token': integration.decrypted_refresh_token,
                 'grant_type': 'refresh_token',
             },
             headers={'Content-Type': 'application/x-www-form-urlencoded'},
@@ -241,11 +284,11 @@ class GarminService:
 
         if response.status_code == 200:
             data = response.json()
-            integration.access_token = data.get('access_token', integration.access_token)
-            integration.refresh_token = data.get('refresh_token', integration.refresh_token)
+            integration.access_token = data.get('access_token', integration.decrypted_access_token)
+            integration.refresh_token = data.get('refresh_token', integration.decrypted_refresh_token)
             integration.expires_at = timezone.now() + timedelta(seconds=data.get('expires_in', 3600))
             integration.save()
-            return integration.access_token
+            return integration.decrypted_access_token
 
         integration.is_active = False
         integration.save()

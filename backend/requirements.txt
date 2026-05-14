@@ -30,4 +30,6 @@ scikit-learn==1.5.0
 numpy==1.26.4
 # RC v0.2: Email (SendGrid)
 sendgrid==6.11.0
+# Token encryption at rest (WearableIntegration OAuth credentials)
+cryptography>=41.0.0
 

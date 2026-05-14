@@ -1,5 +1,20 @@
+import logging
+import os
+import base64
+import hashlib
 from django.contrib.gis.db import models
 from django.conf import settings
+from cryptography.fernet import Fernet, InvalidToken
+
+logger = logging.getLogger(__name__)
+
+# Derive a 32-byte Fernet key from SECRET_KEY (or use explicit env var).
+# Fernet requires a URL-safe base64-encoded 32-byte key.
+_TOKEN_KEY_RAW = os.getenv(
+    'TOKEN_ENCRYPTION_KEY',
+    base64.urlsafe_b64encode(hashlib.sha256(settings.SECRET_KEY.encode()).digest()).decode(),
+)
+_fernet = Fernet(_TOKEN_KEY_RAW.encode() if isinstance(_TOKEN_KEY_RAW, str) else _TOKEN_KEY_RAW)
 
 class Activity(models.Model):
     ACTIVITY_TYPES = (
@@ -97,6 +112,7 @@ class Voucher(models.Model):
 class WearableIntegration(models.Model):
     """
     Stores OAuth credentials for external wearable services (Milestone 4).
+    Tokens are encrypted at rest using Fernet (AES-128-CBC + HMAC-SHA256).
     """
     SERVICE_CHOICES = (
         ('STRAVA', 'Strava'),
@@ -107,7 +123,7 @@ class WearableIntegration(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wearables')
     service = models.CharField(max_length=20, choices=SERVICE_CHOICES)
     
-    # OAuth 2.0
+    # OAuth 2.0 — encrypted at rest via save() override
     access_token = models.TextField()
     refresh_token = models.TextField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
@@ -123,4 +139,41 @@ class WearableIntegration(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.service}"
+
+    def save(self, *args, **kwargs):
+        # Encrypt tokens at rest.  Use a volatile flag + Fernet-decrypt test
+        # to avoid double-encrypting tokens loaded from the DB and re-saved.
+        if not getattr(self, '_tokens_encrypted', False):
+            if self.access_token:
+                try:
+                    _fernet.decrypt(self.access_token.encode())
+                except (InvalidToken, UnicodeDecodeError):
+                    self.access_token = _fernet.encrypt(self.access_token.encode()).decode()
+            if self.refresh_token:
+                try:
+                    _fernet.decrypt(self.refresh_token.encode())
+                except (InvalidToken, UnicodeDecodeError):
+                    self.refresh_token = _fernet.encrypt(self.refresh_token.encode()).decode()
+            self._tokens_encrypted = True
+        super().save(*args, **kwargs)
+
+    @property
+    def decrypted_access_token(self):
+        if not self.access_token:
+            return None
+        try:
+            return _fernet.decrypt(self.access_token.encode()).decode()
+        except (InvalidToken, UnicodeDecodeError):
+            logger.error(f"Failed to decrypt access_token for WearableIntegration id={self.pk}")
+            return None
+
+    @property
+    def decrypted_refresh_token(self):
+        if not self.refresh_token:
+            return None
+        try:
+            return _fernet.decrypt(self.refresh_token.encode()).decode()
+        except (InvalidToken, UnicodeDecodeError):
+            logger.error(f"Failed to decrypt refresh_token for WearableIntegration id={self.pk}")
+            return None
 

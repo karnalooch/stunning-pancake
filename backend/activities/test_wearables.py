@@ -53,11 +53,12 @@ def garmin_integration(db, user):
 @pytest.mark.django_db
 class TestStravaService:
     def test_get_auth_url(self):
-        with patch("activities.wearables.STRAVA_CLIENT_ID", "client_123"):
+        with patch("activities.wearables.STRAVA_CLIENT_ID", "client_123"), \
+             patch("activities.wearables._store_oauth_state", return_value="mock_nonce_abc"):
             url = StravaService.get_auth_url(user_id=42)
             assert "strava.com/oauth/authorize" in url
             assert "client_id=client_123" in url
-            assert "state=42" in url
+            assert "state=mock_nonce_abc" in url
             assert "scope=read" in url
 
     def test_exchange_code_creates_integration(self, user):
@@ -71,7 +72,7 @@ class TestStravaService:
             }
             integration = StravaService.exchange_code(user, "auth_code_xyz")
             assert integration is not None
-            assert integration.access_token == "new_access"
+            assert integration.decrypted_access_token == "new_access"
             assert integration.external_id == "12345"
             assert integration.is_active is True
 
@@ -108,7 +109,7 @@ class TestStravaService:
             token = StravaService.refresh_token(strava_integration)
             assert token == "refreshed_access"
             strava_integration.refresh_from_db()
-            assert strava_integration.access_token == "refreshed_access"
+            assert strava_integration.decrypted_access_token == "refreshed_access"
 
     def test_refresh_token_failure_deactivates(self, strava_integration):
         strava_integration.expires_at = timezone.now() - timedelta(hours=1)
@@ -174,18 +175,19 @@ class TestStravaService:
 @pytest.mark.django_db
 class TestGarminService:
     def test_get_auth_url(self):
-        with patch("activities.wearables.GARMIN_CLIENT_ID", "garmin_client_456"):
+        with patch("activities.wearables.GARMIN_CLIENT_ID", "garmin_client_456"), \
+             patch("activities.wearables._store_oauth_state", return_value="mock_nonce_xyz"):
             url = GarminService.get_auth_url(user_id=7)
             assert "connect.garmin.com" in url
             assert "client_id=garmin_client_456" in url
-            assert "state=7" in url
+            assert "state=mock_nonce_xyz" in url
 
     def test_exchange_code_mock_fallback(self, user):
         with patch("activities.wearables.GARMIN_CLIENT_ID", "mock"):
             with patch("activities.wearables.GARMIN_CLIENT_SECRET", "mock"):
                 integration = GarminService.exchange_code(user, "code")
                 assert integration is not None
-                assert integration.access_token == "mock_garmin_token"
+                assert integration.decrypted_access_token == "mock_garmin_token"
                 assert integration.is_active is True
 
     def test_get_status_connected(self, user, garmin_integration):
