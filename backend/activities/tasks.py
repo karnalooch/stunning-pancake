@@ -13,6 +13,7 @@ Optimized Pipeline:
 from __future__ import annotations
 
 import logging
+import os
 from celery import shared_task
 
 logger = logging.getLogger(__name__)
@@ -117,11 +118,15 @@ def process_activity_async(self, activity_id: int) -> dict:
             from core.plugin_registry import registry
             registry.fire('activity.suspicious', activity=activity, anomaly_ratio=analysis["anomaly_ratio"])
             from core.matrix_provisioner import MatrixProvisioner
-            MatrixProvisioner.send_notification(
-                "!admin_room_id:matrix.org",
-                f"🚨 [LIGHTWEIGHT] Rejected #{activity_id} ({activity.type}) by {activity.user.username}. "
-                f"Reason: {analysis['reason']}"
-            )
+            _matrix_admin_room_id = os.getenv('MATRIX_ADMIN_ROOM_ID')
+            if _matrix_admin_room_id:
+                MatrixProvisioner.send_notification(
+                    _matrix_admin_room_id,
+                    f"🚨 [LIGHTWEIGHT] Rejected #{activity_id} ({activity.type}) by {activity.user.username}. "
+                    f"Reason: {analysis['reason']}"
+                )
+            else:
+                logger.warning('MATRIX_ADMIN_ROOM_ID not configured — anti-cheat alert suppressed')
         except Exception: pass
 
         return {

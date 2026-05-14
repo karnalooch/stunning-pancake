@@ -78,7 +78,7 @@ class LeaderboardService:
         try:
             r = cls._get_redis()
             r.zincrby(key, score_delta, str(user_id))
-            r.expire(key, _CACHE_TTL_S * 60)  # extend TTL on write
+            r.expire(key, _CACHE_TTL_S)  # extend TTL on write
         except Exception as exc:
             logger.warning(
                 "leaderboard.update_failed scope=%s entity=%s err=%s",
@@ -121,7 +121,7 @@ class LeaderboardService:
                 pipe.delete(key)
                 # ZADD format: {member: score}
                 pipe.zadd(key, {str(uid): km for uid, km in scores.items()})
-                pipe.expire(key, _CACHE_TTL_S * 60)
+                pipe.expire(key, _CACHE_TTL_S)
                 pipe.set(ts_key, str(time.time()), ex=3600)
                 pipe.execute()
 
