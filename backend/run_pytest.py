@@ -1,0 +1,129 @@
+"""
+Test runner that mocks GDAL/GEOS native libraries for environments without them.
+Keeps the real django.contrib.gis for Model/ForeignKey infrastructure.
+Runs pytest.
+Usage: python run_pytest.py [pytest args...]
+"""
+import os
+import sys
+from types import ModuleType
+
+# Set required env vars before ANY Django import
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
+os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+os.environ["REDIS_URL"] = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+os.environ["SECRET_KEY"] = os.environ.get("SECRET_KEY", "test-secret-key-for-ci")
+os.environ["DEBUG"] = "1"
+
+# ---------------------------------------------------------------------------
+# Mock ONLY the native GDAL/GEOS submodules that require C libraries.
+# We keep the real django.contrib.gis for Model, ForeignKey, etc.
+# ---------------------------------------------------------------------------
+
+# Mock django.contrib.gis.gdal (native GDAL library wrapper)
+mock_gdal = ModuleType("django.contrib.gis.gdal")
+mock_gdal.GDAL_VERSION = (3, 0, 0)
+mock_gdal.gdal_version = lambda: b"3.0.0"
+mock_gdal.lgdal = ModuleType("lgdal")
+mock_gdal.DataSource = type("DataSource", (), {})
+mock_gdal.Driver = type("Driver", (), {})
+mock_gdal.GDALException = type("GDALException", (Exception,), {})
+mock_gdal.SRSException = type("SRSException", (Exception,), {})
+mock_gdal.OGRGeomType = type("OGRGeomType", (), {})
+mock_gdal.OGRGeometry = type("OGRGeometry", (), {})
+mock_gdal.SpatialReference = type("SpatialReference", (), {})
+mock_gdal.CoordTransform = type("CoordTransform", (), {})
+mock_gdal.Envelope = type("Envelope", (), {})
+sys.modules["django.contrib.gis.gdal"] = mock_gdal
+
+# gdal submodules
+mock_gdal_error = ModuleType("django.contrib.gis.gdal.error")
+mock_gdal_error.GDALException = type("GDALException", (Exception,), {})
+sys.modules["django.contrib.gis.gdal.error"] = mock_gdal_error
+mock_gdal.error = mock_gdal_error
+
+mock_libgdal = ModuleType("django.contrib.gis.gdal.libgdal")
+mock_libgdal.lgdal = ModuleType("lgdal")
+sys.modules["django.contrib.gis.gdal.libgdal"] = mock_libgdal
+
+mock_gdal_prototypes = ModuleType("django.contrib.gis.gdal.prototypes")
+mock_gdal_prototypes.ds = ModuleType("ds")
+sys.modules["django.contrib.gis.gdal.prototypes"] = mock_gdal_prototypes
+sys.modules["django.contrib.gis.gdal.prototypes.ds"] = mock_gdal_prototypes.ds
+
+mock_gdal_datasource = ModuleType("django.contrib.gis.gdal.datasource")
+sys.modules["django.contrib.gis.gdal.datasource"] = mock_gdal_datasource
+
+mock_gdal_driver = ModuleType("django.contrib.gis.gdal.driver")
+sys.modules["django.contrib.gis.gdal.driver"] = mock_gdal_driver
+
+# Mock django.contrib.gis.geos (native GEOS library wrapper)
+mock_geos = ModuleType("django.contrib.gis.geos")
+mock_geos.GEOSGeometry = type("GEOSGeometry", (), {})
+mock_geos.GEOSException = type("GEOSException", (Exception,), {})
+for _geo_type in (
+    "GeometryCollection", "MultiPoint", "MultiLineString", "MultiPolygon",
+    "Point", "LineString", "LinearRing", "Polygon",
+    "fromstr",
+):
+    setattr(mock_geos, _geo_type, type(_geo_type, (), {}))
+sys.modules["django.contrib.gis.geos"] = mock_geos
+
+mock_geos_prototypes = ModuleType("django.contrib.gis.geos.prototypes")
+mock_geos_prototypes.io = ModuleType("io")
+sys.modules["django.contrib.gis.geos.prototypes"] = mock_geos_prototypes
+sys.modules["django.contrib.gis.geos.prototypes.io"] = mock_geos_prototypes.io
+
+mock_geos_collections = ModuleType("django.contrib.gis.geos.collections")
+sys.modules["django.contrib.gis.geos.collections"] = mock_geos_collections
+
+mock_geos_geometry = ModuleType("django.contrib.gis.geos.geometry")
+sys.modules["django.contrib.gis.geos.geometry"] = mock_geos_geometry
+
+# Mock django.contrib.gis.geometry (needs json_regex)
+mock_gis_geometry = ModuleType("django.contrib.gis.geometry")
+mock_gis_geometry.json_regex = r"^\{"
+sys.modules["django.contrib.gis.geometry"] = mock_gis_geometry
+
+# Mock django.contrib.gis.measure
+mock_gis_measure = ModuleType("django.contrib.gis.measure")
+mock_gis_measure.D = type("D", (), {})
+mock_gis_measure.Area = type("Area", (), {})
+mock_gis_measure.Distance = type("Distance", (), {})
+sys.modules["django.contrib.gis.measure"] = mock_gis_measure
+
+# Mock django.contrib.gis.serializers
+sys.modules["django.contrib.gis.serializers"] = ModuleType("django.contrib.gis.serializers")
+
+# ---------------------------------------------------------------------------
+# Monkey-patch GIS fields to work with SQLite (which has no PostGIS)
+# SQLite DatabaseOperations doesn't have geo_db_type, so we add it.
+# ---------------------------------------------------------------------------
+from django.db.backends.sqlite3.operations import DatabaseOperations as SQLiteOps
+
+SQLiteOps.geo_db_type = lambda self, field: "TEXT"
+# ---------------------------------------------------------------------------
+# Patch dj_database_url.parse so settings.py's PostGIS engine → SQLite
+# ---------------------------------------------------------------------------
+import dj_database_url
+
+_original_parse = dj_database_url.parse
+
+
+def _mocked_parse(url, engine=None, **kwargs):
+    cfg = _original_parse(url, engine=engine, **kwargs)
+    cfg["ENGINE"] = "django.db.backends.sqlite3"
+    cfg["NAME"] = ":memory:"
+    return cfg
+
+
+dj_database_url.parse = _mocked_parse
+
+# ---------------------------------------------------------------------------
+# Now run pytest
+# ---------------------------------------------------------------------------
+import pytest
+
+if __name__ == "__main__":
+    args = sys.argv[1:] if len(sys.argv) > 1 else ["activities/"]
+    sys.exit(pytest.main(args))

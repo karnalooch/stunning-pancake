@@ -55,21 +55,34 @@ mock_gis_measure.Distance = type('Distance', (), {})
 sys.modules['django.contrib.gis.measure'] = mock_gis_measure
 
 # Additional mock modules that GIS contrib may try to import
-for _mod in (
-    'django.contrib.gis.geometry',
-    'django.contrib.gis.serializers',
-):
-    sys.modules[_mod] = ModuleType(_mod)
+mock_gis_geometry = ModuleType('django.contrib.gis.geometry')
+mock_gis_geometry.json_regex = r'^\{'
+sys.modules['django.contrib.gis.geometry'] = mock_gis_geometry
 
-# Mock dj_database_url config to swap engine to SQLite
+mock_gis_serializers = ModuleType('django.contrib.gis.serializers')
+sys.modules['django.contrib.gis.serializers'] = mock_gis_serializers
+
+mock_gis_widgets = ModuleType('django.contrib.gis.forms.widgets')
+mock_gis_widgets.OpenLayersWidget = type('OpenLayersWidget', (), {})
+sys.modules['django.contrib.gis.forms.widgets'] = mock_gis_widgets
+
+mock_gis_forms_fields = ModuleType('django.contrib.gis.forms.fields')
+for _field in (
+    'GeometryField', 'GeometryCollectionField', 'PointField', 'MultiPointField',
+    'LineStringField', 'MultiLineStringField', 'PolygonField', 'MultiPolygonField',
+):
+    setattr(mock_gis_forms_fields, _field, type(_field, (), {}))
+sys.modules['django.contrib.gis.forms.fields'] = mock_gis_forms_fields
+
+# Mock dj_database_url.parse to swap engine to SQLite (settings.py uses parse(), not config())
 import dj_database_url
-original_config = dj_database_url.config
-def mocked_config(*args, **kwargs):
-    cfg = original_config(*args, **kwargs)
+original_parse = dj_database_url.parse
+def mocked_parse(url, engine=None, **kwargs):
+    cfg = original_parse(url, engine=engine, **kwargs)
     cfg['ENGINE'] = 'django.db.backends.sqlite3'
     cfg['NAME'] = ':memory:'
     return cfg
-dj_database_url.config = mocked_config
+dj_database_url.parse = mocked_parse
 
 # Set required env vars before Django loads
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
