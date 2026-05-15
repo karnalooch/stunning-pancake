@@ -67,6 +67,7 @@ class UserRole(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='role_assignments')
     role = models.ForeignKey(Role, on_delete=models.CASCADE)
     tenant = models.ForeignKey('users.Tenant', on_delete=models.SET_NULL, null=True, blank=True)
+    tenant_scoped = models.BooleanField(default=False)  # Permission limited to user's tenant
     expires_at = models.DateTimeField(null=True, blank=True)
     granted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='granted_roles')
     created_at = models.DateTimeField(auto_now_add=True)
