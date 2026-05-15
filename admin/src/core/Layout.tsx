@@ -9,6 +9,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
   Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
+  Calendar, TrendingUp, MessageSquare,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
@@ -63,6 +64,35 @@ const NAV_SECTIONS = [
         label: 'Sponsorship',
         path: '/owner/sponsor',
         roles: ['GLOBAL_OWNER', 'SPONSOR'],
+      },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      {
+        icon: Calendar,
+        label: 'Events',
+        path: '/owner/analytics/events',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
+      },
+      {
+        icon: TrendingUp,
+        label: 'Sponsorship',
+        path: '/owner/analytics/sponsorship',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: Gift,
+        label: 'Vouchers',
+        path: '/owner/analytics/vouchers',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: MessageSquare,
+        label: 'Feedback',
+        path: '/owner/analytics/feedback',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
     ],
   },

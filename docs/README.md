@@ -74,11 +74,12 @@ Kompletna dokumentacja platformy 4VELO — wysokowydajnego ekosystemu sportowego
 | [🏛️ Department Architecture](./DEPARTMENT_ARCHITECTURE.md) | Architektura systemu działów |
 | [🏗️ C4 Architecture](./diagrams/architecture_c4.md) | Diagramy architektury C4 |
 
-### Stan projektu (v0.2.0-rc.1) — 100% KOMPLETNY
-- **39 ekranów frontend** — wszystkie gotowe ✅
+### Stan projektu (v0.2.0-rc.1)
+- **39 ekranów frontend** — wszystkie gotowe i routowalne ✅
 - **45+ endpointów backend** — wszystkie zaimplementowane ✅
 - **15+ modeli Django** — kompletne ✅
 - **12 dokumentów** — pełna dokumentacja ✅
+- ⚠️ **Integracja API** — ekrany analityczne używają danych mockowych; podłączenie do backend API w toku
 
 ---
 

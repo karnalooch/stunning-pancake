@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Card, Text, Badge, Group, Stack } from '@mantine/core';
-import { MessageSquare, Check, Clock } from 'lucide-react';
+import { Check, Clock } from 'lucide-react';
 
 const items = [{ user: 'athlete_01', msg: 'Map sometimes freezes on Android 14', status: 'open' }, { user: 'athlete_warsaw', msg: 'Strava sync works great!', status: 'resolved' }, { user: 'global_owner', msg: 'Need dark mode for admin panel', status: 'open' }];
 

@@ -16,6 +16,10 @@ import { Departments } from './modules/departments/Departments';
 import { DepartmentUsers } from './modules/departments/DepartmentUsers';
 import { LandingPage } from './modules/public/LandingPage';
 import { LoginPage } from './core/auth/LoginPage';
+import { EventsManager } from './modules/analytics/EventsManager';
+import { SponsorshipAnalytics } from './modules/analytics/SponsorshipAnalytics';
+import { RewardsVouchers } from './modules/analytics/RewardsVouchers';
+import { BetaFeedback } from './modules/analytics/BetaFeedback';
 import { SettingsScreen } from './modules/settings/SettingsScreen';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
@@ -24,8 +28,13 @@ import { CommandPalette } from './core/components/CommandPalette';
 export default function App() {
   const [loading, setLoading] = useState(false);
   const [departmentsEnabled] = useState(() => {
-    // Feature flag check — can be overridden via localStorage for testing
-    return localStorage.getItem('feature_departments') !== 'disabled';
+    // DEV-ONLY feature flag — overridable via localStorage for development/testing.
+    // Backend permission checks (departments.view) enforce access control in production.
+    const enabled = localStorage.getItem('dev_feature_departments') !== 'disabled';
+    if (import.meta.env.DEV) {
+      console.info('[dev] departmentsEnabled:', enabled);
+    }
+    return enabled;
   });
   const { isAuthenticated, login, user } = useAuth();
 
@@ -59,8 +68,8 @@ export default function App() {
   return (
     <MantineProvider defaultColorScheme="auto" theme={theme}>
       <Notifications position="top-right" zIndex={9999} />
-      <CommandPalette />
       <HashRouter>
+        <CommandPalette />
         {!isAuthenticated ? (
           <Routes>
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
@@ -131,6 +140,38 @@ export default function App() {
                   />
                 </>
               )}
+              <Route
+                path="analytics/events"
+                element={
+                  <PermissionGuard permissions={['analytics.view']}>
+                    <EventsManager />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/sponsorship"
+                element={
+                  <PermissionGuard permissions={['analytics.view']}>
+                    <SponsorshipAnalytics />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/vouchers"
+                element={
+                  <PermissionGuard permissions={['analytics.view']}>
+                    <RewardsVouchers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/feedback"
+                element={
+                  <PermissionGuard permissions={['analytics.view']}>
+                    <BetaFeedback />
+                  </PermissionGuard>
+                }
+              />
               <Route
                 path="settings"
                 element={

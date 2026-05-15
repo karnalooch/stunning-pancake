@@ -2,9 +2,11 @@
 Fixes plain text password for global_owner user.
 Safe to run multiple times — only updates if password is not hashed.
 """
+import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import is_password_usable
+from django.utils.crypto import get_random_string
 
 User = get_user_model()
 
@@ -27,8 +29,19 @@ class Command(BaseCommand):
             return
 
         # Password is plain text — fix it
-        user.set_password('admin123')
+        password = os.getenv('ADMIN_PASSWORD')
+        if not password:
+            password = get_random_string(20)
+            self.stdout.write(
+                self.style.WARNING(
+                    f'No ADMIN_PASSWORD env var set. Generated one-time password: {password}'
+                )
+            )
+
+        user.set_password(password)
         user.save()
         self.stdout.write(
-            self.style.SUCCESS('Fixed password for global_owner. New password: admin123')
+            self.style.SUCCESS(
+                'Fixed password for global_owner. Set ADMIN_PASSWORD env var to change it.'
+            )
         )
