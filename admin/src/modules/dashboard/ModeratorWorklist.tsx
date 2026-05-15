@@ -31,7 +31,7 @@ export const ModeratorWorklist: React.FC = () => {
         <Table>
           <Table.Thead><Table.Tr><Table.Th>User</Table.Th><Table.Th>Type</Table.Th><Table.Th>Distance</Table.Th><Table.Th>Score</Table.Th><Table.Th>Actions</Table.Th></Table.Tr></Table.Thead>
           <Table.Tbody>{activities.map((a: any, i: number) => (
-            <Table.Tr key={i}><Table.Td><Text fw={500} size="sm">{a.user || a.username || 'Unknown'}</Table.Td><Table.Td><Badge size="sm" variant="light">{a.type || 'RUN'}</Badge></Table.Td><Table.Td><Text size="sm">{a.distance ? `${(a.distance / 1000).toFixed(1)}km` : '—'}</Text></Table.Td><Table.Td><Badge size="sm" color={a.score > 0.5 ? 'green' : 'orange'} variant="light">{a.score?.toFixed(2) || '0.00'}</Badge></Table.Td><Table.Td>
+            <Table.Tr key={i}><Table.Td><Text fw={500} size="sm">{a.user || a.username || 'Unknown'}</Text></Table.Td><Table.Td><Badge size="sm" variant="light">{a.type || 'RUN'}</Badge></Table.Td><Table.Td><Text size="sm">{a.distance ? `${(a.distance / 1000).toFixed(1)}km` : '—'}</Text></Table.Td><Table.Td><Badge size="sm" color={a.score > 0.5 ? 'green' : 'orange'} variant="light">{a.score?.toFixed(2) || '0.00'}</Badge></Table.Td><Table.Td>
               <Group gap={4}><Button size="xs" color="green" variant="light" leftSection={<Check size={12} />} onClick={() => handleAction(a.id || a.activity_id, 'approve')}>Approve</Button><Button size="xs" color="red" variant="light" leftSection={<X size={12} />} onClick={() => handleAction(a.id || a.activity_id, 'reject')}>Reject</Button></Group>
             </Table.Td></Table.Tr>
           ))}</Table.Tbody>
