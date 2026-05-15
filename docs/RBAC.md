@@ -75,11 +75,18 @@ class Role(models.TextChoices):
 | `activities.edit` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `activities.delete` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `activities.approve` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `activities.view_all` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `users.view` | ✅ | ✅ | ✅ | ❌ | ✅ |
 | `users.create` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `users.edit` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `users.delete` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `users.view_all` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `users.impersonate` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `tenants.view` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `tenants.create` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `tenants.edit` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `tenants.delete` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `tenants.view_all` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `poi.view` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `poi.create` | ✅ | ✅ | ❌ | ✅ | ❌ |
 | `poi.edit` | ✅ | ✅ | ❌ | ✅ | ❌ |
@@ -88,7 +95,8 @@ class Role(models.TextChoices):
 | `vouchers.view` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `analytics.view` | ✅ | ✅ | ✅ | ✅ | ❌ |
 | `analytics.export` | ✅ | ✅ | ❌ | ❌ | ❌ |
-| `users.impersonate` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `system.config` | ✅ | ❌ | ❌ | ❌ | ❌ |
+| `system.impersonate` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `rbac.manage_roles` | ✅ | ✅ | ❌ | ❌ | ❌ |
 
 ### Zasoby i akcje

@@ -160,7 +160,9 @@ docker compose logs db
 | Serwis | Port | Opis |
 |--------|------|------|
 | backend | 8000 | Django REST API |
-| admin | 3001 | Admin Panel |
+| global_admin | 3001 | Global Admin Panel |
+| tenant_admin | 3002 | Tenant Admin Panel |
+| moderator | 3003 | Moderator Panel |
 | telemetry | 8001 | FastAPI Telemetry |
 | db | 5432 | PostgreSQL + PostGIS |
 | redis | 6379 | Redis Cache |

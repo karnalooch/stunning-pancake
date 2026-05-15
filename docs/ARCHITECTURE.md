@@ -263,7 +263,7 @@ interface AuthState {
 
 | Kolejka | Opis |
 |---------|------|
-| `celery` | Domyślna kolejka zadań |
+| `critical,notifications` | Domyślne kolejki zadań |
 | `traccar:positions` | Pozycje GPS z Traccar |
 | Leaderboard Sorted Sets | Rankingi miast (`leaderboard:{city_id}`) |
 

@@ -165,7 +165,7 @@ CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
 
 ```bash
 # Worker Celery
-celery -A core worker -l info -Q celery
+celery -A core worker -l info -Q critical,notifications
 
 # Beat scheduler
 celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
@@ -175,9 +175,9 @@ celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseSc
 
 ```yaml
 # Celery Worker
-celery:
+celery_worker:
   build: ./backend
-  command: celery -A core worker -l info -Q celery
+  command: celery -A core worker -l info -Q critical,notifications
   environment:
     DATABASE_URL: postgres://...
     REDIS_URL: redis://redis:6379/0
@@ -186,7 +186,7 @@ celery:
     - redis
 
 # Celery Beat
-celerybeat:
+celery_beat:
   build: ./backend
   command: celery -A core beat -l info
   environment:

@@ -61,7 +61,9 @@ docker compose up -d
 Usługa | URL | Status
 -------|-----|-------
 Backend API | http://localhost:8000 | ✅
-Admin Panel | http://localhost:3001 | ✅
+Global Admin | http://localhost:3001 | ✅
+Tenant Admin | http://localhost:3002 | ✅
+Moderator | http://localhost:3003 | ✅
 Telemetry | http://localhost:8001 | ✅
 PostgreSQL | localhost:5432 | ✅
 Redis | localhost:6379 | ✅
