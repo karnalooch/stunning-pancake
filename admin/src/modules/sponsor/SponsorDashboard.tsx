@@ -1,67 +1,36 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Stack, SimpleGrid, Badge, Box, Divider } from '@mantine/core';
-import { Gift, TrendingUp } from 'lucide-react';
-import { apiClient, RewardsApi } from '../../api/client';
-import { notifications } from '@mantine/notifications';
+import { Card, Text, Group, Title, SimpleGrid, ThemeIcon, Box } from '@mantine/core';
+import { Gift, TrendingUp, Users, Activity } from 'lucide-react';
+import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 
 export const SponsorDashboard: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    RewardsApi.getSponsorStats()
-      .then(data => setStats(data))
-      .catch(() => {
-        notifications.show({ title: 'Sponsor Dashboard', message: 'Failed to load sponsor stats.', color: 'red' });
-      });
+    apiClient.get('/rewards/sponsor-stats/').then(res => setStats(res.data || {})).catch(() => { }).finally(() => setLoading(false));
   }, []);
 
   return (
-    <Box>
-      <PageHeader title="Sponsor Dashboard" subtitle="Performance and redemption metrics" />
-
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl">
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <Gift size={24} />
-            <Text size="xl" fw={700} mt="sm">{stats?.vouchers_distributed ?? '—'}</Text>
-            <Text size="xs" c="dimmed">Distributed</Text>
-          </Stack>
+    <Box><PageHeader title="Sponsor Dashboard" subtitle="Track voucher performance and ROI" />
+      <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} mb="xl" spacing="md">
+        <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+          <Group gap="sm"><ThemeIcon size={36} radius="md" color="indigo" variant="light"><Gift size={18} /></ThemeIcon><Box><Text size="xs" c="dimmed">Active Vouchers</Text><Text fw={700} size="xl">{stats?.active_vouchers ?? '—'}</Text></Box></Group>
         </Card>
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <TrendingUp size={24} />
-            <Text size="xl" fw={700} mt="sm">{stats?.redeemed_count ?? '—'}</Text>
-            <Text size="xs" c="dimmed">Redeemed</Text>
-          </Stack>
+        <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+          <Group gap="sm"><ThemeIcon size={36} radius="md" color="green" variant="light"><TrendingUp size={18} /></ThemeIcon><Box><Text size="xs" c="dimmed">Redemptions</Text><Text fw={700} size="xl">{stats?.total_redemptions ?? '—'}</Text></Box></Group>
         </Card>
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <Text size="xl" fw={700} mt="sm">{stats ? `${Math.round((stats.redemption_rate || 0) * 100)}%` : '—'}</Text>
-            <Text size="xs" c="dimmed">Redemption Rate</Text>
-          </Stack>
+        <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+          <Group gap="sm"><ThemeIcon size={36} radius="md" color="violet" variant="light"><Users size={18} /></ThemeIcon><Box><Text size="xs" c="dimmed">Reach</Text><Text fw={700} size="xl">{stats?.total_reach ?? '—'}</Text></Box></Group>
+        </Card>
+        <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
+          <Group gap="sm"><ThemeIcon size={36} radius="md" color="orange" variant="light"><Activity size={18} /></ThemeIcon><Box><Text size="xs" c="dimmed">Conversion</Text><Text fw={700} size="xl">{stats?.conversion_rate ? `${stats.conversion_rate}%` : '—'}</Text></Box></Group>
         </Card>
       </SimpleGrid>
-
-      <Card withBorder>
-        <Group mb="md">
-          <Text fw={600}>Activity Summary</Text>
-        </Group>
-        <Divider mb="md" />
-        <Group gap="xl">
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed">Active Vouchers</Text>
-            <Text fw={600}>{stats?.active_vouchers ?? '—'}</Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed">Expired</Text>
-            <Text fw={600}>{stats?.expired_vouchers ?? '—'}</Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed">POIs</Text>
-            <Text fw={600}>{stats?.poi_count ?? '—'}</Text>
-          </Stack>
-        </Group>
+      <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+        <Title order={5} mb="md">Recent Activity</Title>
+        <Text c="dimmed" ta="center" py="xl">Voucher activity data will appear here.</Text>
       </Card>
     </Box>
   );
