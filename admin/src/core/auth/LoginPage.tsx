@@ -1,69 +1,412 @@
 import React, { useState } from 'react';
-import { TextInput, Button, Text, Stack, Card, Group, Badge, PasswordInput } from '@mantine/core';
-import { motion } from 'framer-motion';
+import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, ThemeIcon } from '@mantine/core';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, ShieldCheck, Globe, Layers, AlertCircle } from 'lucide-react';
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<void>;
 }
 
+/* ─── Feature list shown on the left panel ──────────────── */
+const FEATURES = [
+  {
+    icon: <Globe size={18} />,
+    title: 'Multi-tenant platform',
+    desc: 'Manage unlimited city instances with isolated data.',
+  },
+  {
+    icon: <ShieldCheck size={18} />,
+    title: 'Anti-cheat engine',
+    desc: '4-layer detection: Kinematic, ML, BRouter & Plugin.',
+  },
+  {
+    icon: <Layers size={18} />,
+    title: 'White-label branding',
+    desc: 'Custom look & feel for every tenant deployment.',
+  },
+];
+
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!username || !password) {
       setError('Please fill in all fields.');
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      await onLogin(email, password);
+      await onLogin(username, password);
     } catch (err: any) {
-      setError(err?.message || 'Login failed.');
+      setError(err?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Stack align="center" justify="center" h="100vh" bg="var(--surface-secondary)">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-        <Card withBorder w={400} shadow="sm">
-          <Stack gap="lg">
-            <Stack gap={4} align="center">
-              <Text fw={800} size="xl">4VELO Platform</Text>
-              <Text size="sm" c="dimmed">Admin Panel</Text>
+    <Box
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        background: 'var(--surface-secondary)',
+      }}
+    >
+      {/* ── Left branding panel (desktop only) ──────── */}
+      <Box
+        visibleFrom="md"
+        style={{
+          width: '45%',
+          minHeight: '100vh',
+          background: 'linear-gradient(145deg, #3730A3 0%, #6366F1 40%, #8B5CF6 75%, #A855F7 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '48px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Decorative blobs */}
+        <Box
+          style={{
+            position: 'absolute',
+            top: '-80px',
+            right: '-80px',
+            width: 320,
+            height: 320,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.06)',
+            pointerEvents: 'none',
+          }}
+        />
+        <Box
+          style={{
+            position: 'absolute',
+            bottom: '-60px',
+            left: '-60px',
+            width: 240,
+            height: 240,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.05)',
+            pointerEvents: 'none',
+          }}
+        />
+        <Box
+          style={{
+            position: 'absolute',
+            top: '35%',
+            left: '-40px',
+            width: 160,
+            height: 160,
+            borderRadius: '50%',
+            background: 'rgba(255,255,255,0.04)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Group gap="sm">
+            <Box
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backdropFilter: 'blur(8px)',
+              }}
+            >
+              <Zap size={20} color="white" fill="white" />
+            </Box>
+            <Text fw={900} size="lg" c="white" style={{ letterSpacing: '-0.02em' }}>
+              4VELO
+            </Text>
+          </Group>
+        </motion.div>
+
+        {/* Hero text */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.1 }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingBlock: '40px' }}
+        >
+          <Text
+            style={{
+              fontSize: '34px',
+              fontWeight: 900,
+              color: 'white',
+              lineHeight: 1.2,
+              letterSpacing: '-0.025em',
+              marginBottom: 12,
+            }}
+          >
+            Secure platform
+            <br />
+            management at
+            <br />
+            <span style={{ opacity: 0.75 }}>your fingertips.</span>
+          </Text>
+          <Text
+            style={{
+              fontSize: '15px',
+              color: 'rgba(255,255,255,0.65)',
+              fontWeight: 400,
+              lineHeight: 1.6,
+              maxWidth: 340,
+            }}
+          >
+            The all-in-one admin OS for multi-city sport challenge platforms.
+            Real-time, secure, and beautifully designed.
+          </Text>
+
+          {/* Feature list */}
+          <Stack gap="md" mt={36}>
+            {FEATURES.map((f, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: 0.25 + i * 0.1 }}
+              >
+                <Group gap="sm" align="flex-start">
+                  <Box
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 9,
+                      background: 'rgba(255,255,255,0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      flexShrink: 0,
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    {f.icon}
+                  </Box>
+                  <Stack gap={2}>
+                    <Text size="sm" fw={700} c="white" style={{ lineHeight: 1.3 }}>
+                      {f.title}
+                    </Text>
+                    <Text size="xs" style={{ color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                      {f.desc}
+                    </Text>
+                  </Stack>
+                </Group>
+              </motion.div>
+            ))}
+          </Stack>
+        </motion.div>
+
+        {/* Footer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.6 }}
+        >
+          <Text size="xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            © 2026 4VELO Platform. All rights reserved.
+          </Text>
+        </motion.div>
+      </Box>
+
+      {/* ── Right form panel ─────────────────────────── */}
+      <Box
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '32px 24px',
+          background: 'var(--surface-secondary)',
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, delay: 0.15 }}
+          style={{ width: '100%', maxWidth: 400 }}
+        >
+          {/* Mobile logo */}
+          <Box hiddenFrom="md" mb={32}>
+            <Group gap="sm" justify="center">
+              <Box
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: 'var(--brand-gradient)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Zap size={20} color="white" fill="white" />
+              </Box>
+              <Text fw={900} size="xl" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                4VELO
+              </Text>
+            </Group>
+          </Box>
+
+          {/* Form card */}
+          <Box
+            style={{
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 20,
+              padding: '36px 32px',
+              boxShadow: 'var(--shadow-xl)',
+            }}
+          >
+            <Stack gap={4} mb={28}>
+              <Text
+                style={{
+                  fontSize: '24px',
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  color: 'var(--text-primary)',
+                  lineHeight: 1.25,
+                }}
+              >
+                Welcome back
+              </Text>
+              <Text size="sm" style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>
+                Sign in to your admin account to continue
+              </Text>
             </Stack>
 
             <form onSubmit={handleSubmit}>
               <Stack gap="md">
                 <TextInput
-                  label="Email or Username"
+                  label="Username or Email"
                   placeholder="admin@4velo.app"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.currentTarget.value)}
                   required
+                  autoComplete="username"
+                  styles={{
+                    label: {
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                      marginBottom: 6,
+                    },
+                    input: {
+                      height: 42,
+                      borderRadius: 10,
+                      fontSize: '14px',
+                    },
+                  }}
                 />
+
                 <PasswordInput
                   label="Password"
-                  placeholder="Enter password"
+                  placeholder="Enter your password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => setPassword(e.currentTarget.value)}
                   required
+                  autoComplete="current-password"
+                  styles={{
+                    label: {
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      color: 'var(--text-secondary)',
+                      marginBottom: 6,
+                    },
+                    input: {
+                      height: 42,
+                      borderRadius: 10,
+                      fontSize: '14px',
+                    },
+                  }}
                 />
-                {error && <Text size="sm" c="red">{error}</Text>}
-                <Button type="submit" fullWidth loading={loading}>
-                  Sign In
+
+                {/* Error message */}
+                <AnimatePresence mode="wait">
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <Group
+                        gap="xs"
+                        style={{
+                          padding: '10px 14px',
+                          background: 'var(--danger-light)',
+                          borderRadius: 10,
+                          border: '1px solid rgba(239,68,68,0.2)',
+                        }}
+                      >
+                        <AlertCircle size={14} style={{ color: 'var(--danger)', flexShrink: 0 }} />
+                        <Text size="sm" style={{ color: 'var(--danger)', fontWeight: 500 }}>
+                          {error}
+                        </Text>
+                      </Group>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <Button
+                  type="submit"
+                  fullWidth
+                  loading={loading}
+                  size="md"
+                  style={{
+                    height: 44,
+                    background: 'var(--brand-gradient)',
+                    border: 'none',
+                    borderRadius: 10,
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    letterSpacing: '-0.01em',
+                    transition: 'opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease',
+                    boxShadow: '0 4px 14px rgba(99,102,241,0.4)',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.opacity = '0.9';
+                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 20px rgba(99,102,241,0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                    (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                    (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(99,102,241,0.4)';
+                  }}
+                >
+                  {loading ? 'Signing in…' : 'Sign in'}
                 </Button>
               </Stack>
             </form>
-          </Stack>
-        </Card>
-      </motion.div>
-    </Stack>
+          </Box>
+
+          <Text
+            size="xs"
+            ta="center"
+            mt="lg"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            Secure admin access · All actions are audited
+          </Text>
+        </motion.div>
+      </Box>
+    </Box>
   );
 };

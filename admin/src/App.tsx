@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MantineProvider, Box, Text, Title, Button } from '@mantine/core';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Notifications } from '@mantine/notifications';
+import '@mantine/notifications/styles.css';
 import { theme } from './theme/index';
 
 import { Layout } from './core/Layout';
@@ -49,8 +50,8 @@ export default function App() {
   };
 
   return (
-    <MantineProvider defaultColorScheme="light" theme={theme}>
-      <Notifications position="top-right" />
+    <MantineProvider defaultColorScheme="auto" theme={theme}>
+      <Notifications position="top-right" zIndex={9999} />
       <HashRouter>
         {!isAuthenticated ? (
           <Routes>
