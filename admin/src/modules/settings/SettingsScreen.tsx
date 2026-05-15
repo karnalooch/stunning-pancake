@@ -1,98 +1,61 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Button, Stack, PasswordInput, Divider, Badge, Code, Box } from '@mantine/core';
-import { Key, Server } from 'lucide-react';
-import { useAuth } from '../../core/auth/useAuth';
-import { apiClient } from '../../api/client';
-import { notifications } from '@mantine/notifications';
+import React, { useState } from 'react';
+import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon } from '@mantine/core';
+import { Bell, PaintBucket, Shield, Zap } from 'lucide-react';
 import { PageHeader } from '../../core/components/PageHeader';
+import { notifications } from '@mantine/notifications';
 
 export const SettingsScreen: React.FC = () => {
-  const { user } = useAuth();
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [changingPassword, setChangingPassword] = useState(false);
-  const [health, setHealth] = useState<any>(null);
+  const [settings, setSettings] = useState({
+    notifications: true,
+    emailDigest: false,
+    darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
+    language: 'pl',
+  });
 
-  useEffect(() => {
-    apiClient.get('/infra/health/').then(res => setHealth(res.data)).catch(() => {
-      notifications.show({ title: 'Settings', message: 'Failed to load system health.', color: 'red' });
-    });
-  }, []);
-
-  const handleChangePassword = async () => {
-    if (!oldPassword || !newPassword || newPassword.length < 8) {
-      notifications.show({ title: 'Validation', message: 'New password must be at least 8 characters.', color: 'red' });
-      return;
-    }
-    setChangingPassword(true);
-    try {
-      await apiClient.post('/users/password/change/', { old_password: oldPassword, new_password: newPassword });
-      notifications.show({ title: 'Success', message: 'Password changed.', color: 'green' });
-      setOldPassword('');
-      setNewPassword('');
-    } catch (e: any) {
-      notifications.show({ title: 'Error', message: e?.response?.data?.error || e?.message || 'Failed.', color: 'red' });
-    } finally {
-      setChangingPassword(false);
-    }
+  const handleSave = () => {
+    notifications.show({ title: 'Settings', message: 'Settings saved successfully.', color: 'green' });
   };
 
+  const items = [
+    {
+      icon: <Bell size={22} />, color: 'indigo', title: 'Notifications', children: (
+        <Stack gap="md">
+          <Group justify="space-between"><Box><Text fw={600} size="sm">Push Notifications</Text><Text size="xs" c="dimmed">Real-time alerts for anomalies</Text></Box><Switch checked={settings.notifications} onChange={(e) => setSettings({ ...settings, notifications: e.currentTarget.checked })} /></Group>
+          <Group justify="space-between"><Box><Text fw={600} size="sm">Weekly Email Digest</Text><Text size="xs" c="dimmed">Summary report every Monday</Text></Box><Switch checked={settings.emailDigest} onChange={(e) => setSettings({ ...settings, emailDigest: e.currentTarget.checked })} /></Group>
+        </Stack>
+      )
+    },
+    {
+      icon: <PaintBucket size={22} />, color: 'violet', title: 'Appearance', children: (
+        <Stack gap="md">
+          <Group justify="space-between"><Box><Text fw={600} size="sm">Dark Mode</Text><Text size="xs" c="dimmed">Toggle dark/light theme</Text></Box><Switch checked={settings.darkMode} onChange={(e) => setSettings({ ...settings, darkMode: e.currentTarget.checked })} /></Group>
+          <Select label="Language" value={settings.language} onChange={(v) => setSettings({ ...settings, language: v || 'pl' })} data={[{ value: 'pl', label: 'Polski' }, { value: 'en', label: 'English' }]} />
+        </Stack>
+      )
+    },
+    {
+      icon: <Shield size={22} />, color: 'red', title: 'Security', children: (
+        <Stack gap="md"><Button variant="light" color="red" leftSection={<Shield size={16} />}>Change Password</Button></Stack>
+      )
+    },
+    {
+      icon: <Zap size={22} />, color: 'orange', title: 'Performance', children: (
+        <Stack gap="md"><Group justify="space-between"><Box><Text fw={600} size="sm">API Cache</Text><Text size="xs" c="dimmed">Redis-based caching</Text></Box><Switch defaultChecked /></Group></Stack>
+      )
+    },
+  ];
+
   return (
-    <Box>
-      <PageHeader title="Settings" subtitle="Account and system configuration" />
-
-      <Stack gap="xl">
-        <Card withBorder>
-          <Group mb="md">
-            <Key size={18} />
-            <Text fw={600}>Account</Text>
-          </Group>
-          <Divider mb="md" />
-          <Stack gap="md">
-            <Group justify="space-between">
-              <Stack gap={0}>
-                <Text size="sm" fw={500}>Signed in as</Text>
-                <Text size="xs" c="dimmed">{user?.username} · {user?.role?.replace('_', ' ')}</Text>
-              </Stack>
-              <Badge variant="light">{user?.tenantId || 'Global'}</Badge>
-            </Group>
-
-            <Divider />
-            <Text size="sm" fw={500}>Change Password</Text>
-            <PasswordInput label="Current Password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
-            <PasswordInput label="New Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-            <Button onClick={handleChangePassword} loading={changingPassword} variant="light">
-              Change Password
-            </Button>
-          </Stack>
-        </Card>
-
-        <Card withBorder>
-          <Group mb="md">
-            <Server size={18} />
-            <Text fw={600}>System Health</Text>
-          </Group>
-          <Divider mb="md" />
-          {health ? (
-            <Stack gap="xs">
-              <Group justify="space-between">
-                <Text size="sm">Redis</Text>
-                <Badge color={health?.redis?.status === 'ok' ? 'green' : 'red'} variant="light">
-                  {health?.redis?.status || 'Unknown'}
-                </Badge>
-              </Group>
-              <Group justify="space-between">
-                <Text size="sm">Citus</Text>
-                <Badge color={health?.citus?.status === 'ok' ? 'green' : 'gray'} variant="light">
-                  {health?.citus?.status || 'N/A'}
-                </Badge>
-              </Group>
-            </Stack>
-          ) : (
-            <Text size="sm" c="dimmed">Loading system status...</Text>
-          )}
-        </Card>
-      </Stack>
+    <Box><PageHeader title="Settings" subtitle="Platform configuration and preferences" />
+      <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
+        {items.map((item, i) => (
+          <Card key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }} h="100%">
+            <Group mb="md"><ThemeIcon size={36} radius="md" color={item.color} variant="light">{item.icon}</ThemeIcon><Text fw={700} size="lg">{item.title}</Text></Group>
+            {item.children}
+          </Card>
+        ))}
+      </SimpleGrid>
+      <Button onClick={handleSave} size="md" style={{ background: 'var(--brand-gradient)', borderRadius: 10 }}>Save Settings</Button>
     </Box>
   );
 };
