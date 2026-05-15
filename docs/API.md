@@ -219,6 +219,16 @@ Authorization: Bearer <token>
 |----------|--------|------|---------------|
 | `/heatmap/` | GET | Heatmap aktywności | Authenticated |
 | `/analytics/` | GET | Podsumowanie analityki | Premium users |
+| `/ai/insights/` | GET | Spostrzeżenia AI | Authenticated |
+| `/activity-detail/<id>/` | GET | Szczegóły aktywności | Authenticated |
+
+### Export
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/export/activities/` | GET | Eksport aktywności (CSV/JSON) |
+| `/export/users/` | GET | Eksport użytkowników (JSON) |
+| `/export/statistics/` | GET | Eksport statystyk (PDF) |
 
 ### Beta Feedback
 
