@@ -105,6 +105,11 @@ def seed():
         }
     )
 
+    # 7. Seed RBAC system
+    from django.core.management import call_command
+    call_command('seed_rbac')
+    print("✅ RBAC system seeded.")
+
     print("✅ Seeding complete. Use 'global_owner / admin123' to log in.")
 
 if __name__ == "__main__":

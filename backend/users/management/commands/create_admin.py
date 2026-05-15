@@ -29,6 +29,15 @@ class Command(BaseCommand):
             password=ADMIN_PASSWORD,
             role='GLOBAL_OWNER',
         )
+
+        # Also create RBAC role assignment
+        from users.rbac_models import Role, UserRole
+        try:
+            role = Role.objects.get(slug='global_owner')
+            UserRole.objects.get_or_create(user=user, role=role)
+        except Role.DoesNotExist:
+            pass  # RBAC not seeded yet, will be handled by migration
+
         self.stdout.write(
             self.style.SUCCESS(
                 f'Created admin user: {ADMIN_USERNAME} (role=GLOBAL_OWNER, email={ADMIN_EMAIL})'
