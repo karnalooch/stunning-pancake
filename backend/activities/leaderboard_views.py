@@ -98,3 +98,36 @@ def my_rank(request: Request, city_id: str) -> Response:
             "score_km": score,
         }
     )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def department_leaderboard(request: Request, department_id: int) -> Response:
+    """
+    GET /api/activities/leaderboard/department/<department_id>/
+
+    Returns top 50 users in a specific department, ranked by verified distance.
+    """
+    from django.shortcuts import get_object_or_404
+    from django.db.models import Sum
+    from activities.models import Activity
+    from users.departments import Department
+
+    department = get_object_or_404(Department, id=department_id)
+
+    # Check tenant access
+    if request.user.role != 'GLOBAL_OWNER' and department.tenant_id != request.user.tenant_id:
+        return Response({'error': 'Access denied'}, status=403)
+
+    user_ids = department.members.values_list('id', flat=True)
+    qs = Activity.objects.filter(
+        user_id__in=user_ids,
+        is_verified=True,
+    ).values('user__username').annotate(
+        total_km=Sum('distance')
+    ).order_by('-total_km')[:50]
+
+    return Response([{
+        'username': r['user__username'],
+        'total_km': round((r['total_km'] or 0) / 1000.0, 3),
+    } for r in qs])

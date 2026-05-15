@@ -9,7 +9,7 @@ from .views import (
 
 from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, ActivityApproveView, ActivityRejectView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
-from .leaderboard_views import city_leaderboard, my_rank
+from .leaderboard_views import city_leaderboard, my_rank, department_leaderboard
 from .heatmap import heatmap_view, analytics_summary_view
 from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
 
@@ -40,6 +40,7 @@ urlpatterns = [
     path('payments/checkout/', CreateCheckoutSessionView.as_view(), name='checkout'),
     path('payments/webhook/', StripeWebhookView.as_view(), name='stripe-webhook'),
     # Milestone 2: Leaderboard API (Redis-first, <5ms response)
+    path('leaderboard/department/<int:department_id>/', department_leaderboard, name='department-leaderboard'),
     path('leaderboard/<str:city_id>/', city_leaderboard, name='city-leaderboard'),
     path('leaderboard/<str:city_id>/me/', my_rank, name='my-rank'),
     # Milestone 5: Premium Analytics

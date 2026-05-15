@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus, ClipboardList, Trash2, Send } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
 import { AdminApi } from '../../api/client';
+import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
 interface UserRow {
@@ -51,6 +52,8 @@ export const Users = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteResult, setInviteResult] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [departments, setDepartments] = useState<{ id: number, name: string }[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
 
   // Create user form state
   const [createForm, setCreateForm] = useState({
@@ -88,6 +91,9 @@ export const Users = () => {
 
   useEffect(() => { fetchUsers(); }, []);
   useEffect(() => {
+    apiClient.get('/users/departments/').then(({ data }) => setDepartments(data));
+  }, []);
+  useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
       setAuditLogLoading(true);
       AdminApi.getAuditLogs(50)
@@ -96,7 +102,7 @@ export const Users = () => {
         .finally(() => setAuditLogLoading(false));
       AdminApi.getTenants()
         .then(data => setTenantsList(data))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [user]);
 
@@ -212,6 +218,18 @@ export const Users = () => {
                 style={{ width: '400px' }}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
+              />
+              <Select
+                label="Dział"
+                placeholder="Wszystkie"
+                data={[
+                  { value: '', label: 'Wszystkie' },
+                  ...departments.map(d => ({ value: d.id.toString(), label: d.name }))
+                ]}
+                value={selectedDepartment}
+                onChange={(v) => setSelectedDepartment(v || '')}
+                clearable
+                style={{ width: '200px' }}
               />
               <Group>
                 <Button

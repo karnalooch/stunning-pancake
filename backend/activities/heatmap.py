@@ -160,17 +160,22 @@ def analytics_summary_view(request: Request) -> Response:
         - training_load: ACWR injury risk score
     """
     from datetime import date, timedelta
-    from django.db.models import Sum
+    from django.db.models import Sum, Q
     from django.db.models.functions import TruncWeek, TruncDay
     from activities.models import Activity
     from activities.analytics import trend_analysis, predict_race_time, training_load
 
     user = request.user
+    department_id = request.query_params.get('department')
     today = date.today()
+
+    user_filter = Q(user=user)
+    if department_id:
+        user_filter = Q(user__departments__id=department_id)
 
     # Build weekly loads for last 12 weeks
     weekly_qs = Activity.objects.filter(
-        user=user, is_verified=True,
+        user_filter, is_verified=True,
         start_time__date__gte=today - timedelta(weeks=12),
     ).annotate(week=TruncWeek('start_time')).values('week').annotate(
         km=Sum('distance')
@@ -186,7 +191,7 @@ def analytics_summary_view(request: Request) -> Response:
 
     # Build daily km for last 28 days (for ACWR)
     daily_qs = Activity.objects.filter(
-        user=user, is_verified=True,
+        user_filter, is_verified=True,
         start_time__date__gte=today - timedelta(days=28),
     ).annotate(day=TruncDay('start_time')).values('day').annotate(
         km=Sum('distance')
@@ -202,7 +207,7 @@ def analytics_summary_view(request: Request) -> Response:
 
     # Best effort for race prediction: longest verified activity
     best = Activity.objects.filter(
-        user=user, is_verified=True, type="RUN",
+        user_filter, is_verified=True, type="RUN",
     ).order_by("-distance").first()
 
     race_preds = None

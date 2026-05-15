@@ -101,6 +101,25 @@ class AdminDashboardStatsView(APIView):
                 "secondary_color": t.secondary_color,
             })
 
+        # Per-department stats (for tenant admins)
+        per_dept_stats = []
+        if request.user.role in ('TENANT_ADMIN', 'TENANT_MODERATOR') and request.user.tenant_id:
+            from users.departments import Department
+            for dept in Department.objects.filter(tenant_id=request.user.tenant_id, is_active=True):
+                dept_user_ids = dept.members.values_list('id', flat=True)
+                dept_activities = Activity.objects.filter(user_id__in=dept_user_ids)
+                dept_act_count = dept_activities.count()
+                dept_distance = dept_activities.aggregate(Sum('distance'))['distance__sum'] or 0
+                dept_verified = dept_activities.filter(is_verified=True).count()
+                per_dept_stats.append({
+                    "department_id": dept.id,
+                    "department_name": dept.name,
+                    "users": dept.members.count(),
+                    "activities": dept_act_count,
+                    "distance_km": round(float(dept_distance / 1000.0), 1),
+                    "verified_pct": round((dept_verified / dept_act_count * 100), 1) if dept_act_count > 0 else 0.0,
+                })
+
         return Response({
             "total_users": total_users,
             "total_activities": total_activities,
@@ -113,6 +132,7 @@ class AdminDashboardStatsView(APIView):
             "verified_pct": verified_pct,
             "unverified_total": total_activities - total_verified,
             "per_tenant": per_tenant_stats,
+            "per_department": per_dept_stats,
         })
 
 
