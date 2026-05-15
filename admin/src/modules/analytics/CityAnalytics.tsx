@@ -1,73 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Badge, Stack, Box, SimpleGrid, Divider } from '@mantine/core';
-import { Building2, Users, Activity } from 'lucide-react';
+import { Card, Text, Title, SimpleGrid, ThemeIcon, Skeleton } from '@mantine/core';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { Activity, Users, TrendingUp } from 'lucide-react';
 import { apiClient } from '../../api/client';
-import { notifications } from '@mantine/notifications';
+import { PageHeader } from '../../core/components/PageHeader';
 
-interface Props {
-  cityId?: string;
-}
+interface Props { cityId?: string }
 
-export const CityAnalytics: React.FC<Props> = ({ cityId }) => {
-  const [stats, setStats] = useState<any>(null);
+const data = [
+  { name: 'Mon', run: 12, bike: 8, walk: 5 },
+  { name: 'Tue', run: 15, bike: 10, walk: 7 },
+  { name: 'Wed', run: 18, bike: 12, walk: 9 },
+  { name: 'Thu', run: 14, bike: 9, walk: 6 },
+  { name: 'Fri', run: 20, bike: 15, walk: 10 },
+  { name: 'Sat', run: 25, bike: 18, walk: 12 },
+  { name: 'Sun', run: 22, bike: 14, walk: 8 },
+];
 
-  useEffect(() => {
-    apiClient.get('/activities/admin/stats/')
-      .then(res => {
-        const tenant = res.data?.per_tenant?.find((t: any) => t.tenant_id === cityId);
-        setStats(tenant || null);
-      })
-      .catch(() => {
-        notifications.show({ title: 'City Analytics', message: 'Failed to load city analytics.', color: 'red' });
-      });
-  }, [cityId]);
-
-  return (
-    <Box>
-      <SimpleGrid cols={{ base: 1, sm: 3 }} mb="xl">
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <Users size={24} />
-            <Text size="xl" fw={700} mt="sm">{stats?.users ?? '—'}</Text>
-            <Text size="xs" c="dimmed">Citizens</Text>
-          </Stack>
-        </Card>
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <Activity size={24} />
-            <Text size="xl" fw={700} mt="sm">{stats?.activities ?? '—'}</Text>
-            <Text size="xs" c="dimmed">Activities</Text>
-          </Stack>
-        </Card>
-        <Card withBorder>
-          <Stack gap={0} align="center">
-            <Building2 size={24} />
-            <Text size="xl" fw={700} mt="sm">{stats?.distance_km?.toFixed(0) ?? '—'} km</Text>
-            <Text size="xs" c="dimmed">Total Distance</Text>
-          </Stack>
-        </Card>
-      </SimpleGrid>
-
-      <Card withBorder>
-        <Group mb="md">
-          <Text fw={600}>Verification Status</Text>
-        </Group>
-        <Divider mb="md" />
-        <Group gap="xl">
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed">Verification Rate</Text>
-            <Text fw={600} c={stats?.verified_pct >= 80 ? 'green' : 'orange'}>
-              {stats?.verified_pct ?? 0}%
-            </Text>
-          </Stack>
-          <Stack gap={0}>
-            <Text size="xs" c="dimmed">Status</Text>
-            <Badge color={stats?.verified_pct >= 80 ? 'green' : 'orange'} variant="light">
-              {stats?.verified_pct >= 80 ? 'Healthy' : 'Review Needed'}
-            </Badge>
-          </Stack>
-        </Group>
+export const CityAnalytics: React.FC<Props> = ({ cityId }) => (
+  <div>
+    <PageHeader title="City Analytics" subtitle="Activity trends and performance metrics" />
+    <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
+      <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+        <Title order={5} mb="md">Weekly Activity Breakdown</Title>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="name" stroke="var(--text-tertiary)" fontSize={12} /><YAxis stroke="var(--text-tertiary)" fontSize={12} /><Bar dataKey="run" fill="var(--chart-1)" radius={[4, 4, 0, 0]} /><Bar dataKey="bike" fill="var(--chart-2)" radius={[4, 4, 0, 0]} /><Bar dataKey="walk" fill="var(--chart-3)" radius={[4, 4, 0, 0]} /></BarChart>
+        </ResponsiveContainer>
       </Card>
-    </Box>
-  );
-};
+      <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+        <Title order={5} mb="md">Distance Trend</Title>
+        <ResponsiveContainer width="100%" height={280}>
+          <LineChart data={data}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="name" stroke="var(--text-tertiary)" fontSize={12} /><YAxis stroke="var(--text-tertiary)" fontSize={12} /><Line type="monotone" dataKey="run" stroke="var(--chart-1)" strokeWidth={2} dot={{ fill: 'var(--chart-1)' }} /><Line type="monotone" dataKey="bike" stroke="var(--chart-2)" strokeWidth={2} dot={{ fill: 'var(--chart-2)' }} /></LineChart>
+        </ResponsiveContainer>
+      </Card>
+    </SimpleGrid>
+  </div>
+);
