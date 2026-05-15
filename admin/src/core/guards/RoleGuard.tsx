@@ -1,3 +1,7 @@
+/**
+ * @deprecated Use PermissionGuard instead.
+ * This component is kept for backward compatibility during RBAC migration.
+ */
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth, type Role } from '../auth/useAuth';
@@ -8,6 +12,7 @@ interface RoleGuardProps {
 }
 
 /**
+ * @deprecated Use PermissionGuard instead.
  * RoleGuard protects routes and components based on the user's role.
  * If the user's role is not in the allowedRoles array, they are redirected.
  */

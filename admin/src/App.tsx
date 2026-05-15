@@ -9,7 +9,7 @@ import { Dashboard } from './modules/dashboard/Dashboard';
 import { AntiCheat } from './modules/anti-cheat/AntiCheat';
 import { Users } from './modules/users/Users';
 import { WhiteLabelEngine } from './modules/tenants/WhiteLabelEngine';
-import { RoleGuard } from './core/guards/RoleGuard';
+import { PermissionGuard } from './core/guards/PermissionGuard';
 import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
 import { LandingPage } from './modules/public/LandingPage';
 import { LoginPage } from './core/auth/LoginPage';
@@ -65,49 +65,49 @@ export default function App() {
               <Route
                 path="dashboard"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR']}>
+                  <PermissionGuard permissions={['activities.view']}>
                     <Dashboard />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
               <Route
                 path="anti-cheat"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR']}>
+                  <PermissionGuard permissions={['activities.approve']}>
                     <AntiCheat />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
               <Route
                 path="users"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                  <PermissionGuard permissions={['users.view']}>
                     <Users />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
               <Route
                 path="white-label"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                  <PermissionGuard permissions={['users.edit']}>
                     <WhiteLabelEngine />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
               <Route
                 path="sponsor"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'SPONSOR']}>
+                  <PermissionGuard permissions={['poi.view', 'vouchers.view']}>
                     <SponsorDashboard />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
               <Route
                 path="settings"
                 element={
-                  <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                  <PermissionGuard permissions={['users.edit']}>
                     <SettingsScreen />
-                  </RoleGuard>
+                  </PermissionGuard>
                 }
               />
             </Route>
