@@ -17,6 +17,7 @@ import { ModeratorWorklist } from './ModeratorWorklist';
 import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
+import { UserMapView } from '../analytics/UserMapView';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface TenantRow {
@@ -139,10 +140,10 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                  value: `+${stats.new_users_last_7d}`,
-                  direction: usersTrendDir,
-                  label: 'this week',
-                }
+                value: `+${stats.new_users_last_7d}`,
+                direction: usersTrendDir,
+                label: 'this week',
+              }
               : undefined
           }
         />
@@ -156,10 +157,10 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                  value: `+${stats.new_activities_last_7d}`,
-                  direction: actsTrendDir,
-                  label: 'this week',
-                }
+                value: `+${stats.new_activities_last_7d}`,
+                direction: actsTrendDir,
+                label: 'this week',
+              }
               : undefined
           }
         />
@@ -181,9 +182,9 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                  value: `${stats.unverified_total} flagged`,
-                  direction: stats.unverified_total > 10 ? 'down' : 'flat',
-                }
+                value: `${stats.unverified_total} flagged`,
+                direction: stats.unverified_total > 10 ? 'down' : 'flat',
+              }
               : undefined
           }
         />
@@ -272,8 +273,8 @@ export const Dashboard: React.FC = () => {
                                 t.verified_pct >= 80
                                   ? 'green'
                                   : t.verified_pct >= 50
-                                  ? 'yellow'
-                                  : 'red'
+                                    ? 'yellow'
+                                    : 'red'
                               }
                               radius="xl"
                             />
@@ -339,7 +340,7 @@ export const Dashboard: React.FC = () => {
                 badgeColor="green"
               />
               <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
-              <GlobalHeatmap />
+              <UserMapView />
             </Card>
           </SimpleGrid>
         </motion.div>
