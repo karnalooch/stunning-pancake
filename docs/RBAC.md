@@ -110,6 +110,25 @@ class Role(models.TextChoices):
 | `vouchers` | `view`, `create` | Vouchery nagród |
 | `analytics` | `view`, `export` | Analityka i raporty |
 | `rbac` | `manage_roles` | Zarządzanie rolami |
+| `departments` | `view`, `create`, `edit`, `delete`, `view_users`, `assign_users`, `remove_users`, `view_activities`, `view_analytics` | Departamenty i jednostki organizacyjne |
+
+---
+
+### Uprawnienia Działów (Departments)
+
+| Uprawnienie | GO | TA | DM | SP | AT |
+|-------------|----|----|----|----|----|
+| `departments.view` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `departments.create` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `departments.edit` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `departments.delete` | ✅ | ✅ | ❌ | ❌ | ❌ |
+| `departments.view_users` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `departments.assign_users` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `departments.remove_users` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `departments.view_activities` | ✅ | ✅ | ✅ | ❌ | ❌ |
+| `departments.view_analytics` | ✅ | ✅ | ✅ | ❌ | ❌ |
+
+**DM** = Department Moderator (nowa rola)
 
 ---
 

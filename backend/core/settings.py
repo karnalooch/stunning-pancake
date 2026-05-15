@@ -38,6 +38,9 @@ if not DEBUG and SECRET_KEY == _DEFAULT_UNSAFE:
         )
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '*').split(',')
 
+# Feature Flags — gradual rollout control
+DEPARTMENTS_ENABLED = os.getenv('DEPARTMENTS_ENABLED', '1') == '1'
+
 # Security hardening — HTTPS enforcement (disabled in DEBUG for local dev)
 # Railway terminates HTTPS at the load balancer — check X-Forwarded-Proto
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

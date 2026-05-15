@@ -3,6 +3,7 @@ Department API Views
 =====================
 Endpoints for managing departments and user assignments.
 """
+from django.conf import settings
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -20,6 +21,8 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if not getattr(settings, 'DEPARTMENTS_ENABLED', True):
+            return Department.objects.none()
         qs = super().get_queryset().filter(is_active=True)
         # Global owners see all, tenant admins see their tenant
         if self.request.user.role == 'GLOBAL_OWNER':
@@ -87,6 +90,8 @@ class UserDepartmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if not getattr(settings, 'DEPARTMENTS_ENABLED', True):
+            return UserDepartment.objects.none()
         qs = super().get_queryset()
         if self.request.user.role == 'GLOBAL_OWNER':
             return qs

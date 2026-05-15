@@ -22,6 +22,10 @@ import { apiClient } from './api/client';
 
 export default function App() {
   const [loading, setLoading] = useState(false);
+  const [departmentsEnabled] = useState(() => {
+    // Feature flag check — can be overridden via localStorage for testing
+    return localStorage.getItem('feature_departments') !== 'disabled';
+  });
   const { isAuthenticated, login, user } = useAuth();
 
   const handleLogin = async (username: string, password: string) => {
@@ -105,22 +109,26 @@ export default function App() {
                   </PermissionGuard>
                 }
               />
-              <Route
-                path="departments"
-                element={
-                  <PermissionGuard permissions={['departments.view']}>
-                    <Departments />
-                  </PermissionGuard>
-                }
-              />
-              <Route
-                path="departments/:id/users"
-                element={
-                  <PermissionGuard permissions={['departments.view_users']}>
-                    <DepartmentUsers />
-                  </PermissionGuard>
-                }
-              />
+              {departmentsEnabled && (
+                <>
+                  <Route
+                    path="departments"
+                    element={
+                      <PermissionGuard permissions={['departments.view']}>
+                        <Departments />
+                      </PermissionGuard>
+                    }
+                  />
+                  <Route
+                    path="departments/:id/users"
+                    element={
+                      <PermissionGuard permissions={['departments.view_users']}>
+                        <DepartmentUsers />
+                      </PermissionGuard>
+                    }
+                  />
+                </>
+              )}
               <Route
                 path="settings"
                 element={

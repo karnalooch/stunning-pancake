@@ -279,6 +279,24 @@ Authorization: Bearer <token>
 
 ---
 
+## 🏛️ Department Endpoints
+
+### Base URL: `/api/users/departments/`
+
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | `/api/users/departments/` | `departments.view` |
+| POST | `/api/users/departments/` | `departments.create` |
+| PUT | `/api/users/departments/{id}/` | `departments.edit` |
+| DELETE | `/api/users/departments/{id}/` | `departments.delete` |
+| GET | `/api/users/departments/tree/` | `departments.view` |
+| GET | `/api/users/departments/my/` | Authenticated |
+| GET | `/api/users/departments/{id}/users/` | `departments.view_users` |
+| POST | `/api/users/departments/{id}/assign/` | `departments.assign_users` |
+| POST | `/api/users/departments/{id}/remove/` | `departments.remove_users` |
+
+---
+
 ## 🏆 Leaderboard Endpoints
 
 ### Base URL: `/api/activities/leaderboard/`

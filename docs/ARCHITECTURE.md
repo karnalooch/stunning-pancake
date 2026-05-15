@@ -349,4 +349,18 @@ interface AuthState {
 
 ---
 
+### Department Hierarchy (Organizational Units)
+
+Wspiera strukturę organizacyjną wewnątrz tenantów:
+
+- **Firmy**: działy (IT, HR, Sprzedaż)
+- **Szkoły**: klasy (4A, 4B, 5A)
+- **Uczelnie**: wydziały/katedry
+- **NGO**: zespoły projektowe
+- **Miasta**: dzielnice/osiedla
+
+Model: `Department` z relacją parent/children, przypisaniem do tenanta, moderatorem i typem.
+
+---
+
 > **Zobacz także:** [C4 Architecture Diagrams](./diagrams/architecture_c4.md)
