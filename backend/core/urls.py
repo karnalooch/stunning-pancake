@@ -14,6 +14,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
     path('api/users/rbac/', include('users.rbac_urls')),
+    path('api/users/departments/', include('users.department_urls')),
     path('api/activities/', include('activities.urls')),
     path('api/clubs/', include('clubs.urls')),
     path('api/', include('events.urls')),       # Events Engine + OGC endpoints
