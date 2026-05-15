@@ -12,6 +12,8 @@ import { Users } from './modules/users/Users';
 import { WhiteLabelEngine } from './modules/tenants/WhiteLabelEngine';
 import { PermissionGuard } from './core/guards/PermissionGuard';
 import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
+import { Departments } from './modules/departments/Departments';
+import { DepartmentUsers } from './modules/departments/DepartmentUsers';
 import { LandingPage } from './modules/public/LandingPage';
 import { LoginPage } from './core/auth/LoginPage';
 import { SettingsScreen } from './modules/settings/SettingsScreen';
@@ -100,6 +102,22 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['poi.view', 'vouchers.view']}>
                     <SponsorDashboard />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="departments"
+                element={
+                  <PermissionGuard permissions={['departments.view']}>
+                    <Departments />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="departments/:id/users"
+                element={
+                  <PermissionGuard permissions={['departments.view_users']}>
+                    <DepartmentUsers />
                   </PermissionGuard>
                 }
               />

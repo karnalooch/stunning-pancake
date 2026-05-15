@@ -8,7 +8,7 @@ import { notifications } from '@mantine/notifications';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
-  Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap,
+  Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
@@ -40,6 +40,12 @@ const NAV_SECTIONS = [
         label: 'Users',
         path: '/owner/users',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: Network,
+        label: 'Działy',
+        path: '/owner/departments',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
     ],
   },
@@ -75,11 +81,11 @@ const NAV_SECTIONS = [
 
 /* ─── Role display helpers ──────────────────────────────── */
 const ROLE_LABEL: Record<string, string> = {
-  GLOBAL_OWNER:     'Global Owner',
-  TENANT_ADMIN:     'Tenant Admin',
+  GLOBAL_OWNER: 'Global Owner',
+  TENANT_ADMIN: 'Tenant Admin',
   TENANT_MODERATOR: 'Moderator',
-  SPONSOR:          'Sponsor',
-  ATHLETE:          'Athlete',
+  SPONSOR: 'Sponsor',
+  ATHLETE: 'Athlete',
 };
 
 /* ─── Layout component ──────────────────────────────────── */
