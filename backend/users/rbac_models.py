@@ -31,6 +31,7 @@ class Role(models.Model):
         ('global_owner', 'Global Owner'),
         ('tenant_admin', 'Tenant Admin'),
         ('tenant_moderator', 'Tenant Moderator'),
+        ('department_moderator', 'Department Moderator'),
         ('sponsor', 'Sponsor'),
         ('athlete', 'Athlete'),
     ]

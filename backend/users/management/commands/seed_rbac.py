@@ -36,6 +36,16 @@ PERMISSIONS = [
     # Analytics
     ('analytics.view', 'View Analytics', 'analytics', 'view', 'Can view analytics dashboards'),
     ('analytics.export', 'Export Analytics', 'analytics', 'export', 'Can export analytics data'),
+    # Departments
+    ('departments.view', 'View Departments', 'departments', 'view', 'Can view departments'),
+    ('departments.create', 'Create Departments', 'departments', 'create', 'Can create departments'),
+    ('departments.edit', 'Edit Departments', 'departments', 'edit', 'Can edit departments'),
+    ('departments.delete', 'Delete Departments', 'departments', 'delete', 'Can delete departments'),
+    ('departments.view_users', 'View Department Users', 'departments', 'view_users', 'Can view users in department'),
+    ('departments.assign_users', 'Assign Users to Department', 'departments', 'assign_users', 'Can assign users to department'),
+    ('departments.remove_users', 'Remove Users from Department', 'departments', 'remove_users', 'Can remove users from department'),
+    ('departments.view_activities', 'View Department Activities', 'departments', 'view_activities', 'Can view activities in department'),
+    ('departments.view_analytics', 'View Department Analytics', 'departments', 'view_analytics', 'Can view department analytics'),
     # System
     ('system.config', 'System Configuration', 'system', 'config', 'Can modify system configuration'),
     ('system.impersonate', 'System Impersonation', 'system', 'impersonate', 'Can impersonate any user'),
@@ -64,6 +74,16 @@ ROLE_PERMISSIONS = {
         'poi.view', 'poi.create', 'poi.edit',
         'vouchers.create', 'vouchers.view',
         'analytics.view',
+    ],
+    'department_moderator': [
+        'activities.view', 'activities.approve',
+        'users.view',
+        'tenants.view',
+        'poi.view',
+        'vouchers.view',
+        'analytics.view',
+        'departments.view', 'departments.view_users',
+        'departments.view_activities', 'departments.view_analytics',
     ],
     'athlete': [
         'activities.view', 'activities.create',

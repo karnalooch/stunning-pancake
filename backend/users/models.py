@@ -60,6 +60,15 @@ class User(AbstractUser):
     stripe_customer_id = models.CharField(max_length=100, null=True, blank=True)
     stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
 
+    # Department hierarchy
+    departments = models.ManyToManyField(
+        'users.Department',
+        through='users.UserDepartment',
+        blank=True,
+        related_name='members',
+        help_text='Departments this user belongs to',
+    )
+
     def get_permissions(self, tenant_id=None):
         """Returns set of permission codenames for this user, optionally scoped to a tenant."""
         from .rbac_models import UserRole
