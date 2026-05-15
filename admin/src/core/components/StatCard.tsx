@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Text, Group, Box, Skeleton } from '@mantine/core';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 export type StatCardVariant =
   | 'blue' | 'indigo' | 'violet' | 'green' | 'orange' | 'red' | 'cyan' | 'pink';
@@ -18,28 +19,29 @@ interface StatCardProps {
   variant?: StatCardVariant;
   loading?: boolean;
   index?: number;
+  sparkline?: { value: number }[];
 }
 
 const VARIANT_COLORS: Record<StatCardVariant, string> = {
-  blue:   'var(--mantine-color-blue-6)',
+  blue: 'var(--mantine-color-blue-6)',
   indigo: 'var(--accent)',
   violet: 'var(--mantine-color-violet-6)',
-  green:  'var(--success)',
+  green: 'var(--success)',
   orange: 'var(--warning)',
-  red:    'var(--danger)',
-  cyan:   'var(--info)',
-  pink:   '#EC4899',
+  red: 'var(--danger)',
+  cyan: 'var(--info)',
+  pink: '#EC4899',
 };
 
 const VARIANT_BG: Record<StatCardVariant, string> = {
-  blue:   'rgba(59,130,246,0.08)',
+  blue: 'rgba(59,130,246,0.08)',
   indigo: 'rgba(99,102,241,0.08)',
   violet: 'rgba(139,92,246,0.08)',
-  green:  'rgba(16,185,129,0.08)',
+  green: 'rgba(16,185,129,0.08)',
   orange: 'rgba(245,158,11,0.08)',
-  red:    'rgba(239,68,68,0.08)',
-  cyan:   'rgba(6,182,212,0.08)',
-  pink:   'rgba(236,72,153,0.08)',
+  red: 'rgba(239,68,68,0.08)',
+  cyan: 'rgba(6,182,212,0.08)',
+  pink: 'rgba(236,72,153,0.08)',
 };
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -50,6 +52,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   variant = 'indigo',
   loading = false,
   index = 0,
+  sparkline,
 }) => {
   const color = VARIANT_COLORS[variant];
   const bg = VARIANT_BG[variant];
@@ -82,6 +85,24 @@ export const StatCard: React.FC<StatCardProps> = ({
           (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-sm)';
         }}
       >
+        {/* Sparkline mini-chart */}
+        {sparkline && sparkline.length > 1 && (
+          <Box style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 50, opacity: 0.3 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={sparkline} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id={`sp-${String(label).replace(/\s+/g, '')}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                    <stop offset="100%" stopColor={color} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <Area type="monotone" dataKey="value" stroke={color} strokeWidth={1.5}
+                  fill={`url(#sp-${String(label).replace(/\s+/g, '')})`} dot={false} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        )}
+
         {/* Subtle gradient corner accent */}
         <Box
           style={{
@@ -165,8 +186,8 @@ export const StatCard: React.FC<StatCardProps> = ({
                   trend.direction === 'up'
                     ? 'var(--success)'
                     : trend.direction === 'down'
-                    ? 'var(--danger)'
-                    : 'var(--text-tertiary)',
+                      ? 'var(--danger)'
+                      : 'var(--text-tertiary)',
               }}
             >
               {trend.value}
