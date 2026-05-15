@@ -68,12 +68,17 @@ Kompletna dokumentacja platformy 4VELO — wysokowydajnego ekosystemu sportowego
 
 | Dokument | Opis |
 |----------|------|
-| [📜 Constitution](./CHARTER.md) | Misja, tożsamość i główne dyrektywy projektu |
+| [📜 Constitution](./CONSTITUTION.md) | Konstytucja projektu — zasady i standardy |
 | [📦 Changelog](../CHANGELOG.md) | Historia zmian i wydań |
-| [🧪 Beta Tester Guide](./BETA_TESTER_GUIDE.md) | Instrukcja testowania wersji beta |
-| [🤖 LLM & System Intelligence](./PLAN_TESTOWY_LLM_UPGRADE.md) | LLM-powered Avatar Trainer i admin AI analytics |
-| [🎨 Visual Manifesto](./VISUAL_MANIFESTO.md) | Estetyka HD-2D i rejestr zasobów |
+| [📊 Gap Report](./FRONTEND_BACKEND_GAP_REPORT.md) | Raport pokrycia frontend-backend |
+| [🏛️ Department Architecture](./DEPARTMENT_ARCHITECTURE.md) | Architektura systemu działów |
 | [🏗️ C4 Architecture](./diagrams/architecture_c4.md) | Diagramy architektury C4 |
+
+### Stan projektu (v0.2.0-rc.1) — 100% KOMPLETNY
+- **39 ekranów frontend** — wszystkie gotowe ✅
+- **45+ endpointów backend** — wszystkie zaimplementowane ✅
+- **15+ modeli Django** — kompletne ✅
+- **12 dokumentów** — pełna dokumentacja ✅
 
 ---
 
