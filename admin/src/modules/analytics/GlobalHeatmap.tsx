@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Text, Group, Badge, Stack, Box, Divider } from '@mantine/core';
 import { Map } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 
 export const GlobalHeatmap: React.FC = () => {
   const [positions, setPositions] = useState<any[]>([]);
@@ -9,7 +10,9 @@ export const GlobalHeatmap: React.FC = () => {
   useEffect(() => {
     apiClient.get('/activities/telemetry/live/')
       .then(res => setPositions(Array.isArray(res.data) ? res.data : []))
-      .catch(() => {});
+      .catch(() => {
+        notifications.show({ title: 'Live Activity', message: 'Failed to load live positions.', color: 'red' });
+      });
   }, []);
 
   return (

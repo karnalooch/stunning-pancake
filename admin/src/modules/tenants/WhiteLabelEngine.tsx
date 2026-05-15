@@ -20,7 +20,9 @@ export const WhiteLabelEngine: React.FC = () => {
           if (res.data?.primary_color) setPrimaryColor(res.data.primary_color);
           if (res.data?.secondary_color) setSecondaryColor(res.data.secondary_color);
         })
-        .catch(() => {});
+        .catch(() => {
+          notifications.show({ title: 'White-Label Engine', message: 'Failed to load branding.', color: 'red' });
+        });
     }
   }, [tenantId]);
 

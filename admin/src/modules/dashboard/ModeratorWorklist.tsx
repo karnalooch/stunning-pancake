@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Text, Group, Stack, Badge, Button, Modal, Box, Code } from '@mantine/core';
 import { AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 
 interface Ticket {
   id: string; activity_id?: number; user: string; type: string; score: number; time: string; distance: number; duration: string | null;
@@ -23,7 +24,9 @@ export const ModeratorWorklist = () => {
         }));
         setTickets(data);
       })
-      .catch(() => {})
+      .catch(() => {
+        notifications.show({ title: 'Moderation Queue', message: 'Failed to load moderation queue.', color: 'red' });
+      })
       .finally(() => setLoading(false));
   };
 

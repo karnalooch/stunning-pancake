@@ -28,9 +28,25 @@ export const setGlobalErrorHandler = (handler: (title: string, msg: string) => v
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      useAuth.getState().logout();
+      const state = useAuth.getState();
+      if (state.refreshToken && !error.config._retry) {
+        error.config._retry = true;
+        try {
+          const res = await axios.post(`${baseURL}/auth/token/refresh/`, {
+            refresh: state.refreshToken,
+          });
+          const { access } = res.data;
+          state.login(access, state.refreshToken!, state.user!);
+          error.config.headers.Authorization = `Bearer ${access}`;
+          return apiClient(error.config);
+        } catch {
+          state.logout();
+          return Promise.reject(error);
+        }
+      }
+      state.logout();
       return Promise.reject(error);
     }
     if (error.response?.status === 403) {

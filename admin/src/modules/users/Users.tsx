@@ -5,22 +5,52 @@ import { useAuth } from '../../core/auth/useAuth';
 import { AdminApi } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
+interface UserRow {
+  id: number;
+  displayId: string;
+  name: string;
+  email: string;
+  tenant: string;
+  status: string;
+  flags: number;
+  role: string;
+}
+
+interface TenantRow {
+  id: number;
+  name: string;
+}
+
+interface AuditLogEntry {
+  id?: number;
+  timestamp: string;
+  action: string;
+  impersonator_username?: string;
+  impersonator?: string;
+  target_user_username?: string;
+  target_user?: string;
+  tenant_id?: string;
+  status_code: number;
+  ip_address?: string;
+}
+
 export const Users = () => {
   const { user } = useAuth();
-  const [usersList, setUsersList] = useState<any[]>([]);
-  const [tenantsList, setTenantsList] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [usersList, setUsersList] = useState<UserRow[]>([]);
+  const [tenantsList, setTenantsList] = useState<TenantRow[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
   const [createModalOpened, setCreateModalOpened] = useState(false);
   const [deleteConfirmOpened, setDeleteConfirmOpened] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [impersonating, setImpersonating] = useState(false);
   const [impersonateError, setImpersonateError] = useState<string | null>(null);
-  const [impersonateResult, setImpersonateResult] = useState<any | null>(null);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [impersonateResult, setImpersonateResult] = useState<{ access: string; impersonated_user: string; impersonated_role: string } | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteResult, setInviteResult] = useState<any | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Create user form state
   const [createForm, setCreateForm] = useState({
@@ -41,7 +71,7 @@ export const Users = () => {
   const fetchUsers = () => {
     AdminApi.getUsers()
       .then(data => {
-        const mapped = data.map((u: any) => ({
+        const mapped = data.map((u: { id: number; username: string; email?: string; tenant_name?: string; role: string }) => ({
           id: u.id,
           displayId: `U-${u.id}`,
           name: u.username,
@@ -87,8 +117,8 @@ export const Users = () => {
         username: result.impersonated_user,
         role: result.impersonated_role,
       }));
-    } catch (err: any) {
-      setImpersonateError(err?.response?.data?.error || err?.message || 'Impersonation failed');
+    } catch (err: unknown) {
+      setImpersonateError((err as any)?.response?.data?.error || (err as Error)?.message || 'Impersonation failed');
     } finally {
       setImpersonating(false);
     }
@@ -112,8 +142,8 @@ export const Users = () => {
       setCreateModalOpened(false);
       setCreateForm({ username: '', email: '', password: '', role: 'ATHLETE', tenant_id: '' });
       fetchUsers();
-    } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to create user.', color: 'red' });
+    } catch (err: unknown) {
+      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to create user.', color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -129,8 +159,8 @@ export const Users = () => {
       setDeleteTarget(null);
       setSelectedUser(null);
       fetchUsers();
-    } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to delete user.', color: 'red' });
+    } catch (err: unknown) {
+      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to delete user.', color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -152,8 +182,8 @@ export const Users = () => {
       });
       setInviteResult(result);
       notifications.show({ title: 'Invitation Sent', message: `Token for ${inviteForm.email} generated.`, color: 'cyan' });
-    } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to send invitation.', color: 'red' });
+    } catch (err: unknown) {
+      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to send invitation.', color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -180,7 +210,8 @@ export const Users = () => {
                 placeholder={isGlobalOwner ? "Global Search (ID, Email, Name)..." : "Search within city..."}
                 leftSection={<Search size={14} />}
                 style={{ width: '400px' }}
-                className="fluent-acrylic"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.currentTarget.value)}
               />
               <Group>
                 <Button
@@ -214,7 +245,7 @@ export const Users = () => {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {usersList.map((u) => (
+                {usersList.filter((u) => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.displayId.toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
                   <Table.Tr key={u.id}>
                     <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
                     <Table.Td>
@@ -230,8 +261,8 @@ export const Users = () => {
                     </Table.Td>
                     <Table.Td>
                       <Group gap={0} justify="flex-end">
-                        <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
-                        <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }}>
+                        <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)} aria-label="View user details"><Eye size={16} /></ActionIcon>
+                        <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }} aria-label="Delete user">
                           <Trash2 size={14} />
                         </ActionIcon>
                       </Group>
@@ -265,7 +296,7 @@ export const Users = () => {
                       </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                      {auditLogs.map((log: any, idx: number) => (
+                      {auditLogs.map((log: AuditLogEntry, idx: number) => (
                         <Table.Tr key={log.id || idx}>
                           <Table.Td><Text size="xs" ff="monospace">{new Date(log.timestamp).toLocaleString()}</Text></Table.Td>
                           <Table.Td><Text size="xs" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>{log.action}</Text></Table.Td>
@@ -301,11 +332,11 @@ export const Users = () => {
         {selectedUser && (
           <Stack gap="xl">
             <SimpleGrid cols={2}>
-              <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
+              <Box p="md" style={{ borderRadius: '8px' }}>
                 <Text size="xs" c="dimmed" tt="uppercase">Username</Text>
                 <Text size="md" fw={600}>{selectedUser.name}</Text>
               </Box>
-              <Box p="md" className="fluent-acrylic" style={{ borderRadius: '8px' }}>
+              <Box p="md" style={{ borderRadius: '8px' }}>
                 <Text size="xs" c="dimmed" tt="uppercase">Role</Text>
                 <Badge color={selectedUser.role === 'GLOBAL_OWNER' ? 'red' : 'cyan'}>{selectedUser.role}</Badge>
               </Box>
@@ -355,7 +386,7 @@ export const Users = () => {
             { value: 'SPONSOR', label: 'Sponsor' },
           ]} />
           {isGlobalOwner && (
-            <Select label="Tenant" value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: any) => ({ value: String(t.id), label: t.name }))} clearable />
+            <Select label="Tenant" value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))} clearable />
           )}
           <Button fullWidth onClick={handleCreateUser} color="cyan" loading={actionLoading}>Create User</Button>
         </Stack>

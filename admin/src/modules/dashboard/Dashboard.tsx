@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SimpleGrid, Card, Text, Group, Badge, Progress, Table, Box, Stack } from '@mantine/core';
 import { Users, Activity, Gauge, TrendingUp, ShieldCheck } from 'lucide-react';
+import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
@@ -40,7 +41,9 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     apiClient.get('/activities/admin/stats/')
       .then(res => setStats(res.data))
-      .catch(() => {});
+      .catch(() => {
+        notifications.show({ title: 'Dashboard', message: 'Failed to load stats.', color: 'red' });
+      });
   }, []);
 
   return (

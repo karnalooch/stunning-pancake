@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Text, Group, Badge, Stack, Box, SimpleGrid, Divider } from '@mantine/core';
 import { Building2, Users, Activity } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 
 interface Props {
   cityId?: string;
@@ -16,7 +17,9 @@ export const CityAnalytics: React.FC<Props> = ({ cityId }) => {
         const tenant = res.data?.per_tenant?.find((t: any) => t.tenant_id === cityId);
         setStats(tenant || null);
       })
-      .catch(() => {});
+      .catch(() => {
+        notifications.show({ title: 'City Analytics', message: 'Failed to load city analytics.', color: 'red' });
+      });
   }, [cityId]);
 
   return (

@@ -14,7 +14,9 @@ export const SettingsScreen: React.FC = () => {
   const [health, setHealth] = useState<any>(null);
 
   useEffect(() => {
-    apiClient.get('/infra/health/').then(res => setHealth(res.data)).catch(() => {});
+    apiClient.get('/infra/health/').then(res => setHealth(res.data)).catch(() => {
+      notifications.show({ title: 'Settings', message: 'Failed to load system health.', color: 'red' });
+    });
   }, []);
 
   const handleChangePassword = async () => {

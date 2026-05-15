@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { AppShell, NavLink, Text, Group, Box, Stack, ActionIcon, Avatar } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { AppShell, NavLink, Text, Group, Box, Stack, ActionIcon, Avatar, Button } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut, Menu } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
 
@@ -28,14 +29,29 @@ export const Layout = () => {
   }, []);
 
   const filteredNav = navItems.filter((item) => item.roles.includes(userRole));
+  const [opened, { toggle }] = useDisclosure();
 
   return (
     <AppShell
-      navbar={{ width: 250 }}
+      navbar={{ width: 250, breakpoint: 'md', collapsed: { mobile: !opened } }}
+      header={{ height: 60, collapsed: { desktop: true }, breakpoint: 'md' }}
       padding={0}
       style={{ background: 'var(--surface-secondary)' }}
     >
-      <AppShell.Navbar p="md" style={{ borderRight: '1px solid var(--border)', background: 'var(--surface)' }}>
+      <AppShell.Header>
+        <Group h="100%" px="md" justify="space-between">
+          <Group gap="xs">
+            <Box w={32} h={32} bg="var(--accent)" style={{ borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Text fw={800} size="sm" c="white">S</Text>
+            </Box>
+            <Text fw={700} size="sm">4VELO Admin</Text>
+          </Group>
+          <ActionIcon variant="subtle" onClick={toggle} hiddenFrom="md">
+            <Menu size={20} />
+          </ActionIcon>
+        </Group>
+      </AppShell.Header>
+      <AppShell.Navbar p="md" data-testid="admin-sidebar" style={{ borderRight: '1px solid var(--border)', background: 'var(--surface)' }}>
         <AppShell.Section>
           <Group gap="xs" mb="xl" px="sm">
             <Box
@@ -67,10 +83,14 @@ export const Layout = () => {
                   active={active}
                   variant="light"
                   color="blue"
+                  data-testid={`nav-${item.label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}`}
                 />
               );
             })}
           </Stack>
+          <Box hiddenFrom="md" mt="md" pt="md" style={{ borderTop: '1px solid var(--border)' }}>
+            <Button fullWidth variant="subtle" onClick={toggle}>Close Menu</Button>
+          </Box>
         </AppShell.Section>
 
         <AppShell.Section>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Text, Group, Switch, Stack, Box, Divider, Slider, Badge } from '@mantine/core';
 import { ShieldAlert, Activity } from 'lucide-react';
+import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 
@@ -9,8 +10,12 @@ export const AntiCheat: React.FC = () => {
   const [anomalies, setAnomalies] = useState<any[]>([]);
 
   useEffect(() => {
-    apiClient.get('/activities/telemetry/config/').then(res => setConfig(res.data)).catch(() => {});
-    apiClient.get('/activities/telemetry/anomalies/').then(res => setAnomalies(res.data || [])).catch(() => {});
+    apiClient.get('/activities/telemetry/config/').then(res => setConfig(res.data)).catch(() => {
+      notifications.show({ title: 'Anti-Cheat', message: 'Failed to load anti-cheat config.', color: 'red' });
+    });
+    apiClient.get('/activities/telemetry/anomalies/').then(res => setAnomalies(res.data || [])).catch(() => {
+      notifications.show({ title: 'Anti-Cheat', message: 'Failed to load anomalies.', color: 'red' });
+    });
   }, []);
 
   const updateConfig = async (key: string, value: any) => {

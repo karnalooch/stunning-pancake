@@ -65,6 +65,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       refreshToken: refresh,
       permissions,
     });
+    localStorage.setItem('access_token', token);
+    localStorage.setItem('refresh_token', refresh);
   },
   logout: () => {
     localStorage.removeItem('access_token');
@@ -107,3 +109,26 @@ export const useAuth = create<AuthState>((set, get) => ({
     return user?.role === roleMap[roleSlug];
   },
 }));
+
+const storedToken = localStorage.getItem('access_token');
+const storedRefresh = localStorage.getItem('refresh_token');
+if (storedToken && storedRefresh) {
+  apiClient.get('/users/profile/', {
+    headers: { Authorization: `Bearer ${storedToken}` },
+  })
+    .then(res => {
+      const d = res.data?.data || res.data;
+      useAuth.getState().login(storedToken, storedRefresh, {
+        id: d.id,
+        username: d.username,
+        role: d.role,
+        tenantId: d.tenant_id || null,
+        tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
+        isImpersonated: false,
+      });
+    })
+    .catch(() => {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+    });
+}

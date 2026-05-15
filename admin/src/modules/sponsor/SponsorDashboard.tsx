@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Text, Group, Stack, SimpleGrid, Badge, Box, Divider } from '@mantine/core';
 import { Gift, TrendingUp } from 'lucide-react';
 import { apiClient, RewardsApi } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 
 export const SponsorDashboard: React.FC = () => {
@@ -10,7 +11,9 @@ export const SponsorDashboard: React.FC = () => {
   useEffect(() => {
     RewardsApi.getSponsorStats()
       .then(data => setStats(data))
-      .catch(() => {});
+      .catch(() => {
+        notifications.show({ title: 'Sponsor Dashboard', message: 'Failed to load sponsor stats.', color: 'red' });
+      });
   }, []);
 
   return (

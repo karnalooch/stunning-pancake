@@ -11,11 +11,11 @@ const FeatureCard = ({ icon: Icon, title, description, delay }: any) => (
     viewport={{ once: true }}
     transition={{ delay, duration: 0.5 }}
   >
-    <Box p="xl" className="fluent-acrylic" style={{ borderRadius: '16px', height: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
+    <Box p="xl" style={{ borderRadius: '16px', height: '100%', border: '1px solid rgba(255,255,255,0.1)' }}>
       <Box mb="md" p="sm" bg="rgba(37, 99, 235, 0.1)" style={{ width: 'fit-content', borderRadius: '12px' }}>
         <Icon size={24} color="#2563EB" />
       </Box>
-      <Text fw={800} size="lg" mb="sm" className="text-gradient">
+      <Text fw={800} size="lg" mb="sm">
         {title}
       </Text>
       <Text size="sm" c="dimmed" style={{ lineHeight: 1.6 }}>
@@ -46,7 +46,7 @@ export const LandingPage = () => {
             </motion.div>
 
             <Title order={1} style={{ fontSize: '72px', fontWeight: 900, letterSpacing: '-2px', color: 'white' }}>
-              The <span className="text-gradient">Future</span> of Urban Fitness
+              The <span style={{ color: '#2563EB' }}>Future</span> of Urban Fitness
             </Title>
 
             <Text size="xl" c="dimmed" maw={700} style={{ fontSize: '20px' }}>
@@ -118,7 +118,7 @@ export const LandingPage = () => {
       {/* Footer */}
       <Container size="lg" py="xl">
         <Group justify="space-between" style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '40px' }}>
-          <Text fw={900} size="lg" className="text-gradient">4VELO.</Text>
+          <Text fw={900} size="lg" c="blue">4VELO.</Text>
           <Text size="xs" c="dimmed">© 2026 4VELO Platform. Built with Python & TypeScript.</Text>
         </Group>
       </Container>
