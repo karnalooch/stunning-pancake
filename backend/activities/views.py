@@ -4,7 +4,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from .models import Activity, PrivacyZone, Voucher, POI
-from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer, POISerializer
+from .serializers import ActivitySerializer, ActivityCreateSerializer, PrivacyZoneSerializer, POISerializer, ActivityDetailSerializer
 
 from .services import TelemetryService
 from .social import SocialSharingService
@@ -182,6 +182,18 @@ class ActivityViewSet(viewsets.ModelViewSet):
         data = SocialSharingService.generate_activity_card_data(activity)
         return Response(data)
 
+class ActivityDetailView(generics.RetrieveAPIView):
+    """
+    Detailed view of a single activity with user info and route coordinates.
+    """
+    queryset = Activity.objects.select_related('user').all()
+    serializer_class = ActivityDetailSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return Activity.objects.filter(user=self.request.user).select_related('user')
+
+
 class PrivacyZoneViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing user privacy zones.
@@ -324,3 +336,28 @@ class POIViewSet(viewsets.ReadOnlyModelViewSet):
         if tenant_id:
             return self.queryset.filter(tenant_id=tenant_id)
         return self.queryset
+
+
+class AIInsightsView(generics.GenericAPIView):
+    """
+    Auto-generated AI insights from analytics data.
+    Returns platform health metrics, pending reviews, and anomaly counts.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        return Response(generate_insights())
+
+
+def generate_insights():
+    from .models import Activity
+    from django.db.models import Sum, Count
+    total = Activity.objects.count()
+    verified = Activity.objects.filter(is_verified=True).count()
+    pct = round(verified / max(total, 1) * 100, 1)
+    anomalies = Activity.objects.filter(verification_score__lt=0.3).count()
+    return [
+        {'type': 'positive', 'title': 'Platform Health', 'desc': f'{pct}% verified ({verified}/{total})', 'color': 'green'},
+        {'type': 'warning', 'title': 'Pending Review', 'desc': f'{anomalies} low-score activities need attention', 'color': 'orange'},
+        {'type': 'positive', 'title': 'Activity Count', 'desc': f'{total} total activities recorded', 'color': 'indigo'},
+    ]

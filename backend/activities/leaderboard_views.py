@@ -131,3 +131,14 @@ def department_leaderboard(request: Request, department_id: int) -> Response:
         'username': r['user__username'],
         'total_km': round((r['total_km'] or 0) / 1000.0, 3),
     } for r in qs])
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def leaderboard_list(request: Request) -> Response:
+    """
+    GET /api/activities/leaderboard/
+    
+    Returns available leaderboard types.
+    """
+    return Response({'leaderboards': ['city', 'department', 'event']})

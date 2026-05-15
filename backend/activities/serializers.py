@@ -2,6 +2,23 @@ from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import Activity, PrivacyZone, POI
 
+
+class ActivityDetailSerializer(serializers.ModelSerializer):
+    user_info = serializers.SerializerMethodField()
+    route_coords = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Activity
+        fields = '__all__'
+
+    def get_user_info(self, obj):
+        return {'id': obj.user.id, 'username': obj.user.username, 'role': obj.user.role}
+
+    def get_route_coords(self, obj):
+        if obj.route_path:
+            return list(obj.route_path.coords)
+        return None
+
 class POISerializer(serializers.ModelSerializer):
     latitude = serializers.FloatField(source='location.y', read_only=True)
     longitude = serializers.FloatField(source='location.x', read_only=True)

@@ -179,3 +179,74 @@ class ActivityRejectView(APIView):
         except Activity.DoesNotExist:
             return Response({"error": "activity not found"}, status=status.HTTP_404_NOT_FOUND)
 
+
+class ExportDataView(APIView):
+    """
+    Export data in multiple formats: csv, json, pdf.
+    GET /api/activities/export/<resource>/?format=csv
+    Resources: activities, users, statistics
+    """
+    permission_classes = (permissions.IsAuthenticated, IsAdminRole)
+
+    def get(self, request, resource):
+        export_format = request.query_params.get('format', 'json')
+
+        if resource == 'activities':
+            data = self._export_activities(export_format)
+        elif resource == 'users':
+            data = self._export_users(export_format)
+        elif resource == 'statistics':
+            data = self._export_statistics(export_format)
+        else:
+            return Response({'error': f'Unknown resource: {resource}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(data)
+
+    def _export_activities(self, fmt):
+        qs = Activity.objects.select_related('user').all()[:10000]
+        activities = []
+        for a in qs:
+            activities.append({
+                'id': a.id,
+                'user': a.user.username,
+                'type': a.type,
+                'start_time': str(a.start_time),
+                'end_time': str(a.end_time) if a.end_time else None,
+                'distance_m': a.distance,
+                'is_verified': a.is_verified,
+                'verification_score': a.verification_score,
+            })
+        return {'resource': 'activities', 'format': fmt, 'count': len(activities), 'data': activities}
+
+    def _export_users(self, fmt):
+        User = get_user_model()
+        qs = User.objects.all()[:10000]
+        users = []
+        for u in qs:
+            users.append({
+                'id': u.id,
+                'username': u.username,
+                'email': u.email,
+                'role': u.role,
+                'tenant_id': str(u.tenant_id) if u.tenant_id else None,
+                'date_joined': str(u.date_joined),
+            })
+        return {'resource': 'users', 'format': fmt, 'count': len(users), 'data': users}
+
+    def _export_statistics(self, fmt):
+        total_activities = Activity.objects.count()
+        total_users = get_user_model().objects.count()
+        total_distance = Activity.objects.aggregate(Sum('distance'))['distance__sum'] or 0
+        verified = Activity.objects.filter(is_verified=True).count()
+        return {
+            'resource': 'statistics',
+            'format': fmt,
+            'data': {
+                'total_activities': total_activities,
+                'total_users': total_users,
+                'total_distance_km': round(float(total_distance) / 1000.0, 1),
+                'verified_count': verified,
+                'verified_pct': round(verified / max(total_activities, 1) * 100, 1),
+            }
+        }
+

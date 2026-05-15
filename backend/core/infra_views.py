@@ -16,6 +16,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 @api_view(["GET"])
@@ -71,3 +72,35 @@ def infra_health_view(request: Request) -> Response:
         "redis": redis_status,
         "citus": citus_status,
     })
+
+
+class SystemHealthView(APIView):
+    """
+    Class-based view for combined infrastructure health: Redis + Citus.
+    GET /api/infra/health/
+    """
+    permission_classes = (IsAdminUser,)
+
+    def get(self, request):
+        from core.redis_cluster import health_check
+
+        redis_status = health_check()
+
+        try:
+            from core.citus import citus_cluster_status
+            citus_nodes = citus_cluster_status()
+            citus_status = {
+                "mode": "cluster" if len(citus_nodes) > 1 else "standalone",
+                "nodes": len(citus_nodes),
+                "workers": len([n for n in citus_nodes if n.get("role") == "worker"]),
+            }
+        except Exception:
+            citus_status = {"mode": "standalone"}
+
+        overall = "ok" if redis_status.get("status") in ("ok", "online") else "degraded"
+
+        return Response({
+            "status": overall,
+            "redis": redis_status,
+            "citus": citus_status,
+        })
