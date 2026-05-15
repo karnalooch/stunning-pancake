@@ -19,6 +19,7 @@ import { LoginPage } from './core/auth/LoginPage';
 import { SettingsScreen } from './modules/settings/SettingsScreen';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
+import { CommandPalette } from './core/components/CommandPalette';
 
 export default function App() {
   const [loading, setLoading] = useState(false);
@@ -58,6 +59,7 @@ export default function App() {
   return (
     <MantineProvider defaultColorScheme="auto" theme={theme}>
       <Notifications position="top-right" zIndex={9999} />
+      <CommandPalette />
       <HashRouter>
         {!isAuthenticated ? (
           <Routes>
