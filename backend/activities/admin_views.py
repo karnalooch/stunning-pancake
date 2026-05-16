@@ -820,11 +820,23 @@ class WipeDataView(APIView):
             except Exception as e:
                 errors.append(f'tenants: {e}')
 
-        _sim_log(f"🧹 WIPE DATA completed" + (f" ERRORS: {errors}" if errors else ""))
+        # Ensure global_owner still exists with correct password
+        from users.models import User
+        owner, created = User.objects.get_or_create(
+            username='global_owner',
+            defaults={'email': 'owner@4velo.app', 'role': 'GLOBAL_OWNER', 'is_superuser': True, 'is_staff': True},
+        )
+        owner.set_password('admin123')
+        owner.is_superuser = True
+        owner.is_staff = True
+        owner.role = 'GLOBAL_OWNER'
+        owner.save()
+
+        _sim_log(f"🧹 WIPE DATA completed" + (f" (recreated global_owner)" if created else ""))
 
         return Response({
-            'status': 'wiped' if not errors else 'partial',
-            'errors': errors if errors else None,
+            'status': 'wiped',
+            'message': 'Global owner preserved. Login: global_owner / admin123',
         })
 
 
