@@ -18,6 +18,7 @@
     "SENDGRID_API_KEY": "SG.REPLACE_ME_in_Railway_Dashboard",
     "FROM_EMAIL": "no-reply@4velo.app",
     "FROM_NAME": "4VELO Platform",
+    "GLOBAL_OWNER_PASSWORD": "CHANGE_ME_in_Railway_Dashboard",
     "STRAVA_CLIENT_ID": "REPLACE_ME_in_Railway_Dashboard",
     "STRAVA_CLIENT_SECRET": "REPLACE_ME_in_Railway_Dashboard",
     "STRAVA_REDIRECT_URI": "https://sport-platform.com/api/activities/wearables/strava/callback/",

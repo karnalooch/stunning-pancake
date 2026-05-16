@@ -1,5 +1,6 @@
 import csv
 import io
+import os
 import random
 import threading
 import time
@@ -804,7 +805,7 @@ class WipeDataView(APIView):
             username='global_owner',
             defaults={'email': 'owner@4velo.app', 'role': 'GLOBAL_OWNER', 'is_superuser': True, 'is_staff': True},
         )
-        owner.set_password('admin123')
+        owner.set_password(os.getenv('GLOBAL_OWNER_PASSWORD', 'admin123'))
         owner.is_superuser = True
         owner.is_staff = True
         owner.role = 'GLOBAL_OWNER'
