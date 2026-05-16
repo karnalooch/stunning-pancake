@@ -771,57 +771,35 @@ class WipeDataView(APIView):
         if not confirm:
             return Response({'error': 'Must send ?confirm=true'}, status=status.HTTP_400_BAD_REQUEST)
 
-        errors = []
+        from users.models import User, Tenant
+        from users.departments import Department, UserDepartment
+        from activities.models import Activity
 
-        with connection.cursor() as cursor:
-            # Disable FK triggers for the session (PostgreSQL)
+        deleted = {}
+        models_in_order = [
+            (Activity, 'activities'),
+            (Department, 'departments'),
+            (UserDepartment, 'user_departments'),
+        ]
+        for model, label in models_in_order:
             try:
-                cursor.execute("SET session_replication_role = 'replica'")
-            except Exception:
-                pass
-
-            # Delete all child tables first, then users, then tenants
-            tables_in_order = [
-                'activities_activity',
-                'activities_leaderboardentry',
-                'activities_betafeedback',
-                'activities_event',
-                'activities_leaderboard',
-                'activities_sponsorship',
-                'users_userdepartment',
-                'users_userrole',
-                'users_rolepermission',
-                'users_role',
-                'users_department',
-                'users_user_groups',
-                'users_user_user_permissions',
-                'users_user_departments',
-                'django_admin_log',
-                'authtoken_token',
-                'rewards_voucher',
-                'rewards_voucher_redemption',
-                'rewards_pool',
-            ]
-            for table in tables_in_order:
-                try:
-                    cursor.execute(f'DELETE FROM {table}')
-                except Exception:
-                    pass
-
-            # Now safe to delete users
-            try:
-                cursor.execute("DELETE FROM users_user WHERE role != 'GLOBAL_OWNER'")
+                deleted[label] = model.objects.all().delete()[0]
             except Exception as e:
-                errors.append(f'users: {e}')
+                deleted[label] = f'error: {e}'
 
-            # Then tenants
-            try:
-                cursor.execute("DELETE FROM users_tenant")
-            except Exception as e:
-                errors.append(f'tenants: {e}')
+        # Users except GLOBAL_OWNER
+        try:
+            deleted['users'] = User.objects.exclude(role='GLOBAL_OWNER').delete()[0]
+        except Exception as e:
+            deleted['users'] = f'error: {e}'
 
-        # Ensure global_owner still exists with correct password
-        from users.models import User
+        # Tenants
+        try:
+            deleted['tenants'] = Tenant.objects.all().delete()[0]
+        except Exception as e:
+            deleted['tenants'] = f'error: {e}'
+
+        # Ensure global_owner exists
         owner, created = User.objects.get_or_create(
             username='global_owner',
             defaults={'email': 'owner@4velo.app', 'role': 'GLOBAL_OWNER', 'is_superuser': True, 'is_staff': True},
@@ -832,11 +810,12 @@ class WipeDataView(APIView):
         owner.role = 'GLOBAL_OWNER'
         owner.save()
 
-        _sim_log(f"🧹 WIPE DATA completed" + (f" (recreated global_owner)" if created else ""))
+        _sim_log(f"🧹 WIPE: {deleted}")
 
         return Response({
             'status': 'wiped',
-            'message': 'Global owner preserved. Login: global_owner / admin123',
+            'deleted': {k: v for k, v in deleted.items() if isinstance(v, int)},
+            'message': 'Login: global_owner / admin123',
         })
 
 
