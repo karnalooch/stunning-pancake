@@ -59,19 +59,14 @@ def seed():
         defaults={'location': Point(22.2906, 52.1672)} # lon, lat
     )
 
-    # Voucher creation — safe fallback if code already exists for
-    # a different POI (get_or_create fails on unique code constraint)
-    try:
-        Voucher.objects.get_or_create(
-            poi=coffee_poi,
-            code='COFFEE-20',
-            defaults={
-                'discount_value': '20%',
-                'expiry_date': timezone.now() + timedelta(days=30)
-            }
-        )
-    except IntegrityError:
-        print("Voucher COFFEE-20: already exists (code conflict), skipping")
+    # Voucher — delete any old one first, then create fresh
+    Voucher.objects.filter(code='COFFEE-20').delete()
+    Voucher.objects.create(
+        poi=coffee_poi,
+        code='COFFEE-20',
+        discount_value='20%',
+        expiry_date=timezone.now() + timedelta(days=30)
+    )
 
     # 5. Create Mock Activities
     athlete, _ = User.objects.get_or_create(
