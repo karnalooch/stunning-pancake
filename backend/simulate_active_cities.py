@@ -266,7 +266,7 @@ def _generate_activity_params(activity_type: str):
 # Main simulation
 # ---------------------------------------------------------------------------
 
-def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False):
+def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False, skip_activities: bool = False):
     """Run the Aktywne Miasta simulation."""
     # Lazy imports — models must be loaded after Django is ready
     from users.models import User, Tenant, Role
@@ -521,8 +521,15 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     print()
 
     # ------------------------------------------------------------------
-    # Phase 5: Create activities with GPS tracks
+    # Phase 5: Create activities with GPS tracks (skip if requested)
     # ------------------------------------------------------------------
+    if skip_activities:
+        print("⏭️  Phase 5: Skipping activity generation.")
+        total_activities = 0
+        total_distance = 0.0
+        verified_count = 0
+        return  # <= exits the function after user creation, skipping activity generation entirely
+
     print("🏃 Phase 5: Creating activities with GPS tracks...")
     total_activities = 0
     total_distance = 0.0
@@ -610,9 +617,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
     print(f"   📊 Total activities: {total_activities}")
     print()
-
-    # ------------------------------------------------------------------
-    # Phase 6: Print summary
+    # end of skip_activities block
     # ------------------------------------------------------------------
     avg_distance_per_user = total_distance / max(1, total_users) / 1000.0
     verified_pct = verified_count / max(1, total_activities) * 100
