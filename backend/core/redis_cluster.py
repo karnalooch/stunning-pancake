@@ -187,7 +187,13 @@ def health_check() -> dict:
         err_msg = str(exc)
         # Sanitize leaked auth messages for public health dashboards
         if "authentication required" in err_msg.lower() or "noauth" in err_msg.lower():
-            err_msg = "Redis requires authentication — check REDIS_URL includes password"
+            # Show the sanitized URL being used so the user can debug
+            sanitized = _sanitize_url(REDIS_URL) if REDIS_URL else "not set"
+            err_msg = f"Redis auth failed — URL: {sanitized}"
+            if os.getenv("REDIS_PASSWORD"):
+                err_msg += " (REDIS_PASSWORD is set)"
+            else:
+                err_msg += " (REDIS_PASSWORD not set — add it to .env or embed in REDIS_URL)"
         elif "connection refused" in err_msg.lower():
             err_msg = "Redis unreachable — service may be down"
         elif "name or service not known" in err_msg.lower():
