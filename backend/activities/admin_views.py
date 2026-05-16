@@ -753,6 +753,51 @@ class LiveSimulationView(APIView):
         })
 
 
+class WipeDataView(APIView):
+    """
+    DELETE /api/activities/admin/wipe-data/
+    Deletes ALL data except GLOBAL_OWNER users and their RBAC permissions.
+    Requires confirmation: { "confirm": true }
+    """
+    permission_classes = [IsAdminRole]
+
+    def delete(self, request):
+        confirm = request.data.get('confirm', False)
+        if not confirm:
+            return Response({'error': 'Must send { "confirm": true }'}, status=status.HTTP_400_BAD_REQUEST)
+
+        from django.db import connection
+        from users.departments import UserDepartment, Department
+        from activities.models import Activity
+        from users.models import User, Tenant
+
+        deleted = {}
+
+        # Delete activities
+        count = Activity.objects.all().delete()[0]
+        deleted['activities'] = count
+
+        # Delete user-department assignments
+        count = UserDepartment.objects.all().delete()[0]
+        deleted['user_departments'] = count
+
+        # Delete departments
+        count = Department.objects.all().delete()[0]
+        deleted['departments'] = count
+
+        # Delete non-GLOBAL_OWNER users
+        count = User.objects.exclude(role='GLOBAL_OWNER').delete()[0]
+        deleted['users'] = count
+
+        # Delete tenants
+        count = Tenant.objects.all().delete()[0]
+        deleted['tenants'] = count
+
+        _sim_log(f"🧹 WIPE DATA: {deleted}")
+
+        return Response({'status': 'wiped', 'deleted': deleted})
+
+
 class RunSimulationView(APIView):
     """
     POST   /api/activities/admin/simulate/        — start simulation

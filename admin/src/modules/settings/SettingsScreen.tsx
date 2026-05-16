@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon } from '@mantine/core';
-import { Bell, PaintBucket, Shield, Zap } from 'lucide-react';
-import { PageHeader } from '../../core/components/PageHeader';
+import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon, Modal } from '@mantine/core';
+import { Bell, PaintBucket, Shield, Zap, Trash2, AlertTriangle } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
+import { apiClient } from '../../api/client';
+import { PageHeader } from '../../core/components/PageHeader';
 
 export const SettingsScreen: React.FC = () => {
   const [settings, setSettings] = useState({
@@ -45,6 +46,23 @@ export const SettingsScreen: React.FC = () => {
     },
   ];
 
+  const [wipeModalOpen, setWipeModalOpen] = useState(false);
+  const [wipeConfirm, setWipeConfirm] = useState('');
+  const [wiping, setWiping] = useState(false);
+
+  const handleWipe = async () => {
+    if (wipeConfirm !== 'DELETE ALL DATA') return;
+    setWiping(true);
+    try {
+      await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+      notifications.show({ title: 'Data Wiped', message: 'All data except Global Owner has been deleted.', color: 'green' });
+      setWipeModalOpen(false);
+      setWipeConfirm('');
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.response?.data?.error || 'Wipe failed.', color: 'red' });
+    } finally { setWiping(false); }
+  };
+
   return (
     <Box><PageHeader title="Settings" subtitle="Platform configuration and preferences" />
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
@@ -56,6 +74,39 @@ export const SettingsScreen: React.FC = () => {
         ))}
       </SimpleGrid>
       <Button onClick={handleSave} size="md" style={{ background: 'var(--brand-gradient)', borderRadius: 10 }}>Save Settings</Button>
+
+      {/* Danger Zone */}
+      <Card mt="xl" style={{ background: 'var(--surface)', border: '2px solid var(--mantine-color-red-6)', borderRadius: 14, padding: 24 }}>
+        <Group mb="md">
+          <ThemeIcon size={36} radius="md" color="red" variant="light"><AlertTriangle size={20} /></ThemeIcon>
+          <Text fw={700} size="lg" c="red">Danger Zone</Text>
+        </Group>
+        <Text size="sm" c="dimmed" mb="md">
+          This will permanently delete ALL users (except Global Owner), tenants, departments, and activities. This action cannot be undone.
+        </Text>
+        <Button color="red" variant="outline" leftSection={<Trash2 size={16} />} onClick={() => setWipeModalOpen(true)}>
+          Wipe All Data
+        </Button>
+      </Card>
+
+      <Modal opened={wipeModalOpen} onClose={() => { setWipeModalOpen(false); setWipeConfirm(''); }} title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
+        <Stack gap="md">
+          <Text size="sm">This will delete ALL activities, users (except GLOBAL_OWNER), tenants, and departments. Type <b>DELETE ALL DATA</b> to confirm:</Text>
+          <input
+            type="text"
+            value={wipeConfirm}
+            onChange={(e) => setWipeConfirm(e.target.value)}
+            placeholder="Type DELETE ALL DATA"
+            style={{
+              padding: '8px 12px', border: '1px solid var(--mantine-color-red-6)', borderRadius: 8,
+              background: 'var(--surface-secondary)', color: 'var(--text-primary)', fontSize: 14, width: '100%',
+            }}
+          />
+          <Button color="red" fullWidth leftSection={<Trash2 size={16} />} loading={wiping} disabled={wipeConfirm !== 'DELETE ALL DATA'} onClick={handleWipe}>
+            {wiping ? 'Wiping...' : 'Yes, Delete Everything'}
+          </Button>
+        </Stack>
+      </Modal>
     </Box>
   );
 };
