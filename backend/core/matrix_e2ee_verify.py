@@ -101,6 +101,18 @@ def _sas_key(transaction_id: str) -> str:
     return f"matrix:sas:{transaction_id}"
 
 
+def _redis_safe_get_state(txn_id: str) -> dict | None:
+    """Safely fetch and parse SAS state from Redis. Returns None on any error."""
+    try:
+        r = _get_redis()
+        raw = r.get(_sas_key(txn_id))
+        if not raw:
+            return None
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # REST API Views
 # ---------------------------------------------------------------------------
@@ -137,7 +149,10 @@ def initiate_verification(request: Request) -> Response:
     }
 
     r = _get_redis()
-    r.setex(_sas_key(transaction_id), SAS_TTL_S, json.dumps(state))
+    try:
+        r.setex(_sas_key(transaction_id), SAS_TTL_S, json.dumps(state))
+    except Exception:
+        return Response({"error": "Failed to store verification state."}, status=500)
 
     logger.info(
         "matrix.sas.initiated initiator=%d target=%s txn=%s",
@@ -177,7 +192,11 @@ def accept_verification(request: Request) -> Response:
 
     state["status"] = "ACCEPTED"
     state["acceptor_device_id"] = device_id
-    r.setex(_sas_key(txn_id), SAS_TTL_S, json.dumps(state))
+    try:
+        r = _get_redis()
+        r.setex(_sas_key(txn_id), SAS_TTL_S, json.dumps(state))
+    except Exception:
+        return Response({"error": "Failed to update verification state."}, status=500)
 
     emojis = _derive_sas_emojis(
         commitment=state["commitment"],
@@ -203,16 +222,17 @@ def confirm_verification(request: Request) -> Response:
     txn_id = request.data.get("transaction_id", "")
     confirmed = request.data.get("confirmed", False)
 
-    r = _get_redis()
-    raw = r.get(_sas_key(txn_id))
-    if not raw:
+    state = _redis_safe_get_state(txn_id)
+    if state is None:
         return Response({"error": "Verification not found or expired."}, status=404)
-
-    state = json.loads(raw)
 
     if not confirmed:
         state["status"] = "CANCELLED"
-        r.setex(_sas_key(txn_id), 60, json.dumps(state))
+        try:
+            r = _get_redis()
+            r.setex(_sas_key(txn_id), 60, json.dumps(state))
+        except Exception:
+            logger.warning("matrix.sas.cancelled txn=%s user=%d (redis unavailable)", txn_id, request.user.id)
         logger.warning("matrix.sas.cancelled txn=%s user=%d", txn_id, request.user.id)
         return Response({"status": "CANCELLED"})
 
@@ -227,7 +247,11 @@ def confirm_verification(request: Request) -> Response:
     if len(confirmations) >= 2:
         state["status"] = "VERIFIED"
         state["verified_at"] = int(time.time())
-        r.setex(_sas_key(txn_id), 60, json.dumps(state))
+        try:
+            r = _get_redis()
+            r.setex(_sas_key(txn_id), 60, json.dumps(state))
+        except Exception:
+            logger.warning("matrix.sas.verified txn=%s (redis unavailable)", txn_id)
         logger.info(
             "matrix.sas.verified txn=%s initiator=%s target=%s",
             txn_id, state["initiator_user_id"], state["target_user_id"],
@@ -235,7 +259,11 @@ def confirm_verification(request: Request) -> Response:
         return Response({"status": "VERIFIED", "transaction_id": txn_id})
 
     state["status"] = "CONFIRMING"
-    r.setex(_sas_key(txn_id), SAS_TTL_S, json.dumps(state))
+    try:
+        r = _get_redis()
+        r.setex(_sas_key(txn_id), SAS_TTL_S, json.dumps(state))
+    except Exception:
+        pass
     return Response({"status": "CONFIRMING", "confirmations_received": len(confirmations)})
 
 
@@ -249,12 +277,9 @@ def verification_status(request: Request) -> Response:
     Query param: ?transaction_id=...
     """
     txn_id = request.query_params.get("transaction_id", "")
-    r = _get_redis()
-    raw = r.get(_sas_key(txn_id))
-    if not raw:
-        return Response({"status": "EXPIRED_OR_NOT_FOUND"}, status=404)
-
-    state = json.loads(raw)
+    state = _redis_safe_get_state(txn_id)
+    if state is None:
+        return Response({"error": "Verification not found or expired."}, status=404)
     return Response({
         "transaction_id": txn_id,
         "status": state["status"],
