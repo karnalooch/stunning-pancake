@@ -64,7 +64,7 @@ export const SimulatorPage: React.FC = () => {
     const handleBatchRun = async () => {
         setBatchStarting(true);
         const scale = Math.min(1.0, userCount / 11_000); // convert user count to scale
-        try { await apiClient.post('/activities/admin/simulate/', { scale, days, clear: true, skip_activities: true }); notifications.show({ title: 'Users Generated', message: `~${userCount.toLocaleString()} users (no activities)`, color: 'green' }); }
+        try { await apiClient.post('/activities/admin/simulate/', { total_users: userCount, days, clear: true, skip_activities: true }); notifications.show({ title: 'Users Generated', message: `${userCount.toLocaleString()} users across random cities`, color: 'green' }); }
         catch (err: any) { notifications.show({ title: 'Error', message: err?.response?.data?.error || 'Failed', color: 'red' }); }
         finally { setBatchStarting(false); }
     };

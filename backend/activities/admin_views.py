@@ -365,7 +365,7 @@ def _sim_log(msg: str):
             _simulation_state['log'] = _simulation_state['log'][-200:]
 
 
-def _run_simulation_in_background(scale: float, days: int, clear: bool, continuous: bool, interval: int, skip_activities: bool = False):
+def _run_simulation_in_background(scale: float, days: int, clear: bool, continuous: bool, interval: int, skip_activities: bool = False, total_users: int = None):
     """Run the simulation in the current thread, updating global state."""
     from simulate_active_cities import run
     with _sim_lock:
@@ -385,7 +385,7 @@ def _run_simulation_in_background(scale: float, days: int, clear: bool, continuo
     _sim_log(f"Simulation starting: scale={scale}, days={days}, clear={clear}, mode={mode_str}")
 
     try:
-        run(scale=scale, days=days, clear=clear, dry_run=False, skip_activities=skip_activities)
+        run(scale=scale, days=days, clear=clear, dry_run=False, skip_activities=skip_activities, total_users=total_users)
         _sim_log("Initial batch complete.")
 
         if continuous:
@@ -876,8 +876,9 @@ class RunSimulationView(APIView):
         days = int(request.data.get('days', 30))
         clear = bool(request.data.get('clear', False))
         skip_activities = bool(request.data.get('skip_activities', False))
+        total_users = request.data.get('total_users')  # optional, overrides scale
 
-        if scale < 0.001 or scale > 1.0:
+        if not total_users and (scale < 0.001 or scale > 1.0):
             return Response(
                 {'error': 'scale must be between 0.001 and 1.0'},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -885,7 +886,7 @@ class RunSimulationView(APIView):
 
         thread = threading.Thread(
             target=_run_simulation_in_background,
-            args=(scale, days, clear, False, 60, skip_activities),
+            args=(scale, days, clear, False, 60, skip_activities, total_users),
             daemon=True,
         )
         thread.start()
