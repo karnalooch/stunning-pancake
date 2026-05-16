@@ -123,13 +123,16 @@ class TelemetryConfigView(views.APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        r = get_redis()
-        config_raw = r.get("telemetry:config")
-        if config_raw:
-            try:
-                return Response(json.loads(config_raw))
-            except Exception:
-                pass
+        try:
+            r = get_redis()
+            config_raw = r.get("telemetry:config")
+            if config_raw:
+                try:
+                    return Response(json.loads(config_raw))
+                except Exception:
+                    pass
+        except Exception:
+            pass
         
         # Defaults matching the Admin UI state
         return Response({
