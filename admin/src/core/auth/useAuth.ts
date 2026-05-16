@@ -3,6 +3,15 @@ import { apiClient } from '../../api/client';
 
 export type Role = 'GLOBAL_OWNER' | 'TENANT_ADMIN' | 'TENANT_MODERATOR' | 'ATHLETE' | 'SPONSOR';
 
+/** Legacy role-to-permissions map used as fallback when RBAC returns empty. */
+const LEGACY_ROLE_PERMS: Record<string, string[]> = {
+  GLOBAL_OWNER: ['*'],
+  TENANT_ADMIN: ['activities.view', 'activities.create', 'activities.edit', 'activities.delete', 'activities.approve', 'users.view', 'users.create', 'users.edit'],
+  TENANT_MODERATOR: ['activities.view', 'activities.approve', 'users.view'],
+  SPONSOR: ['activities.view', 'poi.view', 'poi.create', 'poi.edit', 'vouchers.create', 'vouchers.view'],
+  ATHLETE: ['activities.view', 'activities.create', 'users.view', 'poi.view', 'vouchers.view'],
+};
+
 interface User {
   id: number;
   username: string;
@@ -48,14 +57,13 @@ export const useAuth = create<AuthState>((set, get) => ({
       );
     } catch {
       // Fallback: derive permissions from legacy role
-      const rolePerms: Record<string, string[]> = {
-        GLOBAL_OWNER: ['*'],
-        TENANT_ADMIN: ['activities.view', 'activities.create', 'activities.edit', 'activities.delete', 'activities.approve', 'users.view', 'users.create', 'users.edit'],
-        TENANT_MODERATOR: ['activities.view', 'activities.approve', 'users.view'],
-        SPONSOR: ['activities.view', 'poi.view', 'poi.create', 'poi.edit', 'vouchers.create', 'vouchers.view'],
-        ATHLETE: ['activities.view', 'activities.create', 'users.view', 'poi.view', 'vouchers.view'],
-      };
-      permissions = rolePerms[user.role] || [];
+      permissions = LEGACY_ROLE_PERMS[user.role] || [];
+    }
+
+    // If RBAC returned empty permissions (user has no UserRole assignment),
+    // fall back to legacy role-based permissions
+    if (permissions.length === 0) {
+      permissions = LEGACY_ROLE_PERMS[user.role] || [];
     }
 
     set({
