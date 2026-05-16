@@ -74,11 +74,42 @@ def get_redis():
 
 
 def _build_standalone_client():
-    """Single-node Redis (default: dev and staging)."""
+    """Single-node Redis (default: dev and staging).
+    
+    Supports both REDIS_URL (with embedded credentials)
+    and REDIS_HOST / REDIS_PORT / REDIS_PASSWORD (managed services).
+    """
     import redis
-    client = redis.from_url(REDIS_URL, decode_responses=True)
-    logger.info("redis.mode=standalone url=%s", REDIS_URL)
+    import urllib.parse
+
+    url = REDIS_URL
+    redis_password = os.getenv("REDIS_PASSWORD", "")
+
+    # If REDIS_PASSWORD is set but not embedded in REDIS_URL, inject it
+    if redis_password and "://" in url and "@" not in url.split("://", 1)[1]:
+        # Parse the URL, inject password
+        parsed = urllib.parse.urlparse(url)
+        encoded_pw = urllib.parse.quote(redis_password, safe="")
+        url = parsed._replace(
+            netloc=f":{encoded_pw}@{parsed.hostname}:{parsed.port or 6379}"
+        ).geturl()
+
+    try:
+        client = redis.from_url(url, decode_responses=True)
+        # Verify connection immediately
+        client.ping()
+    except (redis.AuthenticationError, redis.ConnectionError, redis.ResponseError) as e:
+        logger.warning("redis.standalone_connect_failed err=%s url=%s", e, _sanitize_url(url))
+        raise
+
+    logger.info("redis.mode=standalone url=%s", _sanitize_url(url))
     return client
+
+
+def _sanitize_url(url: str) -> str:
+    """Hide password in URL for logging."""
+    import re
+    return re.sub(r':([^@]+)@', ':****@', url)
 
 
 def _build_cluster_client():
@@ -130,8 +161,8 @@ def health_check() -> dict:
         dict with mode, node count, and ping latency in ms.
     """
     import time
-    r = get_redis()
     try:
+        r = get_redis()
         t0 = time.monotonic()
         r.ping()
         latency_ms = round((time.monotonic() - t0) * 1000, 2)

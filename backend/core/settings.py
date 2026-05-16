@@ -227,11 +227,22 @@ SPECTACULAR_SETTINGS = {
 # Phase 7: Celery — Async Task Queue
 # Broker: auto-detects Redis Cluster or standalone from environment
 _redis_cluster_nodes = os.getenv('REDIS_CLUSTER_NODES', '')
-_celery_broker = (
-    f"redis://{_redis_cluster_nodes.split(',')[0]}/1"
-    if _redis_cluster_nodes
-    else os.getenv('REDIS_URL', 'redis://redis:6379/1')
-)
+_redis_password = os.getenv('REDIS_PASSWORD', '')
+
+if _redis_cluster_nodes:
+    _celery_broker = f"redis://{_redis_cluster_nodes.split(',')[0]}/1"
+else:
+    _redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/1')
+    # Inject REDIS_PASSWORD if set and not already in URL
+    if _redis_password and '@' not in _redis_url.split('://', 1)[1]:
+        import urllib.parse
+        parsed = urllib.parse.urlparse(_redis_url)
+        encoded_pw = urllib.parse.quote(_redis_password, safe='')
+        _redis_url = parsed._replace(
+            netloc=f':{encoded_pw}@{parsed.hostname}:{parsed.port or 6379}'
+        ).geturl()
+    _celery_broker = _redis_url
+
 CELERY_BROKER_URL = _celery_broker
 CELERY_RESULT_BACKEND = _celery_broker
 CELERY_ACCEPT_CONTENT = ['json']
