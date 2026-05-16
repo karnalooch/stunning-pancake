@@ -91,7 +91,10 @@ export const Users = () => {
 
   useEffect(() => { fetchUsers(); }, []);
   useEffect(() => {
-    apiClient.get('/users/departments/').then(({ data }) => setDepartments(data));
+    apiClient.get('/users/departments/').then(({ data }) => {
+      const arr = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
+      setDepartments(arr);
+    }).catch(() => setDepartments([]));
   }, []);
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
