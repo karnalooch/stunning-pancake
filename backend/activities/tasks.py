@@ -231,13 +231,21 @@ def send_leaderboard_digest(city_id: str, top_n: int = 10) -> None:
 
 
 @shared_task(queue="default", name="activities.tasks.recalculate_city_leaderboard")
-def recalculate_city_leaderboard(city_id: str) -> None:
+def recalculate_city_leaderboard(city_id: str = "") -> None:
     from django.db.models import Sum
     from activities.models import Activity
     from activities.leaderboards import LeaderboardService
-    qs = Activity.objects.filter(is_verified=True, user__tenant_id=city_id).values("user_id").annotate(total_km=Sum("distance"))
-    scores = {row["user_id"]: round((row["total_km"] or 0) / 1000.0, 3) for row in qs}
-    if scores:
-        LeaderboardService.batch_recalculate(city_id, scores)
-        # Also trigger MV refresh
-        refresh_city_rankings_mv.delay()
+
+    if city_id:
+        cities = [city_id]
+    else:
+        cities = list(Activity.objects.filter(is_verified=True).values_list("user__tenant_id", flat=True).distinct())
+
+    for cid in cities:
+        if not cid:
+            continue
+        qs = Activity.objects.filter(is_verified=True, user__tenant_id=cid).values("user_id").annotate(total_km=Sum("distance"))
+        scores = {row["user_id"]: round((row["total_km"] or 0) / 1000.0, 3) for row in qs}
+        if scores:
+            LeaderboardService.batch_recalculate(cid, scores)
+            refresh_city_rankings_mv.delay()
