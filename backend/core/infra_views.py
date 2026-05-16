@@ -127,7 +127,13 @@ class SystemHealthView(APIView):
             else:
                 cel_status = {"status": "error", "error": "No workers responded"}
         except Exception as exc:
-            cel_status = {"status": "error", "error": str(exc)}
+            err_msg = str(exc)
+            # Sanitize leaked auth messages from broker (e.g. Redis password)
+            if "authentication required" in err_msg.lower() or "noauth" in err_msg.lower():
+                err_msg = "Broker requires authentication — check CELERY_BROKER_URL"
+            elif "connection refused" in err_msg.lower():
+                err_msg = "Broker unreachable — service may be down"
+            cel_status = {"status": "error", "error": err_msg}
 
         # -- Storage --
         try:

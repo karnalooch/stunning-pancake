@@ -153,4 +153,12 @@ def health_check() -> dict:
             }
     except Exception as exc:
         logger.error("redis.health_check_failed err=%s", exc)
-        return {"mode": "cluster" if CLUSTER_MODE else "standalone", "status": "error", "error": str(exc)}
+        err_msg = str(exc)
+        # Sanitize leaked auth messages for public health dashboards
+        if "authentication required" in err_msg.lower() or "noauth" in err_msg.lower():
+            err_msg = "Redis requires authentication — check REDIS_URL includes password"
+        elif "connection refused" in err_msg.lower():
+            err_msg = "Redis unreachable — service may be down"
+        elif "name or service not known" in err_msg.lower():
+            err_msg = "Redis host not found — check REDIS_URL hostname"
+        return {"mode": "cluster" if CLUSTER_MODE else "standalone", "status": "error", "error": err_msg}
