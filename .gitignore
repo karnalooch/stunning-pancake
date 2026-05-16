@@ -62,3 +62,4 @@ LINK_DO_APLIKACJI.txt
 mobile/screenshot_*
 .playwright-mcp/
 *.html
+.kilo/kilo.json

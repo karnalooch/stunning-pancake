@@ -65,16 +65,16 @@ apiClient.interceptors.response.use(
 export const AdminApi = {
   getUsers: async () => {
     const { data } = await apiClient.get('/users/all/');
-    return data;
+    return Array.isArray(data) ? data : (data?.results ?? data ?? []);
   },
   getTenants: async () => {
     const { data } = await apiClient.get('/users/tenants/all/');
-    return data;
+    return Array.isArray(data) ? data : (data?.results ?? data ?? []);
   },
   getAuditLogs: async (limit?: number) => {
     const params = limit ? { limit } : {};
     const { data } = await apiClient.get('/users/audit-log/', { params });
-    return data;
+    return Array.isArray(data) ? data : (data?.results ?? data ?? []);
   },
   impersonateUser: async (targetUserId: number) => {
     const { data } = await apiClient.post(`/users/impersonate/${targetUserId}/`);
