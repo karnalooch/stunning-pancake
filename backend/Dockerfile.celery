@@ -16,10 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
 ENV GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
 
-COPY backend/requirements.txt /app/
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/ /app/
+COPY . /app/
 
 RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
 USER 1001
