@@ -32,4 +32,4 @@ numpy==1.26.4
 sendgrid==6.11.0
 # Token encryption at rest (WearableIntegration OAuth credentials)
 cryptography>=41.0.0
-
+django-stubs==5.1.1
