@@ -111,6 +111,12 @@ const NAV_SECTIONS = [
         path: '/owner/settings',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
+      {
+        icon: ShieldAlert,
+        label: 'RBAC Manager',
+        path: '/owner/system/rbac',
+        roles: ['GLOBAL_OWNER'],
+      },
     ],
   },
 ];
