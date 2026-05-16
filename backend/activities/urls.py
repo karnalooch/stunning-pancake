@@ -7,7 +7,7 @@ from .views import (
     WearableSyncView, ActivityDetailView, AIInsightsView
 )
 
-from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, DepartmentAnalyticsView, ActivityApproveView, ActivityRejectView, ExportDataView
+from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, DepartmentAnalyticsView, ActivityApproveView, ActivityRejectView, ExportDataView, RunSimulationView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .leaderboard_views import city_leaderboard, my_rank, department_leaderboard, leaderboard_list, admin_recalculate_leaderboards, admin_leaderboard_list, admin_clear_leaderboard
 from .heatmap import heatmap_view, analytics_summary_view
@@ -61,4 +61,6 @@ urlpatterns = [
     path('ai/insights/', AIInsightsView.as_view(), name='ai-insights'),
     # Export Endpoints
     path('export/<str:resource>/', ExportDataView.as_view(), name='export-data'),
+    # Simulation Endpoint — Aktywne Miasta
+    path('admin/simulate/', RunSimulationView.as_view(), name='admin-simulate'),
 ]

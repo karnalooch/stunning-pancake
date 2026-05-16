@@ -1,5 +1,6 @@
 import csv
 import io
+import threading
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -332,4 +333,47 @@ class ExportDataView(APIView):
                 'verified_pct': round(verified / max(total_activities, 1) * 100, 1),
             }
         }
+
+
+# ---------------------------------------------------------------------------
+# Simulation endpoint — runs Aktywne Miasta simulation in background thread
+# ---------------------------------------------------------------------------
+class RunSimulationView(APIView):
+    """
+    POST /api/activities/admin/simulate/
+    Body: { "scale": 0.01, "days": 30, "clear": false }
+
+    Starts the Aktywne Miasta simulation in a background thread and returns
+    immediately. Check Railway logs for progress output.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        from simulate_active_cities import run
+        scale = float(request.data.get('scale', 0.01))
+        days = int(request.data.get('days', 30))
+        clear = bool(request.data.get('clear', False))
+
+        if scale < 0.001 or scale > 1.0:
+            return Response(
+                {'error': 'scale must be between 0.001 and 1.0'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        def _run_in_background():
+            try:
+                run(scale=scale, days=days, clear=clear, dry_run=False)
+            except Exception as e:
+                print(f"[SIMULATION ERROR] {e}")
+
+        thread = threading.Thread(target=_run_in_background, daemon=True)
+        thread.start()
+
+        return Response({
+            'status': 'started',
+            'scale': scale,
+            'days': days,
+            'clear': clear,
+            'message': f'Simulation started in background thread. Check Railway logs for progress. Estimated time: ~{int(scale * 30)} minutes.',
+        })
 
