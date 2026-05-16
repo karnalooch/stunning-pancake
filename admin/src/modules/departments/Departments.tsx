@@ -48,9 +48,11 @@ export const Departments: React.FC = () => {
     const fetchDepartments = async () => {
         try {
             const { data } = await apiClient.get('/users/departments/');
-            setDepartments(data);
+            const arr = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
+            setDepartments(arr);
         } catch (err) {
             console.error('Failed to fetch departments:', err);
+            setDepartments([]);
         } finally {
             setLoading(false);
         }
@@ -59,9 +61,11 @@ export const Departments: React.FC = () => {
     const fetchTree = async () => {
         try {
             const { data } = await apiClient.get('/users/departments/tree/');
-            setTree(data);
+            const arr = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
+            setTree(arr);
         } catch (err) {
             console.error('Failed to fetch department tree:', err);
+            setTree([]);
         }
     };
 
@@ -211,7 +215,7 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
 
     const parentOptions = [
         { value: '', label: 'Brak (główny)' },
-        ...departments
+        ...(Array.isArray(departments) ? departments : [])
             .filter((d) => d.id !== department?.id)
             .map((d) => ({ value: d.id.toString(), label: d.name })),
     ];
