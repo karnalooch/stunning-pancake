@@ -266,15 +266,23 @@ def _generate_activity_params(activity_type: str):
 # Main simulation
 # ---------------------------------------------------------------------------
 
-def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False, skip_activities: bool = False):
+def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False, skip_activities: bool = False, total_users: int = None, num_cities: int = None):
     """Run the Aktywne Miasta simulation."""
     # Lazy imports — models must be loaded after Django is ready
     from users.models import User, Tenant, Role
     from users.departments import Department, UserDepartment
     from activities.models import Activity
 
-    scale = max(0.001, min(1.0, scale))
-    users_per_city = int(11_000 * scale)
+    # If total_users is specified, use it directly and pick random cities
+    if total_users:
+        num_cities = num_cities or random.randint(3, min(100, len(CITIES)))
+        selected_cities = random.sample(CITIES, num_cities)
+        users_per_city = total_users // num_cities
+        scale = 0.01  # minimal scale for department calculations
+    else:
+        selected_cities = CITIES
+        scale = max(0.001, min(1.0, scale))
+        users_per_city = int(11_000 * scale)
     activities_per_user = max(1, int(4.8 * scale * (days / 30)))  # ~5 activities per user at full scale over 30 days
     departments_per_city = max(5, int(20 * scale))
 
@@ -282,12 +290,12 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     print("╔══════════════════════════════════════════════════════════╗")
     print("║        AKTYWNE MIASTA 2026 — SIMULATION SETUP           ║")
     print("╠══════════════════════════════════════════════════════════╣")
-    print(f"║  Scale factor:    {scale:.2f}{' (DRY RUN)' if dry_run else '':20s}║")
-    print(f"║  Cities:          {len(CITIES):<42d}║")
+    total_u = len(selected_cities) * users_per_city
+    print(f"║  Cities:          {len(selected_cities):<42d}║")
     print(f"║  Users/city:      {users_per_city:<42d}║")
-    print(f"║  Total users:     {len(CITIES) * users_per_city:<42d}║")
+    print(f"║  Total users:     {total_u:<42d}║")
     print(f"║  Days:            {days:<42d}║")
-    print(f"║  Est. activities: {len(CITIES) * users_per_city * activities_per_user:<42,d}║")
+    print(f"║  Est. activities: {total_u * activities_per_user:<42,d}║")
     print("╚══════════════════════════════════════════════════════════╝")
     print()
 
@@ -300,7 +308,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     # ------------------------------------------------------------------
     if clear:
         print("🗑️  Clearing existing simulation data...")
-        tenant_names = [c["name"] for c in CITIES]
+        tenant_names = [c["name"] for c in selected_cities]
         tenants_to_delete = Tenant.objects.filter(name__in=tenant_names)
         tenant_ids = list(tenants_to_delete.values_list("id", flat=True))
         Activity.objects.filter(tenant_id__in=tenant_ids).delete()
@@ -315,7 +323,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     # ------------------------------------------------------------------
     print("🏙️  Phase 1: Creating tenants...")
     tenants = {}
-    for city in CITIES:
+    for city in selected_cities:
         colors = city["colors"]
         tenant, created = Tenant.objects.get_or_create(
             name=city["name"],
@@ -335,7 +343,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     # Phase 2: Create tenant admins
     # ------------------------------------------------------------------
     print("👤 Phase 2: Creating tenant admins...")
-    for city in CITIES:
+    for city in selected_cities:
         tenant = tenants[city["name"]]
         admin_username = f"admin_{city['slug']}"
         admin, created = User.objects.get_or_create(
@@ -363,7 +371,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     departments_by_city = {}
     total_departments = 0
 
-    for city in CITIES:
+    for city in selected_cities:
         tenant = tenants[city["name"]]
         city_depts = []
 
@@ -428,7 +436,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     total_users = 0
     batch_size = 500
 
-    for city in CITIES:
+    for city in selected_cities:
         tenant = tenants[city["name"]]
         city_depts = departments_by_city[city["name"]]
         city_users = []
@@ -539,7 +547,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
     act_batch_size = 200  # bulk_create batch size
 
-    for city in CITIES:
+    for city in selected_cities:
         city_users = users_by_city[city["name"]]
         tenant = tenants[city["name"]]
         city_lat = city["lat"]
