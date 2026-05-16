@@ -11,6 +11,7 @@ from users.models import User, Tenant, Role
 from activities.models import Activity, POI, Voucher
 from django.utils import timezone
 from datetime import timedelta
+from django.db import IntegrityError
 
 def seed():
     print("🌱 Seeding SPORT Platform...")
@@ -58,14 +59,19 @@ def seed():
         defaults={'location': Point(22.2906, 52.1672)} # lon, lat
     )
 
-    Voucher.objects.get_or_create(
-        poi=coffee_poi,
-        code='COFFEE-20',
-        defaults={
-            'discount_value': '20%', 
-            'expiry_date': timezone.now() + timedelta(days=30)
-        }
-    )
+    # Voucher creation — safe fallback if code already exists for
+    # a different POI (get_or_create fails on unique code constraint)
+    try:
+        Voucher.objects.get_or_create(
+            poi=coffee_poi,
+            code='COFFEE-20',
+            defaults={
+                'discount_value': '20%',
+                'expiry_date': timezone.now() + timedelta(days=30)
+            }
+        )
+    except IntegrityError:
+        print("Voucher COFFEE-20: already exists (code conflict), skipping")
 
     # 5. Create Mock Activities
     athlete, _ = User.objects.get_or_create(
