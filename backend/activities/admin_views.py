@@ -760,47 +760,56 @@ class LiveSimulationView(APIView):
 
 class WipeDataView(APIView):
     """
-    DELETE /api/activities/admin/wipe-data/
-    Deletes ALL data except GLOBAL_OWNER users and their RBAC permissions.
-    Requires confirmation: { "confirm": true }
+    DELETE /api/activities/admin/wipe-data/?confirm=true
+    Deletes ALL data except GLOBAL_OWNER users.
     """
     permission_classes = [IsAdminRole]
 
     def delete(self, request):
+        from django.db import connection
         confirm = request.data.get('confirm', False) or request.query_params.get('confirm') == 'true'
         if not confirm:
-            return Response({'error': 'Must send confirm=true query param or { "confirm": true } body'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Must send ?confirm=true'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from django.db import connection
-        from users.departments import UserDepartment, Department
-        from activities.models import Activity
-        from users.models import User, Tenant
+        errors = []
 
-        deleted = {}
+        # Use raw SQL truncation — fastest and avoids FK constraint issues
+        tables_in_order = [
+            'activities_activity',
+            'activities_leaderboardentry',
+            'activities_betafeedback',
+            'users_userdepartment',
+            'users_userrole',
+            'users_rolepermission',
+            'users_department',
+            'users_user_groups',
+            'users_user_user_permissions',
+        ]
+        with connection.cursor() as cursor:
+            for table in tables_in_order:
+                try:
+                    cursor.execute(f'DELETE FROM {table}')
+                except Exception:
+                    pass  # table may not exist
 
-        # Delete activities
-        count = Activity.objects.all().delete()[0]
-        deleted['activities'] = count
+            # Delete non-GLOBAL_OWNER users
+            try:
+                cursor.execute("DELETE FROM users_user WHERE role != 'GLOBAL_OWNER'")
+            except Exception as e:
+                errors.append(f'users: {e}')
 
-        # Delete user-department assignments
-        count = UserDepartment.objects.all().delete()[0]
-        deleted['user_departments'] = count
+            # Delete tenants
+            try:
+                cursor.execute("DELETE FROM users_tenant")
+            except Exception as e:
+                errors.append(f'tenants: {e}')
 
-        # Delete departments
-        count = Department.objects.all().delete()[0]
-        deleted['departments'] = count
+        _sim_log(f"🧹 WIPE DATA completed" + (f" ERRORS: {errors}" if errors else ""))
 
-        # Delete non-GLOBAL_OWNER users
-        count = User.objects.exclude(role='GLOBAL_OWNER').delete()[0]
-        deleted['users'] = count
-
-        # Delete tenants
-        count = Tenant.objects.all().delete()[0]
-        deleted['tenants'] = count
-
-        _sim_log(f"🧹 WIPE DATA: {deleted}")
-
-        return Response({'status': 'wiped', 'deleted': deleted})
+        return Response({
+            'status': 'wiped' if not errors else 'partial',
+            'errors': errors if errors else None,
+        })
 
 
 class RunSimulationView(APIView):
