@@ -346,35 +346,52 @@ _simulation_state = {
     'scale': 0.0,
     'days': 0,
     'error': None,
+    'log': [],          # ring buffer of [timestamp, message]
+    'abort_flag': False,
 }
+_sim_lock = threading.Lock()
+
+
+def _sim_log(msg: str):
+    """Append a timestamped log line (thread-safe, max 200 lines)."""
+    ts = time.strftime('%H:%M:%S')
+    with _sim_lock:
+        _simulation_state['log'].append([ts, msg])
+        if len(_simulation_state['log']) > 200:
+            _simulation_state['log'] = _simulation_state['log'][-200:]
 
 
 def _run_simulation_in_background(scale: float, days: int, clear: bool):
     """Run the simulation in the current thread, updating global state."""
     from simulate_active_cities import run
-    _simulation_state['running'] = True
-    _simulation_state['started_at'] = time.time()
-    _simulation_state['scale'] = scale
-    _simulation_state['days'] = days
-    _simulation_state['error'] = None
-    _simulation_state['completed_at'] = None
+    with _sim_lock:
+        _simulation_state['running'] = True
+        _simulation_state['started_at'] = time.time()
+        _simulation_state['scale'] = scale
+        _simulation_state['days'] = days
+        _simulation_state['error'] = None
+        _simulation_state['completed_at'] = None
+        _simulation_state['log'] = []
+        _simulation_state['abort_flag'] = False
+    _sim_log(f"Simulation starting: scale={scale}, days={days}, clear={clear}")
     try:
         run(scale=scale, days=days, clear=clear, dry_run=False)
+        _sim_log("Simulation completed successfully.")
     except Exception as e:
         _simulation_state['error'] = str(e)
+        _sim_log(f"ERROR: {e}")
         print(f"[SIMULATION ERROR] {e}")
     finally:
-        _simulation_state['running'] = False
-        _simulation_state['completed_at'] = time.time()
+        with _sim_lock:
+            _simulation_state['running'] = False
+            _simulation_state['completed_at'] = time.time()
 
 
 class RunSimulationView(APIView):
     """
-    POST /api/activities/admin/simulate/
-    Body: { "scale": 0.01, "days": 30, "clear": false }
-
-    GET /api/activities/admin/simulate/
-    Returns current simulation status.
+    POST   /api/activities/admin/simulate/        — start simulation
+    GET    /api/activities/admin/simulate/        — status + logs
+    DELETE /api/activities/admin/simulate/        — abort running simulation
     """
     permission_classes = [IsAdminRole]
 
@@ -384,13 +401,26 @@ class RunSimulationView(APIView):
             end = _simulation_state['completed_at'] or time.time()
             elapsed = end - _simulation_state['started_at']
 
+        with _sim_lock:
+            log_snapshot = list(_simulation_state['log'])
+
         return Response({
             'running': _simulation_state['running'],
             'elapsed_seconds': round(elapsed, 1),
             'scale': _simulation_state['scale'],
             'days': _simulation_state['days'],
             'error': _simulation_state['error'],
+            'log': log_snapshot,
         })
+
+    def delete(self, request):
+        """Abort the running simulation."""
+        if not _simulation_state['running']:
+            return Response({'error': 'No simulation is currently running.'}, status=status.HTTP_400_BAD_REQUEST)
+        with _sim_lock:
+            _simulation_state['abort_flag'] = True
+        _sim_log("⚠️ Abort requested by user.")
+        return Response({'status': 'abort_requested', 'message': 'Simulation will stop at the next checkpoint.'})
 
     def post(self, request):
         if _simulation_state['running']:

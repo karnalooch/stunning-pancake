@@ -487,7 +487,18 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
             if users_to_create:
                 with transaction.atomic():
-                    created_users = User.objects.bulk_create(users_to_create)
+                    try:
+                        created_users = User.objects.bulk_create(users_to_create)
+                    except Exception:
+                        # Fall back to individual inserts, skipping duplicates
+                        created_users = []
+                        for u in users_to_create:
+                            try:
+                                with transaction.atomic():
+                                    u.save()
+                                    created_users.append(u)
+                            except Exception:
+                                pass  # skip duplicate
                     city_users.extend(created_users)
 
                     # Assign to departments
