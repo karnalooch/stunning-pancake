@@ -100,6 +100,12 @@ const NAV_SECTIONS = [
         path: '/owner/analytics/feedback',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
+      {
+        icon: TrendingUp,
+        label: 'Departments',
+        path: '/owner/analytics/departments',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
     ],
   },
   {
@@ -115,6 +121,30 @@ const NAV_SECTIONS = [
         icon: ShieldAlert,
         label: 'RBAC Manager',
         path: '/owner/system/rbac',
+        roles: ['GLOBAL_OWNER'],
+      },
+      {
+        icon: Zap,
+        label: 'Feature Flags',
+        path: '/owner/system/feature-flags',
+        roles: ['GLOBAL_OWNER'],
+      },
+      {
+        icon: TrendingUp,
+        label: 'Leaderboards',
+        path: '/owner/system/leaderboards',
+        roles: ['GLOBAL_OWNER'],
+      },
+      {
+        icon: Zap,
+        label: 'Export Center',
+        path: '/owner/system/export',
+        roles: ['GLOBAL_OWNER'],
+      },
+      {
+        icon: Zap,
+        label: 'API Playground',
+        path: '/owner/system/api-playground',
         roles: ['GLOBAL_OWNER'],
       },
     ],
