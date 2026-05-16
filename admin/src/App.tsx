@@ -27,6 +27,7 @@ import { RbacManager } from './modules/analytics/RbacManager';
 import { ApiPlayground } from './modules/settings/ApiPlayground';
 import { FeatureFlags } from './modules/settings/FeatureFlags';
 import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
+import { ActivityDetail } from './modules/dashboard/ActivityDetail';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
@@ -136,6 +137,14 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['users.view']}>
                     <DepartmentUsers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="activities/:id"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <ActivityDetail />
                   </PermissionGuard>
                 }
               />
