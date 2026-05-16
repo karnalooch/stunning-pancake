@@ -30,7 +30,8 @@ from datetime import datetime, timedelta, timezone
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 import django
-django.setup()
+if not django.conf.settings.configured:
+    django.setup()
 
 from django.contrib.gis.geos import LineString, Point
 from django.db import transaction
