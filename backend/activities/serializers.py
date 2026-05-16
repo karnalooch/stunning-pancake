@@ -33,14 +33,19 @@ class ActivitySerializer(serializers.ModelSerializer):
     Serializer for recording and retrieving activities.
     Handles PostGIS LineString for the route.
     """
+    user_info = serializers.SerializerMethodField()
+
     class Meta:
         model = Activity
         fields = (
-            'id', 'user', 'type', 'start_time', 'end_time', 
-            'distance', 'duration', 'is_verified', 
+            'id', 'user', 'user_info', 'type', 'start_time', 'end_time',
+            'distance', 'duration', 'is_verified',
             'verification_score', 'route_path'
         )
         read_only_fields = ('id', 'user', 'is_verified', 'verification_score')
+
+    def get_user_info(self, obj):
+        return {'id': obj.user.id, 'username': obj.user.username}
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
     """

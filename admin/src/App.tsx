@@ -27,6 +27,7 @@ import { RbacManager } from './modules/analytics/RbacManager';
 import { ApiPlayground } from './modules/settings/ApiPlayground';
 import { FeatureFlags } from './modules/settings/FeatureFlags';
 import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
+import { GlobalHeatmap } from './modules/analytics/GlobalHeatmap';
 import { ActivityDetail } from './modules/dashboard/ActivityDetail';
 import { ActivitiesList } from './modules/analytics/ActivitiesList';
 import { useAuth } from './core/auth/useAuth';
@@ -234,6 +235,14 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <DepartmentAnalyticsPage />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/heatmaps"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <GlobalHeatmap />
                   </PermissionGuard>
                 }
               />

@@ -9,7 +9,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
   Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
-  Calendar, TrendingUp, MessageSquare,
+  Calendar, TrendingUp, MessageSquare, Map,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
@@ -106,6 +106,13 @@ const NAV_SECTIONS = [
         path: '/owner/analytics/departments',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
+      {
+        icon: Map,
+        label: 'Heatmaps',
+        path: '/owner/analytics/heatmaps',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+        requiresHeatmapFlag: true,
+      },
     ],
   },
   {
@@ -186,10 +193,15 @@ export const Layout = () => {
     return () => setGlobalErrorHandler(() => { });
   }, []);
 
-  /* Filter nav sections by role */
+  /* Filter nav sections by role and feature flags */
+  const hasHeatmap = user?.tenantFlags?.has_heatmap_analytics ?? false;
   const filteredSections = NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => item.roles.includes(userRole)),
+    items: section.items.filter((item) => {
+      if (!item.roles.includes(userRole)) return false;
+      if ((item as any).requiresHeatmapFlag && !hasHeatmap) return false;
+      return true;
+    }),
   })).filter((section) => section.items.length > 0);
 
   const sidebarWidth = collapsed ? 72 : 260;

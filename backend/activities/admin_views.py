@@ -1,8 +1,11 @@
+import csv
+import io
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django.db.models import Sum, Count, Q
+from django.http import HttpResponse
 from django.utils import timezone
 from datetime import timedelta
 from rest_framework.pagination import PageNumberPagination
@@ -237,7 +240,50 @@ class ExportDataView(APIView):
         else:
             return Response({'error': f'Unknown resource: {resource}'}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(data)
+        if export_format == 'json':
+            return Response(data)
+        elif export_format == 'csv':
+            return self._build_csv_response(data, resource)
+        elif export_format == 'pdf':
+            return self._build_text_report_response(data, resource)
+        else:
+            return Response(data)
+
+    def _build_csv_response(self, data, resource):
+        """Build a CSV HTTP response from export data."""
+        output = io.StringIO()
+        records = data.get('data', [])
+        if records:
+            writer = csv.DictWriter(output, fieldnames=records[0].keys())
+            writer.writeheader()
+            writer.writerows(records)
+        else:
+            output.write('No data available.\r\n')
+        response = HttpResponse(output.getvalue(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{resource}.csv"'
+        return response
+
+    def _build_text_report_response(self, data, resource):
+        """Build a plain-text report HTTP response for PDF-requested exports.
+        Uses text/plain since PDF-generation libraries (ReportLab/WeasyPrint)
+        are not available; the file is delivered as a downloadable text report.
+        """
+        lines = [f"4VELO Export: {data.get('resource', resource)}", "=" * 50, ""]
+        stats = data.get('data', {})
+        if isinstance(stats, dict):
+            for key, value in stats.items():
+                lines.append(f"  {key}: {value}")
+        elif isinstance(stats, list):
+            for item in stats:
+                lines.append(f"  - {item}")
+        else:
+            lines.append(str(stats))
+        lines.append("")
+        lines.append(f"Generated: {timezone.now().isoformat()}")
+        body = "\r\n".join(lines)
+        response = HttpResponse(body, content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{resource}.pdf"'
+        return response
 
     def _export_activities(self, fmt):
         qs = Activity.objects.select_related('user').all()[:10000]

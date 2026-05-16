@@ -95,7 +95,8 @@ export const ActivitiesList: React.FC = () => {
                             const Icon = typeIcons[a.type] || Bike;
                             const username = a.user_info?.username || a.user || 'Unknown';
                             const distKm = ((a.distance || 0) / 1000).toFixed(1);
-                            const durationMin = a.duration ? Math.floor((a.duration || 0) / 60) : null;
+                            const durationNum = typeof a.duration === 'number' ? a.duration : Number(a.duration);
+                            const durationMin = !isNaN(durationNum) && durationNum > 0 ? Math.floor(durationNum / 60) : null;
                             return (
                                 <Table.Tr
                                     key={a.id}

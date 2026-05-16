@@ -190,13 +190,22 @@ class ActivityViewSet(viewsets.ModelViewSet):
 class ActivityDetailView(generics.RetrieveAPIView):
     """
     Detailed view of a single activity with user info and route coordinates.
+    Admin/moderator roles can view any activity; regular users see only their own.
     """
     queryset = Activity.objects.select_related('user').all()
     serializer_class = ActivityDetailSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        return Activity.objects.filter(user=self.request.user).select_related('user')
+        user = self.request.user
+        # Admin and moderator roles can view any activity
+        if user.role in ('GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'):
+            qs = Activity.objects.select_related('user').all()
+            # Tenant-scoped roles only see their tenant's activities
+            if user.role in ('TENANT_ADMIN', 'TENANT_MODERATOR') and user.tenant_id:
+                qs = qs.filter(tenant_id=user.tenant_id)
+            return qs
+        return Activity.objects.filter(user=user).select_related('user')
 
 
 class PrivacyZoneViewSet(viewsets.ModelViewSet):
