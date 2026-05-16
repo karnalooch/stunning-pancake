@@ -50,15 +50,15 @@ class Command(BaseCommand):
         )
         self.stdout.write(self.style.SUCCESS(f'POI Eco Coffee: {"created" if created else "already exists"}'))
 
-        voucher, created = Voucher.objects.get_or_create(
+        # Delete old voucher first to avoid unique code conflicts
+        Voucher.objects.filter(code='COFFEE-20').delete()
+        voucher = Voucher.objects.create(
             poi=coffee_poi,
             code='COFFEE-20',
-            defaults={
-                'discount_value': '20%',
-                'expiry_date': timezone.now() + timedelta(days=30),
-            },
+            discount_value='20%',
+            expiry_date=timezone.now() + timedelta(days=30),
         )
-        self.stdout.write(self.style.SUCCESS(f'Voucher COFFEE-20: {"created" if created else "already exists"}'))
+        self.stdout.write(self.style.SUCCESS('Voucher COFFEE-20: created'))
 
         # 4. Create Mock Athletes & Activities
         athlete, created = User.objects.get_or_create(
