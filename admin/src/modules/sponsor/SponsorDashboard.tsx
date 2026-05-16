@@ -9,7 +9,13 @@ export const SponsorDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiClient.get('/rewards/sponsor-stats/').then(res => setStats(res.data || {})).catch(() => { }).finally(() => setLoading(false));
+    apiClient.get('/rewards/sponsor-stats/')
+      .then(res => setStats(res.data || {}))
+      .catch(err => {
+        console.warn('Sponsor stats unavailable:', err?.response?.status || err?.message);
+        setStats({});
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   return (

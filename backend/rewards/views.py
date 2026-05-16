@@ -79,11 +79,18 @@ def pool_list_view(request: Request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def sponsor_stats_view(request: Request) -> Response:
-    """Returns analytics for the authenticated sponsor."""
+    """Returns analytics for the authenticated sponsor. Falls back to empty stats for non-sponsor roles."""
     try:
         sponsor = request.user.sponsor_profile
     except Sponsor.DoesNotExist:
-        return Response({"error": "Sponsor profile not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response({
+            "poi_count": 0,
+            "vouchers_distributed": 0,
+            "redeemed_count": 0,
+            "redemption_rate": 0,
+            "active_vouchers": 0,
+            "expired_vouchers": 0,
+        })
 
     try:
         pools = sponsor.pools.all()
@@ -99,7 +106,15 @@ def sponsor_stats_view(request: Request) -> Response:
             "expired_vouchers": Voucher.objects.filter(pool__in=pools, pool__valid_until__lt=timezone.now()).count(),
         })
     except Exception as e:
-        return Response({"error": f"Stats unavailable: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({
+            "poi_count": 0,
+            "vouchers_distributed": 0,
+            "redeemed_count": 0,
+            "redemption_rate": 0,
+            "active_vouchers": 0,
+            "expired_vouchers": 0,
+            "error": str(e),
+        })
 
 
 @api_view(["POST"])
