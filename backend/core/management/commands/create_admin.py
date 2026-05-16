@@ -50,3 +50,26 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Created global owner: {owner_username}'))
         else:
             self.stdout.write(self.style.WARNING(f'Global owner already exists, password reset: {owner_username}'))
+
+        # 3. Set up Google Social App for allauth (if env vars are present)
+        google_client_id = os.getenv('GOOGLE_CLIENT_ID', '')
+        google_secret = os.getenv('GOOGLE_SECRET', '')
+        if google_client_id and google_secret:
+            from django.contrib.sites.models import Site
+            from allauth.socialaccount.models import SocialApp
+
+            site, _ = Site.objects.get_or_create(id=1, defaults={'domain': '4velo.app', 'name': '4VELO'})
+            site.domain = '4velo.app'
+            site.name = '4VELO'
+            site.save()
+
+            app, created = SocialApp.objects.update_or_create(
+                provider='google',
+                defaults={
+                    'name': 'Google',
+                    'client_id': google_client_id,
+                    'secret': google_secret,
+                },
+            )
+            app.sites.add(site)
+            self.stdout.write(self.style.SUCCESS('Google Social App configured'))
