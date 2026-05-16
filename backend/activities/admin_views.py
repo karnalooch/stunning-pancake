@@ -773,32 +773,48 @@ class WipeDataView(APIView):
 
         errors = []
 
-        # Use raw SQL truncation — fastest and avoids FK constraint issues
-        tables_in_order = [
-            'activities_activity',
-            'activities_leaderboardentry',
-            'activities_betafeedback',
-            'users_userdepartment',
-            'users_userrole',
-            'users_rolepermission',
-            'users_department',
-            'users_user_groups',
-            'users_user_user_permissions',
-        ]
         with connection.cursor() as cursor:
+            # Disable FK triggers for the session (PostgreSQL)
+            try:
+                cursor.execute("SET session_replication_role = 'replica'")
+            except Exception:
+                pass
+
+            # Delete all child tables first, then users, then tenants
+            tables_in_order = [
+                'activities_activity',
+                'activities_leaderboardentry',
+                'activities_betafeedback',
+                'activities_event',
+                'activities_leaderboard',
+                'activities_sponsorship',
+                'users_userdepartment',
+                'users_userrole',
+                'users_rolepermission',
+                'users_role',
+                'users_department',
+                'users_user_groups',
+                'users_user_user_permissions',
+                'users_user_departments',
+                'django_admin_log',
+                'authtoken_token',
+                'rewards_voucher',
+                'rewards_voucher_redemption',
+                'rewards_pool',
+            ]
             for table in tables_in_order:
                 try:
                     cursor.execute(f'DELETE FROM {table}')
                 except Exception:
-                    pass  # table may not exist
+                    pass
 
-            # Delete non-GLOBAL_OWNER users
+            # Now safe to delete users
             try:
                 cursor.execute("DELETE FROM users_user WHERE role != 'GLOBAL_OWNER'")
             except Exception as e:
                 errors.append(f'users: {e}')
 
-            # Delete tenants
+            # Then tenants
             try:
                 cursor.execute("DELETE FROM users_tenant")
             except Exception as e:
