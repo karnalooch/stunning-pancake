@@ -28,6 +28,7 @@ import { ApiPlayground } from './modules/settings/ApiPlayground';
 import { FeatureFlags } from './modules/settings/FeatureFlags';
 import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
 import { GlobalHeatmap } from './modules/analytics/GlobalHeatmap';
+import { SimulatorPage } from './modules/analytics/SimulatorPage';
 import { ActivityDetail } from './modules/dashboard/ActivityDetail';
 import { ActivitiesList } from './modules/analytics/ActivitiesList';
 import { useAuth } from './core/auth/useAuth';
@@ -243,6 +244,14 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <GlobalHeatmap />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/simulator"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <SimulatorPage />
                   </PermissionGuard>
                 }
               />
