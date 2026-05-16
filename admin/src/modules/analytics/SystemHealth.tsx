@@ -10,6 +10,7 @@ interface SubStatus {
     mode?: string;
     workers?: number;
     usage_pct?: number;
+    error?: string;
 }
 
 interface HealthData {
@@ -88,21 +89,27 @@ export const SystemHealth: React.FC = () => {
             label: 'PostgreSQL',
             status: health.postgresql.status,
             color: statusColor(health.postgresql.status),
-            detail: health.postgresql.latency_ms != null ? `Latency: ${health.postgresql.latency_ms}ms` : '',
+            detail: health.postgresql.status === 'ok'
+                ? `Latency: ${health.postgresql.latency_ms ?? '?'}ms`
+                : health.postgresql.error || '',
         },
         {
             icon: Wifi,
             label: 'Redis',
             status: health.redis.status,
             color: statusColor(health.redis.status),
-            detail: health.redis.mode ? `${health.redis.mode} · ${health.redis.latency_ms ?? '?'}ms` : '',
+            detail: health.redis.status === 'ok'
+                ? `${health.redis.mode || ''} · ${health.redis.latency_ms ?? '?'}ms`
+                : health.redis.error || '',
         },
         {
             icon: Activity,
             label: 'Celery',
             status: health.celery.status,
             color: statusColor(health.celery.status),
-            detail: health.celery.workers != null ? `${health.celery.workers} worker${health.celery.workers !== 1 ? 's' : ''}` : '',
+            detail: health.celery.status === 'ok'
+                ? `${health.celery.workers ?? 0} worker${health.celery.workers !== 1 ? 's' : ''}`
+                : health.celery.error || '',
         },
         {
             icon: HardDrive,
