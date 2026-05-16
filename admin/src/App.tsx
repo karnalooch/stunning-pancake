@@ -15,6 +15,18 @@ import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
 import { LandingPage } from './modules/public/LandingPage';
 import { LoginPage } from './core/auth/LoginPage';
 import { SettingsScreen } from './modules/settings/SettingsScreen';
+import { Departments } from './modules/departments/Departments';
+import { DepartmentUsers } from './modules/departments/DepartmentUsers';
+import { EventsManager } from './modules/analytics/EventsManager';
+import { SponsorshipAnalytics } from './modules/analytics/SponsorshipAnalytics';
+import { RewardsVouchers } from './modules/analytics/RewardsVouchers';
+import { BetaFeedback } from './modules/analytics/BetaFeedback';
+import { ExportCenter } from './modules/analytics/ExportCenter';
+import { LeaderboardManager } from './modules/analytics/LeaderboardManager';
+import { RbacManager } from './modules/analytics/RbacManager';
+import { ApiPlayground } from './modules/settings/ApiPlayground';
+import { FeatureFlags } from './modules/settings/FeatureFlags';
+import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
@@ -108,6 +120,102 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['users.edit']}>
                     <SettingsScreen />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="departments"
+                element={
+                  <PermissionGuard permissions={['users.view']}>
+                    <Departments />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="departments/:id/users"
+                element={
+                  <PermissionGuard permissions={['users.view']}>
+                    <DepartmentUsers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/events"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <EventsManager />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/sponsorship"
+                element={
+                  <PermissionGuard permissions={['poi.view']}>
+                    <SponsorshipAnalytics />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/vouchers"
+                element={
+                  <PermissionGuard permissions={['vouchers.view']}>
+                    <RewardsVouchers />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/feedback"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <BetaFeedback />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="system/export"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <ExportCenter />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="system/leaderboards"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <LeaderboardManager />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="system/rbac"
+                element={
+                  <PermissionGuard permissions={['users.edit']}>
+                    <RbacManager />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="system/api-playground"
+                element={
+                  <PermissionGuard permissions={['users.view']}>
+                    <ApiPlayground />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="system/feature-flags"
+                element={
+                  <PermissionGuard permissions={['users.edit']}>
+                    <FeatureFlags />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/departments"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <DepartmentAnalyticsPage />
                   </PermissionGuard>
                 }
               />

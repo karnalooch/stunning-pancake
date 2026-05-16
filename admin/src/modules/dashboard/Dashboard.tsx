@@ -14,10 +14,15 @@ import { PageHeader } from '../../core/components/PageHeader';
 import { StatCard } from '../../core/components/StatCard';
 import { useAuth } from '../../core/auth/useAuth';
 import { ModeratorWorklist } from './ModeratorWorklist';
+import { ActivityDetail } from './ActivityDetail';
 import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
 import { UserMapView } from '../analytics/UserMapView';
+import { ActivityTimeline } from '../analytics/ActivityTimeline';
+import { AuditLog } from '../analytics/AuditLog';
+import { TrendAnalysis } from '../analytics/TrendAnalysis';
+import { SystemHealth } from '../analytics/SystemHealth';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface TenantRow {
@@ -451,6 +456,21 @@ export const Dashboard: React.FC = () => {
         >
           <CityAnalytics cityId={user?.tenantId || undefined} />
         </motion.div>
+      )}
+
+      {/* ── Live activity timeline ───────────────────── */}
+      {isGlobalOwner && (
+        <Stack mt="xl" gap="md">
+          <Divider label="Activity & System Monitoring" labelPosition="center" />
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <Box><ActivityTimeline /></Box>
+            <Box><AuditLog /></Box>
+          </SimpleGrid>
+          <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
+            <Box><TrendAnalysis /></Box>
+            <Box><SystemHealth /></Box>
+          </SimpleGrid>
+        </Stack>
       )}
     </Box>
   );

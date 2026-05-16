@@ -46,7 +46,7 @@ const NAV_SECTIONS = [
         icon: Network,
         label: 'Działy',
         path: '/owner/departments',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
     ],
   },
@@ -57,7 +57,7 @@ const NAV_SECTIONS = [
         icon: ShieldAlert,
         label: 'Anti-Cheat',
         path: '/owner/anti-cheat',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
+        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
       },
       {
         icon: Gift,
@@ -80,13 +80,13 @@ const NAV_SECTIONS = [
         icon: TrendingUp,
         label: 'Sponsorship',
         path: '/owner/analytics/sponsorship',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+        roles: ['GLOBAL_OWNER'],
       },
       {
         icon: Gift,
         label: 'Vouchers',
         path: '/owner/analytics/vouchers',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+        roles: ['GLOBAL_OWNER'],
       },
       {
         icon: MessageSquare,

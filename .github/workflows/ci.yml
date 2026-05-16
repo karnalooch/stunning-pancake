@@ -127,6 +127,56 @@ jobs:
           npm run build
 
   # ──────────────────────────────────────────
+  # Audit: Route parity, dead screens, RBAC consistency, env drift
+  # ──────────────────────────────────────────
+  audit:
+    name: Audit (Routes + Screens + RBAC + Env)
+    runs-on: ubuntu-latest
+    needs: [admin]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd admin
+          npm ci
+
+      - name: Install tsx (TypeScript runner)
+        run: cd admin && npm i -D tsx
+
+      - name: Route Parity Check
+        run: cd admin && npm run audit:routes
+
+      - name: Dead Screen Detection
+        run: cd admin && npm run audit:screens
+
+      - name: Mobile Screen Parity
+        run: cd admin && npm run audit:mobile
+
+      - name: API Gap Analysis
+        run: cd admin && npm run audit:api
+
+      - name: RBAC Consistency Audit
+        run: cd admin && npm run audit:rbac
+
+      - name: Redirect Chain Audit
+        run: cd admin && npm run audit:redirects
+
+      - name: Environment Variable Drift
+        run: cd admin && npm run audit:env
+
+      - name: Dead Import Detection
+        run: cd admin && npm run audit:imports
+
+  # ──────────────────────────────────────────
   # Security: Dependency vulnerability scan
   # ──────────────────────────────────────────
   security:
