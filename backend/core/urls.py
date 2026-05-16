@@ -1,3 +1,4 @@
+from core import google_auth
 from django.contrib import admin
 from django.urls import path, include
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -41,8 +42,9 @@ urlpatterns = [
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-    # Social Auth (allauth)
-    path('api/auth/social/', include('allauth.socialaccount.urls')),
+    # Google OAuth2 — custom (bypasses allauth)
+    path('api/auth/google/login/', google_auth.google_login, name='google-login'),
+    path('api/auth/google/callback/', google_auth.google_callback, name='google-callback'),
     # Feature Flags (Hyperscale — admin CRUD)
     path('api/settings/flags/', include('core.feature_urls')),
 ]

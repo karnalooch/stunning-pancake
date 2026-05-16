@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MantineProvider, Box, Text, Title, Button } from '@mantine/core';
+import React, { useEffect, useState } from 'react';
+import { MantineProvider, Box, Text, Title, Button, Loader } from '@mantine/core';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
@@ -33,6 +33,38 @@ import { ActivityDetail } from './modules/dashboard/ActivityDetail';
 import { ActivitiesList } from './modules/analytics/ActivitiesList';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
+
+const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.hash.slice(2)); // after #/auth/callback
+    const access = params.get('access');
+    const refresh = params.get('refresh');
+    if (!access) {
+      // Try query params (direct URL from backend redirect)
+      const qp = new URLSearchParams(window.location.search);
+      const qAccess = qp.get('access');
+      const qRefresh = qp.get('refresh');
+      if (qAccess && qRefresh) {
+        // Fetch user profile
+        import('./api/client').then(({ apiClient }) => {
+          apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${qAccess}` } })
+            .then(r => {
+              const d = r.data?.data || r.data;
+              onLogin(qAccess, qRefresh, { id: d.id, username: d.username, role: d.role, tenantId: d.tenant_id || null, tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null, isImpersonated: false });
+              window.location.hash = '#/owner/dashboard';
+            })
+            .catch(() => setError('Failed to load profile'));
+        });
+        return;
+      }
+      setError('No token received from Google login');
+    }
+  }, [onLogin]);
+
+  if (error) return <Box p={50} ta="center"><Title order={2} c="red">Login Failed</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
+  return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">Completing Google login...</Text></Box>;
+};
 
 export default function App() {
   const [loading, setLoading] = useState(false);
@@ -71,6 +103,7 @@ export default function App() {
       <HashRouter>
         {!isAuthenticated ? (
           <Routes>
+            <Route path="/auth/callback" element={<AuthCallback onLogin={handleLogin} />} />
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

@@ -3,7 +3,7 @@ import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, ThemeIcon, D
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ShieldCheck, Globe, Layers, AlertCircle } from 'lucide-react';
 
-const GOOGLE_AUTH_URL = `${import.meta.env.VITE_API_URL || '/api'}/auth/social/google/login/?process=login`;
+const GOOGLE_AUTH_URL = `${import.meta.env.VITE_API_URL || '/api'}/auth/google/login/`;
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<void>;
