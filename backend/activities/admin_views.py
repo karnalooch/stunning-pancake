@@ -767,9 +767,9 @@ class WipeDataView(APIView):
     permission_classes = [IsAdminRole]
 
     def delete(self, request):
-        confirm = request.data.get('confirm', False)
+        confirm = request.data.get('confirm', False) or request.query_params.get('confirm') == 'true'
         if not confirm:
-            return Response({'error': 'Must send { "confirm": true }'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Must send confirm=true query param or { "confirm": true } body'}, status=status.HTTP_400_BAD_REQUEST)
 
         from django.db import connection
         from users.departments import UserDepartment, Department
