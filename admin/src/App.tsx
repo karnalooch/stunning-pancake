@@ -28,6 +28,7 @@ import { ApiPlayground } from './modules/settings/ApiPlayground';
 import { FeatureFlags } from './modules/settings/FeatureFlags';
 import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
 import { ActivityDetail } from './modules/dashboard/ActivityDetail';
+import { ActivitiesList } from './modules/analytics/ActivitiesList';
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
@@ -145,6 +146,14 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <ActivityDetail />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="activities"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <ActivitiesList />
                   </PermissionGuard>
                 }
               />
