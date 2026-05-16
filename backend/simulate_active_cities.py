@@ -269,7 +269,8 @@ def _generate_activity_params(activity_type: str):
 def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False):
     """Run the Aktywne Miasta simulation."""
     # Lazy imports — models must be loaded after Django is ready
-    from users.models import User, Tenant, Role, Department, UserDepartment
+    from users.models import User, Tenant, Role
+    from users.departments import Department, UserDepartment
     from activities.models import Activity
 
     scale = max(0.001, min(1.0, scale))
