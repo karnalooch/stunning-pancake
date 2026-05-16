@@ -191,7 +191,7 @@ export const Dashboard: React.FC = () => {
       </SimpleGrid>
 
       {/* ── Global Owner: per-tenant table ────────────── */}
-      {isGlobalOwner && stats?.per_tenant && (
+      {isGlobalOwner && Array.isArray(stats?.per_tenant) && stats.per_tenant.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
