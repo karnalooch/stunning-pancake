@@ -41,36 +41,46 @@ export const UserMapView: React.FC = () => {
 
     // Initialize map
     useEffect(() => {
+        let cancelled = false;
         if (!mapContainer.current || map.current) return;
 
         import('maplibre-gl').then((maplibregl) => {
-            map.current = new maplibregl.default.Map({
-                container: mapContainer.current!,
-                style: {
-                    version: 8,
-                    sources: {
-                        osm: {
-                            type: 'raster',
-                            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                            tileSize: 256,
-                            attribution: '&copy; OpenStreetMap contributors',
-                        },
-                    },
-                    layers: [
-                        { id: 'osm', type: 'raster', source: 'osm' },
-                    ],
-                },
-                center: [21.0122, 52.2297], // Warsaw center
-                zoom: 6,
-            });
+            if (cancelled || !mapContainer.current) return;
 
-            map.current.on('load', () => {
-                setMapReady(true);
-            });
+            try {
+                map.current = new maplibregl.default.Map({
+                    container: mapContainer.current,
+                    style: {
+                        version: 8,
+                        sources: {
+                            osm: {
+                                type: 'raster',
+                                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                                tileSize: 256,
+                                attribution: '&copy; OpenStreetMap contributors',
+                            },
+                        },
+                        layers: [
+                            { id: 'osm', type: 'raster', source: 'osm' },
+                        ],
+                    },
+                    center: [21.0122, 52.2297],
+                    zoom: 6,
+                });
+
+                map.current.on('load', () => {
+                    if (!cancelled) setMapReady(true);
+                });
+            } catch (err) {
+                console.warn('MapLibre init failed:', err);
+            }
         });
 
         return () => {
-            if (map.current) map.current.remove();
+            cancelled = true;
+            if (map.current) {
+                try { map.current.remove(); } catch { }
+            }
             map.current = null;
         };
     }, []);
