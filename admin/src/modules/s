@@ -1,0 +1,93 @@
+import React, { useState, useEffect } from 'react';
+import { Card, Text, Switch, Group, Stack, Box, Skeleton, Alert } from '@mantine/core';
+import { AlertCircle } from 'lucide-react';
+import { PageHeader } from '../../core/components/PageHeader';
+import { apiClient } from '../../api/client';
+
+interface FeatureFlag {
+  id: number;
+  key: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+}
+
+export const FeatureFlags: React.FC = () => {
+  const [flags, setFlags] = useState<FeatureFlag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get('/settings/flags/')
+      .then(r => setFlags(Array.isArray(r.data) ? r.data : r.data?.results ?? []))
+      .catch(() => setError('Failed to load feature flags.'))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleToggle = (flag: FeatureFlag) => {
+    const newEnabled = !flag.enabled;
+    // Optimistic update
+    setFlags(prev => prev.map(f => f.id === flag.id ? { ...f, enabled: newEnabled } : f));
+    apiClient.patch(`/settings/flags/${flag.id}/`, { enabled: newEnabled })
+      .catch(() => {
+        // Revert on failure
+        setFlags(prev => prev.map(f => f.id === flag.id ? { ...f, enabled: flag.enabled } : f));
+      });
+  };
+
+  if (loading) {
+    return (
+      <Box p="md">
+        <Skeleton height={40} width={300} mb="md" />
+        <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+          <Stack gap="md">
+            {[...Array(5)].map((_, i) => <Skeleton key={i} height={64} radius="md" />)}
+          </Stack>
+        </Card>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box p="md">
+        <PageHeader title="Feature Flags" subtitle="Toggle features without redeploy" />
+        <Alert color="red" icon={<AlertCircle size={18} />} title="Error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  if (flags.length === 0) {
+    return (
+      <Box p="md">
+        <PageHeader title="Feature Flags" subtitle="Toggle features without redeploy" />
+        <Text c="dimmed" ta="center">No feature flags configured.</Text>
+      </Box>
+    );
+  }
+
+  return (
+    <Box p="md">
+      <PageHeader title="Feature Flags" subtitle="Toggle features without redeploy" />
+      <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+        <Stack gap="md">
+          {flags.map(f => (
+            <Group key={f.id} justify="space-between" p="sm" style={{ borderRadius: 10, background: 'var(--surface-secondary)' }}>
+              <Box>
+                <Text fw={600} size="sm">{f.label}</Text>
+                <Text size="xs" c="dimmed">{f.description}</Text>
+              </Box>
+              <Switch
+                checked={f.enabled}
+                onChange={() => handleToggle(f)}
+                onLabel="ON"
+                offLabel="OFF"
+                size="md"
+              />
+            </Group>
+          ))}
+        </Stack>
+      </Card>
+    </Box>
+  );
+};

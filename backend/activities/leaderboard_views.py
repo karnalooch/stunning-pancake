@@ -142,3 +142,67 @@ def leaderboard_list(request: Request) -> Response:
     Returns available leaderboard types.
     """
     return Response({'leaderboards': ['city', 'department', 'event']})
+
+
+# ---------------------------------------------------------------------------
+# Admin Management Endpoints
+# ---------------------------------------------------------------------------
+
+from users.permissions import IsAdminOrModerator
+
+IsAdminRole = IsAdminOrModerator
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def admin_recalculate_leaderboards(request: Request) -> Response:
+    """
+    POST /api/activities/leaderboard/admin/recalculate/
+
+    Force recalculation of all city leaderboards by dispatching
+    background Celery tasks for each active tenant.
+    """
+    from activities.tasks import recalculate_city_leaderboard
+    from users.models import Tenant
+
+    cities = list(Tenant.objects.filter(is_active=True).values_list('id', flat=True))
+    for city_id in cities:
+        recalculate_city_leaderboard.delay(str(city_id))
+
+    logger.info(
+        "admin_recalculate_leaderboards: queued %d cities", len(cities),
+        extra={"user_id": request.user.id, "count": len(cities)},
+    )
+
+    return Response({"status": "recalculating", "cities": len(cities)})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def admin_leaderboard_list(request: Request) -> Response:
+    """
+    GET /api/activities/leaderboard/admin/list/
+
+    Returns all available city leaderboards with metadata:
+    city_id, city_name, total_participants, last_updated.
+    """
+    leaderboards = LeaderboardService.get_all_leaderboards(scope="city")
+    return Response(leaderboards)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated, IsAdminRole])
+def admin_clear_leaderboard(request: Request, city_id: str) -> Response:
+    """
+    DELETE /api/activities/leaderboard/admin/<city_id>/
+
+    Clears the Redis cache for a specific city leaderboard.
+    """
+    LeaderboardService.clear_leaderboard(city_id, scope="city")
+
+    logger.info(
+        "admin_clear_leaderboard: cleared city_id=%s", city_id,
+        extra={"user_id": request.user.id, "city_id": city_id},
+    )
+
+    return Response({"status": "cleared", "city_id": city_id})

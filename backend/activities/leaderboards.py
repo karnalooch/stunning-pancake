@@ -237,3 +237,57 @@ class LeaderboardService:
             logger.info("leaderboard.reset scope=%s entity=%s", scope, entity_id)
         except Exception as exc:
             logger.warning("leaderboard.reset_failed err=%s", exc)
+
+    @classmethod
+    def clear_leaderboard(cls, entity_id: str | int, scope: str = "city") -> None:
+        """
+        Admin-facing alias for reset(). Clears a specific leaderboard cache.
+
+        Args:
+            entity_id: City/Event/Club ID to clear.
+            scope: Leaderboard scope.
+        """
+        cls.reset(entity_id, scope=scope)
+
+    @classmethod
+    def get_all_leaderboards(cls, scope: str = "city") -> list[dict]:
+        """
+        Returns all leaderboards of the given scope with metadata.
+
+        Scans Redis for matching keys and enriches with tenant names from DB.
+
+        Returns:
+            List of dicts with city_id, city_name, total_participants, last_updated.
+        """
+        from users.models import Tenant
+
+        r = cls._get_redis()
+        pattern = f"leaderboard:{scope}:*"
+
+        # Build tenant id → name lookup
+        tenants = {str(t.id): t.name for t in Tenant.objects.filter(is_active=True)}
+
+        leaderboards: list[dict] = []
+        try:
+            for key in r.scan_iter(match=pattern):
+                # Skip timestamp keys
+                if key.endswith(b":ts"):
+                    continue
+                key_str = key.decode() if isinstance(key, bytes) else key
+                # Extract entity_id: "leaderboard:city:<id>"
+                entity_id = key_str.split(":", 2)[-1]
+                count = r.zcard(key_str)
+                if count and count > 0:
+                    ts_key = f"{key_str}:ts"
+                    ts_val = r.get(ts_key)
+                    last_updated = float(ts_val) if ts_val else None
+                    leaderboards.append({
+                        "city_id": entity_id,
+                        "city_name": tenants.get(entity_id, "Unknown"),
+                        "total_participants": count,
+                        "last_updated": last_updated,
+                    })
+        except Exception as exc:
+            logger.error("leaderboard.get_all_failed scope=%s err=%s", scope, exc)
+
+        return leaderboards

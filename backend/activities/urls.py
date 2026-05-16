@@ -7,9 +7,9 @@ from .views import (
     WearableSyncView, ActivityDetailView, AIInsightsView
 )
 
-from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, ActivityApproveView, ActivityRejectView, ExportDataView
+from .admin_views import GlobalActivityListView, TenantActivityListView, AdminDashboardStatsView, DepartmentAnalyticsView, ActivityApproveView, ActivityRejectView, ExportDataView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
-from .leaderboard_views import city_leaderboard, my_rank, department_leaderboard, leaderboard_list
+from .leaderboard_views import city_leaderboard, my_rank, department_leaderboard, leaderboard_list, admin_recalculate_leaderboards, admin_leaderboard_list, admin_clear_leaderboard
 from .heatmap import heatmap_view, analytics_summary_view
 from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
 
@@ -45,8 +45,13 @@ urlpatterns = [
     path('leaderboard/department/<int:department_id>/', department_leaderboard, name='department-leaderboard'),
     path('leaderboard/<str:city_id>/', city_leaderboard, name='city-leaderboard'),
     path('leaderboard/<str:city_id>/me/', my_rank, name='my-rank'),
+    # Admin Leaderboard Management
+    path('leaderboard/admin/recalculate/', admin_recalculate_leaderboards, name='admin-leaderboard-recalculate'),
+    path('leaderboard/admin/list/', admin_leaderboard_list, name='admin-leaderboard-list'),
+    path('leaderboard/admin/<str:city_id>/', admin_clear_leaderboard, name='admin-leaderboard-clear'),
     # Milestone 5: Premium Analytics
     path('heatmap/', heatmap_view, name='heatmap'),
+    path('analytics/department/', DepartmentAnalyticsView.as_view(), name='department-analytics'),
     path('analytics/', analytics_summary_view, name='analytics-summary'),
     # Beta Feedback (RC v0.2)
     path('beta-feedback/', BetaFeedbackCreateView.as_view(), name='beta-feedback-create'),
