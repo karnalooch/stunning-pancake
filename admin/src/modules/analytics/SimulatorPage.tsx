@@ -23,7 +23,7 @@ export const SimulatorPage: React.FC = () => {
     const handleRun = async () => {
         setRunning(true);
         try {
-            await apiClient.post('/api/activities/admin/simulate/', {
+            await apiClient.post('/activities/admin/simulate/', {
                 scale,
                 days,
                 clear,
