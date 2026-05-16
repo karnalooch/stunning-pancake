@@ -73,13 +73,15 @@ Kompletna dokumentacja platformy 4VELO — wysokowydajnego ekosystemu sportowego
 | [📊 Gap Report](./FRONTEND_BACKEND_GAP_REPORT.md) | Raport pokrycia frontend-backend |
 | [🏛️ Department Architecture](./DEPARTMENT_ARCHITECTURE.md) | Architektura systemu działów |
 | [🏗️ C4 Architecture](./diagrams/architecture_c4.md) | Diagramy architektury C4 |
+| [📋 Audit Report 2026-05-16](./AUDIT_REPORT_2026-05-16.md) | Raport audytu routingu, RBAC, orphan screens, env drift |
 
-### Stan projektu (v0.2.0-rc.1)
-- **39 ekranów frontend** — wszystkie gotowe i routowalne ✅
-- **45+ endpointów backend** — wszystkie zaimplementowane ✅
-- **15+ modeli Django** — kompletne ✅
-- **12 dokumentów** — pełna dokumentacja ✅
-- ⚠️ **Integracja API** — ekrany analityczne używają danych mockowych; podłączenie do backend API w toku
+### Stan projektu (v0.3.3-dev)
+- **46 ekranów frontend** — 30 admin (20 routowalnych) + 16 mobile ✅
+- **82+ endpointów backend** — wszystkie zaimplementowane, w tym departments, rewards ✅
+- **20+ modeli Django** — kompletne z migracjami (w tym rewards 0001_initial) ✅
+- **13 dokumentów** — pełna dokumentacja + raport audytu ✅
+- **System audytów** — 8 skryptów statycznych + 2 E2E, CI job `audit` ✅
+- **Wszystkie ekrany routowalne** — 0 dead linków, 0 orphanów, 0 RBAC mismatche ✅
 
 ---
 
@@ -104,6 +106,6 @@ Kompletna dokumentacja platformy 4VELO — wysokowydajnego ekosystemu sportowego
 
 ---
 
-> **Wersja dokumentacji:** v0.2.0-rc.1  
-> **Ostatnia aktualizacja:** 2026-05-15  
+> **Wersja dokumentacji:** v0.3.3-dev  
+> **Ostatnia aktualizacja:** 2026-05-16  
 > **Język:** Polski

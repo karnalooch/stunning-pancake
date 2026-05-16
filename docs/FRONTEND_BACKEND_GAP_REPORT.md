@@ -1,10 +1,10 @@
 # 📊 Frontend vs Backend Gap Report
 
-## Stan projektu: 27 ekranów frontend
+## Stan projektu: 30 ekranów admin (46 łącznie z mobile)
 
 ---
 
-## ✅ Ekrany z pełnym backendem (15)
+## ✅ Ekrany z pełnym backendem (22)
 
 | # | Ekran | Backend Endpoint | Status |
 |---|-------|-----------------|--------|
@@ -13,9 +13,9 @@
 | 3 | Dashboard | `/activities/admin/stats/` | ✅ |
 | 4 | AntiCheat | `/activities/telemetry/config/`, `/activities/telemetry/anomalies/` | ✅ |
 | 5 | Users | `/users/all/`, `/users/create/`, `/users/<id>/delete/` | ✅ |
-| 6 | Departments | `/users/rbac/departments/` | ✅ |
-| 7 | DepartmentUsers | `/users/rbac/user-departments/` | ✅ |
-| 8 | ModeratorWorklist | `/activities/admin/stats/`, `/activities/admin/approve/`, `/activities/admin/reject/` | ✅ |
+| 6 | Departments | `/users/departments/` | ✅ |
+| 7 | DepartmentUsers | `/users/departments/<id>/users/`, `assign/`, `remove/` | ✅ |
+| 8 | ModeratorWorklist | `/activities/admin/approve/`, `/activities/admin/reject/` | ✅ |
 | 9 | SettingsScreen | — (frontend only) | ✅ |
 | 10 | WhiteLabelEngine | `/users/branding/<tenant_id>/` | ✅ |
 | 11 | SponsorDashboard | `/rewards/sponsor-stats/` | ✅ |
@@ -23,6 +23,13 @@
 | 13 | GlobalHeatmap | `/activities/heatmap/` | ✅ |
 | 14 | UserMapView | `/activities/telemetry/live/` | ✅ |
 | 15 | AuditLog | `/users/audit-log/` | ✅ |
+| 16 | EventsManager | `/api/` (events engine) | ✅ |
+| 17 | SponsorshipAnalytics | `/rewards/sponsor-stats/` | ✅ |
+| 18 | RewardsVouchers | `/rewards/pools/`, `/rewards/balance/` | ✅ |
+| 19 | BetaFeedback | `/activities/beta-feedback/` | ✅ |
+| 20 | ActivityTimeline | `/activities/sessions/` | ✅ |
+| 21 | TrendAnalysis | `/activities/analytics/` | ✅ |
+| 22 | SystemHealth | `/api/infra/health/` | ✅ |
 
 ---
 
@@ -30,22 +37,21 @@
 
 | # | Ekran | Co jest | Czego brakuje | Priorytet |
 |---|-------|---------|---------------|-----------|
-| 16 | **ActivityDetail** | Activity model exists | Brak endpointu `/activities/<id>/detail/` z pełnymi danymi (route_path, anti-cheat results) | 🔴 Wysoki |
-| 17 | **SystemIntelligence** | — | Brak endpointu `/api/ai/insights/` — AI insights generowane po stronie frontendu | 🟡 Średni |
-| 18 | **SystemHealth** | — | Brak endpointu `/api/infra/health/` — health checki Redis, DB, Celery | 🟡 Średni |
-| 19 | **RbacManager** | Role/Permission models | Brak endpointów CRUD dla ról i uprawnień | 🟡 Średni |
-| 20 | **LeaderboardManager** | LeaderboardService | Brak endpointów do tworzenia/edycji rankingów | 🟢 Niski |
+| 23 | **ActivityDetail** | Activity model exists, endpoint `/activities/sessions/<id>/detail/` exists | Frontend uses mock data | 🟡 Średni |
+| 24 | **SystemIntelligence** | `/api/ai/insights/` endpoint exists | Frontend uses simulated insights | 🟢 Niski |
+| 25 | **RbacManager** | Role/Permission models | Brak endpointów CRUD dla ról i uprawnień | 🟡 Średni |
+| 26 | **LeaderboardManager** | LeaderboardService + `recalculate_city_leaderboard` task | Brak endpointów do tworzenia/edycji rankingów | 🟢 Niski |
+| 27 | **DepartmentAnalyticsPage** | Frontend component exists | Needs `/activities/analytics/department/` endpoint | 🟡 Średni |
 
 ---
 
-## ❌ Ekrany bez backendu (4)
+## ❌ Ekrany bez backendu (3)
 
 | # | Ekran | Co potrzeba | Priorytet |
 |---|-------|-------------|-----------|
-| 21 | **ExportCenter** | Endpointy eksportu: `GET /api/export/activities.csv`, `GET /api/export/users.json`, `GET /api/export/stats.pdf` | 🟡 Średni |
-| 22 | **FeatureFlags** | Model FeatureFlag + CRUD API: `GET/POST /api/settings/flags/` | 🟢 Niski |
-| 23 | **ApiPlayground** | — (używa `/api/docs/` — Swagger) | ✅ Gotowe |
-| 24 | **MobileNav** | — (frontend only) | ✅ Gotowe |
+| 28 | **ExportCenter** | Endpointy eksportu: `GET /api/activities/export/<resource>/` | 🟡 Średni |
+| 29 | **FeatureFlags** | Model FeatureFlag + CRUD API: `GET/POST /api/settings/flags/` — endpoint exists | 🟢 Niski |
+| 30 | **ApiPlayground** | — (używa `/api/docs/` — Swagger) | ✅ Gotowe |
 
 ---
 
@@ -142,14 +148,16 @@ class FeatureFlag(models.Model):
 
 | Kategoria | Liczba |
 |-----------|--------|
-| ✅ Gotowe (pełny backend) | 15 |
+| ✅ Gotowe (pełny backend) | 22 |
 | ⚠️ Częściowe | 5 |
-| ❌ Bez backendu | 4 |
-| **RAZEM** | **24** |
+| ❌ Bez backendu | 3 |
+| **RAZEM admin** | **30** |
+| 📱 Mobile | 16 |
+| **RAZEM łącznie** | **46** |
 
 ### Backend do zrobienia:
-- **1 endpoint** wysoki priorytet (Activity Detail)
-- **4 endpointy** średni priorytet (Health, AI, RBAC, Export)
-- **2 endpointy** niski priorytet (Leaderboard, FeatureFlags)
+- **0 endpointów** wysoki priorytet — wszystkie krytyczne zrealizowane ✅
+- **3 endpointy** średni priorytet (Activity Detail podłączenie, RBAC CRUD, Department Analytics)
+- **2 endpointy** niski priorytet (Leaderboard CRUD, Feature Flags CRUD)
 
-**Razem: 7 nowych endpointów do implementacji.**
+**Razem: 5 nowych endpointów do implementacji (koniec prac integracyjnych).**

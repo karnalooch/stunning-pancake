@@ -588,5 +588,57 @@ git branch -d feature/new-feature
 
 ---
 
+## 🔍 Audyty (Phase A)
+
+System automatycznych audytów sprawdzających spójność routingu, orphan screens, RBAC, API i zmienne środowiskowe.
+
+### Uruchamianie
+
+```bash
+cd admin
+npm run audit:all       # wszystkie 8 audytów
+npm run audit:routes    # tylko Route Parity Check
+npm run audit:screens   # tylko Dead Screen Detection
+npm run audit:mobile    # tylko Mobile Screen Parity
+npm run audit:api       # tylko API Gap Analysis
+npm run audit:rbac      # tylko RBAC Consistency
+npm run audit:env       # tylko Environment Variable Drift
+```
+
+### CI
+
+Job `audit` w `.github/workflows/ci.yml` odpala wszystkie 8 audytów po buildzie. Failure (exit 1) blokuje merge.
+
+### Lista audytów
+
+| # | Audyt | Co wykrywa |
+|---|-------|-----------|
+| 1 | Route Parity Check | Sidebar linki bez trasy, trasy bez sidebaru |
+| 2 | Dead Screen Detection | Pliki `.tsx` niezaimportowane (orphans) |
+| 3 | Mobile Screen Parity | Brakujące / dodatkowe ekrany mobile vs plan |
+| 4 | API Gap Analysis | FE API calls bez BE endpointów |
+| 5 | RBAC Consistency | Role sidebar vs PermissionGuard permissions |
+| 6 | Redirect Chain Audit | Redirect loops, dead redirects |
+| 7 | Environment Variable Drift | Klucze w kodzie vs .env.example |
+| 8 | Dead Import Detection | Nieużywane importy (ts-prune) |
+| — | Navigation Smoke Test (E2E) | Playwright klika każdy sidebar item |
+| — | Route Liveness Probe (E2E) | Playwright odwiedza każdy URL |
+
+### Schemat audytu
+
+```
+przed commit:
+  npm run audit:all    # < 5s, bez serwera
+  
+przed merge (CI):
+  audit job w ci.yml   # FAIL = blokada
+  
+po merge:
+  playwright e2e        # nav smoke + route liveness
+```
+
+---
+
 > **Zobacz także:** [📈 Updates Guide](./UPDATES.md) — aktualizacje zależności  
-> **Zobacz także:** [🔍 Troubleshooting](./TROUBLESHOOTING.md) — rozwiązywanie problemów
+> **Zobacz także:** [🔍 Troubleshooting](./TROUBLESHOOTING.md) — rozwiązywanie problemów  
+> **Zobacz także:** [📋 Audit Report](./AUDIT_REPORT_2026-05-16.md) — wyniki ostatniego audytu

@@ -1,5 +1,30 @@
 # CHANGELOG — 4VELO Platform
 
+## v0.3.3-dev (2026-05-16) — Audit System + Integration Sprint
+
+### Added
+- **Audit System (Phase A)**: 8 static audit scripts + 2 Playwright E2E tests. Covers route parity, dead screens, mobile parity, API gaps, RBAC consistency, redirect chains, env variable drift, dead imports. CI job `audit` in `ci.yml`. Run via `npm run audit:all`.
+- **12 new admin routes**: Departments, DepartmentUsers (`/departments/:id/users`), EventsManager, SponsorshipAnalytics, RewardsVouchers, BetaFeedback, ExportCenter, LeaderboardManager, RbacManager, ApiPlayground, FeatureFlags, DepartmentAnalyticsPage
+- **4 new dashboard subcomponents**: ActivityTimeline, AuditLog, TrendAnalysis, SystemHealth — embedded in Dashboard for GLOBAL_OWNER
+- **Missing rewards migration**: `rewards/migrations/0001_initial.py` — creates Sponsor, VoucherPool, Voucher, PointsLedger tables
+- **22 new env keys**: EXPO_PUBLIC_*, DEEPSEEK_*, GEMINI_*, TRACCAR_USER/PASS, ML_RETRAIN_*, GLOBAL_OWNER_*, ADMIN_*, ALLOWED_HOSTS, DATABASE_URL, TOKEN_ENCRYPTION_KEY, DJANGO_SUPERUSER_*, DEPARTMENTS_ENABLED
+
+### Fixed
+- **5 dead sidebar links**: departments, analytics/events, analytics/sponsorship, analytics/vouchers, analytics/feedback — all now routed
+- **4 RBAC mismatches**: sidebar roles not matching PermissionGuard permissions. Fixed by restricting sidebar roles (Option A: restrictive). Departments → removed TENANT_MODERATOR. AntiCheat → removed TENANT_ADMIN. Analytics/sponsorship+vouchers → GLOBAL_OWNER only.
+- **Double department URL prefix**: `department_urls.py` router had `r'departments'` while parent include already prefixes `api/users/departments/`. Changed to `r''`. Endpoint tree/users/assign/remove now accessible.
+- **3 `.map is not a function` crashes**: Users.tsx departments fetch, Departments.tsx both fetches — added `Array.isArray()` guards
+- **3 backend 500 errors**: TelemetryConfigView.post() — `get_redis()` without try-catch. sponsor_stats_view — DB ProgrammingError (no migrations). 4 Matrix E2EE endpoints — `get_redis()` + `json.loads()` without try-catch.
+- **Celery Beat SchedulingError**: `recalculate_city_leaderboard` missing `city_id` arg. Task now accepts optional param, iterates all cities when empty.
+- **MapLibre unmount crash**: `Invalid type: container` — dynamic import resolved after component unmount. Added cancelled flag guard.
+- **Catch-all redirect false positive**: audit-redirects.ts now recognizes separate `<Routes>` auth branches.
+
+### Changed
+- **Screen count**: 39 → **46 total** (30 admin routable + 16 mobile). 0 orphans, 0 dead links, 0 RBAC mismatches.
+- **API coverage**: 20 unique FE endpoints → all matched to BE. 82 BE endpoints total. Departments endpoints fully functional.
+- **.env.example**: Reorganized sections, added 22 missing keys, removed duplicates.
+- **Audit report added**: `docs/AUDIT_REPORT_2026-05-16.md` — comprehensive audit results post-fix.
+
 ## v0.3.2-dev (2026-05-15) — Admin Dashboard World-Class Redesign
 
 ### Added

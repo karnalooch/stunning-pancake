@@ -1,6 +1,6 @@
 # Raport audytu 4VELO — 2026-05-16
 
-> Wygenerowano automatycznie przez `npm run audit:all` po pełnym cyklu naprawczym.
+> Wygenerowano automatycznie przez `npm run audit:all`. Wszystkie znalezione błędy naprawione.
 
 ---
 
