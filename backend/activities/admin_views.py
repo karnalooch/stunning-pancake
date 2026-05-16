@@ -1,6 +1,7 @@
 import csv
 import io
 import threading
+import time
 from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -336,20 +337,70 @@ class ExportDataView(APIView):
 
 
 # ---------------------------------------------------------------------------
-# Simulation endpoint — runs Aktywne Miasta simulation in background thread
+# Simulation state (in-process — resets on deploy)
 # ---------------------------------------------------------------------------
+_simulation_state = {
+    'running': False,
+    'started_at': None,
+    'completed_at': None,
+    'scale': 0.0,
+    'days': 0,
+    'error': None,
+}
+
+
+def _run_simulation_in_background(scale: float, days: int, clear: bool):
+    """Run the simulation in the current thread, updating global state."""
+    from simulate_active_cities import run
+    _simulation_state['running'] = True
+    _simulation_state['started_at'] = time.time()
+    _simulation_state['scale'] = scale
+    _simulation_state['days'] = days
+    _simulation_state['error'] = None
+    _simulation_state['completed_at'] = None
+    try:
+        run(scale=scale, days=days, clear=clear, dry_run=False)
+    except Exception as e:
+        _simulation_state['error'] = str(e)
+        print(f"[SIMULATION ERROR] {e}")
+    finally:
+        _simulation_state['running'] = False
+        _simulation_state['completed_at'] = time.time()
+
+
 class RunSimulationView(APIView):
     """
     POST /api/activities/admin/simulate/
     Body: { "scale": 0.01, "days": 30, "clear": false }
 
-    Starts the Aktywne Miasta simulation in a background thread and returns
-    immediately. Check Railway logs for progress output.
+    GET /api/activities/admin/simulate/
+    Returns current simulation status.
     """
     permission_classes = [IsAdminRole]
 
+    def get(self, request):
+        elapsed = 0.0
+        if _simulation_state['started_at']:
+            end = _simulation_state['completed_at'] or time.time()
+            elapsed = end - _simulation_state['started_at']
+
+        return Response({
+            'running': _simulation_state['running'],
+            'elapsed_seconds': round(elapsed, 1),
+            'scale': _simulation_state['scale'],
+            'days': _simulation_state['days'],
+            'error': _simulation_state['error'],
+        })
+
     def post(self, request):
-        from simulate_active_cities import run
+        if _simulation_state['running']:
+            elapsed = time.time() - (_simulation_state['started_at'] or 0)
+            return Response({
+                'error': f'Simulation already running ({elapsed:.0f}s elapsed). Wait for it to finish.',
+                'running': True,
+                'elapsed_seconds': round(elapsed, 1),
+            }, status=status.HTTP_409_CONFLICT)
+
         scale = float(request.data.get('scale', 0.01))
         days = int(request.data.get('days', 30))
         clear = bool(request.data.get('clear', False))
@@ -360,20 +411,19 @@ class RunSimulationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        def _run_in_background():
-            try:
-                run(scale=scale, days=days, clear=clear, dry_run=False)
-            except Exception as e:
-                print(f"[SIMULATION ERROR] {e}")
-
-        thread = threading.Thread(target=_run_in_background, daemon=True)
+        thread = threading.Thread(
+            target=_run_simulation_in_background,
+            args=(scale, days, clear),
+            daemon=True,
+        )
         thread.start()
 
         return Response({
             'status': 'started',
+            'running': True,
             'scale': scale,
             'days': days,
             'clear': clear,
-            'message': f'Simulation started in background thread. Check Railway logs for progress. Estimated time: ~{int(scale * 30)} minutes.',
+            'message': f'Simulation started. Estimated time: ~{int(scale * 30)} minutes.',
         })
 

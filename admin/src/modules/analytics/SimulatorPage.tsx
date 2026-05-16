@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Box, Text, Card, Group, Stack, Slider, NumberInput, Switch, Button, Badge, ThemeIcon, SimpleGrid } from '@mantine/core';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Box, Text, Card, Group, Stack, Slider, NumberInput, Switch, Button, Badge, ThemeIcon, SimpleGrid, Alert, Progress } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { Play, Settings, Map, Zap, Activity } from 'lucide-react';
+import { Play, Settings, Map, Zap, Activity, Loader, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 
@@ -10,39 +10,70 @@ const CITIES = [
     "Łódź", "Lublin", "Bydgoszcz", "Katowice", "Siedlce",
 ];
 
+interface SimulationStatus {
+    running: boolean;
+    elapsed_seconds: number;
+    scale: number;
+    days: number;
+    error: string | null;
+}
+
 export const SimulatorPage: React.FC = () => {
     const [scale, setScale] = useState(0.1);
     const [days, setDays] = useState<number>(30);
     const [clear, setClear] = useState(false);
-    const [running, setRunning] = useState(false);
+    const [starting, setStarting] = useState(false);
+    const [status, setStatus] = useState<SimulationStatus | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const scaledUsers = Math.round(110_000 * scale).toLocaleString();
     const scaledActivities = Math.round(550_000 * scale).toLocaleString();
     const scaledDepts = Math.round(187 * scale);
 
-    const handleRun = async () => {
-        setRunning(true);
+    const fetchStatus = useCallback(async () => {
         try {
-            await apiClient.post('/activities/admin/simulate/', {
-                scale,
-                days,
-                clear,
-            });
+            const { data } = await apiClient.get('/activities/admin/simulate/');
+            setStatus(data);
+            if (!data.running && pollRef.current) {
+                clearInterval(pollRef.current);
+                pollRef.current = null;
+            }
+        } catch {
+            // ignore polling errors
+        }
+    }, []);
+
+    // Poll status
+    useEffect(() => {
+        fetchStatus();
+        return () => {
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, [fetchStatus]);
+
+    const handleRun = async () => {
+        setStarting(true);
+        try {
+            await apiClient.post('/activities/admin/simulate/', { scale, days, clear });
             notifications.show({
                 title: 'Simulation Started',
-                message: `Scale: ${scale}, Days: ${days}. Check Railway logs for progress.`,
+                message: `Scale: ${Math.round(scale * 100)}%, Days: ${days}. Monitor progress below.`,
                 color: 'green',
             });
+            // Start polling
+            pollRef.current = setInterval(fetchStatus, 3000);
+            fetchStatus();
         } catch (err: any) {
-            notifications.show({
-                title: 'Error',
-                message: err?.response?.data?.error || 'Failed to start simulation.',
-                color: 'red',
-            });
+            const msg = err?.response?.data?.error || 'Failed to start simulation.';
+            notifications.show({ title: 'Error', message: msg, color: 'red' });
         } finally {
-            setRunning(false);
+            setStarting(false);
         }
     };
+
+    const isRunning = status?.running ?? false;
+    const estMinutes = Math.max(1, Math.round(scale * 30));
+    const progressPct = status ? Math.min(99, Math.round((status.elapsed_seconds / (estMinutes * 60)) * 100)) : 0;
 
     return (
         <Box p="md">
@@ -50,6 +81,29 @@ export const SimulatorPage: React.FC = () => {
                 title="Aktywne Miasta — Simulator"
                 subtitle="Generate realistic competition data for stress-testing and demos"
             />
+
+            {/* Status Banner */}
+            {status && (isRunning || status.error || (!isRunning && status.elapsed_seconds > 0)) && (
+                <Alert
+                    mb="md"
+                    color={isRunning ? 'blue' : status.error ? 'red' : 'green'}
+                    icon={
+                        isRunning ? <Loader size={16} /> :
+                            status.error ? <AlertCircle size={16} /> :
+                                <CheckCircle2 size={16} />
+                    }
+                    title={
+                        isRunning
+                            ? `Simulation Running — ${Math.floor(status.elapsed_seconds / 60)}m ${Math.floor(status.elapsed_seconds % 60)}s elapsed`
+                            : status.error
+                                ? 'Simulation Failed'
+                                : `Simulation Complete — took ${Math.floor(status.elapsed_seconds / 60)}m ${Math.floor(status.elapsed_seconds % 60)}s`
+                    }
+                >
+                    {isRunning && <Progress value={progressPct} size="xs" mt="xs" animated />}
+                    {status.error && <Text size="sm" mt="xs">{status.error}</Text>}
+                </Alert>
+            )}
 
             <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
                 {/* Stats preview */}
@@ -108,6 +162,7 @@ export const SimulatorPage: React.FC = () => {
                                     { value: 0.5, label: '50%' },
                                     { value: 1.0, label: '100%' },
                                 ]}
+                                disabled={isRunning}
                             />
                         </Box>
 
@@ -117,23 +172,26 @@ export const SimulatorPage: React.FC = () => {
                             onChange={(v) => setDays(Number(v) || 30)}
                             min={1}
                             max={90}
+                            disabled={isRunning}
                         />
 
                         <Switch
                             label="Clear existing simulation data first"
                             checked={clear}
                             onChange={(e) => setClear(e.currentTarget.checked)}
+                            disabled={isRunning}
                         />
 
                         <Button
                             fullWidth
                             size="md"
                             color="violet"
-                            leftSection={<Play size={16} />}
-                            loading={running}
+                            leftSection={isRunning ? <Loader size={16} /> : <Play size={16} />}
+                            loading={starting}
+                            disabled={isRunning}
                             onClick={handleRun}
                         >
-                            {running ? 'Starting Simulation...' : 'Run Simulation'}
+                            {isRunning ? `Running... ${Math.floor((status?.elapsed_seconds ?? 0) / 60)}m elapsed` : starting ? 'Starting...' : 'Run Simulation'}
                         </Button>
                     </Stack>
                 </Card>
@@ -175,7 +233,7 @@ export const SimulatorPage: React.FC = () => {
                 </Group>
                 <Text size="sm" c="dimmed">
                     The simulation runs in a background thread on the server. It creates tenants, users, departments,
-                    and activities with realistic GPS tracks for each city. Progress is visible in Railway logs.
+                    and activities with realistic GPS tracks for each city. Progress is visible above and in Railway logs.
                 </Text>
                 <Group mt="sm" gap="lg">
                     <Box>
