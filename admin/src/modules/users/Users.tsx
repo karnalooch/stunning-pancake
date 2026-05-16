@@ -223,10 +223,10 @@ export const Users = () => {
                 onChange={(e) => setSearchQuery(e.currentTarget.value)}
               />
               <Select
-                label="Dział"
-                placeholder="Wszystkie"
+                label="Department"
+                placeholder="All"
                 data={[
-                  { value: '', label: 'Wszystkie' },
+                  { value: '', label: 'All' },
                   ...departments.map(d => ({ value: d.id.toString(), label: d.name }))
                 ]}
                 value={selectedDepartment}
@@ -417,7 +417,7 @@ export const Users = () => {
       <Modal opened={inviteModalOpened} onClose={() => { setInviteModalOpened(false); setInviteResult(null); }} title={<Text fw={700}>Invite Staff / Moderator</Text>} centered size="md">
         <Stack gap="md">
           <TextInput label="Email Address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="moderator@city.gov" required />
-          <TextInput label="Full Name" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="Jan Kowalski" />
+          <TextInput label="Full Name" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="John Doe" />
           <Select label="Role" value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })} data={[
             { value: 'TENANT_MODERATOR', label: 'Moderator' },
             { value: 'TENANT_ADMIN', label: 'Tenant Admin' },

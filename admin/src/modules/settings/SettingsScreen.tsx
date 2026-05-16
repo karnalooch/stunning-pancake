@@ -9,7 +9,7 @@ export const SettingsScreen: React.FC = () => {
     notifications: true,
     emailDigest: false,
     darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-    language: 'pl',
+    language: 'en',
   });
 
   const handleSave = () => {

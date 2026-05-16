@@ -70,7 +70,7 @@ export const Departments: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!confirm('Czy na pewno chcesz usunąć ten dział?')) return;
+        if (!confirm('Are you sure you want to delete this department?')) return;
         try {
             await apiClient.delete(`/users/departments/${id}/`);
             fetchDepartments();
@@ -81,12 +81,12 @@ export const Departments: React.FC = () => {
     };
 
     const typeLabels: Record<string, string> = {
-        department: 'Dział',
-        class: 'Klasa',
-        faculty: 'Wydział',
-        team: 'Zespół',
-        district: 'Dzielnica',
-        other: 'Inne',
+        department: 'Department',
+        class: 'Class',
+        faculty: 'Faculty',
+        team: 'Team',
+        district: 'District',
+        other: 'Other',
     };
 
     const buildTreeData = (nodes: DepartmentTreeNode[]): any[] => {
@@ -100,25 +100,25 @@ export const Departments: React.FC = () => {
     return (
         <Box p="md">
             <Group justify="space-between" mb="md">
-                <Title order={2}>Działy / Klasy</Title>
+                <Title order={2}>Departments / Classes</Title>
                 <Group>
                     <Button.Group>
                         <Button
                             variant={viewMode === 'list' ? 'filled' : 'outline'}
                             onClick={() => setViewMode('list')}
                         >
-                            Lista
+                            List
                         </Button>
                         <Button
                             variant={viewMode === 'tree' ? 'filled' : 'outline'}
                             onClick={() => setViewMode('tree')}
                         >
-                            Drzewo
+                            Tree
                         </Button>
                     </Button.Group>
                     {canManage && (
                         <Button leftSection={<IconPlus size={16} />} onClick={() => { setEditingDept(null); setModalOpen(true); }}>
-                            Nowy dział
+                            New Department
                         </Button>
                     )}
                 </Group>
@@ -129,12 +129,12 @@ export const Departments: React.FC = () => {
                     <Table>
                         <Table.Thead>
                             <Table.Tr>
-                                <Table.Th>Nazwa</Table.Th>
-                                <Table.Th>Typ</Table.Th>
-                                <Table.Th>Członkowie</Table.Th>
+                                <Table.Th>Name</Table.Th>
+                                <Table.Th>Type</Table.Th>
+                                <Table.Th>Members</Table.Th>
                                 <Table.Th>Moderator</Table.Th>
-                                <Table.Th>Nadrzędny</Table.Th>
-                                <Table.Th>Akcje</Table.Th>
+                                <Table.Th>Parent</Table.Th>
+                                <Table.Th>Actions</Table.Th>
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
@@ -180,7 +180,7 @@ export const Departments: React.FC = () => {
                 </Paper>
             )}
 
-            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title={editingDept ? 'Edytuj dział' : 'Nowy dział'}>
+            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title={editingDept ? 'Edit Department' : 'New Department'}>
                 <DepartmentForm
                     department={editingDept}
                     departments={departments}
@@ -205,16 +205,16 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
     const [saving, setSaving] = useState(false);
 
     const typeOptions = [
-        { value: 'department', label: 'Dział' },
-        { value: 'class', label: 'Klasa' },
-        { value: 'faculty', label: 'Wydział' },
-        { value: 'team', label: 'Zespół' },
-        { value: 'district', label: 'Dzielnica' },
-        { value: 'other', label: 'Inne' },
+        { value: 'department', label: 'Department' },
+        { value: 'class', label: 'Class' },
+        { value: 'faculty', label: 'Faculty' },
+        { value: 'team', label: 'Team' },
+        { value: 'district', label: 'District' },
+        { value: 'other', label: 'Other' },
     ];
 
     const parentOptions = [
-        { value: '', label: 'Brak (główny)' },
+        { value: '', label: 'None (root)' },
         ...(Array.isArray(departments) ? departments : [])
             .filter((d) => d.id !== department?.id)
             .map((d) => ({ value: d.id.toString(), label: d.name })),
@@ -247,11 +247,11 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
     return (
         <form onSubmit={handleSubmit}>
             <Stack>
-                <TextInput label="Nazwa" value={name} onChange={(e) => setName(e.target.value)} required />
-                <Select label="Typ" data={typeOptions} value={departmentType} onChange={(v) => setDepartmentType(v || 'department')} required />
-                <Select label="Dział nadrzędny" data={parentOptions} value={parentId} onChange={(v) => setParentId(v != null ? String(v) : '')} />
-                <TextInput label="Opis" value={description} onChange={(e) => setDescription(e.target.value)} />
-                <Button type="submit" loading={saving}>{department ? 'Zapisz' : 'Utwórz'}</Button>
+                <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                <Select label="Type" data={typeOptions} value={departmentType} onChange={(v) => setDepartmentType(v || 'department')} required />
+                <Select label="Parent Department" data={parentOptions} value={parentId} onChange={(v) => setParentId(v != null ? String(v) : '')} />
+                <TextInput label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
+                <Button type="submit" loading={saving}>{department ? 'Save' : 'Create'}</Button>
             </Stack>
         </form>
     );

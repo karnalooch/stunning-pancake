@@ -44,7 +44,7 @@ const NAV_SECTIONS = [
       },
       {
         icon: Network,
-        label: 'Działy',
+        label: 'Departments',
         path: '/owner/departments',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },

@@ -6,6 +6,7 @@ from .models import Activity, PrivacyZone, POI
 class ActivityDetailSerializer(serializers.ModelSerializer):
     user_info = serializers.SerializerMethodField()
     route_coords = serializers.SerializerMethodField()
+    duration = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -17,6 +18,11 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
     def get_route_coords(self, obj):
         if obj.route_path:
             return list(obj.route_path.coords)
+        return None
+
+    def get_duration(self, obj):
+        if obj.duration:
+            return obj.duration.total_seconds()
         return None
 
 class POISerializer(serializers.ModelSerializer):
@@ -34,6 +40,7 @@ class ActivitySerializer(serializers.ModelSerializer):
     Handles PostGIS LineString for the route.
     """
     user_info = serializers.SerializerMethodField()
+    duration = serializers.SerializerMethodField()
 
     class Meta:
         model = Activity
@@ -46,6 +53,11 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     def get_user_info(self, obj):
         return {'id': obj.user.id, 'username': obj.user.username}
+
+    def get_duration(self, obj):
+        if obj.duration:
+            return obj.duration.total_seconds()
+        return None
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
     """

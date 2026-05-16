@@ -81,7 +81,7 @@ export const DepartmentUsers: React.FC = () => {
     };
 
     const handleRemove = async (userId: number) => {
-        if (!confirm('Czy na pewno chcesz usunąć użytkownika z działu?')) return;
+        if (!confirm('Are you sure you want to remove this user from the department?')) return;
         try {
             await apiClient.post(`/users/departments/${id}/remove/`, { user_id: userId });
             fetchUsers();
@@ -93,16 +93,16 @@ export const DepartmentUsers: React.FC = () => {
     const assignedUserIds = new Set(users.map((u) => u.id));
     const availableUsers = allUsers.filter((u) => !assignedUserIds.has(u.id));
 
-    if (loading) return <Text>Ładowanie...</Text>;
-    if (!department) return <Text>Nie znaleziono działu.</Text>;
+    if (loading) return <Text>Loading...</Text>;
+    if (!department) return <Text>Department not found.</Text>;
 
     return (
         <Box p="md">
             <Group justify="space-between" mb="md">
-                <Title order={2}>{department.name} — Użytkownicy</Title>
+                <Title order={2}>{department.name} — Users</Title>
                 {canAssign && (
                     <Button leftSection={<IconUserPlus size={16} />} onClick={() => setAssignModalOpen(true)}>
-                        Dodaj użytkownika
+                        Add User
                     </Button>
                 )}
             </Group>
@@ -111,10 +111,10 @@ export const DepartmentUsers: React.FC = () => {
                 <Table>
                     <Table.Thead>
                         <Table.Tr>
-                            <Table.Th>Użytkownik</Table.Th>
+                            <Table.Th>User</Table.Th>
                             <Table.Th>Email</Table.Th>
-                            <Table.Th>Rola</Table.Th>
-                            {canRemove && <Table.Th>Akcje</Table.Th>}
+                            <Table.Th>Role</Table.Th>
+                            {canRemove && <Table.Th>Actions</Table.Th>}
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
@@ -126,7 +126,7 @@ export const DepartmentUsers: React.FC = () => {
                                 {canRemove && (
                                     <Table.Td>
                                         <Button variant="subtle" color="red" size="xs" leftSection={<IconUserMinus size={14} />} onClick={() => handleRemove(user.id)}>
-                                            Usuń
+                                            Remove
                                         </Button>
                                     </Table.Td>
                                 )}
@@ -136,16 +136,16 @@ export const DepartmentUsers: React.FC = () => {
                 </Table>
             </Paper>
 
-            <Modal opened={assignModalOpen} onClose={() => setAssignModalOpen(false)} title="Dodaj użytkownika do działu">
+            <Modal opened={assignModalOpen} onClose={() => setAssignModalOpen(false)} title="Add User to Department">
                 <Stack>
                     <Select
-                        label="Użytkownik"
+                        label="User"
                         data={availableUsers.map((u) => ({ value: u.id.toString(), label: `${u.username} (${u.email})` }))}
                         value={selectedUserId}
                         onChange={(v) => setSelectedUserId(v != null ? String(v) : '')}
-                        placeholder="Wybierz użytkownika"
+                        placeholder="Select user"
                     />
-                    <Button onClick={handleAssign} disabled={!selectedUserId}>Dodaj</Button>
+                    <Button onClick={handleAssign} disabled={!selectedUserId}>Add</Button>
                 </Stack>
             </Modal>
         </Box>
