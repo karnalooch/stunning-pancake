@@ -60,6 +60,12 @@ const NAV_SECTIONS = [
         roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
       },
       {
+        icon: Zap,
+        label: 'Activities',
+        path: '/owner/activities',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
+      },
+      {
         icon: Gift,
         label: 'Sponsorship',
         path: '/owner/sponsor',
