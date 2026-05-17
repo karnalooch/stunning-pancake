@@ -189,6 +189,12 @@ export const SimulatorApi = {
     return data;
   },
 
+  // Worker Status
+  getWorkerStatus: async () => {
+    const { data } = await apiClient.get('/activities/admin/worker-status/');
+    return data;
+  },
+
   // Wipe Data
   wipeData: async () => {
     const { data } = await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });

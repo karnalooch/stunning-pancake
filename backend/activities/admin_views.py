@@ -484,6 +484,77 @@ class WipeDataView(APIView):
         })
 
 
+class WorkerStatusView(APIView):
+    """
+    GET /api/activities/admin/worker-status/
+    Returns Celery worker info: active workers, queues, stats.
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        try:
+            from core.celery import app
+            insp = app.control.inspect()
+
+            result = {
+                'workers': [],
+                'total_workers': 0,
+                'active_tasks': 0,
+                'queues': [],
+            }
+
+            stats = insp.stats()
+            active = insp.active()
+            reserved = insp.reserved()
+            scheduled = insp.scheduled()
+            registered = insp.registered()
+
+            if stats:
+                for worker_name, worker_stats in stats.items():
+                    worker_info = {
+                        'name': worker_name,
+                        'pool_size': worker_stats.get('pool', {}).get('max-concurrency', 0) if isinstance(worker_stats.get('pool'), dict) else 0,
+                        'total_tasks': worker_stats.get('total', 0),
+                    }
+                    result['workers'].append(worker_info)
+
+            result['total_workers'] = len(result['workers'])
+
+            # Count active tasks
+            if active:
+                for worker_name, tasks in active.items():
+                    result['active_tasks'] += len(tasks)
+
+            # Discover active queues from worker registrations
+            if registered:
+                all_queues = set()
+                for worker_name, task_list in registered.items():
+                    # registered returns list of task names, not queues
+                    pass
+
+            # Get active queues from inspect active_queues
+            active_queues = insp.active_queues()
+            if active_queues:
+                for worker_name, queues in active_queues.items():
+                    for q in queues:
+                        if q.get('name') not in result['queues']:
+                            result['queues'].append(q.get('name'))
+
+            return Response(result)
+
+        except Exception as exc:
+            import logging
+            logger = logging.getLogger('activities')
+            logger.error(f"Worker status check failed: {exc}")
+            return Response({
+                'workers': [],
+                'total_workers': 0,
+                'active_tasks': 0,
+                'queues': [],
+                'error': str(exc),
+            }, status=status.HTTP_200_OK)  # Don't fail — show empty state
+
+
 class RunSimulationView(APIView):
     """
     POST   /api/activities/admin/simulate/        — start batch simulation
