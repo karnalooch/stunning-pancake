@@ -14,8 +14,19 @@ from __future__ import annotations
 
 import logging
 from celery import shared_task
+from kombu import Queue, Exchange
 
 logger = logging.getLogger(__name__)
+
+# Celery queue configuration
+from celery import current_app as celery_app
+celery_app.conf.task_queues = (
+    Queue('default', Exchange('default'), routing_key='default'),
+    Queue('simulation', Exchange('simulation'), routing_key='simulation'),
+)
+celery_app.conf.task_routes = {
+    'activities.simulator_tasks.*': {'queue': 'simulation'},
+}
 
 
 @shared_task(

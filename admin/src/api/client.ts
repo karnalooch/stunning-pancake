@@ -148,3 +148,50 @@ export const BrandingApi = {
     return data;
   },
 };
+
+export const SimulatorApi = {
+  // Batch Simulation
+  getBatchStatus: async () => {
+    const { data } = await apiClient.get('/activities/admin/simulate/');
+    return data;
+  },
+  startBatch: async (params: {
+    scale?: number;
+    days?: number;
+    clear?: boolean;
+    skip_activities?: boolean;
+    total_users?: number;
+  }) => {
+    const { data } = await apiClient.post('/activities/admin/simulate/', params);
+    return data;
+  },
+  abortBatch: async () => {
+    const { data } = await apiClient.delete('/activities/admin/simulate/');
+    return data;
+  },
+
+  // Live Simulation
+  getLiveStatus: async () => {
+    const { data } = await apiClient.get('/activities/admin/live-simulate/');
+    return data;
+  },
+  startLive: async (params: {
+    pool_pct: number;
+    active_ratio: number;
+    cheat_ratio: number;
+    tick_seconds: number;
+  }) => {
+    const { data } = await apiClient.post('/activities/admin/live-simulate/', params);
+    return data;
+  },
+  abortLive: async () => {
+    const { data } = await apiClient.delete('/activities/admin/live-simulate/');
+    return data;
+  },
+
+  // Wipe Data
+  wipeData: async () => {
+    const { data } = await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+    return data;
+  },
+};
