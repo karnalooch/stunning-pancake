@@ -32,7 +32,7 @@ interface BatchStatus {
 interface WorkerStatus {
     workers: { name: string; pool_size: number; total_tasks: number }[];
     total_workers: number;
-    active_tasks: number;
+    active_tasks: number | Record<string, unknown>;
     queues: string[];
     error?: string;
 }
@@ -629,14 +629,30 @@ export const SimulatorPage: React.FC = () => {
                                 </Box>
                                 <Box>
                                     <Text size="xs" c="dimmed">Active Tasks</Text>
-                                    <Text fw={600}>{workerStatus.active_tasks}</Text>
+                                    <Text fw={600}>
+                                        {typeof workerStatus.active_tasks === 'number'
+                                            ? workerStatus.active_tasks
+                                            : Object.keys(workerStatus.active_tasks).length}
+                                    </Text>
                                 </Box>
                                 <Box>
                                     <Text size="xs" c="dimmed">Queues</Text>
                                     <Text fw={600}>{workerStatus.queues?.length ? workerStatus.queues.join(', ') : 'N/A'}</Text>
                                 </Box>
                             </SimpleGrid>
-                            {workerStatus.workers.length > 0 && (
+                            {typeof workerStatus.active_tasks === 'object' && Object.keys(workerStatus.active_tasks).length > 0 && (
+                                <Box mt="sm">
+                                    <Text size="xs" c="dimmed" mb={4}>Task Names</Text>
+                                    <Group gap="xs" wrap="wrap">
+                                        {Object.keys(workerStatus.active_tasks).map((taskName) => (
+                                            <Badge key={taskName} variant="light" color="blue" size="sm">
+                                                {taskName}
+                                            </Badge>
+                                        ))}
+                                    </Group>
+                                </Box>
+                            )}
+                            {Array.isArray(workerStatus.workers) && workerStatus.workers.length > 0 && (
                                 <SimpleGrid cols={{ base: 1, md: 3 }} spacing="xs" mt="sm">
                                     {workerStatus.workers.map((w, i) => (
                                         <Box key={i} p="xs" style={{ background: 'var(--surface-secondary)', borderRadius: 8 }}>
