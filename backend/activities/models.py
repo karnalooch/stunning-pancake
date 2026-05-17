@@ -177,3 +177,7 @@ class WearableIntegration(models.Model):
             logger.error(f"Failed to decrypt refresh_token for WearableIntegration id={self.pk}")
             return None
 
+# Ensure BetaFeedback model is discovered by Django's model registry.
+# Defined in beta_feedback.py with app_label='activities'.
+from .beta_feedback import BetaFeedback  # noqa: E402, F401
+

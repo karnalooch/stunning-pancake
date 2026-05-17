@@ -140,16 +140,21 @@ def citus_cluster_status() -> list[dict]:
 
     Returns:
         List of dicts: [{nodeid, nodename, nodeport, isactive, role}]
+        Empty list if Citus extension is not installed.
     """
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT nodeid, nodename, nodeport, isactive,
-                   CASE WHEN groupid = 0 THEN 'coordinator' ELSE 'worker' END AS role
-            FROM pg_dist_node
-            ORDER BY groupid, nodeid;
-        """)
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT nodeid, nodename, nodeport, isactive,
+                       CASE WHEN groupid = 0 THEN 'coordinator' ELSE 'worker' END AS role
+                FROM pg_dist_node
+                ORDER BY groupid, nodeid;
+            """)
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    except Exception:
+        logger.debug("citus.cluster_status_unavailable — Citus extension not installed")
+        return []
 
 
 def citus_shard_status() -> list[dict]:
@@ -157,18 +162,25 @@ def citus_shard_status() -> list[dict]:
     Returns shard distribution across workers.
 
     Useful for detecting imbalances that require rebalancing.
+
+    Returns:
+        Empty list if Citus extension is not installed.
     """
-    with connection.cursor() as cursor:
-        cursor.execute("""
-            SELECT logicalrelid::text AS table_name,
-                   COUNT(*) AS shard_count,
-                   SUM(shardmaxvalue::bigint - shardminvalue::bigint) AS slot_range
-            FROM pg_dist_shard
-            GROUP BY logicalrelid
-            ORDER BY table_name;
-        """)
-        cols = [d[0] for d in cursor.description]
-        return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT logicalrelid::text AS table_name,
+                       COUNT(*) AS shard_count,
+                       SUM(shardmaxvalue::bigint - shardminvalue::bigint) AS slot_range
+                FROM pg_dist_shard
+                GROUP BY logicalrelid
+                ORDER BY table_name;
+            """)
+            cols = [d[0] for d in cursor.description]
+            return [dict(zip(cols, row)) for row in cursor.fetchall()]
+    except Exception:
+        logger.debug("citus.shard_status_unavailable — Citus extension not installed")
+        return []
 
 
 def rebalance_shards() -> None:
