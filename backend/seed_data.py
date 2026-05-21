@@ -7,7 +7,7 @@ from django.contrib.gis.geos import Point
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 
-from users.models import User, Tenant, Role
+from users.models import User, Tenant
 from activities.models import Activity, POI, Voucher
 from django.utils import timezone
 from datetime import timedelta
@@ -21,7 +21,7 @@ def seed():
         username='global_owner',
         defaults={
             'email': 'owner@sport-platform.com',
-            'role': Role.GLOBAL_OWNER
+            'role': 'GLOBAL_OWNER'
         }
     )
     password = os.getenv('ADMIN_PASSWORD') or os.getenv('GLOBAL_OWNER_PASSWORD', 'admin123')
@@ -48,7 +48,7 @@ def seed():
     # 3. Create Tenant Admins
     siedlce_admin, _ = User.objects.get_or_create(
         username='siedlce_admin',
-        defaults={'role': Role.TENANT_ADMIN, 'tenant': siedlce}
+        defaults={'role': 'TENANT_ADMIN', 'tenant': siedlce}
     )
     siedlce_admin.set_password('siedlce123')
     siedlce_admin.save()
@@ -72,7 +72,7 @@ def seed():
     # 5. Create Mock Activities
     athlete, _ = User.objects.get_or_create(
         username='athlete_01',
-        defaults={'role': Role.ATHLETE, 'tenant': siedlce}
+        defaults={'role': 'ATHLETE', 'tenant': siedlce}
     )
 
     for i in range(5):
@@ -92,7 +92,7 @@ def seed():
     # 6. Create Mock for Warsaw
     athlete_w, _ = User.objects.get_or_create(
         username='athlete_warsaw',
-        defaults={'role': Role.ATHLETE, 'tenant': warsaw}
+        defaults={'role': 'ATHLETE', 'tenant': warsaw}
     )
     Activity.objects.get_or_create(
         user=athlete_w,
