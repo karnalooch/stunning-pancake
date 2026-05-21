@@ -22,7 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'tenant_name', 'avatar', 'bio')
+        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'tenant_name', 'avatar', 'bio', 'is_active')
         read_only_fields = ('id', 'role')
 
 
@@ -65,3 +65,12 @@ class PasswordChangeSerializer(serializers.Serializer):
         if len(value) < 8:
             raise serializers.ValidationError("Password must be at least 8 characters.")
         return value
+
+
+class UserAdminUpdateSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'is_active', 'avatar', 'bio', 'password')
+

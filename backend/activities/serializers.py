@@ -26,12 +26,36 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
         return None
 
 class POISerializer(serializers.ModelSerializer):
-    latitude = serializers.FloatField(source='location.y', read_only=True)
-    longitude = serializers.FloatField(source='location.x', read_only=True)
+    latitude = serializers.FloatField(required=True)
+    longitude = serializers.FloatField(required=True)
+    tenant_id = serializers.UUIDField(required=False, allow_null=True)
 
     class Meta:
         model = POI
-        fields = ('id', 'name', 'latitude', 'longitude', 'category', 'description')
+        fields = ('id', 'name', 'latitude', 'longitude', 'category', 'description', 'tenant_id')
+        read_only_fields = ('id',)
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.location:
+            ret['latitude'] = instance.location.y
+            ret['longitude'] = instance.location.x
+        return ret
+
+    def create(self, validated_data):
+        from django.contrib.gis.geos import Point
+        lat = validated_data.pop('latitude')
+        lng = validated_data.pop('longitude')
+        validated_data['location'] = Point(lng, lat, srid=4326)
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        from django.contrib.gis.geos import Point
+        lat = validated_data.pop('latitude', None)
+        lng = validated_data.pop('longitude', None)
+        if lat is not None and lng is not None:
+            instance.location = Point(lng, lat, srid=4326)
+        return super().update(instance, validated_data)
 
 
 class ActivitySerializer(serializers.ModelSerializer):

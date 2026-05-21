@@ -9,9 +9,10 @@ from .serializers import (
     TenantSerializer,
     AuditLogSerializer,
     PasswordChangeSerializer,
+    UserAdminUpdateSerializer,
 )
-from .models import User, Tenant, AuditLog
-from .permissions import IsGlobalOwner
+from .models import User, Tenant, AuditLog, Role
+from .permissions import IsGlobalOwner, IsTenantAdmin
 from core.api_response import success, error
 from core.email_service import EmailService
 
@@ -203,10 +204,10 @@ class UserListView(generics.ListAPIView):
 
 
 class TenantListView(generics.ListAPIView):
-    """List all tenants. GLOBAL_OWNER only."""
-    queryset = Tenant.objects.all()
+    """List active tenants. GLOBAL_OWNER and TENANT_ADMIN only."""
+    queryset = Tenant.objects.filter(is_active=True)
     serializer_class = TenantSerializer
-    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+    permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
 
 class AuditLogListView(generics.ListAPIView):
@@ -265,6 +266,66 @@ class UserCreateView(generics.CreateAPIView):
             data=UserSerializer(user).data,
             message=f"User {user.username} created.",
             status_code=status.HTTP_201_CREATED,
+        )
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    """Admin updates an existing user's profile, role, tenant, bio, avatar, status, and password."""
+    queryset = User.objects.all()
+    serializer_class = UserAdminUpdateSerializer
+    permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
+
+    def patch(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs, partial=True)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs, partial=False)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        # RLS Permission Scoping
+        requesting_user = request.user
+        if requesting_user.role == 'TENANT_ADMIN':
+            # TENANT_ADMIN can only edit users within their own tenant
+            if instance.tenant_id != requesting_user.tenant_id:
+                return error("You are not authorized to edit users outside of your tenant.", status_code=status.HTTP_403_FORBIDDEN)
+            
+            # TENANT_ADMIN cannot assign user to a different tenant
+            tenant_id = request.data.get('tenant_id')
+            if tenant_id and str(tenant_id) != str(requesting_user.tenant_id):
+                return error("You cannot assign users to a different tenant.", status_code=status.HTTP_403_FORBIDDEN)
+
+            # TENANT_ADMIN cannot promote any user to GLOBAL_OWNER
+            role = request.data.get('role')
+            if role == 'GLOBAL_OWNER':
+                return error("You cannot promote a user to Global Owner.", status_code=status.HTTP_403_FORBIDDEN)
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        if not serializer.is_valid():
+            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+
+        # Optional password update
+        password = request.data.get('password')
+        if password:
+            instance.set_password(password)
+
+        user = serializer.save()
+
+        # Create audit log entry
+        AuditLog.objects.create(
+            impersonator=requesting_user,
+            target_user=user,
+            tenant_id=str(user.tenant_id) if user.tenant_id else None,
+            action=f"Updated user {user.username} (role: {user.role}, is_active: {user.is_active})",
+            ip_address=request.META.get('REMOTE_ADDR'),
+            status_code=200,
+        )
+
+        return success(
+            data=UserSerializer(user).data,
+            message=f"User {user.username} updated successfully."
         )
 
 

@@ -104,9 +104,10 @@ curl -H "Authorization: Bearer <access_token>" \
 | `/password/reset/confirm/` | POST | Potwierdzenie resetu hasła | Public |
 | `/all/` | GET | Lista wszystkich użytkowników | GLOBAL_OWNER, TENANT_ADMIN |
 | `/create/` | POST | Utworzenie użytkownika | GLOBAL_OWNER, TENANT_ADMIN |
+| `/<id>/update/` | PUT/PATCH | Aktualizacja użytkownika (w tym avatar, bio) | GLOBAL_OWNER, TENANT_ADMIN |
 | `/<id>/delete/` | DELETE | Usunięcie użytkownika | GLOBAL_OWNER, TENANT_ADMIN |
 | `/impersonate/<id>/` | POST | Impersonacja użytkownika | GLOBAL_OWNER |
-| `/tenants/all/` | GET | Lista tenantów | Authenticated |
+| `/tenants/all/` | GET | Lista tenantów | Authenticated (now: IsTenantAdmin+) |
 | `/audit-log/` | GET | Logi audytowe | GLOBAL_OWNER |
 | `/invitation/` | POST | Wysłanie zaproszenia | GLOBAL_OWNER, TENANT_ADMIN |
 | `/branding/<tenant_id>/` | GET | Branding tenantu | Public |
@@ -144,6 +145,46 @@ Authorization: Bearer <token>
   "is_premium": false,
   "avatar": "https://<domena>/media/avatars/avatar.jpg",
   "bio": "Administrator platformy"
+}
+```
+
+### Aktualizacja użytkownika przez administratora
+
+Modyfikuje dane konta użytkownika (w tym hasło, avatar i bio). Dostępne dla `GLOBAL_OWNER` oraz `TENANT_ADMIN` (z uwzględnieniem RLS).
+
+```
+PATCH /api/users/<id>/update/
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "username": "new_nickname",
+  "email": "user_email@example.com",
+  "role": "ATHLETE",
+  "tenant_id": "uuid-tenant-id",
+  "is_active": true,
+  "avatar": "https://host/media/avatars/custom_pic.png",
+  "bio": "New athlete bio text...",
+  "password": "optional_new_password_8_chars_min"
+}
+```
+
+**Odpowiedź (200 OK):**
+```json
+{
+  "status": "success",
+  "message": "User new_nickname updated successfully.",
+  "data": {
+    "id": 42,
+    "username": "new_nickname",
+    "email": "user_email@example.com",
+    "role": "ATHLETE",
+    "tenant_id": "uuid-tenant-id",
+    "tenant_name": "City Name",
+    "avatar": "https://host/media/avatars/custom_pic.png",
+    "bio": "New athlete bio text...",
+    "is_active": true
+  }
 }
 ```
 

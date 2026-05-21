@@ -23,19 +23,69 @@ from .services import EventProgressService, EventNormalizationService
 logger = logging.getLogger(__name__)
 
 
-class EventViewSet(viewsets.ReadOnlyModelViewSet):
+class EventViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for reading Event data.
-    Admin-only creation is handled via the Django admin panel.
+    ViewSet for reading and managing Event data.
     """
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Returns active and completed events visible to the user."""
+        """Returns events scoped by permission and role."""
+        user = self.request.user
+        if not user.is_authenticated:
+            return Event.objects.none()
+
+        if user.role == 'GLOBAL_OWNER':
+            return Event.objects.all().order_by('-start_date')
+
+        if user.role == 'TENANT_ADMIN':
+            from django.db.models import Q
+            return Event.objects.filter(
+                Q(tenant_id=user.tenant_id) | Q(status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED'])
+            ).order_by('-start_date')
+
+        # Standard user
+        if user.tenant_id:
+            from django.db.models import Q
+            return Event.objects.filter(
+                Q(tenant_id=user.tenant_id) | Q(tenant_id__isnull=True)
+            ).filter(status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED']).order_by('-start_date')
+
         return Event.objects.filter(
             status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED']
         ).order_by('-start_date')
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            from users.permissions import IsTenantAdmin
+            return [IsTenantAdmin()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role != 'GLOBAL_OWNER':
+            serializer.save(tenant_id=user.tenant_id, created_by=user)
+        else:
+            serializer.save(created_by=user)
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        instance = self.get_object()
+        if user.role != 'GLOBAL_OWNER':
+            if instance.tenant_id != user.tenant_id:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You cannot update events outside of your tenant.")
+            serializer.save(tenant_id=user.tenant_id)
+        else:
+            serializer.save()
+
+    def perform_destroy(self, instance):
+        user = self.request.user
+        if user.role != 'GLOBAL_OWNER' and instance.tenant_id != user.tenant_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You cannot delete events outside of your tenant.")
+        instance.delete()
 
     @extend_schema(
         summary="Get event leaderboard",

@@ -7,6 +7,7 @@ from .models import Event, Participation, Achievement
 
 class EventSerializer(serializers.ModelSerializer):
     """Full event detail serializer with boundary support."""
+    boundary = serializers.JSONField(required=False, allow_null=True)
 
     class Meta:
         model = Event
@@ -17,8 +18,35 @@ class EventSerializer(serializers.ModelSerializer):
             "tenant_id", "opponent_tenant_id",
             "club", "opponent_club",
             "require_brouter_validation",
+            "boundary",
             "created_at",
         ]
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.boundary:
+            ret['boundary'] = {
+                "type": "Polygon",
+                "coordinates": list(instance.boundary.coords)
+            }
+        return ret
+
+    def validate_boundary(self, value):
+        if value is None:
+            return None
+        import json
+        from django.contrib.gis.geos import GEOSGeometry
+        try:
+            if isinstance(value, dict):
+                geom_str = json.dumps(value)
+            else:
+                geom_str = value
+            geom = GEOSGeometry(geom_str)
+            if geom.geom_type != 'Polygon':
+                raise serializers.ValidationError("Boundary geometry must be a Polygon.")
+            return geom
+        except Exception as e:
+            raise serializers.ValidationError(f"Invalid GeoJSON Polygon: {str(e)}")
 
 
 class ParticipationSerializer(serializers.ModelSerializer):

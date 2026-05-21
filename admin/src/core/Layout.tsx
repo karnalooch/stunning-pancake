@@ -25,6 +25,12 @@ const NAV_SECTIONS = [
         path: '/owner/dashboard',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
+      {
+        icon: Play,
+        label: 'Simulator',
+        path: '/owner/analytics/simulator',
+        roles: ['GLOBAL_OWNER'],
+      },
     ],
   },
   {
@@ -54,37 +60,37 @@ const NAV_SECTIONS = [
     label: 'Operations',
     items: [
       {
-        icon: ShieldAlert,
-        label: 'Anti-Cheat',
-        path: '/owner/anti-cheat',
-        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
-      },
-      {
         icon: Zap,
         label: 'Activities',
         path: '/owner/activities',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
       {
-        icon: Gift,
-        label: 'Sponsorship',
-        path: '/owner/sponsor',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
+        icon: ShieldAlert,
+        label: 'Anti-Cheat',
+        path: '/owner/anti-cheat',
+        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
       },
-    ],
-  },
-  {
-    label: 'Analytics',
-    items: [
       {
         icon: Calendar,
         label: 'Events',
         path: '/owner/analytics/events',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
+    ],
+  },
+  {
+    label: 'Sponsorship & Rewards',
+    items: [
+      {
+        icon: Gift,
+        label: 'Sponsor Dashboard',
+        path: '/owner/sponsor',
+        roles: ['GLOBAL_OWNER', 'SPONSOR'],
+      },
       {
         icon: TrendingUp,
-        label: 'Sponsorship',
+        label: 'Sponsorship Analytics',
         path: '/owner/analytics/sponsorship',
         roles: ['GLOBAL_OWNER'],
       },
@@ -94,15 +100,14 @@ const NAV_SECTIONS = [
         path: '/owner/analytics/vouchers',
         roles: ['GLOBAL_OWNER'],
       },
-      {
-        icon: MessageSquare,
-        label: 'Feedback',
-        path: '/owner/analytics/feedback',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
+    ],
+  },
+  {
+    label: 'Analytics & Feedback',
+    items: [
       {
         icon: TrendingUp,
-        label: 'Departments',
+        label: 'Department Analytics',
         path: '/owner/analytics/departments',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
@@ -114,10 +119,10 @@ const NAV_SECTIONS = [
         requiresHeatmapFlag: true,
       },
       {
-        icon: Play,
-        label: 'Simulator',
-        path: '/owner/analytics/simulator',
-        roles: ['GLOBAL_OWNER'],
+        icon: MessageSquare,
+        label: 'Feedback',
+        path: '/owner/analytics/feedback',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
     ],
   },

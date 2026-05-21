@@ -130,6 +130,21 @@ class Role(models.TextChoices):
 
 **DM** = Department Moderator (nowa rola)
 
+
+---
+
+## 🔒 Aktualizacje uprawnień w v3.0 (Zarządzanie profilami i Matchmaking)
+
+W wersji v3.0 rozszerzono i doprecyzowano uprawnienia dla administratorów (`GLOBAL_OWNER` oraz `TENANT_ADMIN`):
+
+### 1. Edycja profili użytkowników (`users.edit`)
+* **Zakres edycji**: Administratorzy posiadający uprawnienie `users.edit` (`GLOBAL_OWNER` oraz `TENANT_ADMIN` dla swojego tenantu) mogą edytować nie tylko dane tożsamości (nickname/username, email, rola, tenant, status `is_active`, hasło), ale również przypisywać i modyfikować **customowe awatary** (poprzez URL) oraz **opisy biograficzne (pole `bio`)** w formularzu Drawer.
+* **Ograniczenia RLS**: `TENANT_ADMIN` może edytować wyłącznie użytkowników należących do jego `tenant_id`. Nie może zmieniać przypisania tenantu użytkownika ani promować go na rolę `GLOBAL_OWNER`.
+
+### 2. Widok tenantów dla matchmakingu (`tenants.view`)
+* **Dynamiczna lista przeciwników**: Dla wydarzeń typu `INTER_TENANT` (Pojedynek Miast), selektor przeciwnika pobiera listę aktywnych tenantów dynamicznie z bazy danych.
+* **Podniesienie uprawnień**: Uprawnienia do endpointu `/api/users/tenants/all/` (`TenantListView`) zostały rozszerzone z `IsGlobalOwner` na `IsTenantAdmin`. Dzięki temu `TENANT_ADMIN` może pobierać nazwy i ID innych miast w celu ustawienia pojedynku (matchmakingu) bezpośrednio z UI.
+
 ---
 
 ## 🔧 Jak przypisywać role

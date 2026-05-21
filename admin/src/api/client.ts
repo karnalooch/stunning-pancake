@@ -101,6 +101,10 @@ export const AdminApi = {
     const { data } = await apiClient.delete(`/users/${userId}/delete/`);
     return data;
   },
+  updateUser: async (userId: number, userData: any) => {
+    const { data } = await apiClient.patch(`/users/${userId}/update/`, userData);
+    return data;
+  },
   sendInvitation: async (invitationData: { email: string; name: string; role?: string; tenant_id?: string }) => {
     const { data } = await apiClient.post('/users/invitation/', invitationData);
     return data;
@@ -207,4 +211,42 @@ export const SimulatorApi = {
     const { data } = await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
     return data;
   },
+};
+
+export const EventsApi = {
+  getEvents: async () => {
+    const { data } = await apiClient.get('/events/');
+    return Array.isArray(data) ? data : (data?.results || []);
+  },
+  createEvent: async (eventData: any) => {
+    const { data } = await apiClient.post('/events/', eventData);
+    return data;
+  },
+  updateEvent: async (eventId: number, eventData: any) => {
+    const { data } = await apiClient.patch(`/events/${eventId}/`, eventData);
+    return data;
+  },
+  deleteEvent: async (eventId: number) => {
+    const { data } = await apiClient.delete(`/events/${eventId}/`);
+    return data;
+  }
+};
+
+export const POIsApi = {
+  getPOIs: async () => {
+    const { data } = await apiClient.get('/activities/pois/');
+    return Array.isArray(data) ? data : (data?.results || []);
+  },
+  createPOI: async (poiData: any) => {
+    const { data } = await apiClient.post('/activities/pois/', poiData);
+    return data;
+  },
+  updatePOI: async (poiId: number, poiData: any) => {
+    const { data } = await apiClient.patch(`/activities/pois/${poiId}/`, poiData);
+    return data;
+  },
+  deletePOI: async (poiId: number) => {
+    const { data } = await apiClient.delete(`/activities/pois/${poiId}/`);
+    return data;
+  }
 };

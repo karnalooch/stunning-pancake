@@ -12,6 +12,7 @@ from .views import (
     TenantListView,
     AuditLogListView,
     UserCreateView,
+    UserUpdateView,
     UserDeleteView,
     InvitationTokenView,
 )
@@ -29,6 +30,7 @@ urlpatterns = [
     path('tenants/all/', TenantListView.as_view(), name='tenant-list'),
     path('audit-log/', AuditLogListView.as_view(), name='audit-log-list'),
     path('create/', UserCreateView.as_view(), name='user-create'),
+    path('<int:pk>/update/', UserUpdateView.as_view(), name='user-update'),
     path('<int:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
     path('invitation/', InvitationTokenView.as_view(), name='invitation'),
 ]

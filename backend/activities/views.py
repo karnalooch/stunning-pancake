@@ -336,20 +336,60 @@ class LeaderboardView(generics.GenericAPIView):
             
         return Response(result)
 
-class POIViewSet(viewsets.ReadOnlyModelViewSet):
+class POIViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for retrieving sponsor POIs.
+    ViewSet for retrieving and managing sponsor POIs.
     """
     queryset = POI.objects.all()
     serializer_class = POISerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        # Optionally filter by tenant/city
-        tenant_id = self.request.user.tenant_id
-        if tenant_id:
-            return self.queryset.filter(tenant_id=tenant_id)
+        # Filter by tenant/city
+        requesting_user = self.request.user
+        if requesting_user.role != 'GLOBAL_OWNER' and requesting_user.tenant_id:
+            return self.queryset.filter(tenant_id=requesting_user.tenant_id)
         return self.queryset
+
+    def get_permissions(self):
+        # Restrict write operations to GLOBAL_OWNER, TENANT_ADMIN, and SPONSOR
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            class IsPOIAdminOrSponsor(permissions.BasePermission):
+                def has_permission(self, request, view):
+                    role = getattr(request.user, 'role', None)
+                    return request.user.is_authenticated and role in ('GLOBAL_OWNER', 'TENANT_ADMIN', 'SPONSOR')
+            return [IsPOIAdminOrSponsor()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        # Automatically assign tenant_id if user is not GLOBAL_OWNER
+        requesting_user = self.request.user
+        if requesting_user.role != 'GLOBAL_OWNER':
+            serializer.save(tenant_id=requesting_user.tenant_id)
+        else:
+            # For GLOBAL_OWNER, allow setting tenant_id or default to None
+            tenant_id = self.request.data.get('tenant_id')
+            serializer.save(tenant_id=tenant_id)
+
+    def perform_update(self, serializer):
+        # Check tenant isolation
+        requesting_user = self.request.user
+        instance = self.get_object()
+        if requesting_user.role != 'GLOBAL_OWNER':
+            if instance.tenant_id != requesting_user.tenant_id:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("You cannot update POIs outside of your tenant.")
+            serializer.save(tenant_id=requesting_user.tenant_id)
+        else:
+            tenant_id = self.request.data.get('tenant_id', instance.tenant_id)
+            serializer.save(tenant_id=tenant_id)
+
+    def perform_destroy(self, instance):
+        requesting_user = self.request.user
+        if requesting_user.role != 'GLOBAL_OWNER' and instance.tenant_id != requesting_user.tenant_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("You cannot delete POIs outside of your tenant.")
+        instance.delete()
 
 
 class AIInsightsView(generics.GenericAPIView):

@@ -1,9 +1,15 @@
-import { Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon, Drawer, SimpleGrid, Modal, ScrollArea, Tabs, Select, PasswordInput } from '@mantine/core';
+import {
+  Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon,
+  Drawer, SimpleGrid, Modal, ScrollArea, Tabs, Select, PasswordInput,
+  Pagination, Switch, Textarea, Tooltip, Card
+} from '@mantine/core';
 import { useState, useEffect } from 'react';
-import { Search, ShieldAlert, Activity, UserCog, MoreVertical, Eye, UserPlus, ClipboardList, Trash2, Send } from 'lucide-react';
+import {
+  Search, ShieldAlert, UserCog, Eye, UserPlus, ClipboardList,
+  Trash2, Send, Lock, Unlock, Mail, Shield, Building
+} from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
-import { AdminApi } from '../../api/client';
-import { apiClient } from '../../api/client';
+import { AdminApi, apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
 interface UserRow {
@@ -12,9 +18,13 @@ interface UserRow {
   name: string;
   email: string;
   tenant: string;
+  tenant_id: string | null;
   status: string;
   flags: number;
   role: string;
+  avatar: string | null;
+  bio: string;
+  is_active: boolean;
 }
 
 interface TenantRow {
@@ -52,8 +62,14 @@ export const Users = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteResult, setInviteResult] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [departments, setDepartments] = useState<{ id: number, name: string }[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  
+  // Filters
+  const [selectedRole, setSelectedRole] = useState<string>('');
+  const [selectedTenant, setSelectedTenant] = useState<string>('');
+  
+  // Pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
 
   // Create user form state
   const [createForm, setCreateForm] = useState({
@@ -62,6 +78,18 @@ export const Users = () => {
     password: '',
     role: 'ATHLETE',
     tenant_id: '',
+  });
+
+  // Edit user drawer form state
+  const [editForm, setEditForm] = useState({
+    username: '',
+    email: '',
+    role: '',
+    tenant_id: '',
+    is_active: true,
+    avatar: '',
+    bio: '',
+    password: '',
   });
 
   // Invite form state
@@ -74,15 +102,19 @@ export const Users = () => {
   const fetchUsers = () => {
     AdminApi.getUsers()
       .then(data => {
-        const mapped = data.map((u: { id: number; username: string; email?: string; tenant_name?: string; role: string }) => ({
+        const mapped = data.map((u: any) => ({
           id: u.id,
           displayId: `U-${u.id}`,
           name: u.username,
           email: u.email || `${u.username}@sport-platform.com`,
           tenant: u.tenant_name || 'Global HQ',
-          status: u.role === 'ATHLETE' ? 'Active' : 'Staff',
+          tenant_id: u.tenant_id || null,
+          status: u.is_active ? 'Active' : 'Locked',
           flags: 0,
           role: u.role,
+          avatar: u.avatar || null,
+          bio: u.bio || '',
+          is_active: u.is_active ?? true,
         }));
         setUsersList(mapped);
       })
@@ -90,12 +122,7 @@ export const Users = () => {
   };
 
   useEffect(() => { fetchUsers(); }, []);
-  useEffect(() => {
-    apiClient.get('/users/departments/').then(({ data }) => {
-      const arr = Array.isArray(data) ? data : (data && Array.isArray(data.results) ? data.results : []);
-      setDepartments(arr);
-    }).catch(() => setDepartments([]));
-  }, []);
+  
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
       setAuditLogLoading(true);
@@ -109,10 +136,23 @@ export const Users = () => {
     }
   }, [user]);
 
+  // Populate edit form on selection change
+  useEffect(() => {
+    if (selectedUser) {
+      setEditForm({
+        username: selectedUser.name,
+        email: selectedUser.email,
+        role: selectedUser.role,
+        tenant_id: selectedUser.tenant_id || '',
+        is_active: selectedUser.is_active,
+        avatar: selectedUser.avatar || '',
+        bio: selectedUser.bio || '',
+        password: '',
+      });
+    }
+  }, [selectedUser]);
+
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
-  const windowTitle = isGlobalOwner
-    ? "User Audit Suite — Global Registry"
-    : `Instance Management — ${user?.username}'s City`;
 
   const handleImpersonate = async (targetUserId: number) => {
     setImpersonating(true);
@@ -126,8 +166,10 @@ export const Users = () => {
         username: result.impersonated_user,
         role: result.impersonated_role,
       }));
-    } catch (err: unknown) {
-      setImpersonateError((err as any)?.response?.data?.error || (err as Error)?.message || 'Impersonation failed');
+      notifications.show({ title: 'Impersonation Active', message: `Now simulating ${result.impersonated_user}`, color: 'green' });
+    } catch (err: any) {
+      setImpersonateError(err?.response?.data?.error || err?.message || 'Impersonation failed');
+      notifications.show({ title: 'Impersonation Failed', message: 'Unauthorized or invalid token.', color: 'red' });
     } finally {
       setImpersonating(false);
     }
@@ -151,10 +193,56 @@ export const Users = () => {
       setCreateModalOpened(false);
       setCreateForm({ username: '', email: '', password: '', role: 'ATHLETE', tenant_id: '' });
       fetchUsers();
-    } catch (err: unknown) {
-      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to create user.', color: 'red' });
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.response?.data?.details || err?.message || 'Failed to create user.', color: 'red' });
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!selectedUser) return;
+    setActionLoading(true);
+    try {
+      const updatePayload: any = {
+        username: editForm.username,
+        email: editForm.email,
+        role: editForm.role,
+        is_active: editForm.is_active,
+        bio: editForm.bio,
+        avatar: editForm.avatar || null,
+      };
+
+      if (editForm.tenant_id) {
+        updatePayload.tenant_id = editForm.tenant_id;
+      }
+      if (editForm.password) {
+        updatePayload.password = editForm.password;
+      }
+
+      await AdminApi.updateUser(selectedUser.id, updatePayload);
+      notifications.show({ title: 'User Updated', message: `${editForm.username} profile saved.`, color: 'green' });
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (err: any) {
+      notifications.show({ title: 'Update Failed', message: err?.response?.data?.details || err?.message || 'Failed to update user.', color: 'red' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleLockUser = async (userRow: UserRow) => {
+    try {
+      const newStatus = !userRow.is_active;
+      await AdminApi.updateUser(userRow.id, { is_active: newStatus });
+      notifications.show({
+        title: newStatus ? 'Account Unlocked' : 'Account Locked',
+        message: `${userRow.name} status updated successfully.`,
+        color: newStatus ? 'green' : 'orange'
+      });
+      fetchUsers();
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to toggle status.', color: 'red' });
     }
   };
 
@@ -163,13 +251,13 @@ export const Users = () => {
     setActionLoading(true);
     try {
       await AdminApi.deleteUser(deleteTarget.id);
-      notifications.show({ title: 'User Deleted', message: `${deleteTarget.name} removed.`, color: 'orange' });
+      notifications.show({ title: 'User Deleted', message: `${deleteTarget.name} removed permanently.`, color: 'orange' });
       setDeleteConfirmOpened(false);
       setDeleteTarget(null);
       setSelectedUser(null);
       fetchUsers();
-    } catch (err: unknown) {
-      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to delete user.', color: 'red' });
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to delete user.', color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -191,12 +279,35 @@ export const Users = () => {
       });
       setInviteResult(result);
       notifications.show({ title: 'Invitation Sent', message: `Token for ${inviteForm.email} generated.`, color: 'cyan' });
-    } catch (err: unknown) {
-      notifications.show({ title: 'Error', message: (err as Error)?.message || 'Failed to send invitation.', color: 'red' });
+    } catch (err: any) {
+      notifications.show({ title: 'Error', message: err?.message || 'Failed to send invitation.', color: 'red' });
     } finally {
       setActionLoading(false);
     }
   };
+
+  // Filter logic
+  const filteredUsers = usersList.filter((u) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const match = u.name.toLowerCase().includes(q) ||
+                    u.email.toLowerCase().includes(q) ||
+                    u.displayId.toLowerCase().includes(q);
+      if (!match) return false;
+    }
+    if (selectedRole && u.role !== selectedRole) return false;
+    if (selectedTenant && u.tenant_id !== selectedTenant) return false;
+    return true;
+  });
+
+  // Client-side pagination
+  const paginatedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
+  const totalPages = Math.ceil(filteredUsers.length / pageSize);
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedRole, selectedTenant]);
 
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
@@ -204,7 +315,7 @@ export const Users = () => {
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
-          <Tabs.Tab value="users" leftSection={<UserCog size={16} />}>Users</Tabs.Tab>
+          <Tabs.Tab value="users" leftSection={<UserCog size={16} />}>Users Registry</Tabs.Tab>
           {isGlobalOwner && (
             <Tabs.Tab value="audit" leftSection={<ClipboardList size={16} />}>
               Audit Log {auditLogs.length > 0 && `(${auditLogs.length})`}
@@ -215,25 +326,40 @@ export const Users = () => {
         <Tabs.Panel value="users" pt="md">
           <Stack gap="md">
             <Group justify="space-between">
-              <TextInput
-                placeholder={isGlobalOwner ? "Global Search (ID, Email, Name)..." : "Search within city..."}
-                leftSection={<Search size={14} />}
-                style={{ width: '400px' }}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.currentTarget.value)}
-              />
-              <Select
-                label="Department"
-                placeholder="All"
-                data={[
-                  { value: '', label: 'All' },
-                  ...departments.map(d => ({ value: d.id.toString(), label: d.name }))
-                ]}
-                value={selectedDepartment}
-                onChange={(v) => setSelectedDepartment(v || '')}
-                clearable
-                style={{ width: '200px' }}
-              />
+              <Group gap="sm" grow style={{ flex: 1, minWidth: '400px' }}>
+                <TextInput
+                  placeholder={isGlobalOwner ? "Search (ID, Email, Nickname)..." : "Search within city..."}
+                  leftSection={<Search size={14} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                />
+                <Select
+                  placeholder="Role Filter"
+                  data={[
+                    { value: '', label: 'All Roles' },
+                    { value: 'ATHLETE', label: 'Athlete' },
+                    { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+                    { value: 'TENANT_MODERATOR', label: 'Moderator' },
+                    { value: 'SPONSOR', label: 'Sponsor' },
+                    { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+                  ]}
+                  value={selectedRole}
+                  onChange={(v) => setSelectedRole(v || '')}
+                  clearable
+                />
+                {isGlobalOwner && (
+                  <Select
+                    placeholder="Tenant Filter"
+                    data={[
+                      { value: '', label: 'All Cities / Tenants' },
+                      ...tenantsList.map(t => ({ value: String(t.id), label: t.name }))
+                    ]}
+                    value={selectedTenant}
+                    onChange={(v) => setSelectedTenant(v || '')}
+                    clearable
+                  />
+                )}
+              </Group>
               <Group>
                 <Button
                   leftSection={<UserPlus size={16} />}
@@ -254,44 +380,87 @@ export const Users = () => {
               </Group>
             </Group>
 
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>User ID</Table.Th>
-                  <Table.Th>Name / Email</Table.Th>
-                  <Table.Th>Tenant</Table.Th>
-                  <Table.Th>Role</Table.Th>
-                  <Table.Th>Status</Table.Th>
-                  <Table.Th></Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {usersList.filter((u) => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || u.email.toLowerCase().includes(searchQuery.toLowerCase()) || u.displayId.toLowerCase().includes(searchQuery.toLowerCase())).map((u) => (
-                  <Table.Tr key={u.id}>
-                    <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
-                    <Table.Td>
-                      <Stack gap={0}>
-                        <Text size="sm" fw={600}>{u.name}</Text>
-                        <Text size="xs" c="dimmed">{u.email}</Text>
-                      </Stack>
-                    </Table.Td>
-                    <Table.Td><Text size="sm">{u.tenant}</Text></Table.Td>
-                    <Table.Td><Badge color={u.role === 'GLOBAL_OWNER' ? 'red' : u.role === 'TENANT_ADMIN' ? 'blue' : u.role === 'TENANT_MODERATOR' ? 'violet' : 'cyan'} variant="light" size="xs">{u.role}</Badge></Table.Td>
-                    <Table.Td>
-                      <Badge color={u.status === 'Active' ? 'cyan' : 'yellow'} variant="light" size="xs">{u.status}</Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={0} justify="flex-end">
-                        <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)} aria-label="View user details"><Eye size={16} /></ActionIcon>
-                        <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }} aria-label="Delete user">
-                          <Trash2 size={14} />
-                        </ActionIcon>
-                      </Group>
-                    </Table.Td>
+            <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+              <Table verticalSpacing="sm" highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>User ID</Table.Th>
+                    <Table.Th>Identity</Table.Th>
+                    <Table.Th>City / Tenant</Table.Th>
+                    <Table.Th>System Role</Table.Th>
+                    <Table.Th>Status</Table.Th>
+                    <Table.Th style={{ width: '100px' }}></Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {paginatedUsers.length === 0 ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        No users match the active filter criteria.
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : (
+                    paginatedUsers.map((u) => (
+                      <Table.Tr key={u.id}>
+                        <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
+                        <Table.Td>
+                          <Stack gap={0}>
+                            <Text size="sm" fw={600}>{u.name}</Text>
+                            <Text size="xs" c="dimmed">{u.email}</Text>
+                          </Stack>
+                        </Table.Td>
+                        <Table.Td><Text size="sm">{u.tenant}</Text></Table.Td>
+                        <Table.Td>
+                          <Badge color={
+                            u.role === 'GLOBAL_OWNER' ? 'red' :
+                            u.role === 'TENANT_ADMIN' ? 'blue' :
+                            u.role === 'TENANT_MODERATOR' ? 'violet' :
+                            u.role === 'SPONSOR' ? 'grape' : 'cyan'
+                          } variant="light" size="xs">
+                            {u.role}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <Badge color={u.is_active ? 'green' : 'orange'} variant="light" size="xs">
+                              {u.is_active ? 'Active' : 'Locked'}
+                            </Badge>
+                            <Tooltip label={u.is_active ? 'Lock Account' : 'Unlock Account'}>
+                              <ActionIcon
+                                variant="subtle"
+                                size="sm"
+                                color={u.is_active ? 'orange' : 'green'}
+                                onClick={() => handleToggleLockUser(u)}
+                              >
+                                {u.is_active ? <Lock size={12} /> : <Unlock size={12} />}
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4} justify="flex-end">
+                            <Tooltip label="Edit Profile / Telemetry">
+                              <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
+                            </Tooltip>
+                            <Tooltip label="Delete User">
+                              <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }}>
+                                <Trash2 size={14} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    ))
+                  )}
+                </Table.Tbody>
+              </Table>
+            </Card>
+
+            {totalPages > 1 && (
+              <Group justify="center" mt="md">
+                <Pagination value={page} onChange={setPage} total={totalPages} color="cyan" />
+              </Group>
+            )}
           </Stack>
         </Tabs.Panel>
 
@@ -303,41 +472,43 @@ export const Users = () => {
               ) : auditLogs.length === 0 ? (
                 <Text c="dimmed">No audit log entries found.</Text>
               ) : (
-                <ScrollArea style={{ height: '600px' }}>
-                  <Table verticalSpacing="xs" highlightOnHover>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Timestamp</Table.Th>
-                        <Table.Th>Action</Table.Th>
-                        <Table.Th>Impersonator</Table.Th>
-                        <Table.Th>Target User</Table.Th>
-                        <Table.Th>Tenant</Table.Th>
-                        <Table.Th>Status</Table.Th>
-                        <Table.Th>IP</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {auditLogs.map((log: AuditLogEntry, idx: number) => (
-                        <Table.Tr key={log.id || idx}>
-                          <Table.Td><Text size="xs" ff="monospace">{new Date(log.timestamp).toLocaleString()}</Text></Table.Td>
-                          <Table.Td><Text size="xs" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>{log.action}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{log.impersonator_username || log.impersonator || '-'}</Text></Table.Td>
-                          <Table.Td><Text size="xs">{log.target_user_username || log.target_user || '-'}</Text></Table.Td>
-                          <Table.Td><Text size="xs" ff="monospace">{log.tenant_id || '-'}</Text></Table.Td>
-                          <Table.Td><Badge size="xs" color={log.status_code < 400 ? 'cyan' : 'red'} variant="light">{log.status_code}</Badge></Table.Td>
-                          <Table.Td><Text size="xs" ff="monospace">{log.ip_address || '-'}</Text></Table.Td>
+                <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+                  <ScrollArea style={{ height: '600px' }}>
+                    <Table verticalSpacing="xs" highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Timestamp</Table.Th>
+                          <Table.Th>Action</Table.Th>
+                          <Table.Th>Impersonator</Table.Th>
+                          <Table.Th>Target User</Table.Th>
+                          <Table.Th>Tenant ID</Table.Th>
+                          <Table.Th>Status</Table.Th>
+                          <Table.Th>IP</Table.Th>
                         </Table.Tr>
-                      ))}
-                    </Table.Tbody>
-                  </Table>
-                </ScrollArea>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {auditLogs.map((log: AuditLogEntry, idx: number) => (
+                          <Table.Tr key={log.id || idx}>
+                            <Table.Td><Text size="xs" ff="monospace">{new Date(log.timestamp).toLocaleString()}</Text></Table.Td>
+                            <Table.Td><Text size="xs" style={{ maxWidth: '250px', wordBreak: 'break-word' }}>{log.action}</Text></Table.Td>
+                            <Table.Td><Text size="xs">{log.impersonator_username || log.impersonator || '-'}</Text></Table.Td>
+                            <Table.Td><Text size="xs">{log.target_user_username || log.target_user || '-'}</Text></Table.Td>
+                            <Table.Td><Text size="xs" ff="monospace">{log.tenant_id || '-'}</Text></Table.Td>
+                            <Table.Td><Badge size="xs" color={log.status_code < 400 ? 'green' : 'red'} variant="light">{log.status_code}</Badge></Table.Td>
+                            <Table.Td><Text size="xs" ff="monospace">{log.ip_address || '-'}</Text></Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                </Card>
               )}
             </Stack>
           </Tabs.Panel>
         )}
       </Tabs>
 
-      {/* User Detail Drawer */}
+      {/* User Detail & Interactive Profile Editor Drawer */}
       <Drawer
         opened={!!selectedUser}
         onClose={() => {
@@ -347,55 +518,164 @@ export const Users = () => {
         }}
         position="right"
         size="lg"
-        title={<Text fw={700}>Deep-Dive Telemetry: {selectedUser?.name}</Text>}
-        styles={{ content: { background: 'var(--mantine-color-body)' }, header: { background: 'transparent' } }}
+        title={<Text fw={700} size="lg">Modify Profile & Telemetry Details</Text>}
+        styles={{ content: { background: 'var(--surface-secondary)' }, header: { background: 'transparent' } }}
       >
         {selectedUser && (
-          <Stack gap="xl">
-            <SimpleGrid cols={2}>
-              <Box p="md" style={{ borderRadius: '8px' }}>
-                <Text size="xs" c="dimmed" tt="uppercase">Username</Text>
-                <Text size="md" fw={600}>{selectedUser.name}</Text>
-              </Box>
-              <Box p="md" style={{ borderRadius: '8px' }}>
-                <Text size="xs" c="dimmed" tt="uppercase">Role</Text>
-                <Badge color={selectedUser.role === 'GLOBAL_OWNER' ? 'red' : 'cyan'}>{selectedUser.role}</Badge>
-              </Box>
-            </SimpleGrid>
+          <ScrollArea style={{ height: 'calc(100vh - 80px)' }} offsetScrollbars>
+            <Stack gap="xl" p="md">
+              {/* Profile Card Summary */}
+              <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+                <Group gap="md">
+                  <Box
+                    w={48} h={48}
+                    style={{
+                      borderRadius: 12,
+                      background: 'var(--brand-gradient)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    {editForm.is_active ? <Unlock size={24} color="white" /> : <Lock size={24} color="white" />}
+                  </Box>
+                  <Stack gap={2}>
+                    <Text fw={700} size="md">{selectedUser.name}</Text>
+                    <Text size="xs" c="dimmed">{selectedUser.email}</Text>
+                  </Stack>
+                </Group>
+              </Card>
 
-            <Box>
-              <Text fw={600} mb="sm" c="orange">Impersonation (Audited Action)</Text>
-              {impersonateResult ? (
-                <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
-                  <Text size="sm" c="green">Impersonation successful!</Text>
-                  <Text size="xs" c="dimmed">
-                    Token for <b>{impersonateResult.impersonated_user}</b> ({impersonateResult.impersonated_role}) stored.
+              {/* Edit Identity Information Section */}
+              <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+                <Stack gap="sm">
+                  <Text fw={700} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Shield size={16} color="cyan" /> Identity Configuration
                   </Text>
-                  <Button size="xs" variant="light" color="red" onClick={() => {
-                    localStorage.removeItem('impersonation_token');
-                    localStorage.removeItem('impersonated_user');
-                    setImpersonateResult(null);
-                  }}>Clear Impersonation Token</Button>
+                  
+                  <TextInput
+                    label="Username"
+                    value={editForm.username}
+                    onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                    required
+                  />
+                  <TextInput
+                    label="Email Address"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    required
+                    leftSection={<Mail size={14} />}
+                  />
+                  <Select
+                    label="System Role"
+                    value={editForm.role}
+                    onChange={(v) => setEditForm({ ...editForm, role: v || 'ATHLETE' })}
+                    data={[
+                      { value: 'ATHLETE', label: 'Athlete' },
+                      { value: 'TENANT_MODERATOR', label: 'Moderator' },
+                      { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+                      { value: 'SPONSOR', label: 'Sponsor' },
+                      { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+                    ]}
+                    disabled={!isGlobalOwner && editForm.role === 'GLOBAL_OWNER'}
+                  />
+                  {isGlobalOwner && (
+                    <Select
+                      label="Assigned Tenant"
+                      value={editForm.tenant_id}
+                      onChange={(v) => setEditForm({ ...editForm, tenant_id: v || '' })}
+                      data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))}
+                      clearable
+                      leftSection={<Building size={14} />}
+                    />
+                  )}
+                  <Group justify="space-between" mt="xs">
+                    <Text size="sm" fw={500}>Account Status (Active / Unlocked)</Text>
+                    <Switch
+                      checked={editForm.is_active}
+                      onChange={(e) => setEditForm({ ...editForm, is_active: e.currentTarget.checked })}
+                      color="cyan"
+                    />
+                  </Group>
                 </Stack>
-              ) : (
-                <Button
-                  color="red"
-                  variant="light"
-                  leftSection={<ShieldAlert size={16} />}
-                  fullWidth
-                  loading={impersonating}
-                  onClick={() => handleImpersonate(selectedUser.id)}
-                >
-                  {impersonating ? 'Generating Token...' : 'Impersonate User'}
+              </Card>
+
+              {/* Avatars & Biography Customization Section */}
+              <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+                <Stack gap="sm">
+                  <Text fw={700} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🎨 Custom Profile Branding
+                  </Text>
+                  <TextInput
+                    label="Custom Avatar URL"
+                    value={editForm.avatar}
+                    placeholder="https://example.com/avatar.png"
+                    onChange={(e) => setEditForm({ ...editForm, avatar: e.target.value })}
+                  />
+                  <Textarea
+                    label="Biography Description"
+                    placeholder="Enter athlete bio, training goals or company description..."
+                    minRows={3}
+                    maxRows={6}
+                    value={editForm.bio}
+                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                  />
+                </Stack>
+              </Card>
+
+              {/* Password Management */}
+              <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
+                <Stack gap="sm">
+                  <Text fw={700} size="sm">🔐 Security Credentials</Text>
+                  <PasswordInput
+                    label="Force Reset Password"
+                    placeholder="Enter new password to force update"
+                    value={editForm.password}
+                    onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  />
+                </Stack>
+              </Card>
+
+              {/* Save & Impersonation Buttons */}
+              <Stack gap="sm">
+                <Button color="cyan" fullWidth onClick={handleUpdateUser} loading={actionLoading}>
+                  Save All Profile Changes
                 </Button>
-              )}
-            </Box>
-          </Stack>
+
+                {/* Impersonation Options for Admins */}
+                <Box mt="md">
+                  <Text fw={700} size="sm" mb="xs" c="orange">Impersonation Sandbox</Text>
+                  {impersonateResult ? (
+                    <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
+                      <Text size="sm" c="green">Impersonating {impersonateResult.impersonated_user}</Text>
+                      <Text size="xs" c="dimmed">
+                        Session token cached. The frontend mimics this user's dashboards and permissions.
+                      </Text>
+                      <Button size="xs" variant="light" color="red" onClick={() => {
+                        localStorage.removeItem('impersonation_token');
+                        localStorage.removeItem('impersonated_user');
+                        setImpersonateResult(null);
+                      }}>End Impersonation Session</Button>
+                    </Stack>
+                  ) : (
+                    <Button
+                      color="orange"
+                      variant="light"
+                      leftSection={<ShieldAlert size={16} />}
+                      fullWidth
+                      loading={impersonating}
+                      onClick={() => handleImpersonate(selectedUser.id)}
+                    >
+                      {impersonating ? 'Connecting Session...' : 'Launch Impersonated Session'}
+                    </Button>
+                  )}
+                </Box>
+              </Stack>
+            </Stack>
+          </ScrollArea>
         )}
       </Drawer>
 
       {/* Create User Modal */}
-      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title={<Text fw={700}>Create New User</Text>} centered size="md">
+      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title={<Text fw={700}>Create New System User</Text>} centered size="md">
         <Stack gap="md">
           <TextInput label="Username" value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} required />
           <TextInput label="Email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
