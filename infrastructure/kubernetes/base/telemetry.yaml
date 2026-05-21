@@ -20,7 +20,7 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: DATABASE_URL
-          value: postgres://sport_app:sportpass@db-service:5432/sport
+          value: postgres://sportuser:sportpass@db-service:5432/sport
         - name: REDIS_URL
           value: redis://redis-service:6379/0
         ports:

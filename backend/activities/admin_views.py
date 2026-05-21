@@ -511,10 +511,12 @@ class WorkerStatusView(APIView):
 
             if stats:
                 for worker_name, worker_stats in stats.items():
+                    total_raw = worker_stats.get('total', 0)
+                    total_count = sum(total_raw.values()) if isinstance(total_raw, dict) else int(total_raw or 0)
                     worker_info = {
                         'name': worker_name,
                         'pool_size': worker_stats.get('pool', {}).get('max-concurrency', 0) if isinstance(worker_stats.get('pool'), dict) else 0,
-                        'total_tasks': worker_stats.get('total', 0),
+                        'total_tasks': total_count,
                     }
                     result['workers'].append(worker_info)
 

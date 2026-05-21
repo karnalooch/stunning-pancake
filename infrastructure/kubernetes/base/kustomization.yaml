@@ -10,6 +10,7 @@ resources:
   - database.yaml
   - telemetry.yaml
   - traccar.yaml
+  - celery.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: sport-platform

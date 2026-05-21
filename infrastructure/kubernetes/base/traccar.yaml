@@ -19,10 +19,8 @@ spec:
         image: traccar/traccar:latest
         ports:
         - containerPort: 8082
-        - containerPort: 5000-5150
+        - containerPort: 5055
           protocol: TCP
-        - containerPort: 5000-5150
-          protocol: UDP
 ---
 apiVersion: v1
 kind: Service

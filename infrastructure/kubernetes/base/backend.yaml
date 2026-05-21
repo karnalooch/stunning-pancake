@@ -41,13 +41,22 @@ spec:
         ports:
         - containerPort: 8000
         env:
+        - name: DEBUG
+          value: "1"
+        - name: SECRET_KEY
+          value: "django-insecure-prod-k9z!x2y8v4w7u5t3r1q0p9o8n7m6l5k4j3i2h1g"
         - name: DATABASE_URL
-          value: postgres://sport_app:sportpass@db-service:5432/sport
+          value: postgres://sportuser:sportpass@db-service:5432/sport
         - name: CELERY_BROKER_URL
           valueFrom:
             configMapKeyRef:
               name: sport-config
               key: CELERY_BROKER_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sport-config
+              key: REDIS_URL
         livenessProbe:
           httpGet:
             path: /health/

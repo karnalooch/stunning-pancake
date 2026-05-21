@@ -148,7 +148,7 @@ services:
     build: ./backend
     container_name: 4velo_celery_worker
     restart: always
-    command: celery -A core worker -Q critical,notifications -l info --concurrency=4
+    command: celery -A core worker -Q critical,notifications,default,simulation -l info --concurrency=4
     environment:
       DEBUG: ${DEBUG:-0}
       SECRET_KEY: ${SECRET_KEY}

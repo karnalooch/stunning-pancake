@@ -4,6 +4,7 @@ metadata:
   name: sport-config
 data:
     CELERY_BROKER_URL: "redis://redis-service:6379/0"
+    REDIS_URL: "redis://redis-service:6379/0"
     EXPO_PUBLIC_TELEMETRY_URL: "https://api.sport-platform.com"
 ---
 apiVersion: autoscaling/v2

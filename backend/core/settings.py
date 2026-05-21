@@ -206,6 +206,8 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3002',
     'http://localhost:3003',
     'http://localhost:8000',
+    'http://localhost:8080',
+    'http://127.0.0.1:8080',
     'http://localhost:8081',
     'https://sport-admin.vercel.app',
     'https://sport-platform.com',
@@ -261,6 +263,7 @@ CELERY_TASK_ROUTES = {
     'activities.ml_retrain.*': {'queue': 'default'},
     'events.tasks.*': {'queue': 'critical'},
     'notifications.tasks.*': {'queue': 'notifications'},
+    'activities.simulator_tasks.*': {'queue': 'simulation'},
 }
 CELERY_TASK_QUEUE_MAX_PRIORITY = 10
 

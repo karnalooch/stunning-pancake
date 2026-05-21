@@ -34,7 +34,7 @@ def get_batch_state() -> dict:
     # Decode bytes to strings
     state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
     # Parse numeric fields
-    state['running'] = state.get('running', 'false') == 'true'
+    state['running'] = state.get('running', 'false').lower() == 'true'
     state['scale'] = float(state.get('scale', 0))
     state['days'] = int(state.get('days', 0))
     state['total_users'] = int(state.get('total_users', 0))
@@ -110,7 +110,7 @@ def get_live_state() -> dict:
             'cheaters_caught': 0,
         }
     state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
-    state['running'] = state.get('running', 'false') == 'true'
+    state['running'] = state.get('running', 'false').lower() == 'true'
     state['total_users'] = int(state.get('total_users', 0))
     state['active_ratio'] = float(state.get('active_ratio', 0))
     state['cheat_ratio'] = float(state.get('cheat_ratio', 0))

@@ -1,4 +1,4 @@
-function Start-4VELODev {
+function Start-SportDev {
     Write-Host "[START] Uruchamiam 4VELO Dev Engine v0.1.0-beta.1..." -ForegroundColor Green
 
 # --- DODANE PRZEZ GEMINI CLI: AUTOMATYCZNE TUNELE ---
@@ -37,7 +37,7 @@ Start-Job -Name PortForwardOwner -ScriptBlock { kubectl port-forward service/spo
             # Apply K8s
             Write-Host "[K8S] Odświeżam Kubernetes..."
             kubectl apply -k infrastructure/kubernetes/base/
-            kubectl rollout restart deployment sport-backend sport-owner
+            kubectl rollout restart deployment sport-backend sport-owner sport-celery-worker sport-celery-beat
             
             $lastHash = $currentHash
             Write-Host "OK System gotowy. Czekam na zmiany..." -ForegroundColor Green

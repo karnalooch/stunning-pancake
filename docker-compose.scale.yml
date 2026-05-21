@@ -251,7 +251,7 @@ services:
     build: ./backend
     container_name: sport_celery_default
     restart: always
-    command: celery -A core worker -Q default -l info --concurrency=8
+    command: celery -A core worker -Q default,simulation -l info --concurrency=8
     environment:
       SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}

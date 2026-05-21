@@ -657,7 +657,7 @@ export const SimulatorPage: React.FC = () => {
                                     {workerStatus.workers.map((w, i) => (
                                         <Box key={i} p="xs" style={{ background: 'var(--surface-secondary)', borderRadius: 8 }}>
                                             <Text size="xs" fw={500} truncate>{w.name}</Text>
-                                            <Text size="xs" c="dimmed">Pool: {w.pool_size} | Processed: {w.total_tasks}</Text>
+                                            <Text size="xs" c="dimmed">Pool: {w.pool_size} | Processed: {typeof w.total_tasks === 'object' && w.total_tasks !== null ? Object.values(w.total_tasks as Record<string, number>).reduce((a, b) => a + b, 0) : Number(w.total_tasks ?? 0)}</Text>
                                         </Box>
                                     ))}
                                 </SimpleGrid>

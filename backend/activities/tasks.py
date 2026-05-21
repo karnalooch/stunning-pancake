@@ -18,16 +18,6 @@ from kombu import Queue, Exchange
 
 logger = logging.getLogger(__name__)
 
-# Celery queue configuration
-from celery import current_app as celery_app
-celery_app.conf.task_queues = (
-    Queue('default', Exchange('default'), routing_key='default'),
-    Queue('simulation', Exchange('simulation'), routing_key='simulation'),
-)
-celery_app.conf.task_routes = {
-    'activities.simulator_tasks.*': {'queue': 'simulation'},
-}
-
 
 @shared_task(
     bind=True,
@@ -260,3 +250,7 @@ def recalculate_city_leaderboard(city_id: str = "") -> None:
         if scores:
             LeaderboardService.batch_recalculate(cid, scores)
             refresh_city_rankings_mv.delay()
+
+
+# Import simulator tasks so they are registered with Celery
+from . import simulator_tasks

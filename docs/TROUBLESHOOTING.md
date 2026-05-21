@@ -63,6 +63,38 @@ curl -X POST http://localhost:8000/api/auth/token/refresh/ \
   -d '{"refresh": "<refresh_token>"}'
 ```
 
+### Błąd: Pusty czarny pulpit z lewym panelem "SPORT OS PRO EDITION"
+
+**Przyczyna:** 
+* Przeglądarka zapisała w pamięci podręcznej (Cache / Service Worker) stary kod statyczny panelu sprzed refaktora interfejsu (commit `0f9ca9d3`).
+* Uruchomienie starej, zamrożonej wersji desktopowej (Portable `.exe`).
+
+**Rozwiązanie:**
+1. W przeglądarce wykonaj twardy restart cache na stronie `http://localhost:8080` (lub w chmurze):
+   * **Windows/Linux**: `Ctrl + F5` (lub `Ctrl + Shift + R`)
+   * **Mac**: `Cmd + Shift + R`
+   * Możesz również otworzyć stronę w oknie incognito przeglądarki.
+2. Jeśli używasz wersji deweloperskiej desktopowej (Electron), przebuduj aplikację:
+   ```bash
+   cd admin
+   npm run build:exe
+   ```
+
+### Błąd: React Error #31 "Objects are not valid as a React child" przy starcie symulatora (Krok 4)
+
+**Przyczyna:** Celery zwraca statystyki workerów w `worker_stats.get('total')` jako słownik `{task_name: count}` zamiast liczby całkowitej. Próba wyrenderowania obiektu (słownika) bezpośrednio w JSX frontendu powoduje paraliż renderowania React.
+
+**Rozwiązanie:**
+1. **Backend**: Upewnij się, że w `backend/activities/admin_views.py` statystyki są sumowane przed wysłaniem odpowiedzi API:
+   ```python
+   total_raw = worker_stats.get('total', 0)
+   total_count = sum(total_raw.values()) if isinstance(total_raw, dict) else int(total_raw or 0)
+   ```
+2. **Frontend**: W pliku `admin/src/modules/analytics/SimulatorPage.tsx` zastosuj bezpieczną konwersję/fallback typu przed renderowaniem liczby zadań:
+   ```tsx
+   typeof total_tasks === 'object' ? 0 : total_tasks
+   ```
+
 ---
 
 ## 🐘 Problemy z bazą danych

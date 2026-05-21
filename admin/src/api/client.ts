@@ -1,9 +1,16 @@
 import axios from 'axios';
 import { useAuth } from '../core/auth/useAuth';
 
-let baseURL = import.meta.env.VITE_API_URL || '/api';
-if (!baseURL.startsWith('http://') && !baseURL.startsWith('https://')) {
-  baseURL = `https://${baseURL}`;
+let baseURL = import.meta.env.VITE_API_URL || '';
+if (!baseURL) {
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    baseURL = 'http://localhost:8000/api';
+  } else {
+    baseURL = '/api';
+  }
+}
+if (baseURL.startsWith('/') && typeof window !== 'undefined') {
+  baseURL = `${window.location.protocol}//${window.location.host}${baseURL}`;
 }
 
 export const apiClient = axios.create({

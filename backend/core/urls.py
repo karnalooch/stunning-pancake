@@ -1,6 +1,7 @@
 from core import google_auth
 from django.contrib import admin
 from django.urls import path, include
+from django.http import HttpResponse
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
 from core.ogc_views import ogc_conformance, ogc_collections, ogc_collection_items, ogc_single_item
@@ -47,6 +48,7 @@ urlpatterns = [
     path('api/auth/google/callback/', google_auth.google_callback, name='google-callback'),
     # Feature Flags (Hyperscale — admin CRUD)
     path('api/settings/flags/', include('core.feature_urls')),
+    path('health/', lambda r: HttpResponse('OK'), name='health'),
 ]
 
 

@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-celery-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport
+      tier: celery-worker
+  template:
+    metadata:
+      labels:
+        app: sport
+        tier: celery-worker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 2000
+      containers:
+      - name: worker
+        image: sport-backend:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        command: ["celery"]
+        args: ["-A", "core", "worker", "-Q", "critical,notifications,default,simulation", "-l", "info", "--concurrency=4"]
+        env:
+        - name: DEBUG
+          value: "1"
+        - name: SECRET_KEY
+          value: "django-insecure-prod-k9z!x2y8v4w7u5t3r1q0p9o8n7m6l5k4j3i2h1g"
+        - name: DATABASE_URL
+          value: postgres://sportuser:sportpass@db-service:5432/sport
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sport-config
+              key: CELERY_BROKER_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sport-config
+              key: REDIS_URL
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport
+      tier: celery-beat
+  template:
+    metadata:
+      labels:
+        app: sport
+        tier: celery-beat
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 2000
+      containers:
+      - name: beat
+        image: sport-backend:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        command: ["celery"]
+        args: ["-A", "core", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+        env:
+        - name: DEBUG
+          value: "1"
+        - name: SECRET_KEY
+          value: "django-insecure-prod-k9z!x2y8v4w7u5t3r1q0p9o8n7m6l5k4j3i2h1g"
+        - name: DATABASE_URL
+          value: postgres://sportuser:sportpass@db-service:5432/sport
+        - name: CELERY_BROKER_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sport-config
+              key: CELERY_BROKER_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: sport-config
+              key: REDIS_URL
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
