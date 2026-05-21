@@ -1,4 +1,4 @@
-from core import google_auth
+from core import google_auth, facebook_auth
 from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
@@ -46,6 +46,9 @@ urlpatterns = [
     # Google OAuth2 — custom (bypasses allauth)
     path('api/auth/google/login/', google_auth.google_login, name='google-login'),
     path('api/auth/google/callback/', google_auth.google_callback, name='google-callback'),
+    # Facebook OAuth2 — custom (bypasses allauth)
+    path('api/auth/facebook/login/', facebook_auth.facebook_login, name='facebook-login'),
+    path('api/auth/facebook/callback/', facebook_auth.facebook_callback, name='facebook-callback'),
     # Feature Flags (Hyperscale — admin CRUD)
     path('api/settings/flags/', include('core.feature_urls')),
     path('health/', lambda r: HttpResponse('OK'), name='health'),
