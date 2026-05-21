@@ -136,39 +136,67 @@ admin/src/
 
 ## Navigation Structure
 
+The sidebar menu is logically grouped under 6 core business sections to avoid redundancy, with permissions restricted by user role.
+
 ```
 ┌─────────────────────────────────┐
 │ 4VELO Admin OS                  │
 │ ─────────────────────────────── │
 │ OVERVIEW                        │
 │  📊  Dashboard                  │
+│  📱  Smartphone Simulator       │
 │                                 │
 │ MANAGEMENT                      │
 │  🏢  Tenants & Branding         │
-│  👥  Users                      │
+│  👥  Users Manager (Drawer CRUD)│
+│  🏢  Departments                │
 │                                 │
 │ OPERATIONS                      │
-│  🛡️  Anti-Cheat                │
-│  🎁  Sponsorship                │
+│  🏃  Activities                 │
+│  🛡️  Anti-Cheat SOC Console     │
+│  🏆  Events Manager CRUD        │
+│                                 │
+│ SPONSORSHIP & REWARDS           │
+│  📍  Sponsor POI Map Editor     │
+│  📊  Sponsorship Analytics      │
+│  🎫  Vouchers & Rewards         │
+│                                 │
+│ ANALYTICS & FEEDBACK            │
+│  📈  Department Analytics       │
+│  🗺️  Global Heatmaps            │
+│  💬  Beta Feedback Logs         │
 │                                 │
 │ SYSTEM                          │
 │  ⚙️  Settings                   │
+│  🛡️  RBAC permissions           │
 │ ─────────────────────────────── │
 │  🌙 Dark mode                   │
 │  👤 Admin (Global Owner)  [⏻]  │
 └─────────────────────────────────┘
 ```
 
-Routes are filtered by role:
+Routes are strictly filtered at the router level by user role:
 
-| Route | GLOBAL_OWNER | TENANT_ADMIN | TENANT_MODERATOR | SPONSOR |
-|-------|-------------|-------------|-----------------|---------|
-| Dashboard | ✅ | ✅ | ✅ | |
-| Tenants & Branding | ✅ | ✅ | | |
-| Users | ✅ | ✅ | | |
-| Anti-Cheat | ✅ | ✅ | ✅ | |
-| Sponsorship | ✅ | | | ✅ |
-| Settings | ✅ | ✅ | | |
+| Route / Module | GLOBAL_OWNER | TENANT_ADMIN | TENANT_MODERATOR | SPONSOR | ATHLETE |
+|----------------|--------------|--------------|------------------|---------|---------|
+| **Dashboard** | ✅ (Global) | ✅ (Tenant) | ✅ (Read-Only) | | |
+| **Simulator** | ✅ | ✅ | | | |
+| **Tenants & Branding** | ✅ | ✅ (Own Tenant)| | | |
+| **Users Manager** | ✅ (All + Edit)| ✅ (Tenant + Edit)| ✅ (Read-Only) | | |
+| **Activities** | ✅ | ✅ | ✅ | | |
+| **Anti-Cheat SOC** | ✅ (All + Moderation)| ✅ (Tenant + Moderation)| ✅ (Read-Only) | | |
+| **Events Manager** | ✅ (CRUD) | ✅ (Tenant CRUD) | ✅ (Read-Only) | | |
+| **Sponsor POI Map** | ✅ (CRUD) | ✅ (Tenant CRUD) | | ✅ (Own CRUD) | |
+| **Vouchers & Rewards**| ✅ (Manage) | | | ✅ (Manage) | |
+| **System Settings** | ✅ | ✅ | | | |
+
+---
+
+## 🛠️ V3.0 Architecture & Roadmap Specification
+
+For deep-dive details on high-performance pagination, MapLibre GL GPS tracking integrations, interactive 3D sponsorship voucher cards, and our upcoming AI Coach Customization Studio, please consult our dedicated specification document:
+👉 **[ROADMAP_V3.md](file:///e:/Antigravity/projekty/SPORT/docs/admin/ROADMAP_V3.md)**
+
 
 ## Reusable Components
 
