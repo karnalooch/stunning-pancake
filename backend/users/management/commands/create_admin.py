@@ -11,7 +11,7 @@ User = get_user_model()
 
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'global_owner')
 ADMIN_EMAIL = os.getenv('ADMIN_EMAIL', 'admin@4velo.app')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD') or os.getenv('GLOBAL_OWNER_PASSWORD')
 
 
 class Command(BaseCommand):

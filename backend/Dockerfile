@@ -46,4 +46,4 @@ RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
 USER 1001
 
 EXPOSE 8000
-CMD python manage.py migrate --no-input && python manage.py create_admin && python manage.py collectstatic --no-input && gunicorn --bind 0.0.0.0:${PORT:-8000} --workers 3 core.wsgi:application
+CMD python manage.py migrate --no-input && python manage.py create_admin && python seed_data.py && python manage.py collectstatic --no-input && gunicorn --bind 0.0.0.0:${PORT:-8000} --workers 3 core.wsgi:application

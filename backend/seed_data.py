@@ -24,7 +24,8 @@ def seed():
             'role': Role.GLOBAL_OWNER
         }
     )
-    owner.set_password('admin123')
+    password = os.getenv('ADMIN_PASSWORD') or os.getenv('GLOBAL_OWNER_PASSWORD', 'admin123')
+    owner.set_password(password)
     owner.save()
 
     # 2. Create Tenants
