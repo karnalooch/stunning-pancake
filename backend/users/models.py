@@ -134,3 +134,8 @@ class AuditLog(models.Model):
         impersonator_name = self.impersonator.username if self.impersonator else 'N/A'
         target_name = self.target_user.username if self.target_user else 'N/A'
         return f"Audit: {impersonator_name} → {target_name} - {self.action}"
+
+
+# Import other models in this app at the bottom to ensure they are registered with Django's app registry.
+from .departments import Department, UserDepartment
+from .rbac_models import Permission, Role, RolePermission, UserRole
