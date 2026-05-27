@@ -96,7 +96,17 @@ export const SimulatorPage: React.FC = () => {
                 clear: true,
                 skip_activities: !generateActivities,
             });
-            notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
+            notifications.show({ title: 'Cyclists Creating...', message: `Generating ${cyclists.toLocaleString()} users. Wait for completion...`, color: 'yellow' });
+        await new Promise<void>((resolve) => {
+            const check = setInterval(async () => {
+                try {
+                    const status = await SimulatorApi.getBatchStatus();
+                    setBatchStatus(status);
+                    if (!status.running) { clearInterval(check); resolve(); }
+                } catch { }
+            }, 2000);
+        });
+        notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
         } catch (err: any) {
             notifications.show({ title: 'Generation Error', message: err?.response?.data?.error || err.message, color: 'red' });
             setLaunching(false);
@@ -332,3 +342,4 @@ export const SimulatorPage: React.FC = () => {
         </Box>
     );
 };
+
