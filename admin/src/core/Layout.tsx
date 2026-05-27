@@ -25,12 +25,6 @@ const NAV_SECTIONS = [
         path: '/owner/dashboard',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
-      {
-        icon: Play,
-        label: 'Simulator',
-        path: '/owner/analytics/simulator',
-        roles: ['GLOBAL_OWNER'],
-      },
     ],
   },
   {
@@ -123,6 +117,12 @@ const NAV_SECTIONS = [
         label: 'Feedback',
         path: '/owner/analytics/feedback',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: Play,
+        label: 'Simulator',
+        path: '/owner/analytics/simulator',
+        roles: ['GLOBAL_OWNER'],
       },
     ],
   },
