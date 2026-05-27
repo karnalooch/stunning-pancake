@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { MantineProvider, Box, Text, Title, Button, Loader } from '@mantine/core';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Notifications } from '@mantine/notifications';
@@ -6,31 +6,34 @@ import '@mantine/notifications/styles.css';
 import { theme } from './theme/index';
 
 import { Layout } from './core/Layout';
-import { Dashboard } from './modules/dashboard/Dashboard';
-import { AntiCheat } from './modules/anti-cheat/AntiCheat';
-import { Users } from './modules/users/Users';
-import { WhiteLabelEngine } from './modules/tenants/WhiteLabelEngine';
 import { PermissionGuard } from './core/guards/PermissionGuard';
-import { SponsorDashboard } from './modules/sponsor/SponsorDashboard';
-import { LandingPage } from './modules/public/LandingPage';
 import { LoginPage } from './core/auth/LoginPage';
-import { SettingsScreen } from './modules/settings/SettingsScreen';
-import { Departments } from './modules/departments/Departments';
-import { DepartmentUsers } from './modules/departments/DepartmentUsers';
-import { EventsManager } from './modules/analytics/EventsManager';
-import { SponsorshipAnalytics } from './modules/analytics/SponsorshipAnalytics';
-import { RewardsVouchers } from './modules/analytics/RewardsVouchers';
-import { BetaFeedback } from './modules/analytics/BetaFeedback';
-import { ExportCenter } from './modules/analytics/ExportCenter';
-import { LeaderboardManager } from './modules/analytics/LeaderboardManager';
-import { RbacManager } from './modules/analytics/RbacManager';
-import { ApiPlayground } from './modules/settings/ApiPlayground';
-import { FeatureFlags } from './modules/settings/FeatureFlags';
-import { DepartmentAnalyticsPage } from './modules/analytics/DepartmentAnalyticsPage';
-import { GlobalHeatmap } from './modules/analytics/GlobalHeatmap';
-import { SimulatorPage } from './modules/analytics/SimulatorPage';
-import { ActivityDetail } from './modules/dashboard/ActivityDetail';
-import { ActivitiesList } from './modules/analytics/ActivitiesList';
+import { LandingPage } from './modules/public/LandingPage';
+
+const Dashboard = lazy(() => import('./modules/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
+const AntiCheat = lazy(() => import('./modules/anti-cheat/AntiCheat').then(m => ({ default: m.AntiCheat })));
+const Users = lazy(() => import('./modules/users/Users').then(m => ({ default: m.Users })));
+const WhiteLabelEngine = lazy(() => import('./modules/tenants/WhiteLabelEngine').then(m => ({ default: m.WhiteLabelEngine })));
+const SponsorDashboard = lazy(() => import('./modules/sponsor/SponsorDashboard').then(m => ({ default: m.SponsorDashboard })));
+const SettingsScreen = lazy(() => import('./modules/settings/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const Departments = lazy(() => import('./modules/departments/Departments').then(m => ({ default: m.Departments })));
+const DepartmentUsers = lazy(() => import('./modules/departments/DepartmentUsers').then(m => ({ default: m.DepartmentUsers })));
+const EventsManager = lazy(() => import('./modules/analytics/EventsManager').then(m => ({ default: m.EventsManager })));
+const SponsorshipAnalytics = lazy(() => import('./modules/analytics/SponsorshipAnalytics').then(m => ({ default: m.SponsorshipAnalytics })));
+const RewardsVouchers = lazy(() => import('./modules/analytics/RewardsVouchers').then(m => ({ default: m.RewardsVouchers })));
+const BetaFeedback = lazy(() => import('./modules/analytics/BetaFeedback').then(m => ({ default: m.BetaFeedback })));
+const ExportCenter = lazy(() => import('./modules/analytics/ExportCenter').then(m => ({ default: m.ExportCenter })));
+const LeaderboardManager = lazy(() => import('./modules/analytics/LeaderboardManager').then(m => ({ default: m.LeaderboardManager })));
+const RbacManager = lazy(() => import('./modules/analytics/RbacManager').then(m => ({ default: m.RbacManager })));
+const ApiPlayground = lazy(() => import('./modules/settings/ApiPlayground').then(m => ({ default: m.ApiPlayground })));
+const FeatureFlags = lazy(() => import('./modules/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })));
+const DepartmentAnalyticsPage = lazy(() => import('./modules/analytics/DepartmentAnalyticsPage').then(m => ({ default: m.DepartmentAnalyticsPage })));
+const GlobalHeatmap = lazy(() => import('./modules/analytics/GlobalHeatmap').then(m => ({ default: m.GlobalHeatmap })));
+const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
+const ActivityDetail = lazy(() => import('./modules/dashboard/ActivityDetail').then(m => ({ default: m.ActivityDetail })));
+const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').then(m => ({ default: m.ActivitiesList })));
+
+const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
@@ -108,7 +111,8 @@ export default function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         ) : (
-          <Routes>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/owner" element={<Layout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
@@ -301,6 +305,7 @@ export default function App() {
             />
             <Route path="*" element={<Navigate to="/owner/dashboard" replace />} />
           </Routes>
+          </Suspense>
         )}
       </HashRouter>
     </MantineProvider>

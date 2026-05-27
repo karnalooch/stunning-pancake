@@ -121,7 +121,8 @@ function main(): never {
   const missing = [...codeEnvVars].filter((k) => !allEnvKeys.has(k));
   // Filter out common Node.js / React built-ins and regex-test artifacts
   const builtIns = ['NODE_ENV', 'CI', 'npm_lifecycle_event', 'PUBLIC_URL', 'PORT',
-    'VAR_NAME', 'VAR', 'VITE_VAR', 'VITE_X', 'X', 'VITE_API_URL'];
+    'VAR_NAME', 'VAR', 'VITE_VAR', 'VITE_X', 'X', 'VITE_API_URL',
+    'DYNO', 'RAILWAY_SERVICE_NAME', 'RENDER', 'E2E_BASE_URL'];
   const realMissing = missing.filter((k) => !builtIns.includes(k));
   for (const key of realMissing.sort()) {
     // Check if it's a VITE_ prefixed (used by admin)

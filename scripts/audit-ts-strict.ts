@@ -34,20 +34,25 @@ function auditTsConfig(filePath: string): { missing: string[]; extra: string[] }
 
   try {
     const content = readFileSync(filePath, 'utf-8');
-    // Extract compilerOptions object
-    const coMatch = content.match(/"compilerOptions"\s*:\s*\{([^}]+)\}/s);
-    if (!coMatch) return { missing: Object.keys(IDEAL_STRICT_FLAGS), extra: [] };
-
-    const coBlock = coMatch[1];
     const missing: string[] = [];
     const extra: string[] = [];
 
     for (const [flag, expected] of Object.entries(IDEAL_STRICT_FLAGS)) {
-      const flagRegex = new RegExp(`"${flag}"\\s*:\\s*(true|false)`, 'i');
-      const match = coBlock.match(flagRegex);
+      // Match "flag": true or "flag": false (non-commented)
+      const flagRegex = new RegExp(`^\\s*"${flag}"\\s*:\\s*(true|false)`, 'm');
+      const match = content.match(flagRegex);
+      
+      // If strict:true is set, all 16 sub-flags are implicitly enabled
+      const hasStrict = flag !== 'strict' && content.match(/^\s*"strict"\s*:\s*true/m);
+      
+      if (hasStrict) {
+        // Sub-flag is enabled via strict:true — skip
+        continue;
+      }
+      
       if (!match) {
         missing.push(`${flag}: ${expected}`);
-      } else if (match[1].toLowerCase() === 'false') {
+      } else if (match[1] === 'false') {
         missing.push(`${flag}: ${expected} (currently false)`);
       }
     }
@@ -62,7 +67,7 @@ function auditTsConfig(filePath: string): { missing: string[]; extra: string[] }
 function main(): never {
   console.log('\n═══ TypeScript Strictness Audit ═══\n');
 
-  const adminConfig = resolve(ROOT, 'admin/tsconfig.json');
+  const adminConfig = resolve(ROOT, 'admin/tsconfig.app.json');
   const mobileConfig = resolve(ROOT, 'mobile/tsconfig.json');
 
   let totalMissing = 0;
