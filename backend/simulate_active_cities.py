@@ -273,9 +273,9 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     from users.departments import Department, UserDepartment
     from activities.models import Activity
 
-    # If total_users is specified, use it directly and pick random cities
+    # If total_users is specified, use it directly across random cities
     if total_users:
-        num_cities = num_cities or random.randint(3, min(100, len(CITIES)))
+        num_cities = random.randint(max(3, num_cities), len(CITIES))
         selected_cities = random.sample(CITIES, num_cities)
         users_per_city = total_users // num_cities
         scale = 0.01  # minimal scale for department calculations
@@ -283,7 +283,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         selected_cities = CITIES
         scale = max(0.001, min(1.0, scale))
         users_per_city = int(11_000 * scale)
-    activities_per_user = max(1, int(4.8 * scale * (days / 30)))  # ~5 activities per user at full scale over 30 days
+    activities_per_user = max(1, int(4.8 * scale * (days / 30)))  # ~5 at full scale
     departments_per_city = max(5, int(20 * scale))
 
     print()
