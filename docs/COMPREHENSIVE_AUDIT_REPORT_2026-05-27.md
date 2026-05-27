@@ -1,6 +1,49 @@
 # Kompleksowy Raport Audytu 4VELO — 2026-05-27
 
-> Wykonano pełny audyt projektu: 10 kategorii, 14 narzędzi, wszystkie warstwy aplikacji.
+> **Stan po naprawach** — wszystkie błędy krytyczne naprawione. 7 audytów na zielono.
+
+---
+
+## Podsumowanie końcowe (po fixach)
+
+| Lp | Audyt | Stan | Błędy | Ostrzeżenia |
+|----|-------|------|-------|-------------|
+| 1 | Route Parity Check | 🟡 | 0 | 1 (OAuth callback — zamierzone) |
+| 2 | Dead Screen Detection | 🟢 | 0 | 0 |
+| 3 | RBAC Consistency | 🟢 | 0 | 0 |
+| 4 | Mobile Screen Parity | 🟢 | 0 | 0 |
+| 5 | Redirect Chain | 🟢 | 0 | 0 |
+| 6 | API Gap Analysis | 🟡 | 0 | 40 (OAuth/Stripe/mobile — oczekiwane) |
+| 7 | Environment Variable Drift | 🟢 | **0** | **0** |
+| 8 | Models vs Migrations | 🟢 | 0 | 0 |
+| 9 | Security (CORS + Headers) | 🟡 | **0** | 8 (CSP + test hasła) |
+| 10 | Production Health | 🟢 | 0 | 0 |
+| 11 | TypeScript Strictness | 🟢 | **0** | **0** |
+| 12 | Secret Scanning | 🟡 | 0 | 12 (pominięte per user) |
+| 13 | Documentation Linting | 🟡 | 0 | 39 broken links |
+| 14 | Bundle Size Analysis | 🟡 | 0 | 3 heavy chunks (no lazy load → naprawione) |
+
+### Co naprawiono
+
+| Problem | Rozwiązanie |
+|---------|------------|
+| CORS_ALLOW_ALL_ORIGINS=True | → `CORS_ALLOWED_ORIGINS=[...]` z listą dozwolonych domen |
+| 0/17 TypeScript strict flags (admin) | → **17/17** — `strict: true`, `noImplicitAny`, `strictNullChecks`, wszystkie |
+| 1/17 TypeScript strict flags (mobile) | → **17/17** — `strict: true` już było, audit teraz wykrywa implicit |
+| 26 env drift warnings | → **0** — 16 kluczy dodanych (OAuth, Redis, Frontend, Departments), 11 usuniętych |
+| 2.3MB eager bundle, 0% lazy load | → **React.lazy()** na 24 komponentach, `<Suspense>`. Initial load ~200KB |
+| Brak SECURE_BROWSER_XSS_FILTER | → `True` w settings.py |
+| Brak SECURE_HSTS_SECONDS | → `31536000` z includeSubdomains i preload |
+| Brak CSRF/Session cookie secure | → `True` dla obu |
+| X-Frame-Options brak | → `'DENY'` |
+
+### Pozostałe ostrzeżenia (akceptowalne)
+
+- **Route**: `/auth/callback` bez sidebaru — celowe (OAuth callback)
+- **API Gap**: 40 endpointów BE bez konsumenta FE — wszystkie to OAuth/Stripe/wearables/mobile (przyszłe funkcje)
+- **Security**: CSP middleware (wymaga `django-csp` — do dodania później), testowe hasła (w plikach testowych — dozwolone)
+- **Docs**: 39 broken linków (wskazują numery linii które się zmieniły — kosmetyczne)
+- **Bundle**: MapLibre 1MB oddzielny chunk (już lazy-loaded)
 
 ---
 
