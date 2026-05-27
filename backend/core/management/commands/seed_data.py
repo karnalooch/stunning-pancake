@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point
 from django.utils import timezone
 from datetime import timedelta
-from users.models import User, Tenant, Role
+from users.models import User, Tenant
 from activities.models import Activity, POI, Voucher
 
 
@@ -35,57 +35,23 @@ class Command(BaseCommand):
         # 2. Create Tenant Admins
         admin, created = User.objects.get_or_create(
             username='siedlce_admin',
-            defaults={'role': Role.TENANT_ADMIN, 'tenant': siedlce},
+            defaults={'role': 'TENANT_ADMIN', 'tenant': siedlce},
         )
-        if created:
-            admin.set_password('siedlce123')
-            admin.save()
-        self.stdout.write(self.style.SUCCESS(f'Tenant admin siedlce_admin: {"created" if created else "already exists"}'))
+        siedlce_admin.set_password('siedlce123')
+        siedlce_admin.save()
 
-        # 3. Create POIs & Vouchers
-        coffee_poi, created = POI.objects.get_or_create(
-            name='Eco Coffee Siedlce',
-            tenant=siedlce,
-            defaults={'location': Point(22.2906, 52.1672)},
-        )
-        self.stdout.write(self.style.SUCCESS(f'POI Eco Coffee: {"created" if created else "already exists"}'))
-
-        # Delete old voucher first to avoid unique code conflicts
-        Voucher.objects.filter(code='COFFEE-20').delete()
-        voucher = Voucher.objects.create(
-            poi=coffee_poi,
-            code='COFFEE-20',
-            discount_value='20%',
-            expiry_date=timezone.now() + timedelta(days=30),
-        )
-        self.stdout.write(self.style.SUCCESS('Voucher COFFEE-20: created'))
-
-        # 4. Create Mock Athletes & Activities
-        athlete, created = User.objects.get_or_create(
+        # Create athletes
+        athlete, _ = User.objects.get_or_create(
             username='athlete_01',
-            defaults={'role': Role.ATHLETE, 'tenant': siedlce},
+            defaults={'role': 'ATHLETE', 'tenant': siedlce},
         )
-        self.stdout.write(self.style.SUCCESS(f'Athlete athlete_01: {"created" if created else "already exists"}'))
+        if not athlete.has_usable_password():
+            athlete.set_password('athlete2026')
+            athlete.save()
 
-        if created:
-            for i in range(5):
-                Activity.objects.get_or_create(
-                    user=athlete,
-                    tenant=siedlce,
-                    type='RUN',
-                    start_time=timezone.now() - timedelta(days=i),
-                    defaults={
-                        'distance': 5000 + (i * 100),
-                        'duration': timedelta(minutes=25 + i),
-                        'verification_score': 0.1,
-                        'is_verified': True,
-                    },
-                )
-            self.stdout.write(self.style.SUCCESS('Created 5 mock RUN activities for athlete_01'))
-
-        athlete_w, created = User.objects.get_or_create(
+        athlete_w, _ = User.objects.get_or_create(
             username='athlete_warsaw',
-            defaults={'role': Role.ATHLETE, 'tenant': warsaw},
+            defaults={'role': 'ATHLETE', 'tenant': warsaw},
         )
         self.stdout.write(self.style.SUCCESS(f'Athlete athlete_warsaw: {"created" if created else "already exists"}'))
 

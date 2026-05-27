@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.contrib.gis.geos import Point, LineString
 from django.utils import timezone
-from users.models import User, Tenant, Role
+from users.models import User, Tenant
 from activities.models import Activity, POI, Voucher
 
 
@@ -108,7 +108,7 @@ class Command(BaseCommand):
             user, created = User.objects.get_or_create(
                 username=username,
                 defaults={
-                    'role': Role.ATHLETE,
+                    'role': 'ATHLETE',
                     'tenant': tenant,
                     'first_name': first_name,
                     'last_name': last_name,
