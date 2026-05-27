@@ -269,7 +269,7 @@ def _generate_activity_params(activity_type: str):
 def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False, skip_activities: bool = False, total_users: int = None, num_cities: int = None):
     """Run the Aktywne Miasta simulation."""
     # Lazy imports — models must be loaded after Django is ready
-    from users.models import User, Tenant, Role
+    from users.models import User, Tenant
     from users.departments import Department, UserDepartment
     from activities.models import Activity
 
@@ -350,7 +350,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
             username=admin_username,
             defaults={
                 "email": f"admin.{city['slug']}@aktywnemiasta.pl",
-                "role": Role.TENANT_ADMIN,
+                "role": "TENANT_ADMIN",
                 "tenant": tenant,
                 "first_name": city["name"],
                 "last_name": "Administrator",
@@ -454,7 +454,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                 username=username,
                 defaults={
                     "email": f"{username}@aktywnemiasta.pl",
-                    "role": Role.TENANT_MODERATOR,
+                    "role": "TENANT_MODERATOR",
                     "tenant": tenant,
                     "first_name": first,
                     "last_name": last,
@@ -485,7 +485,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                     user = User(
                         username=username,
                         email=email,
-                        role=Role.ATHLETE,
+                        role='ATHLETE',
                         tenant=tenant,
                         first_name=first,
                         last_name=last,
