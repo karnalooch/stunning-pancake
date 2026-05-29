@@ -123,7 +123,7 @@ jobs:
 
       - name: Build production bundle
         env:
-          VITE_API_URL: http://localhost:8000/api
+          VITE_API_URL: http://localhost:8000
         run: |
           cd admin
           npm run build
@@ -291,7 +291,7 @@ jobs:
 
       - name: Build admin for preview
         env:
-          VITE_API_URL: http://localhost:8000/api
+          VITE_API_URL: http://localhost:8000
         run: |
           cd admin
           npm run build
