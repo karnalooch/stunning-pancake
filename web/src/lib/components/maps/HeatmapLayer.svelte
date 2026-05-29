@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import type { Map as MapLibreMap } from 'maplibre-gl';
 
 	interface Props {
