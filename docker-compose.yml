@@ -143,12 +143,12 @@ services:
     depends_on:
       - backend
 
-  # Celery Worker — Async tasks: BRouter validation, notifications (Phase 7)
+  # Celery Worker — Async tasks: BRouter validation, ML, simulation (Phase 7)
   celery_worker:
     build: ./backend
     container_name: 4velo_celery_worker
     restart: always
-    command: celery -A core worker -Q critical,notifications,default,simulation -l info --concurrency=4
+    command: celery -A core worker -Q critical,default,simulation -l info --concurrency=4
     environment:
       DEBUG: ${DEBUG:-0}
       SECRET_KEY: ${SECRET_KEY}

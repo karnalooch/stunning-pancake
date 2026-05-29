@@ -24,4 +24,4 @@ COPY backend/ /app/
 RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
 USER 1001
 
-CMD celery -A core worker --loglevel=info --queues=critical,default,notifications --concurrency=2 --max-tasks-per-child=1000
+CMD celery -A core worker --loglevel=info --queues=critical,default,simulation --concurrency=2 --max-tasks-per-child=1000
