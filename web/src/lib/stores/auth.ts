@@ -9,7 +9,7 @@ function initAuth() {
 	const storedRefresh = localStorage.getItem('auth_refresh_token');
 	if (storedToken) {
 		token = storedToken;
-		refreshToken = storedRefresh;
+		if (storedRefresh) refreshToken = storedRefresh;
 		isAuthenticated = true;
 	}
 	isLoading = false;
