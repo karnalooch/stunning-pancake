@@ -1,0 +1,98 @@
+@import 'tailwindcss';
+
+@theme {
+	--color-primary: #D4A373;
+	--color-primary-hover: #C18A4F;
+	--color-primary-light: #EDD9B0;
+	--color-secondary: #C8B098;
+	--color-success: #7BA05B;
+	--color-warning: #E8A840;
+	--color-error: #CC4444;
+	--color-info: #A0A0A0;
+
+	--color-bg: #0B1D33;
+	--color-bg-strong: #2D2418;
+	--color-bg-surface: #3D3020;
+	--color-surface: #2B303A;
+	--color-surface-elevated: #4A4A4A;
+
+	--color-text: #F5E6CC;
+	--color-text-muted: #C8B098;
+	--color-text-inverse: #000000;
+
+	--color-border: #D4A373;
+	--color-border-muted: #5C4020;
+	--color-outline: #000000;
+
+	--color-gold: #D4A373;
+	--color-gold-light: #EDD9B0;
+	--color-forest: #7BA05B;
+	--color-parchment: #2D2418;
+	--color-deep: #1A1410;
+	--color-panel: #3D3020;
+	--color-deep-sea: #0B1D33;
+	--color-industrial: #4A4A4A;
+	--color-metal: #2B303A;
+	--color-cream: #F5E6CC;
+	--color-sepia: #C8B098;
+	--color-wood: #5C4020;
+	--color-silver: #A0A0A0;
+	--color-cyan: #00D1FF;
+
+	--color-solar-bg: #FFF8E7;
+	--color-solar-surface: #F5E6CC;
+	--color-solar-text: #2D2418;
+	--color-solar-text-muted: #6B4226;
+	--color-solar-border: #6B4226;
+	--color-solar-button-gold-bg: #8B6914;
+	--color-solar-button-green-bg: #3D6B2E;
+	--color-solar-button-red-bg: #AA0000;
+	--color-solar-button-blue-bg: #1E3A8A;
+
+	--font-family-pixel: 'Press Start 2P', monospace;
+	--font-family-body: system-ui, -apple-system, sans-serif;
+
+	--shadow-pixel-button: 4px 4px 0 0 #000000;
+	--shadow-pixel-card: 6px 6px 0 0 #000000;
+}
+
+:root {
+	--color-primary: #D4A373;
+	--color-primary-light: #EDD9B0;
+	--color-secondary: #C8B098;
+	--color-success: #7BA05B;
+	--color-warning: #E8A840;
+	--color-error: #CC4444;
+	--color-info: #A0A0A0;
+
+	--color-bg: #0B1D33;
+	--color-bg-strong: #2D2418;
+	--color-bg-surface: #3D3020;
+	--color-surface: #2B303A;
+	--color-surface-elevated: #4A4A4A;
+
+	--color-text: #F5E6CC;
+	--color-text-muted: #C8B098;
+	--color-text-inverse: #000000;
+
+	--color-border: #D4A373;
+	--color-border-muted: #5C4020;
+	--color-outline: #000000;
+
+	--font-family-body: system-ui, -apple-system, sans-serif;
+	--font-family-pixel: 'Press Start 2P', monospace;
+
+	--shadow-pixel-button: 4px 4px 0 0 #000000;
+	--shadow-pixel-card: 6px 6px 0 0 #000000;
+}
+
+html {
+	font-family: var(--font-family-body);
+	background-color: var(--color-bg);
+	color: var(--color-text);
+}
+
+body {
+	min-height: 100dvh;
+	margin: 0;
+}
