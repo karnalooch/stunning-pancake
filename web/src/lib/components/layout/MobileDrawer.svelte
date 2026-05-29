@@ -20,7 +20,6 @@
 	];
 
 	let { open = $bindable(false) }: { open?: boolean } = $props();
-	let dispatch = $dispatch();
 
 	function close() {
 		open = false;
