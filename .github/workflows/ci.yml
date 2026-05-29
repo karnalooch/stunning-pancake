@@ -122,6 +122,8 @@ jobs:
           npx tsc --noEmit
 
       - name: Build production bundle
+        env:
+          VITE_API_URL: http://localhost:8000
         run: |
           cd admin
           npm run build
@@ -288,6 +290,8 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Build admin for preview
+        env:
+          VITE_API_URL: http://localhost:8000
         run: |
           cd admin
           npm run build
