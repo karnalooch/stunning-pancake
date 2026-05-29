@@ -62,19 +62,15 @@ export const activitiesService = {
 		return apiGet('/api/activities/admin/stats/', { params });
 	},
 
-	async getVoucher(poolId: number): Promise<{ code: string; expires_at: string }> {
-		return apiPost(`/api/rewards/redeem/${poolId}/`);
-	},
-
-	async getPOIs(params?: { category?: string; tenant_id?: string }): Promise<POI[]> {
-		return apiGet<POI[]>('/api/activities/pois/', { params });
-	},
-
 	async redeemVoucher(poolId: number): Promise<{
 		voucher_code: string;
 		voucher_url: string;
 		expires_at: string;
 	}> {
 		return apiPost(`/api/rewards/redeem/${poolId}/`);
+	},
+
+	async getPOIs(params?: { category?: string; tenant_id?: string }): Promise<POI[]> {
+		return apiGet<POI[]>('/api/activities/pois/', { params });
 	}
 };

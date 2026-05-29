@@ -90,7 +90,7 @@ export const adminService = {
 	async exportData(resource: string): Promise<Blob> {
 		const response = await apiGet<Blob>(`/api/activities/export/${resource}/`, {
 			responseType: 'blob'
-		} as never);
+		});
 		return response;
 	},
 

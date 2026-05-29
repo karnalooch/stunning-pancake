@@ -27,9 +27,7 @@ export const clubsService = {
 			if (data.description) formData.append('description', data.description);
 			if (data.sport_type) formData.append('sport_type', data.sport_type);
 			formData.append('logo', data.logo);
-			return apiPost<Club>('/api/clubs/', formData, {
-				headers: { 'Content-Type': 'multipart/form-data' }
-			});
+			return apiPost<Club>('/api/clubs/', formData);
 		}
 		return apiPost<Club>('/api/clubs/', data);
 	},
