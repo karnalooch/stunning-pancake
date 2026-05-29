@@ -6,3 +6,4 @@ export { default as Badge } from './Badge.svelte';
 export { default as Avatar } from './Avatar.svelte';
 export { default as Skeleton } from './Skeleton.svelte';
 export { default as Toast } from './Toast.svelte';
+export { default as PasswordInput } from './PasswordInput.svelte';

@@ -1,2 +1,2 @@
-export { getAuthStore } from './auth';
-export { getUIStore } from './ui';
+export { getAuthStore, auth } from './auth';
+export { getUIStore, ui } from './ui';

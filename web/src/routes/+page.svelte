@@ -1,9 +1,13 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { auth } from '$lib/stores/auth';
 
 	onMount(() => {
-		// eslint-disable-next-line svelte/no-navigation-without-resolve
-		goto('/dashboard');
+		if (auth.isAuthenticated) {
+			goto('/dashboard');
+		}
 	});
 </script>
+
+<h1 class="text-center text-[#B0A090]">Redirecting...</h1>

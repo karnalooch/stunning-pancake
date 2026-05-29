@@ -1,39 +1,29 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
-	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import { auth } from '$lib/stores/auth';
-	import { ui } from '$lib/stores/ui';
-	import { Toast } from '$lib/components/ui';
 
-	let { children } = $props();
+	let { children }: { children: import('svelte').Snippet } = $props();
 
-	onMount(() => {
-		auth.initAuth();
-	});
-
-	let showLoader = $derived(auth.isLoading);
+	let isReady = $derived(!auth.isLoading);
+	let isAuthed = $derived(auth.isAuthenticated);
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
-
-{#if showLoader}
+{#if isReady}
+	{#if isAuthed}
+		{@render children()}
+	{:else}
+		<script>
+			import { goto } from '$app/navigation';
+			goto('/login');
+		</script>
+	{/if}
+{:else}
 	<div class="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#0B1D33] to-[#1A1410]">
 		<div class="flex flex-col items-center gap-4">
 			<svg class="animate-spin h-8 w-8 text-[#D4A373]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
 				<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
 				<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
 			</svg>
-			<p class="text-[#B0A090]">Loading 4VELO...</p>
+			<p class="text-[#B0A090]">Loading...</p>
 		</div>
 	</div>
-{:else}
-	{@render children()}
 {/if}
-
-{#each ui.toasts as toast (toast.id)}
-	<Toast message={toast.message} type={toast.type} visible={true} />
-{/each}
