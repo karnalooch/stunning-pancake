@@ -1,8 +1,10 @@
 import axios, { AxiosError } from 'axios';
 import { firebaseCapture } from './FirebaseService';
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://backend-production-55c7.up.railway.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+if (!BASE_URL) {
+  throw new Error('EXPO_PUBLIC_API_URL environment variable is required.');
+}
 
 // ─── Typed API client ──────────────────────────────────────────
 export const api = axios.create({
@@ -20,6 +22,10 @@ if (__DEV__) {
 }
 
 // Response normalizer — unwraps { ok: true, data: {...} } from backend
+// Also handles automatic token refresh on 401
+let _refreshToken: string | null = null;
+let _onForceLogout: (() => void) | null = null;
+
 api.interceptors.response.use(
   (res) => {
     const body = res.data;
@@ -28,7 +34,29 @@ api.interceptors.response.use(
     }
     return res;
   },
-  (error: AxiosError<{ error?: string; detail?: string }>) => {
+  async (error: AxiosError<{ error?: string; detail?: string }>) => {
+    // Auto-refresh token on 401 (mirrors admin client.ts pattern)
+    if (error.response?.status === 401 && _refreshToken && !(error.config as any)._retry) {
+      (error.config as any)._retry = true;
+      try {
+        const res = await axios.post(`${BASE_URL}/api/auth/token/refresh/`, {
+          refresh: _refreshToken,
+        });
+        const { access } = res.data;
+        api.defaults.headers.common['Authorization'] = `Bearer ${access}`;
+        if (error.config) {
+          error.config.headers.Authorization = `Bearer ${access}`;
+        }
+        return api(error.config!);
+      } catch {
+        // Refresh failed — force logout
+        _refreshToken = null;
+        delete api.defaults.headers.common['Authorization'];
+        _onForceLogout?.();
+        return Promise.reject(error);
+      }
+    }
+
     const msg =
       error.response?.data?.error ||
       error.response?.data?.detail ||
@@ -47,6 +75,28 @@ export const setAuthToken = (token: string | null) => {
   } else {
     delete api.defaults.headers.common['Authorization'];
   }
+};
+
+/** Store refresh token for automatic 401 recovery. Call on login. */
+export const setRefreshToken = (refresh: string | null) => {
+  _refreshToken = refresh;
+};
+
+/** Convenience: set both tokens at once (call on login). */
+export const setAuthTokens = (access: string, refresh: string) => {
+  setAuthToken(access);
+  setRefreshToken(refresh);
+};
+
+/** Clear all auth state (call on logout). */
+export const clearAuthTokens = () => {
+  delete api.defaults.headers.common['Authorization'];
+  _refreshToken = null;
+};
+
+/** Register callback invoked when token refresh fails and force-logout is needed. */
+export const onForceLogout = (cb: () => void) => {
+  _onForceLogout = cb;
 };
 
 // ─── Typed services ────────────────────────────────────────────
@@ -68,7 +118,7 @@ export interface ActivityItem {
   start_time: string;
   end_time: string | null;
   distance: number;
-  duration: string | null;
+  duration: number | null;
   is_verified: boolean;
   verification_score: number;
 }

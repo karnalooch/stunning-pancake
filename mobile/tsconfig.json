@@ -7,6 +7,9 @@
     "paths": {
       "@tokens/*": [
         "../shared/tokens/*"
+      ],
+      "@shared/*": [
+        "../shared/*"
       ]
     }
   }

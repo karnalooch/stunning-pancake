@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView, TokenBlacklistView
 from core.ogc_views import ogc_conformance, ogc_collections, ogc_collection_items, ogc_single_item
 from core.infra_views import redis_health_view, citus_health_view, infra_health_view, SystemHealthView
 from core.matrix_e2ee_verify import (
@@ -43,6 +43,7 @@ urlpatterns = [
     path('api/auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/auth/logout/', TokenBlacklistView.as_view(), name='token_blacklist'),
     # Google OAuth2 — custom (bypasses allauth)
     path('api/auth/google/login/', google_auth.google_login, name='google-login'),
     path('api/auth/google/callback/', google_auth.google_callback, name='google-callback'),

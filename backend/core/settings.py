@@ -45,10 +45,12 @@ DEPARTMENTS_ENABLED = os.getenv('DEPARTMENTS_ENABLED', '1') == '1'
 # Railway terminates HTTPS at the load balancer — check X-Forwarded-Proto
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = not DEBUG
-SECURE_HSTS_SECONDS = 604800 if not DEBUG else 0  # 1 week (ramp up to 1 year after confirming stable HTTPS)
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 year in production, 0 for local dev
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
+SECURE_HSTS_PRELOAD = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
+SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 X_FRAME_OPTIONS = 'DENY'
@@ -215,15 +217,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-# Security headers
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
-X_FRAME_OPTIONS = 'DENY'
+
 
 SPECTACULAR_SETTINGS = {
     'TITLE': '4VELO API - Global Platform',
@@ -267,12 +261,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Warsaw'
 
-# Separate queues: critical (telemetry/BRouter) and notifications (push/email)
+# Separate queues: critical (telemetry/BRouter/simulation) and default (ML, periodic jobs)
 CELERY_TASK_ROUTES = {
     'activities.tasks.*': {'queue': 'critical'},
     'activities.ml_retrain.*': {'queue': 'default'},
     'events.tasks.*': {'queue': 'critical'},
-    'notifications.tasks.*': {'queue': 'notifications'},
     'activities.simulator_tasks.*': {'queue': 'simulation'},
 }
 CELERY_TASK_QUEUE_MAX_PRIORITY = 10
@@ -298,7 +291,7 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'activities.tasks.send_leaderboard_digest',
         'schedule': crontab(hour=9, minute=0, day_of_week=1),
         'args': ('global', 10),
-        'options': {'queue': 'notifications'},
+        'options': {'queue': 'default'},
     },
     # City leaderboard recalculate — every 15 minutes
     'city-leaderboard-recalculate': {

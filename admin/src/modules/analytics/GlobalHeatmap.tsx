@@ -56,7 +56,7 @@ export const GlobalHeatmap: React.FC = () => {
         const params: Record<string, string | number> = { bbox, zoom };
         if (activityType !== 'ALL') params.type = activityType;
 
-        const { data } = await apiClient.get('/api/heatmap/', { params });
+        const { data } = await apiClient.get('/activities/heatmap/', { params });
         const features = data?.features ?? [];
         setCellCount(features.length);
 

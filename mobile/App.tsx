@@ -9,7 +9,7 @@ import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 
 import { Image } from 'react-native';
-import { AuthService, setAuthToken } from './src/services/api';
+import { AuthService, setAuthToken, setAuthTokens, clearAuthTokens, onForceLogout } from './src/services/api';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
 import { ThemeService } from './src/services/ThemeService';
@@ -122,11 +122,20 @@ const AppContent = observer(function AppContent() {
     initFirebase();
     const store = getStorage();
     const token = store.getString('auth_token');
+    const refreshToken = store.getString('auth_refresh_token');
     const hasOnboarded = store.getString('onboarding_complete') === 'true';
     auth.isOnboarded.set(hasOnboarded);
 
+    // Register force-logout callback for when token refresh fails
+    onForceLogout(() => {
+      handleLogout();
+    });
+
     if (token) {
       setAuthToken(token);
+      if (refreshToken) {
+        import('./src/services/api').then(m => m.setRefreshToken(refreshToken));
+      }
       AuthService.getProfile()
         .then(async (user) => {
           auth.user.set(user);
@@ -174,7 +183,8 @@ const AppContent = observer(function AppContent() {
         if (data.access) {
           const store = getStorage();
           store.set('auth_token', data.access);
-          setAuthToken(data.access);
+          store.set('auth_refresh_token', data.refresh);
+          setAuthTokens(data.access, data.refresh);
           const user = await AuthService.getProfile();
           auth.user.set(user);
           auth.isAuthenticated.set(true);
@@ -187,14 +197,14 @@ const AppContent = observer(function AppContent() {
           email: auth.email.get(),
           username: auth.username.get(),
           password: auth.password.get(),
-          tenant_id: 'siedlce-city',
         });
         // Auto-login after register
         const data = await AuthService.login(auth.email.get(), auth.password.get());
         if (data.access) {
           const store = getStorage();
           store.set('auth_token', data.access);
-          setAuthToken(data.access);
+          store.set('auth_refresh_token', data.refresh);
+          setAuthTokens(data.access, data.refresh);
           const user = await AuthService.getProfile();
           auth.user.set(user);
           auth.isAuthenticated.set(true);
@@ -214,7 +224,8 @@ const AppContent = observer(function AppContent() {
   const handleLogout = () => {
     const store = getStorage();
     store.delete('auth_token');
-    setAuthToken(null);
+    store.delete('auth_refresh_token');
+    clearAuthTokens();
     auth.user.set(null);
     auth.isAuthenticated.set(false);
     auth.email.set('');

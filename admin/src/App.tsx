@@ -37,33 +37,51 @@ const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimm
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
 
-const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
+const AuthCallback: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.slice(2)); // after #/auth/callback
-    const access = params.get('access');
-    const refresh = params.get('refresh');
-    if (!access) {
-      // Try query params (direct URL from backend redirect)
-      const qp = new URLSearchParams(window.location.search);
-      const qAccess = qp.get('access');
-      const qRefresh = qp.get('refresh');
-      if (qAccess && qRefresh) {
-        // Fetch user profile
-        import('./api/client').then(({ apiClient }) => {
-          apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${qAccess}` } })
-            .then(r => {
-              const d = r.data?.data || r.data;
-              onLogin(qAccess, qRefresh, { id: d.id, username: d.username, role: d.role, tenantId: d.tenant_id || null, tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null, isImpersonated: false });
-              window.location.hash = '#/owner/dashboard';
-            })
-            .catch(() => setError('Failed to load profile'));
-        });
-        return;
-      }
-      setError('No token received from Google login');
+    let access: string | null = null;
+    let refresh: string | null = null;
+
+    // Backend redirects to {FRONTEND_URL}/#/auth/callback?access=<jwt>&refresh=<jwt>
+    // Tokens are in the query string inside the hash fragment
+    const hash = window.location.hash; // '#/auth/callback?access=xxx&refresh=yyy'
+    const queryIndex = hash.indexOf('?');
+    if (queryIndex >= 0) {
+      const params = new URLSearchParams(hash.slice(queryIndex + 1));
+      access = params.get('access');
+      refresh = params.get('refresh');
     }
-  }, [onLogin]);
+
+    // Fallback: try main URL query params (if backend ever redirects differently)
+    if (!access) {
+      const qp = new URLSearchParams(window.location.search);
+      access = qp.get('access');
+      refresh = qp.get('refresh');
+    }
+
+    if (!access || !refresh) {
+      setError('No token received from Google login');
+      return;
+    }
+
+    // Validate the token and log in
+    apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${access}` } })
+      .then(r => {
+        const d = r.data?.data || r.data;
+        login(access!, refresh!, {
+          id: d.id,
+          username: d.username,
+          role: d.role,
+          tenantId: d.tenant_id || null,
+          tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
+          isImpersonated: false,
+        });
+      })
+      .catch(() => setError('Failed to load profile'));
+  }, [login]);
 
   if (error) return <Box p={50} ta="center"><Title order={2} c="red">Login Failed</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
   return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">Completing Google login...</Text></Box>;
@@ -106,7 +124,7 @@ export default function App() {
       <HashRouter>
         {!isAuthenticated ? (
           <Routes>
-            <Route path="/auth/callback" element={<AuthCallback onLogin={handleLogin} />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

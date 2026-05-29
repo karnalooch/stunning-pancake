@@ -11,6 +11,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@tokens': path.resolve(__dirname, '../shared/tokens'),
+      '@shared': path.resolve(__dirname, '../shared'),
     },
   },
   build: {
