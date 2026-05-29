@@ -8,6 +8,9 @@ if (!baseURL) {
   } else {
     baseURL = '/api';
   }
+} else if (!baseURL.endsWith('/api')) {
+  // Auto-append /api suffix — Railway/service vars may pass bare host URL
+  baseURL = baseURL.replace(/\/+$/, '') + '/api';
 }
 if (baseURL.startsWith('/') && typeof window !== 'undefined') {
   baseURL = `${window.location.protocol}//${window.location.host}${baseURL}`;
