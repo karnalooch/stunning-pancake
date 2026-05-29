@@ -9,7 +9,6 @@
 </script>
 
 {#if open}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
 		role="dialog"
@@ -18,8 +17,7 @@
 		onclick={() => (open = false)}
 		onkeydown={handleKeydown}
 	>
-		<!-- svelte-ignore a11y_click_events_have_key_events -->
-		<div class={cn('rounded-lg border border-[#5C4020] bg-[#3D3020] p-6 shadow-[6px_6px_0_0_#000000]', className)} onclick={(e) => e.stopPropagation()} {...rest}>
+		<div class={cn('rounded-lg border border-[#5C4020] bg-[#3D3020] p-6 shadow-[6px_6px_0_0_#000000]', className)} onclick={(e) => e.stopPropagation()} onkeydown={() => {}} {...rest}>
 			{@render children()}
 		</div>
 	</div>
