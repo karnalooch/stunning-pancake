@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from './client';
+import { apiGet, apiPost } from './client';
 import type { Club, ClubChallenge, PaginatedResponse } from '$shared/types';
 
 export const clubsService = {

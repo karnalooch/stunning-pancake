@@ -1,4 +1,4 @@
-import { apiGet, apiPost, setAuthTokens, clearAuthTokens } from './client';
+import { apiGet, apiPost, clearAuthTokens } from './client';
 import type { UserProfile } from '$shared/types';
 
 export const authService = {

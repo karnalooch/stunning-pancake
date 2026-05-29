@@ -1,5 +1,5 @@
 import axios, { AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios';
-import type { ApiResponse, ApiSuccess, PaginatedResponse } from '$shared/types';
+import type { PaginatedResponse } from '$shared/types';
 
 const client = axios.create({
 	baseURL: '/api/',
