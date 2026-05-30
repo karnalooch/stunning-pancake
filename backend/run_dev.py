@@ -99,6 +99,7 @@ os.environ["DATABASE_URL"] = "sqlite:///db.sqlite3"
 os.environ["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-for-local-play")
 os.environ["DEBUG"] = "1"
 os.environ["CELERY_TASK_ALWAYS_EAGER"] = "True"
+os.environ["CELERY_ALWAYS_EAGER"] = "True"
 os.environ["CELERY_TASK_EAGER_PROPAGATES"] = "True"
 os.environ["CELERY_BROKER_URL"] = "memory://"
 os.environ["CELERY_RESULT_BACKEND"] = "cache+memory://"
@@ -300,5 +301,8 @@ if __name__ == "__main__":
         import seed_data
         seed_data.seed()
     
-    print("🚀 Starting local Django server...")
-    execute_from_command_line([sys.argv[0], "runserver", "127.0.0.1:8000"])
+    if len(sys.argv) > 1:
+        execute_from_command_line(sys.argv)
+    else:
+        print("🚀 Starting local Django server...")
+        execute_from_command_line([sys.argv[0], "runserver", "127.0.0.1:8000"])
