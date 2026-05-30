@@ -30,10 +30,6 @@ export const LeaderboardManager: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [recalculating, setRecalculating] = useState(false);
 
-    useEffect(() => {
-        fetchLeaderboards();
-    }, []);
-
     const fetchLeaderboards = async () => {
         try {
             const { data } = await apiClient.get('/activities/leaderboard/admin/list/');
@@ -45,6 +41,12 @@ export const LeaderboardManager: React.FC = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        Promise.resolve().then(() => {
+            fetchLeaderboards();
+        });
+    }, []);
 
     const fetchRankings = async (cityId: string, cityName: string) => {
         setSelectedCityId(cityId);

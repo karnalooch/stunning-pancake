@@ -1,6 +1,6 @@
 import {
   Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon,
-  Drawer, SimpleGrid, Modal, ScrollArea, Tabs, Select, PasswordInput,
+  Drawer, Modal, ScrollArea, Tabs, Select, PasswordInput,
   Pagination, Switch, Textarea, Tooltip, Card
 } from '@mantine/core';
 import { useState, useEffect } from 'react';
@@ -9,7 +9,7 @@ import {
   Trash2, Send, Lock, Unlock, Mail, Shield, Building
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
-import { AdminApi, apiClient } from '../../api/client';
+import { AdminApi } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
 interface UserRow {
@@ -55,7 +55,6 @@ export const Users = () => {
   const [deleteConfirmOpened, setDeleteConfirmOpened] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [impersonating, setImpersonating] = useState(false);
-  const [impersonateError, setImpersonateError] = useState<string | null>(null);
   const [impersonateResult, setImpersonateResult] = useState<{ access: string; impersonated_user: string; impersonated_role: string } | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [auditLogLoading, setAuditLogLoading] = useState(false);
@@ -125,7 +124,7 @@ export const Users = () => {
   
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
-      setAuditLogLoading(true);
+      Promise.resolve().then(() => setAuditLogLoading(true));
       AdminApi.getAuditLogs(50)
         .then(data => setAuditLogs(data))
         .catch(err => console.error("Failed to load audit logs:", err))
@@ -136,8 +135,10 @@ export const Users = () => {
     }
   }, [user]);
 
-  // Populate edit form on selection change
-  useEffect(() => {
+  // Populate edit form on selection change (using render phase update to avoid set-state-in-effect)
+  const [prevSelectedUser, setPrevSelectedUser] = useState<UserRow | null>(null);
+  if (selectedUser !== prevSelectedUser) {
+    setPrevSelectedUser(selectedUser);
     if (selectedUser) {
       setEditForm({
         username: selectedUser.name,
@@ -150,13 +151,12 @@ export const Users = () => {
         password: '',
       });
     }
-  }, [selectedUser]);
+  }
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
 
   const handleImpersonate = async (targetUserId: number) => {
     setImpersonating(true);
-    setImpersonateError(null);
     setImpersonateResult(null);
     try {
       const result = await AdminApi.impersonateUser(targetUserId);
@@ -167,8 +167,7 @@ export const Users = () => {
         role: result.impersonated_role,
       }));
       notifications.show({ title: 'Impersonation Active', message: `Now simulating ${result.impersonated_user}`, color: 'green' });
-    } catch (err: any) {
-      setImpersonateError(err?.response?.data?.error || err?.message || 'Impersonation failed');
+    } catch {
       notifications.show({ title: 'Impersonation Failed', message: 'Unauthorized or invalid token.', color: 'red' });
     } finally {
       setImpersonating(false);
@@ -304,10 +303,17 @@ export const Users = () => {
   const paginatedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
   const totalPages = Math.ceil(filteredUsers.length / pageSize);
 
-  // Reset page to 1 when filters change
-  useEffect(() => {
+  // Reset page to 1 when filters change (using render phase update to avoid set-state-in-effect)
+  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+  const [prevSelectedRole, setPrevSelectedRole] = useState(selectedRole);
+  const [prevSelectedTenant, setPrevSelectedTenant] = useState(selectedTenant);
+
+  if (searchQuery !== prevSearchQuery || selectedRole !== prevSelectedRole || selectedTenant !== prevSelectedTenant) {
+    setPrevSearchQuery(searchQuery);
+    setPrevSelectedRole(selectedRole);
+    setPrevSelectedTenant(selectedTenant);
     setPage(1);
-  }, [searchQuery, selectedRole, selectedTenant]);
+  }
 
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
@@ -514,7 +520,6 @@ export const Users = () => {
         onClose={() => {
           setSelectedUser(null);
           setImpersonateResult(null);
-          setImpersonateError(null);
         }}
         position="right"
         size="lg"

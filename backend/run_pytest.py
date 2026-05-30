@@ -34,6 +34,7 @@ mock_gdal.OGRGeometry = type("OGRGeometry", (), {})
 mock_gdal.SpatialReference = type("SpatialReference", (), {})
 mock_gdal.CoordTransform = type("CoordTransform", (), {})
 mock_gdal.Envelope = type("Envelope", (), {})
+mock_gdal.GDALRaster = type("GDALRaster", (), {})
 sys.modules["django.contrib.gis.gdal"] = mock_gdal
 
 # gdal submodules
@@ -57,16 +58,43 @@ sys.modules["django.contrib.gis.gdal.datasource"] = mock_gdal_datasource
 mock_gdal_driver = ModuleType("django.contrib.gis.gdal.driver")
 sys.modules["django.contrib.gis.gdal.driver"] = mock_gdal_driver
 
+class _MockMeta(type):
+    def __instancecheck__(cls, instance):
+        if instance is None or isinstance(instance, (str, bytes)):
+            return False
+        return True
+
+class _MockGEOSGeometry(metaclass=_MockMeta):
+    def __init__(self, *args, **kwargs):
+        self.srid = kwargs.get('srid', None)
+        self.num_coords = 0
+    @property
+    def coords(self):
+        return getattr(self, '_coords', [(0, 0), (0.001, 0)])
+
 # Mock django.contrib.gis.geos (native GEOS library wrapper)
 mock_geos = ModuleType("django.contrib.gis.geos")
-mock_geos.GEOSGeometry = type("GEOSGeometry", (), {})
+mock_geos.GEOSGeometry = _MockGEOSGeometry
 mock_geos.GEOSException = type("GEOSException", (Exception,), {})
+def _mock_geo_init(self, *args, **kwargs):
+    self.srid = kwargs.get('srid', None)
+    if args and isinstance(args[0], list):
+        self._coords = args[0]
+        self.num_coords = len(args[0])
+    else:
+        self._coords = [(0, 0), (0.001, 0)]
+        self.num_coords = 2
+
 for _geo_type in (
     "GeometryCollection", "MultiPoint", "MultiLineString", "MultiPolygon",
     "Point", "LineString", "LinearRing", "Polygon",
     "fromstr",
 ):
-    setattr(mock_geos, _geo_type, type(_geo_type, (), {}))
+    setattr(mock_geos, _geo_type, type(_geo_type, (mock_geos.GEOSGeometry,), {
+        "__init__": _mock_geo_init,
+        "srid": None,
+        "num_coords": 0,
+    }))
 sys.modules["django.contrib.gis.geos"] = mock_geos
 
 mock_geos_prototypes = ModuleType("django.contrib.gis.geos.prototypes")
@@ -112,12 +140,18 @@ sys.modules["sendgrid.helpers.mail"] = mock_sendgrid.helpers.mail
 # ---------------------------------------------------------------------------
 from django.db.backends.sqlite3.operations import DatabaseOperations as SQLiteOps
 
+class _MockAdapter(str):
+    def __new__(cls, value, *args, **kwargs):
+        return super().__new__(cls, str(value))
+
+SQLiteOps.Adapter = _MockAdapter
 SQLiteOps.geo_db_type = lambda self, field: "TEXT"
 # SQLite has no spatial 'select' format — fall back to simple column reference
 SQLiteOps.select = "%s"
 # SQLite has no PostGIS index — stub it out
 SQLiteOps.geography = False
 SQLiteOps.gis_operators = {}
+SQLiteOps.get_geom_placeholder = lambda self, field, value, compiler: "%s"
 
 # Monkey-patch UUIDField to accept non-UUID strings on SQLite.
 # Test fixtures use readable IDs like "test-city" which are valid in SQLite
@@ -152,6 +186,16 @@ def _lenient_uuid_to_python(self, value):
 
 
 _fields_module.UUIDField.to_python = _lenient_uuid_to_python
+
+_original_convert_uuidfield_value = SQLiteOps.convert_uuidfield_value
+def _lenient_convert_uuidfield_value(self, value, expression, connection):
+    if value is not None:
+        try:
+            return _original_convert_uuidfield_value(self, value, expression, connection)
+        except ValueError:
+            return _MockUUID(value)
+    return value
+SQLiteOps.convert_uuidfield_value = _lenient_convert_uuidfield_value
 # ---------------------------------------------------------------------------
 # Patch dj_database_url.parse so settings.py's PostGIS engine → SQLite
 # ---------------------------------------------------------------------------
@@ -177,6 +221,25 @@ dj_database_url.parse = _mocked_parse
 # ---------------------------------------------------------------------------
 import django
 django.setup()
+
+from django.conf import settings
+settings.CELERY_TASK_ALWAYS_EAGER = True
+settings.CELERY_TASK_EAGER_PROPAGATES = True
+settings.CELERY_BROKER_URL = 'memory://'
+settings.CELERY_RESULT_BACKEND = 'cache+memory://'
+
+from unittest.mock import MagicMock
+import core.redis_cluster
+core.redis_cluster.get_redis = MagicMock()
+core.redis_cluster.get_redis.return_value.get.return_value = None
+
+from django.db.backends.signals import connection_created
+from django.dispatch import receiver
+
+@receiver(connection_created)
+def extend_sqlite(connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        connection.connection.create_function("set_config", 3, lambda name, value, is_local: "")
 
 from django.db.migrations.operations.special import RunSQL as _RunSQL
 

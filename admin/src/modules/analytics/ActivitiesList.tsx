@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Table, Text, Badge, Skeleton, Alert, Group, Pagination, Checkbox, Button, TextInput, Select, ActionIcon, Tooltip } from '@mantine/core';
 import { AlertCircle, Bike, Footprints, PersonStanding, ArrowUpRight, Check, X, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -45,8 +45,21 @@ export const ActivitiesList: React.FC = () => {
     const [filterDateFrom, setFilterDateFrom] = useState('');
     const [filterDateTo, setFilterDateTo] = useState('');
 
-    useEffect(() => {
+    const [prevDeps, setPrevDeps] = useState({ page, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery });
+
+    if (
+        page !== prevDeps.page ||
+        filterType !== prevDeps.filterType ||
+        filterStatus !== prevDeps.filterStatus ||
+        filterDateFrom !== prevDeps.filterDateFrom ||
+        filterDateTo !== prevDeps.filterDateTo ||
+        searchQuery !== prevDeps.searchQuery
+    ) {
+        setPrevDeps({ page, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery });
         setLoading(true);
+    }
+
+    useEffect(() => {
         const params: Record<string, string | number> = { page, page_size: PAGE_SIZE };
         if (filterType) params.type = filterType;
         if (filterStatus === 'verified') params.verified = 'true';

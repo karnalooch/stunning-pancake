@@ -32,18 +32,12 @@ export const Departments: React.FC = () => {
     const { hasPermission } = useAuth();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [tree, setTree] = useState<DepartmentTreeNode[]>([]);
-    const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingDept, setEditingDept] = useState<Department | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
 
     const canManage = hasPermission('departments.create') || hasPermission('departments.edit');
     const canDelete = hasPermission('departments.delete');
-
-    useEffect(() => {
-        fetchDepartments();
-        fetchTree();
-    }, []);
 
     const fetchDepartments = async () => {
         try {
@@ -53,8 +47,6 @@ export const Departments: React.FC = () => {
         } catch (err) {
             console.error('Failed to fetch departments:', err);
             setDepartments([]);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -68,6 +60,13 @@ export const Departments: React.FC = () => {
             setTree([]);
         }
     };
+
+    useEffect(() => {
+        Promise.resolve().then(() => {
+            fetchDepartments();
+            fetchTree();
+        });
+    }, []);
 
     const handleDelete = async (id: number) => {
         if (!confirm('Are you sure you want to delete this department?')) return;

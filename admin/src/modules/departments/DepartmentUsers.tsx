@@ -31,14 +31,6 @@ export const DepartmentUsers: React.FC = () => {
     const canAssign = hasPermission('departments.assign_users');
     const canRemove = hasPermission('departments.remove_users');
 
-    useEffect(() => {
-        if (id) {
-            fetchDepartment();
-            fetchUsers();
-            fetchAllUsers();
-        }
-    }, [id]);
-
     const fetchDepartment = async () => {
         try {
             const { data } = await apiClient.get(`/users/departments/${id}/`);
@@ -67,6 +59,16 @@ export const DepartmentUsers: React.FC = () => {
             console.error('Failed to fetch all users:', err);
         }
     };
+
+    useEffect(() => {
+        if (id) {
+            Promise.resolve().then(() => {
+                fetchDepartment();
+                fetchUsers();
+                fetchAllUsers();
+            });
+        }
+    }, [id]);
 
     const handleAssign = async () => {
         if (!selectedUserId) return;

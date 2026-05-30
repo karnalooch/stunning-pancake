@@ -40,41 +40,54 @@ import { apiClient } from './api/client';
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.slice(2)); // after #/auth/callback
-    const access = params.get('access');
-    const refresh = params.get('refresh');
+    // 1. Try parsing from hash query string
+    const hash = window.location.hash;
+    const qIndex = hash.indexOf('?');
+    const hashParams = new URLSearchParams(qIndex !== -1 ? hash.slice(qIndex) : '');
+    let access = hashParams.get('access');
+    let refresh = hashParams.get('refresh');
+
+    // 2. Fall back to standard query string (window.location.search)
     if (!access) {
-      // Try query params (direct URL from backend redirect)
       const qp = new URLSearchParams(window.location.search);
-      const qAccess = qp.get('access');
-      const qRefresh = qp.get('refresh');
-      if (qAccess && qRefresh) {
-        // Fetch user profile
-        import('./api/client').then(({ apiClient }) => {
-          apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${qAccess}` } })
-            .then(r => {
-              const d = r.data?.data || r.data;
-              onLogin(qAccess, qRefresh, { id: d.id, username: d.username, role: d.role, tenantId: d.tenant_id || null, tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null, isImpersonated: false });
-              window.location.hash = '#/owner/dashboard';
-            })
-            .catch(() => setError('Failed to load profile'));
-        });
-        return;
-      }
-      setError('No token received from Google login');
+      access = qp.get('access');
+      refresh = qp.get('refresh');
+    }
+
+    if (access && refresh) {
+      const finalAccess = access;
+      const finalRefresh = refresh;
+      // Fetch user profile
+      import('./api/client').then(({ apiClient }) => {
+        apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${finalAccess}` } })
+          .then(r => {
+            const d = r.data?.data || r.data;
+            onLogin(finalAccess, finalRefresh, {
+              id: d.id,
+              username: d.username,
+              role: d.role,
+              tenantId: d.tenant_id || null,
+              tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
+              isImpersonated: false
+            });
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.hash = '#/owner/dashboard';
+          })
+          .catch(() => setError('Failed to load profile'));
+      });
+    } else {
+      Promise.resolve().then(() => setError('No token received from login provider'));
     }
   }, [onLogin]);
 
   if (error) return <Box p={50} ta="center"><Title order={2} c="red">Login Failed</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
-  return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">Completing Google login...</Text></Box>;
+  return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">Completing login process...</Text></Box>;
 };
 
 export default function App() {
-  const [loading, setLoading] = useState(false);
-  const { isAuthenticated, login, user } = useAuth();
+  const { isAuthenticated, login } = useAuth();
 
   const handleLogin = async (username: string, password: string) => {
-    setLoading(true);
     try {
       const res = await apiClient.post('/auth/token/', { username, password });
       const { access, refresh } = res.data;
@@ -95,8 +108,6 @@ export default function App() {
     } catch (error: any) {
       const msg = error?.response?.data?.error || error?.response?.data?.detail || 'Invalid credentials.';
       throw new Error(msg);
-    } finally {
-      setLoading(false);
     }
   };
 

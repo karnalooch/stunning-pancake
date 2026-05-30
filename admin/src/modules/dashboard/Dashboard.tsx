@@ -6,7 +6,7 @@ import {
 import { motion } from 'framer-motion';
 import {
   Users, Activity, Gauge, ShieldCheck, TrendingUp, Brain,
-  Map, CheckCircle2, AlertTriangle, Clock,
+  Map, CheckCircle2, AlertTriangle,
 } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
@@ -14,8 +14,6 @@ import { PageHeader } from '../../core/components/PageHeader';
 import { StatCard } from '../../core/components/StatCard';
 import { useAuth } from '../../core/auth/useAuth';
 import { ModeratorWorklist } from './ModeratorWorklist';
-import { ActivityDetail } from './ActivityDetail';
-import { GlobalHeatmap } from '../analytics/GlobalHeatmap';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
 import { UserMapView } from '../analytics/UserMapView';
@@ -97,7 +95,6 @@ export const Dashboard: React.FC = () => {
   const isModerator = user?.role === 'TENANT_MODERATOR';
 
   useEffect(() => {
-    setLoading(true);
     apiClient.get('/activities/admin/stats/')
       .then((res) => setStats(res.data))
       .catch(() =>

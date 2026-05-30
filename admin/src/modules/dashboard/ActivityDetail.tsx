@@ -23,13 +23,19 @@ interface ActivityDetailData {
 
 export const ActivityDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
+    const [prevId, setPrevId] = useState<string | undefined>(id);
     const [data, setData] = useState<ActivityDetailData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
+    if (id !== prevId) {
+        setPrevId(id);
         setLoading(true);
         setError(null);
+        setData(null);
+    }
+
+    useEffect(() => {
         apiClient.get(`/activities/sessions/${id}/detail/`)
             .then(r => setData(r.data))
             .catch(err => {

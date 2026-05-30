@@ -7,7 +7,28 @@
  * Run from admin/: npx vitest run src/__tests__/SystemIntelligence.test.tsx
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+vi.mock('../api/client', () => {
+  return {
+    apiClient: {
+      get: vi.fn((url: string) => {
+        if (url === '/activities/ai/insights/') {
+          return Promise.resolve({
+            data: [
+              { title: 'Platform Health', desc: '94.2% verification rate', type: 'positive', color: 'green' },
+              { title: 'Growth Insight', desc: 'Siedlce tenant grew 23%', type: 'warning', color: 'orange' },
+              { title: 'Integrity Alert', desc: '3 anomalies detected', type: 'alert', color: 'red' },
+              { title: 'Global Strategy', desc: 'Department adoption at 67%', type: 'positive', color: 'blue' }
+            ]
+          });
+        }
+        return Promise.resolve({ data: [] });
+      })
+    }
+  };
+});
+
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
 import { MantineProvider } from '@mantine/core';
 import { SystemIntelligence } from '../modules/analytics/SystemIntelligence';

@@ -141,20 +141,18 @@ class WearableIntegration(models.Model):
         return f"{self.user.username} - {self.service}"
 
     def save(self, *args, **kwargs):
-        # Encrypt tokens at rest.  Use a volatile flag + Fernet-decrypt test
-        # to avoid double-encrypting tokens loaded from the DB and re-saved.
-        if not getattr(self, '_tokens_encrypted', False):
-            if self.access_token:
-                try:
-                    _fernet.decrypt(self.access_token.encode())
-                except (InvalidToken, UnicodeDecodeError):
-                    self.access_token = _fernet.encrypt(self.access_token.encode()).decode()
-            if self.refresh_token:
-                try:
-                    _fernet.decrypt(self.refresh_token.encode())
-                except (InvalidToken, UnicodeDecodeError):
-                    self.refresh_token = _fernet.encrypt(self.refresh_token.encode()).decode()
-            self._tokens_encrypted = True
+        # Encrypt tokens at rest. Always attempt to decrypt first to avoid
+        # double-encrypting already encrypted tokens loaded from the DB.
+        if self.access_token:
+            try:
+                _fernet.decrypt(self.access_token.encode())
+            except (InvalidToken, UnicodeDecodeError):
+                self.access_token = _fernet.encrypt(self.access_token.encode()).decode()
+        if self.refresh_token:
+            try:
+                _fernet.decrypt(self.refresh_token.encode())
+            except (InvalidToken, UnicodeDecodeError):
+                self.refresh_token = _fernet.encrypt(self.refresh_token.encode()).decode()
         super().save(*args, **kwargs)
 
     @property

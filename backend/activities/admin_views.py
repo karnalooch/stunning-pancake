@@ -611,6 +611,14 @@ class RunSimulationView(APIView):
         clear = bool(request.data.get('clear', False))
         skip_activities = bool(request.data.get('skip_activities', False))
         total_users = request.data.get('total_users')
+        if total_users is not None:
+            try:
+                total_users = int(total_users)
+            except (ValueError, TypeError):
+                return Response(
+                    {'error': 'total_users must be an integer'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         if not total_users and (scale < 0.001 or scale > 1.0):
             return Response(

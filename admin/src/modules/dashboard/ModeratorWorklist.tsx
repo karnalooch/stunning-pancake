@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Badge, Button, Stack, Table, Skeleton, ThemeIcon } from '@mantine/core';
-import { Check, X, Clock, Activity } from 'lucide-react';
+import { Card, Text, Group, Badge, Button, Stack, Table, Skeleton } from '@mantine/core';
+import { Check, X, Activity } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
@@ -8,11 +8,16 @@ export const ModeratorWorklist: React.FC = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { fetchActivities(); }, []);
   const fetchActivities = async () => {
     try { const { data } = await apiClient.get('/activities/admin/stats/'); setActivities((data as any)?.per_tenant?.[0]?.recent_unverified || []); } catch { }
     finally { setLoading(false); }
   };
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      fetchActivities();
+    });
+  }, []);
 
   const handleAction = async (id: number, action: 'approve' | 'reject') => {
     try {

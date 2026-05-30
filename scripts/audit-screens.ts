@@ -88,6 +88,8 @@ function main(): never {
       `import { ${componentName}`,
       `import {${componentName}`,
       `import type { ${componentName}`,
+      `/${componentName}'`,
+      `/${componentName}"`,
     ];
 
     for (const otherFile of allFiles) {
@@ -104,7 +106,8 @@ function main(): never {
         if (imported) break;
 
         // Check relative import paths
-        if (content.includes(basename(moduleFile).replace('.tsx', '')).includes(basename(moduleFile).replace('.ts', ''))) {
+        const baseNameWithoutExt = basename(moduleFile).replace(/\.tsx?$/, '');
+        if (content.includes(baseNameWithoutExt)) {
           imported = true;
           break;
         }
@@ -122,13 +125,29 @@ function main(): never {
   // Now check the reverse: which files ARE imported by App.tsx?
   const appTsx = readFileSync(resolve(ROOT, 'admin/src/App.tsx'), 'utf-8');
   const routedInApp = new Set<string>();
-  const importRegex = /import\s+\{\s*(\w+)\s*\}\s+from\s+['"](.+\.tsx)['"]/g;
+  
+  // Static imports with braces (can be multiple and/or without extension)
+  const importRegex = /import\s+\{\s*([^}]+)\s*\}\s+from\s+['"]([^'"]+)['"]/g;
   let m;
   while ((m = importRegex.exec(appTsx)) !== null) {
+    const names = m[1].split(',').map(s => s.trim());
+    for (const name of names) {
+      if (name) {
+        const cleanName = name.split(/\s+as\s+/).pop()?.trim();
+        if (cleanName) routedInApp.add(cleanName);
+      }
+    }
+  }
+
+  // Default static imports
+  const defaultImportRegex = /import\s+(\w+)\s+from\s+['"]([^'"]+)['"]/g;
+  while ((m = defaultImportRegex.exec(appTsx)) !== null) {
     routedInApp.add(m[1]);
   }
-  const defaultImportRegex = /import\s+(\w+)\s+from\s+['"](.+\.tsx)['"]/g;
-  while ((m = defaultImportRegex.exec(appTsx)) !== null) {
+
+  // Lazy dynamic imports
+  const lazyImportRegex = /const\s+(\w+)\s*=\s*(?:React\.)?lazy\(/g;
+  while ((m = lazyImportRegex.exec(appTsx)) !== null) {
     routedInApp.add(m[1]);
   }
 

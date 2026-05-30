@@ -97,7 +97,7 @@ function main(): never {
   }
 
   // Routes without sidebar entry (orphans)
-  const ignoredRoutes = new Set(['*', '/login', '/unauthorized', '/', 'index', 'dashboard', 'users', 'white-label', 'sponsor', 'settings', 'anti-cheat', '/owner',
+  const ignoredRoutes = new Set(['*', '/login', '/unauthorized', '/auth/callback', '/', 'index', 'dashboard', 'users', 'white-label', 'sponsor', 'settings', 'anti-cheat', '/owner',
     'departments/:id/users', 'activities/:id']);
   for (const route of routes) {
     if (ignoredRoutes.has(route)) continue;

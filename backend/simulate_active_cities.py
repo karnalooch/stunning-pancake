@@ -275,7 +275,9 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
     # If total_users is specified, use it directly across random cities
     if total_users:
-        num_cities = random.randint(max(3, num_cities), len(CITIES))
+        total_users = int(total_users)
+        limit_cities = num_cities if num_cities is not None else 3
+        num_cities = random.randint(max(3, limit_cities), len(CITIES))
         selected_cities = random.sample(CITIES, num_cities)
         users_per_city = total_users // num_cities
         scale = 0.01  # minimal scale for department calculations

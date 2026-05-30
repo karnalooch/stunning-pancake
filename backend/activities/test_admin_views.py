@@ -85,9 +85,7 @@ class TestAdminDashboardStats:
         force_authenticate(request, user=owner_user)
 
         view = AdminDashboardStatsView()
-        view.request = request
-        view.format_kwarg = None
-        response = view.get(request)
+        response = view.dispatch(request)
 
         assert response.status_code == 200
         data = response.data
@@ -105,9 +103,7 @@ class TestAdminDashboardStats:
         force_authenticate(request, user=owner_user)
 
         view = AdminDashboardStatsView()
-        view.request = request
-        view.format_kwarg = None
-        response = view.get(request)
+        response = view.dispatch(request)
 
         per_tenant = response.data.get('per_tenant', [])
         assert isinstance(per_tenant, list)
@@ -121,8 +117,6 @@ class TestAdminDashboardStats:
         force_authenticate(request, user=user)
 
         view = AdminDashboardStatsView()
-        view.request = request
-        view.format_kwarg = None
-        response = view.get(request)
+        response = view.dispatch(request)
 
         assert response.status_code == 403

@@ -16,6 +16,9 @@ mock_gdal.DataSource = type('DataSource', (), {})
 mock_gdal.Driver = type('Driver', (), {})
 mock_gdal.GDALException = type('GDALException', (Exception,), {})
 mock_gdal.SRSException = type('SRSException', (Exception,), {})
+mock_gdal.OGRGeomType = type('OGRGeomType', (), {})
+mock_gdal.CoordTransform = type('CoordTransform', (), {})
+mock_gdal.SpatialReference = type('SpatialReference', (), {})
 sys.modules['django.contrib.gis.gdal'] = mock_gdal
 
 # django.contrib.gis.gdal.error is imported as a submodule
@@ -64,6 +67,8 @@ sys.modules['django.contrib.gis.serializers'] = mock_gis_serializers
 
 mock_gis_widgets = ModuleType('django.contrib.gis.forms.widgets')
 mock_gis_widgets.OpenLayersWidget = type('OpenLayersWidget', (), {})
+mock_gis_widgets.BaseGeometryWidget = type('BaseGeometryWidget', (), {})
+mock_gis_widgets.OSMWidget = type('OSMWidget', (), {})
 sys.modules['django.contrib.gis.forms.widgets'] = mock_gis_widgets
 
 mock_gis_forms_fields = ModuleType('django.contrib.gis.forms.fields')
@@ -90,6 +95,8 @@ os.environ.setdefault('DATABASE_URL', 'sqlite:///:memory:')
 os.environ.setdefault('REDIS_URL', 'redis://localhost:6379/0')
 os.environ.setdefault('SECRET_KEY', 'test-secret-key-for-ci')
 import django
+from django.contrib.gis.db.models.fields import BaseSpatialField
+BaseSpatialField.db_type = lambda self, connection: 'text'
 django.setup()
 
 from django.core.management import execute_from_command_line

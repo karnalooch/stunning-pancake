@@ -198,6 +198,9 @@ def live_tick_task(self):
             if isinstance(start_time, str):
                 start_time = timezone.datetime.fromisoformat(start_time)
 
+            lat = ride.get('lat', 52.2297)
+            lon = ride.get('lon', 21.0122)
+
             if is_cheater:
                 from django.contrib.gis.geos import LineString
                 n_points = 8
