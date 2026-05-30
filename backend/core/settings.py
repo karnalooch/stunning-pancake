@@ -269,6 +269,11 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Warsaw'
 
+# Force Celery to run synchronously in local/SQLite dev environment if DATABASE_URL is SQLite
+if 'sqlite' in os.getenv('DATABASE_URL', ''):
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_ALWAYS_EAGER = True
+
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
     'activities.tasks.*': {'queue': 'critical'},
