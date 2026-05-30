@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box, Text, Card, Group, Stack, Slider, NumberInput, Button,
     Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox,
-    Modal, Divider,
+    Modal, Divider, Stepper,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
     Play, StopCircle, Bike, Trash2, AlertTriangle,
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
-    AlertCircle,
+    AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database
 } from 'lucide-react';
 import { SimulatorApi } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
@@ -28,6 +28,8 @@ interface BatchStatus {
 }
 
 export const SimulatorPage: React.FC = () => {
+    const [activeStep, setActiveStep] = useState(0);
+
     const [cyclists, setCyclists] = useState<number>(1000);
     const [generateActivities, setGenerateActivities] = useState(true);
     const [activeRatio, setActiveRatio] = useState(0.3);
@@ -75,6 +77,9 @@ export const SimulatorPage: React.FC = () => {
             ]);
             setBatchStatus(bs);
             setLiveStatus(ls);
+            if (bs?.running || ls?.running) {
+                setActiveStep(2); // Jump straight to running/monitoring if already active
+            }
         })();
         startPolling();
         return () => {
@@ -97,16 +102,28 @@ export const SimulatorPage: React.FC = () => {
                 skip_activities: !generateActivities,
             });
             notifications.show({ title: 'Cyclists Creating...', message: `Generating ${cyclists.toLocaleString()} users. Wait for completion...`, color: 'yellow' });
-        await new Promise<void>((resolve) => {
-            const check = setInterval(async () => {
-                try {
-                    const status = await SimulatorApi.getBatchStatus();
-                    setBatchStatus(status);
-                    if (!status.running) { clearInterval(check); resolve(); }
-                } catch { }
-            }, 2000);
-        });
-        notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
+            
+            // Wait for synchronous completion in eager mode
+            await new Promise<void>((resolve, reject) => {
+                let attempts = 0;
+                const check = setInterval(async () => {
+                    attempts++;
+                    try {
+                        const status = await SimulatorApi.getBatchStatus();
+                        setBatchStatus(status);
+                        if (!status.running) { 
+                            clearInterval(check); 
+                            resolve(); 
+                        }
+                    } catch (e) {
+                        if (attempts > 10) {
+                            clearInterval(check);
+                            reject(e);
+                        }
+                    }
+                }, 1000);
+            });
+            notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
         } catch (err: any) {
             notifications.show({ title: 'Generation Error', message: err?.response?.data?.error || err.message, color: 'red' });
             setLaunching(false);
@@ -145,6 +162,8 @@ export const SimulatorPage: React.FC = () => {
             await SimulatorApi.wipeData();
             setBatchStatus(null); setLiveStatus(null);
             setWipeModalOpen(false); setWipeConfirm('');
+            setActiveStep(0);
+            notifications.show({ title: 'Wipe Complete', message: 'All simulation and activity data has been wiped.', color: 'green' });
         } catch (err: any) {
             notifications.show({ title: 'Error', message: err?.response?.data?.error || 'Wipe failed', color: 'red' });
         }
@@ -153,173 +172,220 @@ export const SimulatorPage: React.FC = () => {
 
     return (
         <Box p="md">
-            <PageHeader title="🚴 Cycling Simulator" subtitle="Generate cyclists that ride in real-time — visible on the live map" />
+            <PageHeader title="🚴 Cycling Simulator" subtitle="Interactive step-by-step wizard to configure, generate, and monitor live cyclists" />
 
-            <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-                {/* ── LEFT: Configuration ──────────────────────────────── */}
-                <Card withBorder>
-                    <Group mb="md">
-                        <ThemeIcon size={28} radius="sm" color="indigo" variant="light"><Users size={14} /></ThemeIcon>
-                        <Text fw={600}>Configuration</Text>
-                    </Group>
+            <Card withBorder radius="md" p="xl" mb="md">
+                <Stepper active={activeStep} onStepClick={anyRunning ? undefined : setActiveStep} breakpoint="sm" allowNextStepsSelect={false}>
+                    {/* STEP 1: POPULATION CONFIG */}
+                    <Stepper.Step label="Step 1" description="Configure Cyclists" icon={<Users size={16} />}>
+                        <Stack gap="lg" mt="xl" style={{ maxWidth: 600 }}>
+                            <Alert color="indigo" icon={<Users size={18} />} title="Cycling Population Setup">
+                                <Text size="sm">Choose how many cyclists should exist in your Smart City database. These users will be dynamically generated across various municipalities.</Text>
+                            </Alert>
 
-                    <Stack gap="md">
-                        <NumberInput
-                            label="Number of Cyclists"
-                            value={cyclists}
-                            onChange={(v) => setCyclists(Number(v) || 100)}
-                            min={10} max={100000} step={100}
-                            leftSection={<Bike size={16} />}
-                        />
+                            <NumberInput
+                                label="Number of Cyclists to Generate"
+                                description="Min: 10, Max: 100,000 users with ATHLETE role"
+                                value={cyclists}
+                                onChange={(v) => setCyclists(Number(v) || 100)}
+                                min={10} max={100000} step={100}
+                                leftSection={<Bike size={16} />}
+                                size="md"
+                            />
 
-                        <Checkbox
-                            label="Generate GPS-tracked activities"
-                            description="Creates rides with realistic route paths on the map"
-                            checked={generateActivities}
-                            onChange={(e) => setGenerateActivities(e.currentTarget.checked)}
-                        />
+                            <Checkbox
+                                label="Generate historical GPS-tracked activities"
+                                description="Populates the database with realistic completed rides of varying coordinates"
+                                checked={generateActivities}
+                                onChange={(e) => setGenerateActivities(e.currentTarget.checked)}
+                                size="md"
+                            />
 
-                        <Divider label="Live Simulation" labelPosition="center" />
+                            <Group justify="flex-end" mt="xl">
+                                <Button size="md" color="violet" rightSection={<ArrowRight size={16} />} onClick={() => setActiveStep(1)}>
+                                    Next: Live Telemetry Tuning
+                                </Button>
+                            </Group>
+                        </Stack>
+                    </Stepper.Step>
 
-                        <Checkbox
-                            label="Enable live ride simulation"
-                            description="Cyclists will ride in real-time and appear on the live map"
-                            checked={liveEnabled}
-                            onChange={(e) => setLiveEnabled(e.currentTarget.checked)}
-                        />
+                    {/* STEP 2: TELEMETRY TUNING */}
+                    <Stepper.Step label="Step 2" description="Live Telemetry Tuning" icon={<Zap size={16} />}>
+                        <Stack gap="lg" mt="xl" style={{ maxWidth: 600 }}>
+                            <Alert color="teal" icon={<Zap size={18} />} title="Real-Time Telemetry Settings">
+                                <Text size="sm">Configure how kolarze should behave on the active live map. You can simulate cheat ratios (impossible routes/speeds) and define tick telemetry intervals.</Text>
+                            </Alert>
 
-                        {liveEnabled && (
-                            <>
-                                <Box>
-                                    <Text size="sm" fw={500} mb={4}>Active Riders: {(activeRatio * 100).toFixed(0)}%</Text>
-                                    <Slider value={activeRatio} onChange={setActiveRatio} min={0.01} max={1.0} step={0.01}
-                                        marks={[{ value: 0.1, label: '10%' }, { value: 0.3, label: '30%' }, { value: 0.6, label: '60%' }]} />
-                                </Box>
-                                <Box>
-                                    <Text size="sm" fw={500} mb={4}>Cheaters: {(cheatRatio * 100).toFixed(0)}%</Text>
-                                    <Slider value={cheatRatio} onChange={setCheatRatio} min={0} max={0.3} step={0.01}
-                                        marks={[{ value: 0, label: '0%' }, { value: 0.05, label: '5%' }, { value: 0.15, label: '15%' }]} />
-                                </Box>
-                                <NumberInput
-                                    label="Tick Interval (s)"
-                                    value={tickSeconds} onChange={(v) => setTickSeconds(Number(v) || 8)}
-                                    min={3} max={60} leftSection={<Zap size={16} />}
-                                />
-                            </>
-                        )}
+                            <Checkbox
+                                label="Enable live ride simulation"
+                                description="Cyclists will ride in real-time, sending bulk coordinates on a periodic interval"
+                                checked={liveEnabled}
+                                onChange={(e) => setLiveEnabled(e.currentTarget.checked)}
+                                size="md"
+                            />
 
-                        <Card withBorder bg="var(--mantine-color-dark-8)" padding="sm">
-                            <Text size="xs" c="dimmed" mb={4}>Preview</Text>
-                            <SimpleGrid cols={2} spacing="xs">
-                                <Text size="xs">Cyclists: <b>{cyclists.toLocaleString()}</b></Text>
-                                <Text size="xs">Activities: <b>{estActivities.toLocaleString()}</b></Text>
-                                {liveEnabled && (
-                                    <>
-                                        <Text size="xs" c="blue">Riding: <b>~{activeRiders.toLocaleString()}</b></Text>
-                                        <Text size="xs" c="red">Cheaters: <b>~{cheaters.toLocaleString()}</b></Text>
-                                    </>
+                            {liveEnabled && (
+                                <Stack gap="md" mt="xs">
+                                    <Box>
+                                        <Text size="sm" fw={600} mb={4}>Active Riders Pool: {(activeRatio * 100).toFixed(0)}%</Text>
+                                        <Text size="xs" c="dimmed" mb="md">Percentage of generated users currently on an active ride (~{activeRiders.toLocaleString()} kolarzy)</Text>
+                                        <Slider value={activeRatio} onChange={setActiveRatio} min={0.01} max={1.0} step={0.01}
+                                            marks={[{ value: 0.1, label: '10%' }, { value: 0.3, label: '30%' }, { value: 0.6, label: '60%' }]} />
+                                    </Box>
+
+                                    <Box mt="md">
+                                        <Group justify="space-between">
+                                            <Text size="sm" fw={600}>Simulated Cheater Ratio: {(cheatRatio * 100).toFixed(0)}%</Text>
+                                            <Badge color="red" variant="light">Anti-Cheat Testing</Badge>
+                                        </Group>
+                                        <Text size="xs" c="dimmed" mb="md">Percentage of riders generating non-compliant, fraudulent routes (~{cheaters.toLocaleString()} cheaters)</Text>
+                                        <Slider value={cheatRatio} onChange={setCheatRatio} min={0} max={0.3} step={0.01}
+                                            marks={[{ value: 0, label: '0%' }, { value: 0.05, label: '5%' }, { value: 0.15, label: '15%' }]} />
+                                    </Box>
+
+                                    <NumberInput
+                                        label="Telemetry Tick Interval"
+                                        description="How frequently (in seconds) the simulator pushes geographical updates"
+                                        value={tickSeconds} onChange={(v) => setTickSeconds(Number(v) || 8)}
+                                        min={3} max={60} leftSection={<Zap size={16} />}
+                                        size="md"
+                                        mt="md"
+                                    />
+                                </Stack>
+                            )}
+
+                            <Group justify="space-between" mt="xl">
+                                <Button variant="light" size="md" color="gray" leftSection={<ArrowLeft size={16} />} onClick={() => setActiveStep(0)}>
+                                    Back
+                                </Button>
+                                <Button size="md" color="violet" rightSection={<ArrowRight size={16} />} onClick={() => setActiveStep(2)}>
+                                    Next: Review & Launch
+                                </Button>
+                            </Group>
+                        </Stack>
+                    </Stepper.Step>
+
+                    {/* STEP 3: EXECUTION & MONITORING */}
+                    <Stepper.Step label="Step 3" description="Review & Monitor" icon={<Activity size={16} />}>
+                        <SimpleGrid cols={{ base: 1, md: 2 }} spacing="xl" mt="xl">
+                            {/* Summary & Trigger */}
+                            <Stack gap="lg">
+                                <Alert color="indigo" icon={<Database size={18} />} title="Simulation Configuration Summary">
+                                    <Stack gap="xs" mt="xs">
+                                        <Text size="sm">• Total Cyclists: <b>{cyclists.toLocaleString()}</b></Text>
+                                        <Text size="sm">• Historical Activities: <b>{estActivities.toLocaleString()}</b></Text>
+                                        <Text size="sm">• Live Ride Simulation: <b>{liveEnabled ? 'Enabled' : 'Disabled'}</b></Text>
+                                        {liveEnabled && (
+                                            <>
+                                                <Text size="sm" c="blue">• Live Riders Pool: <b>~{activeRiders.toLocaleString()} ({(activeRatio * 100).toFixed(0)}%)</b></Text>
+                                                <Text size="sm" c="red">• Active Cheaters Pool: <b>~{cheaters.toLocaleString()} ({(cheatRatio * 100).toFixed(0)}%)</b></Text>
+                                                <Text size="sm">• Tick telemetry push: <b>Every {tickSeconds} seconds</b></Text>
+                                            </>
+                                        )}
+                                    </Stack>
+                                </Alert>
+
+                                <Stack gap="md">
+                                    <Button size="lg" color="violet" fullWidth
+                                        leftSection={anyRunning ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
+                                        loading={launching} disabled={anyRunning}
+                                        onClick={handleLaunch}>
+                                        {launching ? 'Creating Cyclists & Rides...' : `Launch ${cyclists.toLocaleString()} Cyclists`}
+                                    </Button>
+
+                                    {anyRunning && (
+                                        <Button size="md" color="red" variant="light" fullWidth
+                                            leftSection={<StopCircle size={16} />} onClick={handleStop}>
+                                            Stop Active Simulation
+                                        </Button>
+                                    )}
+
+                                    {!anyRunning && (
+                                        <Button variant="light" size="md" color="gray" leftSection={<ArrowLeft size={16} />} onClick={() => setActiveStep(1)}>
+                                            Back & Change Settings
+                                        </Button>
+                                    )}
+
+                                    <Button variant="light" color="cyan" size="md" fullWidth
+                                        leftSection={<Map size={16} />}
+                                        component="a" href="#/owner/dashboard">
+                                        Open Live Maps
+                                    </Button>
+                                </Stack>
+                            </Stack>
+
+                            {/* Live Monitors & Logs */}
+                            <Card withBorder radius="md" p="md">
+                                <Group mb="md" justify="space-between">
+                                    <Group gap="xs">
+                                        <ThemeIcon size={24} radius="sm" color="teal" variant="light"><Activity size={14} /></ThemeIcon>
+                                        <Text fw={600} size="sm">Live Telemetry Monitor</Text>
+                                    </Group>
+                                    <Badge variant="light" color={anyRunning ? 'green' : 'gray'}>
+                                        {anyRunning ? 'RUNNING' : 'IDLE'}
+                                    </Badge>
+                                </Group>
+
+                                {anyRunning ? (
+                                    <SimpleGrid cols={2} spacing="xs" mb="md">
+                                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                                            <Text size="2xs" c="dimmed">Active Riders</Text>
+                                            <Text fw={700} size="lg" c="blue">{liveStatus?.currently_riding?.toLocaleString() ?? '0'}</Text>
+                                        </Card>
+                                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                                            <Text size="2xs" c="dimmed">Rides Completed</Text>
+                                            <Text fw={700} size="lg" c="green">{liveStatus?.total_completed?.toLocaleString() ?? '0'}</Text>
+                                        </Card>
+                                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                                            <Text size="2xs" c="dimmed">Cheaters Caught</Text>
+                                            <Text fw={700} size="lg" c="red">{liveStatus?.cheaters_caught?.toLocaleString() ?? '0'}</Text>
+                                        </Card>
+                                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                                            <Text size="2xs" c="dimmed">Users Created</Text>
+                                            <Text fw={700} size="lg">{batchStatus?.users_created?.toLocaleString() ?? '—'}</Text>
+                                        </Card>
+                                    </SimpleGrid>
+                                ) : (
+                                    <Alert color="gray" icon={<Activity size={16} />} mb="md">
+                                        <Text size="xs">Ready to start. Click "Launch" on the left to begin the simulation cycle.</Text>
+                                    </Alert>
                                 )}
-                            </SimpleGrid>
-                        </Card>
 
-                        <Button size="lg" color="violet" fullWidth
-                            leftSection={anyRunning ? <Loader size={16} /> : <Play size={18} />}
-                            loading={launching} disabled={anyRunning}
-                            onClick={handleLaunch}>
-                            {launching ? 'Creating...' : `Start ${cyclists.toLocaleString()} Cyclists`}
-                        </Button>
+                                {/* Logs Scroll Area */}
+                                {((batchStatus?.log?.length ?? 0) > 0 || (liveStatus?.log?.length ?? 0) > 0) && (
+                                    <ScrollArea h={180} style={{
+                                        background: '#0d1117', borderRadius: 8, padding: 12,
+                                        fontFamily: 'monospace',
+                                    }}>
+                                        {batchStatus?.log?.map(([ts, msg], i) => (
+                                            <Text key={`b-${i}`} size="2xs"
+                                                style={{ color: msg.includes('ERROR') ? '#f85149' : '#58a6ff', lineHeight: 1.5 }}>
+                                                <Text span c="dimmed" size="2xs">[{ts}]</Text> {msg}
+                                            </Text>
+                                        ))}
+                                        {liveStatus?.log?.map(([ts, msg], i) => (
+                                            <Text key={`l-${i}`} size="2xs"
+                                                style={{ color: msg.includes('ERROR') ? '#f85149' : '#8b949e', lineHeight: 1.5 }}>
+                                                <Text span c="dimmed" size="2xs">[L {ts}]</Text> {msg}
+                                            </Text>
+                                        ))}
+                                        <div ref={logEndRef} />
+                                    </ScrollArea>
+                                )}
 
-                        {anyRunning && (
-                            <Button size="md" color="red" variant="light" fullWidth
-                                leftSection={<StopCircle size={16} />} onClick={handleStop}>
-                                Stop Simulation
-                            </Button>
-                        )}
-                    </Stack>
-                </Card>
-
-                {/* ── RIGHT: Live Monitoring ───────────────────────────── */}
-                <Card withBorder>
-                    <Group mb="md">
-                        <ThemeIcon size={28} radius="sm" color="teal" variant="light"><Activity size={14} /></ThemeIcon>
-                        <Text fw={600}>Live Monitoring</Text>
-                        <Badge variant="light" color={anyRunning ? 'green' : 'gray'}>
-                            {anyRunning ? 'RUNNING' : 'IDLE'}
-                        </Badge>
-                    </Group>
-
-                    {anyRunning ? (
-                        <SimpleGrid cols={{ base: 2, md: 3 }} spacing="sm" mb="md">
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Cyclists Riding</Text>
-                                <Text fw={700} size="xl" c="blue">{liveStatus?.currently_riding?.toLocaleString() ?? '0'}</Text>
-                            </Card>
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Rides Completed</Text>
-                                <Text fw={700} size="xl" c="green">{liveStatus?.total_completed?.toLocaleString() ?? '0'}</Text>
-                            </Card>
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Cheaters Caught</Text>
-                                <Text fw={700} size="xl" c="red">{liveStatus?.cheaters_caught?.toLocaleString() ?? '0'}</Text>
-                            </Card>
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Users Created</Text>
-                                <Text fw={700} size="xl">{batchStatus?.users_created?.toLocaleString() ?? '—'}</Text>
-                            </Card>
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Activities</Text>
-                                <Text fw={700} size="xl" c="cyan">{batchStatus?.activities_created?.toLocaleString() ?? '—'}</Text>
-                            </Card>
-                            <Card withBorder padding="sm">
-                                <Text size="xs" c="dimmed">Phase</Text>
-                                <Text fw={700} size="xl">{batchStatus?.current_phase ?? '...'}</Text>
+                                {/* Wipe Data (Danger Zone) */}
+                                {!anyRunning && (
+                                    <Button color="red" variant="subtle" size="xs" fullWidth mt="md"
+                                        leftSection={<Trash2 size={12} />}
+                                        onClick={() => setWipeModalOpen(true)}>
+                                        Wipe Simulator DB Data
+                                    </Button>
+                                )}
                             </Card>
                         </SimpleGrid>
-                    ) : (
-                        <Alert color="gray" icon={<Activity size={16} />} mb="md">
-                            <Text size="sm">No simulation running. Configure and launch from the left panel.</Text>
-                        </Alert>
-                    )}
-
-                    {/* View on Map */}
-                    <Button variant="light" color="cyan" fullWidth mb="md"
-                        leftSection={<Map size={16} />}
-                        component="a" href="#/owner/dashboard">
-                        View Cyclists on Live Map
-                    </Button>
-
-                    {/* Logs */}
-                    {((batchStatus?.log?.length ?? 0) > 0 || (liveStatus?.log?.length ?? 0) > 0) && (
-                        <ScrollArea h={280} style={{
-                            background: '#0d1117', borderRadius: 8, padding: 12,
-                            fontFamily: 'monospace',
-                        }}>
-                            {batchStatus?.log?.map(([ts, msg], i) => (
-                                <Text key={`b-${i}`} size="xs"
-                                    style={{ color: msg.includes('ERROR') ? '#f85149' : '#58a6ff', lineHeight: 1.5 }}>
-                                    <Text span c="dimmed" size="xs">[{ts}]</Text> {msg}
-                                </Text>
-                            ))}
-                            {liveStatus?.log?.map(([ts, msg], i) => (
-                                <Text key={`l-${i}`} size="xs"
-                                    style={{ color: msg.includes('ERROR') ? '#f85149' : '#8b949e', lineHeight: 1.5 }}>
-                                    <Text span c="dimmed" size="xs">[L {ts}]</Text> {msg}
-                                </Text>
-                            ))}
-                            <div ref={logEndRef} />
-                        </ScrollArea>
-                    )}
-
-                    {/* Danger Zone */}
-                    <Card withBorder mt="md" style={{ border: '1px solid var(--mantine-color-red-6)' }}>
-                        <Button color="red" variant="subtle" fullWidth
-                            leftSection={<Trash2 size={14} />} disabled={anyRunning}
-                            onClick={() => setWipeModalOpen(true)}>
-                            Wipe All Data
-                        </Button>
-                    </Card>
-                </Card>
-            </SimpleGrid>
+                    </Stepper.Step>
+                </Stepper>
+            </Card>
 
             <Modal opened={wipeModalOpen} onClose={() => { setWipeModalOpen(false); setWipeConfirm(''); }}
                 title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
@@ -342,4 +408,3 @@ export const SimulatorPage: React.FC = () => {
         </Box>
     );
 };
-
