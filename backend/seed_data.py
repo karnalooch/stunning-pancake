@@ -21,9 +21,13 @@ def seed():
         username='global_owner',
         defaults={
             'email': 'owner@sport-platform.com',
-            'role': 'GLOBAL_OWNER'
+            'role': 'GLOBAL_OWNER',
+            'is_staff': True,
+            'is_superuser': True
         }
     )
+    owner.is_staff = True
+    owner.is_superuser = True
     password = os.getenv('ADMIN_PASSWORD') or os.getenv('GLOBAL_OWNER_PASSWORD', 'admin123')
     owner.set_password(password)
     owner.save()
