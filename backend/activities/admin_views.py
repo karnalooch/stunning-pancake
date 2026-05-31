@@ -346,6 +346,16 @@ class LiveSimulationView(APIView):
 
     def get(self, request):
         state = sim.get_live_state()
+        if state.get('running') and 'sqlite' in os.getenv('DATABASE_URL', ''):
+            now = time.time()
+            last_tick = state.get('last_tick_at', 0)
+            if now - last_tick >= state.get('tick_seconds', 8):
+                # Trigger next tick on the fly in SQLite dev environment
+                from .simulator_tasks import live_tick_task
+                live_tick_task()
+                sim.set_live_state(last_tick_at=now)
+                state = sim.get_live_state()
+
         log = sim.get_live_log()
         elapsed = 0.0
         if state.get('started_at'):
@@ -399,13 +409,32 @@ class LiveSimulationView(APIView):
         total_athletes = User.objects.filter(role='ATHLETE').count()
         total_users = max(10, int(total_athletes * pool_pct))
 
-        # Spawn Celery task
-        run_live_simulation.delay(
-            total_users=total_users,
-            active_ratio=active_ratio,
-            cheat_ratio=cheat_ratio,
-            tick_seconds=tick_seconds,
-        )
+        # Spawn Celery task or run synchronously on SQLite
+        if 'sqlite' in os.getenv('DATABASE_URL', ''):
+            sim.reset_live_state()
+            sim.set_live_state(
+                running=True, started_at=time.time(),
+                total_users=total_users, active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
+                currently_riding=0, total_completed=0, cheaters_caught=0,
+                last_tick_at=time.time()
+            )
+            # Setup athlete pool
+            user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
+            sim.set_live_pool(user_ids)
+            sim.set_live_state(total_users=len(user_ids))
+            sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): {len(user_ids)} users active.")
+            
+            # Run first tick immediately
+            from .simulator_tasks import live_tick_task
+            live_tick_task()
+        else:
+            run_live_simulation.delay(
+                total_users=total_users,
+                active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio,
+                tick_seconds=tick_seconds,
+            )
 
         return Response({
             'status': 'started',
