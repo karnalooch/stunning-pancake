@@ -114,8 +114,12 @@ export const LiveMap: React.FC = () => {
                 const id = props.deviceId;
                 if (!id) continue;
                 seen.add(id);
-                if (detailMarkersRef.current.has(id)) continue;
                 const [lng, lat] = (feat.geometry as any).coordinates;
+                const existing = detailMarkersRef.current.get(id);
+                if (existing) {
+                    existing.setLngLat([lng, lat]);
+                    continue;
+                }
                 const el = document.createElement('div');
                 el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-10px,-22px)"><div style="background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;border:1px solid rgba(255,255,255,0.12)">${props.name||'Rider'}&nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div><div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#8b5cf6);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div></div>`;
                 const marker = new ml.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);

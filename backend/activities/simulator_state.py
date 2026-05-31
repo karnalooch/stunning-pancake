@@ -5,6 +5,7 @@ Replaces in-process _simulation_state and _live_state dicts.
 All state is stored in Redis so any WSGI worker can read/write it.
 """
 import json
+import threading
 import time
 from typing import Any
 
@@ -95,7 +96,11 @@ LIVE_LOG_KEY = "{sim}:live:log"
 LIVE_LOCK_KEY = "{sim}:live:lock"
 LIVE_POOL_KEY = "{sim}:live:pool"       # Redis set of user IDs
 LIVE_RIDES_KEY = "{sim}:live:rides"     # Redis hash of active rides
+LIVE_TICK_LOCK_KEY = "{sim}:live:tick_lock"
 LIVE_LOCK_TTL = 300  # 5 min (refreshed by runner)
+
+_tick_loop_stop = threading.Event()
+_tick_loop_thread: threading.Thread | None = None
 
 
 def get_live_state() -> dict:
@@ -119,6 +124,13 @@ def get_live_state() -> dict:
     state['total_completed'] = int(state.get('total_completed', 0))
     state['cheaters_caught'] = int(state.get('cheaters_caught', 0))
     state['started_at'] = float(state['started_at']) if state.get('started_at') else None
+    if state.get('last_tick_at'):
+        try:
+            state['last_tick_at'] = float(state['last_tick_at'])
+        except (ValueError, TypeError):
+            state['last_tick_at'] = None
+    else:
+        state['last_tick_at'] = None
     return state
 
 
@@ -222,6 +234,71 @@ def get_live_ride_count() -> int:
 
 
 # ─── Validation ──────────────────────────────────────────────────
+
+def acquire_live_tick_lock() -> bool:
+    """Prevent overlapping ticks when poll endpoints and background loop fire together."""
+    r = get_redis()
+    return bool(r.set(LIVE_TICK_LOCK_KEY, "1", nx=True, ex=30))
+
+
+def release_live_tick_lock():
+    r = get_redis()
+    r.delete(LIVE_TICK_LOCK_KEY)
+
+
+def maybe_advance_live_simulation() -> bool:
+    """Trigger a live sim tick if the interval elapsed. Safe from any poll endpoint."""
+    state = get_live_state()
+    if not state.get('running'):
+        return False
+    now = time.time()
+    try:
+        last_tick = float(state.get('last_tick_at') or 0)
+    except (ValueError, TypeError):
+        last_tick = 0.0
+    try:
+        tick_seconds = float(state.get('tick_seconds', 8))
+    except (ValueError, TypeError):
+        tick_seconds = 8.0
+    if now - last_tick < tick_seconds:
+        return False
+    set_live_state(last_tick_at=now)
+    from activities.simulator_tasks import live_tick_task
+    live_tick_task.delay()
+    return True
+
+
+def start_live_tick_loop():
+    """Background tick loop for SQLite/local dev (Celery eager ignores countdown)."""
+    global _tick_loop_thread
+    stop_live_tick_loop()
+    _tick_loop_stop.clear()
+
+    def _loop():
+        while not _tick_loop_stop.is_set():
+            if not get_live_state().get('running'):
+                break
+            try:
+                tick_seconds = max(2, int(get_live_state().get('tick_seconds', 8)))
+            except (ValueError, TypeError):
+                tick_seconds = 8
+            if _tick_loop_stop.wait(tick_seconds):
+                break
+            if not get_live_state().get('running'):
+                break
+            from activities.simulator_tasks import live_tick_task
+            try:
+                live_tick_task()
+            except Exception:
+                pass
+
+    _tick_loop_thread = threading.Thread(target=_loop, daemon=True, name='live-sim-tick')
+    _tick_loop_thread.start()
+
+
+def stop_live_tick_loop():
+    _tick_loop_stop.set()
+
 
 def validate_athlete_pool(min_users: int = 10) -> dict:
     """Pre-flight check: count available ATHLETE users."""

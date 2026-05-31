@@ -186,6 +186,18 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
 @shared_task(bind=True, queue='simulation', max_retries=0)
 def live_tick_task(self):
     """One tick: finish rides, start new ones, push telemetry to Redis."""
+    if not sim.acquire_live_tick_lock():
+        return
+
+    try:
+        _run_live_tick_body()
+    finally:
+        sim.set_live_state(last_tick_at=time.time())
+        sim.release_live_tick_lock()
+
+
+def _run_live_tick_body():
+    """Core tick logic — separated so lock handling stays in the task wrapper."""
     from users.models import User
     from activities.models import Activity
     from activities.services import TelemetryService
@@ -198,104 +210,16 @@ def live_tick_task(self):
     now = timezone.now()
     pool = sim.get_live_pool()
     active_rides = sim.get_live_rides()
-    
-    # Safely convert types from Redis (which returns strings/bytes on real Redis)
+
     cheat_ratio = float(state.get('cheat_ratio', 0.05))
     active_ratio = float(state.get('active_ratio', 0.25))
     total_users = int(state.get('total_users', 100))
 
     activities_to_create = []
-    telemetry_entries = []
     completed = 0
     cheaters = 0
 
-    # ── Phase 1: Interpolate current position for ALL riding users (TELEMETRY) ──
-    for user_id, ride in active_rides.items():
-        start_time = ride.get('start_time')
-        end_time = ride.get('end_time')
-        if isinstance(start_time, str):
-            start_time = timezone.datetime.fromisoformat(start_time)
-        if isinstance(end_time, str):
-            end_time = timezone.datetime.fromisoformat(end_time)
-
-        lat = ride.get('lat', 52.2297)
-        lon = ride.get('lon', 21.0122)
-        total_s = (end_time - start_time).total_seconds() if start_time and end_time else 1800
-        elapsed_s = (now - start_time).total_seconds() if start_time else 0
-        progress = max(0, min(1, elapsed_s / total_s if total_s > 0 else 0))
-
-        # Road-following grid route: use pre-generated waypoints or generate a realistic grid path
-        waypoints = ride.get('waypoints')
-        if waypoints and len(waypoints) >= 2:
-            # Interpolate position along pre-generated road-following waypoints
-            total_wp = len(waypoints) - 1
-            wp_idx_float = progress * total_wp
-            wp_idx_int = int(wp_idx_float)
-            wp_frac = wp_idx_float - wp_idx_int
-
-            if wp_idx_int >= total_wp:
-                clat = waypoints[-1][0]
-                clon = waypoints[-1][1]
-            else:
-                wp_a = waypoints[wp_idx_int]
-                wp_b = waypoints[wp_idx_int + 1]
-                clat = wp_a[0] + (wp_b[0] - wp_a[0]) * wp_frac
-                clon = wp_a[1] + (wp_b[1] - wp_a[1]) * wp_frac
-
-            # Course: heading between current and next waypoint
-            if wp_idx_int < total_wp:
-                dlat = waypoints[wp_idx_int + 1][0] - waypoints[wp_idx_int][0]
-                dlon = waypoints[wp_idx_int + 1][1] - waypoints[wp_idx_int][1]
-                course = int((math.degrees(math.atan2(dlon, dlat)) + 360) % 360)
-            else:
-                course = random.randint(0, 359)
-        else:
-            # Fallback: realistic city-grid pattern mimicking street blocks
-            block_size = 0.0015  # ~150m blocks
-            grid_steps = 8
-            # Build grid waypoints: alternating N/S and E/W segments
-            grid_lat, grid_lon = lat, lon
-            wp = [(grid_lat, grid_lon)]
-            for step in range(grid_steps):
-                r = random.random()
-                if r < 0.33:
-                    grid_lat += block_size * random.choice([-1, 1])
-                elif r < 0.66:
-                    grid_lon += block_size * random.choice([-1, 1])
-                else:
-                    grid_lat += block_size * 0.5 * random.choice([-1, 1])
-                    grid_lon += block_size * 0.5 * random.choice([-1, 1])
-                wp.append((grid_lat, grid_lon))
-
-            # Interpolate along grid waypoints
-            total_wp = len(wp) - 1
-            wp_idx_float = progress * total_wp
-            wp_idx_int = int(wp_idx_float)
-            wp_frac = wp_idx_float - wp_idx_int
-            if wp_idx_int >= total_wp:
-                clat = wp[-1][0]
-                clon = wp[-1][1]
-            else:
-                clat = wp[wp_idx_int][0] + (wp[wp_idx_int + 1][0] - wp[wp_idx_int][0]) * wp_frac
-                clon = wp[wp_idx_int][1] + (wp[wp_idx_int + 1][1] - wp[wp_idx_int][1]) * wp_frac
-            course = random.randint(0, 359)
-
-        speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
-
-        telemetry_entries.append({
-            'deviceId': str(user_id),
-            'name': f'Athlete {user_id}',
-            'type': ride.get('act_type', 'BIKE'),
-            'lat': clat,
-            'lng': clon,
-            'speed': speed_kmh / 3.6,
-            'course': course,
-        })
-
-    # Push ALL telemetry at once
-    TelemetryService.push_bulk_positions(telemetry_entries)
-
-    # ── Phase 2: Finish expired rides ──
+    # ── Phase 1: Finish expired rides ──
     rides_to_remove = []
     for user_id, ride in active_rides.items():
         end_time = ride.get('end_time')
@@ -304,7 +228,6 @@ def live_tick_task(self):
         if end_time and now >= end_time:
             rides_to_remove.append(user_id)
 
-    # Optimize: Fetch all user profiles in ONE query!
     users_map_p2 = {}
     if rides_to_remove:
         users_map_p2 = {str(u.id): u for u in User.objects.filter(id__in=rides_to_remove).select_related('tenant')}
@@ -369,17 +292,17 @@ def live_tick_task(self):
     for uid in rides_to_remove:
         sim.delete_live_ride(uid)
 
-    # ── Phase 3: Start new rides ──
+    # ── Phase 2: Start new rides ──
     current_riding = sim.get_live_ride_count()
     target_riding = max(1, int(total_users * active_ratio))
     needed = max(0, target_riding - current_riding)
+    started = 0
 
     if needed > 0 and pool:
         riding_ids = set(sim.get_live_rides().keys())
         available = [uid for uid in pool if uid not in riding_ids]
         starters = random.sample(available, min(needed, len(available)))
 
-        # Optimize: Fetch all starter users in ONE query!
         users_map_p3 = {}
         if starters:
             users_map_p3 = {str(u.id): u for u in User.objects.filter(id__in=starters).select_related('tenant')}
@@ -396,22 +319,17 @@ def live_tick_task(self):
             end_time = now + timedelta(seconds=duration_s)
             is_cheater = random.random() < cheat_ratio
 
-            try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                continue
             tenant_name = user.tenant.name if user.tenant else None
             city_info = next((c for c in CITIES if c['name'] == tenant_name), None)
             lat = city_info['lat'] if city_info else 52.2297
             lon = city_info['lon'] if city_info else 21.0122
 
-            # Generate road-following waypoints: 30% via BRouter (real roads), 70% fast grid
             if random.random() < 0.3:
                 waypoints = _generate_road_waypoints(lat, lon, distance_m, act_type)
             else:
                 waypoints = _generate_grid_waypoints(lat, lon)
 
-            ride_data = {
+            sim.set_live_ride(user_id, {
                 'start_time': start_time.isoformat(),
                 'end_time': end_time.isoformat(),
                 'act_type': act_type,
@@ -420,8 +338,90 @@ def live_tick_task(self):
                 'lon': lon,
                 'is_cheater': is_cheater,
                 'waypoints': waypoints,
-            }
-            sim.set_live_ride(user_id, ride_data)
+            })
+            started += 1
+
+    # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
+    active_rides = sim.get_live_rides()
+    telemetry_entries = []
+
+    for user_id, ride in active_rides.items():
+        start_time = ride.get('start_time')
+        end_time = ride.get('end_time')
+        if isinstance(start_time, str):
+            start_time = timezone.datetime.fromisoformat(start_time)
+        if isinstance(end_time, str):
+            end_time = timezone.datetime.fromisoformat(end_time)
+
+        lat = ride.get('lat', 52.2297)
+        lon = ride.get('lon', 21.0122)
+        total_s = (end_time - start_time).total_seconds() if start_time and end_time else 1800
+        elapsed_s = (now - start_time).total_seconds() if start_time else 0
+        progress = max(0, min(1, elapsed_s / total_s if total_s > 0 else 0))
+
+        waypoints = ride.get('waypoints')
+        if waypoints and len(waypoints) >= 2:
+            total_wp = len(waypoints) - 1
+            wp_idx_float = progress * total_wp
+            wp_idx_int = int(wp_idx_float)
+            wp_frac = wp_idx_float - wp_idx_int
+
+            if wp_idx_int >= total_wp:
+                clat = waypoints[-1][0]
+                clon = waypoints[-1][1]
+            else:
+                wp_a = waypoints[wp_idx_int]
+                wp_b = waypoints[wp_idx_int + 1]
+                clat = wp_a[0] + (wp_b[0] - wp_a[0]) * wp_frac
+                clon = wp_a[1] + (wp_b[1] - wp_a[1]) * wp_frac
+
+            if wp_idx_int < total_wp:
+                dlat = waypoints[wp_idx_int + 1][0] - waypoints[wp_idx_int][0]
+                dlon = waypoints[wp_idx_int + 1][1] - waypoints[wp_idx_int][1]
+                course = int((math.degrees(math.atan2(dlon, dlat)) + 360) % 360)
+            else:
+                course = random.randint(0, 359)
+        else:
+            block_size = 0.0015
+            grid_steps = 8
+            grid_lat, grid_lon = lat, lon
+            wp = [(grid_lat, grid_lon)]
+            for _ in range(grid_steps):
+                r = random.random()
+                if r < 0.33:
+                    grid_lat += block_size * random.choice([-1, 1])
+                elif r < 0.66:
+                    grid_lon += block_size * random.choice([-1, 1])
+                else:
+                    grid_lat += block_size * 0.5 * random.choice([-1, 1])
+                    grid_lon += block_size * 0.5 * random.choice([-1, 1])
+                wp.append((grid_lat, grid_lon))
+
+            total_wp = len(wp) - 1
+            wp_idx_float = progress * total_wp
+            wp_idx_int = int(wp_idx_float)
+            wp_frac = wp_idx_float - wp_idx_int
+            if wp_idx_int >= total_wp:
+                clat = wp[-1][0]
+                clon = wp[-1][1]
+            else:
+                clat = wp[wp_idx_int][0] + (wp[wp_idx_int + 1][0] - wp[wp_idx_int][0]) * wp_frac
+                clon = wp[wp_idx_int][1] + (wp[wp_idx_int + 1][1] - wp[wp_idx_int][1]) * wp_frac
+            course = random.randint(0, 359)
+
+        speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
+
+        telemetry_entries.append({
+            'deviceId': str(user_id),
+            'name': f'Athlete {user_id}',
+            'type': ride.get('act_type', 'BIKE'),
+            'lat': clat,
+            'lng': clon,
+            'speed': speed_kmh / 3.6,
+            'course': course,
+        })
+
+    TelemetryService.push_bulk_positions(telemetry_entries)
 
     new_riding = sim.get_live_ride_count()
     sim.set_live_state(
@@ -430,8 +430,12 @@ def live_tick_task(self):
         cheaters_caught=int(state.get('cheaters_caught', 0)) + cheaters,
     )
 
-    if completed > 0:
-        ctx = f"{completed} completed"
-        if cheaters > 0:
-            ctx += f", {cheaters} cheater{'s' if cheaters > 1 else ''}"
-        sim.live_log(f"Tick: {needed} started, {ctx} — {new_riding} riding, 📡 telemetry pushed")
+    if started > 0 or completed > 0:
+        ctx = []
+        if started > 0:
+            ctx.append(f"{started} started")
+        if completed > 0:
+            ctx.append(f"{completed} completed")
+            if cheaters > 0:
+                ctx.append(f"{cheaters} cheater{'s' if cheaters > 1 else ''}")
+        sim.live_log(f"Tick: {', '.join(ctx)} — {new_riding} riding, 📡 {len(telemetry_entries)} positions")

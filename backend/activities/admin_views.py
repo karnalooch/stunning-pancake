@@ -345,20 +345,8 @@ class LiveSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        sim.maybe_advance_live_simulation()
         state = sim.get_live_state()
-        if state.get('running'):
-            now = time.time()
-            try:
-                last_tick = float(state.get('last_tick_at', 0))
-            except (ValueError, TypeError):
-                last_tick = 0.0
-            if now - last_tick >= float(state.get('tick_seconds', 8)):
-                # Trigger next tick on the fly (works for all environments: SQLite local + Railway/async)
-                sim.set_live_state(last_tick_at=now)
-                from .simulator_tasks import live_tick_task
-                live_tick_task.delay()
-                state = sim.get_live_state()
-
         log = sim.get_live_log()
         elapsed = 0.0
         if state.get('started_at'):
@@ -382,6 +370,7 @@ class LiveSimulationView(APIView):
         if not state['running']:
             return Response({'error': 'No live simulation running.'}, status=status.HTTP_400_BAD_REQUEST)
         sim.set_live_state(running=False)
+        sim.stop_live_tick_loop()
         sim.live_log("⚠️ Stopped by user.")
         return Response({'status': 'stopped'})
 
@@ -428,9 +417,10 @@ class LiveSimulationView(APIView):
             sim.set_live_state(total_users=len(user_ids))
             sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): {len(user_ids)} users active.")
             
-            # Run first tick immediately
+            # Run first tick immediately, then keep ticking in background (no Celery countdown in eager mode)
             from .simulator_tasks import live_tick_task
             live_tick_task.delay()
+            sim.start_live_tick_loop()
         else:
             # Production: start non-blocking Celery tick chain (runs independently of browser)
             run_live_simulation.delay(

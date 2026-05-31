@@ -251,6 +251,9 @@ class TelemetryLiveView(generics.GenericAPIView):
 
 
     def get(self, request):
+        from . import simulator_state as sim
+        sim.maybe_advance_live_simulation()
+
         positions = TelemetryService.get_live_positions()
         devices = TelemetryService.get_devices()
         
@@ -275,8 +278,8 @@ class TelemetryLiveView(generics.GenericAPIView):
             info = device_info.get(device_id, {})
             enriched_data.append({
                 "deviceId": device_id,
-                "name": info.get('name', f"Athlete {device_id}"),
-                "type": info.get('type', 'person'),
+                "name": pos.get('name') or info.get('name', f"Athlete {device_id}"),
+                "type": pos.get('category') or pos.get('type') or info.get('type', 'person'),
                 "lat": pos.get('latitude', 0.0),
                 "lng": pos.get('longitude', 0.0),
                 "speed": pos.get('speed', 0.0),
