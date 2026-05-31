@@ -495,7 +495,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
             if users_to_create:
                 with transaction.atomic():
                     try:
-                        created_users = User.objects.bulk_create(users_to_create)
+                        created_users = User.objects.bulk_create(users_to_create, batch_size=50)
                     except Exception:
                         # Fall back to individual inserts, skipping duplicates
                         created_users = []
@@ -514,7 +514,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                         dept = random.choice(city_depts)
                         dept_memberships.append(UserDepartment(user=u, department=dept))
                     if dept_memberships:
-                        UserDepartment.objects.bulk_create(dept_memberships)
+                        UserDepartment.objects.bulk_create(dept_memberships, batch_size=100)
 
             progress = min(batch_end, n_athletes)
             if progress % 1000 == 0 or progress == n_athletes:
@@ -544,7 +544,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     activity_counts_by_city = {}
     distance_by_city = {}
 
-    act_batch_size = 200  # bulk_create batch size
+    act_batch_size = 50  # bulk_create batch size (limit to 50 for SQLite 999 SQL variables limit)
 
     for city in selected_cities:
         city_users = users_by_city[city["name"]]
@@ -604,7 +604,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                 # Flush batch
                 if len(act_batch) >= act_batch_size:
                     with transaction.atomic():
-                        Activity.objects.bulk_create(act_batch)
+                        Activity.objects.bulk_create(act_batch, batch_size=50)
                     act_batch.clear()
 
             # Progress logging
@@ -614,7 +614,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         # Flush remaining
         if act_batch:
             with transaction.atomic():
-                Activity.objects.bulk_create(act_batch)
+                Activity.objects.bulk_create(act_batch, batch_size=50)
             act_batch.clear()
 
         activity_counts_by_city[city["name"]] = city_activities
