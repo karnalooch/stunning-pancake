@@ -19,30 +19,13 @@ interface UserPosition {
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
-const MAX_MARKERS = 200;
-const POLL_INTERVAL = 5000; // 5s – balance between responsiveness and performance
-
-/** Lightweight inline SVG bike marker – no CSS animations, no backdrop-filter */
-const BIKE_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/><path d="M11 12h4"/></svg>`;
-
-function buildMarkerEl(name: string, speedMs: number): HTMLDivElement {
-    const speedKmh = (speedMs * 3.6).toFixed(0);
-    const el = document.createElement('div');
-    el.className = 'live-bike-marker';
-    el.innerHTML = `<div class="lbm-inner">
-      <div class="lbm-badge">${name}&nbsp;<span class="lbm-speed">${speedKmh}km/h</span></div>
-      <div class="lbm-icon">${BIKE_SVG}</div>
-      <div class="lbm-arrow"></div>
-    </div>`;
-    return el;
-}
+const POLL_INTERVAL = 5000;
+const DETAIL_ZOOM_THRESHOLD = 11; // Show individual markers only when zoomed in this far
 
 export const LiveMap: React.FC = () => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<maplibregl.Map | null>(null);
-    const markersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
-    const rafRef = useRef<number>(0);
-    const latestPositions = useRef<UserPosition[]>([]);
+    const detailMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const [onlineCount, setOnlineCount] = useState(0);
@@ -52,65 +35,171 @@ export const LiveMap: React.FC = () => {
     const [heatmapLoading, setHeatmapLoading] = useState(false);
     const [cellCount, setCellCount] = useState(0);
 
-    /** ---------- Marker sync (diff-based, no full clear) ---------- */
-    const syncMarkers = useCallback(() => {
+    /** ---------- WebGL circle & cluster source ---------- */
+    const ensureLiveSource = useCallback((map: maplibregl.Map) => {
+        if (map.getSource('live-positions')) return;
+
+        map.addSource('live-positions', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 50,
+        });
+
+        // Cluster circles
+        map.addLayer({
+            id: 'live-clusters',
+            type: 'circle',
+            source: 'live-positions',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': ['step', ['get', 'point_count'], '#06b6d4', 10, '#8b5cf6', 30, '#ec4899'],
+                'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 30, 40],
+                'circle-opacity': 0.85,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': 'rgba(255,255,255,0.4)',
+            },
+        });
+
+        // Cluster count labels
+        map.addLayer({
+            id: 'live-cluster-count',
+            type: 'symbol',
+            source: 'live-positions',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': '{point_count_abbreviated}',
+                'text-size': 12,
+                'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'],
+            },
+            paint: { 'text-color': '#fff' },
+        });
+
+        // Individual dots (shown when zoomed in or unclustered)
+        map.addLayer({
+            id: 'live-dots',
+            type: 'circle',
+            source: 'live-positions',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': ['match', ['get', 'type'], 'BIKE', '#06b6d4', 'RUN', '#f59e0b', '#8b5cf6'],
+                'circle-radius': 6,
+                'circle-opacity': 0.8,
+                'circle-stroke-width': 1.5,
+                'circle-stroke-color': '#fff',
+            },
+        });
+    }, []);
+
+    /** Update the GeoJSON data for the live positions layer */
+    const updateLiveSource = useCallback((positions: UserPosition[]) => {
         const map = mapRef.current;
         if (!map || !mapReady) return;
 
-        const newPositions = latestPositions.current;
-        const currentMarkers = markersRef.current;
-        const incomingIds = new Set<string>();
+        ensureLiveSource(map);
 
-        // Cap to MAX_MARKERS to prevent DOM overload
-        const capped = newPositions.slice(0, MAX_MARKERS);
+        const features = positions.slice(0, 500).map((pos) => ({
+            type: 'Feature' as const,
+            geometry: { type: 'Point' as const, coordinates: [pos.lng, pos.lat] },
+            properties: {
+                deviceId: pos.deviceId,
+                name: pos.name,
+                type: pos.type,
+                speed: pos.speed,
+                course: pos.course,
+            },
+        }));
 
-        for (const pos of capped) {
-            if (!pos.lat || !pos.lng) continue;
-            incomingIds.add(pos.deviceId);
+        const source = map.getSource('live-positions') as maplibregl.GeoJSONSource;
+        if (source) {
+            source.setData({ type: 'FeatureCollection', features });
+        }
+    }, [mapReady, ensureLiveSource]);
 
-            const existing = currentMarkers.get(pos.deviceId);
-            if (existing) {
-                // Update position only – no DOM recreation
-                existing.setLngLat([pos.lng, pos.lat]);
-            } else {
-                // Create new marker
-                const el = buildMarkerEl(pos.name || `Rider ${pos.deviceId.slice(0,6)}`, pos.speed || 0);
-                const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-                    .setLngLat([pos.lng, pos.lat])
-                    .addTo(map);
-                currentMarkers.set(pos.deviceId, marker);
-            }
+    /** ---------- Detail HTML markers (only when zoomed in) ---------- */
+    const syncDetailMarkers = useCallback(() => {
+        const map = mapRef.current;
+        if (!map) return;
+        const zoom = map.getZoom();
+
+        // Below threshold: remove all HTML markers (WebGL layer handles display)
+        if (zoom < DETAIL_ZOOM_THRESHOLD) {
+            detailMarkersRef.current.forEach((m) => m.remove());
+            detailMarkersRef.current.clear();
+            return;
         }
 
-        // Remove markers for riders that disappeared
-        for (const [id, marker] of currentMarkers) {
-            if (!incomingIds.has(id)) {
+        // At high zoom: add small bike markers for individual riders
+        const source = map.getSource('live-positions') as maplibregl.GeoJSONSource | undefined;
+        if (!source) return;
+
+        // Get unclustered features
+        const features = map.querySourceFeatures('live-positions', {
+            filter: ['!', ['has', 'point_count']],
+        });
+
+        const seen = new Set<string>();
+        const capped = features.slice(0, 50); // at high zoom we can afford a few HTML markers
+
+        for (const feat of capped) {
+            const props = feat.properties as any;
+            const id = props?.deviceId;
+            if (!id) continue;
+            seen.add(id);
+
+            const existing = detailMarkersRef.current.get(id);
+            if (existing) continue; // already placed
+
+            const [lng, lat] = (feat.geometry as any).coordinates;
+            const el = document.createElement('div');
+            el.innerHTML = `<div style="
+              display:flex;flex-direction:column;align-items:center;
+              transform:translate(-10px,-22px);
+            ">
+              <div style="
+                background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;
+                padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;
+                border:1px solid rgba(255,255,255,0.12);
+              ">${props.name || 'Rider'} &nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div>
+              <div style="
+                width:22px;height:22px;border-radius:50%;
+                background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+                border:2px solid rgba(255,255,255,0.3);
+                display:flex;align-items:center;justify-content:center;
+              "><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div>
+            </div>`;
+            const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
+                .setLngLat([lng, lat])
+                .addTo(map);
+            detailMarkersRef.current.set(id, marker);
+        }
+
+        // Clean disappeared
+        for (const [id, marker] of detailMarkersRef.current) {
+            if (!seen.has(id)) {
                 marker.remove();
-                currentMarkers.delete(id);
+                detailMarkersRef.current.delete(id);
             }
         }
-    }, [mapReady]);
+    }, []);
 
-    /** ---------- Fetch positions (lightweight, just stores raw data) ---------- */
+    /** ---------- Fetch ---------- */
     const fetchPositions = useCallback(async () => {
         try {
             const { data } = await apiClient.get('/activities/telemetry/live/');
             if (Array.isArray(data)) {
-                latestPositions.current = data;
                 setOnlineCount(data.length);
-
-                // Batch marker updates via rAF – once per frame max
-                if (rafRef.current) cancelAnimationFrame(rafRef.current);
-                rafRef.current = requestAnimationFrame(syncMarkers);
+                updateLiveSource(data);
+                // Sync detail markers on next frame after source update
+                requestAnimationFrame(syncDetailMarkers);
             }
-        } catch {
-            // silent
-        } finally {
+        } catch {} finally {
             setLoading(false);
         }
-    }, [syncMarkers]);
+    }, [updateLiveSource, syncDetailMarkers]);
 
-    /** ---------- Heatmap (debounced + uses setData for updates) ---------- */
+    /** ---------- Heatmap ---------- */
     const loadHeatmap = useCallback(() => {
         const map = mapRef.current;
         if (!map || !map.isStyleLoaded()) return;
@@ -125,15 +214,8 @@ export const LiveMap: React.FC = () => {
                 const { data } = await apiClient.get('/api/heatmap/', { params: { bbox, zoom } });
                 const features = data?.features ?? [];
                 setCellCount(features.length);
-
                 const source = map.getSource('heatmap-cells') as maplibregl.GeoJSONSource | undefined;
-
-                if (features.length === 0) {
-                    if (source) source.setData({ type: 'FeatureCollection', features: [] });
-                    return;
-                }
-
-                if (!source) {
+                if (!source && features.length > 0) {
                     map.addSource('heatmap-cells', { type: 'geojson', data: { type: 'FeatureCollection', features } });
                     map.addLayer({
                         id: 'heatmap-fill', type: 'fill', source: 'heatmap-cells',
@@ -146,52 +228,42 @@ export const LiveMap: React.FC = () => {
                         id: 'heatmap-outline', type: 'line', source: 'heatmap-cells',
                         paint: { 'line-color': 'rgba(255,255,255,0.06)', 'line-width': 0.5 },
                     });
-                } else {
+                } else if (source) {
                     source.setData({ type: 'FeatureCollection', features });
                 }
-            } catch {
-                setCellCount(0);
-            } finally {
-                setHeatmapLoading(false);
-            }
+            } catch { setCellCount(0); } finally { setHeatmapLoading(false); }
         }, 300);
     }, []);
 
-    /** ---------- Init map ---------- */
+    /** ---------- Init ---------- */
     useEffect(() => {
         let cancelled = false;
         if (!mapContainer.current || mapRef.current) return;
-
         const map = new maplibregl.Map({
-            container: mapContainer.current,
-            style: MAP_STYLE,
-            center: DEFAULT_CENTER,
-            zoom: DEFAULT_ZOOM,
+            container: mapContainer.current, style: MAP_STYLE,
+            center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM,
             attributionControl: false,
         });
         map.addControl(new maplibregl.NavigationControl(), 'top-right');
         map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-        map.on('load', () => { if (!cancelled) setMapReady(true); });
+        map.on('load', () => { if (!cancelled) { ensureLiveSource(map); setMapReady(true); } });
+        map.on('zoom', syncDetailMarkers);
         mapRef.current = map;
-
         return () => {
             cancelled = true;
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            markersRef.current.forEach((m) => m.remove());
-            markersRef.current.clear();
+            detailMarkersRef.current.forEach((m) => m.remove());
+            detailMarkersRef.current.clear();
             try { map.remove(); } catch {}
             mapRef.current = null;
         };
     }, []);
 
-    /** ---------- Polling ---------- */
     useEffect(() => {
         fetchPositions();
         const interval = setInterval(fetchPositions, POLL_INTERVAL);
-        return () => { clearInterval(interval); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+        return () => clearInterval(interval);
     }, [fetchPositions]);
 
-    /** ---------- Heatmap toggle ---------- */
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -199,8 +271,7 @@ export const LiveMap: React.FC = () => {
             try { if (map.getLayer('heatmap-fill')) map.removeLayer('heatmap-fill'); } catch {}
             try { if (map.getLayer('heatmap-outline')) map.removeLayer('heatmap-outline'); } catch {}
             try { if (map.getSource('heatmap-cells')) map.removeSource('heatmap-cells'); } catch {}
-            setCellCount(0);
-            return;
+            setCellCount(0); return;
         }
         if (!map.isStyleLoaded()) return;
         loadHeatmap();
@@ -210,16 +281,6 @@ export const LiveMap: React.FC = () => {
 
     return (
         <Box style={{ position: 'relative', width: '100%', height: '100%', minHeight: 450, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <style>{`
-              .live-bike-marker { display:flex; flex-direction:column; align-items:center; transform:translate(-16px,-30px); pointer-events:none; }
-              .lbm-inner { display:flex; flex-direction:column; align-items:center; }
-              .lbm-badge { background:rgba(0,0,0,0.82); color:#e2e8f0; font-size:10px; font-weight:600; padding:2px 8px; border-radius:6px; white-space:nowrap; margin-bottom:2px; border:1px solid rgba(255,255,255,0.15); }
-              .lbm-speed { color:#4ade80; }
-              .lbm-icon { width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#8b5cf6);display:flex;align-items:center;justify-content:center;border:2px solid rgba(255,255,255,0.25); }
-              .lbm-arrow { width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid rgba(255,255,255,0.7);margin-top:-1px; }
-            `}</style>
-
-            {/* Top bar */}
             <Group style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }} justify="space-between">
                 <Group gap="xs">
                     <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
@@ -236,10 +297,8 @@ export const LiveMap: React.FC = () => {
                     </ActionIcon>
                 </Tooltip>
             </Group>
-
             {loading && <Skeleton height="100%" radius="md" style={{ position: 'absolute', inset: 0, zIndex: 5 }} />}
             <div ref={mapContainer} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
-
             {!mapReady && !loading && (
                 <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f8f9fa', borderRadius: 14, zIndex: 10 }}>
                     <Map size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
@@ -247,7 +306,6 @@ export const LiveMap: React.FC = () => {
                     <Text size="sm" c="dimmed">Loading map tiles...</Text>
                 </Box>
             )}
-
             {showHeatmap && cellCount > 0 && (
                 <Group gap="sm" justify="center" style={{ position: 'absolute', bottom: 10, left: 0, right: 0, zIndex: 10, pointerEvents: 'none' }}>
                     <Group gap={4} style={{ background: 'rgba(15,15,20,0.85)', backdropFilter: 'blur(6px)', borderRadius: 20, padding: '4px 14px', border: '1px solid rgba(255,255,255,0.1)' }}>
