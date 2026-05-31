@@ -198,9 +198,11 @@ def live_tick_task(self):
     now = timezone.now()
     pool = sim.get_live_pool()
     active_rides = sim.get_live_rides()
-    cheat_ratio = state['cheat_ratio']
-    active_ratio = state['active_ratio']
-    total_users = state['total_users']
+    
+    # Safely convert types from Redis (which returns strings/bytes on real Redis)
+    cheat_ratio = float(state.get('cheat_ratio', 0.05))
+    active_ratio = float(state.get('active_ratio', 0.25))
+    total_users = int(state.get('total_users', 100))
 
     activities_to_create = []
     telemetry_entries = []
@@ -424,8 +426,8 @@ def live_tick_task(self):
     new_riding = sim.get_live_ride_count()
     sim.set_live_state(
         currently_riding=new_riding,
-        total_completed=state['total_completed'] + completed,
-        cheaters_caught=state['cheaters_caught'] + cheaters,
+        total_completed=int(state.get('total_completed', 0)) + completed,
+        cheaters_caught=int(state.get('cheaters_caught', 0)) + cheaters,
     )
 
     if completed > 0:
