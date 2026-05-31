@@ -1,9 +1,10 @@
 server {
-    listen 80;
+    listen ${PORT};
     server_name localhost;
     root /usr/share/nginx/html;
     index index.html;
 
+    # Hashed Vite chunks — never fall back to index.html (prevents MIME text/html on missing JS)
     location /assets/ {
         try_files $uri =404;
         add_header Cache-Control "public, max-age=31536000, immutable";

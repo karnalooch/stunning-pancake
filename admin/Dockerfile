@@ -20,14 +20,9 @@ RUN npm run build
 # Use Nginx to serve the static files
 FROM nginx:alpine
 
-# Configure nginx to run as non-root on the dynamic $PORT
-# We use a template for nginx config to substitute $PORT
-RUN printf "server {\n  listen %s;\n  location / {\n    root /usr/share/nginx/html;\n    index index.html index.htm;\n    try_files \$uri \$uri/ /index.html;\n  }\n}\n" '${PORT}' > /etc/nginx/conf.d/default.conf.template
-
+COPY nginx.conf.template /etc/nginx/conf.d/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Give non-root user write access to required directories for Nginx to run as non-root
 RUN chmod -R a+rwx /etc/nginx /var/cache/nginx /var/run /var/log/nginx
 
-# We use a wrapper to substitute the port in nginx config at runtime, defaulting to 8080
 CMD /bin/sh -c "export PORT=\${PORT:-8080} && envsubst '\$PORT' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"
