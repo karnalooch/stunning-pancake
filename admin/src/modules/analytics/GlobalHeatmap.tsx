@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, SegmentedControl, Group, Skeleton, Alert, Badge } from '@mantine/core';
-import { AlertCircle, Map } from 'lucide-react';
+import { AlertCircle, Map as MapIcon } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 
@@ -136,7 +136,7 @@ export const GlobalHeatmap: React.FC = () => {
     <Box p="md">
       <Group justify="space-between" mb="md">
         <Group>
-          <Map size={20} style={{ color: 'var(--accent)' }} />
+          <MapIcon size={20} style={{ color: 'var(--accent)' }} />
           <Text fw={700} size="lg">Activity Heatmaps</Text>
           {cellCount > 0 && <Badge variant="light" size="sm">{cellCount.toLocaleString()} cells</Badge>}
         </Group>
@@ -156,7 +156,7 @@ export const GlobalHeatmap: React.FC = () => {
       <Box style={{ position: 'relative', width: '100%', height: 'calc(100vh - 220px)', minHeight: 500, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', background: '#1a1b1e' }}>
         {loading && (
           <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, zIndex: 10, background: '#1a1b1e' }}>
-            <Map size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
+            <MapIcon size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
             <Skeleton width={200} height={8} radius="xl" />
             <Text size="sm" c="dimmed">Loading map tiles...</Text>
           </Box>
