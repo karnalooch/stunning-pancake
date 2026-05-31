@@ -168,7 +168,7 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
 
     # Run ONE tick
     try:
-        live_tick_task()
+        live_tick_task.delay()
         sim.refresh_live_lock()
     except Exception as e:
         sim.live_log(f"Tick error: {e}")

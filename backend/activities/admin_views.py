@@ -354,9 +354,9 @@ class LiveSimulationView(APIView):
                 last_tick = 0.0
             if now - last_tick >= float(state.get('tick_seconds', 8)):
                 # Trigger next tick on the fly (works for all environments: SQLite local + Railway/async)
-                from .simulator_tasks import live_tick_task
-                live_tick_task()
                 sim.set_live_state(last_tick_at=now)
+                from .simulator_tasks import live_tick_task
+                live_tick_task.delay()
                 state = sim.get_live_state()
 
         log = sim.get_live_log()
@@ -430,7 +430,7 @@ class LiveSimulationView(APIView):
             
             # Run first tick immediately
             from .simulator_tasks import live_tick_task
-            live_tick_task()
+            live_tick_task.delay()
         else:
             # Production: start non-blocking Celery tick chain (runs independently of browser)
             run_live_simulation.delay(
