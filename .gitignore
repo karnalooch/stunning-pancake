@@ -34,6 +34,8 @@ venv/
 .venv/
 env/
 .env/
+db.sqlite3
+*.sqlite3
 
 # 📊 Logs & Telemetry
 *.log
