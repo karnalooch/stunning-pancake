@@ -72,11 +72,6 @@ export const LiveMap: React.FC = () => {
                 'circle-opacity': 0.85, 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(255,255,255,0.4)',
             },
         });
-        map.addLayer({ id: 'live-cluster-count', type: 'symbol', source: 'live-positions',
-            filter: ['has', 'point_count'],
-            layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 12, 'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'] },
-            paint: { 'text-color': '#fff' },
-        });
         map.addLayer({ id: 'live-dots', type: 'circle', source: 'live-positions',
             filter: ['!', ['has', 'point_count']],
             paint: {
