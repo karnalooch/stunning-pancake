@@ -273,6 +273,9 @@ CELERY_TIMEZONE = 'Europe/Warsaw'
 if 'sqlite' in os.getenv('DATABASE_URL', ''):
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_ALWAYS_EAGER = True
+    PASSWORD_HASHERS = [
+        'django.contrib.auth.hashers.MD5PasswordHasher',
+    ]
 
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
