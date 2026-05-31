@@ -36,7 +36,7 @@ const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').t
 const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
-import { LiveMap } from './modules/analytics/LiveMap';
+const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
@@ -301,7 +301,7 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <Box p="md" style={{ height: 'calc(100vh - 100px)' }}>
-                      <LiveMap />
+                      <LiveMapPage />
                     </Box>
                   </PermissionGuard>
                 }

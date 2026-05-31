@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import {
   SimpleGrid, Card, Text, Group, Badge, Progress, Table, Box, Stack,
   Skeleton, Divider, ThemeIcon,
@@ -16,7 +16,7 @@ import { useAuth } from '../../core/auth/useAuth';
 import { ModeratorWorklist } from './ModeratorWorklist';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
-import { LiveMap } from '../analytics/LiveMap';
+const LiveMapLazy = lazy(() => import('../analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 import { ActivityTimeline } from '../analytics/ActivityTimeline';
 import { AuditLog } from '../analytics/AuditLog';
 import { TrendAnalysis } from '../analytics/TrendAnalysis';
@@ -342,7 +342,9 @@ export const Dashboard: React.FC = () => {
                 badgeColor="green"
               />
               <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
-              <LiveMap />
+              <Suspense fallback={<Skeleton height={450} radius="md" />}>
+                <LiveMapLazy />
+              </Suspense>
             </Card>
           </SimpleGrid>
         </motion.div>
