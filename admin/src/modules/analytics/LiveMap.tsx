@@ -5,11 +5,23 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
-// Lazy-init maplibregl to avoid Vite/Rollup CJS constructor interop issues
+// Lazy-init maplibregl — flatten double/triple-wrapped CJS interop from Rollup/Vite
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
     if (!_mlPromise) {
-        _mlPromise = import('maplibre-gl').then((m: any) => m.default || m);
+        _mlPromise = import('maplibre-gl').then((raw: any) => {
+            // Rollup/Vite sometimes wraps CJS exports through multiple .default layers.
+            // Keep unwrapping until we find an object that has a 'Map' constructor.
+            let m: any = raw;
+            while (m && m.default && typeof m.default === 'object' && !m.default.Map) {
+                m = m.default;
+            }
+            // Prefer the innermost .default if it has Map, otherwise return the whole namespace
+            if (m.default && m.default.Map) return m.default;
+            if (m.Map) return m;
+            // Last resort: try the original raw module
+            return raw.default || raw;
+        });
     }
     return _mlPromise;
 }
