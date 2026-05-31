@@ -302,51 +302,57 @@ def live_tick_task(self):
         if end_time and now >= end_time:
             rides_to_remove.append(user_id)
 
+    # Optimize: Fetch all user profiles in ONE query!
+    users_map_p2 = {}
+    if rides_to_remove:
+        users_map_p2 = {str(u.id): u for u in User.objects.filter(id__in=rides_to_remove).select_related('tenant')}
+
+    for user_id in rides_to_remove:
+        user = users_map_p2.get(str(user_id))
+        if not user:
+            continue
+        ride = active_rides[user_id]
+
+        distance_m = ride.get('distance_m', 5000)
+        act_type = ride.get('act_type', 'RUN')
+        is_cheater = ride.get('is_cheater', False)
+        start_time = ride.get('start_time')
+        if isinstance(start_time, str):
+            start_time = timezone.datetime.fromisoformat(start_time)
+
+        lat = ride.get('lat', 52.2297)
+        lon = ride.get('lon', 21.0122)
+
+        if is_cheater:
+            from django.contrib.gis.geos import LineString
+            n_points = 8
+            coords = [
+                (lon + distance_m / 100000.0 * (i / n_points),
+                 lat + distance_m / 100000.0 * (i / n_points))
+                for i in range(n_points)
+            ]
+            route = LineString(coords, srid=4326)
+            is_verified = False
+            score = random.uniform(0.0, 0.25)
+            cheaters += 1
+        else:
             try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                continue
+                from simulate_active_cities import _generate_gps_track
+                route = _generate_gps_track(lat, lon, distance_m, act_type)
+            except Exception:
+                route = None
+            is_verified = random.random() < 0.92
+            score = random.uniform(0.7, 1.0) if is_verified else random.uniform(0.0, 0.4)
 
-            distance_m = ride.get('distance_m', 5000)
-            act_type = ride.get('act_type', 'RUN')
-            is_cheater = ride.get('is_cheater', False)
-            start_time = ride.get('start_time')
-            if isinstance(start_time, str):
-                start_time = timezone.datetime.fromisoformat(start_time)
-
-            lat = ride.get('lat', 52.2297)
-            lon = ride.get('lon', 21.0122)
-
-            if is_cheater:
-                from django.contrib.gis.geos import LineString
-                n_points = 8
-                coords = [
-                    (lon + distance_m / 100000.0 * (i / n_points),
-                     lat + distance_m / 100000.0 * (i / n_points))
-                    for i in range(n_points)
-                ]
-                route = LineString(coords, srid=4326)
-                is_verified = False
-                score = random.uniform(0.0, 0.25)
-                cheaters += 1
-            else:
-                try:
-                    from simulate_active_cities import _generate_gps_track
-                    route = _generate_gps_track(lat, lon, distance_m, act_type)
-                except Exception:
-                    route = None
-                is_verified = random.random() < 0.92
-                score = random.uniform(0.7, 1.0) if is_verified else random.uniform(0.0, 0.4)
-
-            duration_s = max(60, int((now - start_time).total_seconds())) if start_time else 1800
-            activities_to_create.append(Activity(
-                user=user, tenant=user.tenant, type=act_type,
-                start_time=start_time or now, end_time=now,
-                distance=distance_m, duration=timedelta(seconds=duration_s),
-                is_verified=is_verified, verification_score=score,
-                route_path=route,
-            ))
-            completed += 1
+        duration_s = max(60, int((now - start_time).total_seconds())) if start_time else 1800
+        activities_to_create.append(Activity(
+            user=user, tenant=user.tenant, type=act_type,
+            start_time=start_time or now, end_time=now,
+            distance=distance_m, duration=timedelta(seconds=duration_s),
+            is_verified=is_verified, verification_score=score,
+            route_path=route,
+        ))
+        completed += 1
 
     if activities_to_create:
         try:
@@ -371,7 +377,16 @@ def live_tick_task(self):
         available = [uid for uid in pool if uid not in riding_ids]
         starters = random.sample(available, min(needed, len(available)))
 
+        # Optimize: Fetch all starter users in ONE query!
+        users_map_p3 = {}
+        if starters:
+            users_map_p3 = {str(u.id): u for u in User.objects.filter(id__in=starters).select_related('tenant')}
+
         for user_id in starters:
+            user = users_map_p3.get(str(user_id))
+            if not user:
+                continue
+
             act_type = _pick_activity_type()
             distance_m, duration_s = _generate_activity_params(act_type)
             duration_s = max(300, min(3600, duration_s))
