@@ -9,7 +9,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
   Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
-  Calendar, TrendingUp, MessageSquare, Map, Play,
+  Calendar, TrendingUp, MessageSquare, Map, Play, Bike,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
