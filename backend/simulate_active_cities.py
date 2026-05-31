@@ -309,14 +309,11 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     # Phase 0: Clear existing data (optional)
     # ------------------------------------------------------------------
     if clear:
-        print("🗑️  Clearing existing simulation data...")
-        tenant_names = [c["name"] for c in selected_cities]
-        tenants_to_delete = Tenant.objects.filter(name__in=tenant_names)
-        tenant_ids = list(tenants_to_delete.values_list("id", flat=True))
-        Activity.objects.filter(tenant_id__in=tenant_ids).delete()
-        User.objects.filter(tenant_id__in=tenant_ids).delete()
-        Department.objects.filter(tenant_id__in=tenant_ids).delete()
-        tenants_to_delete.delete()
+        print("🗑️  Clearing all existing simulation data...")
+        Activity.objects.all().delete()
+        User.objects.filter(is_superuser=False, is_staff=False).delete()
+        Department.objects.all().delete()
+        Tenant.objects.all().delete()
         print("   ✅ Cleared.")
         print()
 

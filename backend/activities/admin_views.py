@@ -85,23 +85,20 @@ class AdminDashboardStatsView(APIView):
         total_verified = Activity.objects.filter(is_verified=True).count()
         verified_pct = round((total_verified / total_activities * 100), 1) if total_activities > 0 else 0.0
 
-        tenant_qs = Tenant.objects.filter(is_active=True).annotate(
-            user_count=Count('users'),
-            activity_count=Count('activities'),
-            total_distance=Sum('activities__distance'),
-            verified_count=Count('activities', filter=Q(activities__is_verified=True)),
-        )
+        tenant_qs = Tenant.objects.filter(is_active=True)
 
         per_tenant_stats = []
         for t in tenant_qs:
-            act_count = t.activity_count or 0
-            dist = t.total_distance or 0
-            verified = t.verified_count or 0
+            user_count = t.users.count()
+            activities = t.activities.all()
+            act_count = activities.count()
+            dist = activities.aggregate(Sum('distance'))['distance__sum'] or 0
+            verified = activities.filter(is_verified=True).count()
             ver_rate = round((verified / act_count * 100), 1) if act_count > 0 else 0.0
             per_tenant_stats.append({
                 "tenant_id": str(t.id),
                 "tenant_name": t.name,
-                "users": t.user_count,
+                "users": user_count,
                 "activities": act_count,
                 "distance_km": round(float(dist / 1000.0), 1),
                 "verified_pct": ver_rate,
