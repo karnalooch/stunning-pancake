@@ -1,11 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, SegmentedControl, Group, Skeleton, Alert, Badge } from '@mantine/core';
 import { AlertCircle, Map } from 'lucide-react';
-import * as _maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-// Rollup CJS interop: some builds expose constructors on .default, others directly
-const maplibregl = (_maplibregl as any).default || _maplibregl;
 import { apiClient } from '../../api/client';
+
+// Lazy-init via dynamic import to avoid Vite/Rollup CJS constructor interop issues
+let _mlPromise: Promise<any> | null = null;
+function loadMaplibregl(): Promise<any> {
+    if (!_mlPromise) {
+        _mlPromise = import('maplibre-gl').then((m: any) => m.default || m);
+    }
+    return _mlPromise;
+}
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
@@ -15,7 +21,7 @@ type ActivityType = 'ALL' | 'RUN' | 'BIKE' | 'WALK';
 
 export const GlobalHeatmap: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityType, setActivityType] = useState<ActivityType>('ALL');
@@ -24,25 +30,27 @@ export const GlobalHeatmap: React.FC = () => {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: MAP_STYLE,
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      attributionControl: false,
-    });
+    loadMaplibregl().then((m: any) => {
+      if (!mapContainer.current) return;
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-
-    map.on('load', () => setLoading(false));
-    map.on('error', () => {
-      setError('Failed to load map tiles.');
+      const map = new m.Map({
+        container: mapContainer.current,
+        style: MAP_STYLE,
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
+        attributionControl: false,
+      });
+      map.addControl(new m.NavigationControl(), 'top-right');
+      map.addControl(new m.AttributionControl({ compact: true }), 'bottom-right');
+      map.on('load', () => setLoading(false));
+      map.on('error', () => { setError('Failed to load map tiles.'); setLoading(false); });
+      mapRef.current = map;
+    }).catch(() => {
+      setError('Failed to load map library.');
       setLoading(false);
     });
 
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { if (mapRef.current) { try { mapRef.current.remove(); } catch {} } mapRef.current = null; };
   }, []);
 
   useEffect(() => {
