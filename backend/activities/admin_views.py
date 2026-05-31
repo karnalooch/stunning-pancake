@@ -432,23 +432,13 @@ class LiveSimulationView(APIView):
             from .simulator_tasks import live_tick_task
             live_tick_task()
         else:
-            sim.reset_live_state()
-            sim.set_live_state(
-                running=True, started_at=time.time(),
-                total_users=total_users, active_ratio=active_ratio,
-                cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
-                currently_riding=0, total_completed=0, cheaters_caught=0,
-                last_tick_at=time.time()
+            # Production: start non-blocking Celery tick chain (runs independently of browser)
+            run_live_simulation.delay(
+                total_users=total_users,
+                active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio,
+                tick_seconds=tick_seconds,
             )
-            # Setup athlete pool
-            user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
-            sim.set_live_pool(user_ids)
-            sim.set_live_state(total_users=len(user_ids))
-            sim.live_log(f"LIVE SIM (Non-blocking mode): {len(user_ids)} users active. Ticks triggered via frontend polling.")
-            
-            # Run first tick immediately
-            from .simulator_tasks import live_tick_task
-            live_tick_task()
 
         return Response({
             'status': 'started',

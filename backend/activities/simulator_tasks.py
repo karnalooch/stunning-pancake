@@ -10,8 +10,74 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.utils import timezone
+from django.core.cache import cache
 
 from . import simulator_state as sim
+from .services import BRouterService
+
+# ── Fast grid-based fallback waypoint generator (no external API) ──
+def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]]:
+    """Generate waypoints following a realistic city-street grid pattern."""
+    block_size = 0.0015
+    grid_steps = random.randint(6, 14)
+    waypoints = [(lat, lon)]
+    cur_lat, cur_lon = lat, lon
+    for _ in range(grid_steps):
+        seg = random.random()
+        if seg < 0.4:
+            cur_lat += block_size * random.choice([-1, 1])
+            cur_lon += block_size * 0.12 * random.choice([-1, 1])
+        elif seg < 0.8:
+            cur_lon += block_size * random.choice([-1, 1])
+            cur_lat += block_size * 0.12 * random.choice([-1, 1])
+        else:
+            cur_lat += block_size * 0.5 * random.choice([-1, 1])
+            cur_lon += block_size * 0.5 * random.choice([-1, 1])
+        waypoints.append((cur_lat, cur_lon))
+    return waypoints
+
+# ── Road-following waypoint generator (uses BRouter for real road routes) ──
+def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity_type: str) -> list[tuple[float, float]]:
+    """
+    Generate road-following waypoints using BRouter.
+    Falls back to grid-based pattern if BRouter is unavailable.
+    Results are cached per (lat,lon,distance,type) for 1 hour.
+    """
+    cache_key = f"road_wp:{lat:.4f}:{lon:.4f}:{distance_m}:{activity_type}"
+    cached = cache.get(cache_key)
+    if cached:
+        return cached
+
+    # Shift start point ~500m away to force BRouter to generate a real route
+    cos_lat = math.cos(math.radians(lat))
+    start_lat = lat + random.uniform(-0.005, 0.005)
+    start_lon = lon + random.uniform(-0.005, 0.005)
+    
+    # Generate endpoint ~distance_m away in a random direction
+    bearing = random.uniform(0, 2 * math.pi)
+    km = distance_m / 1000.0
+    end_lat = lat + (km / 111.0) * math.cos(bearing) * 0.7
+    end_lon = lon + (km / (111.0 * cos_lat)) * math.sin(bearing) * 0.8
+
+    try:
+        result = BRouterService.validate_track(activity_type, [
+            [start_lon, start_lat],
+            [end_lon, end_lat],
+        ])
+
+        if result.get('success') and result.get('raw_data'):
+            features = result['raw_data'].get('features', [])
+            if features:
+                coords = features[0]['geometry']['coordinates']
+                # BRouter returns [lon, lat], convert to [(lat, lon)] waypoints
+                waypoints = [(c[1], c[0]) for c in coords]
+                if len(waypoints) >= 2:
+                    cache.set(cache_key, waypoints, 3600)
+                    return waypoints
+    except Exception:
+        pass
+
+    return _generate_grid_waypoints(lat, lon)
 
 
 @shared_task(bind=True, queue='simulation', max_retries=0)
@@ -61,21 +127,25 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
 @shared_task(bind=True, queue='simulation', max_retries=0)
 def run_live_simulation(self, total_users=100, active_ratio=0.25,
                          cheat_ratio=0.05, tick_seconds=10):
-    """Orchestrator — dispatches tick tasks that push live telemetry."""
+    """Orchestrator — non-blocking tick chain. Each invocation runs one tick and schedules the next."""
     from users.models import User
 
-    if not sim.acquire_live_lock():
-        sim.live_log("ERROR: live lock — another simulation running")
-        sim.set_live_state(error='Another live simulation is running', running=False)
-        return {'status': 'locked'}
+    state = sim.get_live_state()
 
-    try:
+    # First invocation: initialize state and pool
+    if not state.get('running'):
+        if not sim.acquire_live_lock():
+            sim.live_log("ERROR: live lock — another simulation running")
+            sim.set_live_state(error='Another live simulation is running', running=False)
+            return {'status': 'locked'}
+
         sim.reset_live_state()
         sim.set_live_state(
             running=True, started_at=time.time(),
             total_users=total_users, active_ratio=active_ratio,
             cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
             currently_riding=0, total_completed=0, cheaters_caught=0,
+            last_tick_at=time.time(),
         )
 
         user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
@@ -90,32 +160,27 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
             f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s"
         )
 
-        tick_count = 0
-        while True:
-            state = sim.get_live_state()
-            if not state.get('running', False):
-                sim.live_log("Live simulation stopped.")
-                break
-
-            live_tick_task.delay()
-            tick_count += 1
-            sim.refresh_live_lock()
-
-            for _ in range(tick_seconds):
-                state = sim.get_live_state()
-                if not state.get('running', False):
-                    break
-                time.sleep(1)
-
-        sim.live_log(f"Live simulation ended after {tick_count} ticks.")
-        return {'status': 'stopped', 'ticks': tick_count}
-
-    except Exception as e:
-        sim.set_live_state(error=str(e), running=False)
-        sim.live_log(f"FATAL: {e}")
-        return {'status': 'error', 'error': str(e)}
-    finally:
+    # Check if still running (stop signal)
+    if not sim.get_live_state().get('running', False):
+        sim.live_log("Live simulation stopped.")
         sim.release_live_lock()
+        return {'status': 'stopped'}
+
+    # Run ONE tick
+    try:
+        live_tick_task()
+        sim.refresh_live_lock()
+    except Exception as e:
+        sim.live_log(f"Tick error: {e}")
+
+    # Schedule next tick (non-blocking chain)
+    sim.set_live_state(last_tick_at=time.time())
+    self.apply_async(
+        kwargs={'total_users': total_users, 'active_ratio': active_ratio,
+                'cheat_ratio': cheat_ratio, 'tick_seconds': tick_seconds},
+        countdown=tick_seconds,
+    )
+    return {'status': 'tick_complete', 'next_tick_in': tick_seconds}
 
 
 @shared_task(bind=True, queue='simulation', max_retries=0)
@@ -323,23 +388,11 @@ def live_tick_task(self):
             lat = city_info['lat'] if city_info else 52.2297
             lon = city_info['lon'] if city_info else 21.0122
 
-            # Generate road-following waypoints for realistic street movement
-            block_size = 0.0015  # ~150m blocks (typical city block)
-            grid_steps = random.randint(6, 14)
-            waypoints = [(lat, lon)]
-            cur_lat, cur_lon = lat, lon
-            for _ in range(grid_steps):
-                seg_direction = random.random()
-                if seg_direction < 0.4:
-                    cur_lat += block_size * random.choice([-1, 1])
-                    cur_lon += block_size * 0.15 * random.choice([-1, 1])
-                elif seg_direction < 0.8:
-                    cur_lon += block_size * random.choice([-1, 1])
-                    cur_lat += block_size * 0.15 * random.choice([-1, 1])
-                else:
-                    cur_lat += block_size * 0.6 * random.choice([-1, 1])
-                    cur_lon += block_size * 0.6 * random.choice([-1, 1])
-                waypoints.append((cur_lat, cur_lon))
+            # Generate road-following waypoints: 30% via BRouter (real roads), 70% fast grid
+            if random.random() < 0.3:
+                waypoints = _generate_road_waypoints(lat, lon, distance_m, act_type)
+            else:
+                waypoints = _generate_grid_waypoints(lat, lon)
 
             ride_data = {
                 'start_time': start_time.isoformat(),

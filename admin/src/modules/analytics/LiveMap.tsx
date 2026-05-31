@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip } from '@mantine/core';
-import { Map, Activity, Layers } from 'lucide-react';
+import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
+import { Map, Activity, Layers, Zap } from 'lucide-react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
+import { notifications } from '@mantine/notifications';
 
 interface UserPosition {
     deviceId: string;
@@ -34,6 +35,7 @@ export const LiveMap: React.FC = () => {
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [heatmapLoading, setHeatmapLoading] = useState(false);
     const [cellCount, setCellCount] = useState(0);
+    const [launching, setLaunching] = useState(false);
 
     /** ---------- WebGL circle & cluster source ---------- */
     const ensureLiveSource = useCallback((map: maplibregl.Map) => {
@@ -205,6 +207,31 @@ export const LiveMap: React.FC = () => {
         }
     }, [updateLiveSource, syncDetailMarkers]);
 
+    /** ---------- Quick Launch ---------- */
+    const handleQuickLaunch = useCallback(async () => {
+        setLaunching(true);
+        try {
+            await apiClient.post('/api/activities/admin/live-simulate/', {
+                pool_pct: 1.0,
+                active_ratio: 0.3,
+                cheat_ratio: 0.05,
+                tick_seconds: 8,
+            });
+            notifications.show({ title: 'Live Simulation Started', message: 'Cyclists are now riding on the map', color: 'teal' });
+        } catch (err: any) {
+            if (err?.response?.status === 400) {
+                notifications.show({
+                    title: 'Cannot Launch',
+                    message: 'No athletes in database. Go to Simulator to generate cyclists first.',
+                    color: 'red',
+                });
+            }
+        } finally {
+            setLaunching(false);
+            fetchPositions();
+        }
+    }, [fetchPositions]);
+
     /** ---------- Heatmap ---------- */
     const loadHeatmap = useCallback(() => {
         const map = mapRef.current;
@@ -294,6 +321,11 @@ export const LiveMap: React.FC = () => {
                     </Badge>
                     {cellCount > 0 && showHeatmap && (
                         <Badge variant="light" color="orange" radius="sm" size="md">{cellCount.toLocaleString()} cells</Badge>
+                    )}
+                    {onlineCount === 0 && !loading && mapReady && (
+                        <Button size="xs" color="teal" leftSection={<Zap size={14} />} loading={launching} onClick={handleQuickLaunch}>
+                            Quick Launch
+                        </Button>
                     )}
                 </Group>
                 <Tooltip label="Toggle activity heatmap overlay">
