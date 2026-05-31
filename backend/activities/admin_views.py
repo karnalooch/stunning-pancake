@@ -348,8 +348,11 @@ class LiveSimulationView(APIView):
         state = sim.get_live_state()
         if state.get('running') and 'sqlite' in os.getenv('DATABASE_URL', ''):
             now = time.time()
-            last_tick = state.get('last_tick_at', 0)
-            if now - last_tick >= state.get('tick_seconds', 8):
+            try:
+                last_tick = float(state.get('last_tick_at', 0))
+            except (ValueError, TypeError):
+                last_tick = 0.0
+            if now - last_tick >= float(state.get('tick_seconds', 8)):
                 # Trigger next tick on the fly in SQLite dev environment
                 from .simulator_tasks import live_tick_task
                 live_tick_task()

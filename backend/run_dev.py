@@ -24,8 +24,14 @@ class FakeRedis:
     def hset(self, key, mapping=None, key_val=None, value=None):
         if key not in self.storage:
             self.storage[key] = {}
-        if mapping:
+        if isinstance(mapping, dict):
             self.storage[key].update({k.encode() if isinstance(k, str) else k: v.encode() if isinstance(v, str) else v for k, v in mapping.items()})
+        elif mapping is not None and key_val is not None:
+            k = mapping
+            v = key_val
+            k_b = k.encode() if isinstance(k, str) else k
+            v_b = v.encode() if isinstance(v, str) else v
+            self.storage[key][k_b] = v_b
         return len(self.storage[key])
 
     def hdel(self, key, *fields):
