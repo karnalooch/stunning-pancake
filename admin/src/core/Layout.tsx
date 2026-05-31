@@ -113,6 +113,12 @@ const NAV_SECTIONS = [
         requiresHeatmapFlag: true,
       },
       {
+        icon: Bike,
+        label: 'Live Map',
+        path: '/owner/analytics/live-map',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
         icon: MessageSquare,
         label: 'Feedback',
         path: '/owner/analytics/feedback',

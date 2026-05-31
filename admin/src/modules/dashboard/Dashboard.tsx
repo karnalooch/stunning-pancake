@@ -16,7 +16,7 @@ import { useAuth } from '../../core/auth/useAuth';
 import { ModeratorWorklist } from './ModeratorWorklist';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
-import { UserMapView } from '../analytics/UserMapView';
+import { LiveMap } from '../analytics/LiveMap';
 import { ActivityTimeline } from '../analytics/ActivityTimeline';
 import { AuditLog } from '../analytics/AuditLog';
 import { TrendAnalysis } from '../analytics/TrendAnalysis';
@@ -342,7 +342,7 @@ export const Dashboard: React.FC = () => {
                 badgeColor="green"
               />
               <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
-              <UserMapView />
+              <LiveMap />
             </Card>
           </SimpleGrid>
         </motion.div>

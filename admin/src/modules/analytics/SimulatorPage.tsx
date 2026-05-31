@@ -308,7 +308,7 @@ export const SimulatorPage: React.FC = () => {
 
                                     <Button variant="light" color="cyan" size="md" fullWidth
                                         leftSection={<Map size={16} />}
-                                        component="a" href="#/owner/dashboard">
+                                        component="a" href="#/owner/analytics/live-map">
                                         Open Live Maps
                                     </Button>
                                 </Stack>

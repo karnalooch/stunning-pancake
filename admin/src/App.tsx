@@ -29,6 +29,7 @@ const ApiPlayground = lazy(() => import('./modules/settings/ApiPlayground').then
 const FeatureFlags = lazy(() => import('./modules/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })));
 const DepartmentAnalyticsPage = lazy(() => import('./modules/analytics/DepartmentAnalyticsPage').then(m => ({ default: m.DepartmentAnalyticsPage })));
 const GlobalHeatmap = lazy(() => import('./modules/analytics/GlobalHeatmap').then(m => ({ default: m.GlobalHeatmap })));
+const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
 const ActivityDetail = lazy(() => import('./modules/dashboard/ActivityDetail').then(m => ({ default: m.ActivityDetail })));
 const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').then(m => ({ default: m.ActivitiesList })));
@@ -292,6 +293,16 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <GlobalHeatmap />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/live-map"
+                element={
+                  <PermissionGuard permissions={['activities.view']}>
+                    <Box p="md" style={{ height: 'calc(100vh - 100px)' }}>
+                      <LiveMapPage />
+                    </Box>
                   </PermissionGuard>
                 }
               />
