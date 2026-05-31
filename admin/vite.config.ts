@@ -19,6 +19,10 @@ export default defineConfig({
   build: {
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
+    commonjsOptions: {
+      include: [/maplibre-gl/, /node_modules/],
+      transformMixedEsModules: true,
+    },
   },
   test: {
     environment: 'jsdom',

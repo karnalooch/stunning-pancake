@@ -30,13 +30,14 @@ function auditFile(filePath: string) {
     const hasStaticImport = content.includes("import") && 
         (content.includes("from 'maplibre-gl'") || content.includes('from "maplibre-gl"'));
     const hasDynamicImport = content.includes("import('maplibre-gl')");
+    const hasInteropFallback = content.includes('.default') || content.includes('_maplibregl');
 
     if (!hasStaticImport) return;
 
     // Check for constructor calls using the statically imported module
     const hasConstructor = /new\s+maplibregl\.(Map|Marker|Popup|NavigationControl|AttributionControl|GeolocateControl|FullscreenControl|ScaleControl)\b/.test(content);
 
-    if (hasConstructor) {
+    if (hasConstructor && !hasInteropFallback) {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             if (/new\s+maplibregl\.(Map|Marker|Popup|NavigationControl|AttributionControl|GeolocateControl|FullscreenControl|ScaleControl)\b/.test(line)) {
