@@ -29,7 +29,6 @@ const ApiPlayground = lazy(() => import('./modules/settings/ApiPlayground').then
 const FeatureFlags = lazy(() => import('./modules/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })));
 const DepartmentAnalyticsPage = lazy(() => import('./modules/analytics/DepartmentAnalyticsPage').then(m => ({ default: m.DepartmentAnalyticsPage })));
 const GlobalHeatmap = lazy(() => import('./modules/analytics/GlobalHeatmap').then(m => ({ default: m.GlobalHeatmap })));
-const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
 const ActivityDetail = lazy(() => import('./modules/dashboard/ActivityDetail').then(m => ({ default: m.ActivityDetail })));
 const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').then(m => ({ default: m.ActivitiesList })));
@@ -37,6 +36,7 @@ const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').t
 const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
 import { useAuth } from './core/auth/useAuth';
 import { apiClient } from './api/client';
+import { LiveMap } from './modules/analytics/LiveMap';
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
@@ -301,7 +301,7 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['activities.view']}>
                     <Box p="md" style={{ height: 'calc(100vh - 100px)' }}>
-                      <LiveMapPage />
+                      <LiveMap />
                     </Box>
                   </PermissionGuard>
                 }
