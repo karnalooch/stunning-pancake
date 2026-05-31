@@ -346,14 +346,14 @@ class LiveSimulationView(APIView):
 
     def get(self, request):
         state = sim.get_live_state()
-        if state.get('running') and 'sqlite' in os.getenv('DATABASE_URL', ''):
+        if state.get('running'):
             now = time.time()
             try:
                 last_tick = float(state.get('last_tick_at', 0))
             except (ValueError, TypeError):
                 last_tick = 0.0
             if now - last_tick >= float(state.get('tick_seconds', 8)):
-                # Trigger next tick on the fly in SQLite dev environment
+                # Trigger next tick on the fly (works for all environments: SQLite local + Railway/async)
                 from .simulator_tasks import live_tick_task
                 live_tick_task()
                 sim.set_live_state(last_tick_at=now)
@@ -444,14 +444,11 @@ class LiveSimulationView(APIView):
             user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
             sim.set_live_pool(user_ids)
             sim.set_live_state(total_users=len(user_ids))
-            sim.live_log(f"LIVE SIM (Asynchronous): {len(user_ids)} users active.")
-
-            run_live_simulation.delay(
-                total_users=total_users,
-                active_ratio=active_ratio,
-                cheat_ratio=cheat_ratio,
-                tick_seconds=tick_seconds,
-            )
+            sim.live_log(f"LIVE SIM (Non-blocking mode): {len(user_ids)} users active. Ticks triggered via frontend polling.")
+            
+            # Run first tick immediately
+            from .simulator_tasks import live_tick_task
+            live_tick_task()
 
         return Response({
             'status': 'started',
