@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Box, Text, SegmentedControl, Group, Skeleton, Alert, Badge } from '@mantine/core';
 import { AlertCircle, Map } from 'lucide-react';
-import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 
@@ -13,7 +12,7 @@ type ActivityType = 'ALL' | 'RUN' | 'BIKE' | 'WALK';
 
 export const GlobalHeatmap: React.FC = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
+  const mapRef = useRef<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activityType, setActivityType] = useState<ActivityType>('ALL');
@@ -22,25 +21,35 @@ export const GlobalHeatmap: React.FC = () => {
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
 
-    const map = new maplibregl.Map({
-      container: mapContainer.current,
-      style: MAP_STYLE,
-      center: DEFAULT_CENTER,
-      zoom: DEFAULT_ZOOM,
-      attributionControl: false,
-    });
+    import('maplibre-gl').then((ml: any) => {
+      if (!mapContainer.current) return;
+      const m = ml.default || ml;
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+      const map = new m.Map({
+        container: mapContainer.current,
+        style: MAP_STYLE,
+        center: DEFAULT_CENTER,
+        zoom: DEFAULT_ZOOM,
+        attributionControl: false,
+      });
+      const Nav = m.NavigationControl || (m.default && m.default.NavigationControl);
+      const Attr = m.AttributionControl || (m.default && m.default.AttributionControl);
+      if (Nav) map.addControl(new Nav(), 'top-right');
+      if (Attr) map.addControl(new Attr({ compact: true }), 'bottom-right');
 
-    map.on('load', () => setLoading(false));
-    map.on('error', () => {
-      setError('Failed to load map tiles.');
+      map.on('load', () => setLoading(false));
+      map.on('error', () => {
+        setError('Failed to load map tiles.');
+        setLoading(false);
+      });
+
+      mapRef.current = map;
+    }).catch(() => {
+      setError('Failed to load map library.');
       setLoading(false);
     });
 
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { if (mapRef.current) { try { mapRef.current.remove(); } catch {} } mapRef.current = null; };
   }, []);
 
   useEffect(() => {
