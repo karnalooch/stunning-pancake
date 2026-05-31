@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
-import { Map, Activity, Layers, Zap } from 'lucide-react';
+import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
@@ -279,7 +279,7 @@ export const LiveMap: React.FC = () => {
             <div ref={mapContainer} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
             {!mapReady && !loading && (
                 <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f8f9fa', borderRadius: 14, zIndex: 10 }}>
-                    <Map size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
+                    <MapIcon size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
                     <Skeleton width={200} height={8} radius="xl" />
                     <Text size="sm" c="dimmed">Loading map tiles...</Text>
                 </Box>
