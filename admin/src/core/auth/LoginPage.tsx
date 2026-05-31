@@ -3,8 +3,9 @@ import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, ThemeIcon, D
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ShieldCheck, Globe, Layers, AlertCircle } from 'lucide-react';
 
-const GOOGLE_AUTH_URL = `${import.meta.env.VITE_API_URL || '/api'}/auth/google/login/`;
-const FACEBOOK_AUTH_URL = `${import.meta.env.VITE_API_URL || '/api'}/auth/facebook/login/`;
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const GOOGLE_AUTH_URL = `${API_BASE}/auth/google/login/?client=admin`;
+const FACEBOOK_AUTH_URL = `${API_BASE}/auth/facebook/login/?client=admin`;
 
 interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<void>;

@@ -72,6 +72,16 @@ class FakeRedis:
     def expire(self, key, ttl):
         pass
 
+    def setex(self, key, ttl, value):
+        self.storage[key] = value.encode() if isinstance(value, str) else value
+        return True
+
+    def get(self, key):
+        val = self.storage.get(key)
+        if val is None:
+            return None
+        return val.decode() if isinstance(val, bytes) else val
+
     def sadd(self, key, *members):
         if key not in self.storage:
             self.storage[key] = set()

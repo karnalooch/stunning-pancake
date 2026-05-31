@@ -10,6 +10,7 @@ export default ({ config }) => {
     ...config,
     "name": "4VELO",
     "slug": "mobile",
+    "scheme": "fourvelo",
     "version": "0.2.0-rc.1",
     "updates": {
       "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",

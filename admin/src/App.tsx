@@ -70,9 +70,10 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
               tenantId: d.tenant_id || null,
               tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
               isImpersonated: false
-            });
-            window.history.replaceState({}, document.title, window.location.pathname);
-            window.location.hash = '#/owner/dashboard';
+            }).then(() => {
+              window.history.replaceState({}, document.title, window.location.pathname);
+              window.location.hash = '#/owner/dashboard';
+            }).catch(() => setError('Failed to complete login'));
           })
           .catch(() => setError('Failed to load profile'));
       });
@@ -118,7 +119,7 @@ export default function App() {
       <HashRouter>
         {!isAuthenticated ? (
           <Routes>
-            <Route path="/auth/callback" element={<AuthCallback onLogin={handleLogin} />} />
+            <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
             <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>

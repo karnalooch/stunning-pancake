@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Alert, Text } from 'react-native';
+import React, { useEffect, useCallback } from 'react';
+import { View, Alert, Text, Linking } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { observer, useObservable } from '@legendapp/state/react';
@@ -10,6 +10,7 @@ import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-star
 
 import { Image } from 'react-native';
 import { AuthService, setAuthToken } from './src/services/api';
+import { SocialAuthService } from './src/services/socialAuth';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
 import { ThemeService } from './src/services/ThemeService';
@@ -137,6 +138,7 @@ const AppContent = observer(function AppContent() {
         })
         .catch(() => {
           store.delete('auth_token');
+          store.delete('refresh_token');
           setAuthToken(null);
         })
         .finally(() => auth.isLoading.set(false));
@@ -144,6 +146,50 @@ const AppContent = observer(function AppContent() {
       auth.isLoading.set(false);
     }
   }, []);
+
+  const completeOAuthLogin = useCallback(async (access: string, refresh: string) => {
+    const store = getStorage();
+    store.set('auth_token', access);
+    store.set('refresh_token', refresh);
+    setAuthToken(access);
+    const user = await AuthService.getProfile();
+    auth.user.set(user);
+    auth.isAuthenticated.set(true);
+    if (user.tenant_id) {
+      BrandingService.fetch(user.tenant_id);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleOAuthUrl = async (url: string | null) => {
+      if (!url) return;
+      const tokens = SocialAuthService.parseCallbackUrl(url);
+      if (!tokens) return;
+      auth.isSubmitting.set(true);
+      try {
+        await completeOAuthLogin(tokens.access, tokens.refresh);
+      } catch (e: any) {
+        Alert.alert('OAuth Failed', e?.message || 'Could not complete social login.');
+      } finally {
+        auth.isSubmitting.set(false);
+      }
+    };
+
+    Linking.getInitialURL().then(handleOAuthUrl);
+    const sub = Linking.addEventListener('url', ({ url }) => handleOAuthUrl(url));
+    return () => sub.remove();
+  }, [completeOAuthLogin]);
+
+  const openSocialLogin = async (provider: 'google' | 'facebook') => {
+    const url = provider === 'google'
+      ? SocialAuthService.googleLoginUrl()
+      : SocialAuthService.facebookLoginUrl();
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert('Unavailable', 'Could not open the login page.');
+    }
+  };
 
   const handleOnboardingFinish = (data: any) => {
     const store = getStorage();
@@ -278,6 +324,26 @@ const AppContent = observer(function AppContent() {
             variant="ghost"
             onPress={() => auth.mode.set(mode === 'login' ? 'register' : 'login')}
             label={mode === 'login' ? 'NEW PILOT? REGISTER' : 'EXISTING PILOT? LOGIN'}
+            size="sm"
+          />
+
+          <PixelText size="xs" color={C.secondary} style={{ textAlign: 'center', marginTop: 8, color: C.secondary }}>
+            OR CONTINUE WITH
+          </PixelText>
+
+          <ArcadeButton
+            variant="secondary"
+            onPress={() => openSocialLogin('google')}
+            disabled={auth.isSubmitting.get()}
+            label="GOOGLE"
+            size="sm"
+          />
+
+          <ArcadeButton
+            variant="secondary"
+            onPress={() => openSocialLogin('facebook')}
+            disabled={auth.isSubmitting.get()}
+            label="FACEBOOK"
             size="sm"
           />
         </Column>
