@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map, Activity, Layers, Zap } from 'lucide-react';
+import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
@@ -18,22 +19,19 @@ const DETAIL_ZOOM_THRESHOLD = 11;
 
 export const LiveMap: React.FC = () => {
     const mapContainer = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<any>(null);
-    const mlRef = useRef<any>(null);       // maplibregl namespace (loaded dynamically)
-    const detailMarkersRef = useRef<Map<string, any>>(new Map());
+    const mapRef = useRef<maplibregl.Map | null>(null);
+    const detailMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
-    const [mlReady, setMlReady] = useState(false); // maplibregl loaded
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [heatmapLoading, setHeatmapLoading] = useState(false);
     const [cellCount, setCellCount] = useState(0);
     const [launching, setLaunching] = useState(false);
 
     /* ---------- helpers (use mlRef) ---------- */
-    const getMl = () => mlRef.current;
 
     /* ---------- WebGL source ---------- */
     const ensureLiveSource = useCallback((map: any) => {
@@ -80,11 +78,10 @@ export const LiveMap: React.FC = () => {
     /* ---------- Detail markers (high zoom) ---------- */
     const syncDetailMarkers = useCallback(() => {
         const map = mapRef.current;
-        const ml = getMl();
-        if (!map || !ml) return;
+        if (!map) return;
         const zoom = map.getZoom();
         if (zoom < DETAIL_ZOOM_THRESHOLD) {
-            detailMarkersRef.current.forEach((m: any) => m.remove());
+            detailMarkersRef.current.forEach((m) => m.remove());
             detailMarkersRef.current.clear();
             return;
         }
@@ -101,9 +98,7 @@ export const LiveMap: React.FC = () => {
                 const [lng, lat] = (feat.geometry as any).coordinates;
                 const el = document.createElement('div');
                 el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-10px,-22px)"><div style="background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;border:1px solid rgba(255,255,255,0.12)">${props.name||'Rider'}&nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div><div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#8b5cf6);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div></div>`;
-                const Marker = ml.Marker || ml.default?.Marker;
-                if (!Marker) continue;
-                const marker = new Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
+                const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
                 detailMarkersRef.current.set(id, marker);
             }
             for (const [id, marker] of detailMarkersRef.current) {
@@ -174,50 +169,39 @@ export const LiveMap: React.FC = () => {
         }, 300);
     }, []);
 
-    /* ---------- Init: dynamic maplibregl import (proven Vite pattern) ---------- */
+    /* ---------- Init map ---------- */
     useEffect(() => {
         let cancelled = false;
         if (!mapContainer.current || mapRef.current) return;
 
-        import('maplibre-gl').then((ml: any) => {
-            if (cancelled || !mapContainer.current) return;
-            // Use .default namespace if available (CJS interop), otherwise fall back to ml directly
-            const m = ml.default || ml;
-            mlRef.current = m;
-            setMlReady(true);
-
-            const map = new m.Map({
-                container: mapContainer.current!,
-                style: MAP_STYLE,
-                center: DEFAULT_CENTER,
-                zoom: DEFAULT_ZOOM,
-                attributionControl: false,
-            });
-            const Nav = m.NavigationControl || (m.default && m.default.NavigationControl);
-            const Attr = m.AttributionControl || (m.default && m.default.AttributionControl);
-            if (Nav) map.addControl(new Nav(), 'top-right');
-            if (Attr) map.addControl(new Attr({ compact: true }), 'bottom-right');
-            map.on('load', () => { if (!cancelled) { ensureLiveSource(map); setMapReady(true); } });
-            map.on('zoom', syncDetailMarkers);
-            mapRef.current = map;
-        }).catch(() => { if (!cancelled) { setLoading(false); setMapReady(false); } });
+        const map = new maplibregl.Map({
+            container: mapContainer.current,
+            style: MAP_STYLE,
+            center: DEFAULT_CENTER,
+            zoom: DEFAULT_ZOOM,
+            attributionControl: false,
+        });
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+        map.on('load', () => { if (!cancelled) { ensureLiveSource(map); setMapReady(true); } });
+        map.on('zoom', syncDetailMarkers);
+        mapRef.current = map;
 
         return () => {
             cancelled = true;
-            detailMarkersRef.current.forEach((m: any) => m.remove());
+            detailMarkersRef.current.forEach((m) => m.remove());
             detailMarkersRef.current.clear();
-            if (mapRef.current) { try { mapRef.current.remove(); } catch {} }
+            try { map.remove(); } catch {}
             mapRef.current = null;
         };
     }, [ensureLiveSource, syncDetailMarkers]);
 
     /* ---------- Polling ---------- */
     useEffect(() => {
-        if (!mlReady) return;
         fetchPositions();
         const interval = setInterval(fetchPositions, POLL_INTERVAL);
         return () => clearInterval(interval);
-    }, [fetchPositions, mlReady]);
+    }, [fetchPositions]);
 
     /* ---------- Heatmap toggle ---------- */
     useEffect(() => {

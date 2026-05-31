@@ -13,6 +13,9 @@ export default defineConfig({
       '@tokens': path.resolve(__dirname, '../shared/tokens'),
     },
   },
+  optimizeDeps: {
+    include: ['maplibre-gl'],
+  },
   build: {
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
