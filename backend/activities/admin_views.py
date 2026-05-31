@@ -432,6 +432,20 @@ class LiveSimulationView(APIView):
             from .simulator_tasks import live_tick_task
             live_tick_task()
         else:
+            sim.reset_live_state()
+            sim.set_live_state(
+                running=True, started_at=time.time(),
+                total_users=total_users, active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
+                currently_riding=0, total_completed=0, cheaters_caught=0,
+                last_tick_at=time.time()
+            )
+            # Setup athlete pool
+            user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
+            sim.set_live_pool(user_ids)
+            sim.set_live_state(total_users=len(user_ids))
+            sim.live_log(f"LIVE SIM (Asynchronous): {len(user_ids)} users active.")
+
             run_live_simulation.delay(
                 total_users=total_users,
                 active_ratio=active_ratio,
@@ -654,6 +668,14 @@ class RunSimulationView(APIView):
                 {'error': 'scale must be between 0.001 and 1.0'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        # Reset and mark running=True explicitly to prevent frontend polling race conditions in async environments
+        sim.reset_batch_state()
+        sim.set_batch_state(
+            running=True, current_phase='starting', progress_pct=0,
+            users_created=0, activities_created=0, started_at=time.time(),
+            scale=scale, days=days, total_users=total_users or 0
+        )
 
         # Spawn Celery task
         run_batch_simulation.delay(
