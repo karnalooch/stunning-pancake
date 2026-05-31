@@ -9,6 +9,11 @@ if (!baseURL) {
     baseURL = '/api';
   }
 }
+
+// Automatically normalize: if VITE_API_URL is set but doesn't end with /api, append it!
+if (baseURL && !baseURL.endsWith('/api') && !baseURL.endsWith('/api/')) {
+  baseURL = `${baseURL.replace(/\/$/, '')}/api`;
+}
 if (baseURL.startsWith('/') && typeof window !== 'undefined') {
   baseURL = `${window.location.protocol}//${window.location.host}${baseURL}`;
 }
