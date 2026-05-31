@@ -187,7 +187,13 @@ export const LiveMap: React.FC = () => {
     /** ---------- Fetch ---------- */
     const fetchPositions = useCallback(async () => {
         try {
-            const { data } = await apiClient.get('/activities/telemetry/live/');
+            const map = mapRef.current;
+            let params: Record<string, string> | undefined;
+            if (map) {
+                const bounds = map.getBounds();
+                params = { bbox: `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}` };
+            }
+            const { data } = await apiClient.get('/activities/telemetry/live/', { params });
             if (Array.isArray(data)) {
                 setOnlineCount(data.length);
                 updateLiveSource(data);

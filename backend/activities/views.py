@@ -284,7 +284,23 @@ class TelemetryLiveView(generics.GenericAPIView):
                 "lastUpdate": pos.get('deviceTime')
             })
 
-            
+        # BBox filtering (viewport-aware) for massive scale (100k+)
+        bbox_str = request.query_params.get('bbox', '')
+        if bbox_str:
+            try:
+                parts = [float(x) for x in bbox_str.split(',')]
+                if len(parts) == 4:
+                    west, south, east, north = parts
+                    enriched_data = [
+                        p for p in enriched_data
+                        if west <= p['lng'] <= east and south <= p['lat'] <= north
+                    ]
+            except (ValueError, TypeError):
+                pass
+
+        # Cap response to avoid browser JSON deserialization freeze at massive scale
+        enriched_data = enriched_data[:1000]
+
         return Response(enriched_data)
 
 class AnomalyListView(generics.GenericAPIView):
