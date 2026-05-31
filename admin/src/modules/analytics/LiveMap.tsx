@@ -1,192 +1,118 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map, Activity, Layers, Zap } from 'lucide-react';
-import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 
 interface UserPosition {
-    deviceId: string;
-    name: string;
-    type: string;
-    lat: number;
-    lng: number;
-    speed: number;
-    course: number;
-    lastUpdate: string;
+    deviceId: string; name: string; type: string;
+    lat: number; lng: number; speed: number; course: number; lastUpdate: string;
 }
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
 const POLL_INTERVAL = 5000;
-const DETAIL_ZOOM_THRESHOLD = 11; // Show individual markers only when zoomed in this far
+const DETAIL_ZOOM_THRESHOLD = 11;
 
 export const LiveMap: React.FC = () => {
     const mapContainer = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<maplibregl.Map | null>(null);
-    const detailMarkersRef = useRef<Map<string, maplibregl.Marker>>(new Map());
+    const mapRef = useRef<any>(null);
+    const mlRef = useRef<any>(null);       // maplibregl namespace (loaded dynamically)
+    const detailMarkersRef = useRef<Map<string, any>>(new Map());
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
+    const [mlReady, setMlReady] = useState(false); // maplibregl loaded
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [heatmapLoading, setHeatmapLoading] = useState(false);
     const [cellCount, setCellCount] = useState(0);
     const [launching, setLaunching] = useState(false);
 
-    /** ---------- WebGL circle & cluster source ---------- */
-    const ensureLiveSource = useCallback((map: maplibregl.Map) => {
+    /* ---------- helpers (use mlRef) ---------- */
+    const getMl = () => mlRef.current;
+
+    /* ---------- WebGL source ---------- */
+    const ensureLiveSource = useCallback((map: any) => {
         if (map.getSource('live-positions')) return;
-
         map.addSource('live-positions', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: 14,
-            clusterRadius: 50,
+            type: 'geojson', data: { type: 'FeatureCollection', features: [] },
+            cluster: true, clusterMaxZoom: 14, clusterRadius: 50,
         });
-
-        // Cluster circles
-        map.addLayer({
-            id: 'live-clusters',
-            type: 'circle',
-            source: 'live-positions',
+        map.addLayer({ id: 'live-clusters', type: 'circle', source: 'live-positions',
             filter: ['has', 'point_count'],
             paint: {
                 'circle-color': ['step', ['get', 'point_count'], '#06b6d4', 10, '#8b5cf6', 30, '#ec4899'],
                 'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 30, 40],
-                'circle-opacity': 0.85,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': 'rgba(255,255,255,0.4)',
+                'circle-opacity': 0.85, 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(255,255,255,0.4)',
             },
         });
-
-        // Cluster count labels
-        map.addLayer({
-            id: 'live-cluster-count',
-            type: 'symbol',
-            source: 'live-positions',
+        map.addLayer({ id: 'live-cluster-count', type: 'symbol', source: 'live-positions',
             filter: ['has', 'point_count'],
-            layout: {
-                'text-field': '{point_count_abbreviated}',
-                'text-size': 12,
-                'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'],
-            },
+            layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 12, 'text-font': ['DIN Pro Medium', 'Arial Unicode MS Bold'] },
             paint: { 'text-color': '#fff' },
         });
-
-        // Individual dots (shown when zoomed in or unclustered)
-        map.addLayer({
-            id: 'live-dots',
-            type: 'circle',
-            source: 'live-positions',
+        map.addLayer({ id: 'live-dots', type: 'circle', source: 'live-positions',
             filter: ['!', ['has', 'point_count']],
             paint: {
                 'circle-color': ['match', ['get', 'type'], 'BIKE', '#06b6d4', 'RUN', '#f59e0b', '#8b5cf6'],
-                'circle-radius': 6,
-                'circle-opacity': 0.8,
-                'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#fff',
+                'circle-radius': 6, 'circle-opacity': 0.8, 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff',
             },
         });
     }, []);
 
-    /** Update the GeoJSON data for the live positions layer */
     const updateLiveSource = useCallback((positions: UserPosition[]) => {
         const map = mapRef.current;
         if (!map || !mapReady) return;
-
         ensureLiveSource(map);
-
         const features = positions.slice(0, 500).map((pos) => ({
             type: 'Feature' as const,
             geometry: { type: 'Point' as const, coordinates: [pos.lng, pos.lat] },
-            properties: {
-                deviceId: pos.deviceId,
-                name: pos.name,
-                type: pos.type,
-                speed: pos.speed,
-                course: pos.course,
-            },
+            properties: { deviceId: pos.deviceId, name: pos.name, type: pos.type, speed: pos.speed, course: pos.course },
         }));
-
-        const source = map.getSource('live-positions') as maplibregl.GeoJSONSource;
-        if (source) {
-            source.setData({ type: 'FeatureCollection', features });
-        }
+        const source = map.getSource('live-positions');
+        if (source?.setData) source.setData({ type: 'FeatureCollection', features });
     }, [mapReady, ensureLiveSource]);
 
-    /** ---------- Detail HTML markers (only when zoomed in) ---------- */
+    /* ---------- Detail markers (high zoom) ---------- */
     const syncDetailMarkers = useCallback(() => {
         const map = mapRef.current;
-        if (!map) return;
+        const ml = getMl();
+        if (!map || !ml) return;
         const zoom = map.getZoom();
-
-        // Below threshold: remove all HTML markers (WebGL layer handles display)
         if (zoom < DETAIL_ZOOM_THRESHOLD) {
-            detailMarkersRef.current.forEach((m) => m.remove());
+            detailMarkersRef.current.forEach((m: any) => m.remove());
             detailMarkersRef.current.clear();
             return;
         }
-
-        // At high zoom: add small bike markers for individual riders
-        const source = map.getSource('live-positions') as maplibregl.GeoJSONSource | undefined;
-        if (!source) return;
-
-        // Get unclustered features
-        const features = map.querySourceFeatures('live-positions', {
-            filter: ['!', ['has', 'point_count']],
-        });
-
-        const seen = new Set<string>();
-        const capped = features.slice(0, 50); // at high zoom we can afford a few HTML markers
-
-        for (const feat of capped) {
-            const props = feat.properties as any;
-            const id = props?.deviceId;
-            if (!id) continue;
-            seen.add(id);
-
-            const existing = detailMarkersRef.current.get(id);
-            if (existing) continue; // already placed
-
-            const [lng, lat] = (feat.geometry as any).coordinates;
-            const el = document.createElement('div');
-            el.innerHTML = `<div style="
-              display:flex;flex-direction:column;align-items:center;
-              transform:translate(-10px,-22px);
-            ">
-              <div style="
-                background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;
-                padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;
-                border:1px solid rgba(255,255,255,0.12);
-              ">${props.name || 'Rider'} &nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div>
-              <div style="
-                width:22px;height:22px;border-radius:50%;
-                background:linear-gradient(135deg,#06b6d4,#8b5cf6);
-                border:2px solid rgba(255,255,255,0.3);
-                display:flex;align-items:center;justify-content:center;
-              "><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div>
-            </div>`;
-            const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
-                .setLngLat([lng, lat])
-                .addTo(map);
-            detailMarkersRef.current.set(id, marker);
-        }
-
-        // Clean disappeared
-        for (const [id, marker] of detailMarkersRef.current) {
-            if (!seen.has(id)) {
-                marker.remove();
-                detailMarkersRef.current.delete(id);
+        // small bike markers via Marker API
+        try {
+            const features = map.querySourceFeatures('live-positions', { filter: ['!', ['has', 'point_count']] });
+            const seen = new Set<string>();
+            for (const feat of features.slice(0, 50)) {
+                const props = feat.properties ?? {};
+                const id = props.deviceId;
+                if (!id) continue;
+                seen.add(id);
+                if (detailMarkersRef.current.has(id)) continue;
+                const [lng, lat] = (feat.geometry as any).coordinates;
+                const el = document.createElement('div');
+                el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-10px,-22px)"><div style="background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;border:1px solid rgba(255,255,255,0.12)">${props.name||'Rider'}&nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div><div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#8b5cf6);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div></div>`;
+                const Marker = ml.Marker || ml.default?.Marker;
+                if (!Marker) continue;
+                const marker = new Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
+                detailMarkersRef.current.set(id, marker);
             }
-        }
+            for (const [id, marker] of detailMarkersRef.current) {
+                if (!seen.has(id)) { (marker as any).remove(); detailMarkersRef.current.delete(id); }
+            }
+        } catch {}
     }, []);
 
-    /** ---------- Fetch ---------- */
+    /* ---------- Fetch ---------- */
     const fetchPositions = useCallback(async () => {
         try {
             const map = mapRef.current;
@@ -199,104 +125,101 @@ export const LiveMap: React.FC = () => {
             if (Array.isArray(data)) {
                 setOnlineCount(data.length);
                 updateLiveSource(data);
-                // Sync detail markers on next frame after source update
                 requestAnimationFrame(syncDetailMarkers);
             }
-        } catch {} finally {
-            setLoading(false);
-        }
+        } catch {} finally { setLoading(false); }
     }, [updateLiveSource, syncDetailMarkers]);
 
-    /** ---------- Quick Launch ---------- */
     const handleQuickLaunch = useCallback(async () => {
         setLaunching(true);
         try {
-            await apiClient.post('/api/activities/admin/live-simulate/', {
-                pool_pct: 1.0,
-                active_ratio: 0.3,
-                cheat_ratio: 0.05,
-                tick_seconds: 8,
-            });
+            await apiClient.post('/activities/admin/live-simulate/', { pool_pct: 1.0, active_ratio: 0.3, cheat_ratio: 0.05, tick_seconds: 8 });
             notifications.show({ title: 'Live Simulation Started', message: 'Cyclists are now riding on the map', color: 'teal' });
         } catch (err: any) {
             if (err?.response?.status === 400) {
-                notifications.show({
-                    title: 'Cannot Launch',
-                    message: 'No athletes in database. Go to Simulator to generate cyclists first.',
-                    color: 'red',
-                });
+                notifications.show({ title: 'No athletes', message: 'Go to Simulator to generate cyclists first.', color: 'orange' });
+            } else {
+                notifications.show({ title: 'Launch failed', message: err?.message || 'Unknown error', color: 'red' });
             }
-        } finally {
-            setLaunching(false);
-            fetchPositions();
-        }
+        } finally { setLaunching(false); fetchPositions(); }
     }, [fetchPositions]);
 
-    /** ---------- Heatmap ---------- */
+    /* ---------- Heatmap ---------- */
     const loadHeatmap = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !map.isStyleLoaded()) return;
+        if (!map || typeof map.isStyleLoaded !== 'function' || !map.isStyleLoaded()) return;
         if (heatmapDebounceRef.current) clearTimeout(heatmapDebounceRef.current);
-
         heatmapDebounceRef.current = setTimeout(async () => {
             const bounds = map.getBounds();
             const bbox = `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}`;
-            const zoom = Math.round(map.getZoom());
             try {
                 setHeatmapLoading(true);
-                const { data } = await apiClient.get('/api/heatmap/', { params: { bbox, zoom } });
+                const { data } = await apiClient.get('/api/heatmap/', { params: { bbox, zoom: Math.round(map.getZoom()) } });
                 const features = data?.features ?? [];
                 setCellCount(features.length);
-                const source = map.getSource('heatmap-cells') as maplibregl.GeoJSONSource | undefined;
+                const source = map.getSource('heatmap-cells');
                 if (!source && features.length > 0) {
                     map.addSource('heatmap-cells', { type: 'geojson', data: { type: 'FeatureCollection', features } });
-                    map.addLayer({
-                        id: 'heatmap-fill', type: 'fill', source: 'heatmap-cells',
-                        paint: {
-                            'fill-color': ['interpolate', ['linear'], ['get', 'weight'], 0, '#1a3a5c', 0.25, '#2d6a9f', 0.5, '#f59e0b', 0.75, '#ef4444', 1, '#dc2626'],
-                            'fill-opacity': ['interpolate', ['linear'], ['get', 'weight'], 0, 0.12, 0.5, 0.4, 1, 0.6],
-                        },
+                    map.addLayer({ id: 'heatmap-fill', type: 'fill', source: 'heatmap-cells',
+                        paint: { 'fill-color': ['interpolate',['linear'],['get','weight'],0,'#1a3a5c',0.25,'#2d6a9f',0.5,'#f59e0b',0.75,'#ef4444',1,'#dc2626'],
+                                 'fill-opacity': ['interpolate',['linear'],['get','weight'],0,0.12,0.5,0.4,1,0.6] },
                     });
-                    map.addLayer({
-                        id: 'heatmap-outline', type: 'line', source: 'heatmap-cells',
+                    map.addLayer({ id: 'heatmap-outline', type: 'line', source: 'heatmap-cells',
                         paint: { 'line-color': 'rgba(255,255,255,0.06)', 'line-width': 0.5 },
                     });
-                } else if (source) {
+                } else if (source?.setData) {
                     source.setData({ type: 'FeatureCollection', features });
                 }
             } catch { setCellCount(0); } finally { setHeatmapLoading(false); }
         }, 300);
     }, []);
 
-    /** ---------- Init ---------- */
+    /* ---------- Init: dynamic maplibregl import (proven Vite pattern) ---------- */
     useEffect(() => {
         let cancelled = false;
         if (!mapContainer.current || mapRef.current) return;
-        const map = new maplibregl.Map({
-            container: mapContainer.current, style: MAP_STYLE,
-            center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM,
-            attributionControl: false,
-        });
-        map.addControl(new maplibregl.NavigationControl(), 'top-right');
-        map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
-        map.on('load', () => { if (!cancelled) { ensureLiveSource(map); setMapReady(true); } });
-        map.on('zoom', syncDetailMarkers);
-        mapRef.current = map;
+
+        import('maplibre-gl').then((ml: any) => {
+            if (cancelled || !mapContainer.current) return;
+            // Use .default namespace if available (CJS interop), otherwise fall back to ml directly
+            const m = ml.default || ml;
+            mlRef.current = m;
+            setMlReady(true);
+
+            const map = new m.Map({
+                container: mapContainer.current!,
+                style: MAP_STYLE,
+                center: DEFAULT_CENTER,
+                zoom: DEFAULT_ZOOM,
+                attributionControl: false,
+            });
+            const Nav = m.NavigationControl || (m.default && m.default.NavigationControl);
+            const Attr = m.AttributionControl || (m.default && m.default.AttributionControl);
+            if (Nav) map.addControl(new Nav(), 'top-right');
+            if (Attr) map.addControl(new Attr({ compact: true }), 'bottom-right');
+            map.on('load', () => { if (!cancelled) { ensureLiveSource(map); setMapReady(true); } });
+            map.on('zoom', syncDetailMarkers);
+            mapRef.current = map;
+        }).catch(() => { if (!cancelled) { setLoading(false); setMapReady(false); } });
+
         return () => {
             cancelled = true;
-            detailMarkersRef.current.forEach((m) => m.remove());
+            detailMarkersRef.current.forEach((m: any) => m.remove());
             detailMarkersRef.current.clear();
-            try { map.remove(); } catch {}
+            if (mapRef.current) { try { mapRef.current.remove(); } catch {} }
             mapRef.current = null;
         };
-    }, []);
+    }, [ensureLiveSource, syncDetailMarkers]);
 
+    /* ---------- Polling ---------- */
     useEffect(() => {
+        if (!mlReady) return;
         fetchPositions();
         const interval = setInterval(fetchPositions, POLL_INTERVAL);
         return () => clearInterval(interval);
-    }, [fetchPositions]);
+    }, [fetchPositions, mlReady]);
 
+    /* ---------- Heatmap toggle ---------- */
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -306,8 +229,7 @@ export const LiveMap: React.FC = () => {
             try { if (map.getSource('heatmap-cells')) map.removeSource('heatmap-cells'); } catch {}
             setCellCount(0); return;
         }
-        if (!map.isStyleLoaded()) return;
-        loadHeatmap();
+        if (typeof map.isStyleLoaded === 'function' && map.isStyleLoaded()) loadHeatmap();
         map.on('moveend', loadHeatmap);
         return () => { map.off('moveend', loadHeatmap); };
     }, [showHeatmap, loadHeatmap]);
@@ -319,13 +241,13 @@ export const LiveMap: React.FC = () => {
                     <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
                         {onlineCount} online
                     </Badge>
-                    {cellCount > 0 && showHeatmap && (
-                        <Badge variant="light" color="orange" radius="sm" size="md">{cellCount.toLocaleString()} cells</Badge>
-                    )}
                     {onlineCount === 0 && !loading && mapReady && (
                         <Button size="xs" color="teal" leftSection={<Zap size={14} />} loading={launching} onClick={handleQuickLaunch}>
                             Quick Launch
                         </Button>
+                    )}
+                    {cellCount > 0 && showHeatmap && (
+                        <Badge variant="light" color="orange" radius="sm" size="md">{cellCount.toLocaleString()} cells</Badge>
                     )}
                 </Group>
                 <Tooltip label="Toggle activity heatmap overlay">

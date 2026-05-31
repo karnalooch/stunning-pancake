@@ -23,7 +23,8 @@
     "audit:orm": "npx tsx ../scripts/audit-orm-performance.ts",
     "audit:async": "npx tsx ../scripts/audit-async-race-conditions.ts",
     "audit:compat": "npx tsx ../scripts/audit-env-compatibility.ts",
-    "audit:all": "npm run audit:routes && npm run audit:screens && npm run audit:mobile && npm run audit:api && npm run audit:rbac && npm run audit:redirects && npm run audit:env && npm run audit:imports && npm run audit:orm && npm run audit:async && npm run audit:compat",
+    "audit:maplibre": "npx tsx ../scripts/audit-maplibre-imports.ts",
+    "audit:all": "npm run audit:routes && npm run audit:screens && npm run audit:mobile && npm run audit:api && npm run audit:rbac && npm run audit:redirects && npm run audit:env && npm run audit:imports && npm run audit:orm && npm run audit:async && npm run audit:compat && npm run audit:maplibre",
     "electron:dev": "concurrently \"vite\" \"cross-env NODE_ENV=development wait-on http://localhost:5173 && electron .\"",
     "build:exe": "npm run build && electron-builder --win --x64 --dir"
   },
