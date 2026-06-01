@@ -215,7 +215,14 @@ def _generate_route_waypoints(
         return cached, 'road'
 
     cos_lat = math.cos(math.radians(lat))
-    km = max(0.5, distance_m / 1000.0)
+    # BRouter needs a short A→B leg to build a road polyline; full ride distance_m
+    # is covered over time along that polyline (not as one giant routing request).
+    try:
+        max_leg_km = float(os.getenv('SCALE_SIM_BROUTER_MAX_LEG_KM', '4'))
+    except (TypeError, ValueError):
+        max_leg_km = 4.0
+    max_leg_km = max(0.5, min(max_leg_km, 15.0))
+    km = min(max(0.5, distance_m / 1000.0), max_leg_km)
 
     route_attempts = max(3, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '8')))
     for _ in range(route_attempts):

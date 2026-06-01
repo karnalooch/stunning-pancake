@@ -98,6 +98,7 @@ class BRouterService:
             return {
                 'success': False,
                 'error': f'HTTP {response.status_code}: {err}',
+                'status_code': response.status_code,
             }
         except Exception as e:
             return {'success': False, 'error': str(e)}
