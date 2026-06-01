@@ -245,7 +245,7 @@ export const SimulatorPage: React.FC = () => {
             setBatchStatus(null); setLiveStatus(null);
             setWipeModalOpen(false); setWipeConfirm('');
             setActiveStep(0);
-            const warn = (result as { error?: string })?.error;
+            const warn = (result as { warning?: string; error?: string })?.warning;
             notifications.show({
                 title: 'Wipe Complete',
                 message: warn || 'All simulation and activity data has been wiped.',

@@ -296,10 +296,10 @@ export const SimulatorApi = {
       }
     }
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const finished = (s: { status?: string; phase?: string; running?: boolean; error?: string }) => {
+    const finished = (s: { status?: string; phase?: string; running?: boolean; error?: string; warning?: string }) => {
       const label = s.status || s.phase;
-      if (label === 'complete') return { done: true, ok: true };
-      if (label === 'error' || s.error) return { done: true, ok: false };
+      if (label === 'complete') return { done: true, ok: true, warning: s.warning };
+      if (label === 'error' || (s.error && label !== 'complete')) return { done: true, ok: false };
       if (!s.running && label !== 'queued' && label !== 'starting') return { done: false, ok: false };
       return { done: false, ok: false };
     };
@@ -309,14 +309,20 @@ export const SimulatorApi = {
       if (status.running || status.status === 'queued' || status.status === 'running') break;
       await sleep(1000);
     }
+    let retriedStuck = false;
     for (let i = 0; i < 600; i++) {
       await sleep(2000);
       const status = await SimulatorApi.getWipeStatus();
       onProgress?.(status);
+      if (status.stuck && !retriedStuck) {
+        retriedStuck = true;
+        await startWipe(true);
+        continue;
+      }
       const end = finished(status);
       if (end.done) {
         if (!end.ok) throw new Error(status.error || 'Wipe failed');
-        return status;
+        return { ...status, warning: end.warning || status.warning };
       }
     }
     throw new Error('Wipe timed out');

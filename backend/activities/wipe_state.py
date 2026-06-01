@@ -83,15 +83,13 @@ def mark_wipe_queued():
 
 def wipe_status_label(state: dict) -> str:
     """idle | queued | running | complete | error — used by API and clients."""
-    if state.get('error'):
-        return 'error'
     phase = state.get('phase') or 'idle'
-    if state.get('running'):
-        return 'queued' if phase == 'queued' else 'running'
     if phase == 'complete':
         return 'complete'
-    if phase == 'error':
+    if phase == 'error' or (state.get('error') and phase != 'complete'):
         return 'error'
+    if state.get('running'):
+        return 'queued' if phase == 'queued' else 'running'
     return 'idle'
 
 

@@ -17,6 +17,15 @@ class WipeStatusLabelTests(SimpleTestCase):
         state = {'running': False, 'phase': 'complete', 'error': None}
         self.assertEqual(ws.wipe_status_label(state), 'complete')
 
+    def test_complete_with_vacuum_warning_not_error(self):
+        state = {
+            'running': False,
+            'phase': 'complete',
+            'error': None,
+            'warning': 'permission denied for VACUUM',
+        }
+        self.assertEqual(ws.wipe_status_label(state), 'complete')
+
     def test_error_with_message(self):
         state = {'running': False, 'phase': 'error', 'error': 'disk full'}
         self.assertEqual(ws.wipe_status_label(state), 'error')

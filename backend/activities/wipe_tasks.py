@@ -115,7 +115,7 @@ def run_wipe_sync():
         ws.set_wipe_state(
             running=False, phase='complete', progress_pct=100,
             completed_at=__import__('time').time(), deleted=deleted,
-            error=vacuum_err,
+            error=None, warning=vacuum_err,
         )
         ws.wipe_log('✅ Wipe complete.' + (f' (VACUUM: {vacuum_err})' if vacuum_err else ''))
         out = {'status': 'complete', 'deleted': deleted}

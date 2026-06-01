@@ -134,6 +134,14 @@ def add_citus_worker(host: str, port: int = 5432) -> None:
     logger.info("citus.worker_added host=%s port=%d", host, port)
 
 
+def _citus_extension_installed(cursor) -> bool:
+    """Avoid querying pg_dist_* on plain Postgres (Railway) — those errors flood server logs."""
+    cursor.execute(
+        "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1;"
+    )
+    return cursor.fetchone() is not None
+
+
 def citus_cluster_status() -> list[dict]:
     """
     Returns the current Citus cluster topology (coordinator + workers).
@@ -144,6 +152,8 @@ def citus_cluster_status() -> list[dict]:
     """
     try:
         with connection.cursor() as cursor:
+            if not _citus_extension_installed(cursor):
+                return []
             cursor.execute("""
                 SELECT nodeid, nodename, nodeport, isactive,
                        CASE WHEN groupid = 0 THEN 'coordinator' ELSE 'worker' END AS role
@@ -168,6 +178,8 @@ def citus_shard_status() -> list[dict]:
     """
     try:
         with connection.cursor() as cursor:
+            if not _citus_extension_installed(cursor):
+                return []
             cursor.execute("""
                 SELECT logicalrelid::text AS table_name,
                        COUNT(*) AS shard_count,
