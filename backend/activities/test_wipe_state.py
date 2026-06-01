@@ -20,3 +20,16 @@ class WipeStatusLabelTests(SimpleTestCase):
     def test_error_with_message(self):
         state = {'running': False, 'phase': 'error', 'error': 'disk full'}
         self.assertEqual(ws.wipe_status_label(state), 'error')
+
+    def test_stuck_queued(self):
+        import time as _time
+        state = {
+            'running': True,
+            'phase': 'queued',
+            'started_at': _time.time() - 300,
+        }
+        self.assertTrue(ws.is_wipe_stuck(state))
+
+    def test_not_stuck_when_idle(self):
+        state = {'running': False, 'phase': 'idle'}
+        self.assertFalse(ws.is_wipe_stuck(state))

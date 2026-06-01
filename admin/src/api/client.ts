@@ -274,8 +274,27 @@ export const SimulatorApi = {
   },
 
   // Wipe Data (async chunked — poll until complete)
-  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string }) => void) => {
-    await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string; stuck?: boolean }) => void) => {
+    const startWipe = async (force = false) => {
+      await apiClient.delete('/activities/admin/wipe-data/', {
+        data: { confirm: true, force },
+      });
+    };
+    try {
+      await startWipe(false);
+    } catch (err: unknown) {
+      const ax = err as { response?: { status?: number; data?: { stuck?: boolean; hint?: string } } };
+      if (ax.response?.status === 409) {
+        const status = await SimulatorApi.getWipeStatus();
+        if (status.stuck) {
+          await startWipe(true);
+        } else {
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const finished = (s: { status?: string; phase?: string; running?: boolean; error?: string }) => {
       const label = s.status || s.phase;

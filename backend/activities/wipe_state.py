@@ -8,6 +8,10 @@ WIPE_STATE_KEY = '{admin}:wipe:state'
 WIPE_LOG_KEY = '{admin}:wipe:log'
 WIPE_LOCK_KEY = '{admin}:wipe:lock'
 WIPE_LOCK_TTL = 3600
+# Queued but Celery never picked up the task (common after worker restart).
+WIPE_STALE_QUEUED_SEC = int(__import__('os').getenv('WIPE_STALE_QUEUED_SEC', '120'))
+# Running wipe with no progress for too long (crashed worker mid-delete).
+WIPE_STALE_RUNNING_SEC = int(__import__('os').getenv('WIPE_STALE_RUNNING_SEC', '3600'))
 
 
 def get_wipe_state() -> dict:
@@ -99,3 +103,33 @@ def acquire_wipe_lock() -> bool:
 def release_wipe_lock():
     r = get_redis()
     r.delete(WIPE_LOCK_KEY)
+
+
+def _parse_started_at(state: dict) -> float | None:
+    raw = state.get('started_at')
+    if raw is None or raw == '':
+        return None
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def is_wipe_stuck(state: dict) -> bool:
+    """True when Redis says running but no worker is making progress."""
+    if not state.get('running'):
+        return False
+    started = _parse_started_at(state)
+    if started is None:
+        return True
+    age = time.time() - started
+    phase = (state.get('phase') or '').lower()
+    if phase in ('queued', 'starting'):
+        return age >= WIPE_STALE_QUEUED_SEC
+    return age >= WIPE_STALE_RUNNING_SEC
+
+
+def force_reset_wipe() -> None:
+    """Clear stuck wipe flags so a new DELETE can start."""
+    release_wipe_lock()
+    reset_wipe_state()

@@ -430,9 +430,11 @@ class WipeDataView(APIView):
         from activities import wipe_state as ws
         state = ws.get_wipe_state()
         label = ws.wipe_status_label(state)
+        stuck = ws.is_wipe_stuck(state)
         return Response({
             **state,
             'status': label,
+            'stuck': stuck,
             'log': ws.get_wipe_log(),
         })
 
@@ -444,9 +446,24 @@ class WipeDataView(APIView):
         from activities import wipe_state as ws
         from activities.wipe_tasks import start_wipe_async
 
+        force = (
+            request.data.get('force', False)
+            or str(request.query_params.get('force', '')).lower() in ('1', 'true', 'yes')
+        )
         state = ws.get_wipe_state()
         if state.get('running'):
-            return Response({'error': 'Wipe already in progress.'}, status=status.HTTP_409_CONFLICT)
+            if force or ws.is_wipe_stuck(state):
+                ws.force_reset_wipe()
+                ws.wipe_log('Stale wipe state cleared — starting new wipe.')
+            else:
+                return Response(
+                    {
+                        'error': 'Wipe already in progress.',
+                        'stuck': False,
+                        'hint': 'Wait for completion, POST /admin/simulator-reset/, or retry with force=true.',
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
 
         ws.mark_wipe_queued()
         dispatch = start_wipe_async()
@@ -466,12 +483,16 @@ class SimulatorResetView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request):
+        from activities import wipe_state as ws
+
         sim.reset_simulator_locks()
+        ws.force_reset_wipe()
         return Response({
             'status': 'reset',
             'live_lock_held': sim.is_live_lock_held(),
             'batch_lock_held': sim.is_batch_lock_held(),
             'live_stuck': sim.live_simulation_stuck(),
+            'wipe_cleared': True,
         })
 
 
