@@ -55,6 +55,18 @@ SCALE_BATCH_PARALLEL_MIN_USERS=5000
 SCALE_USER_BULK_BATCH_SIZE=2500
 SCALE_USER_BULK_PG_BATCH_SIZE=500
 SCALE_MAX_CONCURRENT_RIDERS=5000
+
+# Batch bez aktywności — szybsze inserty (domyślnie włączone)
+SCALE_SKIP_DEPT_ON_BATCH=true
+SCALE_BATCH_FAST_INSERT=true
+DATABASE_CONN_MAX_AGE=60
+```
+
+Wyłączenie fast path (np. gdy potrzebujesz `UserDepartment` w batchu demo):
+
+```env
+SCALE_SKIP_DEPT_ON_BATCH=false
+SCALE_BATCH_FAST_INSERT=false
 ```
 
 ### 4. Plan CPU

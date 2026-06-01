@@ -130,6 +130,8 @@ if not _database_url:
 DATABASES = {
     'default': dj_database_url.parse(_database_url, engine='django.contrib.gis.db.backends.postgis')
 }
+if 'sqlite' not in _database_url.lower():
+    DATABASES['default']['CONN_MAX_AGE'] = int(os.getenv('DATABASE_CONN_MAX_AGE', '60'))
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

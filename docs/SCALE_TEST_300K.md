@@ -36,6 +36,11 @@ SCALE_BATCH_PARALLEL_CITIES=true
 SCALE_BATCH_PARALLEL_MIN_USERS=5000
 SCALE_USER_BULK_BATCH_SIZE=2500
 SCALE_USER_BULK_PG_BATCH_SIZE=500
+
+# Szybszy batch Postgres (skip_activities): bez UserDepartment + bez SELECT po bulk_create
+SCALE_SKIP_DEPT_ON_BATCH=true
+SCALE_BATCH_FAST_INSERT=true
+DATABASE_CONN_MAX_AGE=60
 ```
 
 ### Więcej CPU / workerów Celery
@@ -44,6 +49,8 @@ SCALE_USER_BULK_PG_BATCH_SIZE=500
 - Ustaw na serwisie **celery-worker**: `CELERY_WORKER_CONCURRENCY=6` (zostaw 1–2 vCPU na Redis/OS).
 - Przy **„skip activities”** i ≥5k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (10k → 10 miast × ~1k, do 7 workerów naraz).
 - Hasła atletów: **jeden hash bcrypt** na cały batch (bez 10k× `set_password`) — dużo szybsze na demo.
+- Przy **skip_activities**: domyślnie pomijane `UserDepartment` i ponowne `SELECT` po każdym `bulk_create` (`SCALE_SKIP_DEPT_ON_BATCH`, `SCALE_BATCH_FAST_INSERT`). Po wipe używaj czystego insertu; przy ponownym batchu licznik może być przybliżony.
+- **CONN_MAX_AGE=60** na PostgreSQL — mniej handshake’ów przy wielu workerach Celery (`DATABASE_CONN_MAX_AGE`).
 - **Nie uruchamiaj live sim** podczas batcha — ticki co 8s zjadają CPU (w logach: `ForkPoolWorker-1` live + `ForkPoolWorker-2` batch).
 - **Osobny serwis Railway:** `celery-worker-simulation` — tylko kolejka `simulation`. Instrukcja: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
 
@@ -51,7 +58,7 @@ SCALE_USER_BULK_PG_BATCH_SIZE=500
 
 1. **Preflight:** `GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.1&skip_activities=true`
 2. **Simulator** — preset „300k (bez aktywności)” lub ręcznie: 300000 użytkowników, wyłączone aktywności.
-3. Poczekaj na batch (PostgreSQL, ~30–90 min zależnie od dysku).
+3. Poczekaj na batch (PostgreSQL; 10k użytkowników z fast insert ~2–8 min, 300k ~20–60 min zależnie od dysku/workerów).
 4. **Live sim** — `pool_pct=1.0`, `active_ratio=0.1` → ~5000 na mapie (cap).
 5. **Mapa** — zoom na miasto; API zwraca tylko widoczny bbox.
 

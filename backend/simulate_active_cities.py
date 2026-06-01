@@ -68,6 +68,19 @@ def _plan_cities_for_target(total_users: int, num_cities_hint: int | None = None
     return selected, users_per_city
 
 
+def _batch_user_insert_flags(skip_activities: bool) -> tuple[bool, bool]:
+    """(skip_dept, fast_insert) — only enabled for skip_activities batch paths."""
+    if not skip_activities:
+        return False, False
+    try:
+        from activities.scale_config import BATCH_FAST_INSERT, SKIP_DEPT_ON_BATCH
+        skip_dept = SKIP_DEPT_ON_BATCH
+        fast_insert = BATCH_FAST_INSERT and skip_dept
+    except Exception:
+        skip_dept, fast_insert = True, True
+    return skip_dept, fast_insert
+
+
 def _bulk_create_athletes(
     city: dict,
     tenant,
@@ -77,6 +90,8 @@ def _bulk_create_athletes(
     pg_batch_size: int,
     *,
     on_batch_created=None,
+    skip_dept: bool = False,
+    fast_insert: bool = False,
 ) -> int:
     """Insert athletes via bulk_create; returns count actually linked in DB."""
     from users.models import User
@@ -84,6 +99,7 @@ def _bulk_create_athletes(
 
     pwd = _athlete_password_hash()
     total = 0
+    use_fast = fast_insert and skip_dept
 
     for batch_start in range(0, n_athletes, batch_size):
         batch_end = min(batch_start + batch_size, n_athletes)
@@ -109,42 +125,73 @@ def _bulk_create_athletes(
 
         usernames = [u.username for u in users_to_create]
         with transaction.atomic():
-            try:
-                User.objects.bulk_create(
-                    users_to_create,
-                    batch_size=pg_batch_size,
-                    ignore_conflicts=True,
-                )
-            except TypeError:
-                User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
-            except Exception:
-                for u in users_to_create:
-                    try:
-                        u.save()
-                    except Exception:
-                        pass
-
-            user_ids = list(
-                User.objects.filter(
-                    username__in=usernames, tenant=tenant,
-                ).values_list('id', flat=True)
-            )
-            n_saved = len(user_ids)
-            if user_ids and city_depts:
-                dept_ids = [d.pk for d in city_depts]
-                memberships = [
-                    UserDepartment(
-                        user_id=uid,
-                        department_id=dept_ids[i % len(dept_ids)],
-                    )
-                    for i, uid in enumerate(user_ids)
-                ]
+            if use_fast:
+                inserted = False
                 try:
-                    UserDepartment.objects.bulk_create(
-                        memberships, batch_size=pg_batch_size, ignore_conflicts=True,
+                    User.objects.bulk_create(
+                        users_to_create,
+                        batch_size=pg_batch_size,
+                        ignore_conflicts=False,
+                    )
+                    inserted = True
+                except TypeError:
+                    User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                    inserted = True
+                except Exception:
+                    try:
+                        User.objects.bulk_create(
+                            users_to_create,
+                            batch_size=pg_batch_size,
+                            ignore_conflicts=True,
+                        )
+                        inserted = True
+                    except TypeError:
+                        User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                        inserted = True
+                    except Exception:
+                        for u in users_to_create:
+                            try:
+                                u.save()
+                            except Exception:
+                                pass
+                n_saved = len(users_to_create) if inserted else 0
+            else:
+                try:
+                    User.objects.bulk_create(
+                        users_to_create,
+                        batch_size=pg_batch_size,
+                        ignore_conflicts=True,
                     )
                 except TypeError:
-                    UserDepartment.objects.bulk_create(memberships, batch_size=pg_batch_size)
+                    User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                except Exception:
+                    for u in users_to_create:
+                        try:
+                            u.save()
+                        except Exception:
+                            pass
+
+                user_ids = list(
+                    User.objects.filter(
+                        username__in=usernames, tenant=tenant,
+                    ).values_list('id', flat=True)
+                )
+                n_saved = len(user_ids)
+                if user_ids and city_depts and not skip_dept:
+                    dept_ids = [d.pk for d in city_depts]
+                    memberships = [
+                        UserDepartment(
+                            user_id=uid,
+                            department_id=dept_ids[i % len(dept_ids)],
+                        )
+                        for i, uid in enumerate(user_ids)
+                    ]
+                    try:
+                        UserDepartment.objects.bulk_create(
+                            memberships, batch_size=pg_batch_size, ignore_conflicts=True,
+                        )
+                    except TypeError:
+                        UserDepartment.objects.bulk_create(memberships, batch_size=pg_batch_size)
 
         total += n_saved
         if on_batch_created and n_saved:
@@ -643,9 +690,12 @@ def run(
             pct = 22 + 63 * overall
             report('creating_users', pct, users_created=users_so_far, activities_created=0)
 
+        skip_dept, fast_insert = _batch_user_insert_flags(skip_activities)
         n_athletes_created = _bulk_create_athletes(
             city, tenant, n_athletes, city_depts, batch_size, pg_batch_size,
             on_batch_created=_on_batch,
+            skip_dept=skip_dept,
+            fast_insert=fast_insert,
         )
         if not skip_activities and n_athletes_created:
             city_users.extend(
@@ -897,9 +947,12 @@ def create_users_for_city(
         pct = 22 + 63 * overall
         report('creating_users', pct, users_created=users_so_far, activities_created=0)
 
+    skip_dept, fast_insert = _batch_user_insert_flags(skip_activities=True)
     n_athletes_created = _bulk_create_athletes(
         city, tenant, n_athletes, city_depts, batch_size, pg_batch_size,
         on_batch_created=_on_parallel_batch,
+        skip_dept=skip_dept,
+        fast_insert=fast_insert,
     )
     created_count = moderator_count + n_athletes_created
     print(f"   ✅ {city['name']}: {created_count} users (parallel worker)")

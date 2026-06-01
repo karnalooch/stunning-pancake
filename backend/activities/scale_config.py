@@ -13,6 +13,13 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+def _bool(name: str, default: bool) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.lower() in ('1', 'true', 'yes', 'on')
+
+
 # Batch generator (Postgres users)
 MAX_BATCH_USERS = _int('SCALE_MAX_BATCH_USERS', 350_000)
 
@@ -56,3 +63,8 @@ BATCH_PARALLEL_MIN_USERS = _int('SCALE_BATCH_PARALLEL_MIN_USERS', 5_000)
 USER_BULK_BATCH_SIZE = _int('SCALE_USER_BULK_BATCH_SIZE', 2500)
 # Django bulk_create chunk size inside each Redis progress batch
 USER_BULK_PG_BATCH_SIZE = _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)
+
+# Batch user insert fast path (skip_activities flows): skip UserDepartment + SELECT refetch
+SKIP_DEPT_ON_BATCH = _bool('SCALE_SKIP_DEPT_ON_BATCH', True)
+BATCH_FAST_INSERT = _bool('SCALE_BATCH_FAST_INSERT', True)
+# PostgreSQL persistent connections — applied in core.settings (DATABASE_CONN_MAX_AGE, default 60)
