@@ -98,6 +98,18 @@ def release_batch_lock():
     r.delete(BATCH_LOCK_KEY)
 
 
+def is_batch_lock_held() -> bool:
+    r = get_redis()
+    return bool(r.exists(BATCH_LOCK_KEY))
+
+
+def force_stop_batch_simulation():
+    """Abort batch sim and release Redis lock (safe even if already idle)."""
+    set_batch_state(running=False, error=None)
+    release_batch_lock()
+    batch_log("⚠️ Batch stopped (locks cleared).")
+
+
 # ─── Live Simulation State ──────────────────────────────────────
 
 LIVE_STATE_KEY = "{sim}:live:state"
@@ -188,6 +200,40 @@ def refresh_live_lock():
     """Extend the live simulation lock TTL."""
     r = get_redis()
     r.expire(LIVE_LOCK_KEY, LIVE_LOCK_TTL)
+
+
+def is_live_lock_held() -> bool:
+    r = get_redis()
+    return bool(r.exists(LIVE_LOCK_KEY))
+
+
+def force_stop_live_simulation():
+    """Abort live sim, stop tick loop, and release all live locks."""
+    set_live_state(running=False, error=None)
+    release_live_lock()
+    release_live_tick_lock()
+    stop_live_tick_loop()
+    live_log("⚠️ Stopped by user (locks cleared).")
+
+
+def reset_simulator_locks():
+    """Emergency reset — stop flags + release batch/live locks without deleting DB."""
+    force_stop_live_simulation()
+    force_stop_batch_simulation()
+
+
+def live_simulation_stuck() -> bool:
+    """True when Redis indicates activity but running flag is off."""
+    state = get_live_state()
+    if state.get('running'):
+        return False
+    if state.get('error'):
+        return True
+    if is_live_lock_held():
+        return True
+    if get_live_pool_count() > 0 or get_live_ride_count() > 0:
+        return True
+    return False
 
 
 def set_live_pool(user_ids: list):

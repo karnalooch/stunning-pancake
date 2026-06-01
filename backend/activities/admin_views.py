@@ -301,10 +301,18 @@ class LiveSimulationView(APIView):
         elapsed = 0.0
         if state.get('started_at'):
             elapsed = time.time() - state['started_at']
+        pool_size = sim.get_live_pool_count()
+        active_rides = sim.get_live_ride_count()
+        live_lock = sim.is_live_lock_held()
+        stuck = sim.live_simulation_stuck()
         return Response({
             'running': state['running'],
             'elapsed_seconds': round(elapsed, 1),
             'error': state.get('error'),
+            'stuck': stuck,
+            'live_lock_held': live_lock,
+            'pool_size': pool_size,
+            'active_rides': active_rides,
             'total_users': int(state['total_users']),
             'active_ratio': float(state['active_ratio']),
             'cheat_ratio': float(state['cheat_ratio']),
@@ -316,13 +324,12 @@ class LiveSimulationView(APIView):
         })
 
     def delete(self, request):
-        state = sim.get_live_state()
-        if not state['running']:
-            return Response({'error': 'No live simulation running.'}, status=status.HTTP_400_BAD_REQUEST)
-        sim.set_live_state(running=False)
-        sim.stop_live_tick_loop()
-        sim.live_log("⚠️ Stopped by user.")
-        return Response({'status': 'stopped'})
+        sim.force_stop_live_simulation()
+        return Response({
+            'status': 'stopped',
+            'live_lock_held': sim.is_live_lock_held(),
+            'message': 'Live simulation stopped and locks cleared.',
+        })
 
     def post(self, request):
         state = sim.get_live_state()
@@ -371,13 +378,25 @@ class LiveSimulationView(APIView):
             live_tick_task.delay()
             sim.start_live_tick_loop()
         else:
-            # Production: start non-blocking Celery tick chain (runs independently of browser)
-            run_live_simulation.delay(
-                total_users=total_users,
-                active_ratio=active_ratio,
-                cheat_ratio=cheat_ratio,
-                tick_seconds=tick_seconds,
+            if sim.is_live_lock_held() and not state['running']:
+                sim.release_live_lock()
+            if not sim.acquire_live_lock():
+                return Response(
+                    {
+                        'error': 'Live simulation lock is held. Use Stop or Reset Simulator.',
+                        'live_lock_held': True,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            sim.reset_live_state()
+            sim.set_live_state(
+                running=True, started_at=time.time(),
+                total_users=total_users, active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
+                currently_riding=0, total_completed=0, cheaters_caught=0,
+                last_tick_at=time.time(), error=None,
             )
+            run_live_simulation.delay()
 
         return Response({
             'status': 'started',
@@ -422,6 +441,23 @@ class WipeDataView(APIView):
             'running': True,
             'message': 'Chunked wipe running in background. Poll GET /admin/wipe-data/ for progress.',
         }, status=status.HTTP_202_ACCEPTED)
+
+
+class SimulatorResetView(APIView):
+    """
+    POST /api/activities/admin/simulator-reset/
+    Emergency: clear batch/live locks and running flags without deleting data.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        sim.reset_simulator_locks()
+        return Response({
+            'status': 'reset',
+            'live_lock_held': sim.is_live_lock_held(),
+            'batch_lock_held': sim.is_batch_lock_held(),
+            'live_stuck': sim.live_simulation_stuck(),
+        })
 
 
 class WorkerStatusView(APIView):
@@ -539,12 +575,16 @@ class RunSimulationView(APIView):
             end = state['completed_at'] or time.time()
             elapsed = end - state['started_at']
 
+        batch_lock = sim.is_batch_lock_held()
+        stuck = batch_lock and not state['running']
         return Response({
             'running': state['running'],
             'elapsed_seconds': round(elapsed, 1),
             'scale': state['scale'],
             'days': state['days'],
             'error': state.get('error'),
+            'stuck': stuck or bool(state.get('error')),
+            'batch_lock_held': batch_lock,
             'total_users': int(state['total_users']),
             'users_created': state['users_created'],
             'departments_created': state['departments_created'],
@@ -555,12 +595,12 @@ class RunSimulationView(APIView):
         })
 
     def delete(self, request):
-        state = sim.get_batch_state()
-        if not state['running']:
-            return Response({'error': 'No simulation is currently running.'}, status=status.HTTP_400_BAD_REQUEST)
-        sim.set_batch_state(running=False)
-        sim.batch_log("⚠️ Abort requested by user.")
-        return Response({'status': 'abort_requested', 'message': 'Simulation will stop at the next checkpoint.'})
+        sim.force_stop_batch_simulation()
+        return Response({
+            'status': 'abort_requested',
+            'batch_lock_held': sim.is_batch_lock_held(),
+            'message': 'Batch simulation stopped and lock cleared.',
+        })
 
     def post(self, request):
         state = sim.get_batch_state()

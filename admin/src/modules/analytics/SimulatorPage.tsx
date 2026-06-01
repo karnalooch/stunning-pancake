@@ -16,6 +16,7 @@ import { PageHeader } from '../../core/components/PageHeader';
 
 interface LiveStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
+    stuck?: boolean; live_lock_held?: boolean; pool_size?: number; active_rides?: number;
     total_users: number; active_ratio: number; cheat_ratio: number; tick_seconds: number;
     currently_riding: number; total_completed: number; cheaters_caught: number;
     log: [string, string][];
@@ -23,6 +24,7 @@ interface LiveStatus {
 
 interface BatchStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
+    stuck?: boolean; batch_lock_held?: boolean;
     total_users: number; users_created: number; activities_created: number;
     current_phase: string; progress_pct: number;
     log: [string, string][];
@@ -64,6 +66,15 @@ export const SimulatorPage: React.FC = () => {
     const isBatchRunning = batchStatus?.running ?? false;
     const isLiveRunning = liveStatus?.running ?? false;
     const anyRunning = isBatchRunning || isLiveRunning;
+    const isStuck = Boolean(
+        liveStatus?.stuck || batchStatus?.stuck || liveStatus?.error || batchStatus?.error
+        || liveStatus?.live_lock_held || batchStatus?.batch_lock_held
+    );
+    const hasOrphanedLive = !isLiveRunning && (
+        (liveStatus?.pool_size ?? 0) > 0 || (liveStatus?.currently_riding ?? 0) > 0
+        || (liveStatus?.active_rides ?? 0) > 0
+    );
+    const showSimControls = anyRunning || isStuck || hasOrphanedLive;
     const showBatchProgress = launching || isBatchRunning || (batchStatus && batchStatus.progress_pct > 0 && batchStatus.progress_pct < 100);
 
     const MAX_CONCURRENT = 5000;
@@ -115,7 +126,7 @@ export const SimulatorPage: React.FC = () => {
             ]);
             setBatchStatus(bs);
             setLiveStatus(ls);
-            if (bs?.running || ls?.running) {
+            if (bs?.running || ls?.running || bs?.stuck || ls?.stuck || ls?.live_lock_held) {
                 setActiveStep(2); // Jump straight to running/monitoring if already active
             }
         })();
@@ -185,12 +196,34 @@ export const SimulatorPage: React.FC = () => {
         startPolling();
     };
 
+    const refreshStatus = async () => {
+        const [bs, ls] = await Promise.all([
+            SimulatorApi.getBatchStatus().catch(() => null),
+            SimulatorApi.getLiveStatus().catch(() => null),
+        ]);
+        setBatchStatus(bs);
+        setLiveStatus(ls);
+    };
+
     const handleStop = async () => {
         try {
             await SimulatorApi.abortLive();
             await SimulatorApi.abortBatch();
-            notifications.show({ title: 'Simulation Stopped', message: 'Riders will finish current rides', color: 'blue' });
-        } catch {}
+            await refreshStatus();
+            notifications.show({ title: 'Simulation Stopped', message: 'Locks cleared; Celery chain will drain.', color: 'blue' });
+        } catch (err: any) {
+            notifications.show({ title: 'Stop failed', message: err?.response?.data?.error || err.message, color: 'red' });
+        }
+    };
+
+    const handleForceReset = async () => {
+        try {
+            await SimulatorApi.resetSimulator();
+            await refreshStatus();
+            notifications.show({ title: 'Simulator reset', message: 'Locks and running flags cleared.', color: 'teal' });
+        } catch (err: any) {
+            notifications.show({ title: 'Reset failed', message: err?.response?.data?.error || err.message, color: 'red' });
+        }
     };
 
     const handleWipe = async () => {
@@ -373,10 +406,16 @@ export const SimulatorPage: React.FC = () => {
                                         {launching ? 'Creating Cyclists & Rides...' : `Launch ${cyclists.toLocaleString()} Cyclists`}
                                     </Button>
 
-                                    {anyRunning && (
+                                    {showSimControls && (
                                         <Button size="md" color="red" variant="light" fullWidth
                                             leftSection={<StopCircle size={16} />} onClick={handleStop}>
                                             Stop Active Simulation
+                                        </Button>
+                                    )}
+                                    {isStuck && !anyRunning && (
+                                        <Button size="md" color="orange" variant="outline" fullWidth
+                                            leftSection={<RefreshCw size={16} />} onClick={handleForceReset}>
+                                            Reset simulator locks (stuck state)
                                         </Button>
                                     )}
 
@@ -401,8 +440,8 @@ export const SimulatorPage: React.FC = () => {
                                         <ThemeIcon size={24} radius="sm" color="teal" variant="light"><Activity size={14} /></ThemeIcon>
                                         <Text fw={600} size="sm">Live Telemetry Monitor</Text>
                                     </Group>
-                                    <Badge variant="light" color={anyRunning ? 'green' : 'gray'}>
-                                        {anyRunning ? 'RUNNING' : 'IDLE'}
+                                    <Badge variant="light" color={anyRunning ? 'green' : isStuck ? 'orange' : 'gray'}>
+                                        {anyRunning ? 'RUNNING' : isStuck ? 'STUCK' : 'IDLE'}
                                     </Badge>
                                 </Group>
 
@@ -419,7 +458,7 @@ export const SimulatorPage: React.FC = () => {
                                     />
                                 )}
 
-                                {anyRunning ? (
+                                {(anyRunning || hasOrphanedLive) ? (
                                     <SimpleGrid cols={2} spacing="xs" mb="md">
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">
                                             <Text size="2xs" c="dimmed">Active Riders</Text>
@@ -438,6 +477,13 @@ export const SimulatorPage: React.FC = () => {
                                             <Text fw={700} size="lg">{batchStatus?.users_created?.toLocaleString() ?? '—'}</Text>
                                         </Card>
                                     </SimpleGrid>
+                                ) : isStuck ? (
+                                    <Alert color="orange" icon={<AlertTriangle size={16} />} mb="md">
+                                        <Text size="xs">
+                                            Simulator lock or pool still active while status is idle.
+                                            Use Stop or Reset simulator locks, then Wipe if needed.
+                                        </Text>
+                                    </Alert>
                                 ) : (
                                     <Alert color="gray" icon={<Activity size={16} />} mb="md">
                                         <Text size="xs">Ready to start. Click "Launch" on the left to begin the simulation cycle.</Text>
@@ -473,6 +519,11 @@ export const SimulatorPage: React.FC = () => {
                                         onClick={() => setWipeModalOpen(true)}>
                                         Wipe Simulator DB Data
                                     </Button>
+                                )}
+                                {isStuck && anyRunning && (
+                                    <Text size="2xs" c="dimmed" mt="xs" ta="center">
+                                        If Stop does not help, use Reset simulator locks above.
+                                    </Text>
                                 )}
                             </Card>
                         </SimpleGrid>

@@ -243,55 +243,46 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
 
     state = sim.get_live_state()
 
-    # First invocation: initialize state and pool
+    # Stopped / aborted — drain chained Celery tasks without re-acquiring the lock
     if not state.get('running'):
-        if not sim.acquire_live_lock():
-            sim.live_log("ERROR: live lock — another simulation running")
-            sim.set_live_state(error='Another live simulation is running', running=False)
-            return {'status': 'locked'}
+        sim.release_live_lock()
+        return {'status': 'stopped'}
 
-        sim.reset_live_state()
-        sim.set_live_state(
-            running=True, started_at=time.time(),
-            total_users=total_users, active_ratio=active_ratio,
-            cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
-            currently_riding=0, total_completed=0, cheaters_caught=0,
-            last_tick_at=time.time(),
-        )
+    tick_seconds = int(state.get('tick_seconds') or tick_seconds)
+    active_ratio = float(state.get('active_ratio') or active_ratio)
+    cheat_ratio = float(state.get('cheat_ratio') or cheat_ratio)
+    pool_target = int(state.get('total_users') or total_users)
 
+    # One-time pool setup (POST already set running=True and holds the lock)
+    if sim.get_live_pool_count() == 0:
         from activities.scale_config import MAX_LIVE_POOL
-        pool_limit = min(int(total_users), MAX_LIVE_POOL)
+        pool_limit = min(pool_target, MAX_LIVE_POOL)
         pool_size = sim.set_live_pool_from_db(pool_limit)
         sim.set_live_state(total_users=pool_size)
-
-        if pool_size < total_users:
-            sim.live_log(f"WARNING: only {pool_size} athletes in pool (wanted {total_users})")
-
+        if pool_size < pool_target:
+            sim.live_log(f"WARNING: only {pool_size} athletes in pool (wanted {pool_target})")
         sim.live_log(
             f"LIVE SIM: pool={pool_size}, {active_ratio*100:.0f}% active (capped), "
             f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s"
         )
 
-    # Check if still running (stop signal)
     if not sim.get_live_state().get('running', False):
-        sim.live_log("Live simulation stopped.")
         sim.release_live_lock()
         return {'status': 'stopped'}
 
-    # Run ONE tick
     try:
         live_tick_task.delay()
         sim.refresh_live_lock()
     except Exception as e:
         sim.live_log(f"Tick error: {e}")
 
-    # Schedule next tick (non-blocking chain)
     sim.set_live_state(last_tick_at=time.time())
-    self.apply_async(
-        kwargs={'total_users': total_users, 'active_ratio': active_ratio,
-                'cheat_ratio': cheat_ratio, 'tick_seconds': tick_seconds},
-        countdown=tick_seconds,
-    )
+
+    if not sim.get_live_state().get('running', False):
+        sim.release_live_lock()
+        return {'status': 'stopped'}
+
+    self.apply_async(countdown=tick_seconds)
     return {'status': 'tick_complete', 'next_tick_in': tick_seconds}
 
 

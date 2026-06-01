@@ -251,6 +251,11 @@ export const SimulatorApi = {
     return data;
   },
 
+  resetSimulator: async () => {
+    const { data } = await apiClient.post('/activities/admin/simulator-reset/');
+    return data;
+  },
+
   // Worker Status
   getWorkerStatus: async () => {
     const { data } = await apiClient.get('/activities/admin/worker-status/');
