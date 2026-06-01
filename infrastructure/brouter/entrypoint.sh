@@ -76,9 +76,16 @@ if [ "$AUTO" = 1 ]; then
   fi
 fi
 
+# HTTP server on :17777 (not btools.server.BRouter — that is CLI/CGI only).
+BROUTER_PORT="${BROUTER_PORT:-17777}"
+BROUTER_THREADS="${BROUTER_MAX_THREADS:-4}"
+PROFILE_DIR="/brouter/profiles2"
+
 exec java -Xmx"$JAVA_XMX" -Xms"$JAVA_XMS" \
   -cp brouter.jar \
-  btools.server.BRouter \
+  btools.server.RouteServer \
   "$SEGDIR" \
-  foot-all.brf,bicycle.brf \
-  17777 1
+  "$PROFILE_DIR" \
+  "${PROFILE_DIR},${PROFILE_DIR}" \
+  "$BROUTER_PORT" \
+  "$BROUTER_THREADS"

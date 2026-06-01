@@ -9,8 +9,9 @@ RUN apk add --no-cache wget unzip && \
     wget -q "https://github.com/abrensch/brouter/releases/download/v${BROUTER_VERSION}/brouter-${BROUTER_VERSION}.zip" -O /tmp/brouter.zip && \
     unzip -q /tmp/brouter.zip -d /tmp/br && \
     cp "/tmp/br/brouter-${BROUTER_VERSION}/brouter-${BROUTER_VERSION}-all.jar" brouter.jar && \
-    cp "/tmp/br/brouter-${BROUTER_VERSION}/profiles2/trekking.brf" bicycle.brf && \
-    cp "/tmp/br/brouter-${BROUTER_VERSION}/profiles2/trekking-nosteps.brf" foot-all.brf && \
+    cp -r "/tmp/br/brouter-${BROUTER_VERSION}/profiles2" . && \
+    cp profiles2/trekking.brf profiles2/bicycle.brf && \
+    cp profiles2/trekking-nosteps.brf profiles2/foot-all.brf && \
     rm -rf /tmp/br /tmp/brouter.zip && \
     apk del unzip
 
