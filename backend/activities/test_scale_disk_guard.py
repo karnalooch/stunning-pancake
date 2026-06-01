@@ -5,14 +5,34 @@ from django.test import SimpleTestCase
 
 from activities.scale_disk_guard import (
     adjust_batch_plan_for_disk_pressure,
+    infer_volume_cap_from_db_usage,
     is_disk_full_error,
     prepare_batch_disk_guard,
+    resolve_disk_budget_gb,
     _should_auto_wipe,
 )
 from activities.scale_config import compute_batch_scaling
 
 
 class ScaleDiskGuardTest(SimpleTestCase):
+    def test_infer_volume_cap_railway_tiers(self):
+        self.assertEqual(infer_volume_cap_from_db_usage(4.99), 5)
+        self.assertEqual(infer_volume_cap_from_db_usage(0.2), 0.5)
+        self.assertEqual(infer_volume_cap_from_db_usage(8.0), 10)
+
+    @patch.dict('os.environ', {'SCALE_POSTGRES_DISK_BUDGET_GB': ''}, clear=False)
+    @patch('activities.scale_disk_guard.get_database_size_gb', return_value=4.2)
+    def test_resolve_infers_from_db_size(self, _db):
+        budget, source = resolve_disk_budget_gb(4.2)
+        self.assertEqual(budget, 5)
+        self.assertEqual(source, 'inferred_pg_size')
+
+    @patch.dict('os.environ', {'SCALE_POSTGRES_DISK_BUDGET_GB': '25'})
+    def test_resolve_env_override(self):
+        budget, source = resolve_disk_budget_gb(4.0)
+        self.assertEqual(budget, 25)
+        self.assertEqual(source, 'env')
+
     def test_is_disk_full_error(self):
         self.assertTrue(is_disk_full_error(Exception('could not extend file "base/16384/24646"')))
         self.assertFalse(is_disk_full_error(Exception('duplicate key')))

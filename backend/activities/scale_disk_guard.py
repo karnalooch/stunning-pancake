@@ -2,9 +2,12 @@
 Automatic Postgres disk safeguards for batch simulation.
 
 No manual wipe / disk monitoring required when SCALE_AUTO_DISK_GUARD is on (default).
+Disk budget is auto-detected from pg_database_size (Railway tiers), volume mount, or env override.
 """
 from __future__ import annotations
 
+import os
+import shutil
 import time
 from typing import Any
 
@@ -16,11 +19,17 @@ from activities.scale_config import (
     AUTO_WIPE_BEFORE_BATCH,
     BATCH_WARN_WITHOUT_WIPE_ABOVE,
     DISK_HEADROOM_GB,
-    POSTGRES_DISK_BUDGET_GB,
+    POSTGRES_DISK_BUDGET_GB_DEFAULT,
     WIPE_WAIT_TIMEOUT_SEC,
     compute_batch_scaling,
     estimate_batch_disk_gb,
 )
+
+# Standard Railway volume tiers (GB) — used to infer cap from pg_database_size
+RAILWAY_VOLUME_TIERS_GB = (0.5, 5, 10, 20, 50, 100, 250, 500, 1024)
+
+DISK_BUDGET_CACHE_KEY = '{sim}:disk:budget_gb'
+DISK_BUDGET_CACHE_TTL = 86400 * 7
 
 
 def is_disk_full_error(exc: BaseException) -> bool:
@@ -48,12 +57,98 @@ def get_database_size_gb() -> float | None:
     return round(nbytes / (1024 ** 3), 3)
 
 
-def _usage_ratio(db_gb: float | None, projected_delta_gb: float) -> float | None:
-    if db_gb is None:
+def infer_volume_cap_from_db_usage(db_gb: float) -> float:
+    """Smallest standard volume tier that can hold current pg_database_size."""
+    size = max(0.0, float(db_gb))
+    for cap in RAILWAY_VOLUME_TIERS_GB:
+        if size <= cap:
+            return cap
+    return RAILWAY_VOLUME_TIERS_GB[-1]
+
+
+def _read_env_disk_budget_gb() -> float | None:
+    val = os.getenv('SCALE_POSTGRES_DISK_BUDGET_GB')
+    if val is None or str(val).strip() == '':
         return None
-    budget = max(0.5, float(POSTGRES_DISK_BUDGET_GB))
+    try:
+        return max(0.5, float(val))
+    except (TypeError, ValueError):
+        return None
+
+
+def _disk_budget_from_volume_mount() -> float | None:
+    """When this process has the Postgres volume mounted (Railway Postgres service)."""
+    mount = os.getenv('RAILWAY_VOLUME_MOUNT_PATH', '').strip()
+    if not mount or not os.path.isdir(mount):
+        return None
+    try:
+        usage = shutil.disk_usage(mount)
+        return round(usage.total / (1024 ** 3), 3)
+    except OSError:
+        return None
+
+
+def _disk_budget_from_redis_cache() -> float | None:
+    try:
+        from core.redis_cluster import get_redis
+        r = get_redis()
+        raw = r.get(DISK_BUDGET_CACHE_KEY)
+        if not raw:
+            return None
+        val = raw.decode() if isinstance(raw, bytes) else raw
+        return max(0.5, float(val))
+    except Exception:
+        return None
+
+
+def remember_disk_budget_from_full_disk(db_gb: float | None = None) -> None:
+    """Cache volume cap after a disk-full error (tightens future guards)."""
+    size = db_gb if db_gb is not None else get_database_size_gb()
+    if size is None or size <= 0:
+        return
+    cap = max(infer_volume_cap_from_db_usage(size), size * 1.02)
+    try:
+        from core.redis_cluster import get_redis
+        r = get_redis()
+        r.setex(DISK_BUDGET_CACHE_KEY, DISK_BUDGET_CACHE_TTL, str(round(cap, 3)))
+    except Exception:
+        pass
+
+
+def resolve_disk_budget_gb(db_gb: float | None = None) -> tuple[float, str]:
+    """
+    Postgres volume budget in GB.
+
+    Priority: SCALE_POSTGRES_DISK_BUDGET_GB env → RAILWAY_VOLUME_MOUNT_PATH df
+    → Redis (learned from prior disk-full) → infer from pg_database_size → default.
+    """
+    env_b = _read_env_disk_budget_gb()
+    if env_b is not None:
+        return env_b, 'env'
+
+    mount_b = _disk_budget_from_volume_mount()
+    if mount_b is not None:
+        return mount_b, 'railway_volume_mount'
+
+    cached = _disk_budget_from_redis_cache()
+    if cached is not None:
+        return cached, 'learned_cache'
+
+    if db_gb is not None and db_gb > 0:
+        return infer_volume_cap_from_db_usage(db_gb), 'inferred_pg_size'
+
+    return POSTGRES_DISK_BUDGET_GB_DEFAULT, 'default'
+
+
+def _usage_ratio(
+    db_gb: float | None,
+    projected_delta_gb: float,
+) -> tuple[float | None, float | None, str | None]:
+    if db_gb is None:
+        return None, None, None
+    budget, source = resolve_disk_budget_gb(db_gb)
     projected = db_gb + projected_delta_gb + float(DISK_HEADROOM_GB)
-    return projected / budget
+    return projected / budget, budget, source
 
 
 def adjust_batch_plan_for_disk_pressure(
@@ -113,7 +208,7 @@ def _should_auto_wipe(
         return False, ''
 
     estimated = estimate_batch_disk_gb(target_users, skip_activities=skip_activities)
-    ratio = _usage_ratio(db_gb, estimated)
+    ratio, _budget, _src = _usage_ratio(db_gb, estimated)
 
     if clear and athlete_count > 0:
         return True, 'clear=true — automatyczny wipe przed batch'
@@ -201,22 +296,36 @@ def prepare_batch_disk_guard(
             db_gb = get_database_size_gb()
             athlete_count = 0
 
-    ratio = _usage_ratio(db_gb, estimated)
+    ratio, budget_gb, budget_source = _usage_ratio(db_gb, estimated)
     plan = adjust_batch_plan_for_disk_pressure(plan, usage_ratio=ratio)
 
+    if budget_gb is not None and budget_source:
+        src_labels = {
+            'env': 'env',
+            'railway_volume_mount': 'wolumen Railway (df)',
+            'inferred_pg_size': 'wykryto z rozmiaru bazy',
+            'learned_cache': 'po wcześniejszym błędzie dysku',
+            'default': 'domyślny',
+        }
+        actions.insert(
+            0,
+            f'Budżet dysku Postgres: ~{budget_gb:g} GB ({src_labels.get(budget_source, budget_source)}).',
+        )
+
     if ratio is not None and ratio > 1.15:
-        budget = POSTGRES_DISK_BUDGET_GB
         return {
             'ok': False,
             'error': (
-                f'Za mało miejsca na Postgres (budżet {budget} GB, baza ~{db_gb or 0:.1f} GB, '
-                f'batch ~{estimated:.1f} GB). Zwiększ wolumen lub ustaw '
-                f'SCALE_POSTGRES_DISK_BUDGET_GB na rozmiar wolumenu Railway.'
+                f'Za mało miejsca na Postgres (wykryty budżet ~{budget_gb or 0:g} GB, '
+                f'baza ~{db_gb or 0:.1f} GB, batch ~{estimated:.1f} GB). '
+                f'Powiększ wolumen w Railway lub ustaw SCALE_POSTGRES_DISK_BUDGET_GB.'
             ),
             'batch_plan': plan,
             'actions': actions,
             'db_size_gb': db_gb,
             'disk_usage_ratio': ratio,
+            'disk_budget_gb': budget_gb,
+            'disk_budget_source': budget_source,
         }
 
     if ratio is not None and ratio >= 0.7:
@@ -232,5 +341,7 @@ def prepare_batch_disk_guard(
         'actions': actions,
         'db_size_gb': db_gb,
         'disk_usage_ratio': ratio,
+        'disk_budget_gb': budget_gb,
+        'disk_budget_source': budget_source,
         'athletes_in_db': athlete_count,
     }

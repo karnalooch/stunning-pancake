@@ -127,8 +127,8 @@ BATCH_DISK_GB_AT_300K = _float('SCALE_BATCH_DISK_GB_AT_300K', 10.0)
 # Automatic disk guard (wipe + chunk tuning) — no manual monitoring
 AUTO_DISK_GUARD = _bool('SCALE_AUTO_DISK_GUARD', True)
 AUTO_WIPE_BEFORE_BATCH = _bool('SCALE_AUTO_WIPE_BEFORE_BATCH', True)
-# Match Railway Postgres volume size (GB); used for headroom checks
-POSTGRES_DISK_BUDGET_GB = _float('SCALE_POSTGRES_DISK_BUDGET_GB', 10.0)
+# Fallback when auto-detect cannot run (SQLite / no DB size); override via same env if needed
+POSTGRES_DISK_BUDGET_GB_DEFAULT = _float('SCALE_POSTGRES_DISK_BUDGET_GB', 10.0)
 DISK_HEADROOM_GB = _float('SCALE_DISK_HEADROOM_GB', 2.0)
 WIPE_WAIT_TIMEOUT_SEC = _float('SCALE_WIPE_WAIT_TIMEOUT_SEC', 3600.0)
 

@@ -677,11 +677,13 @@ class RunSimulationView(APIView):
                 f"ETA ~{eta_min} min (skip_activities={skip_activities})."
             )
             sim.batch_log(est_message)
-            from activities.scale_config import AUTO_DISK_GUARD, POSTGRES_DISK_BUDGET_GB
+            from activities.scale_config import AUTO_DISK_GUARD
             if AUTO_DISK_GUARD:
+                from activities.scale_disk_guard import get_database_size_gb, resolve_disk_budget_gb
+                db_gb = get_database_size_gb()
+                budget, src = resolve_disk_budget_gb(db_gb)
                 batch_warnings.append(
-                    f"Dysk: automatyczny guard (budżet {POSTGRES_DISK_BUDGET_GB:g} GB, "
-                    f"wipe + dopasowanie chunków w workerze)."
+                    f"Dysk: auto guard (~{budget:g} GB, {src}), wipe + chunki w workerze."
                 )
             else:
                 disk_gb = batch_plan.get('estimated_disk_gb', 0)

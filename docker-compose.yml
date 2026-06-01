@@ -176,7 +176,6 @@ services:
       BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
       CELERY_WORKER_CONCURRENCY: "6"
       CELERY_WORKER_QUEUES: simulation
-      SCALE_POSTGRES_DISK_BUDGET_GB: "20"
       SCALE_AUTO_DISK_GUARD: "true"
       SCALE_AUTO_WIPE_BEFORE_BATCH: "true"
       SCALE_BATCH_PARALLEL_CITIES: "true"

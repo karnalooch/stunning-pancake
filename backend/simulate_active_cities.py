@@ -127,6 +127,11 @@ def _bulk_create_user_chunks(users, pg_chunk: int, **kwargs) -> None:
         except Exception as e:
             if not _is_disk_full_error(e) or chunk <= 50:
                 raise
+            try:
+                from activities.scale_disk_guard import remember_disk_budget_from_full_disk
+                remember_disk_budget_from_full_disk()
+            except Exception:
+                pass
             chunk = max(50, chunk // 2)
 
 

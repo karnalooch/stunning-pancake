@@ -10,7 +10,6 @@ from activities.scale_config import (
     AUTO_DISK_GUARD,
     BATCH_PARALLEL_MIN_USERS,
     BATCH_WARN_WITHOUT_WIPE_ABOVE,
-    POSTGRES_DISK_BUDGET_GB,
     FORCE_SKIP_ACTIVITIES_ABOVE,
     LIVE_POOL_REDIS_FULL_ABOVE,
     MAX_BATCH_USERS,
@@ -94,10 +93,11 @@ def analyze_scale(
             )
 
     if AUTO_DISK_GUARD and target >= 1_000:
+        from activities.scale_disk_guard import get_database_size_gb, resolve_disk_budget_gb
+        db_gb = get_database_size_gb()
+        budget, src = resolve_disk_budget_gb(db_gb)
         recommendations.append(
-            f'Automatyczny disk guard: wipe + dopasowanie chunków (budżet '
-            f'{POSTGRES_DISK_BUDGET_GB:g} GB — ustaw SCALE_POSTGRES_DISK_BUDGET_GB '
-            f'na rozmiar wolumenu Railway).'
+            f'Automatyczny disk guard: budżet dysku ~{budget:g} GB ({src}), wipe + chunki bez ręcznej konfiguracji.'
         )
     elif target >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
         risks.append({

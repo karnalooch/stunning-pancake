@@ -41,11 +41,7 @@ Przy batchu ≥1k worker **sam**:
 - zmniejsza `pg_chunk` i równoległość przy wysokim % budżetu,
 - przy `No space left on device` **dzieli chunk** i ponawia insert.
 
-Ustaw na Railway rozmiar wolumenu Postgres:
-
-```env
-SCALE_POSTGRES_DISK_BUDGET_GB=20
-```
+Budżet dysku jest **wykrywany automatycznie** z `pg_database_size` (tiery Railway: 0.5 / 5 / 10 / 20 / 50 GB…). Opcjonalny override: `SCALE_POSTGRES_DISK_BUDGET_GB=20`.
 
 Wyłączenie (niezalecane): `SCALE_AUTO_DISK_GUARD=0`, `SCALE_AUTO_WIPE_BEFORE_BATCH=0`.
 
