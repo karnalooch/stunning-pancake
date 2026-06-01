@@ -317,13 +317,23 @@ class TelemetryLiveView(generics.GenericAPIView):
                 "lastUpdate": pos.get('deviceTime'),
             })
 
+        try:
+            from activities import simulator_state as sim_state
+            active_riding = sim_state.get_live_ride_count()
+        except Exception:
+            active_riding = telemetry_meta.get('active_riding') or telemetry_meta.get('redis_active', 0)
+
         resp = Response({
             'positions': enriched_data,
             'meta': {
                 **telemetry_meta,
+                'redis_active': active_riding,
+                'active_riding': active_riding,
                 'viewport_bike': viewport_bike,
                 'viewport_run': viewport_run,
-                'pool_note': 'Map shows active riders in viewport only; pool may be 300k+.',
+                'pool_note': (
+                    'active = riders in live sim; cyclists/runners = in current map viewport only.'
+                ),
             },
         })
         resp['Cache-Control'] = 'private, max-age=1'

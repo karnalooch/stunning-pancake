@@ -158,8 +158,13 @@ export const LiveMap: React.FC = () => {
     }, []);
 
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
-        const poolHint = typeof meta?.redis_active === 'number' ? meta.redis_active : list.length;
-        setOnlineCount((prev) => (poolHint !== prev ? poolHint : prev));
+        const riding =
+            typeof meta?.active_riding === 'number'
+                ? meta.active_riding
+                : typeof meta?.redis_active === 'number'
+                    ? meta.redis_active
+                    : list.length;
+        setOnlineCount((prev) => (riding !== prev ? riding : prev));
 
         const bikeMeta = meta?.viewport_bike;
         const runMeta = meta?.viewport_run;

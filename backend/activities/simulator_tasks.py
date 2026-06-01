@@ -381,7 +381,7 @@ def _run_live_tick_body():
     from users.models import User
     from activities.models import Activity
     from activities.services import TelemetryService
-    from simulate_active_cities import CITIES, _pick_activity_type, _generate_activity_params
+    from simulate_active_cities import CITIES, _pick_activity_type, _generate_activity_params, resolve_city_for_user
 
     state = sim.get_live_state()
     if not state.get('running', False):
@@ -474,7 +474,7 @@ def _run_live_tick_body():
     for uid in rides_to_remove:
         sim.delete_live_ride(uid)
 
-    # ── Phase 2: Start new rides (capped — never 90k concurrent in Redis) ──
+    # ── Phase 2: Start new rides (capped globally + balanced per city) ──
     current_riding = sim.get_live_ride_count()
     target_riding = min(
         MAX_CONCURRENT_RIDERS,
@@ -484,15 +484,43 @@ def _run_live_tick_body():
     started = 0
 
     if needed > 0 and pool_size > 0:
-        riding_ids = set(active_rides.keys())
-        sample_size = min(needed * 3, pool_size, 50_000)
-        candidates = sim.sample_live_pool(sample_size)
-        available = [uid for uid in candidates if uid not in riding_ids]
-        starters = random.sample(available, min(needed, len(available))) if available else []
+        riding_ids = {str(uid) for uid in active_rides.keys()}
+        riding_by_city: dict[str, int] = {}
+        for ride in active_rides.values():
+            slug = ride.get('city_slug')
+            if slug:
+                riding_by_city[slug] = riding_by_city.get(slug, 0) + 1
+
+        n_cities = len(CITIES)
+        base_per_city = target_riding // n_cities
+        extra_slots = target_riding % n_cities
+
+        starters: list = []
+        for idx, city in enumerate(CITIES):
+            slug = city['slug']
+            city_cap = base_per_city + (1 if idx < extra_slots else 0)
+            city_needed = max(0, city_cap - riding_by_city.get(slug, 0))
+            if city_needed <= 0 or len(starters) >= needed:
+                continue
+            city_needed = min(city_needed, needed - len(starters))
+            sample_size = min(city_needed * 4, 10_000)
+            candidates = sim.sample_live_pool_city(slug, sample_size)
+            if len(candidates) < city_needed:
+                candidates = list(dict.fromkeys(
+                    candidates + sim.sample_live_pool(min(sample_size, pool_size))
+                ))
+            available = [uid for uid in candidates if str(uid) not in riding_ids]
+            pick = random.sample(available, min(city_needed, len(available))) if available else []
+            for uid in pick:
+                riding_ids.add(str(uid))
+            starters.extend(pick)
 
         users_map_p3 = {}
         if starters:
-            users_map_p3 = {str(u.id): u for u in User.objects.filter(id__in=starters).select_related('tenant')}
+            users_map_p3 = {
+                str(u.id): u
+                for u in User.objects.filter(id__in=starters).select_related('tenant')
+            }
 
         for user_id in starters:
             user = users_map_p3.get(str(user_id))
@@ -506,10 +534,8 @@ def _run_live_tick_body():
             end_time = now + timedelta(seconds=duration_s)
             is_cheater = random.random() < cheat_ratio
 
-            tenant_name = user.tenant.name if user.tenant else None
-            city_info = next((c for c in CITIES if c['name'] == tenant_name), None)
-            lat = city_info['lat'] if city_info else 52.2297
-            lon = city_info['lon'] if city_info else 21.0122
+            city_info = resolve_city_for_user(user)
+            lat, lon = city_info['lat'], city_info['lon']
 
             waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
             if route_source == 'grid':
@@ -517,7 +543,6 @@ def _run_live_tick_body():
                     f"Ride {str(user_id)[:8]}: BRouter unavailable — grid fallback "
                     f"(ensure BROUTER_URL, e.g. http://brouter:17777/brouter)"
                 )
-            # Snap ride origin to first route point (road-snapped when BRouter succeeds)
             start_lat, start_lon = waypoints[0][0], waypoints[0][1]
 
             sim.set_live_ride(user_id, {
@@ -527,6 +552,7 @@ def _run_live_tick_body():
                 'distance_m': distance_m,
                 'lat': start_lat,
                 'lon': start_lon,
+                'city_slug': city_info['slug'],
                 'is_cheater': is_cheater,
                 'waypoints': waypoints,
                 'route_source': route_source,

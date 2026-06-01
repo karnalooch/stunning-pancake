@@ -179,8 +179,19 @@ def force_stop_batch_simulation():
 LIVE_STATE_KEY = "{sim}:live:state"
 LIVE_LOG_KEY = "{sim}:live:log"
 LIVE_LOCK_KEY = "{sim}:live:lock"
-LIVE_POOL_KEY = "{sim}:live:pool"       # Redis set of user IDs
+LIVE_POOL_KEY = "{sim}:live:pool"       # Redis set of user IDs (all cities)
 LIVE_RIDES_KEY = "{sim}:live:rides"     # Redis hash of active rides
+
+
+def live_pool_city_key(city_slug: str) -> str:
+    return f"{{sim}}:live:pool:city:{city_slug}"
+
+
+def _clear_live_city_pools(r) -> None:
+    from simulate_active_cities import CITIES
+    keys = [live_pool_city_key(c['slug']) for c in CITIES]
+    if keys:
+        r.delete(*keys)
 LIVE_TICK_LOCK_KEY = "{sim}:live:tick_lock"
 LIVE_LOCK_TTL = 300  # 5 min (refreshed by runner)
 
@@ -230,6 +241,7 @@ def reset_live_state():
     """Clear all live simulation state."""
     r = get_redis()
     r.delete(LIVE_STATE_KEY, LIVE_LOG_KEY, LIVE_POOL_KEY, LIVE_RIDES_KEY)
+    _clear_live_city_pools(r)
 
 
 def live_log(msg: str):
@@ -303,39 +315,107 @@ def live_simulation_stuck() -> bool:
 def set_live_pool(user_ids: list):
     """Set the user pool for live simulation (small pools only — prefer set_live_pool_from_db)."""
     from activities.scale_config import POOL_SADD_BATCH
+    from simulate_active_cities import CITIES, resolve_city_for_user
+    from users.models import User
+
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
+    _clear_live_city_pools(r)
     if not user_ids:
         return
-    chunk = [str(uid) for uid in user_ids]
-    for i in range(0, len(chunk), POOL_SADD_BATCH):
-        r.sadd(LIVE_POOL_KEY, *chunk[i:i + POOL_SADD_BATCH])
+    users = User.objects.filter(id__in=user_ids).select_related('tenant')
+    by_city: dict[str, list[str]] = {c['slug']: [] for c in CITIES}
+    for user in users:
+        slug = resolve_city_for_user(user)['slug']
+        by_city.setdefault(slug, []).append(str(user.id))
+    for slug, ids in by_city.items():
+        if not ids:
+            continue
+        city_key = live_pool_city_key(slug)
+        for i in range(0, len(ids), POOL_SADD_BATCH):
+            chunk = ids[i:i + POOL_SADD_BATCH]
+            r.sadd(LIVE_POOL_KEY, *chunk)
+            r.sadd(city_key, *chunk)
+
+
+def _sadd_pool_batches(r, global_batch: list[str], city_batches: dict[str, list[str]]) -> None:
+    from activities.scale_config import POOL_SADD_BATCH
+
+    if global_batch:
+        for i in range(0, len(global_batch), POOL_SADD_BATCH):
+            r.sadd(LIVE_POOL_KEY, *global_batch[i:i + POOL_SADD_BATCH])
+    for slug, ids in city_batches.items():
+        if not ids:
+            continue
+        city_key = live_pool_city_key(slug)
+        for i in range(0, len(ids), POOL_SADD_BATCH):
+            r.sadd(city_key, *ids[i:i + POOL_SADD_BATCH])
 
 
 def set_live_pool_from_db(limit: int) -> int:
     """
-    Stream athlete IDs into Redis SET without loading the full pool into Python memory.
-    Returns number of members added (approximate if duplicates).
+    Stream athlete IDs into Redis — balanced per city tenant (round-robin across CITIES).
+    Also fills per-city SETs for stratified live ride starts.
     """
-    from users.models import User
+    from users.models import User, Tenant
+    from simulate_active_cities import CITIES
     from activities.scale_config import POOL_SADD_BATCH, MAX_LIVE_POOL
 
     limit = min(int(limit), MAX_LIVE_POOL)
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
-    batch: list[str] = []
-    count = 0
-    qs = User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:limit]
-    for uid in qs.iterator(chunk_size=POOL_SADD_BATCH):
-        batch.append(str(uid))
-        if len(batch) >= POOL_SADD_BATCH:
-            r.sadd(LIVE_POOL_KEY, *batch)
-            count += len(batch)
-            batch = []
-    if batch:
-        r.sadd(LIVE_POOL_KEY, *batch)
-        count += len(batch)
-    return r.scard(LIVE_POOL_KEY) or count
+    _clear_live_city_pools(r)
+
+    city_names = [c['name'] for c in CITIES]
+    tenants = {t.name: t.id for t in Tenant.objects.filter(name__in=city_names)}
+    cities = [c for c in CITIES if c['name'] in tenants] or list(CITIES)
+    n = len(cities)
+    per_city = max(1, limit // n)
+    remainder = limit
+    global_batch: list[str] = []
+    city_batches: dict[str, list[str]] = {c['slug']: [] for c in cities}
+
+    for i, city in enumerate(cities):
+        quota = per_city if i < n - 1 else remainder
+        remainder -= quota
+        slug = city['slug']
+        tenant_id = tenants.get(city['name'])
+        qs = User.objects.filter(role='ATHLETE')
+        if tenant_id:
+            qs = qs.filter(tenant_id=tenant_id)
+        else:
+            qs = qs.filter(username__startswith=f"{slug}_athlete_")
+        for uid in qs.values_list('id', flat=True)[:quota]:
+            sid = str(uid)
+            global_batch.append(sid)
+            city_batches[slug].append(sid)
+            if len(global_batch) >= POOL_SADD_BATCH:
+                _sadd_pool_batches(r, global_batch, city_batches)
+                global_batch = []
+                city_batches = {c['slug']: [] for c in cities}
+
+    if global_batch:
+        _sadd_pool_batches(r, global_batch, city_batches)
+
+    added = int(r.scard(LIVE_POOL_KEY) or 0)
+    if added < limit:
+        existing = set()
+        if added:
+            raw = r.smembers(LIVE_POOL_KEY)
+            existing = {x.decode() if isinstance(x, bytes) else x for x in raw}
+        fill = limit - added
+        for uid in User.objects.filter(role='ATHLETE').values_list('id', flat=True).iterator(chunk_size=POOL_SADD_BATCH):
+            sid = str(uid)
+            if sid in existing:
+                continue
+            r.sadd(LIVE_POOL_KEY, sid)
+            existing.add(sid)
+            fill -= 1
+            if fill <= 0:
+                break
+        added = int(r.scard(LIVE_POOL_KEY) or 0)
+
+    return added
 
 
 def get_live_pool_count() -> int:
@@ -351,6 +431,20 @@ def sample_live_pool(count: int) -> list[int]:
     if count == 0:
         return []
     raw = r.srandmember(LIVE_POOL_KEY, count)
+    if raw is None:
+        return []
+    if isinstance(raw, (bytes, str)):
+        raw = [raw]
+    return [int(uid.decode() if isinstance(uid, bytes) else uid) for uid in raw]
+
+
+def sample_live_pool_city(city_slug: str, count: int) -> list[int]:
+    """Random sample from one city's pool slice."""
+    r = get_redis()
+    count = max(0, int(count))
+    if count == 0:
+        return []
+    raw = r.srandmember(live_pool_city_key(city_slug), count)
     if raw is None:
         return []
     if isinstance(raw, (bytes, str)):

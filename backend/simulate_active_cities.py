@@ -455,6 +455,29 @@ def _generate_activity_params(activity_type: str):
 # ---------------------------------------------------------------------------
 
 CITIES_BY_SLUG = {c['slug']: c for c in CITIES}
+CITIES_BY_NAME = {c['name']: c for c in CITIES}
+
+
+def resolve_city_for_user(user) -> dict:
+    """
+    Map an athlete to a CITIES entry: tenant name, username prefix, then stable hash.
+    Used by live sim so rides start near the athlete's city, not Warsaw by default.
+    """
+    if user is None:
+        return CITIES[0]
+    tenant = getattr(user, 'tenant', None)
+    if tenant is not None:
+        name = (getattr(tenant, 'name', None) or '').strip()
+        if name in CITIES_BY_NAME:
+            return CITIES_BY_NAME[name]
+    username = (getattr(user, 'username', None) or '').lower()
+    for city in CITIES:
+        if username.startswith(f"{city['slug']}_"):
+            return city
+    pk = getattr(user, 'pk', None) or getattr(user, 'id', None)
+    if pk is not None:
+        return CITIES[int(pk) % len(CITIES)]
+    return CITIES[0]
 
 
 def run(

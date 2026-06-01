@@ -363,10 +363,18 @@ class TelemetryService:
 
         pos_key = cls._positions_key()
         geo_key = cls._geo_key()
+        try:
+            from activities import simulator_state as sim_state
+            active_riding = sim_state.get_live_ride_count()
+        except Exception:
+            active_riding = int(r.hlen(pos_key) or 0)
+
         meta = {
             'returned': 0,
             'capped': False,
-            'redis_active': r.hlen(pos_key),
+            'redis_active': active_riding,
+            'active_riding': active_riding,
+            'telemetry_positions': int(r.hlen(pos_key) or 0),
             'source': 'redis',
         }
         positions: list[dict] = []
@@ -375,10 +383,9 @@ class TelemetryService:
             west, south, east, north = bbox
             center_lon = (west + east) / 2.0
             center_lat = (south + north) / 2.0
-            radius_km = min(
-                cls._bbox_radius_km(west, south, east, north) * 1.2,
-                float(geo_radius_km),
-            )
+            bbox_radius = cls._bbox_radius_km(west, south, east, north) * 1.25
+            # Cover the full viewport (country zoom); floor at configured default
+            radius_km = min(max(bbox_radius, float(geo_radius_km)), 450.0)
         else:
             center_lon, center_lat = 19.1344, 51.9194
             radius_km = float(geo_radius_km)
@@ -388,6 +395,7 @@ class TelemetryService:
             unit='km', count=cap, sort='ASC',
         )
         if not device_ids:
+            meta['returned'] = 0
             return positions, meta
 
         id_list = [d.decode() if isinstance(d, bytes) else d for d in device_ids]
