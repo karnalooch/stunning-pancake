@@ -68,6 +68,16 @@ Telemetry | http://localhost:8001 | ✅
 PostgreSQL | localhost:5432 | ✅
 Redis | localhost:6379 | ✅
 Swagger Docs | http://localhost:8000/api/docs/ | ✅
+BRouter | http://localhost:17777/brouter | ✅ (Compose) |
+Celery simulation | kolejka `simulation` | ✅ (`celery_worker_simulation`) |
+
+### Symulator / Live Map (opcjonalnie)
+
+Do testów obciążeniowych z panelu admin (batch użytkowników + mapa na żywo):
+
+1. Upewnij się, że działają `brouter` i `celery_worker_simulation` (`docker compose ps`).
+2. Zaloguj się jako admin → **Simulator** — najpierw batch, potem live (UI czeka na koniec batcha).
+3. Runbook: [operations/SIMULATOR.md](./operations/SIMULATOR.md).
 
 ---
 
@@ -141,8 +151,9 @@ Po pierwszym uruchomieniu:
 1. **📖 Przeczytaj [Architecture](./ARCHITECTURE.md)** — zrozum architekturę systemu
 2. **⚙️ Skonfiguruj [Configuration](./CONFIGURATION.md)** — dostosuj zmienne środowiskowe
 3. **🛡️ Zapoznaj się z [RBAC](./RBAC.md)** — naucz się zarządzać uprawnieniami
-4. **📡 Sprawdź [API Reference](./API.md)** — poznaj dostępne endpointy
-5. **🧪 Uruchom testy** — zweryfikuj poprawność instalacji:
+4. **📡 Sprawdź [API Reference](./API.md)** — endpointy, w tym admin symulator (§ Admin)
+5. **🚂 Load test:** [operations/](./operations/) — Railway worker + BRouter
+6. **🧪 Uruchom testy** — zweryfikuj poprawność instalacji:
 
 ```bash
 cd backend

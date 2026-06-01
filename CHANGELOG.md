@@ -3,9 +3,12 @@
 ## Unreleased
 
 ### Documentation
-- Reorganized `docs/`: [operations/](./docs/operations/) runbooks (simulator, BRouter), [reports/](./docs/reports/) for audit snapshots, [MAINTENANCE.md](./docs/MAINTENANCE.md) inventory.
-- Updated [docs/README.md](./docs/README.md) index (last reviewed 2026-06-02); Railway BRouter URL and batch→live ordering in [RAILWAY_CELERY_SIMULATION.md](./docs/RAILWAY_CELERY_SIMULATION.md).
-- Simulator troubleshooting: [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md), [operations/SIMULATOR.md](./docs/operations/SIMULATOR.md).
+- Reorganized `docs/`: [operations/](./docs/operations/) runbooks (simulator, BRouter, mobile), [reports/](./docs/reports/) for audit snapshots, [MAINTENANCE.md](./docs/MAINTENANCE.md) inventory.
+- [API.md](./docs/API.md): Admin simulator endpoints (batch, live, reset, disk-audit, 409 examples).
+- [GETTING_STARTED.md](./docs/GETTING_STARTED.md), [INSTALLATION.md](./docs/INSTALLATION.md): BRouter + celery_worker_simulation.
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md), [architecture_c4.md](./docs/diagrams/architecture_c4.md): BRouter on production.
+- [ADR-010](./docs/adr/010-simulator-redis-celery.md): Redis + Celery simulation queue.
+- [product/FAQ.md](./docs/product/FAQ.md): 4VELO branding, GPS recovery FAQ.
 
 ### Fixed (application — recent)
 - Block live sim until batch completes; BRouter snap retries; Live Map markers at all zoom levels.

@@ -94,5 +94,6 @@ erDiagram
 | Redis | 6379 | ✅ Railway managed |
 | Celery Worker | — | ⚠️ Dev only |
 | Celery Beat | — | ⚠️ Dev only |
-| BRouter | 17777 | ⚠️ Dev only (local docker) |
+| BRouter | 17777 | ✅ Osobny serwis Railway + Compose (`infrastructure/brouter`) |
+| Celery simulation | — | ✅ `celery-worker-simulation`, kolejka `simulation` |
 | Traccar | 8082 | ⚠️ Dev only (local docker) |

@@ -166,8 +166,22 @@ docker compose logs db
 | telemetry | 8001 | FastAPI Telemetry |
 | db | 5432 | PostgreSQL + PostGIS |
 | redis | 6379 | Redis Cache |
-| brouter | 17777 | BRouter (walidacja tras) |
+| brouter | 17777 | BRouter (anti-cheat + symulator live) |
+| celery_worker_simulation | — | Batch/live sim, kolejka `simulation` |
 | traccar | 8082 | Traccar (telemetria) |
+
+### BRouter (Compose)
+
+- Obraz: `infrastructure/brouter/Dockerfile` (BRouter 1.7.9, preset Polska).
+- Segmenty: volume `./infrastructure/brouter/segments4` (pierwszy start może pobierać ~1 GB kafelków).
+- Worker symulacji: `BROUTER_URL=http://brouter:17777/brouter` (już w `docker-compose.yml`).
+
+Szczegóły: [operations/BROUTER.md](./operations/BROUTER.md), [infrastructure/brouter/README.md](../infrastructure/brouter/README.md).
+
+```bash
+# Sprawdzenie routingu (po starcie kontenera)
+curl -s "http://localhost:17777/brouter?lonlats=21.01,52.23|21.02,52.24&profile=trekking&format=geojson" | head -c 200
+```
 
 ### Krok 5: Migracje w Dockerze
 

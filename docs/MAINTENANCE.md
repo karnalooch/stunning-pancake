@@ -1,6 +1,6 @@
 # Dokumentacja — utrzymanie i świeżość
 
-**Ostatni przegląd indeksu:** 2026-06-02  
+**Ostatni przegląd indeksu:** 2026-06-02 (backlog docs uzupełniony)  
 **Właściciel treści operacyjnych:** zespół backend / DevOps (symulator, Railway, BRouter)
 
 ---
@@ -36,16 +36,20 @@
 | 2026-04-23 | [archive/](./archive/) | Archiwum | CHARTER, TECH_SPEC — historyczne |
 | — | [mockups/](./mockups/) | Design | Nie w Git — opcjonalne |
 
-### Znane luki (do backlogu dokumentacji)
+### Znane luki (backlog)
 
-| Temat | Stan w kodzie | Gdzie dokumentować |
-|-------|----------------|-------------------|
-| `SCALE_*` / `BROUTER_*` env | `scale_config.py`, Railway | [operations/SIMULATOR.md](./operations/SIMULATOR.md), [CONFIGURATION.md](./CONFIGURATION.md) |
-| Live Map zoom / znaczniki | `admin/.../LiveMap.tsx` | [operations/SIMULATOR.md](./operations/SIMULATOR.md) |
-| Batch przed live (`batch_blocks_live`) | `simulator_state.py` | [operations/SIMULATOR.md](./operations/SIMULATOR.md) |
-| BRouter Docker 1.7.9 + Polska `.rd5` | `infrastructure/brouter/` | [operations/BROUTER.md](./operations/BROUTER.md) |
-| Mobile GPS resilience | `mobile/` | Brak dedykowanego runbooka — ADR-005 częściowo |
-| API admin simulator | `admin_views.py` | [API.md](./API.md) — sekcja do rozszerzenia |
+| Temat | Status docs |
+|-------|-------------|
+| `SCALE_*` / `BROUTER_*` env | ✅ operations + CONFIGURATION |
+| Live Map zoom / znaczniki | ✅ operations/SIMULATOR |
+| Batch przed live | ✅ API.md + operations + ADR-010 |
+| BRouter Railway | ✅ operations/BROUTER + INSTALLATION |
+| Mobile GPS resilience | ✅ operations/MOBILE + DATA_RESILIENCE |
+| API admin simulator | ✅ API.md § Admin |
+| OpenAPI drift | Ręczna weryfikacja `/api/docs/` po zmianach API |
+| Zrzuty Live Map w `docs/assets/live/` | Opcjonalnie po UI change |
+| CI: ostrzeżenie „stale docs” | Nie zaimplementowane |
+| `plans/`, `.kilo/plans/` | Pozostają poza `docs/` — nie archiwizowane |
 
 ---
 

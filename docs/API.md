@@ -529,5 +529,130 @@ Wszystkie listy używają paginacji:
 
 ---
 
+## Admin — symulator skali i live map
+
+**Uprawnienia:** `IsAdminRole` (JWT).  
+**Runbook:** [operations/SIMULATOR.md](./operations/SIMULATOR.md).
+
+> **OpenAPI:** te same ścieżki są w schemacie pod `/api/schema/` i UI `/api/docs/` — po zmianach w `admin_views.py` zweryfikuj w Swaggerze.
+
+### `GET /api/activities/admin/scale-preflight/`
+
+Analiza ryzyka przed dużym testem (dysk, ETA, parallel cities).
+
+| Query | Wymagane | Opis |
+|-------|----------|------|
+| `target_users` | tak | Np. `10000`, `300000` |
+| `active_ratio` | nie | Domyślnie `0.3` |
+| `skip_activities` | nie | `true` / `1` |
+
+### `GET /api/activities/admin/disk-audit/`
+
+Log zdarzeń disk guard + bieżący snapshot.
+
+| Query | Domyślnie | Max |
+|-------|-----------|-----|
+| `limit` | 100 | 500 |
+
+**Odpowiedź (skrót):** `{ "events": [...], "current": { "used_gb", "budget_gb", "pct", "simulation_paused", "writes_blocked" } }`
+
+### Batch — `POST/GET/DELETE /api/activities/admin/simulate/`
+
+**POST — start batch**
+
+```json
+{
+  "total_users": 10000,
+  "days": 7,
+  "clear": true,
+  "skip_activities": true,
+  "scale": 0.01
+}
+```
+
+| Pole | Opis |
+|------|------|
+| `total_users` | Docelowi użytkownicy (preferowane nad `scale`) |
+| `skip_activities` | `true` = tylko użytkownicy (szybciej) |
+| `clear` | Wyczyść dane symulacji przed startem |
+
+**Odpowiedź 202:** task Celery w kolejce `simulation`.
+
+**409 — batch już działa:**
+
+```json
+{
+  "error": "Simulation already running (120s elapsed). Wait for it to finish.",
+  "running": true,
+  "elapsed_seconds": 120.0
+}
+```
+
+**GET — status:** `running`, `current_phase`, `progress_pct`, `users_created`, `batch_lock_held`, `log` (pary timestamp + wiadomość).
+
+**DELETE — abort:** zatrzymuje batch i zwalnia lock.
+
+### Live — `POST/GET/DELETE /api/activities/admin/live-simulate/`
+
+**POST — start live** (dopiero po zakończeniu batcha)
+
+```json
+{
+  "pool_pct": 1.0,
+  "active_ratio": 0.3,
+  "cheat_ratio": 0.05,
+  "tick_seconds": 8
+}
+```
+
+| Pole | Zakres |
+|------|--------|
+| `pool_pct` | 0.01–1.0 — ułamek puli zawodników z DB |
+| `active_ratio` | 0–1 — ułamek puli jeżdżących jednocześnie |
+| `tick_seconds` | 2–300 |
+
+**409 — batch w toku (live zablokowany):**
+
+```json
+{
+  "error": "Batch simulation is still in progress. Wait until it finishes (phase complete, lock released), then start Live Map.",
+  "batch_running": true,
+  "batch_lock_held": true,
+  "batch_current_phase": "creating_users",
+  "batch_block_reason": "batch lock held"
+}
+```
+
+**409 — live już działa:** `{ "error": "Live simulation already running." }`
+
+**GET — status:** `running`, `pool_size`, `active_rides`, `currently_riding`, `batch_blocks_live`, `batch_block_reason`, `log`.
+
+**DELETE — stop live:** zatrzymuje symulację i zwalnia lock.
+
+### `POST /api/activities/admin/simulator-reset/`
+
+Czyści flagi Redis batch/live (bez kasowania użytkowników). Użyj po zawieszeniu lub przed ponownym testem.
+
+```json
+{
+  "status": "reset",
+  "live_lock_held": false,
+  "batch_lock_held": false,
+  "live_stuck": false,
+  "wipe_cleared": true
+}
+```
+
+### `GET /api/activities/admin/worker-status/`
+
+Status workerów Celery (kolejki, aktywne taski) — weryfikacja, że `celery-worker-simulation` nasłuchuje na `simulation`.
+
+### Telemetria live (mapa admin)
+
+`GET /api/activities/telemetry/live/?bbox=…&limit=…&zoom=…` — pozycje na Live Map (osobna ścieżka, patrz implementacja `TelemetryLiveView`).
+
+---
+
 > **Zobacz także:** [🛡️ RBAC Guide](./RBAC.md) — system uprawnień  
+> **Zobacz także:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) — kolejność batch → live  
 > **Zobacz także:** [📡 Swagger Docs](http://localhost:8000/api/docs/) — interaktywna dokumentacja

@@ -43,8 +43,21 @@ Kompletny opis architektury platformy 4VELO — wysokowydajnego ekosystemu sport
 ┌──────────────────┐  ┌──────────────────┐  ┌─────────────────────────────┐
 │  🗺️ BRouter      │  │  📧 SendGrid     │  │  💳 Stripe                  │
 │  Route validation│  │  Email delivery  │  │  Payments + Payouts         │
+│  + live sim      │  │                  │  │                             │
 └──────────────────┘  └──────────────────┘  └─────────────────────────────┘
 ```
+
+### BRouter (produkcja i dev)
+
+| Użycie | Środowisko | URL / serwis |
+|--------|------------|--------------|
+| Anti-cheat (warstwa 3) | Railway + Compose | `BRouterService` → `BROUTER_URL` |
+| Live sim (trasy po drogach) | `celery-worker-simulation` + serwis `brouter` | `http://brouter.railway.internal:17777/brouter` |
+| Lokalnie | Docker Compose | `http://brouter:17777/brouter` |
+
+- Obraz i kafelki `.rd5`: [infrastructure/brouter/README.md](../infrastructure/brouter/README.md).
+- Operacje: [operations/BROUTER.md](./operations/BROUTER.md).
+- Symulator (batch → live): [operations/SIMULATOR.md](./operations/SIMULATOR.md), ADR [010](./adr/010-simulator-redis-celery.md).
 
 ---
 
@@ -322,6 +335,8 @@ interface AuthState {
 | `VMAX_ANOMALY_RATIO` | 0.20 | Max ratio anomalii |
 | `VMAX_CONSECUTIVE` | 3 | Max kolejnych naruszeń |
 | `VMAX_MARGIN` | 1.10 | Margines prędkości |
+| `BROUTER_URL` | — | Base URL silnika (wymagane na prod dla warstwy 3 i live sim) |
+| `BROUTER_TIMEOUT` | 30 | Timeout HTTP do BRouter (sekundy) |
 
 ---
 

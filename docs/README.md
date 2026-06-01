@@ -1,6 +1,6 @@
 # 4VELO — dokumentacja
 
-**Ostatni przegląd indeksu:** 2026-06-02  
+**Ostatni przegląd indeksu:** 2026-06-02 (API symulator, mobile runbook, ADR-010)  
 **Język:** polski (runbooki i przewodniki operatora)
 
 ---
@@ -68,7 +68,8 @@
 
 | Dokument | Opis |
 |----------|------|
-| [ADR](./adr/) | Architecture Decision Records (001–009) |
+| [ADR](./adr/) | Architecture Decision Records (001–010) |
+| [DATA_RESILIENCE.md](./DATA_RESILIENCE.md) | GPS buffer, outbox, recovery (mobile) |
 | [Constitution](./CONSTITUTION.md) | Zasady projektu |
 | [RCP](./compliance/RCP.md) | RODO / compliance |
 | [Onboarding](./onboarding/GUIDE.md) | Onboarding dewelopera |

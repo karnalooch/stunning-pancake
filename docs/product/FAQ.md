@@ -1,4 +1,6 @@
-# FAQ & TUTORIALS — SPORT Platform
+# FAQ & TUTORIALS — 4VELO Platform
+
+> **Ostatnia aktualizacja:** 2026-06-02. Dokumentacja techniczna: [docs/README.md](../README.md).
 
 ## Często Zadawane Pytania (FAQ)
 
@@ -23,4 +25,8 @@ Po zebraniu odpowiedniej liczby punktów (XP), przejdź do zakładki "Rewards", 
 1. Przejdź do profilu.
 2. Wybierz "Integrations".
 3. Zaloguj się do swojego konta Garmin/Strava i zaakceptuj przesyłanie danych.
-4. Twoje nowe aktywności będą automatycznie lądować w SPORT.
+4. Twoje nowe aktywności będą automatycznie lądować w 4VELO.
+
+### 4. Zgubiłem sygnał GPS w trakcie jazdy — czy stracę trasę?
+
+Aplikacja zapisuje punkty lokalnie (MMKV) i wysyła je ponownie po powrocie sieci. Po restarcie aplikacji może pojawić się prośba o dokończenie wysyłki — zaakceptuj i poczekaj na synchronizację. Szczegóły: [DATA_RESILIENCE.md](../DATA_RESILIENCE.md).
