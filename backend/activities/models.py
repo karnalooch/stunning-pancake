@@ -24,6 +24,11 @@ class Activity(models.Model):
         ('WHEELCHAIR', 'Wheelchair'),
     )
 
+    EXTERNAL_SOURCES = (
+        ('STRAVA', 'Strava'),
+        ('GARMIN', 'Garmin'),
+    )
+
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='activities')
     tenant = models.ForeignKey('users.Tenant', on_delete=models.CASCADE, related_name='activities', null=True, blank=True)
     type = models.CharField(max_length=20, choices=ACTIVITY_TYPES)
@@ -38,11 +43,24 @@ class Activity(models.Model):
     
     # PostGIS Path
     route_path = models.LineStringField(srid=4326, null=True, blank=True)
+
+    # Wearable dedupe (Strava/Garmin activity id)
+    external_source = models.CharField(
+        max_length=20, choices=EXTERNAL_SOURCES, null=True, blank=True,
+    )
+    external_id = models.CharField(max_length=200, null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name_plural = "Activities"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'external_source', 'external_id'],
+                condition=models.Q(external_id__isnull=False) & ~models.Q(external_id=''),
+                name='activities_activity_user_external_unique',
+            ),
+        ]
         indexes = [
             models.Index(fields=['user', 'start_time']),
             models.Index(fields=['type', 'is_verified']),

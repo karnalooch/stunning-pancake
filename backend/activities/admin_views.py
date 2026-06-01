@@ -136,15 +136,20 @@ class ActivityApproveView(APIView):
 
     def post(self, request, activity_id):
         try:
-            activity = Activity.objects.get(pk=activity_id)
+            activity = Activity.objects.select_related("user").get(pk=activity_id)
             activity.is_verified = True
             activity.verification_score = 1.0
-            activity.save()
+            activity.save(update_fields=["is_verified", "verification_score"])
+
+            from activities.leaderboard_credit import credit_verified_activity
+            credited = credit_verified_activity(activity)
+
             return Response({
                 "status": "approved",
                 "activity_id": activity.id,
                 "user": activity.user.username,
                 "verification_score": activity.verification_score,
+                "leaderboard_credited": credited,
             })
         except Activity.DoesNotExist:
             return Response({"error": "activity not found"}, status=status.HTTP_404_NOT_FOUND)

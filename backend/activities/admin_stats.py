@@ -94,7 +94,7 @@ def _per_tenant_breakdown() -> list[dict]:
             users = tenant.users.count()
             agg = Activity.objects.filter(tenant_id=tenant.id).aggregate(
                 activities=Count('id'),
-                distance=Sum('distance'),
+                distance=Sum('distance', filter=Q(is_verified=True)),
                 verified=Count('id', filter=Q(is_verified=True)),
             )
             act_count = agg['activities'] or 0
@@ -128,7 +128,7 @@ def _per_department_breakdown(request_user) -> list[dict]:
         try:
             dept_agg = Activity.objects.filter(user__departments=dept).aggregate(
                 act_count=Count('id'),
-                dist=Sum('distance'),
+                dist=Sum('distance', filter=Q(is_verified=True)),
                 verified=Count('id', filter=Q(is_verified=True)),
             )
             act_count = dept_agg['act_count'] or 0

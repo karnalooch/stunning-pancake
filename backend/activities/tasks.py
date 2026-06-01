@@ -35,7 +35,6 @@ def process_activity_async(self, activity_id: int) -> dict:
     from core.redis_cluster import get_redis
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
-    from activities.leaderboards import LeaderboardService
     from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother, fast_rejection_gate
     from django.contrib.gis.geos import LineString
 
@@ -182,29 +181,9 @@ def process_activity_async(self, activity_id: int) -> dict:
     )
 
     if is_verified:
-        # Redis Leaderboard
-        if activity.user.tenant_id:
-            LeaderboardService.update_score(activity.user.id, activity.user.tenant_id, activity.distance / 1000.0)
-
-        # Event & Plugin hooks
-        try:
-            from core.plugin_registry import registry
-            registry.fire('activity.verified', activity=activity)
-            from events.services import EventProgressService
-            EventProgressService.record_activity(
-                user=activity.user, km=activity.distance / 1000.0,
-                tenant_id=activity.user.tenant_id
-            )
-        except Exception: pass
-
-        # Milestone 4: Award points for verified activity
-        try:
-            from rewards.services import RewardsService
-            points = RewardsService.award_for_activity(activity_id)
-            if points:
-                logger.info("rewards.awarded activity_id=%d points=%d", activity_id, points)
-        except Exception as exc:
-            logger.error("rewards.award_error activity_id=%d err=%s", activity_id, exc)
+        activity.refresh_from_db()
+        from activities.leaderboard_credit import credit_verified_activity
+        credit_verified_activity(activity)
 
     return {"status": "done", "verified": is_verified}
 

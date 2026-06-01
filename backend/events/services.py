@@ -24,6 +24,7 @@ class EventProgressService:
         elevation_m: float = 0.0,
         tenant_id: Optional[str] = None,
         club_id: Optional[int] = None,
+        activity_id: Optional[int] = None,
     ) -> None:
         """
         Updates all active events the user qualifies for.
@@ -34,6 +35,7 @@ class EventProgressService:
             elevation_m: Elevation gain in metres.
             tenant_id: User's city/company for INTER_TENANT events.
             club_id: User's club for CLUB_BATTLE events.
+            activity_id: Source activity (for logging; credit is idempotent upstream).
         """
         from django.utils import timezone
         now = timezone.now()
@@ -61,8 +63,8 @@ class EventProgressService:
             cls._check_achievements(user, event, participation)
 
         logger.info(
-            'event_progress.recorded user=%s km=%.2f events=%d',
-            user.username, km, active_events.count()
+            'event_progress.recorded user=%s km=%.2f events=%d activity_id=%s',
+            user.username, km, active_events.count(), activity_id,
         )
 
     @staticmethod

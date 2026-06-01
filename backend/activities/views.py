@@ -363,7 +363,7 @@ class LeaderboardView(generics.GenericAPIView):
 
     def get(self, request):
 
-        from django.db.models import Sum
+        from django.db.models import Q, Sum
         from django.contrib.auth import get_user_model
         User = get_user_model()
         
@@ -374,7 +374,10 @@ class LeaderboardView(generics.GenericAPIView):
             qs = qs.filter(tenant_id=self.request.user.tenant_id)
             
         ranking = qs.annotate(
-            total_distance=Sum('activity__distance')
+            total_distance=Sum(
+                'activity__distance',
+                filter=Q(activity__is_verified=True),
+            )
         ).order_by('-total_distance')[:100]
         
         result = []

@@ -122,11 +122,13 @@ class TestStravaService:
             assert strava_integration.is_active is False
 
     def test_sync_activities_imports_runs(self, user, strava_integration):
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"):
+        with patch.object(StravaService, "refresh_token", return_value="valid_token"), \
+             patch("activities.wearables._finalize_imported_activity"):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
                     {
+                        "id": 1001,
                         "type": "Run",
                         "start_date": "2026-05-01T10:00:00Z",
                         "distance": 8500,
@@ -134,6 +136,7 @@ class TestStravaService:
                         "elapsed_time": 2500,
                     },
                     {
+                        "id": 1002,
                         "type": "Ride",
                         "start_date": "2026-05-01T14:00:00Z",
                         "distance": 32000,
@@ -147,16 +150,19 @@ class TestStravaService:
                 assert Activity.objects.filter(user=user, type="BIKE").exists()
 
     def test_sync_activities_skips_duplicates(self, user, strava_integration):
-        existing = Activity.objects.create(
+        Activity.objects.create(
             user=user, tenant=user.tenant, type="RUN",
             start_time="2026-05-01T10:00:00+00:00", distance=8500,
+            external_source="STRAVA", external_id="555",
             is_verified=True, verification_score=1.0,
         )
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"):
+        with patch.object(StravaService, "refresh_token", return_value="valid_token"), \
+             patch("activities.wearables._finalize_imported_activity"):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
                     {
+                        "id": 555,
                         "type": "Run",
                         "start_date": "2026-05-01T10:00:00Z",
                         "distance": 8500,
@@ -165,7 +171,7 @@ class TestStravaService:
                     },
                 ]
                 count = StravaService.sync_activities(strava_integration)
-                assert count == 0  # duplicate skipped
+                assert count == 0
 
 
 # ---------------------------------------------------------------------------
@@ -204,20 +210,23 @@ class TestGarminService:
             assert count == 0  # mock mode, no actual API call
 
     def test_sync_activities_maps_types_correctly(self, user, garmin_integration):
-        with patch.object(GarminService, "refresh_token", return_value="valid"):
+        with patch.object(GarminService, "refresh_token", return_value="valid"), \
+             patch("activities.wearables._finalize_imported_activity"):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
                     {
+                        "activityId": 2001,
                         "activityType": {"typeKey": "running"},
-                        "startTimeInSeconds": 1714000000000,
-                        "distance": 500000,  # cm? will be *100 = 5000m
+                        "startTimeInSeconds": 1714000000,
+                        "distance": 5000,
                         "duration": 1800,
                     },
                     {
+                        "activityId": 2002,
                         "activityType": {"typeKey": "road_biking"},
-                        "startTimeInSeconds": 1714002000000,
-                        "distance": 1500000,
+                        "startTimeInSeconds": 1714002000,
+                        "distance": 15000,
                         "duration": 2700,
                     },
                 ]

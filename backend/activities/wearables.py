@@ -36,6 +36,17 @@ GARMIN_API_BASE = 'https://connectapi.garmin.com'
 OAUTH_STATE_TTL = int(os.getenv('OAUTH_STATE_TTL', '600'))
 
 
+def _finalize_imported_activity(activity: Activity) -> None:
+    """Queue BRouter verify when a route exists; otherwise credit km once."""
+    if activity.route_path and activity.end_time and not activity.is_verified:
+        from activities.tasks import process_activity_async
+        process_activity_async.delay(activity.id)
+        return
+    if activity.is_verified:
+        from activities.leaderboard_credit import credit_verified_activity
+        credit_verified_activity(activity)
+
+
 def _store_oauth_state(user_id):
     """Store a one-time nonce → user_id mapping in Redis for OAuth CSRF protection.
 
@@ -170,21 +181,31 @@ class StravaService:
                 continue
 
             start_time = timezone.datetime.fromisoformat(act['start_date'].replace('Z', '+00:00'))
+            ext_id = str(act['id'])
 
-            if not Activity.objects.filter(user=integration.user, start_time=start_time, type=sport_type).exists():
-                tenant = integration.user.tenant
-                Activity.objects.create(
-                    user=integration.user,
-                    tenant=tenant,
-                    type=sport_type,
-                    start_time=start_time,
-                    end_time=start_time + timedelta(seconds=act['elapsed_time']),
-                    distance=act['distance'],
-                    duration=timedelta(seconds=act['moving_time']),
-                    is_verified=True,
-                    verification_score=1.0,
-                )
-                count += 1
+            if Activity.objects.filter(
+                user=integration.user,
+                external_source='STRAVA',
+                external_id=ext_id,
+            ).exists():
+                continue
+
+            tenant = integration.user.tenant
+            activity = Activity.objects.create(
+                user=integration.user,
+                tenant=tenant,
+                type=sport_type,
+                start_time=start_time,
+                end_time=start_time + timedelta(seconds=act['elapsed_time']),
+                distance=float(act.get('distance') or 0),
+                duration=timedelta(seconds=act['moving_time']),
+                external_source='STRAVA',
+                external_id=ext_id,
+                is_verified=True,
+                verification_score=1.0,
+            )
+            _finalize_imported_activity(activity)
+            count += 1
 
         integration.last_sync = timezone.now()
         integration.save()
@@ -328,22 +349,36 @@ class GarminService:
                 continue
             start_time = timezone.datetime.fromtimestamp(start_time_ms / 1000)
 
-            if not Activity.objects.filter(user=integration.user, start_time=start_time, type=sport_type).exists():
-                tenant = integration.user.tenant
-                distance = act.get('distance', 0) or 0
-                duration_seconds = act.get('duration', 0) or 0
-                Activity.objects.create(
-                    user=integration.user,
-                    tenant=tenant,
-                    type=sport_type,
-                    start_time=start_time,
-                    end_time=start_time + timedelta(seconds=duration_seconds),
-                    distance=distance * 100,  # Garmin returns in cm? Convert to m
-                    duration=timedelta(seconds=duration_seconds),
-                    is_verified=True,
-                    verification_score=1.0,
-                )
-                count += 1
+            ext_id = str(act.get('activityId') or act.get('summaryId') or '')
+            if not ext_id:
+                continue
+
+            if Activity.objects.filter(
+                user=integration.user,
+                external_source='GARMIN',
+                external_id=ext_id,
+            ).exists():
+                continue
+
+            tenant = integration.user.tenant
+            # Garmin activity list distance is in meters
+            distance_m = float(act.get('distance') or act.get('distanceInMeters') or 0)
+            duration_seconds = act.get('duration', 0) or 0
+            activity = Activity.objects.create(
+                user=integration.user,
+                tenant=tenant,
+                type=sport_type,
+                start_time=start_time,
+                end_time=start_time + timedelta(seconds=duration_seconds),
+                distance=distance_m,
+                duration=timedelta(seconds=duration_seconds),
+                external_source='GARMIN',
+                external_id=ext_id,
+                is_verified=True,
+                verification_score=1.0,
+            )
+            _finalize_imported_activity(activity)
+            count += 1
 
         integration.last_sync = timezone.now()
         integration.save()

@@ -11,14 +11,34 @@ logger = logging.getLogger(__name__)
 # Initialize Redis client for inter-service communication
 redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379/0'))
 
+_PROCESS_QUEUE_TTL_S = 300
+
+
 @receiver(post_save, sender=Activity)
 def validate_activity_on_completion(sender, instance, created, **kwargs):
     """
-    Trigger anti-cheat validation and privacy masking when an activity is marked as finished.
+    Trigger anti-cheat validation when an activity is finished with a route.
+    Dedupes Celery enqueue via Redis SET NX (avoids double process on rapid saves).
     """
-    if not created and instance.end_time and instance.route_path and not instance.is_verified:
-        from .tasks import process_activity_async
-        process_activity_async.delay(instance.id)
+    if not instance.end_time or not instance.route_path or instance.is_verified:
+        return
+    if created:
+        return
+
+    try:
+        from core.redis_cluster import get_redis
+        queue_key = f"process:activity:{instance.id}"
+        if not get_redis().set(queue_key, "1", nx=True, ex=_PROCESS_QUEUE_TTL_S):
+            return
+    except Exception as exc:
+        logger.warning(
+            "process_activity queue dedupe failed activity_id=%s err=%s",
+            instance.id,
+            exc,
+        )
+
+    from .tasks import process_activity_async
+    process_activity_async.delay(instance.id)
 
 
 @receiver(post_save, sender=PrivacyZone)
