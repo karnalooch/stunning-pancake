@@ -527,34 +527,50 @@ def run(
                     users_to_create.append(user)
 
             if users_to_create:
+                usernames = [u.username for u in users_to_create]
                 with transaction.atomic():
                     try:
-                        created_users = User.objects.bulk_create(
+                        User.objects.bulk_create(
                             users_to_create,
                             batch_size=200,
                             ignore_conflicts=True,
                         )
                     except TypeError:
-                        created_users = User.objects.bulk_create(users_to_create, batch_size=200)
+                        User.objects.bulk_create(users_to_create, batch_size=200)
                     except Exception:
-                        # Fall back to individual inserts, skipping duplicates
-                        created_users = []
                         for u in users_to_create:
                             try:
-                                with transaction.atomic():
-                                    u.save()
-                                    created_users.append(u)
+                                u.save()
                             except Exception:
-                                pass  # skip duplicate
-                    city_users.extend(created_users)
+                                pass
 
-                    # Assign to departments
-                    dept_memberships = []
-                    for u in created_users:
-                        dept = random.choice(city_depts)
-                        dept_memberships.append(UserDepartment(user=u, department=dept))
-                    if dept_memberships:
-                        UserDepartment.objects.bulk_create(dept_memberships, batch_size=100)
+                    # ignore_conflicts does not populate PKs — refetch before any FK bulk_create
+                    saved_users = list(
+                        User.objects.filter(username__in=usernames, tenant=tenant).only(
+                            'id', 'username', 'tenant_id',
+                        )
+                    )
+                    city_users.extend(saved_users)
+
+                    if saved_users and city_depts:
+                        dept_ids = [d.pk for d in city_depts]
+                        dept_memberships = [
+                            UserDepartment(
+                                user_id=u.pk,
+                                department_id=random.choice(dept_ids),
+                            )
+                            for u in saved_users
+                        ]
+                        try:
+                            UserDepartment.objects.bulk_create(
+                                dept_memberships,
+                                batch_size=200,
+                                ignore_conflicts=True,
+                            )
+                        except TypeError:
+                            UserDepartment.objects.bulk_create(
+                                dept_memberships, batch_size=200,
+                            )
 
             progress = min(batch_end, n_athletes)
             if progress % 1000 == 0 or progress == n_athletes:
@@ -637,9 +653,11 @@ def run(
                 except Exception:
                     route_path = None
 
+                if not user.pk:
+                    continue
                 activity = Activity(
-                    user=user,
-                    tenant=tenant,
+                    user_id=user.pk,
+                    tenant_id=tenant.pk,
                     type=act_type,
                     start_time=start_time,
                     end_time=end_time,
