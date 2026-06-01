@@ -3,12 +3,14 @@
  * Expo Location + Task Manager with MMKV buffer, outbox, and launch recovery.
  */
 
+import { AppState, type AppStateStatus } from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
 import { MMKV } from 'react-native-mmkv';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
-import { api } from './api';
+import { api } from './apiClient';
 import {
   appendToBuffer,
   appendToOutbox,
@@ -21,6 +23,7 @@ import {
   GpsStorageAdapter,
   loadBuffer,
   loadOutbox,
+  isRecoveryPending,
   loadPendingSession,
   loadTrackingState,
   mergeRouteCoordinates,
@@ -30,6 +33,7 @@ import {
   removeOutboxEntry,
   removePointsFromBuffer,
   savePendingSession,
+  setRecoveryPending,
   TrackingState,
   type TrackingStats,
 } from './gpsSyncStorage';
@@ -288,11 +292,7 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
     pendingSession ||
   Boolean(state?.activityId && (state.isTracking || buffer.length > 0 || outbox.length > 0));
 
-  if (needsResumeUi) {
-    storage.set(GPS_STORAGE_KEYS.RECOVERY_PENDING, 'true');
-  } else {
-    storage.delete(GPS_STORAGE_KEYS.RECOVERY_PENDING);
-  }
+  setRecoveryPending(storage, needsResumeUi);
 
   if (__DEV__ && pendingPointCount(storage) > 0) {
     console.log(
@@ -310,49 +310,119 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
 
 export function isTrackingRecoveryPending(): boolean {
   const storage = getStorage();
-  return storage?.getString(GPS_STORAGE_KEYS.RECOVERY_PENDING) === 'true';
+  return storage ? isRecoveryPending(storage) : false;
+}
+
+export function isRideTrackingActive(): boolean {
+  const storage = getStorage();
+  if (!storage) return false;
+  const state = loadTrackingState(storage);
+  return Boolean(state?.isTracking && state.activityId);
+}
+
+/** Restart Expo location task after app kill if MMKV still marks an active ride. */
+export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
+  const storage = getStorage();
+  if (!storage) return false;
+  const state = loadTrackingState(storage);
+  if (!state?.isTracking || !state.activityId) return false;
+
+  let started = false;
+  try {
+    started = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+  } catch {
+    started = false;
+  }
+  if (started) {
+    startGpsBackgroundSync();
+    return true;
+  }
+
+  const resolution =
+    (state.resolution as PollingResolution) ?? PollingResolution.BALANCED;
+  const config = RESOLUTION_CONFIG[resolution];
+  await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+    ...config,
+    foregroundService: {
+      notificationTitle: '4VELO — Tracking Active',
+      notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
+      notificationColor: '#00FFFF',
+    },
+  });
+  startGpsBackgroundSync();
+  return true;
 }
 
 export function clearTrackingRecoveryPending(): void {
-  getStorage()?.delete(GPS_STORAGE_KEYS.RECOVERY_PENDING);
-}
-
-export async function createSessionWithDurability(
-  payload: Omit<PendingSessionPayload, 'created_at' | 'attempts'>,
-): Promise<number> {
   const storage = getStorage();
-  const body: Record<string, unknown> = {
-    type: payload.type,
-    start_time: payload.start_time,
-  };
-  if (payload.event_id != null) body.event_id = payload.event_id;
-
-  try {
-    const res = await api.post<{ id: number }>('/api/activities/sessions/', body);
-    const id = res.data?.id;
-    if (!id) throw new Error('Session create returned no id');
-    if (storage) clearPendingSession(storage);
-    return id;
-  } catch (err) {
-    if (storage) {
-      savePendingSession(storage, {
-        ...payload,
-        created_at: Date.now(),
-        attempts: 0,
-      });
-    }
-    throw err;
-  }
+  if (storage) setRecoveryPending(storage, false);
 }
+
+export async function runManualGpsRecovery(): Promise<boolean> {
+  await retryPendingSessionCreate();
+  await processGpsOutbox();
+  await uploadBufferSnapshot();
+
+  const storage = getStorage();
+  if (!storage) return true;
+
+  const stillPending =
+    loadPendingSession(storage) != null ||
+    loadBuffer(storage).length > 0 ||
+    loadOutbox(storage).length > 0;
+
+  if (!stillPending) {
+    clearTrackingRecoveryPending();
+    return true;
+  }
+  return false;
+}
+
+export { createSessionWithDurability } from './sessionDurability';
 
 let _syncInterval: ReturnType<typeof setInterval> | null = null;
+let _netInfoUnsubscribe: (() => void) | null = null;
+let _appStateSubscription: { remove: () => void } | null = null;
+
+async function flushGpsUploadQueues(): Promise<void> {
+  await processGpsOutbox();
+  await uploadBufferSnapshot();
+}
+
+function subscribeNetInfoReconnect(): void {
+  if (_netInfoUnsubscribe) return;
+  _netInfoUnsubscribe = NetInfo.addEventListener((state) => {
+    if (state.isConnected && state.isInternetReachable !== false) {
+      void flushGpsUploadQueues();
+    }
+  });
+}
+
+function unsubscribeNetInfoReconnect(): void {
+  _netInfoUnsubscribe?.();
+  _netInfoUnsubscribe = null;
+}
+
+function ensureAppStateNetInfoLifecycle(): void {
+  if (_appStateSubscription) return;
+  _appStateSubscription = AppState.addEventListener('change', (next: AppStateStatus) => {
+    if (next === 'background' || next === 'inactive') {
+      unsubscribeNetInfoReconnect();
+    } else if (next === 'active') {
+      subscribeNetInfoReconnect();
+      void flushGpsUploadQueues();
+    }
+  });
+}
 
 export function startGpsBackgroundSync(): void {
-  if (_syncInterval) return;
-  _syncInterval = setInterval(async () => {
-    await processGpsOutbox();
-    await uploadBufferSnapshot();
-  }, BATCH_INTERVAL_MS);
+  if (!_syncInterval) {
+    _syncInterval = setInterval(() => {
+      void flushGpsUploadQueues();
+    }, BATCH_INTERVAL_MS);
+  }
+  subscribeNetInfoReconnect();
+  ensureAppStateNetInfoLifecycle();
 }
 
 export function stopGpsBackgroundSync(): void {
@@ -360,6 +430,7 @@ export function stopGpsBackgroundSync(): void {
     clearInterval(_syncInterval);
     _syncInterval = null;
   }
+  unsubscribeNetInfoReconnect();
 }
 
 TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
@@ -466,6 +537,10 @@ export class GpsSyncManager {
     this._userId = userId;
   }
 
+  setUserId(userId: number | null): void {
+    this._userId = userId;
+  }
+
   setUpdateCallback(cb: (stats: TrackingStats) => void): void {
     this._onUpdate = cb;
   }
@@ -523,7 +598,7 @@ export class GpsSyncManager {
           paceSecPerKm: 0,
         }),
       );
-      storage.delete(GPS_STORAGE_KEYS.RECOVERY_PENDING);
+      setRecoveryPending(storage, false);
     }
 
     const config = RESOLUTION_CONFIG[resolution];
@@ -604,7 +679,7 @@ export class GpsSyncManager {
           activityId: null,
         }),
       );
-      storage.delete(GPS_STORAGE_KEYS.RECOVERY_PENDING);
+      setRecoveryPending(storage, false);
     }
 
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);

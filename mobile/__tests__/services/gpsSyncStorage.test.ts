@@ -10,11 +10,13 @@ import {
   GPS_STORAGE_KEYS,
   GpsStorageAdapter,
   loadBuffer,
+  isRecoveryPending,
   loadOutbox,
   mergeRouteCoordinates,
   MAX_BUFFER_SIZE,
   removeOutboxEntry,
   saveBuffer,
+  setRecoveryPending,
 } from '../../src/services/gpsSyncStorage';
 
 function mockStorage(): GpsStorageAdapter & { _data: Record<string, string> } {
@@ -96,5 +98,15 @@ describe('gpsSyncStorage', () => {
     appendToBuffer(storage, samplePoint(100));
     appendToBuffer(storage, samplePoint(101));
     expect(loadBuffer(storage)).toHaveLength(2);
+  });
+
+  test('recovery pending flag round-trips', () => {
+    const storage = mockStorage();
+    expect(isRecoveryPending(storage)).toBe(false);
+    setRecoveryPending(storage, true);
+    expect(isRecoveryPending(storage)).toBe(true);
+    expect(storage.getString(GPS_STORAGE_KEYS.RECOVERY_PENDING)).toBe('true');
+    setRecoveryPending(storage, false);
+    expect(isRecoveryPending(storage)).toBe(false);
   });
 });

@@ -33,7 +33,13 @@ flowchart LR
 
 **Recovery przy starcie:** `recoverGpsDataOnLaunch()` (wywołane z `App.tsx`) — retry `pending_session`, `processGpsOutbox()`, upload bufora.
 
+**Ręczne wysłanie (UI):** baner na `RideDashboardScreen` / `ActiveRideHUDScreen` → `runManualGpsRecovery()` (outbox + bufor), flaga czyszczona po sukcesie.
+
+**Sieć:** `@react-native-community/netinfo` — po powrocie online `processGpsOutbox()` + upload bufora; subskrypcja zdejmowana w tle, wznawiana przy `active`.
+
 **Koniec sesji:** flush outbox + bufor → `sync_path` (GeoJSON lista `[lon, lat]`, merge z istniejącą trasą) → `finalize` (idempotentny `end_time`, `distance`).
+
+**Start sesji:** `ActivityService.createSession` → `createSessionWithDurability` (`sessionDurability.ts`); start jazdy przez `rideSessionService.startRideSession` w `App.tsx`.
 
 ### 2. Telemetry (Railway / FastAPI)
 
@@ -49,19 +55,21 @@ flowchart LR
 
 Bez zmian w tym PR: dedupe `external_id`, idempotentny kredyt leaderboard — warstwa importu z zewnątrz.
 
-## Zaimplementowane vs zaplanowane
+## Status implementacji
 
 | Element | Status |
 |---------|--------|
-| Recovery przy starcie + outbox | ✅ Kod |
-| Overflow bufora zamiast cichego truncate | ✅ Kod |
-| `client_batch_id` (mobile + telemetry Redis) | ✅ Kod |
-| `pending_session` + `createSessionWithDurability` | ✅ Kod (wymaga użycia w ekranie startu jazdy) |
-| `sync_path` merge + hash | ✅ Kod |
-| `finalize` endpoint | ✅ Kod |
-| NetInfo — upload po powrocie sieci | 📋 Dokumentacja (brak `@react-native-community/netinfo` w `package.json`) |
-| UI „Wznów śledzenie” | 📋 Flaga `tracking_recovery_pending`; ekran HUD do podpięcia |
-| UNIQUE w DB na `(activity_id, client_batch_id)` | 📋 Redis wystarcza bez migracji Timescale |
+| Recovery przy starcie + outbox | ✅ |
+| Overflow bufora zamiast cichego truncate | ✅ |
+| `client_batch_id` (mobile + telemetry Redis) | ✅ |
+| `pending_session` + `createSessionWithDurability` | ✅ (`ActivityService`, `rideSessionService`, `App.tsx`) |
+| `sync_path` merge + hash | ✅ |
+| `finalize` endpoint | ✅ |
+| NetInfo — upload po powrocie sieci | ✅ |
+| UI „Wyślij niewysłane punkty GPS” | ✅ |
+| Stop jazdy → `stopTracking` + finalize | ✅ |
+| Wznowienie GPS po kill app (`resumeTrackingAfterRelaunch`) | ✅ |
+| UNIQUE w DB na `(activity_id, client_batch_id)` | ✅ Redis wystarcza bez migracji Timescale |
 | PowerSync / offline-first DB | 📋 Osobna inicjatywa (`@powersync/react-native` w deps, nieaktywne) |
 
 ## Pozostałe ryzyka (uczciwie)
@@ -69,7 +77,6 @@ Bez zmian w tym PR: dedupe `external_id`, idempotentny kredyt leaderboard — wa
 - **Zniszczenie telefonu** przed jakimkolwiek uploadem — dane tylko lokalnie, bez odzysku.
 - **MMKV mock** w tle przy awarii JSI — punkty mogą nie zostać zapisane (log + Crashlytics).
 - **Rozbieżność tras:** telemetry `gps_points` vs `Activity.route_path` — pełna rekonsyliacja wymaga joba serwerowego (nie zaimplementowany).
-- **Brak NetInfo** — outbox odświeża się przy starcie i co 30 s, nie natychmiast po sieci.
 
 ## Deploy telemetry (Railway)
 
@@ -81,8 +88,14 @@ Bez zmian w tym PR: dedupe `external_id`, idempotentny kredyt leaderboard — wa
 
 ## Deploy backend (Django)
 
-- Nowe akcje na istniejącym routerze `sessions` — bez zmiany URL-i poza `finalize/` i rozszerzone `sync_path/`.
+- Akcje `sync_path` i `finalize` na routerze `sessions` — bez zmiany URL-i poza `finalize/` i rozszerzone `sync_path/`.
 - Redis wymagany dla idempotentnego `path_hash` (graceful degrade: brak Redis = brak dedupe po hash).
+
+## Deploy mobile
+
+1. `npm install` (nowe: `@react-native-community/netinfo`).
+2. EAS build / OTA update z `App.tsx`, `GpsSyncManager`, ekranami Ride/HUD.
+3. Po wdrożeniu: test offline → kill app → online → baner recovery lub auto-sync.
 
 ## Testy
 

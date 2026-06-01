@@ -1,5 +1,6 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { View, Alert, Text, Linking } from 'react-native';
+import type { NavigationContainerRef } from '@react-navigation/native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { observer, useObservable } from '@legendapp/state/react';
@@ -13,7 +14,20 @@ import { AuthService, setAuthToken } from './src/services/api';
 import { SocialAuthService } from './src/services/socialAuth';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
-import { recoverGpsDataOnLaunch, startGpsBackgroundSync } from './src/services/GpsSyncManager';
+import {
+  getRideGpsManager,
+  resumeActiveRideIfNeeded,
+  startRideSession,
+  stopRideSession,
+} from './src/services/rideSessionService';
+import {
+  isTrackingRecoveryPending,
+  recoverGpsDataOnLaunch,
+  runManualGpsRecovery,
+  startGpsBackgroundSync,
+  type TrackingStats,
+} from './src/services/GpsSyncManager';
+import { RidePausedScreen } from './src/screens/RidePausedScreen';
 import { ThemeService } from './src/services/ThemeService';
 
 import { SplashScreen } from './src/components/SplashScreen';
@@ -100,6 +114,61 @@ const AppContent = observer(function AppContent() {
 
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
   const { theme } = useUnistyles(); // ✅ safe — we are inside ThemeProvider
+  const navRef = useRef<NavigationContainerRef<Record<string, object | undefined>>>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [ridePaused, setRidePaused] = useState(false);
+  const [liveSpeed, setLiveSpeed] = useState(0);
+  const [liveDistanceKm, setLiveDistanceKm] = useState(0);
+  const [gpsRecoveryVisible, setGpsRecoveryVisible] = useState(false);
+  const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
+
+  const refreshGpsRecoveryFlag = useCallback(() => {
+    setGpsRecoveryVisible(isTrackingRecoveryPending());
+  }, []);
+
+  const wireGpsStatsCallback = useCallback((userId: number | null) => {
+    const manager = getRideGpsManager(userId);
+    manager.setUpdateCallback((stats: TrackingStats) => {
+      setLiveSpeed(stats.speedMs ?? 0);
+      setLiveDistanceKm((stats.distanceM ?? 0) / 1000);
+      if (stats.pendingPoints > 0) {
+        setGpsRecoveryVisible(true);
+      }
+    });
+  }, []);
+
+  const onUserSessionReady = useCallback(
+    async (userId: number | null) => {
+      wireGpsStatsCallback(userId);
+      if (await resumeActiveRideIfNeeded(userId)) {
+        setIsRecording(true);
+      }
+    },
+    [wireGpsStatsCallback],
+  );
+
+  const handleGpsRecoveryPress = useCallback(async () => {
+    setGpsRecoveryBusy(true);
+    try {
+      const ok = await runManualGpsRecovery();
+      if (ok) {
+        setGpsRecoveryVisible(false);
+        Alert.alert('Gotowe', 'Niewysłane punkty GPS zostały wysłane.');
+      } else {
+        Alert.alert(
+          'Nie udało się',
+          'Część danych nadal czeka na wysłanie. Sprawdź połączenie i spróbuj ponownie.',
+        );
+        refreshGpsRecoveryFlag();
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Błąd wysyłki GPS';
+      Alert.alert('Błąd', msg);
+    } finally {
+      setGpsRecoveryBusy(false);
+    }
+  }, [refreshGpsRecoveryFlag]);
 
   const auth = useObservable({
     isAuthenticated: false,
@@ -122,9 +191,17 @@ const AppContent = observer(function AppContent() {
 
   useEffect(() => {
     initFirebase();
-    recoverGpsDataOnLaunch().catch((e) =>
-      console.warn('[GPS] launch recovery failed', e),
-    );
+    recoverGpsDataOnLaunch()
+      .then(async (result) => {
+        if (result.needsResumeUi || isTrackingRecoveryPending()) {
+          setGpsRecoveryVisible(true);
+        }
+        const resumed = await resumeActiveRideIfNeeded(null);
+        if (resumed) {
+          setIsRecording(true);
+        }
+      })
+      .catch((e) => console.warn('[GPS] launch recovery failed', e));
     startGpsBackgroundSync();
     const store = getStorage();
     const token = store.getString('auth_token');
@@ -137,6 +214,8 @@ const AppContent = observer(function AppContent() {
         .then(async (user) => {
           auth.user.set(user);
           auth.isAuthenticated.set(true);
+          const userId = user?.id != null ? Number(user.id) : null;
+          await onUserSessionReady(userId);
           if (user.tenant_id) {
             BrandingService.fetch(user.tenant_id);
           }
@@ -150,7 +229,7 @@ const AppContent = observer(function AppContent() {
     } else {
       auth.isLoading.set(false);
     }
-  }, []);
+  }, [onUserSessionReady]);
 
   const completeOAuthLogin = useCallback(async (access: string, refresh: string) => {
     const store = getStorage();
@@ -160,10 +239,12 @@ const AppContent = observer(function AppContent() {
     const user = await AuthService.getProfile();
     auth.user.set(user);
     auth.isAuthenticated.set(true);
+    const userId = user?.id != null ? Number(user.id) : null;
+    await onUserSessionReady(userId);
     if (user.tenant_id) {
       BrandingService.fetch(user.tenant_id);
     }
-  }, []);
+  }, [onUserSessionReady]);
 
   useEffect(() => {
     const handleOAuthUrl = async (url: string | null) => {
@@ -229,6 +310,8 @@ const AppContent = observer(function AppContent() {
           const user = await AuthService.getProfile();
           auth.user.set(user);
           auth.isAuthenticated.set(true);
+          const userId = user?.id != null ? Number(user.id) : null;
+          await onUserSessionReady(userId);
           if (user.tenant_id) {
             BrandingService.fetch(user.tenant_id);
           }
@@ -249,6 +332,8 @@ const AppContent = observer(function AppContent() {
           const user = await AuthService.getProfile();
           auth.user.set(user);
           auth.isAuthenticated.set(true);
+          const userId = user?.id != null ? Number(user.id) : null;
+          await onUserSessionReady(userId);
           if (user.tenant_id) {
             BrandingService.fetch(user.tenant_id);
           }
@@ -261,6 +346,48 @@ const AppContent = observer(function AppContent() {
       auth.isSubmitting.set(false);
     }
   };
+
+  const handleStartRide = useCallback(
+    async (eventId?: number) => {
+      const user = auth.user.get();
+      const userId = user?.id != null ? Number(user.id) : null;
+      try {
+        wireGpsStatsCallback(userId);
+        await startRideSession({
+          type: eventId != null ? 'event' : 'ride',
+          event_id: eventId,
+          userId,
+        });
+        setIsRecording(true);
+        setRidePaused(false);
+        refreshGpsRecoveryFlag();
+        navRef.current?.navigate('Tracking' as never);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Nie udało się rozpocząć jazdy';
+        Alert.alert('Start jazdy', msg);
+        refreshGpsRecoveryFlag();
+      }
+    },
+    [auth.user, refreshGpsRecoveryFlag, wireGpsStatsCallback],
+  );
+
+  const handleStopRide = useCallback(async () => {
+    const user = auth.user.get();
+    const userId = user?.id != null ? Number(user.id) : null;
+    try {
+      await stopRideSession(userId);
+    } catch (e) {
+      console.warn('[GPS] stop ride failed', e);
+    } finally {
+      setIsRecording(false);
+      setRidePaused(false);
+      setLiveSpeed(0);
+      setLiveDistanceKm(0);
+      refreshGpsRecoveryFlag();
+      navRef.current?.navigate('Ride' as never);
+      Alert.alert('Zapisano', 'Trasa została wysłana i sesja zakończona.');
+    }
+  }, [auth.user, refreshGpsRecoveryFlag]);
 
   const handleLogout = () => {
     const store = getStorage();
@@ -364,30 +491,70 @@ const AppContent = observer(function AppContent() {
     if (!isAuth) return renderAuthUI((theme.colors as any) as Record<string, string>);
     if (!isOnboarded) return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
 
+    const gpsRecoveryProps = {
+      gpsRecoveryVisible,
+      gpsRecoveryBusy,
+      onGpsRecoveryPress: handleGpsRecoveryPress,
+    };
+
     return (
-      <NavigationContainer>
-        <Tab.Navigator
-          tabBar={(props) => <GameTabBar {...props} />}
-          screenOptions={{ headerShown: false }}
-        >
-          <Tab.Screen name="Ride">
-            {() => <RideDashboardScreen user={user} />}
-          </Tab.Screen>
-          <Tab.Screen name="Compete">
-            {() => <CityHubScreen user={user} />}
-          </Tab.Screen>
-          <Tab.Screen name="Explore">
-            {() => <MarketplaceScreen />}
-          </Tab.Screen>
-          <Tab.Screen name="Profile">
-            {() => <AthleteProfileScreen user={user} onLogout={handleLogout} />}
-          </Tab.Screen>
-          {/* Keep legacy screen for tracking */}
-          <Tab.Screen name="Tracking" options={{ tabBarStyle: { display: 'none' } }}>
-            {() => <ActiveRideHUDScreen user={user} />}
-          </Tab.Screen>
-        </Tab.Navigator>
-      </NavigationContainer>
+      <>
+        <NavigationContainer ref={navRef}>
+          <Tab.Navigator
+            tabBar={(props) => <GameTabBar {...props} />}
+            screenOptions={{ headerShown: false }}
+          >
+            <Tab.Screen name="Ride">
+              {() => (
+                <RideDashboardScreen
+                  user={user}
+                  isRecording={isRecording}
+                  liveSpeed={liveSpeed * 3.6}
+                  liveDistance={liveDistanceKm}
+                  onStartRide={() => handleStartRide()}
+                  onGoToRide={() => navRef.current?.navigate('Tracking' as never)}
+                  {...gpsRecoveryProps}
+                />
+              )}
+            </Tab.Screen>
+            <Tab.Screen name="Compete">
+              {() => (
+                <CityHubScreen
+                  user={user}
+                  onStartQuest={() => handleStartRide()}
+                />
+              )}
+            </Tab.Screen>
+            <Tab.Screen name="Explore">
+              {() => <MarketplaceScreen />}
+            </Tab.Screen>
+            <Tab.Screen name="Profile">
+              {() => <AthleteProfileScreen user={user} onLogout={handleLogout} />}
+            </Tab.Screen>
+            <Tab.Screen name="Tracking" options={{ tabBarButton: () => null }}>
+              {() => (
+                <ActiveRideHUDScreen
+                  user={user}
+                  liveSpeed={liveSpeed}
+                  liveDistanceKm={liveDistanceKm}
+                  onPause={() => setRidePaused(true)}
+                  onStop={() => void handleStopRide()}
+                  {...gpsRecoveryProps}
+                />
+              )}
+            </Tab.Screen>
+          </Tab.Navigator>
+        </NavigationContainer>
+        {ridePaused && isRecording && (
+          <RidePausedScreen
+            onResume={() => setRidePaused(false)}
+            onStop={() => {
+              setRidePaused(false);
+              void handleStopRide();
+            }}
+          />
+        )}
+      </>
     );
   };
 

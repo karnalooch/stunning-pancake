@@ -219,3 +219,15 @@ export function savePendingSession(
 export function clearPendingSession(storage: GpsStorageAdapter): void {
   storage.delete(GPS_STORAGE_KEYS.PENDING_SESSION);
 }
+
+export function isRecoveryPending(storage: GpsStorageAdapter): boolean {
+  return storage.getString(GPS_STORAGE_KEYS.RECOVERY_PENDING) === 'true';
+}
+
+export function setRecoveryPending(storage: GpsStorageAdapter, pending: boolean): void {
+  if (pending) {
+    storage.set(GPS_STORAGE_KEYS.RECOVERY_PENDING, 'true');
+  } else {
+    storage.delete(GPS_STORAGE_KEYS.RECOVERY_PENDING);
+  }
+}

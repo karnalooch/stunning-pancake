@@ -23,6 +23,7 @@ import * as Haptics from 'expo-haptics';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
+import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -259,6 +260,9 @@ interface RideDashboardScreenProps {
     isRecording?: boolean;
     liveSpeed?: number;
     liveDistance?: number;
+    gpsRecoveryVisible?: boolean;
+    gpsRecoveryBusy?: boolean;
+    onGpsRecoveryPress?: () => void;
 }
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
@@ -268,6 +272,9 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     isRecording = false,
     liveSpeed = 0,
     liveDistance = 0,
+    gpsRecoveryVisible = false,
+    gpsRecoveryBusy = false,
+    onGpsRecoveryPress,
 }) => {
     const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
@@ -319,6 +326,11 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
 
             {/* Content */}
             <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+                <GpsRecoveryBanner
+                    visible={gpsRecoveryVisible}
+                    busy={gpsRecoveryBusy}
+                    onPress={() => onGpsRecoveryPress?.()}
+                />
                 {/* Hero Card — Active Ride or Idle */}
                 <View style={[s.heroCard, s.pixelShadow]}>
                     {isRecording ? (
