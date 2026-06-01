@@ -21,6 +21,31 @@ BATCH_LOCK_KEY = "{sim}:batch:lock"
 BATCH_LOCK_TTL = 3600  # 1 hour max
 
 
+def _redis_float(val) -> float | None:
+    """Parse Redis hash field to float; tolerate missing/None/'None' strings."""
+    if val is None:
+        return None
+    s = str(val).strip()
+    if not s or s.lower() == 'none':
+        return None
+    try:
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+
+def _redis_int(val, default: int = 0) -> int:
+    if val is None:
+        return default
+    s = str(val).strip()
+    if not s or s.lower() == 'none':
+        return default
+    try:
+        return int(float(s))
+    except (TypeError, ValueError):
+        return default
+
+
 def get_batch_state() -> dict:
     """Get current batch simulation state from Redis."""
     r = get_redis()
@@ -36,22 +61,27 @@ def get_batch_state() -> dict:
     state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
     # Parse numeric fields
     state['running'] = state.get('running', 'false').lower() == 'true'
-    state['scale'] = float(state.get('scale', 0))
-    state['days'] = int(state.get('days', 0))
-    state['total_users'] = int(state.get('total_users', 0))
-    state['users_created'] = int(state.get('users_created', 0))
-    state['departments_created'] = int(state.get('departments_created', 0))
-    state['activities_created'] = int(state.get('activities_created', 0))
-    state['progress_pct'] = float(state.get('progress_pct', 0))
-    state['started_at'] = float(state['started_at']) if state.get('started_at') else None
-    state['completed_at'] = float(state['completed_at']) if state.get('completed_at') else None
+    state['scale'] = float(state.get('scale', 0) or 0)
+    state['days'] = _redis_int(state.get('days'), 0)
+    state['total_users'] = _redis_int(state.get('total_users'), 0)
+    state['users_created'] = _redis_int(state.get('users_created'), 0)
+    state['departments_created'] = _redis_int(state.get('departments_created'), 0)
+    state['activities_created'] = _redis_int(state.get('activities_created'), 0)
+    state['progress_pct'] = float(state.get('progress_pct', 0) or 0)
+    state['started_at'] = _redis_float(state.get('started_at'))
+    state['completed_at'] = _redis_float(state.get('completed_at'))
+    err = state.get('error')
+    if err is not None and str(err).strip().lower() == 'none':
+        state['error'] = None
     return state
 
 
 def set_batch_state(**kwargs):
     """Update batch simulation state fields in Redis."""
     r = get_redis()
-    r.hset(BATCH_STATE_KEY, mapping={k: str(v) for k, v in kwargs.items()})
+    mapping = {k: str(v) for k, v in kwargs.items() if v is not None}
+    if mapping:
+        r.hset(BATCH_STATE_KEY, mapping=mapping)
     r.expire(BATCH_STATE_KEY, 86400)  # 24h TTL
 
 
@@ -147,7 +177,13 @@ def get_batch_log() -> list:
     """Get all log lines from Redis."""
     r = get_redis()
     raw = r.lrange(BATCH_LOG_KEY, 0, -1)
-    return [json.loads(line.decode() if isinstance(line, bytes) else line) for line in raw]
+    lines = []
+    for line in raw:
+        try:
+            lines.append(json.loads(line.decode() if isinstance(line, bytes) else line))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return lines
 
 
 def acquire_batch_lock() -> bool:
@@ -220,21 +256,20 @@ def get_live_state() -> dict:
     state['currently_riding'] = int(state.get('currently_riding', 0))
     state['total_completed'] = int(state.get('total_completed', 0))
     state['cheaters_caught'] = int(state.get('cheaters_caught', 0))
-    state['started_at'] = float(state['started_at']) if state.get('started_at') else None
-    if state.get('last_tick_at'):
-        try:
-            state['last_tick_at'] = float(state['last_tick_at'])
-        except (ValueError, TypeError):
-            state['last_tick_at'] = None
-    else:
-        state['last_tick_at'] = None
+    state['started_at'] = _redis_float(state.get('started_at'))
+    state['last_tick_at'] = _redis_float(state.get('last_tick_at'))
+    err = state.get('error')
+    if err is not None and str(err).strip().lower() == 'none':
+        state['error'] = None
     return state
 
 
 def set_live_state(**kwargs):
     """Update live simulation state fields in Redis."""
     r = get_redis()
-    r.hset(LIVE_STATE_KEY, mapping={k: str(v) for k, v in kwargs.items()})
+    mapping = {k: str(v) for k, v in kwargs.items() if v is not None}
+    if mapping:
+        r.hset(LIVE_STATE_KEY, mapping=mapping)
     r.expire(LIVE_STATE_KEY, 86400)
 
 

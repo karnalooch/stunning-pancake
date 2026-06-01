@@ -580,12 +580,19 @@ class RunSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        state = sim.get_batch_state()
-        log = sim.get_batch_log()
+        try:
+            state = sim.get_batch_state()
+            log = sim.get_batch_log()
+        except Exception as exc:
+            return Response(
+                {'error': f'Simulator state unavailable: {exc}', 'running': False, 'log': []},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         elapsed = 0.0
-        if state.get('started_at'):
-            end = state['completed_at'] or time.time()
-            elapsed = end - state['started_at']
+        started = state.get('started_at')
+        if started:
+            end = state.get('completed_at') or time.time()
+            elapsed = end - started
 
         batch_lock = sim.is_batch_lock_held()
         stuck = batch_lock and not state['running']
