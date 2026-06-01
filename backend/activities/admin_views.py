@@ -374,11 +374,12 @@ class LiveSimulationView(APIView):
                 last_tick_at=time.time()
             )
             # Setup athlete pool
-            from activities.scale_config import should_skip_global_live_pool
-            if should_skip_global_live_pool(total_users):
+            from activities.scale_config import compute_batch_scaling
+            pool_plan = compute_batch_scaling(max(total_users, 1))
+            if pool_plan['live_pool_mode'] == 'db':
                 pool_size = sim.init_live_pool_db_mode(total_users)
             else:
-                pool_size = sim.set_live_pool_from_db(total_users)
+                pool_size = sim.set_live_pool_from_db(pool_plan['live_pool_redis_cap'])
             sim.set_live_state(total_users=pool_size)
             sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): pool={pool_size} users.")
             
@@ -662,17 +663,32 @@ class RunSimulationView(APIView):
 
         batch_plan = None
         est_message = f'Batch simulation started. Estimated time: ~{int(scale * 30)} minutes.'
+        batch_warnings: list[str] = []
         if total_users:
             from activities.scale_config import compute_batch_scaling
+            from django.contrib.auth import get_user_model
+
             batch_plan = compute_batch_scaling(int(total_users))
             eta_min = max(1, batch_plan['estimated_batch_seconds'] // 60)
             est_message = (
                 f"Batch started: {batch_plan['num_cities']} cities × "
                 f"{batch_plan['users_per_city']:,} users, "
-                f"bulk {batch_plan['user_bulk_batch_size']:,}, "
+                f"pg chunk {batch_plan['user_bulk_pg_batch_size']:,}, "
                 f"ETA ~{eta_min} min (skip_activities={skip_activities})."
             )
             sim.batch_log(est_message)
+            disk_gb = batch_plan.get('estimated_disk_gb', 0)
+            if disk_gb >= 0.5:
+                batch_warnings.append(
+                    f"Szacowany dysk Postgres: ~{disk_gb:.1f} GB przy tym batchu."
+                )
+            if batch_plan.get('warn_without_wipe') and not clear:
+                existing = get_user_model().objects.filter(role='ATHLETE').count()
+                if existing > 0:
+                    batch_warnings.append(
+                        f"W bazie jest {existing:,} athlete bez wipe — rozważ wipe przed {total_users:,}."
+                    )
+                    sim.batch_log(f"WARNING: {batch_warnings[-1]}")
 
         # Spawn Celery task
         run_batch_simulation.delay(
@@ -694,5 +710,7 @@ class RunSimulationView(APIView):
         }
         if batch_plan:
             payload['batch_plan'] = batch_plan
+        if batch_warnings:
+            payload['warnings'] = batch_warnings
         return Response(payload)
 

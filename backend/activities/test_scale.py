@@ -7,7 +7,9 @@ from activities.scale_config import (
     MAX_CONCURRENT_RIDERS,
     MAX_BATCH_USERS,
     compute_batch_scaling,
+    adaptive_pg_bulk_batch_size,
     adaptive_user_bulk_batch_size,
+    live_pool_mode_for_target,
     plan_batch_cities,
 )
 from activities.scale_preflight import analyze_scale
@@ -44,6 +46,27 @@ class ScaleConfigTest(SimpleTestCase):
             adaptive_user_bulk_batch_size(10_000),
             adaptive_user_bulk_batch_size(300_000),
         )
+
+    def test_pg_batch_scales_down_with_users(self):
+        bulk = adaptive_user_bulk_batch_size(300_000)
+        self.assertGreater(
+            adaptive_pg_bulk_batch_size(bulk, 1_000),
+            adaptive_pg_bulk_batch_size(bulk, 300_000),
+        )
+
+    def test_live_pool_tiers(self):
+        for total, mode, cap_check in (
+            (1_000, 'redis', lambda c: c == 1_000),
+            (10_000, 'redis', lambda c: c <= 50_000),
+            (100_000, 'db', lambda c: True),
+            (300_000, 'db', lambda c: True),
+        ):
+            plan = compute_batch_scaling(total)
+            self.assertEqual(live_pool_mode_for_target(total), mode)
+            self.assertEqual(plan['live_pool_mode'], mode)
+            if mode == 'redis':
+                self.assertTrue(cap_check(plan['live_pool_redis_cap']))
+            self.assertGreater(plan['user_bulk_pg_batch_size'], 0)
 
 
 class ScalePreflightTest(SimpleTestCase):

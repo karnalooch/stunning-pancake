@@ -369,13 +369,14 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
 
     # One-time pool setup (POST already set running=True and holds the lock)
     if not sim.is_live_pool_db_mode() and sim.get_live_pool_count() == 0:
-        from activities.scale_config import effective_redis_pool_limit, should_skip_global_live_pool
+        from activities.scale_config import compute_batch_scaling
 
-        if should_skip_global_live_pool(pool_target):
+        pool_plan = compute_batch_scaling(max(pool_target, 1))
+        if pool_plan['live_pool_mode'] == 'db':
             pool_size = sim.init_live_pool_db_mode(pool_target)
             mode_note = "db sampling per city"
         else:
-            pool_limit = effective_redis_pool_limit(pool_target)
+            pool_limit = pool_plan['live_pool_redis_cap']
             pool_size = sim.set_live_pool_from_db(pool_limit)
             mode_note = f"redis pool (cap {pool_limit})"
         sim.set_live_state(total_users=pool_size)

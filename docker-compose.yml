@@ -182,7 +182,7 @@ services:
       SCALE_BATCH_FAST_INSERT: "true"
       DATABASE_CONN_MAX_AGE: "60"
       SCALE_LIVE_POOL_MAX_REDIS: "50000"
-      SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE: "100000"
+      SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE: "50000"
     volumes:
       - ./backend:/app
     depends_on:

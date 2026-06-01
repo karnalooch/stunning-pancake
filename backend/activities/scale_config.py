@@ -47,12 +47,16 @@ MAX_BATCH_USERS = _int('SCALE_MAX_BATCH_USERS', 350_000)
 # Live sim pool size (logical target; Redis SET capped separately)
 MAX_LIVE_POOL = _int('SCALE_MAX_LIVE_POOL', 350_000)
 
-# Max athlete IDs stored in Redis SETs (global + per-city); above SKIP_GLOBAL_LIVE_POOL_ABOVE uses DB sampling
+# Max athlete IDs stored in Redis SETs (global + per-city); medium tier caps here
 MAX_LIVE_POOL_REDIS = _int('SCALE_LIVE_POOL_MAX_REDIS', 50_000)
 
-# Skip filling Redis with all athlete IDs — sample per city from Postgres instead
-SKIP_GLOBAL_LIVE_POOL_ABOVE = _int('SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE', 100_000)
+# Live pool tiers (see live_pool_mode_for_target)
+LIVE_POOL_REDIS_FULL_ABOVE = _int('SCALE_LIVE_POOL_REDIS_FULL_ABOVE', 5_000)
+SKIP_GLOBAL_LIVE_POOL_ABOVE = _int('SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE', 50_000)
 SIM_SKIP_GLOBAL_LIVE_POOL = _bool('SCALE_SIM_SKIP_GLOBAL_LIVE_POOL', False)
+
+# Admin: warn when starting a large batch without wipe (existing athletes in DB)
+BATCH_WARN_WITHOUT_WIPE_ABOVE = _int('SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE', 10_000)
 
 # Concurrent riders + telemetry published per tick (memory / Redis hash size)
 MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 5_000)
@@ -117,6 +121,9 @@ def _float(name: str, default: float) -> float:
 
 BATCH_PROGRESS_UI_MIN_SECONDS = _float('SCALE_BATCH_PROGRESS_UI_MIN_SECONDS', 2.0)
 
+# Postgres disk estimate for preflight (GB at 300k reference ~10 GB)
+BATCH_DISK_GB_AT_300K = _float('SCALE_BATCH_DISK_GB_AT_300K', 10.0)
+
 
 def adaptive_user_bulk_batch_size(total_users: int) -> int:
     """Django bulk_create chunk per Redis progress tick — scales with target."""
@@ -134,27 +141,56 @@ def adaptive_user_bulk_batch_size(total_users: int) -> int:
 
 
 def adaptive_pg_bulk_batch_size(bulk_batch: int, total_users: int | None = None) -> int:
-    """Inner PG batch_size for bulk_create — smaller at 300k to limit temp files / WAL per INSERT."""
+    """Inner PG batch_size for bulk_create — scales down with target_users (100 → 300k)."""
     if os.getenv('SCALE_USER_BULK_PG_BATCH_SIZE'):
         return _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)
-    total = int(total_users or 0)
+    total = max(1, int(total_users or 0))
+    bb = max(1, int(bulk_batch))
     if total >= 200_000:
-        return min(250, max(100, bulk_batch // 25))
+        return min(250, max(100, bb // 25))
     if total >= 50_000:
-        return min(400, max(200, bulk_batch // 15))
-    return min(1000, max(500, bulk_batch // 5))
+        return min(400, max(200, bb // 15))
+    if total >= 10_000:
+        return min(600, max(250, bb // 10))
+    if total >= 1_000:
+        return min(800, max(200, bb // 6))
+    return min(500, max(100, min(bb, 500)))
+
+
+def live_pool_mode_for_target(target_users: int) -> str:
+    """
+    redis — SADD per-city quotas (bounded queries, capped SET size).
+    db    — no Redis athlete SET; ticks use order_by('?')[:n] per city.
+    """
+    if SIM_SKIP_GLOBAL_LIVE_POOL:
+        return 'db'
+    if int(target_users) >= SKIP_GLOBAL_LIVE_POOL_ABOVE:
+        return 'db'
+    return 'redis'
 
 
 def should_skip_global_live_pool(total_users: int) -> bool:
-    """At 100k+ athletes, do not SADD entire pool — live tick samples from DB per city."""
-    if SIM_SKIP_GLOBAL_LIVE_POOL:
-        return True
-    return int(total_users) >= SKIP_GLOBAL_LIVE_POOL_ABOVE
+    """True when live sim must use DB sampling (large tier)."""
+    return live_pool_mode_for_target(total_users) == 'db'
 
 
 def effective_redis_pool_limit(pool_target: int) -> int:
-    """Cap Redis SET population (global + per-city slices)."""
-    return min(int(pool_target), MAX_LIVE_POOL, MAX_LIVE_POOL_REDIS)
+    """Cap Redis SET population — full target below LIVE_POOL_REDIS_FULL_ABOVE, else Redis max."""
+    target = max(0, int(pool_target))
+    if target < LIVE_POOL_REDIS_FULL_ABOVE:
+        return min(target, MAX_LIVE_POOL)
+    return min(target, MAX_LIVE_POOL, MAX_LIVE_POOL_REDIS)
+
+
+def estimate_batch_disk_gb(target_users: int, *, skip_activities: bool = True) -> float:
+    """Rough Postgres growth for batch insert (preflight / admin warnings)."""
+    total = max(0, int(target_users))
+    if total == 0:
+        return 0.0
+    base = (total / 300_000.0) * BATCH_DISK_GB_AT_300K
+    if not skip_activities:
+        base *= 4.0
+    return round(max(0.05, base), 2)
 
 
 def adaptive_parallel_db_workers(total_users: int) -> int:
@@ -239,6 +275,9 @@ def compute_batch_scaling(total_users: int, max_cities_available: int = 10) -> d
         max(2500, min(10_000, bulk_batch * 2)),
     )
 
+    live_mode = live_pool_mode_for_target(total)
+    redis_cap = effective_redis_pool_limit(total)
+
     return {
         'total_users': total,
         'num_cities': num_cities,
@@ -257,4 +296,13 @@ def compute_batch_scaling(total_users: int, max_cities_available: int = 10) -> d
             total, skip_activities=True, num_cities=num_cities, bulk_batch_size=bulk_batch,
         ),
         'force_skip_activities': total >= FORCE_SKIP_ACTIVITIES_ABOVE,
+        'live_pool_mode': live_mode,
+        'live_pool_redis_cap': redis_cap,
+        'estimated_disk_gb': estimate_batch_disk_gb(total, skip_activities=True),
+        'warn_without_wipe': total >= BATCH_WARN_WITHOUT_WIPE_ABOVE,
+        'live_pool_tier': (
+            'db' if live_mode == 'db'
+            else 'redis_small' if total < LIVE_POOL_REDIS_FULL_ABOVE
+            else 'redis_capped'
+        ),
     }

@@ -128,7 +128,7 @@ def _bulk_create_athletes(
     pwd = _athlete_password_hash()
     total = 0
     use_fast = fast_insert and skip_dept
-    pg_chunk = max(50, min(pg_batch_size, 250))
+    pg_chunk = max(50, int(pg_batch_size))
 
     def _bulk_create_user_chunks(users, **kwargs):
         for i in range(0, len(users), pg_chunk):

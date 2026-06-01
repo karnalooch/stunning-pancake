@@ -422,19 +422,19 @@ def sample_live_athletes_from_db(city_slug: str, count: int) -> list[int]:
 
 def set_live_pool_from_db(limit: int) -> int:
     """
-    Stream athlete IDs into Redis — balanced per city tenant (round-robin across CITIES).
-    Fills per-city SETs for stratified live ride starts; global SET capped at MAX_LIVE_POOL_REDIS.
+    Load athlete IDs into Redis per city — bounded [:quota] queries only (no table iterator).
+    Large targets use DB sampling mode via live_pool_mode_for_target.
     """
     from users.models import Tenant
     from simulate_active_cities import CITIES
     from activities.scale_config import (
         POOL_SADD_BATCH,
         effective_redis_pool_limit,
-        should_skip_global_live_pool,
+        live_pool_mode_for_target,
     )
 
     pool_target = int(limit)
-    if should_skip_global_live_pool(pool_target):
+    if live_pool_mode_for_target(pool_target) == 'db':
         return init_live_pool_db_mode(pool_target)
 
     limit = effective_redis_pool_limit(pool_target)
@@ -446,7 +446,7 @@ def set_live_pool_from_db(limit: int) -> int:
     city_names = [c['name'] for c in CITIES]
     tenants = {t.name: t.id for t in Tenant.objects.filter(name__in=city_names)}
     cities = [c for c in CITIES if c['name'] in tenants] or list(CITIES)
-    n = len(cities)
+    n = max(1, len(cities))
     per_city = max(1, limit // n)
     remainder = limit
     global_batch: list[str] = []
@@ -455,10 +455,13 @@ def set_live_pool_from_db(limit: int) -> int:
     for i, city in enumerate(cities):
         quota = per_city if i < n - 1 else remainder
         remainder -= quota
+        if quota <= 0:
+            continue
         slug = city['slug']
         tenant_id = tenants.get(city['name'])
         qs = _athlete_qs_for_city(city, tenant_id)
-        for uid in qs.values_list('id', flat=True)[:quota]:
+        ids = list(qs.order_by('?').values_list('id', flat=True)[:quota])
+        for uid in ids:
             sid = str(uid)
             global_batch.append(sid)
             city_batches[slug].append(sid)

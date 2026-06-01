@@ -5,7 +5,7 @@
 | Symptom | Cause | Fix |
 |---------|--------|-----|
 | `No space left on device` on `pgsql_tmp` during `bulk_create` | Large multi-row INSERTs (pbkdf2 password field × 2500+ rows) + parallel city workers exhaust Postgres **disk** (temp files + WAL), not just RAM | Smaller `SCALE_USER_BULK_PG_BATCH_SIZE` / adaptive pg chunks (100–250 at 300k); sub-chunked `bulk_create` inside transaction; **≥10 GB** Postgres volume; wipe before run |
-| `run_live_simulation` failed in `set_live_pool_from_db` | Fallback `User.objects.filter(role='ATHLETE').iterator()` = full table scan + sort/hash on 300k IDs | Removed; at ≥100k athletes use **DB pool mode** (`order_by('?')[:n]` per city) or Redis cap `SCALE_LIVE_POOL_MAX_REDIS` (50k) |
+| `run_live_simulation` failed in `set_live_pool_from_db` | Fallback `User.objects.filter(role='ATHLETE').iterator()` = full table scan | Removed; tiered pool: **db** ≥50k, **redis capped** 5k–50k, **redis full** &lt;5k; bounded `[:quota]` queries only |
 | `BRouter unavailable — grid fallback` spam | Live tick logs every ride when `BROUTER_URL` missing on simulation worker | Throttled live_log (first 3, then 1/hour); `BROUTER_URL` on `celery-worker-simulation`; optional `SCALE_SIM_SKIP_BROUTER=1` during batch |
 
 ## Co się **zawieszało** (przed poprawkami)
@@ -25,8 +25,10 @@
 ## Co jest **bezpieczne** po implementacji
 
 - **Batch 300k** — jeden hash hasła `_athlete_password_hash()` dla wszystkich athlete; pg inserty po 100–250 wierszy; `skip_activities` wymuszane ≥150k.
-- **Pula live ≥100k** — tryb `db`: brak globalnego Redis SET 300k; próbkowanie per miasto z Postgres.
-- **Pula live &lt;100k** — Redis SET capped przez `SCALE_LIVE_POOL_MAX_REDIS` (domyślnie **50 000**).
+- **Pula live ≥50k** (`SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE`) — tryb `db`: brak globalnego Redis SET; próbkowanie per miasto z Postgres (`order_by('?')[:n]`).
+- **Pula live 5k–50k** — Redis SET capped przez `SCALE_LIVE_POOL_MAX_REDIS` (domyślnie **50 000**); bounded per-city queries only.
+- **Pula live &lt;5k** — Redis SET do rozmiaru celu (bez sztucznego cap 50k).
+- **Batch insert** — zawsze sub-chunked `bulk_create`; `user_bulk_pg_batch_size` z `compute_batch_scaling` (100 → 300k).
 - **Aktywni na mapie** — max `SCALE_MAX_CONCURRENT_RIDERS` (domyślnie **5000**).
 - **Telemetria** — tylko aktywni jeźdźcy; odczyt `GEORADIUS` + `HMGET`, nie `HGETALL`.
 
@@ -49,7 +51,10 @@
 SCALE_MAX_BATCH_USERS=350000
 SCALE_MAX_LIVE_POOL=350000
 SCALE_LIVE_POOL_MAX_REDIS=50000
-SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE=100000
+SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE=50000
+SCALE_LIVE_POOL_REDIS_FULL_ABOVE=5000
+SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE=10000
+SCALE_BATCH_DISK_GB_AT_300K=10
 SCALE_SIM_SKIP_GLOBAL_LIVE_POOL=0
 SCALE_SIM_SKIP_BROUTER=0
 SCALE_MAX_CONCURRENT_RIDERS=5000
@@ -81,20 +86,23 @@ Service `celery_worker_simulation` should depend on `brouter` and set `BROUTER_U
 | Railway standard | 4–5 | 6 |
 | Mocny / dedykowany | 6–7 | 7–8 |
 
-## Adaptacyjne reguły (domyślne, bez env)
+## Bezpieczeństwo skali (tiers — domyślne, bez env)
 
-| Cel użytkowników | Miasta | users/miasto | pg `bulk_create` chunk (adaptive) | Live pool |
-|------------------|--------|--------------|-----------------------------------|-----------|
-| **10k** | 10 | ~1 000 | pg ~500 | Redis do cap |
-| **100k** | 10 | ~10 000 | pg ~400 | DB sampling (≥100k) |
-| **300k** | 10 | ~30 000 | pg ~100–250 | DB sampling |
+| Cel | Miasta × users/city | pg chunk (bulk) | Live pool | Dysk (~skip_activities) |
+|-----|---------------------|-----------------|-----------|-------------------------|
+| **1k** | ~3–10 × ~100–350 | pg ~200–500 | Redis (pełny cel) | ~0.03 GB |
+| **10k** | 10 × ~1k | pg ~500–600 | Redis cap 50k | ~0.3 GB |
+| **100k** | 10 × ~10k | pg ~350–400 | **DB** sampling | ~3.3 GB |
+| **300k** | 10 × ~30k | pg ~100–250 | **DB** sampling | ~10 GB |
+
+`GET /api/activities/admin/scale-preflight/?target_users=N` zwraca `batch_plan`, `estimated_disk_gb`, `live_pool_mode`, ostrzeżenia wipe/dysk proporcjonalnie do N.
 
 ## Procedura testu 300k
 
 1. **Wipe** stare dane symulatora (chunked async wipe).
 2. **Preflight** — `batch_plan`, `estimated_batch_label`.
 3. **Batch only** — preset 300k, `skip_activities` auto; monitor `celery-worker-simulation` logs (not live).
-4. Po batchu: **live sim** z `active_ratio=0.1`, `pool_pct` rozsądny; expect `LIVE SIM: db sampling per city` when athletes ≥100k.
+4. Po batchu: **live sim** z `active_ratio=0.1`; expect `LIVE SIM: db sampling per city` when pool target ≥50k.
 5. **Mapa** — zoom na miasto; API bbox + limit.
 
 ## API

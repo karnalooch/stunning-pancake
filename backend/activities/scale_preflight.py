@@ -8,7 +8,9 @@ from django.contrib.auth import get_user_model
 from activities import simulator_state as sim
 from activities.scale_config import (
     BATCH_PARALLEL_MIN_USERS,
+    BATCH_WARN_WITHOUT_WIPE_ABOVE,
     FORCE_SKIP_ACTIVITIES_ABOVE,
+    LIVE_POOL_REDIS_FULL_ABOVE,
     MAX_BATCH_USERS,
     MAX_CONCURRENT_RIDERS,
     MAX_LIVE_POOL,
@@ -18,7 +20,8 @@ from activities.scale_config import (
     SKIP_GLOBAL_LIVE_POOL_ABOVE,
     TELEMETRY_API_DEFAULT_LIMIT,
     compute_batch_scaling,
-    should_skip_global_live_pool,
+    estimate_batch_disk_gb,
+    live_pool_mode_for_target,
 )
 from activities.services import TelemetryService
 
@@ -38,6 +41,9 @@ def analyze_scale(
 
     risks: list[dict] = []
     recommendations: list[str] = []
+
+    force_skip = target >= FORCE_SKIP_ACTIVITIES_ABOVE and generate_activities
+    effective_skip = skip_activities or force_skip
 
     # --- Database ---
     if target > 100_000 and generate_activities and not skip_activities:
@@ -60,7 +66,7 @@ def analyze_scale(
             'detail': 'Zalecane pominięcie aktywności historycznych przy dużej puli.',
         })
 
-    if target > 50_000:
+    if target > 5_000:
         risks.append({
             'severity': 'info',
             'area': 'postgresql',
@@ -68,16 +74,51 @@ def analyze_scale(
             'detail': 'Pierwsze odświeżenie KPI może trwać kilka s; potem cache 120s i tryb stale podczas batch.',
         })
 
+    disk_gb = estimate_batch_disk_gb(target, skip_activities=effective_skip)
+    if target >= 1_000:
+        disk_sev = 'high' if disk_gb >= 5 else 'medium' if disk_gb >= 1 else 'info'
+        risks.append({
+            'severity': disk_sev,
+            'area': 'postgresql',
+            'title': 'Szacunek dysku Postgres (batch)',
+            'detail': (
+                f'~{disk_gb:.1f} GB przy {target:,} użytkownikach (skip_activities). '
+                f'Przy pełnym dysku zmniejsz SCALE_USER_BULK_PG_BATCH_SIZE lub wykonaj wipe przed dużym runem.'
+            ),
+        })
+        if disk_gb >= 3:
+            recommendations.append(
+                f'Zapewnij ≥{max(2, int(disk_gb) + 2)} GB wolnego miejsca na wolumenie Postgres.'
+            )
+
+    if target >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
+        risks.append({
+            'severity': 'medium' if athlete_count < target else 'high',
+            'area': 'batch',
+            'title': 'Batch bez wipe',
+            'detail': (
+                f'W bazie jest już {athlete_count:,} athlete; dodajesz ~{target:,}. '
+                'Zalecany chunked wipe (`/admin/wipe-data/`) przed pełnym re-seedem.'
+            ),
+        })
+        recommendations.append('Uruchom wipe przed batch >10k jeśli to pełny re-test skali.')
+
     # --- Redis / live sim ---
-    if should_skip_global_live_pool(target):
+    live_mode = live_pool_mode_for_target(target)
+    if live_mode == 'db':
         pool_detail = (
-            f'Przy ≥{SKIP_GLOBAL_LIVE_POOL_ABOVE:,} athlete live sim używa próbkowania DB per miasto '
-            f'(bez globalnego Redis SET 300k).'
+            f'Przy ≥{SKIP_GLOBAL_LIVE_POOL_ABOVE:,} live sim: próbkowanie DB per miasto '
+            f'(bez globalnego Redis SET).'
+        )
+    elif target < LIVE_POOL_REDIS_FULL_ABOVE:
+        pool_detail = (
+            f'Pula Redis do {target:,} ID (mała skala). Max jednocześnie na mapie: '
+            f'{MAX_CONCURRENT_RIDERS:,}.'
         )
     else:
         pool_detail = (
-            f'Pula Redis capped do {MAX_LIVE_POOL_REDIS:,} ID; jednocześnie jeździ max '
-            f'{MAX_CONCURRENT_RIDERS:,} (telemetria: max {MAX_TELEMETRY_PUBLISH_PER_TICK:,}/tick).'
+            f'Pula Redis capped do {MAX_LIVE_POOL_REDIS:,} ID (cel {target:,}); telemetria max '
+            f'{MAX_TELEMETRY_PUBLISH_PER_TICK:,}/tick.'
         )
     risks.append({
         'severity': 'info',
@@ -86,17 +127,8 @@ def analyze_scale(
         'detail': pool_detail,
     })
 
-    if target >= 100_000:
-        risks.append({
-            'severity': 'high',
-            'area': 'postgresql',
-            'title': 'Dysk Postgres (bulk_create + temp)',
-            'detail': (
-                'Railway Postgres potrzebuje ≥10 GB wolnego miejsca na 300k insertów '
-                '(pgsql_tmp/WAL). Zmniejsz SCALE_USER_BULK_PG_BATCH_SIZE jeśli "No space left on device".'
-            ),
-        })
-        recommendations.append('Nie uruchamiaj live sim podczas batch 300k.')
+    if target >= SKIP_GLOBAL_LIVE_POOL_ABOVE:
+        recommendations.append('Nie uruchamiaj live sim podczas równoległego batch 50k+.')
 
     if target * active_ratio > MAX_CONCURRENT_RIDERS:
         risks.append({
@@ -138,9 +170,6 @@ def analyze_scale(
             'detail': item,
         })
 
-    force_skip = target >= FORCE_SKIP_ACTIVITIES_ABOVE and generate_activities
-    effective_skip = skip_activities or force_skip
-
     batch_plan = compute_batch_scaling(target)
     est_batch_sec = batch_plan['estimated_batch_seconds']
     if effective_skip:
@@ -171,6 +200,9 @@ def analyze_scale(
         'batch_plan': batch_plan,
         'estimated_batch_seconds': est_batch_sec,
         'estimated_batch_label': est_label,
+        'estimated_disk_gb': disk_gb,
+        'live_pool_mode': batch_plan.get('live_pool_mode', live_pool_mode_for_target(target)),
+        'warn_without_wipe': batch_plan.get('warn_without_wipe', False) and athlete_count > 0,
         'limits': {
             'MAX_BATCH_USERS': MAX_BATCH_USERS,
             'MAX_LIVE_POOL': MAX_LIVE_POOL,
