@@ -28,6 +28,9 @@ from activities.scale_config import (
 # Standard Railway volume tiers (GB) — used to infer cap from pg_database_size
 RAILWAY_VOLUME_TIERS_GB = (0.5, 5, 10, 20, 50, 100, 250, 500, 1024)
 
+# Below this DB size, pg_database_size reflects empty/wiped DB, not the volume cap
+EMPTY_DB_INFER_THRESHOLD_GB = 2.0
+
 DISK_BUDGET_CACHE_KEY = '{sim}:disk:budget_gb'
 DISK_BUDGET_CACHE_TTL = 86400 * 7
 
@@ -115,12 +118,19 @@ def remember_disk_budget_from_full_disk(db_gb: float | None = None) -> None:
         pass
 
 
-def resolve_disk_budget_gb(db_gb: float | None = None) -> tuple[float, str]:
+def resolve_disk_budget_gb(
+    db_gb: float | None = None,
+    *,
+    batch_delta_gb: float | None = None,
+) -> tuple[float, str]:
     """
     Postgres volume budget in GB.
 
     Priority: SCALE_POSTGRES_DISK_BUDGET_GB env → RAILWAY_VOLUME_MOUNT_PATH df
     → Redis (learned from prior disk-full) → infer from pg_database_size → default.
+
+    After wipe, pg_database_size is tiny (e.g. 0.1 GB) but the Railway volume may be
+    10–20 GB — do not map that to the 0.5 GB tier.
     """
     env_b = _read_env_disk_budget_gb()
     if env_b is not None:
@@ -135,6 +145,14 @@ def resolve_disk_budget_gb(db_gb: float | None = None) -> tuple[float, str]:
         return cached, 'learned_cache'
 
     if db_gb is not None and db_gb > 0:
+        if db_gb < EMPTY_DB_INFER_THRESHOLD_GB:
+            budget = float(POSTGRES_DISK_BUDGET_GB_DEFAULT)
+            if batch_delta_gb and batch_delta_gb > 0:
+                budget = max(
+                    budget,
+                    db_gb + float(batch_delta_gb) + float(DISK_HEADROOM_GB),
+                )
+            return budget, 'empty_db_floor'
         return infer_volume_cap_from_db_usage(db_gb), 'inferred_pg_size'
 
     return POSTGRES_DISK_BUDGET_GB_DEFAULT, 'default'
@@ -146,7 +164,7 @@ def _usage_ratio(
 ) -> tuple[float | None, float | None, str | None]:
     if db_gb is None:
         return None, None, None
-    budget, source = resolve_disk_budget_gb(db_gb)
+    budget, source = resolve_disk_budget_gb(db_gb, batch_delta_gb=projected_delta_gb)
     projected = db_gb + projected_delta_gb + float(DISK_HEADROOM_GB)
     return projected / budget, budget, source
 
@@ -304,6 +322,7 @@ def prepare_batch_disk_guard(
             'env': 'env',
             'railway_volume_mount': 'wolumen Railway (df)',
             'inferred_pg_size': 'wykryto z rozmiaru bazy',
+            'empty_db_floor': 'pusta baza — domyślny budżet wolumenu',
             'learned_cache': 'po wcześniejszym błędzie dysku',
             'default': 'domyślny',
         }
@@ -312,7 +331,11 @@ def prepare_batch_disk_guard(
             f'Budżet dysku Postgres: ~{budget_gb:g} GB ({src_labels.get(budget_source, budget_source)}).',
         )
 
-    if ratio is not None and ratio > 1.15:
+    if (
+        ratio is not None
+        and ratio > 1.15
+        and budget_source not in ('empty_db_floor', 'default')
+    ):
         return {
             'ok': False,
             'error': (
