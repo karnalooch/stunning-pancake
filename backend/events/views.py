@@ -19,6 +19,7 @@ from .serializers import (
     EventLeaderboardSerializer,
 )
 from .services import EventProgressService, EventNormalizationService
+from .burst import burst_protection_meta, join_event
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,12 @@ class EventViewSet(viewsets.ModelViewSet):
             return [IsTenantAdmin()]
         return super().get_permissions()
 
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        if self.action == 'list':
+            ctx['burst_lightweight'] = True
+        return ctx
+
     def perform_create(self, serializer):
         user = self.request.user
         if user.role != 'GLOBAL_OWNER':
@@ -86,6 +93,42 @@ class EventViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("You cannot delete events outside of your tenant.")
         instance.delete()
+
+    @extend_schema(
+        summary="Join event",
+        description=(
+            "Register the authenticated user for an event. Idempotent: already joined returns 200. "
+            "Large or high-load events may return 429 with Retry-After when burst protection is active."
+        ),
+        responses={
+            200: ParticipationSerializer,
+            201: ParticipationSerializer,
+            429: {'description': 'Join rate limit exceeded'},
+        },
+    )
+    @action(detail=True, methods=['post'], url_path='join')
+    def join(self, request, pk=None):
+        """Join or re-confirm participation in an event."""
+        event = self.get_object()
+        if event.status not in ('PUBLISHED', 'ACTIVE'):
+            return Response(
+                {'detail': 'Event is not open for participation.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        participation, created, err = join_event(request.user, event)
+        if err:
+            resp = Response(
+                {'detail': err['detail'], 'detail_pl': err.get('detail_pl'), 'burst_protection': burst_protection_meta(event, user=request.user)},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+            resp['Retry-After'] = str(err['retry_after'])
+            return resp
+
+        serializer = ParticipationSerializer(participation)
+        data = serializer.data
+        data['burst_protection'] = burst_protection_meta(event, user=request.user)
+        return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
     @extend_schema(
         summary="Get event leaderboard",

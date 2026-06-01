@@ -169,7 +169,62 @@ class ActivityViewSet(viewsets.ModelViewSet):
         description="Starts a new sports session."
     )
     def create(self, request, *args, **kwargs):
-        return super().create(request, *args, **kwargs)
+        from events.burst import (
+            burst_protection_meta,
+            clear_active_session,
+            get_active_session_activity_id,
+            queue_session_start,
+            resolve_event_for_session,
+            session_start_rate_limit,
+            set_active_session,
+        )
+        from events.burst import is_burst_enabled_for_event
+        from events.tasks import process_event_start_queue
+
+        event_id_raw = request.data.get('event_id') or request.query_params.get('event_id')
+        event_id = int(event_id_raw) if event_id_raw not in (None, '') else None
+        event = resolve_event_for_session(request.user, event_id)
+
+        if event and is_burst_enabled_for_event(event.id, event):
+            existing_id = get_active_session_activity_id(event.id, request.user.id)
+            if existing_id:
+                existing = Activity.objects.filter(
+                    pk=existing_id, user=request.user, end_time__isnull=True,
+                ).first()
+                if existing:
+                    serializer = ActivitySerializer(existing)
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                clear_active_session(event.id, request.user.id)
+
+            allowed, _, retry_after = session_start_rate_limit(event.id)
+            if not allowed:
+                position = queue_session_start(
+                    event.id,
+                    request.user.id,
+                    dict(request.data),
+                )
+                process_event_start_queue.delay(event.id)
+                resp = Response(
+                    {
+                        'detail': 'Session start rate limit — queued for retry.',
+                        'detail_pl': 'Limit startu sesji — kolejka, spróbuj za chwilę.',
+                        'queued': True,
+                        'queue_position': position,
+                        'burst_protection': burst_protection_meta(event, user=request.user),
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+                resp['Retry-After'] = str(retry_after)
+                return resp
+
+        response = super().create(request, *args, **kwargs)
+
+        if event and is_burst_enabled_for_event(event.id, event) and response.status_code in (200, 201):
+            activity_id = response.data.get('id')
+            if activity_id:
+                set_active_session(event.id, request.user.id, int(activity_id))
+
+        return response
 
     @action(detail=True, methods=['patch'])
     def sync_path(self, request, pk=None):

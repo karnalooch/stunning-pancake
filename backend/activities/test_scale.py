@@ -82,6 +82,17 @@ class ScalePreflightTest(SimpleTestCase):
         self.assertIn('batch_plan', report)
         self.assertGreater(report['estimated_batch_seconds'], 0)
 
+    @patch('activities.scale_preflight._telemetry_active_count', return_value=0)
+    @patch('activities.scale_preflight.sim.get_live_state', return_value={'running': False})
+    @patch('activities.scale_preflight.get_user_model')
+    def test_50k_event_day_scenario(self, mock_user_model, *_rest):
+        mock_user_model.objects.filter.return_value.count.return_value = 0
+        report = analyze_scale(50_000, active_ratio=0.2, event_day=True)
+        self.assertTrue(report['event_day'])
+        self.assertGreaterEqual(report['max_concurrent_riders'], 5_000)
+        areas = {r['area'] for r in report['risks']}
+        self.assertIn('event_burst', areas)
+
 
 class TelemetryServiceScaleTest(SimpleTestCase):
     def test_bbox_radius_positive(self):

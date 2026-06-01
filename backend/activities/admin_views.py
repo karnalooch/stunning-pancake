@@ -561,11 +561,13 @@ class ScalePreflightView(APIView):
         except (TypeError, ValueError):
             active_ratio = 0.3
         skip_activities = request.query_params.get('skip_activities', 'false').lower() in ('1', 'true', 'yes')
+        event_day = request.query_params.get('event_day', '').lower() in ('1', 'true', 'yes')
         return Response(analyze_scale(
             target_users=target,
             active_ratio=active_ratio,
             skip_activities=skip_activities,
             generate_activities=not skip_activities,
+            event_day=event_day if event_day else None,
         ))
 
 

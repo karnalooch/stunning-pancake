@@ -24,6 +24,14 @@ from activities.scale_config import (
     estimate_batch_disk_gb,
     live_pool_mode_for_target,
 )
+from events.scale_config import (
+    EVENT_BURST_AUTO_MIN_PARTICIPANTS,
+    EVENT_BURST_MODE,
+    EVENT_JOIN_RATE_PER_MINUTE,
+    EVENT_MAX_CONCURRENT_RIDERS,
+    EVENT_SESSION_START_RATE_PER_MINUTE,
+    EVENT_TARGET_POOL_USERS,
+)
 from activities.services import TelemetryService
 
 
@@ -32,13 +40,17 @@ def analyze_scale(
     active_ratio: float = 0.3,
     skip_activities: bool = False,
     generate_activities: bool = True,
+    *,
+    event_day: bool | None = None,
 ) -> dict:
     """Return risks and recommended settings for a planned scale test."""
     User = get_user_model()
     athlete_count = User.objects.filter(role='ATHLETE').count()
     target = min(int(target_users), MAX_BATCH_USERS)
 
-    concurrent = min(MAX_CONCURRENT_RIDERS, max(1, int(target * active_ratio)))
+    is_event_day = event_day if event_day is not None else target >= EVENT_TARGET_POOL_USERS
+    rider_cap = EVENT_MAX_CONCURRENT_RIDERS if is_event_day else MAX_CONCURRENT_RIDERS
+    concurrent = min(rider_cap, max(1, int(target * active_ratio)))
 
     risks: list[dict] = []
     recommendations: list[str] = []
@@ -138,16 +150,41 @@ def analyze_scale(
     if target >= SKIP_GLOBAL_LIVE_POOL_ABOVE:
         recommendations.append('Nie uruchamiaj live sim podczas równoległego batch 50k+.')
 
-    if target * active_ratio > MAX_CONCURRENT_RIDERS:
+    if target * active_ratio > rider_cap:
         risks.append({
             'severity': 'medium',
             'area': 'live_sim',
             'title': 'active_ratio obcięty',
             'detail': (
                 f'Żądane ~{int(target * active_ratio):,} aktywnych jazd, limit systemu '
-                f'{MAX_CONCURRENT_RIDERS:,}.'
+                f'{rider_cap:,}.'
             ),
         })
+
+    if is_event_day:
+        burst_off = EVENT_BURST_MODE == 'off'
+        risks.append({
+            'severity': 'high' if burst_off else 'info',
+            'area': 'event_burst',
+            'title': 'Dzień eventu (~50k wejść)',
+            'detail': (
+                f'Pula rejestracji ~{target:,}; jednoczesna jazda/GPS ograniczona do '
+                f'{EVENT_MAX_CONCURRENT_RIDERS:,}. '
+                f'Ochrona burst: tryb {EVENT_BURST_MODE} (auto włącza się od '
+                f'{EVENT_BURST_AUTO_MIN_PARTICIPANTS:,} uczestników lub przy skoku obciążenia): '
+                f'join {EVENT_JOIN_RATE_PER_MINUTE:,}/min, sesje '
+                f'{EVENT_SESSION_START_RATE_PER_MINUTE:,}/min.'
+            ),
+        })
+        recommendations.append(
+            'Przed startem: warm_event_start (lub manage.py warm_event); '
+            'POST /events/{id}/join/ zamiast masowego tworzenia Participation. '
+            'EVENT_BURST_MODE=off tylko na dev.'
+        )
+        recommendations.append(
+            f'Railway: Redis + 2+ web workers; Postgres connection pooling; '
+            f'EVENT_MAX_CONCURRENT_RIDERS={EVENT_MAX_CONCURRENT_RIDERS}.'
+        )
 
     # --- Frontend ---
     risks.append({
@@ -203,8 +240,10 @@ def analyze_scale(
         'effective_skip_activities': effective_skip,
         'force_skip_activities': force_skip,
         'max_live_pool': MAX_LIVE_POOL,
-        'max_concurrent_riders': MAX_CONCURRENT_RIDERS,
+        'max_concurrent_riders': rider_cap,
         'estimated_concurrent_riders': concurrent,
+        'event_day': is_event_day,
+        'event_burst_mode': EVENT_BURST_MODE,
         'batch_plan': batch_plan,
         'estimated_batch_seconds': est_batch_sec,
         'estimated_batch_label': est_label,

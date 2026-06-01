@@ -8,6 +8,7 @@ from .models import Event, Participation, Achievement
 class EventSerializer(serializers.ModelSerializer):
     """Full event detail serializer with boundary support."""
     boundary = serializers.JSONField(required=False, allow_null=True)
+    burst_protection = serializers.SerializerMethodField()
 
     class Meta:
         model = Event
@@ -20,7 +21,22 @@ class EventSerializer(serializers.ModelSerializer):
             "require_brouter_validation",
             "boundary",
             "created_at",
+            "burst_protection",
         ]
+
+    def get_burst_protection(self, obj):
+        request = self.context.get('request')
+        user = request.user if request and getattr(request, 'user', None) and request.user.is_authenticated else None
+        from events.burst import burst_protection_meta
+        from events.scale_config import EVENT_MAX_CONCURRENT_RIDERS
+        meta = burst_protection_meta(
+            obj,
+            user=user,
+            lightweight=self.context.get('burst_lightweight', False),
+        )
+        if 'max_concurrent_riders_hint' not in meta:
+            meta['max_concurrent_riders_hint'] = EVENT_MAX_CONCURRENT_RIDERS
+        return meta
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

@@ -1,5 +1,7 @@
 # Test skali 300 000 użytkowników
 
+> **Dzień eventu (~50k):** zobacz [EVENT_BURST_50K.md](./EVENT_BURST_50K.md) (auto burst, join/session rate limits, `warm_event`).
+
 ## Root cause (Railway 300k run)
 
 | Symptom | Cause | Fix |

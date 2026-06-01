@@ -458,7 +458,8 @@ def _run_live_tick_body():
         return
 
     now = timezone.now()
-    from activities.scale_config import MAX_CONCURRENT_RIDERS, MAX_TELEMETRY_PUBLISH_PER_TICK
+    from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK
+    from events.burst import effective_event_concurrent_cap, max_starts_per_live_tick
 
     pool_size = sim.get_live_pool_count()
     active_rides = sim.get_live_rides()
@@ -545,12 +546,16 @@ def _run_live_tick_body():
         sim.delete_live_ride(uid)
 
     # ── Phase 2: Start new rides (capped globally + balanced per city) ──
+    max_riders = effective_event_concurrent_cap(state)
+    tick_seconds = int(state.get('tick_seconds', 8))
     current_riding = sim.get_live_ride_count()
     target_riding = min(
-        MAX_CONCURRENT_RIDERS,
+        max_riders,
         max(1, int(total_users * active_ratio)),
     )
     needed = max(0, target_riding - current_riding)
+    if state.get('event_id') or state.get('event_load_test'):
+        needed = min(needed, max_starts_per_live_tick(total_users, active_ratio, tick_seconds))
     started = 0
 
     db_pool = sim.is_live_pool_db_mode()

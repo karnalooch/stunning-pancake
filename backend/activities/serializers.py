@@ -87,9 +87,15 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for starting a new activity.
     """
+    event_id = serializers.IntegerField(required=False, write_only=True)
+
     class Meta:
         model = Activity
-        fields = ('type', 'start_time')
+        fields = ('type', 'start_time', 'event_id')
+
+    def create(self, validated_data):
+        validated_data.pop('event_id', None)
+        return super().create(validated_data)
 
 class PrivacyZoneSerializer(GeoFeatureModelSerializer):
     """
