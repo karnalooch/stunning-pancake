@@ -496,6 +496,18 @@ def get_live_ride_count() -> int:
     return r.hlen(LIVE_RIDES_KEY)
 
 
+def get_live_city_counts() -> dict[str, int]:
+    """Active riders per simulator city (for live-map overview badges)."""
+    from simulate_active_cities import CITIES
+
+    counts = {c['slug']: 0 for c in CITIES}
+    for ride in get_live_rides().values():
+        slug = ride.get('city_slug') or ''
+        if slug in counts:
+            counts[slug] += 1
+    return counts
+
+
 # ─── Validation ──────────────────────────────────────────────────
 
 def acquire_live_tick_lock() -> bool:

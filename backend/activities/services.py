@@ -352,12 +352,84 @@ class TelemetryService:
             pass
 
     @classmethod
+    def _fetch_redis_positions_per_city(
+        cls,
+        r,
+        cap: int,
+        geo_radius_km: float,
+    ) -> tuple[list[dict], dict]:
+        """Guarantee geographic spread at country zoom — sample near each city hub."""
+        import json as _json
+        from simulate_active_cities import CITIES
+
+        pos_key = cls._positions_key()
+        geo_key = cls._geo_key()
+        try:
+            from activities import simulator_state as sim_state
+            active_riding = sim_state.get_live_ride_count()
+        except Exception:
+            active_riding = int(r.hlen(pos_key) or 0)
+
+        per_city = max(8, cap // max(len(CITIES), 1))
+        meta = {
+            'returned': 0,
+            'capped': False,
+            'redis_active': active_riding,
+            'active_riding': active_riding,
+            'telemetry_positions': int(r.hlen(pos_key) or 0),
+            'source': 'redis',
+            'fetch_mode': 'per_city',
+        }
+        seen: set[str] = set()
+        id_list: list[str] = []
+        radius_km = min(max(float(geo_radius_km), 35.0), 120.0)
+
+        for city in CITIES:
+            device_ids = r.georadius(
+                geo_key, city['lon'], city['lat'], radius_km,
+                unit='km', count=per_city, sort='ASC',
+            )
+            for d in device_ids or []:
+                did = d.decode() if isinstance(d, bytes) else str(d)
+                if did not in seen:
+                    seen.add(did)
+                    id_list.append(did)
+                if len(id_list) >= cap:
+                    meta['capped'] = True
+                    break
+            if len(id_list) >= cap:
+                break
+
+        positions: list[dict] = []
+        if not id_list:
+            meta['returned'] = 0
+            return positions, meta
+
+        raw_vals = r.hmget(pos_key, id_list)
+        for pos_json in raw_vals:
+            if not pos_json:
+                continue
+            try:
+                positions.append(
+                    _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json),
+                )
+            except Exception:
+                continue
+            if len(positions) >= cap:
+                meta['capped'] = True
+                break
+
+        meta['returned'] = len(positions)
+        return positions[:cap], meta
+
+    @classmethod
     def _fetch_redis_positions(
         cls,
         r,
         bbox: tuple[float, float, float, float] | None,
         cap: int,
         geo_radius_km: float,
+        zoom: float | None = None,
     ) -> tuple[list[dict], dict]:
         import json as _json
 
@@ -378,6 +450,10 @@ class TelemetryService:
             'source': 'redis',
         }
         positions: list[dict] = []
+        country_overview = zoom is not None and zoom < 8
+
+        if country_overview:
+            return cls._fetch_redis_positions_per_city(r, cap, geo_radius_km)
 
         if bbox:
             west, south, east, north = bbox
@@ -405,7 +481,7 @@ class TelemetryService:
                 continue
             try:
                 pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
-                if bbox:
+                if bbox and not country_overview:
                     west, south, east, north = bbox
                     lon = pos.get('longitude', 0)
                     lat = pos.get('latitude', 0)
@@ -426,6 +502,7 @@ class TelemetryService:
         cls,
         bbox: tuple[float, float, float, float] | None = None,
         limit: int | None = None,
+        zoom: float | None = None,
     ) -> tuple[list[dict], dict]:
         """
         Fetch positions without scanning the full Redis hash.
@@ -456,7 +533,7 @@ class TelemetryService:
         try:
             r = get_redis()
             positions, meta = cls._fetch_redis_positions(
-                r, bbox, cap, float(TELEMETRY_GEO_RADIUS_KM),
+                r, bbox, cap, float(TELEMETRY_GEO_RADIUS_KM), zoom=zoom,
             )
             if positions:
                 if cache_key:

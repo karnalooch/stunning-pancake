@@ -1,3 +1,5 @@
+import type { LiveMapCity } from './liveMapCities';
+
 /** Activity kind for live map markers (icons only — no position dots). */
 export type LiveActivityKind = 'bike' | 'run';
 
@@ -112,6 +114,76 @@ export function animateMarkerTo(
         if (t < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+}
+
+/** City hub marker for Poland overview (pulse + count badge). */
+export function createCityHubMarkerElement(city: LiveMapCity, count: number): HTMLDivElement {
+    const active = count > 0;
+    const root = document.createElement('div');
+    root.className = 'live-city-hub';
+    root.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;';
+
+    const label = document.createElement('div');
+    label.textContent = city.name;
+    label.style.cssText = [
+        'margin-bottom:6px;padding:3px 10px',
+        'background:rgba(15,23,42,0.88);color:#f8fafc',
+        'border-radius:999px;font-size:11px;font-weight:700',
+        'letter-spacing:0.02em;white-space:nowrap',
+        'box-shadow:0 2px 10px rgba(0,0,0,0.2)',
+        'font-family:system-ui,-apple-system,sans-serif',
+        active ? 'opacity:1' : 'opacity:0.55',
+    ].join(';');
+
+    const ring = document.createElement('div');
+    ring.style.cssText = [
+        'position:relative;width:52px;height:52px',
+        'display:flex;align-items:center;justify-content:center',
+    ].join(';');
+
+    const pulse = document.createElement('div');
+    pulse.className = active ? 'live-city-hub-pulse' : '';
+    pulse.style.cssText = [
+        'position:absolute;inset:-6px;border-radius:50%',
+        `background:linear-gradient(135deg,${city.colors[0]},${city.colors[1]})`,
+        active ? '' : 'opacity:0.35',
+    ].join(';');
+
+    const core = document.createElement('div');
+    core.style.cssText = [
+        'position:relative;z-index:1',
+        'min-width:36px;height:36px;padding:0 10px',
+        'border-radius:999px;display:flex;align-items:center;justify-content:center',
+        `background:linear-gradient(145deg,${city.colors[0]},${city.colors[1]})`,
+        'color:#fff;font-size:13px;font-weight:800',
+        'border:2px solid rgba(255,255,255,0.92)',
+        'box-shadow:0 4px 18px rgba(0,0,0,0.25)',
+        'font-variant-numeric:tabular-nums',
+        'font-family:system-ui,-apple-system,sans-serif',
+    ].join(';');
+    core.textContent = String(count);
+
+    ring.append(pulse, core);
+    root.append(label, ring);
+    return root;
+}
+
+export function updateCityHubMarkerElement(el: HTMLDivElement, city: LiveMapCity, count: number): void {
+    const active = count > 0;
+    const label = el.firstElementChild as HTMLDivElement | null;
+    const ring = el.lastElementChild as HTMLDivElement | null;
+    const pulse = ring?.firstElementChild as HTMLDivElement | null;
+    const core = ring?.lastElementChild as HTMLDivElement | null;
+    if (label) {
+        label.style.opacity = active ? '1' : '0.55';
+    }
+    if (pulse) {
+        pulse.className = active ? 'live-city-hub-pulse' : '';
+        pulse.style.opacity = active ? '1' : '0.35';
+    }
+    if (core) {
+        core.textContent = String(count);
+    }
 }
 
 export function updateLiveUserMarkerElement(el: HTMLDivElement, pos: LiveMapPosition): void {

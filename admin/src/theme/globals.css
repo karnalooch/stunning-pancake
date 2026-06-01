@@ -223,6 +223,27 @@ body {
   }
 }
 
+@keyframes liveCityHubPulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.2;
+    transform: scale(1.35);
+  }
+
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+}
+
+.live-city-hub-pulse {
+  animation: liveCityHubPulse 2.4s ease-in-out infinite;
+}
+
 @keyframes float {
 
   0%,

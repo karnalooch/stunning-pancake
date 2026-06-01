@@ -9,10 +9,17 @@ import { notifications } from '@mantine/notifications';
 import {
     createLiveUserMarkerElement,
     updateLiveUserMarkerElement,
+    createCityHubMarkerElement,
+    updateCityHubMarkerElement,
     animateMarkerTo,
     resolveActivityKind,
     type LiveMapPosition,
 } from './liveMapMarkers';
+import {
+    POLAND_SIM_CITIES,
+    polandCitiesBounds,
+    nearestCitySlug,
+} from './liveMapCities';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
@@ -37,9 +44,11 @@ const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
 const POLL_INTERVAL_MS = 2500;
 const MOVE_DEBOUNCE_MS = 400;
+const OVERVIEW_ZOOM_THRESHOLD = 9;
 const DETAIL_ZOOM_THRESHOLD = 11;
 const DETAIL_MARKER_CAP = 120;
 const FETCH_LIMIT = 500;
+const CLUSTER_MAX_ZOOM = 8;
 
 function bboxFromMap(map: any): string {
     const bounds = map.getBounds();
@@ -53,6 +62,9 @@ export const LiveMap: React.FC = () => {
     const mapRef = useRef<any>(null);
     const mlRef = useRef<any>(null);
     const detailMarkersRef = useRef<Map<string, any>>(new Map());
+    const cityHubMarkersRef = useRef<Map<string, any>>(new Map());
+    const cityCountsRef = useRef<Record<string, number>>({});
+    const fitBoundsDoneRef = useRef(false);
     const positionsRef = useRef<UserPosition[]>([]);
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const moveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -81,8 +93,8 @@ export const LiveMap: React.FC = () => {
             type: 'geojson',
             data: { type: 'FeatureCollection', features: [] },
             cluster: true,
-            clusterMaxZoom: 14,
-            clusterRadius: 50,
+            clusterMaxZoom: CLUSTER_MAX_ZOOM,
+            clusterRadius: 42,
         });
         map.addLayer({
             id: 'live-clusters',
@@ -90,11 +102,45 @@ export const LiveMap: React.FC = () => {
             source: 'live-positions',
             filter: ['has', 'point_count'],
             paint: {
-                'circle-color': ['step', ['get', 'point_count'], '#06b6d4', 10, '#8b5cf6', 30, '#ec4899'],
-                'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 30, 40],
-                'circle-opacity': 0.85,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': 'rgba(255,255,255,0.4)',
+                'circle-color': [
+                    'interpolate', ['linear'], ['get', 'point_count'],
+                    2, '#22d3ee', 15, '#8b5cf6', 40, '#ec4899', 80, '#f43f5e',
+                ],
+                'circle-radius': [
+                    'interpolate', ['linear'], ['get', 'point_count'],
+                    2, 22, 10, 28, 30, 36, 60, 44,
+                ],
+                'circle-opacity': 0.88,
+                'circle-stroke-width': 2.5,
+                'circle-stroke-color': 'rgba(255,255,255,0.55)',
+                'circle-blur': 0.15,
+            },
+        });
+        map.addLayer({
+            id: 'live-cluster-count',
+            type: 'symbol',
+            source: 'live-positions',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': ['get', 'point_count_abbreviated'],
+                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+                'text-size': 13,
+            },
+            paint: {
+                'text-color': '#ffffff',
+            },
+        });
+        map.addLayer({
+            id: 'live-unclustered',
+            type: 'circle',
+            source: 'live-positions',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-radius': 6,
+                'circle-color': '#6366f1',
+                'circle-stroke-width': 1.5,
+                'circle-stroke-color': '#fff',
+                'circle-opacity': 0.9,
             },
         });
         try {
@@ -121,11 +167,59 @@ export const LiveMap: React.FC = () => {
         if (source?.setData) source.setData({ type: 'FeatureCollection', features });
     }, [mapReady, ensureLiveSource]);
 
+    const aggregateCityCounts = useCallback((list: UserPosition[]): Record<string, number> => {
+        const counts: Record<string, number> = {};
+        for (const c of POLAND_SIM_CITIES) counts[c.slug] = 0;
+        for (const p of list) {
+            if (!p.lat || !p.lng) continue;
+            const slug = nearestCitySlug(p.lat, p.lng);
+            counts[slug] = (counts[slug] ?? 0) + 1;
+        }
+        return counts;
+    }, []);
+
+    const syncCityHubMarkers = useCallback(() => {
+        const map = mapRef.current;
+        const ml = getMl();
+        if (!map || !ml) return;
+        const zoom = map.getZoom();
+        if (zoom >= OVERVIEW_ZOOM_THRESHOLD) {
+            cityHubMarkersRef.current.forEach((m) => m.remove());
+            cityHubMarkersRef.current.clear();
+            return;
+        }
+        const counts = cityCountsRef.current;
+        for (const city of POLAND_SIM_CITIES) {
+            const count = counts[city.slug] ?? 0;
+            const target: [number, number] = [city.lng, city.lat];
+            const existing = cityHubMarkersRef.current.get(city.slug);
+            if (existing) {
+                updateCityHubMarkerElement(existing.getElement() as HTMLDivElement, city, count);
+                continue;
+            }
+            const el = createCityHubMarkerElement(city, count);
+            const marker = new ml.Marker({ element: el, anchor: 'center' })
+                .setLngLat(target)
+                .addTo(map);
+            cityHubMarkersRef.current.set(city.slug, marker);
+        }
+        try {
+            const showClusters = zoom >= OVERVIEW_ZOOM_THRESHOLD - 1;
+            if (map.getLayer('live-clusters')) {
+                map.setPaintProperty('live-clusters', 'circle-opacity', showClusters ? 0.88 : 0.35);
+            }
+            if (map.getLayer('live-cluster-count')) {
+                map.setLayoutProperty('live-cluster-count', 'visibility', showClusters ? 'visible' : 'none');
+            }
+        } catch { /* style not ready */ }
+    }, []);
+
     const syncDetailMarkers = useCallback(() => {
         const map = mapRef.current;
         const ml = getMl();
         if (!map || !ml) return;
         const zoom = map.getZoom();
+        syncCityHubMarkers();
         if (zoom < DETAIL_ZOOM_THRESHOLD) {
             detailMarkersRef.current.forEach((m) => m.remove());
             detailMarkersRef.current.clear();
@@ -155,7 +249,7 @@ export const LiveMap: React.FC = () => {
                 detailMarkersRef.current.delete(id);
             }
         }
-    }, []);
+    }, [syncCityHubMarkers]);
 
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
         const riding =
@@ -182,7 +276,24 @@ export const LiveMap: React.FC = () => {
         }
         setCyclists((prev) => (bike !== prev ? bike : prev));
         setRunners((prev) => (run !== prev ? run : prev));
-    }, []);
+    }, [syncCityHubMarkers]);
+
+    const applyCityCounts = useCallback((
+        list: UserPosition[],
+        meta: Record<string, unknown> | null | undefined,
+    ) => {
+        const raw = meta?.city_counts;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+            const merged: Record<string, number> = {};
+            for (const c of POLAND_SIM_CITIES) merged[c.slug] = 0;
+            for (const [slug, n] of Object.entries(raw as Record<string, unknown>)) {
+                if (typeof n === 'number') merged[slug] = n;
+            }
+            cityCountsRef.current = merged;
+            return;
+        }
+        cityCountsRef.current = aggregateCityCounts(list);
+    }, [aggregateCityCounts]);
 
     const fetchPositions = useCallback(async () => {
         if (!canFetch || !tabVisibleRef.current || fetchInFlightRef.current) return;
@@ -194,7 +305,10 @@ export const LiveMap: React.FC = () => {
         try {
             const map = mapRef.current;
             const params: Record<string, string | number> = { limit: FETCH_LIMIT };
-            if (map) params.bbox = bboxFromMap(map);
+            if (map) {
+                params.bbox = bboxFromMap(map);
+                params.zoom = Math.round(map.getZoom());
+            }
 
             const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal });
             if (ac.signal.aborted) return;
@@ -204,8 +318,12 @@ export const LiveMap: React.FC = () => {
             if (Array.isArray(list)) {
                 positionsRef.current = list;
                 applyMetaCounts(list, meta);
+                applyCityCounts(list, meta);
                 updateLiveSource(list);
-                requestAnimationFrame(syncDetailMarkers);
+                requestAnimationFrame(() => {
+                    syncCityHubMarkers();
+                    syncDetailMarkers();
+                });
             }
             setLastRefreshMs(Math.round(performance.now() - t0));
         } catch (err: unknown) {
@@ -216,7 +334,7 @@ export const LiveMap: React.FC = () => {
             fetchInFlightRef.current = false;
             setLoading(false);
         }
-    }, [updateLiveSource, syncDetailMarkers, canFetch, applyMetaCounts]);
+    }, [updateLiveSource, syncDetailMarkers, syncCityHubMarkers, canFetch, applyMetaCounts, applyCityCounts]);
 
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;
@@ -345,10 +463,16 @@ export const LiveMap: React.FC = () => {
             map.on('load', () => {
                 if (!cancelled) {
                     ensureLiveSource(map);
+                    if (!fitBoundsDoneRef.current) {
+                        fitBoundsDoneRef.current = true;
+                        map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
+                    }
                     setMapReady(true);
                 }
             });
-            map.on('zoom', syncDetailMarkers);
+            map.on('zoom', () => {
+                syncDetailMarkers();
+            });
             map.on('moveend', scheduleMoveFetch);
             mapRef.current = map;
         }).catch(() => {
@@ -362,6 +486,8 @@ export const LiveMap: React.FC = () => {
             cancelled = true;
             detailMarkersRef.current.forEach((m: any) => m.remove());
             detailMarkersRef.current.clear();
+            cityHubMarkersRef.current.forEach((m: any) => m.remove());
+            cityHubMarkersRef.current.clear();
             if (mapRef.current) {
                 try {
                     mapRef.current.off('moveend', scheduleMoveFetch);

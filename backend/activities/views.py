@@ -269,7 +269,17 @@ class TelemetryLiveView(generics.GenericAPIView):
         except (TypeError, ValueError):
             limit = 0
 
-        positions, telemetry_meta = TelemetryService.get_live_positions(bbox=bbox_tuple, limit=limit or None)
+        zoom_param = None
+        try:
+            z = request.query_params.get('zoom', '')
+            if z != '':
+                zoom_param = float(z)
+        except (TypeError, ValueError):
+            zoom_param = None
+
+        positions, telemetry_meta = TelemetryService.get_live_positions(
+            bbox=bbox_tuple, limit=limit or None, zoom=zoom_param,
+        )
 
         if not isinstance(positions, list):
             positions = []
@@ -320,8 +330,10 @@ class TelemetryLiveView(generics.GenericAPIView):
         try:
             from activities import simulator_state as sim_state
             active_riding = sim_state.get_live_ride_count()
+            city_counts = sim_state.get_live_city_counts()
         except Exception:
             active_riding = telemetry_meta.get('active_riding') or telemetry_meta.get('redis_active', 0)
+            city_counts = {}
 
         resp = Response({
             'positions': enriched_data,
@@ -331,6 +343,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                 'active_riding': active_riding,
                 'viewport_bike': viewport_bike,
                 'viewport_run': viewport_run,
+                'city_counts': city_counts,
                 'pool_note': (
                     'active = riders in live sim; cyclists/runners = in current map viewport only.'
                 ),
