@@ -21,7 +21,7 @@ EXPOSE 17777
 
 CMD ["java", "-Xmx512m", "-Xms64m", \
      "-cp", "brouter.jar", \
-     "btools.server.BRouterServer", \
+     "btools.server.BRouter", \
      "/brouter/segments4", \
      "foot-all.brf,bicycle.brf", \
      "17777", "1"]
