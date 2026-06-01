@@ -8,21 +8,29 @@ import { hasStoredSession } from '../../core/auth/tokens';
 import { useAuth } from '../../core/auth/useAuth';
 import { notifications } from '@mantine/notifications';
 import {
-    createLiveUserMarkerElement,
-    createCompactLiveUserMarkerElement,
-    updateLiveUserMarkerElement,
-    updateCompactLiveUserMarkerElement,
-    createCityHubMarkerElement,
-    updateCityHubMarkerElement,
-    animateMarkerTo,
     resolveActivityKind,
+    speedToKmh,
     type LiveMapPosition,
 } from './liveMapMarkers';
+import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug } from './liveMapCities';
 import {
-    POLAND_SIM_CITIES,
-    polandCitiesBounds,
-    nearestCitySlug,
-} from './liveMapCities';
+    ZOOM_MODE_LABEL,
+    apiDetailForZoom,
+    clusterRadiusForZoom,
+    limitForZoom,
+    pollIntervalForZoom,
+    resolveLiveMapZoomMode,
+} from './liveMapZoom';
+import {
+    installLiveMapLayers,
+    LIVE_LAYERS,
+    LIVE_SOURCES,
+    prepareLiveMapStyle,
+    setCityHubData,
+    setLivePositionsData,
+    type LiveMapClickEvent,
+} from './liveMapLayers';
+import { LivePositionInterpolator } from './liveMapInterp';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
@@ -45,103 +53,28 @@ type UserPosition = LiveMapPosition;
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
-const POLL_BASE_MS = 2200;
 const MOVE_DEBOUNCE_MS = 280;
-/** City hub badges (count per sim city). */
-const CITY_HUB_MAX_ZOOM = 9;
-/** MapLibre clusters — primary view 9–12 (no HTML pile-up). */
-const GL_POINTS_MIN_ZOOM = 7;
-const GL_HTML_HANDOFF_ZOOM = 12;
-/** HTML markers only from this zoom upward. */
-const COMPACT_HTML_MIN_ZOOM = 12;
-/** Name + speed labels only at street zoom. */
-const DETAIL_ZOOM_THRESHOLD = 13;
-const CLUSTER_MAX_ZOOM = 13;
-
-/** API fetch cap scales with zoom — country overview vs street detail. */
-function limitForZoom(zoom: number): number {
-    if (zoom < 7) return 1200;
-    if (zoom < CITY_HUB_MAX_ZOOM) return 2500;
-    if (zoom < DETAIL_ZOOM_THRESHOLD) return 5000;
-    if (zoom < 13) return 8000;
-    return 12000;
-}
-
-function detailMarkerCap(zoom: number, total: number): number {
-    if (zoom < COMPACT_HTML_MIN_ZOOM) return 0;
-    if (zoom < DETAIL_ZOOM_THRESHOLD) return Math.min(100, total);
-    if (zoom < 14) return Math.min(45, total);
-    return Math.min(70, total);
-}
-
-function clusterRadiusForZoom(zoom: number): number {
-    if (zoom < 7) return 62;
-    if (zoom < CITY_HUB_MAX_ZOOM) return 50;
-    if (zoom < GL_HTML_HANDOFF_ZOOM) return 42;
-    return 34;
-}
-
-/** Keep HTML markers apart on screen — avoids label stacks like at zoom 11. */
-function thinPositionsByScreenGap(
-    map: any,
-    positions: UserPosition[],
-    maxCount: number,
-    minGapPx: number,
-): UserPosition[] {
-    const kept: UserPosition[] = [];
-    const placed: { x: number; y: number }[] = [];
-    for (const pos of positions) {
-        if (kept.length >= maxCount) break;
-        if (!pos.lat || !pos.lng) continue;
-        let point: { x: number; y: number };
-        try {
-            point = map.project([pos.lng, pos.lat]);
-        } catch {
-            continue;
-        }
-        const tooClose = placed.some(
-            (p) => Math.hypot(p.x - point.x, p.y - point.y) < minGapPx,
-        );
-        if (tooClose) continue;
-        placed.push(point);
-        kept.push(pos);
-    }
-    return kept;
-}
-
-function setGlPointsVisibility(map: any, zoom: number) {
-    const htmlMode = zoom >= COMPACT_HTML_MIN_ZOOM;
-    const showGl = !htmlMode && zoom >= GL_POINTS_MIN_ZOOM;
-    const behindHubs = zoom < CITY_HUB_MAX_ZOOM;
-    const clusterOpacity = showGl ? (behindHubs ? 0.82 : 0.94) : 0;
-    const pointOpacity = showGl ? (behindHubs ? 0.75 : 0.85) : 0;
-    try {
-        if (map.getLayer('live-clusters')) {
-            map.setPaintProperty('live-clusters', 'circle-opacity', clusterOpacity);
-        }
-        if (map.getLayer('live-cluster-count')) {
-            map.setLayoutProperty('live-cluster-count', 'visibility', showGl ? 'visible' : 'none');
-        }
-        if (map.getLayer('live-unclustered')) {
-            map.setPaintProperty('live-unclustered', 'circle-opacity', pointOpacity);
-        }
-    } catch { /* style not ready */ }
-}
-
-function pollIntervalForZoom(zoom: number, lastRefreshMs: number | null): number {
-    // Faster when user inspects details; slower at country view.
-    let base = POLL_BASE_MS;
-    if (zoom >= 12) base = 1200;
-    else if (zoom >= 10) base = 1600;
-    else if (zoom >= 8) base = 1900;
-    // Add headroom if backend responds slowly.
-    if (lastRefreshMs && lastRefreshMs > 900) base += 500;
-    return Math.max(900, base);
-}
 
 function bboxFromMap(map: any): string {
     const bounds = map.getBounds();
     return `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}`;
+}
+
+function featureToPosition(
+    props: Record<string, unknown>,
+    lng: number,
+    lat: number,
+): UserPosition {
+    return {
+        deviceId: String(props.deviceId ?? ''),
+        name: String(props.name ?? ''),
+        type: String(props.type ?? ''),
+        lat,
+        lng,
+        speed: Number(props.speed ?? 0),
+        course: Number(props.course ?? 0),
+        lastUpdate: '',
+    };
 }
 
 export const LiveMap: React.FC = () => {
@@ -150,8 +83,7 @@ export const LiveMap: React.FC = () => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const mlRef = useRef<any>(null);
-    const detailMarkersRef = useRef<Map<string, any>>(new Map());
-    const cityHubMarkersRef = useRef<Map<string, any>>(new Map());
+    const popupRef = useRef<any>(null);
     const cityCountsRef = useRef<Record<string, number>>({});
     const fitBoundsDoneRef = useRef(false);
     const positionsRef = useRef<UserPosition[]>([]);
@@ -162,7 +94,8 @@ export const LiveMap: React.FC = () => {
     const tabVisibleRef = useRef(typeof document === 'undefined' || !document.hidden);
     const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastRefreshRef = useRef<number | null>(null);
-    const clusterHandlersAttachedRef = useRef(false);
+    const layersReadyRef = useRef(false);
+    const interpolatorRef = useRef<LivePositionInterpolator | null>(null);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -176,130 +109,81 @@ export const LiveMap: React.FC = () => {
     const [cellCount, setCellCount] = useState(0);
     const [launching, setLaunching] = useState(false);
     const [lastRefreshMs, setLastRefreshMs] = useState<number | null>(null);
+    const [zoomMode, setZoomMode] = useState('');
 
-    const getMl = () => mlRef.current;
-
-    const ensureLiveSource = useCallback((map: any) => {
-        if (map.getSource('live-positions')) return;
-        map.addSource('live-positions', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: CLUSTER_MAX_ZOOM,
-            clusterRadius: clusterRadiusForZoom(map.getZoom()),
-        });
-        map.addLayer({
-            id: 'live-clusters',
-            type: 'circle',
-            source: 'live-positions',
-            filter: ['has', 'point_count'],
-            paint: {
-                'circle-color': [
-                    'interpolate', ['linear'], ['get', 'point_count'],
-                    2, '#22d3ee', 15, '#8b5cf6', 40, '#ec4899', 80, '#f43f5e',
-                ],
-                'circle-radius': [
-                    'interpolate', ['linear'], ['get', 'point_count'],
-                    2, 22, 10, 28, 30, 36, 60, 44,
-                ],
-                'circle-opacity': 0.88,
-                'circle-stroke-width': 2.5,
-                'circle-stroke-color': 'rgba(255,255,255,0.55)',
-                'circle-blur': 0.15,
-            },
-        });
-        map.addLayer({
-            id: 'live-cluster-count',
-            type: 'symbol',
-            source: 'live-positions',
-            filter: ['has', 'point_count'],
-            layout: {
-                'text-field': ['get', 'point_count_abbreviated'],
-                'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
-                'text-size': 13,
-            },
-            paint: {
-                'text-color': '#ffffff',
-            },
-        });
-        map.addLayer({
-            id: 'live-unclustered',
-            type: 'circle',
-            source: 'live-positions',
-            filter: ['!', ['has', 'point_count']],
-            paint: {
-                'circle-radius': [
-                    'interpolate', ['linear'], ['zoom'],
-                    7, 5, 9, 7, 11, 8, 13, 6,
-                ],
-                'circle-color': [
-                    'match', ['get', 'kind'],
-                    'run', '#10b981',
-                    'bike', '#7c3aed',
-                    '#6366f1',
-                ],
-                'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#312e81',
-                'circle-opacity': 0.95,
-            },
-        });
-        try {
-            if (map.getLayer('live-dots')) map.removeLayer('live-dots');
-        } catch { /* legacy */ }
-
-        if (!clusterHandlersAttachedRef.current) {
-            clusterHandlersAttachedRef.current = true;
-            map.on('click', 'live-clusters', (e: { point: { x: number; y: number } }) => {
-                const features = map.queryRenderedFeatures(e.point, {
-                    layers: ['live-clusters'],
-                });
-                const feature = features[0];
-                if (!feature?.properties?.cluster_id) return;
-                const clusterId = feature.properties.cluster_id;
-                const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
-                const source = map.getSource('live-positions') as {
-                    getClusterExpansionZoom?: (
-                        id: number,
-                        cb: (err: Error | null, z: number) => void,
-                    ) => void;
-                };
-                source?.getClusterExpansionZoom?.(clusterId, (err, expansionZoom) => {
-                    if (err) return;
-                    map.easeTo({
-                        center: coords,
-                        zoom: Math.min(expansionZoom + 0.5, 16),
-                        duration: 450,
-                    });
-                });
-            });
-            map.on('mouseenter', 'live-clusters', () => {
-                map.getCanvas().style.cursor = 'pointer';
-            });
-            map.on('mouseleave', 'live-clusters', () => {
-                map.getCanvas().style.cursor = '';
-            });
-        }
+    const pushPositionsToMap = useCallback((list: UserPosition[]) => {
+        const map = mapRef.current;
+        if (!map || !layersReadyRef.current) return;
+        setLivePositionsData(map, list);
     }, []);
 
-    const updateLiveSource = useCallback((positions: UserPosition[]) => {
+    const syncZoomMode = useCallback(() => {
         const map = mapRef.current;
-        if (!map || !mapReady) return;
-        ensureLiveSource(map);
-        const features = positions.map((pos) => ({
-            type: 'Feature' as const,
-            geometry: { type: 'Point' as const, coordinates: [pos.lng, pos.lat] },
-            properties: {
-                deviceId: pos.deviceId,
-                name: pos.name,
-                type: pos.type,
-                kind: resolveActivityKind(pos.type),
-                speed: pos.speed,
-                course: pos.course,
-            },
-        }));
-        const source = map.getSource('live-positions');
-        if (source?.setData) source.setData({ type: 'FeatureCollection', features });
-    }, [mapReady, ensureLiveSource]);
+        if (!map) return;
+        setZoomMode(ZOOM_MODE_LABEL[resolveLiveMapZoomMode(map.getZoom())]);
+    }, []);
+
+    const showRiderPopup = useCallback((pos: UserPosition, lngLat: { lng: number; lat: number }) => {
+        const ml = mlRef.current;
+        const map = mapRef.current;
+        if (!ml || !map) return;
+        popupRef.current?.remove();
+        const kind = resolveActivityKind(pos.type);
+        const kmh = speedToKmh(pos.speed);
+        const html = `
+            <div style="font-family:system-ui,sans-serif;min-width:140px;padding:2px 0">
+                <div style="font-weight:700;font-size:13px;margin-bottom:4px">${pos.name || pos.deviceId}</div>
+                <div style="font-size:12px;color:#52525b">${kind === 'bike' ? 'Cycling' : 'Running'} · ${kmh > 0 ? `${kmh} km/h` : '—'}</div>
+            </div>`;
+        popupRef.current = new ml.Popup({ closeButton: true, maxWidth: '240px', offset: 12 })
+            .setLngLat([lngLat.lng, lngLat.lat])
+            .setHTML(html)
+            .addTo(map);
+    }, []);
+
+    const handleClusterClick = useCallback((e: LiveMapClickEvent) => {
+        const map = mapRef.current;
+        if (!map) return;
+        const features = map.queryRenderedFeatures(e.point, { layers: [LIVE_LAYERS.clusters] });
+        const feature = features[0];
+        if (!feature?.properties?.cluster_id) return;
+        const clusterId = feature.properties.cluster_id;
+        const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
+        const source = map.getSource(LIVE_SOURCES.positions) as {
+            getClusterExpansionZoom?: (id: number, cb: (err: Error | null, z: number) => void) => void;
+        };
+        source?.getClusterExpansionZoom?.(clusterId, (err, expansionZoom) => {
+            if (err) return;
+            map.easeTo({
+                center: coords,
+                zoom: Math.min(expansionZoom + 0.5, 16),
+                duration: 450,
+            });
+        });
+    }, []);
+
+    const handleRiderClick = useCallback((e: LiveMapClickEvent) => {
+        const map = mapRef.current;
+        if (!map) return;
+        const layers = [LIVE_LAYERS.riderLabels, LIVE_LAYERS.riderIcons, LIVE_LAYERS.unclustered];
+        const features = map.queryRenderedFeatures(e.point, { layers });
+        const feature = features[0];
+        if (!feature?.properties) return;
+        const [lng, lat] = (feature.geometry as { coordinates: [number, number] }).coordinates;
+        const pos = featureToPosition(feature.properties as Record<string, unknown>, lng, lat);
+        showRiderPopup(pos, { lng, lat });
+    }, [showRiderPopup]);
+
+    const ensureMapLayers = useCallback(async (map: any) => {
+        if (layersReadyRef.current) return;
+        await prepareLiveMapStyle(map);
+        installLiveMapLayers(map, clusterRadiusForZoom(map.getZoom()), {
+            onClusterClick: handleClusterClick,
+            onRiderClick: handleRiderClick,
+        });
+        setCityHubData(map, cityCountsRef.current);
+        layersReadyRef.current = true;
+    }, [handleClusterClick, handleRiderClick]);
 
     const aggregateCityCounts = useCallback((list: UserPosition[]): Record<string, number> => {
         const counts: Record<string, number> = {};
@@ -311,99 +195,6 @@ export const LiveMap: React.FC = () => {
         }
         return counts;
     }, []);
-
-    const syncCityHubMarkers = useCallback(() => {
-        const map = mapRef.current;
-        const ml = getMl();
-        if (!map || !ml) return;
-        const zoom = map.getZoom();
-        if (zoom >= CITY_HUB_MAX_ZOOM) {
-            cityHubMarkersRef.current.forEach((m) => m.remove());
-            cityHubMarkersRef.current.clear();
-            setGlPointsVisibility(map, zoom);
-            return;
-        }
-        const counts = cityCountsRef.current;
-        for (const city of POLAND_SIM_CITIES) {
-            const count = counts[city.slug] ?? 0;
-            const target: [number, number] = [city.lng, city.lat];
-            const existing = cityHubMarkersRef.current.get(city.slug);
-            if (existing) {
-                updateCityHubMarkerElement(existing.getElement() as HTMLDivElement, city, count);
-                continue;
-            }
-            const el = createCityHubMarkerElement(city, count);
-            const marker = new ml.Marker({ element: el, anchor: 'center' })
-                .setLngLat(target)
-                .addTo(map);
-            cityHubMarkersRef.current.set(city.slug, marker);
-        }
-        setGlPointsVisibility(map, zoom);
-    }, []);
-
-    const syncDetailMarkers = useCallback(() => {
-        const map = mapRef.current;
-        const ml = getMl();
-        if (!map || !ml) return;
-        const zoom = map.getZoom();
-        syncCityHubMarkers();
-        setGlPointsVisibility(map, zoom);
-
-        if (zoom < COMPACT_HTML_MIN_ZOOM) {
-            detailMarkersRef.current.forEach((m) => m.remove());
-            detailMarkersRef.current.clear();
-            return;
-        }
-
-        const fullDetail = zoom >= DETAIL_ZOOM_THRESHOLD;
-        const cap = detailMarkerCap(zoom, positionsRef.current.length);
-        const minGap = fullDetail ? 76 : 44;
-        const thinned = thinPositionsByScreenGap(
-            map,
-            positionsRef.current,
-            cap,
-            minGap,
-        );
-        const seen = new Set<string>();
-        for (const pos of thinned) {
-            if (!pos.deviceId || !pos.lat || !pos.lng) continue;
-            seen.add(pos.deviceId);
-            const target: [number, number] = [pos.lng, pos.lat];
-            const existing = detailMarkersRef.current.get(pos.deviceId);
-            if (existing) {
-                const el = existing.getElement() as HTMLDivElement;
-                const isCompact = el.classList.contains('live-user-marker-compact');
-                const needCompact = !fullDetail;
-                if (isCompact === needCompact) {
-                    animateMarkerTo(existing, target);
-                    if (fullDetail) {
-                        updateLiveUserMarkerElement(el, pos);
-                    } else {
-                        updateCompactLiveUserMarkerElement(el, pos);
-                    }
-                    continue;
-                }
-                existing.remove();
-                detailMarkersRef.current.delete(pos.deviceId);
-            }
-            const el = fullDetail
-                ? createLiveUserMarkerElement(pos)
-                : createCompactLiveUserMarkerElement(pos);
-            const marker = new ml.Marker({
-                element: el,
-                anchor: fullDetail ? 'bottom' : 'center',
-            })
-                .setLngLat(target)
-                .addTo(map);
-            detailMarkersRef.current.set(pos.deviceId, marker);
-        }
-        for (const [id, marker] of detailMarkersRef.current) {
-            if (!seen.has(id)) {
-                (marker as any).remove();
-                detailMarkersRef.current.delete(id);
-            }
-        }
-    }, [syncCityHubMarkers]);
 
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
         const riding =
@@ -430,7 +221,7 @@ export const LiveMap: React.FC = () => {
         }
         setCyclists((prev) => (bike !== prev ? bike : prev));
         setRunners((prev) => (run !== prev ? run : prev));
-    }, [syncCityHubMarkers]);
+    }, []);
 
     const applyCityCounts = useCallback((
         list: UserPosition[],
@@ -444,10 +235,22 @@ export const LiveMap: React.FC = () => {
                 if (typeof n === 'number') merged[slug] = n;
             }
             cityCountsRef.current = merged;
-            return;
+        } else {
+            cityCountsRef.current = aggregateCityCounts(list);
         }
-        cityCountsRef.current = aggregateCityCounts(list);
+        const map = mapRef.current;
+        if (map && layersReadyRef.current) setCityHubData(map, cityCountsRef.current);
     }, [aggregateCityCounts]);
+
+    const ingestPositions = useCallback((list: UserPosition[]) => {
+        positionsRef.current = list;
+        if (!interpolatorRef.current) {
+            interpolatorRef.current = new LivePositionInterpolator((blended) => {
+                pushPositionsToMap(blended);
+            });
+        }
+        interpolatorRef.current.animateToward(list);
+    }, [pushPositionsToMap]);
 
     const fetchPositions = useCallback(async () => {
         if (!canFetch || !tabVisibleRef.current || fetchInFlightRef.current) return;
@@ -459,8 +262,10 @@ export const LiveMap: React.FC = () => {
         try {
             const map = mapRef.current;
             const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
+            const detail = apiDetailForZoom(zoom);
             const params: Record<string, string | number> = {
-                limit: limitForZoom(zoom),
+                limit: detail === 'summary' ? 0 : limitForZoom(zoom),
+                detail,
             };
             if (map) {
                 params.bbox = bboxFromMap(map);
@@ -473,14 +278,10 @@ export const LiveMap: React.FC = () => {
             const list = data?.positions ?? [];
             const meta = data?.meta;
             if (Array.isArray(list)) {
-                positionsRef.current = list;
                 applyMetaCounts(list, meta);
                 applyCityCounts(list, meta);
-                updateLiveSource(list);
-                requestAnimationFrame(() => {
-                    syncCityHubMarkers();
-                    syncDetailMarkers();
-                });
+                ingestPositions(list);
+                syncZoomMode();
             }
             const tookMs = Math.round(performance.now() - t0);
             lastRefreshRef.current = tookMs;
@@ -493,7 +294,7 @@ export const LiveMap: React.FC = () => {
             fetchInFlightRef.current = false;
             setLoading(false);
         }
-    }, [updateLiveSource, syncDetailMarkers, syncCityHubMarkers, canFetch, applyMetaCounts, applyCityCounts]);
+    }, [canFetch, applyMetaCounts, applyCityCounts, ingestPositions, syncZoomMode]);
 
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;
@@ -634,30 +435,29 @@ export const LiveMap: React.FC = () => {
             });
             map.addControl(new m.NavigationControl(), 'top-right');
             map.addControl(new m.AttributionControl({ compact: true }), 'bottom-right');
-            map.on('load', () => {
-                if (!cancelled) {
-                    ensureLiveSource(map);
-                    if (!fitBoundsDoneRef.current) {
-                        fitBoundsDoneRef.current = true;
-                        map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
-                    }
-                    setMapReady(true);
+            map.on('load', async () => {
+                if (cancelled) return;
+                await ensureMapLayers(map);
+                if (!fitBoundsDoneRef.current) {
+                    fitBoundsDoneRef.current = true;
+                    map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
                 }
+                syncZoomMode();
+                setMapReady(true);
             });
             map.on('zoom', () => {
-                const src = map.getSource('live-positions');
+                const z = map.getZoom();
+                const src = map.getSource(LIVE_SOURCES.positions);
                 if (src) {
                     try {
                         (src as { setClusterOptions?: (o: { radius?: number }) => void })
-                            .setClusterOptions?.({ radius: clusterRadiusForZoom(map.getZoom()) });
+                            .setClusterOptions?.({ radius: clusterRadiusForZoom(z) });
                     } catch { /* MapLibre < 3.3 */ }
                 }
-                syncDetailMarkers();
-            });
-            map.on('moveend', () => {
+                syncZoomMode();
                 scheduleMoveFetch();
-                syncDetailMarkers();
             });
+            map.on('moveend', scheduleMoveFetch);
             mapRef.current = map;
         }).catch(() => {
             if (!cancelled) {
@@ -668,19 +468,17 @@ export const LiveMap: React.FC = () => {
 
         return () => {
             cancelled = true;
-            detailMarkersRef.current.forEach((m: any) => m.remove());
-            detailMarkersRef.current.clear();
-            cityHubMarkersRef.current.forEach((m: any) => m.remove());
-            cityHubMarkersRef.current.clear();
+            interpolatorRef.current?.cancel();
+            popupRef.current?.remove();
+            layersReadyRef.current = false;
             if (mapRef.current) {
                 try {
-                    mapRef.current.off('moveend', scheduleMoveFetch);
                     mapRef.current.remove();
                 } catch { /* */ }
             }
             mapRef.current = null;
         };
-    }, [ensureLiveSource, syncDetailMarkers, scheduleMoveFetch]);
+    }, [ensureMapLayers, scheduleMoveFetch, syncZoomMode]);
 
     useEffect(() => {
         if (!mlReady || !canFetch || !tabVisible) return;
@@ -725,6 +523,9 @@ export const LiveMap: React.FC = () => {
                     )}
                     {runners > 0 && (
                         <Badge variant="light" color="teal" radius="sm" size="md">{runners} runners</Badge>
+                    )}
+                    {zoomMode && mapReady && onlineCount > 0 && (
+                        <Badge variant="outline" color="indigo" radius="sm" size="sm">{zoomMode}</Badge>
                     )}
                     {lastRefreshMs != null && onlineCount > 0 && (
                         <Badge variant="outline" color="gray" radius="sm" size="sm">{lastRefreshMs}ms</Badge>

@@ -72,6 +72,8 @@ TELEMETRY_LIVE_CACHE_TTL = _int('SCALE_TELEMETRY_LIVE_CACHE_TTL', 2)
 
 def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
     """Cap live-map API responses by zoom (fewer points when zoomed out)."""
+    if limit is not None and int(limit) == 0:
+        return 0
     req = max(1, int(limit or TELEMETRY_API_DEFAULT_LIMIT))
     ceiling = TELEMETRY_API_MAX_LIMIT
     if zoom is not None:

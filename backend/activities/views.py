@@ -396,8 +396,21 @@ class TelemetryLiveView(generics.GenericAPIView):
         except (TypeError, ValueError):
             zoom_param = None
 
+        detail = (request.query_params.get('detail') or '').strip().lower()
+        if detail not in ('summary', 'standard', 'full'):
+            if zoom_param is not None and zoom_param < 7.5:
+                detail = 'summary'
+            elif zoom_param is not None and zoom_param < 12:
+                detail = 'standard'
+            else:
+                detail = 'full'
+
+        fetch_limit = limit or None
+        if detail == 'summary':
+            fetch_limit = 0
+
         positions, telemetry_meta = TelemetryService.get_live_positions(
-            bbox=bbox_tuple, limit=limit or None, zoom=zoom_param,
+            bbox=bbox_tuple, limit=fetch_limit, zoom=zoom_param,
         )
 
         if not isinstance(positions, list):
@@ -430,21 +443,32 @@ class TelemetryLiveView(generics.GenericAPIView):
             if device_id is None:
                 continue
             info = device_info.get(device_id, {})
-            raw_type = (pos.get('category') or pos.get('type') or info.get('type', 'person') or '').lower()
+            type_label = pos.get('category') or pos.get('type') or info.get('type', 'person')
+            raw_type = (type_label or '').lower()
             if raw_type in _bike:
                 viewport_bike += 1
             elif raw_type in _run:
                 viewport_run += 1
-            enriched_data.append({
-                "deviceId": device_id,
-                "name": pos.get('name') or info.get('name', f"Athlete {device_id}"),
-                "type": pos.get('category') or pos.get('type') or info.get('type', 'person'),
-                "lat": pos.get('latitude', 0.0),
-                "lng": pos.get('longitude', 0.0),
-                "speed": pos.get('speed', 0.0),
-                "course": pos.get('course', 0.0),
-                "lastUpdate": pos.get('deviceTime'),
-            })
+            if detail == 'standard':
+                enriched_data.append({
+                    "deviceId": device_id,
+                    "type": type_label,
+                    "lat": pos.get('latitude', 0.0),
+                    "lng": pos.get('longitude', 0.0),
+                    "speed": pos.get('speed', 0.0),
+                    "course": pos.get('course', 0.0),
+                })
+            else:
+                enriched_data.append({
+                    "deviceId": device_id,
+                    "name": pos.get('name') or info.get('name', f"Athlete {device_id}"),
+                    "type": type_label,
+                    "lat": pos.get('latitude', 0.0),
+                    "lng": pos.get('longitude', 0.0),
+                    "speed": pos.get('speed', 0.0),
+                    "course": pos.get('course', 0.0),
+                    "lastUpdate": pos.get('deviceTime'),
+                })
 
         try:
             from activities import simulator_state as sim_state
@@ -458,6 +482,7 @@ class TelemetryLiveView(generics.GenericAPIView):
             'positions': enriched_data,
             'meta': {
                 **telemetry_meta,
+                'detail': detail,
                 'redis_active': active_riding,
                 'active_riding': active_riding,
                 'viewport_bike': viewport_bike,

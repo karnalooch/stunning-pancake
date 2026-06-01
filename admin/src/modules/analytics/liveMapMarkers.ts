@@ -189,7 +189,13 @@ export function createCityHubMarkerElement(city: LiveMapCity, count: number): HT
     return root;
 }
 
-export function updateCityHubMarkerElement(el: HTMLDivElement, city: LiveMapCity, count: number): void {
+export function updateCityHubMarkerElement(
+    el: HTMLDivElement,
+    city: LiveMapCity,
+    count: number,
+    layerOpacity = 1,
+): void {
+    el.style.opacity = String(layerOpacity);
     const active = count > 0;
     const label = el.firstElementChild as HTMLDivElement | null;
     const ring = el.lastElementChild as HTMLDivElement | null;

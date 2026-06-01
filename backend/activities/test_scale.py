@@ -99,6 +99,7 @@ class ScalePreflightTest(SimpleTestCase):
 
 class TelemetryApiLimitTest(SimpleTestCase):
     def test_zoom_adaptive_cap(self):
+        self.assertEqual(resolve_telemetry_api_limit(0, 6), 0)
         self.assertLessEqual(resolve_telemetry_api_limit(20_000, 6), 1_500)
         self.assertLessEqual(resolve_telemetry_api_limit(20_000, 9), 4_000)
         self.assertEqual(

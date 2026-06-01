@@ -55,14 +55,25 @@ Pełna lista: `backend/activities/scale_config.py`, [SCALE_TEST_300K.md](../SCAL
 
 ## Live Map (admin) — poziomy zoomu
 
-| Zoom | Co widać |
-|------|----------|
-| &lt; 9 | Huby miast (licznik) + klastry GL w tle |
-| **9–12** | **Tylko klastry MapLibre** (klik = przybliżenie) — bez setek etykiet HTML |
-| 12–13 | Kompaktowe ikony (max ~100, z odstępem na ekranie) |
-| ≥ 13 | Etykiety Athlete + prędkość (max ~45–70, rozrzedzone) |
+Moduły: `liveMapZoom.ts` (tiery + LOD API), `liveMapLayers.ts` (warstwy GPU), `liveMapInterp.ts` (płynny ruch), `liveMapSprite.ts` (atlas ikon). Badge na mapie = aktualny tryb.
 
-Jeśli widzisz „czarną chmurę” etykiet — jesteś między zoom 11–12 na starej wersji admina; zaktualizuj deploy i Ctrl+F5.
+| Zoom | Tryb | Render |
+|------|------|--------|
+| &lt; 7 | Kraj | Huby GL + `detail=summary` (bez punktów w JSON) |
+| 7–8.5 | Region | Huby + klastry |
+| 8.5–9.5 | Aglomeracja | Huby (fade) + klastry |
+| 9.5–12.2 | Miasto → Osiedle | Klastry MapLibre (klik = zoom) |
+| 12.2–13.5 | Ulice (ikony) | **Symbol layer GPU**, collision engine |
+| ≥ 13.5 | Ulice (etykiety) | Ikona + tekst GPU (`text-optional`) |
+| Klik | Popup | Jedyny DOM — karta Athlete |
+
+**API LOD:** `detail=summary|standard|full` (auto z zoomu) — mniejszy payload przy widoku kraju (`standard` bez nazw).
+
+- Brak setek markerów HTML — wydajność jak Mapbox/Uber.
+- Interpolacja pozycji między poll (~320 ms).
+- Klastry do zoom **14**; jeden `setData` na tick.
+
+Stary admin z markerami HTML: deploy + Ctrl+F5.
 
 ---
 

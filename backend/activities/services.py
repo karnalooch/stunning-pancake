@@ -567,6 +567,20 @@ class TelemetryService:
         )
 
         cap = resolve_telemetry_api_limit(limit, zoom)
+        if cap <= 0:
+            try:
+                from activities import simulator_state as sim_state
+                active_riding = sim_state.get_live_ride_count()
+            except Exception:
+                active_riding = 0
+            return [], {
+                'returned': 0,
+                'capped': False,
+                'redis_active': active_riding,
+                'active_riding': active_riding,
+                'source': 'redis',
+            }
+
         cache_key = cls._live_cache_key(bbox, cap) if bbox else None
         if cache_key:
             cached = cls._get_live_cached(cache_key)
