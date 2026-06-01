@@ -4,6 +4,7 @@ Celery Tasks for Simulator
 Background tasks that run the simulation logic with real-time telemetry.
 """
 import math
+import os
 import random
 import time
 from datetime import timedelta
@@ -179,6 +180,23 @@ def _generate_route_waypoints(
     payload = {'waypoints': grid, 'source': 'grid'}
     cache.set(cache_key, payload, 3600)
     return grid, 'grid'
+
+
+def _jitter_point_km(lat: float, lon: float, radius_km: float) -> tuple[float, float]:
+    """
+    Uniform random point inside a circle (radius_km) around (lat, lon).
+    Intended for small radii (e.g. 1–25km) to avoid "all riders start at the same dot".
+    """
+    radius_km = max(0.0, float(radius_km))
+    if radius_km <= 0:
+        return lat, lon
+    # Uniform over area => r = sqrt(U)
+    r = radius_km * math.sqrt(random.random())
+    theta = random.uniform(0, 2 * math.pi)
+    dlat = (r / 111.0) * math.cos(theta)
+    cos_lat = math.cos(math.radians(lat)) or 1e-6
+    dlon = (r / (111.0 * cos_lat)) * math.sin(theta)
+    return lat + dlat, lon + dlon
 
 
 def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity_type: str) -> list[tuple[float, float]]:
@@ -599,14 +617,25 @@ def _run_live_tick_body():
                 riding_by_city[slug] = riding_by_city.get(slug, 0) + 1
 
         n_cities = len(CITIES)
-        base_per_city = target_riding // n_cities
-        extra_slots = target_riding % n_cities
+        base_per_city = target_riding // max(1, n_cities)
+        extra_slots = target_riding % max(1, n_cities)
+
+        # When `needed` is throttled (event stagger / load-test), iterating CITIES in a fixed
+        # order biases the first cities (they reach the per-city cap while others stay at 0).
+        # Randomize caps + iteration order per tick to keep the overview badges balanced.
+        caps: dict[str, int] = {c['slug']: base_per_city for c in CITIES}
+        if extra_slots > 0 and n_cities > 0:
+            extra_slugs = random.sample([c['slug'] for c in CITIES], k=min(extra_slots, n_cities))
+            for s in extra_slugs:
+                caps[s] = caps.get(s, base_per_city) + 1
 
         starters: list = []
-        for idx, city in enumerate(CITIES):
+        cities = list(CITIES)
+        random.shuffle(cities)
+        for city in cities:
             slug = city['slug']
-            city_cap = base_per_city + (1 if idx < extra_slots else 0)
-            city_needed = max(0, city_cap - riding_by_city.get(slug, 0))
+            city_cap = int(caps.get(slug, base_per_city))
+            city_needed = max(0, city_cap - int(riding_by_city.get(slug, 0)))
             if city_needed <= 0 or len(starters) >= needed:
                 continue
             city_needed = min(city_needed, needed - len(starters))
@@ -645,7 +674,14 @@ def _run_live_tick_body():
             is_cheater = random.random() < cheat_ratio
 
             city_info = resolve_city_for_user(user)
-            lat, lon = city_info['lat'], city_info['lon']
+            # Start from a random spot around the city, not the exact center.
+            # Default 10km; override via SCALE_SIM_CITY_START_RADIUS_KM.
+            start_radius_km = float(os.getenv('SCALE_SIM_CITY_START_RADIUS_KM', '10'))
+            lat0, lon0 = city_info['lat'], city_info['lon']
+            lat, lon = _jitter_point_km(lat0, lon0, start_radius_km)
+
+            # Stable speed per ride (resampling each tick looks jittery).
+            speed_kmh = random.uniform(12, 35) if act_type == 'BIKE' else random.uniform(6, 15)
 
             waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
             if route_source == 'grid':
@@ -663,6 +699,7 @@ def _run_live_tick_body():
                 'is_cheater': is_cheater,
                 'waypoints': waypoints,
                 'route_source': route_source,
+                'speed_kmh': speed_kmh,
             })
             started += 1
 
@@ -690,7 +727,9 @@ def _run_live_tick_body():
             clon = ride.get('lon', 21.0122)
             course = 0
 
-        speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
+        speed_kmh = ride.get('speed_kmh')
+        if not isinstance(speed_kmh, (int, float)):
+            speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
 
         telemetry_entries.append({
             'deviceId': str(user_id),
