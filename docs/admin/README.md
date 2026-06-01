@@ -233,7 +233,7 @@ For deep-dive details on high-performance pagination, MapLibre GL GPS tracking i
 
 | Moduł | Opis |
 |-------|------|
-| `LiveMap.tsx` | MapLibre live positions, zoom tiers (huby → klastry → ikony → etykiety) |
+| `LiveMap.tsx` | MapLibre live positions; zoom 9–12 clusters only, 12+ thinned HTML markers |
 | `liveMapMarkers.ts` | HTML markery zawodnika / hub miasta |
 | `SimulatorPage.tsx` | Batch + live orchestration (`waitForBatchComplete`) |
 | `SimulationProgressBar.tsx` | Pasek postępu batch / wipe |

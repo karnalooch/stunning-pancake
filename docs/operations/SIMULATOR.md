@@ -57,12 +57,12 @@ Pełna lista: `backend/activities/scale_config.py`, [SCALE_TEST_300K.md](../SCAL
 
 | Zoom | Co widać |
 |------|----------|
-| &lt; 9 | Huby miast (licznik) + półprzezroczyste kropki GL |
-| 9–11 | Klastry/kropki GL + **kompaktowe ikony** (rower/bieg) |
-| ≥ 11 | Pełne etykiety zawodników + ikony (limit rośnie z zoomem) |
-| ≥ 12.5 | Warstwa GL wyłączona (zostają HTML markery) |
+| &lt; 9 | Huby miast (licznik) + klastry GL w tle |
+| **9–12** | **Tylko klastry MapLibre** (klik = przybliżenie) — bez setek etykiet HTML |
+| 12–13 | Kompaktowe ikony (max ~100, z odstępem na ekranie) |
+| ≥ 13 | Etykiety Athlete + prędkość (max ~45–70, rozrzedzone) |
 
-Jeśli „nic nie widać” — twarde odświeżenie (Ctrl+F5) po deployu admina.
+Jeśli widzisz „czarną chmurę” etykiet — jesteś między zoom 11–12 na starej wersji admina; zaktualizuj deploy i Ctrl+F5.
 
 ---
 

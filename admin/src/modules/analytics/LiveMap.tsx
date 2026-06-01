@@ -49,13 +49,14 @@ const POLL_BASE_MS = 2200;
 const MOVE_DEBOUNCE_MS = 280;
 /** City hub badges (count per sim city). */
 const CITY_HUB_MAX_ZOOM = 9;
-/** MapLibre cluster dots — visible from country view until street detail. */
+/** MapLibre clusters — primary view 9–12 (no HTML pile-up). */
 const GL_POINTS_MIN_ZOOM = 7;
-const GL_POINTS_HIDE_ZOOM = 12.5;
-/** Icon-only HTML markers (no labels) — fills the old 9–11 dead zone. */
-const COMPACT_MARKER_MIN_ZOOM = 9;
-const DETAIL_ZOOM_THRESHOLD = 11;
-const CLUSTER_MAX_ZOOM = 12;
+const GL_HTML_HANDOFF_ZOOM = 12;
+/** HTML markers only from this zoom upward. */
+const COMPACT_HTML_MIN_ZOOM = 12;
+/** Name + speed labels only at street zoom. */
+const DETAIL_ZOOM_THRESHOLD = 13;
+const CLUSTER_MAX_ZOOM = 13;
 
 /** API fetch cap scales with zoom — country overview vs street detail. */
 function limitForZoom(zoom: number): number {
@@ -67,25 +68,53 @@ function limitForZoom(zoom: number): number {
 }
 
 function detailMarkerCap(zoom: number, total: number): number {
-    if (zoom < COMPACT_MARKER_MIN_ZOOM) return 0;
-    if (zoom < DETAIL_ZOOM_THRESHOLD) return Math.min(280, total);
-    if (zoom < 12) return Math.min(450, total);
-    if (zoom < 13) return Math.min(750, total);
-    return Math.min(1200, total);
+    if (zoom < COMPACT_HTML_MIN_ZOOM) return 0;
+    if (zoom < DETAIL_ZOOM_THRESHOLD) return Math.min(100, total);
+    if (zoom < 14) return Math.min(45, total);
+    return Math.min(70, total);
 }
 
 function clusterRadiusForZoom(zoom: number): number {
-    if (zoom < 7) return 58;
-    if (zoom < CITY_HUB_MAX_ZOOM) return 44;
-    if (zoom < DETAIL_ZOOM_THRESHOLD) return 36;
-    return 28;
+    if (zoom < 7) return 62;
+    if (zoom < CITY_HUB_MAX_ZOOM) return 50;
+    if (zoom < GL_HTML_HANDOFF_ZOOM) return 42;
+    return 34;
+}
+
+/** Keep HTML markers apart on screen — avoids label stacks like at zoom 11. */
+function thinPositionsByScreenGap(
+    map: any,
+    positions: UserPosition[],
+    maxCount: number,
+    minGapPx: number,
+): UserPosition[] {
+    const kept: UserPosition[] = [];
+    const placed: { x: number; y: number }[] = [];
+    for (const pos of positions) {
+        if (kept.length >= maxCount) break;
+        if (!pos.lat || !pos.lng) continue;
+        let point: { x: number; y: number };
+        try {
+            point = map.project([pos.lng, pos.lat]);
+        } catch {
+            continue;
+        }
+        const tooClose = placed.some(
+            (p) => Math.hypot(p.x - point.x, p.y - point.y) < minGapPx,
+        );
+        if (tooClose) continue;
+        placed.push(point);
+        kept.push(pos);
+    }
+    return kept;
 }
 
 function setGlPointsVisibility(map: any, zoom: number) {
-    const showGl = zoom >= GL_POINTS_MIN_ZOOM && zoom < GL_POINTS_HIDE_ZOOM;
+    const htmlMode = zoom >= COMPACT_HTML_MIN_ZOOM;
+    const showGl = !htmlMode && zoom >= GL_POINTS_MIN_ZOOM;
     const behindHubs = zoom < CITY_HUB_MAX_ZOOM;
-    const clusterOpacity = showGl ? (behindHubs ? 0.82 : 0.92) : 0;
-    const pointOpacity = showGl ? (behindHubs ? 0.88 : 0.95) : 0;
+    const clusterOpacity = showGl ? (behindHubs ? 0.82 : 0.94) : 0;
+    const pointOpacity = showGl ? (behindHubs ? 0.75 : 0.85) : 0;
     try {
         if (map.getLayer('live-clusters')) {
             map.setPaintProperty('live-clusters', 'circle-opacity', clusterOpacity);
@@ -133,6 +162,7 @@ export const LiveMap: React.FC = () => {
     const tabVisibleRef = useRef(typeof document === 'undefined' || !document.hidden);
     const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastRefreshRef = useRef<number | null>(null);
+    const clusterHandlersAttachedRef = useRef(false);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -216,6 +246,39 @@ export const LiveMap: React.FC = () => {
         try {
             if (map.getLayer('live-dots')) map.removeLayer('live-dots');
         } catch { /* legacy */ }
+
+        if (!clusterHandlersAttachedRef.current) {
+            clusterHandlersAttachedRef.current = true;
+            map.on('click', 'live-clusters', (e: { point: { x: number; y: number } }) => {
+                const features = map.queryRenderedFeatures(e.point, {
+                    layers: ['live-clusters'],
+                });
+                const feature = features[0];
+                if (!feature?.properties?.cluster_id) return;
+                const clusterId = feature.properties.cluster_id;
+                const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
+                const source = map.getSource('live-positions') as {
+                    getClusterExpansionZoom?: (
+                        id: number,
+                        cb: (err: Error | null, z: number) => void,
+                    ) => void;
+                };
+                source?.getClusterExpansionZoom?.(clusterId, (err, expansionZoom) => {
+                    if (err) return;
+                    map.easeTo({
+                        center: coords,
+                        zoom: Math.min(expansionZoom + 0.5, 16),
+                        duration: 450,
+                    });
+                });
+            });
+            map.on('mouseenter', 'live-clusters', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+            map.on('mouseleave', 'live-clusters', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        }
     }, []);
 
     const updateLiveSource = useCallback((positions: UserPosition[]) => {
@@ -286,7 +349,7 @@ export const LiveMap: React.FC = () => {
         syncCityHubMarkers();
         setGlPointsVisibility(map, zoom);
 
-        if (zoom < COMPACT_MARKER_MIN_ZOOM) {
+        if (zoom < COMPACT_HTML_MIN_ZOOM) {
             detailMarkersRef.current.forEach((m) => m.remove());
             detailMarkersRef.current.clear();
             return;
@@ -294,8 +357,15 @@ export const LiveMap: React.FC = () => {
 
         const fullDetail = zoom >= DETAIL_ZOOM_THRESHOLD;
         const cap = detailMarkerCap(zoom, positionsRef.current.length);
+        const minGap = fullDetail ? 76 : 44;
+        const thinned = thinPositionsByScreenGap(
+            map,
+            positionsRef.current,
+            cap,
+            minGap,
+        );
         const seen = new Set<string>();
-        for (const pos of positionsRef.current.slice(0, cap)) {
+        for (const pos of thinned) {
             if (!pos.deviceId || !pos.lat || !pos.lng) continue;
             seen.add(pos.deviceId);
             const target: [number, number] = [pos.lng, pos.lat];
