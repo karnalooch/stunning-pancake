@@ -101,6 +101,19 @@ export interface POI {
 }
 
 export const ActivityService = {
+  createSession: (body: { type: string; start_time: string; event_id?: number }) =>
+    api.post<{ id: number }>('/api/activities/sessions/', body).then((r) => r.data),
+  syncPath: (activityId: number, route_path: [number, number][], path_hash?: string) =>
+    api
+      .patch(`/api/activities/sessions/${activityId}/sync_path/`, {
+        route_path,
+        path_hash,
+      })
+      .then((r) => r.data),
+  finalizeSession: (activityId: number, body: { end_time?: string; distance?: number }) =>
+    api
+      .post(`/api/activities/sessions/${activityId}/finalize/`, body)
+      .then((r) => r.data),
   getHistory: () => api.get<ActivityItem[]>('/api/activities/sessions/').then((r) => r.data),
   getLeaderboard: (cityId: string) =>
     api.get<any>(`/api/activities/leaderboard/${cityId}/`).then((r) => {

@@ -228,13 +228,77 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'])
     def sync_path(self, request, pk=None):
+        from .route_sync import (
+            linestring_from_payload,
+            merge_linestrings,
+            path_hash_for_coords,
+        )
+
         activity = self.get_object()
         path_data = request.data.get('route_path')
-        if path_data:
-            activity.route_path = path_data
-            activity.save()
-            return Response({"status": "path updated"}, status=status.HTTP_200_OK)
-        return Response({"error": "no path data provided"}, status=status.HTTP_400_BAD_REQUEST)
+        if not path_data:
+            return Response({"error": "no path data provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            incoming = linestring_from_payload(path_data)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_hash = request.data.get('path_hash')
+        if client_hash:
+            try:
+                from core.redis_cluster import get_redis
+                dedupe_key = f"activity:sync_path_hash:{activity.id}:{client_hash}"
+                if not get_redis().set(dedupe_key, "1", nx=True, ex=7 * 24 * 3600):
+                    return Response(
+                        {"status": "path unchanged", "deduped": True},
+                        status=status.HTTP_200_OK,
+                    )
+            except Exception:
+                pass
+
+        merged = merge_linestrings(activity.route_path, incoming)
+        server_hash = path_hash_for_coords(list(merged.coords))
+        if activity.route_path and server_hash == path_hash_for_coords(list(activity.route_path.coords)):
+            return Response(
+                {"status": "path unchanged", "deduped": True},
+                status=status.HTTP_200_OK,
+            )
+
+        activity.route_path = merged
+        activity.save(update_fields=['route_path'])
+        return Response(
+            {"status": "path updated", "coords": merged.num_coords},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=['post'], url_path='finalize')
+    def finalize(self, request, pk=None):
+        """Idempotent session end — sets end_time/distance and triggers verification."""
+        from django.utils import timezone
+        from django.utils.dateparse import parse_datetime
+
+        activity = self.get_object()
+        if activity.end_time:
+            serializer = ActivitySerializer(activity)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        end_raw = request.data.get('end_time')
+        end_time = parse_datetime(end_raw) if end_raw else timezone.now()
+        if end_time and timezone.is_naive(end_time):
+            end_time = timezone.make_aware(end_time, timezone.get_current_timezone())
+
+        distance = request.data.get('distance')
+        if distance is not None:
+            activity.distance = float(distance)
+
+        activity.end_time = end_time or timezone.now()
+        if activity.start_time and activity.end_time:
+            activity.duration = activity.end_time - activity.start_time
+
+        activity.save()
+        serializer = ActivitySerializer(activity)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def share_data(self, request, pk=None):

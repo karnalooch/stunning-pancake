@@ -271,6 +271,22 @@ class GpsPacket(BaseModel):
 
 class BatchPacket(BaseModel):
     packets: list[GpsPacket]
+    client_batch_id: str | None = None
+
+DEDUPE_TTL_S = int(os.getenv("TELEMETRY_DEDUPE_TTL_S", str(7 * 24 * 3600)))
+
+async def _is_duplicate_batch(client_batch_id: str | None) -> bool:
+    """Redis SET NX — duplicate batch ids skip INSERT (7d TTL)."""
+    if not client_batch_id:
+        return False
+    import redis.asyncio as redis_lib
+    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
+    try:
+        key = f"telemetry:dedupe:{client_batch_id}"
+        was_new = await client.set(key, "1", nx=True, ex=DEDUPE_TTL_S)
+        return not was_new
+    finally:
+        await client.aclose()
 
 @app.get("/api/telemetry/health")
 async def health() -> dict:
@@ -301,6 +317,14 @@ async def ingest_packet(packet: GpsPacket) -> dict:
 
 @app.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
+    if await _is_duplicate_batch(batch.client_batch_id):
+        return {
+            "status": "accepted",
+            "inserted": 0,
+            "deduped": True,
+            "client_batch_id": batch.client_batch_id,
+        }
+
     pool = await get_pool()
     rows = []
     dropped = 0
@@ -329,7 +353,12 @@ async def ingest_batch(batch: BatchPacket) -> dict:
             "batch_size": len(rows)
         })
 
-    return {"status": "accepted", "inserted": len(rows), "dropped_privacy": dropped}
+    return {
+        "status": "accepted",
+        "inserted": len(rows),
+        "dropped_privacy": dropped,
+        "client_batch_id": batch.client_batch_id,
+    }
 
 # ---------------------------------------------------------------------------
 # WebSockets

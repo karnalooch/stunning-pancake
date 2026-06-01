@@ -13,6 +13,7 @@ import { AuthService, setAuthToken } from './src/services/api';
 import { SocialAuthService } from './src/services/socialAuth';
 import { BrandingService } from './src/services/BrandingService';
 import { initFirebase } from './src/services/FirebaseService';
+import { recoverGpsDataOnLaunch, startGpsBackgroundSync } from './src/services/GpsSyncManager';
 import { ThemeService } from './src/services/ThemeService';
 
 import { SplashScreen } from './src/components/SplashScreen';
@@ -121,6 +122,10 @@ const AppContent = observer(function AppContent() {
 
   useEffect(() => {
     initFirebase();
+    recoverGpsDataOnLaunch().catch((e) =>
+      console.warn('[GPS] launch recovery failed', e),
+    );
+    startGpsBackgroundSync();
     const store = getStorage();
     const token = store.getString('auth_token');
     const hasOnboarded = store.getString('onboarding_complete') === 'true';
