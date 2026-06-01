@@ -1,0 +1,30 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONUTF8=1
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev gcc python3-dev pkg-config netcat-traditional binutils \
+    libproj-dev gdal-bin libgdal-dev libgeos-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV GDAL_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgdal.so
+ENV GEOS_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu/libgeos_c.so
+
+COPY backend/requirements.txt /app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY backend/ /app/
+
+COPY celery-worker-simulation/start.sh /app/start-celery.sh
+RUN chmod +x /app/start-celery.sh
+
+RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
+USER sportuser
+
+CMD ["/app/start-celery.sh"]

@@ -43,7 +43,7 @@ SCALE_USER_BULK_BATCH_SIZE=1000
 - Ustaw na serwisie **celery-worker**: `CELERY_WORKER_CONCURRENCY=6` (zostaw 1–2 vCPU na Redis/OS).
 - Przy **„skip activities”** i ≥20k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (np. 5 miast → 5 workerów naraz).
 - **Nie uruchamiaj live sim** podczas batcha — ticki co 8s zjadają CPU (w logach: `ForkPoolWorker-1` live + `ForkPoolWorker-2` batch).
-- Opcjonalnie: drugi serwis Railway `celery-worker-batch` tylko kolejka `simulation`, concurrency=7; osobny `celery-worker` na `critical,default,notifications`.
+- **Osobny serwis Railway:** `celery-worker-simulation` — tylko kolejka `simulation`. Instrukcja: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
 
 ## Procedura testu 300k
 

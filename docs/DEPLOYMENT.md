@@ -74,7 +74,16 @@ railway run python manage.py seed_data
 3. Ustaw root directory na `admin/`
 4. Railway użyje `admin/railway.json`
 
-### Krok 8: Weryfikacja
+### Krok 8: Worker Celery — symulacja oddzielnie
+
+Zalecane na produkcji: **dwa** serwisy workerów:
+
+1. **celery-worker** — kolejki `critical,default,notifications`
+2. **celery-worker-simulation** — tylko `simulation` (batch 300k, live map)
+
+Szczegóły: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
+
+### Krok 9: Weryfikacja
 
 ```bash
 # Sprawdź health

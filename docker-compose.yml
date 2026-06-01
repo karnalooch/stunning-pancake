@@ -143,12 +143,12 @@ services:
     depends_on:
       - backend
 
-  # Celery Worker — Async tasks: BRouter validation, notifications (Phase 7)
+  # Celery Worker — critical / default / notifications (no simulation)
   celery_worker:
     build: ./backend
     container_name: 4velo_celery_worker
     restart: always
-    command: celery -A core worker -Q critical,notifications,default,simulation -l info --concurrency=4
+    command: celery -A core worker -Q critical,notifications,default -l info --concurrency=4
     environment:
       DEBUG: ${DEBUG:-0}
       SECRET_KEY: ${SECRET_KEY}
@@ -156,6 +156,25 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
       MATRIX_TOKEN: ${MATRIX_TOKEN:-}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - db
+      - redis
+
+  # Celery Worker — batch + live simulator only (queue: simulation)
+  celery_worker_simulation:
+    build: ./backend
+    container_name: 4velo_celery_simulation
+    restart: always
+    command: celery -A core worker -Q simulation -l info --concurrency=6 --hostname=simulation@%h
+    environment:
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SCALE_BATCH_PARALLEL_CITIES: "true"
+      SCALE_USER_BULK_BATCH_SIZE: "1000"
     volumes:
       - ./backend:/app
     depends_on:

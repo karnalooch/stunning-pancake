@@ -4,7 +4,8 @@ set -e
 # Railway: set CELERY_WORKER_CONCURRENCY to match vCPUs (e.g. 6–7 on an 8 vCPU plan).
 # Leave 1 CPU for OS / beat / broker overhead.
 CONCURRENCY="${CELERY_WORKER_CONCURRENCY:-4}"
-QUEUES="${CELERY_WORKER_QUEUES:-critical,default,notifications,simulation}"
+# simulation queue is handled by celery-worker-simulation service (see docs/RAILWAY_CELERY_SIMULATION.md)
+QUEUES="${CELERY_WORKER_QUEUES:-critical,default,notifications}"
 
 echo "Starting Celery worker: concurrency=${CONCURRENCY} queues=${QUEUES}"
 
