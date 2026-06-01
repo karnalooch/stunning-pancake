@@ -25,7 +25,9 @@ services:
 
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
-    build: ./infrastructure/brouter
+    build:
+      context: .
+      dockerfile: infrastructure/brouter/Dockerfile
     container_name: 4velo_brouter
     restart: always
     ports:

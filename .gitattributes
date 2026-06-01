@@ -1,0 +1,2 @@
+infrastructure/brouter/Dockerfile text eol=lf
+infrastructure/brouter/entrypoint.sh text eol=lf

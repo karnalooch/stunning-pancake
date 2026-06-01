@@ -22,6 +22,12 @@ The container **downloads missing `.rd5` tiles on startup** from [brouter.de/seg
 
 Manual upload is optional (`railway volume files upload`).
 
+## Railway build
+
+- **Dockerfile path:** `infrastructure/brouter/Dockerfile` (repo root as build context).
+- **Root directory:** leave empty `/` (not `infrastructure/brouter`), so `COPY infrastructure/brouter/entrypoint.sh` resolves.
+- Optional config-as-code: `/infrastructure/brouter/railway.json` (absolute path from repo root).
+
 ## Build
 
 ```bash
