@@ -20,6 +20,7 @@ from activities.scale_config import (
     BATCH_WARN_WITHOUT_WIPE_ABOVE,
     DISK_HEADROOM_GB,
     POSTGRES_DISK_BUDGET_GB_DEFAULT,
+    POSTGRES_DISK_BUDGET_GB_FLOOR,
     WIPE_WAIT_TIMEOUT_SEC,
     compute_batch_scaling,
     estimate_batch_disk_gb,
@@ -129,8 +130,9 @@ def resolve_disk_budget_gb(
     Priority: SCALE_POSTGRES_DISK_BUDGET_GB env → RAILWAY_VOLUME_MOUNT_PATH df
     → Redis (learned from prior disk-full) → infer from pg_database_size → default.
 
-    After wipe, pg_database_size is tiny (e.g. 0.1 GB) but the Railway volume may be
-    10–20 GB — do not map that to the 0.5 GB tier.
+    After wipe, pg_database_size is tiny (e.g. 0.1 GB) — do not map that to the 0.5 GB
+    tier (b071e14). Use POSTGRES_DISK_BUDGET_GB_FLOOR (5 GB) or env override, not an
+    inflated guess that hides a full 5 GB Railway volume from the monitor.
     """
     env_b = _read_env_disk_budget_gb()
     if env_b is not None:
@@ -146,16 +148,44 @@ def resolve_disk_budget_gb(
 
     if db_gb is not None and db_gb > 0:
         if db_gb < EMPTY_DB_INFER_THRESHOLD_GB:
-            budget = float(POSTGRES_DISK_BUDGET_GB_DEFAULT)
-            if batch_delta_gb and batch_delta_gb > 0:
-                budget = max(
-                    budget,
-                    db_gb + float(batch_delta_gb) + float(DISK_HEADROOM_GB),
-                )
-            return budget, 'empty_db_floor'
+            # Fixed volume cap for monitor/preflight; projected batch growth is in _usage_ratio.
+            return float(POSTGRES_DISK_BUDGET_GB_DEFAULT), 'empty_db_floor'
         return infer_volume_cap_from_db_usage(db_gb), 'inferred_pg_size'
 
     return POSTGRES_DISK_BUDGET_GB_DEFAULT, 'default'
+
+
+def warn_unconfigured_disk_budget(budget_gb: float | None, budget_source: str | None) -> None:
+    """Log when budget relies on floor/default — ops should set SCALE_POSTGRES_DISK_BUDGET_GB."""
+    import logging
+
+    if budget_source not in ('empty_db_floor', 'default'):
+        return
+    from activities.scale_config import is_postgres_disk_budget_env_set
+
+    if is_postgres_disk_budget_env_set():
+        return
+
+    log = logging.getLogger(__name__)
+    railway = bool(
+        os.getenv('RAILWAY_SERVICE_NAME') or os.getenv('RAILWAY_ENVIRONMENT')
+    )
+    hint = (
+        'Set SCALE_POSTGRES_DISK_BUDGET_GB to your Postgres volume size '
+        f'(Railway common cap: {POSTGRES_DISK_BUDGET_GB_FLOOR:g} GB).'
+    )
+    if railway:
+        hint = (
+            'Railway detected — set SCALE_POSTGRES_DISK_BUDGET_GB on backend and '
+            f'celery-worker-simulation (e.g. {POSTGRES_DISK_BUDGET_GB_FLOOR:g} for 5 GB volumes). '
+            + hint
+        )
+    log.warning(
+        'disk_guard: Postgres budget ~%s GB from %s (%s)',
+        budget_gb,
+        budget_source,
+        hint,
+    )
 
 
 def _usage_ratio(
@@ -316,6 +346,8 @@ def prepare_batch_disk_guard(
 
     ratio, budget_gb, budget_source = _usage_ratio(db_gb, estimated)
     plan = adjust_batch_plan_for_disk_pressure(plan, usage_ratio=ratio)
+
+    warn_unconfigured_disk_budget(budget_gb, budget_source)
 
     if budget_gb is not None and budget_source:
         src_labels = {

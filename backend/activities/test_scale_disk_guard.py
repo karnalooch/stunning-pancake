@@ -31,7 +31,13 @@ class ScaleDiskGuardTest(SimpleTestCase):
     def test_resolve_empty_db_uses_floor_not_half_gb_tier(self):
         budget, source = resolve_disk_budget_gb(0.1, batch_delta_gb=6.7)
         self.assertEqual(source, 'empty_db_floor')
-        self.assertGreaterEqual(budget, 10)
+        self.assertEqual(budget, 5.0)
+
+    @patch.dict('os.environ', {'SCALE_POSTGRES_DISK_BUDGET_GB': '20'}, clear=False)
+    def test_resolve_empty_db_uses_env_when_set(self):
+        budget, source = resolve_disk_budget_gb(0.1)
+        self.assertEqual(source, 'env')
+        self.assertEqual(budget, 20.0)
 
     @patch('activities.scale_disk_guard.get_user_model')
     @patch('activities.scale_disk_guard._should_auto_wipe', return_value=(False, ''))

@@ -5,6 +5,7 @@ from django.test import SimpleTestCase, TestCase
 
 from activities.scale_disk_monitor import (
     EVENT_BLOCK_WRITES,
+    EVENT_BUDGET_UNCONFIGURED,
     EVENT_OK,
     EVENT_PAUSE_SIM,
     EVENT_WARN,
@@ -50,6 +51,28 @@ class EvaluateThresholdsTest(SimpleTestCase):
 
 
 class DiskMonitorRedisTest(SimpleTestCase):
+    @patch('activities.scale_disk_monitor._redis')
+    @patch('activities.scale_disk_monitor.record_disk_audit_event')
+    @patch('activities.scale_disk_monitor._set_redis_bool')
+    @patch('activities.scale_disk_monitor.is_simulation_paused', return_value=False)
+    @patch('activities.scale_disk_monitor.are_sim_writes_blocked', return_value=False)
+    @patch('activities.scale_disk_monitor.get_disk_usage_snapshot')
+    def test_monitor_audits_unconfigured_budget_once(
+        self, mock_snap, _wb, _ps, mock_set, mock_audit, mock_redis,
+    ):
+        mock_redis.return_value.get.return_value = None
+        mock_snap.return_value = {
+            'available': True,
+            'used_gb': 0.2,
+            'budget_gb': 5.0,
+            'pct': 0.04,
+            'budget_source': 'empty_db_floor',
+        }
+        run_disk_monitor(source='cron')
+        mock_audit.assert_called()
+        args, kwargs = mock_audit.call_args
+        self.assertEqual(args[0], EVENT_BUDGET_UNCONFIGURED)
+
     @patch('activities.scale_disk_monitor.record_disk_audit_event')
     @patch('activities.scale_disk_monitor._set_redis_bool')
     @patch('activities.scale_disk_monitor.is_simulation_paused', return_value=False)

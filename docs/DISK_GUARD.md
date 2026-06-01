@@ -19,19 +19,24 @@ Prevents repeat **"No space left on device"** during 10k–300k simulation batch
 | ≥ 95% | Also `scale:disk_writes_blocked=1` — live sim skips `Activity` bulk_create |
 | &lt; 80% | Clears Redis flags, audit `cleared` on transition |
 
-Budget resolution: see `scale_disk_guard.resolve_disk_budget_gb` (env → Railway volume mount → Redis learned cache → inferred tier).
+Budget resolution: see `scale_disk_guard.resolve_disk_budget_gb` (env → Railway volume mount → Redis learned cache → inferred tier → **5 GB floor** when DB is empty after wipe).
 
 ## Environment variables
 
 ```env
 SCALE_AUTO_DISK_GUARD=true
 SCALE_DISK_MONITOR_ENABLED=true
-SCALE_POSTGRES_DISK_BUDGET_GB=20          # recommended on simulation worker
+# Required on Railway if volume is not mounted on this service (typical for celery-worker):
+SCALE_POSTGRES_DISK_BUDGET_GB=5          # Railway Postgres volumes are often 5 GB max
 SCALE_DISK_WARN_PCT=0.80
 SCALE_DISK_PAUSE_SIM_PCT=0.90
 SCALE_DISK_BLOCK_WRITES_PCT=0.95
 SCALE_SIM_ACTIVITY_RETENTION_DAYS=0       # optional: delete old @aktywnemiasta.pl activities
 ```
+
+If `SCALE_POSTGRES_DISK_BUDGET_GB` is unset, the guard assumes **5 GB** when `pg_database_size` is small (after wipe). That is conservative for common Railway caps but **must** match your real volume — otherwise monitoring under-reports usage (e.g. 4.5 GB used on a 5 GB disk looked like 45% of a 10 GB budget and never paused sims).
+
+When the budget comes from `empty_db_floor` or `default`, logs emit `disk_guard: Postgres budget …` and a once-per-day audit event `budget_unconfigured` reminds you to set the env var.
 
 ## Operations
 
@@ -53,7 +58,7 @@ Returns recent events + current usage and flag state.
 ## Railway
 
 - **celery-worker** (with beat): runs `activities.tasks.monitor_postgres_disk` every 5 minutes on `default` queue.
-- **celery-worker-simulation**: set `SCALE_POSTGRES_DISK_BUDGET_GB` to your Postgres volume size (e.g. `20`).
+- **backend** and **celery-worker-simulation**: set `SCALE_POSTGRES_DISK_BUDGET_GB=5` (or your actual Postgres volume size in GB).
 - After disk-full incident: wipe or expand volume; monitor clears flags when usage drops.
 
 See also [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) and [SCALE_TEST_300K.md](./SCALE_TEST_300K.md).

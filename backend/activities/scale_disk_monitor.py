@@ -18,7 +18,11 @@ from activities.scale_config import (
     DISK_WARN_PCT,
     SIM_ACTIVITY_RETENTION_DAYS,
 )
-from activities.scale_disk_guard import get_database_size_gb, resolve_disk_budget_gb
+from activities.scale_disk_guard import (
+    get_database_size_gb,
+    resolve_disk_budget_gb,
+    warn_unconfigured_disk_budget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +36,10 @@ EVENT_PAUSE_SIM = 'pause_sim'
 EVENT_BLOCK_WRITES = 'block_writes'
 EVENT_CLEARED = 'cleared'
 EVENT_RETENTION = 'retention_cleanup'
+EVENT_BUDGET_UNCONFIGURED = 'budget_unconfigured'
+
+REDIS_KEY_BUDGET_HINT_SENT = 'scale:disk:budget_unconfigured_hint'
+REDIS_KEY_BUDGET_HINT_TTL = 86400
 
 
 def get_disk_usage_snapshot() -> dict[str, Any]:
@@ -70,6 +78,37 @@ def _redis_bool(key: str) -> bool:
         return val.lower() in ('1', 'true', 'yes', 'on')
     except Exception:
         return False
+
+
+def _maybe_audit_unconfigured_budget(snap: dict[str, Any], *, source: str) -> None:
+    """Once per day: audit when budget uses floor/default without SCALE_POSTGRES_DISK_BUDGET_GB."""
+    from activities.scale_config import is_postgres_disk_budget_env_set
+
+    budget_source = snap.get('budget_source')
+    if budget_source not in ('empty_db_floor', 'default') or is_postgres_disk_budget_env_set():
+        return
+    try:
+        if _redis().get(REDIS_KEY_BUDGET_HINT_SENT):
+            return
+    except Exception:
+        pass
+
+    record_disk_audit_event(
+        EVENT_BUDGET_UNCONFIGURED,
+        used_gb=snap.get('used_gb'),
+        budget_gb=snap.get('budget_gb'),
+        pct=snap.get('pct'),
+        action_taken=(
+            'Postgres disk budget inferred from floor/default — '
+            'set SCALE_POSTGRES_DISK_BUDGET_GB to your Railway volume size (e.g. 5)'
+        ),
+        source=source,
+        extra={'budget_source': budget_source},
+    )
+    try:
+        _redis().setex(REDIS_KEY_BUDGET_HINT_SENT, REDIS_KEY_BUDGET_HINT_TTL, '1')
+    except Exception:
+        pass
 
 
 def _set_redis_bool(key: str, value: bool, ttl_sec: int = 86400 * 2) -> None:
@@ -171,6 +210,9 @@ def run_disk_monitor(*, source: str = 'cron') -> dict[str, Any]:
     snap = get_disk_usage_snapshot()
     if not snap['available']:
         return {'skipped': True, 'reason': 'no pg size', **snap}
+
+    warn_unconfigured_disk_budget(snap.get('budget_gb'), snap.get('budget_source'))
+    _maybe_audit_unconfigured_budget(snap, source=source)
 
     pct = float(snap['pct'] or 0)
     event_type, action, pause, block = _evaluate_action(pct)
