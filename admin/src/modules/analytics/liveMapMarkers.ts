@@ -179,7 +179,8 @@ export function updateCityHubMarkerElement(el: HTMLDivElement, city: LiveMapCity
     }
     if (pulse) {
         pulse.className = active ? 'live-city-hub-pulse' : '';
-        pulse.style.opacity = active ? '1' : '0.35';
+        pulse.style.opacity = active ? '' : '0.35';
+        pulse.style.transform = active ? '' : 'none';
     }
     if (core) {
         core.textContent = String(count);

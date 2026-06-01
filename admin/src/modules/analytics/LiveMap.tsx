@@ -204,12 +204,16 @@ export const LiveMap: React.FC = () => {
             cityHubMarkersRef.current.set(city.slug, marker);
         }
         try {
-            const showClusters = zoom >= OVERVIEW_ZOOM_THRESHOLD - 1;
+            const showGlClusters = zoom >= OVERVIEW_ZOOM_THRESHOLD;
+            const clusterOpacity = showGlClusters ? 0.88 : 0;
             if (map.getLayer('live-clusters')) {
-                map.setPaintProperty('live-clusters', 'circle-opacity', showClusters ? 0.88 : 0.35);
+                map.setPaintProperty('live-clusters', 'circle-opacity', clusterOpacity);
             }
             if (map.getLayer('live-cluster-count')) {
-                map.setLayoutProperty('live-cluster-count', 'visibility', showClusters ? 'visible' : 'none');
+                map.setLayoutProperty('live-cluster-count', 'visibility', showGlClusters ? 'visible' : 'none');
+            }
+            if (map.getLayer('live-unclustered')) {
+                map.setPaintProperty('live-unclustered', 'circle-opacity', showGlClusters ? 0.9 : 0);
             }
         } catch { /* style not ready */ }
     }, []);
@@ -249,6 +253,18 @@ export const LiveMap: React.FC = () => {
                 detailMarkersRef.current.delete(id);
             }
         }
+        try {
+            if (map.getLayer('live-unclustered')) {
+                const hideDots = zoom < OVERVIEW_ZOOM_THRESHOLD || zoom >= DETAIL_ZOOM_THRESHOLD;
+                map.setPaintProperty('live-unclustered', 'circle-opacity', hideDots ? 0 : 0.9);
+            }
+            if (map.getLayer('live-clusters') && zoom >= DETAIL_ZOOM_THRESHOLD) {
+                map.setPaintProperty('live-clusters', 'circle-opacity', 0);
+                if (map.getLayer('live-cluster-count')) {
+                    map.setLayoutProperty('live-cluster-count', 'visibility', 'none');
+                }
+            }
+        } catch { /* style not ready */ }
     }, [syncCityHubMarkers]);
 
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
