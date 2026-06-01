@@ -220,8 +220,15 @@ _CORS_DEFAULTS = [
     'https://admin-production-083b.up.railway.app',
 ]
 _extra_cors = [o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
-CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_CORS_DEFAULTS + _extra_cors))
+_env_origins = []
+for _origin_var in ('FRONTEND_URL', 'ADMIN_URL'):
+    _origin_val = os.getenv(_origin_var, '').strip().rstrip('/')
+    if _origin_val.startswith(('http://', 'https://')):
+        _env_origins.append(_origin_val)
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_CORS_DEFAULTS + _env_origins + _extra_cors))
 CORS_ALLOW_CREDENTIALS = True
+_extra_csrf = [o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()]
+CSRF_TRUSTED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS + _extra_csrf))
 
 # Security headers
 SECURE_BROWSER_XSS_FILTER = True

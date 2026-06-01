@@ -43,12 +43,17 @@ psql -U 4velo_user -d 4velo_db -c "SELECT * FROM pg_policies;"
 
 ### Błąd: `CORS error: No 'Access-Control-Allow-Origin' header`
 
-**Przyczyna:** Brak konfiguracji CORS.
+**Przyczyny (sprawdź w tej kolejności):**
 
-**Rozwiązanie:**
+1. **Backend niedostępny (502/503)** — gdy Django/Postgres pada, Railway edge zwraca `502 Bad Gateway` **bez** nagłówków CORS. Przeglądarka raportuje to jako błąd CORS na preflight (`OPTIONS`), co jest mylące. Sprawdź health backendu (`curl -I https://<backend>/api/health/`) — jeśli `502` i brak `Access-Control-Allow-Origin`, napraw infrastrukturę (Postgres, redeploy), nie CORS.
+2. **Nieznany origin** — origin admina musi być na liście `CORS_ALLOWED_ORIGINS`. W `backend/core/settings.py` domyślnie jest m.in. `https://admin-production-083b.up.railway.app`; dodatkowe originy: env `FRONTEND_URL`, `ADMIN_URL`, lub `CORS_ALLOWED_ORIGINS` (CSV).
+
+**Rozwiązanie (gdy backend żyje, a origin jest nowy):**
 ```bash
-# Ustaw w .env
-CORS_ALLOWED_ORIGINS=http://localhost:3001,http://localhost:5173,https://sport-platform.com
+# Railway → Backend service → Variables
+FRONTEND_URL=https://admin-production-083b.up.railway.app
+# opcjonalnie dodatkowe domeny:
+CORS_ALLOWED_ORIGINS=https://my-other-admin.example.com
 ```
 
 ### Błąd: `Token is invalid or expired`
@@ -340,30 +345,36 @@ docker compose restart celerybeat
 **Objawy:**
 ```
 Access to fetch at 'http://localhost:8000/api/...' from origin 'http://localhost:5173' has been blocked by CORS policy
+No 'Access-Control-Allow-Origin' header on preflight response
 ```
 
 **Rozwiązanie:**
 
-1. **Sprawdź konfigurację CORS:**
-```python
-# backend/core/settings.py
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
-```
-
-2. **Ustaw w .env:**
+1. **Najpierw: czy backend odpowiada?** (Railway production)
 ```bash
-CORS_ALLOWED_ORIGINS=http://localhost:3001,http://localhost:5173,http://localhost:80
+curl.exe -s -D - -o NUL -X OPTIONS "https://backend-production-55c7.up.railway.app/api/auth/token/" ^
+  -H "Origin: https://admin-production-083b.up.railway.app" ^
+  -H "Access-Control-Request-Method: POST"
+```
+- `HTTP/1.1 502` bez `Access-Control-Allow-Origin` → backend/DB down; napraw Postgres i redeploy backendu.
+- `HTTP/1.1 200` z `Access-Control-Allow-Origin: https://admin-production-083b.up.railway.app` → CORS OK.
+
+2. **Konfiguracja CORS** (`backend/core/settings.py`):
+   - Domyślna lista localhost + `https://admin-production-083b.up.railway.app`
+   - Do listy dokładane są: `FRONTEND_URL`, `ADMIN_URL`, oraz CSV `CORS_ALLOWED_ORIGINS`
+   - `CSRF_TRUSTED_ORIGINS` = te same originy + opcjonalny `CSRF_TRUSTED_ORIGINS` z env
+
+3. **Railway Variables (Backend service):**
+```bash
+FRONTEND_URL=https://admin-production-083b.up.railway.app
+ALLOWED_HOSTS=backend-production-55c7.up.railway.app,sport-platform.com
+# tylko przy dodatkowych domenach:
+CORS_ALLOWED_ORIGINS=https://custom-admin.example.com
 ```
 
-3. **Sprawdź middleware:**
-```python
-MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',  # Musi być pierwszy
-    ...
-]
-```
+4. **Middleware** — `corsheaders.middleware.CorsMiddleware` musi być pierwszy w `MIDDLEWARE`.
 
-4. **Debug CORS headers:**
+5. **Debug CORS (backend żywy):**
 ```bash
 curl -v -H "Origin: http://localhost:5173" http://localhost:8000/api/
 # Powinno zwrócić: Access-Control-Allow-Origin: http://localhost:5173
