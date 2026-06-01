@@ -45,6 +45,27 @@ const STYLES: Record<LiveActivityKind, { gradient: string; shadow: string }> = {
     },
 };
 
+/** Icon-only marker for mid zoom (visible between city hubs and full labels). */
+export function createCompactLiveUserMarkerElement(pos: LiveMapPosition): HTMLDivElement {
+    const kind = resolveActivityKind(pos.type);
+    const style = STYLES[kind];
+    const root = document.createElement('div');
+    root.className = 'live-user-marker-compact';
+    root.style.cssText = 'pointer-events:none;';
+    const icon = document.createElement('div');
+    icon.setAttribute('data-activity', kind);
+    icon.style.cssText = [
+        'width:32px;height:32px;border-radius:50%',
+        'display:flex;align-items:center;justify-content:center',
+        `background:${style.gradient}`,
+        `box-shadow:${style.shadow}`,
+        'border:2px solid rgba(255,255,255,0.95)',
+    ].join(';');
+    icon.innerHTML = kind === 'bike' ? BIKE_SVG : RUN_SVG;
+    root.append(icon);
+    return root;
+}
+
 export function createLiveUserMarkerElement(pos: LiveMapPosition): HTMLDivElement {
     const kind = resolveActivityKind(pos.type);
     const style = STYLES[kind];
@@ -184,6 +205,20 @@ export function updateCityHubMarkerElement(el: HTMLDivElement, city: LiveMapCity
     }
     if (core) {
         core.textContent = String(count);
+    }
+}
+
+export function updateCompactLiveUserMarkerElement(el: HTMLDivElement, pos: LiveMapPosition): void {
+    const kind = resolveActivityKind(pos.type);
+    const icon = el.firstElementChild as HTMLDivElement | null;
+    if (!icon) return;
+    const prev = icon.getAttribute('data-activity');
+    if (prev !== kind) {
+        const style = STYLES[kind];
+        icon.setAttribute('data-activity', kind);
+        icon.style.background = style.gradient;
+        icon.style.boxShadow = style.shadow;
+        icon.innerHTML = kind === 'bike' ? BIKE_SVG : RUN_SVG;
     }
 }
 

@@ -9,7 +9,9 @@ import { useAuth } from '../../core/auth/useAuth';
 import { notifications } from '@mantine/notifications';
 import {
     createLiveUserMarkerElement,
+    createCompactLiveUserMarkerElement,
     updateLiveUserMarkerElement,
+    updateCompactLiveUserMarkerElement,
     createCityHubMarkerElement,
     updateCityHubMarkerElement,
     animateMarkerTo,
@@ -45,30 +47,56 @@ const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
 const POLL_BASE_MS = 2200;
 const MOVE_DEBOUNCE_MS = 280;
-const OVERVIEW_ZOOM_THRESHOLD = 9;
+/** City hub badges (count per sim city). */
+const CITY_HUB_MAX_ZOOM = 9;
+/** MapLibre cluster dots — visible from country view until street detail. */
+const GL_POINTS_MIN_ZOOM = 7;
+const GL_POINTS_HIDE_ZOOM = 12.5;
+/** Icon-only HTML markers (no labels) — fills the old 9–11 dead zone. */
+const COMPACT_MARKER_MIN_ZOOM = 9;
 const DETAIL_ZOOM_THRESHOLD = 11;
-const CLUSTER_MAX_ZOOM = 10;
+const CLUSTER_MAX_ZOOM = 12;
 
 /** API fetch cap scales with zoom — country overview vs street detail. */
 function limitForZoom(zoom: number): number {
     if (zoom < 7) return 1200;
-    if (zoom < OVERVIEW_ZOOM_THRESHOLD) return 2500;
+    if (zoom < CITY_HUB_MAX_ZOOM) return 2500;
     if (zoom < DETAIL_ZOOM_THRESHOLD) return 5000;
     if (zoom < 13) return 8000;
     return 12000;
 }
 
 function detailMarkerCap(zoom: number, total: number): number {
-    if (zoom < 12) return Math.min(80, total);
-    if (zoom < 13) return Math.min(180, total);
-    return Math.min(350, total);
+    if (zoom < COMPACT_MARKER_MIN_ZOOM) return 0;
+    if (zoom < DETAIL_ZOOM_THRESHOLD) return Math.min(280, total);
+    if (zoom < 12) return Math.min(450, total);
+    if (zoom < 13) return Math.min(750, total);
+    return Math.min(1200, total);
 }
 
 function clusterRadiusForZoom(zoom: number): number {
     if (zoom < 7) return 58;
-    if (zoom < OVERVIEW_ZOOM_THRESHOLD) return 44;
-    if (zoom < DETAIL_ZOOM_THRESHOLD) return 34;
-    return 26;
+    if (zoom < CITY_HUB_MAX_ZOOM) return 44;
+    if (zoom < DETAIL_ZOOM_THRESHOLD) return 36;
+    return 28;
+}
+
+function setGlPointsVisibility(map: any, zoom: number) {
+    const showGl = zoom >= GL_POINTS_MIN_ZOOM && zoom < GL_POINTS_HIDE_ZOOM;
+    const behindHubs = zoom < CITY_HUB_MAX_ZOOM;
+    const clusterOpacity = showGl ? (behindHubs ? 0.82 : 0.92) : 0;
+    const pointOpacity = showGl ? (behindHubs ? 0.88 : 0.95) : 0;
+    try {
+        if (map.getLayer('live-clusters')) {
+            map.setPaintProperty('live-clusters', 'circle-opacity', clusterOpacity);
+        }
+        if (map.getLayer('live-cluster-count')) {
+            map.setLayoutProperty('live-cluster-count', 'visibility', showGl ? 'visible' : 'none');
+        }
+        if (map.getLayer('live-unclustered')) {
+            map.setPaintProperty('live-unclustered', 'circle-opacity', pointOpacity);
+        }
+    } catch { /* style not ready */ }
 }
 
 function pollIntervalForZoom(zoom: number, lastRefreshMs: number | null): number {
@@ -170,11 +198,19 @@ export const LiveMap: React.FC = () => {
             source: 'live-positions',
             filter: ['!', ['has', 'point_count']],
             paint: {
-                'circle-radius': 6,
-                'circle-color': '#6366f1',
+                'circle-radius': [
+                    'interpolate', ['linear'], ['zoom'],
+                    7, 5, 9, 7, 11, 8, 13, 6,
+                ],
+                'circle-color': [
+                    'match', ['get', 'kind'],
+                    'run', '#10b981',
+                    'bike', '#7c3aed',
+                    '#6366f1',
+                ],
                 'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#fff',
-                'circle-opacity': 0.9,
+                'circle-stroke-color': '#312e81',
+                'circle-opacity': 0.95,
             },
         });
         try {
@@ -193,6 +229,7 @@ export const LiveMap: React.FC = () => {
                 deviceId: pos.deviceId,
                 name: pos.name,
                 type: pos.type,
+                kind: resolveActivityKind(pos.type),
                 speed: pos.speed,
                 course: pos.course,
             },
@@ -217,9 +254,10 @@ export const LiveMap: React.FC = () => {
         const ml = getMl();
         if (!map || !ml) return;
         const zoom = map.getZoom();
-        if (zoom >= OVERVIEW_ZOOM_THRESHOLD) {
+        if (zoom >= CITY_HUB_MAX_ZOOM) {
             cityHubMarkersRef.current.forEach((m) => m.remove());
             cityHubMarkersRef.current.clear();
+            setGlPointsVisibility(map, zoom);
             return;
         }
         const counts = cityCountsRef.current;
@@ -237,19 +275,7 @@ export const LiveMap: React.FC = () => {
                 .addTo(map);
             cityHubMarkersRef.current.set(city.slug, marker);
         }
-        try {
-            const showGlClusters = zoom >= OVERVIEW_ZOOM_THRESHOLD;
-            const clusterOpacity = showGlClusters ? 0.88 : 0;
-            if (map.getLayer('live-clusters')) {
-                map.setPaintProperty('live-clusters', 'circle-opacity', clusterOpacity);
-            }
-            if (map.getLayer('live-cluster-count')) {
-                map.setLayoutProperty('live-cluster-count', 'visibility', showGlClusters ? 'visible' : 'none');
-            }
-            if (map.getLayer('live-unclustered')) {
-                map.setPaintProperty('live-unclustered', 'circle-opacity', showGlClusters ? 0.9 : 0);
-            }
-        } catch { /* style not ready */ }
+        setGlPointsVisibility(map, zoom);
     }, []);
 
     const syncDetailMarkers = useCallback(() => {
@@ -258,11 +284,15 @@ export const LiveMap: React.FC = () => {
         if (!map || !ml) return;
         const zoom = map.getZoom();
         syncCityHubMarkers();
-        if (zoom < DETAIL_ZOOM_THRESHOLD) {
+        setGlPointsVisibility(map, zoom);
+
+        if (zoom < COMPACT_MARKER_MIN_ZOOM) {
             detailMarkersRef.current.forEach((m) => m.remove());
             detailMarkersRef.current.clear();
             return;
         }
+
+        const fullDetail = zoom >= DETAIL_ZOOM_THRESHOLD;
         const cap = detailMarkerCap(zoom, positionsRef.current.length);
         const seen = new Set<string>();
         for (const pos of positionsRef.current.slice(0, cap)) {
@@ -271,12 +301,28 @@ export const LiveMap: React.FC = () => {
             const target: [number, number] = [pos.lng, pos.lat];
             const existing = detailMarkersRef.current.get(pos.deviceId);
             if (existing) {
-                animateMarkerTo(existing, target);
-                updateLiveUserMarkerElement(existing.getElement() as HTMLDivElement, pos);
-                continue;
+                const el = existing.getElement() as HTMLDivElement;
+                const isCompact = el.classList.contains('live-user-marker-compact');
+                const needCompact = !fullDetail;
+                if (isCompact === needCompact) {
+                    animateMarkerTo(existing, target);
+                    if (fullDetail) {
+                        updateLiveUserMarkerElement(el, pos);
+                    } else {
+                        updateCompactLiveUserMarkerElement(el, pos);
+                    }
+                    continue;
+                }
+                existing.remove();
+                detailMarkersRef.current.delete(pos.deviceId);
             }
-            const el = createLiveUserMarkerElement(pos);
-            const marker = new ml.Marker({ element: el, anchor: 'bottom' })
+            const el = fullDetail
+                ? createLiveUserMarkerElement(pos)
+                : createCompactLiveUserMarkerElement(pos);
+            const marker = new ml.Marker({
+                element: el,
+                anchor: fullDetail ? 'bottom' : 'center',
+            })
                 .setLngLat(target)
                 .addTo(map);
             detailMarkersRef.current.set(pos.deviceId, marker);
@@ -287,18 +333,6 @@ export const LiveMap: React.FC = () => {
                 detailMarkersRef.current.delete(id);
             }
         }
-        try {
-            if (map.getLayer('live-unclustered')) {
-                const hideDots = zoom < OVERVIEW_ZOOM_THRESHOLD || zoom >= DETAIL_ZOOM_THRESHOLD;
-                map.setPaintProperty('live-unclustered', 'circle-opacity', hideDots ? 0 : 0.9);
-            }
-            if (map.getLayer('live-clusters') && zoom >= DETAIL_ZOOM_THRESHOLD) {
-                map.setPaintProperty('live-clusters', 'circle-opacity', 0);
-                if (map.getLayer('live-cluster-count')) {
-                    map.setLayoutProperty('live-cluster-count', 'visibility', 'none');
-                }
-            }
-        } catch { /* style not ready */ }
     }, [syncCityHubMarkers]);
 
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
