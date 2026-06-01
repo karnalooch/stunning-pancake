@@ -45,6 +45,8 @@ Przy batchu ≥1k worker **sam**:
 
 Budżet dysku jest **wykrywany automatycznie** z `pg_database_size` (tiery Railway: 0.5 / 5 / 10 / 20 / 50 GB…). Po **wipe** baza jest mała (~0.1 GB) — guard używa domyślnego budżetu (10 GB), nie tieru 0.5 GB. Dla dokładności na `celery-worker-simulation`: `SCALE_POSTGRES_DISK_BUDGET_GB=20` (rozmiar wolumenu Railway).
 
+**Monitor + audit:** Celery beat co 5 min (`activities.tasks.monitor_postgres_disk`), progi 80/90/95%, Redis `scale:simulation_paused`, API `GET /api/activities/admin/disk-audit/` — szczegóły w [DISK_GUARD.md](./DISK_GUARD.md).
+
 Wyłączenie (niezalecane): `SCALE_AUTO_DISK_GUARD=0`, `SCALE_AUTO_WIPE_BEFORE_BATCH=0`.
 
 ## Railway checklist (300k)

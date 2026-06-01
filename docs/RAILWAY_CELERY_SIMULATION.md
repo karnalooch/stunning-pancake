@@ -54,6 +54,12 @@ SCALE_MAX_CONCURRENT_RIDERS=5000
 # Automatyczny disk guard — budżet dysku z pg_database_size (opcjonalnie SCALE_POSTGRES_DISK_BUDGET_GB)
 SCALE_AUTO_DISK_GUARD=true
 SCALE_AUTO_WIPE_BEFORE_BATCH=true
+SCALE_POSTGRES_DISK_BUDGET_GB=20
+SCALE_DISK_MONITOR_ENABLED=true
+SCALE_DISK_WARN_PCT=0.80
+SCALE_DISK_PAUSE_SIM_PCT=0.90
+SCALE_DISK_BLOCK_WRITES_PCT=0.95
+# SCALE_SIM_ACTIVITY_RETENTION_DAYS=14
 
 # Road-following live sim routes (requires a reachable BRouter service on the same Railway project)
 BROUTER_URL=http://brouter:17777/brouter
@@ -70,7 +76,15 @@ Dodaj osobny serwis **brouter** (np. `nilsnolde/brouter:latest` lub Dockerfile z
 - **celery-worker-simulation**: 4–8 vCPU.
 - **celery-worker**: 2–4 vCPU.
 
-### 5. Weryfikacja logów
+### 5. Disk monitor (beat na `celery-worker`)
+
+Beat co 5 min uruchamia `activities.tasks.monitor_postgres_disk` (kolejka `default`). Przy ≥90% budżetu ustawia Redis `scale:simulation_paused`; przy ≥95% także blokuje zapisy aktywności z live sim.
+
+- Ręcznie: `python manage.py check_disk_guard`
+- Audit: `GET /api/activities/admin/disk-audit/`
+- Dokumentacja: [DISK_GUARD.md](./DISK_GUARD.md)
+
+### 6. Weryfikacja logów
 
 ```text
 Starting Celery SIMULATION worker: concurrency=7 queues=simulation node=simulation@...
@@ -78,7 +92,7 @@ Batch plan: 10 cities × 30,000 users, bulk=7,500, parallel≤6, ETA~45min
 Parallel user creation: 10 cities × 30000 users
 ```
 
-### 6. Uruchomienie batcha
+### 7. Uruchomienie batcha
 
 1. **Nie** uruchamiaj live sim podczas batcha 300k.
 2. Simulator → preset 300k lub 300000 + skip activities.
