@@ -42,6 +42,7 @@ SCALE_MAX_LIVE_POOL=350000
 SCALE_MAX_CONCURRENT_RIDERS=5000
 SCALE_MAX_TELEMETRY_PUBLISH=5000
 SCALE_TELEMETRY_API_LIMIT=500
+SCALE_TELEMETRY_LIVE_CACHE_TTL=2
 SCALE_FORCE_SKIP_ACTIVITIES_ABOVE=150000
 
 # Celery worker symulacji (celery-worker-simulation)
@@ -98,7 +99,10 @@ GET /api/activities/telemetry/live/?bbox=west,south,east,north&limit=500
   "meta": {
     "returned": 412,
     "redis_active": 4987,
-    "capped": false
+    "viewport_bike": 380,
+    "viewport_run": 32,
+    "capped": false,
+    "cached": false
   }
 }
 ```

@@ -157,8 +157,14 @@ export const TelemetryApi = {
     const { data } = await apiClient.get('/activities/telemetry/anomalies/');
     return data;
   },
-  getLivePositions: async (params?: Record<string, string | number>) => {
-    const { data } = await apiClient.get('/activities/telemetry/live/', { params });
+  getLivePositions: async (
+    params?: Record<string, string | number>,
+    options?: { signal?: AbortSignal },
+  ) => {
+    const { data } = await apiClient.get('/activities/telemetry/live/', {
+      params,
+      signal: options?.signal,
+    });
     if (Array.isArray(data)) return { positions: data, meta: {} };
     return data;
   },

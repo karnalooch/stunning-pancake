@@ -10,7 +10,7 @@ class BRouterService:
     Client for interacting with the BRouter engine.
     Used for topological track validation and anti-cheat checks.
     """
-    BASE_URL = os.getenv('BROUTER_URL', 'http://brouter:17878/brouter')
+    BASE_URL = os.getenv('BROUTER_URL', 'http://brouter:17777/brouter')
 
     @classmethod
     def validate_track(cls, activity_type, coordinates):
@@ -215,6 +215,9 @@ class TelemetryService:
     PASS = os.getenv('TRACCAR_PASS', 'admin')
     TELEMETRY_REDIS_PREFIX = 'telemetry:'
     TELEMETRY_REDIS_TTL = 120  # 2 min — positions expire if not refreshed
+    TELEMETRY_LIVE_CACHE_PREFIX = '{telemetry}:live:'
+    _devices_cache: tuple[float, list] | None = None
+    _DEVICES_CACHE_TTL = 60
 
     @classmethod
     def _positions_key(cls) -> str:
@@ -308,6 +311,109 @@ class TelemetryService:
         return max(1.0, math.sqrt(dx * dx + dy * dy) / 2.0)
 
     @classmethod
+    def _live_cache_key(cls, bbox: tuple[float, float, float, float] | None, cap: int) -> str:
+        import hashlib
+        bbox_s = ','.join(f'{x:.4f}' for x in bbox) if bbox else 'all'
+        digest = hashlib.sha256(f'{bbox_s}|{cap}'.encode()).hexdigest()[:20]
+        return f'{cls.TELEMETRY_LIVE_CACHE_PREFIX}{digest}'
+
+    @classmethod
+    def _get_live_cached(cls, key: str) -> tuple[list[dict], dict] | None:
+        import json as _json
+        from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
+        if TELEMETRY_LIVE_CACHE_TTL <= 0:
+            return None
+        try:
+            from core.redis_cluster import get_redis
+            raw = get_redis().get(key)
+            if raw:
+                payload = _json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+                meta = dict(payload.get('meta', {}))
+                meta['cached'] = True
+                return payload.get('positions', []), meta
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def _set_live_cached(cls, key: str, positions: list[dict], meta: dict) -> None:
+        import json as _json
+        from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
+        if TELEMETRY_LIVE_CACHE_TTL <= 0:
+            return
+        try:
+            from core.redis_cluster import get_redis
+            get_redis().setex(
+                key,
+                TELEMETRY_LIVE_CACHE_TTL,
+                _json.dumps({'positions': positions, 'meta': {**meta, 'cached': False}}),
+            )
+        except Exception:
+            pass
+
+    @classmethod
+    def _fetch_redis_positions(
+        cls,
+        r,
+        bbox: tuple[float, float, float, float] | None,
+        cap: int,
+        geo_radius_km: float,
+    ) -> tuple[list[dict], dict]:
+        import json as _json
+
+        pos_key = cls._positions_key()
+        geo_key = cls._geo_key()
+        meta = {
+            'returned': 0,
+            'capped': False,
+            'redis_active': r.hlen(pos_key),
+            'source': 'redis',
+        }
+        positions: list[dict] = []
+
+        if bbox:
+            west, south, east, north = bbox
+            center_lon = (west + east) / 2.0
+            center_lat = (south + north) / 2.0
+            radius_km = min(
+                cls._bbox_radius_km(west, south, east, north) * 1.2,
+                float(geo_radius_km),
+            )
+        else:
+            center_lon, center_lat = 19.1344, 51.9194
+            radius_km = float(geo_radius_km)
+
+        device_ids = r.georadius(
+            geo_key, center_lon, center_lat, radius_km,
+            unit='km', count=cap, sort='ASC',
+        )
+        if not device_ids:
+            return positions, meta
+
+        id_list = [d.decode() if isinstance(d, bytes) else d for d in device_ids]
+        raw_vals = r.hmget(pos_key, id_list)
+        for pos_json in raw_vals:
+            if not pos_json:
+                continue
+            try:
+                pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
+                if bbox:
+                    west, south, east, north = bbox
+                    lon = pos.get('longitude', 0)
+                    lat = pos.get('latitude', 0)
+                    if not (west <= lon <= east and south <= lat <= north):
+                        continue
+                positions.append(pos)
+            except Exception:
+                continue
+            if len(positions) >= cap:
+                meta['capped'] = True
+                break
+
+        meta['returned'] = len(positions)
+        return positions[:cap], meta
+
+    @classmethod
     def get_live_positions(
         cls,
         bbox: tuple[float, float, float, float] | None = None,
@@ -318,7 +424,6 @@ class TelemetryService:
         Returns (positions, meta) where meta includes counts and cap info.
         """
         from core.redis_cluster import get_redis
-        import json as _json
         from activities.scale_config import (
             TELEMETRY_API_DEFAULT_LIMIT,
             TELEMETRY_API_MAX_LIMIT,
@@ -326,15 +431,33 @@ class TelemetryService:
         )
 
         cap = min(limit or TELEMETRY_API_DEFAULT_LIMIT, TELEMETRY_API_MAX_LIMIT)
+        cache_key = cls._live_cache_key(bbox, cap) if bbox else None
+        if cache_key:
+            cached = cls._get_live_cached(cache_key)
+            if cached is not None:
+                return cached
+
         positions: list[dict] = []
-        meta = {
+        meta: dict = {
             'returned': 0,
             'capped': False,
             'redis_active': 0,
             'source': 'redis',
         }
 
-        # Traccar — optional, capped (avoid multi-MB JSON at scale)
+        try:
+            r = get_redis()
+            positions, meta = cls._fetch_redis_positions(
+                r, bbox, cap, float(TELEMETRY_GEO_RADIUS_KM),
+            )
+            if positions:
+                if cache_key:
+                    cls._set_live_cached(cache_key, positions, meta)
+                return positions, meta
+        except Exception:
+            pass
+
+        # Traccar fallback only when Redis has no active riders (avoids 2s timeout per poll)
         try:
             response = requests.get(
                 f'{cls.BASE_URL}/positions',
@@ -344,71 +467,34 @@ class TelemetryService:
             if response.status_code == 200:
                 raw = response.json() if isinstance(response.json(), list) else []
                 positions.extend(raw[:cap])
-                meta['source'] = 'traccar+redis' if positions else 'redis'
-        except Exception:
-            pass
-
-        try:
-            r = get_redis()
-            pos_key = cls._positions_key()
-            geo_key = cls._geo_key()
-            meta['redis_active'] = r.hlen(pos_key)
-
-            if bbox:
-                west, south, east, north = bbox
-                center_lon = (west + east) / 2.0
-                center_lat = (south + north) / 2.0
-                radius_km = min(
-                    cls._bbox_radius_km(west, south, east, north) * 1.2,
-                    float(TELEMETRY_GEO_RADIUS_KM),
-                )
-            else:
-                center_lon, center_lat = 19.1344, 51.9194
-                radius_km = float(TELEMETRY_GEO_RADIUS_KM)
-
-            device_ids = r.georadius(
-                geo_key, center_lon, center_lat, radius_km,
-                unit='km', count=cap, sort='ASC',
-            )
-            if not device_ids:
+                meta['source'] = 'traccar'
                 meta['returned'] = len(positions)
-                return positions, meta
-
-            raw_vals = r.hmget(pos_key, [d.decode() if isinstance(d, bytes) else d for d in device_ids])
-            for pos_json in raw_vals:
-                if not pos_json:
-                    continue
-                try:
-                    pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
-                    if bbox:
-                        west, south, east, north = bbox
-                        lon = pos.get('longitude', 0)
-                        lat = pos.get('latitude', 0)
-                        if not (west <= lon <= east and south <= lat <= north):
-                            continue
-                    positions.append(pos)
-                except Exception:
-                    continue
-                if len(positions) >= cap:
-                    meta['capped'] = True
-                    break
         except Exception:
             pass
 
-        meta['returned'] = len(positions)
+        if cache_key and positions:
+            cls._set_live_cached(cache_key, positions, meta)
         return positions[:cap], meta
 
     @classmethod
     def get_devices(cls):
-        """Fetches metadata about registered devices (athletes)."""
+        """Fetches metadata about registered devices (athletes). Cached briefly."""
+        import time
+        now = time.time()
+        if cls._devices_cache and (now - cls._devices_cache[0]) < cls._DEVICES_CACHE_TTL:
+            return cls._devices_cache[1]
         try:
             response = requests.get(
                 f'{cls.BASE_URL}/devices',
                 auth=(cls.USER, cls.PASS),
-                timeout=5,
+                timeout=3,
             )
             if response.status_code == 200:
-                return response.json()
+                result = response.json()
+                if not isinstance(result, list):
+                    result = []
+                cls._devices_cache = (now, result)
+                return result
             return []
         except Exception:
             return []

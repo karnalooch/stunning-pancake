@@ -86,6 +86,34 @@ export function createLiveUserMarkerElement(pos: LiveMapPosition): HTMLDivElemen
     return root;
 }
 
+/** Smoothly move a MapLibre HTML marker (ease-out quad). */
+export function animateMarkerTo(
+    marker: { getLngLat: () => { lng: number; lat: number }; setLngLat: (c: [number, number]) => void },
+    target: [number, number],
+    durationMs = 450,
+): void {
+    const start = marker.getLngLat();
+    const startLng = start.lng;
+    const startLat = start.lat;
+    const [endLng, endLat] = target;
+    const dx = Math.abs(endLng - startLng) + Math.abs(endLat - startLat);
+    if (dx < 1e-6) {
+        marker.setLngLat(target);
+        return;
+    }
+    const t0 = performance.now();
+    const step = (now: number) => {
+        const t = Math.min(1, (now - t0) / durationMs);
+        const ease = t * (2 - t);
+        marker.setLngLat([
+            startLng + (endLng - startLng) * ease,
+            startLat + (endLat - startLat) * ease,
+        ]);
+        if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+}
+
 export function updateLiveUserMarkerElement(el: HTMLDivElement, pos: LiveMapPosition): void {
     const kind = resolveActivityKind(pos.type);
     const speedKmh = speedToKmh(pos.speed);

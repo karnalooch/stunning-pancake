@@ -270,19 +270,30 @@ class TelemetryLiveView(generics.GenericAPIView):
             limit = 0
 
         positions, telemetry_meta = TelemetryService.get_live_positions(bbox=bbox_tuple, limit=limit or None)
-        devices = TelemetryService.get_devices()
 
         if not isinstance(positions, list):
             positions = []
-        if not isinstance(devices, list):
-            devices = []
 
-        device_info = {
-            d.get('id'): {'name': d.get('name'), 'type': d.get('category')}
-            for d in devices if isinstance(d, dict)
-        }
+        need_devices = any(
+            isinstance(p, dict) and p.get('deviceId') is not None
+            and not (p.get('name') or p.get('category') or p.get('type'))
+            for p in positions
+        )
+        device_info = {}
+        if need_devices:
+            devices = TelemetryService.get_devices()
+            if isinstance(devices, list):
+                device_info = {
+                    d.get('id'): {'name': d.get('name'), 'type': d.get('category')}
+                    for d in devices if isinstance(d, dict)
+                }
 
         enriched_data = []
+        viewport_bike = 0
+        viewport_run = 0
+        _bike = frozenset({'bike', 'bicycle', 'cycling', 'cyclist'})
+        _run = frozenset({'run', 'running', 'runner', 'person', 'walk', 'walking', 'foot'})
+
         for pos in positions:
             if not isinstance(pos, dict):
                 continue
@@ -290,6 +301,11 @@ class TelemetryLiveView(generics.GenericAPIView):
             if device_id is None:
                 continue
             info = device_info.get(device_id, {})
+            raw_type = (pos.get('category') or pos.get('type') or info.get('type', 'person') or '').lower()
+            if raw_type in _bike:
+                viewport_bike += 1
+            elif raw_type in _run:
+                viewport_run += 1
             enriched_data.append({
                 "deviceId": device_id,
                 "name": pos.get('name') or info.get('name', f"Athlete {device_id}"),
@@ -301,13 +317,17 @@ class TelemetryLiveView(generics.GenericAPIView):
                 "lastUpdate": pos.get('deviceTime'),
             })
 
-        return Response({
+        resp = Response({
             'positions': enriched_data,
             'meta': {
                 **telemetry_meta,
+                'viewport_bike': viewport_bike,
+                'viewport_run': viewport_run,
                 'pool_note': 'Map shows active riders in viewport only; pool may be 300k+.',
             },
         })
+        resp['Cache-Control'] = 'private, max-age=1'
+        return resp
 
 class AnomalyListView(generics.GenericAPIView):
     """
