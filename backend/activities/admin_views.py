@@ -68,8 +68,17 @@ class AdminDashboardStatsView(APIView):
 
     def get(self, request):
         from activities.admin_stats import build_dashboard_stats
+        import logging
+
         refresh = request.query_params.get('refresh') == '1'
-        return Response(build_dashboard_stats(request.user, refresh=refresh))
+        try:
+            return Response(build_dashboard_stats(request.user, refresh=refresh))
+        except Exception as exc:
+            logging.getLogger(__name__).exception('admin/stats failed')
+            return Response(
+                {'error': 'stats_unavailable', 'detail': str(exc)[:200]},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
 
 class DepartmentAnalyticsView(APIView):

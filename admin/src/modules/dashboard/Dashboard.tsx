@@ -95,13 +95,17 @@ export const Dashboard: React.FC = () => {
   const isModerator = user?.role === 'TENANT_MODERATOR';
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     apiClient.get('/activities/admin/stats/')
       .then((res) => setStats(res.data))
       .catch(() =>
         notifications.show({ title: 'Dashboard', message: 'Failed to load stats.', color: 'red' }),
       )
       .finally(() => setLoading(false));
-  }, []);
+  }, [user]);
 
   /* ── Greeting ────────────────────────────────────────── */
   const hour = new Date().getHours();

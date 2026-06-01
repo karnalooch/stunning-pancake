@@ -266,8 +266,29 @@ def _generate_activity_params(activity_type: str):
 # Main simulation
 # ---------------------------------------------------------------------------
 
-def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool = False, skip_activities: bool = False, total_users: int = None, num_cities: int = None):
-    """Run the Aktywne Miasta simulation."""
+def run(
+    scale: float = 1.0,
+    days: int = 30,
+    clear: bool = False,
+    dry_run: bool = False,
+    skip_activities: bool = False,
+    total_users: int = None,
+    num_cities: int = None,
+    progress_callback=None,
+):
+    """Run the Aktywne Miasta simulation.
+
+    progress_callback(**kwargs): optional; receives current_phase, progress_pct,
+    users_created, activities_created for Redis/UI progress bars.
+    """
+
+    def report(phase: str, pct: float, **extra):
+        if progress_callback:
+            progress_callback(
+                current_phase=phase,
+                progress_pct=round(min(100.0, max(0.0, pct)), 1),
+                **extra,
+            )
     # Lazy imports — models must be loaded after Django is ready
     from users.models import User, Tenant
     from users.departments import Department, UserDepartment
@@ -305,10 +326,13 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         print("🔍 DRY RUN — no data will be inserted.")
         return
 
+    report('initializing', 1, users_created=0, activities_created=0)
+
     # ------------------------------------------------------------------
     # Phase 0: Clear existing data (optional)
     # ------------------------------------------------------------------
     if clear:
+        report('clearing', 3)
         print("🗑️  Clearing all existing simulation data...")
         Activity.objects.all().delete()
         User.objects.filter(is_superuser=False, is_staff=False).delete()
@@ -316,10 +340,12 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         Tenant.objects.all().delete()
         print("   ✅ Cleared.")
         print()
+        report('clearing', 8)
 
     # ------------------------------------------------------------------
     # Phase 1: Create tenants
     # ------------------------------------------------------------------
+    report('creating_tenants', 10)
     print("🏙️  Phase 1: Creating tenants...")
     tenants = {}
     for city in selected_cities:
@@ -337,10 +363,12 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         status = "✅ Created" if created else "♻️  Exists"
         print(f"   {status}: {city['name']} (id={tenant.id})")
     print()
+    report('creating_tenants', 12)
 
     # ------------------------------------------------------------------
     # Phase 2: Create tenant admins
     # ------------------------------------------------------------------
+    report('creating_admins', 14)
     print("👤 Phase 2: Creating tenant admins...")
     for city in selected_cities:
         tenant = tenants[city["name"]]
@@ -362,10 +390,12 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         else:
             print(f"   ♻️  Admin exists: {admin_username}")
     print()
+    report('creating_admins', 16)
 
     # ------------------------------------------------------------------
     # Phase 3: Create departments per city
     # ------------------------------------------------------------------
+    report('creating_departments', 18)
     print("🏫 Phase 3: Creating departments...")
     departments_by_city = {}
     total_departments = 0
@@ -426,16 +456,19 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
     print(f"   📊 Total departments: {total_departments}")
     print()
+    report('creating_departments', 20, users_created=0, activities_created=0)
 
     # ------------------------------------------------------------------
     # Phase 4: Create users per city
     # ---------------------------------------------------------------------------
+    report('creating_users', 22)
     print("👥 Phase 4: Creating users...")
     users_by_city = {}
-    total_users = 0
+    total_users_created = 0
     batch_size = 500
+    target_user_count = total_u
 
-    for city in selected_cities:
+    for city_index, city in enumerate(selected_cities):
         tenant = tenants[city["name"]]
         city_depts = departments_by_city[city["name"]]
         city_users = []
@@ -526,24 +559,40 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
             progress = min(batch_end, n_athletes)
             if progress % 1000 == 0 or progress == n_athletes:
                 print(f"      ... {progress}/{n_athletes} users created")
+                users_so_far = sum(len(v) for v in users_by_city.values()) + len(city_users)
+                city_frac = progress / max(1, n_athletes)
+                overall = (city_index + city_frac) / max(1, len(selected_cities))
+                pct = 22 + 63 * overall
+                report(
+                    'creating_users',
+                    pct,
+                    users_created=users_so_far,
+                    activities_created=0,
+                )
 
         users_by_city[city["name"]] = city_users
-        total_users += len(city_users)
+        total_users_created += len(city_users)
         print(f"   ✅ {city['name']}: {len(city_users)} users")
+        report(
+            'creating_users',
+            22 + 63 * ((city_index + 1) / max(1, len(selected_cities))),
+            users_created=total_users_created,
+            activities_created=0,
+        )
 
-    print(f"   📊 Total users: {total_users}")
+    print(f"   📊 Total users: {total_users_created}")
     print()
+    report('creating_users', 85, users_created=total_users_created, activities_created=0)
 
     # ------------------------------------------------------------------
     # Phase 5: Create activities with GPS tracks (skip if requested)
     # ------------------------------------------------------------------
     if skip_activities:
         print("⏭️  Phase 5: Skipping activity generation.")
-        total_activities = 0
-        total_distance = 0.0
-        verified_count = 0
+        report('complete', 100, users_created=total_users_created, activities_created=0)
         return  # <= exits the function after user creation, skipping activity generation entirely
 
+    report('creating_activities', 86)
     print("🏃 Phase 5: Creating activities with GPS tracks...")
     total_activities = 0
     total_distance = 0.0
@@ -553,7 +602,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
 
     act_batch_size = 50  # bulk_create batch size (limit to 50 for SQLite 999 SQL variables limit)
 
-    for city in selected_cities:
+    for act_city_index, city in enumerate(selected_cities):
         city_users = users_by_city[city["name"]]
         tenant = tenants[city["name"]]
         city_lat = city["lat"]
@@ -617,6 +666,15 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
             # Progress logging
             if (user_idx + 1) % 500 == 0:
                 print(f"      ... {user_idx + 1}/{len(city_users)} users processed, {city_activities} activities")
+                city_frac = (user_idx + 1) / max(1, len(city_users))
+                overall = (act_city_index + city_frac) / max(1, len(selected_cities))
+                pct = 86 + 13 * overall
+                report(
+                    'creating_activities',
+                    pct,
+                    users_created=total_users_created,
+                    activities_created=total_activities,
+                )
 
         # Flush remaining
         if act_batch:
@@ -628,12 +686,19 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
         distance_by_city[city["name"]] = city_distance
         total_activities += city_activities
         print(f"   ✅ {city['name']}: {city_activities} activities, {city_distance / 1000:,.0f} km")
+        report(
+            'creating_activities',
+            86 + 13 * ((act_city_index + 1) / max(1, len(selected_cities))),
+            users_created=total_users_created,
+            activities_created=total_activities,
+        )
 
     print(f"   📊 Total activities: {total_activities}")
+    report('complete', 99, users_created=total_users_created, activities_created=total_activities)
     print()
     # end of skip_activities block
     # ------------------------------------------------------------------
-    avg_distance_per_user = total_distance / max(1, total_users) / 1000.0
+    avg_distance_per_user = total_distance / max(1, total_users_created) / 1000.0
     verified_pct = verified_count / max(1, total_activities) * 100
 
     print()
@@ -642,7 +707,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
     print("╠══════════════════════════════════════════════════════════╣")
     print(f"║  Cities:          {len(CITIES):<42d}║")
     print(f"║  Departments:     {total_departments:<42d}║")
-    print(f"║  Users:           {total_users:<42,d}║")
+    print(f"║  Users:           {total_users_created:<42,d}║")
     print(f"║  Activities:      {total_activities:<42,d}║")
     print(f"║  Total Distance:  {total_distance / 1000:>12,.0f} km{' ' * 26}║")
     print(f"║  Avg per User:    {avg_distance_per_user:>12,.1f} km{' ' * 26}║")

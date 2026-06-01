@@ -200,7 +200,7 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 
 # CORS — restricted to known domains (was: CORS_ALLOW_ALL_ORIGINS = True)
-CORS_ALLOWED_ORIGINS = [
+_CORS_DEFAULTS = [
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
@@ -215,6 +215,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://sport-platform.com',
     'https://admin-production-083b.up.railway.app',
 ]
+_extra_cors = [o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_CORS_DEFAULTS + _extra_cors))
 CORS_ALLOW_CREDENTIALS = True
 
 # Security headers

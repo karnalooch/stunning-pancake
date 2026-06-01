@@ -48,8 +48,11 @@ def invalidate_dashboard_stats_cache() -> None:
 
 
 def _batch_or_live_running() -> bool:
-    from activities import simulator_state as sim
-    return bool(sim.get_batch_state().get('running') or sim.get_live_state().get('running'))
+    try:
+        from activities import simulator_state as sim
+        return bool(sim.get_batch_state().get('running') or sim.get_live_state().get('running'))
+    except Exception:
+        return False
 
 
 def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bool = False) -> dict:
@@ -139,7 +142,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
             per_dept_stats.append({
                 'department_id': dept.id,
                 'department_name': dept.name,
-                'users': dept.members.count(),
+                'users': dept.get_member_count(),
                 'activities': act_count,
                 'distance_km': round(float(dist) / 1000.0, 1),
                 'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,

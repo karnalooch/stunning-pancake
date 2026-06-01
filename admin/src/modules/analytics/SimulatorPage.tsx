@@ -4,6 +4,7 @@ import {
     Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox,
     Modal, Divider, Stepper,
 } from '@mantine/core';
+import { BatchProgressBar, WipeProgressBar } from './SimulationProgressBar';
 import { notifications } from '@mantine/notifications';
 import {
     Play, StopCircle, Bike, Trash2, AlertTriangle,
@@ -27,6 +28,13 @@ interface BatchStatus {
     log: [string, string][];
 }
 
+interface WipeStatus {
+    running?: boolean;
+    progress_pct?: number;
+    phase?: string;
+    error?: string | null;
+}
+
 export const SimulatorPage: React.FC = () => {
     const [activeStep, setActiveStep] = useState(0);
 
@@ -45,6 +53,7 @@ export const SimulatorPage: React.FC = () => {
     const [wipeConfirm, setWipeConfirm] = useState('');
     const [wiping, setWiping] = useState(false);
     const [wipeProgress, setWipeProgress] = useState(0);
+    const [wipePhase, setWipePhase] = useState('');
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
 
@@ -55,6 +64,7 @@ export const SimulatorPage: React.FC = () => {
     const isBatchRunning = batchStatus?.running ?? false;
     const isLiveRunning = liveStatus?.running ?? false;
     const anyRunning = isBatchRunning || isLiveRunning;
+    const showBatchProgress = launching || isBatchRunning || (batchStatus && batchStatus.progress_pct > 0 && batchStatus.progress_pct < 100);
 
     const MAX_CONCURRENT = 5000;
     const rawActive = Math.round(cyclists * activeRatio);
@@ -122,6 +132,7 @@ export const SimulatorPage: React.FC = () => {
 
     const handleLaunch = async () => {
         setLaunching(true);
+        setActiveStep(2);
         try {
             await SimulatorApi.startBatch({
                 total_users: cyclists,
@@ -129,9 +140,8 @@ export const SimulatorPage: React.FC = () => {
                 clear: true,
                 skip_activities: !generateActivities,
             });
-            notifications.show({ title: 'Cyclists Creating...', message: `Generating ${cyclists.toLocaleString()} users. Wait for completion...`, color: 'yellow' });
-            
-            // Wait for synchronous completion in eager mode
+            notifications.show({ title: 'Generowanie…', message: `Tworzenie ${cyclists.toLocaleString()} użytkowników — postęp poniżej.`, color: 'yellow' });
+
             await new Promise<void>((resolve, reject) => {
                 let attempts = 0;
                 const check = setInterval(async () => {
@@ -139,9 +149,9 @@ export const SimulatorPage: React.FC = () => {
                     try {
                         const status = await SimulatorApi.getBatchStatus();
                         setBatchStatus(status);
-                        if (!status.running) { 
-                            clearInterval(check); 
-                            resolve(); 
+                        if (!status.running) {
+                            clearInterval(check);
+                            resolve();
                         }
                     } catch (e) {
                         if (attempts > 10) {
@@ -149,7 +159,7 @@ export const SimulatorPage: React.FC = () => {
                             reject(e);
                         }
                     }
-                }, 1000);
+                }, 800);
             });
             notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
         } catch (err: any) {
@@ -187,8 +197,12 @@ export const SimulatorPage: React.FC = () => {
         if (wipeConfirm !== 'DELETE ALL DATA') return;
         setWiping(true);
         setWipeProgress(0);
+        setWipePhase('Start…');
         try {
-            await SimulatorApi.wipeData((s) => setWipeProgress(s.progress_pct ?? 0));
+            await SimulatorApi.wipeData((s: WipeStatus) => {
+                setWipeProgress(s.progress_pct ?? 0);
+                setWipePhase(s.phase || '');
+            });
             setBatchStatus(null); setLiveStatus(null);
             setWipeModalOpen(false); setWipeConfirm('');
             setActiveStep(0);
@@ -338,6 +352,19 @@ export const SimulatorPage: React.FC = () => {
                                     </Stack>
                                 </Alert>
 
+                                {showBatchProgress && (
+                                    <BatchProgressBar
+                                        running={isBatchRunning || launching}
+                                        progressPct={batchStatus?.progress_pct ?? (launching ? 2 : 0)}
+                                        currentPhase={batchStatus?.current_phase}
+                                        usersCreated={batchStatus?.users_created}
+                                        targetUsers={batchStatus?.total_users || cyclists}
+                                        activitiesCreated={batchStatus?.activities_created}
+                                        elapsedSeconds={batchStatus?.elapsed_seconds}
+                                        error={batchStatus?.error}
+                                    />
+                                )}
+
                                 <Stack gap="md">
                                     <Button size="lg" color="violet" fullWidth
                                         leftSection={anyRunning ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
@@ -378,6 +405,19 @@ export const SimulatorPage: React.FC = () => {
                                         {anyRunning ? 'RUNNING' : 'IDLE'}
                                     </Badge>
                                 </Group>
+
+                                {isBatchRunning && (
+                                    <BatchProgressBar
+                                        running
+                                        progressPct={batchStatus?.progress_pct}
+                                        currentPhase={batchStatus?.current_phase}
+                                        usersCreated={batchStatus?.users_created}
+                                        targetUsers={batchStatus?.total_users || cyclists}
+                                        activitiesCreated={batchStatus?.activities_created}
+                                        elapsedSeconds={batchStatus?.elapsed_seconds}
+                                        error={batchStatus?.error}
+                                    />
+                                )}
 
                                 {anyRunning ? (
                                     <SimpleGrid cols={2} spacing="xs" mb="md">
@@ -452,8 +492,8 @@ export const SimulatorPage: React.FC = () => {
                             borderRadius: 8, background: 'var(--surface-secondary)',
                             color: 'var(--text-primary)', fontSize: 14, width: '100%',
                         }} />
-                    {wiping && wipeProgress > 0 && (
-                        <Text size="xs" c="dimmed" ta="center">Postęp: {wipeProgress.toFixed(0)}%</Text>
+                    {wiping && (
+                        <WipeProgressBar progressPct={wipeProgress} phase={wipePhase} />
                     )}
                     <Button color="red" fullWidth loading={wiping}
                         disabled={wipeConfirm !== 'DELETE ALL DATA'} onClick={handleWipe}>

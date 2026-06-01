@@ -3,6 +3,8 @@ import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '
 import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
+import { hasStoredSession } from '../../core/auth/tokens';
+import { useAuth } from '../../core/auth/useAuth';
 import { notifications } from '@mantine/notifications';
 import {
     createLiveUserMarkerElement,
@@ -41,6 +43,8 @@ const POLL_INTERVAL = 5000;
 const DETAIL_ZOOM_THRESHOLD = 11;
 
 export const LiveMap: React.FC = () => {
+    const { token, isAuthenticated } = useAuth();
+    const canFetch = Boolean(token || hasStoredSession());
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const mlRef = useRef<any>(null);
@@ -132,6 +136,7 @@ export const LiveMap: React.FC = () => {
 
     /* ---------- Fetch ---------- */
     const fetchPositions = useCallback(async () => {
+        if (!canFetch) return;
         try {
             const map = mapRef.current;
             let params: Record<string, string> | undefined;
@@ -156,7 +161,7 @@ export const LiveMap: React.FC = () => {
                 requestAnimationFrame(syncDetailMarkers);
             }
         } catch {} finally { setLoading(false); }
-    }, [updateLiveSource, syncDetailMarkers]);
+    }, [updateLiveSource, syncDetailMarkers, canFetch]);
 
     const handleQuickLaunch = useCallback(async () => {
         setLaunching(true);
@@ -239,11 +244,11 @@ export const LiveMap: React.FC = () => {
 
     /* ---------- Polling ---------- */
     useEffect(() => {
-        if (!mlReady) return;
+        if (!mlReady || !canFetch) return;
         fetchPositions();
         const interval = setInterval(fetchPositions, POLL_INTERVAL);
         return () => clearInterval(interval);
-    }, [fetchPositions, mlReady]);
+    }, [fetchPositions, mlReady, canFetch, isAuthenticated]);
 
     /* ---------- Heatmap toggle ---------- */
     useEffect(() => {

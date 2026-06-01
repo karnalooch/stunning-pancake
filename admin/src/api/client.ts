@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuth } from '../core/auth/useAuth';
+import { getStoredAccessToken, getStoredRefreshToken } from '../core/auth/tokens';
 
 let baseURL = import.meta.env.VITE_API_URL || '';
 if (!baseURL) {
@@ -23,9 +24,9 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor reads token from Zustand store (not localStorage)
+// Prefer Zustand token; fall back to localStorage until profile hydration finishes.
 apiClient.interceptors.request.use((config) => {
-  const token = useAuth.getState().token;
+  const token = useAuth.getState().token || getStoredAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -43,22 +44,34 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       const state = useAuth.getState();
-      if (state.refreshToken && !error.config._retry) {
+      const refreshToken = state.refreshToken || getStoredRefreshToken();
+      const isProfileBootstrap = String(error.config?.url || '').includes('/users/profile/');
+
+      if (refreshToken && !error.config._retry) {
         error.config._retry = true;
         try {
           const res = await axios.post(`${baseURL}/auth/token/refresh/`, {
-            refresh: state.refreshToken,
+            refresh: refreshToken,
           });
           const { access } = res.data;
-          state.login(access, state.refreshToken!, state.user!);
+          if (state.user) {
+            await state.login(access, refreshToken, state.user);
+          } else {
+            localStorage.setItem('access_token', access);
+            useAuth.setState({ token: access, refreshToken });
+          }
           error.config.headers.Authorization = `Bearer ${access}`;
           return apiClient(error.config);
         } catch {
-          state.logout();
+          if (!isProfileBootstrap) {
+            state.logout();
+          }
           return Promise.reject(error);
         }
       }
-      state.logout();
+      if (!isProfileBootstrap) {
+        state.logout();
+      }
       return Promise.reject(error);
     }
     if (error.response?.status === 403) {

@@ -121,6 +121,8 @@ export const useAuth = create<AuthState>((set, get) => ({
 const storedToken = localStorage.getItem('access_token');
 const storedRefresh = localStorage.getItem('refresh_token');
 if (storedToken && storedRefresh) {
+  // Sync tokens into store immediately so API calls after refresh don't race profile hydration.
+  useAuth.setState({ token: storedToken, refreshToken: storedRefresh });
   apiClient.get('/users/profile/', {
     headers: { Authorization: `Bearer ${storedToken}` },
   })

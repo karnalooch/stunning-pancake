@@ -108,6 +108,29 @@ class TestAdminDashboardStats:
         per_tenant = response.data.get('per_tenant', [])
         assert isinstance(per_tenant, list)
 
+    def test_dashboard_stats_tenant_admin_with_departments(self, user):
+        """TENANT_ADMIN with departments must not 500 (get_member_count path)."""
+        from rest_framework.test import force_authenticate
+        from users.departments import Department
+
+        user.role = 'TENANT_ADMIN'
+        user.save()
+        Department.objects.create(
+            tenant=user.tenant,
+            name='Test Faculty',
+            department_type='faculty',
+        )
+
+        factory = RequestFactory()
+        request = factory.get('/api/activities/admin/stats/')
+        force_authenticate(request, user=user)
+
+        view = AdminDashboardStatsView()
+        response = view.dispatch(request)
+
+        assert response.status_code == 200
+        assert 'per_department' in response.data
+
     def test_dashboard_stats_denies_athlete(self, user):
         """AdminDashboardStatsView should deny ATHLETE users."""
         from rest_framework.test import force_authenticate

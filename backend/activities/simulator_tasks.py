@@ -100,9 +100,22 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
         )
         sim.batch_log(f"Batch starting: scale={scale}, days={days}, total_users={total_users}")
 
-        sim.set_batch_state(current_phase='generating', progress_pct=10)
-        run(scale=scale, days=days, clear=clear, dry_run=False,
-            skip_activities=skip_activities, total_users=total_users)
+        target = int(total_users or 0)
+        last_logged_phase = [None]
+
+        def on_progress(**kwargs):
+            phase = kwargs.get('current_phase', '')
+            if phase and phase != last_logged_phase[0]:
+                last_logged_phase[0] = phase
+                sim.batch_log(f"Phase: {phase}")
+            sim.set_batch_state(**{k: v for k, v in kwargs.items() if v is not None})
+
+        sim.set_batch_state(current_phase='generating', progress_pct=2, total_users=target)
+        run(
+            scale=scale, days=days, clear=clear, dry_run=False,
+            skip_activities=skip_activities, total_users=total_users,
+            progress_callback=on_progress,
+        )
 
         user_count = User.objects.filter(role='ATHLETE').count()
         from activities.models import Activity
