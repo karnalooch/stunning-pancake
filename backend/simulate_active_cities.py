@@ -128,6 +128,11 @@ def _bulk_create_athletes(
     pwd = _athlete_password_hash()
     total = 0
     use_fast = fast_insert and skip_dept
+    pg_chunk = max(50, min(pg_batch_size, 250))
+
+    def _bulk_create_user_chunks(users, **kwargs):
+        for i in range(0, len(users), pg_chunk):
+            User.objects.bulk_create(users[i:i + pg_chunk], batch_size=pg_chunk, **kwargs)
 
     for batch_start in range(0, n_athletes, batch_size):
         batch_end = min(batch_start + batch_size, n_athletes)
@@ -156,25 +161,17 @@ def _bulk_create_athletes(
             if use_fast:
                 inserted = False
                 try:
-                    User.objects.bulk_create(
-                        users_to_create,
-                        batch_size=pg_batch_size,
-                        ignore_conflicts=False,
-                    )
+                    _bulk_create_user_chunks(users_to_create, ignore_conflicts=False)
                     inserted = True
                 except TypeError:
-                    User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                    _bulk_create_user_chunks(users_to_create)
                     inserted = True
                 except Exception:
                     try:
-                        User.objects.bulk_create(
-                            users_to_create,
-                            batch_size=pg_batch_size,
-                            ignore_conflicts=True,
-                        )
+                        _bulk_create_user_chunks(users_to_create, ignore_conflicts=True)
                         inserted = True
                     except TypeError:
-                        User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                        _bulk_create_user_chunks(users_to_create)
                         inserted = True
                     except Exception:
                         for u in users_to_create:
@@ -185,13 +182,9 @@ def _bulk_create_athletes(
                 n_saved = len(users_to_create) if inserted else 0
             else:
                 try:
-                    User.objects.bulk_create(
-                        users_to_create,
-                        batch_size=pg_batch_size,
-                        ignore_conflicts=True,
-                    )
+                    _bulk_create_user_chunks(users_to_create, ignore_conflicts=True)
                 except TypeError:
-                    User.objects.bulk_create(users_to_create, batch_size=pg_batch_size)
+                    _bulk_create_user_chunks(users_to_create)
                 except Exception:
                     for u in users_to_create:
                         try:

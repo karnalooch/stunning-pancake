@@ -12,10 +12,13 @@ from activities.scale_config import (
     MAX_BATCH_USERS,
     MAX_CONCURRENT_RIDERS,
     MAX_LIVE_POOL,
+    MAX_LIVE_POOL_REDIS,
     MAX_TELEMETRY_PUBLISH_PER_TICK,
     SKIP_ACTIVITIES_WARN_ABOVE,
+    SKIP_GLOBAL_LIVE_POOL_ABOVE,
     TELEMETRY_API_DEFAULT_LIMIT,
     compute_batch_scaling,
+    should_skip_global_live_pool,
 )
 from activities.services import TelemetryService
 
@@ -66,15 +69,34 @@ def analyze_scale(
         })
 
     # --- Redis / live sim ---
+    if should_skip_global_live_pool(target):
+        pool_detail = (
+            f'Przy ≥{SKIP_GLOBAL_LIVE_POOL_ABOVE:,} athlete live sim używa próbkowania DB per miasto '
+            f'(bez globalnego Redis SET 300k).'
+        )
+    else:
+        pool_detail = (
+            f'Pula Redis capped do {MAX_LIVE_POOL_REDIS:,} ID; jednocześnie jeździ max '
+            f'{MAX_CONCURRENT_RIDERS:,} (telemetria: max {MAX_TELEMETRY_PUBLISH_PER_TICK:,}/tick).'
+        )
     risks.append({
         'severity': 'info',
         'area': 'redis',
         'title': 'Pula vs aktywni na mapie',
-        'detail': (
-            f'Pula może mieć {target:,} ID w Redis SET, ale jednocześnie jeździ max '
-            f'{MAX_CONCURRENT_RIDERS:,} (telemetria: max {MAX_TELEMETRY_PUBLISH_PER_TICK:,}/tick).'
-        ),
+        'detail': pool_detail,
     })
+
+    if target >= 100_000:
+        risks.append({
+            'severity': 'high',
+            'area': 'postgresql',
+            'title': 'Dysk Postgres (bulk_create + temp)',
+            'detail': (
+                'Railway Postgres potrzebuje ≥10 GB wolnego miejsca na 300k insertów '
+                '(pgsql_tmp/WAL). Zmniejsz SCALE_USER_BULK_PG_BATCH_SIZE jeśli "No space left on device".'
+            ),
+        })
+        recommendations.append('Nie uruchamiaj live sim podczas batch 300k.')
 
     if target * active_ratio > MAX_CONCURRENT_RIDERS:
         risks.append({

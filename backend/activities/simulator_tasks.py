@@ -17,6 +17,28 @@ from .services import BRouterService
 
 _EARTH_RADIUS_M = 6_371_000.0
 
+_brouter_grid_log_count = 0
+_brouter_grid_log_last_hour = 0.0
+
+
+def _maybe_log_brouter_grid_fallback() -> None:
+    """Avoid live_log spam at scale — first 3 rides per worker, then at most once/hour."""
+    global _brouter_grid_log_count, _brouter_grid_log_last_hour
+    _brouter_grid_log_count += 1
+    if _brouter_grid_log_count <= 3:
+        sim.live_log(
+            "BRouter unavailable — grid fallback "
+            "(set BROUTER_URL on celery-worker-simulation, e.g. http://brouter:17777/brouter)"
+        )
+        return
+    now = time.time()
+    if now - _brouter_grid_log_last_hour < 3600:
+        return
+    _brouter_grid_log_last_hour = now
+    sim.live_log(
+        "BRouter unavailable — grid fallback (throttled; configure BROUTER_URL on simulation worker)"
+    )
+
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     rlat1, rlon1, rlat2, rlon2 = map(math.radians, (lat1, lon1, lat2, lon2))
@@ -109,6 +131,17 @@ def _brouter_route_waypoints(
     return None
 
 
+def _skip_brouter_now() -> bool:
+    """During batch-only runs, avoid BRouter HTTP (set SCALE_SIM_SKIP_BROUTER=1 or batch running)."""
+    import os
+    if os.getenv('SCALE_SIM_SKIP_BROUTER', '').lower() in ('1', 'true', 'yes', 'on'):
+        return True
+    try:
+        return bool(sim.get_batch_state().get('running'))
+    except Exception:
+        return False
+
+
 # ── Road-following waypoint generator (uses BRouter for real road routes) ──
 def _generate_route_waypoints(
     lat: float, lon: float, distance_m: float, activity_type: str,
@@ -118,6 +151,10 @@ def _generate_route_waypoints(
     Returns (waypoints, source) where source is 'road' or 'grid'.
     Cached per (lat, lon, distance, type) for 1 hour.
     """
+    if _skip_brouter_now():
+        grid = _generate_grid_waypoints(lat, lon)
+        return grid, 'grid'
+
     cache_key = f"road_wp:{lat:.4f}:{lon:.4f}:{int(distance_m)}:{activity_type}"
     cached = cache.get(cache_key)
     if cached:
@@ -331,15 +368,21 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
     pool_target = int(state.get('total_users') or total_users)
 
     # One-time pool setup (POST already set running=True and holds the lock)
-    if sim.get_live_pool_count() == 0:
-        from activities.scale_config import MAX_LIVE_POOL
-        pool_limit = min(pool_target, MAX_LIVE_POOL)
-        pool_size = sim.set_live_pool_from_db(pool_limit)
+    if not sim.is_live_pool_db_mode() and sim.get_live_pool_count() == 0:
+        from activities.scale_config import effective_redis_pool_limit, should_skip_global_live_pool
+
+        if should_skip_global_live_pool(pool_target):
+            pool_size = sim.init_live_pool_db_mode(pool_target)
+            mode_note = "db sampling per city"
+        else:
+            pool_limit = effective_redis_pool_limit(pool_target)
+            pool_size = sim.set_live_pool_from_db(pool_limit)
+            mode_note = f"redis pool (cap {pool_limit})"
         sim.set_live_state(total_users=pool_size)
         if pool_size < pool_target:
-            sim.live_log(f"WARNING: only {pool_size} athletes in pool (wanted {pool_target})")
+            sim.live_log(f"WARNING: only {pool_size} athletes available (wanted {pool_target})")
         sim.live_log(
-            f"LIVE SIM: pool={pool_size}, {active_ratio*100:.0f}% active (capped), "
+            f"LIVE SIM: {mode_note}, n={pool_size}, {active_ratio*100:.0f}% active (capped), "
             f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s"
         )
 
@@ -483,7 +526,8 @@ def _run_live_tick_body():
     needed = max(0, target_riding - current_riding)
     started = 0
 
-    if needed > 0 and pool_size > 0:
+    db_pool = sim.is_live_pool_db_mode()
+    if needed > 0 and (pool_size > 0 or db_pool):
         riding_ids = {str(uid) for uid in active_rides.keys()}
         riding_by_city: dict[str, int] = {}
         for ride in active_rides.values():
@@ -504,11 +548,14 @@ def _run_live_tick_body():
                 continue
             city_needed = min(city_needed, needed - len(starters))
             sample_size = min(city_needed * 4, 10_000)
-            candidates = sim.sample_live_pool_city(slug, sample_size)
-            if len(candidates) < city_needed:
-                candidates = list(dict.fromkeys(
-                    candidates + sim.sample_live_pool(min(sample_size, pool_size))
-                ))
+            if db_pool:
+                candidates = sim.sample_live_athletes_from_db(slug, sample_size)
+            else:
+                candidates = sim.sample_live_pool_city(slug, sample_size)
+                if len(candidates) < city_needed:
+                    candidates = list(dict.fromkeys(
+                        candidates + sim.sample_live_pool(min(sample_size, pool_size))
+                    ))
             available = [uid for uid in candidates if str(uid) not in riding_ids]
             pick = random.sample(available, min(city_needed, len(available))) if available else []
             for uid in pick:
@@ -539,10 +586,7 @@ def _run_live_tick_body():
 
             waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
             if route_source == 'grid':
-                sim.live_log(
-                    f"Ride {str(user_id)[:8]}: BRouter unavailable — grid fallback "
-                    f"(ensure BROUTER_URL, e.g. http://brouter:17777/brouter)"
-                )
+                _maybe_log_brouter_grid_fallback()
             start_lat, start_lon = waypoints[0][0], waypoints[0][1]
 
             sim.set_live_ride(user_id, {

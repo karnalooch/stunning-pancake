@@ -13,6 +13,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 _DEFAULT_UNSAFE = 'default-unsafe-key-for-dev'
 SECRET_KEY = os.getenv('SECRET_KEY', _DEFAULT_UNSAFE)
 DEBUG = os.getenv('DEBUG', '0') == '1'
+# Never enable DEBUG=1 in production at 300k scale: Django's django.db.backends logger
+# can emit full INSERT SQL including password hashes from bulk_create. Use Railway logs only.
 
 if not DEBUG and SECRET_KEY == _DEFAULT_UNSAFE:
     # Railway / Heroku / Render — auto-generate a random key so the app CAN start.

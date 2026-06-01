@@ -173,6 +173,7 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
       CELERY_WORKER_CONCURRENCY: "6"
       CELERY_WORKER_QUEUES: simulation
       SCALE_BATCH_PARALLEL_CITIES: "true"
@@ -180,11 +181,14 @@ services:
       SCALE_SKIP_DEPT_ON_BATCH: "true"
       SCALE_BATCH_FAST_INSERT: "true"
       DATABASE_CONN_MAX_AGE: "60"
+      SCALE_LIVE_POOL_MAX_REDIS: "50000"
+      SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE: "100000"
     volumes:
       - ./backend:/app
     depends_on:
       - db
       - redis
+      - brouter
 
   # Celery Beat — periodic task scheduler
   celery_beat:

@@ -44,8 +44,15 @@ def _celery_worker_concurrency() -> int:
 # Batch generator (Postgres users)
 MAX_BATCH_USERS = _int('SCALE_MAX_BATCH_USERS', 350_000)
 
-# Live sim pool size (Redis SET — not loaded into Python at once)
+# Live sim pool size (logical target; Redis SET capped separately)
 MAX_LIVE_POOL = _int('SCALE_MAX_LIVE_POOL', 350_000)
+
+# Max athlete IDs stored in Redis SETs (global + per-city); above SKIP_GLOBAL_LIVE_POOL_ABOVE uses DB sampling
+MAX_LIVE_POOL_REDIS = _int('SCALE_LIVE_POOL_MAX_REDIS', 50_000)
+
+# Skip filling Redis with all athlete IDs — sample per city from Postgres instead
+SKIP_GLOBAL_LIVE_POOL_ABOVE = _int('SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE', 100_000)
+SIM_SKIP_GLOBAL_LIVE_POOL = _bool('SCALE_SIM_SKIP_GLOBAL_LIVE_POOL', False)
 
 # Concurrent riders + telemetry published per tick (memory / Redis hash size)
 MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 5_000)
@@ -126,11 +133,28 @@ def adaptive_user_bulk_batch_size(total_users: int) -> int:
     return min(10_000, max(5000, total // 40))
 
 
-def adaptive_pg_bulk_batch_size(bulk_batch: int) -> int:
-    """Inner PG batch_size for bulk_create."""
+def adaptive_pg_bulk_batch_size(bulk_batch: int, total_users: int | None = None) -> int:
+    """Inner PG batch_size for bulk_create — smaller at 300k to limit temp files / WAL per INSERT."""
     if os.getenv('SCALE_USER_BULK_PG_BATCH_SIZE'):
         return _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)
+    total = int(total_users or 0)
+    if total >= 200_000:
+        return min(250, max(100, bulk_batch // 25))
+    if total >= 50_000:
+        return min(400, max(200, bulk_batch // 15))
     return min(1000, max(500, bulk_batch // 5))
+
+
+def should_skip_global_live_pool(total_users: int) -> bool:
+    """At 100k+ athletes, do not SADD entire pool — live tick samples from DB per city."""
+    if SIM_SKIP_GLOBAL_LIVE_POOL:
+        return True
+    return int(total_users) >= SKIP_GLOBAL_LIVE_POOL_ABOVE
+
+
+def effective_redis_pool_limit(pool_target: int) -> int:
+    """Cap Redis SET population (global + per-city slices)."""
+    return min(int(pool_target), MAX_LIVE_POOL, MAX_LIVE_POOL_REDIS)
 
 
 def adaptive_parallel_db_workers(total_users: int) -> int:
@@ -208,7 +232,7 @@ def compute_batch_scaling(total_users: int, max_cities_available: int = 10) -> d
     total = min(max(1, int(total_users)), MAX_BATCH_USERS)
     num_cities, users_per_city = plan_batch_cities(total, max_cities_available)
     bulk_batch = adaptive_user_bulk_batch_size(total)
-    pg_batch = adaptive_pg_bulk_batch_size(bulk_batch)
+    pg_batch = adaptive_pg_bulk_batch_size(bulk_batch, total)
     parallel_workers = adaptive_parallel_db_workers(total)
     progress_every = _int_env_or(
         'SCALE_BATCH_PROGRESS_REDIS_EVERY',

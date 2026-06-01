@@ -374,7 +374,11 @@ class LiveSimulationView(APIView):
                 last_tick_at=time.time()
             )
             # Setup athlete pool
-            pool_size = sim.set_live_pool_from_db(total_users)
+            from activities.scale_config import should_skip_global_live_pool
+            if should_skip_global_live_pool(total_users):
+                pool_size = sim.init_live_pool_db_mode(total_users)
+            else:
+                pool_size = sim.set_live_pool_from_db(total_users)
             sim.set_live_state(total_users=pool_size)
             sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): pool={pool_size} users.")
             

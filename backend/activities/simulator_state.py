@@ -180,6 +180,7 @@ LIVE_STATE_KEY = "{sim}:live:state"
 LIVE_LOG_KEY = "{sim}:live:log"
 LIVE_LOCK_KEY = "{sim}:live:lock"
 LIVE_POOL_KEY = "{sim}:live:pool"       # Redis set of user IDs (all cities)
+LIVE_POOL_MODE_KEY = "{sim}:live:pool_mode"  # "redis" | "db"
 LIVE_RIDES_KEY = "{sim}:live:rides"     # Redis hash of active rides
 
 
@@ -240,8 +241,29 @@ def set_live_state(**kwargs):
 def reset_live_state():
     """Clear all live simulation state."""
     r = get_redis()
-    r.delete(LIVE_STATE_KEY, LIVE_LOG_KEY, LIVE_POOL_KEY, LIVE_RIDES_KEY)
+    r.delete(LIVE_STATE_KEY, LIVE_LOG_KEY, LIVE_POOL_KEY, LIVE_POOL_MODE_KEY, LIVE_RIDES_KEY)
     _clear_live_city_pools(r)
+
+
+def get_live_pool_mode() -> str:
+    """redis = SRANDMEMBER pools; db = per-tick Postgres sampling (large athlete counts)."""
+    r = get_redis()
+    raw = r.get(LIVE_POOL_MODE_KEY)
+    if not raw:
+        return 'redis'
+    return (raw.decode() if isinstance(raw, bytes) else raw) or 'redis'
+
+
+def is_live_pool_db_mode() -> bool:
+    return get_live_pool_mode() == 'db'
+
+
+def _set_live_pool_mode(mode: str) -> None:
+    r = get_redis()
+    if mode == 'redis':
+        r.delete(LIVE_POOL_MODE_KEY)
+    else:
+        r.set(LIVE_POOL_MODE_KEY, mode, ex=86400)
 
 
 def live_log(msg: str):
@@ -307,7 +329,9 @@ def live_simulation_stuck() -> bool:
         return True
     if is_live_lock_held():
         return True
-    if get_live_pool_count() > 0 or get_live_ride_count() > 0:
+    if get_live_ride_count() > 0:
+        return True
+    if not is_live_pool_db_mode() and get_live_pool_count() > 0:
         return True
     return False
 
@@ -352,19 +376,72 @@ def _sadd_pool_batches(r, global_batch: list[str], city_batches: dict[str, list[
             r.sadd(city_key, *ids[i:i + POOL_SADD_BATCH])
 
 
-def set_live_pool_from_db(limit: int) -> int:
+def init_live_pool_db_mode(pool_target: int) -> int:
     """
-    Stream athlete IDs into Redis — balanced per city tenant (round-robin across CITIES).
-    Also fills per-city SETs for stratified live ride starts.
+    Large-scale live sim: no Redis SET of all athlete IDs.
+    Ticks sample per city via Postgres (order_by('?')[:n]).
     """
-    from users.models import User, Tenant
-    from simulate_active_cities import CITIES
-    from activities.scale_config import POOL_SADD_BATCH, MAX_LIVE_POOL
+    from users.models import User
+    from activities.scale_config import MAX_LIVE_POOL
 
-    limit = min(int(limit), MAX_LIVE_POOL)
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
     _clear_live_city_pools(r)
+    _set_live_pool_mode('db')
+
+    athlete_count = User.objects.filter(role='ATHLETE').count()
+    logical = min(int(pool_target), MAX_LIVE_POOL, athlete_count)
+    return logical
+
+
+def _athlete_qs_for_city(city: dict, tenant_id: int | None):
+    from users.models import User
+
+    slug = city['slug']
+    qs = User.objects.filter(role='ATHLETE')
+    if tenant_id:
+        return qs.filter(tenant_id=tenant_id)
+    return qs.filter(username__startswith=f"{slug}_athlete_")
+
+
+def sample_live_athletes_from_db(city_slug: str, count: int) -> list[int]:
+    """Random athletes for one city — bounded query, no full-table scan."""
+    from simulate_active_cities import CITIES
+    from users.models import Tenant
+
+    count = max(0, int(count))
+    if count == 0:
+        return []
+    city = next((c for c in CITIES if c['slug'] == city_slug), None)
+    if not city:
+        return []
+    tenant_id = Tenant.objects.filter(name=city['name']).values_list('id', flat=True).first()
+    qs = _athlete_qs_for_city(city, tenant_id)
+    return list(qs.order_by('?').values_list('id', flat=True)[:count])
+
+
+def set_live_pool_from_db(limit: int) -> int:
+    """
+    Stream athlete IDs into Redis — balanced per city tenant (round-robin across CITIES).
+    Fills per-city SETs for stratified live ride starts; global SET capped at MAX_LIVE_POOL_REDIS.
+    """
+    from users.models import Tenant
+    from simulate_active_cities import CITIES
+    from activities.scale_config import (
+        POOL_SADD_BATCH,
+        effective_redis_pool_limit,
+        should_skip_global_live_pool,
+    )
+
+    pool_target = int(limit)
+    if should_skip_global_live_pool(pool_target):
+        return init_live_pool_db_mode(pool_target)
+
+    limit = effective_redis_pool_limit(pool_target)
+    r = get_redis()
+    r.delete(LIVE_POOL_KEY)
+    _clear_live_city_pools(r)
+    _set_live_pool_mode('redis')
 
     city_names = [c['name'] for c in CITIES]
     tenants = {t.name: t.id for t in Tenant.objects.filter(name__in=city_names)}
@@ -380,11 +457,7 @@ def set_live_pool_from_db(limit: int) -> int:
         remainder -= quota
         slug = city['slug']
         tenant_id = tenants.get(city['name'])
-        qs = User.objects.filter(role='ATHLETE')
-        if tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
-        else:
-            qs = qs.filter(username__startswith=f"{slug}_athlete_")
+        qs = _athlete_qs_for_city(city, tenant_id)
         for uid in qs.values_list('id', flat=True)[:quota]:
             sid = str(uid)
             global_batch.append(sid)
@@ -397,29 +470,16 @@ def set_live_pool_from_db(limit: int) -> int:
     if global_batch:
         _sadd_pool_batches(r, global_batch, city_batches)
 
-    added = int(r.scard(LIVE_POOL_KEY) or 0)
-    if added < limit:
-        existing = set()
-        if added:
-            raw = r.smembers(LIVE_POOL_KEY)
-            existing = {x.decode() if isinstance(x, bytes) else x for x in raw}
-        fill = limit - added
-        for uid in User.objects.filter(role='ATHLETE').values_list('id', flat=True).iterator(chunk_size=POOL_SADD_BATCH):
-            sid = str(uid)
-            if sid in existing:
-                continue
-            r.sadd(LIVE_POOL_KEY, sid)
-            existing.add(sid)
-            fill -= 1
-            if fill <= 0:
-                break
-        added = int(r.scard(LIVE_POOL_KEY) or 0)
-
-    return added
+    return int(r.scard(LIVE_POOL_KEY) or 0)
 
 
 def get_live_pool_count() -> int:
-    """Pool size without SMEMBERS."""
+    """Pool size without SMEMBERS. In db mode, returns logical pool from live state."""
+    if is_live_pool_db_mode():
+        try:
+            return int(get_live_state().get('total_users', 0))
+        except Exception:
+            return 0
     r = get_redis()
     return int(r.scard(LIVE_POOL_KEY) or 0)
 
