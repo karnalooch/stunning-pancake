@@ -78,9 +78,9 @@ mustInclude('backend/activities/admin_stats.py', [
 ], 'Redis/simulator state check must not crash stats');
 
 mustInclude('backend/activities/admin_views.py', [
-  'HTTP_503_SERVICE_UNAVAILABLE',
-  'stats_unavailable',
-], 'AdminDashboardStatsView must return 503 on failure, not 500');
+  'get_cached_dashboard_stats',
+  '_empty_stats',
+], 'AdminDashboardStatsView must degrade gracefully on failure');
 
 const liveMapPath = resolve(ADMIN, 'modules/analytics/LiveMap.tsx');
 if (existsSync(liveMapPath)) {

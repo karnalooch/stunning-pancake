@@ -4,6 +4,7 @@ Cached, aggregate-based admin dashboard KPIs — safe during 300k batch runs.
 from __future__ import annotations
 
 import json
+import logging
 import time
 from datetime import timedelta
 
@@ -13,6 +14,8 @@ from django.utils import timezone
 
 from activities.models import Activity
 from users.models import Tenant
+
+logger = logging.getLogger(__name__)
 
 STATS_CACHE_KEY = '{admin}:dashboard:stats'
 STATS_CACHE_TTL = 120  # seconds
@@ -55,9 +58,98 @@ def _batch_or_live_running() -> bool:
         return False
 
 
+def _empty_stats(*, stale: bool = False, note: str | None = None) -> dict:
+    payload = {
+        'total_users': 0,
+        'total_activities': 0,
+        'total_distance_km': 0.0,
+        'total_calories': 0,
+        'new_users_today': 0,
+        'new_users_last_7d': 0,
+        'new_activities_last_7d': 0,
+        'verified_total': 0,
+        'verified_pct': 0.0,
+        'unverified_total': 0,
+        'per_tenant': [],
+        'per_department': [],
+        'stale': stale,
+        'batch_running': False,
+        'cached_at': time.time(),
+    }
+    if note:
+        payload['stats_note'] = note
+    return payload
+
+
+def _per_tenant_breakdown() -> list[dict]:
+    """
+    Per-tenant KPIs via separate aggregates (avoids broken SQL from
+    multiple Count(distinct=True, filter=...) on the same join).
+    """
+    rows: list[dict] = []
+    for tenant in Tenant.objects.filter(is_active=True).only(
+        'id', 'name', 'primary_color', 'secondary_color',
+    ):
+        try:
+            users = tenant.users.count()
+            agg = Activity.objects.filter(tenant_id=tenant.id).aggregate(
+                activities=Count('id'),
+                distance=Sum('distance'),
+                verified=Count('id', filter=Q(is_verified=True)),
+            )
+            act_count = agg['activities'] or 0
+            dist = agg['distance'] or 0
+            verified = agg['verified'] or 0
+            rows.append({
+                'tenant_id': str(tenant.id),
+                'tenant_name': tenant.name,
+                'users': users,
+                'activities': act_count,
+                'distance_km': round(float(dist) / 1000.0, 1),
+                'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,
+                'primary_color': tenant.primary_color,
+                'secondary_color': tenant.secondary_color,
+            })
+        except Exception:
+            logger.exception('admin/stats per_tenant failed tenant=%s', tenant.id)
+    return rows
+
+
+def _per_department_breakdown(request_user) -> list[dict]:
+    if getattr(request_user, 'role', None) not in ('TENANT_ADMIN', 'TENANT_MODERATOR'):
+        return []
+    if not request_user.tenant_id:
+        return []
+
+    from users.departments import Department
+
+    rows: list[dict] = []
+    for dept in Department.objects.filter(tenant_id=request_user.tenant_id, is_active=True):
+        try:
+            dept_agg = Activity.objects.filter(user__departments=dept).aggregate(
+                act_count=Count('id'),
+                dist=Sum('distance'),
+                verified=Count('id', filter=Q(is_verified=True)),
+            )
+            act_count = dept_agg['act_count'] or 0
+            dist = dept_agg['dist'] or 0
+            verified = dept_agg['verified'] or 0
+            rows.append({
+                'department_id': dept.id,
+                'department_name': dept.name,
+                'users': dept.get_member_count(),
+                'activities': act_count,
+                'distance_km': round(float(dist) / 1000.0, 1),
+                'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,
+            })
+        except Exception:
+            logger.exception('admin/stats per_department failed dept=%s', dept.id)
+    return rows
+
+
 def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bool = False) -> dict:
     """
-    Single round of aggregate queries + Redis cache.
+    Aggregate queries + Redis cache.
     During batch/live sim, serves cache if available (marked stale).
     """
     if allow_stale and _batch_or_live_running():
@@ -78,75 +170,32 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     seven_days_ago = now - timedelta(days=7)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    totals = Activity.objects.aggregate(
-        total_activities=Count('id'),
-        total_distance=Sum('distance'),
-        verified_total=Count('id', filter=Q(is_verified=True)),
-        new_activities_last_7d=Count('id', filter=Q(created_at__gte=seven_days_ago)),
-    )
+    try:
+        totals = Activity.objects.aggregate(
+            total_activities=Count('id'),
+            total_distance=Sum('distance'),
+            verified_total=Count('id', filter=Q(is_verified=True)),
+            new_activities_last_7d=Count('id', filter=Q(created_at__gte=seven_days_ago)),
+        )
+        user_totals = User.objects.aggregate(
+            total_users=Count('id'),
+            new_users_today=Count('id', filter=Q(date_joined__gte=today_start)),
+            new_users_last_7d=Count('id', filter=Q(date_joined__gte=seven_days_ago)),
+        )
+    except Exception:
+        logger.exception('admin/stats global aggregates failed')
+        cached = get_cached_dashboard_stats()
+        if cached:
+            out = dict(cached)
+            out['stale'] = True
+            return out
+        return _empty_stats(stale=True, note='aggregates_unavailable')
+
     total_activities = totals['total_activities'] or 0
     total_distance = totals['total_distance'] or 0
     total_distance_km = round(float(total_distance) / 1000.0, 1)
     total_verified = totals['verified_total'] or 0
     verified_pct = round((total_verified / total_activities * 100), 1) if total_activities else 0.0
-
-    user_totals = User.objects.aggregate(
-        total_users=Count('id'),
-        new_users_today=Count('id', filter=Q(date_joined__gte=today_start)),
-        new_users_last_7d=Count('id', filter=Q(date_joined__gte=seven_days_ago)),
-    )
-
-    per_tenant_stats = list(
-        Tenant.objects.filter(is_active=True).annotate(
-            users=Count('users', distinct=True),
-            activities=Count('activities', distinct=True),
-            distance=Sum('activities__distance'),
-            verified=Count(
-                'activities',
-                filter=Q(activities__is_verified=True),
-                distinct=True,
-            ),
-        ).values(
-            'id', 'name', 'primary_color', 'secondary_color',
-            'users', 'activities', 'distance', 'verified',
-        )
-    )
-    per_tenant = []
-    for row in per_tenant_stats:
-        act_count = row['activities'] or 0
-        dist = row['distance'] or 0
-        verified = row['verified'] or 0
-        per_tenant.append({
-            'tenant_id': str(row['id']),
-            'tenant_name': row['name'],
-            'users': row['users'] or 0,
-            'activities': act_count,
-            'distance_km': round(float(dist) / 1000.0, 1),
-            'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,
-            'primary_color': row['primary_color'],
-            'secondary_color': row['secondary_color'],
-        })
-
-    per_dept_stats = []
-    if getattr(request_user, 'role', None) in ('TENANT_ADMIN', 'TENANT_MODERATOR') and request_user.tenant_id:
-        from users.departments import Department
-        for dept in Department.objects.filter(tenant_id=request_user.tenant_id, is_active=True):
-            dept_agg = Activity.objects.filter(user__departments=dept).aggregate(
-                act_count=Count('id'),
-                dist=Sum('distance'),
-                verified=Count('id', filter=Q(is_verified=True)),
-            )
-            act_count = dept_agg['act_count'] or 0
-            dist = dept_agg['dist'] or 0
-            verified = dept_agg['verified'] or 0
-            per_dept_stats.append({
-                'department_id': dept.id,
-                'department_name': dept.name,
-                'users': dept.get_member_count(),
-                'activities': act_count,
-                'distance_km': round(float(dist) / 1000.0, 1),
-                'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,
-            })
 
     payload = {
         'total_users': user_totals['total_users'] or 0,
@@ -159,8 +208,8 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         'verified_total': total_verified,
         'verified_pct': verified_pct,
         'unverified_total': total_activities - total_verified,
-        'per_tenant': per_tenant,
-        'per_department': per_dept_stats,
+        'per_tenant': _per_tenant_breakdown(),
+        'per_department': _per_department_breakdown(request_user),
         'stale': False,
         'batch_running': False,
         'cached_at': time.time(),

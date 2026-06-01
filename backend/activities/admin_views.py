@@ -67,7 +67,11 @@ class AdminDashboardStatsView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def get(self, request):
-        from activities.admin_stats import build_dashboard_stats
+        from activities.admin_stats import (
+            build_dashboard_stats,
+            get_cached_dashboard_stats,
+            _empty_stats,
+        )
         import logging
 
         refresh = request.query_params.get('refresh') == '1'
@@ -75,9 +79,15 @@ class AdminDashboardStatsView(APIView):
             return Response(build_dashboard_stats(request.user, refresh=refresh))
         except Exception as exc:
             logging.getLogger(__name__).exception('admin/stats failed')
+            cached = get_cached_dashboard_stats()
+            if cached:
+                out = dict(cached)
+                out['stale'] = True
+                out['stats_note'] = 'served_from_cache_after_error'
+                return Response(out)
             return Response(
-                {'error': 'stats_unavailable', 'detail': str(exc)[:200]},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                _empty_stats(stale=True, note=str(exc)[:120]),
+                status=status.HTTP_200_OK,
             )
 
 
