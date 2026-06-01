@@ -128,29 +128,38 @@ def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]
         waypoints.append((cur_lat, cur_lon))
     return waypoints
 
+def _brouter_profiles_for_activity(activity_type: str) -> list[str]:
+    """Primary profile plus fallbacks when start cannot snap (HTTP 400 pass=0)."""
+    primary = BRouterService.profile_for_activity(activity_type)
+    profiles = [primary]
+    if primary != 'trekking':
+        profiles.append('trekking')
+    return profiles
+
+
 def _brouter_route_waypoints(
     start_lat: float, start_lon: float, end_lat: float, end_lon: float, activity_type: str,
 ) -> list[tuple[float, float]] | None:
     """Request a road-following polyline; first point is snapped onto the network."""
+    coords = [[start_lon, start_lat], [end_lon, end_lat]]
+    last_err = 'unknown error'
     try:
-        result = BRouterService.validate_track(activity_type, [
-            [start_lon, start_lat],
-            [end_lon, end_lat],
-        ])
-        if result.get('success'):
-            waypoints = result.get('coordinates')
-            if not waypoints and result.get('raw_data'):
-                waypoints = BRouterService.extract_line_coordinates(result['raw_data'])
-            if waypoints and len(waypoints) >= 2:
-                return waypoints
-            _maybe_log_brouter_route_failure(
-                f"empty route from {BRouterService.BASE_URL} ({activity_type})"
-            )
-        else:
-            err = result.get('error') or 'unknown error'
-            _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> {err}"
-            )
+        for profile in _brouter_profiles_for_activity(activity_type):
+            result = BRouterService.validate_track(activity_type, coords, profile=profile)
+            if result.get('success'):
+                waypoints = result.get('coordinates')
+                if not waypoints and result.get('raw_data'):
+                    waypoints = BRouterService.extract_line_coordinates(result['raw_data'])
+                if waypoints and len(waypoints) >= 2:
+                    return waypoints
+                last_err = f'empty route ({profile})'
+                continue
+            last_err = result.get('error') or 'unknown error'
+            if 'pass=0' not in str(last_err).lower():
+                break
+        _maybe_log_brouter_route_failure(
+            f"{BRouterService.BASE_URL} -> {last_err}"
+        )
     except Exception as exc:
         _maybe_log_brouter_route_failure(
             f"{BRouterService.BASE_URL} exception: {exc}"
@@ -186,7 +195,14 @@ def _skip_brouter_now() -> bool:
 
 # ── Road-following waypoint generator (uses BRouter for real road routes) ──
 def _generate_route_waypoints(
-    lat: float, lon: float, distance_m: float, activity_type: str,
+    lat: float,
+    lon: float,
+    distance_m: float,
+    activity_type: str,
+    *,
+    anchor_lat: float | None = None,
+    anchor_lon: float | None = None,
+    start_radius_km: float | None = None,
 ) -> tuple[list[tuple[float, float]], str]:
     """
     Prefer BRouter road polyline from city center; grid fallback if unavailable.
@@ -214,7 +230,18 @@ def _generate_route_waypoints(
             return cached['waypoints'], cached['source']
         return cached, 'road'
 
-    cos_lat = math.cos(math.radians(lat))
+    anchor_lat = anchor_lat if anchor_lat is not None else lat
+    anchor_lon = anchor_lon if anchor_lon is not None else lon
+    try:
+        route_radius_km = float(
+            start_radius_km
+            if start_radius_km is not None
+            else os.getenv('SCALE_SIM_BROUTER_START_RADIUS_KM', '4')
+        )
+    except (TypeError, ValueError):
+        route_radius_km = 4.0
+    route_radius_km = max(0.0, min(route_radius_km, 25.0))
+
     # BRouter needs a short A→B leg to build a road polyline; full ride distance_m
     # is covered over time along that polyline (not as one giant routing request).
     try:
@@ -224,12 +251,19 @@ def _generate_route_waypoints(
     max_leg_km = max(0.5, min(max_leg_km, 15.0))
     km = min(max(0.5, distance_m / 1000.0), max_leg_km)
 
-    route_attempts = max(3, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '8')))
-    for _ in range(route_attempts):
+    route_attempts = max(3, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '12')))
+    for attempt in range(route_attempts):
+        if attempt == 0:
+            start_lat, start_lon = anchor_lat, anchor_lon
+        elif route_radius_km > 0:
+            start_lat, start_lon = _jitter_point_km(anchor_lat, anchor_lon, route_radius_km)
+        else:
+            start_lat, start_lon = anchor_lat, anchor_lon
+        cos_lat = math.cos(math.radians(start_lat)) or 1e-6
         bearing = random.uniform(0, 2 * math.pi)
-        end_lat = lat + (km / 111.0) * math.cos(bearing)
-        end_lon = lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
-        waypoints = _brouter_route_waypoints(lat, lon, end_lat, end_lon, activity_type)
+        end_lat = start_lat + (km / 111.0) * math.cos(bearing)
+        end_lon = start_lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
+        waypoints = _brouter_route_waypoints(start_lat, start_lon, end_lat, end_lon, activity_type)
         if waypoints:
             payload = {'waypoints': waypoints, 'source': 'road'}
             cache.set(cache_key, payload, 3600)
@@ -845,18 +879,27 @@ def _run_live_tick_body():
             is_cheater = random.random() < cheat_ratio
 
             city_info = resolve_city_for_user(user)
-            # Start from a random spot around the city, not the exact center.
-            # Default 10km; override via SCALE_SIM_CITY_START_RADIUS_KM.
-            start_radius_km = float(os.getenv('SCALE_SIM_CITY_START_RADIUS_KM', '10'))
             lat0, lon0 = city_info['lat'], city_info['lon']
-            lat, lon = _jitter_point_km(lat0, lon0, start_radius_km)
+            try:
+                start_radius_km = float(os.getenv('SCALE_SIM_CITY_START_RADIUS_KM', '4'))
+            except (TypeError, ValueError):
+                start_radius_km = 4.0
+            start_radius_km = max(0.0, min(start_radius_km, 25.0))
 
             motion = _sample_athlete_motion_profile(act_type)
             start_delay_s = int(motion.get('start_delay_s', 0) or 0)
             ride_start = now + timedelta(seconds=start_delay_s)
             ride_end = ride_start + timedelta(seconds=duration_s)
 
-            waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
+            waypoints, route_source = _generate_route_waypoints(
+                lat0,
+                lon0,
+                distance_m,
+                act_type,
+                anchor_lat=lat0,
+                anchor_lon=lon0,
+                start_radius_km=start_radius_km,
+            )
             if not waypoints or len(waypoints) < 2:
                 unroutable += 1
                 continue

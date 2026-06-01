@@ -48,11 +48,12 @@ class BRouterService:
         return []
 
     @classmethod
-    def validate_track(cls, activity_type, coordinates):
+    def validate_track(cls, activity_type, coordinates, profile: str | None = None):
         """
         Sends a track to BRouter to check if it's feasible for the given activity type.
+        Optional profile override (e.g. trekking fallback when bicycle cannot snap pass=0).
         """
-        profile = cls.profile_for_activity(activity_type)
+        profile = profile or cls.profile_for_activity(activity_type)
 
         # Format coordinates for BRouter (lon,lat|lon,lat...)
         coord_str = "|".join([f"{c[0]},{c[1]}" for c in coordinates])

@@ -8,6 +8,7 @@ from unittest.mock import patch
 from activities.services import BRouterService
 from activities import simulator_state as sim
 from activities.simulator_tasks import (
+    _brouter_profiles_for_activity,
     _interpolate_along_polyline,
     _skip_brouter_now,
 )
@@ -30,6 +31,13 @@ class BRouterServiceParseTest(SimpleTestCase):
         }
         pts = BRouterService.extract_line_coordinates(data)
         self.assertEqual(pts, [(52.0, 21.0), (52.01, 21.01)])
+
+
+class BrouterProfilesFallbackTest(SimpleTestCase):
+    def test_bike_includes_trekking_fallback(self):
+        profiles = _brouter_profiles_for_activity('BIKE')
+        self.assertEqual(profiles[0], 'bicycle')
+        self.assertIn('trekking', profiles)
 
 
 class BatchBlocksLiveTest(SimpleTestCase):
