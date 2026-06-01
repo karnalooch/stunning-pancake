@@ -8,5 +8,10 @@
     "numReplicas": 1,
     "sleepApplication": false,
     "restartPolicy": "ALWAYS"
+  },
+  "variables": {
+    "BROUTER_URL": "http://brouter:17777/brouter",
+    "CELERY_WORKER_QUEUES": "simulation",
+    "CELERY_WORKER_CONCURRENCY": "6"
   }
 }

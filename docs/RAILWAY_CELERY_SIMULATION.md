@@ -54,7 +54,12 @@ SCALE_MAX_CONCURRENT_RIDERS=5000
 # Automatyczny disk guard — budżet dysku z pg_database_size (opcjonalnie SCALE_POSTGRES_DISK_BUDGET_GB)
 SCALE_AUTO_DISK_GUARD=true
 SCALE_AUTO_WIPE_BEFORE_BATCH=true
+
+# Road-following live sim routes (requires a reachable BRouter service on the same Railway project)
+BROUTER_URL=http://brouter:17777/brouter
 ```
+
+Dodaj osobny serwis **brouter** (np. `nilsnolde/brouter:latest` lub Dockerfile z `infrastructure/brouter`, port **17777**, ścieżka `/brouter`). Bez niego symulator używa siatki (log: `BRouter unavailable — grid fallback`). Na czas samego batcha: `SCALE_SIM_SKIP_BROUTER=1`.
 
 **Słaby Postgres:** `SCALE_BATCH_MAX_PARALLEL_WORKERS=3`, `CELERY_WORKER_CONCURRENCY=4`.
 

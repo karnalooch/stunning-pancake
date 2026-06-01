@@ -11,11 +11,11 @@ RUN apk add --no-cache wget && \
 # Create segments directory (will be mounted as volume)
 RUN mkdir -p /brouter/segments4
 
-EXPOSE 17878
+EXPOSE 17777
 
 CMD ["java", "-Xmx512m", "-Xms64m", \
      "-cp", "brouter.jar", \
      "btools.server.BRouterServer", \
      "/brouter/segments4", \
      "foot-all.brf,bicycle.brf", \
-     "17878", "1"]
+     "17777", "1"]

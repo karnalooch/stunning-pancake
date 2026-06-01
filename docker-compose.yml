@@ -25,13 +25,13 @@ services:
 
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
-    build: ./infrastructure/brouter/brouter-src
+    build: ./infrastructure/brouter
     container_name: 4velo_brouter
     restart: always
     ports:
       - "17777:17777"
     volumes:
-      - ./infrastructure/brouter/segments4:/segments4:ro
+      - ./infrastructure/brouter/segments4:/brouter/segments4:ro
 
   # Traccar for real-time telemetry collection
   traccar:

@@ -44,7 +44,7 @@
     <!-- BRouter for anti-cheat route validation -->
     <entry key='geocoder.type'>osm</entry>
     <entry key='router.type'>brouter</entry>
-    <entry key='router.url'>http://brouter:17878/brouter</entry>
+    <entry key='router.url'>http://brouter:17777/brouter</entry>
 
     <!-- Web Interface -->
     <entry key='web.port'>8082</entry>
