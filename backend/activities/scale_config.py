@@ -51,5 +51,8 @@ WIPE_CHUNK_SIZE = _int('SCALE_WIPE_CHUNK_SIZE', 5000)
 BATCH_PARALLEL_CITIES = os.getenv('SCALE_BATCH_PARALLEL_CITIES', 'true').lower() in (
     '1', 'true', 'yes', 'on',
 )
-BATCH_PARALLEL_MIN_USERS = _int('SCALE_BATCH_PARALLEL_MIN_USERS', 20_000)
-USER_BULK_BATCH_SIZE = _int('SCALE_USER_BULK_BATCH_SIZE', 1000)
+# Parallel per-city Celery tasks (needs skip_activities). 5k → 10k demo fits.
+BATCH_PARALLEL_MIN_USERS = _int('SCALE_BATCH_PARALLEL_MIN_USERS', 5_000)
+USER_BULK_BATCH_SIZE = _int('SCALE_USER_BULK_BATCH_SIZE', 2500)
+# Django bulk_create chunk size inside each Redis progress batch
+USER_BULK_PG_BATCH_SIZE = _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)

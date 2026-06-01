@@ -33,15 +33,17 @@ SCALE_FORCE_SKIP_ACTIVITIES_ABOVE=150000
 # Celery worker (serwis celery-worker na Railway)
 CELERY_WORKER_CONCURRENCY=6
 SCALE_BATCH_PARALLEL_CITIES=true
-SCALE_BATCH_PARALLEL_MIN_USERS=20000
-SCALE_USER_BULK_BATCH_SIZE=1000
+SCALE_BATCH_PARALLEL_MIN_USERS=5000
+SCALE_USER_BULK_BATCH_SIZE=2500
+SCALE_USER_BULK_PG_BATCH_SIZE=500
 ```
 
 ### Więcej CPU / workerów Celery
 
 - **Jeden batch 300k** to długie zadanie DB — **8 vCPU nie przyspieszy jednego wątku**.
 - Ustaw na serwisie **celery-worker**: `CELERY_WORKER_CONCURRENCY=6` (zostaw 1–2 vCPU na Redis/OS).
-- Przy **„skip activities”** i ≥20k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (np. 5 miast → 5 workerów naraz).
+- Przy **„skip activities”** i ≥5k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (10k → 10 miast × ~1k, do 7 workerów naraz).
+- Hasła atletów: **jeden hash bcrypt** na cały batch (bez 10k× `set_password`) — dużo szybsze na demo.
 - **Nie uruchamiaj live sim** podczas batcha — ticki co 8s zjadają CPU (w logach: `ForkPoolWorker-1` live + `ForkPoolWorker-2` batch).
 - **Osobny serwis Railway:** `celery-worker-simulation` — tylko kolejka `simulation`. Instrukcja: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
 
