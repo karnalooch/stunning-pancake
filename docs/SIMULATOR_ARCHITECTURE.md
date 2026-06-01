@@ -1047,7 +1047,11 @@ export const SimulatorPage: React.FC = () => {
 
 ## 11. Implementation Checklist
 
+> **Status 2026-06-02:** Fazy 1–4 **zrobione** w `backend/activities/simulator_state.py`, `simulator_tasks.py`, `admin_views.py`, `SimulatorPage.tsx`, `LiveMap.tsx`. Operacje: [operations/SIMULATOR.md](./operations/SIMULATOR.md). ADR: [010](./adr/010-simulator-redis-celery.md).  
+> Poniższa lista jest **historycznym planem** z czasu specyfikacji.
+
 ### Phase 1: Redis State Layer
+- [x] `backend/activities/simulator_state.py` — batch/live state, locks, pools
 - [ ] Create `backend/core/simulator_state.py` module with:
   - `BatchSimState` class (reads/writes `sim:batch:*` keys)
   - `LiveSimState` class (reads/writes `sim:live:*` keys)

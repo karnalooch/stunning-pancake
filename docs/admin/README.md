@@ -1,7 +1,7 @@
 # Admin Panel — World-Class Dashboard Redesign
 
-> **Last updated:** 2026-05-15
-> **Version:** Admin v2.0 (redesign)
+> **Last updated:** 2026-06-02  
+> **Version:** Admin v2.0 (redesign) + Live Map / Simulator
 > **Tech:** React 19 · Mantine v9 · Framer Motion · Zustand · TanStack Query
 
 ## Overview
@@ -195,7 +195,7 @@ Routes are strictly filtered at the router level by user role:
 ## 🛠️ V3.0 Architecture & Roadmap Specification
 
 For deep-dive details on high-performance pagination, MapLibre GL GPS tracking integrations, interactive 3D sponsorship voucher cards, and our upcoming AI Coach Customization Studio, please consult our dedicated specification document:
-👉 **[ROADMAP_V3.md](file:///e:/Antigravity/projekty/SPORT/docs/admin/ROADMAP_V3.md)**
+👉 **[ROADMAP_V3.md](./ROADMAP_V3.md)**
 
 
 ## Reusable Components
@@ -228,6 +228,17 @@ For deep-dive details on high-performance pagination, MapLibre GL GPS tracking i
 />
 ```
 **Props:** `title`, `subtitle`, `gradient`, `breadcrumbs`, `children`
+
+## Live Map & Simulator (`src/modules/analytics/`)
+
+| Moduł | Opis |
+|-------|------|
+| `LiveMap.tsx` | MapLibre live positions, zoom tiers (huby → klastry → ikony → etykiety) |
+| `liveMapMarkers.ts` | HTML markery zawodnika / hub miasta |
+| `SimulatorPage.tsx` | Batch + live orchestration (`waitForBatchComplete`) |
+| `SimulationProgressBar.tsx` | Pasek postępu batch / wipe |
+
+Runbook operacyjny: [operations/SIMULATOR.md](../operations/SIMULATOR.md). API: [API.md](../API.md) § Admin.
 
 ## Development
 

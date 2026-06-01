@@ -325,23 +325,9 @@ import { PermissionGuard } from './core/guards/PermissionGuard';
 </PermissionGuard>
 ```
 
-### RoleGuard (deprecated)
+### RoleGuard
 
-Komponent [`RoleGuard`](../admin/src/core/guards/RoleGuard.tsx:1) jest oznaczony jako deprecated na rzecz `PermissionGuard`.
-
-```tsx
-import { RoleGuard } from './core/guards/RoleGuard';
-
-// Ochrona trasy
-<Route
-  path="/admin"
-  element={
-    <RoleGuard allowedRoles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
-      <AdminDashboard />
-    </RoleGuard>
-  }
-/>
-```
+Usunięty z kodu — używaj wyłącznie [`PermissionGuard`](../admin/src/core/guards/PermissionGuard.tsx) z listą uprawnień z API RBAC.
 
 ### Hook `useAuth`
 

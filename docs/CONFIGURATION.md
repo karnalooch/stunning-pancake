@@ -2,11 +2,18 @@
 
 Kompletny przewodnik konfiguracji platformy 4VELO — zmienne środowiskowe, ustawienia Django, Celery, Redis, PostGIS i integracje zewnętrzne.
 
+**Ostatnia aktualizacja:** 2026-06-02
+
 ---
 
 ## 📋 Przegląd zmiennych środowiskowych
 
 Wszystkie zmienne środowiskowe znajdują się w pliku `.env` (lub są ustawiane w panelu Railway). Pełna lista znajduje się w [`.env.example`](../.env.example).
+
+Sekcje specjalne w `.env.example`:
+
+- **Scale / load test** — `SCALE_*` (patrz też [operations/SIMULATOR.md](./operations/SIMULATOR.md))
+- **BRouter** — `BROUTER_URL`, `BROUTER_TIMEOUT`
 
 ---
 

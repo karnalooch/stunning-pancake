@@ -1,4 +1,6 @@
-# ONBOARDING GUIDE — SPORT Platform
+# ONBOARDING GUIDE — 4VELO Platform
+
+> **Ostatnia aktualizacja:** 2026-06-02. Pełny indeks: [docs/README.md](../README.md).
 
 ## 1. Setup Środowiska Deweloperskiego
 Platforma wykorzystuje konteneryzację do zapewnienia spójności między środowiskami.
@@ -16,6 +18,8 @@ Platforma wykorzystuje konteneryzację do zapewnienia spójności między środo
 # 2. Uruchomienie stosu deweloperskiego
 .\dev.ps1
 ```
+
+Opcjonalnie: symulator obciążeniowy — [operations/SIMULATOR.md](../operations/SIMULATOR.md).
 
 ## 2. Onboarding Użytkownika (Wizard Flow)
 Aplikacja mobilna prowadzi użytkownika przez 7-krokowy proces incepcji:

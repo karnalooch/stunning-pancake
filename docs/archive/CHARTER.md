@@ -38,7 +38,9 @@
 - **Mobile**: React Native (Expo, Tamagui, Skia, Legend-State).
 - **Data**: PostgreSQL + PostGIS + Redis.
 
-## 6. Manifest Wizualny (SSOT: `docs/VISUAL_MANIFESTO.md`)
+## 6. Manifest Wizualny
+
+Historyczny SSOT `docs/VISUAL_MANIFESTO.md` nie jest w repo — aktualny design mobile: `mobile/src/theme/`, admin: [admin/README.md](../admin/README.md).
 
 Platforma 4VELO odrzuca klasyczne UI na rzecz immersyjnej estetyki **HD-2D Gaming Fusion**, łączącej trzy style retro-gamingowe:
 

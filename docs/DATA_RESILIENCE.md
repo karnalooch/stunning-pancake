@@ -1,6 +1,8 @@
-# Odporność na utratę danych — 4VELO / stunning-pancake
+# Odporność na utratę danych — 4VELO
 
 Dokument opisuje warstwy trwałości danych GPS i sesji treningowych oraz pozostałe ryzyka.
+
+**Runbook (mobile):** [operations/MOBILE.md](./operations/MOBILE.md) · **Ostatnia aktualizacja:** 2026-06-02
 
 ## Warstwy (od klienta do serwera)
 

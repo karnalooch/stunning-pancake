@@ -27,9 +27,12 @@ Przewodnik deweloperski platformy 4VELO — struktura projektu, standardy kodowa
 │   │   ├── urls.py             # URL-e User
 │   │   └── migrations/         # Migracje User
 │   ├── activities/             # App: Aktywności
+│   │   ├── simulator_state.py  # Redis: batch/live sim state
+│   │   ├── simulator_tasks.py  # Celery: batch, live ticks
+│   │   ├── scale_config.py     # SCALE_* env defaults
 │   │   ├── models.py           # Activity, POI, Voucher, PrivacyZone
 │   │   ├── views.py            # Widoki aktywności
-│   │   ├── admin_views.py      # Widoki admina
+│   │   ├── admin_views.py      # Widoki admina (simulate, live-simulate)
 │   │   ├── serializers.py      # Serializery
 │   │   ├── services.py         # TelemetryService
 │   │   ├── wearables.py        # StravaService, GarminService
@@ -52,6 +55,7 @@ Przewodnik deweloperski platformy 4VELO — struktura projektu, standardy kodowa
 │   ├── Dockerfile              # Docker backend
 │   ├── Dockerfile.celery       # Docker Celery worker
 │   ├── Dockerfile.celerybeat   # Docker Celery Beat
+│   # celery-worker-simulation/ — osobny Dockerfile (kolejka simulation)
 │   └── railway.json            # Railway config
 ├── admin/                      # Frontend (React + Mantine)
 │   ├── src/
@@ -72,7 +76,10 @@ Przewodnik deweloperski platformy 4VELO — struktura projektu, standardy kodowa
 │   │       ├── dashboard/      # Dashboard
 │   │       ├── users/          # Users management
 │   │       ├── tenants/        # Tenants + White-Label
-│   │       ├── analytics/      # Analytics + Heatmap
+│   │       ├── analytics/      # Analytics, LiveMap, SimulatorPage
+│   │       │   ├── LiveMap.tsx
+│   │       │   ├── SimulatorPage.tsx
+│   │       │   └── liveMapMarkers.ts
 │   │       ├── anti-cheat/     # Anti-Cheat dashboard
 │   │       ├── sponsor/        # Sponsor dashboard
 │   │       ├── settings/       # Settings

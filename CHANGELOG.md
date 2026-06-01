@@ -9,6 +9,8 @@
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md), [architecture_c4.md](./docs/diagrams/architecture_c4.md): BRouter on production.
 - [ADR-010](./docs/adr/010-simulator-redis-celery.md): Redis + Celery simulation queue.
 - [product/FAQ.md](./docs/product/FAQ.md): 4VELO branding, GPS recovery FAQ.
+- [CONTRIBUTING.md](./CONTRIBUTING.md), CI [docs.yml](./.github/workflows/docs.yml), `scripts/check_docs_links.py`.
+- [DEPLOYMENT.md](./docs/DEPLOYMENT.md) BRouter step; [admin/README.md](docs/admin/README.md) Live Map; RBAC RoleGuard cleanup.
 
 ### Fixed (application — recent)
 - Block live sim until batch completes; BRouter snap retries; Live Map markers at all zoom levels.

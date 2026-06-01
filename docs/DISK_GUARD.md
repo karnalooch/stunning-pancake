@@ -1,5 +1,7 @@
 # Postgres disk guard (automation + audit)
 
+> **Powiązane:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · **API:** `GET /api/activities/admin/disk-audit/` · **Ostatnia aktualizacja:** 2026-06-02
+
 Prevents repeat **"No space left on device"** during 10k–300k simulation batches on Railway Postgres.
 
 ## Layers

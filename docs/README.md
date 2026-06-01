@@ -5,6 +5,13 @@
 
 ---
 
+## Contributing
+
+| Dokument | Opis |
+|----------|------|
+| [CONTRIBUTING.md](../CONTRIBUTING.md) | PR workflow, testy, kiedy aktualizować docs |
+| [MAINTENANCE.md](./MAINTENANCE.md) | Inwentarz świeżości, checklista release |
+
 ## Start
 
 | Dokument | Opis |

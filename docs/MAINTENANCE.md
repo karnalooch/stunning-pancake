@@ -1,6 +1,6 @@
 # Dokumentacja — utrzymanie i świeżość
 
-**Ostatni przegląd indeksu:** 2026-06-02 (backlog docs uzupełniony)  
+**Ostatni przegląd indeksu:** 2026-06-02 (CI link check, CONTRIBUTING, pełny przegląd)  
 **Właściciel treści operacyjnych:** zespół backend / DevOps (symulator, Railway, BRouter)
 
 ---
@@ -48,7 +48,7 @@
 | API admin simulator | ✅ API.md § Admin |
 | OpenAPI drift | Ręczna weryfikacja `/api/docs/` po zmianach API |
 | Zrzuty Live Map w `docs/assets/live/` | Opcjonalnie po UI change |
-| CI: ostrzeżenie „stale docs” | Nie zaimplementowane |
+| CI: link check | ✅ `.github/workflows/docs.yml` + `scripts/check_docs_links.py` |
 | `plans/`, `.kilo/plans/` | Pozostają poza `docs/` — nie archiwizowane |
 
 ---

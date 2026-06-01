@@ -83,6 +83,14 @@ Zalecane na produkcji: **dwa** serwisy workerów:
 
 Szczegóły: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
 
+### Krok 8b: Serwis BRouter (live sim + anti-cheat)
+
+1. Nowy serwis z repo: **Dockerfile** `infrastructure/brouter/Dockerfile`, build context = root repo.
+2. Port **17777**, volume **`/brouter/segments4`** (≥ 2 GB).
+3. Zmienne na `celery-worker-simulation` i backend: `BROUTER_URL=http://brouter.railway.internal:17777/brouter`.
+
+Runbook: [operations/BROUTER.md](./operations/BROUTER.md), [infrastructure/brouter/README.md](../infrastructure/brouter/README.md).
+
 ### Krok 9: Weryfikacja
 
 ```bash
