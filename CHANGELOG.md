@@ -1,5 +1,15 @@
 # CHANGELOG — 4VELO Platform
 
+## Unreleased
+
+### Documentation
+- Reorganized `docs/`: [operations/](./docs/operations/) runbooks (simulator, BRouter), [reports/](./docs/reports/) for audit snapshots, [MAINTENANCE.md](./docs/MAINTENANCE.md) inventory.
+- Updated [docs/README.md](./docs/README.md) index (last reviewed 2026-06-02); Railway BRouter URL and batch→live ordering in [RAILWAY_CELERY_SIMULATION.md](./docs/RAILWAY_CELERY_SIMULATION.md).
+- Simulator troubleshooting: [TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md), [operations/SIMULATOR.md](./docs/operations/SIMULATOR.md).
+
+### Fixed (application — recent)
+- Block live sim until batch completes; BRouter snap retries; Live Map markers at all zoom levels.
+
 ## v0.3.3-dev (2026-05-16) — Audit System + Integration Sprint
 
 ### Added
@@ -23,7 +33,7 @@
 - **Screen count**: 39 → **46 total** (30 admin routable + 16 mobile). 0 orphans, 0 dead links, 0 RBAC mismatches.
 - **API coverage**: 20 unique FE endpoints → all matched to BE. 82 BE endpoints total. Departments endpoints fully functional.
 - **.env.example**: Reorganized sections, added 22 missing keys, removed duplicates.
-- **Audit report added**: `docs/AUDIT_REPORT_2026-05-16.md` — comprehensive audit results post-fix.
+- **Audit report added**: `docs/reports/AUDIT_REPORT_2026-05-16.md` — comprehensive audit results post-fix.
 
 ## v0.3.2-dev (2026-05-15) — Admin Dashboard World-Class Redesign
 

@@ -30,14 +30,14 @@ The platform will be available at `localhost` with automated port-forwarding.
 
 ## 📂 Documentation & Guides
 
--   **[📜 Constitution](./docs/CHARTER.md)** — Mission, Identity, and Core Directives (Agentic Engineering).
--   **[📦 Changelog](./CHANGELOG.md)** — Release notes for v0.1.0-beta.1 and all previous versions.
--   **[🛡️ Admin Panel Docs](./docs/admin/README.md)** — Dashboard redesign, design system, component API, architecture.
--   **[🧪 Beta Tester Guide](./docs/BETA_TESTER_GUIDE.md)** — Closed beta testing instructions, access credentials, and test scenarios.
--   **[Architectural Whitepaper](./docs/diagrams/architecture_c4.md)** — Core strategies: PostGIS, TimescaleDB, BRouter, RLS.
--   **[Visual Manifesto](./docs/VISUAL_MANIFESTO.md)** — HD-2D aesthetic SSOT and asset registry.
--   **[🤖 LLM Coach & System Intelligence](./docs/PLAN_TESTOWY_LLM_UPGRADE.md)** — LLM-powered Avatar Trainer (personality-driven coaching) and Admin AI analytics. Includes test suite, architecture, and deployment checklist.
--   **[Setup Guide](./setup-environment.ps1)** — Automated environment bootstrap.
+-   **[📚 Documentation index](./docs/README.md)** — główny spis (start, operacje, architektura, API).
+-   **[⚙️ Operations runbooks](./docs/operations/)** — symulator batch/live, BRouter, Railway worker.
+-   **[📦 Changelog](./CHANGELOG.md)** — historia wydań.
+-   **[🛡️ Admin Panel](./docs/admin/README.md)** — design system i komponenty.
+-   **[🏛️ Architecture](./docs/ARCHITECTURE.md)** — PostGIS, anti-cheat, multi-tenant.
+-   **[C4 diagrams](./docs/diagrams/architecture_c4.md)** — kontekst systemu.
+-   **[📜 Constitution](./docs/CONSTITUTION.md)** — zasady projektu (CHARTER historyczny: [archive/CHARTER.md](./docs/archive/CHARTER.md)).
+-   **[Setup](./setup-environment.ps1)** — bootstrap środowiska lokalnego.
 
 ## 🚢 Production Deploy
 

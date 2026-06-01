@@ -61,11 +61,18 @@ SCALE_DISK_PAUSE_SIM_PCT=0.90
 SCALE_DISK_BLOCK_WRITES_PCT=0.95
 # SCALE_SIM_ACTIVITY_RETENTION_DAYS=14
 
-# Road-following live sim routes (requires a reachable BRouter service on the same Railway project)
-BROUTER_URL=http://brouter:17777/brouter
+# Road-following live sim (osobny serwis brouter w tym samym projekcie Railway)
+BROUTER_URL=http://brouter.railway.internal:17777/brouter
+SCALE_SIM_STRICT_ROAD_ROUTES=1
+SCALE_SIM_SKIP_BROUTER=0
+SCALE_SIM_BROUTER_MAX_LEG_KM=4
+SCALE_SIM_BROUTER_START_RADIUS_KM=4
+SCALE_SIM_CITY_START_RADIUS_KM=4
 ```
 
-Dodaj osobny serwis **brouter** (np. `nilsnolde/brouter:latest` lub Dockerfile z `infrastructure/brouter`, port **17777**, ścieżka `/brouter`). Bez niego symulator używa siatki (log: `BRouter unavailable — grid fallback`). Na czas samego batcha: `SCALE_SIM_SKIP_BROUTER=1`.
+Dodaj serwis **brouter**: Dockerfile `infrastructure/brouter/Dockerfile`, port **17777**, volume `/brouter/segments4`. Runbook: [operations/BROUTER.md](./operations/BROUTER.md). Bez BRouter przy `STRICT_ROAD_ROUTES=1` jazdy nie wystartują (log: `Road-only mode: skipped …`). Na czas samego batcha można `SCALE_SIM_SKIP_BROUTER=1`.
+
+**Kolejność:** nie uruchamiaj live podczas batcha — API zwraca 409; UI czeka na koniec batcha. Zobacz [operations/SIMULATOR.md](./operations/SIMULATOR.md).
 
 **Słaby Postgres:** `SCALE_BATCH_MAX_PARALLEL_WORKERS=3`, `CELERY_WORKER_CONCURRENCY=4`.
 
@@ -94,9 +101,10 @@ Parallel user creation: 10 cities × 30000 users
 
 ### 7. Uruchomienie batcha
 
-1. **Nie** uruchamiaj live sim podczas batcha 300k.
-2. Simulator → preset 300k lub 300000 + skip activities.
-3. POST `/api/activities/admin/simulate/` zwraca `batch_plan` + ETA.
+1. **Nie** uruchamiaj live sim podczas batcha (batch lock + `batch_blocks_live_simulation()`).
+2. Poczekaj na log `Done: … users` i fazę `complete`, potem live (`pool_pct=1.0` zalecane).
+3. Simulator → preset 300k lub `total_users` + `skip_activities`.
+4. POST `/api/activities/admin/simulate/` zwraca `batch_plan` + ETA.
 
 ## Docker Compose (lokalnie)
 

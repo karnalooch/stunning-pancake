@@ -343,6 +343,18 @@ docker compose up -d
 
 ---
 
+## Aktualizacja dokumentacji
+
+Po zmianach w symulatorze, BRouter lub Live Map zaktualizuj:
+
+1. [operations/SIMULATOR.md](./operations/SIMULATOR.md) lub [operations/BROUTER.md](./operations/BROUTER.md)
+2. [MAINTENANCE.md](./MAINTENANCE.md) — data przeglądu
+3. [docs/README.md](./README.md) — jeśli dodajesz nowy plik
+4. [CHANGELOG](../CHANGELOG.md) — sekcja Unreleased / wydanie
+
+---
+
 > **Zobacz także:** [🔄 Migration Guide](./MIGRATION.md) — migracje i rollback  
 > **Zobacz także:** [🌐 Deployment Guide](./DEPLOYMENT.md) — wdrożenie produkcyjne  
-> **Zobacz także:** [📦 CHANGELOG](../CHANGELOG.md) — historia zmian
+> **Zobacz także:** [📦 CHANGELOG](../CHANGELOG.md) — historia zmian  
+> **Zobacz także:** [MAINTENANCE.md](./MAINTENANCE.md) — inwentarz dokumentacji

@@ -641,4 +641,4 @@ po merge:
 
 > **Zobacz także:** [📈 Updates Guide](./UPDATES.md) — aktualizacje zależności  
 > **Zobacz także:** [🔍 Troubleshooting](./TROUBLESHOOTING.md) — rozwiązywanie problemów  
-> **Zobacz także:** [📋 Audit Report](./AUDIT_REPORT_2026-05-16.md) — wyniki ostatniego audytu
+> **Zobacz także:** [📋 Audit Report](./reports/AUDIT_REPORT_2026-05-16.md) — wyniki audytu 2026-05-16 (archiwum)

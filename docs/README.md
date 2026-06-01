@@ -1,111 +1,103 @@
-# 📚 4VELO Platform — Dokumentacja
+# 4VELO — dokumentacja
 
-Kompletna dokumentacja platformy 4VELO — wysokowydajnego ekosystemu sportowego B2B/B2C.
+**Ostatni przegląd indeksu:** 2026-06-02  
+**Język:** polski (runbooki i przewodniki operatora)
 
 ---
 
-## 🚀 Szybki start
+## Start
 
 | Dokument | Opis |
 |----------|------|
-| [🏁 Getting Started](./GETTING_STARTED.md) | Przewodnik szybkiego startu — od zera do uruchomienia w 15 minut |
-| [📦 Installation](./INSTALLATION.md) | Pełna instrukcja instalacji lokalnej, Docker Compose i Railway |
+| [Getting Started](./GETTING_STARTED.md) | Od zera do działającego środowiska (~15 min) |
+| [Installation](./INSTALLATION.md) | Docker Compose, lokalne zależności, porty |
+| [Development](./DEVELOPMENT.md) | Struktura repo, testy, Git workflow |
 
 ---
 
-## 🏗️ Architektura i konfiguracja
+## Operacje (produkcja / Railway)
 
 | Dokument | Opis |
 |----------|------|
-| [🏛️ Architecture](./ARCHITECTURE.md) | Architektura systemu — backend, frontend, mobile, baza danych, anti-cheat |
-| [⚙️ Configuration](./CONFIGURATION.md) | Konfiguracja — zmienne środowiskowe, Django, Celery, Redis, PostGIS, integracje |
+| **[operations/](./operations/)** | **Runbooki** — symulator, BRouter, skróty |
+| [Railway — worker symulacji](./RAILWAY_CELERY_SIMULATION.md) | `celery-worker-simulation`, kolejka `simulation` |
+| [Disk guard](./DISK_GUARD.md) | Budżet Postgres, pauza zapisów |
+| [Scale test 300k](./SCALE_TEST_300K.md) | Duży test obciążeniowy |
+| [Event burst 50k](./EVENT_BURST_50K.md) | Dzień eventu |
+| [Troubleshooting](./TROUBLESHOOTING.md) | CORS, DB, Celery, symulator, BRouter |
+| [Deployment](./DEPLOYMENT.md) | Wdrożenie, SSL, backupy |
 
 ---
 
-## 🔐 Bezpieczeństwo i uprawnienia
+## Architektura i API
 
 | Dokument | Opis |
 |----------|------|
-| [🛡️ RBAC Guide](./RBAC.md) | System kontroli dostępu oparty na rolach — role, uprawnienia, API, frontend guards |
+| [Architecture](./ARCHITECTURE.md) | Backend, mobile, anti-cheat, PostGIS |
+| [Department architecture](./DEPARTMENT_ARCHITECTURE.md) | Działy / tenant |
+| [C4 diagrams](./diagrams/architecture_c4.md) | Diagramy kontekstu |
+| [API Reference](./API.md) | REST, auth, webhooks |
+| [RBAC](./RBAC.md) | Role i uprawnienia |
+| [Simulator architecture](./SIMULATOR_ARCHITECTURE.md) | Spec Redis + Celery (implementacja gotowa) |
+| [Data resilience](./DATA_RESILIENCE.md) | Odporność danych |
 
 ---
 
-## 📡 API
+## Konfiguracja i proces
 
 | Dokument | Opis |
 |----------|------|
-| [🔌 API Reference](./API.md) | Pełna referencja API — autoryzacja, endpointy, webhooks, odpowiedzi błędów |
+| [Configuration](./CONFIGURATION.md) | Django, Redis, integracje |
+| [Migration](./MIGRATION.md) | Migracje DB, rollback |
+| [Updates](./UPDATES.md) | Aktualizacja zależności i obrazów |
+| [MAINTENANCE.md](./MAINTENANCE.md) | **Inwentarz docs, luki, checklista** |
+| [CHANGELOG](../CHANGELOG.md) | Historia wydań |
 
 ---
 
-## 🚢 Wdrożenie i migracje
+## Admin panel
 
 | Dokument | Opis |
 |----------|------|
-| [🌐 Deployment](./DEPLOYMENT.md) | Przewodnik wdrożeniowy — Railway, Docker Compose production, SSL, backupy, monitoring |
-| [🔄 Migration](./MIGRATION.md) | Migracje bazy danych, migracja RBAC, zero-downtime deployment, procedury rollback |
+| [admin/README.md](./admin/README.md) | Design system, komponenty |
+| [admin/ROADMAP_V3.md](./admin/ROADMAP_V3.md) | Roadmap v3 |
 
 ---
 
-## 🔧 Rozwój i aktualizacje
+## Decyzje i zgodność
 
 | Dokument | Opis |
 |----------|------|
-| [💻 Development](./DEVELOPMENT.md) | Przewodnik deweloperski — struktura projektu, standardy kodowania, testy, debugging, Git workflow |
-| [📈 Updates](./UPDATES.md) | Przewodnik aktualizacji — zależności, migracje, obrazy Docker, changelog |
+| [ADR](./adr/) | Architecture Decision Records (001–009) |
+| [Constitution](./CONSTITUTION.md) | Zasady projektu |
+| [RCP](./compliance/RCP.md) | RODO / compliance |
+| [Onboarding](./onboarding/GUIDE.md) | Onboarding dewelopera |
 
 ---
 
-## 🆘 Pomoc
+## Raporty (snapshoty — nie „żywa” dokumentacja)
+
+| Dokument | Data |
+|----------|------|
+| [reports/](./reports/) | Audyty i gap reporty |
+| [runbooks/db_recovery.md](./runbooks/db_recovery.md) | Odtwarzanie DB |
+
+## Archiwum
 
 | Dokument | Opis |
 |----------|------|
-| [🔍 Troubleshooting](./TROUBLESHOOTING.md) | Rozwiązywanie problemów — typowe błędy, problemy z bazą, Redis, Celery, CORS, auth, wydajność |
+| [archive/](./archive/) | CHARTER, TECH_SPEC, SWOT — historyczne |
 
 ---
 
-## 📖 Dodatkowe zasoby
+## Według roli
 
-| Dokument | Opis |
-|----------|------|
-| [📜 Constitution](./CONSTITUTION.md) | Konstytucja projektu — zasady i standardy |
-| [📦 Changelog](../CHANGELOG.md) | Historia zmian i wydań |
-| [📊 Gap Report](./FRONTEND_BACKEND_GAP_REPORT.md) | Raport pokrycia frontend-backend |
-| [🏛️ Department Architecture](./DEPARTMENT_ARCHITECTURE.md) | Architektura systemu działów |
-| [🏗️ C4 Architecture](./diagrams/architecture_c4.md) | Diagramy architektury C4 |
-| [📋 Audit Report 2026-05-16](./AUDIT_REPORT_2026-05-16.md) | Raport audytu routingu, RBAC, orphan screens, env drift |
+**Nowy deweloper:** Getting Started → Installation → Development → Architecture → ADR-008.
 
-### Stan projektu (v0.3.3-dev)
-- **46 ekranów frontend** — 30 admin (20 routowalnych) + 16 mobile ✅
-- **82+ endpointów backend** — wszystkie zaimplementowane, w tym departments, rewards ✅
-- **20+ modeli Django** — kompletne z migracjami (w tym rewards 0001_initial) ✅
-- **13 dokumentów** — pełna dokumentacja + raport audytu ✅
-- **System audytów** — 8 skryptów statycznych + 2 E2E, CI job `audit` ✅
-- **Wszystkie ekrany routowalne** — 0 dead linków, 0 orphanów, 0 RBAC mismatche ✅
+**Operator / load test:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) → RAILWAY_CELERY_SIMULATION → DISK_GUARD → Troubleshooting.
+
+**Integrator API:** API → RBAC → Getting Started.
 
 ---
 
-## 📋 Spis treści według roli
-
-### Dla nowego dewelopera
-1. [Getting Started](./GETTING_STARTED.md) — szybki start
-2. [Installation](./INSTALLATION.md) — konfiguracja środowiska
-3. [Development](./DEVELOPMENT.md) — praca z kodem
-4. [Architecture](./ARCHITECTURE.md) — zrozumienie systemu
-
-### Dla administratora / operatora
-1. [Deployment](./DEPLOYMENT.md) — wdrożenie produkcyjne
-2. [Configuration](./CONFIGURATION.md) — konfiguracja
-3. [Troubleshooting](./TROUBLESHOOTING.md) — rozwiązywanie problemów
-4. [Updates](./UPDATES.md) — aktualizacje
-
-### Dla integratora / API consumer
-1. [API Reference](./API.md) — dokumentacja API
-2. [RBAC Guide](./RBAC.md) — system uprawnień
-3. [Getting Started](./GETTING_STARTED.md) — szybki start
-
----
-
-> **Wersja dokumentacji:** v0.3.3-dev  
-> **Ostatnia aktualizacja:** 2026-05-16  
-> **Język:** Polski
+> Utrzymanie tego indeksu: przy każdej większej zmianie operacyjnej zaktualizuj [MAINTENANCE.md](./MAINTENANCE.md) i datę powyżej.

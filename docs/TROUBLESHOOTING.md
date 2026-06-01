@@ -626,5 +626,36 @@ docker compose logs -f --tail=100 backend
 
 ---
 
+## Symulator i Live Map (admin)
+
+### Live startuje w trakcie batcha / mało jeźdźców na mapie
+
+**Objawy:** `only 160 athletes available`, ~48 na mapie przy planowanych tysiącach, log `Batch simulation is still in progress`.
+
+**Rozwiązanie:**
+
+1. Zatrzymaj live i batch; `POST /api/activities/admin/simulator-reset/`.
+2. Uruchom batch i **poczekaj** na `Done: … users` (UI: Simulator z włączonym live czeka automatycznie).
+3. Dopiero potem live z `pool_pct=1.0`.
+
+Szczegóły: [operations/SIMULATOR.md](./operations/SIMULATOR.md).
+
+### BRouter: `no track found at pass=0`
+
+**Przyczyna:** Punkt startu poza siecią dróg lub brak kafelka `.rd5`.
+
+**Rozwiązanie:** Sprawdź serwis `brouter`, volume segmentów, `BROUTER_URL` na `celery-worker-simulation`, `lookups.dat` v11. Zobacz [operations/BROUTER.md](./operations/BROUTER.md).
+
+### Na mapie nic nie widać przy niektórych poziomach zoomu
+
+**Przyczyna (historyczna):** martwa strefa zoom 9–11 (ukryta warstwa GL). **Od 2026-06-02:** kompaktowe ikony + klastry — wymaga deployu najnowszego admina (twardy refresh Ctrl+F5).
+
+### `disk_guard: Postgres budget`
+
+Ustaw `SCALE_POSTGRES_DISK_BUDGET_GB=5` (lub rozmiar wolumenu) na **backend** i **celery-worker-simulation**. Zobacz [DISK_GUARD.md](./DISK_GUARD.md).
+
+---
+
+> **Zobacz także:** [operations/](./operations/) — runbooki symulatora i BRouter  
 > **Zobacz także:** [🌐 Deployment Guide](./DEPLOYMENT.md) — wdrożenie produkcyjne  
 > **Zobacz także:** [🔄 Migration Guide](./MIGRATION.md) — migracje i rollback

@@ -480,6 +480,18 @@ CORS_ALLOWED_ORIGINS=http://localhost:3001,http://localhost:5173,https://sport-p
 | `RLS_APP_ROLE` | `4velo_app` | Rola aplikacji dla RLS |
 | `CITUS_SHARD_COUNT` | 32 | Liczba shardów Citus |
 
+### Symulacja skali i BRouter
+
+Pełna tabela operacyjna: [operations/SIMULATOR.md](./operations/SIMULATOR.md). Kod: [`backend/activities/scale_config.py`](../backend/activities/scale_config.py).
+
+| Zmienna | Gdzie ustawić | Opis |
+|---------|---------------|------|
+| `BROUTER_URL` | backend, celery-worker-simulation | Np. `http://brouter.railway.internal:17777/brouter` |
+| `SCALE_POSTGRES_DISK_BUDGET_GB` | backend, celery-worker-simulation | Budżet wolumenu Postgres (Railway często 5) |
+| `SCALE_SIM_STRICT_ROAD_ROUTES` | celery-worker-simulation | `1` = tylko trasy z BRouter |
+| `CELERY_WORKER_QUEUES` | celery-worker-simulation | `simulation` |
+
 ---
 
-> **Następny krok:** [🛡️ RBAC Guide](./RBAC.md)
+> **Następny krok:** [🛡️ RBAC Guide](./RBAC.md)  
+> **Operacje:** [operations/](./operations/)
