@@ -29,7 +29,12 @@ def _chunk_delete(qs, label: str, deleted: dict, progress_base: float, progress_
     return total_removed
 
 
-@shared_task(bind=True, queue='default', max_retries=0)
+@shared_task(
+    bind=True,
+    queue='default',
+    max_retries=0,
+    name='activities.wipe_tasks.wipe_data_task',
+)
 def wipe_data_task(self):
     return run_wipe_sync()
 

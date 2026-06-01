@@ -241,5 +241,6 @@ def monitor_postgres_disk() -> dict:
     return result
 
 
-# Import simulator tasks so they are registered with Celery
-from . import simulator_tasks
+# Register Celery tasks in sibling modules (autodiscover only loads tasks.py).
+from . import simulator_tasks  # noqa: F401
+from . import wipe_tasks  # noqa: F401
