@@ -55,6 +55,15 @@ def set_batch_state(**kwargs):
     r.expire(BATCH_STATE_KEY, 86400)  # 24h TTL
 
 
+def increment_batch_users_created(delta: int) -> int:
+    """Atomic progress counter for parallel per-city batch workers."""
+    try:
+        r = get_redis()
+        return int(r.hincrby(BATCH_STATE_KEY, 'users_created', int(delta)))
+    except Exception:
+        return 0
+
+
 def reset_batch_state():
     """Clear all batch simulation state."""
     r = get_redis()

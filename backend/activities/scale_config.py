@@ -46,3 +46,10 @@ HEATMAP_CACHE_TTL = _int('SCALE_HEATMAP_CACHE_TTL', 300)
 
 # Wipe chunks (rows per DELETE batch)
 WIPE_CHUNK_SIZE = _int('SCALE_WIPE_CHUNK_SIZE', 5000)
+
+# Celery batch: parallel user creation per city (requires skip_activities)
+BATCH_PARALLEL_CITIES = os.getenv('SCALE_BATCH_PARALLEL_CITIES', 'true').lower() in (
+    '1', 'true', 'yes', 'on',
+)
+BATCH_PARALLEL_MIN_USERS = _int('SCALE_BATCH_PARALLEL_MIN_USERS', 20_000)
+USER_BULK_BATCH_SIZE = _int('SCALE_USER_BULK_BATCH_SIZE', 1000)

@@ -21,7 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ /app/
 
+COPY start.sh /app/start-celery.sh
+RUN chmod +x /app/start-celery.sh
+
 RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
 USER 1001
 
-CMD celery -A core worker --loglevel=info --queues=critical,default,notifications,simulation --concurrency=2 --max-tasks-per-child=1000
+CMD ["/app/start-celery.sh"]

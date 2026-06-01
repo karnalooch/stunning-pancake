@@ -266,12 +266,16 @@ def _generate_activity_params(activity_type: str):
 # Main simulation
 # ---------------------------------------------------------------------------
 
+CITIES_BY_SLUG = {c['slug']: c for c in CITIES}
+
+
 def run(
     scale: float = 1.0,
     days: int = 30,
     clear: bool = False,
     dry_run: bool = False,
     skip_activities: bool = False,
+    skip_user_creation: bool = False,
     total_users: int = None,
     num_cities: int = None,
     progress_callback=None,
@@ -458,6 +462,16 @@ def run(
     print()
     report('creating_departments', 20, users_created=0, activities_created=0)
 
+    if skip_user_creation:
+        return {
+            'city_slugs': [c['slug'] for c in selected_cities],
+            'users_per_city': users_per_city,
+            'scale': scale,
+            'activities_per_user': activities_per_user,
+            'days': days,
+            'total_u': total_u,
+        }
+
     # ------------------------------------------------------------------
     # Phase 4: Create users per city
     # ---------------------------------------------------------------------------
@@ -465,7 +479,11 @@ def run(
     print("👥 Phase 4: Creating users...")
     users_by_city = {}
     total_users_created = 0
-    batch_size = 500
+    try:
+        from activities.scale_config import USER_BULK_BATCH_SIZE
+        batch_size = USER_BULK_BATCH_SIZE
+    except Exception:
+        batch_size = 500
     target_user_count = total_u
 
     for city_index, city in enumerate(selected_cities):
@@ -746,6 +764,149 @@ def run(
 
     print("╚══════════════════════════════════════════════════════════╝")
     print()
+
+
+def create_users_for_city(
+    city_slug: str,
+    users_per_city: int,
+    scale: float,
+    *,
+    city_index: int = 0,
+    total_cities: int = 1,
+    total_target_users: int | None = None,
+    progress_callback=None,
+) -> int:
+    """
+    Phase 4 for a single city — intended for parallel Celery workers.
+    Returns number of user rows linked to the city (moderators + athletes).
+    """
+    from users.models import User, Tenant
+    from users.departments import Department, UserDepartment
+    from activities import simulator_state as sim
+
+    city = CITIES_BY_SLUG.get(city_slug)
+    if not city:
+        raise ValueError(f'Unknown city slug: {city_slug}')
+
+    try:
+        from activities.scale_config import USER_BULK_BATCH_SIZE
+        batch_size = USER_BULK_BATCH_SIZE
+    except Exception:
+        batch_size = 500
+
+    tenant = Tenant.objects.get(name=city['name'])
+    city_depts = list(Department.objects.filter(tenant=tenant, is_active=True))
+    city_users: list = []
+
+    def report(phase: str, pct: float, **extra):
+        if progress_callback:
+            progress_callback(
+                current_phase=phase,
+                progress_pct=round(min(100.0, max(0.0, pct)), 1),
+                **extra,
+            )
+
+    n_moderators = max(1, int(5 * scale))
+    n_athletes = users_per_city - n_moderators
+    target = total_target_users or (users_per_city * total_cities)
+
+    print(f"   🏙️  {city['name']}: creating {users_per_city} users (worker)...")
+
+    for i in range(n_moderators):
+        first, last = _pick_name()
+        username = f"moderator_{city['slug']}_{i+1}"
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={
+                'email': f'{username}@aktywnemiasta.pl',
+                'role': 'TENANT_MODERATOR',
+                'tenant': tenant,
+                'first_name': first,
+                'last_name': last,
+            },
+        )
+        if created:
+            user.set_password('Moderator2026!')
+            user.save()
+            if city_depts:
+                dept = random.choice(city_depts)
+                UserDepartment.objects.get_or_create(user=user, department=dept)
+        city_users.append(user)
+
+    fast_bulk = n_athletes > 5_000
+    for batch_start in range(0, n_athletes, batch_size):
+        batch_end = min(batch_start + batch_size, n_athletes)
+        batch_count = batch_end - batch_start
+        users_to_create = []
+
+        for i in range(batch_count):
+            idx = batch_start + i
+            first, last = _pick_name()
+            username = f"{city['slug']}_athlete_{idx+1:06d}"
+            email = f'{username}@aktywnemiasta.pl'
+            if fast_bulk or not User.objects.filter(username=username).exists():
+                user = User(
+                    username=username,
+                    email=email,
+                    role='ATHLETE',
+                    tenant=tenant,
+                    first_name=first,
+                    last_name=last,
+                )
+                user.set_password('Athlete2026!')
+                users_to_create.append(user)
+
+        if users_to_create:
+            usernames = [u.username for u in users_to_create]
+            with transaction.atomic():
+                try:
+                    User.objects.bulk_create(
+                        users_to_create, batch_size=200, ignore_conflicts=True,
+                    )
+                except TypeError:
+                    User.objects.bulk_create(users_to_create, batch_size=200)
+                except Exception:
+                    for u in users_to_create:
+                        try:
+                            u.save()
+                        except Exception:
+                            pass
+
+                saved_users = list(
+                    User.objects.filter(username__in=usernames, tenant=tenant).only(
+                        'id', 'username', 'tenant_id',
+                    )
+                )
+                city_users.extend(saved_users)
+
+                if saved_users and city_depts:
+                    dept_ids = [d.pk for d in city_depts]
+                    dept_memberships = [
+                        UserDepartment(
+                            user_id=u.pk,
+                            department_id=random.choice(dept_ids),
+                        )
+                        for u in saved_users
+                    ]
+                    try:
+                        UserDepartment.objects.bulk_create(
+                            dept_memberships, batch_size=200, ignore_conflicts=True,
+                        )
+                    except TypeError:
+                        UserDepartment.objects.bulk_create(dept_memberships, batch_size=200)
+
+        progress = min(batch_end, n_athletes)
+        if progress % 1000 == 0 or progress == n_athletes:
+            users_so_far = sim.get_batch_state().get('users_created', 0)
+            city_frac = progress / max(1, n_athletes)
+            overall = (city_index + city_frac) / max(1, total_cities)
+            pct = 22 + 63 * overall
+            report('creating_users', pct, users_created=users_so_far, activities_created=0)
+
+    created_count = len(city_users)
+    sim.increment_batch_users_created(created_count)
+    print(f"   ✅ {city['name']}: {created_count} users (parallel worker)")
+    return created_count
 
 
 # ---------------------------------------------------------------------------

@@ -29,7 +29,21 @@ SCALE_MAX_CONCURRENT_RIDERS=5000
 SCALE_MAX_TELEMETRY_PUBLISH=5000
 SCALE_TELEMETRY_API_LIMIT=500
 SCALE_FORCE_SKIP_ACTIVITIES_ABOVE=150000
+
+# Celery worker (serwis celery-worker na Railway)
+CELERY_WORKER_CONCURRENCY=6
+SCALE_BATCH_PARALLEL_CITIES=true
+SCALE_BATCH_PARALLEL_MIN_USERS=20000
+SCALE_USER_BULK_BATCH_SIZE=1000
 ```
+
+### Więcej CPU / workerów Celery
+
+- **Jeden batch 300k** to długie zadanie DB — **8 vCPU nie przyspieszy jednego wątku**.
+- Ustaw na serwisie **celery-worker**: `CELERY_WORKER_CONCURRENCY=6` (zostaw 1–2 vCPU na Redis/OS).
+- Przy **„skip activities”** i ≥20k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (np. 5 miast → 5 workerów naraz).
+- **Nie uruchamiaj live sim** podczas batcha — ticki co 8s zjadają CPU (w logach: `ForkPoolWorker-1` live + `ForkPoolWorker-2` batch).
+- Opcjonalnie: drugi serwis Railway `celery-worker-batch` tylko kolejka `simulation`, concurrency=7; osobny `celery-worker` na `critical,default,notifications`.
 
 ## Procedura testu 300k
 
