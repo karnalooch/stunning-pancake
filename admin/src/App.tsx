@@ -35,7 +35,9 @@ const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').t
 
 const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
 import { useAuth } from './core/auth/useAuth';
+import axios from 'axios';
 import { apiClient } from './api/client';
+import { clearStoredSession } from './core/auth/tokens';
 const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
@@ -91,15 +93,21 @@ export default function App() {
 
   const handleLogin = async (username: string, password: string) => {
     try {
-      const res = await apiClient.post('/auth/token/', { username, password });
+      clearStoredSession();
+      useAuth.getState().logout();
+
+      const baseURL = apiClient.defaults.baseURL || '/api';
+      const res = await axios.post(`${baseURL}/auth/token/`, { username, password });
       const { access, refresh } = res.data;
 
-      const profileRes = await apiClient.get('/users/profile/', {
-        headers: { Authorization: `Bearer ${access}` },
-      });
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
+      useAuth.setState({ token: access, refreshToken: refresh });
+
+      const profileRes = await apiClient.get('/users/profile/');
       const profileData = profileRes.data?.data || profileRes.data;
 
-      login(access, refresh, {
+      await login(access, refresh, {
         id: profileData.id,
         username: profileData.username,
         role: profileData.role,
@@ -108,7 +116,14 @@ export default function App() {
         isImpersonated: false,
       });
     } catch (error: any) {
-      const msg = error?.response?.data?.error || error?.response?.data?.detail || 'Invalid credentials.';
+      const data = error?.response?.data;
+      const detail = data?.detail;
+      const msg =
+        (typeof detail === 'string' && detail) ||
+        (Array.isArray(detail) && detail[0]) ||
+        data?.non_field_errors?.[0] ||
+        data?.error ||
+        'Nieprawidłowy login lub hasło.';
       throw new Error(msg);
     }
   };

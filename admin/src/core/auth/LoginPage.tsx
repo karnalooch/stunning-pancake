@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { clearStoredSession } from './tokens';
+import { useAuth } from './useAuth';
 import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, ThemeIcon, Divider } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ShieldCheck, Globe, Layers, AlertCircle } from 'lucide-react';
@@ -31,10 +33,16 @@ const FEATURES = [
 ];
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const logout = useAuth((s) => s.logout);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    clearStoredSession();
+    logout();
+  }, [logout]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

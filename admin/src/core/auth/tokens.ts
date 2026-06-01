@@ -12,3 +12,16 @@ export function getStoredRefreshToken(): string | null {
 export function hasStoredSession(): boolean {
   return Boolean(getStoredAccessToken() && getStoredRefreshToken());
 }
+
+/** Remove persisted JWTs (call before password login or when tokens are invalid). */
+export function clearStoredSession(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('impersonation_token');
+}
+
+export function isAuthApiPath(url: string | undefined): boolean {
+  if (!url) return false;
+  return url.includes('/auth/token/');
+}

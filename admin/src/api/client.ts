@@ -1,6 +1,11 @@
 import axios from 'axios';
 import { useAuth } from '../core/auth/useAuth';
-import { getStoredAccessToken, getStoredRefreshToken } from '../core/auth/tokens';
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  isAuthApiPath,
+} from '../core/auth/tokens';
 
 let baseURL = import.meta.env.VITE_API_URL || '';
 if (!baseURL) {
@@ -26,6 +31,12 @@ export const apiClient = axios.create({
 
 // Prefer Zustand token; fall back to localStorage until profile hydration finishes.
 apiClient.interceptors.request.use((config) => {
+  const url = String(config.url || '');
+  // Never send stale Bearer to login/refresh — causes "token not valid for any token type".
+  if (isAuthApiPath(url) || (config as { skipAuth?: boolean }).skipAuth) {
+    delete config.headers.Authorization;
+    return config;
+  }
   const token = useAuth.getState().token || getStoredAccessToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -43,9 +54,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
+      const reqUrl = String(error.config?.url || '');
       const state = useAuth.getState();
       const refreshToken = state.refreshToken || getStoredRefreshToken();
-      const isProfileBootstrap = String(error.config?.url || '').includes('/users/profile/');
+      const isProfileBootstrap = reqUrl.includes('/users/profile/');
+      const isAuthRequest = isAuthApiPath(reqUrl);
+
+      if (isAuthRequest) {
+        return Promise.reject(error);
+      }
 
       if (refreshToken && !error.config._retry) {
         error.config._retry = true;
@@ -63,14 +80,20 @@ apiClient.interceptors.response.use(
           error.config.headers.Authorization = `Bearer ${access}`;
           return apiClient(error.config);
         } catch {
+          clearStoredSession();
           if (!isProfileBootstrap) {
             state.logout();
+          } else {
+            useAuth.setState({ token: null, refreshToken: null });
           }
           return Promise.reject(error);
         }
       }
+      clearStoredSession();
       if (!isProfileBootstrap) {
         state.logout();
+      } else {
+        useAuth.setState({ token: null, refreshToken: null });
       }
       return Promise.reject(error);
     }

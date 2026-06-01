@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { apiClient } from '../../api/client';
+import { clearStoredSession } from './tokens';
 
 export type Role = 'GLOBAL_OWNER' | 'TENANT_ADMIN' | 'TENANT_MODERATOR' | 'ATHLETE' | 'SPONSOR';
 
@@ -118,14 +119,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 }));
 
+function isLoginRoute(): boolean {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash || '';
+  return hash.includes('/login') || hash.includes('/auth/callback');
+}
+
 const storedToken = localStorage.getItem('access_token');
 const storedRefresh = localStorage.getItem('refresh_token');
-if (storedToken && storedRefresh) {
-  // Sync tokens into store immediately so API calls after refresh don't race profile hydration.
+if (storedToken && storedRefresh && !isLoginRoute()) {
   useAuth.setState({ token: storedToken, refreshToken: storedRefresh });
-  apiClient.get('/users/profile/', {
-    headers: { Authorization: `Bearer ${storedToken}` },
-  })
+  apiClient.get('/users/profile/')
     .then(res => {
       const d = res.data?.data || res.data;
       useAuth.getState().login(storedToken, storedRefresh, {
@@ -138,7 +142,7 @@ if (storedToken && storedRefresh) {
       });
     })
     .catch(() => {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
+      clearStoredSession();
+      useAuth.setState({ token: null, refreshToken: null });
     });
 }

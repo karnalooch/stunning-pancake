@@ -53,7 +53,18 @@ mustInclude('admin/src/core/auth/useAuth.ts', [
 mustInclude('admin/src/core/auth/tokens.ts', [
   'getStoredAccessToken',
   'hasStoredSession',
+  'clearStoredSession',
+  'isAuthApiPath',
 ], 'tokens helper module');
+
+mustInclude('admin/src/api/client.ts', [
+  'isAuthApiPath',
+], 'API client must skip Bearer on auth/token paths');
+
+mustInclude('admin/src/App.tsx', [
+  'clearStoredSession',
+  "axios.post(`${baseURL}/auth/token/`",
+], 'password login must clear stale tokens and use plain axios');
 
 mustNotInclude(
   'backend/activities/admin_stats.py',
