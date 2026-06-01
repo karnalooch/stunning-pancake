@@ -44,6 +44,9 @@ export const SimulatorPage: React.FC = () => {
     const [wipeModalOpen, setWipeModalOpen] = useState(false);
     const [wipeConfirm, setWipeConfirm] = useState('');
     const [wiping, setWiping] = useState(false);
+    const [wipeProgress, setWipeProgress] = useState(0);
+    const [scaleReport, setScaleReport] = useState<any | null>(null);
+    const [preflightLoading, setPreflightLoading] = useState(false);
 
     const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const livePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -53,9 +56,34 @@ export const SimulatorPage: React.FC = () => {
     const isLiveRunning = liveStatus?.running ?? false;
     const anyRunning = isBatchRunning || isLiveRunning;
 
-    const activeRiders = Math.round(cyclists * activeRatio);
+    const MAX_CONCURRENT = 5000;
+    const rawActive = Math.round(cyclists * activeRatio);
+    const activeRiders = Math.min(rawActive, MAX_CONCURRENT);
     const cheaters = Math.round(activeRiders * cheatRatio);
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
+
+    const runPreflight = async () => {
+        setPreflightLoading(true);
+        try {
+            const report = await SimulatorApi.getScalePreflight({
+                target_users: cyclists,
+                active_ratio: activeRatio,
+                skip_activities: !generateActivities,
+            });
+            setScaleReport(report);
+        } catch (err: any) {
+            notifications.show({ title: 'Preflight failed', message: err?.message || 'Error', color: 'red' });
+        }
+        setPreflightLoading(false);
+    };
+
+    const applyScale300k = () => {
+        setCyclists(300_000);
+        setGenerateActivities(false);
+        setActiveRatio(0.1);
+        setTickSeconds(15);
+        setScaleReport(null);
+    };
 
     const startPolling = useCallback(() => {
         if (batchPollRef.current) clearInterval(batchPollRef.current);
@@ -158,16 +186,18 @@ export const SimulatorPage: React.FC = () => {
     const handleWipe = async () => {
         if (wipeConfirm !== 'DELETE ALL DATA') return;
         setWiping(true);
+        setWipeProgress(0);
         try {
-            await SimulatorApi.wipeData();
+            await SimulatorApi.wipeData((s) => setWipeProgress(s.progress_pct ?? 0));
             setBatchStatus(null); setLiveStatus(null);
             setWipeModalOpen(false); setWipeConfirm('');
             setActiveStep(0);
             notifications.show({ title: 'Wipe Complete', message: 'All simulation and activity data has been wiped.', color: 'green' });
         } catch (err: any) {
-            notifications.show({ title: 'Error', message: err?.response?.data?.error || 'Wipe failed', color: 'red' });
+            notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed', color: 'red' });
         }
         setWiping(false);
+        setWipeProgress(0);
     };
 
     return (
@@ -183,15 +213,36 @@ export const SimulatorPage: React.FC = () => {
                                 <Text size="sm">Choose how many cyclists should exist in your Smart City database. These users will be dynamically generated across various municipalities.</Text>
                             </Alert>
 
+                            <Group gap="xs">
+                                <Button variant="light" size="xs" onClick={applyScale300k}>Preset: 300k (bez aktywności)</Button>
+                                <Button variant="light" size="xs" loading={preflightLoading} onClick={runPreflight}>
+                                    Analiza ryzyka
+                                </Button>
+                            </Group>
+
                             <NumberInput
                                 label="Number of Cyclists to Generate"
-                                description="Min: 10, Max: 100,000 users with ATHLETE role"
+                                description="Do 350k — przy >150k aktywności historyczne są wyłączane automatycznie"
                                 value={cyclists}
                                 onChange={(v) => setCyclists(Number(v) || 100)}
-                                min={10} max={100000} step={100}
+                                min={10} max={350000} step={1000}
                                 leftSection={<Bike size={16} />}
                                 size="md"
                             />
+
+                            {scaleReport && (
+                                <Alert color="orange" icon={<AlertTriangle size={18} />} title="Scale preflight">
+                                    <Text size="sm" mb="xs">
+                                        Pula: {scaleReport.target_users?.toLocaleString()} · jednocześnie na mapie max{' '}
+                                        {scaleReport.estimated_concurrent_riders?.toLocaleString()}
+                                    </Text>
+                                    <Stack gap={4}>
+                                        {(scaleReport.risks || []).filter((r: any) => r.severity !== 'resolved').slice(0, 5).map((r: any, i: number) => (
+                                            <Text key={i} size="xs">[{r.severity}] {r.title}: {r.detail}</Text>
+                                        ))}
+                                    </Stack>
+                                </Alert>
+                            )}
 
                             <Checkbox
                                 label="Generate historical GPS-tracked activities"
@@ -228,7 +279,9 @@ export const SimulatorPage: React.FC = () => {
                                 <Stack gap="md" mt="xs">
                                     <Box>
                                         <Text size="sm" fw={600} mb={4}>Active Riders Pool: {(activeRatio * 100).toFixed(0)}%</Text>
-                                        <Text size="xs" c="dimmed" mb="md">Percentage of generated users currently on an active ride (~{activeRiders.toLocaleString()} kolarzy)</Text>
+                                        <Text size="xs" c="dimmed" mb="md">
+                                            Na mapie jednocześnie max {MAX_CONCURRENT.toLocaleString()} (z {rawActive.toLocaleString()} żądanych)
+                                        </Text>
                                         <Slider value={activeRatio} onChange={setActiveRatio} min={0.01} max={1.0} step={0.01}
                                             marks={[{ value: 0.1, label: '10%' }, { value: 0.3, label: '30%' }, { value: 0.6, label: '60%' }]} />
                                     </Box>
@@ -399,9 +452,12 @@ export const SimulatorPage: React.FC = () => {
                             borderRadius: 8, background: 'var(--surface-secondary)',
                             color: 'var(--text-primary)', fontSize: 14, width: '100%',
                         }} />
+                    {wiping && wipeProgress > 0 && (
+                        <Text size="xs" c="dimmed" ta="center">Postęp: {wipeProgress.toFixed(0)}%</Text>
+                    )}
                     <Button color="red" fullWidth loading={wiping}
                         disabled={wipeConfirm !== 'DELETE ALL DATA'} onClick={handleWipe}>
-                        {wiping ? 'Wiping...' : 'Yes, Delete Everything'}
+                        {wiping ? `Wiping… ${wipeProgress.toFixed(0)}%` : 'Yes, Delete Everything'}
                     </Button>
                 </Stack>
             </Modal>

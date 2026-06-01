@@ -62,83 +62,14 @@ class TenantActivityListView(generics.ListAPIView):
 class AdminDashboardStatsView(APIView):
     """
     Returns high-level platform KPIs for the admin dashboard with per-tenant breakdown.
+    Uses aggregate queries + Redis cache; serves stale cache while batch/live sim runs.
     """
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def get(self, request):
-        User = get_user_model()
-        now = timezone.now()
-        seven_days_ago = now - timedelta(days=7)
-
-        total_users = User.objects.count()
-        total_activities = Activity.objects.count()
-        total_distance = Activity.objects.aggregate(Sum('distance'))['distance__sum'] or 0
-        total_distance_km = round(float(total_distance / 1000.0), 1)
-
-        # Approximate calories: 50 kcal per km (cycling/running mix)
-        total_calories = int(total_distance_km * 50)
-
-        new_users_today = User.objects.filter(date_joined__gte=now.replace(hour=0, minute=0, second=0)).count()
-        new_users_last_7d = User.objects.filter(date_joined__gte=seven_days_ago).count()
-        new_activities_last_7d = Activity.objects.filter(created_at__gte=seven_days_ago).count()
-
-        total_verified = Activity.objects.filter(is_verified=True).count()
-        verified_pct = round((total_verified / total_activities * 100), 1) if total_activities > 0 else 0.0
-
-        tenant_qs = Tenant.objects.filter(is_active=True)
-
-        per_tenant_stats = []
-        for t in tenant_qs:
-            user_count = t.users.count()
-            activities = t.activities.all()
-            act_count = activities.count()
-            dist = activities.aggregate(Sum('distance'))['distance__sum'] or 0
-            verified = activities.filter(is_verified=True).count()
-            ver_rate = round((verified / act_count * 100), 1) if act_count > 0 else 0.0
-            per_tenant_stats.append({
-                "tenant_id": str(t.id),
-                "tenant_name": t.name,
-                "users": user_count,
-                "activities": act_count,
-                "distance_km": round(float(dist / 1000.0), 1),
-                "verified_pct": ver_rate,
-                "primary_color": t.primary_color,
-                "secondary_color": t.secondary_color,
-            })
-
-        # Per-department stats (for tenant admins)
-        per_dept_stats = []
-        if request.user.role in ('TENANT_ADMIN', 'TENANT_MODERATOR') and request.user.tenant_id:
-            from users.departments import Department
-            for dept in Department.objects.filter(tenant_id=request.user.tenant_id, is_active=True):
-                dept_user_ids = dept.members.values_list('id', flat=True)
-                dept_activities = Activity.objects.filter(user_id__in=dept_user_ids)
-                dept_act_count = dept_activities.count()
-                dept_distance = dept_activities.aggregate(Sum('distance'))['distance__sum'] or 0
-                dept_verified = dept_activities.filter(is_verified=True).count()
-                per_dept_stats.append({
-                    "department_id": dept.id,
-                    "department_name": dept.name,
-                    "users": dept.members.count(),
-                    "activities": dept_act_count,
-                    "distance_km": round(float(dept_distance / 1000.0), 1),
-                    "verified_pct": round((dept_verified / dept_act_count * 100), 1) if dept_act_count > 0 else 0.0,
-                })
-
-        return Response({
-            "total_users": total_users,
-            "total_activities": total_activities,
-            "total_distance_km": total_distance_km,
-            "total_calories": total_calories,
-            "new_users_today": new_users_today,
-            "new_users_last_7d": new_users_last_7d,
-            "new_activities_last_7d": new_activities_last_7d,
-            "verified_total": total_verified,
-            "verified_pct": verified_pct,
-            "unverified_total": total_activities - total_verified,
-            "per_tenant": per_tenant_stats,
-            "per_department": per_dept_stats,
-        })
+        from activities.admin_stats import build_dashboard_stats
+        refresh = request.query_params.get('refresh') == '1'
+        return Response(build_dashboard_stats(request.user, refresh=refresh))
 
 
 class DepartmentAnalyticsView(APIView):
@@ -412,10 +343,9 @@ class LiveSimulationView(APIView):
                 last_tick_at=time.time()
             )
             # Setup athlete pool
-            user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
-            sim.set_live_pool(user_ids)
-            sim.set_live_state(total_users=len(user_ids))
-            sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): {len(user_ids)} users active.")
+            pool_size = sim.set_live_pool_from_db(total_users)
+            sim.set_live_state(total_users=pool_size)
+            sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): pool={pool_size} users.")
             
             # Run first tick immediately, then keep ticking in background (no Celery countdown in eager mode)
             from .simulator_tasks import live_tick_task
@@ -443,65 +373,36 @@ class LiveSimulationView(APIView):
 
 class WipeDataView(APIView):
     """
-    DELETE /api/activities/admin/wipe-data/?confirm=true
-    Deletes ALL data except GLOBAL_OWNER users.
+    DELETE /api/activities/admin/wipe-data/  — start chunked async wipe
+    GET    /api/activities/admin/wipe-data/  — progress { running, progress_pct, deleted, log }
     """
     permission_classes = [IsAdminRole]
 
+    def get(self, request):
+        from activities import wipe_state as ws
+        state = ws.get_wipe_state()
+        return Response({
+            **state,
+            'log': ws.get_wipe_log(),
+        })
+
     def delete(self, request):
-        from django.db import connection
         confirm = request.data.get('confirm', False) or request.query_params.get('confirm') == 'true'
         if not confirm:
             return Response({'error': 'Must send ?confirm=true'}, status=status.HTTP_400_BAD_REQUEST)
 
-        from users.models import User, Tenant
-        from users.departments import Department, UserDepartment
-        from activities.models import Activity
+        from activities import wipe_state as ws
+        from activities.wipe_tasks import start_wipe_async
 
-        deleted = {}
-        models_in_order = [
-            (Activity, 'activities'),
-            (Department, 'departments'),
-            (UserDepartment, 'user_departments'),
-        ]
-        for model, label in models_in_order:
-            try:
-                deleted[label] = model.objects.all().delete()[0]
-            except Exception as e:
-                deleted[label] = f'error: {e}'
+        if ws.get_wipe_state().get('running'):
+            return Response({'error': 'Wipe already in progress.'}, status=status.HTTP_409_CONFLICT)
 
-        # Users except GLOBAL_OWNER
-        try:
-            deleted['users'] = User.objects.exclude(role='GLOBAL_OWNER').delete()[0]
-        except Exception as e:
-            deleted['users'] = f'error: {e}'
-
-        # Tenants
-        try:
-            deleted['tenants'] = Tenant.objects.all().delete()[0]
-        except Exception as e:
-            deleted['tenants'] = f'error: {e}'
-
-        # Ensure global_owner exists
-        owner, created = User.objects.get_or_create(
-            username='global_owner',
-            defaults={'email': 'owner@4velo.app', 'role': 'GLOBAL_OWNER', 'is_superuser': True, 'is_staff': True},
-        )
-        owner.set_password(os.getenv('GLOBAL_OWNER_PASSWORD', 'admin123'))
-        owner.is_superuser = True
-        owner.is_staff = True
-        owner.role = 'GLOBAL_OWNER'
-        owner.save()
-
-        # Also reset simulator state
-        sim.reset_batch_state()
-        sim.reset_live_state()
-
+        start_wipe_async()
         return Response({
-            'status': 'wiped',
-            'deleted': {k: v for k, v in deleted.items() if isinstance(v, int)},
-            'message': 'Login: global_owner / admin123',
-        })
+            'status': 'started',
+            'running': True,
+            'message': 'Chunked wipe running in background. Poll GET /admin/wipe-data/ for progress.',
+        }, status=status.HTTP_202_ACCEPTED)
 
 
 class WorkerStatusView(APIView):
@@ -577,6 +478,32 @@ class WorkerStatusView(APIView):
             }, status=status.HTTP_200_OK)  # Don't fail — show empty state
 
 
+class ScalePreflightView(APIView):
+    """
+    GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.3
+    Analyse risks before a large-scale load test.
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        from activities.scale_preflight import analyze_scale
+        try:
+            target = int(request.query_params.get('target_users', 1000))
+        except (TypeError, ValueError):
+            return Response({'error': 'target_users must be an integer'}, status=400)
+        try:
+            active_ratio = float(request.query_params.get('active_ratio', 0.3))
+        except (TypeError, ValueError):
+            active_ratio = 0.3
+        skip_activities = request.query_params.get('skip_activities', 'false').lower() in ('1', 'true', 'yes')
+        return Response(analyze_scale(
+            target_users=target,
+            active_ratio=active_ratio,
+            skip_activities=skip_activities,
+            generate_activities=not skip_activities,
+        ))
+
+
 class RunSimulationView(APIView):
     """
     POST   /api/activities/admin/simulate/        — start batch simulation
@@ -638,6 +565,17 @@ class RunSimulationView(APIView):
                 return Response(
                     {'error': 'total_users must be an integer'},
                     status=status.HTTP_400_BAD_REQUEST,
+                )
+            from activities.scale_config import MAX_BATCH_USERS, FORCE_SKIP_ACTIVITIES_ABOVE
+            if total_users > MAX_BATCH_USERS:
+                return Response(
+                    {'error': f'total_users exceeds limit ({MAX_BATCH_USERS:,})'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if total_users >= FORCE_SKIP_ACTIVITIES_ABOVE and not skip_activities:
+                skip_activities = True
+                sim.batch_log(
+                    f"Auto skip_activities for {total_users:,} users (scale safety)."
                 )
 
         if not total_users and (scale < 0.001 or scale > 1.0):

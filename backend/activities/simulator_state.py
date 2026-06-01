@@ -182,15 +182,65 @@ def refresh_live_lock():
 
 
 def set_live_pool(user_ids: list):
-    """Set the user pool for live simulation."""
+    """Set the user pool for live simulation (small pools only — prefer set_live_pool_from_db)."""
+    from activities.scale_config import POOL_SADD_BATCH
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
-    if user_ids:
-        r.sadd(LIVE_POOL_KEY, *[str(uid) for uid in user_ids])
+    if not user_ids:
+        return
+    chunk = [str(uid) for uid in user_ids]
+    for i in range(0, len(chunk), POOL_SADD_BATCH):
+        r.sadd(LIVE_POOL_KEY, *chunk[i:i + POOL_SADD_BATCH])
+
+
+def set_live_pool_from_db(limit: int) -> int:
+    """
+    Stream athlete IDs into Redis SET without loading the full pool into Python memory.
+    Returns number of members added (approximate if duplicates).
+    """
+    from users.models import User
+    from activities.scale_config import POOL_SADD_BATCH, MAX_LIVE_POOL
+
+    limit = min(int(limit), MAX_LIVE_POOL)
+    r = get_redis()
+    r.delete(LIVE_POOL_KEY)
+    batch: list[str] = []
+    count = 0
+    qs = User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:limit]
+    for uid in qs.iterator(chunk_size=POOL_SADD_BATCH):
+        batch.append(str(uid))
+        if len(batch) >= POOL_SADD_BATCH:
+            r.sadd(LIVE_POOL_KEY, *batch)
+            count += len(batch)
+            batch = []
+    if batch:
+        r.sadd(LIVE_POOL_KEY, *batch)
+        count += len(batch)
+    return r.scard(LIVE_POOL_KEY) or count
+
+
+def get_live_pool_count() -> int:
+    """Pool size without SMEMBERS."""
+    r = get_redis()
+    return int(r.scard(LIVE_POOL_KEY) or 0)
+
+
+def sample_live_pool(count: int) -> list[int]:
+    """Random sample of pool members — O(count), not O(pool size)."""
+    r = get_redis()
+    count = max(0, int(count))
+    if count == 0:
+        return []
+    raw = r.srandmember(LIVE_POOL_KEY, count)
+    if raw is None:
+        return []
+    if isinstance(raw, (bytes, str)):
+        raw = [raw]
+    return [int(uid.decode() if isinstance(uid, bytes) else uid) for uid in raw]
 
 
 def get_live_pool() -> list:
-    """Get all user IDs in the live pool."""
+    """Get all user IDs in the live pool. Avoid when pool > ~10k — use sample_live_pool."""
     r = get_redis()
     raw = r.smembers(LIVE_POOL_KEY)
     return [int(uid.decode() if isinstance(uid, bytes) else uid) for uid in raw]

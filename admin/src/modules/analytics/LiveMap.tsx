@@ -139,13 +139,20 @@ export const LiveMap: React.FC = () => {
                 const bounds = map.getBounds();
                 params = { bbox: `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}` };
             }
-            const { data } = await apiClient.get('/activities/telemetry/live/', { params });
-            if (Array.isArray(data)) {
-                positionsRef.current = data;
-                setOnlineCount(data.length);
-                setCyclists(data.filter((p) => resolveActivityKind(p.type) === 'bike').length);
-                setRunners(data.filter((p) => resolveActivityKind(p.type) === 'run').length);
-                updateLiveSource(data);
+            const { data } = await apiClient.get('/activities/telemetry/live/', {
+                params: { ...params, limit: 500 },
+            });
+            const list = Array.isArray(data)
+                ? data
+                : (data?.positions ?? []);
+            const meta = Array.isArray(data) ? null : data?.meta;
+            if (Array.isArray(list)) {
+                positionsRef.current = list;
+                const poolHint = meta?.redis_active ?? list.length;
+                setOnlineCount(typeof poolHint === 'number' ? poolHint : list.length);
+                setCyclists(list.filter((p) => resolveActivityKind(p.type) === 'bike').length);
+                setRunners(list.filter((p) => resolveActivityKind(p.type) === 'run').length);
+                updateLiveSource(list);
                 requestAnimationFrame(syncDetailMarkers);
             }
         } catch {} finally { setLoading(false); }

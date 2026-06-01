@@ -114,6 +114,8 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
             running=False, completed_at=time.time(),
         )
         sim.batch_log(f"Done: {user_count} users, {activity_count} activities")
+        from activities.admin_stats import invalidate_dashboard_stats_cache
+        invalidate_dashboard_stats_cache()
         return {'status': 'complete', 'users': user_count, 'activities': activity_count}
 
     except Exception as e:
@@ -148,15 +150,16 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
             last_tick_at=time.time(),
         )
 
-        user_ids = list(User.objects.filter(role='ATHLETE').values_list('id', flat=True)[:total_users])
-        sim.set_live_pool(user_ids)
-        sim.set_live_state(total_users=len(user_ids))
+        from activities.scale_config import MAX_LIVE_POOL
+        pool_limit = min(int(total_users), MAX_LIVE_POOL)
+        pool_size = sim.set_live_pool_from_db(pool_limit)
+        sim.set_live_state(total_users=pool_size)
 
-        if len(user_ids) < total_users:
-            sim.live_log(f"WARNING: only {len(user_ids)} athletes (wanted {total_users})")
+        if pool_size < total_users:
+            sim.live_log(f"WARNING: only {pool_size} athletes in pool (wanted {total_users})")
 
         sim.live_log(
-            f"LIVE SIM: {len(user_ids)} users, {active_ratio*100:.0f}% active, "
+            f"LIVE SIM: pool={pool_size}, {active_ratio*100:.0f}% active (capped), "
             f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s"
         )
 
@@ -208,7 +211,9 @@ def _run_live_tick_body():
         return
 
     now = timezone.now()
-    pool = sim.get_live_pool()
+    from activities.scale_config import MAX_CONCURRENT_RIDERS, MAX_TELEMETRY_PUBLISH_PER_TICK
+
+    pool_size = sim.get_live_pool_count()
     active_rides = sim.get_live_rides()
 
     cheat_ratio = float(state.get('cheat_ratio', 0.05))
@@ -292,16 +297,21 @@ def _run_live_tick_body():
     for uid in rides_to_remove:
         sim.delete_live_ride(uid)
 
-    # ── Phase 2: Start new rides ──
+    # ── Phase 2: Start new rides (capped — never 90k concurrent in Redis) ──
     current_riding = sim.get_live_ride_count()
-    target_riding = max(1, int(total_users * active_ratio))
+    target_riding = min(
+        MAX_CONCURRENT_RIDERS,
+        max(1, int(total_users * active_ratio)),
+    )
     needed = max(0, target_riding - current_riding)
     started = 0
 
-    if needed > 0 and pool:
-        riding_ids = set(sim.get_live_rides().keys())
-        available = [uid for uid in pool if uid not in riding_ids]
-        starters = random.sample(available, min(needed, len(available)))
+    if needed > 0 and pool_size > 0:
+        riding_ids = set(active_rides.keys())
+        sample_size = min(needed * 3, pool_size, 50_000)
+        candidates = sim.sample_live_pool(sample_size)
+        available = [uid for uid in candidates if uid not in riding_ids]
+        starters = random.sample(available, min(needed, len(available))) if available else []
 
         users_map_p3 = {}
         if starters:
@@ -421,6 +431,8 @@ def _run_live_tick_body():
             'course': course,
         })
 
+    if len(telemetry_entries) > MAX_TELEMETRY_PUBLISH_PER_TICK:
+        telemetry_entries = telemetry_entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
     TelemetryService.push_bulk_positions(telemetry_entries)
 
     new_riding = sim.get_live_ride_count()

@@ -3,21 +3,12 @@ Heatmap API — SPORT Platform (Milestone 5)
 ============================================
 Constitution §25.2: City Analytics Layer
 
-Provides GeoJSON heatmap data for Admin Dashboard and Smart City portals.
-
-Heatmaps are built from verified activity GPS tracks using a
-spatial binning approach (H3-compatible grid without external deps):
-
-  1. Load verified activity LineStrings for the requested bbox.
-  2. Sample coordinates at configurable resolution.
-  3. Bin points into a grid and return as GeoJSON FeatureCollection
-     with 'weight' property (normalised 0–1) per cell.
-
-Endpoints (wired in core/urls.py):
-    GET /api/heatmap/?bbox=lon_min,lat_min,lon_max,lat_max&type=RUN&zoom=12
+BBox-limited, cached GeoJSON heatmaps — safe at 300k+ users / millions of activities.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
 from collections import defaultdict
@@ -29,51 +20,58 @@ from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
-# Grid cell size in degrees (approx 200m at equator)
 DEFAULT_CELL_DEG = 0.002
+HEATMAP_CACHE_PREFIX = '{heatmap}:tile:'
+
+
+def _bbox_diagonal_km(lon_min: float, lat_min: float, lon_max: float, lat_max: float) -> float:
+    lat_mid = (lat_min + lat_max) / 2.0
+    dx = (lon_max - lon_min) * 111.0 * math.cos(math.radians(lat_mid))
+    dy = (lat_max - lat_min) * 111.0
+    return math.sqrt(dx * dx + dy * dy)
+
+
+def _cache_key(bbox_raw: str, activity_type: str, zoom: int, tenant_id: str) -> str:
+    digest = hashlib.sha256(f'{bbox_raw}|{activity_type}|{zoom}|{tenant_id}'.encode()).hexdigest()[:24]
+    return f'{HEATMAP_CACHE_PREFIX}{digest}'
+
+
+def _get_cached(key: str) -> dict | None:
+    try:
+        from core.redis_cluster import get_redis
+        raw = get_redis().get(key)
+        if raw:
+            return json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+    except Exception:
+        pass
+    return None
+
+
+def _set_cached(key: str, payload: dict, ttl: int) -> None:
+    try:
+        from core.redis_cluster import get_redis
+        get_redis().setex(key, ttl, json.dumps(payload))
+    except Exception:
+        pass
 
 
 def _cell_key(lat: float, lon: float, cell_size: float) -> tuple[int, int]:
-    """Snaps a coordinate to the nearest grid cell."""
     return (int(lat / cell_size), int(lon / cell_size))
 
 
 def _cell_to_centroid(row: int, col: int, cell_size: float) -> tuple[float, float]:
-    """Returns (lat, lon) centroid of a grid cell."""
     return (row * cell_size + cell_size / 2, col * cell_size + cell_size / 2)
 
 
-@api_view(["GET"])
-@permission_classes([IsAuthenticated])
-def heatmap_view(request: Request) -> Response:
-    """
-    Returns a GeoJSON FeatureCollection of heatmap cells.
-
-    Query params:
-        bbox     — 'lon_min,lat_min,lon_max,lat_max' (required)
-        type     — Activity type filter: RUN|BIKE|WALK (default: all)
-        zoom     — Map zoom level hint (influences cell_size, 1–18)
-        tenant   — Tenant ID filter (default: all tenants)
-    """
+def _build_heatmap_features(
+    lon_min: float, lat_min: float, lon_max: float, lat_max: float,
+    activity_type: str, zoom: int, tenant_id: str,
+) -> dict:
     from activities.models import Activity
+    from activities.scale_config import HEATMAP_MAX_ACTIVITIES_SAMPLE
     from django.contrib.gis.geos import Polygon
 
-    bbox_raw = request.query_params.get("bbox", "")
-    activity_type = request.query_params.get("type", "")
-    zoom = int(request.query_params.get("zoom", 12))
-    tenant_id = request.query_params.get("tenant", "")
-
-    if not bbox_raw:
-        return Response({"error": "bbox parameter required. Format: lon_min,lat_min,lon_max,lat_max."}, status=400)
-
-    try:
-        lon_min, lat_min, lon_max, lat_max = map(float, bbox_raw.split(","))
-    except ValueError:
-        return Response({"error": "Invalid bbox format."}, status=400)
-
-    # Cell size adapts to zoom: zoom 10 → 0.005°, zoom 14 → 0.0005°
     cell_size = max(0.0001, DEFAULT_CELL_DEG / (2 ** max(0, zoom - 12)))
-
     bbox_poly = Polygon.from_bbox((lon_min, lat_min, lon_max, lat_max))
     bbox_poly.srid = 4326
 
@@ -87,37 +85,41 @@ def heatmap_view(request: Request) -> Response:
     if tenant_id:
         qs = qs.filter(user__tenant_id=tenant_id)
 
-    # Limit sample to avoid excessive load
-    qs = qs.only("route_path")[:500]
+    qs = qs.only('route_path').order_by('-created_at')
+    max_sample = HEATMAP_MAX_ACTIVITIES_SAMPLE
 
     grid: dict[tuple[int, int], int] = defaultdict(int)
-
-    for activity in qs:
+    seen = 0
+    for activity in qs.iterator(chunk_size=200):
+        if seen >= max_sample:
+            break
         if not activity.route_path:
             continue
+        seen += 1
         coords = activity.route_path.coords
-        # Sample every 5th point for performance
         for coord in coords[::5]:
             lon, lat = coord[0], coord[1]
             if lon_min <= lon <= lon_max and lat_min <= lat <= lat_max:
-                key = _cell_key(lat, lon, cell_size)
-                grid[key] += 1
+                grid[_cell_key(lat, lon, cell_size)] += 1
 
     if not grid:
-        return Response({"type": "FeatureCollection", "features": []})
+        return {
+            'type': 'FeatureCollection',
+            'features': [],
+            'meta': {'totalCells': 0, 'maxCount': 0, 'cellSizeDeg': cell_size, 'sampled': seen},
+        }
 
     max_count = max(grid.values())
-
     features = []
     for (row, col), count in grid.items():
         lat_c, lon_c = _cell_to_centroid(row, col, cell_size)
         weight = round(count / max_count, 4)
         half = cell_size / 2
         features.append({
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [[
+            'type': 'Feature',
+            'geometry': {
+                'type': 'Polygon',
+                'coordinates': [[
                     [lon_c - half, lat_c - half],
                     [lon_c + half, lat_c - half],
                     [lon_c + half, lat_c + half],
@@ -125,39 +127,99 @@ def heatmap_view(request: Request) -> Response:
                     [lon_c - half, lat_c - half],
                 ]],
             },
-            "properties": {
-                "weight": weight,
-                "count": count,
-                "activityType": activity_type or "ALL",
+            'properties': {
+                'weight': weight,
+                'count': count,
+                'activityType': activity_type or 'ALL',
             },
         })
 
-    logger.info(
-        "heatmap.generated cells=%d bbox=%s type=%s zoom=%d",
-        len(features), bbox_raw, activity_type, zoom,
+    return {
+        'type': 'FeatureCollection',
+        'features': features,
+        'meta': {
+            'totalCells': len(features),
+            'maxCount': max_count,
+            'cellSizeDeg': cell_size,
+            'sampled': seen,
+            'sampleCap': max_sample,
+        },
+    }
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def heatmap_view(request: Request) -> Response:
+    from activities.scale_config import (
+        HEATMAP_CACHE_TTL,
+        HEATMAP_MAX_BBOX_KM,
+        HEATMAP_MIN_ZOOM,
     )
 
-    return Response({
-        "type": "FeatureCollection",
-        "features": features,
-        "meta": {
-            "totalCells": len(features),
-            "maxCount": max_count,
-            "cellSizeDeg": cell_size,
-        },
-    })
+    bbox_raw = request.query_params.get('bbox', '')
+    activity_type = request.query_params.get('type', '')
+    try:
+        zoom = int(request.query_params.get('zoom', 12))
+    except (TypeError, ValueError):
+        zoom = 12
+    tenant_id = request.query_params.get('tenant', '')
+
+    if not bbox_raw:
+        return Response(
+            {'error': 'bbox parameter required. Format: lon_min,lat_min,lon_max,lat_max.'},
+            status=400,
+        )
+
+    try:
+        lon_min, lat_min, lon_max, lat_max = map(float, bbox_raw.split(','))
+    except ValueError:
+        return Response({'error': 'Invalid bbox format.'}, status=400)
+
+    if zoom < HEATMAP_MIN_ZOOM:
+        return Response({
+            'error': f'Zoom in further (min zoom {HEATMAP_MIN_ZOOM}) to load heatmap.',
+            'min_zoom': HEATMAP_MIN_ZOOM,
+        }, status=400)
+
+    diagonal_km = _bbox_diagonal_km(lon_min, lat_min, lon_max, lat_max)
+    if diagonal_km > HEATMAP_MAX_BBOX_KM:
+        return Response({
+            'error': (
+                f'Viewport too large ({diagonal_km:.0f} km). '
+                f'Max {HEATMAP_MAX_BBOX_KM} km — zoom in on a city or region.'
+            ),
+            'max_bbox_km': HEATMAP_MAX_BBOX_KM,
+        }, status=400)
+
+    cache_key = _cache_key(bbox_raw, activity_type, zoom, tenant_id)
+    if request.query_params.get('refresh') != '1':
+        cached = _get_cached(cache_key)
+        if cached:
+            cached = dict(cached)
+            cached.setdefault('meta', {})['cached'] = True
+            return Response(cached)
+
+    payload = _build_heatmap_features(
+        lon_min, lat_min, lon_max, lat_max, activity_type, zoom, tenant_id,
+    )
+    payload.setdefault('meta', {})['cached'] = False
+    _set_cached(cache_key, payload, HEATMAP_CACHE_TTL)
+
+    logger.info(
+        'heatmap.generated cells=%d bbox=%s zoom=%d sampled=%s',
+        len(payload.get('features', [])),
+        bbox_raw,
+        zoom,
+        payload.get('meta', {}).get('sampled'),
+    )
+    return Response(payload)
 
 
-@api_view(["GET"])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def analytics_summary_view(request: Request) -> Response:
     """
     Returns premium analytics for the authenticated user.
-
-    Includes:
-        - trend_analysis: weekly km trend with slope and R²
-        - race_predictions: Riegel-based finish time estimates
-        - training_load: ACWR injury risk score
     """
     from datetime import date, timedelta
     from django.db.models import Sum, Q
@@ -173,7 +235,6 @@ def analytics_summary_view(request: Request) -> Response:
     if department_id:
         user_filter = Q(user__departments__id=department_id)
 
-    # Build weekly loads for last 12 weeks
     weekly_qs = Activity.objects.filter(
         user_filter, is_verified=True,
         start_time__date__gte=today - timedelta(weeks=12),
@@ -185,11 +246,10 @@ def analytics_summary_view(request: Request) -> Response:
     weekly_loads = []
     for week_offset in range(11, -1, -1):
         week_start = (today - timedelta(weeks=week_offset + 1))
-        weekly_loads.append({"week_start": week_start.isoformat(), "km": weekly_loads_map.get(week_start, 0.0)})
+        weekly_loads.append({'week_start': week_start.isoformat(), 'km': weekly_loads_map.get(week_start, 0.0)})
 
     trend = trend_analysis(weekly_loads)
 
-    # Build daily km for last 28 days (for ACWR)
     daily_qs = Activity.objects.filter(
         user_filter, is_verified=True,
         start_time__date__gte=today - timedelta(days=28),
@@ -205,25 +265,24 @@ def analytics_summary_view(request: Request) -> Response:
 
     acwr = training_load(daily_km)
 
-    # Best effort for race prediction: longest verified activity
     best = Activity.objects.filter(
-        user_filter, is_verified=True, type="RUN",
-    ).order_by("-distance").first()
+        user_filter, is_verified=True, type='RUN',
+    ).order_by('-distance').first()
 
     race_preds = None
     if best and best.distance > 0 and best.duration:
         ref_km = best.distance / 1000.0
         ref_s = best.duration.total_seconds()
         race_preds = {
-            "5km":    predict_race_time(ref_km, ref_s, 5.0, "RUN"),
-            "10km":   predict_race_time(ref_km, ref_s, 10.0, "RUN"),
-            "half_marathon": predict_race_time(ref_km, ref_s, 21.0975, "RUN"),
-            "marathon": predict_race_time(ref_km, ref_s, 42.195, "RUN"),
+            '5km': predict_race_time(ref_km, ref_s, 5.0, 'RUN'),
+            '10km': predict_race_time(ref_km, ref_s, 10.0, 'RUN'),
+            'half_marathon': predict_race_time(ref_km, ref_s, 21.0975, 'RUN'),
+            'marathon': predict_race_time(ref_km, ref_s, 42.195, 'RUN'),
         }
 
     return Response({
-        "trend": trend,
-        "training_load": acwr,
-        "race_predictions": race_preds,
-        "weekly_loads": weekly_loads,
+        'trend': trend,
+        'training_load': acwr,
+        'race_predictions': race_preds,
+        'weekly_loads': weekly_loads,
     })

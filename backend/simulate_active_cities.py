@@ -468,7 +468,8 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                     UserDepartment.objects.get_or_create(user=user, department=dept)
             city_users.append(user)
 
-        # Create athletes in batches
+        # Create athletes in batches (skip per-row exists() at scale — use bulk + ignore_conflicts)
+        fast_bulk = n_athletes > 5_000
         for batch_start in range(0, n_athletes, batch_size):
             batch_end = min(batch_start + batch_size, n_athletes)
             batch_count = batch_end - batch_start
@@ -480,7 +481,7 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
                 username = f"{city['slug']}_athlete_{idx+1:06d}"
                 email = f"{username}@aktywnemiasta.pl"
 
-                if not User.objects.filter(username=username).exists():
+                if fast_bulk or not User.objects.filter(username=username).exists():
                     user = User(
                         username=username,
                         email=email,
@@ -495,7 +496,13 @@ def run(scale: float = 1.0, days: int = 30, clear: bool = False, dry_run: bool =
             if users_to_create:
                 with transaction.atomic():
                     try:
-                        created_users = User.objects.bulk_create(users_to_create, batch_size=50)
+                        created_users = User.objects.bulk_create(
+                            users_to_create,
+                            batch_size=200,
+                            ignore_conflicts=True,
+                        )
+                    except TypeError:
+                        created_users = User.objects.bulk_create(users_to_create, batch_size=200)
                     except Exception:
                         # Fall back to individual inserts, skipping duplicates
                         created_users = []

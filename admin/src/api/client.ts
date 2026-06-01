@@ -121,8 +121,9 @@ export const TelemetryApi = {
     const { data } = await apiClient.get('/activities/telemetry/anomalies/');
     return data;
   },
-  getLivePositions: async () => {
-    const { data } = await apiClient.get('/activities/telemetry/live/');
+  getLivePositions: async (params?: Record<string, string | number>) => {
+    const { data } = await apiClient.get('/activities/telemetry/live/', { params });
+    if (Array.isArray(data)) return { positions: data, meta: {} };
     return data;
   },
   getConfig: async () => {
@@ -166,6 +167,15 @@ export const BrandingApi = {
 };
 
 export const SimulatorApi = {
+  getScalePreflight: async (params: {
+    target_users: number;
+    active_ratio?: number;
+    skip_activities?: boolean;
+  }) => {
+    const { data } = await apiClient.get('/activities/admin/scale-preflight/', { params });
+    return data;
+  },
+
   // Batch Simulation
   getBatchStatus: async () => {
     const { data } = await apiClient.get('/activities/admin/simulate/');
@@ -211,10 +221,21 @@ export const SimulatorApi = {
     return data;
   },
 
-  // Wipe Data
-  wipeData: async () => {
-    const { data } = await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+  getWipeStatus: async () => {
+    const { data } = await apiClient.get('/activities/admin/wipe-data/');
     return data;
+  },
+
+  // Wipe Data (async chunked — poll until complete)
+  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string }) => void) => {
+    await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+    for (let i = 0; i < 600; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const status = await SimulatorApi.getWipeStatus();
+      onProgress?.(status);
+      if (!status.running) return status;
+    }
+    throw new Error('Wipe timed out');
   },
 };
 

@@ -75,6 +75,12 @@ export const GlobalHeatmap: React.FC = () => {
         if (activityType !== 'ALL') params.type = activityType;
 
         const { data } = await apiClient.get('/api/heatmap/', { params });
+        if (data?.error) {
+          setError(data.error);
+          setCellCount(0);
+          return;
+        }
+        setError(null);
         const features = data?.features ?? [];
         setCellCount(features.length);
 
@@ -113,8 +119,9 @@ export const GlobalHeatmap: React.FC = () => {
           source: 'heatmap-cells',
           paint: { 'line-color': 'rgba(255,255,255,0.12)', 'line-width': 0.5 },
         });
-      } catch (err) {
-        console.warn('Heatmap data fetch failed:', err);
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
+        setError(msg || 'Heatmap fetch failed. Zoom in on a smaller area.');
         setCellCount(0);
       }
     };

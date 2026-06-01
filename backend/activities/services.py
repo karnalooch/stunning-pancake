@@ -206,6 +206,9 @@ class TelemetryService:
     """
     Client for interacting with the Traccar GPS tracking server.
     Also supports Redis-backed simulator positions for when Traccar is unavailable.
+
+    At scale (100k+ pool), only *active riders* are stored in Redis (hash + GEO index).
+    Reads use GEORADIUS + HMGET — never HGETALL.
     """
     BASE_URL = os.getenv('TRACCAR_URL', 'http://traccar:8082/api')
     USER = os.getenv('TRACCAR_USER', 'admin')
@@ -214,92 +217,186 @@ class TelemetryService:
     TELEMETRY_REDIS_TTL = 120  # 2 min — positions expire if not refreshed
 
     @classmethod
+    def _positions_key(cls) -> str:
+        return f'{cls.TELEMETRY_REDIS_PREFIX}positions'
+
+    @classmethod
+    def _geo_key(cls) -> str:
+        return f'{cls.TELEMETRY_REDIS_PREFIX}geo'
+
+    @classmethod
+    def _encode_entry(cls, e: dict) -> tuple[str, str, float, float]:
+        import json as _json
+        device_id = str(e.get('deviceId', ''))
+        lat = float(e.get('lat', 0))
+        lon = float(e.get('lng', 0))
+        payload = _json.dumps({
+            'id': device_id,
+            'deviceId': device_id,
+            'name': e.get('name', f'Athlete {device_id}'),
+            'type': e.get('type', 'person'),
+            'latitude': lat,
+            'longitude': lon,
+            'speed': e.get('speed', 0),
+            'course': e.get('course', 0),
+            'deviceTime': timezone.now().isoformat(),
+            'category': e.get('type', 'person'),
+        })
+        return device_id, payload, lon, lat
+
+    @classmethod
     def push_simulator_position(cls, device_id: str, lat: float, lon: float,
                                  speed: float = 0.0, course: float = 0.0,
                                  name: str = '', device_type: str = 'person'):
         """Push a single simulator-generated position to Redis for live map display."""
         from core.redis_cluster import get_redis
-        import json as _json
-        r = get_redis()
-        key = f'{cls.TELEMETRY_REDIS_PREFIX}positions'
-        pos_data = _json.dumps({
-            'id': device_id,
-            'deviceId': device_id,
-            'name': name or f'Athlete {device_id}',
-            'type': device_type,
-            'latitude': lat,
-            'longitude': lon,
-            'speed': speed,
-            'course': course,
-            'deviceTime': timezone.now().isoformat(),
-            'category': device_type,
+        device_id, payload, lon, lat = cls._encode_entry({
+            'deviceId': device_id, 'lat': lat, 'lng': lon,
+            'speed': speed, 'course': course, 'name': name, 'type': device_type,
         })
-        r.hset(key, device_id, pos_data)
-        r.expire(key, cls.TELEMETRY_REDIS_TTL + 30)
+        r = get_redis()
+        r.hset(cls._positions_key(), device_id, payload)
+        r.geoadd(cls._geo_key(), (lon, lat, device_id))
+        r.expire(cls._positions_key(), cls.TELEMETRY_REDIS_TTL + 30)
+        r.expire(cls._geo_key(), cls.TELEMETRY_REDIS_TTL + 30)
+
+    @classmethod
+    def replace_active_positions(cls, entries: list[dict], merge: bool = False):
+        """
+        Replace simulator telemetry for currently riding athletes only.
+        Full replace each tick keeps Redis bounded (≤ MAX_CONCURRENT_RIDERS).
+        """
+        from core.redis_cluster import get_redis
+        from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK
+
+        if not entries:
+            if not merge:
+                r = get_redis()
+                r.delete(cls._positions_key(), cls._geo_key())
+            return
+
+        entries = entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
+        r = get_redis()
+        pos_key = cls._positions_key()
+        geo_key = cls._geo_key()
+
+        if not merge:
+            r.delete(pos_key, geo_key)
+
+        pipe = r.pipeline()
+        for e in entries:
+            device_id, payload, lon, lat = cls._encode_entry(e)
+            if not device_id:
+                continue
+            pipe.hset(pos_key, device_id, payload)
+            pipe.geoadd(geo_key, (lon, lat, device_id))
+        pipe.expire(pos_key, cls.TELEMETRY_REDIS_TTL + 30)
+        pipe.expire(geo_key, cls.TELEMETRY_REDIS_TTL + 30)
+        pipe.execute()
 
     @classmethod
     def push_bulk_positions(cls, entries: list[dict]):
-        """Push multiple positions at once (more efficient for bulk updates)."""
-        from core.redis_cluster import get_redis
-        import json as _json
-        if not entries:
-            return
-        r = get_redis()
-        key = f'{cls.TELEMETRY_REDIS_PREFIX}positions'
-        mapping = {}
-        for e in entries:
-            pos_data = _json.dumps({
-                'id': e.get('deviceId', ''),
-                'deviceId': e.get('deviceId', ''),
-                'name': e.get('name', f"Athlete {e.get('deviceId', '')}"),
-                'type': e.get('type', 'person'),
-                'latitude': e.get('lat', 0),
-                'longitude': e.get('lng', 0),
-                'speed': e.get('speed', 0),
-                'course': e.get('course', 0),
-                'deviceTime': timezone.now().isoformat(),
-                'category': e.get('type', 'person'),
-            })
-            mapping[e.get('deviceId', '')] = pos_data
-        r.hset(key, mapping=mapping)
-        r.expire(key, cls.TELEMETRY_REDIS_TTL + 30)
+        """Publish positions for all active riders (replaces previous snapshot)."""
+        cls.replace_active_positions(entries, merge=False)
 
     @classmethod
-    def get_live_positions(cls):
-        """
-        Fetches latest positions for all active devices.
-        Merges Traccar positions with simulator positions from Redis.
-        """
-        positions = []
+    def _bbox_radius_km(cls, west: float, south: float, east: float, north: float) -> float:
+        import math
+        lat_mid = (south + north) / 2.0
+        dx = (east - west) * 111.0 * math.cos(math.radians(lat_mid))
+        dy = (north - south) * 111.0
+        return max(1.0, math.sqrt(dx * dx + dy * dy) / 2.0)
 
-        # 1. Try Traccar
+    @classmethod
+    def get_live_positions(
+        cls,
+        bbox: tuple[float, float, float, float] | None = None,
+        limit: int | None = None,
+    ) -> tuple[list[dict], dict]:
+        """
+        Fetch positions without scanning the full Redis hash.
+        Returns (positions, meta) where meta includes counts and cap info.
+        """
+        from core.redis_cluster import get_redis
+        import json as _json
+        from activities.scale_config import (
+            TELEMETRY_API_DEFAULT_LIMIT,
+            TELEMETRY_API_MAX_LIMIT,
+            TELEMETRY_GEO_RADIUS_KM,
+        )
+
+        cap = min(limit or TELEMETRY_API_DEFAULT_LIMIT, TELEMETRY_API_MAX_LIMIT)
+        positions: list[dict] = []
+        meta = {
+            'returned': 0,
+            'capped': False,
+            'redis_active': 0,
+            'source': 'redis',
+        }
+
+        # Traccar — optional, capped (avoid multi-MB JSON at scale)
         try:
             response = requests.get(
                 f'{cls.BASE_URL}/positions',
                 auth=(cls.USER, cls.PASS),
-                timeout=3,
+                timeout=2,
             )
             if response.status_code == 200:
-                positions.extend(response.json() if isinstance(response.json(), list) else [])
+                raw = response.json() if isinstance(response.json(), list) else []
+                positions.extend(raw[:cap])
+                meta['source'] = 'traccar+redis' if positions else 'redis'
         except Exception:
             pass
 
-        # 2. Read simulator positions from Redis
         try:
-            from core.redis_cluster import get_redis
-            import json as _json
             r = get_redis()
-            raw = r.hgetall(f'{cls.TELEMETRY_REDIS_PREFIX}positions')
-            for _, pos_json in (raw or {}).items():
+            pos_key = cls._positions_key()
+            geo_key = cls._geo_key()
+            meta['redis_active'] = r.hlen(pos_key)
+
+            if bbox:
+                west, south, east, north = bbox
+                center_lon = (west + east) / 2.0
+                center_lat = (south + north) / 2.0
+                radius_km = min(
+                    cls._bbox_radius_km(west, south, east, north) * 1.2,
+                    float(TELEMETRY_GEO_RADIUS_KM),
+                )
+            else:
+                center_lon, center_lat = 19.1344, 51.9194
+                radius_km = float(TELEMETRY_GEO_RADIUS_KM)
+
+            device_ids = r.georadius(
+                geo_key, center_lon, center_lat, radius_km,
+                unit='km', count=cap, sort='ASC',
+            )
+            if not device_ids:
+                meta['returned'] = len(positions)
+                return positions, meta
+
+            raw_vals = r.hmget(pos_key, [d.decode() if isinstance(d, bytes) else d for d in device_ids])
+            for pos_json in raw_vals:
+                if not pos_json:
+                    continue
                 try:
                     pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
+                    if bbox:
+                        west, south, east, north = bbox
+                        lon = pos.get('longitude', 0)
+                        lat = pos.get('latitude', 0)
+                        if not (west <= lon <= east and south <= lat <= north):
+                            continue
                     positions.append(pos)
                 except Exception:
                     continue
+                if len(positions) >= cap:
+                    meta['capped'] = True
+                    break
         except Exception:
             pass
 
-        return positions
+        meta['returned'] = len(positions)
+        return positions[:cap], meta
 
     @classmethod
     def get_devices(cls):
@@ -321,7 +418,7 @@ class TelemetryService:
         """Remove all simulator-generated positions from Redis."""
         from core.redis_cluster import get_redis
         r = get_redis()
-        r.delete(f'{cls.TELEMETRY_REDIS_PREFIX}positions')
+        r.delete(cls._positions_key(), cls._geo_key())
 
 import random
 

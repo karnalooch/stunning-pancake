@@ -54,12 +54,13 @@ export const SettingsScreen: React.FC = () => {
     if (wipeConfirm !== 'DELETE ALL DATA') return;
     setWiping(true);
     try {
-      await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
+      const { SimulatorApi } = await import('../../api/client');
+      await SimulatorApi.wipeData();
       notifications.show({ title: 'Data Wiped', message: 'All data except Global Owner has been deleted.', color: 'green' });
       setWipeModalOpen(false);
       setWipeConfirm('');
     } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.response?.data?.error || 'Wipe failed.', color: 'red' });
+      notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed.', color: 'red' });
     } finally { setWiping(false); }
   };
 

@@ -254,27 +254,41 @@ class TelemetryLiveView(generics.GenericAPIView):
         from . import simulator_state as sim
         sim.maybe_advance_live_simulation()
 
-        positions = TelemetryService.get_live_positions()
+        bbox_tuple = None
+        bbox_str = request.query_params.get('bbox', '')
+        if bbox_str:
+            try:
+                parts = [float(x) for x in bbox_str.split(',')]
+                if len(parts) == 4:
+                    bbox_tuple = tuple(parts)
+            except (ValueError, TypeError):
+                pass
+
+        try:
+            limit = int(request.query_params.get('limit', 0))
+        except (TypeError, ValueError):
+            limit = 0
+
+        positions, telemetry_meta = TelemetryService.get_live_positions(bbox=bbox_tuple, limit=limit or None)
         devices = TelemetryService.get_devices()
-        
-        # Ensure we have lists to work with
+
         if not isinstance(positions, list):
             positions = []
         if not isinstance(devices, list):
             devices = []
-            
-        # Merge device names and types into positions for better UI
-        device_info = {d.get('id'): {'name': d.get('name'), 'type': d.get('category')} for d in devices if isinstance(d, dict)}
-        
+
+        device_info = {
+            d.get('id'): {'name': d.get('name'), 'type': d.get('category')}
+            for d in devices if isinstance(d, dict)
+        }
+
         enriched_data = []
         for pos in positions:
             if not isinstance(pos, dict):
                 continue
-                
             device_id = pos.get('deviceId')
             if device_id is None:
                 continue
-            
             info = device_info.get(device_id, {})
             enriched_data.append({
                 "deviceId": device_id,
@@ -284,27 +298,16 @@ class TelemetryLiveView(generics.GenericAPIView):
                 "lng": pos.get('longitude', 0.0),
                 "speed": pos.get('speed', 0.0),
                 "course": pos.get('course', 0.0),
-                "lastUpdate": pos.get('deviceTime')
+                "lastUpdate": pos.get('deviceTime'),
             })
 
-        # BBox filtering (viewport-aware) for massive scale (100k+)
-        bbox_str = request.query_params.get('bbox', '')
-        if bbox_str:
-            try:
-                parts = [float(x) for x in bbox_str.split(',')]
-                if len(parts) == 4:
-                    west, south, east, north = parts
-                    enriched_data = [
-                        p for p in enriched_data
-                        if west <= p['lng'] <= east and south <= p['lat'] <= north
-                    ]
-            except (ValueError, TypeError):
-                pass
-
-        # Cap response to avoid browser JSON deserialization freeze at massive scale
-        enriched_data = enriched_data[:1000]
-
-        return Response(enriched_data)
+        return Response({
+            'positions': enriched_data,
+            'meta': {
+                **telemetry_meta,
+                'pool_note': 'Map shows active riders in viewport only; pool may be 300k+.',
+            },
+        })
 
 class AnomalyListView(generics.GenericAPIView):
     """
