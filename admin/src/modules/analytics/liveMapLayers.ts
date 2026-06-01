@@ -104,7 +104,7 @@ export function installLiveMapLayers(
                 ],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    6.5, 0.42, 8.5, 0.82, 11.6, 0.94, 12.9, 0,
+                    6.5, 0.42, 8.5, 0.82, 11.8, 0.94, 12.6, 0.55, 13.2, 0,
                 ],
                 'circle-stroke-width': 2.5,
                 'circle-stroke-color': 'rgba(255,255,255,0.55)',
@@ -126,7 +126,7 @@ export function installLiveMapLayers(
                 'text-color': '#ffffff',
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    6.5, 0.5, 11.6, 1, 12.5, 0,
+                    6.5, 0.5, 11.8, 1, 13, 0,
                 ],
             },
         });
@@ -151,7 +151,7 @@ export function installLiveMapLayers(
                 'circle-stroke-color': '#312e81',
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    7, 0.35, 11.2, 0.82, 12.1, 0.55, 12.9, 0,
+                    7, 0.35, 11.2, 0.82, 12.4, 0.7, 12.8, 0.35, 13.2, 0,
                 ],
             },
         });
@@ -161,8 +161,8 @@ export function installLiveMapLayers(
             type: 'symbol',
             source: LIVE_SOURCES.positions,
             filter: ['!', ['has', 'point_count']],
-            minzoom: 12,
-            maxzoom: 13.5,
+            minzoom: 11.8,
+            maxzoom: 13.45,
             layout: {
                 'icon-image': [
                     'match', ['get', 'kind'],
@@ -174,14 +174,14 @@ export function installLiveMapLayers(
                     'interpolate', ['linear'], ['zoom'],
                     12, 0.5, 13.5, 0.72, 15, 0.88,
                 ],
-                'icon-allow-overlap': false,
-                'icon-ignore-placement': false,
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true,
                 'symbol-sort-key': ['-', ['coalesce', ['get', 'speed'], 0]],
             },
             paint: {
                 'icon-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    12.05, 0, 12.75, 0.92, 13.5, 1,
+                    11.8, 0.15, 12.2, 0.75, 12.6, 0.95, 13.2, 0.85,
                 ],
             },
         });
@@ -191,7 +191,7 @@ export function installLiveMapLayers(
             type: 'symbol',
             source: LIVE_SOURCES.positions,
             filter: ['!', ['has', 'point_count']],
-            minzoom: 13.5,
+            minzoom: 13.35,
             layout: {
                 'icon-image': [
                     'match', ['get', 'kind'],
@@ -228,11 +228,11 @@ export function installLiveMapLayers(
                 'text-halo-width': 1.4,
                 'icon-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    13.45, 0, 13.7, 1,
+                    13.3, 0.5, 13.55, 1,
                 ],
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    13.45, 0, 13.85, 1,
+                    13.35, 0, 13.7, 1,
                 ],
             },
         });

@@ -22,20 +22,32 @@ export class LivePositionInterpolator {
         }
     }
 
+    /** Instant update (pan/zoom fetch) — avoids dropping riders mid-interpolation. */
+    snapTo(next: LiveMapPosition[]): void {
+        this.cancel();
+        this.from.clear();
+        this.to.clear();
+        for (const p of next) {
+            if (!p.deviceId || !p.lat || !p.lng) continue;
+            this.from.set(p.deviceId, { lng: p.lng, lat: p.lat });
+        }
+        this.onFrame(next, 1);
+    }
+
     /** Smooth transition between poll updates (GPU-friendly single setData stream). */
     animateToward(next: LiveMapPosition[]): void {
         this.cancel();
         if (next.length > MAX_INTERP_POINTS) {
-            this.from.clear();
-            this.to.clear();
-            this.onFrame(next, 1);
+            this.snapTo(next);
             return;
         }
 
         const nextMap = new Map<string, Coord>();
+        const nextById = new Map<string, LiveMapPosition>();
         for (const p of next) {
             if (!p.deviceId || !p.lat || !p.lng) continue;
             nextMap.set(p.deviceId, { lng: p.lng, lat: p.lat });
+            nextById.set(p.deviceId, p);
         }
 
         if (this.from.size === 0) {
@@ -52,20 +64,22 @@ export class LivePositionInterpolator {
             const t = Math.min(1, elapsed / INTERP_MS);
             const eased = t * (2 - t);
             const blended: LiveMapPosition[] = [];
-            for (const p of next) {
-                if (!p.deviceId) continue;
-                const a = this.from.get(p.deviceId);
-                const b = this.to.get(p.deviceId) ?? a;
+            const ids = new Set([...this.from.keys(), ...nextMap.keys()]);
+            for (const id of ids) {
+                const target = nextById.get(id);
+                if (!target) continue;
+                const a = this.from.get(id);
+                const b = nextMap.get(id) ?? a;
                 if (!b) {
-                    blended.push(p);
+                    blended.push(target);
                     continue;
                 }
                 if (!a) {
-                    blended.push(p);
+                    blended.push(target);
                     continue;
                 }
                 blended.push({
-                    ...p,
+                    ...target,
                     lng: a.lng + (b.lng - a.lng) * eased,
                     lat: a.lat + (b.lat - a.lat) * eased,
                 });

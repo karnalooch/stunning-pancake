@@ -31,6 +31,8 @@ import {
     type LiveMapClickEvent,
 } from './liveMapLayers';
 import { LivePositionInterpolator } from './liveMapInterp';
+import { bboxFromMap } from './liveMapBbox';
+import type { LiveApiDetail } from './liveMapZoom';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
@@ -53,12 +55,9 @@ type UserPosition = LiveMapPosition;
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
-const MOVE_DEBOUNCE_MS = 280;
-
-function bboxFromMap(map: any): string {
-    const bounds = map.getBounds();
-    return `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}`;
-}
+const MOVE_DEBOUNCE_MS = 180;
+const MOVE_FETCH_THROTTLE_MS = 120;
+const STALE_EMPTY_MS = 3500;
 
 function featureToPosition(
     props: Record<string, unknown>,
@@ -96,6 +95,9 @@ export const LiveMap: React.FC = () => {
     const lastRefreshRef = useRef<number | null>(null);
     const layersReadyRef = useRef(false);
     const interpolatorRef = useRef<LivePositionInterpolator | null>(null);
+    const fetchSeqRef = useRef(0);
+    const lastMoveAtRef = useRef(0);
+    const lastDragFetchAtRef = useRef(0);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -242,20 +244,54 @@ export const LiveMap: React.FC = () => {
         if (map && layersReadyRef.current) setCityHubData(map, cityCountsRef.current);
     }, [aggregateCityCounts]);
 
-    const ingestPositions = useCallback((list: UserPosition[]) => {
+    const ingestPositions = useCallback((list: UserPosition[], opts?: { snap?: boolean }) => {
         positionsRef.current = list;
         if (!interpolatorRef.current) {
             interpolatorRef.current = new LivePositionInterpolator((blended) => {
                 pushPositionsToMap(blended);
             });
         }
-        interpolatorRef.current.animateToward(list);
+        if (opts?.snap) {
+            interpolatorRef.current.snapTo(list);
+        } else {
+            interpolatorRef.current.animateToward(list);
+        }
     }, [pushPositionsToMap]);
 
-    const fetchPositions = useCallback(async () => {
-        if (!canFetch || !tabVisibleRef.current || fetchInFlightRef.current) return;
+    const applyPositionPayload = useCallback((
+        list: UserPosition[],
+        meta: Record<string, unknown> | null | undefined,
+        detail: LiveApiDetail,
+        snap: boolean,
+    ) => {
+        const movedRecently = Date.now() - lastMoveAtRef.current < STALE_EMPTY_MS;
+        const keepStale =
+            list.length === 0
+            && detail !== 'summary'
+            && movedRecently
+            && positionsRef.current.length > 0;
+
+        applyMetaCounts(list, meta);
+        applyCityCounts(list, meta);
+
+        if (detail === 'summary') {
+            ingestPositions([], { snap: true });
+            return;
+        }
+        if (keepStale) return;
+
+        ingestPositions(list, { snap });
+    }, [applyMetaCounts, applyCityCounts, ingestPositions]);
+
+    const fetchPositions = useCallback(async (opts?: { priority?: boolean; snap?: boolean }) => {
+        if (!canFetch || !tabVisibleRef.current) return;
+        const priority = Boolean(opts?.priority);
+        if (!priority && fetchInFlightRef.current) return;
+
         fetchInFlightRef.current = true;
-        abortRef.current?.abort();
+        if (priority) abortRef.current?.abort();
+
+        const seq = ++fetchSeqRef.current;
         const ac = new AbortController();
         abortRef.current = ac;
         const t0 = performance.now();
@@ -269,41 +305,55 @@ export const LiveMap: React.FC = () => {
             };
             if (map) {
                 params.bbox = bboxFromMap(map);
-                params.zoom = Math.round(zoom);
+                params.zoom = Math.round(zoom * 10) / 10;
             }
 
             const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal });
-            if (ac.signal.aborted) return;
+            if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
 
             const list = data?.positions ?? [];
             const meta = data?.meta;
             if (Array.isArray(list)) {
-                applyMetaCounts(list, meta);
-                applyCityCounts(list, meta);
-                ingestPositions(list);
+                applyPositionPayload(list, meta, detail, Boolean(opts?.snap) || priority);
                 syncZoomMode();
             }
             const tookMs = Math.round(performance.now() - t0);
             lastRefreshRef.current = tookMs;
             setLastRefreshMs(tookMs);
         } catch (err: unknown) {
-            if (ac.signal.aborted) return;
+            if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
             const status = (err as { response?: { status?: number } })?.response?.status;
             if (status !== 401 && status !== 403) { /* silent poll */ }
         } finally {
-            fetchInFlightRef.current = false;
+            if (seq === fetchSeqRef.current) {
+                fetchInFlightRef.current = false;
+            }
             setLoading(false);
         }
-    }, [canFetch, applyMetaCounts, applyCityCounts, ingestPositions, syncZoomMode]);
+    }, [canFetch, applyPositionPayload, syncZoomMode]);
 
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;
 
-    const scheduleMoveFetch = useCallback(() => {
+    const scheduleMoveFetch = useCallback((immediate = false) => {
+        lastMoveAtRef.current = Date.now();
         if (moveDebounceRef.current) clearTimeout(moveDebounceRef.current);
-        moveDebounceRef.current = setTimeout(() => {
-            fetchPositionsRef.current();
-        }, MOVE_DEBOUNCE_MS);
+        const run = () => {
+            fetchPositionsRef.current({ priority: true, snap: true });
+        };
+        if (immediate) {
+            run();
+            return;
+        }
+        moveDebounceRef.current = setTimeout(run, MOVE_DEBOUNCE_MS);
+    }, []);
+
+    const scheduleDragFetch = useCallback(() => {
+        lastMoveAtRef.current = Date.now();
+        const now = Date.now();
+        if (now - lastDragFetchAtRef.current < MOVE_FETCH_THROTTLE_MS) return;
+        lastDragFetchAtRef.current = now;
+        fetchPositionsRef.current({ priority: true, snap: true });
     }, []);
 
     const handleQuickLaunch = useCallback(async () => {
@@ -455,9 +505,13 @@ export const LiveMap: React.FC = () => {
                     } catch { /* MapLibre < 3.3 */ }
                 }
                 syncZoomMode();
-                scheduleMoveFetch();
+                scheduleMoveFetch(true);
             });
-            map.on('moveend', scheduleMoveFetch);
+            map.on('movestart', () => {
+                lastMoveAtRef.current = Date.now();
+            });
+            map.on('move', scheduleDragFetch);
+            map.on('moveend', () => scheduleMoveFetch(true));
             mapRef.current = map;
         }).catch(() => {
             if (!cancelled) {
@@ -478,7 +532,7 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, syncZoomMode]);
+    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomMode]);
 
     useEffect(() => {
         if (!mlReady || !canFetch || !tabVisible) return;
