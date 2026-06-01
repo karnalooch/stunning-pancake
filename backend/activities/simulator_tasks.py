@@ -141,10 +141,7 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
     """Generate tenants, departments, users, and activities."""
     from simulate_active_cities import run
     from users.models import User
-    from activities.scale_config import (
-        BATCH_PARALLEL_CITIES,
-        BATCH_PARALLEL_MIN_USERS,
-    )
+    from activities.scale_config import compute_batch_scaling
 
     if not sim.acquire_batch_lock():
         sim.batch_log("ERROR: batch lock — another simulation running")
@@ -152,10 +149,11 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
         return {'status': 'locked'}
 
     target = int(total_users or 0)
-    use_parallel = (
-        BATCH_PARALLEL_CITIES
-        and skip_activities
-        and target >= BATCH_PARALLEL_MIN_USERS
+    batch_plan = compute_batch_scaling(target) if target else {}
+    use_parallel = bool(
+        skip_activities
+        and target
+        and batch_plan.get('use_parallel_cities')
     )
     parallel_started = False
 
@@ -166,6 +164,15 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
             total_users=target, current_phase='initializing', progress_pct=0,
             users_created=0,
         )
+        if batch_plan:
+            eta_min = max(1, batch_plan['estimated_batch_seconds'] // 60)
+            sim.batch_log(
+                f"Batch plan: {batch_plan['num_cities']} cities × "
+                f"{batch_plan['users_per_city']:,} users, "
+                f"bulk={batch_plan['user_bulk_batch_size']:,}, "
+                f"parallel≤{batch_plan['max_parallel_workers']}, "
+                f"ETA~{eta_min}min"
+            )
         sim.batch_log(f"Batch starting: scale={scale}, days={days}, total_users={total_users}")
 
         last_logged_phase = [None]

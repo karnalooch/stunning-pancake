@@ -651,6 +651,20 @@ class RunSimulationView(APIView):
             scale=scale, days=days, total_users=total_users or 0
         )
 
+        batch_plan = None
+        est_message = f'Batch simulation started. Estimated time: ~{int(scale * 30)} minutes.'
+        if total_users:
+            from activities.scale_config import compute_batch_scaling
+            batch_plan = compute_batch_scaling(int(total_users))
+            eta_min = max(1, batch_plan['estimated_batch_seconds'] // 60)
+            est_message = (
+                f"Batch started: {batch_plan['num_cities']} cities × "
+                f"{batch_plan['users_per_city']:,} users, "
+                f"bulk {batch_plan['user_bulk_batch_size']:,}, "
+                f"ETA ~{eta_min} min (skip_activities={skip_activities})."
+            )
+            sim.batch_log(est_message)
+
         # Spawn Celery task
         run_batch_simulation.delay(
             scale=scale,
@@ -660,13 +674,16 @@ class RunSimulationView(APIView):
             total_users=total_users,
         )
 
-        return Response({
+        payload = {
             'status': 'started',
             'running': True,
             'scale': scale,
             'days': days,
             'clear': clear,
             'skip_activities': skip_activities,
-            'message': f'Batch simulation started. Estimated time: ~{int(scale * 30)} minutes.',
-        })
+            'message': est_message,
+        }
+        if batch_plan:
+            payload['batch_plan'] = batch_plan
+        return Response(payload)
 

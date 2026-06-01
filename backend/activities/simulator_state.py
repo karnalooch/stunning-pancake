@@ -57,11 +57,75 @@ def set_batch_state(**kwargs):
 
 def increment_batch_users_created(delta: int) -> int:
     """Atomic progress counter for parallel per-city batch workers."""
+    if delta <= 0:
+        try:
+            return int(get_batch_state().get('users_created', 0))
+        except Exception:
+            return 0
     try:
         r = get_redis()
         return int(r.hincrby(BATCH_STATE_KEY, 'users_created', int(delta)))
     except Exception:
         return 0
+
+
+_batch_progress_pending = threading.local()
+_batch_ui_last_flush = threading.local()
+
+
+def _batch_progress_flush_every() -> int:
+    try:
+        from activities.scale_config import BATCH_PROGRESS_REDIS_EVERY
+        return max(500, int(BATCH_PROGRESS_REDIS_EVERY))
+    except Exception:
+        return 5000
+
+
+def increment_batch_users_created_throttled(delta: int) -> int:
+    """
+    Buffer per-worker inserts; flush to Redis in chunks (avoids HINCRBY per bulk_create row at 300k).
+    """
+    pending = int(getattr(_batch_progress_pending, 'value', 0) or 0) + int(delta)
+    flush_at = _batch_progress_flush_every()
+    if pending >= flush_at:
+        flushed = increment_batch_users_created(pending)
+        _batch_progress_pending.value = 0
+        return flushed
+    _batch_progress_pending.value = pending
+    try:
+        return int(get_batch_state().get('users_created', 0))
+    except Exception:
+        return 0
+
+
+def flush_batch_users_progress() -> int:
+    """Flush any buffered user count (call at end of city worker)."""
+    pending = int(getattr(_batch_progress_pending, 'value', 0) or 0)
+    if pending > 0:
+        _batch_progress_pending.value = 0
+        return increment_batch_users_created(pending)
+    try:
+        return int(get_batch_state().get('users_created', 0))
+    except Exception:
+        return 0
+
+
+def set_batch_state_throttled(**kwargs) -> bool:
+    """Rate-limit Redis HSET for progress_pct from parallel workers."""
+    try:
+        from activities.scale_config import BATCH_PROGRESS_UI_MIN_SECONDS
+        min_interval = float(BATCH_PROGRESS_UI_MIN_SECONDS)
+    except Exception:
+        min_interval = 2.0
+
+    now = time.time()
+    last = float(getattr(_batch_ui_last_flush, 'at', 0) or 0)
+    force = kwargs.get('current_phase') in ('complete', 'error') or kwargs.get('running') is False
+    if not force and (now - last) < min_interval and 'progress_pct' in kwargs:
+        return False
+    set_batch_state(**kwargs)
+    _batch_ui_last_flush.at = now
+    return True
 
 
 def reset_batch_state():

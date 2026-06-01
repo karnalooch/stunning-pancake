@@ -1,41 +1,36 @@
 # Railway — osobny worker symulacji (kolejka `simulation`)
 
-Symulacja batch (300k użytkowników) i live sim **nie dzielą już CPU** z krytycznymi taskami (telemetry, rankingi, powiadomienia).
+Symulacja batch (10k–300k użytkowników) i live sim **nie dzielą CPU** z krytycznymi taskami (telemetry, rankingi, powiadomienia).
 
 ## Architektura
 
 | Serwis Railway | Kolejki Celery | Rola |
 |----------------|----------------|------|
 | **celery-worker** | `critical`, `default`, `notifications` | API, ML, beat tasks, rankingi |
-| **celery-worker-simulation** | `simulation` | batch 300k, live map ticks |
+| **celery-worker-simulation** | `simulation` | batch 10k–300k, live map ticks |
 
-Oba serwisy łączą się z tym samym **Redis** (`REDIS_URL`) i **PostgreSQL** (`DATABASE_URL`) co backend.
+Oba serwisy: ten sam **Redis** (`REDIS_URL`) i **PostgreSQL** (`DATABASE_URL`).
 
 ## Krok po kroku (Railway)
 
-### 1. Główny worker — usuń kolejkę `simulation`
+### 1. Główny worker — bez kolejki `simulation`
 
-W istniejącym serwisie **celery-worker** → **Variables**:
+**celery-worker** → Variables:
 
 ```env
 CELERY_WORKER_QUEUES=critical,default,notifications
 CELERY_WORKER_CONCURRENCY=4
 ```
 
-Zrób **Redeploy** celery-worker.
+Redeploy.
 
-### 2. Nowy serwis symulacji
+### 2. Serwis `celery-worker-simulation`
 
-1. W projekcie Railway: **+ New** → **GitHub Repo** (to samo repo).
-2. Nazwa serwisu: `celery-worker-simulation`.
-3. **Settings** → **Build**:
-   - **Root Directory**: zostaw pusty / `.` (root repozytorium).
-   - **Dockerfile Path**: `celery-worker-simulation/Dockerfile`
-4. **Settings** → **Deploy** → **Start Command**: zostaw puste (CMD z Dockerfile).
+1. **+ New** → GitHub Repo (to samo repo).
+2. **Dockerfile Path**: `celery-worker-simulation/Dockerfile`
+3. Start Command: puste (CMD z Dockerfile).
 
-### 3. Zmienne środowiskowe (skopiuj z backendu + worker)
-
-W **celery-worker-simulation** → **Variables** (te same co backend, minimum):
+### 3. Zmienne (skopiuj z backendu + poniższe)
 
 ```env
 DATABASE_URL=<jak backend>
@@ -43,66 +38,53 @@ REDIS_URL=<jak backend>
 SECRET_KEY=<jak backend>
 DEBUG=0
 
-# Worker symulacji — więcej CPU tutaj
 CELERY_WORKER_QUEUES=simulation
 CELERY_WORKER_CONCURRENCY=7
 CELERY_WORKER_HOSTNAME=simulation@%h
-CELERY_LOG_LEVEL=info
 
-# Batch 300k — równoległe miasta
+# Adaptacyjny batch — env opcjonalne (domyślnie liczone z total_users)
 SCALE_BATCH_PARALLEL_CITIES=true
 SCALE_BATCH_PARALLEL_MIN_USERS=5000
-SCALE_USER_BULK_BATCH_SIZE=2500
-SCALE_USER_BULK_PG_BATCH_SIZE=500
-SCALE_MAX_CONCURRENT_RIDERS=5000
-
-# Batch bez aktywności — szybsze inserty (domyślnie włączone)
+SCALE_BATCH_MAX_PARALLEL_WORKERS=6
 SCALE_SKIP_DEPT_ON_BATCH=true
 SCALE_BATCH_FAST_INSERT=true
 DATABASE_CONN_MAX_AGE=60
+SCALE_MAX_CONCURRENT_RIDERS=5000
 ```
 
-Wyłączenie fast path (np. gdy potrzebujesz `UserDepartment` w batchu demo):
+**Słaby Postgres:** `SCALE_BATCH_MAX_PARALLEL_WORKERS=3`, `CELERY_WORKER_CONCURRENCY=4`.
 
-```env
-SCALE_SKIP_DEPT_ON_BATCH=false
-SCALE_BATCH_FAST_INSERT=false
-```
+**300k test:** `CELERY_WORKER_CONCURRENCY=7`, `SCALE_BATCH_MAX_PARALLEL_WORKERS=6` — ~10 miast × ~30k użytk., bulk ~7500.
 
 ### 4. Plan CPU
 
-- **celery-worker-simulation**: plan z **4–8 vCPU** (batch + opcjonalnie live sim).
-- **celery-worker**: mniejszy plan (2–4 vCPU) wystarczy na `critical` / `notifications`.
+- **celery-worker-simulation**: 4–8 vCPU.
+- **celery-worker**: 2–4 vCPU.
 
-### 5. Weryfikacja w logach
-
-Po starcie **celery-worker-simulation** powinno być:
+### 5. Weryfikacja logów
 
 ```text
 Starting Celery SIMULATION worker: concurrency=7 queues=simulation node=simulation@...
-```
-
-W **celery-worker** (bez simulation):
-
-```text
-Starting Celery worker: concurrency=4 queues=critical,default,notifications
+Batch plan: 10 cities × 30,000 users, bulk=7,500, parallel≤6, ETA~45min
+Parallel user creation: 10 cities × 30000 users
 ```
 
 ### 6. Uruchomienie batcha
 
-1. **Nie** uruchamiaj live sim podczas batcha 300k (opcjonalnie po zakończeniu).
-2. Simulator → preset 300k (bez aktywności) → Launch.
-3. W logach **celery-worker-simulation** zobaczysz `Parallel user creation: N cities` i postęp per miasto.
+1. **Nie** uruchamiaj live sim podczas batcha 300k.
+2. Simulator → preset 300k lub 300000 + skip activities.
+3. POST `/api/activities/admin/simulate/` zwraca `batch_plan` + ETA.
 
 ## Docker Compose (lokalnie)
-
-W `docker-compose.yml` są dwa serwisy: `celery_worker` i `celery_worker_simulation`.
 
 ```bash
 docker compose up -d celery_worker celery_worker_simulation celery_beat
 ```
 
+Serwis `celery_worker_simulation` — kolejka `simulation`, zmienne jak wyżej.
+
 ## Skalowanie
 
-- **Więcej równoległości**: zwiększ `CELERY_WORKER_CONCURRENCY` na serwisie simulation.
-- **Druga replika**: Railway → celery-worker-simulation → **Replicas: 2** (dwa kontenery × concurrency — więcej równoległych tasków per miasto).
+- Więcej równoległości DB: `SCALE_BATCH_MAX_PARALLEL_WORKERS` (nie więcej miast niż ~10 w kodzie).
+- Więcej workerów CPU: `CELERY_WORKER_CONCURRENCY` lub Replicas=2 na Railway.
+- Nadpisanie chunk size: `SCALE_USER_BULK_BATCH_SIZE` (np. 10000 przy bardzo mocnym Postgres).

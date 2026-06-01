@@ -173,8 +173,13 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_WORKER_CONCURRENCY: "6"
+      CELERY_WORKER_QUEUES: simulation
       SCALE_BATCH_PARALLEL_CITIES: "true"
-      SCALE_USER_BULK_BATCH_SIZE: "1000"
+      SCALE_BATCH_MAX_PARALLEL_WORKERS: "6"
+      SCALE_SKIP_DEPT_ON_BATCH: "true"
+      SCALE_BATCH_FAST_INSERT: "true"
+      DATABASE_CONN_MAX_AGE: "60"
     volumes:
       - ./backend:/app
     depends_on:

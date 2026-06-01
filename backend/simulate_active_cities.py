@@ -54,18 +54,46 @@ def _athlete_password_hash() -> str:
 
 def _plan_cities_for_target(total_users: int, num_cities_hint: int | None = None):
     """
-    Pick city count so Celery can run many run_batch_city_users tasks in parallel.
-    10k users → 10 cities × ~1000 users (uses up to 7 workers at once).
+    Pick city count so Celery chord stays bounded (≤20 tasks) with adaptive users/city.
+    Uses activities.scale_config.compute_batch_scaling (10k → ~10×1k, 300k → ~10×30k).
     """
     total_users = int(total_users)
+    try:
+        from activities.scale_config import compute_batch_scaling
+        plan = compute_batch_scaling(total_users, max_cities_available=len(CITIES))
+        n = plan['num_cities']
+        users_per_city = plan['users_per_city']
+    except Exception:
+        if total_users >= 5_000:
+            n = min(len(CITIES), max(5, min(10, total_users // 800)))
+        else:
+            limit = num_cities_hint if num_cities_hint is not None else 3
+            n = random.randint(max(3, min(limit, len(CITIES))), len(CITIES))
+        users_per_city = max(50, total_users // n)
+
+    if total_users < 5_000 and num_cities_hint is not None:
+        n = min(len(CITIES), max(3, num_cities_hint))
+
+    selected = random.sample(CITIES, min(n, len(CITIES)))
     if total_users >= 5_000:
-        n = min(len(CITIES), max(5, min(10, total_users // 800)))
-    else:
-        limit = num_cities_hint if num_cities_hint is not None else 3
-        n = random.randint(max(3, min(limit, len(CITIES))), len(CITIES))
-    selected = random.sample(CITIES, n)
-    users_per_city = max(50, total_users // n)
+        users_per_city = max(50, math.ceil(total_users / len(selected)))
     return selected, users_per_city
+
+
+def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
+    """(bulk_batch_size, pg_batch_size) — adaptive when total_users is set."""
+    if not total_users:
+        try:
+            from activities.scale_config import USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
+            return USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
+        except Exception:
+            return 500, 500
+    try:
+        from activities.scale_config import compute_batch_scaling
+        plan = compute_batch_scaling(int(total_users), max_cities_available=len(CITIES))
+        return plan['user_bulk_batch_size'], plan['user_bulk_pg_batch_size']
+    except Exception:
+        return 2500, 500
 
 
 def _batch_user_insert_flags(skip_activities: bool) -> tuple[bool, bool]:
@@ -637,13 +665,7 @@ def run(
     print("👥 Phase 4: Creating users...")
     users_by_city = {}
     total_users_created = 0
-    try:
-        from activities.scale_config import USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
-        batch_size = USER_BULK_BATCH_SIZE
-        pg_batch_size = USER_BULK_PG_BATCH_SIZE
-    except Exception:
-        batch_size = 500
-        pg_batch_size = 500
+    batch_size, pg_batch_size = _batch_sizes_for_target(total_users)
     target_user_count = total_u
 
     for city_index, city in enumerate(selected_cities):
@@ -888,13 +910,7 @@ def create_users_for_city(
     if not city:
         raise ValueError(f'Unknown city slug: {city_slug}')
 
-    try:
-        from activities.scale_config import USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
-        batch_size = USER_BULK_BATCH_SIZE
-        pg_batch_size = USER_BULK_PG_BATCH_SIZE
-    except Exception:
-        batch_size = 500
-        pg_batch_size = 500
+    batch_size, pg_batch_size = _batch_sizes_for_target(total_target_users)
 
     tenant = Tenant.objects.get(name=city['name'])
     city_depts = list(Department.objects.filter(tenant=tenant, is_active=True))
@@ -933,18 +949,24 @@ def create_users_for_city(
                 dept = random.choice(city_depts)
                 UserDepartment.objects.get_or_create(user=user, department=dept)
             moderator_count += 1
-            sim.increment_batch_users_created(1)
+            sim.increment_batch_users_created_throttled(1)
 
     athletes_done = 0
 
     def _on_parallel_batch(n_saved: int):
         nonlocal athletes_done
         athletes_done += n_saved
-        sim.increment_batch_users_created(n_saved)
-        users_so_far = sim.get_batch_state().get('users_created', 0)
+        users_so_far = sim.increment_batch_users_created_throttled(n_saved)
         city_frac = athletes_done / max(1, n_athletes)
         overall = (city_index + city_frac) / max(1, total_cities)
         pct = 22 + 63 * overall
+        if progress_callback:
+            sim.set_batch_state_throttled(
+                current_phase='creating_users',
+                progress_pct=round(min(100.0, max(0.0, pct)), 1),
+                users_created=users_so_far,
+                activities_created=0,
+            )
         report('creating_users', pct, users_created=users_so_far, activities_created=0)
 
     skip_dept, fast_insert = _batch_user_insert_flags(skip_activities=True)
@@ -954,6 +976,7 @@ def create_users_for_city(
         skip_dept=skip_dept,
         fast_insert=fast_insert,
     )
+    sim.flush_batch_users_progress()
     created_count = moderator_count + n_athletes_created
     print(f"   ✅ {city['name']}: {created_count} users (parallel worker)")
     return created_count

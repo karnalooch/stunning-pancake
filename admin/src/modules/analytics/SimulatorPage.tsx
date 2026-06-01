@@ -82,6 +82,13 @@ export const SimulatorPage: React.FC = () => {
     const activeRiders = Math.min(rawActive, MAX_CONCURRENT);
     const cheaters = Math.round(activeRiders * cheatRatio);
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
+    const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
+
+    useEffect(() => {
+        if (cyclists >= FORCE_SKIP_ACTIVITIES_ABOVE && generateActivities) {
+            setGenerateActivities(false);
+        }
+    }, [cyclists, generateActivities]);
 
     const runPreflight = async () => {
         setPreflightLoading(true);
@@ -283,6 +290,14 @@ export const SimulatorPage: React.FC = () => {
                                         Pula: {scaleReport.target_users?.toLocaleString()} · jednocześnie na mapie max{' '}
                                         {scaleReport.estimated_concurrent_riders?.toLocaleString()}
                                     </Text>
+                                    {scaleReport.batch_plan && (
+                                        <Text size="sm" mb="xs" c="dimmed">
+                                            Batch: {scaleReport.batch_plan.num_cities} miast ×{' '}
+                                            {scaleReport.batch_plan.users_per_city?.toLocaleString()} użytk./miasto · bulk{' '}
+                                            {scaleReport.batch_plan.user_bulk_batch_size?.toLocaleString()} · parallel≤
+                                            {scaleReport.batch_plan.max_parallel_workers} · {scaleReport.estimated_batch_label}
+                                        </Text>
+                                    )}
                                     <Stack gap={4}>
                                         {(scaleReport.risks || []).filter((r: any) => r.severity !== 'resolved').slice(0, 5).map((r: any, i: number) => (
                                             <Text key={i} size="xs">[{r.severity}] {r.title}: {r.detail}</Text>

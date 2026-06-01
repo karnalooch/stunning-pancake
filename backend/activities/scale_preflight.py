@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 
 from activities import simulator_state as sim
 from activities.scale_config import (
+    BATCH_PARALLEL_MIN_USERS,
     FORCE_SKIP_ACTIVITIES_ABOVE,
     MAX_BATCH_USERS,
     MAX_CONCURRENT_RIDERS,
@@ -14,6 +15,7 @@ from activities.scale_config import (
     MAX_TELEMETRY_PUBLISH_PER_TICK,
     SKIP_ACTIVITIES_WARN_ABOVE,
     TELEMETRY_API_DEFAULT_LIMIT,
+    compute_batch_scaling,
 )
 from activities.services import TelemetryService
 
@@ -117,6 +119,24 @@ def analyze_scale(
     force_skip = target >= FORCE_SKIP_ACTIVITIES_ABOVE and generate_activities
     effective_skip = skip_activities or force_skip
 
+    batch_plan = compute_batch_scaling(target)
+    est_batch_sec = batch_plan['estimated_batch_seconds']
+    if effective_skip:
+        est_label = (
+            f"~{est_batch_sec // 60}–{(est_batch_sec * 2) // 60} min "
+            f"({batch_plan['num_cities']} cities × {batch_plan['users_per_city']:,}, "
+            f"bulk {batch_plan['user_bulk_batch_size']:,}, "
+            f"parallel≤{batch_plan['max_parallel_workers']})"
+        )
+    else:
+        est_label = 'hours–days (activities enabled)'
+
+    if target >= BATCH_PARALLEL_MIN_USERS and effective_skip:
+        recommendations.append(
+            f"Batch Celery: {est_label}. "
+            f"Tune SCALE_BATCH_MAX_PARALLEL_WORKERS on weak Postgres."
+        )
+
     return {
         'target_users': target,
         'athletes_in_db': athlete_count,
@@ -126,6 +146,9 @@ def analyze_scale(
         'max_live_pool': MAX_LIVE_POOL,
         'max_concurrent_riders': MAX_CONCURRENT_RIDERS,
         'estimated_concurrent_riders': concurrent,
+        'batch_plan': batch_plan,
+        'estimated_batch_seconds': est_batch_sec,
+        'estimated_batch_label': est_label,
         'limits': {
             'MAX_BATCH_USERS': MAX_BATCH_USERS,
             'MAX_LIVE_POOL': MAX_LIVE_POOL,

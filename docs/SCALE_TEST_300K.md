@@ -11,6 +11,7 @@
 | **PostgreSQL** | Generowanie aktywności GPS dla 300k | Dni + terabajty |
 | **Frontend** | JSON z tysiącami punktów + kropki + ikony | Zamrożenie karty przeglądarki |
 | **Admin dashboard** | `COUNT` / pętla per-tenant na ogromnych tabelach | Wolne ładowanie KPI |
+| **Batch progress** | `HINCRBY` + `HSET` na każdy `bulk_create` chunk | Redis i UI przy 300k |
 
 ## Co jest **bezpieczne** po implementacji
 
@@ -18,7 +19,20 @@
 - **Aktywni na mapie** — max `SCALE_MAX_CONCURRENT_RIDERS` (domyślnie **5000**).
 - **Telemetria** — tylko aktywni jeźdźcy; odczyt `GEORADIUS` + `HMGET`, nie `HGETALL`.
 - **API mapy** — `bbox` + `limit` (domyślnie 500), odpowiedź `{ positions, meta }`.
-- **Batch 300k** — `bulk_create(ignore_conflicts=True)`, bez `skip_activities` powyżej 150k wymuszane auto.
+- **Batch 300k** — adaptacyjny plan miast/bulk, `skip_activities` wymuszane ≥150k, postęp Redis throttled.
+- **Chord** — max **10–20** tasków per miasto (w repo 10 miast), nie jeden task na użytkownika.
+
+## Adaptacyjne reguły (domyślne, bez env)
+
+| Cel użytkowników | Miasta (taski Celery) | users/miasto | `bulk_create` chunk | Równoległość DB* | Szac. batch (skip act.) |
+|------------------|----------------------|--------------|---------------------|------------------|-------------------------|
+| **10k** | 10 | ~1 000 | 2 500 | ≤6 | ~3–8 min |
+| **100k** | 10 | ~10 000 | 5 000 | ≤5 | ~15–35 min |
+| **300k** | 10 | ~30 000 | 7 500 | ≤7 | ~25–60 min |
+
+\* `SCALE_BATCH_MAX_PARALLEL_WORKERS` lub domyślnie `min(Celery concurrency, 4–7)` zależnie od skali.
+
+Logika: `activities.scale_config.compute_batch_scaling(total_users)`.
 
 ## Zmienne środowiskowe
 
@@ -30,55 +44,47 @@ SCALE_MAX_TELEMETRY_PUBLISH=5000
 SCALE_TELEMETRY_API_LIMIT=500
 SCALE_FORCE_SKIP_ACTIVITIES_ABOVE=150000
 
-# Celery worker (serwis celery-worker na Railway)
-CELERY_WORKER_CONCURRENCY=6
+# Celery worker symulacji (celery-worker-simulation)
+CELERY_WORKER_CONCURRENCY=7
+CELERY_WORKER_QUEUES=simulation
 SCALE_BATCH_PARALLEL_CITIES=true
 SCALE_BATCH_PARALLEL_MIN_USERS=5000
-SCALE_USER_BULK_BATCH_SIZE=2500
-SCALE_USER_BULK_PG_BATCH_SIZE=500
 
-# Szybszy batch Postgres (skip_activities): bez UserDepartment + bez SELECT po bulk_create
+# Opcjonalne — nadpisują adaptację (zwykle nie trzeba)
+# SCALE_USER_BULK_BATCH_SIZE=7500
+# SCALE_USER_BULK_PG_BATCH_SIZE=1000
+SCALE_BATCH_MAX_PARALLEL_WORKERS=4
+SCALE_BATCH_MAX_CITY_TASKS=20
+SCALE_BATCH_PROGRESS_REDIS_EVERY=5000
+SCALE_BATCH_PROGRESS_UI_MIN_SECONDS=2
+
+# Szybszy batch Postgres (skip_activities)
 SCALE_SKIP_DEPT_ON_BATCH=true
 SCALE_BATCH_FAST_INSERT=true
 DATABASE_CONN_MAX_AGE=60
 ```
 
-### Więcej CPU / workerów Celery
+### Tuning Postgres
 
-- **Jeden batch 300k** to długie zadanie DB — **8 vCPU nie przyspieszy jednego wątku**.
-- Ustaw na serwisie **celery-worker**: `CELERY_WORKER_CONCURRENCY=6` (zostaw 1–2 vCPU na Redis/OS).
-- Przy **„skip activities”** i ≥5k użytkowników batch dzieli **tworzenie użytkowników per miasto** na równoległe taski Celery (10k → 10 miast × ~1k, do 7 workerów naraz).
-- Hasła atletów: **jeden hash bcrypt** na cały batch (bez 10k× `set_password`) — dużo szybsze na demo.
-- Przy **skip_activities**: domyślnie pomijane `UserDepartment` i ponowne `SELECT` po każdym `bulk_create` (`SCALE_SKIP_DEPT_ON_BATCH`, `SCALE_BATCH_FAST_INSERT`). Po wipe używaj czystego insertu; przy ponownym batchu licznik może być przybliżony.
-- **CONN_MAX_AGE=60** na PostgreSQL — mniej handshake’ów przy wielu workerach Celery (`DATABASE_CONN_MAX_AGE`).
-- **Nie uruchamiaj live sim** podczas batcha — ticki co 8s zjadają CPU (w logach: `ForkPoolWorker-1` live + `ForkPoolWorker-2` batch).
-- **Osobny serwis Railway:** `celery-worker-simulation` — tylko kolejka `simulation`. Instrukcja: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md).
+| Profil Postgres | `SCALE_BATCH_MAX_PARALLEL_WORKERS` | `CELERY_WORKER_CONCURRENCY` |
+|-----------------|-------------------------------------|-----------------------------|
+| Słaby / współdzielony | 2–3 | 4 |
+| Railway standard | 4–5 | 6 |
+| Mocny / dedykowany | 6–7 | 7–8 |
+
+Przy **skip_activities** i ≥5k użytkowników: fazy 1–3 (tenanty, adminy, działy) sekwencyjnie, potem **równoległe** `run_batch_city_users` (chord).
 
 ## Procedura testu 300k
 
-1. **Preflight:** `GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.1&skip_activities=true`
-2. **Simulator** — preset „300k (bez aktywności)” lub ręcznie: 300000 użytkowników, wyłączone aktywności.
-3. Poczekaj na batch (PostgreSQL; 10k użytkowników z fast insert ~2–8 min, 300k ~20–60 min zależnie od dysku/workerów).
-4. **Live sim** — `pool_pct=1.0`, `active_ratio=0.1` → ~5000 na mapie (cap).
-5. **Mapa** — zoom na miasto; API zwraca tylko widoczny bbox.
+1. **Preflight:** `GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.1&skip_activities=true` — sprawdź `batch_plan` i `estimated_batch_label`.
+2. **Simulator** — preset „300k (bez aktywności)” lub ręcznie ≥150k (aktywności wyłączą się same).
+3. Poczekaj na batch w logach **celery-worker-simulation** (`Parallel user creation: N cities`).
+4. **Live sim** dopiero po batchu — `active_ratio=0.1` → ~5000 na mapie (cap).
+5. **Mapa** — zoom na miasto; API tylko bbox.
 
-## Dashboard, heatmap, wipe (zabezpieczone)
+## Dashboard, heatmap, wipe
 
-### Dashboard KPI (`/api/activities/admin/stats/`)
-- Jedno zapytanie agregujące zamiast N×COUNT per tenant.
-- Cache Redis **120s**; podczas batch/live sim zwraca **stale** cache (`stale: true`).
-- Odśwież na siłę: `?refresh=1`.
-
-### Heatmap (`/api/heatmap/`)
-- Wymaga **bbox**; odrzuca widok > **120 km** (przybliż).
-- Min zoom **7** — przy oddaleniu komunikat „zoom in”.
-- Max **1500** tras próbkowanych w bbox; wynik cache **5 min** w Redis.
-- PostGIS `bboverlaps` + `iterator` — bez ładowania całej tabeli.
-
-### Wipe (`DELETE` + `GET /api/activities/admin/wipe-data/`)
-- **DELETE** → `202` — start zadania w tle (chunki po 5000 wierszy).
-- **GET** — `progress_pct`, `phase`, `deleted`, `log`.
-- UI (Simulator / Settings) polluje co 2s do 100%.
+Zobacz sekcje w poprzedniej wersji dokumentu — bez zmian (cache KPI, bbox heatmap, chunked wipe).
 
 ## API
 

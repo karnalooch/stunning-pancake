@@ -3,7 +3,13 @@ from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from activities.scale_config import MAX_CONCURRENT_RIDERS, MAX_BATCH_USERS
+from activities.scale_config import (
+    MAX_CONCURRENT_RIDERS,
+    MAX_BATCH_USERS,
+    compute_batch_scaling,
+    adaptive_user_bulk_batch_size,
+    plan_batch_cities,
+)
 from activities.scale_preflight import analyze_scale
 from activities.services import TelemetryService
 
@@ -12,6 +18,32 @@ class ScaleConfigTest(SimpleTestCase):
     def test_limits_sane(self):
         self.assertGreaterEqual(MAX_BATCH_USERS, 300_000)
         self.assertLessEqual(MAX_CONCURRENT_RIDERS, 10_000)
+
+    def test_adaptive_batch_10k_100k_300k(self):
+        for total, min_bulk, max_cities in (
+            (10_000, 2500, 10),
+            (100_000, 3500, 10),
+            (300_000, 5000, 10),
+        ):
+            plan = compute_batch_scaling(total)
+            self.assertLessEqual(plan['num_cities'], max_cities)
+            self.assertGreaterEqual(plan['user_bulk_batch_size'], min_bulk)
+            self.assertGreater(plan['users_per_city'], 1000)
+            self.assertLessEqual(
+                plan['num_cities'] * plan['users_per_city'],
+                total + plan['num_cities'],
+            )
+
+    def test_plan_cities_bounded(self):
+        n, upc = plan_batch_cities(300_000, max_cities_available=10)
+        self.assertLessEqual(n, 10)
+        self.assertGreaterEqual(upc, 15_000)
+
+    def test_bulk_batch_scales_up(self):
+        self.assertLessEqual(
+            adaptive_user_bulk_batch_size(10_000),
+            adaptive_user_bulk_batch_size(300_000),
+        )
 
 
 class ScalePreflightTest(SimpleTestCase):
@@ -24,6 +56,8 @@ class ScalePreflightTest(SimpleTestCase):
         self.assertTrue(report['force_skip_activities'])
         self.assertTrue(report['effective_skip_activities'])
         self.assertEqual(report['estimated_concurrent_riders'], MAX_CONCURRENT_RIDERS)
+        self.assertIn('batch_plan', report)
+        self.assertGreater(report['estimated_batch_seconds'], 0)
 
 
 class TelemetryServiceScaleTest(SimpleTestCase):
