@@ -46,9 +46,29 @@ const POLL_INTERVAL_MS = 2500;
 const MOVE_DEBOUNCE_MS = 400;
 const OVERVIEW_ZOOM_THRESHOLD = 9;
 const DETAIL_ZOOM_THRESHOLD = 11;
-const DETAIL_MARKER_CAP = 120;
-const FETCH_LIMIT = 500;
-const CLUSTER_MAX_ZOOM = 8;
+const CLUSTER_MAX_ZOOM = 10;
+
+/** API fetch cap scales with zoom — country overview vs street detail. */
+function limitForZoom(zoom: number): number {
+    if (zoom < 7) return 1200;
+    if (zoom < OVERVIEW_ZOOM_THRESHOLD) return 2500;
+    if (zoom < DETAIL_ZOOM_THRESHOLD) return 5000;
+    if (zoom < 13) return 8000;
+    return 12000;
+}
+
+function detailMarkerCap(zoom: number, total: number): number {
+    if (zoom < 12) return Math.min(80, total);
+    if (zoom < 13) return Math.min(180, total);
+    return Math.min(350, total);
+}
+
+function clusterRadiusForZoom(zoom: number): number {
+    if (zoom < 7) return 58;
+    if (zoom < OVERVIEW_ZOOM_THRESHOLD) return 44;
+    if (zoom < DETAIL_ZOOM_THRESHOLD) return 34;
+    return 26;
+}
 
 function bboxFromMap(map: any): string {
     const bounds = map.getBounds();
@@ -94,7 +114,7 @@ export const LiveMap: React.FC = () => {
             data: { type: 'FeatureCollection', features: [] },
             cluster: true,
             clusterMaxZoom: CLUSTER_MAX_ZOOM,
-            clusterRadius: 42,
+            clusterRadius: clusterRadiusForZoom(map.getZoom()),
         });
         map.addLayer({
             id: 'live-clusters',
@@ -229,7 +249,7 @@ export const LiveMap: React.FC = () => {
             detailMarkersRef.current.clear();
             return;
         }
-        const cap = Math.min(DETAIL_MARKER_CAP, positionsRef.current.length);
+        const cap = detailMarkerCap(zoom, positionsRef.current.length);
         const seen = new Set<string>();
         for (const pos of positionsRef.current.slice(0, cap)) {
             if (!pos.deviceId || !pos.lat || !pos.lng) continue;
@@ -320,10 +340,13 @@ export const LiveMap: React.FC = () => {
         const t0 = performance.now();
         try {
             const map = mapRef.current;
-            const params: Record<string, string | number> = { limit: FETCH_LIMIT };
+            const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
+            const params: Record<string, string | number> = {
+                limit: limitForZoom(zoom),
+            };
             if (map) {
                 params.bbox = bboxFromMap(map);
-                params.zoom = Math.round(map.getZoom());
+                params.zoom = Math.round(zoom);
             }
 
             const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal });
@@ -487,9 +510,19 @@ export const LiveMap: React.FC = () => {
                 }
             });
             map.on('zoom', () => {
+                const src = map.getSource('live-positions');
+                if (src) {
+                    try {
+                        (src as { setClusterOptions?: (o: { radius?: number }) => void })
+                            .setClusterOptions?.({ radius: clusterRadiusForZoom(map.getZoom()) });
+                    } catch { /* MapLibre < 3.3 */ }
+                }
                 syncDetailMarkers();
             });
-            map.on('moveend', scheduleMoveFetch);
+            map.on('moveend', () => {
+                scheduleMoveFetch();
+                syncDetailMarkers();
+            });
             mapRef.current = map;
         }).catch(() => {
             if (!cancelled) {

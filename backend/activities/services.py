@@ -483,8 +483,8 @@ class TelemetryService:
                 pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
                 if bbox and not country_overview:
                     west, south, east, north = bbox
-                    lon = pos.get('longitude', 0)
-                    lat = pos.get('latitude', 0)
+                    lon = pos.get('longitude', pos.get('lng', 0))
+                    lat = pos.get('latitude', pos.get('lat', 0))
                     if not (west <= lon <= east and south <= lat <= north):
                         continue
                 positions.append(pos)
@@ -510,12 +510,11 @@ class TelemetryService:
         """
         from core.redis_cluster import get_redis
         from activities.scale_config import (
-            TELEMETRY_API_DEFAULT_LIMIT,
-            TELEMETRY_API_MAX_LIMIT,
             TELEMETRY_GEO_RADIUS_KM,
+            resolve_telemetry_api_limit,
         )
 
-        cap = min(limit or TELEMETRY_API_DEFAULT_LIMIT, TELEMETRY_API_MAX_LIMIT)
+        cap = resolve_telemetry_api_limit(limit, zoom)
         cache_key = cls._live_cache_key(bbox, cap) if bbox else None
         if cache_key:
             cached = cls._get_live_cached(cache_key)

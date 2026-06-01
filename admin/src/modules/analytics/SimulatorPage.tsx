@@ -77,9 +77,8 @@ export const SimulatorPage: React.FC = () => {
     const showSimControls = anyRunning || isStuck || hasOrphanedLive;
     const showBatchProgress = launching || isBatchRunning || (batchStatus && batchStatus.progress_pct > 0 && batchStatus.progress_pct < 100);
 
-    const MAX_CONCURRENT = 5000;
     const rawActive = Math.round(cyclists * activeRatio);
-    const activeRiders = Math.min(rawActive, MAX_CONCURRENT);
+    const activeRiders = rawActive;
     const cheaters = Math.round(activeRiders * cheatRatio);
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
     const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
@@ -342,7 +341,7 @@ export const SimulatorPage: React.FC = () => {
                                     <Box>
                                         <Text size="sm" fw={600} mb={4}>Active Riders Pool: {(activeRatio * 100).toFixed(0)}%</Text>
                                         <Text size="xs" c="dimmed" mb="md">
-                                            Na mapie jednocześnie max {MAX_CONCURRENT.toLocaleString()} (z {rawActive.toLocaleString()} żądanych)
+                                            ~{activeRiders.toLocaleString()} aktywnych w symulacji (widok mapy zależy od zoomu i bbox)
                                         </Text>
                                         <Slider value={activeRatio} onChange={setActiveRatio} min={0.01} max={1.0} step={0.01}
                                             marks={[{ value: 0.1, label: '10%' }, { value: 0.3, label: '30%' }, { value: 0.6, label: '60%' }]} />

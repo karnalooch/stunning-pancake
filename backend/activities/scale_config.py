@@ -59,15 +59,31 @@ SIM_SKIP_GLOBAL_LIVE_POOL = _bool('SCALE_SIM_SKIP_GLOBAL_LIVE_POOL', False)
 BATCH_WARN_WITHOUT_WIPE_ABOVE = _int('SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE', 10_000)
 
 # Concurrent riders + telemetry published per tick (memory / Redis hash size)
-MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 5_000)
-MAX_TELEMETRY_PUBLISH_PER_TICK = _int('SCALE_MAX_TELEMETRY_PUBLISH', 5_000)
+MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 50_000)
+MAX_TELEMETRY_PUBLISH_PER_TICK = _int('SCALE_MAX_TELEMETRY_PUBLISH', 50_000)
 
-# Live map API
-TELEMETRY_API_DEFAULT_LIMIT = _int('SCALE_TELEMETRY_API_LIMIT', 500)
-TELEMETRY_API_MAX_LIMIT = _int('SCALE_TELEMETRY_API_MAX_LIMIT', 2_000)
+# Live map API (viewport + zoom; see resolve_telemetry_api_limit)
+TELEMETRY_API_DEFAULT_LIMIT = _int('SCALE_TELEMETRY_API_LIMIT', 800)
+TELEMETRY_API_MAX_LIMIT = _int('SCALE_TELEMETRY_API_MAX_LIMIT', 15_000)
 TELEMETRY_GEO_RADIUS_KM = _int('SCALE_TELEMETRY_GEO_RADIUS_KM', 80)
 # Short TTL for identical bbox+limit live-map polls (seconds)
 TELEMETRY_LIVE_CACHE_TTL = _int('SCALE_TELEMETRY_LIVE_CACHE_TTL', 2)
+
+
+def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
+    """Cap live-map API responses by zoom (fewer points when zoomed out)."""
+    req = max(1, int(limit or TELEMETRY_API_DEFAULT_LIMIT))
+    ceiling = TELEMETRY_API_MAX_LIMIT
+    if zoom is not None:
+        z = float(zoom)
+        if z < 8:
+            ceiling = min(ceiling, 1_500)
+        elif z < 10:
+            ceiling = min(ceiling, 4_000)
+        elif z < 12:
+            ceiling = min(ceiling, 8_000)
+    return min(req, ceiling)
+
 
 # Redis SADD chunk size when building live pool
 POOL_SADD_BATCH = _int('SCALE_POOL_SADD_BATCH', 5_000)

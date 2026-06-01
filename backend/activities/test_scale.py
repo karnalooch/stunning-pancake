@@ -6,11 +6,13 @@ from django.test import SimpleTestCase
 from activities.scale_config import (
     MAX_CONCURRENT_RIDERS,
     MAX_BATCH_USERS,
+    TELEMETRY_API_MAX_LIMIT,
     compute_batch_scaling,
     adaptive_pg_bulk_batch_size,
     adaptive_user_bulk_batch_size,
     live_pool_mode_for_target,
     plan_batch_cities,
+    resolve_telemetry_api_limit,
 )
 from activities.scale_preflight import analyze_scale
 from activities.services import TelemetryService
@@ -19,7 +21,8 @@ from activities.services import TelemetryService
 class ScaleConfigTest(SimpleTestCase):
     def test_limits_sane(self):
         self.assertGreaterEqual(MAX_BATCH_USERS, 300_000)
-        self.assertLessEqual(MAX_CONCURRENT_RIDERS, 10_000)
+        self.assertLessEqual(MAX_CONCURRENT_RIDERS, 100_000)
+        self.assertGreaterEqual(MAX_CONCURRENT_RIDERS, 5_000)
 
     def test_adaptive_batch_10k_100k_300k(self):
         for total, min_bulk, max_cities in (
@@ -92,6 +95,16 @@ class ScalePreflightTest(SimpleTestCase):
         self.assertGreaterEqual(report['max_concurrent_riders'], 5_000)
         areas = {r['area'] for r in report['risks']}
         self.assertIn('event_burst', areas)
+
+
+class TelemetryApiLimitTest(SimpleTestCase):
+    def test_zoom_adaptive_cap(self):
+        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 6), 1_500)
+        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 9), 4_000)
+        self.assertEqual(
+            resolve_telemetry_api_limit(20_000, 14),
+            min(20_000, TELEMETRY_API_MAX_LIMIT),
+        )
 
 
 class TelemetryServiceScaleTest(SimpleTestCase):
