@@ -571,6 +571,13 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
         sim.release_live_lock()
         return {'status': 'stopped'}
 
+    blocked, block_reason = sim.batch_blocks_live_simulation()
+    if blocked:
+        sim.live_log(f'Live sim stopped: {block_reason} (finish batch first)')
+        sim.set_live_state(running=False, error=f'Blocked by batch: {block_reason}')
+        sim.release_live_lock()
+        return {'status': 'blocked', 'reason': block_reason}
+
     tick_seconds = int(state.get('tick_seconds') or tick_seconds)
     active_ratio = float(state.get('active_ratio') or active_ratio)
     cheat_ratio = float(state.get('cheat_ratio') or cheat_ratio)
@@ -590,15 +597,27 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
             mode_note = f"redis pool (cap {pool_limit})"
         sim.set_live_state(total_users=pool_size)
         if pool_size < pool_target:
-            sim.live_log(f"WARNING: only {pool_size} athletes available (wanted {pool_target})")
+            sim.live_log(
+                f"WARNING: only {pool_size} athletes available (wanted {pool_target}). "
+                f"Stop live sim and restart after batch completes to refresh the pool."
+            )
+        max_riders_hint = max(1, int(pool_size * active_ratio))
         sim.live_log(
             f"LIVE SIM: {mode_note}, n={pool_size}, {active_ratio*100:.0f}% active (capped), "
-            f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s"
+            f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s "
+            f"(~{max_riders_hint} riders on map at once if all start)"
         )
 
     if not sim.get_live_state().get('running', False):
         sim.release_live_lock()
         return {'status': 'stopped'}
+
+    blocked, block_reason = sim.batch_blocks_live_simulation()
+    if blocked:
+        sim.live_log(f'Live sim stopped before tick: {block_reason}')
+        sim.set_live_state(running=False, error=f'Blocked by batch: {block_reason}')
+        sim.release_live_lock()
+        return {'status': 'blocked', 'reason': block_reason}
 
     try:
         live_tick_task.delay()
@@ -639,6 +658,9 @@ def _run_live_tick_body():
 
     state = sim.get_live_state()
     if not state.get('running', False):
+        return
+
+    if sim.batch_blocks_live_simulation()[0]:
         return
 
     _heal_stale_batch_running_flag()

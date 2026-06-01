@@ -203,6 +203,25 @@ def is_batch_lock_held() -> bool:
     return bool(r.exists(BATCH_LOCK_KEY))
 
 
+_BATCH_IDLE_PHASES = frozenset({'idle', 'complete', ''})
+
+
+def batch_blocks_live_simulation() -> tuple[bool, str]:
+    """
+    True when live sim must not start — batch still running or not fully finished.
+    Uses lock + running flag + phase (parallel batch keeps lock until finalize).
+    """
+    if is_batch_lock_held():
+        return True, 'batch lock held'
+    state = get_batch_state()
+    if state.get('running'):
+        return True, 'batch running'
+    phase = (state.get('current_phase') or 'idle').strip().lower()
+    if phase not in _BATCH_IDLE_PHASES:
+        return True, f'batch phase {phase!r}'
+    return False, ''
+
+
 def force_stop_batch_simulation():
     """Abort batch sim and release Redis lock (safe even if already idle)."""
     set_batch_state(running=False, error=None)

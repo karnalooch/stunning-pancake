@@ -12,6 +12,7 @@ import {
     AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database
 } from 'lucide-react';
 import { SimulatorApi } from '../../api/client';
+import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
 
 interface LiveStatus {
@@ -159,25 +160,7 @@ export const SimulatorPage: React.FC = () => {
             });
             notifications.show({ title: 'Generowanie…', message: `Tworzenie ${cyclists.toLocaleString()} użytkowników — postęp poniżej.`, color: 'yellow' });
 
-            await new Promise<void>((resolve, reject) => {
-                let attempts = 0;
-                const check = setInterval(async () => {
-                    attempts++;
-                    try {
-                        const status = await SimulatorApi.getBatchStatus();
-                        setBatchStatus(status);
-                        if (!status.running) {
-                            clearInterval(check);
-                            resolve();
-                        }
-                    } catch (e) {
-                        if (attempts > 10) {
-                            clearInterval(check);
-                            reject(e);
-                        }
-                    }
-                }, 800);
-            });
+            await waitForBatchComplete({ onStatus: setBatchStatus });
             notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
         } catch (err: any) {
             notifications.show({ title: 'Generation Error', message: err?.response?.data?.error || err.message, color: 'red' });

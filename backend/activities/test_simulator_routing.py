@@ -6,6 +6,7 @@ from django.test import SimpleTestCase
 from unittest.mock import patch
 
 from activities.services import BRouterService
+from activities import simulator_state as sim
 from activities.simulator_tasks import (
     _interpolate_along_polyline,
     _skip_brouter_now,
@@ -29,6 +30,35 @@ class BRouterServiceParseTest(SimpleTestCase):
         }
         pts = BRouterService.extract_line_coordinates(data)
         self.assertEqual(pts, [(52.0, 21.0), (52.01, 21.01)])
+
+
+class BatchBlocksLiveTest(SimpleTestCase):
+    @patch('activities.simulator_state.is_batch_lock_held', return_value=True)
+    @patch('activities.simulator_state.get_batch_state', return_value={'running': False, 'current_phase': 'idle'})
+    def test_blocks_when_lock_held(self, _state, _lock):
+        blocked, reason = sim.batch_blocks_live_simulation()
+        self.assertTrue(blocked)
+        self.assertIn('lock', reason)
+
+    @patch('activities.simulator_state.is_batch_lock_held', return_value=False)
+    @patch('activities.simulator_state.get_batch_state', return_value={'running': True, 'current_phase': 'creating_users'})
+    def test_blocks_when_running(self, _state, _lock):
+        blocked, reason = sim.batch_blocks_live_simulation()
+        self.assertTrue(blocked)
+        self.assertIn('running', reason)
+
+    @patch('activities.simulator_state.is_batch_lock_held', return_value=False)
+    @patch('activities.simulator_state.get_batch_state', return_value={'running': False, 'current_phase': 'creating_users'})
+    def test_blocks_when_phase_in_progress(self, _state, _lock):
+        blocked, _ = sim.batch_blocks_live_simulation()
+        self.assertTrue(blocked)
+
+    @patch('activities.simulator_state.is_batch_lock_held', return_value=False)
+    @patch('activities.simulator_state.get_batch_state', return_value={'running': False, 'current_phase': 'complete'})
+    def test_allows_when_complete(self, _state, _lock):
+        blocked, reason = sim.batch_blocks_live_simulation()
+        self.assertFalse(blocked)
+        self.assertEqual(reason, '')
 
 
 class SkipBrouterNowTest(SimpleTestCase):

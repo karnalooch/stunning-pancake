@@ -361,8 +361,11 @@ class LiveSimulationView(APIView):
         active_rides = sim.get_live_ride_count()
         live_lock = sim.is_live_lock_held()
         stuck = sim.live_simulation_stuck()
+        batch_blocked, batch_block_reason = sim.batch_blocks_live_simulation()
         return Response({
             'running': state['running'],
+            'batch_blocks_live': batch_blocked,
+            'batch_block_reason': batch_block_reason or None,
             'elapsed_seconds': round(elapsed, 1),
             'error': state.get('error'),
             'stuck': stuck,
@@ -391,6 +394,23 @@ class LiveSimulationView(APIView):
         state = sim.get_live_state()
         if state['running']:
             return Response({'error': 'Live simulation already running.'}, status=status.HTTP_409_CONFLICT)
+
+        blocked, block_reason = sim.batch_blocks_live_simulation()
+        if blocked:
+            batch = sim.get_batch_state()
+            return Response(
+                {
+                    'error': (
+                        'Batch simulation is still in progress. Wait until it finishes '
+                        '(phase complete, lock released), then start Live Map.'
+                    ),
+                    'batch_running': bool(batch.get('running')),
+                    'batch_lock_held': sim.is_batch_lock_held(),
+                    'batch_current_phase': batch.get('current_phase'),
+                    'batch_block_reason': block_reason,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
         pool_pct = float(request.data.get('pool_pct', 0.5))
         active_ratio = float(request.data.get('active_ratio', 0.3))
@@ -423,6 +443,15 @@ class LiveSimulationView(APIView):
 
         # Spawn Celery task or run synchronously on SQLite
         if 'sqlite' in os.getenv('DATABASE_URL', ''):
+            blocked, block_reason = sim.batch_blocks_live_simulation()
+            if blocked:
+                return Response(
+                    {
+                        'error': 'Batch simulation is still in progress.',
+                        'batch_block_reason': block_reason,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
             sim.reset_live_state()
             sim.set_live_state(
                 running=True, started_at=time.time(),
@@ -453,6 +482,20 @@ class LiveSimulationView(APIView):
                     {
                         'error': 'Live simulation lock is held. Use Stop or Reset Simulator.',
                         'live_lock_held': True,
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            blocked, block_reason = sim.batch_blocks_live_simulation()
+            if blocked:
+                sim.release_live_lock()
+                batch = sim.get_batch_state()
+                return Response(
+                    {
+                        'error': 'Batch simulation is still in progress (live start aborted).',
+                        'batch_block_reason': block_reason,
+                        'batch_running': bool(batch.get('running')),
+                        'batch_lock_held': sim.is_batch_lock_held(),
+                        'batch_current_phase': batch.get('current_phase'),
                     },
                     status=status.HTTP_409_CONFLICT,
                 )

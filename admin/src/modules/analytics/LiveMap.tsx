@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { apiClient, TelemetryApi } from '../../api/client';
+import { apiClient, SimulatorApi, TelemetryApi } from '../../api/client';
+import { isBatchInProgress } from '../../api/simulatorBatch';
 import { hasStoredSession } from '../../core/auth/tokens';
 import { useAuth } from '../../core/auth/useAuth';
 import { notifications } from '@mantine/notifications';
@@ -403,6 +404,15 @@ export const LiveMap: React.FC = () => {
     const handleQuickLaunch = useCallback(async () => {
         setLaunching(true);
         try {
+            const batch = await SimulatorApi.getBatchStatus().catch(() => null);
+            if (isBatchInProgress(batch)) {
+                notifications.show({
+                    title: 'Batch w toku',
+                    message: 'Poczekaj na zakończenie generowania użytkowników, potem uruchom live.',
+                    color: 'orange',
+                });
+                return;
+            }
             await apiClient.post('/activities/admin/live-simulate/', {
                 pool_pct: 1.0,
                 active_ratio: 0.3,
@@ -415,7 +425,13 @@ export const LiveMap: React.FC = () => {
                 color: 'teal',
             });
         } catch (err: any) {
-            if (err?.response?.status === 400) {
+            if (err?.response?.status === 409) {
+                notifications.show({
+                    title: 'Batch w toku',
+                    message: err?.response?.data?.error || 'Zakończ batch przed uruchomieniem live.',
+                    color: 'orange',
+                });
+            } else if (err?.response?.status === 400) {
                 notifications.show({
                     title: 'No athletes',
                     message: 'Go to Simulator to generate cyclists first.',
