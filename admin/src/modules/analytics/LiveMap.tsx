@@ -4,6 +4,12 @@ import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import { notifications } from '@mantine/notifications';
+import {
+    createLiveUserMarkerElement,
+    updateLiveUserMarkerElement,
+    resolveActivityKind,
+    type LiveMapPosition,
+} from './liveMapMarkers';
 
 // Lazy-init maplibregl — flatten double/triple-wrapped CJS interop from Rollup/Vite
 let _mlPromise: Promise<any> | null = null;
@@ -26,10 +32,7 @@ function loadMaplibregl(): Promise<any> {
     return _mlPromise;
 }
 
-interface UserPosition {
-    deviceId: string; name: string; type: string;
-    lat: number; lng: number; speed: number; course: number; lastUpdate: string;
-}
+type UserPosition = LiveMapPosition;
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
@@ -42,9 +45,12 @@ export const LiveMap: React.FC = () => {
     const mapRef = useRef<any>(null);
     const mlRef = useRef<any>(null);
     const detailMarkersRef = useRef<Map<string, any>>(new Map());
+    const positionsRef = useRef<UserPosition[]>([]);
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
 
     const [onlineCount, setOnlineCount] = useState(0);
+    const [cyclists, setCyclists] = useState(0);
+    const [runners, setRunners] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
     const [mlReady, setMlReady] = useState(false);
@@ -72,13 +78,8 @@ export const LiveMap: React.FC = () => {
                 'circle-opacity': 0.85, 'circle-stroke-width': 2, 'circle-stroke-color': 'rgba(255,255,255,0.4)',
             },
         });
-        map.addLayer({ id: 'live-dots', type: 'circle', source: 'live-positions',
-            filter: ['!', ['has', 'point_count']],
-            paint: {
-                'circle-color': ['match', ['get', 'type'], 'BIKE', '#06b6d4', 'RUN', '#f59e0b', '#8b5cf6'],
-                'circle-radius': 6, 'circle-opacity': 0.8, 'circle-stroke-width': 1.5, 'circle-stroke-color': '#fff',
-            },
-        });
+        // No live-dots layer — individual athletes use HTML activity icons only.
+        try { if (map.getLayer('live-dots')) map.removeLayer('live-dots'); } catch { /* legacy */ }
     }, []);
 
     const updateLiveSource = useCallback((positions: UserPosition[]) => {
@@ -94,7 +95,7 @@ export const LiveMap: React.FC = () => {
         if (source?.setData) source.setData({ type: 'FeatureCollection', features });
     }, [mapReady, ensureLiveSource]);
 
-    /* ---------- Detail markers (high zoom) ---------- */
+    /* ---------- Activity icon markers (high zoom, no dots) ---------- */
     const syncDetailMarkers = useCallback(() => {
         const map = mapRef.current;
         const ml = getMl();
@@ -105,30 +106,28 @@ export const LiveMap: React.FC = () => {
             detailMarkersRef.current.clear();
             return;
         }
-        // small bike markers via Marker API
-        try {
-            const features = map.querySourceFeatures('live-positions', { filter: ['!', ['has', 'point_count']] });
-            const seen = new Set<string>();
-            for (const feat of features.slice(0, 50)) {
-                const props = feat.properties ?? {};
-                const id = props.deviceId;
-                if (!id) continue;
-                seen.add(id);
-                const [lng, lat] = (feat.geometry as any).coordinates;
-                const existing = detailMarkersRef.current.get(id);
-                if (existing) {
-                    existing.setLngLat([lng, lat]);
-                    continue;
-                }
-                const el = document.createElement('div');
-                el.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-10px,-22px)"><div style="background:rgba(0,0,0,0.78);color:#e2e8f0;font-size:9px;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;margin-bottom:2px;border:1px solid rgba(255,255,255,0.12)">${props.name||'Rider'}&nbsp;<span style="color:#4ade80">${((props.speed||0)*3.6).toFixed(0)}</span></div><div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#8b5cf6);border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><path d="M5 18l2-6h4l4-6h3"/><path d="M15 12h2l2-2"/></svg></div></div>`;
-                const marker = new ml.Marker({ element: el, anchor: 'bottom' }).setLngLat([lng, lat]).addTo(map);
-                detailMarkersRef.current.set(id, marker);
+        const seen = new Set<string>();
+        for (const pos of positionsRef.current.slice(0, 50)) {
+            if (!pos.deviceId || !pos.lat || !pos.lng) continue;
+            seen.add(pos.deviceId);
+            const existing = detailMarkersRef.current.get(pos.deviceId);
+            if (existing) {
+                existing.setLngLat([pos.lng, pos.lat]);
+                updateLiveUserMarkerElement(existing.getElement() as HTMLDivElement, pos);
+                continue;
             }
-            for (const [id, marker] of detailMarkersRef.current) {
-                if (!seen.has(id)) { (marker as any).remove(); detailMarkersRef.current.delete(id); }
+            const el = createLiveUserMarkerElement(pos);
+            const marker = new ml.Marker({ element: el, anchor: 'bottom' })
+                .setLngLat([pos.lng, pos.lat])
+                .addTo(map);
+            detailMarkersRef.current.set(pos.deviceId, marker);
+        }
+        for (const [id, marker] of detailMarkersRef.current) {
+            if (!seen.has(id)) {
+                (marker as any).remove();
+                detailMarkersRef.current.delete(id);
             }
-        } catch {}
+        }
     }, []);
 
     /* ---------- Fetch ---------- */
@@ -142,7 +141,10 @@ export const LiveMap: React.FC = () => {
             }
             const { data } = await apiClient.get('/activities/telemetry/live/', { params });
             if (Array.isArray(data)) {
+                positionsRef.current = data;
                 setOnlineCount(data.length);
+                setCyclists(data.filter((p) => resolveActivityKind(p.type) === 'bike').length);
+                setRunners(data.filter((p) => resolveActivityKind(p.type) === 'run').length);
                 updateLiveSource(data);
                 requestAnimationFrame(syncDetailMarkers);
             }
@@ -258,6 +260,12 @@ export const LiveMap: React.FC = () => {
                     <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
                         {onlineCount} online
                     </Badge>
+                    {cyclists > 0 && (
+                        <Badge variant="light" color="violet" radius="sm" size="md">{cyclists} cyclists</Badge>
+                    )}
+                    {runners > 0 && (
+                        <Badge variant="light" color="teal" radius="sm" size="md">{runners} runners</Badge>
+                    )}
                     {onlineCount === 0 && !loading && mapReady && (
                         <Button size="xs" color="teal" leftSection={<Zap size={14} />} loading={launching} onClick={handleQuickLaunch}>
                             Quick Launch
