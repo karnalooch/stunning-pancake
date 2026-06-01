@@ -112,6 +112,7 @@ export const LiveMap: React.FC = () => {
     const [launching, setLaunching] = useState(false);
     const [lastRefreshMs, setLastRefreshMs] = useState<number | null>(null);
     const [zoomMode, setZoomMode] = useState('');
+    const [mapZoom, setMapZoom] = useState<number | null>(null);
 
     const pushPositionsToMap = useCallback((list: UserPosition[]) => {
         const map = mapRef.current;
@@ -119,10 +120,12 @@ export const LiveMap: React.FC = () => {
         setLivePositionsData(map, list);
     }, []);
 
-    const syncZoomMode = useCallback(() => {
+    const syncZoomUi = useCallback(() => {
         const map = mapRef.current;
         if (!map) return;
-        setZoomMode(ZOOM_MODE_LABEL[resolveLiveMapZoomMode(map.getZoom())]);
+        const z = map.getZoom();
+        setMapZoom(Math.round(z * 10) / 10);
+        setZoomMode(ZOOM_MODE_LABEL[resolveLiveMapZoomMode(z)]);
     }, []);
 
     const showRiderPopup = useCallback((pos: UserPosition, lngLat: { lng: number; lat: number }) => {
@@ -315,7 +318,7 @@ export const LiveMap: React.FC = () => {
             const meta = data?.meta;
             if (Array.isArray(list)) {
                 applyPositionPayload(list, meta, detail, Boolean(opts?.snap) || priority);
-                syncZoomMode();
+                syncZoomUi();
             }
             const tookMs = Math.round(performance.now() - t0);
             lastRefreshRef.current = tookMs;
@@ -330,7 +333,7 @@ export const LiveMap: React.FC = () => {
             }
             setLoading(false);
         }
-    }, [canFetch, applyPositionPayload, syncZoomMode]);
+    }, [canFetch, applyPositionPayload, syncZoomUi]);
 
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;
@@ -492,7 +495,7 @@ export const LiveMap: React.FC = () => {
                     fitBoundsDoneRef.current = true;
                     map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
                 }
-                syncZoomMode();
+                syncZoomUi();
                 setMapReady(true);
             });
             map.on('zoom', () => {
@@ -504,7 +507,7 @@ export const LiveMap: React.FC = () => {
                             .setClusterOptions?.({ radius: clusterRadiusForZoom(z) });
                     } catch { /* MapLibre < 3.3 */ }
                 }
-                syncZoomMode();
+                syncZoomUi();
                 scheduleMoveFetch(true);
             });
             map.on('movestart', () => {
@@ -532,7 +535,7 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomMode]);
+    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi]);
 
     useEffect(() => {
         if (!mlReady || !canFetch || !tabVisible) return;
@@ -578,8 +581,21 @@ export const LiveMap: React.FC = () => {
                     {runners > 0 && (
                         <Badge variant="light" color="teal" radius="sm" size="md">{runners} runners</Badge>
                     )}
-                    {zoomMode && mapReady && onlineCount > 0 && (
-                        <Badge variant="outline" color="indigo" radius="sm" size="sm">{zoomMode}</Badge>
+                    {mapReady && mapZoom != null && (
+                        <Tooltip label="Aktualny poziom zoomu MapLibre (ułatwia debug warstw)">
+                            <Badge
+                                variant="outline"
+                                color="indigo"
+                                radius="sm"
+                                size="sm"
+                                style={{ fontVariantNumeric: 'tabular-nums' }}
+                            >
+                                z {mapZoom.toFixed(1)}
+                            </Badge>
+                        </Tooltip>
+                    )}
+                    {zoomMode && mapReady && (
+                        <Badge variant="outline" color="grape" radius="sm" size="sm">{zoomMode}</Badge>
                     )}
                     {lastRefreshMs != null && onlineCount > 0 && (
                         <Badge variant="outline" color="gray" radius="sm" size="sm">{lastRefreshMs}ms</Badge>
@@ -608,6 +624,35 @@ export const LiveMap: React.FC = () => {
             </Group>
             {loading && <Skeleton height="100%" radius="md" style={{ position: 'absolute', inset: 0, zIndex: 5 }} />}
             <div ref={mapContainer} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
+            {mapReady && mapZoom != null && (
+                <Box
+                    style={{
+                        position: 'absolute',
+                        bottom: 12,
+                        left: 12,
+                        zIndex: 10,
+                        pointerEvents: 'none',
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        background: 'rgba(24,24,27,0.88)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        backdropFilter: 'blur(6px)',
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    }}
+                >
+                    <Text size="xs" c="gray.4" lh={1.2}>
+                        zoom
+                    </Text>
+                    <Text size="sm" c="white" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {mapZoom.toFixed(1)}
+                    </Text>
+                    {zoomMode && (
+                        <Text size="xs" c="indigo.3" mt={2}>
+                            {zoomMode}
+                        </Text>
+                    )}
+                </Box>
+            )}
             {!mapReady && !loading && (
                 <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f8f9fa', borderRadius: 14, zIndex: 10 }}>
                     <MapIcon size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
