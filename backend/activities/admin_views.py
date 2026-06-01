@@ -429,8 +429,10 @@ class WipeDataView(APIView):
     def get(self, request):
         from activities import wipe_state as ws
         state = ws.get_wipe_state()
+        label = ws.wipe_status_label(state)
         return Response({
             **state,
+            'status': label,
             'log': ws.get_wipe_log(),
         })
 
@@ -442,13 +444,16 @@ class WipeDataView(APIView):
         from activities import wipe_state as ws
         from activities.wipe_tasks import start_wipe_async
 
-        if ws.get_wipe_state().get('running'):
+        state = ws.get_wipe_state()
+        if state.get('running'):
             return Response({'error': 'Wipe already in progress.'}, status=status.HTTP_409_CONFLICT)
 
-        start_wipe_async()
+        ws.mark_wipe_queued()
+        dispatch = start_wipe_async()
         return Response({
-            'status': 'started',
+            'status': 'queued',
             'running': True,
+            'dispatch': dispatch,
             'message': 'Chunked wipe running in background. Poll GET /admin/wipe-data/ for progress.',
         }, status=status.HTTP_202_ACCEPTED)
 

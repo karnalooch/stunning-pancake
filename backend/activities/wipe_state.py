@@ -59,6 +59,38 @@ def reset_wipe_state():
     r.delete(WIPE_STATE_KEY, WIPE_LOG_KEY)
 
 
+def clear_wipe_log():
+    r = get_redis()
+    r.delete(WIPE_LOG_KEY)
+
+
+def mark_wipe_queued():
+    """Set running before async dispatch so polls do not treat idle as complete."""
+    set_wipe_state(
+        running=True,
+        phase='queued',
+        progress_pct=0,
+        error=None,
+        deleted={},
+        started_at=time.time(),
+        completed_at=None,
+    )
+
+
+def wipe_status_label(state: dict) -> str:
+    """idle | queued | running | complete | error — used by API and clients."""
+    if state.get('error'):
+        return 'error'
+    phase = state.get('phase') or 'idle'
+    if state.get('running'):
+        return 'queued' if phase == 'queued' else 'running'
+    if phase == 'complete':
+        return 'complete'
+    if phase == 'error':
+        return 'error'
+    return 'idle'
+
+
 def acquire_wipe_lock() -> bool:
     r = get_redis()
     return bool(r.set(WIPE_LOCK_KEY, '1', nx=True, ex=WIPE_LOCK_TTL))

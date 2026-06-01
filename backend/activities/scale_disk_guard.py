@@ -239,7 +239,7 @@ def wait_for_wipe_completed(timeout_sec: float | None = None, poll_sec: float = 
     while time.time() < deadline:
         state = ws.get_wipe_state()
         if not state.get('running'):
-            return state.get('phase') == 'complete' and not state.get('error')
+            return ws.wipe_status_label(state) == 'complete' and not state.get('error')
         time.sleep(poll_sec)
     return False
 

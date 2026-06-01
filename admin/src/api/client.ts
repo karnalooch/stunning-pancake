@@ -274,13 +274,31 @@ export const SimulatorApi = {
   },
 
   // Wipe Data (async chunked — poll until complete)
-  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string }) => void) => {
+  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string }) => void) => {
     await apiClient.delete('/activities/admin/wipe-data/', { data: { confirm: true } });
-    for (let i = 0; i < 600; i++) {
-      await new Promise((r) => setTimeout(r, 2000));
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const finished = (s: { status?: string; phase?: string; running?: boolean; error?: string }) => {
+      const label = s.status || s.phase;
+      if (label === 'complete') return { done: true, ok: true };
+      if (label === 'error' || s.error) return { done: true, ok: false };
+      if (!s.running && label !== 'queued' && label !== 'starting') return { done: false, ok: false };
+      return { done: false, ok: false };
+    };
+    for (let i = 0; i < 30; i++) {
       const status = await SimulatorApi.getWipeStatus();
       onProgress?.(status);
-      if (!status.running) return status;
+      if (status.running || status.status === 'queued' || status.status === 'running') break;
+      await sleep(1000);
+    }
+    for (let i = 0; i < 600; i++) {
+      await sleep(2000);
+      const status = await SimulatorApi.getWipeStatus();
+      onProgress?.(status);
+      const end = finished(status);
+      if (end.done) {
+        if (!end.ok) throw new Error(status.error || 'Wipe failed');
+        return status;
+      }
     }
     throw new Error('Wipe timed out');
   },

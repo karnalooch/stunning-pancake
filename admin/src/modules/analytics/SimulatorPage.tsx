@@ -238,14 +238,19 @@ export const SimulatorPage: React.FC = () => {
         setWipeProgress(0);
         setWipePhase('Start…');
         try {
-            await SimulatorApi.wipeData((s: WipeStatus) => {
+            const result = await SimulatorApi.wipeData((s: WipeStatus) => {
                 setWipeProgress(s.progress_pct ?? 0);
                 setWipePhase(s.phase || '');
             });
             setBatchStatus(null); setLiveStatus(null);
             setWipeModalOpen(false); setWipeConfirm('');
             setActiveStep(0);
-            notifications.show({ title: 'Wipe Complete', message: 'All simulation and activity data has been wiped.', color: 'green' });
+            const warn = (result as { error?: string })?.error;
+            notifications.show({
+                title: 'Wipe Complete',
+                message: warn || 'All simulation and activity data has been wiped.',
+                color: warn ? 'yellow' : 'green',
+            });
         } catch (err: any) {
             notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed', color: 'red' });
         }

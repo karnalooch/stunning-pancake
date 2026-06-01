@@ -29,14 +29,29 @@ def _chunk_delete(qs, label: str, deleted: dict, progress_base: float, progress_
     return total_removed
 
 
-@shared_task(bind=True, queue='simulation', max_retries=0)
+@shared_task(bind=True, queue='default', max_retries=0)
 def wipe_data_task(self):
     return run_wipe_sync()
 
 
+def _clear_disk_guard_after_wipe():
+    """Drop pause/block flags so sim can restart after reclaiming space."""
+    try:
+        from activities.scale_disk_monitor import run_disk_monitor
+        run_disk_monitor(source='wipe')
+    except Exception:
+        pass
+
+
 def run_wipe_sync():
     if not ws.acquire_wipe_lock():
-        return {'status': 'locked'}
+        ws.set_wipe_state(
+            running=False,
+            phase='error',
+            error='Wipe already in progress or lock held. Wait up to 1h or retry.',
+        )
+        ws.wipe_log('ERROR: could not acquire wipe lock')
+        return {'status': 'locked', 'error': 'lock held'}
 
     from django.contrib.auth import get_user_model
     from users.models import User, Tenant
@@ -44,7 +59,7 @@ def run_wipe_sync():
     from activities.models import Activity
     from activities import simulator_state as sim
 
-    ws.reset_wipe_state()
+    ws.clear_wipe_log()
     ws.set_wipe_state(
         running=True, phase='starting', progress_pct=0,
         started_at=__import__('time').time(), error=None, deleted={},
@@ -88,27 +103,41 @@ def run_wipe_sync():
         invalidate_dashboard_stats_cache()
 
         ws.wipe_log('Postgres VACUUM (reclaim space)…')
-        _vacuum_postgres_if_needed()
+        vacuum_err = _vacuum_postgres_if_needed()
+
+        _clear_disk_guard_after_wipe()
 
         ws.set_wipe_state(
             running=False, phase='complete', progress_pct=100,
             completed_at=__import__('time').time(), deleted=deleted,
+            error=vacuum_err,
         )
-        ws.wipe_log('✅ Wipe complete.')
-        return {'status': 'complete', 'deleted': deleted}
+        ws.wipe_log('✅ Wipe complete.' + (f' (VACUUM: {vacuum_err})' if vacuum_err else ''))
+        out = {'status': 'complete', 'deleted': deleted}
+        if vacuum_err:
+            out['warning'] = vacuum_err
+        return out
     except Exception as e:
-        ws.set_wipe_state(running=False, phase='error', error=str(e))
-        ws.wipe_log(f'ERROR: {e}')
-        return {'status': 'error', 'error': str(e)}
+        from activities.scale_disk_guard import is_disk_full_error
+        err_msg = str(e)
+        if is_disk_full_error(e):
+            err_msg = (
+                f'{err_msg} — Postgres disk full. Expand volume or free space, then retry wipe.'
+            )
+        ws.set_wipe_state(
+            running=False, phase='error', error=err_msg, deleted=deleted,
+        )
+        ws.wipe_log(f'ERROR: {err_msg}')
+        return {'status': 'error', 'error': err_msg, 'deleted': deleted}
     finally:
         ws.release_wipe_lock()
 
 
-def _vacuum_postgres_if_needed() -> None:
+def _vacuum_postgres_if_needed() -> str | None:
     """Reclaim disk after large deletes (must run outside a transaction)."""
     from django.db import connection
     if connection.vendor != 'postgresql':
-        return
+        return None
     try:
         old_autocommit = connection.get_autocommit()
         connection.set_autocommit(True)
@@ -117,19 +146,29 @@ def _vacuum_postgres_if_needed() -> None:
                 cursor.execute('VACUUM (ANALYZE)')
         finally:
             connection.set_autocommit(old_autocommit)
-    except Exception:
-        pass
+        return None
+    except Exception as exc:
+        return str(exc)
 
 
-def start_wipe_async() -> bool:
-    """Dispatch wipe via Celery or daemon thread (SQLite dev)."""
+def start_wipe_async() -> str:
+    """
+    Dispatch wipe via Celery default queue or a backend thread.
+
+    Returns dispatch mode: 'celery' | 'thread'.
+    Caller should set queued state before calling (see mark_wipe_queued).
+    """
     import os
+
+    if os.getenv('WIPE_USE_BACKEND_THREAD', '').lower() in ('1', 'true', 'yes'):
+        threading.Thread(target=run_wipe_sync, daemon=True, name='wipe-data').start()
+        return 'thread'
     if 'sqlite' in os.getenv('DATABASE_URL', ''):
         threading.Thread(target=run_wipe_sync, daemon=True, name='wipe-data').start()
-        return True
+        return 'thread'
     try:
         wipe_data_task.delay()
-        return True
+        return 'celery'
     except Exception:
         threading.Thread(target=run_wipe_sync, daemon=True, name='wipe-data').start()
-        return True
+        return 'thread'

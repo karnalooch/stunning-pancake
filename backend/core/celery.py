@@ -23,6 +23,7 @@ app.conf.task_routes = {
     'activities.tasks.process_activity':              {'queue': 'critical'},
     'activities.tasks.send_leaderboard_digest':       {'queue': 'notifications'},
     'activities.tasks.recalculate_city_leaderboard':  {'queue': 'default'},
+    'activities.wipe_tasks.*':                        {'queue': 'default'},
     'activities.simulator_tasks.*':                   {'queue': 'simulation'},
     '*':                                               {'queue': 'default'},
 }
