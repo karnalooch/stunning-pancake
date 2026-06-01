@@ -196,17 +196,17 @@ def _bulk_create_athletes(
             if use_fast:
                 inserted = False
                 try:
-                    _bulk_create_user_chunks(users_to_create, ignore_conflicts=False)
+                    _bulk_create_user_chunks(users_to_create, pg_chunk, ignore_conflicts=False)
                     inserted = True
                 except TypeError:
-                    _bulk_create_user_chunks(users_to_create)
+                    _bulk_create_user_chunks(users_to_create, pg_chunk)
                     inserted = True
                 except Exception:
                     try:
-                        _bulk_create_user_chunks(users_to_create, ignore_conflicts=True)
+                        _bulk_create_user_chunks(users_to_create, pg_chunk, ignore_conflicts=True)
                         inserted = True
                     except TypeError:
-                        _bulk_create_user_chunks(users_to_create)
+                        _bulk_create_user_chunks(users_to_create, pg_chunk)
                         inserted = True
                     except Exception:
                         for u in users_to_create:
@@ -217,9 +217,9 @@ def _bulk_create_athletes(
                 n_saved = len(users_to_create) if inserted else 0
             else:
                 try:
-                    _bulk_create_user_chunks(users_to_create, ignore_conflicts=True)
+                    _bulk_create_user_chunks(users_to_create, pg_chunk, ignore_conflicts=True)
                 except TypeError:
-                    _bulk_create_user_chunks(users_to_create)
+                    _bulk_create_user_chunks(users_to_create, pg_chunk)
                 except Exception:
                     for u in users_to_create:
                         try:
