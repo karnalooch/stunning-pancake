@@ -10,7 +10,10 @@
     "restartPolicy": "ALWAYS"
   },
   "variables": {
-    "BROUTER_URL": "http://brouter:17777/brouter",
+    "BROUTER_URL": "http://brouter.railway.internal:17777/brouter",
+    "BROUTER_TIMEOUT": "30",
+    "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
+    "SCALE_SIM_SKIP_BROUTER": "0",
     "CELERY_WORKER_QUEUES": "simulation",
     "CELERY_WORKER_CONCURRENCY": "6"
   }

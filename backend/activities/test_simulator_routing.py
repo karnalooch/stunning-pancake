@@ -3,8 +3,50 @@ from types import SimpleNamespace
 
 from django.test import SimpleTestCase
 
-from activities.simulator_tasks import _interpolate_along_polyline
+from unittest.mock import patch
+
+from activities.services import BRouterService
+from activities.simulator_tasks import (
+    _interpolate_along_polyline,
+    _skip_brouter_now,
+)
 from simulate_active_cities import CITIES, CITIES_BY_NAME, resolve_city_for_user
+
+
+class BRouterServiceParseTest(SimpleTestCase):
+    def test_extract_line_coordinates_from_geojson(self):
+        data = {
+            'type': 'FeatureCollection',
+            'features': [
+                {
+                    'type': 'Feature',
+                    'geometry': {
+                        'type': 'LineString',
+                        'coordinates': [[21.0, 52.0], [21.01, 52.01]],
+                    },
+                },
+            ],
+        }
+        pts = BRouterService.extract_line_coordinates(data)
+        self.assertEqual(pts, [(52.0, 21.0), (52.01, 21.01)])
+
+
+class SkipBrouterNowTest(SimpleTestCase):
+    @patch.dict('os.environ', {'SCALE_SIM_SKIP_BROUTER': '1'}, clear=False)
+    def test_skip_when_env_set(self):
+        self.assertTrue(_skip_brouter_now())
+
+    @patch.dict('os.environ', {'SCALE_SIM_SKIP_BROUTER': '0'}, clear=False)
+    @patch('activities.simulator_tasks.sim.is_batch_lock_held', return_value=False)
+    @patch('activities.simulator_tasks.sim.get_batch_state', return_value={'running': True})
+    def test_no_skip_when_running_without_lock(self, _state, _lock):
+        self.assertFalse(_skip_brouter_now())
+
+    @patch.dict('os.environ', {'SCALE_SIM_SKIP_BROUTER': '0'}, clear=False)
+    @patch('activities.simulator_tasks.sim.is_batch_lock_held', return_value=True)
+    @patch('activities.simulator_tasks.sim.get_batch_state', return_value={'running': True})
+    def test_skip_when_batch_lock_and_running(self, _state, _lock):
+        self.assertTrue(_skip_brouter_now())
 
 
 class InterpolateAlongPolylineTest(SimpleTestCase):

@@ -21,6 +21,22 @@ STRICT_ROAD_ROUTES = os.getenv('SCALE_SIM_STRICT_ROAD_ROUTES', '1').lower() in (
 
 _brouter_grid_log_count = 0
 _brouter_grid_log_last_hour = 0.0
+_brouter_route_fail_log_count = 0
+_brouter_route_fail_log_last_hour = 0.0
+
+
+def _maybe_log_brouter_route_failure(reason: str) -> None:
+    """Log why strict road-only mode skipped a start (throttled)."""
+    global _brouter_route_fail_log_count, _brouter_route_fail_log_last_hour
+    _brouter_route_fail_log_count += 1
+    if _brouter_route_fail_log_count <= 5:
+        sim.live_log(f"BRouter routing failed: {reason[:240]}")
+        return
+    now = time.time()
+    if now - _brouter_route_fail_log_last_hour < 3600:
+        return
+    _brouter_route_fail_log_last_hour = now
+    sim.live_log(f"BRouter routing failed (throttled): {reason[:240]}")
 
 
 def _maybe_log_brouter_grid_fallback() -> None:
@@ -121,24 +137,48 @@ def _brouter_route_waypoints(
             [start_lon, start_lat],
             [end_lon, end_lat],
         ])
-        if result.get('success') and result.get('raw_data'):
-            features = result['raw_data'].get('features', [])
-            if features:
-                coords = features[0]['geometry']['coordinates']
-                waypoints = [(c[1], c[0]) for c in coords]
-                if len(waypoints) >= 2:
-                    return waypoints
-    except Exception:
-        pass
+        if result.get('success'):
+            waypoints = result.get('coordinates')
+            if not waypoints and result.get('raw_data'):
+                waypoints = BRouterService.extract_line_coordinates(result['raw_data'])
+            if waypoints and len(waypoints) >= 2:
+                return waypoints
+            _maybe_log_brouter_route_failure(
+                f"empty route from {BRouterService.BASE_URL} ({activity_type})"
+            )
+        else:
+            err = result.get('error') or 'unknown error'
+            _maybe_log_brouter_route_failure(
+                f"{BRouterService.BASE_URL} -> {err}"
+            )
+    except Exception as exc:
+        _maybe_log_brouter_route_failure(
+            f"{BRouterService.BASE_URL} exception: {exc}"
+        )
     return None
 
 
+def _heal_stale_batch_running_flag() -> None:
+    """Clear batch running=true when lock expired — unblocks live BRouter routing."""
+    try:
+        state = sim.get_batch_state()
+        if state.get('running') and not sim.is_batch_lock_held():
+            sim.set_batch_state(running=False, completed_at=time.time())
+            sim.live_log('Cleared stale batch running flag (batch lock not held).')
+    except Exception:
+        pass
+
+
 def _skip_brouter_now() -> bool:
-    """During batch-only runs, avoid BRouter HTTP (set SCALE_SIM_SKIP_BROUTER=1 or batch running)."""
-    import os
+    """
+    Skip BRouter HTTP when explicitly disabled or a batch job holds the batch lock.
+    Do not skip on stale running=true without lock (common after crashed batch).
+    """
     if os.getenv('SCALE_SIM_SKIP_BROUTER', '').lower() in ('1', 'true', 'yes', 'on'):
         return True
     try:
+        if not sim.is_batch_lock_held():
+            return False
         return bool(sim.get_batch_state().get('running'))
     except Exception:
         return False
@@ -155,6 +195,14 @@ def _generate_route_waypoints(
     """
     if _skip_brouter_now():
         if STRICT_ROAD_ROUTES:
+            if os.getenv('SCALE_SIM_SKIP_BROUTER', '').lower() in ('1', 'true', 'yes', 'on'):
+                _maybe_log_brouter_route_failure(
+                    'SCALE_SIM_SKIP_BROUTER=1 (unset for live road routing)'
+                )
+            else:
+                _maybe_log_brouter_route_failure(
+                    'batch simulation running flag set (finish batch or POST simulator-reset)'
+                )
             return [], 'unroutable'
         grid = _generate_grid_waypoints(lat, lon)
         return grid, 'grid'
@@ -169,7 +217,8 @@ def _generate_route_waypoints(
     cos_lat = math.cos(math.radians(lat))
     km = max(0.5, distance_m / 1000.0)
 
-    for _ in range(3):
+    route_attempts = max(3, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '8')))
+    for _ in range(route_attempts):
         bearing = random.uniform(0, 2 * math.pi)
         end_lat = lat + (km / 111.0) * math.cos(bearing)
         end_lon = lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
@@ -585,6 +634,8 @@ def _run_live_tick_body():
     if not state.get('running', False):
         return
 
+    _heal_stale_batch_running_flag()
+
     writes_ok, write_reason = check_sim_writes_allowed('simulator')
     if not writes_ok:
         sim.live_log(f'Disk guard (writes): {write_reason}')
@@ -800,7 +851,8 @@ def _run_live_tick_body():
             started += 1
         if unroutable > 0 and STRICT_ROAD_ROUTES:
             sim.live_log(
-                f"Road-only mode: skipped {unroutable} starts this tick (no routable street path)."
+                f"Road-only mode: skipped {unroutable} starts this tick "
+                f"(no routable street path; see BRouter routing failed lines above)."
             )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──

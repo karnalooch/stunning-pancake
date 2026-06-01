@@ -10,47 +10,97 @@ class BRouterService:
     Client for interacting with the BRouter engine.
     Used for topological track validation and anti-cheat checks.
     """
-    BASE_URL = os.getenv('BROUTER_URL', 'http://brouter:17777/brouter')
+    BASE_URL = os.getenv('BROUTER_URL', 'http://brouter:17777/brouter').rstrip('/')
+    PROFILE_MAP = {
+        'RUN': 'foot-all',
+        'BIKE': 'bicycle',
+        'WALK': 'foot-all',
+        'WHEELCHAIR': 'wheelchair',
+    }
+
+    @classmethod
+    def _timeout_seconds(cls) -> float:
+        try:
+            return float(os.getenv('BROUTER_TIMEOUT', '30'))
+        except (TypeError, ValueError):
+            return 30.0
+
+    @classmethod
+    def profile_for_activity(cls, activity_type: str) -> str:
+        return cls.PROFILE_MAP.get(activity_type, 'foot-all')
+
+    @classmethod
+    def extract_line_coordinates(cls, data: dict) -> list[tuple[float, float]]:
+        """Return (lat, lon) points from BRouter GeoJSON FeatureCollection."""
+        features = data.get('features') or []
+        for feature in features:
+            geom = feature.get('geometry') or {}
+            if geom.get('type') != 'LineString':
+                continue
+            coords = geom.get('coordinates') or []
+            points = []
+            for c in coords:
+                if not c or len(c) < 2:
+                    continue
+                points.append((float(c[1]), float(c[0])))
+            if len(points) >= 2:
+                return points
+        return []
 
     @classmethod
     def validate_track(cls, activity_type, coordinates):
         """
         Sends a track to BRouter to check if it's feasible for the given activity type.
         """
-        # Mapping SPORT types to BRouter profiles
-        profile_map = {
-            'RUN': 'foot-all',
-            'BIKE': 'bicycle',
-            'WALK': 'foot-all',
-            'WHEELCHAIR': 'wheelchair'
-        }
-        
-        profile = profile_map.get(activity_type, 'foot-all')
-        
+        profile = cls.profile_for_activity(activity_type)
+
         # Format coordinates for BRouter (lon,lat|lon,lat...)
         coord_str = "|".join([f"{c[0]},{c[1]}" for c in coordinates])
-        
+
         params = {
             'lonlats': coord_str,
             'profile': profile,
             'alternativeidx': 0,
-            'format': 'geojson'
+            'format': 'geojson',
         }
-        
+
         try:
-            response = requests.get(cls.BASE_URL, params=params, timeout=10)
+            response = requests.get(
+                cls.BASE_URL,
+                params=params,
+                timeout=cls._timeout_seconds(),
+            )
             if response.status_code == 200:
-                data = response.json()
-                # Basic validation: if BRouter can find a path, the track is "feasible"
-                # We can compare the distance from BRouter with the actual GPS distance
+                try:
+                    data = response.json()
+                except ValueError:
+                    return {
+                        'success': False,
+                        'error': f'non-JSON response: {response.text[:200]}',
+                    }
+                points = cls.extract_line_coordinates(data)
+                if not points:
+                    return {
+                        'success': False,
+                        'error': 'no LineString in GeoJSON response',
+                        'raw_data': data,
+                    }
+                props = (data.get('features') or [{}])[0].get('properties') or {}
                 return {
-                    "success": True,
-                    "brouter_distance": data['features'][0]['properties']['track-length'],
-                    "raw_data": data
+                    'success': True,
+                    'brouter_distance': props.get('track-length'),
+                    'raw_data': data,
+                    'coordinates': points,
                 }
-            return {"success": False, "error": response.text}
+            err = (response.text or '').strip()
+            if len(err) > 300:
+                err = err[:300] + '…'
+            return {
+                'success': False,
+                'error': f'HTTP {response.status_code}: {err}',
+            }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {'success': False, 'error': str(e)}
 
 # Privacy Zone v2 — Default radii per zone type (metres)
 _ZONE_RADII_M: dict[str, float] = {
