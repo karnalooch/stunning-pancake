@@ -1,5 +1,6 @@
 import csv
 import io
+import math
 import os
 import random
 import time
@@ -21,6 +22,56 @@ from .simulator_tasks import run_batch_simulation, run_live_simulation
 
 # Keep IsAdminRole as an alias for backward compatibility
 IsAdminRole = IsAdminOrModerator
+
+
+def _bootstrap_live_athletes(min_users: int = 500) -> dict:
+    """
+    Ensure a minimal ATHLETE pool exists so quick live-sim can start after wipe.
+    Creates city tenants on demand and lightweight athlete users (no activities/departments).
+    """
+    from django.contrib.auth.hashers import make_password
+    from users.models import User, Tenant
+    from simulate_active_cities import CITIES
+
+    current = User.objects.filter(role='ATHLETE').count()
+    if current >= min_users:
+        return {'created': 0, 'total': current}
+
+    to_create = max(0, int(min_users) - current)
+    if to_create == 0:
+        return {'created': 0, 'total': current}
+
+    per_city = max(1, math.ceil(to_create / max(1, len(CITIES))))
+    pwd = make_password('Athlete2026!')
+    created_total = 0
+
+    for city in CITIES:
+        if created_total >= to_create:
+            break
+        slug = city['slug']
+        tenant, _ = Tenant.objects.get_or_create(name=city['name'])
+        already = User.objects.filter(username__startswith=f'{slug}_athlete_').count()
+
+        batch = []
+        for i in range(per_city):
+            if created_total >= to_create:
+                break
+            idx = already + i + 1
+            username = f"{slug}_athlete_{idx:06d}"
+            batch.append(User(
+                username=username,
+                email=f'{username}@aktywnemiasta.pl',
+                role='ATHLETE',
+                tenant=tenant,
+                password=pwd,
+            ))
+            created_total += 1
+
+        if batch:
+            User.objects.bulk_create(batch, batch_size=1000, ignore_conflicts=True)
+
+    total = User.objects.filter(role='ATHLETE').count()
+    return {'created': max(0, total - current), 'total': total}
 
 
 class ActivityPagination(PageNumberPagination):
@@ -356,7 +407,14 @@ class LiveSimulationView(APIView):
         # Validate athlete pool
         validation = sim.validate_athlete_pool(min_users=10)
         if not validation['has_athletes']:
-            return Response({'error': validation['error']}, status=status.HTTP_400_BAD_REQUEST)
+            seeded = _bootstrap_live_athletes(min_users=500)
+            validation = sim.validate_athlete_pool(min_users=10)
+            if not validation['has_athletes']:
+                return Response({
+                    'error': validation['error'],
+                    'bootstrap_attempted': True,
+                    'athletes_after_bootstrap': seeded.get('total', 0),
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         # Calculate actual user count from pool percentage
         from users.models import User

@@ -7,7 +7,9 @@
 
 Routing needs map data under `segments4/` (gitignored). Without tiles, HTTP may succeed but route requests return no path → simulator grid fallback.
 
-Download a regional extract and import per [BRouter docs](https://github.com/brouter/brouter), or mount a prebuilt `segments4` directory into `/brouter/segments4`.
+Download regional `.rd5` tiles from [brouter.de segments4](https://brouter.de/brouter/segments4/) (e.g. Poland / Europe), or import per [abrensch/brouter](https://github.com/abrensch/brouter) docs. Mount them into `/brouter/segments4` on Railway.
+
+Releases are published as `brouter-X.Y.Z.zip` on GitHub (`abrensch/brouter`), not the legacy `brouter/brouter` JAR URLs.
 
 ## Build
 
