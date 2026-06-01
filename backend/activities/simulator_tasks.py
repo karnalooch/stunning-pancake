@@ -15,6 +15,58 @@ from django.core.cache import cache
 from . import simulator_state as sim
 from .services import BRouterService
 
+_EARTH_RADIUS_M = 6_371_000.0
+
+
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    rlat1, rlon1, rlat2, rlon2 = map(math.radians, (lat1, lon1, lat2, lon2))
+    dlat = rlat2 - rlat1
+    dlon = rlon2 - rlon1
+    a = math.sin(dlat / 2) ** 2 + math.cos(rlat1) * math.cos(rlat2) * math.sin(dlon / 2) ** 2
+    return 2 * _EARTH_RADIUS_M * math.asin(math.sqrt(a))
+
+
+def _interpolate_along_polyline(
+    waypoints: list[tuple[float, float]], progress: float,
+) -> tuple[float, float, int]:
+    """Return (lat, lon, course°) at fraction progress (0–1) along polyline arc length."""
+    if not waypoints:
+        return 52.2297, 21.0122, 0
+    if len(waypoints) == 1:
+        return waypoints[0][0], waypoints[0][1], 0
+
+    progress = max(0.0, min(1.0, progress))
+    seg_lens = []
+    for i in range(len(waypoints) - 1):
+        a, b = waypoints[i], waypoints[i + 1]
+        seg_lens.append(_haversine_m(a[0], a[1], b[0], b[1]))
+
+    total = sum(seg_lens)
+    if total <= 0:
+        return waypoints[-1][0], waypoints[-1][1], 0
+
+    target = progress * total
+    walked = 0.0
+    for i, seg_len in enumerate(seg_lens):
+        if walked + seg_len >= target or i == len(seg_lens) - 1:
+            frac = (target - walked) / seg_len if seg_len > 0 else 0.0
+            frac = max(0.0, min(1.0, frac))
+            lat_a, lon_a = waypoints[i]
+            lat_b, lon_b = waypoints[i + 1]
+            clat = lat_a + (lat_b - lat_a) * frac
+            clon = lon_a + (lon_b - lon_a) * frac
+            dlat = lat_b - lat_a
+            dlon = lon_b - lon_a
+            course = int((math.degrees(math.atan2(dlon, dlat)) + 360) % 360)
+            return clat, clon, course
+        walked += seg_len
+
+    lat_a, lon_a = waypoints[-2]
+    lat_b, lon_b = waypoints[-1]
+    course = int((math.degrees(math.atan2(lon_b - lon_a, lat_b - lat_a)) + 360) % 360)
+    return lat_b, lon_b, course
+
+
 # ── Fast grid-based fallback waypoint generator (no external API) ──
 def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]]:
     """Generate waypoints following a realistic city-street grid pattern."""
@@ -36,48 +88,66 @@ def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]
         waypoints.append((cur_lat, cur_lon))
     return waypoints
 
-# ── Road-following waypoint generator (uses BRouter for real road routes) ──
-def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity_type: str) -> list[tuple[float, float]]:
-    """
-    Generate road-following waypoints using BRouter.
-    Falls back to grid-based pattern if BRouter is unavailable.
-    Results are cached per (lat,lon,distance,type) for 1 hour.
-    """
-    cache_key = f"road_wp:{lat:.4f}:{lon:.4f}:{distance_m}:{activity_type}"
-    cached = cache.get(cache_key)
-    if cached:
-        return cached
-
-    # Shift start point ~500m away to force BRouter to generate a real route
-    cos_lat = math.cos(math.radians(lat))
-    start_lat = lat + random.uniform(-0.005, 0.005)
-    start_lon = lon + random.uniform(-0.005, 0.005)
-    
-    # Generate endpoint ~distance_m away in a random direction
-    bearing = random.uniform(0, 2 * math.pi)
-    km = distance_m / 1000.0
-    end_lat = lat + (km / 111.0) * math.cos(bearing) * 0.7
-    end_lon = lon + (km / (111.0 * cos_lat)) * math.sin(bearing) * 0.8
-
+def _brouter_route_waypoints(
+    start_lat: float, start_lon: float, end_lat: float, end_lon: float, activity_type: str,
+) -> list[tuple[float, float]] | None:
+    """Request a road-following polyline; first point is snapped onto the network."""
     try:
         result = BRouterService.validate_track(activity_type, [
             [start_lon, start_lat],
             [end_lon, end_lat],
         ])
-
         if result.get('success') and result.get('raw_data'):
             features = result['raw_data'].get('features', [])
             if features:
                 coords = features[0]['geometry']['coordinates']
-                # BRouter returns [lon, lat], convert to [(lat, lon)] waypoints
                 waypoints = [(c[1], c[0]) for c in coords]
                 if len(waypoints) >= 2:
-                    cache.set(cache_key, waypoints, 3600)
                     return waypoints
     except Exception:
         pass
+    return None
 
-    return _generate_grid_waypoints(lat, lon)
+
+# ── Road-following waypoint generator (uses BRouter for real road routes) ──
+def _generate_route_waypoints(
+    lat: float, lon: float, distance_m: float, activity_type: str,
+) -> tuple[list[tuple[float, float]], str]:
+    """
+    Prefer BRouter road polyline from city center; grid fallback if unavailable.
+    Returns (waypoints, source) where source is 'road' or 'grid'.
+    Cached per (lat, lon, distance, type) for 1 hour.
+    """
+    cache_key = f"road_wp:{lat:.4f}:{lon:.4f}:{int(distance_m)}:{activity_type}"
+    cached = cache.get(cache_key)
+    if cached:
+        if isinstance(cached, dict):
+            return cached['waypoints'], cached['source']
+        return cached, 'road'
+
+    cos_lat = math.cos(math.radians(lat))
+    km = max(0.5, distance_m / 1000.0)
+
+    for _ in range(3):
+        bearing = random.uniform(0, 2 * math.pi)
+        end_lat = lat + (km / 111.0) * math.cos(bearing)
+        end_lon = lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
+        waypoints = _brouter_route_waypoints(lat, lon, end_lat, end_lon, activity_type)
+        if waypoints:
+            payload = {'waypoints': waypoints, 'source': 'road'}
+            cache.set(cache_key, payload, 3600)
+            return waypoints, 'road'
+
+    grid = _generate_grid_waypoints(lat, lon)
+    payload = {'waypoints': grid, 'source': 'grid'}
+    cache.set(cache_key, payload, 3600)
+    return grid, 'grid'
+
+
+def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity_type: str) -> list[tuple[float, float]]:
+    """Backward-compatible wrapper — returns waypoints only."""
+    waypoints, _ = _generate_route_waypoints(lat, lon, distance_m, activity_type)
+    return waypoints
 
 
 @shared_task(bind=True, queue='simulation', max_retries=0)
@@ -441,20 +511,25 @@ def _run_live_tick_body():
             lat = city_info['lat'] if city_info else 52.2297
             lon = city_info['lon'] if city_info else 21.0122
 
-            if random.random() < 0.3:
-                waypoints = _generate_road_waypoints(lat, lon, distance_m, act_type)
-            else:
-                waypoints = _generate_grid_waypoints(lat, lon)
+            waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
+            if route_source == 'grid':
+                sim.live_log(
+                    f"Ride {str(user_id)[:8]}: BRouter unavailable — grid fallback "
+                    f"(ensure BROUTER_URL, e.g. http://brouter:17777/brouter)"
+                )
+            # Snap ride origin to first route point (road-snapped when BRouter succeeds)
+            start_lat, start_lon = waypoints[0][0], waypoints[0][1]
 
             sim.set_live_ride(user_id, {
                 'start_time': start_time.isoformat(),
                 'end_time': end_time.isoformat(),
                 'act_type': act_type,
                 'distance_m': distance_m,
-                'lat': lat,
-                'lon': lon,
+                'lat': start_lat,
+                'lon': start_lon,
                 'is_cheater': is_cheater,
                 'waypoints': waypoints,
+                'route_source': route_source,
             })
             started += 1
 
@@ -470,61 +545,17 @@ def _run_live_tick_body():
         if isinstance(end_time, str):
             end_time = timezone.datetime.fromisoformat(end_time)
 
-        lat = ride.get('lat', 52.2297)
-        lon = ride.get('lon', 21.0122)
         total_s = (end_time - start_time).total_seconds() if start_time and end_time else 1800
         elapsed_s = (now - start_time).total_seconds() if start_time else 0
         progress = max(0, min(1, elapsed_s / total_s if total_s > 0 else 0))
 
         waypoints = ride.get('waypoints')
         if waypoints and len(waypoints) >= 2:
-            total_wp = len(waypoints) - 1
-            wp_idx_float = progress * total_wp
-            wp_idx_int = int(wp_idx_float)
-            wp_frac = wp_idx_float - wp_idx_int
-
-            if wp_idx_int >= total_wp:
-                clat = waypoints[-1][0]
-                clon = waypoints[-1][1]
-            else:
-                wp_a = waypoints[wp_idx_int]
-                wp_b = waypoints[wp_idx_int + 1]
-                clat = wp_a[0] + (wp_b[0] - wp_a[0]) * wp_frac
-                clon = wp_a[1] + (wp_b[1] - wp_a[1]) * wp_frac
-
-            if wp_idx_int < total_wp:
-                dlat = waypoints[wp_idx_int + 1][0] - waypoints[wp_idx_int][0]
-                dlon = waypoints[wp_idx_int + 1][1] - waypoints[wp_idx_int][1]
-                course = int((math.degrees(math.atan2(dlon, dlat)) + 360) % 360)
-            else:
-                course = random.randint(0, 359)
+            clat, clon, course = _interpolate_along_polyline(waypoints, progress)
         else:
-            block_size = 0.0015
-            grid_steps = 8
-            grid_lat, grid_lon = lat, lon
-            wp = [(grid_lat, grid_lon)]
-            for _ in range(grid_steps):
-                r = random.random()
-                if r < 0.33:
-                    grid_lat += block_size * random.choice([-1, 1])
-                elif r < 0.66:
-                    grid_lon += block_size * random.choice([-1, 1])
-                else:
-                    grid_lat += block_size * 0.5 * random.choice([-1, 1])
-                    grid_lon += block_size * 0.5 * random.choice([-1, 1])
-                wp.append((grid_lat, grid_lon))
-
-            total_wp = len(wp) - 1
-            wp_idx_float = progress * total_wp
-            wp_idx_int = int(wp_idx_float)
-            wp_frac = wp_idx_float - wp_idx_int
-            if wp_idx_int >= total_wp:
-                clat = wp[-1][0]
-                clon = wp[-1][1]
-            else:
-                clat = wp[wp_idx_int][0] + (wp[wp_idx_int + 1][0] - wp[wp_idx_int][0]) * wp_frac
-                clon = wp[wp_idx_int][1] + (wp[wp_idx_int + 1][1] - wp[wp_idx_int][1]) * wp_frac
-            course = random.randint(0, 359)
+            clat = ride.get('lat', 52.2297)
+            clon = ride.get('lon', 21.0122)
+            course = 0
 
         speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
 
