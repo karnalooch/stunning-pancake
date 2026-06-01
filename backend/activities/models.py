@@ -193,6 +193,47 @@ class WearableIntegration(models.Model):
             logger.error(f"Failed to decrypt refresh_token for WearableIntegration id={self.pk}")
             return None
 
+class DiskAuditEvent(models.Model):
+    """Append-only audit log for Postgres disk guard actions."""
+
+    EVENT_TYPES = (
+        ('ok', 'OK'),
+        ('warn', 'Warning'),
+        ('pause_sim', 'Pause simulation'),
+        ('block_writes', 'Block sim writes'),
+        ('cleared', 'Safeguards cleared'),
+        ('retention_cleanup', 'Retention cleanup'),
+        ('preflight', 'Preflight'),
+        ('manual', 'Manual'),
+    )
+    SOURCE_CHOICES = (
+        ('cron', 'Celery beat'),
+        ('manual', 'Management command'),
+        ('simulator', 'Simulator task'),
+        ('preflight', 'Preflight / admin'),
+        ('api', 'Admin API'),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    event_type = models.CharField(max_length=32, choices=EVENT_TYPES, db_index=True)
+    used_gb = models.FloatField(null=True, blank=True)
+    budget_gb = models.FloatField(null=True, blank=True)
+    pct = models.FloatField(null=True, blank=True, help_text='used_gb / budget_gb')
+    action_taken = models.CharField(max_length=500)
+    source = models.CharField(max_length=64, choices=SOURCE_CHOICES, default='cron')
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at', 'event_type']),
+        ]
+        verbose_name = 'Disk audit event'
+
+    def __str__(self):
+        pct = f'{self.pct * 100:.0f}%' if self.pct is not None else '—'
+        return f'{self.event_type} @ {self.created_at:%Y-%m-%d %H:%M} ({pct})'
+
+
 # Ensure BetaFeedback model is discovered by Django's model registry.
 # Defined in beta_feedback.py with app_label='activities'.
 from .beta_feedback import BetaFeedback  # noqa: E402, F401

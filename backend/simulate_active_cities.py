@@ -537,6 +537,18 @@ def run(
     from users.departments import Department, UserDepartment
     from activities.models import Activity
 
+    try:
+        from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
+
+        run_disk_monitor(source='simulator')
+        allowed, reason = check_simulation_allowed('simulator')
+        if not allowed:
+            raise RuntimeError(reason or 'Simulation blocked by disk guard')
+    except RuntimeError:
+        raise
+    except Exception:
+        pass
+
     # If total_users is specified, use it directly across random cities
     if total_users:
         total_users = int(total_users)
@@ -956,6 +968,12 @@ def create_users_for_city(
     from users.models import User, Tenant
     from users.departments import Department, UserDepartment
     from activities import simulator_state as sim
+    from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
+
+    allowed, reason = check_simulation_allowed('simulator')
+    if not allowed:
+        run_disk_monitor(source='simulator')
+        raise RuntimeError(reason or 'Simulation blocked by disk guard')
 
     city = CITIES_BY_SLUG.get(city_slug)
     if not city:

@@ -285,6 +285,7 @@ if 'sqlite' in os.getenv('DATABASE_URL', ''):
 
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
+    'activities.tasks.monitor_postgres_disk': {'queue': 'default'},
     'activities.tasks.*': {'queue': 'critical'},
     'activities.ml_retrain.*': {'queue': 'default'},
     'events.tasks.*': {'queue': 'critical'},
@@ -326,6 +327,12 @@ CELERY_BEAT_SCHEDULE = {
     'daily-event-cleanup': {
         'task': 'events.tasks.close_expired_events',
         'schedule': crontab(hour=2, minute=0),
+        'options': {'queue': 'default'},
+    },
+    # Postgres disk guard — every 5 minutes (simulation safeguards + audit)
+    'postgres-disk-monitor': {
+        'task': 'activities.tasks.monitor_postgres_disk',
+        'schedule': crontab(minute='*/5'),
         'options': {'queue': 'default'},
     },
 }

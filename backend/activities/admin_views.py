@@ -543,6 +543,51 @@ class WorkerStatusView(APIView):
             }, status=status.HTTP_200_OK)  # Don't fail — show empty state
 
 
+class DiskAuditListView(APIView):
+    """
+    GET /api/activities/admin/disk-audit/?limit=100
+    Read-only disk guard audit log.
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        from activities.models import DiskAuditEvent
+        from activities.scale_disk_monitor import (
+            are_sim_writes_blocked,
+            get_disk_usage_snapshot,
+            is_simulation_paused,
+        )
+
+        try:
+            limit = min(500, max(1, int(request.query_params.get('limit', 100))))
+        except (TypeError, ValueError):
+            limit = 100
+
+        rows = DiskAuditEvent.objects.order_by('-created_at')[:limit]
+        events = [
+            {
+                'id': e.id,
+                'timestamp': e.created_at.isoformat(),
+                'event_type': e.event_type,
+                'used_gb': e.used_gb,
+                'budget_gb': e.budget_gb,
+                'pct': e.pct,
+                'action_taken': e.action_taken,
+                'source': e.source,
+            }
+            for e in rows
+        ]
+        snap = get_disk_usage_snapshot()
+        return Response({
+            'events': events,
+            'current': {
+                **snap,
+                'simulation_paused': is_simulation_paused(),
+                'writes_blocked': are_sim_writes_blocked(),
+            },
+        })
+
+
 class ScalePreflightView(APIView):
     """
     GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.3
@@ -660,6 +705,16 @@ class RunSimulationView(APIView):
             return Response(
                 {'error': 'scale must be between 0.001 and 1.0'},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
+
+        run_disk_monitor(source='preflight')
+        allowed, guard_reason = check_simulation_allowed('preflight')
+        if not allowed:
+            return Response(
+                {'error': guard_reason, 'disk_guard': True},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         # Reset and mark running=True explicitly to prevent frontend polling race conditions in async environments

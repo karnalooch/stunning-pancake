@@ -231,5 +231,15 @@ def recalculate_city_leaderboard(city_id: str = "") -> None:
             refresh_city_rankings_mv.delay()
 
 
+@shared_task(queue='default', name='activities.tasks.monitor_postgres_disk')
+def monitor_postgres_disk() -> dict:
+    """Periodic disk check — Redis safeguards + DiskAuditEvent (Celery beat)."""
+    from activities.scale_disk_monitor import cleanup_simulated_activities, run_disk_monitor
+
+    result = run_disk_monitor(source='cron')
+    cleanup_simulated_activities(source='cron')
+    return result
+
+
 # Import simulator tasks so they are registered with Celery
 from . import simulator_tasks

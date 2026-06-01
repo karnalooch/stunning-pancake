@@ -190,7 +190,13 @@ def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity
 @shared_task(bind=True, queue='simulation', max_retries=0)
 def run_batch_city_users(self, city_slug, users_per_city, scale, city_index, total_cities, total_target_users):
     """Create users for one city (parallel batch phase)."""
+    from activities.scale_disk_monitor import check_simulation_allowed
     from simulate_active_cities import create_users_for_city
+
+    allowed, reason = check_simulation_allowed('simulator')
+    if not allowed:
+        sim.batch_log(f'ERROR disk guard: {reason}')
+        raise RuntimeError(reason)
 
     def on_progress(**kwargs):
         sim.set_batch_state(**{k: v for k, v in kwargs.items() if v is not None})
@@ -254,6 +260,16 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
         sim.batch_log("ERROR: batch lock — another simulation running")
         sim.set_batch_state(error='Another simulation is running', running=False)
         return {'status': 'locked'}
+
+    from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
+
+    run_disk_monitor(source='simulator')
+    allowed, reason = check_simulation_allowed('simulator')
+    if not allowed:
+        sim.batch_log(f'ERROR disk guard: {reason}')
+        sim.set_batch_state(error=reason, running=False)
+        sim.release_batch_lock()
+        return {'status': 'disk_guard', 'error': reason}
 
     target = int(total_users or 0)
     batch_plan = compute_batch_scaling(target) if target else {}
@@ -379,7 +395,16 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
 def run_live_simulation(self, total_users=100, active_ratio=0.25,
                          cheat_ratio=0.05, tick_seconds=10):
     """Orchestrator — non-blocking tick chain. Each invocation runs one tick and schedules the next."""
+    from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
     from users.models import User
+
+    run_disk_monitor(source='simulator')
+    allowed, reason = check_simulation_allowed('simulator')
+    if not allowed:
+        sim.live_log(f'Disk guard: {reason}')
+        sim.set_live_state(running=False, error=reason)
+        sim.release_live_lock()
+        return {'status': 'disk_guard', 'error': reason}
 
     state = sim.get_live_state()
 
@@ -451,10 +476,16 @@ def _run_live_tick_body():
     from users.models import User
     from activities.models import Activity
     from activities.services import TelemetryService
+    from activities.scale_disk_monitor import check_sim_writes_allowed
     from simulate_active_cities import CITIES, _pick_activity_type, _generate_activity_params, resolve_city_for_user
 
     state = sim.get_live_state()
     if not state.get('running', False):
+        return
+
+    writes_ok, write_reason = check_sim_writes_allowed('simulator')
+    if not writes_ok:
+        sim.live_log(f'Disk guard (writes): {write_reason}')
         return
 
     now = timezone.now()

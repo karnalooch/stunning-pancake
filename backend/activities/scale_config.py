@@ -148,6 +148,14 @@ POSTGRES_DISK_BUDGET_GB_DEFAULT = _float('SCALE_POSTGRES_DISK_BUDGET_GB', 10.0)
 DISK_HEADROOM_GB = _float('SCALE_DISK_HEADROOM_GB', 2.0)
 WIPE_WAIT_TIMEOUT_SEC = _float('SCALE_WIPE_WAIT_TIMEOUT_SEC', 3600.0)
 
+# Proactive disk monitor (Celery beat + manage.py check_disk_guard)
+DISK_MONITOR_ENABLED = _bool('SCALE_DISK_MONITOR_ENABLED', True)
+DISK_WARN_PCT = _float('SCALE_DISK_WARN_PCT', 0.80)
+DISK_PAUSE_SIM_PCT = _float('SCALE_DISK_PAUSE_SIM_PCT', 0.90)
+DISK_BLOCK_WRITES_PCT = _float('SCALE_DISK_BLOCK_WRITES_PCT', 0.95)
+# Optional: delete simulator activities older than N days (0 = off)
+SIM_ACTIVITY_RETENTION_DAYS = _int('SCALE_SIM_ACTIVITY_RETENTION_DAYS', 0)
+
 
 def adaptive_user_bulk_batch_size(total_users: int) -> int:
     """Django bulk_create chunk per Redis progress tick — scales with target."""
