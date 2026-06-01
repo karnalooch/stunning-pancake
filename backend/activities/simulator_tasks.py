@@ -17,6 +17,7 @@ from . import simulator_state as sim
 from .services import BRouterService
 
 _EARTH_RADIUS_M = 6_371_000.0
+STRICT_ROAD_ROUTES = os.getenv('SCALE_SIM_STRICT_ROAD_ROUTES', '1').lower() in ('1', 'true', 'yes', 'on')
 
 _brouter_grid_log_count = 0
 _brouter_grid_log_last_hour = 0.0
@@ -153,6 +154,8 @@ def _generate_route_waypoints(
     Cached per (lat, lon, distance, type) for 1 hour.
     """
     if _skip_brouter_now():
+        if STRICT_ROAD_ROUTES:
+            return [], 'unroutable'
         grid = _generate_grid_waypoints(lat, lon)
         return grid, 'grid'
 
@@ -176,6 +179,11 @@ def _generate_route_waypoints(
             cache.set(cache_key, payload, 3600)
             return waypoints, 'road'
 
+    if STRICT_ROAD_ROUTES:
+        payload = {'waypoints': [], 'source': 'unroutable'}
+        cache.set(cache_key, payload, 120)
+        return [], 'unroutable'
+
     grid = _generate_grid_waypoints(lat, lon)
     payload = {'waypoints': grid, 'source': 'grid'}
     cache.set(cache_key, payload, 3600)
@@ -197,6 +205,82 @@ def _jitter_point_km(lat: float, lon: float, radius_km: float) -> tuple[float, f
     cos_lat = math.cos(math.radians(lat)) or 1e-6
     dlon = (r / (111.0 * cos_lat)) * math.sin(theta)
     return lat + dlat, lon + dlon
+
+
+def _sample_athlete_motion_profile(activity_type: str) -> dict:
+    """
+    Human-like pace profile:
+    - base speed by tier (easy/steady/fast)
+    - periodic speed modulation
+    - deterministic micro-stops (traffic lights / crossings)
+    """
+    if activity_type == 'BIKE':
+        tier = random.choices(
+            [('easy', 18.0, 24.0), ('steady', 22.0, 30.0), ('fast', 28.0, 36.0)],
+            weights=[0.22, 0.60, 0.18],
+            k=1,
+        )[0]
+        stop_chance = 0.12
+    elif activity_type == 'RUN':
+        tier = random.choices(
+            [('easy', 7.0, 9.8), ('steady', 9.0, 12.5), ('fast', 11.0, 15.0)],
+            weights=[0.35, 0.50, 0.15],
+            k=1,
+        )[0]
+        stop_chance = 0.08
+    else:  # WALK / other
+        tier = random.choices(
+            [('easy', 3.8, 5.3), ('steady', 4.5, 6.2), ('fast', 5.6, 7.2)],
+            weights=[0.45, 0.45, 0.10],
+            k=1,
+        )[0]
+        stop_chance = 0.06
+
+    _label, low, high = tier
+    base_speed = random.uniform(low, high)
+    return {
+        'speed_kmh': base_speed,
+        'speed_variation': random.uniform(0.06, 0.18),
+        'phase_offset': random.uniform(0, 2 * math.pi),
+        'stop_cycle_s': random.randint(180, 520),
+        'stop_duration_s': random.randint(8, 35) if random.random() < stop_chance else 0,
+        'start_delay_s': random.randint(0, 90),
+    }
+
+
+def _compute_live_motion(ride: dict, now_dt, start_dt, end_dt) -> tuple[float, float, float]:
+    """
+    Returns (progress[0..1], speed_kmh, paused_seconds) with deterministic pause windows.
+    """
+    total_s = max(1.0, (end_dt - start_dt).total_seconds())
+    elapsed_raw = (now_dt - start_dt).total_seconds()
+    if elapsed_raw <= 0:
+        return 0.0, 0.0, 0.0
+
+    stop_cycle = max(1, int(ride.get('stop_cycle_s', 300) or 300))
+    stop_dur = max(0, int(ride.get('stop_duration_s', 0) or 0))
+    stop_dur = min(stop_dur, max(0, stop_cycle - 5))
+    if stop_dur > 0:
+        cycles = int(elapsed_raw // stop_cycle)
+        rem = elapsed_raw % stop_cycle
+        paused = cycles * stop_dur + max(0.0, rem - (stop_cycle - stop_dur))
+        in_stop = rem > (stop_cycle - stop_dur)
+    else:
+        paused = 0.0
+        in_stop = False
+
+    effective_elapsed = max(0.0, elapsed_raw - paused)
+    progress = max(0.0, min(1.0, effective_elapsed / total_s))
+
+    base = float(ride.get('speed_kmh', 0) or 0)
+    variation = float(ride.get('speed_variation', 0.1) or 0.1)
+    phase = float(ride.get('phase_offset', 0.0) or 0.0)
+    # Smooth effort wave over time (fatigue / terrain / cadence changes).
+    wave = math.sin((effective_elapsed / 140.0) + phase) * variation
+    speed_kmh = max(0.0, base * (1.0 + wave))
+    if in_stop:
+        speed_kmh = 0.0
+    return progress, speed_kmh, paused
 
 
 def _generate_road_waypoints(lat: float, lon: float, distance_m: float, activity_type: str) -> list[tuple[float, float]]:
@@ -564,8 +648,14 @@ def _run_live_tick_body():
             cheaters += 1
         else:
             try:
-                from simulate_active_cities import _generate_gps_track
-                route = _generate_gps_track(lat, lon, distance_m, act_type)
+                from django.contrib.gis.geos import LineString
+                waypoints = ride.get('waypoints') or []
+                if isinstance(waypoints, list) and len(waypoints) >= 2:
+                    # Reuse live route polyline so saved activities follow roads too.
+                    route = LineString([(p[1], p[0]) for p in waypoints], srid=4326)
+                else:
+                    from simulate_active_cities import _generate_gps_track
+                    route = _generate_gps_track(lat, lon, distance_m, act_type)
             except Exception:
                 route = None
             is_verified = random.random() < 0.92
@@ -661,6 +751,7 @@ def _run_live_tick_body():
                 for u in User.objects.filter(id__in=starters).select_related('tenant')
             }
 
+        unroutable = 0
         for user_id in starters:
             user = users_map_p3.get(str(user_id))
             if not user:
@@ -680,17 +771,22 @@ def _run_live_tick_body():
             lat0, lon0 = city_info['lat'], city_info['lon']
             lat, lon = _jitter_point_km(lat0, lon0, start_radius_km)
 
-            # Stable speed per ride (resampling each tick looks jittery).
-            speed_kmh = random.uniform(12, 35) if act_type == 'BIKE' else random.uniform(6, 15)
+            motion = _sample_athlete_motion_profile(act_type)
+            start_delay_s = int(motion.get('start_delay_s', 0) or 0)
+            ride_start = now + timedelta(seconds=start_delay_s)
+            ride_end = ride_start + timedelta(seconds=duration_s)
 
             waypoints, route_source = _generate_route_waypoints(lat, lon, distance_m, act_type)
+            if not waypoints or len(waypoints) < 2:
+                unroutable += 1
+                continue
             if route_source == 'grid':
                 _maybe_log_brouter_grid_fallback()
             start_lat, start_lon = waypoints[0][0], waypoints[0][1]
 
             sim.set_live_ride(user_id, {
-                'start_time': start_time.isoformat(),
-                'end_time': end_time.isoformat(),
+                'start_time': ride_start.isoformat(),
+                'end_time': ride_end.isoformat(),
                 'act_type': act_type,
                 'distance_m': distance_m,
                 'lat': start_lat,
@@ -699,9 +795,13 @@ def _run_live_tick_body():
                 'is_cheater': is_cheater,
                 'waypoints': waypoints,
                 'route_source': route_source,
-                'speed_kmh': speed_kmh,
+                **motion,
             })
             started += 1
+        if unroutable > 0 and STRICT_ROAD_ROUTES:
+            sim.live_log(
+                f"Road-only mode: skipped {unroutable} starts this tick (no routable street path)."
+            )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     active_rides = sim.get_live_rides()
@@ -715,9 +815,15 @@ def _run_live_tick_body():
         if isinstance(end_time, str):
             end_time = timezone.datetime.fromisoformat(end_time)
 
-        total_s = (end_time - start_time).total_seconds() if start_time and end_time else 1800
-        elapsed_s = (now - start_time).total_seconds() if start_time else 0
-        progress = max(0, min(1, elapsed_s / total_s if total_s > 0 else 0))
+        if start_time and end_time:
+            progress, speed_kmh, _paused_s = _compute_live_motion(ride, now, start_time, end_time)
+        else:
+            total_s = (end_time - start_time).total_seconds() if start_time and end_time else 1800
+            elapsed_s = (now - start_time).total_seconds() if start_time else 0
+            progress = max(0, min(1, elapsed_s / total_s if total_s > 0 else 0))
+            speed_kmh = ride.get('speed_kmh')
+            if not isinstance(speed_kmh, (int, float)):
+                speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
 
         waypoints = ride.get('waypoints')
         if waypoints and len(waypoints) >= 2:
@@ -726,10 +832,6 @@ def _run_live_tick_body():
             clat = ride.get('lat', 52.2297)
             clon = ride.get('lon', 21.0122)
             course = 0
-
-        speed_kmh = ride.get('speed_kmh')
-        if not isinstance(speed_kmh, (int, float)):
-            speed_kmh = random.uniform(12, 35) if ride.get('act_type') == 'BIKE' else random.uniform(6, 15)
 
         telemetry_entries.append({
             'deviceId': str(user_id),

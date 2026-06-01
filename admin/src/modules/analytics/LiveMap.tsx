@@ -42,8 +42,8 @@ type UserPosition = LiveMapPosition;
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
-const POLL_INTERVAL_MS = 2500;
-const MOVE_DEBOUNCE_MS = 400;
+const POLL_BASE_MS = 2200;
+const MOVE_DEBOUNCE_MS = 280;
 const OVERVIEW_ZOOM_THRESHOLD = 9;
 const DETAIL_ZOOM_THRESHOLD = 11;
 const CLUSTER_MAX_ZOOM = 10;
@@ -70,6 +70,17 @@ function clusterRadiusForZoom(zoom: number): number {
     return 26;
 }
 
+function pollIntervalForZoom(zoom: number, lastRefreshMs: number | null): number {
+    // Faster when user inspects details; slower at country view.
+    let base = POLL_BASE_MS;
+    if (zoom >= 12) base = 1200;
+    else if (zoom >= 10) base = 1600;
+    else if (zoom >= 8) base = 1900;
+    // Add headroom if backend responds slowly.
+    if (lastRefreshMs && lastRefreshMs > 900) base += 500;
+    return Math.max(900, base);
+}
+
 function bboxFromMap(map: any): string {
     const bounds = map.getBounds();
     return `${bounds.getWest().toFixed(4)},${bounds.getSouth().toFixed(4)},${bounds.getEast().toFixed(4)},${bounds.getNorth().toFixed(4)}`;
@@ -91,6 +102,8 @@ export const LiveMap: React.FC = () => {
     const abortRef = useRef<AbortController | null>(null);
     const fetchInFlightRef = useRef(false);
     const tabVisibleRef = useRef(typeof document === 'undefined' || !document.hidden);
+    const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastRefreshRef = useRef<number | null>(null);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -364,7 +377,9 @@ export const LiveMap: React.FC = () => {
                     syncDetailMarkers();
                 });
             }
-            setLastRefreshMs(Math.round(performance.now() - t0));
+            const tookMs = Math.round(performance.now() - t0);
+            lastRefreshRef.current = tookMs;
+            setLastRefreshMs(tookMs);
         } catch (err: unknown) {
             if (ac.signal.aborted) return;
             const status = (err as { response?: { status?: number } })?.response?.status;
@@ -549,9 +564,18 @@ export const LiveMap: React.FC = () => {
 
     useEffect(() => {
         if (!mlReady || !canFetch || !tabVisible) return;
-        fetchPositions();
-        const interval = setInterval(() => fetchPositionsRef.current(), POLL_INTERVAL_MS);
-        return () => clearInterval(interval);
+        const loop = async () => {
+            await fetchPositionsRef.current();
+            const map = mapRef.current;
+            const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
+            const delay = pollIntervalForZoom(zoom, lastRefreshRef.current);
+            pollTimerRef.current = setTimeout(loop, delay);
+        };
+        loop();
+        return () => {
+            if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+            pollTimerRef.current = null;
+        };
     }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible]);
 
     useEffect(() => {
