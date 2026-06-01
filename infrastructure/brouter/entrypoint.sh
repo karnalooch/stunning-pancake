@@ -3,13 +3,27 @@ set -e
 
 SEGDIR="${BROUTER_SEGMENTS_DIR:-/brouter/segments4}"
 BASE="${BROUTER_SEGMENTS_URL:-https://brouter.de/brouter/segments4}"
+PROFILES_BASE="${BROUTER_PROFILES_URL:-https://brouter.de/brouter/profiles2}"
+PROFILE_DIR="${BROUTER_PROFILES_DIR:-/brouter/profiles2}"
 PRESET="${BROUTER_SEGMENT_PRESET:-poland}"
 AUTO="${BROUTER_AUTO_DOWNLOAD_SEGMENTS:-1}"
+SYNC_LOOKUPS="${BROUTER_SYNC_LOOKUPS:-1}"
 
 JAVA_XMX="${BROUTER_JAVA_XMX:-768m}"
 JAVA_XMS="${BROUTER_JAVA_XMS:-64m}"
 
-mkdir -p "$SEGDIR"
+mkdir -p "$SEGDIR" "$PROFILE_DIR"
+
+sync_lookups() {
+  case "$SYNC_LOOKUPS" in
+    0|false|FALSE|no|NO|off|OFF) return 0 ;;
+  esac
+  echo "[brouter] syncing lookups.dat from ${PROFILES_BASE}/ (must match .rd5 tiles)"
+  wget -q --timeout=60 --tries=3 -O "${PROFILE_DIR}/lookups.dat.tmp" "${PROFILES_BASE}/lookups.dat"
+  mv "${PROFILE_DIR}/lookups.dat.tmp" "${PROFILE_DIR}/lookups.dat"
+}
+
+sync_lookups
 
 min_bytes() {
   # Ignore stub/empty tiles (< 1 MiB).
@@ -79,7 +93,6 @@ fi
 # HTTP server on :17777 (not btools.server.BRouter — that is CLI/CGI only).
 BROUTER_PORT="${BROUTER_PORT:-17777}"
 BROUTER_THREADS="${BROUTER_MAX_THREADS:-4}"
-PROFILE_DIR="/brouter/profiles2"
 
 exec java -Xmx"$JAVA_XMX" -Xms"$JAVA_XMS" \
   -cp brouter.jar \

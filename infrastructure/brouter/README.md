@@ -15,6 +15,10 @@ The container **downloads missing `.rd5` tiles on startup** from [brouter.de/seg
 | `BROUTER_SEGMENTS_DIR` | `/brouter/segments4` | Segment directory |
 | `BROUTER_SEGMENTS_URL` | `https://brouter.de/brouter/segments4` | Base URL |
 | `BROUTER_JAVA_XMX` | `768m` | Heap (raise if OOM on large presets) |
+| `BROUTER_PROFILES_URL` | `https://brouter.de/brouter/profiles2` | `lookups.dat` + profiles (must match segment version) |
+| `BROUTER_SYNC_LOOKUPS` | `1` | Refresh `lookups.dat` on each container start |
+
+**Lookup mismatch:** If logs show `lookup version mismatch (old rd5?) lookups.dat=10 … rd5=11`, redeploy `brouter` (image pulls current `lookups.dat` from brouter.de). Segments from brouter.de/segments4 and profiles must use the same lookup generation.
 
 **Preset `poland`:** 16 tiles (E10–E25, N40–N55), ~**1.0–1.2 GB** total. First deploy can take **10–30+ minutes** while tiles download.
 
