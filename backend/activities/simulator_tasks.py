@@ -257,6 +257,32 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
 
     target = int(total_users or 0)
     batch_plan = compute_batch_scaling(target) if target else {}
+
+    if target >= 1_000:
+        from activities.scale_disk_guard import prepare_batch_disk_guard
+
+        sim.set_batch_state(current_phase='disk_guard', progress_pct=1)
+        sim.batch_log('Sprawdzanie miejsca na dysku Postgres…')
+        guard = prepare_batch_disk_guard(
+            target, skip_activities=skip_activities, clear=clear,
+        )
+        for action in guard.get('actions') or []:
+            sim.batch_log(action)
+        if not guard.get('ok'):
+            err = guard.get('error', 'Disk guard blocked batch')
+            sim.set_batch_state(error=err, running=False, completed_at=time.time())
+            sim.batch_log(f'ERROR disk guard: {err}')
+            sim.release_batch_lock()
+            return {'status': 'disk_guard', 'error': err}
+        batch_plan = guard.get('batch_plan') or batch_plan
+        sim.set_batch_state(
+            user_bulk_pg_batch_size=batch_plan.get('user_bulk_pg_batch_size'),
+            user_bulk_batch_size=batch_plan.get('user_bulk_batch_size'),
+            max_parallel_workers=batch_plan.get('max_parallel_workers'),
+            disk_usage_ratio=guard.get('disk_usage_ratio'),
+            db_size_gb=guard.get('db_size_gb'),
+        )
+
     use_parallel = bool(
         skip_activities
         and target

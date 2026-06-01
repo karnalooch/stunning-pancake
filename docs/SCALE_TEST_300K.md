@@ -32,9 +32,26 @@
 - **Aktywni na mapie** — max `SCALE_MAX_CONCURRENT_RIDERS` (domyślnie **5000**).
 - **Telemetria** — tylko aktywni jeźdźcy; odczyt `GEORADIUS` + `HMGET`, nie `HGETALL`.
 
+## Automatyczny disk guard (domyślnie włączony)
+
+Przy batchu ≥1k worker **sam**:
+
+- sprawdza rozmiar bazy (`pg_database_size`),
+- uruchamia **chunked wipe** gdy re-seed / brak miejsca (bez ręcznego pilnowania),
+- zmniejsza `pg_chunk` i równoległość przy wysokim % budżetu,
+- przy `No space left on device` **dzieli chunk** i ponawia insert.
+
+Ustaw na Railway rozmiar wolumenu Postgres:
+
+```env
+SCALE_POSTGRES_DISK_BUDGET_GB=20
+```
+
+Wyłączenie (niezalecane): `SCALE_AUTO_DISK_GUARD=0`, `SCALE_AUTO_WIPE_BEFORE_BATCH=0`.
+
 ## Railway checklist (300k)
 
-1. **Postgres volume ≥10 GB** (20 GB recommended). Run **wipe** (`/api/activities/admin/wipe-data/`) before a full 300k re-seed if disk was full.
+1. **Postgres volume ≥10 GB** (20 GB recommended). Wipe przed 300k jest **automatyczny** przy re-seedzie; ręczny wipe tylko w razie potrzeby.
 2. **Do not run live sim during batch** — wait until batch completes; live at 300k uses DB sampling or capped Redis.
 3. **celery-worker-simulation** env:
    - `BROUTER_URL=http://brouter:17777/brouter` (or your BRouter service URL)

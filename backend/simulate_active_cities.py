@@ -82,6 +82,15 @@ def _plan_cities_for_target(total_users: int, num_cities_hint: int | None = None
 
 def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
     """(bulk_batch_size, pg_batch_size) — adaptive when total_users is set."""
+    try:
+        from activities import simulator_state as sim
+        state = sim.get_batch_state()
+        bulk_o = state.get('user_bulk_batch_size')
+        pg_o = state.get('user_bulk_pg_batch_size')
+        if bulk_o and pg_o:
+            return int(float(bulk_o)), int(float(pg_o))
+    except Exception:
+        pass
     if not total_users:
         try:
             from activities.scale_config import USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
@@ -94,6 +103,31 @@ def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
         return plan['user_bulk_batch_size'], plan['user_bulk_pg_batch_size']
     except Exception:
         return 2500, 500
+
+
+def _is_disk_full_error(exc: BaseException) -> bool:
+    try:
+        from activities.scale_disk_guard import is_disk_full_error
+        return is_disk_full_error(exc)
+    except Exception:
+        msg = str(exc).lower()
+        return 'no space left on device' in msg or 'could not extend file' in msg
+
+
+def _bulk_create_user_chunks(users, pg_chunk: int, **kwargs) -> None:
+    """bulk_create in sub-chunks; halves chunk on disk-full and retries."""
+    from users.models import User
+
+    chunk = max(50, int(pg_chunk))
+    for _attempt in range(6):
+        try:
+            for i in range(0, len(users), chunk):
+                User.objects.bulk_create(users[i:i + chunk], batch_size=chunk, **kwargs)
+            return
+        except Exception as e:
+            if not _is_disk_full_error(e) or chunk <= 50:
+                raise
+            chunk = max(50, chunk // 2)
 
 
 def _batch_user_insert_flags(skip_activities: bool) -> tuple[bool, bool]:
@@ -129,10 +163,6 @@ def _bulk_create_athletes(
     total = 0
     use_fast = fast_insert and skip_dept
     pg_chunk = max(50, int(pg_batch_size))
-
-    def _bulk_create_user_chunks(users, **kwargs):
-        for i in range(0, len(users), pg_chunk):
-            User.objects.bulk_create(users[i:i + pg_chunk], batch_size=pg_chunk, **kwargs)
 
     for batch_start in range(0, n_athletes, batch_size):
         batch_end = min(batch_start + batch_size, n_athletes)

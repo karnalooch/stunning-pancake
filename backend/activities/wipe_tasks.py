@@ -87,6 +87,9 @@ def run_wipe_sync():
         TelemetryService.clear_simulator_positions()
         invalidate_dashboard_stats_cache()
 
+        ws.wipe_log('Postgres VACUUM (reclaim space)…')
+        _vacuum_postgres_if_needed()
+
         ws.set_wipe_state(
             running=False, phase='complete', progress_pct=100,
             completed_at=__import__('time').time(), deleted=deleted,
@@ -99,6 +102,23 @@ def run_wipe_sync():
         return {'status': 'error', 'error': str(e)}
     finally:
         ws.release_wipe_lock()
+
+
+def _vacuum_postgres_if_needed() -> None:
+    """Reclaim disk after large deletes (must run outside a transaction)."""
+    from django.db import connection
+    if connection.vendor != 'postgresql':
+        return
+    try:
+        old_autocommit = connection.get_autocommit()
+        connection.set_autocommit(True)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute('VACUUM (ANALYZE)')
+        finally:
+            connection.set_autocommit(old_autocommit)
+    except Exception:
+        pass
 
 
 def start_wipe_async() -> bool:

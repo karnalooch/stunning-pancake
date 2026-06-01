@@ -7,8 +7,10 @@ from django.contrib.auth import get_user_model
 
 from activities import simulator_state as sim
 from activities.scale_config import (
+    AUTO_DISK_GUARD,
     BATCH_PARALLEL_MIN_USERS,
     BATCH_WARN_WITHOUT_WIPE_ABOVE,
+    POSTGRES_DISK_BUDGET_GB,
     FORCE_SKIP_ACTIVITIES_ABOVE,
     LIVE_POOL_REDIS_FULL_ABOVE,
     MAX_BATCH_USERS,
@@ -91,7 +93,13 @@ def analyze_scale(
                 f'Zapewnij ≥{max(2, int(disk_gb) + 2)} GB wolnego miejsca na wolumenie Postgres.'
             )
 
-    if target >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
+    if AUTO_DISK_GUARD and target >= 1_000:
+        recommendations.append(
+            f'Automatyczny disk guard: wipe + dopasowanie chunków (budżet '
+            f'{POSTGRES_DISK_BUDGET_GB:g} GB — ustaw SCALE_POSTGRES_DISK_BUDGET_GB '
+            f'na rozmiar wolumenu Railway).'
+        )
+    elif target >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
         risks.append({
             'severity': 'medium' if athlete_count < target else 'high',
             'area': 'batch',

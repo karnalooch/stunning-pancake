@@ -677,18 +677,18 @@ class RunSimulationView(APIView):
                 f"ETA ~{eta_min} min (skip_activities={skip_activities})."
             )
             sim.batch_log(est_message)
-            disk_gb = batch_plan.get('estimated_disk_gb', 0)
-            if disk_gb >= 0.5:
+            from activities.scale_config import AUTO_DISK_GUARD, POSTGRES_DISK_BUDGET_GB
+            if AUTO_DISK_GUARD:
                 batch_warnings.append(
-                    f"Szacowany dysk Postgres: ~{disk_gb:.1f} GB przy tym batchu."
+                    f"Dysk: automatyczny guard (budżet {POSTGRES_DISK_BUDGET_GB:g} GB, "
+                    f"wipe + dopasowanie chunków w workerze)."
                 )
-            if batch_plan.get('warn_without_wipe') and not clear:
-                existing = get_user_model().objects.filter(role='ATHLETE').count()
-                if existing > 0:
+            else:
+                disk_gb = batch_plan.get('estimated_disk_gb', 0)
+                if disk_gb >= 0.5:
                     batch_warnings.append(
-                        f"W bazie jest {existing:,} athlete bez wipe — rozważ wipe przed {total_users:,}."
+                        f"Szacowany dysk Postgres: ~{disk_gb:.1f} GB przy tym batchu."
                     )
-                    sim.batch_log(f"WARNING: {batch_warnings[-1]}")
 
         # Spawn Celery task
         run_batch_simulation.delay(
