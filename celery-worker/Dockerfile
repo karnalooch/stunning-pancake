@@ -1,10 +1,10 @@
 FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV PYTHONUTF8 1
-ENV LANG C.UTF-8
-ENV LC_ALL C.UTF-8
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONUTF8=1
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
 
 WORKDIR /app
 
@@ -21,10 +21,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ /app/
 
-COPY start.sh /app/start-celery.sh
+# Build context is repo root (same as COPY backend/)
+COPY celery-worker/start.sh /app/start-celery.sh
 RUN chmod +x /app/start-celery.sh
 
 RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
-USER 1001
+USER sportuser
 
 CMD ["/app/start-celery.sh"]
