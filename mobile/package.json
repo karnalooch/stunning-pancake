@@ -31,7 +31,7 @@
     "@react-navigation/bottom-tabs": "^6.5.8",
     "@react-navigation/native": "^6.1.7",
     "@shopify/react-native-skia": "2.4.18",
-    "axios": "^1.15.2",
+    "axios": "^1.16.1",
     "expo": "^55.0.0",
     "expo-av": "^16.0.8",
     "expo-font": "^55.0.6",
