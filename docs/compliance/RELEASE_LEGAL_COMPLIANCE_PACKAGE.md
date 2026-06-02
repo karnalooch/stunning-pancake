@@ -7,9 +7,36 @@ Używaj razem z:
 
 ## 1) OSS license compliance checklist
 
+### Third-party notices (admin + backend)
+
+| Artifact | Location |
+|----------|----------|
+| Generated notices | [`THIRD_PARTY_NOTICES.md`](../../THIRD_PARTY_NOTICES.md) (repo root) |
+| Generator | [`scripts/compliance/generate-third-party-notices.mjs`](../../scripts/compliance/generate-third-party-notices.mjs) |
+
+**Regenerate before release** (from repo root):
+
+```bash
+# Admin: uses package-lock.json only (no network)
+node scripts/compliance/generate-third-party-notices.mjs
+
+# Or from admin/
+cd admin && npm run licenses:report
+
+# Backend: install deps for full pip metadata (recommended)
+pip install -r backend/requirements.txt
+pip install pip-licenses
+node scripts/compliance/generate-third-party-notices.mjs
+
+# CI / pre-release gate (fails on GPL/AGPL/UNKNOWN)
+node scripts/compliance/generate-third-party-notices.mjs --check
+```
+
+Commit the updated `THIRD_PARTY_NOTICES.md` with the release tag.
+
 Każdy release musi mieć komplet:
 
-- [ ] `THIRD_PARTY_NOTICES.md` wygenerowany/odświeżony z aktualnych zależności.
+- [ ] `THIRD_PARTY_NOTICES.md` wygenerowany/odświeżony z aktualnych zależności (patrz powyżej).
 - [ ] SBOM wygenerowany dla backend i admin (np. CycloneDX/SPDX) i zarchiwizowany jako artifact release.
 - [ ] Skan licencji zależności wykonany (`pip-licenses` + `license-checker` lub równoważne).
 - [ ] Wszystkie licencje copyleft (GPL/AGPL/LGPL) przeanalizowane pod kątem dystrybucji i obowiązków.

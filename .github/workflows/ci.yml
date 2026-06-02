@@ -202,6 +202,22 @@ jobs:
           cd admin
           npm audit --audit-level=high || true
 
+      - name: Set up Node.js (license inventory)
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install admin lockfile (license scan)
+        run: cd admin && npm ci
+
+      - name: License compliance check (OSS inventory)
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pip-licenses
+          node scripts/compliance/generate-third-party-notices.mjs --check
+
   # ──────────────────────────────────────────
   # Trivy: Container & Filesystem CVE Scan (Milestone 3)
   # Results appear in GitHub Security → Code Scanning tab
