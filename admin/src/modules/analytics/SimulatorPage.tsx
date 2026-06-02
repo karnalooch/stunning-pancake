@@ -174,10 +174,10 @@ export const SimulatorPage: React.FC = () => {
         if (livePollRef.current) clearInterval(livePollRef.current);
 
         batchPollRef.current = setInterval(async () => {
-            try { const d = await SimulatorApi.getBatchStatus(); setBatchStatus(d); } catch {}
+            try { const d = await SimulatorApi.getBatchStatus({ silent: true }); setBatchStatus(d); } catch {}
         }, 2000);
         livePollRef.current = setInterval(async () => {
-            try { const d = await SimulatorApi.getLiveStatus(); setLiveStatus(d); } catch {}
+            try { const d = await SimulatorApi.getLiveStatus({ silent: true }); setLiveStatus(d); } catch {}
         }, 1500);
     }, []);
 

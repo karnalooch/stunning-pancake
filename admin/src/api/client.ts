@@ -46,6 +46,12 @@ if (baseURL.startsWith('/') && typeof window !== 'undefined') {
   baseURL = `${window.location.protocol}//${window.location.host}${baseURL}`;
 }
 
+export type ApiClientRequestConfig = import('axios').InternalAxiosRequestConfig & {
+  skipAuth?: boolean;
+  /** Suppress global 500 toast (polling / background status). */
+  skipGlobalError?: boolean;
+};
+
 export const apiClient = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
@@ -55,7 +61,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   const url = String(config.url || '');
   // Never send stale Bearer to login/refresh — causes "token not valid for any token type".
-  if (isAuthApiPath(url) || (config as { skipAuth?: boolean }).skipAuth) {
+  if (isAuthApiPath(url) || (config as ApiClientRequestConfig).skipAuth) {
     delete config.headers.Authorization;
     return config;
   }
@@ -124,7 +130,10 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
     if (error.response?.status && error.response.status >= 500) {
-      if (_notifyError) _notifyError('Server Error', `The server encountered an error (${error.response.status}). Please try again.`);
+      const skip = (error.config as ApiClientRequestConfig | undefined)?.skipGlobalError;
+      if (!skip && _notifyError) {
+        _notifyError('Server Error', `The server encountered an error (${error.response.status}). Please try again.`);
+      }
     }
     return Promise.reject(error);
   }
@@ -204,12 +213,13 @@ export const TelemetryApi = {
   },
   getLivePositions: async (
     params?: Record<string, string | number>,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; silent?: boolean },
   ) => {
     const { data } = await apiClient.get('/activities/telemetry/live/', {
       params,
       signal: options?.signal,
-    });
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
     if (Array.isArray(data)) return { positions: data, meta: {} };
     return data;
   },
@@ -271,8 +281,10 @@ export const SimulatorApi = {
   },
 
   // Batch Simulation
-  getBatchStatus: async () => {
-    const { data } = await apiClient.get('/activities/admin/simulate/');
+  getBatchStatus: async (options?: { silent?: boolean }) => {
+    const { data } = await apiClient.get('/activities/admin/simulate/', {
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
     return data;
   },
   startBatch: async (params: {
@@ -292,8 +304,10 @@ export const SimulatorApi = {
   },
 
   // Live Simulation
-  getLiveStatus: async () => {
-    const { data } = await apiClient.get('/activities/admin/live-simulate/');
+  getLiveStatus: async (options?: { silent?: boolean }) => {
+    const { data } = await apiClient.get('/activities/admin/live-simulate/', {
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
     return data;
   },
   startLive: async (params: {

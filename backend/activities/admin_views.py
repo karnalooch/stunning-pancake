@@ -365,46 +365,56 @@ class LiveSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        sim.heal_stale_live_simulation(reschedule=True)
-        sim.maybe_advance_live_simulation()
-        state = sim.get_live_state()
-        log = sim.get_live_log()
-        elapsed = 0.0
-        if state.get('started_at'):
-            elapsed = time.time() - state['started_at']
-        pool_size = sim.get_live_pool_count()
-        active_rides = sim.get_live_ride_count()
-        live_lock = sim.is_live_lock_held()
-        stuck = sim.live_simulation_stuck()
-        tick_stale = sim.live_tick_stale() if state['running'] else False
-        batch_blocked, batch_block_reason = sim.batch_blocks_live_simulation()
-        from activities.scale_config import parse_scale_overrides_from_state, resolve_live_scale_limits
+        try:
+            sim.heal_stale_live_simulation(reschedule=True)
+            sim.maybe_advance_live_simulation()
+            state = sim.get_live_state()
+            log = sim.get_live_log()
+            elapsed = 0.0
+            if state.get('started_at'):
+                elapsed = time.time() - state['started_at']
+            pool_size = sim.get_live_pool_count()
+            active_rides = sim.get_live_ride_count()
+            live_lock = sim.is_live_lock_held()
+            stuck = sim.live_simulation_stuck()
+            tick_stale = sim.live_tick_stale() if state['running'] else False
+            batch_blocked, batch_block_reason = sim.batch_blocks_live_simulation()
+            from activities.scale_config import parse_scale_overrides_from_state, resolve_live_scale_limits
 
-        scale_overrides = parse_scale_overrides_from_state(state)
-        effective_scale = resolve_live_scale_limits(state)
-        return Response({
-            'running': state['running'],
-            'batch_blocks_live': batch_blocked,
-            'batch_block_reason': batch_block_reason or None,
-            'elapsed_seconds': round(elapsed, 1),
-            'error': state.get('error'),
-            'stuck': stuck,
-            'tick_stale': tick_stale,
-            'worker_recovered_at': state.get('worker_recovered_at'),
-            'live_lock_held': live_lock,
-            'pool_size': pool_size,
-            'active_rides': active_rides,
-            'total_users': int(state['total_users']),
-            'active_ratio': float(state['active_ratio']),
-            'cheat_ratio': float(state['cheat_ratio']),
-            'tick_seconds': state['tick_seconds'],
-            'currently_riding': state['currently_riding'],
-            'total_completed': state['total_completed'],
-            'cheaters_caught': state['cheaters_caught'],
-            'scale_overrides': scale_overrides,
-            'effective_scale_limits': effective_scale,
-            'log': log,
-        })
+            scale_overrides = parse_scale_overrides_from_state(state)
+            effective_scale = resolve_live_scale_limits(state)
+            return Response({
+                'running': state['running'],
+                'batch_blocks_live': batch_blocked,
+                'batch_block_reason': batch_block_reason or None,
+                'elapsed_seconds': round(elapsed, 1),
+                'error': state.get('error'),
+                'stuck': stuck,
+                'tick_stale': tick_stale,
+                'worker_recovered_at': state.get('worker_recovered_at'),
+                'live_lock_held': live_lock,
+                'pool_size': pool_size,
+                'active_rides': active_rides,
+                'total_users': int(state.get('total_users', 0)),
+                'active_ratio': float(state.get('active_ratio', 0)),
+                'cheat_ratio': float(state.get('cheat_ratio', 0)),
+                'tick_seconds': int(state.get('tick_seconds', 10)),
+                'currently_riding': int(state.get('currently_riding', 0)),
+                'total_completed': int(state.get('total_completed', 0)),
+                'cheaters_caught': int(state.get('cheaters_caught', 0)),
+                'scale_overrides': scale_overrides,
+                'effective_scale_limits': effective_scale,
+                'log': log,
+            })
+        except Exception as exc:
+            return Response(
+                {
+                    'error': f'Live simulator state unavailable: {exc}',
+                    'running': False,
+                    'log': [],
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
     def delete(self, request):
         sim.force_stop_live_simulation()
@@ -846,35 +856,35 @@ class RunSimulationView(APIView):
         try:
             state = sim.get_batch_state()
             log = sim.get_batch_log()
+            elapsed = 0.0
+            started = state.get('started_at')
+            if started:
+                end = state.get('completed_at') or time.time()
+                elapsed = end - started
+
+            batch_lock = sim.is_batch_lock_held()
+            stuck = batch_lock and not state['running']
+            return Response({
+                'running': state['running'],
+                'elapsed_seconds': round(elapsed, 1),
+                'scale': state['scale'],
+                'days': state['days'],
+                'error': state.get('error'),
+                'stuck': stuck or bool(state.get('error')),
+                'batch_lock_held': batch_lock,
+                'total_users': int(state.get('total_users', 0)),
+                'users_created': state.get('users_created', 0),
+                'departments_created': state.get('departments_created', 0),
+                'activities_created': state.get('activities_created', 0),
+                'current_phase': state.get('current_phase', 'idle'),
+                'progress_pct': state.get('progress_pct', 0),
+                'log': log,
+            })
         except Exception as exc:
             return Response(
                 {'error': f'Simulator state unavailable: {exc}', 'running': False, 'log': []},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
-        elapsed = 0.0
-        started = state.get('started_at')
-        if started:
-            end = state.get('completed_at') or time.time()
-            elapsed = end - started
-
-        batch_lock = sim.is_batch_lock_held()
-        stuck = batch_lock and not state['running']
-        return Response({
-            'running': state['running'],
-            'elapsed_seconds': round(elapsed, 1),
-            'scale': state['scale'],
-            'days': state['days'],
-            'error': state.get('error'),
-            'stuck': stuck or bool(state.get('error')),
-            'batch_lock_held': batch_lock,
-            'total_users': int(state['total_users']),
-            'users_created': state['users_created'],
-            'departments_created': state['departments_created'],
-            'activities_created': state['activities_created'],
-            'current_phase': state['current_phase'],
-            'progress_pct': state['progress_pct'],
-            'log': log,
-        })
 
     def delete(self, request):
         sim.force_stop_batch_simulation()

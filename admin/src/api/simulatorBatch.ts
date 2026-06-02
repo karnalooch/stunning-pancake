@@ -1,4 +1,4 @@
-import { SimulatorApi } from './client';
+import { formatApiError, SimulatorApi } from './client';
 
 export type BatchSimStatus = {
   running?: boolean;
@@ -47,4 +47,66 @@ export async function waitForBatchComplete(options?: {
     await new Promise((r) => setTimeout(r, pollMs));
   }
   throw new Error('Batch did not finish within the timeout.');
+}
+
+export class QuickLaunchBlockedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'QuickLaunchBlockedError';
+  }
+}
+
+/** One-click live map: ensure batch idle, seed athletes if needed, start live sim. */
+export async function quickLaunchLiveMap(options?: {
+  pool_pct?: number;
+  active_ratio?: number;
+  cheat_ratio?: number;
+  tick_seconds?: number;
+  bootstrapUsers?: number;
+}): Promise<void> {
+  const pool_pct = options?.pool_pct ?? 1.0;
+  const active_ratio = options?.active_ratio ?? 0.3;
+  const cheat_ratio = options?.cheat_ratio ?? 0.05;
+  const tick_seconds = options?.tick_seconds ?? 8;
+  const bootstrapUsers = options?.bootstrapUsers ?? 500;
+
+  const batch = await SimulatorApi.getBatchStatus().catch(() => null);
+  if (isBatchInProgress(batch)) {
+    throw new QuickLaunchBlockedError(
+      'Batch generation is still running. Wait for it to finish, then try Quick Launch again.',
+    );
+  }
+
+  const startLive = () =>
+    SimulatorApi.startLive({ pool_pct, active_ratio, cheat_ratio, tick_seconds });
+
+  try {
+    await startLive();
+    return;
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status;
+    if (status !== 400) {
+      throw err;
+    }
+  }
+
+  await SimulatorApi.startBatch({
+    total_users: bootstrapUsers,
+    days: 1,
+    clear: false,
+    skip_activities: true,
+  });
+  await waitForBatchComplete({
+    pollMs: 1000,
+    startTimeoutMs: 120_000,
+    totalTimeoutMs: 600_000,
+  });
+  await startLive();
+}
+
+export function formatQuickLaunchError(err: unknown): string {
+  if (err instanceof QuickLaunchBlockedError) {
+    return err.message;
+  }
+  return formatApiError(err, 'Quick launch failed');
 }

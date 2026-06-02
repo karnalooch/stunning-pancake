@@ -61,13 +61,19 @@ def get_batch_state() -> dict:
     state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
     # Parse numeric fields
     state['running'] = state.get('running', 'false').lower() == 'true'
-    state['scale'] = float(state.get('scale', 0) or 0)
+    try:
+        state['scale'] = float(state.get('scale', 0) or 0)
+    except (TypeError, ValueError):
+        state['scale'] = 0.0
     state['days'] = _redis_int(state.get('days'), 0)
     state['total_users'] = _redis_int(state.get('total_users'), 0)
     state['users_created'] = _redis_int(state.get('users_created'), 0)
     state['departments_created'] = _redis_int(state.get('departments_created'), 0)
     state['activities_created'] = _redis_int(state.get('activities_created'), 0)
-    state['progress_pct'] = float(state.get('progress_pct', 0) or 0)
+    try:
+        state['progress_pct'] = float(state.get('progress_pct', 0) or 0)
+    except (TypeError, ValueError):
+        state['progress_pct'] = 0.0
     state['started_at'] = _redis_float(state.get('started_at'))
     state['completed_at'] = _redis_float(state.get('completed_at'))
     err = state.get('error')
@@ -271,10 +277,16 @@ def get_live_state() -> dict:
         }
     state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
     state['running'] = state.get('running', 'false').lower() == 'true'
-    state['total_users'] = int(state.get('total_users', 0))
-    state['active_ratio'] = float(state.get('active_ratio', 0))
-    state['cheat_ratio'] = float(state.get('cheat_ratio', 0))
-    state['tick_seconds'] = int(state.get('tick_seconds', 10))
+    state['total_users'] = _redis_int(state.get('total_users'), 0)
+    try:
+        state['active_ratio'] = float(state.get('active_ratio', 0) or 0)
+    except (TypeError, ValueError):
+        state['active_ratio'] = 0.0
+    try:
+        state['cheat_ratio'] = float(state.get('cheat_ratio', 0) or 0)
+    except (TypeError, ValueError):
+        state['cheat_ratio'] = 0.0
+    state['tick_seconds'] = _redis_int(state.get('tick_seconds'), 10)
     state['currently_riding'] = int(state.get('currently_riding', 0))
     state['total_completed'] = int(state.get('total_completed', 0))
     state['cheaters_caught'] = int(state.get('cheaters_caught', 0))
@@ -339,7 +351,13 @@ def get_live_log() -> list:
     """Get all log lines from Redis."""
     r = get_redis()
     raw = r.lrange(LIVE_LOG_KEY, 0, -1)
-    return [json.loads(line.decode() if isinstance(line, bytes) else line) for line in raw]
+    lines = []
+    for line in raw:
+        try:
+            lines.append(json.loads(line.decode() if isinstance(line, bytes) else line))
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return lines
 
 
 def acquire_live_lock() -> bool:

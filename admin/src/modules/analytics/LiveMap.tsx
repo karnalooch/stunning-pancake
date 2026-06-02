@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { apiClient, SimulatorApi, TelemetryApi } from '../../api/client';
-import { isBatchInProgress } from '../../api/simulatorBatch';
+import { apiClient, TelemetryApi } from '../../api/client';
+import { formatQuickLaunchError, quickLaunchLiveMap, QuickLaunchBlockedError } from '../../api/simulatorBatch';
 import { hasStoredSession } from '../../core/auth/tokens';
 import { useAuth } from '../../core/auth/useAuth';
 import { notifications } from '@mantine/notifications';
@@ -79,7 +79,7 @@ function featureToPosition(
 
 export const LiveMap: React.FC = () => {
     const { token, isAuthenticated } = useAuth();
-    const canFetch = Boolean(token || hasStoredSession());
+    const canFetch = isAuthenticated && Boolean(token || hasStoredSession());
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<any>(null);
     const mlRef = useRef<any>(null);
@@ -99,6 +99,7 @@ export const LiveMap: React.FC = () => {
     const fetchSeqRef = useRef(0);
     const lastMoveAtRef = useRef(0);
     const lastDragFetchAtRef = useRef(0);
+    const liveFetchPausedRef = useRef(false);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -114,6 +115,14 @@ export const LiveMap: React.FC = () => {
     const [lastRefreshMs, setLastRefreshMs] = useState<number | null>(null);
     const [zoomMode, setZoomMode] = useState('');
     const [mapZoom, setMapZoom] = useState<number | null>(null);
+    const [liveFetchPaused, setLiveFetchPaused] = useState(false);
+
+    useEffect(() => {
+        if (isAuthenticated && (token || hasStoredSession())) {
+            liveFetchPausedRef.current = false;
+            setLiveFetchPaused(false);
+        }
+    }, [isAuthenticated, token]);
 
     const pushPositionsToMap = useCallback((list: UserPosition[]) => {
         const map = mapRef.current;
@@ -288,7 +297,7 @@ export const LiveMap: React.FC = () => {
     }, [applyMetaCounts, applyCityCounts, ingestPositions]);
 
     const fetchPositions = useCallback(async (opts?: { priority?: boolean; snap?: boolean }) => {
-        if (!canFetch || !tabVisibleRef.current) return;
+        if (!canFetch || liveFetchPausedRef.current || !tabVisibleRef.current) return;
         const priority = Boolean(opts?.priority);
         if (!priority && fetchInFlightRef.current) return;
 
@@ -312,7 +321,7 @@ export const LiveMap: React.FC = () => {
                 params.zoom = Math.round(zoom * 10) / 10;
             }
 
-            const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal });
+            const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal, silent: true });
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
 
             const list = data?.positions ?? [];
@@ -327,7 +336,15 @@ export const LiveMap: React.FC = () => {
         } catch (err: unknown) {
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
             const status = (err as { response?: { status?: number } })?.response?.status;
-            if (status !== 401 && status !== 403) { /* silent poll */ }
+            if (status === 401 || status === 403) {
+                liveFetchPausedRef.current = true;
+                setLiveFetchPaused(true);
+                abortRef.current?.abort();
+                if (pollTimerRef.current) {
+                    clearTimeout(pollTimerRef.current);
+                    pollTimerRef.current = null;
+                }
+            }
         } finally {
             if (seq === fetchSeqRef.current) {
                 fetchInFlightRef.current = false;
@@ -361,53 +378,48 @@ export const LiveMap: React.FC = () => {
     }, []);
 
     const handleQuickLaunch = useCallback(async () => {
+        if (!canFetch) {
+            notifications.show({
+                title: 'Sign in required',
+                message: 'Log in as an admin to start the live simulation.',
+                color: 'orange',
+            });
+            return;
+        }
         setLaunching(true);
         try {
-            const batch = await SimulatorApi.getBatchStatus().catch(() => null);
-            if (isBatchInProgress(batch)) {
-                notifications.show({
-                    title: 'Batch w toku',
-                    message: 'Poczekaj na zakończenie generowania użytkowników, potem uruchom live.',
-                    color: 'orange',
-                });
-                return;
-            }
-            await apiClient.post('/activities/admin/live-simulate/', {
-                pool_pct: 1.0,
-                active_ratio: 0.3,
-                cheat_ratio: 0.05,
-                tick_seconds: 8,
-            });
+            await quickLaunchLiveMap();
             notifications.show({
                 title: 'Live Simulation Started',
                 message: 'Cyclists are now riding on the map',
                 color: 'teal',
             });
-        } catch (err: any) {
-            if (err?.response?.status === 409) {
+            if (liveFetchPausedRef.current) {
+                liveFetchPausedRef.current = false;
+                setLiveFetchPaused(false);
+            }
+        } catch (err: unknown) {
+            const status = (err as { response?: { status?: number } })?.response?.status;
+            if (err instanceof QuickLaunchBlockedError || status === 409) {
                 notifications.show({
                     title: 'Batch w toku',
-                    message: err?.response?.data?.error || 'Zakończ batch przed uruchomieniem live.',
-                    color: 'orange',
-                });
-            } else if (err?.response?.status === 400) {
-                notifications.show({
-                    title: 'No athletes',
-                    message: 'Go to Simulator to generate cyclists first.',
+                    message: formatQuickLaunchError(err),
                     color: 'orange',
                 });
             } else {
                 notifications.show({
                     title: 'Launch failed',
-                    message: err?.message || 'Unknown error',
+                    message: formatQuickLaunchError(err),
                     color: 'red',
                 });
             }
         } finally {
             setLaunching(false);
-            fetchPositions();
+            if (!liveFetchPausedRef.current) {
+                fetchPositions({ priority: true, snap: true });
+            }
         }
-    }, [fetchPositions]);
+    }, [canFetch, fetchPositions]);
 
     const loadHeatmap = useCallback(() => {
         const map = mapRef.current;
@@ -539,7 +551,7 @@ export const LiveMap: React.FC = () => {
     }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi]);
 
     useEffect(() => {
-        if (!mlReady || !canFetch || !tabVisible) return;
+        if (!mlReady || !canFetch || !tabVisible || liveFetchPaused) return;
         const loop = async () => {
             await fetchPositionsRef.current();
             const map = mapRef.current;
@@ -552,7 +564,7 @@ export const LiveMap: React.FC = () => {
             if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
             pollTimerRef.current = null;
         };
-    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible]);
+    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused]);
 
     useEffect(() => {
         const map = mapRef.current;
