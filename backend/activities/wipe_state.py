@@ -7,6 +7,7 @@ from core.redis_cluster import get_redis
 WIPE_STATE_KEY = '{admin}:wipe:state'
 WIPE_LOG_KEY = '{admin}:wipe:log'
 WIPE_LOCK_KEY = '{admin}:wipe:lock'
+WIPE_IN_PROGRESS_KEY = '{admin}:wipe:in_progress'
 WIPE_LOCK_TTL = 3600
 # Queued but Celery never picked up the task (common after worker restart).
 WIPE_STALE_QUEUED_SEC = int(__import__('os').getenv('WIPE_STALE_QUEUED_SEC', '120'))
@@ -101,6 +102,20 @@ def acquire_wipe_lock() -> bool:
 def release_wipe_lock():
     r = get_redis()
     r.delete(WIPE_LOCK_KEY)
+
+
+def set_wipe_in_progress(enabled: bool, ttl_seconds: int = 3600) -> None:
+    """Global barrier checked by simulator start endpoints."""
+    r = get_redis()
+    if enabled:
+        r.set(WIPE_IN_PROGRESS_KEY, '1', ex=max(60, int(ttl_seconds)))
+        return
+    r.delete(WIPE_IN_PROGRESS_KEY)
+
+
+def is_wipe_in_progress() -> bool:
+    r = get_redis()
+    return bool(r.exists(WIPE_IN_PROGRESS_KEY))
 
 
 def _parse_started_at(state: dict) -> float | None:

@@ -392,6 +392,15 @@ class LiveSimulationView(APIView):
         })
 
     def post(self, request):
+        from activities import wipe_state as ws
+        if ws.is_wipe_in_progress():
+            return Response(
+                {
+                    'error': 'Wipe is in progress. Starting live simulation is temporarily blocked.',
+                    'code': 'WIPE_IN_PROGRESS',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         state = sim.get_live_state()
         if state['running']:
             return Response({'error': 'Live simulation already running.'}, status=status.HTTP_409_CONFLICT)
@@ -566,6 +575,7 @@ class WipeDataView(APIView):
 
         from activities import wipe_state as ws
         from activities.wipe_tasks import start_wipe_async
+        from activities import simulator_state as sim
 
         force = (
             request.data.get('force', False)
@@ -600,6 +610,10 @@ class WipeDataView(APIView):
         )
 
         ws.mark_wipe_queued()
+        # Immediate quiesce barrier: stop both sim modes before heavy deletes begin.
+        ws.set_wipe_in_progress(True)
+        sim.force_stop_live_simulation()
+        sim.force_stop_batch_simulation()
         dispatch = start_wipe_async()
         return Response({
             'status': 'queued',
@@ -827,6 +841,15 @@ class RunSimulationView(APIView):
         })
 
     def post(self, request):
+        from activities import wipe_state as ws
+        if ws.is_wipe_in_progress():
+            return Response(
+                {
+                    'error': 'Wipe is in progress. Starting batch simulation is temporarily blocked.',
+                    'code': 'WIPE_IN_PROGRESS',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
         state = sim.get_batch_state()
         if state['running']:
             elapsed = time.time() - (state['started_at'] or 0)

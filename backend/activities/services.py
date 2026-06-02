@@ -17,6 +17,8 @@ class BRouterService:
         'WALK': 'foot-all',
         'WHEELCHAIR': 'wheelchair',
     }
+    UNROUTABLE_ERROR_CODE = 'BROUTER_UNROUTABLE_START'
+    TRANSPORT_ERROR_CODE = 'BROUTER_TRANSPORT_FAILURE'
 
     @classmethod
     def _timeout_seconds(cls) -> float:
@@ -28,6 +30,40 @@ class BRouterService:
     @classmethod
     def profile_for_activity(cls, activity_type: str) -> str:
         return cls.PROFILE_MAP.get(activity_type, 'foot-all')
+
+    @classmethod
+    def classify_error(cls, error: str | None, status_code: int | None = None) -> dict:
+        """
+        Split retryable "no route from this start" failures from hard infrastructure errors.
+        """
+        text = (error or '').strip()
+        normalized = text.lower()
+        status = int(status_code or 0)
+        is_unroutable = (
+            'target island' in normalized
+            or 'pass=0' in normalized
+            or 'no route found' in normalized
+        )
+        if status == 400 and is_unroutable:
+            return {
+                'severity': 'warning',
+                'retryable': True,
+                'code': cls.UNROUTABLE_ERROR_CODE,
+                'message': text or 'Start point not routable on road graph.',
+            }
+        if status >= 500 or status in (0, 502, 503, 504):
+            return {
+                'severity': 'error',
+                'retryable': True,
+                'code': cls.TRANSPORT_ERROR_CODE,
+                'message': text or (f'HTTP {status}' if status else 'Transport failure'),
+            }
+        return {
+            'severity': 'error',
+            'retryable': False,
+            'code': cls.TRANSPORT_ERROR_CODE,
+            'message': text or (f'HTTP {status}' if status else 'Unknown routing failure'),
+        }
 
     @classmethod
     def extract_line_coordinates(cls, data: dict) -> list[tuple[float, float]]:
@@ -100,9 +136,14 @@ class BRouterService:
                 'success': False,
                 'error': f'HTTP {response.status_code}: {err}',
                 'status_code': response.status_code,
+                'classification': cls.classify_error(err, response.status_code),
             }
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            return {
+                'success': False,
+                'error': str(e),
+                'classification': cls.classify_error(str(e), 0),
+            }
 
 # Privacy Zone v2 — Default radii per zone type (metres)
 _ZONE_RADII_M: dict[str, float] = {

@@ -61,6 +61,8 @@ BATCH_WARN_WITHOUT_WIPE_ABOVE = _int('SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE', 10_0
 # Concurrent riders + telemetry published per tick (memory / Redis hash size)
 MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 50_000)
 MAX_TELEMETRY_PUBLISH_PER_TICK = _int('SCALE_MAX_TELEMETRY_PUBLISH', 50_000)
+# Global cap for new live starts per tick (all modes, 0=unbounded).
+MAX_STARTS_PER_LIVE_TICK = _int('SCALE_MAX_STARTS_PER_LIVE_TICK', 0)
 
 # Live map API (viewport + zoom; see resolve_telemetry_api_limit)
 TELEMETRY_API_DEFAULT_LIMIT = _int('SCALE_TELEMETRY_API_LIMIT', 800)

@@ -54,6 +54,27 @@ def test_wipe_delete_is_idempotent_when_already_running(api_client, owner_user):
     start_async.assert_not_called()
 
 
+@pytest.mark.django_db
+def test_batch_start_rejected_while_wipe_in_progress(api_client, owner_user):
+    api_client.force_authenticate(user=owner_user)
+    url = reverse('admin-simulate')
+    with patch('activities.wipe_state.is_wipe_in_progress', return_value=True):
+        response = api_client.post(url, {'total_users': 1000}, format='json')
+    assert response.status_code == 409
+    assert response.data['code'] == 'WIPE_IN_PROGRESS'
+
+
+@pytest.mark.django_db
+def test_live_start_rejected_while_wipe_in_progress(api_client, owner_user):
+    api_client.force_authenticate(user=owner_user)
+    url = reverse('admin-live-simulate')
+    payload = {'pool_pct': 1.0, 'active_ratio': 0.2, 'cheat_ratio': 0.05, 'tick_seconds': 8}
+    with patch('activities.wipe_state.is_wipe_in_progress', return_value=True):
+        response = api_client.post(url, payload, format='json')
+    assert response.status_code == 409
+    assert response.data['code'] == 'WIPE_IN_PROGRESS'
+
+
 def test_run_wipe_sync_lock_conflict_does_not_override_running_state():
     with patch('activities.wipe_tasks.ws.acquire_wipe_lock', return_value=False), \
             patch('activities.wipe_tasks.ws.get_wipe_state', return_value={'running': True}), \

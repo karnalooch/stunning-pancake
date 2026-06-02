@@ -32,6 +32,18 @@ class BRouterServiceParseTest(SimpleTestCase):
         pts = BRouterService.extract_line_coordinates(data)
         self.assertEqual(pts, [(52.0, 21.0), (52.01, 21.01)])
 
+    def test_classify_target_island_as_unroutable_warning(self):
+        cls = BRouterService.classify_error('target island reached, pass=0', 400)
+        self.assertEqual(cls['severity'], 'warning')
+        self.assertTrue(cls['retryable'])
+        self.assertEqual(cls['code'], BRouterService.UNROUTABLE_ERROR_CODE)
+
+    def test_classify_transport_failure_as_error(self):
+        cls = BRouterService.classify_error('gateway timeout', 504)
+        self.assertEqual(cls['severity'], 'error')
+        self.assertTrue(cls['retryable'])
+        self.assertEqual(cls['code'], BRouterService.TRANSPORT_ERROR_CODE)
+
 
 class BrouterProfilesFallbackTest(SimpleTestCase):
     def test_bike_includes_trekking_fallback(self):

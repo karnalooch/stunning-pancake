@@ -39,6 +39,15 @@ interface WipeStatus {
     error?: string | null;
 }
 
+const extractStartConflictMessage = (err: any): string => {
+    const statusCode = err?.response?.status;
+    const code = err?.response?.data?.code;
+    if (statusCode === 409 && code === 'WIPE_IN_PROGRESS') {
+        return 'Data wipe is running. Wait for wipe completion before starting simulation.';
+    }
+    return err?.response?.data?.error || err?.message || 'Start request failed';
+};
+
 export const SimulatorPage: React.FC = () => {
     const { user } = useAuth();
     const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
@@ -177,7 +186,7 @@ export const SimulatorPage: React.FC = () => {
             await waitForBatchComplete({ onStatus: setBatchStatus });
             notifications.show({ title: 'Cyclists Created', message: `${cyclists.toLocaleString()} users generated`, color: 'green' });
         } catch (err: any) {
-            notifications.show({ title: 'Generation Error', message: err?.response?.data?.error || err.message, color: 'red' });
+            notifications.show({ title: 'Generation Error', message: extractStartConflictMessage(err), color: 'red' });
             setLaunching(false);
             return;
         }
@@ -193,7 +202,7 @@ export const SimulatorPage: React.FC = () => {
                 });
                 notifications.show({ title: 'Live Simulation Started', message: `${activeRiders.toLocaleString()} visible on map`, color: 'teal' });
             } catch (err: any) {
-                notifications.show({ title: 'Live Sim Error', message: err?.response?.data?.error || err.message, color: 'orange' });
+                notifications.show({ title: 'Live Sim Error', message: extractStartConflictMessage(err), color: 'orange' });
             }
         }
         startPolling();
@@ -523,12 +532,25 @@ export const SimulatorPage: React.FC = () => {
                                                 <Text span c="dimmed" size="2xs">[{ts}]</Text> {msg}
                                             </Text>
                                         ))}
-                                        {liveStatus?.log?.map(([ts, msg], i) => (
-                                            <Text key={`l-${i}`} size="2xs"
-                                                style={{ color: msg.includes('ERROR') ? '#f85149' : '#8b949e', lineHeight: 1.5 }}>
-                                                <Text span c="dimmed" size="2xs">[L {ts}]</Text> {msg}
-                                            </Text>
-                                        ))}
+                                        {liveStatus?.log?.map(([ts, msg], i) => {
+                                            const lower = msg.toLowerCase();
+                                            const isUnroutableWarning =
+                                                lower.includes('unroutable start')
+                                                || lower.includes('road-only mode: skipped')
+                                                || lower.includes('pass=0')
+                                                || lower.includes('target island');
+                                            const color = msg.includes('ERROR')
+                                                ? '#f85149'
+                                                : isUnroutableWarning
+                                                    ? '#d29922'
+                                                    : '#8b949e';
+                                            return (
+                                                <Text key={`l-${i}`} size="2xs"
+                                                    style={{ color, lineHeight: 1.5 }}>
+                                                    <Text span c="dimmed" size="2xs">[L {ts}]</Text> {msg}
+                                                </Text>
+                                            );
+                                        })}
                                         <div ref={logEndRef} />
                                     </ScrollArea>
                                 )}

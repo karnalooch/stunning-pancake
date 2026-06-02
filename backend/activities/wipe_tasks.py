@@ -56,6 +56,7 @@ def run_wipe_sync():
             return {'status': 'already_running'}
         ws.wipe_log('Wipe request ignored: lock held by another worker.')
         return {'status': 'locked', 'error': 'lock held'}
+    ws.set_wipe_in_progress(True, ttl_seconds=ws.WIPE_LOCK_TTL)
 
     from django.contrib.auth import get_user_model
     from users.models import User, Tenant
@@ -134,6 +135,7 @@ def run_wipe_sync():
         ws.wipe_log(f'ERROR: {err_msg}')
         return {'status': 'error', 'error': err_msg, 'deleted': deleted}
     finally:
+        ws.set_wipe_in_progress(False)
         ws.release_wipe_lock()
 
 

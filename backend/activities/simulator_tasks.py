@@ -143,6 +143,7 @@ def _brouter_route_waypoints(
     """Request a road-following polyline; first point is snapped onto the network."""
     coords = [[start_lon, start_lat], [end_lon, end_lat]]
     last_err = 'unknown error'
+    last_classification = None
     try:
         for profile in _brouter_profiles_for_activity(activity_type):
             result = BRouterService.validate_track(activity_type, coords, profile=profile)
@@ -155,11 +156,21 @@ def _brouter_route_waypoints(
                 last_err = f'empty route ({profile})'
                 continue
             last_err = result.get('error') or 'unknown error'
+            last_classification = result.get('classification') or BRouterService.classify_error(
+                last_err,
+                result.get('status_code'),
+            )
             if 'pass=0' not in str(last_err).lower():
                 break
-        _maybe_log_brouter_route_failure(
-            f"{BRouterService.BASE_URL} -> {last_err}"
-        )
+        # "target island"/pass=0 are expected transient misses under dense concurrent starts.
+        if (last_classification or {}).get('code') == BRouterService.UNROUTABLE_ERROR_CODE:
+            _maybe_log_brouter_route_failure(
+                f"{BRouterService.BASE_URL} -> unroutable start ({last_err})"
+            )
+        else:
+            _maybe_log_brouter_route_failure(
+                f"{BRouterService.BASE_URL} -> {last_err}"
+            )
     except Exception as exc:
         _maybe_log_brouter_route_failure(
             f"{BRouterService.BASE_URL} exception: {exc}"
@@ -705,7 +716,7 @@ def _run_live_tick_body():
         return
 
     now = timezone.now()
-    from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK
+    from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK, MAX_STARTS_PER_LIVE_TICK
     from events.burst import effective_event_concurrent_cap, max_starts_per_live_tick
 
     pool_size = sim.get_live_pool_count()
@@ -807,8 +818,14 @@ def _run_live_tick_body():
         max(1, int(total_users * active_ratio)),
     )
     needed = max(0, target_riding - current_riding)
+    event_stagger_cap = None
     if state.get('event_id') or state.get('event_load_test'):
-        needed = min(needed, max_starts_per_live_tick(total_users, active_ratio, tick_seconds))
+        event_stagger_cap = max_starts_per_live_tick(total_users, active_ratio, tick_seconds)
+    global_start_cap = int(MAX_STARTS_PER_LIVE_TICK or 0)
+    if event_stagger_cap is not None:
+        needed = min(needed, event_stagger_cap)
+    if global_start_cap > 0:
+        needed = min(needed, global_start_cap)
     started = 0
 
     db_pool = sim.is_live_pool_db_mode()
