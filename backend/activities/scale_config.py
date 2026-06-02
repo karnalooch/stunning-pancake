@@ -2,11 +2,14 @@
 Scale limits for large simulations (e.g. 300k athletes).
 
 Override via environment variables. See docs/SCALE_TEST_300K.md.
+Per-session overrides (admin wizard) take precedence over env when set.
 """
 from __future__ import annotations
 
+import json
 import math
 import os
+from typing import Any
 
 
 def _int(name: str, default: int) -> int:
@@ -67,6 +70,108 @@ MAX_STARTS_PER_LIVE_TICK = _int('SCALE_MAX_STARTS_PER_LIVE_TICK', 30)
 
 # Hard cap on BRouter HTTP calls inside one live_tick_task (0=unlimited).
 BROUTER_MAX_CALLS_PER_TICK = _int('SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK', 25)
+
+# BRouter snap-to-road retries per new ride start (live sim).
+BROUTER_ROUTE_ATTEMPTS = _int('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', 4)
+
+# Admin wizard / session override bounds (server-enforced; UI sliders stay inside these).
+OVERRIDE_MAX_STARTS_HARD_CAP = 150
+OVERRIDE_MAX_BROUTER_CALLS_HARD_CAP = 100
+OVERRIDE_MIN_STARTS = 5
+OVERRIDE_MIN_BROUTER_CALLS = 5
+OVERRIDE_ROUTE_ATTEMPTS_MIN = 2
+OVERRIDE_ROUTE_ATTEMPTS_MAX = 8
+
+# Keys accepted in API `scale_overrides` object
+SCALE_OVERRIDE_KEYS = frozenset({
+    'max_starts_per_live_tick',
+    'brouter_max_calls_per_tick',
+    'brouter_route_attempts',
+})
+
+
+def _resolve_int(
+    key: str,
+    *,
+    env_name: str,
+    env_default: int,
+    overrides: dict[str, int] | None,
+) -> int:
+    if overrides and key in overrides:
+        return int(overrides[key])
+    return _int(env_name, env_default)
+
+
+def parse_scale_overrides_payload(raw: Any) -> dict[str, int] | None:
+    """Parse and clamp scale_overrides from API body or Redis string. None = use env only."""
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s or s.lower() == 'none':
+            return None
+        try:
+            raw = json.loads(s)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return None
+    if not isinstance(raw, dict):
+        return None
+    out: dict[str, int] = {}
+    for key in SCALE_OVERRIDE_KEYS:
+        if key not in raw or raw[key] is None:
+            continue
+        try:
+            val = int(raw[key])
+        except (TypeError, ValueError):
+            continue
+        if key == 'max_starts_per_live_tick':
+            val = max(OVERRIDE_MIN_STARTS, min(OVERRIDE_MAX_STARTS_HARD_CAP, val))
+        elif key == 'brouter_max_calls_per_tick':
+            val = max(OVERRIDE_MIN_BROUTER_CALLS, min(OVERRIDE_MAX_BROUTER_CALLS_HARD_CAP, val))
+        elif key == 'brouter_route_attempts':
+            val = max(OVERRIDE_ROUTE_ATTEMPTS_MIN, min(OVERRIDE_ROUTE_ATTEMPTS_MAX, val))
+        out[key] = val
+    return out or None
+
+
+def scale_overrides_for_storage(overrides: dict[str, int] | None) -> str | None:
+    """JSON string for Redis hash field, or None to omit."""
+    if not overrides:
+        return None
+    return json.dumps(overrides, sort_keys=True)
+
+
+def parse_scale_overrides_from_state(state: dict | None) -> dict[str, int] | None:
+    if not state:
+        return None
+    return parse_scale_overrides_payload(state.get('scale_overrides'))
+
+
+def resolve_live_scale_limits(state: dict | None = None) -> dict[str, int]:
+    """
+    Effective live-sim tuning: session override > env > module default.
+    """
+    overrides = parse_scale_overrides_from_state(state)
+    return {
+        'max_starts_per_live_tick': _resolve_int(
+            'max_starts_per_live_tick',
+            env_name='SCALE_MAX_STARTS_PER_LIVE_TICK',
+            env_default=30,
+            overrides=overrides,
+        ),
+        'brouter_max_calls_per_tick': _resolve_int(
+            'brouter_max_calls_per_tick',
+            env_name='SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK',
+            env_default=25,
+            overrides=overrides,
+        ),
+        'brouter_route_attempts': _resolve_int(
+            'brouter_route_attempts',
+            env_name='SCALE_SIM_BROUTER_ROUTE_ATTEMPTS',
+            env_default=4,
+            overrides=overrides,
+        ),
+    }
 
 # Live map API (viewport + zoom; see resolve_telemetry_api_limit)
 TELEMETRY_API_DEFAULT_LIMIT = _int('SCALE_TELEMETRY_API_LIMIT', 800)

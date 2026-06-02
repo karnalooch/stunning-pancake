@@ -61,4 +61,18 @@ Signs of stuck state after worker death:
 - **Large live map:** increase `SCALE_MAX_STARTS_PER_LIVE_TICK` and `SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK` together; monitor BRouter latency.
 - Prefer **second simulation replica** over `CELERY_WORKER_CONCURRENCY=8` on one small container.
 
+## Admin wizard sliders (per-session overrides)
+
+In **Simulator → Step 2 → Performance**, admins can tune live spawn rate without redeploying Railway env vars. Values are sent as `scale_overrides` on batch/live start and stored in Redis simulator state.
+
+| Wizard control | API field | Server hard cap |
+|----------------|-----------|-----------------|
+| New rides per tick | `max_starts_per_live_tick` | 150 |
+| BRouter HTTP per tick | `brouter_max_calls_per_tick` | 100 |
+| Route snap attempts | `brouter_route_attempts` | 8 |
+
+**Precedence:** session override → env (`SCALE_*`) → code default (30 / 25 / 4).
+
+**Presets:** Eco 25/21, Balanced 50/42, Fast 80/66 (starts / linked BRouter calls). Raise both together; if workers OOM, lower starts first, then route attempts.
+
 See also [RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md), [SIMULATOR.md](./SIMULATOR.md), [BROUTER.md](./BROUTER.md).

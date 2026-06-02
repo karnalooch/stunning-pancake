@@ -25,6 +25,19 @@ from .simulator_tasks import run_batch_simulation, run_live_simulation
 IsAdminRole = IsAdminOrModerator
 
 
+def _scale_overrides_from_request(request) -> tuple[dict[str, int] | None, str | None]:
+    """Parse optional scale_overrides; return (clamped dict, redis JSON or None)."""
+    from activities.scale_config import parse_scale_overrides_payload, scale_overrides_for_storage
+
+    raw = request.data.get('scale_overrides')
+    if raw is None:
+        return None, None
+    parsed = parse_scale_overrides_payload(raw)
+    if raw and not parsed:
+        return None, None
+    return parsed, scale_overrides_for_storage(parsed)
+
+
 def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     """
     Ensure a minimal ATHLETE pool exists so quick live-sim can start after wipe.
@@ -365,6 +378,10 @@ class LiveSimulationView(APIView):
         stuck = sim.live_simulation_stuck()
         tick_stale = sim.live_tick_stale() if state['running'] else False
         batch_blocked, batch_block_reason = sim.batch_blocks_live_simulation()
+        from activities.scale_config import parse_scale_overrides_from_state, resolve_live_scale_limits
+
+        scale_overrides = parse_scale_overrides_from_state(state)
+        effective_scale = resolve_live_scale_limits(state)
         return Response({
             'running': state['running'],
             'batch_blocks_live': batch_blocked,
@@ -384,6 +401,8 @@ class LiveSimulationView(APIView):
             'currently_riding': state['currently_riding'],
             'total_completed': state['total_completed'],
             'cheaters_caught': state['cheaters_caught'],
+            'scale_overrides': scale_overrides,
+            'effective_scale_limits': effective_scale,
             'log': log,
         })
 
@@ -438,6 +457,23 @@ class LiveSimulationView(APIView):
         if tick_seconds < 2 or tick_seconds > 300:
             return Response({'error': 'tick_seconds must be 2–300'}, status=400)
 
+        scale_parsed, scale_json = _scale_overrides_from_request(request)
+        if request.data.get('scale_overrides') is not None and scale_parsed is None:
+            return Response(
+                {'error': 'scale_overrides must be an object with optional integer fields: '
+                 'max_starts_per_live_tick, brouter_max_calls_per_tick, brouter_route_attempts'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if scale_parsed is None:
+            from activities.scale_config import (
+                parse_scale_overrides_from_state,
+                scale_overrides_for_storage,
+            )
+            batch_so = parse_scale_overrides_from_state(sim.get_batch_state())
+            if batch_so:
+                scale_parsed = batch_so
+                scale_json = scale_overrides_for_storage(batch_so)
+
         # Validate athlete pool
         validation = sim.validate_athlete_pool(min_users=10)
         if not validation['has_athletes']:
@@ -467,13 +503,16 @@ class LiveSimulationView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             sim.reset_live_state()
-            sim.set_live_state(
+            live_kw = dict(
                 running=True, started_at=time.time(),
                 total_users=total_users, active_ratio=active_ratio,
                 cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
                 currently_riding=0, total_completed=0, cheaters_caught=0,
-                last_tick_at=time.time()
+                last_tick_at=time.time(),
             )
+            if scale_json:
+                live_kw['scale_overrides'] = scale_json
+            sim.set_live_state(**live_kw)
             # Setup athlete pool
             from activities.scale_config import compute_batch_scaling
             pool_plan = compute_batch_scaling(max(total_users, 1))
@@ -514,15 +553,21 @@ class LiveSimulationView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             sim.reset_live_state()
-            sim.set_live_state(
+            live_kw = dict(
                 running=True, started_at=time.time(),
                 total_users=total_users, active_ratio=active_ratio,
                 cheat_ratio=cheat_ratio, tick_seconds=tick_seconds,
                 currently_riding=0, total_completed=0, cheaters_caught=0,
                 last_tick_at=time.time(), error=None,
             )
+            if scale_json:
+                live_kw['scale_overrides'] = scale_json
+            sim.set_live_state(**live_kw)
             run_live_simulation.delay()
 
+        from activities.scale_config import resolve_live_scale_limits
+
+        limits = resolve_live_scale_limits(sim.get_live_state())
         return Response({
             'status': 'started',
             'running': True,
@@ -530,7 +575,12 @@ class LiveSimulationView(APIView):
             'active_ratio': active_ratio,
             'cheat_ratio': cheat_ratio,
             'tick_seconds': tick_seconds,
-            'message': f'Live simulation: {total_users} users, {active_ratio*100:.0f}% active, {cheat_ratio*100:.0f}% cheaters',
+            'scale_overrides': scale_parsed,
+            'effective_scale_limits': limits,
+            'message': (
+                f'Live simulation: {total_users} users, {active_ratio*100:.0f}% active, '
+                f'{cheat_ratio*100:.0f}% cheaters · starts/tick≤{limits["max_starts_per_live_tick"]}'
+            ),
         })
 
 
@@ -904,13 +954,24 @@ class RunSimulationView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
+        scale_parsed, scale_json = _scale_overrides_from_request(request)
+        if request.data.get('scale_overrides') is not None and scale_parsed is None:
+            return Response(
+                {'error': 'scale_overrides must be an object with optional integer fields: '
+                 'max_starts_per_live_tick, brouter_max_calls_per_tick, brouter_route_attempts'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Reset and mark running=True explicitly to prevent frontend polling race conditions in async environments
         sim.reset_batch_state()
-        sim.set_batch_state(
+        batch_kw = dict(
             running=True, current_phase='starting', progress_pct=0,
             users_created=0, activities_created=0, started_at=time.time(),
-            scale=scale, days=days, total_users=total_users or 0
+            scale=scale, days=days, total_users=total_users or 0,
         )
+        if scale_json:
+            batch_kw['scale_overrides'] = scale_json
+        sim.set_batch_state(**batch_kw)
 
         batch_plan = None
         est_message = f'Batch simulation started. Estimated time: ~{int(scale * 30)} minutes.'
@@ -952,6 +1013,8 @@ class RunSimulationView(APIView):
             total_users=total_users,
         )
 
+        from activities.scale_config import resolve_live_scale_limits
+
         payload = {
             'status': 'started',
             'running': True,
@@ -960,6 +1023,8 @@ class RunSimulationView(APIView):
             'clear': clear,
             'skip_activities': skip_activities,
             'message': est_message,
+            'scale_overrides': scale_parsed,
+            'effective_scale_limits': resolve_live_scale_limits(sim.get_batch_state()),
         }
         if batch_plan:
             payload['batch_plan'] = batch_plan

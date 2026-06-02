@@ -231,6 +231,13 @@ export const BrandingApi = {
   },
 };
 
+/** Per-session live sim tuning (admin wizard); server clamps to safe maxima. */
+export type ScaleOverrides = {
+  max_starts_per_live_tick: number;
+  brouter_max_calls_per_tick: number;
+  brouter_route_attempts: number;
+};
+
 export const SimulatorApi = {
   getScalePreflight: async (params: {
     target_users: number;
@@ -252,6 +259,7 @@ export const SimulatorApi = {
     clear?: boolean;
     skip_activities?: boolean;
     total_users?: number;
+    scale_overrides?: ScaleOverrides;
   }) => {
     const { data } = await apiClient.post('/activities/admin/simulate/', params);
     return data;
@@ -271,6 +279,7 @@ export const SimulatorApi = {
     active_ratio: number;
     cheat_ratio: number;
     tick_seconds: number;
+    scale_overrides?: ScaleOverrides;
   }) => {
     const { data } = await apiClient.post('/activities/admin/live-simulate/', params);
     return data;

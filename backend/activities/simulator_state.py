@@ -73,6 +73,9 @@ def get_batch_state() -> dict:
     err = state.get('error')
     if err is not None and str(err).strip().lower() == 'none':
         state['error'] = None
+    so = state.get('scale_overrides')
+    if so is not None and str(so).strip().lower() in ('', 'none'):
+        state['scale_overrides'] = None
     return state
 
 
@@ -280,6 +283,9 @@ def get_live_state() -> dict:
     err = state.get('error')
     if err is not None and str(err).strip().lower() == 'none':
         state['error'] = None
+    so = state.get('scale_overrides')
+    if so is not None and str(so).strip().lower() in ('', 'none'):
+        state['scale_overrides'] = None
     return state
 
 

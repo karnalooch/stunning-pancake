@@ -52,6 +52,27 @@ class BrouterProfilesFallbackTest(SimpleTestCase):
         self.assertIn('trekking', profiles)
 
 
+class BrouterIslandEarlyExitTest(SimpleTestCase):
+    @patch('activities.simulator_tasks._consume_brouter_tick_budget', return_value=True)
+    @patch('activities.simulator_tasks.BRouterService.validate_track')
+    def test_skips_trekking_fallback_on_unroutable_island(self, mock_validate, _budget):
+        from activities.simulator_tasks import _brouter_route_waypoints
+
+        mock_validate.return_value = {
+            'success': False,
+            'error': 'target island reached, pass=0',
+            'status_code': 400,
+            'classification': {
+                'code': BRouterService.UNROUTABLE_ERROR_CODE,
+                'severity': 'warning',
+                'retryable': True,
+            },
+        }
+        result = _brouter_route_waypoints(52.0, 21.0, 52.01, 21.01, 'BIKE')
+        self.assertIsNone(result)
+        self.assertEqual(mock_validate.call_count, 1)
+
+
 class BatchBlocksLiveTest(SimpleTestCase):
     @patch('activities.simulator_state.is_batch_lock_held', return_value=True)
     @patch('activities.simulator_state.get_batch_state', return_value={'running': False, 'current_phase': 'idle'})

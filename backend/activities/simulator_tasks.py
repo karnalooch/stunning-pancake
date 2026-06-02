@@ -135,10 +135,11 @@ def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]
 
 def _reset_brouter_tick_budget() -> None:
     global _tick_brouter_calls, _tick_brouter_budget
-    from activities.scale_config import BROUTER_MAX_CALLS_PER_TICK
+    from activities.scale_config import resolve_live_scale_limits
 
+    limits = resolve_live_scale_limits(sim.get_live_state())
     _tick_brouter_calls = 0
-    _tick_brouter_budget = int(BROUTER_MAX_CALLS_PER_TICK or 0)
+    _tick_brouter_budget = int(limits['brouter_max_calls_per_tick'] or 0)
 
 
 def _brouter_tick_budget_remaining() -> int | None:
@@ -198,6 +199,9 @@ def _brouter_route_waypoints(
                 result.get('status_code'),
             )
             if 'pass=0' not in str(last_err).lower():
+                break
+            # Island / pass=0: profile fallback rarely helps — save HTTP budget for other starts.
+            if (last_classification or {}).get('code') == BRouterService.UNROUTABLE_ERROR_CODE:
                 break
         # "target island"/pass=0 are expected transient misses under dense concurrent starts.
         if (last_classification or {}).get('code') == BRouterService.UNROUTABLE_ERROR_CODE:
@@ -299,7 +303,10 @@ def _generate_route_waypoints(
     max_leg_km = max(0.5, min(max_leg_km, 15.0))
     km = min(max(0.5, distance_m / 1000.0), max_leg_km)
 
-    route_attempts = max(1, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '4')))
+    from activities.scale_config import resolve_live_scale_limits
+
+    limits = resolve_live_scale_limits(sim.get_live_state())
+    route_attempts = max(1, int(limits['brouter_route_attempts']))
     for attempt in range(route_attempts):
         if attempt == 0:
             start_lat, start_lon = anchor_lat, anchor_lon
@@ -690,11 +697,17 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
                 f"WARNING: only {pool_size} athletes available (wanted {pool_target}). "
                 f"Stop live sim and restart after batch completes to refresh the pool."
             )
+        from activities.scale_config import resolve_live_scale_limits
+
+        limits = resolve_live_scale_limits(sim.get_live_state())
         max_riders_hint = max(1, int(pool_size * active_ratio))
         sim.live_log(
             f"LIVE SIM: {mode_note}, n={pool_size}, {active_ratio*100:.0f}% active (capped), "
             f"{cheat_ratio*100:.0f}% cheaters, tick={tick_seconds}s "
-            f"(~{max_riders_hint} riders on map at once if all start)"
+            f"(~{max_riders_hint} riders on map at once if all start) · "
+            f"starts/tick≤{limits['max_starts_per_live_tick']}, "
+            f"brouter/tick≤{limits['brouter_max_calls_per_tick']}, "
+            f"route tries={limits['brouter_route_attempts']}"
         )
 
     if not sim.get_live_state().get('running', False):
@@ -768,9 +781,10 @@ def _run_live_tick_body():
         return
 
     now = timezone.now()
-    from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK, MAX_STARTS_PER_LIVE_TICK
+    from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK, resolve_live_scale_limits
     from events.burst import effective_event_concurrent_cap, max_starts_per_live_tick
 
+    scale_limits = resolve_live_scale_limits(state)
     pool_size = sim.get_live_pool_count()
     active_rides = sim.get_live_rides()
 
@@ -873,7 +887,7 @@ def _run_live_tick_body():
     event_stagger_cap = None
     if state.get('event_id') or state.get('event_load_test'):
         event_stagger_cap = max_starts_per_live_tick(total_users, active_ratio, tick_seconds)
-    global_start_cap = int(MAX_STARTS_PER_LIVE_TICK or 0)
+    global_start_cap = int(scale_limits['max_starts_per_live_tick'] or 0)
     if event_stagger_cap is not None:
         needed = min(needed, event_stagger_cap)
     if global_start_cap > 0:
