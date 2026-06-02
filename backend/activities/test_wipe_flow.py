@@ -27,6 +27,33 @@ def api_client():
 
 
 @pytest.mark.django_db
+def test_wipe_get_returns_progress_fields(api_client, owner_user):
+    api_client.force_authenticate(user=owner_user)
+    url = reverse('admin-wipe-data')
+    with patch('activities.wipe_state.get_wipe_state', return_value={
+        'running': True,
+        'phase': 'users',
+        'progress_pct': 61,
+        'error': None,
+        'deleted': {'users': 12000},
+        'tables_done': 4,
+        'tables_total': 6,
+        'rows_deleted': 12000,
+        'message': 'Deleting users',
+    }), patch('activities.wipe_state.is_wipe_stuck', return_value=False), \
+            patch('activities.wipe_state.get_wipe_log', return_value=[]):
+        response = api_client.get(url)
+
+    assert response.status_code == 200
+    assert response.data['status'] == 'running'
+    assert response.data['tables_done'] == 4
+    assert response.data['tables_total'] == 6
+    assert response.data['rows_deleted'] == 12000
+    assert response.data['phase_label']
+    assert response.data['error'] is None
+
+
+@pytest.mark.django_db
 def test_wipe_delete_is_idempotent_when_already_running(api_client, owner_user):
     api_client.force_authenticate(user=owner_user)
     url = reverse('admin-wipe-data')

@@ -594,14 +594,7 @@ class WipeDataView(APIView):
     def get(self, request):
         from activities import wipe_state as ws
         state = ws.get_wipe_state()
-        label = ws.wipe_status_label(state)
-        stuck = ws.is_wipe_stuck(state)
-        return Response({
-            **state,
-            'status': label,
-            'stuck': stuck,
-            'log': ws.get_wipe_log(),
-        })
+        return Response(ws.serialize_wipe_response(state, log=ws.get_wipe_log()))
 
     def delete(self, request):
         confirm = request.data.get('confirm', False) or request.query_params.get('confirm') == 'true'
@@ -641,16 +634,12 @@ class WipeDataView(APIView):
                 ws.force_reset_wipe()
                 ws.wipe_log('Stale wipe state cleared — starting new wipe.')
             else:
-                return Response(
-                    {
-                        **state,
-                        'status': ws.wipe_status_label(state),
-                        'stuck': False,
-                        'message': 'Wipe already running. Returning current job state.',
-                        'hint': 'Poll GET /admin/wipe-data/ until complete. Retry force=true only for stale jobs.',
-                    },
-                    status=status.HTTP_202_ACCEPTED,
+                payload = ws.serialize_wipe_response(state, stuck=False, log=ws.get_wipe_log())
+                payload['message'] = 'Wipe already running. Returning current job state.'
+                payload['hint'] = (
+                    'Poll GET /admin/wipe-data/ until complete. Retry force=true only for stale jobs.'
                 )
+                return Response(payload, status=status.HTTP_202_ACCEPTED)
 
         # Audit log for the wipe action (queued).
         from users.models import AuditLog
@@ -669,12 +658,13 @@ class WipeDataView(APIView):
         sim.force_stop_live_simulation()
         sim.force_stop_batch_simulation()
         dispatch = start_wipe_async()
-        return Response({
-            'status': 'queued',
-            'running': True,
-            'dispatch': dispatch,
-            'message': 'Chunked wipe running in background. Poll GET /admin/wipe-data/ for progress.',
-        }, status=status.HTTP_202_ACCEPTED)
+        state = ws.get_wipe_state()
+        payload = ws.serialize_wipe_response(state, stuck=False)
+        payload['dispatch'] = dispatch
+        payload['message'] = (
+            'Chunked wipe running in background. Poll GET /admin/wipe-data/ for progress.'
+        )
+        return Response(payload, status=status.HTTP_202_ACCEPTED)
 
 
 class SimulatorResetView(APIView):

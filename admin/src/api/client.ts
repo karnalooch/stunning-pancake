@@ -1,5 +1,27 @@
 import axios from 'axios';
+import { formatApiError, isAbsentError } from './apiErrors';
 import { useAuth } from '../core/auth/useAuth';
+
+export type WipeProgressStatus = {
+  running?: boolean;
+  status?: string;
+  phase?: string;
+  phase_label?: string;
+  message?: string | null;
+  progress_pct?: number;
+  tables_done?: number;
+  tables_total?: number;
+  rows_deleted?: number;
+  deleted?: Record<string, number>;
+  error?: string | null;
+  warning?: string | null;
+  stuck?: boolean;
+  started_at?: number | null;
+  completed_at?: number | null;
+  log?: [string, string][];
+};
+
+export { formatApiError, isAbsentError };
 import {
   clearStoredSession,
   getStoredAccessToken,
@@ -300,61 +322,75 @@ export const SimulatorApi = {
     return data;
   },
 
-  getWipeStatus: async () => {
+  getWipeStatus: async (): Promise<WipeProgressStatus> => {
     const { data } = await apiClient.get('/activities/admin/wipe-data/');
     return data;
   },
 
+  isWipeActive(status: WipeProgressStatus | null | undefined): boolean {
+    if (!status) return false;
+    if (status.running) return true;
+    const label = (status.status || status.phase || 'idle').toLowerCase();
+    return label === 'queued' || label === 'running';
+  },
+
   // Wipe Data (async chunked — poll until complete)
   wipeData: async (
-    onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string; stuck?: boolean }) => void,
+    onProgress?: (s: WipeProgressStatus) => void,
     opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
-  ) => {
+  ): Promise<WipeProgressStatus> => {
     const confirm_phrase = opts?.confirmPhrase ?? '';
     const mfa_confirmed = Boolean(opts?.mfaConfirmed);
 
-    const startWipe = async (force = false) => {
-      await apiClient.delete('/activities/admin/wipe-data/', {
+    const startWipe = async (force = false): Promise<WipeProgressStatus> => {
+      const { data } = await apiClient.delete('/activities/admin/wipe-data/', {
         data: { confirm: true, force, confirm_phrase, mfa_confirmed },
       });
+      return data;
     };
-    try {
-      await startWipe(false);
-    } catch (err: unknown) {
-      const ax = err as { response?: { status?: number; data?: { stuck?: boolean; hint?: string; error?: string } } };
-      if (ax.response?.status === 409) {
-        const status = await SimulatorApi.getWipeStatus();
-        if (status.stuck) {
-          await startWipe(true);
-        } else if (status.running || status.status === 'queued' || status.status === 'running') {
-          // Another request already started the same wipe job.
-          // Continue by polling shared state instead of failing the UI.
-          onProgress?.(status);
-        } else {
-          throw new Error(
-            ax.response?.data?.error
-              || ax.response?.data?.hint
-              || 'Wipe conflicted with another operation. Refresh status and retry.',
-          );
-        }
-      } else {
-        throw err;
+
+    const wipeFinished = (s: WipeProgressStatus) => {
+      const label = (s.status || s.phase || 'idle').toLowerCase();
+      if (label === 'complete') {
+        return { done: true, ok: true, warning: s.warning };
       }
-    }
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const finished = (s: { status?: string; phase?: string; running?: boolean; error?: string; warning?: string }) => {
-      const label = s.status || s.phase;
-      if (label === 'complete') return { done: true, ok: true, warning: s.warning };
-      if (label === 'error' || (s.error && label !== 'complete')) return { done: true, ok: false };
-      if (!s.running && label !== 'queued' && label !== 'starting') return { done: false, ok: false };
+      if (label === 'error' || (!isAbsentError(s.error) && label !== 'complete')) {
+        return { done: true, ok: false };
+      }
       return { done: false, ok: false };
     };
+
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    try {
+      const kickoff = await startWipe(false);
+      onProgress?.(kickoff);
+    } catch (err: unknown) {
+      const ax = err as { response?: { status?: number; data?: WipeProgressStatus } };
+      if (ax.response?.status === 202 && ax.response.data) {
+        onProgress?.(ax.response.data);
+      } else if (ax.response?.status === 409) {
+        const status = await SimulatorApi.getWipeStatus();
+        if (status.stuck) {
+          const restarted = await startWipe(true);
+          onProgress?.(restarted);
+        } else if (SimulatorApi.isWipeActive(status)) {
+          onProgress?.(status);
+        } else {
+          throw new Error(formatApiError(err, 'Wipe conflicted with another operation.'));
+        }
+      } else {
+        throw new Error(formatApiError(err, 'Failed to start wipe'));
+      }
+    }
+
     for (let i = 0; i < 30; i++) {
       const status = await SimulatorApi.getWipeStatus();
       onProgress?.(status);
-      if (status.running || status.status === 'queued' || status.status === 'running') break;
+      if (SimulatorApi.isWipeActive(status)) break;
       await sleep(1000);
     }
+
     let retriedStuck = false;
     for (let i = 0; i < 600; i++) {
       await sleep(2000);
@@ -362,16 +398,21 @@ export const SimulatorApi = {
       onProgress?.(status);
       if (status.stuck && !retriedStuck) {
         retriedStuck = true;
-        await startWipe(true);
+        const restarted = await startWipe(true);
+        onProgress?.(restarted);
         continue;
       }
-      const end = finished(status);
+      const end = wipeFinished(status);
       if (end.done) {
-        if (!end.ok) throw new Error(status.error || 'Wipe failed');
+        if (!end.ok) {
+          throw new Error(
+            isAbsentError(status.error) ? 'Wipe failed' : String(status.error),
+          );
+        }
         return { ...status, warning: end.warning || status.warning };
       }
     }
-    throw new Error('Wipe timed out');
+    throw new Error('Wipe timed out after 20 minutes');
   },
 };
 

@@ -1,7 +1,27 @@
 """Wipe status helpers — prevents false 'complete' when idle before task starts."""
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 
 from activities import wipe_state as ws
+
+
+class _FakeRedis:
+    def __init__(self):
+        self.hashes = {}
+
+    def hset(self, key, mapping=None, **kwargs):
+        self.hashes.setdefault(key, {}).update(mapping or {})
+
+    def hgetall(self, key):
+        return dict(self.hashes.get(key, {}))
+
+    def expire(self, key, ttl):
+        pass
+
+    def delete(self, *keys):
+        for key in keys:
+            self.hashes.pop(key, None)
 
 
 class WipeStatusLabelTests(SimpleTestCase):
@@ -42,3 +62,36 @@ class WipeStatusLabelTests(SimpleTestCase):
     def test_not_stuck_when_idle(self):
         state = {'running': False, 'phase': 'idle'}
         self.assertFalse(ws.is_wipe_stuck(state))
+
+    @patch('activities.wipe_state.get_redis')
+    def test_none_error_not_serialized_as_string(self, mock_get_redis):
+        mock_get_redis.return_value = _FakeRedis()
+        ws.set_wipe_state(running=True, phase='users', progress_pct=50, error=None)
+        state = ws.get_wipe_state()
+        self.assertIsNone(state['error'])
+
+    @patch('activities.wipe_state.get_redis')
+    def test_progress_fields_in_state(self, mock_get_redis):
+        mock_get_redis.return_value = _FakeRedis()
+        ws.set_wipe_state(
+            running=True,
+            phase='activities',
+            progress_pct=12.5,
+            deleted={'activities': 5000},
+            tables_done=2,
+            tables_total=6,
+            message='Deleting activities',
+        )
+        state = ws.get_wipe_state()
+        self.assertEqual(state['tables_done'], 2)
+        self.assertEqual(state['tables_total'], 6)
+        self.assertEqual(state['rows_deleted'], 5000)
+        self.assertEqual(state['deleted']['activities'], 5000)
+
+    def test_serialize_wipe_response_shape(self):
+        state = ws.get_wipe_state()
+        payload = ws.serialize_wipe_response(state, log=[])
+        self.assertIn('status', payload)
+        self.assertIn('phase_label', payload)
+        self.assertIn('stuck', payload)
+        self.assertIn('tables_total', payload)

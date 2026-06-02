@@ -13,9 +13,18 @@ const PHASE_LABELS: Record<string, string> = {
     complete: 'Zakończono',
     starting: 'Start',
     idle: 'Oczekiwanie',
+    queued: 'W kolejce',
+    quiescing: 'Zatrzymywanie symulacji',
+    activities: 'Usuwanie aktywności',
+    departments: 'Usuwanie działów',
+    users: 'Usuwanie użytkowników',
+    tenants: 'Usuwanie tenantów',
+    finalizing: 'Finalizacja (owner, VACUUM)',
+    error: 'Błąd',
 };
 
-function formatPhase(phase?: string) {
+function formatPhase(phase?: string, phaseLabel?: string | null) {
+    if (phaseLabel) return phaseLabel;
     if (!phase) return 'Przetwarzanie…';
     return PHASE_LABELS[phase] || phase.replace(/_/g, ' ');
 }
@@ -93,23 +102,74 @@ export const BatchProgressBar: React.FC<BatchProgressProps> = ({
 };
 
 export interface WipeProgressProps {
-    progressPct: number;
+    running?: boolean;
+    progressPct?: number;
     phase?: string;
+    phaseLabel?: string | null;
+    message?: string | null;
+    tablesDone?: number;
+    tablesTotal?: number;
+    rowsDeleted?: number;
+    deleted?: Record<string, number>;
+    error?: string | null;
+    startedAt?: number | null;
 }
 
-export const WipeProgressBar: React.FC<WipeProgressProps> = ({ progressPct, phase }) => (
-    <Box>
-        <Group justify="space-between" mb={6}>
-            <Text size="sm" fw={600}>{phase || 'Czyszczenie danych'}</Text>
-            <Text size="xs" c="dimmed">{progressPct.toFixed(0)}%</Text>
-        </Group>
-        <Progress
-            value={progressPct}
-            color="red"
-            size="md"
-            radius="xl"
-            striped={progressPct < 100}
-            animated={progressPct < 100}
-        />
-    </Box>
-);
+export const WipeProgressBar: React.FC<WipeProgressProps> = ({
+    running = true,
+    progressPct = 0,
+    phase,
+    phaseLabel,
+    message,
+    tablesDone = 0,
+    tablesTotal = 0,
+    rowsDeleted = 0,
+    deleted,
+    error,
+    startedAt,
+}) => {
+    const pct = Math.min(100, Math.max(0, progressPct));
+    const elapsed = startedAt ? Math.max(0, Date.now() / 1000 - startedAt) : 0;
+    const title = formatPhase(phase, phaseLabel || message);
+    const showTables = tablesTotal > 0;
+
+    return (
+        <Box>
+            <Group justify="space-between" mb={6} gap="xs">
+                <Text size="sm" fw={600}>
+                    {error ? 'Błąd czyszczenia' : title}
+                </Text>
+                <Text size="xs" c="dimmed">
+                    {running && !error ? `${pct.toFixed(0)}%` : error ? '—' : '100%'}
+                    {elapsed > 0 ? ` · ${formatElapsed(elapsed)}` : ''}
+                </Text>
+            </Group>
+            <Progress
+                value={error ? 100 : pct}
+                color={error ? 'red' : 'red'}
+                size="lg"
+                radius="xl"
+                striped={running && pct < 100 && !error}
+                animated={running && pct < 100 && !error}
+            />
+            <Group justify="space-between" mt={6} gap="xs">
+                {showTables && (
+                    <Text size="xs" c="dimmed">
+                        Etap: <b>{tablesDone}</b> / {tablesTotal}
+                    </Text>
+                )}
+                {(rowsDeleted > 0 || (deleted && Object.keys(deleted).length > 0)) && (
+                    <Text size="xs" c="dimmed">
+                        Wiersze: <b>{(rowsDeleted || Object.values(deleted || {}).reduce((a, b) => a + b, 0)).toLocaleString()}</b>
+                    </Text>
+                )}
+            </Group>
+            {message && running && !error && (
+                <Text size="xs" c="dimmed" mt={4}>{message}</Text>
+            )}
+            {error && (
+                <Text size="xs" c="red" mt={4}>{error}</Text>
+            )}
+        </Box>
+    );
+};

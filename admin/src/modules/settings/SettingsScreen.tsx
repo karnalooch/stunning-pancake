@@ -4,6 +4,8 @@ import { Bell, PaintBucket, Shield, Zap, Trash2, AlertTriangle } from 'lucide-re
 import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
+import { WipeProgressBar } from '../analytics/SimulationProgressBar';
+import { formatApiError, SimulatorApi, type WipeProgressStatus } from '../../api/client';
 
 export const SettingsScreen: React.FC = () => {
   const { user } = useAuth();
@@ -63,25 +65,31 @@ export const SettingsScreen: React.FC = () => {
   const [wipeConfirmPhrase, setWipeConfirmPhrase] = useState('');
   const [wipeMfaAck, setWipeMfaAck] = useState(false);
   const [wiping, setWiping] = useState(false);
+  const [wipeStatus, setWipeStatus] = useState<WipeProgressStatus | null>(null);
 
   const handleWipe = async () => {
     setWiping(true);
+    setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: 'Starting wipe…' });
     try {
-      const { SimulatorApi } = await import('../../api/client');
-      await SimulatorApi.wipeData(undefined, {
+      const result = await SimulatorApi.wipeData((s) => setWipeStatus(s), {
         confirmPhrase: wipeConfirmPhrase,
         mfaConfirmed: wipeMfaAck,
       });
+      const warn = result?.warning;
       notifications.show({
         title: 'Data Wiped',
-        message: 'All data except Global Owner has been deleted.',
-        color: 'green',
+        message: warn || 'All data except Global Owner has been deleted.',
+        color: warn ? 'yellow' : 'green',
       });
       setWipeModalOpen(false);
       setWipeConfirmPhrase('');
       setWipeMfaAck(false);
-    } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed.', color: 'red' });
+    } catch (err: unknown) {
+      notifications.show({
+        title: 'Wipe failed',
+        message: formatApiError(err, 'Wipe failed.'),
+        color: 'red',
+      });
     } finally {
       setWiping(false);
     }
@@ -162,15 +170,33 @@ export const SettingsScreen: React.FC = () => {
                 label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
               />
 
+              {(wiping || SimulatorApi.isWipeActive(wipeStatus)) && (
+                <WipeProgressBar
+                  running={wiping || SimulatorApi.isWipeActive(wipeStatus)}
+                  progressPct={wipeStatus?.progress_pct ?? 0}
+                  phase={wipeStatus?.phase}
+                  phaseLabel={wipeStatus?.phase_label}
+                  message={wipeStatus?.message}
+                  tablesDone={wipeStatus?.tables_done}
+                  tablesTotal={wipeStatus?.tables_total}
+                  rowsDeleted={wipeStatus?.rows_deleted}
+                  deleted={wipeStatus?.deleted}
+                  startedAt={wipeStatus?.started_at ?? undefined}
+                  error={wipeStatus?.error ?? undefined}
+                />
+              )}
+
               <Button
                 color="red"
                 fullWidth
                 leftSection={<Trash2 size={16} />}
                 loading={wiping}
-                disabled={wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck}
+                disabled={wiping || wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck}
                 onClick={handleWipe}
               >
-                {wiping ? 'Wiping...' : 'Yes, Delete Everything'}
+                {wiping
+                  ? `Wiping… ${(wipeStatus?.progress_pct ?? 0).toFixed(0)}%`
+                  : 'Yes, Delete Everything'}
               </Button>
             </Stack>
           </Modal>

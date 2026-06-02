@@ -11,7 +11,7 @@ import {
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
     AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database
 } from 'lucide-react';
-import { SimulatorApi, type ScaleOverrides } from '../../api/client';
+import { SimulatorApi, formatApiError, type ScaleOverrides, type WipeProgressStatus } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
@@ -30,13 +30,6 @@ interface BatchStatus {
     total_users: number; users_created: number; activities_created: number;
     current_phase: string; progress_pct: number;
     log: [string, string][];
-}
-
-interface WipeStatus {
-    running?: boolean;
-    progress_pct?: number;
-    phase?: string;
-    error?: string | null;
 }
 
 const SCALE_STARTS_MIN = 5;
@@ -108,8 +101,7 @@ export const SimulatorPage: React.FC = () => {
     const [wipeConfirmPhrase, setWipeConfirmPhrase] = useState('');
     const [wipeMfaAck, setWipeMfaAck] = useState(false);
     const [wiping, setWiping] = useState(false);
-    const [wipeProgress, setWipeProgress] = useState(0);
-    const [wipePhase, setWipePhase] = useState('');
+    const [wipeStatus, setWipeStatus] = useState<WipeProgressStatus | null>(null);
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
 
@@ -130,7 +122,8 @@ export const SimulatorPage: React.FC = () => {
     const isBatchRunning = batchStatus?.running ?? false;
     const isLiveRunning = liveStatus?.running ?? false;
     const anyRunning = isBatchRunning || isLiveRunning;
-    const isStuck = Boolean(
+    const isWipeActive = wiping || SimulatorApi.isWipeActive(wipeStatus);
+    const isStuck = !isWipeActive && Boolean(
         liveStatus?.stuck || batchStatus?.stuck || liveStatus?.error || batchStatus?.error
         || liveStatus?.live_lock_held || batchStatus?.batch_lock_held
     );
@@ -190,12 +183,18 @@ export const SimulatorPage: React.FC = () => {
 
     useEffect(() => {
         (async () => {
-            const [bs, ls] = await Promise.all([
+            const [bs, ls, ws] = await Promise.all([
                 SimulatorApi.getBatchStatus().catch(() => null),
                 SimulatorApi.getLiveStatus().catch(() => null),
+                SimulatorApi.getWipeStatus().catch(() => null),
             ]);
             setBatchStatus(bs);
             setLiveStatus(ls);
+            if (ws && SimulatorApi.isWipeActive(ws)) {
+                setWipeStatus(ws);
+                setWiping(true);
+                setWipeModalOpen(true);
+            }
             if (bs?.running || ls?.running || bs?.stuck || ls?.stuck || ls?.live_lock_held) {
                 setActiveStep(2); // Jump straight to running/monitoring if already active
             }
@@ -282,33 +281,37 @@ export const SimulatorPage: React.FC = () => {
 
     const handleWipe = async () => {
         setWiping(true);
-        setWipeProgress(0);
-        setWipePhase('Start…');
+        setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: 'Starting wipe…' });
         try {
             const result = await SimulatorApi.wipeData(
-                (s: WipeStatus) => {
-                    setWipeProgress(s.progress_pct ?? 0);
-                    setWipePhase(s.phase || '');
-                },
+                (s) => setWipeStatus(s),
                 {
                     confirmPhrase: wipeConfirmPhrase,
                     mfaConfirmed: wipeMfaAck,
                 },
             );
-            setBatchStatus(null); setLiveStatus(null);
-            setWipeModalOpen(false); setWipeConfirmPhrase(''); setWipeMfaAck(false);
+            setBatchStatus(null);
+            setLiveStatus(null);
+            setWipeStatus(result);
+            setWipeModalOpen(false);
+            setWipeConfirmPhrase('');
+            setWipeMfaAck(false);
             setActiveStep(0);
-            const warn = (result as { warning?: string; error?: string })?.warning;
+            await refreshStatus();
+            const warn = result?.warning;
             notifications.show({
                 title: 'Wipe Complete',
                 message: warn || 'All simulation and activity data has been wiped.',
                 color: warn ? 'yellow' : 'green',
             });
-        } catch (err: any) {
-            notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed', color: 'red' });
+        } catch (err: unknown) {
+            notifications.show({
+                title: 'Wipe failed',
+                message: formatApiError(err, 'Wipe failed'),
+                color: 'red',
+            });
         }
         setWiping(false);
-        setWipeProgress(0);
     };
 
     return (
@@ -605,8 +608,8 @@ export const SimulatorPage: React.FC = () => {
                                         <ThemeIcon size={24} radius="sm" color="teal" variant="light"><Activity size={14} /></ThemeIcon>
                                         <Text fw={600} size="sm">Live Telemetry Monitor</Text>
                                     </Group>
-                                    <Badge variant="light" color={anyRunning ? 'green' : isStuck ? 'orange' : 'gray'}>
-                                        {anyRunning ? 'RUNNING' : isStuck ? 'STUCK' : 'IDLE'}
+                                    <Badge variant="light" color={isWipeActive ? 'red' : anyRunning ? 'green' : isStuck ? 'orange' : 'gray'}>
+                                        {isWipeActive ? 'WIPING' : anyRunning ? 'RUNNING' : isStuck ? 'STUCK' : 'IDLE'}
                                     </Badge>
                                 </Group>
 
@@ -642,6 +645,21 @@ export const SimulatorPage: React.FC = () => {
                                             <Text fw={700} size="lg">{batchStatus?.users_created?.toLocaleString() ?? '—'}</Text>
                                         </Card>
                                     </SimpleGrid>
+                                ) : isWipeActive ? (
+                                    <Box mb="md">
+                                        <WipeProgressBar
+                                            running
+                                            progressPct={wipeStatus?.progress_pct}
+                                            phase={wipeStatus?.phase}
+                                            phaseLabel={wipeStatus?.phase_label}
+                                            message={wipeStatus?.message}
+                                            tablesDone={wipeStatus?.tables_done}
+                                            tablesTotal={wipeStatus?.tables_total}
+                                            rowsDeleted={wipeStatus?.rows_deleted}
+                                            deleted={wipeStatus?.deleted}
+                                            startedAt={wipeStatus?.started_at ?? undefined}
+                                        />
+                                    </Box>
                                 ) : isStuck ? (
                                     <Alert color="orange" icon={<AlertTriangle size={16} />} mb="md">
                                         <Text size="xs">
@@ -739,12 +757,26 @@ export const SimulatorPage: React.FC = () => {
                         onChange={(e) => setWipeMfaAck(e.currentTarget.checked)}
                         label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
                     />
-                    {wiping && (
-                        <WipeProgressBar progressPct={wipeProgress} phase={wipePhase} />
+                    {(wiping || SimulatorApi.isWipeActive(wipeStatus)) && (
+                        <WipeProgressBar
+                            running={wiping || SimulatorApi.isWipeActive(wipeStatus)}
+                            progressPct={wipeStatus?.progress_pct ?? 0}
+                            phase={wipeStatus?.phase}
+                            phaseLabel={wipeStatus?.phase_label}
+                            message={wipeStatus?.message}
+                            tablesDone={wipeStatus?.tables_done}
+                            tablesTotal={wipeStatus?.tables_total}
+                            rowsDeleted={wipeStatus?.rows_deleted}
+                            deleted={wipeStatus?.deleted}
+                            startedAt={wipeStatus?.started_at ?? undefined}
+                            error={wipeStatus?.error ?? undefined}
+                        />
                     )}
                     <Button color="red" fullWidth loading={wiping}
-                        disabled={wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck} onClick={handleWipe}>
-                        {wiping ? `Wiping… ${wipeProgress.toFixed(0)}%` : 'Yes, Delete Everything'}
+                        disabled={wiping || wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck} onClick={handleWipe}>
+                        {wiping
+                            ? `Wiping… ${(wipeStatus?.progress_pct ?? 0).toFixed(0)}%`
+                            : 'Yes, Delete Everything'}
                     </Button>
                 </Stack>
             </Modal>

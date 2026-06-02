@@ -66,9 +66,10 @@ def run_wipe_sync():
 
     ws.clear_wipe_log()
     ws.set_wipe_state(
-        running=True, phase='starting', progress_pct=0,
-        started_at=__import__('time').time(), error=None, deleted={},
+        running=True, phase='quiescing', progress_pct=1,
+        started_at=__import__('time').time(), error=None, warning=None, deleted={},
     )
+    ws.wipe_log('Quiescing simulators…')
     deleted = {}
 
     try:
@@ -89,6 +90,7 @@ def run_wipe_sync():
         ws.set_wipe_state(phase='tenants', progress_pct=92)
         deleted['tenants'] = _chunk_delete(Tenant.objects.all(), 'tenants', deleted, 92, 5)
 
+        ws.set_wipe_state(phase='finalizing', progress_pct=96, message='Recreating Global Owner…')
         owner, _ = User.objects.get_or_create(
             username='global_owner',
             defaults={
