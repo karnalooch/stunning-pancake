@@ -205,6 +205,26 @@ class TestRolePermissions:
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(reverse("user-list"))
         assert response.status_code == 200
+        assert "results" in response.data
+        assert "count" in response.data
+
+    def test_user_list_pagination_and_search(self, api_client, owner_user, tenant):
+        for i in range(12):
+            User.objects.create_user(
+                username=f"batch_athlete_{i}",
+                email=f"a{i}@test.com",
+                password="password123",
+                role="ATHLETE",
+                tenant=tenant,
+            )
+        api_client.force_authenticate(user=owner_user)
+        page1 = api_client.get(reverse("user-list"), {"page": 1, "page_size": 5})
+        assert page1.status_code == 200
+        assert len(page1.data["results"]) == 5
+        assert page1.data["count"] >= 12
+        found = api_client.get(reverse("user-list"), {"search": "batch_athlete_3"})
+        assert found.status_code == 200
+        assert any(u["username"] == "batch_athlete_3" for u in found.data["results"])
 
     def test_athlete_denied_user_list(self, api_client, athlete_user):
         api_client.force_authenticate(user=athlete_user)

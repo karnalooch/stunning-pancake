@@ -53,8 +53,8 @@ export const DepartmentUsers: React.FC = () => {
 
     const fetchAllUsers = async () => {
         try {
-            const { data } = await apiClient.get('/users/all/');
-            setAllUsers(data);
+            const { data } = await apiClient.get('/users/all/', { params: { page_size: 100 } });
+            setAllUsers(Array.isArray(data) ? data : data?.results ?? []);
         } catch (err) {
             console.error('Failed to fetch all users:', err);
         }

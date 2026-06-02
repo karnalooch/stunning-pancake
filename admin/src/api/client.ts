@@ -111,11 +111,17 @@ apiClient.interceptors.response.use(
 // ─── API Services ──────────────────────────────────────────────
 
 export const AdminApi = {
-  getUsers: async () => {
-    const { data } = await apiClient.get('/users/all/');
-    if (Array.isArray(data)) return data;
-    if (data && Array.isArray(data.results)) return data.results;
-    return [];
+  getUsers: async (params?: Record<string, string | number>) => {
+    const { data } = await apiClient.get('/users/all/', { params });
+    if (Array.isArray(data)) {
+      return { results: data, count: data.length, next: null as string | null, previous: null as string | null };
+    }
+    return {
+      results: data?.results ?? [],
+      count: typeof data?.count === 'number' ? data.count : 0,
+      next: data?.next ?? null,
+      previous: data?.previous ?? null,
+    };
   },
   getTenants: async () => {
     const { data } = await apiClient.get('/users/tenants/all/');

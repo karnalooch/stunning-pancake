@@ -1,4 +1,6 @@
+from django.db.models import Q
 from rest_framework import generics, permissions, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema
@@ -196,11 +198,38 @@ class ImpersonateUserView(generics.GenericAPIView):
             return error("User not found.", status_code=status.HTTP_404_NOT_FOUND)
 
 
+class UserListPagination(PageNumberPagination):
+    page_size = 25
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class UserListView(generics.ListAPIView):
-    """List all users. GLOBAL_OWNER only."""
-    queryset = User.objects.all()
+    """Paginated user registry for admin. GLOBAL_OWNER only."""
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+    pagination_class = UserListPagination
+
+    def get_queryset(self):
+        qs = User.objects.select_related('tenant').order_by('-id')
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            q = Q(username__icontains=search) | Q(email__icontains=search)
+            if search.isdigit():
+                q |= Q(id=int(search))
+            elif search.upper().startswith('U-') and search[2:].isdigit():
+                q |= Q(id=int(search[2:]))
+            qs = qs.filter(q)
+        role = (self.request.query_params.get('role') or '').strip()
+        if role:
+            qs = qs.filter(role=role)
+        tenant_id = (self.request.query_params.get('tenant_id') or '').strip()
+        if tenant_id:
+            try:
+                qs = qs.filter(tenant_id=int(tenant_id))
+            except (TypeError, ValueError):
+                pass
+        return qs
 
 
 class TenantListView(generics.ListAPIView):

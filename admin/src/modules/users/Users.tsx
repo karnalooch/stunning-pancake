@@ -3,7 +3,8 @@ import {
   Drawer, Modal, ScrollArea, Tabs, Select, PasswordInput,
   Pagination, Switch, Textarea, Tooltip, Card
 } from '@mantine/core';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useDebouncedValue } from '@mantine/hooks';
 import {
   Search, ShieldAlert, UserCog, Eye, UserPlus, ClipboardList,
   Trash2, Send, Lock, Unlock, Mail, Shield, Building
@@ -48,6 +49,8 @@ interface AuditLogEntry {
 export const Users = () => {
   const { user } = useAuth();
   const [usersList, setUsersList] = useState<UserRow[]>([]);
+  const [usersTotal, setUsersTotal] = useState(0);
+  const [usersLoading, setUsersLoading] = useState(true);
   const [tenantsList, setTenantsList] = useState<TenantRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
@@ -61,6 +64,7 @@ export const Users = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [inviteResult, setInviteResult] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch] = useDebouncedValue(searchQuery, 300);
   
   // Filters
   const [selectedRole, setSelectedRole] = useState<string>('');
@@ -98,29 +102,53 @@ export const Users = () => {
     role: 'TENANT_MODERATOR',
   });
 
-  const fetchUsers = () => {
-    AdminApi.getUsers()
-      .then(data => {
-        const mapped = data.map((u: any) => ({
-          id: u.id,
-          displayId: `U-${u.id}`,
-          name: u.username,
-          email: u.email || `${u.username}@sport-platform.com`,
-          tenant: u.tenant_name || 'Global HQ',
-          tenant_id: u.tenant_id || null,
-          status: u.is_active ? 'Active' : 'Locked',
-          flags: 0,
-          role: u.role,
-          avatar: u.avatar || null,
-          bio: u.bio || '',
-          is_active: u.is_active ?? true,
-        }));
-        setUsersList(mapped);
-      })
-      .catch(err => console.error("Failed to load users:", err));
-  };
+  const mapUserRow = (u: {
+    id: number;
+    username: string;
+    email?: string;
+    tenant_name?: string;
+    tenant_id?: string | null;
+    is_active?: boolean;
+    role: string;
+    avatar?: string | null;
+    bio?: string;
+  }): UserRow => ({
+    id: u.id,
+    displayId: `U-${u.id}`,
+    name: u.username,
+    email: u.email || `${u.username}@sport-platform.com`,
+    tenant: u.tenant_name || 'Global HQ',
+    tenant_id: u.tenant_id != null ? String(u.tenant_id) : null,
+    status: u.is_active ? 'Active' : 'Locked',
+    flags: 0,
+    role: u.role,
+    avatar: u.avatar || null,
+    bio: u.bio || '',
+    is_active: u.is_active ?? true,
+  });
 
-  useEffect(() => { fetchUsers(); }, []);
+  const fetchUsers = useCallback(() => {
+    setUsersLoading(true);
+    const params: Record<string, string | number> = {
+      page,
+      page_size: pageSize,
+    };
+    if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+    if (selectedRole) params.role = selectedRole;
+    if (selectedTenant) params.tenant_id = selectedTenant;
+
+    AdminApi.getUsers(params)
+      .then(({ results, count }) => {
+        setUsersList(results.map(mapUserRow));
+        setUsersTotal(count);
+      })
+      .catch((err) => console.error('Failed to load users:', err))
+      .finally(() => setUsersLoading(false));
+  }, [page, pageSize, debouncedSearch, selectedRole, selectedTenant]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
   
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
@@ -285,35 +313,7 @@ export const Users = () => {
     }
   };
 
-  // Filter logic
-  const filteredUsers = usersList.filter((u) => {
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      const match = u.name.toLowerCase().includes(q) ||
-                    u.email.toLowerCase().includes(q) ||
-                    u.displayId.toLowerCase().includes(q);
-      if (!match) return false;
-    }
-    if (selectedRole && u.role !== selectedRole) return false;
-    if (selectedTenant && u.tenant_id !== selectedTenant) return false;
-    return true;
-  });
-
-  // Client-side pagination
-  const paginatedUsers = filteredUsers.slice((page - 1) * pageSize, page * pageSize);
-  const totalPages = Math.ceil(filteredUsers.length / pageSize);
-
-  // Reset page to 1 when filters change (using render phase update to avoid set-state-in-effect)
-  const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
-  const [prevSelectedRole, setPrevSelectedRole] = useState(selectedRole);
-  const [prevSelectedTenant, setPrevSelectedTenant] = useState(selectedTenant);
-
-  if (searchQuery !== prevSearchQuery || selectedRole !== prevSelectedRole || selectedTenant !== prevSelectedTenant) {
-    setPrevSearchQuery(searchQuery);
-    setPrevSelectedRole(selectedRole);
-    setPrevSelectedTenant(selectedTenant);
-    setPage(1);
-  }
+  const totalPages = Math.max(1, Math.ceil(usersTotal / pageSize));
 
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
@@ -337,7 +337,10 @@ export const Users = () => {
                   placeholder={isGlobalOwner ? "Search (ID, Email, Nickname)..." : "Search within city..."}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.currentTarget.value);
+                    setPage(1);
+                  }}
                 />
                 <Select
                   placeholder="Role Filter"
@@ -350,7 +353,10 @@ export const Users = () => {
                     { value: 'GLOBAL_OWNER', label: 'Global Owner' },
                   ]}
                   value={selectedRole}
-                  onChange={(v) => setSelectedRole(v || '')}
+                  onChange={(v) => {
+                    setSelectedRole(v || '');
+                    setPage(1);
+                  }}
                   clearable
                 />
                 {isGlobalOwner && (
@@ -361,7 +367,10 @@ export const Users = () => {
                       ...tenantsList.map(t => ({ value: String(t.id), label: t.name }))
                     ]}
                     value={selectedTenant}
-                    onChange={(v) => setSelectedTenant(v || '')}
+                    onChange={(v) => {
+                      setSelectedTenant(v || '');
+                      setPage(1);
+                    }}
                     clearable
                   />
                 )}
@@ -386,6 +395,14 @@ export const Users = () => {
               </Group>
             </Group>
 
+            <Group justify="space-between">
+              <Text size="sm" c="dimmed">
+                {usersLoading
+                  ? 'Loading users…'
+                  : `Showing ${usersList.length.toLocaleString()} of ${usersTotal.toLocaleString()} users`}
+              </Text>
+            </Group>
+
             <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
               <Table verticalSpacing="sm" highlightOnHover>
                 <Table.Thead>
@@ -399,14 +416,20 @@ export const Users = () => {
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {paginatedUsers.length === 0 ? (
+                  {usersLoading ? (
+                    <Table.Tr>
+                      <Table.Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                        Loading…
+                      </Table.Td>
+                    </Table.Tr>
+                  ) : usersList.length === 0 ? (
                     <Table.Tr>
                       <Table.Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
                         No users match the active filter criteria.
                       </Table.Td>
                     </Table.Tr>
                   ) : (
-                    paginatedUsers.map((u) => (
+                    usersList.map((u) => (
                       <Table.Tr key={u.id}>
                         <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
                         <Table.Td>
@@ -462,7 +485,7 @@ export const Users = () => {
               </Table>
             </Card>
 
-            {totalPages > 1 && (
+            {usersTotal > pageSize && (
               <Group justify="center" mt="md">
                 <Pagination value={page} onChange={setPage} total={totalPages} color="cyan" />
               </Group>
