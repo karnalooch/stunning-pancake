@@ -21,14 +21,30 @@ STATS_CACHE_KEY = '{admin}:dashboard:stats'
 STATS_CACHE_TTL = 120  # seconds
 
 
+def _scoped_tenant_id(request_user) -> str | None:
+    """Tenant admins/moderators see only their tenant KPIs."""
+    role = getattr(request_user, 'role', None)
+    if role in ('TENANT_ADMIN', 'TENANT_MODERATOR') and getattr(request_user, 'tenant_id', None):
+        return str(request_user.tenant_id)
+    return None
+
+
+def _stats_cache_key(request_user) -> str:
+    tid = _scoped_tenant_id(request_user)
+    if tid:
+        return f'{{admin}}:dashboard:stats:tenant:{tid}'
+    return STATS_CACHE_KEY
+
+
 def _redis():
     from core.redis_cluster import get_redis
     return get_redis()
 
 
-def get_cached_dashboard_stats() -> dict | None:
+def get_cached_dashboard_stats(request_user=None) -> dict | None:
+    cache_key = _stats_cache_key(request_user) if request_user is not None else STATS_CACHE_KEY
     try:
-        raw = _redis().get(STATS_CACHE_KEY)
+        raw = _redis().get(cache_key)
         if raw:
             return json.loads(raw.decode() if isinstance(raw, bytes) else raw)
     except Exception:
@@ -36,16 +52,20 @@ def get_cached_dashboard_stats() -> dict | None:
     return None
 
 
-def set_cached_dashboard_stats(payload: dict) -> None:
+def set_cached_dashboard_stats(payload: dict, request_user=None) -> None:
+    cache_key = _stats_cache_key(request_user) if request_user is not None else STATS_CACHE_KEY
     try:
-        _redis().setex(STATS_CACHE_KEY, STATS_CACHE_TTL, json.dumps(payload))
+        _redis().setex(cache_key, STATS_CACHE_TTL, json.dumps(payload))
     except Exception:
         pass
 
 
-def invalidate_dashboard_stats_cache() -> None:
+def invalidate_dashboard_stats_cache(tenant_id: str | None = None) -> None:
     try:
-        _redis().delete(STATS_CACHE_KEY)
+        r = _redis()
+        r.delete(STATS_CACHE_KEY)
+        if tenant_id:
+            r.delete(f'{{admin}}:dashboard:stats:tenant:{tenant_id}')
     except Exception:
         pass
 
@@ -81,15 +101,37 @@ def _empty_stats(*, stale: bool = False, note: str | None = None) -> dict:
     return payload
 
 
-def _per_tenant_breakdown() -> list[dict]:
+def _recent_unverified_for_tenant(tenant_id: str, *, limit: int = 25) -> list[dict]:
+    """Pending moderation queue for a single tenant."""
+    qs = (
+        Activity.objects.filter(tenant_id=tenant_id, is_verified=False)
+        .select_related('user')
+        .order_by('-created_at')[:limit]
+    )
+    return [
+        {
+            'id': a.id,
+            'activity_id': a.id,
+            'user': a.user.username if a.user_id else 'Unknown',
+            'username': a.user.username if a.user_id else 'Unknown',
+            'type': a.type,
+            'distance': a.distance,
+            'score': float(a.verification_score or 0),
+        }
+        for a in qs
+    ]
+
+
+def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
     """
     Per-tenant KPIs via separate aggregates (avoids broken SQL from
     multiple Count(distinct=True, filter=...) on the same join).
     """
     rows: list[dict] = []
-    for tenant in Tenant.objects.filter(is_active=True).only(
-        'id', 'name', 'primary_color', 'secondary_color',
-    ):
+    tenants = Tenant.objects.filter(is_active=True)
+    if tenant_id:
+        tenants = tenants.filter(id=tenant_id)
+    for tenant in tenants.only('id', 'name', 'primary_color', 'secondary_color'):
         try:
             users = tenant.users.count()
             agg = Activity.objects.filter(tenant_id=tenant.id).aggregate(
@@ -109,6 +151,7 @@ def _per_tenant_breakdown() -> list[dict]:
                 'verified_pct': round((verified / act_count * 100), 1) if act_count else 0.0,
                 'primary_color': tenant.primary_color,
                 'secondary_color': tenant.secondary_color,
+                'recent_unverified': _recent_unverified_for_tenant(str(tenant.id)),
             })
         except Exception:
             logger.exception('admin/stats per_tenant failed tenant=%s', tenant.id)
@@ -151,9 +194,12 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     """
     Aggregate queries + Redis cache.
     During batch/live sim, serves cache if available (marked stale).
+    TENANT_ADMIN / TENANT_MODERATOR receive tenant-scoped totals (not platform-wide).
     """
+    scoped_tid = _scoped_tenant_id(request_user)
+
     if allow_stale and _batch_or_live_running():
-        cached = get_cached_dashboard_stats()
+        cached = get_cached_dashboard_stats(request_user)
         if cached:
             cached = dict(cached)
             cached['stale'] = True
@@ -161,7 +207,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
             return cached
 
     if not refresh:
-        cached = get_cached_dashboard_stats()
+        cached = get_cached_dashboard_stats(request_user)
         if cached:
             return cached
 
@@ -170,21 +216,27 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     seven_days_ago = now - timedelta(days=7)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
+    activity_qs = Activity.objects.all()
+    user_qs = User.objects.all()
+    if scoped_tid:
+        activity_qs = activity_qs.filter(tenant_id=scoped_tid)
+        user_qs = user_qs.filter(tenant_id=scoped_tid)
+
     try:
-        totals = Activity.objects.aggregate(
+        totals = activity_qs.aggregate(
             total_activities=Count('id'),
             total_distance=Sum('distance'),
             verified_total=Count('id', filter=Q(is_verified=True)),
             new_activities_last_7d=Count('id', filter=Q(created_at__gte=seven_days_ago)),
         )
-        user_totals = User.objects.aggregate(
+        user_totals = user_qs.aggregate(
             total_users=Count('id'),
             new_users_today=Count('id', filter=Q(date_joined__gte=today_start)),
             new_users_last_7d=Count('id', filter=Q(date_joined__gte=seven_days_ago)),
         )
     except Exception:
         logger.exception('admin/stats global aggregates failed')
-        cached = get_cached_dashboard_stats()
+        cached = get_cached_dashboard_stats(request_user)
         if cached:
             out = dict(cached)
             out['stale'] = True
@@ -197,6 +249,13 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     total_verified = totals['verified_total'] or 0
     verified_pct = round((total_verified / total_activities * 100), 1) if total_activities else 0.0
 
+    per_tenant = _per_tenant_breakdown(tenant_id=scoped_tid)
+    recent_unverified = (
+        _recent_unverified_for_tenant(scoped_tid)
+        if scoped_tid
+        else []
+    )
+
     payload = {
         'total_users': user_totals['total_users'] or 0,
         'total_activities': total_activities,
@@ -208,11 +267,13 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         'verified_total': total_verified,
         'verified_pct': verified_pct,
         'unverified_total': total_activities - total_verified,
-        'per_tenant': _per_tenant_breakdown(),
+        'per_tenant': per_tenant,
         'per_department': _per_department_breakdown(request_user),
+        'recent_unverified': recent_unverified,
+        'scoped_tenant_id': scoped_tid,
         'stale': False,
         'batch_running': False,
         'cached_at': time.time(),
     }
-    set_cached_dashboard_stats(payload)
+    set_cached_dashboard_stats(payload, request_user)
     return payload

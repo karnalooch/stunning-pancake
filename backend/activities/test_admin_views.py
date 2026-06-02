@@ -130,6 +130,7 @@ class TestAdminDashboardStats:
 
         assert response.status_code == 200
         assert 'per_department' in response.data
+        assert response.data.get('scoped_tenant_id') == str(user.tenant_id)
 
     def test_dashboard_stats_denies_athlete(self, user):
         """AdminDashboardStatsView should deny ATHLETE users."""

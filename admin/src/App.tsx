@@ -322,10 +322,11 @@ export default function App() {
                   </PermissionGuard>
                 }
               />
+              {/* Simulator: GLOBAL_OWNER only — nav in Layout.tsx matches this guard */}
               <Route
                 path="analytics/simulator"
                 element={
-                  <PermissionGuard permissions={['activities.view']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <SimulatorPage />
                   </PermissionGuard>
                 }

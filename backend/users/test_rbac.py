@@ -204,3 +204,21 @@ class TestPermissionClasses:
         checker = IsAdminOrModerator()
         request = type('Request', (), {'user': tenant_moderator})()
         assert checker.has_permission(request, None) is True
+
+
+@pytest.mark.django_db
+class TestRoleApi:
+    def test_global_owner_can_patch_role_permissions(self, global_owner, rbac_roles, rbac_permissions):
+        from rest_framework.test import APIClient
+
+        role = Role.objects.get(slug='athlete')
+        client = APIClient()
+        client.force_authenticate(user=global_owner)
+        perm_ids = [p.id for p in rbac_permissions[:2]]
+        response = client.patch(
+            f'/api/users/rbac/roles/{role.id}/',
+            {'permission_ids': perm_ids},
+            format='json',
+        )
+        assert response.status_code == 200
+        assert RolePermission.objects.filter(role=role).count() == 2

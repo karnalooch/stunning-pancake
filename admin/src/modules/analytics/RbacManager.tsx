@@ -1,6 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Text, Card, SimpleGrid, ThemeIcon, Group, Badge, Skeleton, Stack, Paper, Drawer, ScrollArea, Divider, Anchor } from '@mantine/core';
-import { Shield, Key, Lock, AlertCircle, FolderTree } from 'lucide-react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import {
+    Box, Text, Card, SimpleGrid, ThemeIcon, Group, Badge, Skeleton, Stack, Paper, Drawer,
+    ScrollArea, Divider, Checkbox, Button, Alert,
+} from '@mantine/core';
+import { Shield, Key, Lock, AlertCircle, FolderTree, Save } from 'lucide-react';
+import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 import { apiClient } from '../../api/client';
 
@@ -10,7 +14,7 @@ interface RoleItem {
     name: string;
     description: string;
     is_system: boolean;
-    permissions: any[];
+    permissions: { id?: number; permission: { id: number; codename: string; name: string; resource: string; action: string } }[];
     created_at: string;
 }
 
@@ -18,6 +22,14 @@ interface PermResource {
     codename: string;
     action: string;
     name: string;
+}
+
+interface PermissionRow {
+    id: number;
+    codename: string;
+    name: string;
+    resource: string;
+    action: string;
 }
 
 const roleColorMap: Record<string, string> = {
@@ -42,44 +54,116 @@ const resourceColorMap: Record<string, string> = {
 
 export const RbacManager: React.FC = () => {
     const [roles, setRoles] = useState<RoleItem[]>([]);
+    const [allPermissions, setAllPermissions] = useState<PermissionRow[]>([]);
     const [permissionsByResource, setPermissionsByResource] = useState<Record<string, PermResource[]>>({});
     const [drawerRole, setDrawerRole] = useState<RoleItem | null>(null);
+    const [editPermissionIds, setEditPermissionIds] = useState<Set<number>>(new Set());
     const [drawerOpened, setDrawerOpened] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const loadRoles = useCallback(async () => {
+        const rolesRes = await apiClient.get('/users/rbac/roles/');
+        const rolesData = Array.isArray(rolesRes.data)
+            ? rolesRes.data
+            : (rolesRes.data?.results && Array.isArray(rolesRes.data.results) ? rolesRes.data.results : []);
+        setRoles(rolesData);
+        return rolesData as RoleItem[];
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [rolesRes, permsRes] = await Promise.all([
-                    apiClient.get('/users/rbac/roles/'),
+                const [, permsRes, permsListRes] = await Promise.all([
+                    loadRoles() as Promise<RoleItem[]>,
                     apiClient.get('/users/rbac/permissions/by_resource/'),
+                    apiClient.get('/users/rbac/permissions/'),
                 ]);
-                const rolesData = Array.isArray(rolesRes.data)
-                    ? rolesRes.data
-                    : (rolesRes.data?.results && Array.isArray(rolesRes.data.results) ? rolesRes.data.results : []);
-                setRoles(rolesData);
                 setPermissionsByResource(permsRes.data || {});
-            } catch (err) {
+                const permRows = Array.isArray(permsListRes.data)
+                    ? permsListRes.data
+                    : (permsListRes.data?.results ?? []);
+                setAllPermissions(permRows);
+            } catch {
                 setError('Unable to load RBAC data. Please try again later.');
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-    }, []);
+    }, [loadRoles]);
 
     const getRoleColor = (slug: string) => roleColorMap[slug] || 'gray';
 
+    const openRoleDrawer = (role: RoleItem) => {
+        const ids = new Set<number>();
+        for (const rp of role.permissions || []) {
+            const pid = rp.permission?.id;
+            if (pid) ids.add(pid);
+        }
+        setEditPermissionIds(ids);
+        setDrawerRole(role);
+        setDrawerOpened(true);
+    };
+
+    const closeDrawer = () => {
+        setDrawerOpened(false);
+        setDrawerRole(null);
+        setEditPermissionIds(new Set());
+    };
+
+    const togglePermission = (permId: number, checked: boolean) => {
+        setEditPermissionIds((prev) => {
+            const next = new Set(prev);
+            if (checked) next.add(permId);
+            else next.delete(permId);
+            return next;
+        });
+    };
+
+    const handleSaveRole = async () => {
+        if (!drawerRole) return;
+        setSaving(true);
+        try {
+            const { data } = await apiClient.patch(`/users/rbac/roles/${drawerRole.id}/`, {
+                permission_ids: Array.from(editPermissionIds),
+            });
+            notifications.show({
+                title: 'RBAC updated',
+                message: `Saved ${editPermissionIds.size} permission(s) for "${drawerRole.name}".`,
+                color: 'green',
+            });
+            const updated = data as RoleItem;
+            setRoles((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+            setDrawerRole(updated);
+            await loadRoles();
+        } catch (err: unknown) {
+            const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+                || 'Failed to save role permissions.';
+            notifications.show({ title: 'Save failed', message: String(msg), color: 'red' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const permissionsByResourceForDrawer = useMemo(() => {
-        if (!drawerRole?.permissions || drawerRole.permissions.length === 0) return {};
+        const grouped: Record<string, PermissionRow[]> = {};
+        for (const p of allPermissions) {
+            grouped[p.resource] = grouped[p.resource] || [];
+            grouped[p.resource].push(p);
+        }
+        return grouped;
+    }, [allPermissions]);
+
+    const permissionsByResourceReadOnly = useMemo(() => {
+        if (!drawerRole?.permissions?.length) return {};
         const byResource: Record<string, PermResource[]> = {};
-        for (const rp of drawerRole.permissions as any[]) {
+        for (const rp of drawerRole.permissions) {
             const p = rp?.permission;
             if (!p?.resource) continue;
-            const resource = p.resource as string;
-            byResource[resource] = byResource[resource] || [];
-            byResource[resource].push({
+            byResource[p.resource] = byResource[p.resource] || [];
+            byResource[p.resource].push({
                 codename: p.codename,
                 action: p.action,
                 name: p.name,
@@ -92,7 +176,6 @@ export const RbacManager: React.FC = () => {
         <Box p="md">
             <PageHeader title="RBAC Manager" subtitle="Visual role & permission management" />
 
-            {/* ── Roles Section ── */}
             <Text fw={700} size="lg" mb="md">Roles</Text>
             {loading ? (
                 <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
@@ -115,10 +198,7 @@ export const RbacManager: React.FC = () => {
                             <Card
                                 key={r.id || r.slug}
                                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, cursor: 'pointer' }}
-                                onClick={() => {
-                                    setDrawerRole(r);
-                                    setDrawerOpened(true);
-                                }}
+                                onClick={() => openRoleDrawer(r)}
                             >
                                 <Group mb="md">
                                     <ThemeIcon size={42} radius="md" color={color} variant="light">
@@ -132,7 +212,7 @@ export const RbacManager: React.FC = () => {
                                 <Group gap="xs">
                                     <Badge color={color} variant="light">{permCount} permission{permCount !== 1 ? 's' : ''}</Badge>
                                     {r.is_system && <Badge variant="light" color="gray" leftSection={<Lock size={10} />}>System</Badge>}
-                                    <Badge variant="light" leftSection={<Key size={10} />}>Manage</Badge>
+                                    <Badge variant="light" leftSection={<Key size={10} />}>Edit</Badge>
                                 </Group>
                             </Card>
                         );
@@ -140,7 +220,6 @@ export const RbacManager: React.FC = () => {
                 </SimpleGrid>
             )}
 
-            {/* ── Permissions by Resource ── */}
             {!loading && !error && Object.keys(permissionsByResource).length > 0 && (
                 <>
                     <Text fw={700} size="lg" mt="xl" mb="md">Permissions by Resource</Text>
@@ -173,28 +252,17 @@ export const RbacManager: React.FC = () => {
                 </>
             )}
 
-            {/* ── Role details drawer ── */}
             <Drawer
                 opened={drawerOpened}
-                onClose={() => {
-                    setDrawerOpened(false);
-                    setDrawerRole(null);
-                }}
+                onClose={closeDrawer}
                 position="right"
                 size="lg"
-                title={<Text fw={700} size="lg">Role details</Text>}
+                title={<Text fw={700} size="lg">Edit role permissions</Text>}
             >
                 {drawerRole ? (
                     <ScrollArea style={{ height: 'calc(100vh - 120px)' }}>
                         <Stack gap="md" p="md">
-                            <Paper
-                                p="md"
-                                style={{
-                                    background: 'var(--surface-secondary)',
-                                    border: '1px solid var(--border)',
-                                    borderRadius: 12,
-                                }}
-                            >
+                            <Paper p="md" style={{ background: 'var(--surface-secondary)', border: '1px solid var(--border)', borderRadius: 12 }}>
                                 <Group gap="sm">
                                     <ThemeIcon size={42} radius="md" color={getRoleColor(drawerRole.slug)} variant="light">
                                         <Shield size={20} />
@@ -207,56 +275,46 @@ export const RbacManager: React.FC = () => {
                                 <Divider my="sm" />
                                 <Group gap="xs" wrap="wrap">
                                     <Badge color={getRoleColor(drawerRole.slug)} variant="light">
-                                        {drawerRole.permissions?.length ?? 0} permissions
+                                        {editPermissionIds.size} selected
                                     </Badge>
                                     {drawerRole.is_system && (
-                                        <Badge variant="light" color="gray" leftSection={<Lock size={10} />}>
-                                            System
-                                        </Badge>
+                                        <Badge variant="light" color="gray" leftSection={<Lock size={10} />}>System</Badge>
                                     )}
-                                    <Badge variant="light" leftSection={<Key size={10} />}>
-                                        Manage
-                                    </Badge>
                                 </Group>
                             </Paper>
 
+                            {drawerRole.is_system && (
+                                <Alert color="yellow" title="System role">
+                                    Permission changes apply immediately and are audit-logged via the API.
+                                </Alert>
+                            )}
+
                             <Box>
-                                <Text fw={700} size="sm" mb="sm">Effective permissions by resource</Text>
+                                <Text fw={700} size="sm" mb="sm">Permissions</Text>
                                 {Object.keys(permissionsByResourceForDrawer).length === 0 ? (
-                                    <Text size="sm" c="dimmed">No permissions attached to this role.</Text>
+                                    <Text size="sm" c="dimmed">No permissions in catalog.</Text>
                                 ) : (
                                     <Stack gap="sm">
                                         {Object.entries(permissionsByResourceForDrawer).map(([resource, perms]) => {
                                             const color = resourceColorMap[resource] || 'gray';
                                             return (
-                                                <Card
-                                                    key={resource}
-                                                    padding="md"
-                                                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-                                                >
-                                                    <Group mb="sm" justify="space-between">
-                                                        <Group gap="sm">
-                                                            <ThemeIcon size={32} radius="md" color={color} variant="light">
-                                                                <FolderTree size={14} />
-                                                            </ThemeIcon>
-                                                            <Box>
-                                                                <Text fw={700} size="xs" tt="capitalize">{resource}</Text>
-                                                                <Text size="2xs" c="dimmed">{perms.length} actions</Text>
-                                                            </Box>
-                                                        </Group>
-                                                    </Group>
-                                                    <Group gap={6} wrap="wrap">
-                                                        {perms.slice(0, 16).map(p => (
-                                                            <Badge key={p.codename} size="xs" variant="light" color={color}>
-                                                                {p.action}
-                                                            </Badge>
+                                                <Card key={resource} padding="md" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+                                                    <Text fw={700} size="xs" tt="capitalize" mb="xs">{resource}</Text>
+                                                    <Stack gap={6}>
+                                                        {perms.map((p) => (
+                                                            <Checkbox
+                                                                key={p.id}
+                                                                label={
+                                                                    <Group gap={6}>
+                                                                        <Text size="sm">{p.name}</Text>
+                                                                        <Badge size="xs" variant="light" color={color}>{p.action}</Badge>
+                                                                    </Group>
+                                                                }
+                                                                checked={editPermissionIds.has(p.id)}
+                                                                onChange={(e) => togglePermission(p.id, e.currentTarget.checked)}
+                                                            />
                                                         ))}
-                                                        {perms.length > 16 && (
-                                                            <Badge size="xs" variant="outline" color="gray">
-                                                                +{perms.length - 16} more
-                                                            </Badge>
-                                                        )}
-                                                    </Group>
+                                                    </Stack>
                                                 </Card>
                                             );
                                         })}
@@ -264,23 +322,30 @@ export const RbacManager: React.FC = () => {
                                 )}
                             </Box>
 
+                            <Button
+                                leftSection={<Save size={16} />}
+                                loading={saving}
+                                onClick={handleSaveRole}
+                            >
+                                Save permissions
+                            </Button>
+
+                            <Divider label="Current snapshot" labelPosition="center" />
                             <Box>
-                                <Text fw={700} size="sm" mb="xs">Next step</Text>
-                                <Text size="sm" c="dimmed" mb="xs">
-                                    Drawer is read-only; editing is supported via the RBAC API.
-                                </Text>
-                                <Text size="sm">
-                                    Edit endpoint:{" "}
-                                    <Text component="span" style={{ fontFamily: 'monospace' }}>
-                                        PATCH /api/users/rbac/roles/{drawerRole.id}/
-                                    </Text>
-                                </Text>
-                                <Anchor href="/api/docs/" target="_blank" mt="xs">Open API docs</Anchor>
+                                {Object.keys(permissionsByResourceReadOnly).length === 0 ? (
+                                    <Text size="sm" c="dimmed">No permissions attached.</Text>
+                                ) : (
+                                    <Group gap={6} wrap="wrap">
+                                        {Object.values(permissionsByResourceReadOnly).flat().map((p) => (
+                                            <Badge key={p.codename} size="xs" variant="outline">{p.codename}</Badge>
+                                        ))}
+                                    </Group>
+                                )}
                             </Box>
                         </Stack>
                     </ScrollArea>
                 ) : (
-                    <Text size="sm" c="dimmed">Select a role to inspect permissions.</Text>
+                    <Text size="sm" c="dimmed">Select a role to edit permissions.</Text>
                 )}
             </Drawer>
         </Box>

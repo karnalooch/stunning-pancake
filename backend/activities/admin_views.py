@@ -144,7 +144,7 @@ class AdminDashboardStatsView(APIView):
             return Response(build_dashboard_stats(request.user, refresh=refresh))
         except Exception as exc:
             logging.getLogger(__name__).exception('admin/stats failed')
-            cached = get_cached_dashboard_stats()
+            cached = get_cached_dashboard_stats(request.user)
             if cached:
                 out = dict(cached)
                 out['stale'] = True

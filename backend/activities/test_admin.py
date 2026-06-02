@@ -127,6 +127,18 @@ class TestAdminDashboardStats:
         response = api_client.get(reverse("admin-stats"))
         assert response.status_code == 200
 
+    def test_tenant_admin_stats_scoped_to_tenant(self, api_client, admin_user, create_activities):
+        """TENANT_ADMIN must see tenant totals only, not platform-wide aggregates."""
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(reverse("admin-stats"))
+        assert response.status_code == 200
+        data = response.data
+        assert data["total_activities"] == 7
+        assert data.get("scoped_tenant_id") == str(admin_user.tenant_id)
+        assert len(data["per_tenant"]) == 1
+        assert data["per_tenant"][0]["tenant_name"] == "Test City"
+        assert "recent_unverified" in data
+
     def test_athlete_denied(self, api_client, athlete_user, create_activities):
         api_client.force_authenticate(user=athlete_user)
         response = api_client.get(reverse("admin-stats"))

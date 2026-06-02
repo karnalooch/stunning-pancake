@@ -929,34 +929,35 @@ export const Users = () => {
                   Save All Profile Changes
                 </Button>
 
-                {/* Impersonation Options for Admins */}
-                <Box mt="md">
-                  <Text fw={700} size="sm" mb="xs" c="orange">Impersonation Sandbox</Text>
-                  {impersonateResult ? (
-                    <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
-                      <Text size="sm" c="green">Impersonating {impersonateResult.impersonated_user}</Text>
-                      <Text size="xs" c="dimmed">
-                        Session token cached. The frontend mimics this user's dashboards and permissions.
-                      </Text>
-                      <Button size="xs" variant="light" color="red" onClick={() => {
-                        localStorage.removeItem('impersonation_token');
-                        localStorage.removeItem('impersonated_user');
-                        setImpersonateResult(null);
-                      }}>End Impersonation Session</Button>
-                    </Stack>
-                  ) : (
-                    <Button
-                      color="orange"
-                      variant="light"
-                      leftSection={<ShieldAlert size={16} />}
-                      fullWidth
-                      loading={impersonating}
-                      onClick={() => handleImpersonate(selectedUser.id)}
-                    >
-                      {impersonating ? 'Connecting Session...' : 'Launch Impersonated Session'}
-                    </Button>
-                  )}
-                </Box>
+                {user?.role === 'GLOBAL_OWNER' && (
+                  <Box mt="md">
+                    <Text fw={700} size="sm" mb="xs" c="orange">Impersonation Sandbox</Text>
+                    {impersonateResult ? (
+                      <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
+                        <Text size="sm" c="green">Impersonating {impersonateResult.impersonated_user}</Text>
+                        <Text size="xs" c="dimmed">
+                          Session token cached. The frontend mimics this user&apos;s dashboards and permissions.
+                        </Text>
+                        <Button size="xs" variant="light" color="red" onClick={() => {
+                          localStorage.removeItem('impersonation_token');
+                          localStorage.removeItem('impersonated_user');
+                          setImpersonateResult(null);
+                        }}>End Impersonation Session</Button>
+                      </Stack>
+                    ) : (
+                      <Button
+                        color="orange"
+                        variant="light"
+                        leftSection={<ShieldAlert size={16} />}
+                        fullWidth
+                        loading={impersonating}
+                        onClick={() => handleImpersonate(selectedUser.id)}
+                      >
+                        {impersonating ? 'Connecting Session...' : 'Launch Impersonated Session'}
+                      </Button>
+                    )}
+                  </Box>
+                )}
               </Stack>
             </Stack>
           </ScrollArea>
