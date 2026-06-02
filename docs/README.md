@@ -29,6 +29,7 @@
 | **[operations/](./operations/)** | **Runbooki** — symulator, BRouter, skróty |
 | [Railway — worker symulacji](./RAILWAY_CELERY_SIMULATION.md) | `celery-worker-simulation`, kolejka `simulation` |
 | [Kubernetes runbook](./operations/KUBERNETES.md) | Deploy API + Celery + Redis + BRouter na klastrze k8s |
+| [Pre-release verification](./operations/PRE_RELEASE_VERIFICATION.md) | Single-command gate + checklista release (CI/reliability/compliance) |
 | [Disk guard](./DISK_GUARD.md) | Budżet Postgres, pauza zapisów |
 | [Scale test 300k](./SCALE_TEST_300K.md) | Duży test obciążeniowy |
 | [Event burst 50k](./EVENT_BURST_50K.md) | Dzień eventu |
@@ -80,6 +81,7 @@
 | [DATA_RESILIENCE.md](./DATA_RESILIENCE.md) | GPS buffer, outbox, recovery (mobile) |
 | [Constitution](./CONSTITUTION.md) | Zasady projektu |
 | [RCP](./compliance/RCP.md) | RODO / compliance |
+| [Release legal package](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | OSS/GDPR/ToS + Go/No-Go template dla release |
 | [Onboarding](./onboarding/GUIDE.md) | Onboarding dewelopera |
 
 ---

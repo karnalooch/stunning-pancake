@@ -13,4 +13,8 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [RELIABILITY_AUDIT_PLAYBOOK.md](./RELIABILITY_AUDIT_PLAYBOOK.md) | Playbook niezawodnosci (release gate + incident runbook) |
 | [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02) |
 
+Powiązane dokumenty operacyjne:
+- [../operations/PRE_RELEASE_VERIFICATION.md](../operations/PRE_RELEASE_VERIFICATION.md) — praktyczny gate przed release.
+- [../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) — legal/compliance go-to-market checklist.
+
 Nowe audyty: dodaj plik `NAZWA_YYYY-MM-DD.md` tutaj, bez nadpisywania starych. Audyty panelu admin → preferuj `docs/admin/UI_AUDIT_*.md`.
