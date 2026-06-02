@@ -579,11 +579,13 @@ class WipeDataView(APIView):
             else:
                 return Response(
                     {
-                        'error': 'Wipe already in progress.',
+                        **state,
+                        'status': ws.wipe_status_label(state),
                         'stuck': False,
-                        'hint': 'Wait for completion, POST /admin/simulator-reset/, or retry with force=true.',
+                        'message': 'Wipe already running. Returning current job state.',
+                        'hint': 'Poll GET /admin/wipe-data/ until complete. Retry force=true only for stale jobs.',
                     },
-                    status=status.HTTP_409_CONFLICT,
+                    status=status.HTTP_202_ACCEPTED,
                 )
 
         # Audit log for the wipe action (queued).

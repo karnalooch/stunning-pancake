@@ -50,12 +50,11 @@ def _clear_disk_guard_after_wipe():
 
 def run_wipe_sync():
     if not ws.acquire_wipe_lock():
-        ws.set_wipe_state(
-            running=False,
-            phase='error',
-            error='Wipe already in progress or lock held. Wait up to 1h or retry.',
-        )
-        ws.wipe_log('ERROR: could not acquire wipe lock')
+        state = ws.get_wipe_state()
+        if state.get('running'):
+            ws.wipe_log('Wipe request ignored: already running (lock held).')
+            return {'status': 'already_running'}
+        ws.wipe_log('Wipe request ignored: lock held by another worker.')
         return {'status': 'locked', 'error': 'lock held'}
 
     from django.contrib.auth import get_user_model

@@ -312,13 +312,21 @@ export const SimulatorApi = {
     try {
       await startWipe(false);
     } catch (err: unknown) {
-      const ax = err as { response?: { status?: number; data?: { stuck?: boolean; hint?: string } } };
+      const ax = err as { response?: { status?: number; data?: { stuck?: boolean; hint?: string; error?: string } } };
       if (ax.response?.status === 409) {
         const status = await SimulatorApi.getWipeStatus();
         if (status.stuck) {
           await startWipe(true);
+        } else if (status.running || status.status === 'queued' || status.status === 'running') {
+          // Another request already started the same wipe job.
+          // Continue by polling shared state instead of failing the UI.
+          onProgress?.(status);
         } else {
-          throw err;
+          throw new Error(
+            ax.response?.data?.error
+              || ax.response?.data?.hint
+              || 'Wipe conflicted with another operation. Refresh status and retry.',
+          );
         }
       } else {
         throw err;
