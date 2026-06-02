@@ -1,0 +1,87 @@
+[
+  {
+    "step": "login",
+    "ms": 3665,
+    "url": "https://admin-production-083b.up.railway.app/#/owner/dashboard"
+  },
+  {
+    "route": "dashboard",
+    "ms": 2509,
+    "title": "Good morning, global_owner 👋",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "users",
+    "ms": 2508,
+    "title": "",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "activities",
+    "ms": 2508,
+    "title": "All Activities",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "anti-cheat",
+    "ms": 2509,
+    "title": "Anti-Cheat Engine",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "live-map",
+    "ms": 2518,
+    "title": "",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "simulator",
+    "ms": 2516,
+    "title": "🚴 Cycling Simulator",
+    "hasError": true,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "sponsor",
+    "ms": 2507,
+    "title": "Sponsor Dashboard",
+    "hasError": false,
+    "hasEmptyPlaceholder": true,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "white-label",
+    "ms": 2503,
+    "title": "White-Label Engine",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "departments",
+    "ms": 2509,
+    "title": "",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  },
+  {
+    "route": "settings",
+    "ms": 2505,
+    "title": "Settings",
+    "hasError": false,
+    "hasEmptyPlaceholder": false,
+    "snippet": "4VELO 4VELO Admin OS OVERVIEW Dashboard MANAGEMENT Tenants & Branding Users Departments OPERATIONS Activities Anti-Cheat Events SPONSORSHIP & REWARDS Sponsor Dashboard Sponsorship Analytics Vouchers A"
+  }
+]

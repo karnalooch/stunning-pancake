@@ -40,6 +40,35 @@ def admin_user(db, tenant):
 
 
 @pytest.fixture
+def other_tenant(db):
+    return Tenant.objects.create(id="other-city", name="Other City", is_active=True)
+
+
+@pytest.fixture
+def other_tenant_admin(db, other_tenant):
+    return User.objects.create_user(
+        username="admin2", email="admin2@test.com", password="password123",
+        role="TENANT_ADMIN", tenant=other_tenant,
+    )
+
+
+@pytest.fixture
+def moderator_user(db, tenant):
+    return User.objects.create_user(
+        username="mod", email="mod@test.com", password="password123",
+        role="TENANT_MODERATOR", tenant=tenant,
+    )
+
+
+@pytest.fixture
+def sponsor_user(db, tenant):
+    return User.objects.create_user(
+        username="sponsor", email="sponsor@test.com", password="password123",
+        role="SPONSOR", tenant=tenant,
+    )
+
+
+@pytest.fixture
 def athlete_user(db, tenant):
     return User.objects.create_user(
         username="athlete", email="athlete@test.com", password="password123",
@@ -206,7 +235,33 @@ class TestRolePermissions:
         response = api_client.get(reverse("user-list"))
         assert response.status_code == 200
         assert "results" in response.data
-        assert "count" in response.data
+        assert "next_cursor" in response.data
+        assert "has_more" in response.data
+
+    def test_tenant_admin_user_list_is_scoped(self, api_client, admin_user, other_tenant, tenant):
+        # Create users in both tenants
+        in_tenant = User.objects.create_user(
+            username="t1", email="t1@test.com", password="password123", role="ATHLETE", tenant=tenant
+        )
+        out_tenant = User.objects.create_user(
+            username="t2", email="t2@test.com", password="password123", role="ATHLETE", tenant=other_tenant
+        )
+
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(reverse("user-list"), {"page_size": 100})
+        assert response.status_code == 200
+        usernames = {u["username"] for u in response.data["results"]}
+        assert in_tenant.username in usernames
+        assert out_tenant.username not in usernames
+
+    def test_tenant_admin_detail_is_scoped_404(self, api_client, admin_user, other_tenant):
+        other = User.objects.create_user(
+            username="outsider", email="outsider@test.com", password="password123", role="ATHLETE", tenant=other_tenant
+        )
+        api_client.force_authenticate(user=admin_user)
+        url = reverse("user-detail", kwargs={"pk": other.id})
+        response = api_client.get(url)
+        assert response.status_code == 404
 
     def test_user_list_pagination_and_search(self, api_client, owner_user, tenant):
         for i in range(12):
@@ -218,16 +273,32 @@ class TestRolePermissions:
                 tenant=tenant,
             )
         api_client.force_authenticate(user=owner_user)
-        page1 = api_client.get(reverse("user-list"), {"page": 1, "page_size": 5})
+        page1 = api_client.get(reverse("user-list"), {"page_size": 5})
         assert page1.status_code == 200
         assert len(page1.data["results"]) == 5
-        assert page1.data["count"] >= 12
+        assert page1.data["has_more"] in (True, False)
+        assert page1.data["next_cursor"] is not None
+
+        page2 = api_client.get(reverse("user-list"), {"page_size": 5, "cursor": page1.data["next_cursor"]})
+        assert page2.status_code == 200
+        assert len(page2.data["results"]) == 5 or len(page2.data["results"]) < 5
+
         found = api_client.get(reverse("user-list"), {"search": "batch_athlete_3"})
         assert found.status_code == 200
         assert any(u["username"] == "batch_athlete_3" for u in found.data["results"])
 
     def test_athlete_denied_user_list(self, api_client, athlete_user):
         api_client.force_authenticate(user=athlete_user)
+        response = api_client.get(reverse("user-list"))
+        assert response.status_code == 403
+
+    def test_moderator_denied_user_list(self, api_client, moderator_user):
+        api_client.force_authenticate(user=moderator_user)
+        response = api_client.get(reverse("user-list"))
+        assert response.status_code == 403
+
+    def test_sponsor_denied_user_list(self, api_client, sponsor_user):
+        api_client.force_authenticate(user=sponsor_user)
         response = api_client.get(reverse("user-list"))
         assert response.status_code == 403
 
@@ -244,3 +315,32 @@ class TestRolePermissions:
         assert response.status_code == 200
         assert "access" in response.data
         assert response.data["impersonated_user"] == "athlete"
+
+
+@pytest.mark.django_db
+class TestBulkUserEndpoints:
+    def test_tenant_admin_bulk_set_status_scoped(self, api_client, admin_user, tenant, other_tenant):
+        u1 = User.objects.create_user(username="u1", email="u1@test.com", password="password123", role="ATHLETE", tenant=tenant)
+        u2 = User.objects.create_user(username="u2", email="u2@test.com", password="password123", role="ATHLETE", tenant=other_tenant)
+        api_client.force_authenticate(user=admin_user)
+
+        url = reverse("users-bulk-set-status")
+        # Cross-tenant targeting must be rejected
+        r = api_client.post(url, {"user_ids": [u1.id, u2.id], "is_active": False}, format="json")
+        assert r.status_code == 403
+
+        ok = api_client.post(url, {"user_ids": [u1.id], "is_active": False}, format="json")
+        assert ok.status_code == 202
+        assert ok.data["allowed"] == 1
+
+    def test_tenant_admin_bulk_change_role_restricts_roles(self, api_client, admin_user, tenant):
+        u1 = User.objects.create_user(username="u3", email="u3@test.com", password="password123", role="ATHLETE", tenant=tenant)
+        api_client.force_authenticate(user=admin_user)
+
+        url = reverse("users-bulk-change-role")
+        forbidden = api_client.post(url, {"user_ids": [u1.id], "role": "GLOBAL_OWNER"}, format="json")
+        assert forbidden.status_code == 403
+
+        ok = api_client.post(url, {"user_ids": [u1.id], "role": "TENANT_MODERATOR"}, format="json")
+        assert ok.status_code == 202
+        assert ok.data["allowed"] == 1

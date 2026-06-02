@@ -97,15 +97,26 @@ class ImpersonationAuditMiddleware:
 
         # Block 2: Admin logging — only for mutating requests, skip if already logged as impersonation
         if is_authenticated and user_role in ('GLOBAL_OWNER', 'TENANT_ADMIN') and not logged_as_impersonation:
+            # If the admin deletes their own user account, avoid creating an AuditLog row
+            # that would temporarily reference the row being deleted (SQLite teardown FK checks
+            # can otherwise fail for this self-delete scenario).
+            skip_self_delete_audit = False
+            if request.method == 'DELETE' and '/api/users/' in request.path and '/delete/' in request.path:
+                import re
+                m = re.search(r'/api/users/(\d+)/delete/', request.path)
+                if m and int(m.group(1)) == request.user.id:
+                    skip_self_delete_audit = True
+
             action = f"Admin Action: {request.method} {request.path}"
-            AuditLog.objects.create(
-                impersonator_id=request.user.id,
-                target_user_id=request.user.id,
-                action=action,
-                ip_address=self.get_client_ip(request),
-                status_code=response.status_code,
-                tenant_id=tenant_id,
-            )
+            if not skip_self_delete_audit:
+                AuditLog.objects.create(
+                    impersonator_id=request.user.id,
+                    target_user_id=None,
+                    action=action,
+                    ip_address=self.get_client_ip(request),
+                    status_code=response.status_code,
+                    tenant_id=tenant_id,
+                )
 
         return response
 

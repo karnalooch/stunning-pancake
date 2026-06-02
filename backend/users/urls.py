@@ -9,12 +9,16 @@ from .views import (
     TenantUpdateView,
     ImpersonateUserView,
     UserListView,
+    UserDetailView,
     TenantListView,
     AuditLogListView,
     UserCreateView,
     UserUpdateView,
     UserDeleteView,
     InvitationTokenView,
+    UserBulkSetStatusView,
+    UserBulkChangeRoleView,
+    UserBulkJobStatusView,
 )
 
 urlpatterns = [
@@ -32,5 +36,9 @@ urlpatterns = [
     path('create/', UserCreateView.as_view(), name='user-create'),
     path('<int:pk>/update/', UserUpdateView.as_view(), name='user-update'),
     path('<int:pk>/delete/', UserDeleteView.as_view(), name='user-delete'),
+    path('<int:pk>/detail/', UserDetailView.as_view(), name='user-detail'),
+    path('bulk/set-status/', UserBulkSetStatusView.as_view(), name='users-bulk-set-status'),
+    path('bulk/change-role/', UserBulkChangeRoleView.as_view(), name='users-bulk-change-role'),
+    path('bulk/jobs/<str:job_id>/', UserBulkJobStatusView.as_view(), name='users-bulk-job-status'),
     path('invitation/', InvitationTokenView.as_view(), name='invitation'),
 ]

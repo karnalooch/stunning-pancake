@@ -10,5 +10,6 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md](./COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md) | Kompleksowy |
 | [FULL_INDUSTRY_AUDIT_2026-05-27.md](./FULL_INDUSTRY_AUDIT_2026-05-27.md) | Branżowy |
 | [FRONTEND_BACKEND_GAP_REPORT.md](./FRONTEND_BACKEND_GAP_REPORT.md) | Luki FE/BE |
+| [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02) |
 
-Nowe audyty: dodaj plik `NAZWA_YYYY-MM-DD.md` tutaj, bez nadpisywania starych.
+Nowe audyty: dodaj plik `NAZWA_YYYY-MM-DD.md` tutaj, bez nadpisywania starych. Audyty panelu admin → preferuj `docs/admin/UI_AUDIT_*.md`.

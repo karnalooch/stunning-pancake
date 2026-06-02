@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box, Text, Card, Group, Stack, Slider, NumberInput, Button,
     Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox,
@@ -14,6 +14,7 @@ import {
 import { SimulatorApi } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
+import { useAuth } from '../../core/auth/useAuth';
 
 interface LiveStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
@@ -39,6 +40,8 @@ interface WipeStatus {
 }
 
 export const SimulatorPage: React.FC = () => {
+    const { user } = useAuth();
+    const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
     const [activeStep, setActiveStep] = useState(0);
 
     const [cyclists, setCyclists] = useState<number>(1000);
@@ -53,12 +56,23 @@ export const SimulatorPage: React.FC = () => {
     const [liveStatus, setLiveStatus] = useState<LiveStatus | null>(null);
 
     const [wipeModalOpen, setWipeModalOpen] = useState(false);
-    const [wipeConfirm, setWipeConfirm] = useState('');
+    const [wipeConfirmPhrase, setWipeConfirmPhrase] = useState('');
+    const [wipeMfaAck, setWipeMfaAck] = useState(false);
     const [wiping, setWiping] = useState(false);
     const [wipeProgress, setWipeProgress] = useState(0);
     const [wipePhase, setWipePhase] = useState('');
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
+
+    const environmentLabel = useMemo(
+        () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
+        [],
+    );
+
+    const requiredWipePhrase = useMemo(
+        () => `DELETE ALL DATA — ${environmentLabel} — GLOBAL_OWNER`,
+        [environmentLabel],
+    );
 
     const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const livePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -216,17 +230,22 @@ export const SimulatorPage: React.FC = () => {
     };
 
     const handleWipe = async () => {
-        if (wipeConfirm !== 'DELETE ALL DATA') return;
         setWiping(true);
         setWipeProgress(0);
         setWipePhase('Start…');
         try {
-            const result = await SimulatorApi.wipeData((s: WipeStatus) => {
-                setWipeProgress(s.progress_pct ?? 0);
-                setWipePhase(s.phase || '');
-            });
+            const result = await SimulatorApi.wipeData(
+                (s: WipeStatus) => {
+                    setWipeProgress(s.progress_pct ?? 0);
+                    setWipePhase(s.phase || '');
+                },
+                {
+                    confirmPhrase: wipeConfirmPhrase,
+                    mfaConfirmed: wipeMfaAck,
+                },
+            );
             setBatchStatus(null); setLiveStatus(null);
-            setWipeModalOpen(false); setWipeConfirm('');
+            setWipeModalOpen(false); setWipeConfirmPhrase(''); setWipeMfaAck(false);
             setActiveStep(0);
             const warn = (result as { warning?: string; error?: string })?.warning;
             notifications.show({
@@ -515,7 +534,7 @@ export const SimulatorPage: React.FC = () => {
                                 )}
 
                                 {/* Wipe Data (Danger Zone) */}
-                                {!anyRunning && (
+                                {!anyRunning && isGlobalOwner && (
                                     <Button color="red" variant="subtle" size="xs" fullWidth mt="md"
                                         leftSection={<Trash2 size={12} />}
                                         onClick={() => setWipeModalOpen(true)}>
@@ -533,23 +552,41 @@ export const SimulatorPage: React.FC = () => {
                 </Stepper>
             </Card>
 
-            <Modal opened={wipeModalOpen} onClose={() => { setWipeModalOpen(false); setWipeConfirm(''); }}
+            <Modal
+                opened={wipeModalOpen}
+                onClose={() => {
+                    setWipeModalOpen(false);
+                    setWipeConfirmPhrase('');
+                    setWipeMfaAck(false);
+                }}
                 title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
                 <Stack gap="md">
-                    <Text size="sm">Type <b>DELETE ALL DATA</b> to confirm:</Text>
-                    <input type="text" value={wipeConfirm}
-                        onChange={(e) => setWipeConfirm(e.target.value)}
-                        placeholder="Type DELETE ALL DATA"
+                    <Text size="sm" c="dimmed">
+                        Stop 1/2: Type the exact phrase (role + environment).
+                    </Text>
+                    <Text size="sm">
+                        Type <b>exactly</b>:
+                        <span style={{ fontFamily: 'monospace' }}> &quot;{requiredWipePhrase}&quot;</span>
+                    </Text>
+                    <input type="text" value={wipeConfirmPhrase}
+                        onChange={(e) => setWipeConfirmPhrase(e.target.value)}
+                        placeholder={requiredWipePhrase}
                         style={{
                             padding: '8px 12px', border: '1px solid var(--mantine-color-red-6)',
                             borderRadius: 8, background: 'var(--surface-secondary)',
                             color: 'var(--text-primary)', fontSize: 14, width: '100%',
+                            fontFamily: 'monospace',
                         }} />
+                    <Checkbox
+                        checked={wipeMfaAck}
+                        onChange={(e) => setWipeMfaAck(e.currentTarget.checked)}
+                        label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
+                    />
                     {wiping && (
                         <WipeProgressBar progressPct={wipeProgress} phase={wipePhase} />
                     )}
                     <Button color="red" fullWidth loading={wiping}
-                        disabled={wipeConfirm !== 'DELETE ALL DATA'} onClick={handleWipe}>
+                        disabled={wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck} onClick={handleWipe}>
                         {wiping ? `Wiping… ${wipeProgress.toFixed(0)}%` : 'Yes, Delete Everything'}
                     </Button>
                 </Stack>

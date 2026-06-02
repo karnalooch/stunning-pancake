@@ -161,20 +161,19 @@ import django.db.models.fields as _fields_module
 _original_uuid_to_python = _fields_module.UUIDField.to_python
 
 
-class _MockUUID:
-    """Minimal UUID-like object that supports .hex attribute."""
-    def __init__(self, hex_val: str):
-        self.hex = hex_val
-        self._hex = hex_val
+class _MockUUID(str):
+    """
+    Minimal JSON-serializable UUID-like object for SQLite tests.
 
-    def __str__(self):
-        return self._hex
+    DRF's JSON renderer can't serialize arbitrary objects, so we subclass `str`
+    (which makes it JSON-serializable) while still providing a `.hex` attr.
+    """
 
-    def __eq__(self, other):
-        return str(self) == str(other)
+    def __new__(cls, value):
+        return super().__new__(cls, str(value))
 
-    def __hash__(self):
-        return hash(self._hex)
+    def __init__(self, value):
+        self.hex = str(value)
 
 
 def _lenient_uuid_to_python(self, value):

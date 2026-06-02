@@ -1,0 +1,183 @@
+{
+  "started": "2026-06-02T00:36:49.168Z",
+  "findings": [
+    {
+      "login": "ok",
+      "url": "https://admin-production-083b.up.railway.app/#/owner/dashboard"
+    },
+    {
+      "section": "leaderboards",
+      "clicked": "Recalculate All"
+    },
+    {
+      "section": "export",
+      "clicked": "Export"
+    },
+    {
+      "section": "export",
+      "clicked": "Export"
+    },
+    {
+      "section": "export",
+      "clicked": "Export"
+    },
+    {
+      "section": "settings",
+      "clicked": "Change Password"
+    },
+    {
+      "section": "settings",
+      "clicked": "Save Settings"
+    },
+    {
+      "section": "settings",
+      "skip": "Wipe All Data"
+    },
+    {
+      "section": "dashboard",
+      "clickFail": "Zoom in",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "dashboard",
+      "clicked": "Zoom out"
+    },
+    {
+      "section": "dashboard",
+      "clicked": "Drag to rotate map, click to reset north"
+    },
+    {
+      "section": "white-label",
+      "clicked": "Deploy Branding"
+    },
+    {
+      "users": "audit tab opened"
+    },
+    {
+      "users": "create modal"
+    },
+    {
+      "users": "invite modal"
+    },
+    {
+      "users": "edit drawer opened"
+    },
+    {
+      "usersDrawerSnippet": ""
+    },
+    {
+      "users": "lock toggle present (not clicked)"
+    },
+    {
+      "route": "users",
+      "tab": "Users Registry"
+    },
+    {
+      "route": "users",
+      "tab": "Audit Log (50)"
+    },
+    {
+      "section": "users",
+      "clicked": "Users Registry"
+    },
+    {
+      "section": "users",
+      "clicked": "Audit Log (50)"
+    },
+    {
+      "section": "departments",
+      "clicked": "List"
+    },
+    {
+      "section": "departments",
+      "clicked": "Tree"
+    },
+    {
+      "section": "departments",
+      "clicked": "New Department"
+    }
+  ],
+  "routes": [
+    {
+      "id": "rbac",
+      "ms": 2232,
+      "title": "RBAC Manager",
+      "empty": false,
+      "error": false,
+      "snippet": "RBAC Manager Visual role & permission management Roles Athlete athlete 5 PERMISSIONS SYSTEM MANAGE Department Moderator department_moderator 11 PERMISSIONS SYSTEM MANAGE Global Owner global_owner 36 PERMISSIONS SYSTEM MANAGE Sponsor sponsor 7 PERMISSIONS SYSTEM MANAGE Tenant Admi"
+    },
+    {
+      "id": "feature-flags",
+      "ms": 2213,
+      "title": "Feature Flags",
+      "empty": false,
+      "error": false,
+      "snippet": "Feature Flags Toggle features without redeploy No feature flags configured."
+    },
+    {
+      "id": "leaderboards",
+      "ms": 2217,
+      "title": "Leaderboard Manager",
+      "empty": true,
+      "error": false,
+      "snippet": "Leaderboard Manager Manage rankings and competitions Recalculate All City Leaderboards No leaderboards found."
+    },
+    {
+      "id": "export",
+      "ms": 2215,
+      "title": "Export Center",
+      "empty": false,
+      "error": false,
+      "snippet": "Export Center Download data in multiple formats Activities CSV Export all activities as CSV Export Users JSON Export users as JSON Export Statistics PDF Weekly statistics report Export"
+    },
+    {
+      "id": "api-playground",
+      "ms": 2217,
+      "title": "Recalculating",
+      "empty": false,
+      "error": false,
+      "snippet": "API Playground Interactive API Documentation Open Swagger UI The interactive documentation is hosted at https://backend-production-55c7.up.railway.app/docs/. Open it in a new tab for full Swagger UI experience. Quick API Reference BASE: HTTPS://BACKEND-PRODUCTION-55C7.UP.RAILWAY."
+    },
+    {
+      "id": "settings",
+      "ms": 2225,
+      "title": "Settings",
+      "empty": false,
+      "error": false,
+      "snippet": "Settings Platform configuration and preferences Notifications Push Notifications Real-time alerts for anomalies Weekly Email Digest Summary report every Monday Appearance Dark Mode Toggle dark/light theme Language Security Change Password Performance API Cache Redis-based caching"
+    },
+    {
+      "id": "dashboard",
+      "ms": 2216,
+      "title": "Good morning, global_owner 👋",
+      "empty": false,
+      "error": false,
+      "snippet": "Good morning, global_owner 👋 Global platform overview — all tenants combined TOTAL ATHLETES TOTAL ACTIVITIES TOTAL DISTANCE VERIFICATION RATE System Intelligence AI Live Activity 0 ACTIVE © CARTO, © OpenStreetMap contributors Activity & System Monitoring Activity Timeline Audit "
+    },
+    {
+      "id": "white-label",
+      "ms": 2234,
+      "title": "White-Label Engine",
+      "empty": false,
+      "error": false,
+      "snippet": "White-Label Engine Customize tenant branding Domain Tenant Name Custom Domain Colors Primary Color Secondary Color Live Preview Siedlce City siedlce.sport.com Deploy Branding"
+    },
+    {
+      "id": "users",
+      "ms": 2222,
+      "title": "Branding",
+      "empty": false,
+      "error": false,
+      "snippet": "Users Registry Audit Log Create User Invite Staff Showing 15 of 10 014 users USER ID IDENTITY CITY / TENANT SYSTEM ROLE STATUS U-1476285 athlete_warsaw athlete_warsaw@sport-platform.com Warsaw Runners ATHLETE ACTIVE U-1476284 athlete_01 athlete_01@sport-platform.com Siedlce City "
+    },
+    {
+      "id": "departments",
+      "ms": 32242,
+      "title": "",
+      "empty": false,
+      "error": false,
+      "snippet": "Departments / Classes List Tree New Department NAME TYPE MEMBERS MODERATOR PARENT ACTIONS Akademia Medyczna w Katowice FACULTY 1 — — Akademia Medyczna w Lublin FACULTY 0 — — Akademia Medyczna w Łódź FACULTY 0 — — Akademia Medyczna — Bydgoszcz FACULTY 0 — Uniwersytet Przyrodniczy "
+    }
+  ],
+  "fatal": "TimeoutError: locator.getAttribute: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('.mantine-AppShell-main, [class*=\"AppShell-main\"], main').first().locator('button:visible, [role=\"button\"]:visible').nth(3)\n"
+}

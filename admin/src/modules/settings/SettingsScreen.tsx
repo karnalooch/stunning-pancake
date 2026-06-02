@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
-import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon, Modal } from '@mantine/core';
+import React, { useMemo, useState } from 'react';
+import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon, Modal, Checkbox } from '@mantine/core';
 import { Bell, PaintBucket, Shield, Zap, Trash2, AlertTriangle } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
-import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
+import { useAuth } from '../../core/auth/useAuth';
 
 export const SettingsScreen: React.FC = () => {
+  const { user } = useAuth();
+  const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
+
+  const environmentLabel = useMemo(
+    () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
+    [],
+  );
+
+  const requiredWipePhrase = useMemo(
+    () => `DELETE ALL DATA — ${environmentLabel} — GLOBAL_OWNER`,
+    [environmentLabel],
+  );
+
   const [settings, setSettings] = useState({
     notifications: true,
     emailDigest: false,
@@ -47,21 +60,31 @@ export const SettingsScreen: React.FC = () => {
   ];
 
   const [wipeModalOpen, setWipeModalOpen] = useState(false);
-  const [wipeConfirm, setWipeConfirm] = useState('');
+  const [wipeConfirmPhrase, setWipeConfirmPhrase] = useState('');
+  const [wipeMfaAck, setWipeMfaAck] = useState(false);
   const [wiping, setWiping] = useState(false);
 
   const handleWipe = async () => {
-    if (wipeConfirm !== 'DELETE ALL DATA') return;
     setWiping(true);
     try {
       const { SimulatorApi } = await import('../../api/client');
-      await SimulatorApi.wipeData();
-      notifications.show({ title: 'Data Wiped', message: 'All data except Global Owner has been deleted.', color: 'green' });
+      await SimulatorApi.wipeData(undefined, {
+        confirmPhrase: wipeConfirmPhrase,
+        mfaConfirmed: wipeMfaAck,
+      });
+      notifications.show({
+        title: 'Data Wiped',
+        message: 'All data except Global Owner has been deleted.',
+        color: 'green',
+      });
       setWipeModalOpen(false);
-      setWipeConfirm('');
+      setWipeConfirmPhrase('');
+      setWipeMfaAck(false);
     } catch (err: any) {
       notifications.show({ title: 'Error', message: err?.response?.data?.error || err.message || 'Wipe failed.', color: 'red' });
-    } finally { setWiping(false); }
+    } finally {
+      setWiping(false);
+    }
   };
 
   return (
@@ -77,37 +100,82 @@ export const SettingsScreen: React.FC = () => {
       <Button onClick={handleSave} size="md" style={{ background: 'var(--brand-gradient)', borderRadius: 10 }}>Save Settings</Button>
 
       {/* Danger Zone */}
-      <Card mt="xl" style={{ background: 'var(--surface)', border: '2px solid var(--mantine-color-red-6)', borderRadius: 14, padding: 24 }}>
-        <Group mb="md">
-          <ThemeIcon size={36} radius="md" color="red" variant="light"><AlertTriangle size={20} /></ThemeIcon>
-          <Text fw={700} size="lg" c="red">Danger Zone</Text>
-        </Group>
-        <Text size="sm" c="dimmed" mb="md">
-          This will permanently delete ALL users (except Global Owner), tenants, departments, and activities. This action cannot be undone.
-        </Text>
-        <Button color="red" variant="outline" leftSection={<Trash2 size={16} />} onClick={() => setWipeModalOpen(true)}>
-          Wipe All Data
-        </Button>
-      </Card>
-
-      <Modal opened={wipeModalOpen} onClose={() => { setWipeModalOpen(false); setWipeConfirm(''); }} title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
-        <Stack gap="md">
-          <Text size="sm">This will delete ALL activities, users (except GLOBAL_OWNER), tenants, and departments. Type <b>DELETE ALL DATA</b> to confirm:</Text>
-          <input
-            type="text"
-            value={wipeConfirm}
-            onChange={(e) => setWipeConfirm(e.target.value)}
-            placeholder="Type DELETE ALL DATA"
-            style={{
-              padding: '8px 12px', border: '1px solid var(--mantine-color-red-6)', borderRadius: 8,
-              background: 'var(--surface-secondary)', color: 'var(--text-primary)', fontSize: 14, width: '100%',
-            }}
-          />
-          <Button color="red" fullWidth leftSection={<Trash2 size={16} />} loading={wiping} disabled={wipeConfirm !== 'DELETE ALL DATA'} onClick={handleWipe}>
-            {wiping ? 'Wiping...' : 'Yes, Delete Everything'}
+      {isGlobalOwner && (
+        <Card
+          mt="xl"
+          style={{ background: 'var(--surface)', border: '2px solid var(--mantine-color-red-6)', borderRadius: 14, padding: 24 }}
+        >
+          <Group mb="md">
+            <ThemeIcon size={36} radius="md" color="red" variant="light">
+              <AlertTriangle size={20} />
+            </ThemeIcon>
+            <Text fw={700} size="lg" c="red">
+              Danger Zone
+            </Text>
+          </Group>
+          <Text size="sm" c="dimmed" mb="md">
+            Permanently deletes ALL users (except Global Owner), tenants, departments, and activities. This action cannot be undone.
+          </Text>
+          <Button color="red" variant="outline" leftSection={<Trash2 size={16} />} onClick={() => setWipeModalOpen(true)}>
+            Wipe All Data
           </Button>
-        </Stack>
-      </Modal>
+
+          <Modal
+            opened={wipeModalOpen}
+            onClose={() => {
+              setWipeModalOpen(false);
+              setWipeConfirmPhrase('');
+              setWipeMfaAck(false);
+            }}
+            title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>}
+            centered
+          >
+            <Stack gap="md">
+              <Text size="sm" c="dimmed">
+                Stop 1/2: Type the exact phrase (role + environment).
+              </Text>
+              <Text size="sm">
+                This will delete ALL activities, users (except <b>GLOBAL_OWNER</b>), tenants, and departments.
+                Type <b>exactly</b>: <span style={{ fontFamily: 'monospace' }}>&quot;{requiredWipePhrase}&quot;</span>
+              </Text>
+
+              <input
+                type="text"
+                value={wipeConfirmPhrase}
+                onChange={(e) => setWipeConfirmPhrase(e.target.value)}
+                placeholder={requiredWipePhrase}
+                style={{
+                  padding: '8px 12px',
+                  border: '1px solid var(--mantine-color-red-6)',
+                  borderRadius: 8,
+                  background: 'var(--surface-secondary)',
+                  color: 'var(--text-primary)',
+                  fontSize: 14,
+                  width: '100%',
+                  fontFamily: 'monospace',
+                }}
+              />
+
+              <Checkbox
+                checked={wipeMfaAck}
+                onChange={(e) => setWipeMfaAck(e.currentTarget.checked)}
+                label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
+              />
+
+              <Button
+                color="red"
+                fullWidth
+                leftSection={<Trash2 size={16} />}
+                loading={wiping}
+                disabled={wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck}
+                onClick={handleWipe}
+              >
+                {wiping ? 'Wiping...' : 'Yes, Delete Everything'}
+              </Button>
+            </Stack>
+          </Modal>
+        </Card>
+      )}
     </Box>
   );
 };

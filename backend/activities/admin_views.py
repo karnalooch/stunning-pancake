@@ -11,12 +11,13 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum, Count, Q
 from django.http import HttpResponse
 from django.utils import timezone
+from django.conf import settings as django_settings
 from datetime import timedelta
 from rest_framework.pagination import PageNumberPagination
 from .models import Activity
 from .serializers import ActivitySerializer
 from users.models import Tenant
-from users.permissions import IsAdminOrModerator
+from users.permissions import IsAdminOrModerator, IsGlobalOwner
 from . import simulator_state as sim
 from .simulator_tasks import run_batch_simulation, run_live_simulation
 
@@ -525,7 +526,7 @@ class WipeDataView(APIView):
     DELETE /api/activities/admin/wipe-data/  — start chunked async wipe
     GET    /api/activities/admin/wipe-data/  — progress { running, progress_pct, deleted, log }
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwner]
 
     def get(self, request):
         from activities import wipe_state as ws
@@ -543,6 +544,25 @@ class WipeDataView(APIView):
         confirm = request.data.get('confirm', False) or request.query_params.get('confirm') == 'true'
         if not confirm:
             return Response({'error': 'Must send ?confirm=true'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Strong guard rails: exact phrase + MFA-like checkbox acknowledgement.
+        # Phrase includes environment to prevent accidental cross-environment wipes.
+        expected_env = 'development' if getattr(django_settings, 'DEBUG', False) else 'production'
+        expected_phrase = f'DELETE ALL DATA — {expected_env.upper()} — GLOBAL_OWNER'
+
+        confirm_phrase = (request.data.get('confirm_phrase') or '').strip()
+        if confirm_phrase != expected_phrase:
+            return Response(
+                {'error': 'Invalid confirmation phrase. Re-open the dialog and confirm exactly as shown.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        mfa_confirmed = bool(request.data.get('mfa_confirmed', False))
+        if not mfa_confirmed:
+            return Response(
+                {'error': 'Missing MFA-like confirmation checkbox (mfa_confirmed=true).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         from activities import wipe_state as ws
         from activities.wipe_tasks import start_wipe_async
@@ -565,6 +585,17 @@ class WipeDataView(APIView):
                     },
                     status=status.HTTP_409_CONFLICT,
                 )
+
+        # Audit log for the wipe action (queued).
+        from users.models import AuditLog
+        AuditLog.objects.create(
+            impersonator=request.user,
+            target_user=request.user,
+            tenant_id=None,
+            action='WIPE ALL DATA queued',
+            ip_address=request.META.get('REMOTE_ADDR'),
+            status_code=202,
+        )
 
         ws.mark_wipe_queued()
         dispatch = start_wipe_async()

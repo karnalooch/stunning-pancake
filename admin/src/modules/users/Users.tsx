@@ -1,7 +1,7 @@
 import {
   Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon,
   Drawer, Modal, ScrollArea, Tabs, Select, PasswordInput,
-  Pagination, Switch, Textarea, Tooltip, Card
+  Switch, Textarea, Tooltip, Card, Checkbox, Progress
 } from '@mantine/core';
 import { useState, useEffect, useCallback } from 'react';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -49,7 +49,6 @@ interface AuditLogEntry {
 export const Users = () => {
   const { user } = useAuth();
   const [usersList, setUsersList] = useState<UserRow[]>([]);
-  const [usersTotal, setUsersTotal] = useState(0);
   const [usersLoading, setUsersLoading] = useState(true);
   const [tenantsList, setTenantsList] = useState<TenantRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
@@ -70,9 +69,36 @@ export const Users = () => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedTenant, setSelectedTenant] = useState<string>('');
   
-  // Pagination
-  const [page, setPage] = useState(1);
-  const pageSize = 15;
+  // Cursor pagination (scales to 300k+ without offset scans).
+  const pageSize = 25;
+  const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);
+  const [cursorIndex, setCursorIndex] = useState(0);
+  const currentCursor = cursorStack[cursorIndex] ?? null;
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  // Server-side sorting
+  const [sortBy, setSortBy] = useState<'id' | 'username' | 'email' | 'role' | 'status' | 'tenant'>('id');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Bulk selection (current cursor page only).
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [bulkRoleModalOpened, setBulkRoleModalOpened] = useState(false);
+  const [bulkChangeRoleForm, setBulkChangeRoleForm] = useState<{
+    role: string;
+    update_tenant: boolean;
+    tenant_id: string;
+  }>({ role: 'ATHLETE', update_tenant: false, tenant_id: '' });
+  const [bulkJob, setBulkJob] = useState<null | {
+    job_id: string;
+    status: string;
+    progress_pct?: number;
+    processed?: number;
+    total?: number;
+    error?: string;
+    message?: string;
+    action?: string;
+  }>(null);
 
   // Create user form state
   const [createForm, setCreateForm] = useState({
@@ -129,26 +155,91 @@ export const Users = () => {
 
   const fetchUsers = useCallback(() => {
     setUsersLoading(true);
-    const params: Record<string, string | number> = {
-      page,
+    const params: Record<string, string | number | null> = {
+      cursor: currentCursor,
       page_size: pageSize,
+      sort: sortBy,
+      order: sortOrder,
     };
     if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
     if (selectedRole) params.role = selectedRole;
     if (selectedTenant) params.tenant_id = selectedTenant;
 
     AdminApi.getUsers(params)
-      .then(({ results, count }) => {
+      .then(({ results, next_cursor, has_more }) => {
         setUsersList(results.map(mapUserRow));
-        setUsersTotal(count);
+        setSelectedUserIds([]);
+        setNextCursor(next_cursor ?? null);
+        setHasMore(Boolean(has_more));
       })
       .catch((err) => console.error('Failed to load users:', err))
       .finally(() => setUsersLoading(false));
-  }, [page, pageSize, debouncedSearch, selectedRole, selectedTenant]);
+  }, [currentCursor, pageSize, debouncedSearch, selectedRole, selectedTenant, sortBy, sortOrder]);
+
+  // Reset cursor when filters/sorting change.
+  useEffect(() => {
+    setCursorStack([null]);
+    setCursorIndex(0);
+  }, [debouncedSearch, selectedRole, selectedTenant, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Poll async bulk actions (redis-backed) until completion.
+  useEffect(() => {
+    if (!bulkJob?.job_id) return;
+
+    const jobId = bulkJob.job_id;
+    let stopped = false;
+    const intervalId = setInterval(async () => {
+      try {
+        const s = await AdminApi.getBulkJobStatus(jobId);
+        if (stopped) return;
+
+        setBulkJob((prev) => {
+          if (!prev || prev.job_id !== jobId) return prev;
+          return { ...prev, ...s, job_id: jobId };
+        });
+
+        if (s.status === 'complete') {
+          clearInterval(intervalId);
+          if (stopped) return;
+          notifications.show({
+            title: 'Bulk action complete',
+            message: s.message || 'Done.',
+            color: 'green',
+          });
+          setSelectedUserIds([]);
+          setBulkRoleModalOpened(false);
+          setBulkJob(null);
+          fetchUsers();
+        } else if (s.status === 'error') {
+          clearInterval(intervalId);
+          if (stopped) return;
+          notifications.show({
+            title: 'Bulk action failed',
+            message: s.error || s.message || 'Unknown error',
+            color: 'red',
+          });
+          setBulkJob(null);
+          fetchUsers();
+        }
+      } catch (err: any) {
+        notifications.show({
+          title: 'Bulk status polling failed',
+          message: err?.response?.data?.error || err.message || 'Unknown error',
+          color: 'red',
+        });
+        clearInterval(intervalId);
+      }
+    }, 1500);
+
+    return () => {
+      stopped = true;
+      clearInterval(intervalId);
+    };
+  }, [bulkJob?.job_id, fetchUsers]);
   
   useEffect(() => {
     if (user?.role === 'GLOBAL_OWNER') {
@@ -163,23 +254,53 @@ export const Users = () => {
     }
   }, [user]);
 
-  // Populate edit form on selection change (using render phase update to avoid set-state-in-effect)
-  const [prevSelectedUser, setPrevSelectedUser] = useState<UserRow | null>(null);
-  if (selectedUser !== prevSelectedUser) {
-    setPrevSelectedUser(selectedUser);
-    if (selectedUser) {
-      setEditForm({
-        username: selectedUser.name,
-        email: selectedUser.email,
-        role: selectedUser.role,
-        tenant_id: selectedUser.tenant_id || '',
-        is_active: selectedUser.is_active,
-        avatar: selectedUser.avatar || '',
-        bio: selectedUser.bio || '',
-        password: '',
+  const [drawerUserLoading, setDrawerUserLoading] = useState(false);
+  useEffect(() => {
+    if (!selectedUser) return;
+    let cancelled = false;
+
+    // Instant populate to avoid a blank drawer while we lazily fetch.
+    setEditForm({
+      username: selectedUser.name,
+      email: selectedUser.email,
+      role: selectedUser.role,
+      tenant_id: selectedUser.tenant_id || '',
+      is_active: selectedUser.is_active,
+      avatar: selectedUser.avatar || '',
+      bio: selectedUser.bio || '',
+      password: '',
+    });
+
+    setDrawerUserLoading(true);
+    AdminApi.getUserDetail(selectedUser.id)
+      .then((details: any) => {
+        if (cancelled) return;
+        setEditForm({
+          username: details.username ?? selectedUser.name,
+          email: details.email ?? selectedUser.email,
+          role: details.role ?? selectedUser.role,
+          tenant_id: details.tenant_id ?? '',
+          is_active: Boolean(details.is_active),
+          avatar: details.avatar ?? '',
+          bio: details.bio ?? '',
+          password: '',
+        });
+      })
+      .catch(() => {
+        notifications.show({
+          title: 'User load failed',
+          message: 'Could not load the full user details.',
+          color: 'red',
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setDrawerUserLoading(false);
       });
-    }
-  }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedUser?.id]);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
 
@@ -313,8 +434,6 @@ export const Users = () => {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(usersTotal / pageSize));
-
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
   return (
@@ -339,7 +458,6 @@ export const Users = () => {
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.currentTarget.value);
-                    setPage(1);
                   }}
                 />
                 <Select
@@ -355,9 +473,29 @@ export const Users = () => {
                   value={selectedRole}
                   onChange={(v) => {
                     setSelectedRole(v || '');
-                    setPage(1);
                   }}
                   clearable
+                />
+                <Select
+                  placeholder="Sort"
+                  data={[
+                    { value: 'id_desc', label: 'Newest (ID desc)' },
+                    { value: 'id_asc', label: 'Oldest (ID asc)' },
+                    { value: 'username_asc', label: 'Username A-Z' },
+                    { value: 'username_desc', label: 'Username Z-A' },
+                    { value: 'email_asc', label: 'Email A-Z' },
+                    { value: 'email_desc', label: 'Email Z-A' },
+                    { value: 'role_asc', label: 'Role (A-Z)' },
+                    { value: 'status_desc', label: 'Status: Active first' },
+                    { value: 'tenant_asc', label: 'Tenant (A-Z)' },
+                  ]}
+                  value={`${sortBy}_${sortOrder}`}
+                  onChange={(v) => {
+                    if (!v) return;
+                    const [nextSortBy, nextSortOrder] = String(v).split('_');
+                    setSortBy(nextSortBy as any);
+                    setSortOrder(nextSortOrder as any);
+                  }}
                 />
                 {isGlobalOwner && (
                   <Select
@@ -369,7 +507,6 @@ export const Users = () => {
                     value={selectedTenant}
                     onChange={(v) => {
                       setSelectedTenant(v || '');
-                      setPage(1);
                     }}
                     clearable
                   />
@@ -399,14 +536,110 @@ export const Users = () => {
               <Text size="sm" c="dimmed">
                 {usersLoading
                   ? 'Loading users…'
-                  : `Showing ${usersList.length.toLocaleString()} of ${usersTotal.toLocaleString()} users`}
+                  : `Showing ${usersList.length.toLocaleString()} users${hasMore ? ' (more available)' : ''}`}
               </Text>
             </Group>
+
+            {selectedUserIds.length > 0 && (
+              <Card
+                withBorder
+                padding="md"
+                style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+              >
+                <Group justify="space-between" align="center">
+                  <Text size="sm" c="dimmed">
+                    Selected {selectedUserIds.length.toLocaleString()} user{selectedUserIds.length !== 1 ? 's' : ''} (current page)
+                  </Text>
+                  <Group gap="sm" wrap="nowrap">
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="orange"
+                      leftSection={<Lock size={14} />}
+                      onClick={() => {
+                        AdminApi.bulkSetStatus({ user_ids: selectedUserIds, is_active: false })
+                          .then((res) => {
+                            setBulkJob({ ...res, job_id: res.job_id, status: res.status });
+                            notifications.show({
+                              title: 'Bulk lock started',
+                              message: `Job ${res.job_id} queued.`,
+                              color: 'orange',
+                            });
+                          })
+                          .catch((err) => {
+                            notifications.show({
+                              title: 'Bulk lock failed',
+                              message: err?.response?.data?.error || err.message || 'Unknown error',
+                              color: 'red',
+                            });
+                          });
+                      }}
+                    >
+                      Lock
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      color="green"
+                      leftSection={<Unlock size={14} />}
+                      onClick={() => {
+                        AdminApi.bulkSetStatus({ user_ids: selectedUserIds, is_active: true })
+                          .then((res) => {
+                            setBulkJob({ ...res, job_id: res.job_id, status: res.status });
+                            notifications.show({
+                              title: 'Bulk unlock started',
+                              message: `Job ${res.job_id} queued.`,
+                              color: 'green',
+                            });
+                          })
+                          .catch((err) => {
+                            notifications.show({
+                              title: 'Bulk unlock failed',
+                              message: err?.response?.data?.error || err.message || 'Unknown error',
+                              color: 'red',
+                            });
+                          });
+                      }}
+                    >
+                      Unlock
+                    </Button>
+                    <Button size="xs" variant="light" color="cyan" leftSection={<Shield size={14} />} onClick={() => setBulkRoleModalOpened(true)}>
+                      Change Role
+                    </Button>
+                  </Group>
+                </Group>
+
+                {bulkJob?.job_id && (bulkJob.status === 'queued' || bulkJob.status === 'running') && (
+                  <>
+                    <Text size="xs" c="dimmed" mt="sm">
+                      Bulk action: {bulkJob.action || bulkJob.status} · {bulkJob.progress_pct ?? 0}% · processed {bulkJob.processed ?? 0}/{bulkJob.total ?? selectedUserIds.length}
+                    </Text>
+                    <Progress value={bulkJob.progress_pct ?? 0} size="sm" mt="xs" />
+                  </>
+                )}
+              </Card>
+            )}
 
             <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
               <Table verticalSpacing="sm" highlightOnHover>
                 <Table.Thead>
                   <Table.Tr>
+                    <Table.Th style={{ width: '44px' }}>
+                      <Checkbox
+                        aria-label="Select all visible"
+                        checked={usersList.length > 0 && usersList.every((u) => selectedUserIds.includes(u.id))}
+                        indeterminate={usersList.some((u) => selectedUserIds.includes(u.id)) && !usersList.every((u) => selectedUserIds.includes(u.id))}
+                        onChange={(e) => {
+                          const checked = e.currentTarget.checked;
+                          const visibleIds = usersList.map((u) => u.id);
+                          if (checked) {
+                            setSelectedUserIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+                          } else {
+                            setSelectedUserIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+                          }
+                        }}
+                      />
+                    </Table.Th>
                     <Table.Th>User ID</Table.Th>
                     <Table.Th>Identity</Table.Th>
                     <Table.Th>City / Tenant</Table.Th>
@@ -418,19 +651,32 @@ export const Users = () => {
                 <Table.Tbody>
                   {usersLoading ? (
                     <Table.Tr>
-                      <Table.Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                      <Table.Td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
                         Loading…
                       </Table.Td>
                     </Table.Tr>
                   ) : usersList.length === 0 ? (
                     <Table.Tr>
-                      <Table.Td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
+                      <Table.Td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
                         No users match the active filter criteria.
                       </Table.Td>
                     </Table.Tr>
                   ) : (
                     usersList.map((u) => (
                       <Table.Tr key={u.id}>
+                        <Table.Td>
+                          <Checkbox
+                            aria-label={`Select user ${u.displayId}`}
+                            checked={selectedUserIds.includes(u.id)}
+                            onChange={(e) => {
+                              const checked = e.currentTarget.checked;
+                              setSelectedUserIds((prev) => {
+                                if (checked) return Array.from(new Set([...prev, u.id]));
+                                return prev.filter((id) => id !== u.id);
+                              });
+                            }}
+                          />
+                        </Table.Td>
                         <Table.Td><Text size="sm" ff="monospace" c="dimmed">{u.displayId}</Text></Table.Td>
                         <Table.Td>
                           <Stack gap={0}>
@@ -485,11 +731,26 @@ export const Users = () => {
               </Table>
             </Card>
 
-            {usersTotal > pageSize && (
-              <Group justify="center" mt="md">
-                <Pagination value={page} onChange={setPage} total={totalPages} color="cyan" />
-              </Group>
-            )}
+            <Group justify="space-between" mt="md">
+              <Button
+                variant="light"
+                onClick={() => cursorIndex > 0 && setCursorIndex((i) => i - 1)}
+                disabled={cursorIndex <= 0 || usersLoading}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="light"
+                onClick={() => {
+                  if (!nextCursor) return;
+                  setCursorStack((prev) => [...prev.slice(0, cursorIndex + 1), nextCursor]);
+                  setCursorIndex((i) => i + 1);
+                }}
+                disabled={!nextCursor || usersLoading}
+              >
+                Next
+              </Button>
+            </Group>
           </Stack>
         </Tabs.Panel>
 
@@ -742,6 +1003,113 @@ export const Users = () => {
               Generate Invitation Token
             </Button>
           )}
+        </Stack>
+      </Modal>
+
+      {/* Bulk Change Role Modal */}
+      <Modal
+        opened={bulkRoleModalOpened}
+        onClose={() => setBulkRoleModalOpened(false)}
+        title={<Text fw={700}>Change role for selected users</Text>}
+        centered
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Selected: <b>{selectedUserIds.length.toLocaleString()}</b> users (this cursor page).
+          </Text>
+
+          <Select
+            label="New Role"
+            value={bulkChangeRoleForm.role}
+            onChange={(v) => {
+              const role = v || 'ATHLETE';
+              setBulkChangeRoleForm((prev) => ({
+                ...prev,
+                role,
+                // GLOBAL_OWNER always clears tenant on the backend.
+                update_tenant: role === 'GLOBAL_OWNER' ? false : prev.update_tenant,
+                tenant_id: role === 'GLOBAL_OWNER' ? '' : prev.tenant_id,
+              }));
+            }}
+            data={[
+              { value: 'ATHLETE', label: 'Athlete' },
+              { value: 'TENANT_MODERATOR', label: 'Tenant Moderator' },
+              { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+              { value: 'SPONSOR', label: 'Sponsor' },
+              { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+            ]}
+          />
+
+          {bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && (
+            <>
+              <Checkbox
+                checked={bulkChangeRoleForm.update_tenant}
+                onChange={(e) => {
+                  const checked = e.currentTarget.checked;
+                  setBulkChangeRoleForm((prev) => ({
+                    ...prev,
+                    update_tenant: checked,
+                    tenant_id: checked ? prev.tenant_id : '',
+                  }));
+                }}
+                label="Also update tenant for all selected users"
+                description="When unchecked, role is changed but existing tenant assignments remain unchanged."
+              />
+
+              {bulkChangeRoleForm.update_tenant && (
+                <Select
+                  label="Tenant"
+                  placeholder="Pick a tenant..."
+                  value={bulkChangeRoleForm.tenant_id}
+                  onChange={(v) => setBulkChangeRoleForm((prev) => ({ ...prev, tenant_id: v || '' }))}
+                  data={tenantsList.map((t) => ({ value: String(t.id), label: t.name }))}
+                  clearable
+                />
+              )}
+            </>
+          )}
+
+          <Group justify="flex-end">
+            <Button variant="subtle" onClick={() => setBulkRoleModalOpened(false)}>
+              Cancel
+            </Button>
+            <Button
+              color="cyan"
+              onClick={async () => {
+                if (selectedUserIds.length === 0) return;
+                if (bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && bulkChangeRoleForm.update_tenant) {
+                  if (!bulkChangeRoleForm.tenant_id) {
+                    notifications.show({ title: 'Tenant required', message: 'Select tenant or uncheck tenant update.', color: 'red' });
+                    return;
+                  }
+                }
+                try {
+                  const res = await AdminApi.bulkChangeRole({
+                    user_ids: selectedUserIds,
+                    role: bulkChangeRoleForm.role,
+                    update_tenant: bulkChangeRoleForm.role !== 'GLOBAL_OWNER' ? bulkChangeRoleForm.update_tenant : false,
+                    tenant_id: bulkChangeRoleForm.update_tenant ? bulkChangeRoleForm.tenant_id : null,
+                  });
+                  setBulkJob({ ...res, job_id: res.job_id, status: res.status });
+                  setBulkRoleModalOpened(false);
+                  notifications.show({
+                    title: 'Bulk role change started',
+                    message: `Job ${res.job_id} queued.`,
+                    color: 'cyan',
+                  });
+                } catch (err: any) {
+                  notifications.show({
+                    title: 'Bulk role change failed',
+                    message: err?.response?.data?.error || err.message || 'Unknown error',
+                    color: 'red',
+                  });
+                }
+              }}
+            >
+              Start Job
+            </Button>
+          </Group>
         </Stack>
       </Modal>
 

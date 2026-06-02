@@ -45,6 +45,8 @@ interface DashboardStats {
   verified_pct: number;
   unverified_total: number;
   per_tenant: TenantRow[];
+  stale?: boolean;
+  batch_running?: boolean;
 }
 
 /* ─── Animation variants ────────────────────────────────── */
@@ -112,11 +114,12 @@ export const Dashboard: React.FC = () => {
   const greeting =
     hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  /* ── Trend from weekly data ───────────────────────────── */
-  const usersTrendDir =
-    stats && stats.new_users_last_7d > 0 ? 'up' : stats && stats.new_users_last_7d === 0 ? 'flat' : 'down';
-  const actsTrendDir =
-    stats && stats.new_activities_last_7d > 0 ? 'up' : 'flat';
+  /* ── Simulator signal ─────────────────────────────────── */
+  const simulatorBadge = stats?.batch_running
+    ? { text: 'Simulator running (KPIs may be stale)', color: 'orange' as const }
+    : stats?.stale
+      ? { text: 'Stale KPIs (served from cache)', color: 'yellow' as const }
+      : null;
 
   return (
     <Box>
@@ -132,7 +135,13 @@ export const Dashboard: React.FC = () => {
             ? 'Global platform overview — all tenants combined'
             : `Local analytics — ${user?.tenantId ?? 'your instance'}`
         }
-      />
+      >
+        {simulatorBadge && (
+          <Badge size="sm" color={simulatorBadge.color} variant="light">
+            {simulatorBadge.text}
+          </Badge>
+        )}
+      </PageHeader>
 
       {/* ── KPI stat cards ────────────────────────────── */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="md">
@@ -146,9 +155,9 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                value: `+${stats.new_users_last_7d}`,
-                direction: usersTrendDir,
-                label: 'this week',
+                value: `${stats.new_users_last_7d.toLocaleString()}`,
+                direction: stats.new_users_last_7d > 0 ? 'up' : 'flat',
+                label: 'new last 7d',
               }
               : undefined
           }
@@ -163,9 +172,9 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                value: `+${stats.new_activities_last_7d}`,
-                direction: actsTrendDir,
-                label: 'this week',
+                value: `${stats.new_activities_last_7d.toLocaleString()}`,
+                direction: stats.new_activities_last_7d > 0 ? 'up' : 'flat',
+                label: 'new last 7d',
               }
               : undefined
           }
@@ -188,8 +197,9 @@ export const Dashboard: React.FC = () => {
           trend={
             stats
               ? {
-                value: `${stats.unverified_total} flagged`,
+                value: `${stats.unverified_total.toLocaleString()}`,
                 direction: stats.unverified_total > 10 ? 'down' : 'flat',
+                label: 'pending review (total)',
               }
               : undefined
           }

@@ -8,9 +8,10 @@ export type Role = 'GLOBAL_OWNER' | 'TENANT_ADMIN' | 'TENANT_MODERATOR' | 'ATHLE
 const LEGACY_ROLE_PERMS: Record<string, string[]> = {
   GLOBAL_OWNER: ['*'],
   TENANT_ADMIN: ['activities.view', 'activities.create', 'activities.edit', 'activities.delete', 'activities.approve', 'users.view', 'users.create', 'users.edit'],
-  TENANT_MODERATOR: ['activities.view', 'activities.approve', 'users.view'],
+  // Backend admin user registry endpoints are restricted to GLOBAL_OWNER + TENANT_ADMIN.
+  TENANT_MODERATOR: ['activities.view', 'activities.approve'],
   SPONSOR: ['activities.view', 'poi.view', 'poi.create', 'poi.edit', 'vouchers.create', 'vouchers.view'],
-  ATHLETE: ['activities.view', 'activities.create', 'users.view', 'poi.view', 'vouchers.view'],
+  ATHLETE: ['activities.view', 'activities.create', 'poi.view', 'vouchers.view'],
 };
 
 interface User {

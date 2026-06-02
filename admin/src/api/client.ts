@@ -111,17 +111,34 @@ apiClient.interceptors.response.use(
 // ─── API Services ──────────────────────────────────────────────
 
 export const AdminApi = {
-  getUsers: async (params?: Record<string, string | number>) => {
+  getUsers: async (params?: Record<string, string | number | boolean | undefined>) => {
     const { data } = await apiClient.get('/users/all/', { params });
     if (Array.isArray(data)) {
-      return { results: data, count: data.length, next: null as string | null, previous: null as string | null };
+      return { results: data, next_cursor: null as string | null, has_more: false };
     }
     return {
       results: data?.results ?? [],
-      count: typeof data?.count === 'number' ? data.count : 0,
-      next: data?.next ?? null,
-      previous: data?.previous ?? null,
+      next_cursor: data?.next_cursor ?? null,
+      has_more: Boolean(data?.has_more),
+      page_size: typeof data?.page_size === 'number' ? data.page_size : undefined,
     };
+  },
+  getUserDetail: async (userId: number) => {
+    const { data } = await apiClient.get(`/users/${userId}/detail/`);
+    // DRF standard: data is the user object (no {ok,data} wrapper).
+    return (data && (data.data || data)) as any;
+  },
+  bulkSetStatus: async (payload: { user_ids: number[]; is_active: boolean }) => {
+    const { data } = await apiClient.post('/users/bulk/set-status/', payload);
+    return data;
+  },
+  bulkChangeRole: async (payload: { user_ids: number[]; role: string; update_tenant?: boolean; tenant_id?: string | null }) => {
+    const { data } = await apiClient.post('/users/bulk/change-role/', payload);
+    return data;
+  },
+  getBulkJobStatus: async (jobId: string) => {
+    const { data } = await apiClient.get(`/users/bulk/jobs/${jobId}/`);
+    return data;
   },
   getTenants: async () => {
     const { data } = await apiClient.get('/users/tenants/all/');
@@ -280,10 +297,16 @@ export const SimulatorApi = {
   },
 
   // Wipe Data (async chunked — poll until complete)
-  wipeData: async (onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string; stuck?: boolean }) => void) => {
+  wipeData: async (
+    onProgress?: (s: { progress_pct?: number; phase?: string; status?: string; error?: string; stuck?: boolean }) => void,
+    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
+  ) => {
+    const confirm_phrase = opts?.confirmPhrase ?? '';
+    const mfa_confirmed = Boolean(opts?.mfaConfirmed);
+
     const startWipe = async (force = false) => {
       await apiClient.delete('/activities/admin/wipe-data/', {
-        data: { confirm: true, force },
+        data: { confirm: true, force, confirm_phrase, mfa_confirmed },
       });
     };
     try {

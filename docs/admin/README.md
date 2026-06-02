@@ -8,6 +8,8 @@
 
 The 4VELO Admin Panel has been redesigned with a world-class, premium UI system featuring full dark mode support, fluid animations, and a comprehensive design token system.
 
+**Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -254,6 +256,17 @@ npm run test         # Vitest
 npm run test:e2e     # Playwright E2E
 npm run electron:dev # Desktop app mode
 ```
+
+### UI audit automation
+
+```bash
+ADMIN_URL=https://admin-production-083b.up.railway.app \
+ADMIN_USER=global_owner ADMIN_PASS='…' \
+node scripts/audit-admin-full.mjs   # → audit-screenshots/audit-report.json
+node scripts/explore-admin.mjs      # → probe-screenshots/report.json
+```
+
+See [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) for findings and P0–P3 priorities.
 
 ## Design Decisions
 
