@@ -6,6 +6,7 @@ Krótkie przewodniki „co zrobić na Railway / w symulatorze”. Szczegóły ar
 |---------|------|
 | [SIMULATOR.md](./SIMULATOR.md) | Batch użytkowników, live map, kolejność startu, env, mapa admin |
 | [BROUTER.md](./BROUTER.md) | Serwis BRouter, kafelki Polski, routing `pass=0` |
+| [KUBERNETES.md](./KUBERNETES.md) | Bazowe manifesty k8s: API, Celery, Redis, BRouter, ingress, HPA |
 | [MOBILE.md](./MOBILE.md) | GPS MMKV, NetInfo, recovery przy starcie aplikacji |
 | [../RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md) | Worker `celery-worker-simulation`, zmienne Railway |
 | [../DISK_GUARD.md](../DISK_GUARD.md) | Budżet dysku Postgres, pauza symulacji |

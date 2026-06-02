@@ -28,6 +28,7 @@
 |----------|------|
 | **[operations/](./operations/)** | **Runbooki** — symulator, BRouter, skróty |
 | [Railway — worker symulacji](./RAILWAY_CELERY_SIMULATION.md) | `celery-worker-simulation`, kolejka `simulation` |
+| [Kubernetes runbook](./operations/KUBERNETES.md) | Deploy API + Celery + Redis + BRouter na klastrze k8s |
 | [Disk guard](./DISK_GUARD.md) | Budżet Postgres, pauza zapisów |
 | [Scale test 300k](./SCALE_TEST_300K.md) | Duży test obciążeniowy |
 | [Event burst 50k](./EVENT_BURST_50K.md) | Dzień eventu |

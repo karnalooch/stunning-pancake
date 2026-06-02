@@ -1,0 +1,29 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sport-backend-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sport-backend-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sport-celery-worker
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: sport-celery-worker
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: sport-redis
+spec:
+  maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sport-redis

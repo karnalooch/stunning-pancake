@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: sport
+
+resources:
+  - namespace.yaml
+  - config/app-configmap.yaml
+  - config/app-secrets.template.yaml
+  - workloads/redis.yaml
+  - workloads/brouter.yaml
+  - workloads/api.yaml
+  - workloads/worker.yaml
+  - workloads/worker-simulation.yaml
+  - workloads/beat.yaml
+  - policy/pdb.yaml
+  - policy/hpa.yaml
+  - network/ingress.yaml
+  # Optional:
+  # - workloads/admin.optional.yaml
+  # - optional/postgres.optional.yaml

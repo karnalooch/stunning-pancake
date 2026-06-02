@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sport-brouter
+  labels:
+    app: sport-brouter
+spec:
+  selector:
+    app: sport-brouter
+  ports:
+    - name: http
+      port: 17777
+      targetPort: 17777
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-brouter
+  labels:
+    app: sport-brouter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport-brouter
+  template:
+    metadata:
+      labels:
+        app: sport-brouter
+    spec:
+      containers:
+        - name: brouter
+          image: ghcr.io/your-org/sport-brouter:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 17777
+              name: http
+          env:
+            - name: BROUTER_SEGMENT_PRESET
+              value: "poland"
+            - name: BROUTER_AUTO_DOWNLOAD_SEGMENTS
+              value: "1"
+            - name: BROUTER_JAVA_XMX
+              value: "768m"
+            - name: BROUTER_SYNC_LOOKUPS
+              value: "1"
+          readinessProbe:
+            tcpSocket:
+              port: 17777
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 17777
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "768Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1500Mi"
+          volumeMounts:
+            - name: brouter-segments
+              mountPath: /brouter/segments4
+      volumes:
+        - name: brouter-segments
+          persistentVolumeClaim:
+            claimName: sport-brouter-segments
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sport-brouter-segments
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 6Gi

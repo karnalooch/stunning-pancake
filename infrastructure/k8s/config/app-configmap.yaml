@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sport-app-config
+data:
+  DJANGO_SETTINGS_MODULE: "core.settings"
+  DEBUG: "0"
+  ALLOWED_HOSTS: "api.example.com"
+  CORS_ALLOWED_ORIGINS: "https://admin.example.com"
+  PORT: "8000"
+  DATABASE_CONN_MAX_AGE: "60"
+  REDIS_URL: "redis://sport-redis:6379/0"
+  BROUTER_URL: "http://sport-brouter:17777/brouter"
+  CELERY_BROKER_URL: "redis://sport-redis:6379/0"
+  CELERY_RESULT_BACKEND: "redis://sport-redis:6379/1"
+  CELERY_WORKER_LOG_LEVEL: "info"
+  CELERY_WORKER_DEFAULT_QUEUES: "critical,default,notifications"
+  CELERY_WORKER_SIMULATION_QUEUES: "simulation"
+  CELERY_WORKER_ROUTING_QUEUES: "routing"
+  CELERY_WORKER_WIPE_QUEUES: "wipe"
+  CELERY_WORKER_DEFAULT_CONCURRENCY: "4"
+  CELERY_WORKER_SIMULATION_CONCURRENCY: "6"
+  CELERY_WORKER_ROUTING_CONCURRENCY: "2"
+  CELERY_WORKER_WIPE_CONCURRENCY: "2"
+  SCALE_AUTO_WIPE_BEFORE_BATCH: "true"
+  SCALE_BATCH_PARALLEL_CITIES: "true"
+  SCALE_BATCH_MAX_PARALLEL_WORKERS: "6"

@@ -35,6 +35,7 @@ The platform will be available at `localhost` with automated port-forwarding.
 
 -   **[📚 Documentation index](./docs/README.md)** — główny spis (start, operacje, architektura, API).
 -   **[⚙️ Operations runbooks](./docs/operations/)** — symulator batch/live, BRouter, Railway worker.
+-   **[☸️ Kubernetes runbook](./docs/operations/KUBERNETES.md)** — baseline manifests for API, Celery, Redis, BRouter.
 -   **[📦 Changelog](./CHANGELOG.md)** — historia wydań.
 -   **[🛡️ Admin Panel](./docs/admin/README.md)** — design system i komponenty.
 -   **[🏛️ Architecture](./docs/ARCHITECTURE.md)** — PostGIS, anti-cheat, multi-tenant.

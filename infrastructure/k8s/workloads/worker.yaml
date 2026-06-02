@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-celery-worker
+  labels:
+    app: sport-celery-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sport-celery-worker
+  template:
+    metadata:
+      labels:
+        app: sport-celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: ghcr.io/your-org/sport-backend:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - >
+              celery -A core worker
+              -Q ${CELERY_WORKER_DEFAULT_QUEUES}
+              -l ${CELERY_WORKER_LOG_LEVEL}
+              --concurrency=${CELERY_WORKER_DEFAULT_CONCURRENCY}
+              --hostname=default@%h
+          envFrom:
+            - configMapRef:
+                name: sport-app-config
+            - secretRef:
+                name: sport-app-secrets
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pgrep -f "celery.*worker" >/dev/null
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pgrep -f "celery.*worker" >/dev/null
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "2Gi"

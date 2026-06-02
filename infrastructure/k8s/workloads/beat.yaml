@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-celery-beat
+  labels:
+    app: sport-celery-beat
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport-celery-beat
+  template:
+    metadata:
+      labels:
+        app: sport-celery-beat
+    spec:
+      containers:
+        - name: celery-beat
+          image: ghcr.io/your-org/sport-backend:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - core
+            - beat
+            - -l
+            - info
+            - --scheduler
+            - django_celery_beat.schedulers:DatabaseScheduler
+          envFrom:
+            - configMapRef:
+                name: sport-app-config
+            - secretRef:
+                name: sport-app-secrets
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pgrep -f "celery.*beat" >/dev/null
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pgrep -f "celery.*beat" >/dev/null
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "768Mi"
