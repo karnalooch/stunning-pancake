@@ -33,6 +33,7 @@ import {
 import { LivePositionInterpolator } from './liveMapInterp';
 import { bboxFromMap } from './liveMapBbox';
 import type { LiveApiDetail } from './liveMapZoom';
+import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
@@ -52,7 +53,7 @@ function loadMaplibregl(): Promise<any> {
 
 type UserPosition = LiveMapPosition;
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const MAP_STYLE = resolveMapStyleUrl('light');
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 6;
 const MOVE_DEBOUNCE_MS = 180;
@@ -487,7 +488,7 @@ export const LiveMap: React.FC = () => {
                 attributionControl: false,
             });
             map.addControl(new m.NavigationControl(), 'top-right');
-            map.addControl(new m.AttributionControl({ compact: true }), 'bottom-right');
+            map.addControl(new m.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
             map.on('load', async () => {
                 if (cancelled) return;
                 await ensureMapLayers(map);

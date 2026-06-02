@@ -44,6 +44,7 @@ Zweryfikuj dla każdej integracji aktywnej w release:
 - [ ] Stripe (payments/billing): zgodność z ToS, webhook security, PCI scope jasny.
 - [ ] Email provider (np. SendGrid/Mailgun): anti-spam, unsubscribe, retention, suppression lists.
 - [ ] Maps/routing (Mapbox/Google/BRouter źródła danych): limits, attribution, tiles usage policy.
+- [ ] Admin basemap: OpenFreeMap / OSM attribution — `docs/compliance/MAP_BASEMAP_LICENSING.md` (no CARTO `cartocdn.com` in production).
 - [ ] Social auth/sharing (Google/Apple/Meta/X): branding guidelines, token handling, approved scopes.
 - [ ] Monitoring/analytics (Sentry/Datadog itp.): data minimization, PII scrubbing, retention.
 

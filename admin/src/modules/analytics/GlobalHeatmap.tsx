@@ -3,6 +3,7 @@ import { Box, Text, SegmentedControl, Group, Skeleton, Alert, Badge } from '@man
 import { AlertCircle, Map as MapIcon } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
+import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
 
 // Lazy-init maplibregl — flatten double/triple-wrapped CJS interop from Rollup/Vite
 let _mlPromise: Promise<any> | null = null;
@@ -21,7 +22,7 @@ function loadMaplibregl(): Promise<any> {
     return _mlPromise;
 }
 
-const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const MAP_STYLE = resolveMapStyleUrl('dark');
 const DEFAULT_CENTER: [number, number] = [19.1344, 51.9194];
 const DEFAULT_ZOOM = 5.5;
 
@@ -49,7 +50,7 @@ export const GlobalHeatmap: React.FC = () => {
         attributionControl: false,
       });
       map.addControl(new m.NavigationControl(), 'top-right');
-      map.addControl(new m.AttributionControl({ compact: true }), 'bottom-right');
+      map.addControl(new m.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
       map.on('load', () => setLoading(false));
       map.on('error', () => { setError('Failed to load map tiles.'); setLoading(false); });
       mapRef.current = map;

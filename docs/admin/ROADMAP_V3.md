@@ -103,7 +103,7 @@ Converting the read-only Events list into a full administration suite with backe
 Replaces static, non-functional activity graphics with a fully interactive routing tool utilizing MapLibre GL.
 
 ### Architecture:
-* **Vector Map Layer**: Embeds a MapLibre GL container loading the sleek `dark-matter` vector style.
+* **Vector Map Layer**: Embeds a MapLibre GL container loading the OpenFreeMap dark basemap (`tiles.openfreemap.org/styles/dark`).
 * **Route Trajectory Overlay**:
   - Plots `route_coords` coordinates.
   - Color-codes the path vector based on verification status: verified activities are highlighted in a bright glowing neon cyan, while unverified or flagged activities are highlighted in a glowing hot orange/red to draw the attention of SOC operators.
