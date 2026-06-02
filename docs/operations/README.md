@@ -7,6 +7,7 @@ Krótkie przewodniki „co zrobić na Railway / w symulatorze”. Szczegóły ar
 | [SIMULATOR.md](./SIMULATOR.md) | Batch użytkowników, live map, kolejność startu, env, mapa admin |
 | [BROUTER.md](./BROUTER.md) | Serwis BRouter, kafelki Polski, routing `pass=0` |
 | [KUBERNETES.md](./KUBERNETES.md) | Bazowe manifesty k8s: API, Celery, Redis, BRouter, ingress, HPA |
+| [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) | Railway **nie** hostuje K8s; Opcja B (skalowanie) vs migracja GKE/k3s |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Single-command gate + CI/reliability/compliance checklist przed release |
 | [MOBILE.md](./MOBILE.md) | GPS MMKV, NetInfo, recovery przy starcie aplikacji |
 | [../RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md) | Worker `celery-worker-simulation`, zmienne Railway |

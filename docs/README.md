@@ -28,6 +28,7 @@
 |----------|------|
 | **[operations/](./operations/)** | **Runbooki** — symulator, BRouter, skróty |
 | [Railway — worker symulacji](./RAILWAY_CELERY_SIMULATION.md) | `celery-worker-simulation`, kolejka `simulation` |
+| [Railway vs Kubernetes](./operations/RAILWAY_KUBERNETES.md) | Czy Railway ma K8s, skalowanie natywne, migracja na GKE/k3s |
 | [Kubernetes runbook](./operations/KUBERNETES.md) | Deploy API + Celery + Redis + BRouter na klastrze k8s |
 | [Pre-release verification](./operations/PRE_RELEASE_VERIFICATION.md) | Single-command gate + checklista release (CI/reliability/compliance) |
 | [Disk guard](./DISK_GUARD.md) | Budżet Postgres, pauza zapisów |

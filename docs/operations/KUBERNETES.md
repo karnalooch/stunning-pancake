@@ -1,5 +1,7 @@
 # Kubernetes Runbook — SPORT Platform
 
+> **Produkcja na Railway?** Railway nie uruchamia tych manifestów. Zobacz [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) (decyzja Railway vs K8s, mapowanie env, checklista migracji).
+
 Production-ready, pragmatic baseline for deploying:
 - Django backend API
 - Celery workers (default + simulation)
@@ -30,7 +32,7 @@ Path: `infrastructure/k8s/`
 
 Before first deployment, copy and edit:
 
-1. `infrastructure/k8s/config/app-secrets.template.yaml`
+1. `infrastructure/k8s/config/app-secrets.template.yaml` (or map from `railway-to-k8s.env.template` if migrating from Railway Variables)
 2. Replace at least:
    - `SECRET_KEY`
    - `DATABASE_URL` (external PostgreSQL)
