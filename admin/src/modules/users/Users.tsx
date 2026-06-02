@@ -535,7 +535,7 @@ export const Users = () => {
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
                 {usersLoading
-                  ? 'Loading users…'
+                  ? 'Loading users...'
                   : `Showing ${usersList.length.toLocaleString()} users${hasMore ? ' (more available)' : ''}`}
               </Text>
             </Group>
@@ -612,7 +612,7 @@ export const Users = () => {
                 {bulkJob?.job_id && (bulkJob.status === 'queued' || bulkJob.status === 'running') && (
                   <>
                     <Text size="xs" c="dimmed" mt="sm">
-                      Bulk action: {bulkJob.action || bulkJob.status} · {bulkJob.progress_pct ?? 0}% · processed {bulkJob.processed ?? 0}/{bulkJob.total ?? selectedUserIds.length}
+                      Bulk action: {bulkJob.action || bulkJob.status} - {bulkJob.progress_pct ?? 0}% - processed {bulkJob.processed ?? 0}/{bulkJob.total ?? selectedUserIds.length}
                     </Text>
                     <Progress value={bulkJob.progress_pct ?? 0} size="sm" mt="xs" />
                   </>
@@ -652,7 +652,7 @@ export const Users = () => {
                   {usersLoading ? (
                     <Table.Tr>
                       <Table.Td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                        Loading…
+                        Loading...
                       </Table.Td>
                     </Table.Tr>
                   ) : usersList.length === 0 ? (
@@ -891,7 +891,7 @@ export const Users = () => {
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                 <Stack gap="sm">
                   <Text fw={700} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    🎨 Custom Profile Branding
+                    Custom Profile Branding
                   </Text>
                   <TextInput
                     label="Custom Avatar URL"
@@ -913,7 +913,7 @@ export const Users = () => {
               {/* Password Management */}
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                 <Stack gap="sm">
-                  <Text fw={700} size="sm">🔐 Security Credentials</Text>
+                  <Text fw={700} size="sm">Security Credentials</Text>
                   <PasswordInput
                     label="Force Reset Password"
                     placeholder="Enter new password to force update"
