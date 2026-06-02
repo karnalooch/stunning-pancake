@@ -39,8 +39,14 @@ SECRET_KEY=<jak backend>
 DEBUG=0
 
 CELERY_WORKER_QUEUES=simulation
-CELERY_WORKER_CONCURRENCY=7
+CELERY_WORKER_CONCURRENCY=2
+CELERY_WORKER_POOL=solo
+CELERY_WORKER_PREFETCH_MULTIPLIER=1
+CELERY_MAX_TASKS_PER_CHILD=50
 CELERY_WORKER_HOSTNAME=simulation@%h
+SCALE_MAX_STARTS_PER_LIVE_TICK=30
+SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK=25
+SCALE_SIM_BROUTER_ROUTE_ATTEMPTS=4
 
 # Adaptacyjny batch — env opcjonalne (domyślnie liczone z total_users)
 SCALE_BATCH_PARALLEL_CITIES=true
@@ -74,9 +80,11 @@ Dodaj serwis **brouter**: Dockerfile `infrastructure/brouter/Dockerfile`, port *
 
 **Kolejność:** nie uruchamiaj live podczas batcha — API zwraca 409; UI czeka na koniec batcha. Zobacz [operations/SIMULATOR.md](./operations/SIMULATOR.md).
 
-**Słaby Postgres:** `SCALE_BATCH_MAX_PARALLEL_WORKERS=3`, `CELERY_WORKER_CONCURRENCY=4`.
+**Słaby Postgres:** `SCALE_BATCH_MAX_PARALLEL_WORKERS=3`, `CELERY_WORKER_CONCURRENCY=2`, `CELERY_WORKER_POOL=solo`.
 
-**300k test:** `CELERY_WORKER_CONCURRENCY=7`, `SCALE_BATCH_MAX_PARALLEL_WORKERS=6` — ~10 miast × ~30k użytk., bulk ~7500.
+**300k test:** `CELERY_WORKER_CONCURRENCY=4` (prefork) **tylko przy ≥4 GB RAM**, `SCALE_BATCH_MAX_PARALLEL_WORKERS=6` — ~10 miast × ~30k użytk., bulk ~7500.
+
+**OOM / SIGKILL:** zobacz [operations/RAILWAY_CELERY_MEMORY.md](./operations/RAILWAY_CELERY_MEMORY.md).
 
 ### 4. Plan CPU
 

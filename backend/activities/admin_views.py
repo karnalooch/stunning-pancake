@@ -352,6 +352,7 @@ class LiveSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        sim.heal_stale_live_simulation(reschedule=True)
         sim.maybe_advance_live_simulation()
         state = sim.get_live_state()
         log = sim.get_live_log()
@@ -362,6 +363,7 @@ class LiveSimulationView(APIView):
         active_rides = sim.get_live_ride_count()
         live_lock = sim.is_live_lock_held()
         stuck = sim.live_simulation_stuck()
+        tick_stale = sim.live_tick_stale() if state['running'] else False
         batch_blocked, batch_block_reason = sim.batch_blocks_live_simulation()
         return Response({
             'running': state['running'],
@@ -370,6 +372,8 @@ class LiveSimulationView(APIView):
             'elapsed_seconds': round(elapsed, 1),
             'error': state.get('error'),
             'stuck': stuck,
+            'tick_stale': tick_stale,
+            'worker_recovered_at': state.get('worker_recovered_at'),
             'live_lock_held': live_lock,
             'pool_size': pool_size,
             'active_rides': active_rides,

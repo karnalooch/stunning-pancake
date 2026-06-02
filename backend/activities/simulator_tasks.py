@@ -10,6 +10,7 @@ import time
 from datetime import timedelta
 
 from celery import shared_task
+from celery.exceptions import WorkerLostError
 from django.utils import timezone
 from django.core.cache import cache
 
@@ -18,6 +19,10 @@ from .services import BRouterService
 
 _EARTH_RADIUS_M = 6_371_000.0
 STRICT_ROAD_ROUTES = os.getenv('SCALE_SIM_STRICT_ROAD_ROUTES', '1').lower() in ('1', 'true', 'yes', 'on')
+
+# Per-tick BRouter HTTP budget (reset at start of each live_tick_task).
+_tick_brouter_calls = 0
+_tick_brouter_budget: int | None = None
 
 _brouter_grid_log_count = 0
 _brouter_grid_log_last_hour = 0.0
@@ -128,6 +133,36 @@ def _generate_grid_waypoints(lat: float, lon: float) -> list[tuple[float, float]
         waypoints.append((cur_lat, cur_lon))
     return waypoints
 
+def _reset_brouter_tick_budget() -> None:
+    global _tick_brouter_calls, _tick_brouter_budget
+    from activities.scale_config import BROUTER_MAX_CALLS_PER_TICK
+
+    _tick_brouter_calls = 0
+    _tick_brouter_budget = int(BROUTER_MAX_CALLS_PER_TICK or 0)
+
+
+def _brouter_tick_budget_remaining() -> int | None:
+    """None = unlimited; 0 = exhausted."""
+    global _tick_brouter_budget
+    if _tick_brouter_budget is None:
+        _reset_brouter_tick_budget()
+    if _tick_brouter_budget <= 0:
+        return None
+    return max(0, _tick_brouter_budget - _tick_brouter_calls)
+
+
+def _consume_brouter_tick_budget() -> bool:
+    """Return True if a BRouter HTTP call is allowed this tick."""
+    global _tick_brouter_calls
+    remaining = _brouter_tick_budget_remaining()
+    if remaining is None:
+        return True
+    if remaining <= 0:
+        return False
+    _tick_brouter_calls += 1
+    return True
+
+
 def _brouter_profiles_for_activity(activity_type: str) -> list[str]:
     """Primary profile plus fallbacks when start cannot snap (HTTP 400 pass=0)."""
     primary = BRouterService.profile_for_activity(activity_type)
@@ -141,6 +176,8 @@ def _brouter_route_waypoints(
     start_lat: float, start_lon: float, end_lat: float, end_lon: float, activity_type: str,
 ) -> list[tuple[float, float]] | None:
     """Request a road-following polyline; first point is snapped onto the network."""
+    if not _consume_brouter_tick_budget():
+        return None
     coords = [[start_lon, start_lat], [end_lon, end_lat]]
     last_err = 'unknown error'
     last_classification = None
@@ -262,7 +299,7 @@ def _generate_route_waypoints(
     max_leg_km = max(0.5, min(max_leg_km, 15.0))
     km = min(max(0.5, distance_m / 1000.0), max_leg_km)
 
-    route_attempts = max(3, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '12')))
+    route_attempts = max(1, int(os.getenv('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', '4')))
     for attempt in range(route_attempts):
         if attempt == 0:
             start_lat, start_lon = anchor_lat, anchor_lon
@@ -594,7 +631,14 @@ def run_batch_simulation(self, scale=0.01, days=30, clear=False,
             sim.release_batch_lock()
 
 
-@shared_task(bind=True, queue='simulation', max_retries=0)
+@shared_task(
+    bind=True,
+    queue='simulation',
+    max_retries=2,
+    autoretry_for=(WorkerLostError,),
+    retry_backoff=True,
+    retry_jitter=True,
+)
 def run_live_simulation(self, total_users=100, active_ratio=0.25,
                          cheat_ratio=0.05, tick_seconds=10):
     """Orchestrator — non-blocking tick chain. Each invocation runs one tick and schedules the next."""
@@ -680,12 +724,20 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
     return {'status': 'tick_complete', 'next_tick_in': tick_seconds}
 
 
-@shared_task(bind=True, queue='simulation', max_retries=0)
+@shared_task(
+    bind=True,
+    queue='simulation',
+    max_retries=2,
+    autoretry_for=(WorkerLostError,),
+    retry_backoff=True,
+    retry_jitter=True,
+)
 def live_tick_task(self):
     """One tick: finish rides, start new ones, push telemetry to Redis."""
     if not sim.acquire_live_tick_lock():
         return
 
+    _reset_brouter_tick_budget()
     try:
         _run_live_tick_body()
     finally:

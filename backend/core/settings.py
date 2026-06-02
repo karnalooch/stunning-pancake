@@ -282,6 +282,14 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Warsaw'
 
+# Worker reliability (Railway OOM / SIGKILL): ack after task body, requeue on worker loss.
+CELERY_TASK_ACKS_LATE = os.getenv('CELERY_TASK_ACKS_LATE', 'true').lower() in ('1', 'true', 'yes', 'on')
+CELERY_TASK_REJECT_ON_WORKER_LOST = os.getenv(
+    'CELERY_TASK_REJECT_ON_WORKER_LOST', 'true',
+).lower() in ('1', 'true', 'yes', 'on')
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv('CELERY_WORKER_PREFETCH_MULTIPLIER', '1'))
+CELERY_WORKER_MAX_TASKS_PER_CHILD = int(os.getenv('CELERY_MAX_TASKS_PER_CHILD', '200'))
+
 # Force Celery to run synchronously in local/SQLite dev environment if DATABASE_URL is SQLite
 if 'sqlite' in os.getenv('DATABASE_URL', ''):
     CELERY_TASK_ALWAYS_EAGER = True

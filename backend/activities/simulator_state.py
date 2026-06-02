@@ -390,6 +390,79 @@ def live_simulation_stuck() -> bool:
     return False
 
 
+def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bool:
+    """True when running=1 but no successful tick for several intervals (worker died / lock skip)."""
+    state = get_live_state()
+    if not state.get('running'):
+        return False
+    try:
+        tick_seconds = float(state.get('tick_seconds', 8))
+    except (ValueError, TypeError):
+        tick_seconds = 8.0
+    try:
+        last_tick = float(state.get('last_tick_at') or 0)
+    except (ValueError, TypeError):
+        last_tick = 0.0
+    if last_tick <= 0:
+        return True
+    threshold = max(min_seconds, tick_seconds * multiplier)
+    return (time.time() - last_tick) > threshold
+
+
+def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool = False) -> dict:
+    """
+    Recover after Celery worker SIGKILL: release orphan locks, restart tick chain.
+    Safe to call from status polls (idempotent). Do not pass from_tick_task=False from inside live_tick_task.
+    """
+    actions: list[str] = []
+    state = get_live_state()
+    r = get_redis()
+
+    if not state.get('running'):
+        if is_live_lock_held():
+            release_live_lock()
+            actions.append('released_orphan_live_lock')
+        if r.exists(LIVE_TICK_LOCK_KEY):
+            release_live_tick_lock()
+            actions.append('released_orphan_tick_lock')
+        if actions:
+            live_log('Self-heal: cleared orphan live locks (sim not running).')
+        return {'healed': bool(actions), 'actions': actions}
+
+    if (
+        not from_tick_task
+        and r.exists(LIVE_TICK_LOCK_KEY)
+        and live_tick_stale(multiplier=2.0, min_seconds=20.0)
+    ):
+        release_live_tick_lock()
+        actions.append('cleared_stale_tick_lock')
+
+    if live_tick_stale():
+        set_live_state(
+            worker_recovered_at=time.time(),
+            error=None,
+        )
+        actions.append('marked_stale_ticks')
+        if reschedule:
+            try:
+                from activities.simulator_tasks import live_tick_task, run_live_simulation
+
+                if is_live_lock_held():
+                    live_tick_task.delay()
+                    actions.append('rescheduled_live_tick')
+                else:
+                    run_live_simulation.delay()
+                    actions.append('rescheduled_live_runner')
+            except Exception as exc:
+                actions.append(f'reschedule_failed:{exc!s:.120}')
+        live_log(
+            'Self-heal: live ticks stalled (worker may have been killed); '
+            + ', '.join(actions)
+        )
+
+    return {'healed': bool(actions), 'actions': actions}
+
+
 def set_live_pool(user_ids: list):
     """Set the user pool for live simulation (small pools only — prefer set_live_pool_from_db)."""
     from activities.scale_config import POOL_SADD_BATCH
@@ -643,6 +716,11 @@ def maybe_advance_live_simulation() -> bool:
     state = get_live_state()
     if not state.get('running'):
         return False
+
+    if live_tick_stale():
+        heal_stale_live_simulation(reschedule=True)
+        state = get_live_state()
+
     now = time.time()
     try:
         last_tick = float(state.get('last_tick_at') or 0)
@@ -654,7 +732,8 @@ def maybe_advance_live_simulation() -> bool:
         tick_seconds = 8.0
     if now - last_tick < tick_seconds:
         return False
-    set_live_state(last_tick_at=now)
+    # Do not bump last_tick_at here — only live_tick_task / runner after real work.
+    # Premature updates caused ~0.01s "ticks" with zero riders when enqueue failed or lock busy.
     from activities.simulator_tasks import live_tick_task
     live_tick_task.delay()
     return True

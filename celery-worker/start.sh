@@ -13,4 +13,5 @@ exec celery -A core worker \
   --loglevel="${CELERY_LOG_LEVEL:-info}" \
   --queues="${QUEUES}" \
   --concurrency="${CONCURRENCY}" \
+  --prefetch-multiplier="${CELERY_WORKER_PREFETCH_MULTIPLIER:-4}" \
   --max-tasks-per-child="${CELERY_MAX_TASKS_PER_CHILD:-500}"
