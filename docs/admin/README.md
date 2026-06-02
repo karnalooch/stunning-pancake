@@ -268,6 +268,11 @@ node scripts/explore-admin.mjs      # → probe-screenshots/report.json
 
 See [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) for findings and P0–P3 priorities.
 
+### Reliability / release audit
+
+For practical reliability release gates and 409/lock/stuck-job incident handling, see:
+[../reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)
+
 ## Design Decisions
 
 1. **CSS variables over Mantine tokens** — Mantine's colour system is limited. Custom CSS variables give us full dark-mode control and consistency across components.
