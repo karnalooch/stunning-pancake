@@ -12,9 +12,10 @@ Krótkie przewodniki „co zrobić na Railway / w symulatorze”. Szczegóły ar
 | [MOBILE.md](./MOBILE.md) | GPS MMKV, NetInfo, recovery przy starcie aplikacji |
 | [../RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md) | Worker `celery-worker-simulation`, zmienne Railway |
 | [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md) | OOM SIGKILL, concurrency, BRouter caps, self-heal |
+| [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) | Checklist production + `scripts/railway-verify-production.ps1` |
 | [../DISK_GUARD.md](../DISK_GUARD.md) | Budżet dysku Postgres, pauza symulacji |
 | [../SCALE_TEST_300K.md](../SCALE_TEST_300K.md) | Test 300k użytkowników |
 | [../EVENT_BURST_50K.md](../EVENT_BURST_50K.md) | Burst przy dniu eventu |
 | [../../infrastructure/brouter/README.md](../../infrastructure/brouter/README.md) | Dockerfile, volume, preset `poland` |
 
-**Ostatnia aktualizacja:** 2026-06-02
+**Ostatnia aktualizacja:** 2026-06-03

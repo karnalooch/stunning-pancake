@@ -68,6 +68,22 @@ class RouteLiveRideTaskTest(SimpleTestCase):
         self.assertTrue(_async_routing_enabled())
 
 
+class LiveTickStateShadowRegressionTest(SimpleTestCase):
+    """Regression: city-balance loop must not shadow live `state` dict (AttributeError on .get)."""
+
+    def test_city_balance_loop_uses_ride_state_variable(self):
+        import inspect
+
+        from activities import simulator_tasks as st
+
+        body = inspect.getsource(st._run_live_tick_body)
+        self.assertIn(
+            'ride_state = ride_fsm.normalize_ride_state(ride)',
+            body,
+            'live tick must not assign normalize_ride_state to `state`',
+        )
+
+
 class CeleryRouteTest(SimpleTestCase):
     def test_route_task_on_routing_queue(self):
         from core.celery import app

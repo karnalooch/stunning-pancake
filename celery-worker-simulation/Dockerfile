@@ -27,4 +27,5 @@ RUN chmod +x /app/start-celery.sh
 RUN useradd -m -u 1001 sportuser && chown -R sportuser:sportuser /app
 USER sportuser
 
-CMD ["/app/start-celery.sh"]
+# Use sh explicitly so CRLF from Windows checkouts cannot break the shebang exec.
+CMD ["sh", "/app/start-celery.sh"]

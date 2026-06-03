@@ -1022,8 +1022,8 @@ def _run_live_tick_body():
         riding_ids = {str(uid) for uid in active_rides.keys()}
         riding_by_city: dict[str, int] = {}
         for ride in active_rides.values():
-            state = ride_fsm.normalize_ride_state(ride)
-            if state not in (ride_fsm.ACTIVE, ride_fsm.ROUTED, ride_fsm.ROUTING, ride_fsm.PENDING_ROUTE):
+            ride_state = ride_fsm.normalize_ride_state(ride)
+            if ride_state not in (ride_fsm.ACTIVE, ride_fsm.ROUTED, ride_fsm.ROUTING, ride_fsm.PENDING_ROUTE):
                 continue
             slug = ride.get('city_slug')
             if slug:
