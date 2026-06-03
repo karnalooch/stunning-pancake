@@ -1,34 +1,50 @@
 /** Runtime sprite atlas for MapLibre symbol layers (bike / run). */
 
-const SIZE = 64;
+const SIZE = 72;
 
 function drawRoundIcon(
     ctx: CanvasRenderingContext2D,
     kind: 'bike' | 'run',
 ): void {
+    const cx = SIZE / 2;
+    const cy = SIZE / 2;
+    const r = SIZE / 2 - 3;
+
+    // Dark outer ring for contrast on light Positron basemap
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+    ctx.fill();
+
     const g = ctx.createLinearGradient(0, 0, SIZE, SIZE);
     if (kind === 'bike') {
-        g.addColorStop(0, '#4f46e5');
-        g.addColorStop(0.55, '#7c3aed');
-        g.addColorStop(1, '#a855f7');
+        g.addColorStop(0, '#4338ca');
+        g.addColorStop(0.5, '#6d28d9');
+        g.addColorStop(1, '#9333ea');
     } else {
-        g.addColorStop(0, '#059669');
-        g.addColorStop(0.55, '#10b981');
-        g.addColorStop(1, '#34d399');
+        g.addColorStop(0, '#047857');
+        g.addColorStop(0.5, '#059669');
+        g.addColorStop(1, '#10b981');
     }
     ctx.beginPath();
-    ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fillStyle = g;
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.95)';
-    ctx.lineWidth = 3;
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.98)';
+    ctx.lineWidth = 3.5;
     ctx.stroke();
 
     ctx.strokeStyle = '#fff';
     ctx.fillStyle = '#fff';
-    ctx.lineWidth = 2.2;
+    ctx.lineWidth = 2.6;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+
+    const scale = SIZE / 64;
+    ctx.save();
+    ctx.translate((SIZE - 64 * scale) / 2, (SIZE - 64 * scale) / 2);
+    ctx.scale(scale, scale);
 
     if (kind === 'bike') {
         ctx.beginPath();
@@ -56,6 +72,7 @@ function drawRoundIcon(
         ctx.lineTo(50, 28);
         ctx.stroke();
     }
+    ctx.restore();
 }
 
 function iconImageData(kind: 'bike' | 'run'): ImageData {

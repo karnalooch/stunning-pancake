@@ -9,10 +9,12 @@
  * | 9.5–10.5| city           | Klastry (główny widok miasta) |
  * | 10.5–11.5| district      | Ciaśniejsze klastry |
  * | 11.5–12.2| neighborhood  | Klastry + pojedyncze kropki GL |
- * | 12.2–12.8| handoff       | GL zanika ↔ ikony GPU (symbol layer) |
+ * | 12.2–12.8| handoff       | GL dots fade ↔ GPU symbol icons |
  * | 12.8–13.5| street-icons  | Ikony MapLibre + collision engine |
  * | 13.5–14.5| street-labels | Etykiety GPU (text-optional) |
  * | 14.5+   | detail         | Więcej etykiet dzięki collision |
+ *
+ * Paint crossfade bands: see LIVE_MAP_LOD (wider ranges than mode boundaries).
  */
 
 export type LiveMapZoomMode =
@@ -28,6 +30,33 @@ export type LiveMapZoomMode =
     | 'detail';
 
 export const CLUSTER_MAX_ZOOM = 14;
+
+/**
+ * Shared zoom bands for MapLibre paint crossfades — wider ranges reduce pop-in
+ * when switching between city hubs, clusters, GL dots, and GPU symbol layers.
+ */
+export const LIVE_MAP_LOD = {
+    cityHubMin: 6,
+    cityHubFadeInEnd: 7.2,
+    cityHubFadeOutStart: 8.6,
+    cityHubFadeOutEnd: 10.8,
+    clusterVisibleStart: 6.2,
+    clusterPeakEnd: 11.6,
+    clusterFadeOutEnd: 13.6,
+    dotFadeInStart: 10.6,
+    dotFadeInEnd: 11.6,
+    dotFadeOutStart: 12.1,
+    dotFadeOutEnd: 13.5,
+    iconMinZoom: 11.4,
+    iconMaxZoom: 13.85,
+    iconFadeInStart: 11.4,
+    iconFadeInEnd: 12.3,
+    iconFadeOutStart: 13.1,
+    iconFadeOutEnd: 13.85,
+    labelMinZoom: 13.15,
+    labelFadeInStart: 13.15,
+    labelFadeInEnd: 13.7,
+} as const;
 
 /** Fade 0→1 between start (inclusive) and end (exclusive) zoom. */
 export function zoomFade(zoom: number, start: number, end: number): number {

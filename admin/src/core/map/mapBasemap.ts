@@ -26,6 +26,15 @@ export const MAP_ATTRIBUTION_CONTROL_OPTIONS = {
     customAttribution: MAP_ATTRIBUTION_CUSTOM,
 } as const;
 
+/**
+ * Font stacks available from OpenFreeMap positron/dark glyphs endpoint
+ * (`https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf`).
+ * Positron style uses Noto Sans only — Open Sans stacks 404.
+ */
+export const MAP_TEXT_FONT_BOLD = ['Noto Sans Bold'] as const;
+export const MAP_TEXT_FONT_REGULAR = ['Noto Sans Regular'] as const;
+export const MAP_TEXT_FONT_ITALIC = ['Noto Sans Italic'] as const;
+
 function envTrim(key: string): string | undefined {
     const v = import.meta.env[key];
     if (typeof v !== 'string') return undefined;
