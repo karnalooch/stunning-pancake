@@ -78,7 +78,7 @@ Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRO
 | # | Kryterium | Status |
 |---|-----------|--------|
 | 1 | `python run_pytest.py … -m simulator_light` — PASS lokalnie / CI | ✅ 31/31 (2026-06-03) |
-| 2 | `.\scripts\railway-verify-production.ps1` — PASS (jeśli `RAILWAY_API_TOKEN`) | ⚠️ 1 FAIL: brak `routing@` w ostatnich 80 liniach logów worker-routing (reszta OK) |
+| 2 | `.\scripts\railway-verify-production.ps1` — PASS (jeśli `RAILWAY_API_TOKEN`) | ✅ PASS 22/22 (2026-06-03, push `b9652e24`) |
 | 3 | P0 smoke GO — [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | ☐ |
 | 4 | Live sim: `ride_warming` → spadek; `routing_queue_depth` stabilne przy `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | ☐ |
 | 5 | Load-test 10k — wypełniony szablon metryk w SCALE_TEST_300K (bez prod 10k bez zgody) | ☐ |

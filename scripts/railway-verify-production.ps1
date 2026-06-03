@@ -131,13 +131,13 @@ if ($routeVars -match 'DATABASE_URL' -and $routeVars -match 'REDIS_URL') {
 }
 
 # --- Logs: routing must be Celery, not Expo ---
-$routeLogs = railway logs -s $RoutingService --lines 80 2>&1 | Out-String
+$routeLogs = railway logs -s $RoutingService --lines 200 2>&1 | Out-String
 if ($routeLogs -match 'expo start|Metro Bundler|Metro is running') {
     Add-Result "$RoutingService logs (no Expo)" $false 'Still shows Expo/Metro - wrong build'
-} elseif ($routeLogs -match 'routing@|CELERY.*routing|Starting Celery.*routing') {
+} elseif ($routeLogs -match 'routing@|CELERY.*routing|Starting Celery.*routing|route_live_ride_task') {
     Add-Result "$RoutingService logs (Celery routing@)" $true 'Celery worker detected'
 } else {
-    Add-Result "$RoutingService logs (Celery routing@)" $false 'No routing@ / Celery startup in last 80 lines'
+    Add-Result "$RoutingService logs (Celery routing@)" $false 'No routing@ / route_live_ride_task in last 200 lines'
 }
 
 # --- GraphQL build config (optional) ---
