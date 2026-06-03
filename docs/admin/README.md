@@ -9,7 +9,8 @@
 The 4VELO Admin Panel has been redesigned with a world-class, premium UI system featuring full dark mode support, fluid animations, and a comprehensive design token system.
 
 **Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)  
-**P0 closure (2026-06-02):** audit §8 · post-deploy smoke → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)
+**P0 closure (2026-06-02):** audit §8 · post-deploy smoke → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)  
+**P1 roadmap (paczki 1–6, deploy bez staging):** [P1_ROADMAP.md](./P1_ROADMAP.md)
 
 ## Tech Stack
 
