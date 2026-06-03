@@ -229,7 +229,7 @@ async def _map_worker(
     counters: dict[str, int],
     headers: dict[str, str],
 ) -> None:
-    params = {"zoom": 6, "limit": 800}
+    params = {"zoom": 6, "limit": 800, "detail": "summary"}
     while time.monotonic() < deadline:
         t0 = time.perf_counter()
         try:

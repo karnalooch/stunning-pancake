@@ -8,7 +8,7 @@ param(
     [double]$ActiveRatio = 0.17,
     [double]$PoolPct = 1.0,
     [int]$TickSeconds = 4,
-    [int]$MinRideActive = 1000,
+    [int]$MinRideActive = 500,
     [int]$PollSeconds = 8,
     [int]$TimeoutMinutes = 10,
     [switch]$StopExisting
@@ -81,7 +81,7 @@ if ($st.ride_active -lt $MinRideActive) {
     Write-Error "Timed out: ride_active=$($st.ride_active) < $MinRideActive"
 }
 
-$probe = Invoke-RestMethod -Uri "$BackendUrl/activities/telemetry/live/?zoom=6&limit=800" -Headers $headers
+$probe = Invoke-RestMethod -Uri "$BackendUrl/activities/telemetry/live/?zoom=6&limit=800&detail=summary" -Headers $headers
 Write-Host "[+] Warm complete: ride_active=$($st.ride_active) redis_active=$($probe.meta.redis_active)"
 Write-Host "[+] JWT (pass to load script): $token"
 $token

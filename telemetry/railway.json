@@ -7,6 +7,18 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicy": "ALWAYS"
+    "restartPolicy": "ALWAYS",
+    "limitOverride": {
+      "containers": {
+        "cpu": 1,
+        "memoryBytes": 1073741824
+      }
+    }
+  },
+  "variables": {
+    "TELEMETRY_SKIP_DB": "0",
+    "TELEMETRY_DB_POOL_MAX": "30",
+    "TELEMETRY_INGEST_BATCH_SIZE": "200",
+    "UVICORN_WORKERS": "2"
   }
 }

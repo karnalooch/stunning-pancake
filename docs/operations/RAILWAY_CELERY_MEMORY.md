@@ -3,7 +3,7 @@
 | | |
 |--|--|
 | **Status** | ✅ Active |
-| **Ostatnia aktualizacja** | 2026-06-03 |
+| **Ostatnia aktualizacja** | 2026-06-04 |
 | **Cel** | Zapobiegać OOM (SIGKILL), utrzymać kolejkę `routing` oddzielnie od `live_tick`, udokumentować caps `SCALE_*`. |
 | **Audience** | Platform Operator, Backend Lead |
 | **Checklist + skrypt** | [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1` |
@@ -114,8 +114,8 @@ Live sim wysyła `route_live_ride_task` na **`routing`**, żeby `live_tick` nie 
 | `SCALE_SIM_ASYNC_ROUTING` | `1` |
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` |
 | `SECRET_KEY` | **Ten sam** co backend/simulation |
-| `numReplicas` | **3** (poziomy scale — patrz niżej) |
-| Service RAM | **≥ 1 GB / replikę** (≈ 3 GB łącznie przy 3 replikach) |
+| `numReplicas` | **2** (8 GB plan — patrz budżet poniżej) |
+| Service RAM | **512 MB / replikę** (≈ 1 GB łącznie przy 2 replikach) |
 
 **Weryfikacja:** [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) + skrypt.
 
@@ -144,6 +144,45 @@ Po skalowaniu `numReplicas=2→3` (railway.json + `serviceInstanceUpdate(numRepl
 | OOM / SIGKILL w projekcie | — | **brak** (routing, simulation, celery-worker, Backend, brouter) |
 
 **Wniosek (uczciwy):** 3. replika zwiększyła drenaż ~liniowo (~1,89/s), ale `sim.routing.backpressure` **pozostaje przypięty** (firing ~co tick, kolejka `routing` przy cap). Skalowanie drenażu nie zamyka backpressure, bo **popyt > drenaż** przy bieżącym `active_ratio`. **Decydująca dźwignia = obniżenie `active_ratio`** (strona popytu) przez admina — nie zmieniono jej w tym kroku (poza zakresem decyzji operatora).
+
+#### Budżet RAM/CPU — plan 8 GB / 8 vCPU (2026-06-04)
+
+Projekt `marvelous-gratitude` ma **8 GB RAM i 8 vCPU łącznie** (wszystkie serwisy). SSOT w `railway.json` (`limitOverride`) + GraphQL `serviceInstanceLimitsUpdate` dla natychmiastowego efektu.
+
+| Serwis | RAM | vCPU | Repliki | Uwagi |
+|--------|-----|------|---------|--------|
+| `celery-worker-simulation` | **2 GB** | 1 | 1 | OOM guard — solo pool |
+| `celery-worker-routing` | **512 MB** | 0.5 | **2** | ↓ z 3 replik (oszcz. ~1,5 GB); BRouter HTTP only |
+| `Backend` | **1 GB** | 1 | 1 | Status poll + heal |
+| `telemetry` | **1 GB** | 1 | 1 | FastAPI ingest; `UVICORN_WORKERS=2` |
+| `celery-worker` | **512 MB** | 0.5 | 1 | default/critical/notifications |
+| `celery-beat` | **512 MB** | 0.5 | 1 | Scheduler |
+| `Admin` | **512 MB** | 0.5 | 1 | SPA static |
+| `brouter` | **512 MB** | 0.5 | 1 | `*.railway.internal:17777` |
+| `Redis` | template | — | 1 | Managed image; minimal viable |
+| `TimescaleDB` | template | — | 1 | Managed; volume 5 GB |
+
+**Łącznie compute (app):** ~6,5 GB cap + DB/Redis template overhead → mieści się w 8 GB planie.
+
+Apply (Platform Operator):
+
+```powershell
+# Przykład GraphQL (serviceInstanceLimitsUpdate) — patrz skrypt sesji 2026-06-04
+# numReplicas routing: serviceInstanceUpdate(numReplicas: 2)
+# active_ratio prod: .\scripts\railway-set-live-active-ratio.ps1 -ActiveRatio 0.18 -Restart
+# In-place (po deploy): railway ssh -s Backend -- python manage.py set_live_active_ratio 0.18
+```
+
+#### Backpressure closure (2026-06-04)
+
+| Akcja | Wynik |
+|-------|--------|
+| `active_ratio` 0.46 → **0.18** | Admin API (`global_owner`) + restart z `tick_seconds=8`, domyślne caps 30/25/4 |
+| Routing repliki 3 → **2** | Budżet 8 GB; GraphQL + `celery-worker-routing/railway.json` |
+| Management command | `python manage.py set_live_active_ratio <ratio>` — in-place bez restartu (wymaga deploy + SSH) |
+| Skrypt operacyjny | `scripts/railway-set-live-active-ratio.ps1` |
+
+Po restarcie z niskim ratio obserwuj logi ≥15 min: spadek `sim.routing.backpressure`, `ride_warming` → 0 po rozgrzaniu tras.
 
 ### Niezawodność (wszystkie workery)
 

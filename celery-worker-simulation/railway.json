@@ -7,7 +7,13 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicy": "ALWAYS"
+    "restartPolicy": "ALWAYS",
+    "limitOverride": {
+      "containers": {
+        "cpu": 1,
+        "memoryBytes": 2147483648
+      }
+    }
   },
   "variables": {
     "BROUTER_URL": "http://brouter.railway.internal:17777/brouter",

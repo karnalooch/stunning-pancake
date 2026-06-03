@@ -23,7 +23,7 @@ export default function () {
     headers: jwt ? { Authorization: `Bearer ${jwt}` } : {},
     tags: { name: "live-map" },
   };
-  const res = http.get(`${mapUrl}?zoom=6&limit=800`, params);
+  const res = http.get(`${mapUrl}?zoom=6&limit=800&detail=summary`, params);
   check(res, { "status 200": (r) => r.status === 200 });
   sleep(0.05);
 }

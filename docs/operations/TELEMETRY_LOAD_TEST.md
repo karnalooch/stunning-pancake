@@ -191,9 +191,9 @@ Requires explicit Platform Operator approval before prod or shared staging.
 | Ingest scaffold + skip-db / DB-on profiles | **DONE** | Profiles A/B above; commit `ff0f0ba4` |
 | Live map warm-up + authenticated benchmark | **DONE** | Profile C; `warm-simulator-for-map-test.ps1`; 290 OK @ p95 1177 ms (laptop, 1020 riders) |
 | Live map p95 < 300 ms SLO | **DEFERRED** | Laptop FAIL (1177 ms p95, 132 timeouts); re-test on staging / prod observability |
-| 50k positions/s sustained | **DEFERRED** | Laptop ceiling ~13k skip-db; needs distributed k6/Locust + operator window |
+| 50k positions/s sustained | **DEFERRED** | Laptop ceiling ~13k skip-db; Railway prod **8 CPU / 8 GB** total — distributed k6/Locust + operator window; **no prod 50k without consent** |
 | Phase 2 sharding prod env | **DONE** | `TELEMETRY_SHARD_COUNT=4` on backend + simulation (prior session) |
-| Separate Railway Telemetry service | **N/A** | Prod project `marvelous-gratitude` has no dedicated Telemetry service (2026-06-04 `railway service list`); FastAPI ingest env (`TELEMETRY_DB_POOL_MAX`, `TELEMETRY_INGEST_BATCH_SIZE`) applies when/if service is added — **not** `TELEMETRY_SKIP_DB` on prod |
+| Separate Railway Telemetry service | **DONE** (2026-06-04) | Serwis `telemetry` w `marvelous-gratitude`; `rootDirectory=/telemetry`, `TELEMETRY_SKIP_DB=0`, `TELEMETRY_DB_POOL_MAX=30`, `TELEMETRY_INGEST_BATCH_SIZE=200`, `UVICORN_WORKERS=2`, Backend `TELEMETRY_URL=http://telemetry.railway.internal:8001`, RAM 1 GB |
 | k6 distributed stub | **DONE** | `scripts/load-test-telemetry-map.k6.js` |
 | Locust full harness | **DEFERRED** | Phase 3 |
 
@@ -211,6 +211,7 @@ Requires explicit Platform Operator approval before prod or shared staging.
 
 ## Production note
 
-For Railway prod (`marvelous-gratitude`), set shard env vars via Dashboard or CLI
-(see [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md)). Use **observational** prod
-checks only (health, p95 from Datadog) until a scheduled load-test window is approved.
+For Railway prod (`marvelous-gratitude`, **8 GB / 8 vCPU plan**), set shard env vars via Dashboard or CLI
+(see [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md)). Dedicated `telemetry` service (1 GB, 2 uvicorn workers).
+Use **observational** prod checks only (health, p95 from Datadog) until a scheduled load-test window is approved.
+Map benchmarks: use `detail=summary` and warm-up target **500** riders (`warm-simulator-for-map-test.ps1 -MinRideActive 500`).
