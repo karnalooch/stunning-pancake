@@ -366,9 +366,7 @@ class TelemetryService:
         device_type: str = "person",
     ):
         """Push a single simulator-generated position to Redis for live map display."""
-        from core.redis_cluster import get_redis
-
-        from activities.telemetry_shard import keys_for_device
+        from activities.telemetry_shard import TelemetryShardRouter, keys_for_device
 
         device_id, payload, lon, lat = cls._encode_entry(
             {
@@ -381,8 +379,8 @@ class TelemetryService:
                 "type": device_type,
             }
         )
-        r = get_redis()
         sk = keys_for_device(device_id)
+        r = TelemetryShardRouter.client_for(sk.index)
         r.hset(sk.positions, device_id, payload)
         r.geoadd(sk.geo, (lon, lat, device_id))
         r.expire(sk.positions, cls.TELEMETRY_REDIS_TTL + 30)
@@ -394,18 +392,23 @@ class TelemetryService:
         Replace simulator telemetry for currently riding athletes only.
         Full replace each tick keeps Redis bounded (≤ MAX_CONCURRENT_RIDERS).
         """
-        from core.redis_cluster import get_redis
         from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK
-        from activities.telemetry_shard import all_shard_keys, shard_for_device, shard_count
+        from activities.telemetry_shard import (
+            TelemetryShardRouter,
+            all_shard_keys,
+            shard_for_device,
+            shard_count,
+        )
 
         n_shards = shard_count()
-        r = get_redis()
         all_keys = all_shard_keys(n_shards)
 
         if not entries:
             if not merge:
                 for sk in all_keys:
-                    r.delete(sk.positions, sk.geo)
+                    TelemetryShardRouter.client_for(sk.index).delete(
+                        sk.positions, sk.geo
+                    )
             return
 
         entries = entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
@@ -415,21 +418,27 @@ class TelemetryService:
 
         if not merge:
             for sk in all_keys:
-                r.delete(sk.positions, sk.geo)
+                TelemetryShardRouter.client_for(sk.index).delete(sk.positions, sk.geo)
 
-        pipe = r.pipeline()
+        by_shard: dict[int, list[tuple[str, str, float, float]]] = {}
         for e in entries:
             device_id, payload, lon, lat = cls._encode_entry(e)
             if not device_id:
                 continue
             idx = shard_for_device(device_id, n_shards)
+            by_shard.setdefault(idx, []).append((device_id, payload, lon, lat))
+
+        ttl = cls.TELEMETRY_REDIS_TTL + 30
+        for idx, rows in by_shard.items():
             sk = all_keys[idx]
-            pipe.hset(sk.positions, device_id, payload)
-            pipe.geoadd(sk.geo, (lon, lat, device_id))
-        for sk in all_keys:
-            pipe.expire(sk.positions, cls.TELEMETRY_REDIS_TTL + 30)
-            pipe.expire(sk.geo, cls.TELEMETRY_REDIS_TTL + 30)
-        pipe.execute()
+            r = TelemetryShardRouter.client_for(idx)
+            pipe = r.pipeline()
+            for device_id, payload, lon, lat in rows:
+                pipe.hset(sk.positions, device_id, payload)
+                pipe.geoadd(sk.geo, (lon, lat, device_id))
+            pipe.expire(sk.positions, ttl)
+            pipe.expire(sk.geo, ttl)
+            pipe.execute()
 
     @classmethod
     def _record_ingest_load(cls, n: int) -> None:
@@ -502,17 +511,89 @@ class TelemetryService:
             pass
 
     @classmethod
-    def _total_positions(cls, r) -> int:
+    def _total_positions(cls, r=None) -> int:
         """Sum of position-hash sizes across all telemetry shards."""
-        from activities.telemetry_shard import all_shard_keys
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        from activities.telemetry_shard import (
+            TelemetryShardRouter,
+            all_shard_keys,
+            parallel_shard_workers,
+        )
+
+        shards = all_shard_keys()
+        if len(shards) <= 1:
+            client = r or TelemetryShardRouter.client_for(0)
+            try:
+                return int(client.hlen(shards[0].positions) or 0)
+            except Exception:
+                return 0
+
+        def _hlen(sk):
+            try:
+                return int(TelemetryShardRouter.client_for(sk.index).hlen(sk.positions) or 0)
+            except Exception:
+                return 0
 
         total = 0
-        for sk in all_shard_keys():
+        workers = parallel_shard_workers(len(shards))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_hlen, sk) for sk in shards]
+            for fut in as_completed(futures):
+                total += fut.result()
+        return total
+
+    @classmethod
+    def _geo_query_one_shard(
+        cls,
+        sk,
+        center_lon: float,
+        center_lat: float,
+        radius_km: float,
+        count: int,
+    ) -> list[tuple[str, dict]]:
+        """GEORADIUS + HMGET on a single shard. Returns (device_id, position) pairs."""
+        import json as _json
+
+        from activities.telemetry_shard import TelemetryShardRouter
+
+        r = TelemetryShardRouter.client_for(sk.index)
+        try:
+            device_ids = r.georadius(
+                sk.geo,
+                center_lon,
+                center_lat,
+                radius_km,
+                unit="km",
+                count=count,
+                sort="ASC",
+            )
+        except Exception:
+            return []
+
+        id_list: list[str] = []
+        for d in device_ids or []:
+            id_list.append(d.decode() if isinstance(d, bytes) else str(d))
+        if not id_list:
+            return []
+
+        try:
+            raw_vals = r.hmget(sk.positions, id_list)
+        except Exception:
+            return []
+
+        out: list[tuple[str, dict]] = []
+        for did, pos_json in zip(id_list, raw_vals):
+            if not pos_json:
+                continue
             try:
-                total += int(r.hlen(sk.positions) or 0)
+                pos = _json.loads(
+                    pos_json.decode() if isinstance(pos_json, bytes) else pos_json
+                )
+                out.append((did, pos))
             except Exception:
                 continue
-        return total
+        return out
 
     @classmethod
     def _geo_query_shards(
@@ -524,54 +605,51 @@ class TelemetryService:
         count: int,
     ) -> list[dict]:
         """
-        Fan a GEORADIUS query across every shard, then HMGET each shard for the
-        ids it owns. Returns parsed position dicts (deduped, capped at `count`).
+        Fan a GEORADIUS query across every shard in parallel, then merge.
+        Returns parsed position dicts (deduped, capped at `count`).
         """
-        import json as _json
-        from activities.telemetry_shard import all_shard_keys
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        from activities.telemetry_shard import all_shard_keys, parallel_shard_workers
+
+        shards = all_shard_keys()
+        if len(shards) <= 1:
+            pairs = cls._geo_query_one_shard(
+                shards[0], center_lon, center_lat, radius_km, count
+            )
+            return [pos for _did, pos in pairs[:count]]
 
         positions: list[dict] = []
         seen: set[str] = set()
-        for sk in all_shard_keys():
-            if len(positions) >= count:
-                break
-            try:
-                device_ids = r.georadius(
-                    sk.geo,
+        workers = parallel_shard_workers(len(shards))
+
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(
+                    cls._geo_query_one_shard,
+                    sk,
                     center_lon,
                     center_lat,
                     radius_km,
-                    unit="km",
-                    count=count,
-                    sort="ASC",
-                )
-            except Exception:
-                continue
-            id_list: list[str] = []
-            for d in device_ids or []:
-                did = d.decode() if isinstance(d, bytes) else str(d)
-                if did not in seen:
-                    seen.add(did)
-                    id_list.append(did)
-            if not id_list:
-                continue
-            try:
-                raw_vals = r.hmget(sk.positions, id_list)
-            except Exception:
-                continue
-            for pos_json in raw_vals:
-                if not pos_json:
-                    continue
+                    count,
+                ): sk
+                for sk in shards
+            }
+            shard_hits: list[list[tuple[str, dict]]] = []
+            for fut in as_completed(futures):
                 try:
-                    positions.append(
-                        _json.loads(
-                            pos_json.decode() if isinstance(pos_json, bytes) else pos_json
-                        )
-                    )
+                    shard_hits.append(fut.result())
                 except Exception:
                     continue
+
+        for pairs in shard_hits:
+            for did, pos in pairs:
+                if did in seen:
+                    continue
+                seen.add(did)
+                positions.append(pos)
                 if len(positions) >= count:
-                    break
+                    return positions
         return positions
 
     @classmethod
@@ -798,13 +876,10 @@ class TelemetryService:
     @classmethod
     def clear_simulator_positions(cls):
         """Remove all simulator-generated positions from Redis (all shards)."""
-        from core.redis_cluster import get_redis
-        from activities.telemetry_shard import all_shard_keys
+        from activities.telemetry_shard import TelemetryShardRouter, all_shard_keys
 
-        r = get_redis()
         for sk in all_shard_keys():
-            # Each shard pair shares a hash-tag slot — single-slot safe in cluster.
-            r.delete(sk.positions, sk.geo)
+            TelemetryShardRouter.client_for(sk.index).delete(sk.positions, sk.geo)
 
 
 import random

@@ -125,7 +125,7 @@ Legacy: `EVENT_BURST_MODE=1` → `on`, `EVENT_BURST_MODE=0` → `off`.
 
 - **50k registrations over ~10 minutes** is realistic with default join rate (5k/min).
 - **10k concurrent GPS dots** on the live map is the intended ceiling (`EVENT_MAX_CONCURRENT_RIDERS`).
-- The live-position index can now be **horizontally sharded** across N Redis shards — see [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md). The router/abstraction + always-on ingest backpressure ship now (`TELEMETRY_SHARD_COUNT=1` keeps legacy single-key behaviour). True 50k simultaneous ingest still needs the phased multi-Redis rollout documented there.
+- The live-position index is **horizontally sharded** across N Redis shards with Phase 2 per-shard client routing — see [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md). Set `TELEMETRY_SHARD_COUNT=4+` on backend + simulation worker; optional `REDIS_TELEMETRY_SHARD_NODES` for dedicated Redis per shard. Load-test scaffold: [operations/TELEMETRY_LOAD_TEST.md](./operations/TELEMETRY_LOAD_TEST.md).
 - Use staggered starts and client-side retry on 429 (global guard + event burst).
 
 See also: [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) for batch/live sim scale · [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md) for sharding rollout.

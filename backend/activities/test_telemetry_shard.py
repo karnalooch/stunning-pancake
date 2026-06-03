@@ -20,6 +20,8 @@ class ShardRouterPureTest(SimpleTestCase):
             import os
 
             os.environ.pop("TELEMETRY_SHARD_COUNT", None)
+            os.environ.pop("REDIS_TELEMETRY_SHARD_NODES", None)
+            ts.TelemetryShardRouter.reset()
             self.assertEqual(ts.shard_count(), 1)
             self.assertFalse(ts.is_sharding_enabled())
 
@@ -59,8 +61,36 @@ class ShardRouterPureTest(SimpleTestCase):
         self.assertEqual(len(ts.all_shard_keys(count=4)), 4)
         self.assertEqual(len(ts.all_shard_keys(count=1)), 1)
 
+    def test_shard_node_urls_parsing(self):
+        with patch.dict(
+            "os.environ",
+            {"REDIS_TELEMETRY_SHARD_NODES": "redis://a/0, redis://b/1"},
+            clear=False,
+        ):
+            self.assertEqual(ts.shard_node_urls(), ["redis://a/0", "redis://b/1"])
+            self.assertTrue(ts.has_dedicated_shard_nodes())
+
+    def test_resolve_node_urls_cycles_when_fewer_than_shards(self):
+        with patch.dict(
+            "os.environ",
+            {"REDIS_TELEMETRY_SHARD_NODES": "redis://host/0,redis://host/1"},
+            clear=False,
+        ):
+            resolved = ts._resolve_node_urls(4)
+            self.assertEqual(len(resolved), 4)
+            self.assertEqual(resolved[0], "redis://host/0")
+            self.assertEqual(resolved[1], "redis://host/1")
+            self.assertEqual(resolved[2], "redis://host/0")
+            self.assertEqual(resolved[3], "redis://host/1")
+
 
 class TelemetryServiceShardRoundTripTest(SimpleTestCase):
+    def setUp(self):
+        ts.TelemetryShardRouter.reset()
+
+    def tearDown(self):
+        ts.TelemetryShardRouter.reset()
+
     def _push_grid(self, n: int):
         from activities.services import TelemetryService
 
@@ -124,22 +154,60 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
         TelemetryService.clear_simulator_positions()
         # Verify directly against shards (get_live_positions has a short-TTL cache
         # that FakeRedis does not expire).
-        from core.redis_cluster import get_redis
+        from activities.telemetry_shard import TelemetryShardRouter
 
-        r = get_redis()
-        remaining = sum(int(r.hlen(sk.positions) or 0) for sk in ts.all_shard_keys(count=4))
+        remaining = 0
+        for sk in ts.all_shard_keys(count=4):
+            r = TelemetryShardRouter.client_for(sk.index)
+            remaining += int(r.hlen(sk.positions) or 0)
         self.assertEqual(remaining, 0)
 
     @patch.dict("os.environ", {"TELEMETRY_SHARD_COUNT": "4"}, clear=False)
     def test_writes_land_on_multiple_shards(self):
         """Confirm sharding actually spreads keys (not all in one shard)."""
         from activities.services import TelemetryService
-        from core.redis_cluster import get_redis
+        from activities.telemetry_shard import TelemetryShardRouter
 
         self._push_grid(40)
-        r = get_redis()
         non_empty = 0
         for sk in ts.all_shard_keys(count=4):
+            r = TelemetryShardRouter.client_for(sk.index)
             if int(r.hlen(sk.positions) or 0) > 0:
                 non_empty += 1
         self.assertGreater(non_empty, 1)
+
+    @patch.dict(
+        "os.environ",
+        {
+            "TELEMETRY_SHARD_COUNT": "4",
+            "REDIS_TELEMETRY_SHARD_NODES": "redis://fake/0,redis://fake/1,redis://fake/2,redis://fake/3",
+        },
+        clear=False,
+    )
+    def test_multi_client_routing_uses_separate_fake_redis(self):
+        """Phase 2: each shard index gets its own client when nodes are configured."""
+        from core.fake_redis import FakeRedis
+        from activities.services import TelemetryService
+
+        shards = [FakeRedis() for _ in range(4)]
+        ts.TelemetryShardRouter.reset()
+        ts.TelemetryShardRouter._clients = {i: shards[i] for i in range(4)}
+
+        for i in range(4):
+            TelemetryService.push_simulator_position(
+                device_id=f"shard-test-{i}",
+                lat=52.0 + i * 0.01,
+                lon=21.0,
+                name=f"S{i}",
+            )
+
+        # Each dedicated client should hold at least one key (hash tag differs per shard).
+        filled = sum(1 for s in shards if s.storage)
+        self.assertGreaterEqual(filled, 1)
+
+        positions, meta = TelemetryService.get_live_positions(
+            bbox=(20.0, 51.0, 22.0, 53.0),
+            limit=100,
+        )
+        self.assertEqual(len(positions), 4)
+        self.assertEqual(meta["telemetry_positions"], 4)

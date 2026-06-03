@@ -160,6 +160,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-04 | **Telemetry sharding Phase 2:** `TelemetryShardRouter.client_for()` + `REDIS_TELEMETRY_SHARD_NODES`, parallel read fan-out, FastAPI asyncpg pool/batching, load-test scaffold ([TELEMETRY_LOAD_TEST.md](../operations/TELEMETRY_LOAD_TEST.md)). Prod: `TELEMETRY_SHARD_COUNT=4` on backend + simulation |
 | 2026-06-03 | **Always-on protection + telemetry sharding (foundation):** globalny `core/load_guard.py` (always-on, load-driven, hysteresis, fail-open — join/session/ingest + concurrent cap), `TelemetryShardRouter` (`activities/telemetry_shard.py`, shard po `deviceId`/CRC32, hash-tag `{tel:i}`, read fan-out, `TELEMETRY_SHARD_COUNT=1` = legacy), always-on telemetry ingest backpressure (Django signal + FastAPI 429), 32 testy. Multi-instance per-shard = Faza 2 (patrz [operations/TELEMETRY_SHARDING.md](../operations/TELEMETRY_SHARDING.md)) |
 | 2026-06-03 | Scaling routing: `numReplicas=2→3` (horizontal, ~3 GB łącznie). Pomiar prod: drenaż ~1,89/s (~liniowy), backpressure nadal przypięty (1/6,2 s) → decydująca dźwignia = obniżenie `active_ratio`; p.6 niezamknięte. Brak OOM |
 | 2026-06-03 | Scaling routing: `celery-worker-routing` `numReplicas=1→2` (horizontal, ~1 GB/replikę) w odpowiedzi na sustained backpressure; aktualizacja p.4 i p.6 operational closure |

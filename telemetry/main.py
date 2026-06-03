@@ -60,15 +60,94 @@ TRACCAR_CHANNEL = os.getenv("TRACCAR_REDIS_CHANNEL", "traccar:positions")
 ZONE_UPDATE_CHANNEL = "privacy_zones:updates"
 
 _pool: asyncpg.Pool | None = None
+_insert_queue: asyncio.Queue | None = None
+_insert_worker_task: asyncio.Task | None = None
+
+try:
+    _DB_POOL_MIN = max(1, int(os.getenv("TELEMETRY_DB_POOL_MIN", "5")))
+except (TypeError, ValueError):
+    _DB_POOL_MIN = 5
+try:
+    _DB_POOL_MAX = max(_DB_POOL_MIN, int(os.getenv("TELEMETRY_DB_POOL_MAX", "30")))
+except (TypeError, ValueError):
+    _DB_POOL_MAX = 30
+try:
+    _INGEST_BATCH_SIZE = max(1, int(os.getenv("TELEMETRY_INGEST_BATCH_SIZE", "100")))
+except (TypeError, ValueError):
+    _INGEST_BATCH_SIZE = 100
+try:
+    _INGEST_FLUSH_MS = max(10, int(os.getenv("TELEMETRY_INGEST_FLUSH_MS", "50")))
+except (TypeError, ValueError):
+    _INGEST_FLUSH_MS = 50
+
+_INSERT_SQL = (
+    "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) "
+    "VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8) ON CONFLICT DO NOTHING"
+)
 
 # Local cache for privacy zones: {user_id: [ {lat, lon, radius, id}, ... ]}
 _privacy_zones: dict[int, list[dict]] = {}
 
+
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
-        _pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
+        _pool = await asyncpg.create_pool(
+            DB_DSN,
+            min_size=_DB_POOL_MIN,
+            max_size=_DB_POOL_MAX,
+            command_timeout=30,
+        )
+        logger.info(
+            "db.pool ready min=%d max=%d batch=%d",
+            _DB_POOL_MIN,
+            _DB_POOL_MAX,
+            _INGEST_BATCH_SIZE,
+        )
     return _pool
+
+
+async def _flush_insert_buffer(rows: list[tuple]) -> None:
+    if not rows:
+        return
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        await conn.executemany(_INSERT_SQL, rows)
+
+
+async def _insert_worker() -> None:
+    """Background batch inserter — amortizes DB round-trips under burst ingest."""
+    assert _insert_queue is not None
+    buffer: list[tuple] = []
+    flush_interval = _INGEST_FLUSH_MS / 1000.0
+    while True:
+        try:
+            row = await asyncio.wait_for(_insert_queue.get(), timeout=flush_interval)
+            buffer.append(row)
+            _insert_queue.task_done()
+        except asyncio.TimeoutError:
+            pass
+        except asyncio.CancelledError:
+            if buffer:
+                await _flush_insert_buffer(buffer)
+            raise
+
+        if len(buffer) >= _INGEST_BATCH_SIZE:
+            batch = buffer
+            buffer = []
+            await _flush_insert_buffer(batch)
+
+
+async def enqueue_gps_rows(rows: list[tuple]) -> None:
+    """Queue rows for batched insert (used by HTTP + WebSocket ingest)."""
+    global _insert_queue, _insert_worker_task
+    if not rows:
+        return
+    if _insert_queue is None:
+        _insert_queue = asyncio.Queue(maxsize=max(_INGEST_BATCH_SIZE * 20, 5000))
+        _insert_worker_task = asyncio.create_task(_insert_worker())
+    for row in rows:
+        await _insert_queue.put(row)
 
 # ---------------------------------------------------------------------------
 # Geospatial Helpers
@@ -139,7 +218,7 @@ async def _traccar_redis_bridge() -> None:
     """Consumes Traccar positions from Redis and broadcasts to UI."""
     import redis.asyncio as redis_lib
     batch_buffer: list[tuple] = []
-    MAX_BATCH_SIZE = 50
+    MAX_BATCH_SIZE = _INGEST_BATCH_SIZE
     last_flush = time.time()
     client = redis_lib.from_url(REDIS_URL, decode_responses=True)
 
@@ -232,7 +311,15 @@ async def startup() -> None:
 
 @app.on_event("shutdown")
 async def shutdown() -> None:
-    if _pool: await _pool.close()
+    global _insert_worker_task
+    if _insert_worker_task is not None:
+        _insert_worker_task.cancel()
+        try:
+            await _insert_worker_task
+        except asyncio.CancelledError:
+            pass
+    if _pool:
+        await _pool.close()
 
 # ---------------------------------------------------------------------------
 # WebSocket Management
@@ -358,14 +445,10 @@ async def _is_duplicate_batch(client_batch_id: str | None) -> bool:
     """Redis SET NX — duplicate batch ids skip INSERT (7d TTL)."""
     if not client_batch_id:
         return False
-    import redis.asyncio as redis_lib
-    client = redis_lib.from_url(REDIS_URL, decode_responses=True)
-    try:
-        key = f"telemetry:dedupe:{client_batch_id}"
-        was_new = await client.set(key, "1", nx=True, ex=DEDUPE_TTL_S)
-        return not was_new
-    finally:
-        await client.aclose()
+    client = await _get_ingest_redis()
+    key = f"telemetry:dedupe:{client_batch_id}"
+    was_new = await client.set(key, "1", nx=True, ex=DEDUPE_TTL_S)
+    return not was_new
 
 @app.get("/api/telemetry/health")
 async def health() -> dict:
@@ -380,12 +463,18 @@ async def ingest_packet(packet: GpsPacket) -> dict:
     if is_in_privacy_zone(packet.user_id, packet.lat, packet.lon):
         return {"status": "dropped_privacy"}
 
-    pool = await get_pool()
-    async with pool.acquire() as conn:
-        await conn.execute(
-            "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
-            packet.timestamp, packet.device_id, packet.user_id, packet.lat, packet.lon, packet.speed_ms, packet.accuracy_m, packet.activity_id
+    await enqueue_gps_rows([
+        (
+            packet.timestamp,
+            packet.device_id,
+            packet.user_id,
+            packet.lat,
+            packet.lon,
+            packet.speed_ms,
+            packet.accuracy_m,
+            packet.activity_id,
         )
+    ])
 
     await manager.broadcast({
         "type": "position_update",
@@ -412,7 +501,6 @@ async def ingest_batch(batch: BatchPacket) -> dict:
             "client_batch_id": batch.client_batch_id,
         }
 
-    pool = await get_pool()
     rows = []
     dropped = 0
     for p in batch.packets:
@@ -422,12 +510,7 @@ async def ingest_batch(batch: BatchPacket) -> dict:
         rows.append((p.timestamp, p.device_id, p.user_id, p.lat, p.lon, p.speed_ms, p.accuracy_m, p.activity_id))
     
     if rows:
-        async with pool.acquire() as conn:
-            await conn.executemany(
-                "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
-                rows
-            )
-        
+        await enqueue_gps_rows(rows)
         last = batch.packets[-1]
         await manager.broadcast({
             "type": "position_update",
@@ -490,12 +573,7 @@ async def websocket_ingest(ws: WebSocket) -> None:
                 except: continue
 
             if rows:
-                pool = await get_pool()
-                async with pool.acquire() as conn:
-                    await conn.executemany(
-                        "INSERT INTO gps_points (time, device_id, user_id, lat, lon, speed_ms, accuracy_m, activity_id) VALUES (to_timestamp($1), $2, $3, $4, $5, $6, $7, $8)",
-                        rows
-                    )
+                await enqueue_gps_rows(rows)
                 # Broadcast the latest
                 last = rows[-1]
                 await manager.broadcast({
