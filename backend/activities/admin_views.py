@@ -44,7 +44,7 @@ def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     Creates city tenants on demand and lightweight athlete users (no activities/departments).
     """
     from django.contrib.auth.hashers import make_password
-    from users.models import User, Tenant
+    from users.models import User
     from simulate_active_cities import CITIES
 
     current = User.objects.filter(role='ATHLETE').count()

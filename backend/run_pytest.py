@@ -66,7 +66,7 @@ class _MockMeta(type):
 
 class _MockGEOSGeometry(metaclass=_MockMeta):
     def __init__(self, *args, **kwargs):
-        self.srid = kwargs.get('srid', None)
+        self.srid = kwargs.get('srid')
         self.num_coords = 0
     @property
     def coords(self):
@@ -77,7 +77,7 @@ mock_geos = ModuleType("django.contrib.gis.geos")
 mock_geos.GEOSGeometry = _MockGEOSGeometry
 mock_geos.GEOSException = type("GEOSException", (Exception,), {})
 def _mock_geo_init(self, *args, **kwargs):
-    self.srid = kwargs.get('srid', None)
+    self.srid = kwargs.get('srid')
     if args and isinstance(args[0], list):
         self._coords = args[0]
         self.num_coords = len(args[0])

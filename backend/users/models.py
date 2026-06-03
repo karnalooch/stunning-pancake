@@ -71,7 +71,6 @@ class User(AbstractUser):
 
     def get_permissions(self, tenant_id=None):
         """Returns set of permission codenames for this user, optionally scoped to a tenant."""
-        from .rbac_models import UserRole
         qs = UserRole.objects.filter(user=self)
         if tenant_id:
             qs = qs.filter(models.Q(tenant_id=tenant_id) | models.Q(tenant__isnull=True))
@@ -89,7 +88,6 @@ class User(AbstractUser):
 
     def has_role(self, role_slug, tenant_id=None):
         """Check if user has a specific role."""
-        from .rbac_models import UserRole
         qs = UserRole.objects.filter(user=self, role__slug=role_slug)
         if tenant_id:
             qs = qs.filter(models.Q(tenant_id=tenant_id) | models.Q(tenant__isnull=True))

@@ -35,7 +35,7 @@ def normalize_ride_state(ride: dict[str, Any] | None) -> str:
 
 
 def ride_counts_by_state(rides: dict[int, dict]) -> dict[str, int]:
-    counts = {s: 0 for s in ALL_STATES}
+    counts = dict.fromkeys(ALL_STATES, 0)
     for ride in rides.values():
         state = normalize_ride_state(ride)
         counts[state] = counts.get(state, 0) + 1

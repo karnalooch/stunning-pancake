@@ -25,7 +25,7 @@ sys.modules['django.contrib.gis.gdal'] = mock_gdal
 mock_gdal_error = ModuleType('django.contrib.gis.gdal.error')
 mock_gdal_error.GDALException = type('GDALException', (Exception,), {})
 sys.modules['django.contrib.gis.gdal.error'] = mock_gdal_error
-setattr(mock_gdal, 'error', mock_gdal_error)
+mock_gdal.error = mock_gdal_error
 
 mock_libgdal = ModuleType('django.contrib.gis.gdal.libgdal')
 mock_libgdal.lgdal = ModuleType('lgdal')

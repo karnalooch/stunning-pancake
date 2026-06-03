@@ -140,12 +140,12 @@ def train_baseline_model(n_samples: int = 5000, output_path: Path | None = None)
     print(f"🔧 Generating {n_samples} synthetic clean tracks...")
     X = generate_clean_dataset(n_samples)
     print(f"   Feature matrix: {X.shape[0]} samples × {X.shape[1]} features")
-    print(f"   Feature ranges:")
+    print("   Feature ranges:")
     feature_names = ["mean_spd", "std_spd", "cv", "max_accel", "p90", "fast_frac", "straight_ratio", "seg_var"]
     for i, name in enumerate(feature_names):
         print(f"   {name:20s}: [{X[:,i].min():.3f}, {X[:,i].max():.3f}]  μ={X[:,i].mean():.3f}")
 
-    print(f"\n🤖 Training IsolationForest...")
+    print("\n🤖 Training IsolationForest...")
     clf = IsolationForest(
         n_estimators=300,
         contamination=0.03,
@@ -186,7 +186,7 @@ def verify_model(model_path: Path) -> None:
     car_score = clf.score_samples(car_features)[0]
     runner_score = clf.score_samples(runner_features)[0]
 
-    print(f"\n🧪 Model Verification:")
+    print("\n🧪 Model Verification:")
     print(f"   Runner score:  {runner_score:.4f}  → {'✅ CLEAN' if runner_score > -0.15 else '❌ FLAGGED (unexpected)'}")
     print(f"   Car score:     {car_score:.4f}  → {'✅ FLAGGED' if car_score < -0.15 else '⚠️  NOT flagged (threshold may need adjustment)'}")
 

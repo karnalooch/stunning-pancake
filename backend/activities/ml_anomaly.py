@@ -58,7 +58,7 @@ def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def extract_features(points: list["GpsPoint"]) -> list[float] | None:
+def extract_features(points: list[GpsPoint]) -> list[float] | None:
     """
     Extracts an 8-dimensional feature vector from a GPS track.
 
@@ -170,7 +170,7 @@ def _load_model():
     return _model_payload
 
 
-def train_and_save_model(clean_tracks: list[list["GpsPoint"]], output_path: Path | None = None) -> None:
+def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path | None = None) -> None:
     """
     Trains an IsolationForest on a corpus of known-clean tracks and saves it.
 
@@ -230,7 +230,7 @@ def train_and_save_model(clean_tracks: list[list["GpsPoint"]], output_path: Path
 # Inference
 # ---------------------------------------------------------------------------
 
-def ml_anomaly_score(points: list["GpsPoint"]) -> tuple[float | None, float | None]:
+def ml_anomaly_score(points: list[GpsPoint]) -> tuple[float | None, float | None]:
     """
     Returns an anomaly score and the dynamic threshold for a GPS track using the IsolationForest model.
 
@@ -256,7 +256,7 @@ def ml_anomaly_score(points: list["GpsPoint"]) -> tuple[float | None, float | No
         return None, None
 
 
-def is_ml_anomaly(points: list["GpsPoint"], sensitivity: float = 1.0) -> bool:
+def is_ml_anomaly(points: list[GpsPoint], sensitivity: float = 1.0) -> bool:
     """
     Returns True if the track is statistically anomalous.
 

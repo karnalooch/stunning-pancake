@@ -396,7 +396,7 @@ class GarminService:
             'trail_running': 'RUN',
             'cycling': 'BIKE',
         }
-        return mapping.get(type_key.lower(), None)
+        return mapping.get(type_key.lower())
 
     @classmethod
     def get_status(cls, user):

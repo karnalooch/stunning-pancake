@@ -55,7 +55,7 @@ REFERENCE_TABLES: list[str] = [
 ]
 
 # Number of shards per distributed table (recommended: 2× worker count)
-SHARD_COUNT = int(32)
+SHARD_COUNT = 32
 
 
 def enable_citus_extension() -> None:

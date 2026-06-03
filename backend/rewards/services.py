@@ -11,7 +11,12 @@ Handles:
 from __future__ import annotations
 
 import logging
+from typing import TYPE_CHECKING
+
 from django.db import transaction
+
+if TYPE_CHECKING:
+    from rewards.models import Voucher
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -89,7 +94,7 @@ class RewardsService:
 
     @classmethod
     @transaction.atomic
-    def redeem_voucher(cls, user_id: int, pool_id: int) -> "Voucher | None":
+    def redeem_voucher(cls, user_id: int, pool_id: int) -> Voucher | None:
         """
         Atomically redeems one voucher from a pool for the user.
 

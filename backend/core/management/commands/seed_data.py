@@ -33,7 +33,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Tenant Warsaw: {"created" if created else "already exists"}'))
 
         # 2. Create Tenant Admins
-        admin, created = User.objects.get_or_create(
+        siedlce_admin, created = User.objects.get_or_create(
             username='siedlce_admin',
             defaults={'role': 'TENANT_ADMIN', 'tenant': siedlce},
         )

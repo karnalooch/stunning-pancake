@@ -306,6 +306,8 @@ CELERY_TASK_ROUTES = {
     'activities.ml_retrain.*': {'queue': 'default'},
     'events.tasks.*': {'queue': 'critical'},
     'notifications.tasks.*': {'queue': 'notifications'},
+    # Must precede simulator_tasks.* wildcard (Celery matches most specific route).
+    'activities.simulator_tasks.route_live_ride_task': {'queue': 'routing'},
     'activities.simulator_tasks.*': {'queue': 'simulation'},
 }
 CELERY_TASK_QUEUE_MAX_PRIORITY = 10

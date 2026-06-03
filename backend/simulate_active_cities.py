@@ -334,11 +334,7 @@ def _pick_name():
     # Make last name agree in gender (simple heuristic)
     if first in FIRST_NAMES_F:
         # Feminise last name
-        if last.endswith("ski"):
-            last = last[:-1] + "a"
-        elif last.endswith("cki"):
-            last = last[:-1] + "a"
-        elif last.endswith("dzki"):
+        if last.endswith("ski") or last.endswith("cki") or last.endswith("dzki"):
             last = last[:-1] + "a"
     return first, last
 
