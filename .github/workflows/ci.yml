@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [master, main, develop]
 
+# Default read-only; jobs that upload SARIF override security-events (and actions).
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: '3.12'
   NODE_VERSION: '20'
@@ -226,54 +230,67 @@ jobs:
     name: Trivy CVE Scan
     runs-on: ubuntu-latest
     permissions:
-      security-events: write
       contents: read
+      security-events: write
+      actions: read
 
     steps:
       - uses: actions/checkout@v6
 
+      # Run all filesystem scans before SARIF upload so a failed upload cannot skip later scans.
       - name: Trivy — Backend (Python)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.33.1
         with:
-          scan-type: 'fs'
-          scan-ref: 'backend/'
-          format: 'sarif'
-          output: 'trivy-backend.sarif'
-          severity: 'CRITICAL,HIGH'
+          scan-type: fs
+          scan-ref: backend/
+          format: sarif
+          output: trivy-backend.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Trivy — Admin Dashboard (JS/TS)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: admin/
+          format: sarif
+          output: trivy-admin.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '0'
+
+      - name: Trivy — Mobile (React Native)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: fs
+          scan-ref: mobile/
+          format: sarif
+          output: trivy-mobile.sarif
+          severity: CRITICAL,HIGH
           exit-code: '0'
 
       - name: Upload backend SARIF → GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: hashFiles('trivy-backend.sarif') != ''
+        continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
           sarif_file: trivy-backend.sarif
           category: trivy-backend
 
-      - name: Trivy — Admin Dashboard (JS/TS)
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: 'admin/'
-          format: 'sarif'
-          output: 'trivy-admin.sarif'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
-
       - name: Upload admin SARIF → GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: hashFiles('trivy-admin.sarif') != ''
+        continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
           sarif_file: trivy-admin.sarif
           category: trivy-admin
 
-      - name: Trivy — Mobile (React Native)
-        uses: aquasecurity/trivy-action@master
+      - name: Upload mobile SARIF → GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: hashFiles('trivy-mobile.sarif') != ''
+        continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
-          scan-type: 'fs'
-          scan-ref: 'mobile/'
-          format: 'table'
-          severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+          sarif_file: trivy-mobile.sarif
+          category: trivy-mobile
 
   # ──────────────────────────────────────────
   # E2E: Playwright tests on built admin
