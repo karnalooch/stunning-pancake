@@ -114,8 +114,8 @@ Live sim wysyła `route_live_ride_task` na **`routing`**, żeby `live_tick` nie 
 | `SCALE_SIM_ASYNC_ROUTING` | `1` |
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` |
 | `SECRET_KEY` | **Ten sam** co backend/simulation |
-| `numReplicas` | **2** (poziomy scale — patrz niżej) |
-| Service RAM | **≥ 1 GB / replikę** (≈ 2 GB łącznie przy 2 replikach) |
+| `numReplicas` | **3** (poziomy scale — patrz niżej) |
+| Service RAM | **≥ 1 GB / replikę** (≈ 3 GB łącznie przy 3 replikach) |
 
 **Weryfikacja:** [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) + skrypt.
 
@@ -125,11 +125,25 @@ Przy sustained backpressure (`sim.routing.backpressure` ~96% ticków >7,5 min, k
 
 | Lever | Decyzja |
 |-------|---------|
-| **Horizontal (wybrane)** | `numReplicas=2` w `celery-worker-routing/railway.json`. Każda replika ~1 GB, łącznie ~2 GB. Czysty scale bez ryzyka OOM pojedynczego kontenera. |
+| **Horizontal (wybrane)** | `numReplicas=3` w `celery-worker-routing/railway.json`. Każda replika ~1 GB, łącznie ~3 GB. Czysty scale bez ryzyka OOM pojedynczego kontenera. |
 | Vertical (odrzucone) | `solo` nie skaluje `concurrency>1`; wymagałby `prefork` → wyższe ryzyko RAM/OOM. |
-| `active_ratio` | **Niezmieniony** (wybrano scaling, nie obniżenie obciążenia). Opcjonalnie: obniżenie `active_ratio` przez admina jako dodatkowa ulga, jeśli 2 repliki nie wystarczą. |
+| `active_ratio` | **Niezmieniony** (wybrano scaling, nie obniżenie obciążenia). **Rekomendacja po 3 replikach (patrz niżej):** obniżenie `active_ratio` przez admina jest **decydującą dźwignią** — backpressure pozostaje przypięty mimo skalowania, bo wąskim gardłem jest popyt > drenaż przy bieżącym `active_ratio`. |
 
-Apply: edycja `railway.json` (SSOT — nadpisuje Dashboard/API przy każdym deployu) + `serviceInstanceUpdate(numReplicas:2)` przez GraphQL dla natychmiastowego efektu, następnie commit + push `main` (auto-redeploy z `karnalooch/stunning-pancake`). Weryfikacja: 2× `routing@` ready w logach, spadek częstotliwości `sim.routing.backpressure`.
+Apply: edycja `railway.json` (SSOT — nadpisuje Dashboard/API przy każdym deployu) + `serviceInstanceUpdate(numReplicas:N)` przez GraphQL dla natychmiastowego efektu, następnie commit + push `main` (auto-redeploy z `karnalooch/stunning-pancake`). Weryfikacja: N× `routing@` ready w logach (`mingle: sync`), spadek częstotliwości `sim.routing.backpressure`.
+
+#### Skalowanie do 3 replik + pomiary drenażu (2026-06-03)
+
+Po skalowaniu `numReplicas=2→3` (railway.json + `serviceInstanceUpdate(numReplicas:3)` → `true`), pomiary z logów prod:
+
+| Metryka | 2 repliki (przed) | 3 repliki (po) |
+|---------|-------------------|----------------|
+| Distinct `routing@` ready | 2 | **3** (`mingle: sync`, brak OOM) |
+| Drenaż agregat | ~1,4/s (~0,7/s × 2) | **~1,89/s** (~0,63/s × 3, ~liniowy scale) |
+| `sim.routing.backpressure` | ~67×/5,25 min ≈ **1 / 4,7 s** | **1 / 6,2 s** (nadal ~co tick) |
+| RAM routing łącznie | ~2 GB | **~3 GB** (3 × ~1 GB) |
+| OOM / SIGKILL w projekcie | — | **brak** (routing, simulation, celery-worker, Backend, brouter) |
+
+**Wniosek (uczciwy):** 3. replika zwiększyła drenaż ~liniowo (~1,89/s), ale `sim.routing.backpressure` **pozostaje przypięty** (firing ~co tick, kolejka `routing` przy cap). Skalowanie drenażu nie zamyka backpressure, bo **popyt > drenaż** przy bieżącym `active_ratio`. **Decydująca dźwignia = obniżenie `active_ratio`** (strona popytu) przez admina — nie zmieniono jej w tym kroku (poza zakresem decyzji operatora).
 
 ### Niezawodność (wszystkie workery)
 

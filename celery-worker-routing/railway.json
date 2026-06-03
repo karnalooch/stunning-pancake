@@ -5,7 +5,7 @@
     "dockerfilePath": "celery-worker-simulation/Dockerfile"
   },
   "deploy": {
-    "numReplicas": 2,
+    "numReplicas": 3,
     "sleepApplication": false,
     "restartPolicy": "ALWAYS"
   },
