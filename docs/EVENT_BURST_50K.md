@@ -9,7 +9,43 @@
 
 Burst protection is **automatic** by default (`EVENT_BURST_MODE=auto`). You do not need to set `EVENT_BURST_MODE=1` on Railway before event day.
 
-**Powiązane:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · [SCALE_TEST_300K.md](./SCALE_TEST_300K.md)
+> **Always-on layer (new).** Protection is now **two layers**:
+> 1. **Global load guard** (`backend/core/load_guard.py`) — platform-wide, **always on**, independent of any event. Watches live join / session-start / telemetry-ingest rates and applies hard caps automatically (mode `GLOBAL_PROTECTION_MODE=auto`). Under normal load it is a no-op; it only bites when a signal crosses its cap.
+> 2. **Event burst** (`backend/events/burst.py`) — the original event-scoped limits described below.
+>
+> Request flow: `request → global guard → event burst`. See [Always-on global protection](#always-on-global-protection-platform-wide) and [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md).
+
+**Powiązane:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) · [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md)
+
+## Always-on global protection (platform-wide)
+
+The global load guard protects the platform **whether or not an event exists** — e.g. a viral spike, a botted endpoint, or an unscheduled mass start. It mirrors the simulator routing-backpressure design (hard cap + hysteresis + fail-open).
+
+| Signal | Window | Default cap (env) | Engaged when |
+|--------|--------|-------------------|--------------|
+| Joins | 60 s | `GLOBAL_MAX_JOIN_PER_MINUTE=8000` | rate ≥ 90 % of cap |
+| Session starts | 60 s | `GLOBAL_MAX_SESSION_PER_MINUTE=5000` | rate ≥ 90 % of cap |
+| Telemetry ingest | 1 s | `GLOBAL_MAX_INGEST_PER_SECOND=20000` | rate ≥ 90 % of cap |
+| Concurrent riders | — | `GLOBAL_MAX_CONCURRENT_RIDERS=50000` | effective cap = `min(platform, event)` |
+
+- **Mode** `GLOBAL_PROTECTION_MODE` = `auto` (default) | `on` (always enforce) | `off` (disable).
+- **Hysteresis** — once a signal trips, it stays "engaged" for 120 s so the platform doesn't flap around the threshold.
+- **Fail-open** — any Redis error returns "allowed". Protection must never take the platform down.
+- **Safe defaults** — caps are high, so normal traffic sees no change; limits only engage under genuine overload.
+- **429 responses** — `POST /api/events/events/{id}/join/` and `POST /api/activities/sessions/` return `429 + Retry-After` with `detail_pl` when the global guard throttles, *before* event-scoped logic runs.
+- **Telemetry ingest** — the FastAPI telemetry service (`telemetry/main.py`) enforces the same per-second cap on `/api/telemetry/ingest` and `/ingest/batch`, returning `429 + Retry-After` always (not event-gated). The Django simulator publish path feeds the same global ingest signal.
+
+```env
+# auto (default) | on (always enforce) | off (disable)
+GLOBAL_PROTECTION_MODE=auto
+GLOBAL_MAX_JOIN_PER_MINUTE=8000
+GLOBAL_MAX_SESSION_PER_MINUTE=5000
+GLOBAL_MAX_INGEST_PER_SECOND=20000
+GLOBAL_MAX_CONCURRENT_RIDERS=50000
+GLOBAL_PROTECTION_ENGAGE_RATIO=0.9
+```
+
+Structured logs: `loadguard.engaged`, `loadguard.throttled` (same style as `sim.routing.*`).
 
 ## What “50k users” means
 
@@ -89,6 +125,7 @@ Legacy: `EVENT_BURST_MODE=1` → `on`, `EVENT_BURST_MODE=0` → `off`.
 
 - **50k registrations over ~10 minutes** is realistic with default join rate (5k/min).
 - **10k concurrent GPS dots** on the live map is the intended ceiling (`EVENT_MAX_CONCURRENT_RIDERS`).
-- Full 50k simultaneous telemetry would require horizontal sharding beyond this codebase’s defaults — use staggered starts and client-side retry on 429.
+- The live-position index can now be **horizontally sharded** across N Redis shards — see [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md). The router/abstraction + always-on ingest backpressure ship now (`TELEMETRY_SHARD_COUNT=1` keeps legacy single-key behaviour). True 50k simultaneous ingest still needs the phased multi-Redis rollout documented there.
+- Use staggered starts and client-side retry on 429 (global guard + event burst).
 
-See also: [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) for batch/live sim scale.
+See also: [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) for batch/live sim scale · [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md) for sharding rollout.

@@ -275,6 +275,85 @@ class BatchPacket(BaseModel):
 
 DEDUPE_TTL_S = int(os.getenv("TELEMETRY_DEDUPE_TTL_S", str(7 * 24 * 3600)))
 
+# ---------------------------------------------------------------------------
+# Always-on ingest backpressure (independent of any event)
+# ---------------------------------------------------------------------------
+# Mirrors backend/core/load_guard.py semantics: GLOBAL_PROTECTION_MODE=auto|on|off
+# with a per-second cap. Defaults are high so normal traffic is unaffected; under
+# a real 50k-device burst, excess packets get 429 + Retry-After instead of OOMing
+# the DB pool. Fail-open: any Redis error allows the packet through.
+
+def _global_protection_mode() -> str:
+    val = (os.getenv("GLOBAL_PROTECTION_MODE", "auto") or "auto").strip().lower()
+    if val in ("1", "true", "yes", "on", "force_on"):
+        return "on"
+    if val in ("0", "false", "no", "off", "force_off"):
+        return "off"
+    return "auto"
+
+
+try:
+    _INGEST_MAX_PER_SECOND = int(os.getenv("GLOBAL_MAX_INGEST_PER_SECOND", "20000"))
+except (TypeError, ValueError):
+    _INGEST_MAX_PER_SECOND = 20000
+
+try:
+    _INGEST_ENGAGE_RATIO = float(os.getenv("GLOBAL_PROTECTION_ENGAGE_RATIO", "0.9"))
+except (TypeError, ValueError):
+    _INGEST_ENGAGE_RATIO = 0.9
+
+_INGEST_GUARD_KEY = "{global}:loadguard:ingest:sw"
+_ingest_redis = None
+
+
+async def _get_ingest_redis():
+    global _ingest_redis
+    if _ingest_redis is None:
+        import redis.asyncio as redis_lib
+
+        _ingest_redis = redis_lib.from_url(REDIS_URL, decode_responses=True)
+    return _ingest_redis
+
+
+async def _ingest_allowed(n: int = 1) -> tuple[bool, int, int]:
+    """
+    Record `n` packets in a 1s sliding window and decide if the request passes.
+    Returns (allowed, count, retry_after_seconds).
+    """
+    mode = _global_protection_mode()
+    if mode == "off" or _INGEST_MAX_PER_SECOND <= 0:
+        return True, 0, 0
+    now = time.time()
+    try:
+        client = await _get_ingest_redis()
+        pipe = client.pipeline()
+        pipe.zremrangebyscore(_INGEST_GUARD_KEY, 0, now - 1.0)
+        for i in range(max(1, int(n))):
+            pipe.zadd(_INGEST_GUARD_KEY, {f"{now}:{i}:{os.urandom(4).hex()}": now})
+        pipe.zcard(_INGEST_GUARD_KEY)
+        pipe.expire(_INGEST_GUARD_KEY, 5)
+        results = await pipe.execute()
+        count = int(results[-2] or 0)
+    except Exception:
+        return True, 0, 0  # fail-open
+
+    if mode == "on":
+        if count > _INGEST_MAX_PER_SECOND:
+            return False, count, 1
+        return True, count, 0
+    # auto
+    if count > _INGEST_MAX_PER_SECOND:
+        return False, count, 1
+    return True, count, 0
+
+
+def _raise_ingest_throttled(retry_after: int) -> None:
+    raise HTTPException(
+        status_code=429,
+        detail="Telemetry ingest rate limit exceeded — retry shortly.",
+        headers={"Retry-After": str(max(1, retry_after))},
+    )
+
 async def _is_duplicate_batch(client_batch_id: str | None) -> bool:
     """Redis SET NX — duplicate batch ids skip INSERT (7d TTL)."""
     if not client_batch_id:
@@ -294,6 +373,10 @@ async def health() -> dict:
 
 @app.post("/api/telemetry/ingest", status_code=202)
 async def ingest_packet(packet: GpsPacket) -> dict:
+    allowed, _count, retry_after = await _ingest_allowed(1)
+    if not allowed:
+        _raise_ingest_throttled(retry_after)
+
     if is_in_privacy_zone(packet.user_id, packet.lat, packet.lon):
         return {"status": "dropped_privacy"}
 
@@ -317,6 +400,10 @@ async def ingest_packet(packet: GpsPacket) -> dict:
 
 @app.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
+    allowed, _count, retry_after = await _ingest_allowed(len(batch.packets) or 1)
+    if not allowed:
+        _raise_ingest_throttled(retry_after)
+
     if await _is_duplicate_batch(batch.client_batch_id):
         return {
             "status": "accepted",

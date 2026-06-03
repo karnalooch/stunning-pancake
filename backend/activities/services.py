@@ -319,11 +319,17 @@ class TelemetryService:
 
     @classmethod
     def _positions_key(cls) -> str:
-        return f"{cls.TELEMETRY_REDIS_PREFIX}positions"
+        """Legacy single-shard positions key (shard 0). Kept for backward compat."""
+        from activities.telemetry_shard import shard_keys
+
+        return shard_keys(0).positions
 
     @classmethod
     def _geo_key(cls) -> str:
-        return f"{cls.TELEMETRY_REDIS_PREFIX}geo"
+        """Legacy single-shard GEO key (shard 0). Kept for backward compat."""
+        from activities.telemetry_shard import shard_keys
+
+        return shard_keys(0).geo
 
     @classmethod
     def _encode_entry(cls, e: dict) -> tuple[str, str, float, float]:
@@ -362,6 +368,8 @@ class TelemetryService:
         """Push a single simulator-generated position to Redis for live map display."""
         from core.redis_cluster import get_redis
 
+        from activities.telemetry_shard import keys_for_device
+
         device_id, payload, lon, lat = cls._encode_entry(
             {
                 "deviceId": device_id,
@@ -374,10 +382,11 @@ class TelemetryService:
             }
         )
         r = get_redis()
-        r.hset(cls._positions_key(), device_id, payload)
-        r.geoadd(cls._geo_key(), (lon, lat, device_id))
-        r.expire(cls._positions_key(), cls.TELEMETRY_REDIS_TTL + 30)
-        r.expire(cls._geo_key(), cls.TELEMETRY_REDIS_TTL + 30)
+        sk = keys_for_device(device_id)
+        r.hset(sk.positions, device_id, payload)
+        r.geoadd(sk.geo, (lon, lat, device_id))
+        r.expire(sk.positions, cls.TELEMETRY_REDIS_TTL + 30)
+        r.expire(sk.geo, cls.TELEMETRY_REDIS_TTL + 30)
 
     @classmethod
     def replace_active_positions(cls, entries: list[dict], merge: bool = False):
@@ -387,31 +396,50 @@ class TelemetryService:
         """
         from core.redis_cluster import get_redis
         from activities.scale_config import MAX_TELEMETRY_PUBLISH_PER_TICK
+        from activities.telemetry_shard import all_shard_keys, shard_for_device, shard_count
+
+        n_shards = shard_count()
+        r = get_redis()
+        all_keys = all_shard_keys(n_shards)
 
         if not entries:
             if not merge:
-                r = get_redis()
-                r.delete(cls._positions_key(), cls._geo_key())
+                for sk in all_keys:
+                    r.delete(sk.positions, sk.geo)
             return
 
         entries = entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
-        r = get_redis()
-        pos_key = cls._positions_key()
-        geo_key = cls._geo_key()
+
+        # Always-on ingest signal (fail-open; never blocks the snapshot publish).
+        cls._record_ingest_load(len(entries))
 
         if not merge:
-            r.delete(pos_key, geo_key)
+            for sk in all_keys:
+                r.delete(sk.positions, sk.geo)
 
         pipe = r.pipeline()
         for e in entries:
             device_id, payload, lon, lat = cls._encode_entry(e)
             if not device_id:
                 continue
-            pipe.hset(pos_key, device_id, payload)
-            pipe.geoadd(geo_key, (lon, lat, device_id))
-        pipe.expire(pos_key, cls.TELEMETRY_REDIS_TTL + 30)
-        pipe.expire(geo_key, cls.TELEMETRY_REDIS_TTL + 30)
+            idx = shard_for_device(device_id, n_shards)
+            sk = all_keys[idx]
+            pipe.hset(sk.positions, device_id, payload)
+            pipe.geoadd(sk.geo, (lon, lat, device_id))
+        for sk in all_keys:
+            pipe.expire(sk.positions, cls.TELEMETRY_REDIS_TTL + 30)
+            pipe.expire(sk.geo, cls.TELEMETRY_REDIS_TTL + 30)
         pipe.execute()
+
+    @classmethod
+    def _record_ingest_load(cls, n: int) -> None:
+        """Feed the global always-on ingest signal. Best-effort, never raises."""
+        try:
+            from core.load_guard import check_ingest
+
+            check_ingest(n)
+        except Exception:
+            pass
 
     @classmethod
     def push_bulk_positions(cls, entries: list[dict]):
@@ -474,6 +502,79 @@ class TelemetryService:
             pass
 
     @classmethod
+    def _total_positions(cls, r) -> int:
+        """Sum of position-hash sizes across all telemetry shards."""
+        from activities.telemetry_shard import all_shard_keys
+
+        total = 0
+        for sk in all_shard_keys():
+            try:
+                total += int(r.hlen(sk.positions) or 0)
+            except Exception:
+                continue
+        return total
+
+    @classmethod
+    def _geo_query_shards(
+        cls,
+        r,
+        center_lon: float,
+        center_lat: float,
+        radius_km: float,
+        count: int,
+    ) -> list[dict]:
+        """
+        Fan a GEORADIUS query across every shard, then HMGET each shard for the
+        ids it owns. Returns parsed position dicts (deduped, capped at `count`).
+        """
+        import json as _json
+        from activities.telemetry_shard import all_shard_keys
+
+        positions: list[dict] = []
+        seen: set[str] = set()
+        for sk in all_shard_keys():
+            if len(positions) >= count:
+                break
+            try:
+                device_ids = r.georadius(
+                    sk.geo,
+                    center_lon,
+                    center_lat,
+                    radius_km,
+                    unit="km",
+                    count=count,
+                    sort="ASC",
+                )
+            except Exception:
+                continue
+            id_list: list[str] = []
+            for d in device_ids or []:
+                did = d.decode() if isinstance(d, bytes) else str(d)
+                if did not in seen:
+                    seen.add(did)
+                    id_list.append(did)
+            if not id_list:
+                continue
+            try:
+                raw_vals = r.hmget(sk.positions, id_list)
+            except Exception:
+                continue
+            for pos_json in raw_vals:
+                if not pos_json:
+                    continue
+                try:
+                    positions.append(
+                        _json.loads(
+                            pos_json.decode() if isinstance(pos_json, bytes) else pos_json
+                        )
+                    )
+                except Exception:
+                    continue
+                if len(positions) >= count:
+                    break
+        return positions
+
+    @classmethod
     def _fetch_redis_positions_per_city(
         cls,
         r,
@@ -481,17 +582,15 @@ class TelemetryService:
         geo_radius_km: float,
     ) -> tuple[list[dict], dict]:
         """Guarantee geographic spread at country zoom — sample near each city hub."""
-        import json as _json
         from simulate_active_cities import CITIES
 
-        pos_key = cls._positions_key()
-        geo_key = cls._geo_key()
+        total_positions = cls._total_positions(r)
         try:
             from activities import simulator_state as sim_state
 
             active_riding = sim_state.get_live_ride_count()
         except Exception:
-            active_riding = int(r.hlen(pos_key) or 0)
+            active_riding = total_positions
 
         per_city = max(8, cap // max(len(CITIES), 1))
         meta = {
@@ -499,53 +598,31 @@ class TelemetryService:
             "capped": False,
             "redis_active": active_riding,
             "active_riding": active_riding,
-            "telemetry_positions": int(r.hlen(pos_key) or 0),
+            "telemetry_positions": total_positions,
             "source": "redis",
             "fetch_mode": "per_city",
         }
-        seen: set[str] = set()
-        id_list: list[str] = []
         radius_km = min(max(float(geo_radius_km), 35.0), 120.0)
 
-        for city in CITIES:
-            device_ids = r.georadius(
-                geo_key,
-                city["lon"],
-                city["lat"],
-                radius_km,
-                unit="km",
-                count=per_city,
-                sort="ASC",
-            )
-            for d in device_ids or []:
-                did = d.decode() if isinstance(d, bytes) else str(d)
-                if did not in seen:
-                    seen.add(did)
-                    id_list.append(did)
-                if len(id_list) >= cap:
-                    meta["capped"] = True
-                    break
-            if len(id_list) >= cap:
-                break
-
         positions: list[dict] = []
-        if not id_list:
-            meta["returned"] = 0
-            return positions, meta
-
-        raw_vals = r.hmget(pos_key, id_list)
-        for pos_json in raw_vals:
-            if not pos_json:
-                continue
-            try:
-                positions.append(
-                    _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json),
-                )
-            except Exception:
-                continue
+        seen: set[str] = set()
+        for city in CITIES:
             if len(positions) >= cap:
                 meta["capped"] = True
                 break
+            city_positions = cls._geo_query_shards(
+                r, city["lon"], city["lat"], radius_km, per_city
+            )
+            for pos in city_positions:
+                did = str(pos.get("deviceId") or pos.get("id") or "")
+                if did and did in seen:
+                    continue
+                if did:
+                    seen.add(did)
+                positions.append(pos)
+                if len(positions) >= cap:
+                    meta["capped"] = True
+                    break
 
         meta["returned"] = len(positions)
         return positions[:cap], meta
@@ -559,23 +636,20 @@ class TelemetryService:
         geo_radius_km: float,
         zoom: float | None = None,
     ) -> tuple[list[dict], dict]:
-        import json as _json
-
-        pos_key = cls._positions_key()
-        geo_key = cls._geo_key()
+        total_positions = cls._total_positions(r)
         try:
             from activities import simulator_state as sim_state
 
             active_riding = sim_state.get_live_ride_count()
         except Exception:
-            active_riding = int(r.hlen(pos_key) or 0)
+            active_riding = total_positions
 
         meta = {
             "returned": 0,
             "capped": False,
             "redis_active": active_riding,
             "active_riding": active_riding,
-            "telemetry_positions": int(r.hlen(pos_key) or 0),
+            "telemetry_positions": total_positions,
             "source": "redis",
         }
         positions: list[dict] = []
@@ -595,35 +669,19 @@ class TelemetryService:
             center_lon, center_lat = 19.1344, 51.9194
             radius_km = float(geo_radius_km)
 
-        device_ids = r.georadius(
-            geo_key,
-            center_lon,
-            center_lat,
-            radius_km,
-            unit="km",
-            count=cap,
-            sort="ASC",
-        )
-        if not device_ids:
+        raw_positions = cls._geo_query_shards(r, center_lon, center_lat, radius_km, cap)
+        if not raw_positions:
             meta["returned"] = 0
             return positions, meta
 
-        id_list = [d.decode() if isinstance(d, bytes) else d for d in device_ids]
-        raw_vals = r.hmget(pos_key, id_list)
-        for pos_json in raw_vals:
-            if not pos_json:
-                continue
-            try:
-                pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
-                if bbox and not country_overview:
-                    west, south, east, north = bbox
-                    lon = pos.get("longitude", pos.get("lng", 0))
-                    lat = pos.get("latitude", pos.get("lat", 0))
-                    if not (west <= lon <= east and south <= lat <= north):
-                        continue
-                positions.append(pos)
-            except Exception:
-                continue
+        for pos in raw_positions:
+            if bbox and not country_overview:
+                west, south, east, north = bbox
+                lon = pos.get("longitude", pos.get("lng", 0))
+                lat = pos.get("latitude", pos.get("lat", 0))
+                if not (west <= lon <= east and south <= lat <= north):
+                    continue
+            positions.append(pos)
             if len(positions) >= cap:
                 meta["capped"] = True
                 break
@@ -739,11 +797,14 @@ class TelemetryService:
 
     @classmethod
     def clear_simulator_positions(cls):
-        """Remove all simulator-generated positions from Redis."""
+        """Remove all simulator-generated positions from Redis (all shards)."""
         from core.redis_cluster import get_redis
+        from activities.telemetry_shard import all_shard_keys
 
         r = get_redis()
-        r.delete(cls._positions_key(), cls._geo_key())
+        for sk in all_shard_keys():
+            # Each shard pair shares a hash-tag slot — single-slot safe in cluster.
+            r.delete(sk.positions, sk.geo)
 
 
 import random

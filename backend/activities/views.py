@@ -210,6 +210,27 @@ class ActivityViewSet(viewsets.ModelViewSet):
         from events.burst import is_burst_enabled_for_event
         from events.tasks import process_event_start_queue
 
+        # Global always-on guard — platform-wide session-start protection that
+        # applies whether or not this session belongs to an event.
+        try:
+            from core.load_guard import check_session_start
+
+            gdecision = check_session_start()
+            if not gdecision.allowed:
+                resp = Response(
+                    {
+                        "detail": "Platform session-start rate limit — retry shortly.",
+                        "detail_pl": "Globalny limit startu sesji — spróbuj za chwilę.",
+                        "queued": False,
+                        "global_protection": gdecision.as_meta(),
+                    },
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+                resp["Retry-After"] = str(gdecision.retry_after)
+                return resp
+        except Exception:
+            pass
+
         event_id_raw = request.data.get("event_id") or request.query_params.get("event_id")
         event_id = int(event_id_raw) if event_id_raw not in (None, "") else None
         event = resolve_event_for_session(request.user, event_id)

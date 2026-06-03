@@ -406,6 +406,25 @@ def join_event(user, event: Event) -> tuple[Participation, bool, dict | None]:
     if existing:
         return existing, False, None
 
+    # Global always-on guard (platform-wide, independent of this event's size).
+    try:
+        from core.load_guard import check_join as _global_check_join
+
+        gdecision = _global_check_join()
+        if not gdecision.allowed:
+            return (
+                None,
+                False,
+                {
+                    "status": 429,
+                    "retry_after": gdecision.retry_after,
+                    "detail": "Platform join rate limit exceeded. Please retry shortly.",
+                    "detail_pl": "Globalny limit dołączeń — spróbuj za chwilę.",
+                },
+            )
+    except Exception:
+        pass
+
     if is_burst_globally_enabled():
         allowed, _, retry_after = join_rate_limit(event.id)
         if not allowed:

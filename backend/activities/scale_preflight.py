@@ -289,6 +289,7 @@ def _telemetry_active_count() -> int:
         from core.redis_cluster import get_redis
 
         r = get_redis()
-        return int(r.hlen(TelemetryService._positions_key()) or 0)
+        # Shard-aware: sums across all telemetry shards (legacy = single shard).
+        return TelemetryService._total_positions(r)
     except Exception:
         return 0
