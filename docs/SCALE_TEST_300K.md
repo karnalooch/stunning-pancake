@@ -123,6 +123,30 @@ Service `celery_worker_simulation` should depend on `brouter` and set `BROUTER_U
 
 `GET /api/activities/admin/scale-preflight/?target_users=N` zwraca `batch_plan`, `estimated_disk_gb`, `live_pool_mode`, ostrzeżenia wipe/dysk proporcjonalnie do N.
 
+## Load-test 10k — Paczka 1b (szablon raportu)
+
+> **Nie uruchamiaj 10k na produkcji bez planu Platform Operator.** Wypełnij po kontrolowanym teście (staging / niski `active_ratio` / preflight).
+
+| Metryka | Wartość (run: ______) | Uwagi |
+|---------|----------------------|--------|
+| `target_users` / pool | | batch + live pool mode |
+| `active_ratio` | | |
+| `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | | backpressure cap |
+| `routing_queue_depth` (peak / steady) | | z live-simulate lub Dashboard `sim_kpi` |
+| `routing_backpressure_active` (min) | | ile minut aktywny |
+| `dispatches_throttled` (ticks) | | |
+| `ride_warming` (peak) | | FSM PENDING_ROUTE + ROUTING |
+| `ride_active` / `currently_riding` | | ACTIVE on map |
+| `sim.routing.backpressure` (log count) | | Datadog / Railway |
+| `sim.routing.unroutable` (log count) | | |
+| Tick stale / worker OOM | | celery-worker-simulation RAM |
+| Map API p95 (bbox, city zoom) | | `telemetry/live` |
+| Werdykt | PASS / FAIL | |
+
+**Gate:** wszystkie punkty [P1_ROADMAP.md](./admin/P1_ROADMAP.md) § Operational closure ✅ przed startem Paczki 2 Sponsor.
+
+---
+
 ## Procedura testu 300k
 
 1. **Wipe** stare dane symulatora (chunked async wipe).

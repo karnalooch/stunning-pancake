@@ -9,7 +9,7 @@ import { notifications } from '@mantine/notifications';
 import {
     Play, StopCircle, Bike, Trash2, AlertTriangle,
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
-    AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database
+    AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route
 } from 'lucide-react';
 import { SimulatorApi, formatApiError, type ScaleOverrides, type WipeProgressStatus } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
@@ -22,6 +22,10 @@ interface LiveStatus {
     async_routing_enabled?: boolean;
     ride_warming?: number; ride_routing?: number; ride_routed?: number; ride_active?: number;
     routing_unroutable_total?: number;
+    routing_queue_depth?: number;
+    routing_backpressure_active?: boolean;
+    dispatches_throttled?: boolean;
+    max_routing_queue_depth?: number | null;
     total_users: number; active_ratio: number; cheat_ratio: number; tick_seconds: number;
     currently_riding: number; total_completed: number; cheaters_caught: number;
     log: [string, string][];
@@ -662,6 +666,21 @@ export const SimulatorPage: React.FC = () => {
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">
                                             <Text size="2xs" c="dimmed">Cheaters Caught</Text>
                                             <Text fw={700} size="lg" c="red">{liveStatus?.cheaters_caught?.toLocaleString() ?? '0'}</Text>
+                                        </Card>
+                                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                                            <Text size="2xs" c="dimmed">Routing queue</Text>
+                                            <Group gap={6} wrap="nowrap">
+                                                <ThemeIcon size={20} variant="light" color="violet"><Route size={12} /></ThemeIcon>
+                                                <Text fw={700} size="lg" ff="monospace">
+                                                    {liveStatus?.routing_queue_depth?.toLocaleString() ?? '0'}
+                                                </Text>
+                                                {liveStatus?.routing_backpressure_active && (
+                                                    <Badge size="xs" color="red" variant="filled">Backpressure</Badge>
+                                                )}
+                                                {liveStatus?.dispatches_throttled && !liveStatus?.routing_backpressure_active && (
+                                                    <Badge size="xs" color="yellow" variant="light">Throttled</Badge>
+                                                )}
+                                            </Group>
                                         </Card>
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">
                                             <Text size="2xs" c="dimmed">Users Created</Text>

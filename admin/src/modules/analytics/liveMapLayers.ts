@@ -43,6 +43,7 @@ function positionsToFeatures(positions: LiveMapPosition[]) {
                 speed: pos.speed ?? 0,
                 speedKmh: speedToKmh(pos.speed ?? 0),
                 course: pos.course ?? 0,
+                ride_state: pos.ride_state || 'ACTIVE',
             },
         }));
 }

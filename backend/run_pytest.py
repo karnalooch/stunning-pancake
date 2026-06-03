@@ -12,7 +12,11 @@ from types import ModuleType
 # Set required env vars before ANY Django import
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 os.environ["DATABASE_URL"] = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
-os.environ["REDIS_URL"] = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+# Never default to db/0 — that is the dev live-sim hash after load tests.
+if os.environ.get("PYTEST_ALLOW_SHARED_REDIS") != "1":
+    os.environ["REDIS_URL"] = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/15")
+else:
+    os.environ["REDIS_URL"] = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
 os.environ["SECRET_KEY"] = os.environ.get("SECRET_KEY", "test-secret-key-for-ci")
 os.environ["DEBUG"] = "1"
 
@@ -258,11 +262,9 @@ settings.CELERY_TASK_EAGER_PROPAGATES = True
 settings.CELERY_BROKER_URL = "memory://"
 settings.CELERY_RESULT_BACKEND = "cache+memory://"
 
-from unittest.mock import MagicMock
-import core.redis_cluster
+from core.fake_redis import install_pytest_redis
 
-core.redis_cluster.get_redis = MagicMock()
-core.redis_cluster.get_redis.return_value.get.return_value = None
+install_pytest_redis()
 
 from django.db.backends.signals import connection_created
 from django.dispatch import receiver

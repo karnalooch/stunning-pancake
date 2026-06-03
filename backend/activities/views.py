@@ -482,6 +482,25 @@ class TelemetryLiveView(generics.GenericAPIView):
                     if isinstance(d, dict)
                 }
 
+        ride_warming = 0
+        ride_on_map = 0
+        city_counts: dict[str, int] = {}
+        ride_states_by_device: dict[str, str] = {}
+        try:
+            from activities import simulator_state as sim_state
+            from activities.ride_fsm import fsm_summary, normalize_ride_state
+
+            rides_map = sim_state.get_live_rides()
+            fsm = fsm_summary(rides_map)
+            ride_on_map = fsm["ride_on_map"]
+            ride_warming = fsm["ride_warming"]
+            city_counts = sim_state.get_live_city_counts()
+            ride_states_by_device = {
+                str(uid): normalize_ride_state(ride) for uid, ride in rides_map.items()
+            }
+        except Exception:
+            pass
+
         enriched_data = []
         viewport_bike = 0
         viewport_run = 0
@@ -501,41 +520,37 @@ class TelemetryLiveView(generics.GenericAPIView):
                 viewport_bike += 1
             elif raw_type in _run:
                 viewport_run += 1
+            ride_state = ride_states_by_device.get(str(device_id))
             if detail == "standard":
-                enriched_data.append(
-                    {
-                        "deviceId": device_id,
-                        "type": type_label,
-                        "lat": pos.get("latitude", 0.0),
-                        "lng": pos.get("longitude", 0.0),
-                        "speed": pos.get("speed", 0.0),
-                        "course": pos.get("course", 0.0),
-                    }
-                )
+                row = {
+                    "deviceId": device_id,
+                    "type": type_label,
+                    "lat": pos.get("latitude", 0.0),
+                    "lng": pos.get("longitude", 0.0),
+                    "speed": pos.get("speed", 0.0),
+                    "course": pos.get("course", 0.0),
+                }
+                if ride_state:
+                    row["ride_state"] = ride_state
+                enriched_data.append(row)
             else:
-                enriched_data.append(
-                    {
-                        "deviceId": device_id,
-                        "name": pos.get("name") or info.get("name", f"Athlete {device_id}"),
-                        "type": type_label,
-                        "lat": pos.get("latitude", 0.0),
-                        "lng": pos.get("longitude", 0.0),
-                        "speed": pos.get("speed", 0.0),
-                        "course": pos.get("course", 0.0),
-                        "lastUpdate": pos.get("deviceTime"),
-                    }
-                )
+                row = {
+                    "deviceId": device_id,
+                    "name": pos.get("name") or info.get("name", f"Athlete {device_id}"),
+                    "type": type_label,
+                    "lat": pos.get("latitude", 0.0),
+                    "lng": pos.get("longitude", 0.0),
+                    "speed": pos.get("speed", 0.0),
+                    "course": pos.get("course", 0.0),
+                    "lastUpdate": pos.get("deviceTime"),
+                }
+                if ride_state:
+                    row["ride_state"] = ride_state
+                enriched_data.append(row)
 
-        try:
-            from activities import simulator_state as sim_state
-
-            active_riding = sim_state.get_live_ride_count()
-            city_counts = sim_state.get_live_city_counts()
-        except Exception:
-            active_riding = telemetry_meta.get("active_riding") or telemetry_meta.get(
-                "redis_active", 0
-            )
-            city_counts = {}
+        active_riding = ride_on_map or (
+            telemetry_meta.get("active_riding") or telemetry_meta.get("redis_active", 0)
+        )
 
         resp = Response(
             {
@@ -545,11 +560,14 @@ class TelemetryLiveView(generics.GenericAPIView):
                     "detail": detail,
                     "redis_active": active_riding,
                     "active_riding": active_riding,
+                    "ride_on_map": ride_on_map,
+                    "ride_warming": ride_warming,
                     "viewport_bike": viewport_bike,
                     "viewport_run": viewport_run,
                     "city_counts": city_counts,
                     "pool_note": (
-                        "active = riders in live sim; cyclists/runners = in current map viewport only."
+                        "active = ACTIVE riders on map (FSM); warming = PENDING_ROUTE + ROUTING; "
+                        "cyclists/runners = current viewport only."
                     ),
                 },
             }

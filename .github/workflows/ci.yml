@@ -85,6 +85,16 @@ jobs:
           cd backend
           python manage.py migrate
 
+      - name: Simulator light tests (pytest)
+        env:
+          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          REDIS_URL: redis://localhost:6379/15
+          SECRET_KEY: ci-insecure-key
+        run: |
+          cd backend
+          pip install pytest pytest-django
+          python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py -m simulator_light -v
+
       - name: Run tests
         env:
           DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test

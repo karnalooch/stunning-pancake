@@ -3,10 +3,13 @@
 Avoid real Redis hgetall on live rides and broker inspect — those can OOM on dev
 Redis left over from load tests. Run locally:
 
-  cd backend && python -m pytest activities/test_simulator_backpressure.py -v --tb=short
+  cd backend && python run_pytest.py activities/test_simulator_backpressure.py -m simulator_light -v
 """
 
+import pytest
 from unittest.mock import MagicMock, patch
+
+pytestmark = pytest.mark.simulator_light
 
 from django.test import SimpleTestCase
 

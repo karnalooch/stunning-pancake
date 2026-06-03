@@ -259,6 +259,18 @@ coverage report
 coverage html
 ```
 
+### Enterprise test isolation (simulator Paczka 1b)
+
+Po load teście 10k **nie** uruchamiaj pełnego `pytest` ani `manage.py test activities` na tym samym Redis co dev — `hgetall` na `live-rides` może wyczerpać RAM. **Na Windows po load sim zawsze używaj `python run_pytest.py` (nigdy surowego `pytest`)** — inaczej testy mogą zamrozić laptop.
+
+| Cel | Polecenie |
+|-----|-----------|
+| Szybkie testy sim (mock broker/FSM) | `cd backend && python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py -m simulator_light -v` |
+| Izolacja Redis lokalnie | `REDIS_URL=redis://localhost:6379/15` (osobna baza) przed `run_pytest.py` |
+| CI | job Backend — krok „Simulator light tests”; `REDIS_URL` db **15** |
+
+`run_pytest.py` mockuje GDAL, wymusza Redis db **15** (lub `FakeRedis` in-memory) i rebinding `get_redis` w `simulator_state` — bezpieczne na laptopie. Markery: `simulator_light` (domyślny dev/CI), `simulator_integration` (wymaga `PYTEST_ALLOW_SHARED_REDIS=1` na db/0).
+
 ### Frontend (Admin)
 
 ```bash

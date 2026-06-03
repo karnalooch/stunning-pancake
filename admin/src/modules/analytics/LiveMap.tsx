@@ -65,6 +65,7 @@ function featureToPosition(
     lng: number,
     lat: number,
 ): UserPosition {
+    const rideState = props.ride_state != null ? String(props.ride_state) : undefined;
     return {
         deviceId: String(props.deviceId ?? ''),
         name: String(props.name ?? ''),
@@ -74,6 +75,7 @@ function featureToPosition(
         speed: Number(props.speed ?? 0),
         course: Number(props.course ?? 0),
         lastUpdate: '',
+        ...(rideState ? { ride_state: rideState } : {}),
     };
 }
 
@@ -145,9 +147,13 @@ export const LiveMap: React.FC = () => {
         popupRef.current?.remove();
         const kind = resolveActivityKind(pos.type);
         const kmh = speedToKmh(pos.speed);
+        const stateLine = pos.ride_state && pos.ride_state !== 'ACTIVE'
+            ? `<div style="font-size:11px;color:#64748b;margin-bottom:4px">State: ${pos.ride_state}</div>`
+            : '';
         const html = `
             <div style="font-family:system-ui,sans-serif;min-width:140px;padding:2px 0">
                 <div style="font-weight:700;font-size:13px;margin-bottom:4px">${pos.name || pos.deviceId}</div>
+                ${stateLine}
                 <div style="font-size:12px;color:#52525b">${kind === 'bike' ? 'Cycling' : 'Running'} · ${kmh > 0 ? `${kmh} km/h` : '—'}</div>
             </div>`;
         popupRef.current = new ml.Popup({ closeButton: true, maxWidth: '240px', offset: 12 })
@@ -211,14 +217,20 @@ export const LiveMap: React.FC = () => {
         return counts;
     }, []);
 
+    const [rideWarming, setRideWarming] = useState(0);
+
     const applyMetaCounts = useCallback((list: UserPosition[], meta: Record<string, unknown> | null | undefined) => {
         const riding =
-            typeof meta?.active_riding === 'number'
-                ? meta.active_riding
-                : typeof meta?.redis_active === 'number'
-                    ? meta.redis_active
-                    : list.length;
+            typeof meta?.ride_on_map === 'number'
+                ? meta.ride_on_map
+                : typeof meta?.active_riding === 'number'
+                    ? meta.active_riding
+                    : typeof meta?.redis_active === 'number'
+                        ? meta.redis_active
+                        : list.length;
         setOnlineCount((prev) => (riding !== prev ? riding : prev));
+        const warming = typeof meta?.ride_warming === 'number' ? meta.ride_warming : 0;
+        setRideWarming((prev) => (warming !== prev ? warming : prev));
 
         const bikeMeta = meta?.viewport_bike;
         const runMeta = meta?.viewport_run;
@@ -588,6 +600,11 @@ export const LiveMap: React.FC = () => {
                     <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
                         {onlineCount.toLocaleString()} active
                     </Badge>
+                    {rideWarming > 0 && (
+                        <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (not on map yet)">
+                            +{rideWarming.toLocaleString()} warming
+                        </Badge>
+                    )}
                     {cyclists > 0 && (
                         <Badge variant="light" color="violet" radius="sm" size="md">{cyclists} cyclists</Badge>
                     )}

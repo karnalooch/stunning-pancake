@@ -66,3 +66,7 @@ django_settings_module = "core.settings"
 DJANGO_SETTINGS_MODULE = "core.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 addopts = "--tb=short -q"
+markers = [
+    "simulator_light: fast simulator tests; mocked broker/FSM; safe on laptop",
+    "simulator_integration: simulator tests that may touch Redis (optional, future)",
+]

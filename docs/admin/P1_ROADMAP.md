@@ -2,7 +2,7 @@
 
 | | |
 |--|--|
-| **Status** | ✅ Active — Paczka **1a** + **1b** (backpressure + sim KPI); Paczka **2** następna |
+| **Status** | ✅ Active — Paczka **1a** + **1b** (core ✅); **operational gate** przed Paczką **2** Sponsor |
 | **Główny użytkownik** | `GLOBAL_OWNER` |
 | **Post-deploy gate** | [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) |
 | **Operacje Railway** | [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1` |
@@ -28,7 +28,7 @@
 
 ### Kolejność paczek (8A)
 
-1. **Simulator + skala** — 1a ✅ · 1b ✅ (core) · load-test / map FSM 🚧  
+1. **Simulator + skala** — 1a ✅ · 1b ✅ (core) · load-test 10k 🚧 · operational gate 🚧  
 2. **Sponsor** (Paczka 2) — **teraz (product)**  
 3. **GO tooling** (Paczka 3)  
 4. **Tenant Admin** (Paczka 4)  
@@ -60,16 +60,29 @@
 
 Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md).
 
-### Paczka 1b ✅ (core 2026-06-03) · follow-up 🚧
+### Paczka 1b ✅ (core 2026-06-03) · operational gate 🚧
 
 | Element | Status |
 |---------|--------|
 | Backpressure kolejki `routing` | ✅ `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH`, per-tick cap, API + log `sim.routing.backpressure` |
 | Dashboard KPI „sim ON” | ✅ sekcja **Live Simulator** na Dashboard GO (`sim_kpi` w `/admin/stats/`) |
-| Live Map + FSM | 🚧 pełna spójność warstw mapy ze stanami Redis |
-| Load-test 10k | 🚧 raport w [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) |
-| Metryki Datadog | 🚧 opcjonalnie — `sim.routing.*` już w logach strukturalnych |
-| Testy pytest (backpressure + status) | ✅ lekkie — mock broker/FSM, bez `hgetall` na dev Redis |
+| Simulator page — queue KPI | ✅ `routing_queue_depth`, backpressure, throttled (live-simulate API) |
+| Live Map + FSM | ✅ `active_riding` / `ride_on_map` = ACTIVE; `city_counts` FSM; `ride_state` w payload; badge warming |
+| Load-test 10k | 🚧 szablon raportu — [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) § Load-test 10k |
+| Metryki Datadog | ✅ log keys — [DATADOG_SIMULATOR.md](../operations/DATADOG_SIMULATOR.md) |
+| Testy pytest (backpressure + status + routing) | ✅ `-m simulator_light` via `run_pytest.py` |
+| Enterprise: markery `simulator_light` / `simulator_integration` + CI | ✅ `pyproject.toml`, `run_pytest.py`, Redis db/15 w CI |
+
+#### Operational closure (przed Paczką 2 Sponsor)
+
+| # | Kryterium | Status |
+|---|-----------|--------|
+| 1 | `python run_pytest.py … -m simulator_light` — PASS lokalnie / CI | ✅ 31/31 (2026-06-03) |
+| 2 | `.\scripts\railway-verify-production.ps1` — PASS (jeśli `RAILWAY_API_TOKEN`) | ⚠️ 1 FAIL: brak `routing@` w ostatnich 80 liniach logów worker-routing (reszta OK) |
+| 3 | P0 smoke GO — [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | ☐ |
+| 4 | Live sim: `ride_warming` → spadek; `routing_queue_depth` stabilne przy `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | ☐ |
+| 5 | Load-test 10k — wypełniony szablon metryk w SCALE_TEST_300K (bez prod 10k bez zgody) | ☐ |
+| 6 | Logi prod: brak lawiny `sim.routing.backpressure` >15 min przy normalnym `active_ratio` | ☐ |
 
 ---
 
@@ -149,6 +162,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 |------|--------|
 | 2026-06-03 | Cross-link: pełna checklista GPX w P2 §2.3 (F1–F6) |
 | 2026-06-03 | GPX → P2_ROADMAP; wyjaśnienie P2 vs Paczka 6 |
+| 2026-06-03 | Paczka 1b enterprise: map FSM, Simulator queue KPI, operational gate checklist |
 | 2026-06-03 | Paczka 1b: routing backpressure + Dashboard sim KPI |
 | 2026-06-03 | Paczka 1a done; linki verify script; 1b + Paczka 2 next |
 | 2026-06-03 | Utworzenie dokumentu; FSM + routing queue + API/UI |

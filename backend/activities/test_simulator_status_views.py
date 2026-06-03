@@ -3,13 +3,15 @@
 Integration-light: patches avoid loading the full live-rides Redis hash (hgetall), which
 can exhaust memory after a large load test. Run:
 
-  cd backend && python -m pytest activities/test_simulator_status_views.py -v --tb=short
+  cd backend && python run_pytest.py activities/test_simulator_status_views.py -m simulator_light -v
 """
 
 import json
 from unittest.mock import patch
 
 import pytest
+
+pytestmark = pytest.mark.simulator_light
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -28,6 +30,9 @@ _EMPTY_FSM = {
 @pytest.fixture(autouse=True)
 def _isolate_heavy_sim_reads(monkeypatch):
     """Prevent GET handlers from hgetall on a huge live-rides hash."""
+    from core.fake_redis import install_pytest_redis
+
+    fake = install_pytest_redis()
     monkeypatch.setattr(sim, "get_live_rides", lambda: {})
     monkeypatch.setattr(sim, "heal_stale_live_simulation", lambda **kwargs: None)
     monkeypatch.setattr(sim, "maybe_advance_live_simulation", lambda: None)
@@ -39,6 +44,7 @@ def _isolate_heavy_sim_reads(monkeypatch):
         "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
         lambda: None,
     )
+    return fake
 
 
 @pytest.fixture
@@ -63,9 +69,7 @@ def test_batch_status_get_tolerates_corrupt_log(owner_client):
     sim.set_batch_state(
         running=False, current_phase="idle", total_users=10, progress_pct="not-a-float"
     )
-    from core.redis_cluster import get_redis
-
-    r = get_redis()
+    r = sim.get_redis()
     r.delete(sim.BATCH_LOG_KEY)
     r.rpush(sim.BATCH_LOG_KEY, "not-json")
     r.rpush(sim.BATCH_LOG_KEY, json.dumps(["12:00:00", "ok"]))
@@ -80,9 +84,7 @@ def test_batch_status_get_tolerates_corrupt_log(owner_client):
 def test_live_status_get_tolerates_corrupt_log(owner_client):
     sim.reset_live_state()
     sim.set_live_state(running=False, active_ratio="bad", cheat_ratio="")
-    from core.redis_cluster import get_redis
-
-    r = get_redis()
+    r = sim.get_redis()
     r.delete(sim.LIVE_LOG_KEY)
     r.rpush(sim.LIVE_LOG_KEY, "{broken")
     r.rpush(sim.LIVE_LOG_KEY, json.dumps(["12:00:01", "tick"]))
@@ -103,9 +105,7 @@ def test_live_status_exposes_backpressure_fields(owner_client):
         routing_backpressure_active=True,
         dispatches_throttled=True,
     )
-    from core.redis_cluster import get_redis
-
-    r = get_redis()
+    r = sim.get_redis()
     r.delete(sim.LIVE_LOG_KEY)
     r.rpush(sim.LIVE_LOG_KEY, json.dumps(["12:00:02", "backpressure"]))
 

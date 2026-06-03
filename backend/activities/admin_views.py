@@ -410,7 +410,7 @@ class LiveSimulationView(APIView):
             if state.get("started_at"):
                 elapsed = time.time() - state["started_at"]
             pool_size = sim.get_live_pool_count()
-            active_rides = sim.get_live_ride_count()
+            active_rides = sim.get_live_rides_in_flight_count()
             live_lock = sim.is_live_lock_held()
             stuck = sim.live_simulation_stuck()
             tick_stale = sim.live_tick_stale() if state["running"] else False

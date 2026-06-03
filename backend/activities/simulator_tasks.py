@@ -249,7 +249,7 @@ def _brouter_route_waypoints(
         # "target island"/pass=0 are expected transient misses under dense concurrent starts.
         if (last_classification or {}).get("code") == BRouterService.UNROUTABLE_ERROR_CODE:
             _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> unroutable start ({last_err})",
+                f"{BRouterService.BASE_URL} -> island/unroutable (section 0, pass=0): {last_err}",
                 unroutable=True,
             )
         else:
@@ -352,10 +352,8 @@ def _generate_route_waypoints(
 
     limits = resolve_live_scale_limits(sim.get_live_state())
     route_attempts = max(1, int(limits["brouter_route_attempts"]))
-    for attempt in range(route_attempts):
-        if attempt == 0:
-            start_lat, start_lon = anchor_lat, anchor_lon
-        elif route_radius_km > 0:
+    for _attempt in range(route_attempts):
+        if route_radius_km > 0:
             start_lat, start_lon = _jitter_point_km(anchor_lat, anchor_lon, route_radius_km)
         else:
             start_lat, start_lon = anchor_lat, anchor_lon
@@ -377,8 +375,7 @@ def _generate_route_waypoints(
             return waypoints, "road"
 
     if STRICT_ROAD_ROUTES:
-        payload = {"waypoints": [], "source": "unroutable"}
-        cache.set(cache_key, payload, 120)
+        # Do not negative-cache at city granularity — one island miss would block all riders.
         return [], "unroutable"
 
     grid = _generate_grid_waypoints(lat, lon)
@@ -1061,7 +1058,7 @@ def _run_live_tick_body():
     # ── Phase 2: Start new rides (capped globally + balanced per city) ──
     max_riders = effective_event_concurrent_cap(state)
     tick_seconds = int(state.get("tick_seconds", 8))
-    current_riding = sim.get_live_ride_count()
+    current_riding = sim.get_live_rides_in_flight_count()
     target_riding = min(
         max_riders,
         max(1, int(total_users * active_ratio)),

@@ -1,10 +1,12 @@
 """Unit tests for live-sim routing and multi-city assignment."""
 
 from types import SimpleNamespace
+from unittest.mock import patch
 
+import pytest
 from django.test import SimpleTestCase
 
-from unittest.mock import patch
+pytestmark = pytest.mark.simulator_light
 
 from activities.services import BRouterService
 from activities import simulator_state as sim
@@ -53,6 +55,54 @@ class BrouterProfilesFallbackTest(SimpleTestCase):
         self.assertIn("trekking", profiles)
 
 
+class GenerateRouteWaypointsCacheTest(SimpleTestCase):
+    @patch.dict("os.environ", {"SCALE_SIM_STRICT_ROAD_ROUTES": "1"}, clear=False)
+    @patch("activities.simulator_tasks._skip_brouter_now", return_value=False)
+    @patch("activities.simulator_tasks.cache")
+    @patch("activities.simulator_tasks._brouter_route_waypoints", return_value=None)
+    @patch("activities.scale_config.resolve_live_scale_limits")
+    @patch("activities.simulator_tasks.sim.get_live_state", return_value={})
+    def test_unroutable_not_negative_cached(
+        self, _live, mock_limits, _route, mock_cache, _skip
+    ):
+        from activities.simulator_tasks import _generate_route_waypoints
+
+        mock_limits.return_value = {"brouter_route_attempts": 2}
+        mock_cache.get.return_value = None
+        waypoints, source = _generate_route_waypoints(52.23, 21.01, 5000, "RUN")
+        self.assertEqual(source, "unroutable")
+        self.assertEqual(waypoints, [])
+        mock_cache.set.assert_not_called()
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SCALE_SIM_STRICT_ROAD_ROUTES": "0",
+            "SCALE_SIM_BROUTER_START_RADIUS_KM": "3",
+        },
+        clear=False,
+    )
+    @patch("activities.simulator_tasks._skip_brouter_now", return_value=False)
+    @patch("activities.simulator_tasks.cache.get", return_value=None)
+    @patch("activities.simulator_tasks._brouter_route_waypoints")
+    @patch("activities.simulator_tasks._jitter_point_km", return_value=(52.24, 21.02))
+    @patch("activities.scale_config.resolve_live_scale_limits")
+    @patch("activities.simulator_tasks.sim.get_live_state", return_value={})
+    def test_first_attempt_jitters_start(
+        self, _live, mock_limits, mock_jitter, mock_route, _cache_get, _skip
+    ):
+        from activities.simulator_tasks import _generate_route_waypoints
+
+        mock_limits.return_value = {"brouter_route_attempts": 1}
+        mock_route.return_value = [(52.24, 21.02), (52.25, 21.03)]
+        _generate_route_waypoints(52.23, 21.01, 5000, "RUN")
+        mock_jitter.assert_called()
+        mock_route.assert_called_once()
+        args = mock_route.call_args[0]
+        self.assertEqual(args[0], 52.24)
+        self.assertEqual(args[1], 21.02)
+
+
 class BrouterIslandEarlyExitTest(SimpleTestCase):
     @patch("activities.simulator_tasks._consume_brouter_tick_budget", return_value=True)
     @patch("activities.simulator_tasks.BRouterService.validate_track")
@@ -72,6 +122,30 @@ class BrouterIslandEarlyExitTest(SimpleTestCase):
         result = _brouter_route_waypoints(52.0, 21.0, 52.01, 21.01, "BIKE")
         self.assertIsNone(result)
         self.assertEqual(mock_validate.call_count, 1)
+
+    @patch("activities.simulator_tasks._consume_brouter_tick_budget", return_value=True)
+    @patch("activities.simulator_tasks._maybe_log_brouter_route_failure")
+    @patch("activities.simulator_tasks.BRouterService.validate_track")
+    def test_unroutable_log_mentions_island_section(
+        self, mock_validate, mock_log, _budget
+    ):
+        from activities.simulator_tasks import _brouter_route_waypoints
+
+        mock_validate.return_value = {
+            "success": False,
+            "error": "target island detected for section 0",
+            "status_code": 400,
+            "classification": {
+                "code": BRouterService.UNROUTABLE_ERROR_CODE,
+                "severity": "warning",
+                "retryable": True,
+            },
+        }
+        _brouter_route_waypoints(52.0, 21.0, 52.01, 21.01, "BIKE")
+        mock_log.assert_called_once()
+        reason = mock_log.call_args[0][0]
+        self.assertIn("section 0", reason)
+        self.assertNotIn("unroutable start", reason.lower())
 
 
 class BatchBlocksLiveTest(SimpleTestCase):

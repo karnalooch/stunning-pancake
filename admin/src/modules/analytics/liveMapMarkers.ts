@@ -12,6 +12,8 @@ export interface LiveMapPosition {
     speed: number;
     course: number;
     lastUpdate: string;
+    /** FSM state when backend attaches it (ACTIVE riders on map). */
+    ride_state?: string;
 }
 
 const CYCLIST_TYPES = new Set(['bike', 'bicycle', 'cycling', 'cyclist']);

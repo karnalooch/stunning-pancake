@@ -433,7 +433,7 @@ def live_simulation_stuck() -> bool:
         return True
     if is_live_lock_held():
         return True
-    if get_live_ride_count() > 0:
+    if get_live_rides_in_flight_count() > 0:
         return True
     if not is_live_pool_db_mode() and get_live_pool_count() > 0:
         return True
@@ -729,10 +729,24 @@ def delete_live_ride(user_id: int):
     r.hdel(LIVE_RIDES_KEY, str(user_id))
 
 
-def get_live_ride_count() -> int:
-    """Get count of active rides."""
+def get_live_rides_in_flight_count() -> int:
+    """All entries in the live rides hash (ACTIVE + warming/routing pipeline)."""
     r = get_redis()
     return r.hlen(LIVE_RIDES_KEY)
+
+
+def get_live_ride_count(*, active_only: bool = True) -> int:
+    """
+    Ride counts for admin/map KPIs.
+
+    Default (active_only=True): ACTIVE rides only — matches telemetry_eligible / ride_on_map.
+    active_only=False: full hash length — concurrency / stuck detection.
+    """
+    if not active_only:
+        return get_live_rides_in_flight_count()
+    from activities.ride_fsm import telemetry_eligible
+
+    return sum(1 for ride in get_live_rides().values() if telemetry_eligible(ride))
 
 
 def get_live_city_counts() -> dict[str, int]:

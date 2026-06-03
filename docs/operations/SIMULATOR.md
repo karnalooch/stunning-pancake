@@ -84,11 +84,12 @@ Po dużym live sim Redis może trzymać ogromny hash `live_rides` — **GET stat
 
 ```bash
 cd backend
-python -m pytest activities/test_simulator_backpressure.py -v --tb=short
-python -m pytest activities/test_simulator_status_views.py -v --tb=short
+python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py -m simulator_light -v --tb=short
 ```
 
 Testy jednostkowe mockują broker i `get_live_rides`; widoki statusu mają `autouse` patch na pusty hash. Nie uruchamiaj pełnego `pytest` backendu, jeśli ładujesz GDAL/PostGIS bez potrzeby.
+
+**Logi strukturalne (Paczka 1b — Datadog / Railway):** szukaj kluczy `sim.routing.backpressure` i `sim.routing.unroutable` w logach workera `celery-worker-simulation` / `celery-worker-routing`. Szczegóły pól: [DATADOG_SIMULATOR.md](./DATADOG_SIMULATOR.md).
 
 ---
 
