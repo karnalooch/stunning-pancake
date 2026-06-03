@@ -1,17 +1,19 @@
-﻿from django.test import TestCase
+from django.test import TestCase
 from .models import User
+
 
 class UserTest(TestCase):
     """
     Test suite for User model and registration.
     """
+
     def setUp(self):
         self.user = User.objects.create_user(
             username="testathlete",
             email="test@sport.com",
             password="testpassword123",
             role="ATHLETE",
-            tenant_id="CITY_LDN"
+            tenant_id="CITY_LDN",
         )
 
     def test_user_creation(self):
@@ -22,4 +24,3 @@ class UserTest(TestCase):
 
     def test_user_str(self):
         self.assertEqual(str(self.user), "testathlete (End User / Athlete)")
-

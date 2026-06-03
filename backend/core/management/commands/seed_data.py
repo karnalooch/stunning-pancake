@@ -8,66 +8,74 @@ from activities.models import Activity, POI, Voucher
 
 
 class Command(BaseCommand):
-    help = 'Seeds the SPORT platform with demo data (tenants, POIs, mock activities)'
+    help = "Seeds the SPORT platform with demo data (tenants, POIs, mock activities)"
 
     def handle(self, *args, **options):
-        self.stdout.write('Seeding SPORT Platform...')
+        self.stdout.write("Seeding SPORT Platform...")
 
         # 1. Create Tenants
         siedlce, created = Tenant.objects.get_or_create(
-            name='Siedlce City',
+            name="Siedlce City",
             defaults={
-                'primary_color': '#2563EB',
-                'secondary_color': '#10B981',
-            }
+                "primary_color": "#2563EB",
+                "secondary_color": "#10B981",
+            },
         )
-        self.stdout.write(self.style.SUCCESS(f'Tenant Siedlce: {"created" if created else "already exists"}'))
+        self.stdout.write(
+            self.style.SUCCESS(f"Tenant Siedlce: {'created' if created else 'already exists'}")
+        )
 
         warsaw, created = Tenant.objects.get_or_create(
-            name='Warsaw Runners',
+            name="Warsaw Runners",
             defaults={
-                'primary_color': '#DC2626',
-                'secondary_color': '#FBBF24',
-            }
+                "primary_color": "#DC2626",
+                "secondary_color": "#FBBF24",
+            },
         )
-        self.stdout.write(self.style.SUCCESS(f'Tenant Warsaw: {"created" if created else "already exists"}'))
+        self.stdout.write(
+            self.style.SUCCESS(f"Tenant Warsaw: {'created' if created else 'already exists'}")
+        )
 
         # 2. Create Tenant Admins
         siedlce_admin, created = User.objects.get_or_create(
-            username='siedlce_admin',
-            defaults={'role': 'TENANT_ADMIN', 'tenant': siedlce},
+            username="siedlce_admin",
+            defaults={"role": "TENANT_ADMIN", "tenant": siedlce},
         )
-        siedlce_admin.set_password('siedlce123')
+        siedlce_admin.set_password("siedlce123")
         siedlce_admin.save()
 
         # Create athletes
         athlete, _ = User.objects.get_or_create(
-            username='athlete_01',
-            defaults={'role': 'ATHLETE', 'tenant': siedlce},
+            username="athlete_01",
+            defaults={"role": "ATHLETE", "tenant": siedlce},
         )
         if not athlete.has_usable_password():
-            athlete.set_password('athlete2026')
+            athlete.set_password("athlete2026")
             athlete.save()
 
         athlete_w, _ = User.objects.get_or_create(
-            username='athlete_warsaw',
-            defaults={'role': 'ATHLETE', 'tenant': warsaw},
+            username="athlete_warsaw",
+            defaults={"role": "ATHLETE", "tenant": warsaw},
         )
-        self.stdout.write(self.style.SUCCESS(f'Athlete athlete_warsaw: {"created" if created else "already exists"}'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Athlete athlete_warsaw: {'created' if created else 'already exists'}"
+            )
+        )
 
         if created:
             Activity.objects.get_or_create(
                 user=athlete_w,
                 tenant=warsaw,
-                type='BIKE',
+                type="BIKE",
                 start_time=timezone.now(),
                 defaults={
-                    'distance': 15000,
-                    'duration': timedelta(minutes=45),
-                    'verification_score': 0.9,
-                    'is_verified': True,
+                    "distance": 15000,
+                    "duration": timedelta(minutes=45),
+                    "verification_score": 0.9,
+                    "is_verified": True,
                 },
             )
-            self.stdout.write(self.style.SUCCESS('Created BIKE activity for athlete_warsaw'))
+            self.stdout.write(self.style.SUCCESS("Created BIKE activity for athlete_warsaw"))
 
-        self.stdout.write(self.style.SUCCESS('Seeding complete.'))
+        self.stdout.write(self.style.SUCCESS("Seeding complete."))

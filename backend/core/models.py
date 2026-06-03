@@ -4,7 +4,7 @@ from django.db import models
 class FeatureFlag(models.Model):
     key = models.CharField(max_length=100, unique=True)
     label = models.CharField(max_length=200)
-    description = models.TextField(blank=True, default='')
+    description = models.TextField(blank=True, default="")
     enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -3,6 +3,7 @@ P1 Tests — StravaService & GarminService
 ===========================================
 RC v0.2: OAuth token exchange, activity sync, status, token refresh.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import timedelta
@@ -19,16 +20,21 @@ User = get_user_model()
 def user(db):
     tenant = Tenant.objects.create(id="test-wear", name="Wearable City", is_active=True)
     return User.objects.create_user(
-        username="wearer", email="wear@test.com", password="pass",
-        role="ATHLETE", tenant=tenant,
+        username="wearer",
+        email="wear@test.com",
+        password="pass",
+        role="ATHLETE",
+        tenant=tenant,
     )
 
 
 @pytest.fixture
 def strava_integration(db, user):
     return WearableIntegration.objects.create(
-        user=user, service="STRAVA",
-        access_token="access_123", refresh_token="refresh_456",
+        user=user,
+        service="STRAVA",
+        access_token="access_123",
+        refresh_token="refresh_456",
         expires_at=timezone.now() + timedelta(hours=6),
         external_id="strava_athlete_42",
         is_active=True,
@@ -38,7 +44,8 @@ def strava_integration(db, user):
 @pytest.fixture
 def garmin_integration(db, user):
     return WearableIntegration.objects.create(
-        user=user, service="GARMIN",
+        user=user,
+        service="GARMIN",
         access_token="garmin_access_789",
         refresh_token="garmin_refresh_012",
         expires_at=timezone.now() + timedelta(hours=6),
@@ -50,11 +57,14 @@ def garmin_integration(db, user):
 # StravaService
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestStravaService:
     def test_get_auth_url(self):
-        with patch("activities.wearables.STRAVA_CLIENT_ID", "client_123"), \
-             patch("activities.wearables._store_oauth_state", return_value="mock_nonce_abc"):
+        with (
+            patch("activities.wearables.STRAVA_CLIENT_ID", "client_123"),
+            patch("activities.wearables._store_oauth_state", return_value="mock_nonce_abc"),
+        ):
             url = StravaService.get_auth_url(user_id=42)
             assert "strava.com/oauth/authorize" in url
             assert "client_id=client_123" in url
@@ -122,8 +132,10 @@ class TestStravaService:
             assert strava_integration.is_active is False
 
     def test_sync_activities_imports_runs(self, user, strava_integration):
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"), \
-             patch("activities.wearables._finalize_imported_activity"):
+        with (
+            patch.object(StravaService, "refresh_token", return_value="valid_token"),
+            patch("activities.wearables._finalize_imported_activity"),
+        ):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
@@ -151,13 +163,20 @@ class TestStravaService:
 
     def test_sync_activities_skips_duplicates(self, user, strava_integration):
         Activity.objects.create(
-            user=user, tenant=user.tenant, type="RUN",
-            start_time="2026-05-01T10:00:00+00:00", distance=8500,
-            external_source="STRAVA", external_id="555",
-            is_verified=True, verification_score=1.0,
+            user=user,
+            tenant=user.tenant,
+            type="RUN",
+            start_time="2026-05-01T10:00:00+00:00",
+            distance=8500,
+            external_source="STRAVA",
+            external_id="555",
+            is_verified=True,
+            verification_score=1.0,
         )
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"), \
-             patch("activities.wearables._finalize_imported_activity"):
+        with (
+            patch.object(StravaService, "refresh_token", return_value="valid_token"),
+            patch("activities.wearables._finalize_imported_activity"),
+        ):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [
@@ -178,11 +197,14 @@ class TestStravaService:
 # GarminService
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestGarminService:
     def test_get_auth_url(self):
-        with patch("activities.wearables.GARMIN_CLIENT_ID", "garmin_client_456"), \
-             patch("activities.wearables._store_oauth_state", return_value="mock_nonce_xyz"):
+        with (
+            patch("activities.wearables.GARMIN_CLIENT_ID", "garmin_client_456"),
+            patch("activities.wearables._store_oauth_state", return_value="mock_nonce_xyz"),
+        ):
             url = GarminService.get_auth_url(user_id=7)
             assert "connect.garmin.com" in url
             assert "client_id=garmin_client_456" in url
@@ -210,8 +232,10 @@ class TestGarminService:
             assert count == 0  # mock mode, no actual API call
 
     def test_sync_activities_maps_types_correctly(self, user, garmin_integration):
-        with patch.object(GarminService, "refresh_token", return_value="valid"), \
-             patch("activities.wearables._finalize_imported_activity"):
+        with (
+            patch.object(GarminService, "refresh_token", return_value="valid"),
+            patch("activities.wearables._finalize_imported_activity"),
+        ):
             with patch("requests.get") as mock_get:
                 mock_get.return_value.status_code = 200
                 mock_get.return_value.json.return_value = [

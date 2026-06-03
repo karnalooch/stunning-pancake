@@ -56,8 +56,9 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          pip install ruff
-          ruff check backend/ --output-format=github
+          pip install "ruff>=0.8,<0.16"
+          cd backend
+          ruff check . --output-format=github
 
       - name: Type check with mypy (core modules)
         run: |

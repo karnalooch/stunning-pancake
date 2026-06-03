@@ -4,25 +4,37 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0005_tenant_delete_tenantprofile_remove_user_tenant_id_and_more'),
+        ("users", "0005_tenant_delete_tenantprofile_remove_user_tenant_id_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='AuditLog',
+            name="AuditLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('impersonator_id', models.IntegerField(help_text='ID of the GLOBAL_OWNER who initiated the impersonation')),
-                ('target_user_id', models.IntegerField(help_text='ID of the user who was impersonated')),
-                ('action', models.CharField(max_length=255)),
-                ('ip_address', models.GenericIPAddressField(blank=True, null=True)),
-                ('status_code', models.IntegerField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "impersonator_id",
+                    models.IntegerField(
+                        help_text="ID of the GLOBAL_OWNER who initiated the impersonation"
+                    ),
+                ),
+                (
+                    "target_user_id",
+                    models.IntegerField(help_text="ID of the user who was impersonated"),
+                ),
+                ("action", models.CharField(max_length=255)),
+                ("ip_address", models.GenericIPAddressField(blank=True, null=True)),
+                ("status_code", models.IntegerField()),
+                ("timestamp", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'ordering': ['-timestamp'],
+                "ordering": ["-timestamp"],
             },
         ),
     ]

@@ -3,6 +3,7 @@ P0 Tests — Admin Dashboard Stats & Activity Moderation
 =======================================================
 RC v0.2 critical paths: stats endpoint, approve/reject flow.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 from django.urls import reverse
@@ -34,7 +35,9 @@ def tenant2(db):
 @pytest.fixture
 def owner_user(db):
     return User.objects.create_user(
-        username="owner", email="owner@test.com", password="pass",
+        username="owner",
+        email="owner@test.com",
+        password="pass",
         role="GLOBAL_OWNER",
     )
 
@@ -42,16 +45,22 @@ def owner_user(db):
 @pytest.fixture
 def admin_user(db, tenant):
     return User.objects.create_user(
-        username="admin", email="admin@test.com", password="pass",
-        role="TENANT_ADMIN", tenant=tenant,
+        username="admin",
+        email="admin@test.com",
+        password="pass",
+        role="TENANT_ADMIN",
+        tenant=tenant,
     )
 
 
 @pytest.fixture
 def athlete_user(db, tenant):
     return User.objects.create_user(
-        username="athlete", email="athlete@test.com", password="pass",
-        role="ATHLETE", tenant=tenant,
+        username="athlete",
+        email="athlete@test.com",
+        password="pass",
+        role="ATHLETE",
+        tenant=tenant,
     )
 
 
@@ -60,35 +69,50 @@ def create_activities(db, tenant, tenant2, athlete_user):
     """Creates 10 activities with mixed verification for dashboard testing."""
     user = athlete_user
     user2 = User.objects.create_user(
-        username="athlete2", email="a2@test.com", password="pass",
-        role="ATHLETE", tenant=tenant2,
+        username="athlete2",
+        email="a2@test.com",
+        password="pass",
+        role="ATHLETE",
+        tenant=tenant2,
     )
     acts = []
     for i in range(7):
-        acts.append(Activity.objects.create(
-            user=user, tenant=tenant, type="RUN",
-            start_time=timezone.now(),
-            distance=5000 + i * 200,
-            is_verified=i < 5,
-            verification_score=0.5 + i * 0.07,
-        ))
+        acts.append(
+            Activity.objects.create(
+                user=user,
+                tenant=tenant,
+                type="RUN",
+                start_time=timezone.now(),
+                distance=5000 + i * 200,
+                is_verified=i < 5,
+                verification_score=0.5 + i * 0.07,
+            )
+        )
     for i in range(3):
-        acts.append(Activity.objects.create(
-            user=user2, tenant=tenant2, type="BIKE",
-            start_time=timezone.now(),
-            distance=10000 + i * 500,
-            is_verified=True,
-            verification_score=0.9,
-        ))
+        acts.append(
+            Activity.objects.create(
+                user=user2,
+                tenant=tenant2,
+                type="BIKE",
+                start_time=timezone.now(),
+                distance=10000 + i * 500,
+                is_verified=True,
+                verification_score=0.9,
+            )
+        )
     return acts
 
 
 @pytest.fixture
 def unverified_activity(db, tenant, athlete_user):
     return Activity.objects.create(
-        user=athlete_user, tenant=tenant, type="RUN",
-        start_time=timezone.now(), distance=5000,
-        is_verified=False, verification_score=0.25,
+        user=athlete_user,
+        tenant=tenant,
+        type="RUN",
+        start_time=timezone.now(),
+        distance=5000,
+        is_verified=False,
+        verification_score=0.25,
     )
 
 
@@ -96,9 +120,12 @@ def unverified_activity(db, tenant, athlete_user):
 # AdminDashboardStatsView
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestAdminDashboardStats:
-    def test_owner_gets_full_stats(self, api_client, owner_user, tenant, tenant2, create_activities):
+    def test_owner_gets_full_stats(
+        self, api_client, owner_user, tenant, tenant2, create_activities
+    ):
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(reverse("admin-stats"))
         assert response.status_code == 200
@@ -156,6 +183,7 @@ class TestAdminDashboardStats:
 # ActivityApproveView / ActivityRejectView
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestActivityModeration:
     def test_owner_can_approve(self, api_client, owner_user, unverified_activity):
@@ -192,8 +220,11 @@ class TestActivityModeration:
 
     def test_moderator_can_approve_in_tenant(self, api_client, tenant, unverified_activity):
         moderator = User.objects.create_user(
-            username="mod", email="mod@test.com", password="pass",
-            role="TENANT_MODERATOR", tenant=tenant,
+            username="mod",
+            email="mod@test.com",
+            password="pass",
+            role="TENANT_MODERATOR",
+            tenant=tenant,
         )
         api_client.force_authenticate(user=moderator)
         url = reverse("admin-approve", kwargs={"activity_id": unverified_activity.id})

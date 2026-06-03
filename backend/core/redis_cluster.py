@@ -25,6 +25,7 @@ Usage:
   r = get_redis()
   p = get_pipeline(r)
 """
+
 from __future__ import annotations
 
 import logging
@@ -52,6 +53,7 @@ _client = None
 # Connection factory (auto-selects standalone vs cluster)
 # ---------------------------------------------------------------------------
 
+
 def get_redis():
     """
     Returns a Redis client appropriate for the deployment mode.
@@ -75,7 +77,7 @@ def get_redis():
 
 def _build_standalone_client():
     """Single-node Redis (default: dev and staging).
-    
+
     Supports both REDIS_URL (with embedded credentials)
     and REDIS_HOST / REDIS_PORT / REDIS_PASSWORD (managed services).
     """
@@ -109,7 +111,8 @@ def _build_standalone_client():
 def _sanitize_url(url: str) -> str:
     """Hide password in URL for logging."""
     import re
-    return re.sub(r':([^@]+)@', ':****@', url)
+
+    return re.sub(r":([^@]+)@", ":****@", url)
 
 
 def _build_cluster_client():
@@ -134,8 +137,8 @@ def _build_cluster_client():
     client = redis.cluster.RedisCluster(
         startup_nodes=nodes,
         decode_responses=True,
-        skip_full_coverage_check=True,   # Allows partial coverage in degraded mode
-        read_from_replicas=True,         # Route GET operations to replicas (3x read throughput)
+        skip_full_coverage_check=True,  # Allows partial coverage in degraded mode
+        read_from_replicas=True,  # Route GET operations to replicas (3x read throughput)
     )
     logger.info("redis.mode=cluster nodes=%d", len(nodes))
     return client
@@ -161,6 +164,7 @@ def health_check() -> dict:
         dict with mode, node count, and ping latency in ms.
     """
     import time
+
     try:
         r = get_redis()
         t0 = time.monotonic()
@@ -198,4 +202,8 @@ def health_check() -> dict:
             err_msg = "Redis unreachable — service may be down"
         elif "name or service not known" in err_msg.lower():
             err_msg = "Redis host not found — check REDIS_URL hostname"
-        return {"mode": "cluster" if CLUSTER_MODE else "standalone", "status": "error", "error": err_msg}
+        return {
+            "mode": "cluster" if CLUSTER_MODE else "standalone",
+            "status": "error",
+            "error": err_msg,
+        }

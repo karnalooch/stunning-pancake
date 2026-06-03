@@ -26,6 +26,7 @@ Pipeline (Milestone 2+):
     ▼
   [5] Viterbi HMM map matching
 """
+
 import math
 import logging
 import os
@@ -38,13 +39,15 @@ logger = logging.getLogger(__name__)
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class GpsPoint:
     """A single raw GPS observation."""
+
     lat: float
     lon: float
-    accuracy_m: float = 5.0   # horizontal accuracy reported by device
-    timestamp: float = 0.0     # unix epoch
+    accuracy_m: float = 5.0  # horizontal accuracy reported by device
+    timestamp: float = 0.0  # unix epoch
 
 
 @dataclass
@@ -58,15 +61,17 @@ class KalmanState:
         q: Process noise (how fast the real position can change).
         r: Measurement noise (GPS accuracy variance).
     """
+
     x: float = 0.0
     p: float = 1.0
-    q: float = 0.00001   # ~1m/s²  process noise
-    r: float = 0.0001    # ~10m measurement noise
+    q: float = 0.00001  # ~1m/s²  process noise
+    r: float = 0.0001  # ~10m measurement noise
 
 
 # ---------------------------------------------------------------------------
 # Kalman Filter
 # ---------------------------------------------------------------------------
+
 
 class KalmanFilter1D:
     """
@@ -96,7 +101,7 @@ class KalmanFilter1D:
         p_pred = s.p + s.q
 
         # --- Update ---
-        k = p_pred / (p_pred + s.r)           # Kalman gain
+        k = p_pred / (p_pred + s.r)  # Kalman gain
         s.x = x_pred + k * (measurement - x_pred)
         s.p = (1.0 - k) * p_pred
 
@@ -212,16 +217,16 @@ def total_distance_m(points: list[GpsPoint]) -> float:
 # ---------------------------------------------------------------------------
 
 VMAX_MS: dict[str, float] = {
-    "RUN":         12.0,   # m/s — ~43 km/h, sprint burst
-    "BIKE":        25.0,   # m/s — ~90 km/h
-    "WALK":         3.5,   # m/s — ~12.6 km/h
-    "WHEELCHAIR":   8.0,   # m/s — ~29 km/h
+    "RUN": 12.0,  # m/s — ~43 km/h, sprint burst
+    "BIKE": 25.0,  # m/s — ~90 km/h
+    "WALK": 3.5,  # m/s — ~12.6 km/h
+    "WHEELCHAIR": 8.0,  # m/s — ~29 km/h
 }
 
 # Configurable via env (allow ops to tune without deploy)
-_ANOMALY_RATIO_THRESHOLD = float(os.getenv("VMAX_ANOMALY_RATIO", "0.20"))   # >20% = suspicious
-_CONSECUTIVE_THRESHOLD   = int(os.getenv("VMAX_CONSECUTIVE", "3"))           # 3+ consecutive = reject
-_VMAX_MARGIN             = float(os.getenv("VMAX_MARGIN", "1.10"))           # 10% margin
+_ANOMALY_RATIO_THRESHOLD = float(os.getenv("VMAX_ANOMALY_RATIO", "0.20"))  # >20% = suspicious
+_CONSECUTIVE_THRESHOLD = int(os.getenv("VMAX_CONSECUTIVE", "3"))  # 3+ consecutive = reject
+_VMAX_MARGIN = float(os.getenv("VMAX_MARGIN", "1.10"))  # 10% margin
 
 
 # ---------------------------------------------------------------------------
@@ -235,11 +240,17 @@ _VMAX_MARGIN             = float(os.getenv("VMAX_MARGIN", "1.10"))           # 1
 # ---------------------------------------------------------------------------
 
 # --- Thresholds (all configurable via .env) ---
-_TELEPORT_JUMP_M        = float(os.getenv("GATE_TELEPORT_M",       "500"))   # >500m between consecutive pts
-_MAX_ACCEL_MS2          = float(os.getenv("GATE_MAX_ACCEL",         "6.0"))   # m/s² — sprint start ≈ 4-5 m/s²
-_MOTOR_VARIANCE_RATIO   = float(os.getenv("GATE_MOTOR_VAR",         "0.05"))  # speed σ/μ < 5% → suspiciously smooth
-_STRAIGHT_LINE_RATIO    = float(os.getenv("GATE_STRAIGHT_RATIO",    "0.92"))  # >92% displacement/track = bus/tram
-_MOTOR_MIN_SEGMENTS     = int(os.getenv("GATE_MOTOR_MIN_SEG",       "15"))    # need at least N segs for variance check
+_TELEPORT_JUMP_M = float(os.getenv("GATE_TELEPORT_M", "500"))  # >500m between consecutive pts
+_MAX_ACCEL_MS2 = float(os.getenv("GATE_MAX_ACCEL", "6.0"))  # m/s² — sprint start ≈ 4-5 m/s²
+_MOTOR_VARIANCE_RATIO = float(
+    os.getenv("GATE_MOTOR_VAR", "0.05")
+)  # speed σ/μ < 5% → suspiciously smooth
+_STRAIGHT_LINE_RATIO = float(
+    os.getenv("GATE_STRAIGHT_RATIO", "0.92")
+)  # >92% displacement/track = bus/tram
+_MOTOR_MIN_SEGMENTS = int(
+    os.getenv("GATE_MOTOR_MIN_SEG", "15")
+)  # need at least N segs for variance check
 
 
 def fast_rejection_gate(
@@ -290,8 +301,10 @@ def fast_rejection_gate(
             continue
 
         dist = haversine_m(
-            points[i - 1].lat, points[i - 1].lon,
-            points[i].lat,     points[i].lon,
+            points[i - 1].lat,
+            points[i - 1].lon,
+            points[i].lat,
+            points[i].lon,
         )
         total_track_m += dist
         speed = dist / dt
@@ -301,11 +314,13 @@ def fast_rejection_gate(
         if dist > _TELEPORT_JUMP_M:
             logger.warning(
                 "gate.TELEPORT idx=%d dist=%.1fm type=%s",
-                i, dist, activity_type,
+                i,
+                dist,
+                activity_type,
             )
             return {
                 "passed": False,
-                "reason": f"TELEPORT: {dist:.0f}m jump between points #{i-1} and #{i}",
+                "reason": f"TELEPORT: {dist:.0f}m jump between points #{i - 1} and #{i}",
                 "details": {"teleport_dist_m": dist, "idx": i},
             }
 
@@ -316,7 +331,10 @@ def fast_rejection_gate(
             if accel > _MAX_ACCEL_MS2:
                 logger.warning(
                     "gate.ACCEL idx=%d accel=%.2f m/s² limit=%.1f type=%s",
-                    i, accel, _MAX_ACCEL_MS2, activity_type,
+                    i,
+                    accel,
+                    _MAX_ACCEL_MS2,
+                    activity_type,
                 )
                 return {
                     "passed": False,
@@ -329,16 +347,18 @@ def fast_rejection_gate(
     if len(speeds) >= _MOTOR_MIN_SEGMENTS:
         mean_speed = sum(speeds) / len(speeds)
         if mean_speed > 0.5:  # only check if moving (>0.5 m/s = 1.8 km/h)
-            variance  = sum((s - mean_speed) ** 2 for s in speeds) / len(speeds)
-            std_dev   = math.sqrt(variance)
-            cv        = std_dev / mean_speed  # coefficient of variation
+            variance = sum((s - mean_speed) ** 2 for s in speeds) / len(speeds)
+            std_dev = math.sqrt(variance)
+            cv = std_dev / mean_speed  # coefficient of variation
 
             # Humans are sloppy — their CV is typically 0.15–0.40
             # Motor vehicles: CV < 0.05 (cruise control, tracks, rails)
             if cv < _MOTOR_VARIANCE_RATIO:
                 logger.warning(
                     "gate.MOTOR_FINGERPRINT cv=%.4f mean=%.2f m/s type=%s",
-                    cv, mean_speed, activity_type,
+                    cv,
+                    mean_speed,
+                    activity_type,
                 )
                 return {
                     "passed": False,
@@ -349,25 +369,36 @@ def fast_rejection_gate(
     # --- Test 4: STRAIGHT-LINE RATIO ---
     if total_track_m > 200:  # only meaningful for tracks longer than 200m
         displacement_m = haversine_m(
-            points[0].lat, points[0].lon,
-            points[-1].lat, points[-1].lon,
+            points[0].lat,
+            points[0].lon,
+            points[-1].lat,
+            points[-1].lon,
         )
         straight_ratio = displacement_m / total_track_m
 
         if straight_ratio > _STRAIGHT_LINE_RATIO:
             logger.warning(
                 "gate.STRAIGHT_LINE ratio=%.3f displacement=%.0fm track=%.0fm type=%s",
-                straight_ratio, displacement_m, total_track_m, activity_type,
+                straight_ratio,
+                displacement_m,
+                total_track_m,
+                activity_type,
             )
             return {
                 "passed": False,
                 "reason": f"STRAIGHT_LINE: {straight_ratio:.1%} displacement ratio > {_STRAIGHT_LINE_RATIO:.0%} (vehicle pattern)",
-                "details": {"straight_ratio": straight_ratio, "displacement_m": displacement_m, "track_m": total_track_m},
+                "details": {
+                    "straight_ratio": straight_ratio,
+                    "displacement_m": displacement_m,
+                    "track_m": total_track_m,
+                },
             }
 
     logger.debug(
         "gate.PASSED type=%s points=%d track_m=%.0f",
-        activity_type, len(points), total_track_m,
+        activity_type,
+        len(points),
+        total_track_m,
     )
     return {"passed": True, "reason": None, "details": {"track_m": total_track_m}}
 
@@ -399,15 +430,21 @@ def detect_speed_anomalies(
         if dt <= 0:
             continue
         dist = haversine_m(
-            points[i - 1].lat, points[i - 1].lon,
-            points[i].lat, points[i].lon,
+            points[i - 1].lat,
+            points[i - 1].lon,
+            points[i].lat,
+            points[i].lon,
         )
         speed_ms = dist / dt
         if speed_ms > max_speed:
             flagged.append(i)
             logger.warning(
                 "vmax_violation idx=%d speed=%.2f m/s (%.1f km/h) limit=%.2f type=%s",
-                i, speed_ms, speed_ms * 3.6, max_speed, activity_type,
+                i,
+                speed_ms,
+                speed_ms * 3.6,
+                max_speed,
+                activity_type,
             )
 
     return flagged
@@ -460,31 +497,39 @@ def analyze_anomalies(
         reason = f"anomaly_ratio={ratio:.2%} exceeds {_ANOMALY_RATIO_THRESHOLD:.0%} threshold"
     elif max_consecutive >= _CONSECUTIVE_THRESHOLD:
         is_suspicious = True
-        reason = f"{max_consecutive} consecutive V-max violations (threshold={_CONSECUTIVE_THRESHOLD})"
+        reason = (
+            f"{max_consecutive} consecutive V-max violations (threshold={_CONSECUTIVE_THRESHOLD})"
+        )
 
     if is_suspicious:
         logger.warning(
             "activity_suspicious type=%s ratio=%.2f consecutive=%d reason=%s",
-            activity_type, ratio, max_consecutive, reason,
+            activity_type,
+            ratio,
+            max_consecutive,
+            reason,
         )
     else:
         logger.debug(
             "activity_clean type=%s ratio=%.2f consecutive=%d",
-            activity_type, ratio, max_consecutive,
+            activity_type,
+            ratio,
+            max_consecutive,
         )
 
     return {
-        "flagged_indices":  flagged,
-        "anomaly_ratio":    round(ratio, 4),
-        "max_consecutive":  max_consecutive,
-        "is_suspicious":    is_suspicious,
-        "reason":           reason,
+        "flagged_indices": flagged,
+        "anomaly_ratio": round(ratio, 4),
+        "max_consecutive": max_consecutive,
+        "is_suspicious": is_suspicious,
+        "reason": reason,
     }
 
 
 # ---------------------------------------------------------------------------
 # Map Matching stub (HMM / Viterbi pattern — BRouter delegated)
 # ---------------------------------------------------------------------------
+
 
 def match_to_road_network(
     points: list[GpsPoint],
@@ -516,8 +561,11 @@ def match_to_road_network(
 
     # Delegate to Viterbi HMM (lazy import to avoid circular deps)
     from .viterbi_matching import viterbi_match
+
     matched = viterbi_match(points, road_points)
-    logger.debug("map_matching(viterbi): matched %d points road_pts=%d", len(matched), len(road_points))
+    logger.debug(
+        "map_matching(viterbi): matched %d points road_pts=%d", len(matched), len(road_points)
+    )
     return matched
 
 
@@ -525,16 +573,18 @@ def match_to_road_network(
 # Public pipeline facade
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ProcessingResult:
     """Aggregated output of the full signal processing pipeline."""
-    smoothed_points:   list[GpsPoint] = field(default_factory=list)
-    matched_points:    list[GpsPoint] = field(default_factory=list)
-    total_distance_m:  float = 0.0
+
+    smoothed_points: list[GpsPoint] = field(default_factory=list)
+    matched_points: list[GpsPoint] = field(default_factory=list)
+    total_distance_m: float = 0.0
     anomalous_indices: list[int] = field(default_factory=list)
-    is_suspicious:     bool = False
-    anomaly_ratio:     float = 0.0
-    max_consecutive:   int = 0
+    is_suspicious: bool = False
+    anomaly_ratio: float = 0.0
+    max_consecutive: int = 0
     suspicious_reason: str | None = None
 
 

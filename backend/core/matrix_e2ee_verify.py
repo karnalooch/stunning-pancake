@@ -23,6 +23,7 @@ REST Endpoints (wired in core/urls.py under /api/matrix/):
   POST /api/matrix/verify/confirm/    → Confirm emojis matched
   GET  /api/matrix/verify/status/     → Check verification state
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -49,16 +50,70 @@ SAS_TTL_S = 600
 # SAS Emoji lookup (standard Matrix SAS emoji set — first 64 of 64)
 # ---------------------------------------------------------------------------
 SAS_EMOJI = [
-    "🐶 Dog", "🐱 Cat", "🦁 Lion", "🐎 Horse", "🦄 Unicorn", "🐷 Pig", "🐘 Elephant",
-    "🐰 Rabbit", "🐼 Panda", "🐓 Rooster", "🐧 Penguin", "🐢 Turtle", "🐟 Fish",
-    "🐙 Octopus", "🦋 Butterfly", "🌸 Flower", "🌳 Tree", "🌵 Cactus", "🍄 Mushroom",
-    "🌏 Globe", "🌙 Moon", "☁️ Cloud", "🔥 Fire", "🍌 Banana", "🍎 Apple", "🍓 Strawberry",
-    "🌽 Corn", "🍕 Pizza", "🎂 Cake", "❤️ Heart", "🙂 Smiley", "🤖 Robot", "🎩 Hat",
-    "👓 Glasses", "🔧 Wrench", "🎅 Santa", "👍 Thumbs Up", "☂️ Umbrella", "⌛ Hourglass",
-    "⏰ Clock", "🎁 Gift", "💡 Bulb", "📚 Book", "✏️ Pencil", "📎 Paperclip", "✂️ Scissors",
-    "🔒 Lock", "🔑 Key", "🔨 Hammer", "📱 Phone", "💻 Laptop", "🖨️ Printer", "🖱️ Mouse",
-    "📷 Camera", "📺 TV", "🎙️ Microphone", "📻 Radio", "📡 Satellite", "🚗 Car", "🚌 Bus",
-    "🛵 Motorbike", "🚲 Bicycle", "✈️ Plane", "🚀 Rocket",
+    "🐶 Dog",
+    "🐱 Cat",
+    "🦁 Lion",
+    "🐎 Horse",
+    "🦄 Unicorn",
+    "🐷 Pig",
+    "🐘 Elephant",
+    "🐰 Rabbit",
+    "🐼 Panda",
+    "🐓 Rooster",
+    "🐧 Penguin",
+    "🐢 Turtle",
+    "🐟 Fish",
+    "🐙 Octopus",
+    "🦋 Butterfly",
+    "🌸 Flower",
+    "🌳 Tree",
+    "🌵 Cactus",
+    "🍄 Mushroom",
+    "🌏 Globe",
+    "🌙 Moon",
+    "☁️ Cloud",
+    "🔥 Fire",
+    "🍌 Banana",
+    "🍎 Apple",
+    "🍓 Strawberry",
+    "🌽 Corn",
+    "🍕 Pizza",
+    "🎂 Cake",
+    "❤️ Heart",
+    "🙂 Smiley",
+    "🤖 Robot",
+    "🎩 Hat",
+    "👓 Glasses",
+    "🔧 Wrench",
+    "🎅 Santa",
+    "👍 Thumbs Up",
+    "☂️ Umbrella",
+    "⌛ Hourglass",
+    "⏰ Clock",
+    "🎁 Gift",
+    "💡 Bulb",
+    "📚 Book",
+    "✏️ Pencil",
+    "📎 Paperclip",
+    "✂️ Scissors",
+    "🔒 Lock",
+    "🔑 Key",
+    "🔨 Hammer",
+    "📱 Phone",
+    "💻 Laptop",
+    "🖨️ Printer",
+    "🖱️ Mouse",
+    "📷 Camera",
+    "📺 TV",
+    "🎙️ Microphone",
+    "📻 Radio",
+    "📡 Satellite",
+    "🚗 Car",
+    "🚌 Bus",
+    "🛵 Motorbike",
+    "🚲 Bicycle",
+    "✈️ Plane",
+    "🚀 Rocket",
 ]
 
 
@@ -94,6 +149,7 @@ def _derive_sas_emojis(
 
 def _get_redis():
     from core.redis_cluster import get_redis
+
     return get_redis()
 
 
@@ -116,6 +172,7 @@ def _redis_safe_get_state(txn_id: str) -> dict | None:
 # ---------------------------------------------------------------------------
 # REST API Views
 # ---------------------------------------------------------------------------
+
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -156,15 +213,19 @@ def initiate_verification(request: Request) -> Response:
 
     logger.info(
         "matrix.sas.initiated initiator=%d target=%s txn=%s",
-        request.user.id, target_user, transaction_id,
+        request.user.id,
+        target_user,
+        transaction_id,
     )
 
-    return Response({
-        "transaction_id": transaction_id,
-        "commitment": commitment,
-        "expires_at": expires_at,
-        "status": "PENDING",
-    })
+    return Response(
+        {
+            "transaction_id": transaction_id,
+            "commitment": commitment,
+            "expires_at": expires_at,
+            "status": "PENDING",
+        }
+    )
 
 
 @api_view(["POST"])
@@ -232,7 +293,9 @@ def confirm_verification(request: Request) -> Response:
             r = _get_redis()
             r.setex(_sas_key(txn_id), 60, json.dumps(state))
         except Exception:
-            logger.warning("matrix.sas.cancelled txn=%s user=%d (redis unavailable)", txn_id, request.user.id)
+            logger.warning(
+                "matrix.sas.cancelled txn=%s user=%d (redis unavailable)", txn_id, request.user.id
+            )
         logger.warning("matrix.sas.cancelled txn=%s user=%d", txn_id, request.user.id)
         return Response({"status": "CANCELLED"})
 
@@ -254,7 +317,9 @@ def confirm_verification(request: Request) -> Response:
             logger.warning("matrix.sas.verified txn=%s (redis unavailable)", txn_id)
         logger.info(
             "matrix.sas.verified txn=%s initiator=%s target=%s",
-            txn_id, state["initiator_user_id"], state["target_user_id"],
+            txn_id,
+            state["initiator_user_id"],
+            state["target_user_id"],
         )
         return Response({"status": "VERIFIED", "transaction_id": txn_id})
 
@@ -280,8 +345,10 @@ def verification_status(request: Request) -> Response:
     state = _redis_safe_get_state(txn_id)
     if state is None:
         return Response({"error": "Verification not found or expired."}, status=404)
-    return Response({
-        "transaction_id": txn_id,
-        "status": state["status"],
-        "expires_at": state.get("expires_at"),
-    })
+    return Response(
+        {
+            "transaction_id": txn_id,
+            "status": state["status"],
+            "expires_at": state.get("expires_at"),
+        }
+    )

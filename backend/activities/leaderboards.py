@@ -15,6 +15,7 @@ Key schema:
     leaderboard:<scope>:<id>    → Redis Sorted Set (score = total km)
     leaderboard:<scope>:<id>:ts → Redis String (last recalculation timestamp)
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,7 +27,7 @@ from core.redis_cluster import get_redis, get_pipeline
 
 logger = logging.getLogger(__name__)
 
-_CACHE_TTL_S = int(os.getenv("LEADERBOARD_CACHE_TTL", "30"))   # seconds
+_CACHE_TTL_S = int(os.getenv("LEADERBOARD_CACHE_TTL", "30"))  # seconds
 
 
 class LeaderboardService:
@@ -82,7 +83,9 @@ class LeaderboardService:
         except Exception as exc:
             logger.warning(
                 "leaderboard.update_failed scope=%s entity=%s err=%s",
-                scope, entity_id, exc,
+                scope,
+                entity_id,
+                exc,
             )
 
     # ------------------------------------------------------------------
@@ -127,12 +130,16 @@ class LeaderboardService:
 
             logger.info(
                 "leaderboard.batch_recalc scope=%s entity=%s users=%d",
-                scope, entity_id, len(scores),
+                scope,
+                entity_id,
+                len(scores),
             )
         except Exception as exc:
             logger.error(
                 "leaderboard.batch_recalc_failed scope=%s entity=%s err=%s",
-                scope, entity_id, exc,
+                scope,
+                entity_id,
+                exc,
             )
 
     @classmethod
@@ -281,12 +288,14 @@ class LeaderboardService:
                     ts_key = f"{key_str}:ts"
                     ts_val = r.get(ts_key)
                     last_updated = float(ts_val) if ts_val else None
-                    leaderboards.append({
-                        "city_id": entity_id,
-                        "city_name": tenants.get(entity_id, "Unknown"),
-                        "total_participants": count,
-                        "last_updated": last_updated,
-                    })
+                    leaderboards.append(
+                        {
+                            "city_id": entity_id,
+                            "city_name": tenants.get(entity_id, "Unknown"),
+                            "total_participants": count,
+                            "last_updated": last_updated,
+                        }
+                    )
         except Exception as exc:
             logger.error("leaderboard.get_all_failed scope=%s err=%s", scope, exc)
 

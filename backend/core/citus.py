@@ -28,6 +28,7 @@ Usage (run once after enabling Citus):
     docker compose -f docker-compose.scale.yml exec backend \
         python manage.py shell -c "from core.citus import apply_citus_sharding; apply_citus_sharding()"
 """
+
 from __future__ import annotations
 
 import logging
@@ -38,10 +39,10 @@ logger = logging.getLogger(__name__)
 
 # Tables to distribute (sharded by column)
 DISTRIBUTED_TABLES: list[tuple[str, str]] = [
-    ("activities_activity",      "user_id"),
-    ("events_participation",     "user_id"),
-    ("rewards_pointsledger",     "user_id"),
-    ("rewards_voucher",          "user_id"),
+    ("activities_activity", "user_id"),
+    ("events_participation", "user_id"),
+    ("rewards_pointsledger", "user_id"),
+    ("rewards_voucher", "user_id"),
 ]
 
 # Small tables replicated to all workers (for fast JOINs)
@@ -104,7 +105,9 @@ def apply_citus_sharding() -> None:
                 )
                 logger.info(
                     "citus.distributed_table table=%s dist_col=%s shards=%d",
-                    table, dist_col, SHARD_COUNT,
+                    table,
+                    dist_col,
+                    SHARD_COUNT,
                 )
             except Exception as exc:
                 logger.warning("citus.distributed_table_skip table=%s err=%s", table, exc)
@@ -112,7 +115,8 @@ def apply_citus_sharding() -> None:
 
     logger.info(
         "citus.sharding_complete reference=%d distributed=%d",
-        len(REFERENCE_TABLES), len(DISTRIBUTED_TABLES),
+        len(REFERENCE_TABLES),
+        len(DISTRIBUTED_TABLES),
     )
 
 
@@ -136,9 +140,7 @@ def add_citus_worker(host: str, port: int = 5432) -> None:
 
 def _citus_extension_installed(cursor) -> bool:
     """Avoid querying pg_dist_* on plain Postgres (Railway) — those errors flood server logs."""
-    cursor.execute(
-        "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1;"
-    )
+    cursor.execute("SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1;")
     return cursor.fetchone() is not None
 
 

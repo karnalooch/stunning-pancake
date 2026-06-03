@@ -10,6 +10,7 @@ Endpoints:
 
 Access: Admin only (IsAdminUser permission).
 """
+
 from __future__ import annotations
 
 import time
@@ -28,6 +29,7 @@ START_TIME = time.time()
 def redis_health_view(request: Request) -> Response:
     """Returns Redis Cluster topology and latency."""
     from core.redis_cluster import health_check
+
     return Response(health_check())
 
 
@@ -37,17 +39,22 @@ def citus_health_view(request: Request) -> Response:
     """Returns Citus node topology and shard distribution."""
     try:
         from core.citus import citus_cluster_status, citus_shard_status
-        return Response({
-            "nodes": citus_cluster_status(),
-            "shards": citus_shard_status(),
-        })
+
+        return Response(
+            {
+                "nodes": citus_cluster_status(),
+                "shards": citus_shard_status(),
+            }
+        )
     except Exception as exc:
         # Citus not installed — single node mode
-        return Response({
-            "mode": "standalone",
-            "note": "Citus extension not active. Run apply_citus_sharding() to enable.",
-            "error": str(exc),
-        })
+        return Response(
+            {
+                "mode": "standalone",
+                "note": "Citus extension not active. Run apply_citus_sharding() to enable.",
+                "error": str(exc),
+            }
+        )
 
 
 @api_view(["GET"])
@@ -60,6 +67,7 @@ def infra_health_view(request: Request) -> Response:
 
     try:
         from core.citus import citus_cluster_status
+
         citus_nodes = citus_cluster_status()
         citus_status = {
             "mode": "cluster" if len(citus_nodes) > 1 else "standalone",
@@ -71,11 +79,13 @@ def infra_health_view(request: Request) -> Response:
 
     overall = "ok" if redis_status.get("status") in ("ok", "online") else "degraded"
 
-    return Response({
-        "status": overall,
-        "redis": redis_status,
-        "citus": citus_status,
-    })
+    return Response(
+        {
+            "status": overall,
+            "redis": redis_status,
+            "citus": citus_status,
+        }
+    )
 
 
 class SystemHealthView(APIView):
@@ -84,6 +94,7 @@ class SystemHealthView(APIView):
     Backend, PostgreSQL, Redis, Celery, Storage, Citus.
     GET /api/infra/health/
     """
+
     permission_classes = (IsAdminUser,)
 
     def get(self, request):
@@ -95,6 +106,7 @@ class SystemHealthView(APIView):
         # -- Citus (existing) --
         try:
             from core.citus import citus_cluster_status
+
             citus_nodes = citus_cluster_status()
             citus_status = {
                 "mode": "cluster" if len(citus_nodes) > 1 else "standalone",
@@ -107,6 +119,7 @@ class SystemHealthView(APIView):
         # -- PostgreSQL --
         try:
             from django.db import connection
+
             t0 = time.monotonic()
             connection.ensure_connection()
             with connection.cursor() as cursor:
@@ -119,6 +132,7 @@ class SystemHealthView(APIView):
         # -- Celery --
         try:
             from core.celery import app
+
             insp = app.control.inspect()
             stats = insp.stats()
             if stats:
@@ -138,6 +152,7 @@ class SystemHealthView(APIView):
         # -- Storage --
         try:
             import psutil
+
             disk = psutil.disk_usage("/")
             storage_pct = disk.percent
             sto_status = {
@@ -166,12 +181,14 @@ class SystemHealthView(APIView):
         # "ok" if all are "ok", otherwise "degraded"
         overall = "ok" if all(s == "ok" for s in sub_statuses) else "degraded"
 
-        return Response({
-            "status": overall,
-            "backend": backend_status,
-            "postgresql": pg_status,
-            "redis": redis_status,
-            "celery": cel_status,
-            "storage": sto_status,
-            "citus": citus_status,
-        })
+        return Response(
+            {
+                "status": overall,
+                "backend": backend_status,
+                "postgresql": pg_status,
+                "redis": redis_status,
+                "celery": cel_status,
+                "storage": sto_status,
+                "citus": citus_status,
+            }
+        )

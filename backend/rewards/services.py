@@ -8,6 +8,7 @@ Handles:
 - Atomic voucher redemption with race-condition protection.
 - User balance calculation from PointsLedger.
 """
+
 from __future__ import annotations
 
 import logging
@@ -42,9 +43,7 @@ class RewardsService:
         from rewards.models import PointsLedger
         from django.db.models import Sum
 
-        total = PointsLedger.objects.filter(user_id=user_id).aggregate(
-            total=Sum("delta")
-        )["total"]
+        total = PointsLedger.objects.filter(user_id=user_id).aggregate(total=Sum("delta"))["total"]
         return total or 0
 
     @classmethod
@@ -88,7 +87,9 @@ class RewardsService:
         )
         logger.info(
             "rewards.awarded user=%d activity=%d points=%d",
-            activity.user_id, activity_id, points,
+            activity.user_id,
+            activity_id,
+            points,
         )
         return points
 
@@ -124,14 +125,15 @@ class RewardsService:
         if balance < pool.points_required:
             logger.warning(
                 "redeem_voucher: insufficient points user=%d balance=%d required=%d",
-                user_id, balance, pool.points_required,
+                user_id,
+                balance,
+                pool.points_required,
             )
             return None
 
         # Claim an unassigned voucher — SELECT FOR UPDATE prevents race conditions
         voucher = (
-            Voucher.objects
-            .select_for_update(skip_locked=True)
+            Voucher.objects.select_for_update(skip_locked=True)
             .filter(pool=pool, user__isnull=True)
             .first()
         )
@@ -152,6 +154,9 @@ class RewardsService:
 
         logger.info(
             "rewards.redeemed user=%d pool=%d code=%s points_spent=%d",
-            user_id, pool_id, voucher.code, pool.points_required,
+            user_id,
+            pool_id,
+            voucher.code,
+            pool.points_required,
         )
         return voucher

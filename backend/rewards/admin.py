@@ -1,6 +1,7 @@
 """
 Django Admin registration for Rewards & Voucher Marketplace.
 """
+
 from django.contrib import admin
 from rewards.models import Sponsor, VoucherPool, Voucher, PointsLedger
 
@@ -22,13 +23,21 @@ class VoucherInline(admin.TabularInline):
 
 @admin.register(VoucherPool)
 class VoucherPoolAdmin(admin.ModelAdmin):
-    list_display = ["title", "sponsor", "points_required", "available_count", "valid_from", "valid_until"]
+    list_display = [
+        "title",
+        "sponsor",
+        "points_required",
+        "available_count",
+        "valid_from",
+        "valid_until",
+    ]
     list_filter = ["sponsor"]
     search_fields = ["title", "sponsor__name"]
     inlines = [VoucherInline]
 
     def available_count(self, obj):
         return obj.available_count
+
     available_count.short_description = "Available"
 
 

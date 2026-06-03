@@ -4,6 +4,7 @@ Scale limits for large simulations (e.g. 300k athletes).
 Override via environment variables. See docs/SCALE_TEST_300K.md.
 Per-session overrides (admin wizard) take precedence over env when set.
 """
+
 from __future__ import annotations
 
 import json
@@ -22,7 +23,7 @@ def _int(name: str, default: int) -> int:
 def _int_env_or(name: str, computed: int) -> int:
     """Use env var when set; otherwise adaptive `computed` default."""
     val = os.getenv(name)
-    if val is None or str(val).strip() == '':
+    if val is None or str(val).strip() == "":
         return int(computed)
     try:
         return int(val)
@@ -34,45 +35,45 @@ def _bool(name: str, default: bool) -> bool:
     val = os.getenv(name)
     if val is None:
         return default
-    return val.lower() in ('1', 'true', 'yes', 'on')
+    return val.lower() in ("1", "true", "yes", "on")
 
 
 def _celery_worker_concurrency() -> int:
     try:
-        return max(1, int(os.getenv('CELERY_WORKER_CONCURRENCY', '4')))
+        return max(1, int(os.getenv("CELERY_WORKER_CONCURRENCY", "4")))
     except (TypeError, ValueError):
         return 4
 
 
 # Batch generator (Postgres users)
-MAX_BATCH_USERS = _int('SCALE_MAX_BATCH_USERS', 350_000)
+MAX_BATCH_USERS = _int("SCALE_MAX_BATCH_USERS", 350_000)
 
 # Live sim pool size (logical target; Redis SET capped separately)
-MAX_LIVE_POOL = _int('SCALE_MAX_LIVE_POOL', 350_000)
+MAX_LIVE_POOL = _int("SCALE_MAX_LIVE_POOL", 350_000)
 
 # Max athlete IDs stored in Redis SETs (global + per-city); medium tier caps here
-MAX_LIVE_POOL_REDIS = _int('SCALE_LIVE_POOL_MAX_REDIS', 50_000)
+MAX_LIVE_POOL_REDIS = _int("SCALE_LIVE_POOL_MAX_REDIS", 50_000)
 
 # Live pool tiers (see live_pool_mode_for_target)
-LIVE_POOL_REDIS_FULL_ABOVE = _int('SCALE_LIVE_POOL_REDIS_FULL_ABOVE', 5_000)
-SKIP_GLOBAL_LIVE_POOL_ABOVE = _int('SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE', 50_000)
-SIM_SKIP_GLOBAL_LIVE_POOL = _bool('SCALE_SIM_SKIP_GLOBAL_LIVE_POOL', False)
+LIVE_POOL_REDIS_FULL_ABOVE = _int("SCALE_LIVE_POOL_REDIS_FULL_ABOVE", 5_000)
+SKIP_GLOBAL_LIVE_POOL_ABOVE = _int("SCALE_SKIP_GLOBAL_LIVE_POOL_ABOVE", 50_000)
+SIM_SKIP_GLOBAL_LIVE_POOL = _bool("SCALE_SIM_SKIP_GLOBAL_LIVE_POOL", False)
 
 # Admin: warn when starting a large batch without wipe (existing athletes in DB)
-BATCH_WARN_WITHOUT_WIPE_ABOVE = _int('SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE', 10_000)
+BATCH_WARN_WITHOUT_WIPE_ABOVE = _int("SCALE_BATCH_WARN_WITHOUT_WIPE_ABOVE", 10_000)
 
 # Concurrent riders + telemetry published per tick (memory / Redis hash size)
-MAX_CONCURRENT_RIDERS = _int('SCALE_MAX_CONCURRENT_RIDERS', 50_000)
-MAX_TELEMETRY_PUBLISH_PER_TICK = _int('SCALE_MAX_TELEMETRY_PUBLISH', 50_000)
+MAX_CONCURRENT_RIDERS = _int("SCALE_MAX_CONCURRENT_RIDERS", 50_000)
+MAX_TELEMETRY_PUBLISH_PER_TICK = _int("SCALE_MAX_TELEMETRY_PUBLISH", 50_000)
 # Global cap for new live starts per tick (all modes, 0=unbounded). Default 30 avoids
 # fork-OOM on Railway when strict road routing fans out BRouter HTTP per start.
-MAX_STARTS_PER_LIVE_TICK = _int('SCALE_MAX_STARTS_PER_LIVE_TICK', 30)
+MAX_STARTS_PER_LIVE_TICK = _int("SCALE_MAX_STARTS_PER_LIVE_TICK", 30)
 
 # Hard cap on BRouter HTTP calls inside one live_tick_task (0=unlimited).
-BROUTER_MAX_CALLS_PER_TICK = _int('SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK', 25)
+BROUTER_MAX_CALLS_PER_TICK = _int("SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK", 25)
 
 # BRouter snap-to-road retries per new ride start (live sim).
-BROUTER_ROUTE_ATTEMPTS = _int('SCALE_SIM_BROUTER_ROUTE_ATTEMPTS', 4)
+BROUTER_ROUTE_ATTEMPTS = _int("SCALE_SIM_BROUTER_ROUTE_ATTEMPTS", 4)
 
 # Admin wizard / session override bounds (server-enforced; UI sliders stay inside these).
 OVERRIDE_MAX_STARTS_HARD_CAP = 150
@@ -83,11 +84,13 @@ OVERRIDE_ROUTE_ATTEMPTS_MIN = 2
 OVERRIDE_ROUTE_ATTEMPTS_MAX = 8
 
 # Keys accepted in API `scale_overrides` object
-SCALE_OVERRIDE_KEYS = frozenset({
-    'max_starts_per_live_tick',
-    'brouter_max_calls_per_tick',
-    'brouter_route_attempts',
-})
+SCALE_OVERRIDE_KEYS = frozenset(
+    {
+        "max_starts_per_live_tick",
+        "brouter_max_calls_per_tick",
+        "brouter_route_attempts",
+    }
+)
 
 
 def _resolve_int(
@@ -108,7 +111,7 @@ def parse_scale_overrides_payload(raw: Any) -> dict[str, int] | None:
         return None
     if isinstance(raw, str):
         s = raw.strip()
-        if not s or s.lower() == 'none':
+        if not s or s.lower() == "none":
             return None
         try:
             raw = json.loads(s)
@@ -124,11 +127,11 @@ def parse_scale_overrides_payload(raw: Any) -> dict[str, int] | None:
             val = int(raw[key])
         except (TypeError, ValueError):
             continue
-        if key == 'max_starts_per_live_tick':
+        if key == "max_starts_per_live_tick":
             val = max(OVERRIDE_MIN_STARTS, min(OVERRIDE_MAX_STARTS_HARD_CAP, val))
-        elif key == 'brouter_max_calls_per_tick':
+        elif key == "brouter_max_calls_per_tick":
             val = max(OVERRIDE_MIN_BROUTER_CALLS, min(OVERRIDE_MAX_BROUTER_CALLS_HARD_CAP, val))
-        elif key == 'brouter_route_attempts':
+        elif key == "brouter_route_attempts":
             val = max(OVERRIDE_ROUTE_ATTEMPTS_MIN, min(OVERRIDE_ROUTE_ATTEMPTS_MAX, val))
         out[key] = val
     return out or None
@@ -144,7 +147,7 @@ def scale_overrides_for_storage(overrides: dict[str, int] | None) -> str | None:
 def parse_scale_overrides_from_state(state: dict | None) -> dict[str, int] | None:
     if not state:
         return None
-    return parse_scale_overrides_payload(state.get('scale_overrides'))
+    return parse_scale_overrides_payload(state.get("scale_overrides"))
 
 
 def resolve_live_scale_limits(state: dict | None = None) -> dict[str, int]:
@@ -153,32 +156,33 @@ def resolve_live_scale_limits(state: dict | None = None) -> dict[str, int]:
     """
     overrides = parse_scale_overrides_from_state(state)
     return {
-        'max_starts_per_live_tick': _resolve_int(
-            'max_starts_per_live_tick',
-            env_name='SCALE_MAX_STARTS_PER_LIVE_TICK',
+        "max_starts_per_live_tick": _resolve_int(
+            "max_starts_per_live_tick",
+            env_name="SCALE_MAX_STARTS_PER_LIVE_TICK",
             env_default=30,
             overrides=overrides,
         ),
-        'brouter_max_calls_per_tick': _resolve_int(
-            'brouter_max_calls_per_tick',
-            env_name='SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK',
+        "brouter_max_calls_per_tick": _resolve_int(
+            "brouter_max_calls_per_tick",
+            env_name="SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK",
             env_default=25,
             overrides=overrides,
         ),
-        'brouter_route_attempts': _resolve_int(
-            'brouter_route_attempts',
-            env_name='SCALE_SIM_BROUTER_ROUTE_ATTEMPTS',
+        "brouter_route_attempts": _resolve_int(
+            "brouter_route_attempts",
+            env_name="SCALE_SIM_BROUTER_ROUTE_ATTEMPTS",
             env_default=4,
             overrides=overrides,
         ),
     }
 
+
 # Live map API (viewport + zoom; see resolve_telemetry_api_limit)
-TELEMETRY_API_DEFAULT_LIMIT = _int('SCALE_TELEMETRY_API_LIMIT', 800)
-TELEMETRY_API_MAX_LIMIT = _int('SCALE_TELEMETRY_API_MAX_LIMIT', 15_000)
-TELEMETRY_GEO_RADIUS_KM = _int('SCALE_TELEMETRY_GEO_RADIUS_KM', 80)
+TELEMETRY_API_DEFAULT_LIMIT = _int("SCALE_TELEMETRY_API_LIMIT", 800)
+TELEMETRY_API_MAX_LIMIT = _int("SCALE_TELEMETRY_API_MAX_LIMIT", 15_000)
+TELEMETRY_GEO_RADIUS_KM = _int("SCALE_TELEMETRY_GEO_RADIUS_KM", 80)
 # Short TTL for identical bbox+limit live-map polls (seconds)
-TELEMETRY_LIVE_CACHE_TTL = _int('SCALE_TELEMETRY_LIVE_CACHE_TTL', 2)
+TELEMETRY_LIVE_CACHE_TTL = _int("SCALE_TELEMETRY_LIVE_CACHE_TTL", 2)
 
 
 def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
@@ -199,44 +203,47 @@ def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
 
 
 # Redis SADD chunk size when building live pool
-POOL_SADD_BATCH = _int('SCALE_POOL_SADD_BATCH', 5_000)
+POOL_SADD_BATCH = _int("SCALE_POOL_SADD_BATCH", 5_000)
 
 # Above this, batch sim should use skip_activities unless explicitly allowed
-SKIP_ACTIVITIES_WARN_ABOVE = _int('SCALE_SKIP_ACTIVITIES_WARN_ABOVE', 50_000)
-FORCE_SKIP_ACTIVITIES_ABOVE = _int('SCALE_FORCE_SKIP_ACTIVITIES_ABOVE', 150_000)
+SKIP_ACTIVITIES_WARN_ABOVE = _int("SCALE_SKIP_ACTIVITIES_WARN_ABOVE", 50_000)
+FORCE_SKIP_ACTIVITIES_ABOVE = _int("SCALE_FORCE_SKIP_ACTIVITIES_ABOVE", 150_000)
 
 # Admin dashboard stats cache TTL (seconds)
-STATS_CACHE_TTL = _int('SCALE_STATS_CACHE_TTL', 120)
+STATS_CACHE_TTL = _int("SCALE_STATS_CACHE_TTL", 120)
 
 # Heatmap: max bbox diagonal (km), activities sampled per request, min zoom
-HEATMAP_MAX_BBOX_KM = _int('SCALE_HEATMAP_MAX_BBOX_KM', 120)
-HEATMAP_MAX_ACTIVITIES_SAMPLE = _int('SCALE_HEATMAP_MAX_ACTIVITIES', 1500)
-HEATMAP_MIN_ZOOM = _int('SCALE_HEATMAP_MIN_ZOOM', 7)
-HEATMAP_CACHE_TTL = _int('SCALE_HEATMAP_CACHE_TTL', 300)
+HEATMAP_MAX_BBOX_KM = _int("SCALE_HEATMAP_MAX_BBOX_KM", 120)
+HEATMAP_MAX_ACTIVITIES_SAMPLE = _int("SCALE_HEATMAP_MAX_ACTIVITIES", 1500)
+HEATMAP_MIN_ZOOM = _int("SCALE_HEATMAP_MIN_ZOOM", 7)
+HEATMAP_CACHE_TTL = _int("SCALE_HEATMAP_CACHE_TTL", 300)
 
 # Wipe chunks (rows per DELETE batch)
-WIPE_CHUNK_SIZE = _int('SCALE_WIPE_CHUNK_SIZE', 5000)
+WIPE_CHUNK_SIZE = _int("SCALE_WIPE_CHUNK_SIZE", 5000)
 
 # Celery batch: parallel user creation per city (requires skip_activities)
-BATCH_PARALLEL_CITIES = os.getenv('SCALE_BATCH_PARALLEL_CITIES', 'true').lower() in (
-    '1', 'true', 'yes', 'on',
+BATCH_PARALLEL_CITIES = os.getenv("SCALE_BATCH_PARALLEL_CITIES", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
 )
-BATCH_PARALLEL_MIN_USERS = _int('SCALE_BATCH_PARALLEL_MIN_USERS', 5_000)
+BATCH_PARALLEL_MIN_USERS = _int("SCALE_BATCH_PARALLEL_MIN_USERS", 5_000)
 
 # Static fallbacks when total_users is unknown (overridden by compute_batch_scaling)
-USER_BULK_BATCH_SIZE = _int('SCALE_USER_BULK_BATCH_SIZE', 2500)
-USER_BULK_PG_BATCH_SIZE = _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)
+USER_BULK_BATCH_SIZE = _int("SCALE_USER_BULK_BATCH_SIZE", 2500)
+USER_BULK_PG_BATCH_SIZE = _int("SCALE_USER_BULK_PG_BATCH_SIZE", 500)
 
 # Batch user insert fast path (skip_activities flows): skip UserDepartment + SELECT refetch
-SKIP_DEPT_ON_BATCH = _bool('SCALE_SKIP_DEPT_ON_BATCH', True)
-BATCH_FAST_INSERT = _bool('SCALE_BATCH_FAST_INSERT', True)
+SKIP_DEPT_ON_BATCH = _bool("SCALE_SKIP_DEPT_ON_BATCH", True)
+BATCH_FAST_INSERT = _bool("SCALE_BATCH_FAST_INSERT", True)
 
 # Chord city cap (we have 10 CITIES in simulate_active_cities — keep headroom for future)
-BATCH_MAX_CITY_TASKS = _int('SCALE_BATCH_MAX_CITY_TASKS', 20)
-BATCH_MIN_CITY_TASKS = _int('SCALE_BATCH_MIN_CITY_TASKS', 5)
+BATCH_MAX_CITY_TASKS = _int("SCALE_BATCH_MAX_CITY_TASKS", 20)
+BATCH_MIN_CITY_TASKS = _int("SCALE_BATCH_MIN_CITY_TASKS", 5)
 
 # Redis progress: flush users_created counter at most every N inserted users (per worker)
-BATCH_PROGRESS_REDIS_EVERY = _int('SCALE_BATCH_PROGRESS_REDIS_EVERY', 5000)
+BATCH_PROGRESS_REDIS_EVERY = _int("SCALE_BATCH_PROGRESS_REDIS_EVERY", 5000)
 
 # PostgreSQL persistent connections — applied in core.settings (DATABASE_CONN_MAX_AGE, default 60)
 
@@ -248,44 +255,46 @@ def _float(name: str, default: float) -> float:
         return default
 
 
-BATCH_PROGRESS_UI_MIN_SECONDS = _float('SCALE_BATCH_PROGRESS_UI_MIN_SECONDS', 2.0)
+BATCH_PROGRESS_UI_MIN_SECONDS = _float("SCALE_BATCH_PROGRESS_UI_MIN_SECONDS", 2.0)
 
 # Postgres disk estimate for preflight (GB at 300k reference ~10 GB)
-BATCH_DISK_GB_AT_300K = _float('SCALE_BATCH_DISK_GB_AT_300K', 10.0)
+BATCH_DISK_GB_AT_300K = _float("SCALE_BATCH_DISK_GB_AT_300K", 10.0)
 
 # Automatic disk guard (wipe + chunk tuning) — no manual monitoring
-AUTO_DISK_GUARD = _bool('SCALE_AUTO_DISK_GUARD', True)
-AUTO_WIPE_BEFORE_BATCH = _bool('SCALE_AUTO_WIPE_BEFORE_BATCH', True)
+AUTO_DISK_GUARD = _bool("SCALE_AUTO_DISK_GUARD", True)
+AUTO_WIPE_BEFORE_BATCH = _bool("SCALE_AUTO_WIPE_BEFORE_BATCH", True)
 # Conservative floor when pg_database_size is tiny after wipe (b071e14 — not the 0.5 GB tier).
 # Railway Postgres volumes are often 5 GB; set SCALE_POSTGRES_DISK_BUDGET_GB explicitly in prod.
 POSTGRES_DISK_BUDGET_GB_FLOOR = 5.0
 POSTGRES_DISK_BUDGET_GB_DEFAULT = _float(
-    'SCALE_POSTGRES_DISK_BUDGET_GB',
+    "SCALE_POSTGRES_DISK_BUDGET_GB",
     POSTGRES_DISK_BUDGET_GB_FLOOR,
 )
 
 
 def is_postgres_disk_budget_env_set() -> bool:
     """True when SCALE_POSTGRES_DISK_BUDGET_GB is explicitly set (recommended on Railway)."""
-    val = os.getenv('SCALE_POSTGRES_DISK_BUDGET_GB')
-    return val is not None and str(val).strip() != ''
-DISK_HEADROOM_GB = _float('SCALE_DISK_HEADROOM_GB', 2.0)
-WIPE_WAIT_TIMEOUT_SEC = _float('SCALE_WIPE_WAIT_TIMEOUT_SEC', 3600.0)
+    val = os.getenv("SCALE_POSTGRES_DISK_BUDGET_GB")
+    return val is not None and str(val).strip() != ""
+
+
+DISK_HEADROOM_GB = _float("SCALE_DISK_HEADROOM_GB", 2.0)
+WIPE_WAIT_TIMEOUT_SEC = _float("SCALE_WIPE_WAIT_TIMEOUT_SEC", 3600.0)
 
 # Proactive disk monitor (Celery beat + manage.py check_disk_guard)
-DISK_MONITOR_ENABLED = _bool('SCALE_DISK_MONITOR_ENABLED', True)
-DISK_WARN_PCT = _float('SCALE_DISK_WARN_PCT', 0.80)
-DISK_PAUSE_SIM_PCT = _float('SCALE_DISK_PAUSE_SIM_PCT', 0.90)
-DISK_BLOCK_WRITES_PCT = _float('SCALE_DISK_BLOCK_WRITES_PCT', 0.95)
+DISK_MONITOR_ENABLED = _bool("SCALE_DISK_MONITOR_ENABLED", True)
+DISK_WARN_PCT = _float("SCALE_DISK_WARN_PCT", 0.80)
+DISK_PAUSE_SIM_PCT = _float("SCALE_DISK_PAUSE_SIM_PCT", 0.90)
+DISK_BLOCK_WRITES_PCT = _float("SCALE_DISK_BLOCK_WRITES_PCT", 0.95)
 # Optional: delete simulator activities older than N days (0 = off)
-SIM_ACTIVITY_RETENTION_DAYS = _int('SCALE_SIM_ACTIVITY_RETENTION_DAYS', 0)
+SIM_ACTIVITY_RETENTION_DAYS = _int("SCALE_SIM_ACTIVITY_RETENTION_DAYS", 0)
 
 
 def adaptive_user_bulk_batch_size(total_users: int) -> int:
     """Django bulk_create chunk per Redis progress tick — scales with target."""
     total = max(1, int(total_users))
-    if os.getenv('SCALE_USER_BULK_BATCH_SIZE'):
-        return _int('SCALE_USER_BULK_BATCH_SIZE', 2500)
+    if os.getenv("SCALE_USER_BULK_BATCH_SIZE"):
+        return _int("SCALE_USER_BULK_BATCH_SIZE", 2500)
     if total <= 10_000:
         return 2500
     if total <= 50_000:
@@ -298,8 +307,8 @@ def adaptive_user_bulk_batch_size(total_users: int) -> int:
 
 def adaptive_pg_bulk_batch_size(bulk_batch: int, total_users: int | None = None) -> int:
     """Inner PG batch_size for bulk_create — scales down with target_users (100 → 300k)."""
-    if os.getenv('SCALE_USER_BULK_PG_BATCH_SIZE'):
-        return _int('SCALE_USER_BULK_PG_BATCH_SIZE', 500)
+    if os.getenv("SCALE_USER_BULK_PG_BATCH_SIZE"):
+        return _int("SCALE_USER_BULK_PG_BATCH_SIZE", 500)
     total = max(1, int(total_users or 0))
     bb = max(1, int(bulk_batch))
     if total >= 200_000:
@@ -319,15 +328,15 @@ def live_pool_mode_for_target(target_users: int) -> str:
     db    — no Redis athlete SET; ticks use order_by('?')[:n] per city.
     """
     if SIM_SKIP_GLOBAL_LIVE_POOL:
-        return 'db'
+        return "db"
     if int(target_users) >= SKIP_GLOBAL_LIVE_POOL_ABOVE:
-        return 'db'
-    return 'redis'
+        return "db"
+    return "redis"
 
 
 def should_skip_global_live_pool(total_users: int) -> bool:
     """True when live sim must use DB sampling (large tier)."""
-    return live_pool_mode_for_target(total_users) == 'db'
+    return live_pool_mode_for_target(total_users) == "db"
 
 
 def effective_redis_pool_limit(pool_target: int) -> int:
@@ -364,7 +373,7 @@ def adaptive_parallel_db_workers(total_users: int) -> int:
         computed = min(concurrency, 6)
     else:
         computed = min(concurrency, 4)
-    return max(1, _int_env_or('SCALE_BATCH_MAX_PARALLEL_WORKERS', computed))
+    return max(1, _int_env_or("SCALE_BATCH_MAX_PARALLEL_WORKERS", computed))
 
 
 def plan_batch_cities(total_users: int, max_cities_available: int = 10) -> tuple[int, int]:
@@ -402,7 +411,11 @@ def estimate_batch_duration_seconds(
 ) -> int:
     """Rough ETA for admin preflight (skip_activities fast path)."""
     total = max(1, int(total_users))
-    n_cities, upc = plan_batch_cities(total) if num_cities is None else (num_cities, math.ceil(total / max(1, num_cities)))
+    n_cities, upc = (
+        plan_batch_cities(total)
+        if num_cities is None
+        else (num_cities, math.ceil(total / max(1, num_cities)))
+    )
     bulk = bulk_batch_size or adaptive_user_bulk_batch_size(total)
     parallel = adaptive_parallel_db_workers(total)
 
@@ -427,7 +440,7 @@ def compute_batch_scaling(total_users: int, max_cities_available: int = 10) -> d
     pg_batch = adaptive_pg_bulk_batch_size(bulk_batch, total)
     parallel_workers = adaptive_parallel_db_workers(total)
     progress_every = _int_env_or(
-        'SCALE_BATCH_PROGRESS_REDIS_EVERY',
+        "SCALE_BATCH_PROGRESS_REDIS_EVERY",
         max(2500, min(10_000, bulk_batch * 2)),
     )
 
@@ -435,30 +448,32 @@ def compute_batch_scaling(total_users: int, max_cities_available: int = 10) -> d
     redis_cap = effective_redis_pool_limit(total)
 
     return {
-        'total_users': total,
-        'num_cities': num_cities,
-        'users_per_city': users_per_city,
-        'user_bulk_batch_size': bulk_batch,
-        'user_bulk_pg_batch_size': pg_batch,
-        'max_parallel_workers': parallel_workers,
-        'max_parallel_cities': min(num_cities, parallel_workers),
-        'batch_progress_redis_every': progress_every,
-        'batch_progress_ui_min_seconds': BATCH_PROGRESS_UI_MIN_SECONDS,
-        'use_parallel_cities': (
-            BATCH_PARALLEL_CITIES
-            and total >= BATCH_PARALLEL_MIN_USERS
+        "total_users": total,
+        "num_cities": num_cities,
+        "users_per_city": users_per_city,
+        "user_bulk_batch_size": bulk_batch,
+        "user_bulk_pg_batch_size": pg_batch,
+        "max_parallel_workers": parallel_workers,
+        "max_parallel_cities": min(num_cities, parallel_workers),
+        "batch_progress_redis_every": progress_every,
+        "batch_progress_ui_min_seconds": BATCH_PROGRESS_UI_MIN_SECONDS,
+        "use_parallel_cities": (BATCH_PARALLEL_CITIES and total >= BATCH_PARALLEL_MIN_USERS),
+        "estimated_batch_seconds": estimate_batch_duration_seconds(
+            total,
+            skip_activities=True,
+            num_cities=num_cities,
+            bulk_batch_size=bulk_batch,
         ),
-        'estimated_batch_seconds': estimate_batch_duration_seconds(
-            total, skip_activities=True, num_cities=num_cities, bulk_batch_size=bulk_batch,
-        ),
-        'force_skip_activities': total >= FORCE_SKIP_ACTIVITIES_ABOVE,
-        'live_pool_mode': live_mode,
-        'live_pool_redis_cap': redis_cap,
-        'estimated_disk_gb': estimate_batch_disk_gb(total, skip_activities=True),
-        'warn_without_wipe': total >= BATCH_WARN_WITHOUT_WIPE_ABOVE,
-        'live_pool_tier': (
-            'db' if live_mode == 'db'
-            else 'redis_small' if total < LIVE_POOL_REDIS_FULL_ABOVE
-            else 'redis_capped'
+        "force_skip_activities": total >= FORCE_SKIP_ACTIVITIES_ABOVE,
+        "live_pool_mode": live_mode,
+        "live_pool_redis_cap": redis_cap,
+        "estimated_disk_gb": estimate_batch_disk_gb(total, skip_activities=True),
+        "warn_without_wipe": total >= BATCH_WARN_WITHOUT_WIPE_ABOVE,
+        "live_pool_tier": (
+            "db"
+            if live_mode == "db"
+            else "redis_small"
+            if total < LIVE_POOL_REDIS_FULL_ABOVE
+            else "redis_capped"
         ),
     }

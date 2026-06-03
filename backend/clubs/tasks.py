@@ -7,6 +7,7 @@ main Django request cycle. Matrix ops can be slow (TLS + E2EE setup).
 Queues used:
     notifications — lower priority than 'critical' (telemetry).
 """
+
 from __future__ import annotations
 
 import logging
@@ -131,7 +132,9 @@ def invite_member_to_matrix_async(self, room_id: str, matrix_user_id: str, club_
     except Exception as exc:
         logger.error(
             "invite_member: error room=%s user=%s err=%s",
-            room_id, matrix_user_id, exc,
+            room_id,
+            matrix_user_id,
+            exc,
         )
         raise self.retry(exc=exc)
 

@@ -4,6 +4,7 @@ P3 Tests — TenantRLSMiddleware + ImpersonationAuditMiddleware
 Tests the P0 Issue 2 fixes: skip static paths, tenant session
 variable setting, and impersonation audit logging for mutating requests.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from core.middleware import TenantRLSMiddleware, ImpersonationAuditMiddleware
@@ -15,12 +16,19 @@ class TestTenantRLSMiddleware:
         mock_get_response = MagicMock()
         middleware = TenantRLSMiddleware(mock_get_response)
 
-        for path in ('/static/app.js', '/media/logo.png', '/health/', '/favicon.ico', '/docs/', '/schema/'):
+        for path in (
+            "/static/app.js",
+            "/media/logo.png",
+            "/health/",
+            "/favicon.ico",
+            "/docs/",
+            "/schema/",
+        ):
             request = MagicMock()
             request.path = path
             request.user.is_authenticated = True
 
-            with patch('core.middleware.connection') as mock_conn:
+            with patch("core.middleware.connection") as mock_conn:
                 middleware(request)
                 mock_conn.cursor.assert_not_called()
 
@@ -30,11 +38,11 @@ class TestTenantRLSMiddleware:
         middleware = TenantRLSMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.path = '/api/activities/'
+        request.path = "/api/activities/"
         request.user.is_authenticated = True
-        request.user.tenant_id = 'test-uuid-123'
+        request.user.tenant_id = "test-uuid-123"
 
-        with patch('core.middleware.connection') as mock_conn:
+        with patch("core.middleware.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
@@ -47,10 +55,10 @@ class TestTenantRLSMiddleware:
         middleware = TenantRLSMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.path = '/api/activities/'
+        request.path = "/api/activities/"
         request.user.is_authenticated = False
 
-        with patch('core.middleware.connection') as mock_conn:
+        with patch("core.middleware.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
@@ -65,14 +73,14 @@ class TestImpersonationAuditMiddleware:
         middleware = ImpersonationAuditMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.method = 'GET'
+        request.method = "GET"
         request.user.is_authenticated = True
-        request.user.role = 'GLOBAL_OWNER'
+        request.user.role = "GLOBAL_OWNER"
         request.user.id = 1
         request.user.tenant_id = None
         request.auth = {}
 
-        with patch('core.middleware.AuditLog') as mock_audit:
+        with patch("core.middleware.AuditLog") as mock_audit:
             middleware(request)
             mock_audit.objects.create.assert_not_called()
 
@@ -82,19 +90,19 @@ class TestImpersonationAuditMiddleware:
         middleware = ImpersonationAuditMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.method = 'POST'
-        request.path = '/api/users/1/'
+        request.method = "POST"
+        request.path = "/api/users/1/"
         request.user.is_authenticated = True
         request.user.id = 42
-        request.user.tenant_id = 'tenant-uuid'
-        request.auth = {'impersonated': True, 'impersonator_id': 1}
-        request.META = {'REMOTE_ADDR': '127.0.0.1'}
+        request.user.tenant_id = "tenant-uuid"
+        request.auth = {"impersonated": True, "impersonator_id": 1}
+        request.META = {"REMOTE_ADDR": "127.0.0.1"}
 
         response = MagicMock()
         response.status_code = 200
         mock_get_response.return_value = response
 
-        with patch('core.middleware.AuditLog') as mock_audit:
+        with patch("core.middleware.AuditLog") as mock_audit:
             result = middleware(request)
             mock_audit.objects.create.assert_called_once()
             assert result.status_code == 200
@@ -105,12 +113,12 @@ class TestImpersonationAuditMiddleware:
         middleware = ImpersonationAuditMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.method = 'DELETE'
-        request.path = '/api/activities/5/'
+        request.method = "DELETE"
+        request.path = "/api/activities/5/"
         request.user.is_authenticated = True
         request.user.id = 99
-        request.user.tenant_id = 'tenant-xyz'
-        request.user.role = 'TENANT_ADMIN'
+        request.user.tenant_id = "tenant-xyz"
+        request.user.role = "TENANT_ADMIN"
         request.auth = {}
         request.META = {}
 
@@ -118,7 +126,7 @@ class TestImpersonationAuditMiddleware:
         response.status_code = 204
         mock_get_response.return_value = response
 
-        with patch('core.middleware.AuditLog') as mock_audit:
+        with patch("core.middleware.AuditLog") as mock_audit:
             result = middleware(request)
             mock_audit.objects.create.assert_called_once()
             assert result.status_code == 204
@@ -129,12 +137,12 @@ class TestImpersonationAuditMiddleware:
         middleware = ImpersonationAuditMiddleware(mock_get_response)
 
         request = MagicMock()
-        request.method = 'POST'
-        request.path = '/api/activities/'
+        request.method = "POST"
+        request.path = "/api/activities/"
         request.user.is_authenticated = True
         request.user.id = 7
-        request.user.tenant_id = 'tenant-x'
-        request.user.role = 'ATHLETE'
+        request.user.tenant_id = "tenant-x"
+        request.user.role = "ATHLETE"
         request.auth = {}
         request.META = {}
 
@@ -142,7 +150,7 @@ class TestImpersonationAuditMiddleware:
         response.status_code = 201
         mock_get_response.return_value = response
 
-        with patch('core.middleware.AuditLog') as mock_audit:
+        with patch("core.middleware.AuditLog") as mock_audit:
             result = middleware(request)
             mock_audit.objects.create.assert_not_called()
             assert result.status_code == 201

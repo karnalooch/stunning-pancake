@@ -3,6 +3,7 @@ P0 Tests — User CRUD, Invitation, Audit Logging
 ==================================================
 RC v0.2 critical paths: create/delete users, invitations, audit trail.
 """
+
 import pytest
 from django.urls import reverse
 from rest_framework import status
@@ -26,7 +27,9 @@ def tenant(db):
 @pytest.fixture
 def owner_user(db):
     return User.objects.create_user(
-        username="owner", email="owner@test.com", password="password123",
+        username="owner",
+        email="owner@test.com",
+        password="password123",
         role="GLOBAL_OWNER",
     )
 
@@ -34,8 +37,11 @@ def owner_user(db):
 @pytest.fixture
 def admin_user(db, tenant):
     return User.objects.create_user(
-        username="admin", email="admin@test.com", password="password123",
-        role="TENANT_ADMIN", tenant=tenant,
+        username="admin",
+        email="admin@test.com",
+        password="password123",
+        role="TENANT_ADMIN",
+        tenant=tenant,
     )
 
 
@@ -47,32 +53,44 @@ def other_tenant(db):
 @pytest.fixture
 def other_tenant_admin(db, other_tenant):
     return User.objects.create_user(
-        username="admin2", email="admin2@test.com", password="password123",
-        role="TENANT_ADMIN", tenant=other_tenant,
+        username="admin2",
+        email="admin2@test.com",
+        password="password123",
+        role="TENANT_ADMIN",
+        tenant=other_tenant,
     )
 
 
 @pytest.fixture
 def moderator_user(db, tenant):
     return User.objects.create_user(
-        username="mod", email="mod@test.com", password="password123",
-        role="TENANT_MODERATOR", tenant=tenant,
+        username="mod",
+        email="mod@test.com",
+        password="password123",
+        role="TENANT_MODERATOR",
+        tenant=tenant,
     )
 
 
 @pytest.fixture
 def sponsor_user(db, tenant):
     return User.objects.create_user(
-        username="sponsor", email="sponsor@test.com", password="password123",
-        role="SPONSOR", tenant=tenant,
+        username="sponsor",
+        email="sponsor@test.com",
+        password="password123",
+        role="SPONSOR",
+        tenant=tenant,
     )
 
 
 @pytest.fixture
 def athlete_user(db, tenant):
     return User.objects.create_user(
-        username="athlete", email="athlete@test.com", password="password123",
-        role="ATHLETE", tenant=tenant,
+        username="athlete",
+        email="athlete@test.com",
+        password="password123",
+        role="ATHLETE",
+        tenant=tenant,
     )
 
 
@@ -80,17 +98,22 @@ def athlete_user(db, tenant):
 # UserCreateView
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestUserCreate:
     def test_owner_can_create_user(self, api_client, owner_user, tenant):
         api_client.force_authenticate(user=owner_user)
-        response = api_client.post(reverse("user-create"), {
-            "username": "newuser",
-            "email": "new@test.com",
-            "password": "securepass123",
-            "role": "ATHLETE",
-            "tenant_id": str(tenant.id),
-        }, format="json")
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "newuser",
+                "email": "new@test.com",
+                "password": "securepass123",
+                "role": "ATHLETE",
+                "tenant_id": str(tenant.id),
+            },
+            format="json",
+        )
         assert response.status_code == 201
         user = User.objects.get(username="newuser")
         assert user.role == "ATHLETE"
@@ -99,43 +122,62 @@ class TestUserCreate:
 
     def test_creates_audit_log(self, api_client, owner_user, tenant):
         api_client.force_authenticate(user=owner_user)
-        api_client.post(reverse("user-create"), {
-            "username": "logged_user",
-            "email": "log@test.com",
-            "password": "securepass123",
-        }, format="json")
+        api_client.post(
+            reverse("user-create"),
+            {
+                "username": "logged_user",
+                "email": "log@test.com",
+                "password": "securepass123",
+            },
+            format="json",
+        )
         assert AuditLog.objects.filter(action__contains="Created user logged_user").exists()
 
     def test_athlete_cannot_create(self, api_client, athlete_user):
         api_client.force_authenticate(user=athlete_user)
-        response = api_client.post(reverse("user-create"), {
-            "username": "bad", "email": "bad@test.com", "password": "pass123456",
-        }, format="json")
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "bad",
+                "email": "bad@test.com",
+                "password": "pass123456",
+            },
+            format="json",
+        )
         assert response.status_code == 403
 
     def test_duplicate_username_rejected(self, api_client, owner_user, athlete_user):
         api_client.force_authenticate(user=owner_user)
-        response = api_client.post(reverse("user-create"), {
-            "username": "athlete",  # already exists
-            "email": "dup@test.com",
-            "password": "pass123456",
-        }, format="json")
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "athlete",  # already exists
+                "email": "dup@test.com",
+                "password": "pass123456",
+            },
+            format="json",
+        )
         assert response.status_code == 400
 
     def test_admin_can_create_for_tenant(self, api_client, admin_user, tenant):
         api_client.force_authenticate(user=admin_user)
-        response = api_client.post(reverse("user-create"), {
-            "username": "tenant_user",
-            "email": "tuser@test.com",
-            "password": "securepass123",
-            "role": "TENANT_MODERATOR",
-        }, format="json")
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "tenant_user",
+                "email": "tuser@test.com",
+                "password": "securepass123",
+                "role": "TENANT_MODERATOR",
+            },
+            format="json",
+        )
         assert response.status_code == 201
 
 
 # ---------------------------------------------------------------------------
 # UserDeleteView
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestUserDelete:
@@ -176,15 +218,20 @@ class TestUserDelete:
 # InvitationTokenView
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.django_db
 class TestInvitation:
     def test_admin_can_send_invitation(self, api_client, admin_user, tenant):
         api_client.force_authenticate(user=admin_user)
-        response = api_client.post(reverse("invitation"), {
-            "email": "invitee@test.com",
-            "name": "Jan Kowalski",
-            "role": "TENANT_MODERATOR",
-        }, format="json")
+        response = api_client.post(
+            reverse("invitation"),
+            {
+                "email": "invitee@test.com",
+                "name": "Jan Kowalski",
+                "role": "TENANT_MODERATOR",
+            },
+            format="json",
+        )
         assert response.status_code == 201
         data = response.data
         assert data["email"] == "invitee@test.com"
@@ -195,10 +242,16 @@ class TestInvitation:
 
     def test_invitation_creates_audit_log(self, api_client, admin_user):
         api_client.force_authenticate(user=admin_user)
-        api_client.post(reverse("invitation"), {
-            "email": "audit_invite@test.com",
-        }, format="json")
-        assert AuditLog.objects.filter(action__contains="Invited user audit_invite@test.com").exists()
+        api_client.post(
+            reverse("invitation"),
+            {
+                "email": "audit_invite@test.com",
+            },
+            format="json",
+        )
+        assert AuditLog.objects.filter(
+            action__contains="Invited user audit_invite@test.com"
+        ).exists()
 
     def test_missing_email_rejected(self, api_client, owner_user):
         api_client.force_authenticate(user=owner_user)
@@ -207,26 +260,39 @@ class TestInvitation:
 
     def test_athlete_cannot_invite(self, api_client, athlete_user):
         api_client.force_authenticate(user=athlete_user)
-        response = api_client.post(reverse("invitation"), {
-            "email": "bad@test.com",
-        }, format="json")
+        response = api_client.post(
+            reverse("invitation"),
+            {
+                "email": "bad@test.com",
+            },
+            format="json",
+        )
         assert response.status_code == 403
 
     def test_duplicate_invitation_unique_username(self, api_client, admin_user):
         """Second invitation with same email prefix generates unique username."""
         api_client.force_authenticate(user=admin_user)
-        r1 = api_client.post(reverse("invitation"), {
-            "email": "same@test.com",
-        }, format="json")
-        r2 = api_client.post(reverse("invitation"), {
-            "email": "same@test.com",
-        }, format="json")
+        r1 = api_client.post(
+            reverse("invitation"),
+            {
+                "email": "same@test.com",
+            },
+            format="json",
+        )
+        r2 = api_client.post(
+            reverse("invitation"),
+            {
+                "email": "same@test.com",
+            },
+            format="json",
+        )
         assert r1.data["username"] != r2.data["username"]
 
 
 # ---------------------------------------------------------------------------
 # Role-based access
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.django_db
 class TestRolePermissions:
@@ -241,10 +307,18 @@ class TestRolePermissions:
     def test_tenant_admin_user_list_is_scoped(self, api_client, admin_user, other_tenant, tenant):
         # Create users in both tenants
         in_tenant = User.objects.create_user(
-            username="t1", email="t1@test.com", password="password123", role="ATHLETE", tenant=tenant
+            username="t1",
+            email="t1@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=tenant,
         )
         out_tenant = User.objects.create_user(
-            username="t2", email="t2@test.com", password="password123", role="ATHLETE", tenant=other_tenant
+            username="t2",
+            email="t2@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=other_tenant,
         )
 
         api_client.force_authenticate(user=admin_user)
@@ -256,7 +330,11 @@ class TestRolePermissions:
 
     def test_tenant_admin_detail_is_scoped_404(self, api_client, admin_user, other_tenant):
         other = User.objects.create_user(
-            username="outsider", email="outsider@test.com", password="password123", role="ATHLETE", tenant=other_tenant
+            username="outsider",
+            email="outsider@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=other_tenant,
         )
         api_client.force_authenticate(user=admin_user)
         url = reverse("user-detail", kwargs={"pk": other.id})
@@ -279,7 +357,9 @@ class TestRolePermissions:
         assert page1.data["has_more"] in (True, False)
         assert page1.data["next_cursor"] is not None
 
-        page2 = api_client.get(reverse("user-list"), {"page_size": 5, "cursor": page1.data["next_cursor"]})
+        page2 = api_client.get(
+            reverse("user-list"), {"page_size": 5, "cursor": page1.data["next_cursor"]}
+        )
         assert page2.status_code == 200
         assert len(page2.data["results"]) == 5 or len(page2.data["results"]) < 5
 
@@ -319,9 +399,23 @@ class TestRolePermissions:
 
 @pytest.mark.django_db
 class TestBulkUserEndpoints:
-    def test_tenant_admin_bulk_set_status_scoped(self, api_client, admin_user, tenant, other_tenant):
-        u1 = User.objects.create_user(username="u1", email="u1@test.com", password="password123", role="ATHLETE", tenant=tenant)
-        u2 = User.objects.create_user(username="u2", email="u2@test.com", password="password123", role="ATHLETE", tenant=other_tenant)
+    def test_tenant_admin_bulk_set_status_scoped(
+        self, api_client, admin_user, tenant, other_tenant
+    ):
+        u1 = User.objects.create_user(
+            username="u1",
+            email="u1@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=tenant,
+        )
+        u2 = User.objects.create_user(
+            username="u2",
+            email="u2@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=other_tenant,
+        )
         api_client.force_authenticate(user=admin_user)
 
         url = reverse("users-bulk-set-status")
@@ -334,11 +428,19 @@ class TestBulkUserEndpoints:
         assert ok.data["allowed"] == 1
 
     def test_tenant_admin_bulk_change_role_restricts_roles(self, api_client, admin_user, tenant):
-        u1 = User.objects.create_user(username="u3", email="u3@test.com", password="password123", role="ATHLETE", tenant=tenant)
+        u1 = User.objects.create_user(
+            username="u3",
+            email="u3@test.com",
+            password="password123",
+            role="ATHLETE",
+            tenant=tenant,
+        )
         api_client.force_authenticate(user=admin_user)
 
         url = reverse("users-bulk-change-role")
-        forbidden = api_client.post(url, {"user_ids": [u1.id], "role": "GLOBAL_OWNER"}, format="json")
+        forbidden = api_client.post(
+            url, {"user_ids": [u1.id], "role": "GLOBAL_OWNER"}, format="json"
+        )
         assert forbidden.status_code == 403
 
         ok = api_client.post(url, {"user_ids": [u1.id], "role": "TENANT_MODERATOR"}, format="json")

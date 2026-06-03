@@ -10,6 +10,7 @@ Endpoints:
     POST /api/rewards/stripe/portal/    → Create billing portal session
     POST /api/rewards/stripe/webhook/   → Stripe webhook receiver
 """
+
 from __future__ import annotations
 
 import logging
@@ -33,14 +34,23 @@ logger = logging.getLogger(__name__)
 # Serializers
 # ---------------------------------------------------------------------------
 
+
 class VoucherPoolSerializer(serializers.ModelSerializer):
     sponsor_name = serializers.CharField(source="sponsor.name", read_only=True)
     available = serializers.IntegerField(source="available_count", read_only=True)
 
     class Meta:
         model = VoucherPool
-        fields = ["id", "title", "description", "points_required", "sponsor_name",
-                  "available", "valid_from", "valid_until"]
+        fields = [
+            "id",
+            "title",
+            "description",
+            "points_required",
+            "sponsor_name",
+            "available",
+            "valid_from",
+            "valid_until",
+        ]
 
 
 class VoucherSerializer(serializers.ModelSerializer):
@@ -56,6 +66,7 @@ class VoucherSerializer(serializers.ModelSerializer):
 # Views
 # ---------------------------------------------------------------------------
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def balance_view(request: Request) -> Response:
@@ -69,10 +80,14 @@ def balance_view(request: Request) -> Response:
 def pool_list_view(request: Request) -> Response:
     """Lists all currently active voucher pools."""
     now = timezone.now()
-    pools = VoucherPool.objects.filter(
-        valid_from__lte=now,
-        valid_until__gte=now,
-    ).select_related("sponsor").order_by("points_required")
+    pools = (
+        VoucherPool.objects.filter(
+            valid_from__lte=now,
+            valid_until__gte=now,
+        )
+        .select_related("sponsor")
+        .order_by("points_required")
+    )
     return Response(VoucherPoolSerializer(pools, many=True).data)
 
 
@@ -83,38 +98,50 @@ def sponsor_stats_view(request: Request) -> Response:
     try:
         sponsor = request.user.sponsor_profile
     except Sponsor.DoesNotExist:
-        return Response({
-            "poi_count": 0,
-            "vouchers_distributed": 0,
-            "redeemed_count": 0,
-            "redemption_rate": 0,
-            "active_vouchers": 0,
-            "expired_vouchers": 0,
-        })
+        return Response(
+            {
+                "poi_count": 0,
+                "vouchers_distributed": 0,
+                "redeemed_count": 0,
+                "redemption_rate": 0,
+                "active_vouchers": 0,
+                "expired_vouchers": 0,
+            }
+        )
 
     try:
         pools = sponsor.pools.all()
         total_vouchers = Voucher.objects.filter(pool__in=pools).count()
         redeemed_vouchers = Voucher.objects.filter(pool__in=pools, user__isnull=False).count()
-        
-        return Response({
-            "poi_count": sponsor.pools.count(),
-            "vouchers_distributed": total_vouchers,
-            "redeemed_count": redeemed_vouchers,
-            "redemption_rate": (redeemed_vouchers / total_vouchers) if total_vouchers > 0 else 0,
-            "active_vouchers": Voucher.objects.filter(pool__in=pools, user__isnull=False, is_used=False).count(),
-            "expired_vouchers": Voucher.objects.filter(pool__in=pools, pool__valid_until__lt=timezone.now()).count(),
-        })
+
+        return Response(
+            {
+                "poi_count": sponsor.pools.count(),
+                "vouchers_distributed": total_vouchers,
+                "redeemed_count": redeemed_vouchers,
+                "redemption_rate": (redeemed_vouchers / total_vouchers)
+                if total_vouchers > 0
+                else 0,
+                "active_vouchers": Voucher.objects.filter(
+                    pool__in=pools, user__isnull=False, is_used=False
+                ).count(),
+                "expired_vouchers": Voucher.objects.filter(
+                    pool__in=pools, pool__valid_until__lt=timezone.now()
+                ).count(),
+            }
+        )
     except Exception as e:
-        return Response({
-            "poi_count": 0,
-            "vouchers_distributed": 0,
-            "redeemed_count": 0,
-            "redemption_rate": 0,
-            "active_vouchers": 0,
-            "expired_vouchers": 0,
-            "error": str(e),
-        })
+        return Response(
+            {
+                "poi_count": 0,
+                "vouchers_distributed": 0,
+                "redeemed_count": 0,
+                "redemption_rate": 0,
+                "active_vouchers": 0,
+                "expired_vouchers": 0,
+                "error": str(e),
+            }
+        )
 
 
 @api_view(["POST"])
@@ -147,7 +174,9 @@ def stripe_b2c_checkout_view(request: Request) -> Response:
         cancel_url=request.data.get("cancel_url", ""),
     )
     if not url:
-        return Response({"error": "Checkout unavailable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"error": "Checkout unavailable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     return Response({"checkout_url": url})
 
 
@@ -165,7 +194,9 @@ def stripe_b2b_checkout_view(request: Request) -> Response:
         cancel_url=request.data.get("cancel_url", ""),
     )
     if not url:
-        return Response({"error": "Checkout unavailable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        return Response(
+            {"error": "Checkout unavailable."}, status=status.HTTP_503_SERVICE_UNAVAILABLE
+        )
     return Response({"checkout_url": url})
 
 

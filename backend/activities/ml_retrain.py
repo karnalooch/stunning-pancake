@@ -16,6 +16,7 @@ The model improves automatically as real data accumulates.
 After 30 days of production: expect 10-20% better anomaly detection
 vs. the synthetic baseline (less false negatives on sport-specific edge cases).
 """
+
 from __future__ import annotations
 
 import logging
@@ -78,10 +79,7 @@ def retrain_ml_model() -> dict:
         coords = list(act.route_path.coords)
         if len(coords) < 20:
             continue
-        points = [
-            GpsPoint(lat=c[1], lon=c[0], timestamp=float(i))
-            for i, c in enumerate(coords)
-        ]
+        points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
         feats = extract_features(points)
         if feats:
             clean_features.append(feats)
@@ -89,7 +87,8 @@ def retrain_ml_model() -> dict:
     if len(clean_features) < MIN_CLEAN_SAMPLES:
         logger.warning(
             "ml_retrain: insufficient clean samples (got %d, need %d) — keeping existing model",
-            len(clean_features), MIN_CLEAN_SAMPLES,
+            len(clean_features),
+            MIN_CLEAN_SAMPLES,
         )
         return {
             "status": "skipped",
@@ -114,12 +113,12 @@ def retrain_ml_model() -> dict:
     scores = clf.score_samples(X_clean)
     mean_score = float(np.mean(scores))
     std_score = float(np.std(scores))
-    
+
     # Dynamic Z-score threshold (e.g., Z = -3.0 means 3 standard deviations below mean)
     # We save this dynamic threshold alongside the model
     z_threshold = -3.0
     dynamic_threshold = mean_score + (z_threshold * std_score)
-    
+
     false_positive_rate = float((scores < dynamic_threshold).mean())
 
     # We pack the model and the threshold together
@@ -127,7 +126,7 @@ def retrain_ml_model() -> dict:
         "model": clf,
         "mean_score": mean_score,
         "std_score": std_score,
-        "dynamic_threshold": dynamic_threshold
+        "dynamic_threshold": dynamic_threshold,
     }
 
     # --- Atomic model swap (write to temp, then rename) ---
@@ -150,6 +149,7 @@ def retrain_ml_model() -> dict:
 
     # Invalidate in-memory singleton so next call reloads from disk
     import activities.ml_anomaly as ml_mod
+
     ml_mod._model_payload = None
     ml_mod._model_loaded = False
 
@@ -167,6 +167,7 @@ def retrain_ml_model() -> dict:
     # Report to Sentry as a performance transaction
     try:
         import sentry_sdk
+
         sentry_sdk.set_measurement("ml.false_positive_rate", false_positive_rate, "ratio")
         sentry_sdk.set_measurement("ml.training_samples", len(clean_features), "none")
     except Exception:

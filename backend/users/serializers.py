@@ -5,25 +5,39 @@ from .models import User, Tenant, AuditLog
 class TenantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tenant
-        fields = ('id', 'name', 'primary_color', 'secondary_color', 'is_active')
+        fields = ("id", "name", "primary_color", "secondary_color", "is_active")
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    impersonator_username = serializers.CharField(source='impersonator.username', read_only=True, default=None)
-    target_user_username = serializers.CharField(source='target_user.username', read_only=True, default=None)
+    impersonator_username = serializers.CharField(
+        source="impersonator.username", read_only=True, default=None
+    )
+    target_user_username = serializers.CharField(
+        source="target_user.username", read_only=True, default=None
+    )
 
     class Meta:
         model = AuditLog
-        fields = '__all__'
+        fields = "__all__"
 
 
 class UserSerializer(serializers.ModelSerializer):
-    tenant_name = serializers.CharField(source='tenant.name', read_only=True, default='')
+    tenant_name = serializers.CharField(source="tenant.name", read_only=True, default="")
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'tenant_name', 'avatar', 'bio', 'is_active')
-        read_only_fields = ('id', 'role')
+        fields = (
+            "id",
+            "username",
+            "email",
+            "role",
+            "tenant_id",
+            "tenant_name",
+            "avatar",
+            "bio",
+            "is_active",
+        )
+        read_only_fields = ("id", "role")
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -32,7 +46,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('username', 'email', 'password', 'tenant_id')
+        fields = ("username", "email", "password", "tenant_id")
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -46,11 +60,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
-            password=validated_data.pop('password'),
-            tenant_id=validated_data.get('tenant_id'),
-            role='ATHLETE',
+            username=validated_data["username"],
+            email=validated_data.get("email", ""),
+            password=validated_data.pop("password"),
+            tenant_id=validated_data.get("tenant_id"),
+            role="ATHLETE",
         )
         return user
 
@@ -72,5 +86,14 @@ class UserAdminUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'tenant_id', 'is_active', 'avatar', 'bio', 'password')
-
+        fields = (
+            "id",
+            "username",
+            "email",
+            "role",
+            "tenant_id",
+            "is_active",
+            "avatar",
+            "bio",
+            "password",
+        )

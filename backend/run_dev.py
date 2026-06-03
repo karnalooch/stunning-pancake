@@ -3,17 +3,20 @@ Dev runner that mocks GDAL/GEOS and sets up a local SQLite database file (db.sql
 Permits running on Windows without installing native libraries.
 Usage: python run_dev.py
 """
+
 import os
 import sys
 import io
 from types import ModuleType
 
 # Force UTF-8 stdout/stderr on Windows to avoid UnicodeEncodeErrors with emojis
-if sys.platform == 'win32':
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
 
 import json
+
+
 class FakeRedis:
     def __init__(self):
         self.storage = {}
@@ -25,7 +28,12 @@ class FakeRedis:
         if key not in self.storage:
             self.storage[key] = {}
         if isinstance(mapping, dict):
-            self.storage[key].update({k.encode() if isinstance(k, str) else k: v.encode() if isinstance(v, str) else v for k, v in mapping.items()})
+            self.storage[key].update(
+                {
+                    k.encode() if isinstance(k, str) else k: v.encode() if isinstance(v, str) else v
+                    for k, v in mapping.items()
+                }
+            )
         elif mapping is not None and key_val is not None:
             k = mapping
             v = key_val
@@ -57,11 +65,11 @@ class FakeRedis:
     def ltrim(self, key, start, end):
         if key in self.storage:
             lst = self.storage[key]
-            self.storage[key] = lst[start:end+1 if end != -1 else None]
+            self.storage[key] = lst[start : end + 1 if end != -1 else None]
 
     def lrange(self, key, start, end):
         lst = self.storage.get(key, [])
-        return lst[start:end+1 if end != -1 else None]
+        return lst[start : end + 1 if end != -1 else None]
 
     def set(self, key, value, nx=False, ex=None):
         if nx and key in self.storage:
@@ -95,6 +103,7 @@ class FakeRedis:
         if key in self.storage:
             for m in members:
                 self.storage[key].discard(m.encode() if isinstance(m, str) else m)
+
 
 fake_redis_instance = FakeRedis()
 
@@ -157,25 +166,31 @@ sys.modules["django.contrib.gis.gdal.datasource"] = mock_gdal_datasource
 mock_gdal_driver = ModuleType("django.contrib.gis.gdal.driver")
 sys.modules["django.contrib.gis.gdal.driver"] = mock_gdal_driver
 
+
 class _MockMeta(type):
     def __instancecheck__(cls, instance):
         if instance is None or isinstance(instance, (str, bytes)):
             return False
         return True
 
+
 class _MockGEOSGeometry(metaclass=_MockMeta):
     def __init__(self, *args, **kwargs):
-        self.srid = kwargs.get('srid')
+        self.srid = kwargs.get("srid")
         self.num_coords = 0
+
     @property
     def coords(self):
-        return getattr(self, '_coords', [(0, 0), (0.001, 0)])
+        return getattr(self, "_coords", [(0, 0), (0.001, 0)])
+
 
 mock_geos = ModuleType("django.contrib.gis.geos")
 mock_geos.GEOSGeometry = _MockGEOSGeometry
 mock_geos.GEOSException = type("GEOSException", (Exception,), {})
+
+
 def _mock_geo_init(self, *args, **kwargs):
-    self.srid = kwargs.get('srid')
+    self.srid = kwargs.get("srid")
     if args and isinstance(args[0], list):
         self._coords = args[0]
         self.num_coords = len(args[0])
@@ -183,16 +198,31 @@ def _mock_geo_init(self, *args, **kwargs):
         self._coords = [(0, 0), (0.001, 0)]
         self.num_coords = 2
 
+
 for _geo_type in (
-    "GeometryCollection", "MultiPoint", "MultiLineString", "MultiPolygon",
-    "Point", "LineString", "LinearRing", "Polygon",
+    "GeometryCollection",
+    "MultiPoint",
+    "MultiLineString",
+    "MultiPolygon",
+    "Point",
+    "LineString",
+    "LinearRing",
+    "Polygon",
     "fromstr",
 ):
-    setattr(mock_geos, _geo_type, type(_geo_type, (mock_geos.GEOSGeometry,), {
-        "__init__": _mock_geo_init,
-        "srid": None,
-        "num_coords": 0,
-    }))
+    setattr(
+        mock_geos,
+        _geo_type,
+        type(
+            _geo_type,
+            (mock_geos.GEOSGeometry,),
+            {
+                "__init__": _mock_geo_init,
+                "srid": None,
+                "num_coords": 0,
+            },
+        ),
+    )
 sys.modules["django.contrib.gis.geos"] = mock_geos
 
 mock_geos_prototypes = ModuleType("django.contrib.gis.geos.prototypes")
@@ -214,9 +244,11 @@ sys.modules["django.contrib.gis.measure"] = mock_gis_measure
 # Monkey-patch GIS fields to work with SQLite (which has no PostGIS)
 from django.db.backends.sqlite3.operations import DatabaseOperations as SQLiteOps
 
+
 class _MockAdapter(str):
     def __new__(cls, value, *args, **kwargs):
         return super().__new__(cls, str(value))
+
 
 SQLiteOps.Adapter = _MockAdapter
 SQLiteOps.geo_db_type = lambda self, field: "TEXT"
@@ -230,8 +262,10 @@ import django.db.models.fields as _fields_module
 
 _original_uuid_to_python = _fields_module.UUIDField.to_python
 
+
 class _MockUUID:
     """Minimal UUID-like object that supports .hex attribute."""
+
     def __init__(self, hex_val: str):
         self.hex = hex_val
         self._hex = hex_val
@@ -245,15 +279,19 @@ class _MockUUID:
     def __hash__(self):
         return hash(self._hex)
 
+
 def _lenient_uuid_to_python(self, value):
     try:
         return _original_uuid_to_python(self, value)
     except Exception:
         return _MockUUID(str(value))
 
+
 _fields_module.UUIDField.to_python = _lenient_uuid_to_python
 
 _original_convert_uuidfield_value = SQLiteOps.convert_uuidfield_value
+
+
 def _lenient_convert_uuidfield_value(self, value, expression, connection):
     if value is not None:
         try:
@@ -261,49 +299,64 @@ def _lenient_convert_uuidfield_value(self, value, expression, connection):
         except ValueError:
             return _MockUUID(value)
     return value
+
+
 SQLiteOps.convert_uuidfield_value = _lenient_convert_uuidfield_value
 
 # Patch dj_database_url to force SQLite database file
 import dj_database_url
+
 original_parse = dj_database_url.parse
+
+
 def _mocked_parse(url, engine=None, **kwargs):
     cfg = original_parse(url, engine=engine, **kwargs)
     cfg["ENGINE"] = "django.db.backends.sqlite3"
     cfg["NAME"] = "db.sqlite3"
     return cfg
+
+
 dj_database_url.parse = _mocked_parse
 
 # Start Django Setup
 import django
+
 django.setup()
 
 from django.contrib.gis.db.models.fields import BaseSpatialField
+
 BaseSpatialField.db_type = lambda self, connection: "text"
 
 import core.redis_cluster
+
 core.redis_cluster.get_redis = lambda: fake_redis_instance
 
 from django.db.backends.signals import connection_created
 from django.dispatch import receiver
 
+
 @receiver(connection_created)
 def extend_sqlite(connection, **kwargs):
-    if connection.vendor == 'sqlite':
+    if connection.vendor == "sqlite":
         connection.connection.create_function("set_config", 3, lambda name, value, is_local: "")
 
+
 from django.db.migrations.operations.special import RunSQL as _RunSQL
+
 _original_database_forwards = _RunSQL.database_forwards
 _original_database_backwards = _RunSQL.database_backwards
+
 
 def _sqlite_safe_forwards(self, app_label, schema_editor, from_state, to_state):
     try:
         _original_database_forwards(self, app_label, schema_editor, from_state, to_state)
     except Exception as e:
-        vendor = getattr(schema_editor.connection, 'vendor', 'unknown')
-        if vendor == 'sqlite':
+        vendor = getattr(schema_editor.connection, "vendor", "unknown")
+        if vendor == "sqlite":
             print(f"  [SQLite] Skipping unsupported RunSQL ({type(e).__name__})")
         else:
             raise
+
 
 _RunSQL.database_forwards = _sqlite_safe_forwards
 
@@ -315,8 +368,9 @@ if __name__ == "__main__":
         print("📁 db.sqlite3 does not exist. Migrating and seeding...")
         execute_from_command_line([sys.argv[0], "migrate"])
         import seed_data
+
         seed_data.seed()
-    
+
     if len(sys.argv) > 1:
         execute_from_command_line(sys.argv)
     else:

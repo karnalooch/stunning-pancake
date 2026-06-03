@@ -10,6 +10,7 @@ Optimized Pipeline:
 3. BRouter (only if clean) - Map matching & topology validation.
 4. Redis & PG Leaderboard updates.
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,7 +36,13 @@ def process_activity_async(self, activity_id: int) -> dict:
     from core.redis_cluster import get_redis
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
-    from activities.signal_processing import GpsPoint, process_gps_track, analyze_anomalies, GpsKalmanSmoother, fast_rejection_gate
+    from activities.signal_processing import (
+        GpsPoint,
+        process_gps_track,
+        analyze_anomalies,
+        GpsKalmanSmoother,
+        fast_rejection_gate,
+    )
     from django.contrib.gis.geos import LineString
 
     # Fetch dynamic config
@@ -47,7 +54,7 @@ def process_activity_async(self, activity_id: int) -> dict:
     auto_ban = config.get("autoBan", True)
 
     try:
-        activity = Activity.objects.select_related('user').get(pk=activity_id)
+        activity = Activity.objects.select_related("user").get(pk=activity_id)
     except Activity.DoesNotExist:
         logger.error("process_activity_async: activity_id=%d not found", activity_id)
         return {"status": "error", "reason": "not_found"}
@@ -72,12 +79,15 @@ def process_activity_async(self, activity_id: int) -> dict:
     if not gate["passed"] and auto_ban:
         logger.warning(
             "activity.rejected_gate activity_id=%d reason=%s details=%s",
-            activity_id, gate["reason"], gate["details"]
+            activity_id,
+            gate["reason"],
+            gate["details"],
         )
         Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
         try:
             from core.plugin_registry import registry
-            registry.fire('activity.suspicious', activity=activity, anomaly_ratio=1.0)
+
+            registry.fire("activity.suspicious", activity=activity, anomaly_ratio=1.0)
         except Exception:
             pass
         return {
@@ -89,12 +99,16 @@ def process_activity_async(self, activity_id: int) -> dict:
     # --- Step 2.5: ML ANOMALY DETECTOR (Layer 1.5 — Milestone 5) ---
     try:
         from activities.ml_anomaly import is_ml_anomaly
+
         if is_ml_anomaly(raw_points, sensitivity=ml_sensitivity) and auto_ban:
             logger.warning("activity.rejected_ml activity_id=%d", activity_id)
-            Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
+            Activity.objects.filter(pk=activity_id).update(
+                is_verified=False, verification_score=0.0
+            )
             try:
                 from core.plugin_registry import registry
-                registry.fire('activity.suspicious', activity=activity, anomaly_ratio=0.9)
+
+                registry.fire("activity.suspicious", activity=activity, anomaly_ratio=0.9)
             except Exception:
                 pass
             return {"status": "rejected_ml", "reason": "isolation_forest_anomaly"}
@@ -108,29 +122,30 @@ def process_activity_async(self, activity_id: int) -> dict:
 
     if analysis["is_suspicious"] and auto_ban:
         logger.warning(
-            "activity.rejected_early activity_id=%d reason=%s",
-            activity_id, analysis["reason"]
+            "activity.rejected_early activity_id=%d reason=%s", activity_id, analysis["reason"]
         )
-        Activity.objects.filter(pk=activity_id).update(
-            is_verified=False,
-            verification_score=0.0
-        )
-        
+        Activity.objects.filter(pk=activity_id).update(is_verified=False, verification_score=0.0)
+
         try:
             from core.plugin_registry import registry
-            registry.fire('activity.suspicious', activity=activity, anomaly_ratio=analysis["anomaly_ratio"])
+
+            registry.fire(
+                "activity.suspicious", activity=activity, anomaly_ratio=analysis["anomaly_ratio"]
+            )
             from core.matrix_provisioner import MatrixProvisioner
+
             MatrixProvisioner.send_notification(
                 "!admin_room_id:matrix.org",
                 f"🚨 [LIGHTWEIGHT] Rejected #{activity_id} ({activity.type}) by {activity.user.username}. "
-                f"Reason: {analysis['reason']}"
+                f"Reason: {analysis['reason']}",
             )
-        except Exception: pass
+        except Exception:
+            pass
 
         return {
             "status": "rejected_early",
             "reason": analysis["reason"],
-            "anomaly_ratio": analysis["anomaly_ratio"]
+            "anomaly_ratio": analysis["anomaly_ratio"],
         }
 
     # --- Step 3: BRouter validation (Only if clean) ---
@@ -157,7 +172,7 @@ def process_activity_async(self, activity_id: int) -> dict:
         if gps_dist > 0:
             ratio = abs(b_dist - gps_dist) / gps_dist
             verification_score = 1.0 - ratio
-            
+
             # Use dynamic tolerance: base 0.10 * multiplier (e.g. 1.5x = 0.15)
             tolerance = 0.10 * brouter_multiplier
             is_verified = ratio < tolerance
@@ -166,7 +181,10 @@ def process_activity_async(self, activity_id: int) -> dict:
     if is_verified:
         try:
             from core.plugin_registry import registry
-            plugin_results = registry.fire('validate_activity', activity=activity, processing_result=processing)
+
+            plugin_results = registry.fire(
+                "validate_activity", activity=activity, processing_result=processing
+            )
             if False in plugin_results:
                 logger.warning("activity.rejected_by_plugin activity_id=%d", activity_id)
                 is_verified = False
@@ -183,6 +201,7 @@ def process_activity_async(self, activity_id: int) -> dict:
     if is_verified:
         activity.refresh_from_db()
         from activities.leaderboard_credit import credit_verified_activity
+
         credit_verified_activity(activity)
 
     return {"status": "done", "verified": is_verified}
@@ -195,6 +214,7 @@ def refresh_city_rankings_mv() -> None:
     Milestone 2 Requirement: Async Materialized View updates.
     """
     from django.db import connection
+
     with connection.cursor() as cursor:
         cursor.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY city_rankings_mv;")
     logger.info("city_rankings_mv refreshed")
@@ -204,9 +224,12 @@ def refresh_city_rankings_mv() -> None:
 def send_leaderboard_digest(city_id: str, top_n: int = 10) -> None:
     from activities.leaderboards import LeaderboardService
     from core.matrix_provisioner import MatrixProvisioner
+
     top = LeaderboardService.get_top_users(city_id, limit=top_n)
     if top:
-        msg = f"🏆 Ranking {city_id}:\n" + "\n".join([f"{i+1}. {e['user_id']}: {e['score']:.1f}km" for i, e in enumerate(top)])
+        msg = f"🏆 Ranking {city_id}:\n" + "\n".join(
+            [f"{i + 1}. {e['user_id']}: {e['score']:.1f}km" for i, e in enumerate(top)]
+        )
         MatrixProvisioner.send_notification(f"!city_{city_id}:matrix.org", msg)
 
 
@@ -219,25 +242,33 @@ def recalculate_city_leaderboard(city_id: str = "") -> None:
     if city_id:
         cities = [city_id]
     else:
-        cities = list(Activity.objects.filter(is_verified=True).values_list("user__tenant_id", flat=True).distinct())
+        cities = list(
+            Activity.objects.filter(is_verified=True)
+            .values_list("user__tenant_id", flat=True)
+            .distinct()
+        )
 
     for cid in cities:
         if not cid:
             continue
-        qs = Activity.objects.filter(is_verified=True, user__tenant_id=cid).values("user_id").annotate(total_km=Sum("distance"))
+        qs = (
+            Activity.objects.filter(is_verified=True, user__tenant_id=cid)
+            .values("user_id")
+            .annotate(total_km=Sum("distance"))
+        )
         scores = {row["user_id"]: round((row["total_km"] or 0) / 1000.0, 3) for row in qs}
         if scores:
             LeaderboardService.batch_recalculate(cid, scores)
             refresh_city_rankings_mv.delay()
 
 
-@shared_task(queue='default', name='activities.tasks.monitor_postgres_disk')
+@shared_task(queue="default", name="activities.tasks.monitor_postgres_disk")
 def monitor_postgres_disk() -> dict:
     """Periodic disk check — Redis safeguards + DiskAuditEvent (Celery beat)."""
     from activities.scale_disk_monitor import cleanup_simulated_activities, run_disk_monitor
 
-    result = run_disk_monitor(source='cron')
-    cleanup_simulated_activities(source='cron')
+    result = run_disk_monitor(source="cron")
+    cleanup_simulated_activities(source="cron")
     return result
 
 

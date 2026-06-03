@@ -4,6 +4,7 @@ Redis-backed burst protection for coordinated event starts.
 Auto mode (default): rate limits apply for large/active events or on load spikes.
 Set EVENT_BURST_MODE=on|off to force always/never.
 """
+
 from __future__ import annotations
 
 import json
@@ -41,26 +42,26 @@ _TRACK_LIMIT = 999_999_999  # always record in sliding window for load detection
 
 def _event_tag(event_id: int) -> str:
     """Hash tag for Redis Cluster — all burst keys for one event share a slot."""
-    return f'{{{event_id}}}'
+    return f"{{{event_id}}}"
 
 
 def burst_keys(event_id: int) -> dict[str, str]:
     tag = _event_tag(event_id)
     return {
-        'join_window': f'{tag}:burst:join:sw',
-        'session_window': f'{tag}:burst:session:sw',
-        'meta': f'{tag}:burst:meta',
-        'warm': f'{tag}:burst:warm',
-        'active': f'{tag}:burst:active',
-        'auto': f'{tag}:burst:auto',
-        'session_queue': f'{tag}:burst:session:queue',
-        'active_session': f'{tag}:burst:active_session',
+        "join_window": f"{tag}:burst:join:sw",
+        "session_window": f"{tag}:burst:session:sw",
+        "meta": f"{tag}:burst:meta",
+        "warm": f"{tag}:burst:warm",
+        "active": f"{tag}:burst:active",
+        "auto": f"{tag}:burst:auto",
+        "session_queue": f"{tag}:burst:session:queue",
+        "active_session": f"{tag}:burst:active_session",
     }
 
 
 def is_burst_globally_enabled() -> bool:
     """False only when EVENT_BURST_MODE=off (dev)."""
-    return EVENT_BURST_MODE != 'off'
+    return EVENT_BURST_MODE != "off"
 
 
 def is_burst_enabled_for_event(event_id: int, event: Event | None = None) -> bool:
@@ -70,15 +71,15 @@ def is_burst_enabled_for_event(event_id: int, event: Event | None = None) -> boo
     Auto rules (any): force on, Redis burst:auto (load spike), burst:active (warm),
     participation >= AUTO_MIN + (ACTIVE or PUBLISHED near start).
     """
-    if EVENT_BURST_MODE == 'off':
+    if EVENT_BURST_MODE == "off":
         return False
-    if EVENT_BURST_MODE == 'on':
+    if EVENT_BURST_MODE == "on":
         return True
 
-    if _redis_flag(burst_keys(event_id)['auto']) or _redis_flag(burst_keys(event_id)['active']):
+    if _redis_flag(burst_keys(event_id)["auto"]) or _redis_flag(burst_keys(event_id)["active"]):
         return True
 
-    event = event or Event.objects.filter(pk=event_id).only('status', 'start_date').first()
+    event = event or Event.objects.filter(pk=event_id).only("status", "start_date").first()
     if not event or not _event_in_burst_window(event):
         return False
 
@@ -86,9 +87,9 @@ def is_burst_enabled_for_event(event_id: int, event: Event | None = None) -> boo
 
 
 def _event_in_burst_window(event: Event) -> bool:
-    if event.status == 'ACTIVE':
+    if event.status == "ACTIVE":
         return True
-    if event.status != 'PUBLISHED':
+    if event.status != "PUBLISHED":
         return False
     now = timezone.now()
     if event.start_date <= now:
@@ -113,13 +114,13 @@ def set_burst_auto(event_id: int) -> None:
     """Mark event as load-spike protected (TTL)."""
     try:
         get_redis().set(
-            burst_keys(event_id)['auto'],
-            '1',
+            burst_keys(event_id)["auto"],
+            "1",
             ex=EVENT_BURST_AUTO_TTL_SECONDS,
         )
-        logger.info('event.burst_auto event_id=%s ttl=%ss', event_id, EVENT_BURST_AUTO_TTL_SECONDS)
+        logger.info("event.burst_auto event_id=%s ttl=%ss", event_id, EVENT_BURST_AUTO_TTL_SECONDS)
     except Exception as exc:
-        logger.warning('event_burst.auto_flag_failed event_id=%s err=%s', event_id, exc)
+        logger.warning("event_burst.auto_flag_failed event_id=%s err=%s", event_id, exc)
 
 
 def set_burst_warm_active(event_id: int, event: Event) -> None:
@@ -127,19 +128,20 @@ def set_burst_warm_active(event_id: int, event: Event) -> None:
     count = participation_count(event_id)
     if count >= EVENT_BURST_AUTO_MIN_PARTICIPANTS or SCALE_EVENT_LOAD_TEST:
         try:
-            get_redis().set(burst_keys(event_id)['active'], '1', ex=_META_TTL)
+            get_redis().set(burst_keys(event_id)["active"], "1", ex=_META_TTL)
             logger.info(
-                'event.burst_warm_active event_id=%s participants=%s',
-                event_id, count,
+                "event.burst_warm_active event_id=%s participants=%s",
+                event_id,
+                count,
             )
         except Exception as exc:
-            logger.warning('event_burst.active_flag_failed event_id=%s err=%s', event_id, exc)
+            logger.warning("event_burst.active_flag_failed event_id=%s err=%s", event_id, exc)
 
 
 def _maybe_auto_enable_from_load(event_id: int) -> None:
     keys = burst_keys(event_id)
-    joins = sliding_window_count(keys['join_window'])
-    sessions = sliding_window_count(keys['session_window'])
+    joins = sliding_window_count(keys["join_window"])
+    sessions = sliding_window_count(keys["session_window"])
     if (
         joins > EVENT_BURST_LOAD_SPIKE_JOIN_THRESHOLD
         or joins > EVENT_BURST_LOAD_JOIN_THRESHOLD
@@ -176,7 +178,7 @@ def sliding_window_try(
         return True, 0, 0
 
     now = time.time()
-    member = f'{now}:{uuid.uuid4().hex[:8]}'
+    member = f"{now}:{uuid.uuid4().hex[:8]}"
     try:
         r = get_redis()
         pipe = r.pipeline()
@@ -192,7 +194,7 @@ def sliding_window_try(
             return False, count - 1, retry
         return True, count, 0
     except Exception as exc:
-        logger.warning('event_burst.redis_failed key=%s err=%s', redis_key, exc)
+        logger.warning("event_burst.redis_failed key=%s err=%s", redis_key, exc)
         return True, 0, 0
 
 
@@ -220,7 +222,7 @@ def join_rate_limit(event_id: int) -> tuple[bool, int, int]:
         return True, 0, 0
     keys = burst_keys(event_id)
     return _track_and_check_limit(
-        keys['join_window'],
+        keys["join_window"],
         event_id,
         rate_per_minute=EVENT_JOIN_RATE_PER_MINUTE,
     )
@@ -231,7 +233,7 @@ def session_start_rate_limit(event_id: int) -> tuple[bool, int, int]:
         return True, 0, 0
     keys = burst_keys(event_id)
     return _track_and_check_limit(
-        keys['session_window'],
+        keys["session_window"],
         event_id,
         rate_per_minute=EVENT_SESSION_START_RATE_PER_MINUTE,
     )
@@ -242,27 +244,27 @@ def cache_event_meta(event: Event) -> None:
     keys = burst_keys(event.id)
     count = participation_count(event.id)
     payload = {
-        'id': event.id,
-        'title': event.title,
-        'status': event.status,
-        'start_date': event.start_date.isoformat(),
-        'end_date': event.end_date.isoformat(),
-        'event_type': event.event_type,
-        'tenant_id': event.tenant_id,
-        'burst_mode': EVENT_BURST_MODE,
-        'burst_enabled': is_burst_enabled_for_event(event.id, event),
-        'participant_count': count,
-        'join_rate_per_minute': EVENT_JOIN_RATE_PER_MINUTE,
-        'session_rate_per_minute': EVENT_SESSION_START_RATE_PER_MINUTE,
-        'stagger_seconds': EVENT_START_STAGGER_SECONDS,
-        'cached_at': timezone.now().isoformat(),
+        "id": event.id,
+        "title": event.title,
+        "status": event.status,
+        "start_date": event.start_date.isoformat(),
+        "end_date": event.end_date.isoformat(),
+        "event_type": event.event_type,
+        "tenant_id": event.tenant_id,
+        "burst_mode": EVENT_BURST_MODE,
+        "burst_enabled": is_burst_enabled_for_event(event.id, event),
+        "participant_count": count,
+        "join_rate_per_minute": EVENT_JOIN_RATE_PER_MINUTE,
+        "session_rate_per_minute": EVENT_SESSION_START_RATE_PER_MINUTE,
+        "stagger_seconds": EVENT_START_STAGGER_SECONDS,
+        "cached_at": timezone.now().isoformat(),
     }
     try:
         r = get_redis()
-        r.set(keys['meta'], json.dumps(payload), ex=_META_TTL)
-        r.set(keys['warm'], '1', ex=_META_TTL)
+        r.set(keys["meta"], json.dumps(payload), ex=_META_TTL)
+        r.set(keys["warm"], "1", ex=_META_TTL)
     except Exception as exc:
-        logger.warning('event_burst.cache_meta_failed event_id=%s err=%s', event.id, exc)
+        logger.warning("event_burst.cache_meta_failed event_id=%s err=%s", event.id, exc)
 
 
 def reset_burst_counters(event_id: int) -> None:
@@ -270,17 +272,17 @@ def reset_burst_counters(event_id: int) -> None:
     try:
         r = get_redis()
         r.delete(
-            keys['join_window'],
-            keys['session_window'],
-            keys['session_queue'],
+            keys["join_window"],
+            keys["session_window"],
+            keys["session_queue"],
         )
     except Exception as exc:
-        logger.warning('event_burst.reset_failed event_id=%s err=%s', event_id, exc)
+        logger.warning("event_burst.reset_failed event_id=%s err=%s", event_id, exc)
 
 
 def get_cached_meta(event_id: int) -> dict | None:
     try:
-        raw = get_redis().get(burst_keys(event_id)['meta'])
+        raw = get_redis().get(burst_keys(event_id)["meta"])
         if raw:
             return json.loads(raw)
     except Exception:
@@ -302,13 +304,19 @@ def get_active_session_activity_id(event_id: int, user_id: int) -> int | None:
     return None
 
 
-def set_active_session(event_id: int, user_id: int, activity_id: int, ttl_seconds: int = 86400) -> None:
+def set_active_session(
+    event_id: int, user_id: int, activity_id: int, ttl_seconds: int = 86400
+) -> None:
     try:
-        get_redis().set(active_session_redis_key(event_id, user_id), str(activity_id), ex=ttl_seconds)
+        get_redis().set(
+            active_session_redis_key(event_id, user_id), str(activity_id), ex=ttl_seconds
+        )
     except Exception as exc:
         logger.warning(
-            'event_burst.active_session_set_failed event=%s user=%s err=%s',
-            event_id, user_id, exc,
+            "event_burst.active_session_set_failed event=%s user=%s err=%s",
+            event_id,
+            user_id,
+            exc,
         )
 
 
@@ -317,22 +325,24 @@ def clear_active_session(event_id: int, user_id: int) -> None:
         get_redis().delete(active_session_redis_key(event_id, user_id))
     except Exception as exc:
         logger.warning(
-            'event_burst.active_session_clear_failed event=%s user=%s err=%s',
-            event_id, user_id, exc,
+            "event_burst.active_session_clear_failed event=%s user=%s err=%s",
+            event_id,
+            user_id,
+            exc,
         )
 
 
 def queue_session_start(event_id: int, user_id: int, payload: dict) -> int:
     """Enqueue deferred session create; returns 1-based queue position."""
     keys = burst_keys(event_id)
-    entry = json.dumps({'user_id': user_id, 'payload': payload, 'ts': time.time()})
+    entry = json.dumps({"user_id": user_id, "payload": payload, "ts": time.time()})
     try:
         r = get_redis()
-        r.lpush(keys['session_queue'], entry)
-        r.expire(keys['session_queue'], _META_TTL)
-        return int(r.llen(keys['session_queue']) or 1)
+        r.lpush(keys["session_queue"], entry)
+        r.expire(keys["session_queue"], _META_TTL)
+        return int(r.llen(keys["session_queue"]) or 1)
     except Exception as exc:
-        logger.warning('event_burst.queue_failed event_id=%s err=%s', event_id, exc)
+        logger.warning("event_burst.queue_failed event_id=%s err=%s", event_id, exc)
         return 0
 
 
@@ -346,10 +356,11 @@ def burst_protection_meta(
     enabled = is_burst_enabled_for_event(event.id, event)
     if lightweight:
         from events.scale_config import EVENT_MAX_CONCURRENT_RIDERS
+
         return {
-            'enabled': enabled,
-            'mode': EVENT_BURST_MODE,
-            'max_concurrent_riders_hint': EVENT_MAX_CONCURRENT_RIDERS,
+            "enabled": enabled,
+            "mode": EVENT_BURST_MODE,
+            "max_concurrent_riders_hint": EVENT_MAX_CONCURRENT_RIDERS,
         }
 
     join_allowed = True
@@ -358,7 +369,7 @@ def burst_protection_meta(
 
     if enabled:
         keys = burst_keys(event.id)
-        count = sliding_window_count(keys['join_window'])
+        count = sliding_window_count(keys["join_window"])
         join_allowed = count < EVENT_JOIN_RATE_PER_MINUTE
         if not join_allowed:
             retry_after = max(1, int(_WINDOW_SECONDS - (time.time() % _WINDOW_SECONDS)))
@@ -372,15 +383,15 @@ def burst_protection_meta(
             pass
 
     return {
-        'enabled': enabled,
-        'mode': EVENT_BURST_MODE,
-        'join_allowed': join_allowed,
-        'stagger_hint_seconds': stagger_hint,
-        'retry_after_seconds': retry_after if not join_allowed else 0,
-        'queue_position': queue_position,
-        'join_rate_per_minute': EVENT_JOIN_RATE_PER_MINUTE,
-        'session_start_rate_per_minute': EVENT_SESSION_START_RATE_PER_MINUTE,
-        'max_concurrent_riders_hint': None,  # filled by serializer from scale_config
+        "enabled": enabled,
+        "mode": EVENT_BURST_MODE,
+        "join_allowed": join_allowed,
+        "stagger_hint_seconds": stagger_hint,
+        "retry_after_seconds": retry_after if not join_allowed else 0,
+        "queue_position": queue_position,
+        "join_rate_per_minute": EVENT_JOIN_RATE_PER_MINUTE,
+        "session_start_rate_per_minute": EVENT_SESSION_START_RATE_PER_MINUTE,
+        "max_concurrent_riders_hint": None,  # filled by serializer from scale_config
     }
 
 
@@ -402,16 +413,16 @@ def join_event(user, event: Event) -> tuple[Participation, bool, dict | None]:
                 None,
                 False,
                 {
-                    'status': 429,
-                    'retry_after': retry_after,
-                    'detail': 'Event join rate limit exceeded. Please retry shortly.',
-                    'detail_pl': 'Limit dołączeń do wydarzenia — spróbuj za chwilę.',
+                    "status": 429,
+                    "retry_after": retry_after,
+                    "detail": "Event join rate limit exceeded. Please retry shortly.",
+                    "detail_pl": "Limit dołączeń do wydarzenia — spróbuj za chwilę.",
                 },
             )
 
     participation, created = Participation.objects.get_or_create(event=event, user=user)
     if created:
-        logger.info('event.join user_id=%s event_id=%s', user.id, event.id)
+        logger.info("event.join user_id=%s event_id=%s", user.id, event.id)
     return participation, created, None
 
 
@@ -424,7 +435,7 @@ def resolve_event_for_session(user, event_id: int | None) -> Event | None:
             return None
         if not Participation.objects.filter(event=event, user=user).exists():
             return None
-        if event.status not in ('PUBLISHED', 'ACTIVE'):
+        if event.status not in ("PUBLISHED", "ACTIVE"):
             return None
         return event
 
@@ -432,11 +443,11 @@ def resolve_event_for_session(user, event_id: int | None) -> Event | None:
     return (
         Event.objects.filter(
             participations__user=user,
-            status__in=('PUBLISHED', 'ACTIVE'),
+            status__in=("PUBLISHED", "ACTIVE"),
             start_date__lte=now,
             end_date__gte=now,
         )
-        .order_by('-start_date')
+        .order_by("-start_date")
         .first()
     )
 
@@ -455,6 +466,6 @@ def effective_event_concurrent_cap(live_state: dict | None = None) -> int:
     from events.scale_config import EVENT_MAX_CONCURRENT_RIDERS, SCALE_EVENT_LOAD_TEST
 
     state = live_state or {}
-    if state.get('event_id') or SCALE_EVENT_LOAD_TEST:
+    if state.get("event_id") or SCALE_EVENT_LOAD_TEST:
         return EVENT_MAX_CONCURRENT_RIDERS
     return MAX_CONCURRENT_RIDERS

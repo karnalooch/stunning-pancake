@@ -3,6 +3,7 @@ Unit Tests — GPS Signal Processing
 =====================================
 Tests for Kalman filter, Viterbi map-matching, and kinematic anomaly detection.
 """
+
 import math
 import pytest
 from activities.signal_processing import (
@@ -25,13 +26,13 @@ from activities.viterbi_matching import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def straight_track() -> list[GpsPoint]:
     """10 GPS points along a straight line (Siedlce, ~10m apart)."""
     base_lat, base_lon = 52.1686, 22.2875
     return [
-        GpsPoint(lat=base_lat + i * 0.0001, lon=base_lon, timestamp=float(i))
-        for i in range(10)
+        GpsPoint(lat=base_lat + i * 0.0001, lon=base_lon, timestamp=float(i)) for i in range(10)
     ]
 
 
@@ -39,6 +40,7 @@ def straight_track() -> list[GpsPoint]:
 def noisy_track() -> list[GpsPoint]:
     """10 GPS points with artificial noise added."""
     import random
+
     random.seed(42)
     base_lat, base_lon = 52.1686, 22.2875
     return [
@@ -55,15 +57,13 @@ def noisy_track() -> list[GpsPoint]:
 def road_points() -> list[GpsPoint]:
     """Synthetic road segment (straight line)."""
     base_lat, base_lon = 52.1686, 22.2875
-    return [
-        GpsPoint(lat=base_lat + i * 0.0001, lon=base_lon)
-        for i in range(20)
-    ]
+    return [GpsPoint(lat=base_lat + i * 0.0001, lon=base_lon) for i in range(20)]
 
 
 # ---------------------------------------------------------------------------
 # Haversine tests
 # ---------------------------------------------------------------------------
+
 
 class TestHaversine:
     def test_same_point_is_zero(self):
@@ -100,6 +100,7 @@ class TestTotalDistance:
 # Kalman filter tests
 # ---------------------------------------------------------------------------
 
+
 class TestGpsKalmanSmoother:
     def test_empty_input(self):
         smoother = GpsKalmanSmoother()
@@ -120,6 +121,7 @@ class TestGpsKalmanSmoother:
         # Use points near (0,0) so Kalman filter's x=0 initial state doesn't
         # cause a transient that inflates smoothed jitter.
         import random
+
         random.seed(42)
         noisy = [
             GpsPoint(
@@ -131,27 +133,32 @@ class TestGpsKalmanSmoother:
         ]
         smoother = GpsKalmanSmoother()
         result = smoother.smooth(noisy)
-        raw_jitter = sum((noisy[i+1].lat - noisy[i].lat)**2 for i in range(len(noisy)-1))
-        smooth_jitter = sum((result[i+1].lat - result[i].lat)**2 for i in range(len(result)-1))
+        raw_jitter = sum((noisy[i + 1].lat - noisy[i].lat) ** 2 for i in range(len(noisy) - 1))
+        smooth_jitter = sum(
+            (result[i + 1].lat - result[i].lat) ** 2 for i in range(len(result) - 1)
+        )
         assert smooth_jitter <= raw_jitter
 
     def test_first_point_close_to_input(self, straight_track):
         smoother = GpsKalmanSmoother()
         result = smoother.smooth(straight_track)
-        assert abs(result[0].lat - straight_track[0].lat) < 0.01  # ~1km tolerance for initial transient
+        assert (
+            abs(result[0].lat - straight_track[0].lat) < 0.01
+        )  # ~1km tolerance for initial transient
 
 
 # ---------------------------------------------------------------------------
 # Anomaly detection tests
 # ---------------------------------------------------------------------------
 
+
 class TestSpeedAnomalyDetection:
     def test_detects_teleport(self):
         pts = [
             GpsPoint(lat=52.0, lon=21.0, timestamp=0.0),
-            GpsPoint(lat=52.01, lon=21.0, timestamp=1.0),   # ~1110 m/s
+            GpsPoint(lat=52.01, lon=21.0, timestamp=1.0),  # ~1110 m/s
         ]
-        flagged = detect_speed_anomalies(pts, 'RUN')
+        flagged = detect_speed_anomalies(pts, "RUN")
         assert 1 in flagged
 
     def test_skips_zero_dt(self):
@@ -159,7 +166,7 @@ class TestSpeedAnomalyDetection:
             GpsPoint(lat=52.0, lon=21.0, timestamp=0.0),
             GpsPoint(lat=52.001, lon=21.0, timestamp=0.0),
         ]
-        flagged = detect_speed_anomalies(pts, 'RUN')
+        flagged = detect_speed_anomalies(pts, "RUN")
         assert isinstance(flagged, list)
 
     def test_no_anomaly_on_normal_walk(self):
@@ -168,13 +175,14 @@ class TestSpeedAnomalyDetection:
             GpsPoint(lat=52.0, lon=21.0, timestamp=0.0),
             GpsPoint(lat=52.00027, lon=21.0, timestamp=10.0),  # ~30m in 10s
         ]
-        flagged = detect_speed_anomalies(pts, 'WALK')
+        flagged = detect_speed_anomalies(pts, "WALK")
         assert flagged == []
 
 
 # ---------------------------------------------------------------------------
 # Viterbi map-matching tests
 # ---------------------------------------------------------------------------
+
 
 class TestViterbiMatching:
     def test_returns_same_length(self, straight_track, road_points):
@@ -211,26 +219,27 @@ class TestViterbiMatching:
 # Full pipeline integration test
 # ---------------------------------------------------------------------------
 
+
 class TestProcessGpsTrack:
     def test_returns_processing_result(self, straight_track):
-        result = process_gps_track(straight_track, 'RUN')
+        result = process_gps_track(straight_track, "RUN")
         assert isinstance(result, ProcessingResult)
 
     def test_matched_same_length_as_input(self, straight_track):
-        result = process_gps_track(straight_track, 'RUN')
+        result = process_gps_track(straight_track, "RUN")
         assert len(result.matched_points) == len(straight_track)
 
     def test_distance_positive(self, straight_track):
-        result = process_gps_track(straight_track, 'RUN')
+        result = process_gps_track(straight_track, "RUN")
         assert result.total_distance_m > 0
 
     def test_clean_track_not_suspicious(self, straight_track):
         # Test anomaly detection directly on raw points — the Kalman filter
         # initial transient (x=0) would otherwise corrupt smoothed-point speeds.
-        flagged = detect_speed_anomalies(straight_track, 'RUN')
+        flagged = detect_speed_anomalies(straight_track, "RUN")
         assert flagged == []
 
     def test_empty_track(self):
-        result = process_gps_track([], 'RUN')
+        result = process_gps_track([], "RUN")
         assert result.total_distance_m == 0.0
         assert result.matched_points == []

@@ -17,6 +17,7 @@ Provides statistically-grounded performance insights for premium users:
 
 All computation is pure Python + statistics stdlib — no ML deps required.
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,16 +33,17 @@ logger = logging.getLogger(__name__)
 # Type definitions
 # ---------------------------------------------------------------------------
 
+
 class WeeklyLoad(TypedDict):
-    week_start: str   # ISO date
+    week_start: str  # ISO date
     km: float
 
 
 class TrendResult(TypedDict):
-    slope_km_per_week: float     # Positive = improving, negative = declining
+    slope_km_per_week: float  # Positive = improving, negative = declining
     intercept: float
-    trend: str                   # "IMPROVING" | "DECLINING" | "STABLE"
-    r_squared: float             # Fit quality 0–1
+    trend: str  # "IMPROVING" | "DECLINING" | "STABLE"
+    r_squared: float  # Fit quality 0–1
     weeks_analysed: int
 
 
@@ -49,21 +51,22 @@ class RaceTimePrediction(TypedDict):
     target_distance_km: float
     predicted_time_s: float
     predicted_pace_s_per_km: float
-    confidence: str              # "HIGH" | "MEDIUM" | "LOW"
-    formula: str                 # "riegel"
+    confidence: str  # "HIGH" | "MEDIUM" | "LOW"
+    formula: str  # "riegel"
 
 
 class ACWRResult(TypedDict):
     acwr: float
-    acute_km: float              # Last 7 days
-    chronic_km: float            # Rolling 28-day average
-    status: str                  # "OPTIMAL" | "UNDERTRAINED" | "OVERTRAINING_RISK"
+    acute_km: float  # Last 7 days
+    chronic_km: float  # Rolling 28-day average
+    status: str  # "OPTIMAL" | "UNDERTRAINED" | "OVERTRAINING_RISK"
     recommendation: str
 
 
 # ---------------------------------------------------------------------------
 # Trend Analysis
 # ---------------------------------------------------------------------------
+
 
 def trend_analysis(weekly_loads: list[WeeklyLoad]) -> TrendResult | None:
     """
@@ -120,6 +123,7 @@ def trend_analysis(weekly_loads: list[WeeklyLoad]) -> TrendResult | None:
 # Race Time Prediction (Riegel's Formula)
 # ---------------------------------------------------------------------------
 
+
 def predict_race_time(
     reference_distance_km: float,
     reference_time_s: float,
@@ -151,7 +155,7 @@ def predict_race_time(
     exp = exponents.get(activity_type.upper(), 1.06)
 
     ratio = target_distance_km / reference_distance_km
-    predicted_s = reference_time_s * (ratio ** exp)
+    predicted_s = reference_time_s * (ratio**exp)
     pace_s_per_km = predicted_s / target_distance_km
 
     # Confidence based on ratio distance
@@ -174,6 +178,7 @@ def predict_race_time(
 # ---------------------------------------------------------------------------
 # Acute/Chronic Workload Ratio (ACWR)
 # ---------------------------------------------------------------------------
+
 
 def training_load(daily_km: dict[date, float]) -> ACWRResult | None:
     """
@@ -198,25 +203,19 @@ def training_load(daily_km: dict[date, float]) -> ACWRResult | None:
     today = max(daily_km.keys())
 
     # Acute: sum of last 7 days
-    acute_km = sum(
-        daily_km.get(today - timedelta(days=i), 0.0)
-        for i in range(7)
-    )
+    acute_km = sum(daily_km.get(today - timedelta(days=i), 0.0) for i in range(7))
 
     # Chronic: mean of last 4 × 7-day blocks (28 days)
     weekly_sums = []
     for week in range(4):
         start = week * 7
-        week_km = sum(
-            daily_km.get(today - timedelta(days=start + i), 0.0)
-            for i in range(7)
-        )
+        week_km = sum(daily_km.get(today - timedelta(days=start + i), 0.0) for i in range(7))
         weekly_sums.append(week_km)
 
     chronic_weekly = statistics.mean(weekly_sums) if weekly_sums else 0.0
 
     if chronic_weekly < 0.1:
-        return None   # New user, no chronic baseline
+        return None  # New user, no chronic baseline
 
     acwr = round(acute_km / chronic_weekly, 2)
 

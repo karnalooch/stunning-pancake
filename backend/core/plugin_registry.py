@@ -22,6 +22,7 @@ Rules (Constitution §23):
     - All cross-domain interaction via these hooks only.
     - Each plugin declares a PluginManifest for metadata/introspection.
 """
+
 from __future__ import annotations
 
 import logging
@@ -105,6 +106,7 @@ class SportHookSpec:
 # Plugin Manifest (metadata)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class PluginManifest:
     """
@@ -118,6 +120,7 @@ class PluginManifest:
         hooks: List of hook names implemented.
         pilot_mode: If True, only activates for pilot tenants.
     """
+
     name: str
     version: str
     author: str
@@ -129,6 +132,7 @@ class PluginManifest:
 # ---------------------------------------------------------------------------
 # SPORT Plugin Manager (wraps pluggy.PluginManager)
 # ---------------------------------------------------------------------------
+
 
 class SportPluginManager:
     """
@@ -220,6 +224,7 @@ class SportPluginManager:
 
         For new plugins, use @hookimpl directly and pass the object to register().
         """
+
         def decorator(fn: Callable) -> Callable:
             # Tag the function so pluggy recognises it
             fn = hookimpl(fn)
@@ -235,6 +240,7 @@ class SportPluginManager:
             self._pm.register(plugin, name=f"adhoc_{hook_name}_{fn.__name__}")
             logger.debug("hook.registered hook=%s fn=%s", hook_name, fn.__qualname__)
             return fn
+
         return decorator
 
     # ------------------------------------------------------------------
@@ -258,7 +264,12 @@ class SportPluginManager:
     def get_hooks(self) -> dict[str, int]:
         """Returns hook names with handler counts."""
         counts: dict[str, int] = {}
-        for hook_name in ["activity_verified", "activity_suspicious", "event_completed", "club_created"]:
+        for hook_name in [
+            "activity_verified",
+            "activity_suspicious",
+            "event_completed",
+            "club_created",
+        ]:
             hook = getattr(self._pm.hook, hook_name, None)
             if hook:
                 counts[hook_name.replace("_", ".")] = len(hook.get_hookimpls())
@@ -306,14 +317,11 @@ class VoucherHotspotPlugin:
                 return {"vouchers_awarded": 0}
 
             awarded = 0
-            nearby_pois = POI.objects.filter(
-                location__distance_lte=(activity.route_path, D(m=100))
-            )
+            nearby_pois = POI.objects.filter(location__distance_lte=(activity.route_path, D(m=100)))
 
             for poi in nearby_pois:
                 voucher = (
-                    Voucher.objects
-                    .filter(poi=poi, is_redeemed=False)
+                    Voucher.objects.filter(poi=poi, is_redeemed=False)
                     .select_for_update(skip_locked=True)
                     .first()
                 )
@@ -324,7 +332,9 @@ class VoucherHotspotPlugin:
                     awarded += 1
                     logger.info(
                         "voucher.awarded code=%s user=%s poi=%s",
-                        voucher.code, activity.user_id, poi.name,
+                        voucher.code,
+                        activity.user_id,
+                        poi.name,
                     )
 
             return {"vouchers_awarded": awarded}
@@ -349,22 +359,24 @@ RUN_VALIDATOR_MANIFEST = PluginManifest(
     hooks=["validate_activity"],
 )
 
+
 class RunValidatorPlugin:
     @hookimpl
     def validate_activity(self, activity: Any, processing_result: Any) -> bool:
         if activity.type != "RUN":
             return True
-        
+
         # Example: Reject runs with impossibly high elevation gain per km
         # (Very simple biomechanical heuristic)
-        if hasattr(processing_result, 'total_elevation_gain'):
+        if hasattr(processing_result, "total_elevation_gain"):
             dist_km = processing_result.total_distance_m / 1000.0
             if dist_km > 0.1:
                 gain_per_km = processing_result.total_elevation_gain / dist_km
-                if gain_per_km > 400: # >40% average grade is impossible for running long distances
+                if gain_per_km > 400:  # >40% average grade is impossible for running long distances
                     logger.warning("run_validator.rejected: gain_per_km=%.1f", gain_per_km)
                     return False
         return True
+
 
 registry.register(RUN_VALIDATOR_MANIFEST, RunValidatorPlugin())
 
@@ -381,14 +393,16 @@ BIKE_VALIDATOR_MANIFEST = PluginManifest(
     hooks=["validate_activity"],
 )
 
+
 class BikeValidatorPlugin:
     @hookimpl
     def validate_activity(self, activity: Any, processing_result: Any) -> bool:
         if activity.type != "BIKE":
             return True
-        
+
         # Example: Biking usually follows road networks more strictly
         # We could check the map-matching confidence here.
         return True
+
 
 registry.register(BIKE_VALIDATOR_MANIFEST, BikeValidatorPlugin())

@@ -6,36 +6,48 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('activities', '0001_initial'),
+        ("activities", "0001_initial"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='voucher',
-            name='redeemed_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL),
+            model_name="voucher",
+            name="redeemed_by",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddField(
-            model_name='privacyzone',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+            model_name="privacyzone",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL
+            ),
         ),
         migrations.AddField(
-            model_name='activity',
-            name='user',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='activities', to=settings.AUTH_USER_MODEL),
+            model_name="activity",
+            name="user",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="activities",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.AddIndex(
-            model_name='activity',
-            index=models.Index(fields=['user', 'start_time'], name='activities__user_id_7273b1_idx'),
+            model_name="activity",
+            index=models.Index(
+                fields=["user", "start_time"], name="activities__user_id_7273b1_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='activity',
-            index=models.Index(fields=['type', 'is_verified'], name='activities__type_9d88f2_idx'),
+            model_name="activity",
+            index=models.Index(fields=["type", "is_verified"], name="activities__type_9d88f2_idx"),
         ),
     ]

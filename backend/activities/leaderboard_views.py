@@ -6,6 +6,7 @@ Milestone 2: /api/activities/leaderboard/<city_id>/
 Serves city leaderboard data from Redis (sub-5ms response).
 Falls back to DB recalculation if Redis is empty.
 """
+
 from __future__ import annotations
 
 import logging
@@ -45,6 +46,7 @@ def city_leaderboard(request: Request, city_id: str) -> Response:
     if not top:
         # Redis empty — queue background recalculation and reset_leaderboard_state
         from activities.tasks import recalculate_city_leaderboard
+
         recalculate_city_leaderboard.delay(city_id)
         return Response(
             {
@@ -58,10 +60,11 @@ def city_leaderboard(request: Request, city_id: str) -> Response:
 
     # Contract Enrichment: Add usernames to the leaderboard entries
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
     user_ids = [e["user_id"] for e in top]
     users_map = {str(u.id): u.username for u in User.objects.filter(id__in=user_ids)}
-    
+
     for entry in top:
         entry["username"] = users_map.get(str(entry["user_id"]), "Unknown Pilot")
 
@@ -87,14 +90,14 @@ def my_rank(request: Request, city_id: str) -> Response:
     scope = request.query_params.get("scope", "city")
     user_id = request.user.id
 
-    rank  = LeaderboardService.get_user_rank(city_id, user_id, scope=scope)
+    rank = LeaderboardService.get_user_rank(city_id, user_id, scope=scope)
     score = LeaderboardService.get_user_score(city_id, user_id, scope=scope)
 
     return Response(
         {
-            "city_id":  city_id,
-            "user_id":  user_id,
-            "rank":     rank,
+            "city_id": city_id,
+            "user_id": user_id,
+            "rank": rank,
             "score_km": score,
         }
     )
@@ -116,32 +119,40 @@ def department_leaderboard(request: Request, department_id: int) -> Response:
     department = get_object_or_404(Department, id=department_id)
 
     # Check tenant access
-    if request.user.role != 'GLOBAL_OWNER' and department.tenant_id != request.user.tenant_id:
-        return Response({'error': 'Access denied'}, status=403)
+    if request.user.role != "GLOBAL_OWNER" and department.tenant_id != request.user.tenant_id:
+        return Response({"error": "Access denied"}, status=403)
 
-    user_ids = department.members.values_list('id', flat=True)
-    qs = Activity.objects.filter(
-        user_id__in=user_ids,
-        is_verified=True,
-    ).values('user__username').annotate(
-        total_km=Sum('distance')
-    ).order_by('-total_km')[:50]
+    user_ids = department.members.values_list("id", flat=True)
+    qs = (
+        Activity.objects.filter(
+            user_id__in=user_ids,
+            is_verified=True,
+        )
+        .values("user__username")
+        .annotate(total_km=Sum("distance"))
+        .order_by("-total_km")[:50]
+    )
 
-    return Response([{
-        'username': r['user__username'],
-        'total_km': round((r['total_km'] or 0) / 1000.0, 3),
-    } for r in qs])
+    return Response(
+        [
+            {
+                "username": r["user__username"],
+                "total_km": round((r["total_km"] or 0) / 1000.0, 3),
+            }
+            for r in qs
+        ]
+    )
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def leaderboard_list(request: Request) -> Response:
     """
     GET /api/activities/leaderboard/
-    
+
     Returns available leaderboard types.
     """
-    return Response({'leaderboards': ['city', 'department', 'event']})
+    return Response({"leaderboards": ["city", "department", "event"]})
 
 
 # ---------------------------------------------------------------------------
@@ -165,13 +176,14 @@ def admin_recalculate_leaderboards(request: Request) -> Response:
     from activities.tasks import recalculate_city_leaderboard
     from users.models import Tenant
 
-    cities = list(Tenant.objects.filter(is_active=True).values_list('id', flat=True))
+    cities = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
     # Explicitly reset_leaderboard_state for each city to avoid frontend race conditions
     for city_id in cities:
         recalculate_city_leaderboard.delay(str(city_id))
 
     logger.info(
-        "admin_recalculate_leaderboards: queued %d cities", len(cities),
+        "admin_recalculate_leaderboards: queued %d cities",
+        len(cities),
         extra={"user_id": request.user.id, "count": len(cities)},
     )
 
@@ -202,7 +214,8 @@ def admin_clear_leaderboard(request: Request, city_id: str) -> Response:
     LeaderboardService.clear_leaderboard(city_id, scope="city")
 
     logger.info(
-        "admin_clear_leaderboard: cleared city_id=%s", city_id,
+        "admin_clear_leaderboard: cleared city_id=%s",
+        city_id,
         extra={"user_id": request.user.id, "city_id": city_id},
     )
 

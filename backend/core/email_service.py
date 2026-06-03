@@ -9,6 +9,7 @@ Handles:
 - Beta feedback confirmation
 - System alerts to admins
 """
+
 import os
 import logging
 import sendgrid
@@ -16,9 +17,9 @@ from sendgrid.helpers.mail import Mail, Email, To, Content, Subject, HtmlContent
 
 logger = logging.getLogger(__name__)
 
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')
-FROM_EMAIL = os.getenv('FROM_EMAIL', 'no-reply@4velo.app')
-FROM_NAME = os.getenv('FROM_NAME', '4VELO Platform')
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY", "")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "no-reply@4velo.app")
+FROM_NAME = os.getenv("FROM_NAME", "4VELO Platform")
 
 
 class EmailService:
@@ -62,12 +63,14 @@ class EmailService:
         return cls.send(to_email, subject, body)
 
     @classmethod
-    def send_invitation(cls, to_email: str, username: str, temp_password: str, tenant_name: str = '') -> bool:
+    def send_invitation(
+        cls, to_email: str, username: str, temp_password: str, tenant_name: str = ""
+    ) -> bool:
         subject = f"4VELO Platform — Invitation{f' to {tenant_name}' if tenant_name else ''}"
         body = f"""
         <div style="font-family: monospace; max-width: 600px; margin: 0 auto; padding: 20px; background: #0B1D33; color: #F5E6CC;">
             <h1 style="color: #D4A373; font-size: 24px;">YOU HAVE BEEN RECRUITED</h1>
-            <p>Welcome to the 4VELO Platform{f' — {tenant_name}' if tenant_name else ''}.</p>
+            <p>Welcome to the 4VELO Platform{f" — {tenant_name}" if tenant_name else ""}.</p>
             <p>Your login credentials:</p>
             <div style="background: #2D2418; padding: 16px; border: 1px solid #D4A373; margin: 16px 0;">
                 <p style="margin: 4px 0;"><strong>Username:</strong> <code style="color: #D4A373;">{username}</code></p>

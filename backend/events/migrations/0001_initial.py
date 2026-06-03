@@ -7,81 +7,226 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('clubs', '0001_initial'),
+        ("clubs", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Event',
+            name="Event",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=300)),
-                ('slug', models.SlugField(max_length=300, unique=True)),
-                ('description', models.TextField(blank=True)),
-                ('banner', models.ImageField(blank=True, null=True, upload_to='events/banners/')),
-                ('event_type', models.CharField(choices=[('ACCUMULATIVE', 'Accumulative Distance/Elevation'), ('CHECKPOINT', 'Checkpoint / POI Run'), ('ROUTE_MATCH', 'Route Match Race'), ('INTER_TENANT', 'City vs City / Company vs Company'), ('CLUB_BATTLE', 'Club vs Club Challenge')], default='ACCUMULATIVE', max_length=20)),
-                ('sport_filter', models.CharField(choices=[('ALL', 'All Sports'), ('RUN', 'Running Only'), ('BIKE', 'Cycling Only'), ('RUN_BIKE', 'Running & Cycling')], default='ALL', max_length=10)),
-                ('status', models.CharField(choices=[('DRAFT', 'Draft'), ('PUBLISHED', 'Published'), ('ACTIVE', 'Active'), ('COMPLETED', 'Completed'), ('CANCELLED', 'Cancelled')], default='DRAFT', max_length=10)),
-                ('start_date', models.DateTimeField()),
-                ('end_date', models.DateTimeField()),
-                ('tenant_id', models.CharField(blank=True, help_text='Owner city or company', max_length=100, null=True)),
-                ('opponent_tenant_id', models.CharField(blank=True, help_text='For INTER_TENANT events', max_length=100, null=True)),
-                ('boundary', django.contrib.gis.db.models.fields.PolygonField(blank=True, help_text='GeoJSON polygon defining the event area', null=True, srid=4326)),
-                ('require_brouter_validation', models.BooleanField(default=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('club', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='clubs.club')),
-                ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_events', to=settings.AUTH_USER_MODEL)),
-                ('opponent_club', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='opponent_events', to='clubs.club')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("title", models.CharField(max_length=300)),
+                ("slug", models.SlugField(max_length=300, unique=True)),
+                ("description", models.TextField(blank=True)),
+                ("banner", models.ImageField(blank=True, null=True, upload_to="events/banners/")),
+                (
+                    "event_type",
+                    models.CharField(
+                        choices=[
+                            ("ACCUMULATIVE", "Accumulative Distance/Elevation"),
+                            ("CHECKPOINT", "Checkpoint / POI Run"),
+                            ("ROUTE_MATCH", "Route Match Race"),
+                            ("INTER_TENANT", "City vs City / Company vs Company"),
+                            ("CLUB_BATTLE", "Club vs Club Challenge"),
+                        ],
+                        default="ACCUMULATIVE",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "sport_filter",
+                    models.CharField(
+                        choices=[
+                            ("ALL", "All Sports"),
+                            ("RUN", "Running Only"),
+                            ("BIKE", "Cycling Only"),
+                            ("RUN_BIKE", "Running & Cycling"),
+                        ],
+                        default="ALL",
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("DRAFT", "Draft"),
+                            ("PUBLISHED", "Published"),
+                            ("ACTIVE", "Active"),
+                            ("COMPLETED", "Completed"),
+                            ("CANCELLED", "Cancelled"),
+                        ],
+                        default="DRAFT",
+                        max_length=10,
+                    ),
+                ),
+                ("start_date", models.DateTimeField()),
+                ("end_date", models.DateTimeField()),
+                (
+                    "tenant_id",
+                    models.CharField(
+                        blank=True, help_text="Owner city or company", max_length=100, null=True
+                    ),
+                ),
+                (
+                    "opponent_tenant_id",
+                    models.CharField(
+                        blank=True, help_text="For INTER_TENANT events", max_length=100, null=True
+                    ),
+                ),
+                (
+                    "boundary",
+                    django.contrib.gis.db.models.fields.PolygonField(
+                        blank=True,
+                        help_text="GeoJSON polygon defining the event area",
+                        null=True,
+                        srid=4326,
+                    ),
+                ),
+                ("require_brouter_validation", models.BooleanField(default=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "club",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="events",
+                        to="clubs.club",
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="created_events",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "opponent_club",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="opponent_events",
+                        to="clubs.club",
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Achievement',
+            name="Achievement",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('achievement_type', models.CharField(choices=[('MILESTONE_KM', 'Distance Milestone'), ('MILESTONE_RANK', 'Leaderboard Rank'), ('COMPLETION', 'Event Completion'), ('STREAK', 'Activity Streak')], max_length=20)),
-                ('title', models.CharField(max_length=200)),
-                ('description', models.TextField(blank=True)),
-                ('icon', models.CharField(default='trophy', max_length=100)),
-                ('awarded_at', models.DateTimeField(auto_now_add=True)),
-                ('metadata', models.JSONField(blank=True, default=dict)),
-                ('event', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='achievements', to='events.event')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='achievements', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "achievement_type",
+                    models.CharField(
+                        choices=[
+                            ("MILESTONE_KM", "Distance Milestone"),
+                            ("MILESTONE_RANK", "Leaderboard Rank"),
+                            ("COMPLETION", "Event Completion"),
+                            ("STREAK", "Activity Streak"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("title", models.CharField(max_length=200)),
+                ("description", models.TextField(blank=True)),
+                ("icon", models.CharField(default="trophy", max_length=100)),
+                ("awarded_at", models.DateTimeField(auto_now_add=True)),
+                ("metadata", models.JSONField(blank=True, default=dict)),
+                (
+                    "event",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="achievements",
+                        to="events.event",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="achievements",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Participation',
+            name="Participation",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('total_km', models.FloatField(default=0.0)),
-                ('total_elevation_m', models.FloatField(default=0.0)),
-                ('activity_count', models.IntegerField(default=0)),
-                ('score', models.FloatField(default=0.0)),
-                ('joined_at', models.DateTimeField(auto_now_add=True)),
-                ('last_updated', models.DateTimeField(auto_now=True)),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='participations', to='events.event')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='event_participations', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("total_km", models.FloatField(default=0.0)),
+                ("total_elevation_m", models.FloatField(default=0.0)),
+                ("activity_count", models.IntegerField(default=0)),
+                ("score", models.FloatField(default=0.0)),
+                ("joined_at", models.DateTimeField(auto_now_add=True)),
+                ("last_updated", models.DateTimeField(auto_now=True)),
+                (
+                    "event",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="participations",
+                        to="events.event",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="event_participations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['event', 'score'], name='events_part_event_i_9b46f5_idx')],
-                'unique_together': {('event', 'user')},
+                "indexes": [
+                    models.Index(fields=["event", "score"], name="events_part_event_i_9b46f5_idx")
+                ],
+                "unique_together": {("event", "user")},
             },
         ),
         migrations.AddIndex(
-            model_name='event',
-            index=models.Index(fields=['status', 'start_date'], name='events_even_status_dfba18_idx'),
+            model_name="event",
+            index=models.Index(
+                fields=["status", "start_date"], name="events_even_status_dfba18_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='event',
-            index=models.Index(fields=['tenant_id', 'status'], name='events_even_tenant__44ea3f_idx'),
+            model_name="event",
+            index=models.Index(
+                fields=["tenant_id", "status"], name="events_even_tenant__44ea3f_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='achievement',
-            index=models.Index(fields=['user', 'achievement_type'], name='events_achi_user_id_2708e5_idx'),
+            model_name="achievement",
+            index=models.Index(
+                fields=["user", "achievement_type"], name="events_achi_user_id_2708e5_idx"
+            ),
         ),
     ]

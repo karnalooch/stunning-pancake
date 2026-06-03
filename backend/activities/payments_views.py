@@ -9,8 +9,8 @@ from .payments import PaymentService
 logger = logging.getLogger(__name__)
 
 PRICE_IDS = {
-    'premium_monthly': 'price_1SPORT_MONTHLY',
-    'premium_annual': 'price_1SPORT_ANNUAL',
+    "premium_monthly": "price_1SPORT_MONTHLY",
+    "premium_annual": "price_1SPORT_ANNUAL",
 }
 
 
@@ -27,20 +27,20 @@ class CreateCheckoutSessionView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
-        plan = request.data.get('plan', 'premium_monthly')
+        plan = request.data.get("plan", "premium_monthly")
         price_id = PRICE_IDS.get(plan)
         if not price_id:
             return Response(
-                {'error': f'Unknown plan: {plan}'},
+                {"error": f"Unknown plan: {plan}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         url = PaymentService.create_checkout_session(request.user, price_id)
-        if url.startswith('http'):
-            return Response({'checkout_url': url})
-        return Response({'error': url}, status=status.HTTP_502_BAD_GATEWAY)
+        if url.startswith("http"):
+            return Response({"checkout_url": url})
+        return Response({"error": url}, status=status.HTTP_502_BAD_GATEWAY)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+@method_decorator(csrf_exempt, name="dispatch")
 class StripeWebhookView(APIView):
     """
     POST /api/activities/payments/webhook/
@@ -53,8 +53,8 @@ class StripeWebhookView(APIView):
 
     def post(self, request):
         payload = request.body
-        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE', '')
+        sig_header = request.META.get("HTTP_STRIPE_SIGNATURE", "")
         success = PaymentService.handle_webhook(payload, sig_header)
         if success:
-            return Response({'status': 'ok'})
-        return Response({'error': 'webhook processing failed'}, status=400)
+            return Response({"status": "ok"})
+        return Response({"error": "webhook processing failed"}, status=400)

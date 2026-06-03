@@ -4,21 +4,20 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('activities', '0005_remove_poi_tenant_id_activity_tenant_poi_tenant'),
+        ("activities", "0005_remove_poi_tenant_id_activity_tenant_poi_tenant"),
     ]
 
     operations = [
         migrations.RunSQL(
-            sql='''
+            sql="""
                 ALTER TABLE activities_activity ENABLE ROW LEVEL SECURITY;
                 CREATE POLICY tenant_isolation_policy ON activities_activity
                 USING (tenant_id = current_setting('sport.current_tenant_id', true)::uuid);
-            ''',
-            reverse_sql='''
+            """,
+            reverse_sql="""
                 DROP POLICY IF EXISTS tenant_isolation_policy ON activities_activity;
                 ALTER TABLE activities_activity DISABLE ROW LEVEL SECURITY;
-            '''
+            """,
         ),
     ]

@@ -147,4 +147,3 @@ def get_log(job_id: str) -> list[list[str]] | list[Any]:
         except Exception:
             continue
     return out
-

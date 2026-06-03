@@ -14,6 +14,7 @@ Env vars required:
     STRIPE_B2C_PRICE_ID  — Price ID for individual Premium plan
     STRIPE_B2B_PRICE_ID  — Price ID for corporate seat plan
 """
+
 from __future__ import annotations
 
 import logging
@@ -40,7 +41,9 @@ class StripeService:
     """
 
     @classmethod
-    def create_b2c_checkout(cls, user_id: int, email: str, success_url: str, cancel_url: str) -> str | None:
+    def create_b2c_checkout(
+        cls, user_id: int, email: str, success_url: str, cancel_url: str
+    ) -> str | None:
         """
         Creates a Stripe Checkout Session for B2C Premium subscription.
 
@@ -74,7 +77,9 @@ class StripeService:
             return None
 
     @classmethod
-    def create_b2b_checkout(cls, tenant_id: str, email: str, seats: int, success_url: str, cancel_url: str) -> str | None:
+    def create_b2b_checkout(
+        cls, tenant_id: str, email: str, seats: int, success_url: str, cancel_url: str
+    ) -> str | None:
         """
         Creates a Stripe Checkout Session for B2B corporate subscription.
 
@@ -135,7 +140,9 @@ class StripeService:
     # --- STRIPE CONNECT (Milestone 4: Multi-Sponsor Payouts) ---
 
     @classmethod
-    def create_connect_account(cls, user_id: int, email: str, refresh_url: str, return_url: str) -> dict | None:
+    def create_connect_account(
+        cls, user_id: int, email: str, refresh_url: str, return_url: str
+    ) -> dict | None:
         """
         Creates a Stripe Express account and an onboarding link for an athlete.
         """
@@ -151,7 +158,7 @@ class StripeService:
                     "card_payments": {"requested": True},
                     "transfers": {"requested": True},
                 },
-                metadata={"user_id": str(user_id)}
+                metadata={"user_id": str(user_id)},
             )
 
             # 2. Create an Account Link for onboarding
@@ -168,7 +175,9 @@ class StripeService:
             return None
 
     @classmethod
-    def create_transfer(cls, amount_cents: int, destination_acct: str, description: str = "Reward payout") -> str | None:
+    def create_transfer(
+        cls, amount_cents: int, destination_acct: str, description: str = "Reward payout"
+    ) -> str | None:
         """
         Transfers funds from the platform to a connected athlete account.
         """
@@ -236,6 +245,7 @@ class StripeService:
     @classmethod
     def _activate_user_subscription(cls, user_id: int, subscription_id: str | None) -> None:
         from django.contrib.auth import get_user_model
+
         User = get_user_model()
         User.objects.filter(pk=user_id).update(is_premium=True)
         logger.info("stripe.user_activated user=%d sub=%s", user_id, subscription_id)

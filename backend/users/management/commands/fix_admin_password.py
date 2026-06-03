@@ -2,6 +2,7 @@
 Fixes plain text password for global_owner user.
 Safe to run multiple times — only updates if password is not hashed.
 """
+
 import os
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -12,29 +13,29 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = 'Fix plain text password for global_owner user'
+    help = "Fix plain text password for global_owner user"
 
     def handle(self, *args, **options):
         try:
-            user = User.objects.get(username='global_owner')
+            user = User.objects.get(username="global_owner")
         except User.DoesNotExist:
-            self.stdout.write(self.style.ERROR('User global_owner does not exist.'))
+            self.stdout.write(self.style.ERROR("User global_owner does not exist."))
             return
 
         # Check if password is already properly hashed
-        if is_password_usable(user.password) and user.password.startswith('pbkdf2_'):
+        if is_password_usable(user.password) and user.password.startswith("pbkdf2_"):
             self.stdout.write(
-                self.style.SUCCESS('Password is already properly hashed. No fix needed.')
+                self.style.SUCCESS("Password is already properly hashed. No fix needed.")
             )
             return
 
         # Password is plain text — fix it
-        password = os.getenv('ADMIN_PASSWORD')
+        password = os.getenv("ADMIN_PASSWORD")
         if not password:
             password = get_random_string(20)
             self.stdout.write(
                 self.style.WARNING(
-                    f'No ADMIN_PASSWORD env var set. Generated one-time password: {password}'
+                    f"No ADMIN_PASSWORD env var set. Generated one-time password: {password}"
                 )
             )
 
@@ -42,6 +43,6 @@ class Command(BaseCommand):
         user.save()
         self.stdout.write(
             self.style.SUCCESS(
-                'Fixed password for global_owner. Set ADMIN_PASSWORD env var to change it.'
+                "Fixed password for global_owner. Set ADMIN_PASSWORD env var to change it."
             )
         )

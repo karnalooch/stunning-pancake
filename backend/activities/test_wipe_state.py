@@ -1,4 +1,5 @@
 """Wipe status helpers — prevents false 'complete' when idle before task starts."""
+
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
@@ -26,72 +27,73 @@ class _FakeRedis:
 
 class WipeStatusLabelTests(SimpleTestCase):
     def test_idle_is_not_complete(self):
-        state = {'running': False, 'phase': 'idle', 'error': None}
-        self.assertEqual(ws.wipe_status_label(state), 'idle')
+        state = {"running": False, "phase": "idle", "error": None}
+        self.assertEqual(ws.wipe_status_label(state), "idle")
 
     def test_queued_while_running(self):
-        state = {'running': True, 'phase': 'queued', 'error': None}
-        self.assertEqual(ws.wipe_status_label(state), 'queued')
+        state = {"running": True, "phase": "queued", "error": None}
+        self.assertEqual(ws.wipe_status_label(state), "queued")
 
     def test_complete(self):
-        state = {'running': False, 'phase': 'complete', 'error': None}
-        self.assertEqual(ws.wipe_status_label(state), 'complete')
+        state = {"running": False, "phase": "complete", "error": None}
+        self.assertEqual(ws.wipe_status_label(state), "complete")
 
     def test_complete_with_vacuum_warning_not_error(self):
         state = {
-            'running': False,
-            'phase': 'complete',
-            'error': None,
-            'warning': 'permission denied for VACUUM',
+            "running": False,
+            "phase": "complete",
+            "error": None,
+            "warning": "permission denied for VACUUM",
         }
-        self.assertEqual(ws.wipe_status_label(state), 'complete')
+        self.assertEqual(ws.wipe_status_label(state), "complete")
 
     def test_error_with_message(self):
-        state = {'running': False, 'phase': 'error', 'error': 'disk full'}
-        self.assertEqual(ws.wipe_status_label(state), 'error')
+        state = {"running": False, "phase": "error", "error": "disk full"}
+        self.assertEqual(ws.wipe_status_label(state), "error")
 
     def test_stuck_queued(self):
         import time as _time
+
         state = {
-            'running': True,
-            'phase': 'queued',
-            'started_at': _time.time() - 300,
+            "running": True,
+            "phase": "queued",
+            "started_at": _time.time() - 300,
         }
         self.assertTrue(ws.is_wipe_stuck(state))
 
     def test_not_stuck_when_idle(self):
-        state = {'running': False, 'phase': 'idle'}
+        state = {"running": False, "phase": "idle"}
         self.assertFalse(ws.is_wipe_stuck(state))
 
-    @patch('activities.wipe_state.get_redis')
+    @patch("activities.wipe_state.get_redis")
     def test_none_error_not_serialized_as_string(self, mock_get_redis):
         mock_get_redis.return_value = _FakeRedis()
-        ws.set_wipe_state(running=True, phase='users', progress_pct=50, error=None)
+        ws.set_wipe_state(running=True, phase="users", progress_pct=50, error=None)
         state = ws.get_wipe_state()
-        self.assertIsNone(state['error'])
+        self.assertIsNone(state["error"])
 
-    @patch('activities.wipe_state.get_redis')
+    @patch("activities.wipe_state.get_redis")
     def test_progress_fields_in_state(self, mock_get_redis):
         mock_get_redis.return_value = _FakeRedis()
         ws.set_wipe_state(
             running=True,
-            phase='activities',
+            phase="activities",
             progress_pct=12.5,
-            deleted={'activities': 5000},
+            deleted={"activities": 5000},
             tables_done=2,
             tables_total=6,
-            message='Deleting activities',
+            message="Deleting activities",
         )
         state = ws.get_wipe_state()
-        self.assertEqual(state['tables_done'], 2)
-        self.assertEqual(state['tables_total'], 6)
-        self.assertEqual(state['rows_deleted'], 5000)
-        self.assertEqual(state['deleted']['activities'], 5000)
+        self.assertEqual(state["tables_done"], 2)
+        self.assertEqual(state["tables_total"], 6)
+        self.assertEqual(state["rows_deleted"], 5000)
+        self.assertEqual(state["deleted"]["activities"], 5000)
 
     def test_serialize_wipe_response_shape(self):
         state = ws.get_wipe_state()
         payload = ws.serialize_wipe_response(state, log=[])
-        self.assertIn('status', payload)
-        self.assertIn('phase_label', payload)
-        self.assertIn('stuck', payload)
-        self.assertIn('tables_total', payload)
+        self.assertIn("status", payload)
+        self.assertIn("phase_label", payload)
+        self.assertIn("stuck", payload)
+        self.assertIn("tables_total", payload)

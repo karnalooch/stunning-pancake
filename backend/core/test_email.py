@@ -3,6 +3,7 @@ P1 Tests — EmailService (SendGrid)
 ====================================
 RC v0.2: password reset emails, invitation emails, beta acknowledgment.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 from core.email_service import EmailService

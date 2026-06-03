@@ -38,10 +38,11 @@ class EventProgressService:
             activity_id: Source activity (for logging; credit is idempotent upstream).
         """
         from django.utils import timezone
+
         now = timezone.now()
 
         active_events = Event.objects.filter(
-            status='ACTIVE',
+            status="ACTIVE",
             start_date__lte=now,
             end_date__gte=now,
         ).select_for_update(skip_locked=True)
@@ -63,16 +64,19 @@ class EventProgressService:
             cls._check_achievements(user, event, participation)
 
         logger.info(
-            'event_progress.recorded user=%s km=%.2f events=%d activity_id=%s',
-            user.username, km, active_events.count(), activity_id,
+            "event_progress.recorded user=%s km=%.2f events=%d activity_id=%s",
+            user.username,
+            km,
+            active_events.count(),
+            activity_id,
         )
 
     @staticmethod
     def _user_qualifies(event: Event, tenant_id: str | None, club_id: int | None) -> bool:
         """Returns True if user's tenant/club matches the event scope."""
-        if event.event_type == 'INTER_TENANT':
+        if event.event_type == "INTER_TENANT":
             return tenant_id in (event.tenant_id, event.opponent_tenant_id)
-        if event.event_type == 'CLUB_BATTLE':
+        if event.event_type == "CLUB_BATTLE":
             return club_id in (event.club_id, event.opponent_club_id)
         if event.tenant_id:
             return tenant_id == event.tenant_id
@@ -82,25 +86,25 @@ class EventProgressService:
     def _update_redis_leaderboard(event: Event, user, score: float) -> None:
         """Pushes score to per-event Redis Sorted Set."""
         try:
-            key_suffix = f'event:{event.id}'
+            key_suffix = f"event:{event.id}"
             LeaderboardService.update_score(user.id, key_suffix, score)
         except Exception as e:
-            logger.warning('redis_leaderboard_update_failed event=%d err=%s', event.id, e)
+            logger.warning("redis_leaderboard_update_failed event=%d err=%s", event.id, e)
 
     @staticmethod
     def _check_achievements(user, event: Event, participation: Participation) -> None:
         """Awards milestone achievements based on participation stats."""
-        milestones = [(10, '10 km'), (50, '50 km'), (100, '100 km')]
+        milestones = [(10, "10 km"), (50, "50 km"), (100, "100 km")]
         for threshold, label in milestones:
             if participation.total_km >= threshold:
                 Achievement.objects.get_or_create(
                     user=user,
                     event=event,
-                    achievement_type='MILESTONE_KM',
-                    title=f'{label} osiągnięte w {event.title}',
+                    achievement_type="MILESTONE_KM",
+                    title=f"{label} osiągnięte w {event.title}",
                     defaults={
-                        'description': f'Gratulacje! Przebiegłeś/przejechałeś {label} w ramach eventu.',
-                        'metadata': {'km_threshold': threshold},
+                        "description": f"Gratulacje! Przebiegłeś/przejechałeś {label} w ramach eventu.",
+                        "metadata": {"km_threshold": threshold},
                     },
                 )
 
@@ -113,9 +117,9 @@ class EventNormalizationService:
     """
 
     COMPLEXITY_FACTORS = {
-        'RUN': 1.2,
-        'BIKE': 1.0,
-        'ALL': 1.0,
+        "RUN": 1.2,
+        "BIKE": 1.0,
+        "ALL": 1.0,
     }
 
     @classmethod
@@ -131,6 +135,7 @@ class EventNormalizationService:
             Normalized float score.
         """
         from django.contrib.auth import get_user_model
+
         get_user_model()  # ensure custom user model is loaded
 
         participants = Participation.objects.filter(

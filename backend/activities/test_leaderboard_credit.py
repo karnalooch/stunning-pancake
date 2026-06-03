@@ -1,6 +1,7 @@
 """
 Tests for idempotent leaderboard credit and process-queue dedupe.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import timedelta
@@ -48,9 +49,11 @@ class TestCreditVerifiedActivity:
         mock_redis = MagicMock()
         mock_redis.set.side_effect = [True, False]
 
-        with patch("core.redis_cluster.get_redis", return_value=mock_redis), \
-             patch("activities.leaderboards.LeaderboardService.update_score") as mock_lb, \
-             patch("events.services.EventProgressService.record_activity"):
+        with (
+            patch("core.redis_cluster.get_redis", return_value=mock_redis),
+            patch("activities.leaderboards.LeaderboardService.update_score") as mock_lb,
+            patch("events.services.EventProgressService.record_activity"),
+        ):
             assert credit_verified_activity(verified_activity) is True
             assert credit_verified_activity(verified_activity) is False
             mock_lb.assert_called_once()
@@ -93,9 +96,11 @@ class TestWearableExternalIdDedupe:
             is_verified=True,
         )
 
-        with patch.object(StravaService, "refresh_token", return_value="valid_token"), \
-             patch("activities.wearables._finalize_imported_activity"), \
-             patch("requests.get") as mock_get:
+        with (
+            patch.object(StravaService, "refresh_token", return_value="valid_token"),
+            patch("activities.wearables._finalize_imported_activity"),
+            patch("requests.get") as mock_get,
+        ):
             mock_get.return_value.status_code = 200
             mock_get.return_value.json.return_value = [
                 {

@@ -4,20 +4,27 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0001_initial'),
+        ("users", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tenantprofile',
-            name='config_json',
-            field=models.JSONField(blank=True, default=dict, help_text='Per-tenant configuration: brouter_validation, normalization_factor, allowed_sports, push_notification_key, etc.'),
+            model_name="tenantprofile",
+            name="config_json",
+            field=models.JSONField(
+                blank=True,
+                default=dict,
+                help_text="Per-tenant configuration: brouter_validation, normalization_factor, allowed_sports, push_notification_key, etc.",
+            ),
         ),
         migrations.AddField(
-            model_name='tenantprofile',
-            name='white_label_domain',
-            field=models.CharField(blank=True, help_text='Custom domain for white-label deployments (e.g. wellness.acme.com)', max_length=200),
+            model_name="tenantprofile",
+            name="white_label_domain",
+            field=models.CharField(
+                blank=True,
+                help_text="Custom domain for white-label deployments (e.g. wellness.acme.com)",
+                max_length=200,
+            ),
         ),
     ]

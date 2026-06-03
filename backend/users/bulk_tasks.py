@@ -82,7 +82,9 @@ def bulk_action_task(
 
             processed += len(batch)
             progress_pct = round((processed / max(total, 1)) * 100, 2)
-            set_state(job_id, progress_pct=progress_pct, processed=processed, status=f"running:{action}")
+            set_state(
+                job_id, progress_pct=progress_pct, processed=processed, status=f"running:{action}"
+            )
             bulk_log(job_id, f"{action}: processed {processed}/{total}")
 
         mark_complete(job_id, processed=processed, message=f"complete:{action}")
@@ -92,4 +94,3 @@ def bulk_action_task(
         mark_error(job_id, error=str(exc), processed=processed, message=f"error:{action}")
         bulk_log(job_id, f"ERROR: {exc}")
         return {"status": "error", "error": str(exc)}
-

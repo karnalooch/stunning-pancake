@@ -5,7 +5,6 @@ from django.db.models import Q
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("activities", "0011_beta_feedback"),
     ]

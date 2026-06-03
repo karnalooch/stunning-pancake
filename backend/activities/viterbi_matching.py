@@ -20,6 +20,7 @@ Reference:
   Newson & Krumm (2009): "Hidden Markov Map Matching Through Noise and Sparseness"
   https://dl.acm.org/doi/10.1145/1653771.1653818
 """
+
 from __future__ import annotations
 
 import math
@@ -34,13 +35,14 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-SIGMA_Z = 4.07   # metres — GPS measurement noise std deviation (Newson & Krumm)
-BETA = 3.0       # transition probability decay factor (metres)
+SIGMA_Z = 4.07  # metres — GPS measurement noise std deviation (Newson & Krumm)
+BETA = 3.0  # transition probability decay factor (metres)
 
 
 # ---------------------------------------------------------------------------
 # Road candidate
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class RoadCandidate:
@@ -53,6 +55,7 @@ class RoadCandidate:
         road_idx: Index into the road polyline points list.
         dist_to_obs: Distance from GPS observation to this candidate (metres).
     """
+
     lat: float
     lon: float
     road_idx: int
@@ -62,6 +65,7 @@ class RoadCandidate:
 # ---------------------------------------------------------------------------
 # Probability functions (Newson & Krumm)
 # ---------------------------------------------------------------------------
+
 
 def emission_probability(dist_m: float) -> float:
     """
@@ -76,7 +80,7 @@ def emission_probability(dist_m: float) -> float:
         Log-probability (negative, larger = more likely).
     """
     # Log of Gaussian PDF (we work in log space to avoid underflow)
-    return -(dist_m ** 2) / (2 * SIGMA_Z ** 2)
+    return -(dist_m**2) / (2 * SIGMA_Z**2)
 
 
 def transition_probability(delta_dist_m: float) -> float:
@@ -99,6 +103,7 @@ def transition_probability(delta_dist_m: float) -> float:
 # Candidate generation
 # ---------------------------------------------------------------------------
 
+
 def _generate_candidates(
     obs: GpsPoint,
     road_points: list[GpsPoint],
@@ -119,31 +124,39 @@ def _generate_candidates(
     for idx, rp in enumerate(road_points):
         d = haversine_m(obs.lat, obs.lon, rp.lat, rp.lon)
         if d <= max_radius_m:
-            candidates.append(RoadCandidate(
-                lat=rp.lat, lon=rp.lon,
-                road_idx=idx, dist_to_obs=d,
-            ))
+            candidates.append(
+                RoadCandidate(
+                    lat=rp.lat,
+                    lon=rp.lon,
+                    road_idx=idx,
+                    dist_to_obs=d,
+                )
+            )
     # If nothing within radius, return the single nearest candidate
     if not candidates:
         best_idx = 0
-        best_dist = float('inf')
+        best_dist = float("inf")
         for idx, rp in enumerate(road_points):
             d = haversine_m(obs.lat, obs.lon, rp.lat, rp.lon)
             if d < best_dist:
                 best_idx = idx
                 best_dist = d
         nearest = road_points[best_idx]
-        candidates.append(RoadCandidate(
-            lat=nearest.lat, lon=nearest.lon,
-            road_idx=best_idx,
-            dist_to_obs=best_dist,
-        ))
+        candidates.append(
+            RoadCandidate(
+                lat=nearest.lat,
+                lon=nearest.lon,
+                road_idx=best_idx,
+                dist_to_obs=best_dist,
+            )
+        )
     return sorted(candidates, key=lambda c: c.dist_to_obs)
 
 
 # ---------------------------------------------------------------------------
 # Viterbi algorithm
 # ---------------------------------------------------------------------------
+
 
 def viterbi_match(
     observations: list[GpsPoint],
@@ -189,8 +202,10 @@ def viterbi_match(
     # --- Forward pass ---
     for t in range(1, n_obs):
         obs_dist = haversine_m(
-            observations[t - 1].lat, observations[t - 1].lon,
-            observations[t].lat, observations[t].lon,
+            observations[t - 1].lat,
+            observations[t - 1].lon,
+            observations[t].lat,
+            observations[t].lon,
         )
         prev_cands = all_candidates[t - 1]
         curr_cands = all_candidates[t]
@@ -230,15 +245,19 @@ def viterbi_match(
     matched: list[GpsPoint] = []
     for t, cand_idx in enumerate(path):
         c = all_candidates[t][cand_idx]
-        matched.append(GpsPoint(
-            lat=c.lat,
-            lon=c.lon,
-            accuracy_m=observations[t].accuracy_m,
-            timestamp=observations[t].timestamp,
-        ))
+        matched.append(
+            GpsPoint(
+                lat=c.lat,
+                lon=c.lon,
+                accuracy_m=observations[t].accuracy_m,
+                timestamp=observations[t].timestamp,
+            )
+        )
 
     logger.info(
         "viterbi_match: matched %d/%d observations road_pts=%d",
-        len(matched), n_obs, len(road_points),
+        len(matched),
+        n_obs,
+        len(road_points),
     )
     return matched

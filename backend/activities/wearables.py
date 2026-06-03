@@ -22,28 +22,34 @@ from core.redis_cluster import get_redis
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
-STRAVA_CLIENT_ID = os.getenv('STRAVA_CLIENT_ID')
-STRAVA_CLIENT_SECRET = os.getenv('STRAVA_CLIENT_SECRET')
-STRAVA_REDIRECT_URI = os.getenv('STRAVA_REDIRECT_URI', 'https://sport-platform.com/api/activities/wearables/strava/callback/')
+STRAVA_CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
+STRAVA_CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
+STRAVA_REDIRECT_URI = os.getenv(
+    "STRAVA_REDIRECT_URI", "https://sport-platform.com/api/activities/wearables/strava/callback/"
+)
 
-GARMIN_CLIENT_ID = os.getenv('GARMIN_CLIENT_ID')
-GARMIN_CLIENT_SECRET = os.getenv('GARMIN_CLIENT_SECRET')
-GARMIN_REDIRECT_URI = os.getenv('GARMIN_REDIRECT_URI', 'https://sport-platform.com/api/activities/wearables/garmin/callback/')
+GARMIN_CLIENT_ID = os.getenv("GARMIN_CLIENT_ID")
+GARMIN_CLIENT_SECRET = os.getenv("GARMIN_CLIENT_SECRET")
+GARMIN_REDIRECT_URI = os.getenv(
+    "GARMIN_REDIRECT_URI", "https://sport-platform.com/api/activities/wearables/garmin/callback/"
+)
 
-GARMIN_API_BASE = 'https://connectapi.garmin.com'
+GARMIN_API_BASE = "https://connectapi.garmin.com"
 
 # OAuth state nonce TTL in seconds (default 10 minutes)
-OAUTH_STATE_TTL = int(os.getenv('OAUTH_STATE_TTL', '600'))
+OAUTH_STATE_TTL = int(os.getenv("OAUTH_STATE_TTL", "600"))
 
 
 def _finalize_imported_activity(activity: Activity) -> None:
     """Queue BRouter verify when a route exists; otherwise credit km once."""
     if activity.route_path and activity.end_time and not activity.is_verified:
         from activities.tasks import process_activity_async
+
         process_activity_async.delay(activity.id)
         return
     if activity.is_verified:
         from activities.leaderboard_credit import credit_verified_activity
+
         credit_verified_activity(activity)
 
 
@@ -96,27 +102,31 @@ class StravaService:
 
     @staticmethod
     def exchange_code(user, code):
-        response = requests.post("https://www.strava.com/oauth/token", data={
-            'client_id': STRAVA_CLIENT_ID,
-            'client_secret': STRAVA_CLIENT_SECRET,
-            'code': code,
-            'grant_type': 'authorization_code'
-        }, timeout=15)
+        response = requests.post(
+            "https://www.strava.com/oauth/token",
+            data={
+                "client_id": STRAVA_CLIENT_ID,
+                "client_secret": STRAVA_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
+            },
+            timeout=15,
+        )
 
         if response.status_code == 200:
             data = response.json()
-            expires_at = timezone.now() + timedelta(seconds=data['expires_in'])
+            expires_at = timezone.now() + timedelta(seconds=data["expires_in"])
 
             integration, _ = WearableIntegration.objects.update_or_create(
                 user=user,
-                service='STRAVA',
+                service="STRAVA",
                 defaults={
-                    'access_token': data['access_token'],
-                    'refresh_token': data['refresh_token'],
-                    'expires_at': expires_at,
-                    'external_id': str(data['athlete']['id']),
-                    'is_active': True
-                }
+                    "access_token": data["access_token"],
+                    "refresh_token": data["refresh_token"],
+                    "expires_at": expires_at,
+                    "external_id": str(data["athlete"]["id"]),
+                    "is_active": True,
+                },
             )
             return integration
         else:
@@ -125,22 +135,28 @@ class StravaService:
 
     @staticmethod
     def refresh_token(integration):
-        if integration.expires_at and integration.expires_at > timezone.now() + timedelta(minutes=5):
+        if integration.expires_at and integration.expires_at > timezone.now() + timedelta(
+            minutes=5
+        ):
             return integration.decrypted_access_token
 
-        response = requests.post("https://www.strava.com/oauth/token", data={
-            'client_id': STRAVA_CLIENT_ID,
-            'client_secret': STRAVA_CLIENT_SECRET,
-            'refresh_token': integration.decrypted_refresh_token,
-            'grant_type': 'refresh_token'
-        }, timeout=15)
+        response = requests.post(
+            "https://www.strava.com/oauth/token",
+            data={
+                "client_id": STRAVA_CLIENT_ID,
+                "client_secret": STRAVA_CLIENT_SECRET,
+                "refresh_token": integration.decrypted_refresh_token,
+                "grant_type": "refresh_token",
+            },
+            timeout=15,
+        )
 
         if response.status_code == 200:
             data = response.json()
-            integration.access_token = data['access_token']
-            if 'refresh_token' in data:
-                integration.refresh_token = data['refresh_token']
-            integration.expires_at = timezone.now() + timedelta(seconds=data['expires_in'])
+            integration.access_token = data["access_token"]
+            if "refresh_token" in data:
+                integration.refresh_token = data["refresh_token"]
+            integration.expires_at = timezone.now() + timedelta(seconds=data["expires_in"])
             integration.save()
             return integration.decrypted_access_token
         else:
@@ -158,8 +174,8 @@ class StravaService:
         after = int(integration.last_sync.timestamp()) if integration.last_sync else 0
         response = requests.get(
             "https://www.strava.com/api/v3/athlete/activities",
-            headers={'Authorization': f'Bearer {token}'},
-            params={'after': after, 'per_page': 100},
+            headers={"Authorization": f"Bearer {token}"},
+            params={"after": after, "per_page": 100},
             timeout=30,
         )
 
@@ -170,22 +186,22 @@ class StravaService:
         activities = response.json()
         count = 0
         for act in activities:
-            s_type = act.get('type', '')
-            if s_type in ['Ride', 'VirtualRide']:
-                sport_type = 'BIKE'
-            elif s_type == 'Run':
-                sport_type = 'RUN'
-            elif s_type in ['Walk', 'Hike']:
-                sport_type = 'WALK'
+            s_type = act.get("type", "")
+            if s_type in ["Ride", "VirtualRide"]:
+                sport_type = "BIKE"
+            elif s_type == "Run":
+                sport_type = "RUN"
+            elif s_type in ["Walk", "Hike"]:
+                sport_type = "WALK"
             else:
                 continue
 
-            start_time = timezone.datetime.fromisoformat(act['start_date'].replace('Z', '+00:00'))
-            ext_id = str(act['id'])
+            start_time = timezone.datetime.fromisoformat(act["start_date"].replace("Z", "+00:00"))
+            ext_id = str(act["id"])
 
             if Activity.objects.filter(
                 user=integration.user,
-                external_source='STRAVA',
+                external_source="STRAVA",
                 external_id=ext_id,
             ).exists():
                 continue
@@ -196,10 +212,10 @@ class StravaService:
                 tenant=tenant,
                 type=sport_type,
                 start_time=start_time,
-                end_time=start_time + timedelta(seconds=act['elapsed_time']),
-                distance=float(act.get('distance') or 0),
-                duration=timedelta(seconds=act['moving_time']),
-                external_source='STRAVA',
+                end_time=start_time + timedelta(seconds=act["elapsed_time"]),
+                distance=float(act.get("distance") or 0),
+                duration=timedelta(seconds=act["moving_time"]),
+                external_source="STRAVA",
                 external_id=ext_id,
                 is_verified=True,
                 verification_score=1.0,
@@ -216,15 +232,17 @@ class StravaService:
     def get_status(cls, user):
         """Returns the connection status for a user."""
         try:
-            integration = WearableIntegration.objects.get(user=user, service='STRAVA')
+            integration = WearableIntegration.objects.get(user=user, service="STRAVA")
             return {
-                'connected': integration.is_active,
-                'last_sync': integration.last_sync.isoformat() if integration.last_sync else None,
-                'external_id': integration.external_id,
-                'expires_at': integration.expires_at.isoformat() if integration.expires_at else None,
+                "connected": integration.is_active,
+                "last_sync": integration.last_sync.isoformat() if integration.last_sync else None,
+                "external_id": integration.external_id,
+                "expires_at": integration.expires_at.isoformat()
+                if integration.expires_at
+                else None,
             }
         except WearableIntegration.DoesNotExist:
-            return {'connected': False}
+            return {"connected": False}
 
 
 class GarminService:
@@ -245,41 +263,41 @@ class GarminService:
         response = requests.post(
             f"{GARMIN_API_BASE}/oauth-service/oauth/token",
             data={
-                'client_id': GARMIN_CLIENT_ID,
-                'client_secret': GARMIN_CLIENT_SECRET,
-                'code': code,
-                'grant_type': 'authorization_code',
+                "client_id": GARMIN_CLIENT_ID,
+                "client_secret": GARMIN_CLIENT_SECRET,
+                "code": code,
+                "grant_type": "authorization_code",
             },
-            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=15,
         )
 
         if response.status_code == 200:
             data = response.json()
-            expires_at = timezone.now() + timedelta(seconds=data.get('expires_in', 3600))
+            expires_at = timezone.now() + timedelta(seconds=data.get("expires_in", 3600))
 
             integration, _ = WearableIntegration.objects.update_or_create(
                 user=user,
-                service='GARMIN',
+                service="GARMIN",
                 defaults={
-                    'access_token': data.get('access_token', 'mock_garmin_token'),
-                    'refresh_token': data.get('refresh_token', ''),
-                    'expires_at': expires_at,
-                    'is_active': True,
-                }
+                    "access_token": data.get("access_token", "mock_garmin_token"),
+                    "refresh_token": data.get("refresh_token", ""),
+                    "expires_at": expires_at,
+                    "is_active": True,
+                },
             )
             return integration
 
         logger.error(f"Garmin token exchange failed: {response.text}")
         # Fallback: create mock integration for demo
-        if not GARMIN_CLIENT_ID or GARMIN_CLIENT_ID == 'mock':
+        if not GARMIN_CLIENT_ID or GARMIN_CLIENT_ID == "mock":
             integration, _ = WearableIntegration.objects.update_or_create(
                 user=user,
-                service='GARMIN',
+                service="GARMIN",
                 defaults={
-                    'access_token': 'mock_garmin_token',
-                    'is_active': True,
-                }
+                    "access_token": "mock_garmin_token",
+                    "is_active": True,
+                },
             )
             return integration
         return None
@@ -292,22 +310,24 @@ class GarminService:
         response = requests.post(
             f"{GARMIN_API_BASE}/oauth-service/oauth/token",
             data={
-                'client_id': GARMIN_CLIENT_ID,
-                'client_secret': GARMIN_CLIENT_SECRET,
-                'refresh_token': integration.decrypted_refresh_token,
-                'grant_type': 'refresh_token',
+                "client_id": GARMIN_CLIENT_ID,
+                "client_secret": GARMIN_CLIENT_SECRET,
+                "refresh_token": integration.decrypted_refresh_token,
+                "grant_type": "refresh_token",
             },
-            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
             timeout=15,
         )
 
         if response.status_code == 200:
             data = response.json()
-            if 'access_token' in data:
-                integration.access_token = data['access_token']
-            if 'refresh_token' in data:
-                integration.refresh_token = data['refresh_token']
-            integration.expires_at = timezone.now() + timedelta(seconds=data.get('expires_in', 3600))
+            if "access_token" in data:
+                integration.access_token = data["access_token"]
+            if "refresh_token" in data:
+                integration.refresh_token = data["refresh_token"]
+            integration.expires_at = timezone.now() + timedelta(
+                seconds=data.get("expires_in", 3600)
+            )
             integration.save()
             return integration.decrypted_access_token
 
@@ -321,49 +341,49 @@ class GarminService:
         if not token:
             return 0
 
-        headers = {'Authorization': f'Bearer {token}'}
+        headers = {"Authorization": f"Bearer {token}"}
         response = requests.get(
             f"{GARMIN_API_BASE}/activitylist-service/activities/activity",
             headers=headers,
-            params={'limit': 100, 'start': 1},
+            params={"limit": 100, "start": 1},
             timeout=15,
         )
 
         if response.status_code != 200:
             logger.error(f"Garmin API error: {response.status_code}")
-            if GARMIN_CLIENT_ID == 'mock' or not GARMIN_CLIENT_ID:
+            if GARMIN_CLIENT_ID == "mock" or not GARMIN_CLIENT_ID:
                 return 0
             return 0
 
         data = response.json()
-        activities = data if isinstance(data, list) else data.get('activityList', [])
+        activities = data if isinstance(data, list) else data.get("activityList", [])
         count = 0
 
         for act in activities:
-            sport_type = cls._map_activity_type(act.get('activityType', {}).get('typeKey', ''))
+            sport_type = cls._map_activity_type(act.get("activityType", {}).get("typeKey", ""))
             if not sport_type:
                 continue
 
-            start_time_ms = act.get('startTimeInSeconds')
+            start_time_ms = act.get("startTimeInSeconds")
             if not start_time_ms:
                 continue
             start_time = timezone.datetime.fromtimestamp(start_time_ms / 1000)
 
-            ext_id = str(act.get('activityId') or act.get('summaryId') or '')
+            ext_id = str(act.get("activityId") or act.get("summaryId") or "")
             if not ext_id:
                 continue
 
             if Activity.objects.filter(
                 user=integration.user,
-                external_source='GARMIN',
+                external_source="GARMIN",
                 external_id=ext_id,
             ).exists():
                 continue
 
             tenant = integration.user.tenant
             # Garmin activity list distance is in meters
-            distance_m = float(act.get('distance') or act.get('distanceInMeters') or 0)
-            duration_seconds = act.get('duration', 0) or 0
+            distance_m = float(act.get("distance") or act.get("distanceInMeters") or 0)
+            duration_seconds = act.get("duration", 0) or 0
             activity = Activity.objects.create(
                 user=integration.user,
                 tenant=tenant,
@@ -372,7 +392,7 @@ class GarminService:
                 end_time=start_time + timedelta(seconds=duration_seconds),
                 distance=distance_m,
                 duration=timedelta(seconds=duration_seconds),
-                external_source='GARMIN',
+                external_source="GARMIN",
                 external_id=ext_id,
                 is_verified=True,
                 verification_score=1.0,
@@ -388,24 +408,26 @@ class GarminService:
     @classmethod
     def _map_activity_type(cls, type_key):
         mapping = {
-            'running': 'RUN',
-            'road_biking': 'BIKE',
-            'mountain_biking': 'BIKE',
-            'walking': 'WALK',
-            'hiking': 'WALK',
-            'trail_running': 'RUN',
-            'cycling': 'BIKE',
+            "running": "RUN",
+            "road_biking": "BIKE",
+            "mountain_biking": "BIKE",
+            "walking": "WALK",
+            "hiking": "WALK",
+            "trail_running": "RUN",
+            "cycling": "BIKE",
         }
         return mapping.get(type_key.lower())
 
     @classmethod
     def get_status(cls, user):
         try:
-            integration = WearableIntegration.objects.get(user=user, service='GARMIN')
+            integration = WearableIntegration.objects.get(user=user, service="GARMIN")
             return {
-                'connected': integration.is_active,
-                'last_sync': integration.last_sync.isoformat() if integration.last_sync else None,
-                'expires_at': integration.expires_at.isoformat() if integration.expires_at else None,
+                "connected": integration.is_active,
+                "last_sync": integration.last_sync.isoformat() if integration.last_sync else None,
+                "expires_at": integration.expires_at.isoformat()
+                if integration.expires_at
+                else None,
             }
         except WearableIntegration.DoesNotExist:
-            return {'connected': False}
+            return {"connected": False}

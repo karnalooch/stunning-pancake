@@ -4,6 +4,7 @@ Events API — SPORT Platform
 REST endpoints for the Events Engine (Constitution §21).
 Includes OGC API — Moving Features compatible output (Constitution §24.4).
 """
+
 import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -28,6 +29,7 @@ class EventViewSet(viewsets.ModelViewSet):
     """
     ViewSet for reading and managing Event data.
     """
+
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticated]
 
@@ -37,41 +39,46 @@ class EventViewSet(viewsets.ModelViewSet):
         if not user.is_authenticated:
             return Event.objects.none()
 
-        if user.role == 'GLOBAL_OWNER':
-            return Event.objects.all().order_by('-start_date')
+        if user.role == "GLOBAL_OWNER":
+            return Event.objects.all().order_by("-start_date")
 
-        if user.role == 'TENANT_ADMIN':
+        if user.role == "TENANT_ADMIN":
             from django.db.models import Q
+
             return Event.objects.filter(
-                Q(tenant_id=user.tenant_id) | Q(status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED'])
-            ).order_by('-start_date')
+                Q(tenant_id=user.tenant_id) | Q(status__in=["PUBLISHED", "ACTIVE", "COMPLETED"])
+            ).order_by("-start_date")
 
         # Standard user
         if user.tenant_id:
             from django.db.models import Q
-            return Event.objects.filter(
-                Q(tenant_id=user.tenant_id) | Q(tenant_id__isnull=True)
-            ).filter(status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED']).order_by('-start_date')
 
-        return Event.objects.filter(
-            status__in=['PUBLISHED', 'ACTIVE', 'COMPLETED']
-        ).order_by('-start_date')
+            return (
+                Event.objects.filter(Q(tenant_id=user.tenant_id) | Q(tenant_id__isnull=True))
+                .filter(status__in=["PUBLISHED", "ACTIVE", "COMPLETED"])
+                .order_by("-start_date")
+            )
+
+        return Event.objects.filter(status__in=["PUBLISHED", "ACTIVE", "COMPLETED"]).order_by(
+            "-start_date"
+        )
 
     def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+        if self.action in ["create", "update", "partial_update", "destroy"]:
             from users.permissions import IsTenantAdmin
+
             return [IsTenantAdmin()]
         return super().get_permissions()
 
     def get_serializer_context(self):
         ctx = super().get_serializer_context()
-        if self.action == 'list':
-            ctx['burst_lightweight'] = True
+        if self.action == "list":
+            ctx["burst_lightweight"] = True
         return ctx
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != 'GLOBAL_OWNER':
+        if user.role != "GLOBAL_OWNER":
             serializer.save(tenant_id=user.tenant_id, created_by=user)
         else:
             serializer.save(created_by=user)
@@ -79,9 +86,10 @@ class EventViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         user = self.request.user
         instance = self.get_object()
-        if user.role != 'GLOBAL_OWNER':
+        if user.role != "GLOBAL_OWNER":
             if instance.tenant_id != user.tenant_id:
                 from rest_framework.exceptions import PermissionDenied
+
                 raise PermissionDenied("You cannot update events outside of your tenant.")
             serializer.save(tenant_id=user.tenant_id)
         else:
@@ -89,8 +97,9 @@ class EventViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         user = self.request.user
-        if user.role != 'GLOBAL_OWNER' and instance.tenant_id != user.tenant_id:
+        if user.role != "GLOBAL_OWNER" and instance.tenant_id != user.tenant_id:
             from rest_framework.exceptions import PermissionDenied
+
             raise PermissionDenied("You cannot delete events outside of your tenant.")
         instance.delete()
 
@@ -103,31 +112,35 @@ class EventViewSet(viewsets.ModelViewSet):
         responses={
             200: ParticipationSerializer,
             201: ParticipationSerializer,
-            429: {'description': 'Join rate limit exceeded'},
+            429: {"description": "Join rate limit exceeded"},
         },
     )
-    @action(detail=True, methods=['post'], url_path='join')
+    @action(detail=True, methods=["post"], url_path="join")
     def join(self, request, pk=None):
         """Join or re-confirm participation in an event."""
         event = self.get_object()
-        if event.status not in ('PUBLISHED', 'ACTIVE'):
+        if event.status not in ("PUBLISHED", "ACTIVE"):
             return Response(
-                {'detail': 'Event is not open for participation.'},
+                {"detail": "Event is not open for participation."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         participation, created, err = join_event(request.user, event)
         if err:
             resp = Response(
-                {'detail': err['detail'], 'detail_pl': err.get('detail_pl'), 'burst_protection': burst_protection_meta(event, user=request.user)},
+                {
+                    "detail": err["detail"],
+                    "detail_pl": err.get("detail_pl"),
+                    "burst_protection": burst_protection_meta(event, user=request.user),
+                },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
-            resp['Retry-After'] = str(err['retry_after'])
+            resp["Retry-After"] = str(err["retry_after"])
             return resp
 
         serializer = ParticipationSerializer(participation)
         data = serializer.data
-        data['burst_protection'] = burst_protection_meta(event, user=request.user)
+        data["burst_protection"] = burst_protection_meta(event, user=request.user)
         return Response(data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
 
     @extend_schema(
@@ -144,8 +157,7 @@ class EventViewSet(viewsets.ModelViewSet):
         top_n = int(request.query_params.get("top_n", 20))
 
         participations = (
-            Participation.objects
-            .filter(event=event)
+            Participation.objects.filter(event=event)
             .select_related("user")
             .order_by("-score")[:top_n]
         )
@@ -175,7 +187,7 @@ class EventViewSet(viewsets.ModelViewSet):
     def tenant_standing(self, request, pk=None):
         """Normalized city vs city / company vs company score."""
         event = self.get_object()
-        if event.event_type != 'INTER_TENANT':
+        if event.event_type != "INTER_TENANT":
             return Response(
                 {"detail": "Only available for INTER_TENANT events."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -184,12 +196,14 @@ class EventViewSet(viewsets.ModelViewSet):
         score_a = EventNormalizationService.get_tenant_score(event, event.tenant_id)
         score_b = EventNormalizationService.get_tenant_score(event, event.opponent_tenant_id)
 
-        return Response({
-            "event_id": event.id,
-            "tenant_a": {"id": event.tenant_id, "score": round(score_a, 4)},
-            "tenant_b": {"id": event.opponent_tenant_id, "score": round(score_b, 4)},
-            "leader": event.tenant_id if score_a >= score_b else event.opponent_tenant_id,
-        })
+        return Response(
+            {
+                "event_id": event.id,
+                "tenant_a": {"id": event.tenant_id, "score": round(score_a, 4)},
+                "tenant_b": {"id": event.opponent_tenant_id, "score": round(score_b, 4)},
+                "leader": event.tenant_id if score_a >= score_b else event.opponent_tenant_id,
+            }
+        )
 
     @extend_schema(
         summary="OGC API — Moving Features: event boundary",
@@ -211,33 +225,38 @@ class EventViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        return Response({
-            "type": "Feature",
-            "id": f"event-boundary-{event.id}",
-            "properties": {
-                "event_id": event.id,
-                "title": event.title,
-                "event_type": event.event_type,
-                "status": event.status,
-                "start_date": event.start_date.isoformat(),
-                "end_date": event.end_date.isoformat(),
-            },
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": list(event.boundary.coords),
-            },
-        })
+        return Response(
+            {
+                "type": "Feature",
+                "id": f"event-boundary-{event.id}",
+                "properties": {
+                    "event_id": event.id,
+                    "title": event.title,
+                    "event_type": event.event_type,
+                    "status": event.status,
+                    "start_date": event.start_date.isoformat(),
+                    "end_date": event.end_date.isoformat(),
+                },
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": list(event.boundary.coords),
+                },
+            }
+        )
 
 
 class AchievementViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for reading a user's earned Achievements.
     """
+
     serializer_class = AchievementSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """Returns only the authenticated user's achievements."""
-        return Achievement.objects.filter(
-            user=self.request.user
-        ).select_related("event").order_by("-awarded_at")
+        return (
+            Achievement.objects.filter(user=self.request.user)
+            .select_related("event")
+            .order_by("-awarded_at")
+        )

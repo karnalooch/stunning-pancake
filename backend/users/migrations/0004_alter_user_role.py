@@ -4,15 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0003_add_white_label_fields'),
+        ("users", "0003_add_white_label_fields"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='user',
-            name='role',
-            field=models.CharField(choices=[('GLOBAL_ADMIN', 'Superuser / Global Admin'), ('LOCAL_ADMIN', 'Tenant Admin / Coordinator'), ('MODERATOR', 'Moderator / Support'), ('USER', 'Athlete / User')], default='USER', max_length=20),
+            model_name="user",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("GLOBAL_ADMIN", "Superuser / Global Admin"),
+                    ("LOCAL_ADMIN", "Tenant Admin / Coordinator"),
+                    ("MODERATOR", "Moderator / Support"),
+                    ("USER", "Athlete / User"),
+                ],
+                default="USER",
+                max_length=20,
+            ),
         ),
     ]

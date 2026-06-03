@@ -1,6 +1,7 @@
 """
 Idempotent leaderboard + event progress credit for verified activities.
 """
+
 from __future__ import annotations
 
 import logging

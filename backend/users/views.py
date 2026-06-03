@@ -30,9 +30,9 @@ def _allowed_role_values() -> set[str]:
     Some test environments/migrations may not expose `Role.choices` reliably,
     so we fall back to the known role slugs.
     """
-    fallback = {'GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR', 'ATHLETE', 'SPONSOR'}
+    fallback = {"GLOBAL_OWNER", "TENANT_ADMIN", "TENANT_MODERATOR", "ATHLETE", "SPONSOR"}
     try:
-        choices = getattr(Role, 'choices', None)
+        choices = getattr(Role, "choices", None)
         if choices:
             return {value for value, _label in choices}
     except Exception:
@@ -42,10 +42,11 @@ def _allowed_role_values() -> set[str]:
 
 class PasswordResetRequestView(generics.GenericAPIView):
     """Request a password reset token via email."""
+
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
-        email = request.data.get('email', '').strip()
+        email = request.data.get("email", "").strip()
         if not email:
             return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -53,9 +54,11 @@ class PasswordResetRequestView(generics.GenericAPIView):
             user = User.objects.get(email=email)
             # Generate a simple reset token (in production, use django.contrib.auth.tokens)
             import secrets
+
             token = secrets.token_urlsafe(32)
             from django.core.cache import cache
-            cache.set(f'password_reset:{token}', user.id, timeout=1800)  # 30 min
+
+            cache.set(f"password_reset:{token}", user.id, timeout=1800)  # 30 min
 
             EmailService.send_password_reset(email, token)
             return success(message="If an account exists, a reset email has been sent.")
@@ -65,17 +68,21 @@ class PasswordResetRequestView(generics.GenericAPIView):
 
 class PasswordResetConfirmView(generics.GenericAPIView):
     """Confirm password reset with token and new password."""
+
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
-        token = request.data.get('token', '').strip()
-        new_password = request.data.get('new_password', '').strip()
+        token = request.data.get("token", "").strip()
+        new_password = request.data.get("new_password", "").strip()
 
         if not token or len(new_password) < 8:
-            return error("Invalid token or password too short.", status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Invalid token or password too short.", status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         from django.core.cache import cache
-        user_id = cache.get(f'password_reset:{token}')
+
+        user_id = cache.get(f"password_reset:{token}")
         if not user_id:
             return error("Invalid or expired reset token.", status_code=status.HTTP_400_BAD_REQUEST)
 
@@ -83,7 +90,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
             user = User.objects.get(pk=user_id)
             user.set_password(new_password)
             user.save()
-            cache.delete(f'password_reset:{token}')
+            cache.delete(f"password_reset:{token}")
             return success(message="Password reset successful.")
         except User.DoesNotExist:
             return error("User not found.", status_code=status.HTTP_404_NOT_FOUND)
@@ -91,6 +98,7 @@ class PasswordResetConfirmView(generics.GenericAPIView):
 
 class RegisterView(generics.CreateAPIView):
     """Register a new Athlete user. Default role is ATHLETE."""
+
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
@@ -102,7 +110,11 @@ class RegisterView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
-            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Validation failed",
+                details=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
         user = serializer.save()
         return success(
             data=UserSerializer(user).data,
@@ -113,6 +125,7 @@ class RegisterView(generics.CreateAPIView):
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     """Retrieve or update the authenticated user's profile."""
+
     serializer_class = UserSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
@@ -126,13 +139,18 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data, partial=True)
         if not serializer.is_valid():
-            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Validation failed",
+                details=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
         serializer.save()
         return success(data=serializer.data, message="Profile updated.")
 
 
 class PasswordChangeView(generics.GenericAPIView):
     """Change the authenticated user's password."""
+
     permission_classes = (permissions.IsAuthenticated,)
     serializer_class = PasswordChangeSerializer
 
@@ -143,7 +161,11 @@ class PasswordChangeView(generics.GenericAPIView):
     def post(self, request):
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
-            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Validation failed",
+                details=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         user = request.user
         if not user.check_password(serializer.validated_data["old_password"]):
@@ -157,45 +179,52 @@ class PasswordChangeView(generics.GenericAPIView):
 
 class TenantBrandingView(generics.RetrieveAPIView):
     """Get branding details for a specific tenant."""
+
     permission_classes = (permissions.AllowAny,)
 
     def get(self, request, tenant_id):
         try:
             tenant = Tenant.objects.get(id=tenant_id, is_active=True)
-            return success(data={
-                "name": tenant.name,
-                "primary_color": tenant.primary_color,
-                "secondary_color": tenant.secondary_color,
-                "logo_url": tenant.logo.url if tenant.logo else None,
-            })
+            return success(
+                data={
+                    "name": tenant.name,
+                    "primary_color": tenant.primary_color,
+                    "secondary_color": tenant.secondary_color,
+                    "logo_url": tenant.logo.url if tenant.logo else None,
+                }
+            )
         except Tenant.DoesNotExist:
             return error("Tenant not found.", status_code=status.HTTP_404_NOT_FOUND)
 
 
 class TenantUpdateView(generics.UpdateAPIView):
     """Update branding and configuration for a tenant."""
+
     queryset = Tenant.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
 
     def put(self, request, *args, **kwargs):
         tenant = self.get_object()
-        if request.user.role != 'GLOBAL_OWNER' and (
-            request.user.role != 'TENANT_ADMIN' or request.user.tenant_id != tenant.id
+        if request.user.role != "GLOBAL_OWNER" and (
+            request.user.role != "TENANT_ADMIN" or request.user.tenant_id != tenant.id
         ):
             return error("Unauthorized.", status_code=status.HTTP_403_FORBIDDEN)
 
-        tenant.primary_color = request.data.get('primary_color', tenant.primary_color)
-        tenant.secondary_color = request.data.get('secondary_color', tenant.secondary_color)
+        tenant.primary_color = request.data.get("primary_color", tenant.primary_color)
+        tenant.secondary_color = request.data.get("secondary_color", tenant.secondary_color)
         tenant.save()
-        return success(data={
-            "status": "success",
-            "primary_color": tenant.primary_color,
-            "secondary_color": tenant.secondary_color,
-        })
+        return success(
+            data={
+                "status": "success",
+                "primary_color": tenant.primary_color,
+                "secondary_color": tenant.secondary_color,
+            }
+        )
 
 
 class ImpersonateUserView(generics.GenericAPIView):
     """GLOBAL_OWNER can request an access token for another user."""
+
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
     queryset = User.objects.all()
 
@@ -207,22 +236,25 @@ class ImpersonateUserView(generics.GenericAPIView):
         try:
             target_user = User.objects.get(id=target_user_id)
             refresh = RefreshToken.for_user(target_user)
-            refresh['impersonated'] = True
-            refresh['impersonator_id'] = request.user.id
+            refresh["impersonated"] = True
+            refresh["impersonator_id"] = request.user.id
             # Test suite expects `access` and friends at top-level (no `ok/data` wrapper).
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'impersonated_user': target_user.username,
-                'impersonated_role': target_user.role,
-            }, status=status.HTTP_200_OK)
+            return Response(
+                {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                    "impersonated_user": target_user.username,
+                    "impersonated_role": target_user.role,
+                },
+                status=status.HTTP_200_OK,
+            )
         except User.DoesNotExist:
             return error("User not found.", status_code=status.HTTP_404_NOT_FOUND)
 
 
 def _encode_user_cursor(payload: dict) -> str:
-    raw = json.dumps(payload, separators=(',', ':'), ensure_ascii=False).encode('utf-8')
-    token = base64.urlsafe_b64encode(raw).decode('utf-8').rstrip('=')
+    raw = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    token = base64.urlsafe_b64encode(raw).decode("utf-8").rstrip("=")
     return token
 
 
@@ -230,28 +262,30 @@ def _decode_user_cursor(token: str) -> dict | None:
     if not token:
         return None
     try:
-        padded = token + '=' * (-len(token) % 4)
-        raw = base64.urlsafe_b64decode(padded.encode('utf-8'))
-        return json.loads(raw.decode('utf-8'))
+        padded = token + "=" * (-len(token) % 4)
+        raw = base64.urlsafe_b64decode(padded.encode("utf-8"))
+        return json.loads(raw.decode("utf-8"))
     except Exception:
         return None
 
 
-def _scoped_user_queryset(request) -> 'User.objects':  # type: ignore[name-defined]
+def _scoped_user_queryset(request) -> "User.objects":  # type: ignore[name-defined]
     """
     Global Owner: unscoped.
     Tenant Admin: tenant-only (request.user.tenant_id).
     """
-    qs = User.objects.select_related('tenant').all()
-    if getattr(request.user, 'role', None) == 'TENANT_ADMIN':
-        tenant_id = getattr(request.user, 'tenant_id', None)
+    qs = User.objects.select_related("tenant").all()
+    if getattr(request.user, "role", None) == "TENANT_ADMIN":
+        tenant_id = getattr(request.user, "tenant_id", None)
         if not tenant_id:
             return qs.none()
         return qs.filter(tenant_id=tenant_id)
     return qs
 
 
-def _validate_bulk_targets(request, user_ids: list[int]) -> tuple[list[int] | None, Response | None]:
+def _validate_bulk_targets(
+    request, user_ids: list[int]
+) -> tuple[list[int] | None, Response | None]:
     """
     Ensures bulk targets are allowed for the requesting role.
 
@@ -264,32 +298,39 @@ def _validate_bulk_targets(request, user_ids: list[int]) -> tuple[list[int] | No
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    role = getattr(request.user, 'role', None)
-    if role == 'TENANT_ADMIN':
-        tenant_id = getattr(request.user, 'tenant_id', None)
+    role = getattr(request.user, "role", None)
+    if role == "TENANT_ADMIN":
+        tenant_id = getattr(request.user, "tenant_id", None)
         if not tenant_id:
             return None, error("Tenant admin has no tenant.", status_code=status.HTTP_403_FORBIDDEN)
 
-        rows = list(User.objects.filter(id__in=user_ids).values_list('id', 'tenant_id'))
+        rows = list(User.objects.filter(id__in=user_ids).values_list("id", "tenant_id"))
         existing_ids = {int(i) for i, _t in rows}
         cross_tenant = [int(i) for i, t in rows if str(t) != str(tenant_id)]
 
         if cross_tenant:
-            return None, error("You can only target users within your tenant.", status_code=status.HTTP_403_FORBIDDEN)
+            return None, error(
+                "You can only target users within your tenant.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
 
         allowed = [uid for uid in user_ids if int(uid) in existing_ids]
         if not allowed:
-            return None, error("No valid users found for provided ids.", status_code=status.HTTP_400_BAD_REQUEST)
+            return None, error(
+                "No valid users found for provided ids.", status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         return allowed, None
 
     # GLOBAL_OWNER (or any other admin role allowed by permissions): keep prior behavior
     try:
-        allowed_ids = list(User.objects.filter(id__in=user_ids).values_list('id', flat=True))
+        allowed_ids = list(User.objects.filter(id__in=user_ids).values_list("id", flat=True))
     except Exception:
         allowed_ids = []
     if not allowed_ids:
-        return None, error("No valid users found for provided ids.", status_code=status.HTTP_400_BAD_REQUEST)
+        return None, error(
+            "No valid users found for provided ids.", status_code=status.HTTP_400_BAD_REQUEST
+        )
     return allowed_ids, None
 
 
@@ -309,20 +350,20 @@ class UserListView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         qs = _scoped_user_queryset(request)
 
-        search = (request.query_params.get('search') or '').strip()
-        role = (request.query_params.get('role') or '').strip()
-        tenant_id_param = (request.query_params.get('tenant_id') or '').strip()
+        search = (request.query_params.get("search") or "").strip()
+        role = (request.query_params.get("role") or "").strip()
+        tenant_id_param = (request.query_params.get("tenant_id") or "").strip()
         tenant_id_effective = tenant_id_param
-        if getattr(request.user, 'role', None) == 'TENANT_ADMIN':
-            tenant_id_effective = str(getattr(request.user, 'tenant_id', '') or '')
+        if getattr(request.user, "role", None) == "TENANT_ADMIN":
+            tenant_id_effective = str(getattr(request.user, "tenant_id", "") or "")
 
         # Sorting (server-side, cursor-friendly).
-        sort_by = (request.query_params.get('sort') or 'id').strip()
-        order = (request.query_params.get('order') or 'desc').strip().lower()
-        if order not in ('asc', 'desc'):
-            order = 'desc'
+        sort_by = (request.query_params.get("sort") or "id").strip()
+        order = (request.query_params.get("order") or "desc").strip().lower()
+        if order not in ("asc", "desc"):
+            order = "desc"
 
-        page_size_raw = request.query_params.get('page_size')
+        page_size_raw = request.query_params.get("page_size")
         try:
             page_size = int(page_size_raw) if page_size_raw is not None else 25
         except (TypeError, ValueError):
@@ -330,39 +371,39 @@ class UserListView(generics.ListAPIView):
         page_size = max(1, min(100, page_size))
 
         sort_map = {
-            'id': 'id',
-            'username': 'username',
-            'email': 'email',
-            'role': 'role',
-            'status': 'is_active',
-            'tenant': 'tenant_sort_key',
+            "id": "id",
+            "username": "username",
+            "email": "email",
+            "role": "role",
+            "status": "is_active",
+            "tenant": "tenant_sort_key",
         }
-        sort_field_db = sort_map.get(sort_by, 'id')
+        sort_field_db = sort_map.get(sort_by, "id")
 
-        cursor_token = (request.query_params.get('cursor') or '').strip()
+        cursor_token = (request.query_params.get("cursor") or "").strip()
         cursor = _decode_user_cursor(cursor_token)
 
         filters_sig = {
-            'search': search,
-            'role': role,
-            'tenant_id': tenant_id_effective,
-            'sort_by': sort_by,
-            'order': order,
+            "search": search,
+            "role": role,
+            "tenant_id": tenant_id_effective,
+            "sort_by": sort_by,
+            "order": order,
         }
         cursor_ok = (
             cursor
-            and cursor.get('filters_sig') == filters_sig
-            and cursor.get('sort_field_db') == sort_field_db
+            and cursor.get("filters_sig") == filters_sig
+            and cursor.get("sort_field_db") == sort_field_db
         )
 
-        if sort_by == 'tenant':
-            qs = qs.annotate(tenant_sort_key=Coalesce('tenant__name', Value('')))
+        if sort_by == "tenant":
+            qs = qs.annotate(tenant_sort_key=Coalesce("tenant__name", Value("")))
 
         if search:
             q = Q(username__icontains=search) | Q(email__icontains=search)
             if search.isdigit():
                 q |= Q(id=int(search))
-            elif search.upper().startswith('U-') and search[2:].isdigit():
+            elif search.upper().startswith("U-") and search[2:].isdigit():
                 q |= Q(id=int(search[2:]))
             qs = qs.filter(q)
 
@@ -374,25 +415,25 @@ class UserListView(generics.ListAPIView):
             qs = qs.filter(tenant_id=tenant_id_effective)
 
         if cursor_ok:
-            last_value = cursor.get('last_value')
-            last_id = cursor.get('last_id')
+            last_value = cursor.get("last_value")
+            last_id = cursor.get("last_id")
             if last_value is not None and isinstance(last_id, int):
-                if order == 'asc':
+                if order == "asc":
                     qs = qs.filter(
-                        Q(**{f'{sort_field_db}__gt': last_value})
-                        | (Q(**{f'{sort_field_db}__exact': last_value}) & Q(id__gt=last_id))
+                        Q(**{f"{sort_field_db}__gt": last_value})
+                        | (Q(**{f"{sort_field_db}__exact": last_value}) & Q(id__gt=last_id))
                     )
                 else:
                     qs = qs.filter(
-                        Q(**{f'{sort_field_db}__lt': last_value})
-                        | (Q(**{f'{sort_field_db}__exact': last_value}) & Q(id__lt=last_id))
+                        Q(**{f"{sort_field_db}__lt": last_value})
+                        | (Q(**{f"{sort_field_db}__exact": last_value}) & Q(id__lt=last_id))
                     )
 
         # Deterministic tie-breaker: id.
-        if order == 'desc':
-            qs = qs.order_by(f'-{sort_field_db}', '-id')
+        if order == "desc":
+            qs = qs.order_by(f"-{sort_field_db}", "-id")
         else:
-            qs = qs.order_by(f'{sort_field_db}', 'id')
+            qs = qs.order_by(f"{sort_field_db}", "id")
 
         # Fetch page_size+1 to detect has_more.
         rows = list(qs[: page_size + 1])
@@ -403,26 +444,29 @@ class UserListView(generics.ListAPIView):
         if has_more and page_rows:
             last = page_rows[-1]
             next_payload = {
-                'filters_sig': filters_sig,
-                'sort_field_db': sort_field_db,
-                'last_value': getattr(last, sort_field_db, None),
-                'last_id': int(last.id),
+                "filters_sig": filters_sig,
+                "sort_field_db": sort_field_db,
+                "last_value": getattr(last, sort_field_db, None),
+                "last_id": int(last.id),
             }
             next_cursor = _encode_user_cursor(next_payload)
 
         serialized = self.get_serializer(page_rows, many=True)
-        return Response({
-            'results': serialized.data,
-            'next_cursor': next_cursor,
-            'has_more': has_more,
-            'page_size': page_size,
-            'sort': sort_by,
-            'order': order,
-        })
+        return Response(
+            {
+                "results": serialized.data,
+                "next_cursor": next_cursor,
+                "has_more": has_more,
+                "page_size": page_size,
+                "sort": sort_by,
+                "order": order,
+            }
+        )
 
 
 class TenantListView(generics.ListAPIView):
     """List active tenants. GLOBAL_OWNER and TENANT_ADMIN only."""
+
     queryset = Tenant.objects.filter(is_active=True)
     serializer_class = TenantSerializer
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
@@ -430,16 +474,17 @@ class TenantListView(generics.ListAPIView):
 
 class AuditLogListView(generics.ListAPIView):
     """List audit log entries. GLOBAL_OWNER only."""
+
     queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
 
     def get_queryset(self):
         qs = super().get_queryset()
-        limit = self.request.query_params.get('limit')
+        limit = self.request.query_params.get("limit")
         if limit:
             try:
-                qs = qs[:int(limit)]
+                qs = qs[: int(limit)]
             except (ValueError, TypeError):
                 pass
         return qs
@@ -447,23 +492,28 @@ class AuditLogListView(generics.ListAPIView):
 
 class UserCreateView(generics.CreateAPIView):
     """Admin creates a new user with role + tenant assignment."""
+
     serializer_class = RegisterSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request, *args, **kwargs):
-        user_role = getattr(request.user, 'role', None)
-        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+        user_role = getattr(request.user, "role", None)
+        if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
             return error("Only admins can create users.", status_code=status.HTTP_403_FORBIDDEN)
 
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
-            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Validation failed",
+                details=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         user = serializer.save()
-        role = request.data.get('role', 'ATHLETE')
+        role = request.data.get("role", "ATHLETE")
         if role in _allowed_role_values():
             user.role = role
-        tenant_id = request.data.get('tenant_id')
+        tenant_id = request.data.get("tenant_id")
         if tenant_id:
             try:
                 user.tenant = Tenant.objects.get(id=tenant_id)
@@ -476,7 +526,7 @@ class UserCreateView(generics.CreateAPIView):
             target_user=user,
             tenant_id=str(user.tenant_id) if user.tenant_id else None,
             action=f"Created user {user.username} with role {user.role}",
-            ip_address=request.META.get('REMOTE_ADDR'),
+            ip_address=request.META.get("REMOTE_ADDR"),
             status_code=201,
         )
 
@@ -489,6 +539,7 @@ class UserCreateView(generics.CreateAPIView):
 
 class UserUpdateView(generics.UpdateAPIView):
     """Admin updates an existing user's profile, role, tenant, bio, avatar, status, and password."""
+
     queryset = User.objects.all()
     serializer_class = UserAdminUpdateSerializer
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
@@ -500,32 +551,45 @@ class UserUpdateView(generics.UpdateAPIView):
         return self.update(request, *args, **kwargs, partial=False)
 
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop('partial', False)
+        partial = kwargs.pop("partial", False)
         instance = self.get_object()
 
         # RLS Permission Scoping
         requesting_user = request.user
-        if requesting_user.role == 'TENANT_ADMIN':
+        if requesting_user.role == "TENANT_ADMIN":
             # TENANT_ADMIN can only edit users within their own tenant
             if instance.tenant_id != requesting_user.tenant_id:
-                return error("You are not authorized to edit users outside of your tenant.", status_code=status.HTTP_403_FORBIDDEN)
-            
+                return error(
+                    "You are not authorized to edit users outside of your tenant.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+
             # TENANT_ADMIN cannot assign user to a different tenant
-            tenant_id = request.data.get('tenant_id')
+            tenant_id = request.data.get("tenant_id")
             if tenant_id and str(tenant_id) != str(requesting_user.tenant_id):
-                return error("You cannot assign users to a different tenant.", status_code=status.HTTP_403_FORBIDDEN)
+                return error(
+                    "You cannot assign users to a different tenant.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
 
             # TENANT_ADMIN cannot promote any user to GLOBAL_OWNER
-            role = request.data.get('role')
-            if role == 'GLOBAL_OWNER':
-                return error("You cannot promote a user to Global Owner.", status_code=status.HTTP_403_FORBIDDEN)
+            role = request.data.get("role")
+            if role == "GLOBAL_OWNER":
+                return error(
+                    "You cannot promote a user to Global Owner.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         if not serializer.is_valid():
-            return error("Validation failed", details=serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "Validation failed",
+                details=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Optional password update
-        password = request.data.get('password')
+        password = request.data.get("password")
         if password:
             instance.set_password(password)
 
@@ -537,28 +601,28 @@ class UserUpdateView(generics.UpdateAPIView):
             target_user=user,
             tenant_id=str(user.tenant_id) if user.tenant_id else None,
             action=f"Updated user {user.username} (role: {user.role}, is_active: {user.is_active})",
-            ip_address=request.META.get('REMOTE_ADDR'),
+            ip_address=request.META.get("REMOTE_ADDR"),
             status_code=200,
         )
 
         return success(
-            data=UserSerializer(user).data,
-            message=f"User {user.username} updated successfully."
+            data=UserSerializer(user).data, message=f"User {user.username} updated successfully."
         )
 
 
 class UserDeleteView(generics.DestroyAPIView):
     """Admin deletes a user."""
+
     queryset = User.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
 
     def delete(self, request, *args, **kwargs):
-        user_role = getattr(request.user, 'role', None)
-        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+        user_role = getattr(request.user, "role", None)
+        if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
             return error("Only admins can delete users.", status_code=status.HTTP_403_FORBIDDEN)
 
         try:
-            target = User.objects.get(pk=kwargs['pk'])
+            target = User.objects.get(pk=kwargs["pk"])
             # In SQLite-based test runs, FK "SET NULL" enforcement can be flaky
             # during teardown constraint checking. The test suite for self-delete
             # doesn't assert audit-log presence, so avoid creating the FK row
@@ -569,7 +633,7 @@ class UserDeleteView(generics.DestroyAPIView):
                     target_user=None,
                     tenant_id=str(target.tenant_id) if target.tenant_id else None,
                     action=f"Deleted user {target.username} (role: {target.role})",
-                    ip_address=request.META.get('REMOTE_ADDR'),
+                    ip_address=request.META.get("REMOTE_ADDR"),
                     status_code=200,
                 )
             username = target.username
@@ -581,23 +645,24 @@ class UserDeleteView(generics.DestroyAPIView):
 
 class InvitationTokenView(generics.GenericAPIView):
     """Admin sends an invitation token to invite a new moderator/staff."""
+
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
-        user_role = getattr(request.user, 'role', None)
-        if user_role not in ('GLOBAL_OWNER', 'TENANT_ADMIN'):
+        user_role = getattr(request.user, "role", None)
+        if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
             return error("Only admins can send invitations.", status_code=status.HTTP_403_FORBIDDEN)
 
-        email = request.data.get('email')
-        name = request.data.get('name', '')
-        role = request.data.get('role', 'TENANT_MODERATOR')
-        tenant_id = request.data.get('tenant_id', getattr(request.user, 'tenant_id', None))
+        email = request.data.get("email")
+        name = request.data.get("name", "")
+        role = request.data.get("role", "TENANT_MODERATOR")
+        tenant_id = request.data.get("tenant_id", getattr(request.user, "tenant_id", None))
 
         if not email:
             return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
         temp_password = User.objects.make_random_password(length=12)
-        username = email.split('@')[0]
+        username = email.split("@")[0]
         base_username = username
         counter = 1
         while User.objects.filter(username=username).exists():
@@ -605,7 +670,7 @@ class InvitationTokenView(generics.GenericAPIView):
             counter += 1
 
         tenant = None
-        tenant_name = ''
+        tenant_name = ""
         if tenant_id:
             try:
                 tenant = Tenant.objects.get(id=tenant_id)
@@ -617,8 +682,8 @@ class InvitationTokenView(generics.GenericAPIView):
             username=username,
             email=email,
             password=temp_password,
-            first_name=name or '',
-            role=role if role in _allowed_role_values() else 'TENANT_MODERATOR',
+            first_name=name or "",
+            role=role if role in _allowed_role_values() else "TENANT_MODERATOR",
             tenant=tenant,
         )
 
@@ -627,20 +692,23 @@ class InvitationTokenView(generics.GenericAPIView):
             target_user=user,
             tenant_id=str(tenant_id) if tenant_id else None,
             action=f"Invited user {email} as {role} to tenant {tenant_id}",
-            ip_address=request.META.get('REMOTE_ADDR'),
+            ip_address=request.META.get("REMOTE_ADDR"),
             status_code=201,
         )
 
         EmailService.send_invitation(email, username, temp_password, tenant_name)
 
         # Test suite expects response.data to include `email`, `role`, etc. at top-level.
-        return Response({
-            "username": username,
-            "email": email,
-            "temporary_password": temp_password,
-            "role": role,
-            "message": f"Invitation created and email sent to {email}.",
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                "username": username,
+                "email": email,
+                "temporary_password": temp_password,
+                "role": role,
+                "message": f"Invitation created and email sent to {email}.",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class UserDetailView(generics.RetrieveAPIView):
@@ -665,13 +733,15 @@ class UserBulkSetStatusView(generics.GenericAPIView):
         from users.bulk_state import mark_queued
         import uuid
 
-        user_ids = request.data.get('user_ids') or []
-        desired_is_active = request.data.get('is_active')
+        user_ids = request.data.get("user_ids") or []
+        desired_is_active = request.data.get("is_active")
         if desired_is_active is None:
             return error("is_active is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
         if not isinstance(user_ids, list) or not user_ids:
-            return error("user_ids must be a non-empty list.", status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "user_ids must be a non-empty list.", status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         desired_is_active = bool(desired_is_active)
         if len(user_ids) > 5000:
@@ -683,13 +753,13 @@ class UserBulkSetStatusView(generics.GenericAPIView):
         assert allowed_ids is not None
 
         job_id = str(uuid.uuid4())
-        action = 'set_status'
+        action = "set_status"
         mark_queued(
             job_id,
             action=action,
             total=len(allowed_ids),
             requester_id=int(request.user.id),
-            requester_tenant_id=str(getattr(request.user, 'tenant_id', '') or ''),
+            requester_tenant_id=str(getattr(request.user, "tenant_id", "") or ""),
         )
 
         from users.bulk_tasks import bulk_action_task
@@ -701,12 +771,15 @@ class UserBulkSetStatusView(generics.GenericAPIView):
             desired_is_active=desired_is_active,
         )
 
-        return Response({
-            'job_id': job_id,
-            'status': 'queued',
-            'requested': len(user_ids),
-            'allowed': len(allowed_ids),
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "queued",
+                "requested": len(user_ids),
+                "allowed": len(allowed_ids),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class UserBulkChangeRoleView(generics.GenericAPIView):
@@ -721,42 +794,50 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
         from users.bulk_state import mark_queued
         import uuid
 
-        user_ids = request.data.get('user_ids') or []
-        role = request.data.get('role') or ''
-        update_tenant = bool(request.data.get('update_tenant', False))
-        tenant_id = request.data.get('tenant_id')
+        user_ids = request.data.get("user_ids") or []
+        role = request.data.get("role") or ""
+        update_tenant = bool(request.data.get("update_tenant", False))
+        tenant_id = request.data.get("tenant_id")
 
         if not role or role not in _allowed_role_values():
             return error("Invalid role.", status_code=status.HTTP_400_BAD_REQUEST)
 
-        requesting_role = getattr(request.user, 'role', None)
-        if requesting_role == 'TENANT_ADMIN':
-            allowed_roles = {'ATHLETE', 'TENANT_MODERATOR', 'SPONSOR'}
+        requesting_role = getattr(request.user, "role", None)
+        if requesting_role == "TENANT_ADMIN":
+            allowed_roles = {"ATHLETE", "TENANT_MODERATOR", "SPONSOR"}
             if role not in allowed_roles:
                 return error("You cannot assign this role.", status_code=status.HTTP_403_FORBIDDEN)
 
             # Tenant admins cannot move users across tenants.
             if update_tenant:
-                req_tenant_id = getattr(request.user, 'tenant_id', None)
+                req_tenant_id = getattr(request.user, "tenant_id", None)
                 if str(tenant_id) != str(req_tenant_id):
-                    return error("You cannot assign users to a different tenant.", status_code=status.HTTP_403_FORBIDDEN)
+                    return error(
+                        "You cannot assign users to a different tenant.",
+                        status_code=status.HTTP_403_FORBIDDEN,
+                    )
 
         if not isinstance(user_ids, list) or not user_ids:
-            return error("user_ids must be a non-empty list.", status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "user_ids must be a non-empty list.", status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         if len(user_ids) > 5000:
             return error("Too many user_ids (max 5000).", status_code=status.HTTP_400_BAD_REQUEST)
 
-        if role == 'GLOBAL_OWNER':
+        if role == "GLOBAL_OWNER":
             # Only GLOBAL_OWNER may assign GLOBAL_OWNER (permission gating is IsTenantAdmin,
             # but keep a defense-in-depth check here).
-            if requesting_role != 'GLOBAL_OWNER':
-                return error("You cannot promote a user to Global Owner.", status_code=status.HTTP_403_FORBIDDEN)
+            if requesting_role != "GLOBAL_OWNER":
+                return error(
+                    "You cannot promote a user to Global Owner.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
             update_tenant = True
             tenant_id = None
         else:
             # For tenant-scoped roles you can opt-in to updating tenant for all users.
-            if update_tenant and tenant_id in ('', 'null'):
+            if update_tenant and tenant_id in ("", "null"):
                 tenant_id = None
 
         allowed_ids, resp = _validate_bulk_targets(request, [int(x) for x in user_ids])
@@ -765,13 +846,13 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
         assert allowed_ids is not None
 
         job_id = str(uuid.uuid4())
-        action = 'change_role'
+        action = "change_role"
         mark_queued(
             job_id,
             action=action,
             total=len(allowed_ids),
             requester_id=int(request.user.id),
-            requester_tenant_id=str(getattr(request.user, 'tenant_id', '') or ''),
+            requester_tenant_id=str(getattr(request.user, "tenant_id", "") or ""),
         )
 
         from users.bulk_tasks import bulk_action_task
@@ -785,12 +866,15 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
             tenant_id=tenant_id,
         )
 
-        return Response({
-            'job_id': job_id,
-            'status': 'queued',
-            'requested': len(user_ids),
-            'allowed': len(allowed_ids),
-        }, status=status.HTTP_202_ACCEPTED)
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "queued",
+                "requested": len(user_ids),
+                "allowed": len(allowed_ids),
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
 
 class UserBulkJobStatusView(generics.GenericAPIView):
@@ -804,14 +888,14 @@ class UserBulkJobStatusView(generics.GenericAPIView):
         state = get_state(job_id)
 
         # Tenant admins may only poll jobs they started (avoid leaking other jobs by guessing IDs).
-        if getattr(request.user, 'role', None) == 'TENANT_ADMIN':
-            requester_id = state.get('requester_id')
-            if requester_id is None or str(requester_id) != str(getattr(request.user, 'id', '')):
+        if getattr(request.user, "role", None) == "TENANT_ADMIN":
+            requester_id = state.get("requester_id")
+            if requester_id is None or str(requester_id) != str(getattr(request.user, "id", "")):
                 return error("Job not found.", status_code=status.HTTP_404_NOT_FOUND)
 
         # Log is helpful during long jobs but can be noisy; FE can ignore it.
         try:
-            state['log'] = get_log(job_id)
+            state["log"] = get_log(job_id)
         except Exception:
-            state['log'] = []
+            state["log"] = []
         return Response(state)

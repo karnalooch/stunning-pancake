@@ -6,7 +6,6 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,57 +14,176 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Club',
+            name="Club",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=200, unique=True)),
-                ('slug', models.SlugField(max_length=200, unique=True)),
-                ('description', models.TextField(blank=True)),
-                ('logo', models.ImageField(blank=True, null=True, upload_to='clubs/logos/')),
-                ('sport_type', models.CharField(choices=[('MIXED', 'Mixed'), ('RUN', 'Running'), ('BIKE', 'Cycling'), ('WALK', 'Walking')], default='MIXED', max_length=10)),
-                ('tenant_id', models.CharField(blank=True, help_text='City or company tenant this club belongs to', max_length=100, null=True)),
-                ('matrix_room_id', models.CharField(blank=True, max_length=200)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('owner', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='owned_clubs', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("name", models.CharField(max_length=200, unique=True)),
+                ("slug", models.SlugField(max_length=200, unique=True)),
+                ("description", models.TextField(blank=True)),
+                ("logo", models.ImageField(blank=True, null=True, upload_to="clubs/logos/")),
+                (
+                    "sport_type",
+                    models.CharField(
+                        choices=[
+                            ("MIXED", "Mixed"),
+                            ("RUN", "Running"),
+                            ("BIKE", "Cycling"),
+                            ("WALK", "Walking"),
+                        ],
+                        default="MIXED",
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "tenant_id",
+                    models.CharField(
+                        blank=True,
+                        help_text="City or company tenant this club belongs to",
+                        max_length=100,
+                        null=True,
+                    ),
+                ),
+                ("matrix_room_id", models.CharField(blank=True, max_length=200)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="owned_clubs",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='ClubMembership',
+            name="ClubMembership",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('PENDING', 'Pending Approval'), ('ACTIVE', 'Active Member'), ('BANNED', 'Banned')], default='ACTIVE', max_length=10)),
-                ('role', models.CharField(choices=[('MEMBER', 'Member'), ('CAPTAIN', 'Captain')], default='MEMBER', max_length=10)),
-                ('joined_at', models.DateTimeField(auto_now_add=True)),
-                ('total_km', models.FloatField(default=0.0, help_text='Contributed km in active challenges')),
-                ('club', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='memberships', to='clubs.club')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='club_memberships', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending Approval"),
+                            ("ACTIVE", "Active Member"),
+                            ("BANNED", "Banned"),
+                        ],
+                        default="ACTIVE",
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "role",
+                    models.CharField(
+                        choices=[("MEMBER", "Member"), ("CAPTAIN", "Captain")],
+                        default="MEMBER",
+                        max_length=10,
+                    ),
+                ),
+                ("joined_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "total_km",
+                    models.FloatField(default=0.0, help_text="Contributed km in active challenges"),
+                ),
+                (
+                    "club",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="memberships",
+                        to="clubs.club",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="club_memberships",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('club', 'user')},
+                "unique_together": {("club", "user")},
             },
         ),
         migrations.CreateModel(
-            name='ClubChallenge',
+            name="ClubChallenge",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('title', models.CharField(max_length=200)),
-                ('sport_type', models.CharField(default='MIXED', max_length=10)),
-                ('start_date', models.DateTimeField()),
-                ('end_date', models.DateTimeField()),
-                ('status', models.CharField(choices=[('PENDING', 'Pending'), ('ACTIVE', 'Active'), ('COMPLETED', 'Completed'), ('CANCELLED', 'Cancelled')], default='PENDING', max_length=10)),
-                ('challenger_score', models.FloatField(default=0.0)),
-                ('opponent_score', models.FloatField(default=0.0)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('challenger', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='challenges_issued', to='clubs.club')),
-                ('opponent', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='challenges_received', to='clubs.club')),
-                ('winner', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='won_challenges', to='clubs.club')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("title", models.CharField(max_length=200)),
+                ("sport_type", models.CharField(default="MIXED", max_length=10)),
+                ("start_date", models.DateTimeField()),
+                ("end_date", models.DateTimeField()),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("PENDING", "Pending"),
+                            ("ACTIVE", "Active"),
+                            ("COMPLETED", "Completed"),
+                            ("CANCELLED", "Cancelled"),
+                        ],
+                        default="PENDING",
+                        max_length=10,
+                    ),
+                ),
+                ("challenger_score", models.FloatField(default=0.0)),
+                ("opponent_score", models.FloatField(default=0.0)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "challenger",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="challenges_issued",
+                        to="clubs.club",
+                    ),
+                ),
+                (
+                    "opponent",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="challenges_received",
+                        to="clubs.club",
+                    ),
+                ),
+                (
+                    "winner",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="won_challenges",
+                        to="clubs.club",
+                    ),
+                ),
             ],
             options={
-                'indexes': [models.Index(fields=['status', 'start_date'], name='clubs_clubc_status_563850_idx')],
+                "indexes": [
+                    models.Index(
+                        fields=["status", "start_date"], name="clubs_clubc_status_563850_idx"
+                    )
+                ],
             },
         ),
         migrations.AddIndex(
-            model_name='club',
-            index=models.Index(fields=['tenant_id', 'sport_type'], name='clubs_club_tenant__7c144e_idx'),
+            model_name="club",
+            index=models.Index(
+                fields=["tenant_id", "sport_type"], name="clubs_club_tenant__7c144e_idx"
+            ),
         ),
     ]

@@ -9,7 +9,7 @@ import redis
 logger = logging.getLogger(__name__)
 
 # Initialize Redis client for inter-service communication
-redis_client = redis.from_url(os.getenv('REDIS_URL', 'redis://redis:6379/0'))
+redis_client = redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"))
 
 _PROCESS_QUEUE_TTL_S = 300
 
@@ -27,6 +27,7 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
 
     try:
         from core.redis_cluster import get_redis
+
         queue_key = f"process:activity:{instance.id}"
         if not get_redis().set(queue_key, "1", nx=True, ex=_PROCESS_QUEUE_TTL_S):
             return
@@ -38,6 +39,7 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
         )
 
     from .tasks import process_activity_async
+
     process_activity_async.delay(instance.id)
 
 
@@ -56,7 +58,7 @@ def notify_privacy_zone_update(sender, instance, created, **kwargs):
             "lon": instance.center.x,
             "radius": instance.radius,
         }
-        redis_client.publish('privacy_zones:updates', json.dumps(data))
+        redis_client.publish("privacy_zones:updates", json.dumps(data))
     except Exception as e:
         logger.error(f"Failed to publish privacy zone update: {e}")
 
@@ -72,7 +74,6 @@ def notify_privacy_zone_delete(sender, instance, **kwargs):
             "user_id": instance.user.id,
             "zone_id": instance.id,
         }
-        redis_client.publish('privacy_zones:updates', json.dumps(data))
+        redis_client.publish("privacy_zones:updates", json.dumps(data))
     except Exception as e:
         logger.error(f"Failed to publish privacy zone deletion: {e}")
-

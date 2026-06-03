@@ -6,43 +6,82 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0004_alter_user_role'),
+        ("users", "0004_alter_user_role"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Tenant',
+            name="Tenant",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('name', models.CharField(max_length=200)),
-                ('logo', models.ImageField(blank=True, null=True, upload_to='tenants/logos/')),
-                ('primary_color', models.CharField(default='#00d2ff', max_length=7)),
-                ('secondary_color', models.CharField(default='#92fe9d', max_length=7)),
-                ('is_active', models.BooleanField(default=True)),
-                ('max_users', models.IntegerField(default=1000)),
-                ('has_heatmap_analytics', models.BooleanField(default=False, help_text='Feature toggle for advanced heatmap analytics')),
-                ('white_label_domain', models.CharField(blank=True, help_text='Custom domain for white-label deployments (e.g. wellness.acme.com)', max_length=200)),
-                ('config_json', models.JSONField(blank=True, default=dict, help_text='Per-tenant configuration: brouter_validation, normalization_factor, allowed_sports, push_notification_key, etc.')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4, editable=False, primary_key=True, serialize=False
+                    ),
+                ),
+                ("name", models.CharField(max_length=200)),
+                ("logo", models.ImageField(blank=True, null=True, upload_to="tenants/logos/")),
+                ("primary_color", models.CharField(default="#00d2ff", max_length=7)),
+                ("secondary_color", models.CharField(default="#92fe9d", max_length=7)),
+                ("is_active", models.BooleanField(default=True)),
+                ("max_users", models.IntegerField(default=1000)),
+                (
+                    "has_heatmap_analytics",
+                    models.BooleanField(
+                        default=False, help_text="Feature toggle for advanced heatmap analytics"
+                    ),
+                ),
+                (
+                    "white_label_domain",
+                    models.CharField(
+                        blank=True,
+                        help_text="Custom domain for white-label deployments (e.g. wellness.acme.com)",
+                        max_length=200,
+                    ),
+                ),
+                (
+                    "config_json",
+                    models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Per-tenant configuration: brouter_validation, normalization_factor, allowed_sports, push_notification_key, etc.",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.DeleteModel(
-            name='TenantProfile',
+            name="TenantProfile",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='tenant_id',
+            model_name="user",
+            name="tenant_id",
         ),
         migrations.AlterField(
-            model_name='user',
-            name='role',
-            field=models.CharField(choices=[('GLOBAL_OWNER', 'Global Owner'), ('TENANT_ADMIN', 'Tenant Admin / Owner'), ('TENANT_MODERATOR', 'Moderator'), ('ATHLETE', 'Athlete'), ('SPONSOR', 'Sponsor')], default='ATHLETE', max_length=20),
+            model_name="user",
+            name="role",
+            field=models.CharField(
+                choices=[
+                    ("GLOBAL_OWNER", "Global Owner"),
+                    ("TENANT_ADMIN", "Tenant Admin / Owner"),
+                    ("TENANT_MODERATOR", "Moderator"),
+                    ("ATHLETE", "Athlete"),
+                    ("SPONSOR", "Sponsor"),
+                ],
+                default="ATHLETE",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='user',
-            name='tenant',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='users', to='users.tenant'),
+            model_name="user",
+            name="tenant",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="users",
+                to="users.tenant",
+            ),
         ),
     ]

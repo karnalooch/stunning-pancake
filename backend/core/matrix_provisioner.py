@@ -13,6 +13,7 @@ Env vars required:
     MATRIX_HOMESERVER  — e.g. https://matrix.org
     MATRIX_TOKEN       — bot account access token
 """
+
 from __future__ import annotations
 
 import logging
@@ -36,6 +37,7 @@ HEADERS = {
 # ---------------------------------------------------------------------------
 # Low-level Matrix API helpers
 # ---------------------------------------------------------------------------
+
 
 def _post(endpoint: str, payload: dict) -> dict | None:
     """
@@ -77,6 +79,7 @@ def _put(endpoint: str, payload: dict) -> dict | None:
 # ---------------------------------------------------------------------------
 # Room provisioning
 # ---------------------------------------------------------------------------
+
 
 class MatrixProvisioner:
     """
@@ -183,9 +186,12 @@ class MatrixProvisioner:
         Returns:
             True if the invite was sent successfully.
         """
-        result = _post(f"rooms/{requests.utils.quote(room_id)}/invite", {
-            "user_id": matrix_user_id,
-        })
+        result = _post(
+            f"rooms/{requests.utils.quote(room_id)}/invite",
+            {
+                "user_id": matrix_user_id,
+            },
+        )
         if result is not None:
             logger.info("matrix.invite_sent room=%s user=%s", room_id, matrix_user_id)
             return True

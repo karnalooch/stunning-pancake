@@ -10,6 +10,7 @@ Models:
     RewardRule    — Points threshold required to unlock a VoucherPool.
     PointsLedger  — Append-only ledger of user point transactions.
 """
+
 from __future__ import annotations
 
 from django.conf import settings
@@ -22,13 +23,14 @@ class Sponsor(models.Model):
     A company or organization that provides rewards for platform participants.
     Linked to a specific tenant (city/corporation) or global.
     """
+
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="sponsor_profile",
-        help_text="User who manages this sponsor profile."
+        help_text="User who manages this sponsor profile.",
     )
     name = models.CharField(max_length=200)
     logo_url = models.URLField(blank=True)
@@ -49,6 +51,7 @@ class VoucherPool(models.Model):
     A collection of voucher codes for a specific reward offer.
     Each pool is linked to a sponsor and has a limited validity window.
     """
+
     sponsor = models.ForeignKey(Sponsor, on_delete=models.CASCADE, related_name="pools")
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -57,9 +60,7 @@ class VoucherPool(models.Model):
     )
     valid_from = models.DateTimeField()
     valid_until = models.DateTimeField()
-    max_redemptions = models.PositiveIntegerField(
-        default=0, help_text="0 = unlimited"
-    )
+    max_redemptions = models.PositiveIntegerField(default=0, help_text="0 = unlimited")
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property
@@ -78,6 +79,7 @@ class Voucher(models.Model):
     A single redeemable voucher code.
     Is 'unassigned' (user=None) until a user redeems it.
     """
+
     pool = models.ForeignKey(VoucherPool, on_delete=models.CASCADE, related_name="vouchers")
     code = models.CharField(max_length=64, unique=True)
     user = models.ForeignKey(
@@ -103,11 +105,12 @@ class PointsLedger(models.Model):
     Never update or delete rows — only append.
     Balance = SUM of all rows for a user.
     """
+
     REASON_CHOICES = [
         ("ACTIVITY_VERIFIED", _("Activity Verified")),
-        ("EVENT_BONUS",       _("Event Bonus")),
-        ("VOUCHER_REDEEM",    _("Voucher Redeemed")),
-        ("ADMIN_ADJUST",      _("Admin Adjustment")),
+        ("EVENT_BONUS", _("Event Bonus")),
+        ("VOUCHER_REDEEM", _("Voucher Redeemed")),
+        ("ADMIN_ADJUST", _("Admin Adjustment")),
     ]
 
     user = models.ForeignKey(
@@ -115,13 +118,12 @@ class PointsLedger(models.Model):
         on_delete=models.CASCADE,
         related_name="points_ledger",
     )
-    delta = models.IntegerField(
-        help_text="Positive = earn, Negative = spend"
-    )
+    delta = models.IntegerField(help_text="Positive = earn, Negative = spend")
     reason = models.CharField(max_length=30, choices=REASON_CHOICES)
     reference_id = models.CharField(
-        max_length=100, blank=True,
-        help_text="Activity ID, Event ID, or Voucher code that triggered this entry."
+        max_length=100,
+        blank=True,
+        help_text="Activity ID, Event ID, or Voucher code that triggered this entry.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

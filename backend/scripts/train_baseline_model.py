@@ -19,6 +19,7 @@ Usage:
 Output:
     /app/models/anomaly_detector.pkl  (or ML_MODEL_PATH env var)
 """
+
 from __future__ import annotations
 
 import math
@@ -46,42 +47,43 @@ np.random.seed(RANDOM_SEED)
 # Synthetic clean track generation
 # ---------------------------------------------------------------------------
 
+
 def _make_clean_run_features() -> list[float]:
     """Simulate a realistic human running track (5–15km)."""
-    mean_spd   = random.uniform(2.5, 5.5)          # m/s  (9-20 km/h)
-    std_spd    = random.uniform(0.3, 1.2)           # natural variation
-    cv         = std_spd / max(mean_spd, 0.01)
-    max_accel  = random.uniform(0.5, 2.5)           # m/s²
-    p90        = mean_spd + random.uniform(0.5, 2.0)
-    fast_frac  = random.uniform(0.0, 0.15)          # rarely >8 m/s
-    straight   = random.uniform(0.15, 0.65)         # loops/zigzags
-    seg_var    = random.uniform(0.5, 3.0)
+    mean_spd = random.uniform(2.5, 5.5)  # m/s  (9-20 km/h)
+    std_spd = random.uniform(0.3, 1.2)  # natural variation
+    cv = std_spd / max(mean_spd, 0.01)
+    max_accel = random.uniform(0.5, 2.5)  # m/s²
+    p90 = mean_spd + random.uniform(0.5, 2.0)
+    fast_frac = random.uniform(0.0, 0.15)  # rarely >8 m/s
+    straight = random.uniform(0.15, 0.65)  # loops/zigzags
+    seg_var = random.uniform(0.5, 3.0)
     return [mean_spd, std_spd, cv, max_accel, p90, fast_frac, straight, seg_var]
 
 
 def _make_clean_bike_features() -> list[float]:
     """Simulate a realistic road cyclist track (10–80km)."""
-    mean_spd   = random.uniform(4.0, 11.0)          # m/s  (14-40 km/h)
-    std_spd    = random.uniform(0.5, 2.5)
-    cv         = std_spd / max(mean_spd, 0.01)
-    max_accel  = random.uniform(0.3, 1.8)
-    p90        = mean_spd + random.uniform(1.0, 4.0)
-    fast_frac  = random.uniform(0.05, 0.40)         # road cyclists > 8 m/s often
-    straight   = random.uniform(0.30, 0.80)         # roads are straighter
-    seg_var    = random.uniform(0.3, 2.0)
+    mean_spd = random.uniform(4.0, 11.0)  # m/s  (14-40 km/h)
+    std_spd = random.uniform(0.5, 2.5)
+    cv = std_spd / max(mean_spd, 0.01)
+    max_accel = random.uniform(0.3, 1.8)
+    p90 = mean_spd + random.uniform(1.0, 4.0)
+    fast_frac = random.uniform(0.05, 0.40)  # road cyclists > 8 m/s often
+    straight = random.uniform(0.30, 0.80)  # roads are straighter
+    seg_var = random.uniform(0.3, 2.0)
     return [mean_spd, std_spd, cv, max_accel, p90, fast_frac, straight, seg_var]
 
 
 def _make_clean_walk_features() -> list[float]:
     """Simulate a human walk (1–8km)."""
-    mean_spd   = random.uniform(0.9, 2.2)
-    std_spd    = random.uniform(0.1, 0.5)
-    cv         = std_spd / max(mean_spd, 0.01)
-    max_accel  = random.uniform(0.2, 1.0)
-    p90        = mean_spd + random.uniform(0.2, 0.8)
-    fast_frac  = 0.0
-    straight   = random.uniform(0.10, 0.60)
-    seg_var    = random.uniform(0.5, 2.5)
+    mean_spd = random.uniform(0.9, 2.2)
+    std_spd = random.uniform(0.1, 0.5)
+    cv = std_spd / max(mean_spd, 0.01)
+    max_accel = random.uniform(0.2, 1.0)
+    p90 = mean_spd + random.uniform(0.2, 0.8)
+    fast_frac = 0.0
+    straight = random.uniform(0.10, 0.60)
+    seg_var = random.uniform(0.5, 2.5)
     return [mean_spd, std_spd, cv, max_accel, p90, fast_frac, straight, seg_var]
 
 
@@ -97,9 +99,9 @@ def generate_clean_dataset(n_samples: int = 5000) -> np.ndarray:
     """
     samples = []
     generators = [
-        (_make_clean_run_features,  0.45),   # 45% runners
-        (_make_clean_bike_features, 0.45),   # 45% cyclists
-        (_make_clean_walk_features, 0.10),   # 10% walkers
+        (_make_clean_run_features, 0.45),  # 45% runners
+        (_make_clean_bike_features, 0.45),  # 45% cyclists
+        (_make_clean_walk_features, 0.10),  # 10% walkers
     ]
 
     for _ in range(n_samples):
@@ -117,6 +119,7 @@ def generate_clean_dataset(n_samples: int = 5000) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Training
 # ---------------------------------------------------------------------------
+
 
 def train_baseline_model(n_samples: int = 5000, output_path: Path | None = None) -> Path:
     """
@@ -141,9 +144,18 @@ def train_baseline_model(n_samples: int = 5000, output_path: Path | None = None)
     X = generate_clean_dataset(n_samples)
     print(f"   Feature matrix: {X.shape[0]} samples × {X.shape[1]} features")
     print("   Feature ranges:")
-    feature_names = ["mean_spd", "std_spd", "cv", "max_accel", "p90", "fast_frac", "straight_ratio", "seg_var"]
+    feature_names = [
+        "mean_spd",
+        "std_spd",
+        "cv",
+        "max_accel",
+        "p90",
+        "fast_frac",
+        "straight_ratio",
+        "seg_var",
+    ]
     for i, name in enumerate(feature_names):
-        print(f"   {name:20s}: [{X[:,i].min():.3f}, {X[:,i].max():.3f}]  μ={X[:,i].mean():.3f}")
+        print(f"   {name:20s}: [{X[:, i].min():.3f}, {X[:, i].max():.3f}]  μ={X[:, i].mean():.3f}")
 
     print("\n🤖 Training IsolationForest...")
     clf = IsolationForest(
@@ -158,8 +170,12 @@ def train_baseline_model(n_samples: int = 5000, output_path: Path | None = None)
     # Self-validation: score the training set — should mostly be positive
     scores = clf.score_samples(X)
     flagged = (scores < -0.15).sum()
-    print(f"   Self-validation: {flagged}/{len(scores)} synthetic clean tracks flagged ({100*flagged/len(scores):.1f}%)")
-    print(f"   Score distribution: min={scores.min():.3f}  mean={scores.mean():.3f}  max={scores.max():.3f}")
+    print(
+        f"   Self-validation: {flagged}/{len(scores)} synthetic clean tracks flagged ({100 * flagged / len(scores):.1f}%)"
+    )
+    print(
+        f"   Score distribution: min={scores.min():.3f}  mean={scores.mean():.3f}  max={scores.max():.3f}"
+    )
 
     with open(save_path, "wb") as f:
         pickle.dump(clf, f)
@@ -172,6 +188,7 @@ def train_baseline_model(n_samples: int = 5000, output_path: Path | None = None)
 # ---------------------------------------------------------------------------
 # Verification
 # ---------------------------------------------------------------------------
+
 
 def verify_model(model_path: Path) -> None:
     """Quick smoke test: checks model rejects obviously anomalous inputs."""
@@ -187,15 +204,21 @@ def verify_model(model_path: Path) -> None:
     runner_score = clf.score_samples(runner_features)[0]
 
     print("\n🧪 Model Verification:")
-    print(f"   Runner score:  {runner_score:.4f}  → {'✅ CLEAN' if runner_score > -0.15 else '❌ FLAGGED (unexpected)'}")
-    print(f"   Car score:     {car_score:.4f}  → {'✅ FLAGGED' if car_score < -0.15 else '⚠️  NOT flagged (threshold may need adjustment)'}")
+    print(
+        f"   Runner score:  {runner_score:.4f}  → {'✅ CLEAN' if runner_score > -0.15 else '❌ FLAGGED (unexpected)'}"
+    )
+    print(
+        f"   Car score:     {car_score:.4f}  → {'✅ FLAGGED' if car_score < -0.15 else '⚠️  NOT flagged (threshold may need adjustment)'}"
+    )
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Train SPORT baseline ML anomaly detector")
-    parser.add_argument("--samples", type=int, default=5000, help="Number of synthetic tracks (default: 5000)")
+    parser.add_argument(
+        "--samples", type=int, default=5000, help="Number of synthetic tracks (default: 5000)"
+    )
     parser.add_argument("--output", type=str, default=None, help="Override output path")
     args = parser.parse_args()
 

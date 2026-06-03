@@ -33,6 +33,7 @@ def error(message, details=None, status_code=status.HTTP_400_BAD_REQUEST):
 def paginated(queryset, serializer_class, request, context=None):
     """Return a paginated response. Falls back to full list if no pagination configured."""
     from rest_framework.pagination import PageNumberPagination
+
     paginator = PageNumberPagination()
     page = paginator.paginate_queryset(queryset, request)
     if page is not None:

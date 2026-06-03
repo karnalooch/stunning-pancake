@@ -1,14 +1,14 @@
 from django.db import migrations
 
-class Migration(migrations.Migration):
 
+class Migration(migrations.Migration):
     dependencies = [
-        ('activities', '0007_enable_rls_poi_vouchers'),
+        ("activities", "0007_enable_rls_poi_vouchers"),
     ]
 
     operations = [
         migrations.RunSQL(
-            sql='''
+            sql="""
                 -- 0. Ensure the application role exists (needed for RLS policy TO clauses)
                 DO $$
                 BEGIN
@@ -68,11 +68,11 @@ class Migration(migrations.Migration):
                         AND p.tenant_id = NULLIF(current_setting('app.tenant_id', TRUE), '')::uuid
                     )
                 );
-            ''',
-            reverse_sql='''
+            """,
+            reverse_sql="""
                 DROP POLICY IF EXISTS tenant_isolation ON activities_voucher;
                 DROP POLICY IF EXISTS tenant_isolation ON activities_poi;
                 DROP POLICY IF EXISTS tenant_isolation ON activities_activity;
-            '''
+            """,
         ),
     ]

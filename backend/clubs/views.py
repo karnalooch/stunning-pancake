@@ -17,15 +17,15 @@ class ClubListCreateView(generics.ListCreateAPIView):
     POST /api/clubs/           — Create a new club (owner = request.user).
     """
 
-    queryset = Club.objects.all().order_by('-created_at')
+    queryset = Club.objects.all().order_by("-created_at")
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self):
-        return ClubCreateSerializer if self.request.method == 'POST' else ClubSerializer
+        return ClubCreateSerializer if self.request.method == "POST" else ClubSerializer
 
     def get_queryset(self):
         qs = super().get_queryset()
-        sport = self.request.query_params.get('sport_type')
+        sport = self.request.query_params.get("sport_type")
         if sport:
             qs = qs.filter(sport_type=sport)
         return qs
@@ -42,20 +42,20 @@ class ClubDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ClubSerializer
 
     def get_permissions(self):
-        if self.request.method in ('PATCH', 'DELETE'):
+        if self.request.method in ("PATCH", "DELETE"):
             return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
     def update(self, request, *args, **kwargs):
         club = self.get_object()
         if club.owner != request.user:
-            return Response({'error': 'Only the owner can edit this club.'}, status=403)
+            return Response({"error": "Only the owner can edit this club."}, status=403)
         return super().update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
         club = self.get_object()
         if club.owner != request.user:
-            return Response({'error': 'Only the owner can delete this club.'}, status=403)
+            return Response({"error": "Only the owner can delete this club."}, status=403)
         return super().destroy(request, *args, **kwargs)
 
 
@@ -67,12 +67,12 @@ class ClubMembersView(generics.ListAPIView):
 
     def get_queryset(self):
         return ClubMembership.objects.filter(
-            club_id=self.kwargs['pk'], status='ACTIVE'
-        ).select_related('user')
+            club_id=self.kwargs["pk"], status="ACTIVE"
+        ).select_related("user")
 
 
-@extend_schema(responses={200: {'type': 'object'}})
-@api_view(['POST'])
+@extend_schema(responses={200: {"type": "object"}})
+@api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def join_club(request, pk):
     """
@@ -83,31 +83,31 @@ def join_club(request, pk):
     try:
         club = Club.objects.get(pk=pk)
     except Club.DoesNotExist:
-        return Response({'error': 'Club not found.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Club not found."}, status=status.HTTP_404_NOT_FOUND)
 
     membership, created = ClubMembership.objects.get_or_create(
         club=club,
         user=request.user,
-        defaults={'status': 'ACTIVE'},
+        defaults={"status": "ACTIVE"},
     )
-    if not created and membership.status != 'ACTIVE':
-        membership.status = 'ACTIVE'
+    if not created and membership.status != "ACTIVE":
+        membership.status = "ACTIVE"
         membership.save()
 
-    return Response({'status': 'joined', 'club': club.name})
+    return Response({"status": "joined", "club": club.name})
 
 
-@extend_schema(responses={200: {'type': 'object'}})
-@api_view(['POST'])
+@extend_schema(responses={200: {"type": "object"}})
+@api_view(["POST"])
 @permission_classes([permissions.IsAuthenticated])
 def leave_club(request, pk):
     """POST /api/clubs/<id>/leave/ — Leave a club."""
     try:
         membership = ClubMembership.objects.get(club_id=pk, user=request.user)
         membership.delete()
-        return Response({'status': 'left'})
+        return Response({"status": "left"})
     except ClubMembership.DoesNotExist:
-        return Response({'error': 'Not a member.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({"error": "Not a member."}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ClubChallengeListCreateView(generics.ListCreateAPIView):
@@ -116,7 +116,9 @@ class ClubChallengeListCreateView(generics.ListCreateAPIView):
     POST /api/clubs/challenges/   — Create a new challenge.
     """
 
-    queryset = ClubChallenge.objects.filter(status__in=['PENDING', 'ACTIVE']).order_by('-created_at')
+    queryset = ClubChallenge.objects.filter(status__in=["PENDING", "ACTIVE"]).order_by(
+        "-created_at"
+    )
     serializer_class = ClubChallengeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -128,6 +130,8 @@ class ClubLeaderboardView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return ClubMembership.objects.filter(
-            club_id=self.kwargs['pk'], status='ACTIVE'
-        ).order_by('-total_km').select_related('user')[:10]
+        return (
+            ClubMembership.objects.filter(club_id=self.kwargs["pk"], status="ACTIVE")
+            .order_by("-total_km")
+            .select_related("user")[:10]
+        )

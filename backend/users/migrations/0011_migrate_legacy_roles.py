@@ -2,24 +2,25 @@
 Data migration: Migrate existing User.role values to UserRole assignments.
 Backward-compatible: keeps User.role field for legacy code.
 """
+
 from django.db import migrations
 
 
 def migrate_legacy_roles(apps, schema_editor):
-    User = apps.get_model('users', 'User')
-    Role = apps.get_model('users', 'Role')
-    UserRole = apps.get_model('users', 'UserRole')
+    User = apps.get_model("users", "User")
+    Role = apps.get_model("users", "Role")
+    UserRole = apps.get_model("users", "UserRole")
 
     role_map = {
-        'GLOBAL_OWNER': 'global_owner',
-        'TENANT_ADMIN': 'tenant_admin',
-        'TENANT_MODERATOR': 'tenant_moderator',
-        'SPONSOR': 'sponsor',
-        'ATHLETE': 'athlete',
+        "GLOBAL_OWNER": "global_owner",
+        "TENANT_ADMIN": "tenant_admin",
+        "TENANT_MODERATOR": "tenant_moderator",
+        "SPONSOR": "sponsor",
+        "ATHLETE": "athlete",
     }
 
     for user in User.objects.all():
-        legacy_role = getattr(user, 'role', None)
+        legacy_role = getattr(user, "role", None)
         if legacy_role and legacy_role in role_map:
             role_slug = role_map[legacy_role]
             try:
@@ -34,14 +35,13 @@ def migrate_legacy_roles(apps, schema_editor):
 
 
 def reverse_migrate_legacy_roles(apps, schema_editor):
-    UserRole = apps.get_model('users', 'UserRole')
+    UserRole = apps.get_model("users", "UserRole")
     UserRole.objects.all().delete()
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0010_seed_rbac_data'),
+        ("users", "0010_seed_rbac_data"),
     ]
 
     operations = [

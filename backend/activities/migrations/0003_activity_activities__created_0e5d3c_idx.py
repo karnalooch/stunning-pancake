@@ -4,14 +4,13 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('activities', '0002_initial'),
+        ("activities", "0002_initial"),
     ]
 
     operations = [
         migrations.AddIndex(
-            model_name='activity',
-            index=models.Index(fields=['created_at'], name='activities__created_0e5d3c_idx'),
+            model_name="activity",
+            index=models.Index(fields=["created_at"], name="activities__created_0e5d3c_idx"),
         ),
     ]

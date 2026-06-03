@@ -16,6 +16,7 @@ LINKED_RLS_TABLES = {
 
 APP_ROLE = "sport_app"
 
+
 def ensure_app_role():
     """Create the application role if it doesn't exist (used for RLS policies)."""
     with connection.cursor() as cursor:
@@ -28,6 +29,7 @@ def ensure_app_role():
             END
             $$;
         """)
+
 
 def apply_rls_policies():
     with connection.cursor() as cursor:
@@ -42,7 +44,7 @@ def apply_rls_policies():
             # Drop old legacy policies if they exist
             cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation_policy ON {table};")
             cursor.execute(f"DROP POLICY IF EXISTS poi_tenant_isolation_policy ON {table};")
-            
+
             cursor.execute(f"""
                 CREATE POLICY tenant_isolation ON {table}
                 FOR ALL
@@ -62,7 +64,7 @@ def apply_rls_policies():
             cursor.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;")
             cursor.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {table};")
             cursor.execute(f"DROP POLICY IF EXISTS voucher_tenant_isolation_policy ON {table};")
-            
+
             # Note: For linked tables, we check the tenant_id of the parent record
             cursor.execute(f"""
                 CREATE POLICY tenant_isolation ON {table}
@@ -80,9 +82,11 @@ def apply_rls_policies():
 
     logger.info("RLS policies applied.")
 
+
 def set_tenant_context(tenant_id: str):
     with connection.cursor() as cursor:
         cursor.execute("SELECT set_config('app.tenant_id', %s, FALSE);", [str(tenant_id)])
+
 
 def remove_rls_policies():
     with connection.cursor() as cursor:

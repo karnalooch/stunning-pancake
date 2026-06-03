@@ -14,6 +14,7 @@ CLI flags:
     --clear          Delete existing simulation data before running.
     --dry-run        Print what would be created without inserting.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -30,6 +31,7 @@ from datetime import datetime, timedelta, timezone
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
 import django
+
 if not django.conf.settings.configured:
     django.setup()
 
@@ -48,7 +50,8 @@ def _athlete_password_hash() -> str:
     global _ATHLETE_PASSWORD_HASH
     if _ATHLETE_PASSWORD_HASH is None:
         from django.contrib.auth.hashers import make_password
-        _ATHLETE_PASSWORD_HASH = make_password('Athlete2026!')
+
+        _ATHLETE_PASSWORD_HASH = make_password("Athlete2026!")
     return _ATHLETE_PASSWORD_HASH
 
 
@@ -60,9 +63,10 @@ def _plan_cities_for_target(total_users: int, num_cities_hint: int | None = None
     total_users = int(total_users)
     try:
         from activities.scale_config import compute_batch_scaling
+
         plan = compute_batch_scaling(total_users, max_cities_available=len(CITIES))
-        n = plan['num_cities']
-        users_per_city = plan['users_per_city']
+        n = plan["num_cities"]
+        users_per_city = plan["users_per_city"]
     except Exception:
         if total_users >= 5_000:
             n = min(len(CITIES), max(5, min(10, total_users // 800)))
@@ -84,9 +88,10 @@ def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
     """(bulk_batch_size, pg_batch_size) — adaptive when total_users is set."""
     try:
         from activities import simulator_state as sim
+
         state = sim.get_batch_state()
-        bulk_o = state.get('user_bulk_batch_size')
-        pg_o = state.get('user_bulk_pg_batch_size')
+        bulk_o = state.get("user_bulk_batch_size")
+        pg_o = state.get("user_bulk_pg_batch_size")
         if bulk_o and pg_o:
             return int(float(bulk_o)), int(float(pg_o))
     except Exception:
@@ -94,13 +99,15 @@ def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
     if not total_users:
         try:
             from activities.scale_config import USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
+
             return USER_BULK_BATCH_SIZE, USER_BULK_PG_BATCH_SIZE
         except Exception:
             return 500, 500
     try:
         from activities.scale_config import compute_batch_scaling
+
         plan = compute_batch_scaling(int(total_users), max_cities_available=len(CITIES))
-        return plan['user_bulk_batch_size'], plan['user_bulk_pg_batch_size']
+        return plan["user_bulk_batch_size"], plan["user_bulk_pg_batch_size"]
     except Exception:
         return 2500, 500
 
@@ -108,10 +115,11 @@ def _batch_sizes_for_target(total_users: int | None) -> tuple[int, int]:
 def _is_disk_full_error(exc: BaseException) -> bool:
     try:
         from activities.scale_disk_guard import is_disk_full_error
+
         return is_disk_full_error(exc)
     except Exception:
         msg = str(exc).lower()
-        return 'no space left on device' in msg or 'could not extend file' in msg
+        return "no space left on device" in msg or "could not extend file" in msg
 
 
 def _bulk_create_user_chunks(users, pg_chunk: int, **kwargs) -> None:
@@ -122,13 +130,14 @@ def _bulk_create_user_chunks(users, pg_chunk: int, **kwargs) -> None:
     for _attempt in range(6):
         try:
             for i in range(0, len(users), chunk):
-                User.objects.bulk_create(users[i:i + chunk], batch_size=chunk, **kwargs)
+                User.objects.bulk_create(users[i : i + chunk], batch_size=chunk, **kwargs)
             return
         except Exception as e:
             if not _is_disk_full_error(e) or chunk <= 50:
                 raise
             try:
                 from activities.scale_disk_guard import remember_disk_budget_from_full_disk
+
                 remember_disk_budget_from_full_disk()
             except Exception:
                 pass
@@ -141,6 +150,7 @@ def _batch_user_insert_flags(skip_activities: bool) -> tuple[bool, bool]:
         return False, False
     try:
         from activities.scale_config import BATCH_FAST_INSERT, SKIP_DEPT_ON_BATCH
+
         skip_dept = SKIP_DEPT_ON_BATCH
         fast_insert = BATCH_FAST_INSERT and skip_dept
     except Exception:
@@ -177,16 +187,18 @@ def _bulk_create_athletes(
         for i in range(batch_count):
             idx = batch_start + i
             first, last = _pick_name()
-            username = f"{city['slug']}_athlete_{idx+1:06d}"
-            users_to_create.append(User(
-                username=username,
-                email=f'{username}@aktywnemiasta.pl',
-                role='ATHLETE',
-                tenant=tenant,
-                first_name=first,
-                last_name=last,
-                password=pwd,
-            ))
+            username = f"{city['slug']}_athlete_{idx + 1:06d}"
+            users_to_create.append(
+                User(
+                    username=username,
+                    email=f"{username}@aktywnemiasta.pl",
+                    role="ATHLETE",
+                    tenant=tenant,
+                    first_name=first,
+                    last_name=last,
+                    password=pwd,
+                )
+            )
 
         if not users_to_create:
             continue
@@ -229,8 +241,9 @@ def _bulk_create_athletes(
 
                 user_ids = list(
                     User.objects.filter(
-                        username__in=usernames, tenant=tenant,
-                    ).values_list('id', flat=True)
+                        username__in=usernames,
+                        tenant=tenant,
+                    ).values_list("id", flat=True)
                 )
                 n_saved = len(user_ids)
                 if user_ids and city_depts and not skip_dept:
@@ -244,7 +257,9 @@ def _bulk_create_athletes(
                     ]
                     try:
                         UserDepartment.objects.bulk_create(
-                            memberships, batch_size=pg_batch_size, ignore_conflicts=True,
+                            memberships,
+                            batch_size=pg_batch_size,
+                            ignore_conflicts=True,
                         )
                     except TypeError:
                         UserDepartment.objects.bulk_create(memberships, batch_size=pg_batch_size)
@@ -257,76 +272,258 @@ def _bulk_create_athletes(
 
 
 CITIES = [
-    {"name": "Warszawa",    "slug": "warszawa",     "lat": 52.2297, "lon": 21.0122, "colors": ("#DC2626", "#FBBF24")},
-    {"name": "Kraków",      "slug": "krakow",       "lat": 50.0647, "lon": 19.9450, "colors": ("#2563EB", "#10B981")},
-    {"name": "Wrocław",     "slug": "wroclaw",      "lat": 51.1079, "lon": 17.0385, "colors": ("#F59E0B", "#EF4444")},
-    {"name": "Poznań",      "slug": "poznan",       "lat": 52.4064, "lon": 16.9252, "colors": ("#8B5CF6", "#FBBF24")},
-    {"name": "Gdańsk",      "slug": "gdansk",       "lat": 54.3520, "lon": 18.6466, "colors": ("#06B6D4", "#F59E0B")},
-    {"name": "Łódź",        "slug": "lodz",         "lat": 51.7592, "lon": 19.4560, "colors": ("#EC4899", "#6366F1")},
-    {"name": "Lublin",      "slug": "lublin",       "lat": 51.2465, "lon": 22.5684, "colors": ("#10B981", "#F59E0B")},
-    {"name": "Bydgoszcz",   "slug": "bydgoszcz",    "lat": 53.1235, "lon": 18.0084, "colors": ("#3B82F6", "#EF4444")},
-    {"name": "Katowice",    "slug": "katowice",     "lat": 50.2649, "lon": 19.0238, "colors": ("#14B8A6", "#F97316")},
-    {"name": "Siedlce",     "slug": "siedlce",      "lat": 52.1676, "lon": 22.2900, "colors": ("#2563EB", "#10B981")},
+    {
+        "name": "Warszawa",
+        "slug": "warszawa",
+        "lat": 52.2297,
+        "lon": 21.0122,
+        "colors": ("#DC2626", "#FBBF24"),
+    },
+    {
+        "name": "Kraków",
+        "slug": "krakow",
+        "lat": 50.0647,
+        "lon": 19.9450,
+        "colors": ("#2563EB", "#10B981"),
+    },
+    {
+        "name": "Wrocław",
+        "slug": "wroclaw",
+        "lat": 51.1079,
+        "lon": 17.0385,
+        "colors": ("#F59E0B", "#EF4444"),
+    },
+    {
+        "name": "Poznań",
+        "slug": "poznan",
+        "lat": 52.4064,
+        "lon": 16.9252,
+        "colors": ("#8B5CF6", "#FBBF24"),
+    },
+    {
+        "name": "Gdańsk",
+        "slug": "gdansk",
+        "lat": 54.3520,
+        "lon": 18.6466,
+        "colors": ("#06B6D4", "#F59E0B"),
+    },
+    {
+        "name": "Łódź",
+        "slug": "lodz",
+        "lat": 51.7592,
+        "lon": 19.4560,
+        "colors": ("#EC4899", "#6366F1"),
+    },
+    {
+        "name": "Lublin",
+        "slug": "lublin",
+        "lat": 51.2465,
+        "lon": 22.5684,
+        "colors": ("#10B981", "#F59E0B"),
+    },
+    {
+        "name": "Bydgoszcz",
+        "slug": "bydgoszcz",
+        "lat": 53.1235,
+        "lon": 18.0084,
+        "colors": ("#3B82F6", "#EF4444"),
+    },
+    {
+        "name": "Katowice",
+        "slug": "katowice",
+        "lat": 50.2649,
+        "lon": 19.0238,
+        "colors": ("#14B8A6", "#F97316"),
+    },
+    {
+        "name": "Siedlce",
+        "slug": "siedlce",
+        "lat": 52.1676,
+        "lon": 22.2900,
+        "colors": ("#2563EB", "#10B981"),
+    },
 ]
 
 # ---------------------------------------------------------------------------
 # Polish name pools
 # ---------------------------------------------------------------------------
 FIRST_NAMES_M = [
-    "Adam", "Piotr", "Krzysztof", "Tomasz", "Paweł", "Michał", "Jakub", "Marcin",
-    "Łukasz", "Grzegorz", "Marek", "Maciej", "Jan", "Andrzej", "Robert", "Dariusz",
-    "Wojciech", "Bartosz", "Mateusz", "Kamil", "Rafał", "Sebastian", "Artur", "Filip",
-    "Damian", "Adrian", "Patryk", "Dawid", "Igor", "Oskar", "Wiktor", "Aleksander",
-    "Stanisław", "Kazimierz", "Zbigniew", "Jerzy", "Tadeusz", "Ryszard", "Mariusz", "Jacek",
+    "Adam",
+    "Piotr",
+    "Krzysztof",
+    "Tomasz",
+    "Paweł",
+    "Michał",
+    "Jakub",
+    "Marcin",
+    "Łukasz",
+    "Grzegorz",
+    "Marek",
+    "Maciej",
+    "Jan",
+    "Andrzej",
+    "Robert",
+    "Dariusz",
+    "Wojciech",
+    "Bartosz",
+    "Mateusz",
+    "Kamil",
+    "Rafał",
+    "Sebastian",
+    "Artur",
+    "Filip",
+    "Damian",
+    "Adrian",
+    "Patryk",
+    "Dawid",
+    "Igor",
+    "Oskar",
+    "Wiktor",
+    "Aleksander",
+    "Stanisław",
+    "Kazimierz",
+    "Zbigniew",
+    "Jerzy",
+    "Tadeusz",
+    "Ryszard",
+    "Mariusz",
+    "Jacek",
 ]
 FIRST_NAMES_F = [
-    "Anna", "Maria", "Katarzyna", "Magdalena", "Agnieszka", "Barbara", "Ewa", "Monika",
-    "Joanna", "Aleksandra", "Natalia", "Julia", "Maja", "Zuzanna", "Hanna", "Wiktoria",
-    "Oliwia", "Amelia", "Zofia", "Lena", "Emilia", "Kinga", "Patrycja", "Karolina",
-    "Dorota", "Iwona", "Beata", "Renata", "Sylwia", "Justyna", "Małgorzata", "Elżbieta",
-    "Krystyna", "Teresa", "Danuta", "Halina", "Irena", "Urszula", "Grażyna", "Bożena",
+    "Anna",
+    "Maria",
+    "Katarzyna",
+    "Magdalena",
+    "Agnieszka",
+    "Barbara",
+    "Ewa",
+    "Monika",
+    "Joanna",
+    "Aleksandra",
+    "Natalia",
+    "Julia",
+    "Maja",
+    "Zuzanna",
+    "Hanna",
+    "Wiktoria",
+    "Oliwia",
+    "Amelia",
+    "Zofia",
+    "Lena",
+    "Emilia",
+    "Kinga",
+    "Patrycja",
+    "Karolina",
+    "Dorota",
+    "Iwona",
+    "Beata",
+    "Renata",
+    "Sylwia",
+    "Justyna",
+    "Małgorzata",
+    "Elżbieta",
+    "Krystyna",
+    "Teresa",
+    "Danuta",
+    "Halina",
+    "Irena",
+    "Urszula",
+    "Grażyna",
+    "Bożena",
 ]
 LAST_NAMES = [
-    "Kowalski", "Nowak", "Wiśniewski", "Wójcik", "Kamiński", "Lewandowski", "Zieliński",
-    "Szymański", "Woźniak", "Dąbrowski", "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski",
-    "Krawczyk", "Piotrowski", "Grabowski", "Nowakowski", "Pawłowski", "Michalski",
-    "Adamczyk", "Dudek", "Zając", "Wieczorek", "Jabłoński", "Król", "Majewski",
-    "Olszewski", "Jaworski", "Wróbel", "Malinowski", "Stępień", "Duda", "Bąk",
-    "Wilk", "Czarnecki", "Sawicki", "Sokołowski", "Urbański", "Kubiak",
+    "Kowalski",
+    "Nowak",
+    "Wiśniewski",
+    "Wójcik",
+    "Kamiński",
+    "Lewandowski",
+    "Zieliński",
+    "Szymański",
+    "Woźniak",
+    "Dąbrowski",
+    "Kozłowski",
+    "Jankowski",
+    "Mazur",
+    "Kwiatkowski",
+    "Krawczyk",
+    "Piotrowski",
+    "Grabowski",
+    "Nowakowski",
+    "Pawłowski",
+    "Michalski",
+    "Adamczyk",
+    "Dudek",
+    "Zając",
+    "Wieczorek",
+    "Jabłoński",
+    "Król",
+    "Majewski",
+    "Olszewski",
+    "Jaworski",
+    "Wróbel",
+    "Malinowski",
+    "Stępień",
+    "Duda",
+    "Bąk",
+    "Wilk",
+    "Czarnecki",
+    "Sawicki",
+    "Sokołowski",
+    "Urbański",
+    "Kubiak",
 ]
 
 # Department name templates per city
 SCHOOL_NAMES = [
-    "Szkoła Podstawowa nr {}", "Liceum Ogólnokształcące nr {}",
-    "Zespół Szkół nr {}", "Szkoła Podstawowa im. Adama Mickiewicza",
+    "Szkoła Podstawowa nr {}",
+    "Liceum Ogólnokształcące nr {}",
+    "Zespół Szkół nr {}",
+    "Szkoła Podstawowa im. Adama Mickiewicza",
     "Liceum Ogólnokształcące im. Marii Curie-Skłodowskiej",
-    "Zespół Szkół Technicznych", "Szkoła Podstawowa im. Janusza Korczaka",
+    "Zespół Szkół Technicznych",
+    "Szkoła Podstawowa im. Janusza Korczaka",
     "Liceum Ogólnokształcące im. Bolesława Chrobrego",
     "Szkoła Podstawowa im. Mikołaja Kopernika",
     "Zespół Szkół Ekonomicznych",
 ]
 UNI_NAMES = [
-    "Uniwersytet", "Politechnika", "Akademia Wychowania Fizycznego",
-    "Akademia Medyczna", "Uniwersytet Przyrodniczy", "Akademia Sztuk Pięknych",
-    "Wydział Informatyki", "Wydział Mechaniczny", "Wydział Ekonomii",
-    "Wydział Filologii", "Wydział Matematyki", "Wydział Biologii",
+    "Uniwersytet",
+    "Politechnika",
+    "Akademia Wychowania Fizycznego",
+    "Akademia Medyczna",
+    "Uniwersytet Przyrodniczy",
+    "Akademia Sztuk Pięknych",
+    "Wydział Informatyki",
+    "Wydział Mechaniczny",
+    "Wydział Ekonomii",
+    "Wydział Filologii",
+    "Wydział Matematyki",
+    "Wydział Biologii",
 ]
 INST_NAMES = [
-    "Urząd Miasta", "Szpital Miejski", "Klub Sportowy", "Ośrodek Kultury",
-    "Biblioteka Miejska", "Straż Miejska", "Zakład Komunalny",
-    "Centrum Sportu i Rekreacji", "Miejski Ośrodek Pomocy Społecznej",
+    "Urząd Miasta",
+    "Szpital Miejski",
+    "Klub Sportowy",
+    "Ośrodek Kultury",
+    "Biblioteka Miejska",
+    "Straż Miejska",
+    "Zakład Komunalny",
+    "Centrum Sportu i Rekreacji",
+    "Miejski Ośrodek Pomocy Społecznej",
 ]
 
 # Activity type distribution
 ACTIVITY_TYPES = [
-    ("RUN",    0.35, 3000,  15000,  6.0,  12.0),   # type, weight, min_m, max_m, min_kmh, max_kmh
-    ("BIKE",   0.45, 5000,  60000, 15.0,  30.0),
-    ("WALK",   0.20, 1000,   8000,  3.0,   6.0),
+    ("RUN", 0.35, 3000, 15000, 6.0, 12.0),  # type, weight, min_m, max_m, min_kmh, max_kmh
+    ("BIKE", 0.45, 5000, 60000, 15.0, 30.0),
+    ("WALK", 0.20, 1000, 8000, 3.0, 6.0),
 ]
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _pick_name():
     first = random.choice(FIRST_NAMES_M + FIRST_NAMES_F)
@@ -339,7 +536,9 @@ def _pick_name():
     return first, last
 
 
-def _generate_gps_track(lat: float, lon: float, distance_m: float, activity_type: str) -> LineString:
+def _generate_gps_track(
+    lat: float, lon: float, distance_m: float, activity_type: str
+) -> LineString:
     """
     Generate a realistic GPS track as a LineString.
 
@@ -384,10 +583,12 @@ def _generate_gps_track(lat: float, lon: float, distance_m: float, activity_type
         jitter_lat = random.uniform(-0.00005, 0.00005)
         jitter_lon = random.uniform(-0.00005, 0.00005)
 
-        coords.append((
-            base_lon + noise_lon + jitter_lon,  # lon first (GeoJSON order)
-            base_lat + noise_lat + jitter_lat,
-        ))
+        coords.append(
+            (
+                base_lon + noise_lon + jitter_lon,  # lon first (GeoJSON order)
+                base_lat + noise_lat + jitter_lat,
+            )
+        )
 
     # Ensure the track starts and ends near the same point (loop closure)
     if len(coords) > 1:
@@ -411,7 +612,9 @@ def _generate_timestamp(days: int) -> datetime:
     - More activities on weekends
     """
     day_offset = random.uniform(0, days)
-    base_date = django_tz.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(days=days)
+    base_date = django_tz.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
+        days=days
+    )
     day = base_date + timedelta(days=day_offset)
 
     # Day-of-week weighting: weekends get 1.5x weight
@@ -478,8 +681,8 @@ def _generate_activity_params(activity_type: str):
 # Main simulation
 # ---------------------------------------------------------------------------
 
-CITIES_BY_SLUG = {c['slug']: c for c in CITIES}
-CITIES_BY_NAME = {c['name']: c for c in CITIES}
+CITIES_BY_SLUG = {c["slug"]: c for c in CITIES}
+CITIES_BY_NAME = {c["name"]: c for c in CITIES}
 
 
 def resolve_city_for_user(user) -> dict:
@@ -489,16 +692,16 @@ def resolve_city_for_user(user) -> dict:
     """
     if user is None:
         return CITIES[0]
-    tenant = getattr(user, 'tenant', None)
+    tenant = getattr(user, "tenant", None)
     if tenant is not None:
-        name = (getattr(tenant, 'name', None) or '').strip()
+        name = (getattr(tenant, "name", None) or "").strip()
         if name in CITIES_BY_NAME:
             return CITIES_BY_NAME[name]
-    username = (getattr(user, 'username', None) or '').lower()
+    username = (getattr(user, "username", None) or "").lower()
     for city in CITIES:
         if username.startswith(f"{city['slug']}_"):
             return city
-    pk = getattr(user, 'pk', None) or getattr(user, 'id', None)
+    pk = getattr(user, "pk", None) or getattr(user, "id", None)
     if pk is not None:
         return CITIES[int(pk) % len(CITIES)]
     return CITIES[0]
@@ -528,6 +731,7 @@ def run(
                 progress_pct=round(min(100.0, max(0.0, pct)), 1),
                 **extra,
             )
+
     # Lazy imports — models must be loaded after Django is ready
     from users.models import User, Tenant
     from users.departments import Department, UserDepartment
@@ -536,10 +740,10 @@ def run(
     try:
         from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
 
-        run_disk_monitor(source='simulator')
-        allowed, reason = check_simulation_allowed('simulator')
+        run_disk_monitor(source="simulator")
+        allowed, reason = check_simulation_allowed("simulator")
         if not allowed:
-            raise RuntimeError(reason or 'Simulation blocked by disk guard')
+            raise RuntimeError(reason or "Simulation blocked by disk guard")
     except RuntimeError:
         raise
     except Exception:
@@ -575,13 +779,13 @@ def run(
         print("🔍 DRY RUN — no data will be inserted.")
         return
 
-    report('initializing', 1, users_created=0, activities_created=0)
+    report("initializing", 1, users_created=0, activities_created=0)
 
     # ------------------------------------------------------------------
     # Phase 0: Clear existing data (optional)
     # ------------------------------------------------------------------
     if clear:
-        report('clearing', 3)
+        report("clearing", 3)
         print("🗑️  Clearing all existing simulation data...")
         Activity.objects.all().delete()
         User.objects.filter(is_superuser=False, is_staff=False).delete()
@@ -589,12 +793,12 @@ def run(
         Tenant.objects.all().delete()
         print("   ✅ Cleared.")
         print()
-        report('clearing', 8)
+        report("clearing", 8)
 
     # ------------------------------------------------------------------
     # Phase 1: Create tenants
     # ------------------------------------------------------------------
-    report('creating_tenants', 10)
+    report("creating_tenants", 10)
     print("🏙️  Phase 1: Creating tenants...")
     tenants = {}
     for city in selected_cities:
@@ -612,12 +816,12 @@ def run(
         status = "✅ Created" if created else "♻️  Exists"
         print(f"   {status}: {city['name']} (id={tenant.id})")
     print()
-    report('creating_tenants', 12)
+    report("creating_tenants", 12)
 
     # ------------------------------------------------------------------
     # Phase 2: Create tenant admins
     # ------------------------------------------------------------------
-    report('creating_admins', 14)
+    report("creating_admins", 14)
     print("👤 Phase 2: Creating tenant admins...")
     for city in selected_cities:
         tenant = tenants[city["name"]]
@@ -639,12 +843,12 @@ def run(
         else:
             print(f"   ♻️  Admin exists: {admin_username}")
     print()
-    report('creating_admins', 16)
+    report("creating_admins", 16)
 
     # ------------------------------------------------------------------
     # Phase 3: Create departments per city
     # ------------------------------------------------------------------
-    report('creating_departments', 18)
+    report("creating_departments", 18)
     print("🏫 Phase 3: Creating departments...")
     departments_by_city = {}
     total_departments = 0
@@ -658,7 +862,8 @@ def run(
         for i in range(1, n_schools + 1):
             name = random.choice(SCHOOL_NAMES).format(i)
             dept, created = Department.objects.get_or_create(
-                tenant=tenant, name=name,
+                tenant=tenant,
+                name=name,
                 defaults={"department_type": "class", "description": f"Szkoła w {city['name']}"},
             )
             city_depts.append(dept)
@@ -671,8 +876,12 @@ def run(
                 # Create parent university
                 name = f"{random.choice(UNI_NAMES)} w {city['name']}"
                 dept, created = Department.objects.get_or_create(
-                    tenant=tenant, name=name,
-                    defaults={"department_type": "faculty", "description": f"Uniwersytet w {city['name']}"},
+                    tenant=tenant,
+                    name=name,
+                    defaults={
+                        "department_type": "faculty",
+                        "description": f"Uniwersytet w {city['name']}",
+                    },
                 )
                 parent_uni = dept
                 city_depts.append(dept)
@@ -680,7 +889,8 @@ def run(
                 # Create faculty under parent
                 fac_name = f"{random.choice(UNI_NAMES)} — {city['name']}"
                 dept, created = Department.objects.get_or_create(
-                    tenant=tenant, name=fac_name,
+                    tenant=tenant,
+                    name=fac_name,
                     defaults={
                         "department_type": "faculty",
                         "parent": parent_uni,
@@ -694,8 +904,12 @@ def run(
         for i in range(n_insts):
             name = f"{random.choice(INST_NAMES)} w {city['name']}"
             dept, created = Department.objects.get_or_create(
-                tenant=tenant, name=name,
-                defaults={"department_type": "department", "description": f"Instytucja w {city['name']}"},
+                tenant=tenant,
+                name=name,
+                defaults={
+                    "department_type": "department",
+                    "description": f"Instytucja w {city['name']}",
+                },
             )
             city_depts.append(dept)
 
@@ -705,22 +919,22 @@ def run(
 
     print(f"   📊 Total departments: {total_departments}")
     print()
-    report('creating_departments', 20, users_created=0, activities_created=0)
+    report("creating_departments", 20, users_created=0, activities_created=0)
 
     if skip_user_creation:
         return {
-            'city_slugs': [c['slug'] for c in selected_cities],
-            'users_per_city': users_per_city,
-            'scale': scale,
-            'activities_per_user': activities_per_user,
-            'days': days,
-            'total_u': total_u,
+            "city_slugs": [c["slug"] for c in selected_cities],
+            "users_per_city": users_per_city,
+            "scale": scale,
+            "activities_per_user": activities_per_user,
+            "days": days,
+            "total_u": total_u,
         }
 
     # ------------------------------------------------------------------
     # Phase 4: Create users per city
     # ---------------------------------------------------------------------------
-    report('creating_users', 22)
+    report("creating_users", 22)
     print("👥 Phase 4: Creating users...")
     users_by_city = {}
     total_users_created = 0
@@ -740,7 +954,7 @@ def run(
         # Create moderators
         for i in range(n_moderators):
             first, last = _pick_name()
-            username = f"moderator_{city['slug']}_{i+1}"
+            username = f"moderator_{city['slug']}_{i + 1}"
             user, created = User.objects.get_or_create(
                 username=username,
                 defaults={
@@ -765,15 +979,22 @@ def run(
         def _on_batch(n_saved: int):
             nonlocal athletes_created
             athletes_created += n_saved
-            users_so_far = sum(len(v) for v in users_by_city.values()) + len(city_users) + athletes_created
+            users_so_far = (
+                sum(len(v) for v in users_by_city.values()) + len(city_users) + athletes_created
+            )
             city_frac = athletes_created / max(1, n_athletes)
             overall = (city_index + city_frac) / max(1, len(selected_cities))
             pct = 22 + 63 * overall
-            report('creating_users', pct, users_created=users_so_far, activities_created=0)
+            report("creating_users", pct, users_created=users_so_far, activities_created=0)
 
         skip_dept, fast_insert = _batch_user_insert_flags(skip_activities)
         n_athletes_created = _bulk_create_athletes(
-            city, tenant, n_athletes, city_depts, batch_size, pg_batch_size,
+            city,
+            tenant,
+            n_athletes,
+            city_depts,
+            batch_size,
+            pg_batch_size,
             on_batch_created=_on_batch,
             skip_dept=skip_dept,
             fast_insert=fast_insert,
@@ -781,15 +1002,16 @@ def run(
         if not skip_activities and n_athletes_created:
             city_users.extend(
                 User.objects.filter(
-                    tenant=tenant, role='ATHLETE',
+                    tenant=tenant,
+                    role="ATHLETE",
                     username__startswith=f"{city['slug']}_athlete_",
-                ).only('id', 'username', 'tenant_id')
+                ).only("id", "username", "tenant_id")
             )
         users_by_city[city["name"]] = city_users
         total_users_created += len(city_users)
         print(f"   ✅ {city['name']}: {len(city_users)} users")
         report(
-            'creating_users',
+            "creating_users",
             22 + 63 * ((city_index + 1) / max(1, len(selected_cities))),
             users_created=total_users_created,
             activities_created=0,
@@ -797,17 +1019,17 @@ def run(
 
     print(f"   📊 Total users: {total_users_created}")
     print()
-    report('creating_users', 85, users_created=total_users_created, activities_created=0)
+    report("creating_users", 85, users_created=total_users_created, activities_created=0)
 
     # ------------------------------------------------------------------
     # Phase 5: Create activities with GPS tracks (skip if requested)
     # ------------------------------------------------------------------
     if skip_activities:
         print("⏭️  Phase 5: Skipping activity generation.")
-        report('complete', 100, users_created=total_users_created, activities_created=0)
+        report("complete", 100, users_created=total_users_created, activities_created=0)
         return  # <= exits the function after user creation, skipping activity generation entirely
 
-    report('creating_activities', 86)
+    report("creating_activities", 86)
     print("🏃 Phase 5: Creating activities with GPS tracks...")
     total_activities = 0
     total_distance = 0.0
@@ -844,7 +1066,9 @@ def run(
 
                 # Verification: ~90% verified
                 is_verified = random.random() < 0.90
-                verification_score = random.uniform(0.7, 1.0) if is_verified else random.uniform(0.0, 0.4)
+                verification_score = (
+                    random.uniform(0.7, 1.0) if is_verified else random.uniform(0.0, 0.4)
+                )
 
                 # Generate GPS track
                 try:
@@ -882,12 +1106,14 @@ def run(
 
             # Progress logging
             if (user_idx + 1) % 500 == 0:
-                print(f"      ... {user_idx + 1}/{len(city_users)} users processed, {city_activities} activities")
+                print(
+                    f"      ... {user_idx + 1}/{len(city_users)} users processed, {city_activities} activities"
+                )
                 city_frac = (user_idx + 1) / max(1, len(city_users))
                 overall = (act_city_index + city_frac) / max(1, len(selected_cities))
                 pct = 86 + 13 * overall
                 report(
-                    'creating_activities',
+                    "creating_activities",
                     pct,
                     users_created=total_users_created,
                     activities_created=total_activities,
@@ -904,14 +1130,14 @@ def run(
         total_activities += city_activities
         print(f"   ✅ {city['name']}: {city_activities} activities, {city_distance / 1000:,.0f} km")
         report(
-            'creating_activities',
+            "creating_activities",
             86 + 13 * ((act_city_index + 1) / max(1, len(selected_cities))),
             users_created=total_users_created,
             activities_created=total_activities,
         )
 
     print(f"   📊 Total activities: {total_activities}")
-    report('complete', 99, users_created=total_users_created, activities_created=total_activities)
+    report("complete", 99, users_created=total_users_created, activities_created=total_activities)
     print()
     # end of skip_activities block
     # ------------------------------------------------------------------
@@ -966,18 +1192,18 @@ def create_users_for_city(
     from activities import simulator_state as sim
     from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
 
-    allowed, reason = check_simulation_allowed('simulator')
+    allowed, reason = check_simulation_allowed("simulator")
     if not allowed:
-        run_disk_monitor(source='simulator')
-        raise RuntimeError(reason or 'Simulation blocked by disk guard')
+        run_disk_monitor(source="simulator")
+        raise RuntimeError(reason or "Simulation blocked by disk guard")
 
     city = CITIES_BY_SLUG.get(city_slug)
     if not city:
-        raise ValueError(f'Unknown city slug: {city_slug}')
+        raise ValueError(f"Unknown city slug: {city_slug}")
 
     batch_size, pg_batch_size = _batch_sizes_for_target(total_target_users)
 
-    tenant = Tenant.objects.get(name=city['name'])
+    tenant = Tenant.objects.get(name=city["name"])
     city_depts = list(Department.objects.filter(tenant=tenant, is_active=True))
     moderator_count = 0
 
@@ -996,19 +1222,19 @@ def create_users_for_city(
 
     for i in range(n_moderators):
         first, last = _pick_name()
-        username = f"moderator_{city['slug']}_{i+1}"
+        username = f"moderator_{city['slug']}_{i + 1}"
         user, created = User.objects.get_or_create(
             username=username,
             defaults={
-                'email': f'{username}@aktywnemiasta.pl',
-                'role': 'TENANT_MODERATOR',
-                'tenant': tenant,
-                'first_name': first,
-                'last_name': last,
+                "email": f"{username}@aktywnemiasta.pl",
+                "role": "TENANT_MODERATOR",
+                "tenant": tenant,
+                "first_name": first,
+                "last_name": last,
             },
         )
         if created:
-            user.set_password('Moderator2026!')
+            user.set_password("Moderator2026!")
             user.save()
             if city_depts:
                 dept = random.choice(city_depts)
@@ -1027,16 +1253,21 @@ def create_users_for_city(
         pct = 22 + 63 * overall
         if progress_callback:
             sim.set_batch_state_throttled(
-                current_phase='creating_users',
+                current_phase="creating_users",
                 progress_pct=round(min(100.0, max(0.0, pct)), 1),
                 users_created=users_so_far,
                 activities_created=0,
             )
-        report('creating_users', pct, users_created=users_so_far, activities_created=0)
+        report("creating_users", pct, users_created=users_so_far, activities_created=0)
 
     skip_dept, fast_insert = _batch_user_insert_flags(skip_activities=True)
     n_athletes_created = _bulk_create_athletes(
-        city, tenant, n_athletes, city_depts, batch_size, pg_batch_size,
+        city,
+        tenant,
+        n_athletes,
+        city_depts,
+        batch_size,
+        pg_batch_size,
         on_batch_created=_on_parallel_batch,
         skip_dept=skip_dept,
         fast_insert=fast_insert,
@@ -1052,10 +1283,18 @@ def create_users_for_city(
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Aktywne Miasta 2026 Simulation")
-    parser.add_argument("--scale", type=float, default=1.0, help="Scale factor (0.001–1.0, default 1.0)")
-    parser.add_argument("--days", type=int, default=30, help="Competition duration in days (default 30)")
-    parser.add_argument("--clear", action="store_true", help="Delete existing simulation data before running")
-    parser.add_argument("--dry-run", action="store_true", help="Print what would be created without inserting")
+    parser.add_argument(
+        "--scale", type=float, default=1.0, help="Scale factor (0.001–1.0, default 1.0)"
+    )
+    parser.add_argument(
+        "--days", type=int, default=30, help="Competition duration in days (default 30)"
+    )
+    parser.add_argument(
+        "--clear", action="store_true", help="Delete existing simulation data before running"
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print what would be created without inserting"
+    )
     args = parser.parse_args()
 
     run(scale=args.scale, days=args.days, clear=args.clear, dry_run=args.dry_run)

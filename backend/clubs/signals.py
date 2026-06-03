@@ -4,6 +4,7 @@ Django Signals — Clubs app
 Auto-provisions Matrix room on Club creation (Constitution §21.2).
 Milestone 3: All Matrix calls are now async (Celery notifications queue).
 """
+
 import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -31,6 +32,7 @@ def provision_matrix_room_on_creation(sender, instance: Club, created: bool, **k
 
     # Defer to Celery — do NOT block the HTTP request
     from clubs.tasks import provision_matrix_room_async
+
     provision_matrix_room_async.delay(instance.pk)
     logger.info("club.matrix_provision_queued club_id=%d", instance.pk)
 
@@ -47,7 +49,7 @@ def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool,
         instance: The saved ClubMembership instance.
         created: True if this is a new membership.
     """
-    if not created or instance.status != 'ACTIVE':
+    if not created or instance.status != "ACTIVE":
         return
 
     club = instance.club
@@ -64,7 +66,7 @@ def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool,
     send_matrix_notification_async.delay(club.matrix_room_id, message)
 
     # Invite user if they have a Matrix ID
-    matrix_user_id = getattr(instance.user, 'matrix_user_id', None)
+    matrix_user_id = getattr(instance.user, "matrix_user_id", None)
     if matrix_user_id:
         invite_member_to_matrix_async.delay(
             room_id=club.matrix_room_id,
@@ -73,5 +75,6 @@ def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool,
         )
         logger.info(
             "club.matrix_invite_queued user=%s club=%d",
-            instance.user_id, club.pk,
+            instance.user_id,
+            club.pk,
         )

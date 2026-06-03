@@ -4,6 +4,7 @@ Redis-based Simulator State Manager
 Replaces in-process _simulation_state and _live_state dicts.
 All state is stored in Redis so any WSGI worker can read/write it.
 """
+
 import json
 import threading
 import time
@@ -26,7 +27,7 @@ def _redis_float(val) -> float | None:
     if val is None:
         return None
     s = str(val).strip()
-    if not s or s.lower() == 'none':
+    if not s or s.lower() == "none":
         return None
     try:
         return float(s)
@@ -38,7 +39,7 @@ def _redis_int(val, default: int = 0) -> int:
     if val is None:
         return default
     s = str(val).strip()
-    if not s or s.lower() == 'none':
+    if not s or s.lower() == "none":
         return default
     try:
         return int(float(s))
@@ -52,36 +53,47 @@ def get_batch_state() -> dict:
     raw = r.hgetall(BATCH_STATE_KEY)
     if not raw:
         return {
-            'running': False, 'started_at': None, 'completed_at': None,
-            'scale': 0.0, 'days': 0, 'error': None, 'total_users': 0,
-            'users_created': 0, 'departments_created': 0, 'activities_created': 0,
-            'current_phase': 'idle', 'progress_pct': 0,
+            "running": False,
+            "started_at": None,
+            "completed_at": None,
+            "scale": 0.0,
+            "days": 0,
+            "error": None,
+            "total_users": 0,
+            "users_created": 0,
+            "departments_created": 0,
+            "activities_created": 0,
+            "current_phase": "idle",
+            "progress_pct": 0,
         }
     # Decode bytes to strings
-    state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
+    state = {
+        k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
+        for k, v in raw.items()
+    }
     # Parse numeric fields
-    state['running'] = state.get('running', 'false').lower() == 'true'
+    state["running"] = state.get("running", "false").lower() == "true"
     try:
-        state['scale'] = float(state.get('scale', 0) or 0)
+        state["scale"] = float(state.get("scale", 0) or 0)
     except (TypeError, ValueError):
-        state['scale'] = 0.0
-    state['days'] = _redis_int(state.get('days'), 0)
-    state['total_users'] = _redis_int(state.get('total_users'), 0)
-    state['users_created'] = _redis_int(state.get('users_created'), 0)
-    state['departments_created'] = _redis_int(state.get('departments_created'), 0)
-    state['activities_created'] = _redis_int(state.get('activities_created'), 0)
+        state["scale"] = 0.0
+    state["days"] = _redis_int(state.get("days"), 0)
+    state["total_users"] = _redis_int(state.get("total_users"), 0)
+    state["users_created"] = _redis_int(state.get("users_created"), 0)
+    state["departments_created"] = _redis_int(state.get("departments_created"), 0)
+    state["activities_created"] = _redis_int(state.get("activities_created"), 0)
     try:
-        state['progress_pct'] = float(state.get('progress_pct', 0) or 0)
+        state["progress_pct"] = float(state.get("progress_pct", 0) or 0)
     except (TypeError, ValueError):
-        state['progress_pct'] = 0.0
-    state['started_at'] = _redis_float(state.get('started_at'))
-    state['completed_at'] = _redis_float(state.get('completed_at'))
-    err = state.get('error')
-    if err is not None and str(err).strip().lower() == 'none':
-        state['error'] = None
-    so = state.get('scale_overrides')
-    if so is not None and str(so).strip().lower() in ('', 'none'):
-        state['scale_overrides'] = None
+        state["progress_pct"] = 0.0
+    state["started_at"] = _redis_float(state.get("started_at"))
+    state["completed_at"] = _redis_float(state.get("completed_at"))
+    err = state.get("error")
+    if err is not None and str(err).strip().lower() == "none":
+        state["error"] = None
+    so = state.get("scale_overrides")
+    if so is not None and str(so).strip().lower() in ("", "none"):
+        state["scale_overrides"] = None
     return state
 
 
@@ -98,12 +110,12 @@ def increment_batch_users_created(delta: int) -> int:
     """Atomic progress counter for parallel per-city batch workers."""
     if delta <= 0:
         try:
-            return int(get_batch_state().get('users_created', 0))
+            return int(get_batch_state().get("users_created", 0))
         except Exception:
             return 0
     try:
         r = get_redis()
-        return int(r.hincrby(BATCH_STATE_KEY, 'users_created', int(delta)))
+        return int(r.hincrby(BATCH_STATE_KEY, "users_created", int(delta)))
     except Exception:
         return 0
 
@@ -115,6 +127,7 @@ _batch_ui_last_flush = threading.local()
 def _batch_progress_flush_every() -> int:
     try:
         from activities.scale_config import BATCH_PROGRESS_REDIS_EVERY
+
         return max(500, int(BATCH_PROGRESS_REDIS_EVERY))
     except Exception:
         return 5000
@@ -124,7 +137,7 @@ def increment_batch_users_created_throttled(delta: int) -> int:
     """
     Buffer per-worker inserts; flush to Redis in chunks (avoids HINCRBY per bulk_create row at 300k).
     """
-    pending = int(getattr(_batch_progress_pending, 'value', 0) or 0) + int(delta)
+    pending = int(getattr(_batch_progress_pending, "value", 0) or 0) + int(delta)
     flush_at = _batch_progress_flush_every()
     if pending >= flush_at:
         flushed = increment_batch_users_created(pending)
@@ -132,19 +145,19 @@ def increment_batch_users_created_throttled(delta: int) -> int:
         return flushed
     _batch_progress_pending.value = pending
     try:
-        return int(get_batch_state().get('users_created', 0))
+        return int(get_batch_state().get("users_created", 0))
     except Exception:
         return 0
 
 
 def flush_batch_users_progress() -> int:
     """Flush any buffered user count (call at end of city worker)."""
-    pending = int(getattr(_batch_progress_pending, 'value', 0) or 0)
+    pending = int(getattr(_batch_progress_pending, "value", 0) or 0)
     if pending > 0:
         _batch_progress_pending.value = 0
         return increment_batch_users_created(pending)
     try:
-        return int(get_batch_state().get('users_created', 0))
+        return int(get_batch_state().get("users_created", 0))
     except Exception:
         return 0
 
@@ -153,14 +166,15 @@ def set_batch_state_throttled(**kwargs) -> bool:
     """Rate-limit Redis HSET for progress_pct from parallel workers."""
     try:
         from activities.scale_config import BATCH_PROGRESS_UI_MIN_SECONDS
+
         min_interval = float(BATCH_PROGRESS_UI_MIN_SECONDS)
     except Exception:
         min_interval = 2.0
 
     now = time.time()
-    last = float(getattr(_batch_ui_last_flush, 'at', 0) or 0)
-    force = kwargs.get('current_phase') in ('complete', 'error') or kwargs.get('running') is False
-    if not force and (now - last) < min_interval and 'progress_pct' in kwargs:
+    last = float(getattr(_batch_ui_last_flush, "at", 0) or 0)
+    force = kwargs.get("current_phase") in ("complete", "error") or kwargs.get("running") is False
+    if not force and (now - last) < min_interval and "progress_pct" in kwargs:
         return False
     set_batch_state(**kwargs)
     _batch_ui_last_flush.at = now
@@ -176,7 +190,7 @@ def reset_batch_state():
 def batch_log(msg: str):
     """Append timestamped log line to Redis list."""
     r = get_redis()
-    ts = time.strftime('%H:%M:%S')
+    ts = time.strftime("%H:%M:%S")
     r.rpush(BATCH_LOG_KEY, json.dumps([ts, msg]))
     r.ltrim(BATCH_LOG_KEY, -200, -1)  # Keep last 200
     r.expire(BATCH_LOG_KEY, 86400)
@@ -212,7 +226,7 @@ def is_batch_lock_held() -> bool:
     return bool(r.exists(BATCH_LOCK_KEY))
 
 
-_BATCH_IDLE_PHASES = frozenset({'idle', 'complete', ''})
+_BATCH_IDLE_PHASES = frozenset({"idle", "complete", ""})
 
 
 def batch_blocks_live_simulation() -> tuple[bool, str]:
@@ -221,14 +235,14 @@ def batch_blocks_live_simulation() -> tuple[bool, str]:
     Uses lock + running flag + phase (parallel batch keeps lock until finalize).
     """
     if is_batch_lock_held():
-        return True, 'batch lock held'
+        return True, "batch lock held"
     state = get_batch_state()
-    if state.get('running'):
-        return True, 'batch running'
-    phase = (state.get('current_phase') or 'idle').strip().lower()
+    if state.get("running"):
+        return True, "batch running"
+    phase = (state.get("current_phase") or "idle").strip().lower()
     if phase not in _BATCH_IDLE_PHASES:
-        return True, f'batch phase {phase!r}'
-    return False, ''
+        return True, f"batch phase {phase!r}"
+    return False, ""
 
 
 def force_stop_batch_simulation():
@@ -243,9 +257,9 @@ def force_stop_batch_simulation():
 LIVE_STATE_KEY = "{sim}:live:state"
 LIVE_LOG_KEY = "{sim}:live:log"
 LIVE_LOCK_KEY = "{sim}:live:lock"
-LIVE_POOL_KEY = "{sim}:live:pool"       # Redis set of user IDs (all cities)
+LIVE_POOL_KEY = "{sim}:live:pool"  # Redis set of user IDs (all cities)
 LIVE_POOL_MODE_KEY = "{sim}:live:pool_mode"  # "redis" | "db"
-LIVE_RIDES_KEY = "{sim}:live:rides"     # Redis hash of active rides
+LIVE_RIDES_KEY = "{sim}:live:rides"  # Redis hash of active rides
 
 
 def live_pool_city_key(city_slug: str) -> str:
@@ -254,9 +268,12 @@ def live_pool_city_key(city_slug: str) -> str:
 
 def _clear_live_city_pools(r) -> None:
     from simulate_active_cities import CITIES
-    keys = [live_pool_city_key(c['slug']) for c in CITIES]
+
+    keys = [live_pool_city_key(c["slug"]) for c in CITIES]
     if keys:
         r.delete(*keys)
+
+
 LIVE_TICK_LOCK_KEY = "{sim}:live:tick_lock"
 LIVE_LOCK_TTL = 300  # 5 min (refreshed by runner)
 
@@ -270,34 +287,43 @@ def get_live_state() -> dict:
     raw = r.hgetall(LIVE_STATE_KEY)
     if not raw:
         return {
-            'running': False, 'started_at': None, 'error': None,
-            'total_users': 0, 'active_ratio': 0.0, 'cheat_ratio': 0.0,
-            'tick_seconds': 10, 'currently_riding': 0, 'total_completed': 0,
-            'cheaters_caught': 0,
+            "running": False,
+            "started_at": None,
+            "error": None,
+            "total_users": 0,
+            "active_ratio": 0.0,
+            "cheat_ratio": 0.0,
+            "tick_seconds": 10,
+            "currently_riding": 0,
+            "total_completed": 0,
+            "cheaters_caught": 0,
         }
-    state = {k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v for k, v in raw.items()}
-    state['running'] = state.get('running', 'false').lower() == 'true'
-    state['total_users'] = _redis_int(state.get('total_users'), 0)
+    state = {
+        k.decode() if isinstance(k, bytes) else k: v.decode() if isinstance(v, bytes) else v
+        for k, v in raw.items()
+    }
+    state["running"] = state.get("running", "false").lower() == "true"
+    state["total_users"] = _redis_int(state.get("total_users"), 0)
     try:
-        state['active_ratio'] = float(state.get('active_ratio', 0) or 0)
+        state["active_ratio"] = float(state.get("active_ratio", 0) or 0)
     except (TypeError, ValueError):
-        state['active_ratio'] = 0.0
+        state["active_ratio"] = 0.0
     try:
-        state['cheat_ratio'] = float(state.get('cheat_ratio', 0) or 0)
+        state["cheat_ratio"] = float(state.get("cheat_ratio", 0) or 0)
     except (TypeError, ValueError):
-        state['cheat_ratio'] = 0.0
-    state['tick_seconds'] = _redis_int(state.get('tick_seconds'), 10)
-    state['currently_riding'] = int(state.get('currently_riding', 0))
-    state['total_completed'] = int(state.get('total_completed', 0))
-    state['cheaters_caught'] = int(state.get('cheaters_caught', 0))
-    state['started_at'] = _redis_float(state.get('started_at'))
-    state['last_tick_at'] = _redis_float(state.get('last_tick_at'))
-    err = state.get('error')
-    if err is not None and str(err).strip().lower() == 'none':
-        state['error'] = None
-    so = state.get('scale_overrides')
-    if so is not None and str(so).strip().lower() in ('', 'none'):
-        state['scale_overrides'] = None
+        state["cheat_ratio"] = 0.0
+    state["tick_seconds"] = _redis_int(state.get("tick_seconds"), 10)
+    state["currently_riding"] = int(state.get("currently_riding", 0))
+    state["total_completed"] = int(state.get("total_completed", 0))
+    state["cheaters_caught"] = int(state.get("cheaters_caught", 0))
+    state["started_at"] = _redis_float(state.get("started_at"))
+    state["last_tick_at"] = _redis_float(state.get("last_tick_at"))
+    err = state.get("error")
+    if err is not None and str(err).strip().lower() == "none":
+        state["error"] = None
+    so = state.get("scale_overrides")
+    if so is not None and str(so).strip().lower() in ("", "none"):
+        state["scale_overrides"] = None
     return state
 
 
@@ -322,17 +348,17 @@ def get_live_pool_mode() -> str:
     r = get_redis()
     raw = r.get(LIVE_POOL_MODE_KEY)
     if not raw:
-        return 'redis'
-    return (raw.decode() if isinstance(raw, bytes) else raw) or 'redis'
+        return "redis"
+    return (raw.decode() if isinstance(raw, bytes) else raw) or "redis"
 
 
 def is_live_pool_db_mode() -> bool:
-    return get_live_pool_mode() == 'db'
+    return get_live_pool_mode() == "db"
 
 
 def _set_live_pool_mode(mode: str) -> None:
     r = get_redis()
-    if mode == 'redis':
+    if mode == "redis":
         r.delete(LIVE_POOL_MODE_KEY)
     else:
         r.set(LIVE_POOL_MODE_KEY, mode, ex=86400)
@@ -341,7 +367,7 @@ def _set_live_pool_mode(mode: str) -> None:
 def live_log(msg: str):
     """Append timestamped log line to Redis list."""
     r = get_redis()
-    ts = time.strftime('%H:%M:%S')
+    ts = time.strftime("%H:%M:%S")
     r.rpush(LIVE_LOG_KEY, json.dumps([ts, msg]))
     r.ltrim(LIVE_LOG_KEY, -300, -1)
     r.expire(LIVE_LOG_KEY, 86400)
@@ -401,9 +427,9 @@ def reset_simulator_locks():
 def live_simulation_stuck() -> bool:
     """True when Redis indicates activity but running flag is off."""
     state = get_live_state()
-    if state.get('running'):
+    if state.get("running"):
         return False
-    if state.get('error'):
+    if state.get("error"):
         return True
     if is_live_lock_held():
         return True
@@ -417,14 +443,14 @@ def live_simulation_stuck() -> bool:
 def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bool:
     """True when running=1 but no successful tick for several intervals (worker died / lock skip)."""
     state = get_live_state()
-    if not state.get('running'):
+    if not state.get("running"):
         return False
     try:
-        tick_seconds = float(state.get('tick_seconds', 8))
+        tick_seconds = float(state.get("tick_seconds", 8))
     except (ValueError, TypeError):
         tick_seconds = 8.0
     try:
-        last_tick = float(state.get('last_tick_at') or 0)
+        last_tick = float(state.get("last_tick_at") or 0)
     except (ValueError, TypeError):
         last_tick = 0.0
     if last_tick <= 0:
@@ -442,16 +468,16 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
     state = get_live_state()
     r = get_redis()
 
-    if not state.get('running'):
+    if not state.get("running"):
         if is_live_lock_held():
             release_live_lock()
-            actions.append('released_orphan_live_lock')
+            actions.append("released_orphan_live_lock")
         if r.exists(LIVE_TICK_LOCK_KEY):
             release_live_tick_lock()
-            actions.append('released_orphan_tick_lock')
+            actions.append("released_orphan_tick_lock")
         if actions:
-            live_log('Self-heal: cleared orphan live locks (sim not running).')
-        return {'healed': bool(actions), 'actions': actions}
+            live_log("Self-heal: cleared orphan live locks (sim not running).")
+        return {"healed": bool(actions), "actions": actions}
 
     if (
         not from_tick_task
@@ -459,32 +485,31 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
         and live_tick_stale(multiplier=2.0, min_seconds=20.0)
     ):
         release_live_tick_lock()
-        actions.append('cleared_stale_tick_lock')
+        actions.append("cleared_stale_tick_lock")
 
     if live_tick_stale():
         set_live_state(
             worker_recovered_at=time.time(),
             error=None,
         )
-        actions.append('marked_stale_ticks')
+        actions.append("marked_stale_ticks")
         if reschedule:
             try:
                 from activities.simulator_tasks import live_tick_task, run_live_simulation
 
                 if is_live_lock_held():
                     live_tick_task.delay()
-                    actions.append('rescheduled_live_tick')
+                    actions.append("rescheduled_live_tick")
                 else:
                     run_live_simulation.delay()
-                    actions.append('rescheduled_live_runner')
+                    actions.append("rescheduled_live_runner")
             except Exception as exc:
-                actions.append(f'reschedule_failed:{exc!s:.120}')
+                actions.append(f"reschedule_failed:{exc!s:.120}")
         live_log(
-            'Self-heal: live ticks stalled (worker may have been killed); '
-            + ', '.join(actions)
+            "Self-heal: live ticks stalled (worker may have been killed); " + ", ".join(actions)
         )
 
-    return {'healed': bool(actions), 'actions': actions}
+    return {"healed": bool(actions), "actions": actions}
 
 
 def set_live_pool(user_ids: list):
@@ -498,17 +523,17 @@ def set_live_pool(user_ids: list):
     _clear_live_city_pools(r)
     if not user_ids:
         return
-    users = User.objects.filter(id__in=user_ids).select_related('tenant')
-    by_city: dict[str, list[str]] = {c['slug']: [] for c in CITIES}
+    users = User.objects.filter(id__in=user_ids).select_related("tenant")
+    by_city: dict[str, list[str]] = {c["slug"]: [] for c in CITIES}
     for user in users:
-        slug = resolve_city_for_user(user)['slug']
+        slug = resolve_city_for_user(user)["slug"]
         by_city.setdefault(slug, []).append(str(user.id))
     for slug, ids in by_city.items():
         if not ids:
             continue
         city_key = live_pool_city_key(slug)
         for i in range(0, len(ids), POOL_SADD_BATCH):
-            chunk = ids[i:i + POOL_SADD_BATCH]
+            chunk = ids[i : i + POOL_SADD_BATCH]
             r.sadd(LIVE_POOL_KEY, *chunk)
             r.sadd(city_key, *chunk)
 
@@ -518,13 +543,13 @@ def _sadd_pool_batches(r, global_batch: list[str], city_batches: dict[str, list[
 
     if global_batch:
         for i in range(0, len(global_batch), POOL_SADD_BATCH):
-            r.sadd(LIVE_POOL_KEY, *global_batch[i:i + POOL_SADD_BATCH])
+            r.sadd(LIVE_POOL_KEY, *global_batch[i : i + POOL_SADD_BATCH])
     for slug, ids in city_batches.items():
         if not ids:
             continue
         city_key = live_pool_city_key(slug)
         for i in range(0, len(ids), POOL_SADD_BATCH):
-            r.sadd(city_key, *ids[i:i + POOL_SADD_BATCH])
+            r.sadd(city_key, *ids[i : i + POOL_SADD_BATCH])
 
 
 def init_live_pool_db_mode(pool_target: int) -> int:
@@ -538,9 +563,9 @@ def init_live_pool_db_mode(pool_target: int) -> int:
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
     _clear_live_city_pools(r)
-    _set_live_pool_mode('db')
+    _set_live_pool_mode("db")
 
-    athlete_count = User.objects.filter(role='ATHLETE').count()
+    athlete_count = User.objects.filter(role="ATHLETE").count()
     logical = min(int(pool_target), MAX_LIVE_POOL, athlete_count)
     return logical
 
@@ -548,8 +573,8 @@ def init_live_pool_db_mode(pool_target: int) -> int:
 def _athlete_qs_for_city(city: dict, tenant_id: int | None):
     from users.models import User
 
-    slug = city['slug']
-    qs = User.objects.filter(role='ATHLETE')
+    slug = city["slug"]
+    qs = User.objects.filter(role="ATHLETE")
     if tenant_id:
         return qs.filter(tenant_id=tenant_id)
     return qs.filter(username__startswith=f"{slug}_athlete_")
@@ -563,12 +588,12 @@ def sample_live_athletes_from_db(city_slug: str, count: int) -> list[int]:
     count = max(0, int(count))
     if count == 0:
         return []
-    city = next((c for c in CITIES if c['slug'] == city_slug), None)
+    city = next((c for c in CITIES if c["slug"] == city_slug), None)
     if not city:
         return []
-    tenant_id = Tenant.objects.filter(name=city['name']).values_list('id', flat=True).first()
+    tenant_id = Tenant.objects.filter(name=city["name"]).values_list("id", flat=True).first()
     qs = _athlete_qs_for_city(city, tenant_id)
-    return list(qs.order_by('?').values_list('id', flat=True)[:count])
+    return list(qs.order_by("?").values_list("id", flat=True)[:count])
 
 
 def set_live_pool_from_db(limit: int) -> int:
@@ -585,33 +610,33 @@ def set_live_pool_from_db(limit: int) -> int:
     )
 
     pool_target = int(limit)
-    if live_pool_mode_for_target(pool_target) == 'db':
+    if live_pool_mode_for_target(pool_target) == "db":
         return init_live_pool_db_mode(pool_target)
 
     limit = effective_redis_pool_limit(pool_target)
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
     _clear_live_city_pools(r)
-    _set_live_pool_mode('redis')
+    _set_live_pool_mode("redis")
 
-    city_names = [c['name'] for c in CITIES]
+    city_names = [c["name"] for c in CITIES]
     tenants = {t.name: t.id for t in Tenant.objects.filter(name__in=city_names)}
-    cities = [c for c in CITIES if c['name'] in tenants] or list(CITIES)
+    cities = [c for c in CITIES if c["name"] in tenants] or list(CITIES)
     n = max(1, len(cities))
     per_city = max(1, limit // n)
     remainder = limit
     global_batch: list[str] = []
-    city_batches: dict[str, list[str]] = {c['slug']: [] for c in cities}
+    city_batches: dict[str, list[str]] = {c["slug"]: [] for c in cities}
 
     for i, city in enumerate(cities):
         quota = per_city if i < n - 1 else remainder
         remainder -= quota
         if quota <= 0:
             continue
-        slug = city['slug']
-        tenant_id = tenants.get(city['name'])
+        slug = city["slug"]
+        tenant_id = tenants.get(city["name"])
         qs = _athlete_qs_for_city(city, tenant_id)
-        ids = list(qs.order_by('?').values_list('id', flat=True)[:quota])
+        ids = list(qs.order_by("?").values_list("id", flat=True)[:quota])
         for uid in ids:
             sid = str(uid)
             global_batch.append(sid)
@@ -619,7 +644,7 @@ def set_live_pool_from_db(limit: int) -> int:
             if len(global_batch) >= POOL_SADD_BATCH:
                 _sadd_pool_batches(r, global_batch, city_batches)
                 global_batch = []
-                city_batches = {c['slug']: [] for c in cities}
+                city_batches = {c["slug"]: [] for c in cities}
 
     if global_batch:
         _sadd_pool_batches(r, global_batch, city_batches)
@@ -631,7 +656,7 @@ def get_live_pool_count() -> int:
     """Pool size without SMEMBERS. In db mode, returns logical pool from live state."""
     if is_live_pool_db_mode():
         try:
-            return int(get_live_state().get('total_users', 0))
+            return int(get_live_state().get("total_users", 0))
         except Exception:
             return 0
     r = get_redis()
@@ -715,11 +740,11 @@ def get_live_city_counts() -> dict[str, int]:
     from simulate_active_cities import CITIES
     from activities.ride_fsm import telemetry_eligible
 
-    counts = {c['slug']: 0 for c in CITIES}
+    counts = {c["slug"]: 0 for c in CITIES}
     for ride in get_live_rides().values():
         if not telemetry_eligible(ride):
             continue
-        slug = ride.get('city_slug') or ''
+        slug = ride.get("city_slug") or ""
         if slug in counts:
             counts[slug] += 1
     return counts
@@ -738,6 +763,7 @@ def increment_live_routing_counter(field: str, delta: int = 1) -> int:
 
 # ─── Validation ──────────────────────────────────────────────────
 
+
 def acquire_live_tick_lock() -> bool:
     """Prevent overlapping ticks when poll endpoints and background loop fire together."""
     r = get_redis()
@@ -752,7 +778,7 @@ def release_live_tick_lock():
 def maybe_advance_live_simulation() -> bool:
     """Trigger a live sim tick if the interval elapsed. Safe from any poll endpoint."""
     state = get_live_state()
-    if not state.get('running'):
+    if not state.get("running"):
         return False
 
     if live_tick_stale():
@@ -761,11 +787,11 @@ def maybe_advance_live_simulation() -> bool:
 
     now = time.time()
     try:
-        last_tick = float(state.get('last_tick_at') or 0)
+        last_tick = float(state.get("last_tick_at") or 0)
     except (ValueError, TypeError):
         last_tick = 0.0
     try:
-        tick_seconds = float(state.get('tick_seconds', 8))
+        tick_seconds = float(state.get("tick_seconds", 8))
     except (ValueError, TypeError):
         tick_seconds = 8.0
     if now - last_tick < tick_seconds:
@@ -773,6 +799,7 @@ def maybe_advance_live_simulation() -> bool:
     # Do not bump last_tick_at here — only live_tick_task / runner after real work.
     # Premature updates caused ~0.01s "ticks" with zero riders when enqueue failed or lock busy.
     from activities.simulator_tasks import live_tick_task
+
     live_tick_task.delay()
     return True
 
@@ -785,23 +812,24 @@ def start_live_tick_loop():
 
     def _loop():
         while not _tick_loop_stop.is_set():
-            if not get_live_state().get('running'):
+            if not get_live_state().get("running"):
                 break
             try:
-                tick_seconds = max(2, int(get_live_state().get('tick_seconds', 8)))
+                tick_seconds = max(2, int(get_live_state().get("tick_seconds", 8)))
             except (ValueError, TypeError):
                 tick_seconds = 8
             if _tick_loop_stop.wait(tick_seconds):
                 break
-            if not get_live_state().get('running'):
+            if not get_live_state().get("running"):
                 break
             from activities.simulator_tasks import live_tick_task
+
             try:
                 live_tick_task()
             except Exception:
                 pass
 
-    _tick_loop_thread = threading.Thread(target=_loop, daemon=True, name='live-sim-tick')
+    _tick_loop_thread = threading.Thread(target=_loop, daemon=True, name="live-sim-tick")
     _tick_loop_thread.start()
 
 
@@ -812,10 +840,13 @@ def stop_live_tick_loop():
 def validate_athlete_pool(min_users: int = 10) -> dict:
     """Pre-flight check: count available ATHLETE users."""
     from users.models import User
-    count = User.objects.filter(role='ATHLETE').count()
+
+    count = User.objects.filter(role="ATHLETE").count()
     return {
-        'has_athletes': count >= min_users,
-        'athlete_count': count,
-        'min_required': min_users,
-        'error': None if count >= min_users else f"Only {count} ATHLETE users found (need {min_users}). Run batch generator first.",
+        "has_athletes": count >= min_users,
+        "athlete_count": count,
+        "min_required": min_users,
+        "error": None
+        if count >= min_users
+        else f"Only {count} ATHLETE users found (need {min_users}). Run batch generator first.",
     }

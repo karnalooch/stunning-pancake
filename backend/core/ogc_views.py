@@ -11,6 +11,7 @@ Endpoints:
     GET /api/ogc/collections/{id}/items/     → Paginated moving features
     GET /api/ogc/collections/{id}/items/{fid}/ → Single feature trajectory
 """
+
 from __future__ import annotations
 
 import logging
@@ -57,14 +58,18 @@ def ogc_collections(request: Request) -> Response:
             "extent": {
                 "temporal": {
                     "interval": [
-                        [e["start_date"].isoformat() if e["start_date"] else None,
-                         e["end_date"].isoformat() if e["end_date"] else None]
+                        [
+                            e["start_date"].isoformat() if e["start_date"] else None,
+                            e["end_date"].isoformat() if e["end_date"] else None,
+                        ]
                     ]
                 }
             },
             "links": [
                 {
-                    "href": request.build_absolute_uri(f"/api/ogc/collections/event-{e['id']}/items/"),
+                    "href": request.build_absolute_uri(
+                        f"/api/ogc/collections/event-{e['id']}/items/"
+                    ),
                     "rel": "items",
                     "type": "application/geo+json",
                 }
@@ -73,12 +78,12 @@ def ogc_collections(request: Request) -> Response:
         for e in events
     ]
 
-    return Response({
-        "collections": collections,
-        "links": [
-            {"href": request.build_absolute_uri("/api/ogc/collections/"), "rel": "self"}
-        ],
-    })
+    return Response(
+        {
+            "collections": collections,
+            "links": [{"href": request.build_absolute_uri("/api/ogc/collections/"), "rel": "self"}],
+        }
+    )
 
 
 @api_view(["GET"])
@@ -110,46 +115,50 @@ def ogc_collection_items(request: Request, collection_id: str) -> Response:
         is_verified=True,
         start_time__gte=event.start_date,
         route_path__isnull=False,
-    ).select_related("user")[offset:offset + limit]
+    ).select_related("user")[offset : offset + limit]
 
     features = []
     for act in activities:
         if not act.route_path:
             continue
         coords = list(act.route_path.coords)
-        features.append({
-            "type": "Feature",
-            "id": str(act.pk),
-            "geometry": {
-                "type": "LineString",
-                "coordinates": coords,
-            },
-            "properties": {
-                "datetime": act.start_time.isoformat(),
-                "activityType": act.type,
-                "distanceM": act.distance,
-                "isVerified": act.is_verified,
-            },
-            "time": {
-                "interval": [
-                    act.start_time.isoformat(),
-                    act.end_time.isoformat() if act.end_time else None,
-                ]
-            },
-        })
-
-    return Response({
-        "type": "FeatureCollection",
-        "features": features,
-        "numberReturned": len(features),
-        "links": [
+        features.append(
             {
-                "href": request.build_absolute_uri(),
-                "rel": "self",
-                "type": "application/geo+json",
+                "type": "Feature",
+                "id": str(act.pk),
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": coords,
+                },
+                "properties": {
+                    "datetime": act.start_time.isoformat(),
+                    "activityType": act.type,
+                    "distanceM": act.distance,
+                    "isVerified": act.is_verified,
+                },
+                "time": {
+                    "interval": [
+                        act.start_time.isoformat(),
+                        act.end_time.isoformat() if act.end_time else None,
+                    ]
+                },
             }
-        ],
-    })
+        )
+
+    return Response(
+        {
+            "type": "FeatureCollection",
+            "features": features,
+            "numberReturned": len(features),
+            "links": [
+                {
+                    "href": request.build_absolute_uri(),
+                    "rel": "self",
+                    "type": "application/geo+json",
+                }
+            ],
+        }
+    )
 
 
 @api_view(["GET"])
@@ -182,22 +191,24 @@ def ogc_single_item(request: Request, collection_id: str, feature_id: str) -> Re
             for i in range(n)
         ]
 
-    return Response({
-        "type": "Feature",
-        "id": str(act.pk),
-        "geometry": {
-            "type": "LineString",
-            "coordinates": coords,
-        },
-        "properties": {
-            "activityType": act.type,
-            "distanceM": act.distance,
-            "timestamps": timestamps,
-        },
-        "time": {
-            "interval": [
-                act.start_time.isoformat() if act.start_time else None,
-                act.end_time.isoformat() if act.end_time else None,
-            ]
-        },
-    })
+    return Response(
+        {
+            "type": "Feature",
+            "id": str(act.pk),
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords,
+            },
+            "properties": {
+                "activityType": act.type,
+                "distanceM": act.distance,
+                "timestamps": timestamps,
+            },
+            "time": {
+                "interval": [
+                    act.start_time.isoformat() if act.start_time else None,
+                    act.end_time.isoformat() if act.end_time else None,
+                ]
+            },
+        }
+    )

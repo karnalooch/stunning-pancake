@@ -5,25 +5,36 @@ import django.db.models.deletion
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0006_auditlog'),
-        ('activities', '0004_city_rankings_mv'),
+        ("users", "0006_auditlog"),
+        ("activities", "0004_city_rankings_mv"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='poi',
-            name='tenant_id',
+            model_name="poi",
+            name="tenant_id",
         ),
         migrations.AddField(
-            model_name='activity',
-            name='tenant',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='activities', to='users.tenant'),
+            model_name="activity",
+            name="tenant",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="activities",
+                to="users.tenant",
+            ),
         ),
         migrations.AddField(
-            model_name='poi',
-            name='tenant',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='pois', to='users.tenant'),
+            model_name="poi",
+            name="tenant",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="pois",
+                to="users.tenant",
+            ),
         ),
     ]

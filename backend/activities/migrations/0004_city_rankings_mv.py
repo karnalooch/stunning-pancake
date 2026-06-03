@@ -1,9 +1,9 @@
 from django.db import migrations
 
-class Migration(migrations.Migration):
 
+class Migration(migrations.Migration):
     dependencies = [
-        ('activities', '0003_activity_activities__created_0e5d3c_idx'),
+        ("activities", "0003_activity_activities__created_0e5d3c_idx"),
     ]
 
     operations = [
@@ -29,6 +29,6 @@ class Migration(migrations.Migration):
 
             CREATE UNIQUE INDEX city_rankings_user_idx ON city_rankings_mv (city_id, user_id);
             """,
-            reverse_sql="DROP MATERIALIZED VIEW IF EXISTS city_rankings_mv;"
+            reverse_sql="DROP MATERIALIZED VIEW IF EXISTS city_rankings_mv;",
         ),
     ]

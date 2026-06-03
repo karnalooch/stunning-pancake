@@ -14,6 +14,7 @@ Design principles:
 - Model is trained offline and saved to disk; loaded lazily on first call.
 - Feature vector is interpretable: 8 kinematic features per track.
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,7 +40,7 @@ ANOMALY_THRESHOLD = float(os.getenv("ML_ANOMALY_THRESHOLD", "-0.15"))
 # Minimum track length for ML analysis (too few points = unreliable)
 MIN_POINTS_FOR_ML = 20
 
-_model_payload = None   # Lazy-loaded dict containing model and thresholds
+_model_payload = None  # Lazy-loaded dict containing model and thresholds
 _model_loaded = False
 _model_lock = threading.Lock()
 
@@ -47,6 +48,7 @@ _model_lock = threading.Lock()
 # ---------------------------------------------------------------------------
 # Feature engineering
 # ---------------------------------------------------------------------------
+
 
 def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Returns distance in metres between two WGS-84 coordinates."""
@@ -128,17 +130,18 @@ def extract_features(points: list[GpsPoint]) -> list[float] | None:
 # Model I/O
 # ---------------------------------------------------------------------------
 
+
 def _load_model():
     """Lazily loads the IsolationForest model payload from disk (Thread-safe)."""
     global _model_payload, _model_loaded
-    
+
     if _model_loaded:
         return _model_payload
 
     with _model_lock:
         if _model_loaded:
             return _model_payload
-            
+
         _model_loaded = True
         if not MODEL_PATH.exists():
             logger.info("ml_anomaly: model file not found at %s — ML check disabled", MODEL_PATH)
@@ -146,6 +149,7 @@ def _load_model():
 
         try:
             import joblib
+
             payload = joblib.load(MODEL_PATH)
             if not isinstance(payload, dict):
                 # Backwards compatibility for older pickled models
@@ -156,6 +160,7 @@ def _load_model():
         except ImportError:
             # Fallback to pickle if joblib is not available yet
             import pickle
+
             with open(MODEL_PATH, "rb") as f:
                 payload = pickle.load(f)
                 if not isinstance(payload, dict):
@@ -170,7 +175,9 @@ def _load_model():
     return _model_payload
 
 
-def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path | None = None) -> None:
+def train_and_save_model(
+    clean_tracks: list[list[GpsPoint]], output_path: Path | None = None
+) -> None:
     """
     Trains an IsolationForest on a corpus of known-clean tracks and saves it.
 
@@ -184,7 +191,9 @@ def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path |
         import numpy as np
         from sklearn.ensemble import IsolationForest
     except ImportError:
-        logger.error("ml_anomaly.train: scikit-learn and numpy required. pip install scikit-learn numpy")
+        logger.error(
+            "ml_anomaly.train: scikit-learn and numpy required. pip install scikit-learn numpy"
+        )
         return
 
     feature_matrix = []
@@ -200,7 +209,7 @@ def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path |
     X = np.array(feature_matrix)
     clf = IsolationForest(
         n_estimators=200,
-        contamination=0.05,   # 5% expected anomaly rate
+        contamination=0.05,  # 5% expected anomaly rate
         random_state=42,
         n_jobs=-1,
     )
@@ -215,7 +224,7 @@ def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path |
         "model": clf,
         "mean_score": mean_score,
         "std_score": std_score,
-        "dynamic_threshold": dynamic_threshold
+        "dynamic_threshold": dynamic_threshold,
     }
 
     save_path = output_path or MODEL_PATH
@@ -223,12 +232,15 @@ def train_and_save_model(clean_tracks: list[list[GpsPoint]], output_path: Path |
     with open(save_path, "wb") as f:
         pickle.dump(model_payload, f)
 
-    logger.info("ml_anomaly.train: model saved to %s (trained on %d tracks)", save_path, len(feature_matrix))
+    logger.info(
+        "ml_anomaly.train: model saved to %s (trained on %d tracks)", save_path, len(feature_matrix)
+    )
 
 
 # ---------------------------------------------------------------------------
 # Inference
 # ---------------------------------------------------------------------------
+
 
 def ml_anomaly_score(points: list[GpsPoint]) -> tuple[float | None, float | None]:
     """
@@ -247,6 +259,7 @@ def ml_anomaly_score(points: list[GpsPoint]) -> tuple[float | None, float | None
 
     try:
         import numpy as np
+
         model = payload["model"]
         threshold = payload.get("dynamic_threshold", ANOMALY_THRESHOLD)
         score = float(model.score_samples(np.array([feats]))[0])
@@ -266,7 +279,7 @@ def is_ml_anomaly(points: list[GpsPoint], sensitivity: float = 1.0) -> bool:
 
     Args:
         points: List of GPS points from the track.
-        sensitivity: Multiplier for the threshold (0.1 to 2.0). 
+        sensitivity: Multiplier for the threshold (0.1 to 2.0).
                      1.0 is balanced, <1.0 is aggressive, >1.0 is forgiving.
 
     Returns:
@@ -274,7 +287,7 @@ def is_ml_anomaly(points: list[GpsPoint], sensitivity: float = 1.0) -> bool:
     """
     score, threshold = ml_anomaly_score(points)
     if score is None or threshold is None:
-        return False   # Fail open: no model = no rejection
+        return False  # Fail open: no model = no rejection
 
     # sensitivity mapping: if sensitivity is 0.5 (aggressive), we want threshold to be higher (closer to 0)
     # if sensitivity is 1.5 (forgiving), we want threshold to be lower (further from 0)
@@ -283,5 +296,10 @@ def is_ml_anomaly(points: list[GpsPoint], sensitivity: float = 1.0) -> bool:
 
     is_anom = score < effective_threshold
     if is_anom:
-        logger.info("ml_anomaly.flagged score=%.4f threshold=%.4f effective=%.4f", score, threshold, effective_threshold)
+        logger.info(
+            "ml_anomaly.flagged score=%.4f threshold=%.4f effective=%.4f",
+            score,
+            threshold,
+            effective_threshold,
+        )
     return is_anom
