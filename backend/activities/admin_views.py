@@ -427,6 +427,20 @@ class LiveSimulationView(APIView):
 
             rides_map = sim.get_live_rides()
             fsm = fsm_summary(rides_map)
+            from activities.simulator_routing_backpressure import routing_backpressure_snapshot
+
+            bp = routing_backpressure_snapshot(fsm_pending=fsm["ride_warming"])
+            routing_queue_depth = int(state.get("routing_queue_depth") or bp["routing_queue_depth"])
+            routing_backpressure_active = (
+                str(state.get("routing_backpressure_active", "")).lower() == "true"
+                if state.get("routing_backpressure_active") is not None
+                else bp["routing_backpressure_active"]
+            )
+            dispatches_throttled = (
+                str(state.get("dispatches_throttled", "")).lower() == "true"
+                if state.get("dispatches_throttled") is not None
+                else False
+            )
             return Response(
                 {
                     "running": state["running"],
@@ -450,6 +464,15 @@ class LiveSimulationView(APIView):
                     "routing_transport_errors_total": int(
                         state.get("routing_transport_errors_total", 0)
                     ),
+                    "routing_queue_depth": routing_queue_depth,
+                    "routing_broker_queue_depth": bp.get("routing_broker_queue_depth"),
+                    "routing_fsm_pending": bp["routing_fsm_pending"],
+                    "routing_backpressure_active": routing_backpressure_active,
+                    "dispatches_throttled": dispatches_throttled,
+                    "dispatches_throttled_last_tick": int(
+                        state.get("dispatches_throttled_last_tick", 0) or 0
+                    ),
+                    "max_routing_queue_depth": bp.get("max_routing_queue_depth"),
                     "total_users": int(state.get("total_users", 0)),
                     "active_ratio": float(state.get("active_ratio", 0)),
                     "cheat_ratio": float(state.get("cheat_ratio", 0)),

@@ -27,7 +27,8 @@
 ### API
 
 - `POST /api/activities/admin/live-simulate/` → **409** jeśli batch w toku.
-- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `batch_block_reason`, `ride_warming`, `ride_routing`, `ride_routed`, `async_routing_enabled`.
+- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `ride_warming`, `ride_routing`, `async_routing_enabled`, `routing_queue_depth`, `routing_backpressure_active`, `dispatches_throttled`.
+- `GET /api/activities/admin/stats/` (GLOBAL_OWNER) → `sim_kpi` — osobna sekcja **Live Simulator** na Dashboard (nie mylić z KPI athlete).
 
 ### FSM jazdy (Paczka 1)
 
@@ -69,8 +70,25 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | `SCALE_POSTGRES_DISK_BUDGET_GB` | `5` (Railway) | Budżet dysku — [DISK_GUARD.md](../DISK_GUARD.md) |
 | `SCALE_BATCH_PARALLEL_CITIES` | `true` | Równoległe miasta przy dużym batchu |
 | `SCALE_MAX_CONCURRENT_RIDERS` | `5000` | Limit jednoczesnych jazd |
+| `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `max_starts_per_live_tick` (~30) | Max nowych `route_live_ride_task.delay` na jeden `live_tick` (niezależnie od backpressure) |
+| `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | *(puste = wyłączone)* | Gdy ustawione (np. `500`) — **backpressure**: brak nowych dispatchy, gdy `max(ride_warming FSM, Celery LLEN routing)` ≥ cap |
+| `SCALE_SIM_ASYNC_ROUTING` | `1` | `0` = BRouter w `live_tick` (stary model); `1` = kolejka `routing` |
+
+**Backpressure (Paczka 1b):** `routing_backpressure_snapshot` bierze głębszą z FSM `PENDING_ROUTE`/`ROUTING` i z brokera Redis (`LLEN routing`). Przy aktywnym backpressure `effective_routing_dispatch_cap` zwraca `0` na ticku. Log: `sim.routing.backpressure` / wpis w live log (rate-limit 60 s).
 
 Pełna lista: `backend/activities/scale_config.py`, [SCALE_TEST_300K.md](../SCALE_TEST_300K.md).
+
+### Testy lokalne (pamięć)
+
+Po dużym live sim Redis może trzymać ogromny hash `live_rides` — **GET status ładuje `hgetall`**, co przy pytest może skończyć się OOM.
+
+```bash
+cd backend
+python -m pytest activities/test_simulator_backpressure.py -v --tb=short
+python -m pytest activities/test_simulator_status_views.py -v --tb=short
+```
+
+Testy jednostkowe mockują broker i `get_live_rides`; widoki statusu mają `autouse` patch na pusty hash. Nie uruchamiaj pełnego `pytest` backendu, jeśli ładujesz GDAL/PostGIS bez potrzeby.
 
 ---
 
@@ -106,6 +124,7 @@ Stary admin z markerami HTML: deploy + Ctrl+F5.
 | `BRouter routing failed … pass=0` | Start poza siecią dróg — retry z centrum miasta; zobacz [BROUTER.md](./BROUTER.md) |
 | `Road-only mode: skipped N starts` | `STRICT_ROAD_ROUTES=1` i brak trasy |
 | `Batch simulation is still in progress` | Live zablokowany — poprawna ochrona |
+| `Routing backpressure: skipped N dispatches` | Kolejka routing / FSM warming ≥ `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` |
 
 ---
 

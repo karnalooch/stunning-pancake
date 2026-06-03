@@ -6,7 +6,7 @@ import {
 import { motion } from 'framer-motion';
 import {
   Users, Activity, Gauge, ShieldCheck, TrendingUp, Brain,
-  Map, CheckCircle2, AlertTriangle,
+  Map, CheckCircle2, AlertTriangle, Radio, PauseCircle, Route,
 } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
@@ -34,6 +34,24 @@ interface TenantRow {
   secondary_color: string;
 }
 
+interface SimKpi {
+  sim_on: boolean;
+  live_running: boolean;
+  batch_running: boolean;
+  batch_phase?: string;
+  currently_riding: number;
+  ride_warming: number;
+  ride_routing: number;
+  ride_routed?: number;
+  ride_active?: number;
+  async_routing_enabled: boolean;
+  routing_queue_depth: number;
+  routing_backpressure_active: boolean;
+  dispatches_throttled: boolean;
+  max_routing_queue_depth?: number | null;
+  tick_stale?: boolean;
+}
+
 interface DashboardStats {
   total_users: number;
   total_activities: number;
@@ -47,6 +65,7 @@ interface DashboardStats {
   per_tenant: TenantRow[];
   stale?: boolean;
   batch_running?: boolean;
+  sim_kpi?: SimKpi;
 }
 
 /* ─── Animation variants ────────────────────────────────── */
@@ -205,6 +224,81 @@ export const Dashboard: React.FC = () => {
           }
         />
       </SimpleGrid>
+
+      {/* ── Live simulator KPI (platform — not athlete DB counts) ── */}
+      {isGlobalOwner && stats?.sim_kpi && (
+        <Card
+          mb="xl"
+          style={{
+            background: 'var(--surface)',
+            border: `1px solid ${stats.sim_kpi.sim_on ? 'var(--accent)' : 'var(--border)'}`,
+            borderRadius: 14,
+            padding: '18px 22px',
+            boxShadow: 'var(--shadow-sm)',
+          }}
+        >
+          <SectionHeader
+            icon={<Radio size={16} />}
+            title="Live Simulator"
+            badge={stats.sim_kpi.sim_on ? 'ON' : 'OFF'}
+            badgeColor={stats.sim_kpi.sim_on ? 'green' : 'gray'}
+          />
+          <SimpleGrid cols={{ base: 2, sm: 3, lg: 6 }} spacing="md">
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">State</Text>
+              <Group gap={6}>
+                {stats.sim_kpi.live_running ? (
+                  <Badge color="green" variant="light" leftSection={<Radio size={12} />}>Running</Badge>
+                ) : stats.sim_kpi.batch_running ? (
+                  <Badge color="orange" variant="light">Batch {stats.sim_kpi.batch_phase}</Badge>
+                ) : (
+                  <Badge color="gray" variant="light" leftSection={<PauseCircle size={12} />}>Idle</Badge>
+                )}
+              </Group>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">On map</Text>
+              <Text fw={700} ff="monospace">{stats.sim_kpi.currently_riding}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Warming</Text>
+              <Text fw={700} ff="monospace" c={stats.sim_kpi.ride_warming > 0 ? 'orange' : undefined}>
+                {stats.sim_kpi.ride_warming}
+              </Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Routing</Text>
+              <Text fw={700} ff="monospace">{stats.sim_kpi.ride_routing}</Text>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Async routing</Text>
+              <Badge size="sm" color={stats.sim_kpi.async_routing_enabled ? 'teal' : 'gray'} variant="light">
+                {stats.sim_kpi.async_routing_enabled ? 'ON' : 'OFF'}
+              </Badge>
+            </Stack>
+            <Stack gap={2}>
+              <Text size="xs" c="dimmed">Queue depth</Text>
+              <Group gap={6}>
+                <ThemeIcon size={22} variant="light" color="violet">
+                  <Route size={14} />
+                </ThemeIcon>
+                <Text fw={700} ff="monospace">{stats.sim_kpi.routing_queue_depth}</Text>
+                {stats.sim_kpi.routing_backpressure_active && (
+                  <Badge size="xs" color="red" variant="filled">Backpressure</Badge>
+                )}
+                {stats.sim_kpi.dispatches_throttled && !stats.sim_kpi.routing_backpressure_active && (
+                  <Badge size="xs" color="yellow" variant="light">Throttled</Badge>
+                )}
+              </Group>
+            </Stack>
+          </SimpleGrid>
+          {stats.sim_kpi.tick_stale && stats.sim_kpi.live_running && (
+            <Text size="xs" c="orange" mt="sm">
+              Live ticks stale — check celery-worker-simulation or use simulator-reset.
+            </Text>
+          )}
+        </Card>
+      )}
 
       {/* ── Global Owner: per-tenant table ────────────── */}
       {isGlobalOwner && Array.isArray(stats?.per_tenant) && stats.per_tenant.length > 0 && (

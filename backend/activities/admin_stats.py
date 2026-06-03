@@ -72,6 +72,68 @@ def invalidate_dashboard_stats_cache(tenant_id: str | None = None) -> None:
         pass
 
 
+def _redis_bool(val) -> bool:
+    if isinstance(val, bool):
+        return val
+    if val is None:
+        return False
+    return str(val).strip().lower() in ("1", "true", "yes", "on")
+
+
+def build_sim_kpi_snapshot() -> dict:
+    """
+    Platform-wide live/batch simulator KPIs (not athlete DB counts).
+    Always fresh — not tied to dashboard stats cache TTL.
+    """
+    try:
+        from activities import simulator_state as sim
+        from activities.ride_fsm import fsm_summary
+        from activities.simulator_tasks import _async_routing_enabled
+        from activities.simulator_routing_backpressure import (
+            max_routing_queue_depth,
+            routing_backpressure_snapshot,
+        )
+
+        batch = sim.get_batch_state()
+        live = sim.get_live_state()
+        rides = sim.get_live_rides()
+        fsm = fsm_summary(rides)
+        bp = routing_backpressure_snapshot(fsm_pending=fsm["ride_warming"])
+        live_running = bool(live.get("running"))
+        batch_running = bool(batch.get("running"))
+        return {
+            "sim_on": live_running or batch_running,
+            "live_running": live_running,
+            "batch_running": batch_running,
+            "live_error": live.get("error"),
+            "batch_phase": batch.get("current_phase") or "idle",
+            "currently_riding": int(live.get("currently_riding", 0) or fsm["ride_on_map"]),
+            "ride_warming": fsm["ride_warming"],
+            "ride_routing": fsm["ride_routing"],
+            "ride_routed": fsm["ride_routed"],
+            "ride_active": fsm["ride_active"],
+            "async_routing_enabled": _async_routing_enabled(),
+            "routing_queue_depth": int(
+                live.get("routing_queue_depth") or bp["routing_queue_depth"]
+            ),
+            "routing_backpressure_active": _redis_bool(live.get("routing_backpressure_active"))
+            or bp["routing_backpressure_active"],
+            "dispatches_throttled": _redis_bool(live.get("dispatches_throttled")),
+            "max_routing_queue_depth": max_routing_queue_depth(),
+            "routing_unroutable_total": int(live.get("routing_unroutable_total", 0) or 0),
+            "tick_stale": sim.live_tick_stale() if live_running else False,
+            "live_lock_held": sim.is_live_lock_held(),
+        }
+    except Exception:
+        logger.exception("admin/sim_kpi snapshot failed")
+        return {
+            "sim_on": False,
+            "live_running": False,
+            "batch_running": False,
+            "error": "sim_kpi_unavailable",
+        }
+
+
 def _batch_or_live_running() -> bool:
     try:
         from activities import simulator_state as sim
@@ -211,6 +273,8 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
             cached = dict(cached)
             cached["stale"] = True
             cached["batch_running"] = True
+            if getattr(request_user, "role", None) == "GLOBAL_OWNER":
+                cached["sim_kpi"] = build_sim_kpi_snapshot()
             return cached
 
     if not refresh:
@@ -259,7 +323,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     per_tenant = _per_tenant_breakdown(tenant_id=scoped_tid)
     recent_unverified = _recent_unverified_for_tenant(scoped_tid) if scoped_tid else []
 
-    payload = {
+    payload: dict = {
         "total_users": user_totals["total_users"] or 0,
         "total_activities": total_activities,
         "total_distance_km": total_distance_km,
@@ -278,5 +342,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         "batch_running": False,
         "cached_at": time.time(),
     }
+    if getattr(request_user, "role", None) == "GLOBAL_OWNER":
+        payload["sim_kpi"] = build_sim_kpi_snapshot()
     set_cached_dashboard_stats(payload, request_user)
     return payload

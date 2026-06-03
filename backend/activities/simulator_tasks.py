@@ -18,6 +18,7 @@ from django.core.cache import cache
 
 from . import simulator_state as sim
 from . import ride_fsm
+from . import simulator_routing_backpressure as routing_bp
 from .services import BRouterService
 
 logger = logging.getLogger("activities.simulator")
@@ -44,16 +45,6 @@ _brouter_unroutable_log_last_hour = 0.0
 
 def _async_routing_enabled() -> bool:
     return os.getenv("SCALE_SIM_ASYNC_ROUTING", "1").lower() in ("1", "true", "yes", "on")
-
-
-def _max_routing_dispatch_per_tick(scale_limits: dict) -> int:
-    try:
-        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "0"))
-    except (TypeError, ValueError):
-        cap = 0
-    if cap <= 0:
-        cap = int(scale_limits.get("max_starts_per_live_tick") or 30)
-    return max(1, cap)
 
 
 def _maybe_log_brouter_route_failure(reason: str, *, unroutable: bool = False) -> None:
@@ -1150,7 +1141,20 @@ def _run_live_tick_body():
             }
 
         routing_dispatched = 0
-        routing_dispatch_cap = _max_routing_dispatch_per_tick(scale_limits) if async_routing else 0
+        routing_dispatch_cap = (
+            routing_bp.max_routing_dispatch_per_tick(scale_limits) if async_routing else 0
+        )
+        active_rides_pre = sim.get_live_rides()
+        fsm_pre = ride_fsm.fsm_summary(active_rides_pre)
+        bp_snapshot = routing_bp.routing_backpressure_snapshot(
+            fsm_pending=fsm_pre["ride_warming"],
+        )
+        routing_dispatch_cap, dispatch_throttled = routing_bp.effective_routing_dispatch_cap(
+            routing_dispatch_cap,
+            bp_snapshot,
+            starters_remaining=len(starters),
+        )
+        dispatches_skipped = 0
         unroutable = 0
         for user_id in starters:
             user = users_map_p3.get(str(user_id))
@@ -1203,6 +1207,10 @@ def _run_live_tick_body():
                 started += 1
                 continue
 
+            if async_routing and dispatch_throttled:
+                dispatches_skipped += 1
+                continue
+
             waypoints, route_source = _generate_route_waypoints(
                 lat0,
                 lon0,
@@ -1242,6 +1250,19 @@ def _run_live_tick_body():
             )
         if async_routing and routing_dispatched > 0:
             sim.live_log(f"Queued {routing_dispatched} rides on routing worker.")
+        if async_routing and dispatches_skipped > 0:
+            routing_bp.maybe_log_routing_backpressure(
+                snapshot=bp_snapshot,
+                skipped=dispatches_skipped,
+                base_cap=routing_bp.max_routing_dispatch_per_tick(scale_limits),
+            )
+        if async_routing:
+            sim.set_live_state(
+                routing_queue_depth=bp_snapshot["routing_queue_depth"],
+                routing_backpressure_active=bp_snapshot["routing_backpressure_active"],
+                dispatches_throttled=dispatches_skipped > 0 or dispatch_throttled,
+                dispatches_throttled_last_tick=dispatches_skipped,
+            )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     active_rides = sim.get_live_rides()

@@ -69,6 +69,7 @@ Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRO
 | Live Map + FSM | 🚧 pełna spójność warstw mapy ze stanami Redis |
 | Load-test 10k | 🚧 raport w [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) |
 | Metryki Datadog | 🚧 opcjonalnie — `sim.routing.*` już w logach strukturalnych |
+| Testy pytest (backpressure + status) | ✅ lekkie — mock broker/FSM, bez `hgetall` na dev Redis |
 
 ---
 
