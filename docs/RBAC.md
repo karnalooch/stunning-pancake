@@ -1,6 +1,15 @@
 # 🛡️ RBAC — Role-Based Access Control Guide
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Backend Lead / Security |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, admin |
+
 Kompletny przewodnik systemu kontroli dostępu opartego na rolach (RBAC) w platformie 4VELO.
+
+**Powiązane:** [admin/README.md](./admin/README.md) · [API.md](./API.md)
 
 ---
 

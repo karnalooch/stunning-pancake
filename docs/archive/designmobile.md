@@ -1,5 +1,11 @@
 # DESIGN SYSTEM — VELO QUEST (a.k.a. Quest Velos)
 
+| | |
+|--|--|
+| **Status** | 📦 Snapshot (historyczny mockup SSOT) |
+| **Last reviewed** | 2026-06-03 |
+| **Redirect** | Implementacja: `mobile/src/theme/stitch.ts` · [adr/006-design-system-stitch.md](../adr/006-design-system-stitch.md) |
+
 > **App**: Velo Quest — Cycling Performance Platform with HD-2D Retro Pixel-Art Aesthetics
 > **Design Language**: Solar White + Forest Green, retro-gaming UI (Space Grotesk / VT323)
 > **This Document**: Single Source of Truth (SSOT) for all visual design tokens, component patterns, layout conventions, and interaction behaviors derived from 15 STITCH screen mockups.

@@ -1,8 +1,15 @@
 # Odporność na utratę danych — 4VELO
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Mobile Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Mobile, backend |
+
 Dokument opisuje warstwy trwałości danych GPS i sesji treningowych oraz pozostałe ryzyka.
 
-**Runbook (mobile):** [operations/MOBILE.md](./operations/MOBILE.md) · **Ostatnia aktualizacja:** 2026-06-02
+**Runbook:** [operations/MOBILE.md](./operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](./adr/004-persistent-storage-mmkv.md)
 
 ## Warstwy (od klienta do serwera)
 

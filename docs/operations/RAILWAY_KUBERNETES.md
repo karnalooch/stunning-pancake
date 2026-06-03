@@ -1,7 +1,9 @@
 # Railway a Kubernetes — decyzja i ścieżka wdrożenia
 
-**Ostatnia aktualizacja:** 2026-06-02  
-**Kontekst:** produkcja na Railway (Docker + `railway.json`), manifesty w `infrastructure/k8s/`.
+**Status:** ✅ Active  
+**Ostatnia aktualizacja:** 2026-06-03  
+**Kontekst:** produkcja na Railway (Docker + `railway.json`), manifesty w `infrastructure/k8s/`.  
+**Powiązane:** [OPERATIONS_INDEX.md](./OPERATIONS_INDEX.md) · [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md)
 
 ---
 
@@ -22,7 +24,7 @@ Manifesty w repozytorium **nie psują** obecnego deployu Railway — są additiv
 
 Railway uruchamia **kontenery** z repozytorium:
 
-- `backend/railway.json`, `admin/railway.json`, `celery-worker/railway.json`, `celery-worker-simulation/railway.json`, `telemetry/railway.json`, `infrastructure/brouter/railway.json`
+- `backend/railway.json`, `admin/railway.json`, `celery-worker/railway.json`, `celery-worker-simulation/railway.json`, `celery-worker-routing/railway.json`, `telemetry/railway.json`, `infrastructure/brouter/railway.json`
 - Build: **Dockerfile** (lub Nixpacks)
 - Skalowanie: **Replicas** na serwisie, **RAM/CPU** w Settings → Resources, zmienne w **Variables**
 - Sieć: publiczny URL + prywatna `http://<service>.railway.internal:<port>`
@@ -45,6 +47,7 @@ flowchart LR
     ADM[admin]
     CW[celery-worker]
     CWS[celery-worker-simulation]
+    CWR[celery-worker-routing]
     BR[brouter]
     PG[(PostgreSQL)]
     RD[(Redis)]
@@ -54,6 +57,7 @@ flowchart LR
   CW --> RD
   CWS --> RD
   CWS --> BR
+  CWR --> BR
   API --> BR
 ```
 

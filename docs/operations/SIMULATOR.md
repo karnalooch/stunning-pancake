@@ -1,6 +1,13 @@
 # Runbook — symulator (batch + live map)
 
-**Ostatnia aktualizacja:** 2026-06-03  
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Platform Operator, Admin Owner |
+| **Spec** | [SIMULATOR_ARCHITECTURE.md](../SIMULATOR_ARCHITECTURE.md) |
+
 **Kod:** `backend/activities/simulator_*.py`, `admin/src/modules/analytics/SimulatorPage.tsx`, `LiveMap.tsx`
 
 ---

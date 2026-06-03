@@ -1,5 +1,14 @@
 # REJESTR CZYNNOŚCI PRZETWARZANIA (RCP) — SPORT
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | DPO / Legal |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | DPO, Legal, Product |
+
+**Indeks:** [COMPLIANCE_INDEX.md](./COMPLIANCE_INDEX.md) · **FAQ użytkownika:** [product/FAQ.md](../product/FAQ.md)
+
 ## 1. Administrator Danych
 [Nazwa Twojej Firmy / Twoje Dane]
 

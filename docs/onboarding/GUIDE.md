@@ -1,6 +1,13 @@
 # ONBOARDING GUIDE — 4VELO Platform
 
-> **Ostatnia aktualizacja:** 2026-06-02. Pełny indeks: [docs/README.md](../README.md).
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Developer onboarding |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Nowi deweloperzy, tenant ops |
+
+**Indeks:** [docs/README.md](../README.md)
 
 ## 1. Setup Środowiska Deweloperskiego
 Platforma wykorzystuje konteneryzację do zapewnienia spójności między środowiskami.

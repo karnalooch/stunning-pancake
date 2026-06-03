@@ -1,6 +1,13 @@
 # Railway — osobny worker symulacji (kolejka `simulation`)
 
-Symulacja batch (10k–300k użytkowników) i live sim **nie dzielą CPU** z krytycznymi taskami (telemetry, rankingi, powiadomienia).
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Platform Operator |
+
+Symulacja batch (10k–300k) i live sim **nie dzielą CPU** z taskami krytycznymi. **Weryfikacja:** [operations/RAILWAY_PRODUCTION_CHECKLIST.md](./operations/RAILWAY_PRODUCTION_CHECKLIST.md) · **OOM:** [operations/RAILWAY_CELERY_MEMORY.md](./operations/RAILWAY_CELERY_MEMORY.md)
 
 ## Architektura
 

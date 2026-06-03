@@ -1,6 +1,13 @@
 # FAQ & TUTORIALS — 4VELO Platform
 
-> **Ostatnia aktualizacja:** 2026-06-02. Dokumentacja techniczna: [docs/README.md](../README.md).
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Product / Support |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Użytkownicy końcowi, support |
+
+Dokumentacja techniczna: [docs/README.md](../README.md) · GPS: [operations/MOBILE.md](../operations/MOBILE.md) · RODO: [compliance/RCP.md](../compliance/RCP.md)
 
 ## Często Zadawane Pytania (FAQ)
 

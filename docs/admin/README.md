@@ -1,8 +1,14 @@
 # Admin Panel — World-Class Dashboard Redesign
 
-> **Last updated:** 2026-06-02  
-> **Version:** Admin v2.0 (redesign) + Live Map / Simulator
-> **Tech:** React 19 · Mantine v9 · Framer Motion · Zustand · TanStack Query
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Admin / Frontend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Index** | [ADMIN_INDEX.md](./ADMIN_INDEX.md) |
+| **Version** | Admin v2.0 + Live Map / Simulator |
+
+**Tech:** React 19 · Mantine v9 · Framer Motion · Zustand · TanStack Query
 
 ## Overview
 
@@ -10,7 +16,8 @@ The 4VELO Admin Panel has been redesigned with a world-class, premium UI system 
 
 **Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)  
 **P0 closure (2026-06-02):** audit §8 · post-deploy smoke → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)  
-**P1 roadmap (paczki 1–6, deploy bez staging):** [P1_ROADMAP.md](./P1_ROADMAP.md)
+**P1 roadmap (paczki 1–6; 1a ✅, 1b + Sponsor next):** [P1_ROADMAP.md](./P1_ROADMAP.md)  
+**Railway prod verify:** [operations/RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1`
 
 ## Tech Stack
 

@@ -1,8 +1,15 @@
 # Test skali 300 000 użytkowników
 
-> **Runbook:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · **Railway:** [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) · **Ostatnia aktualizacja:** 2026-06-02
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Platform Operator |
 
-> **Dzień eventu (~50k):** zobacz [EVENT_BURST_50K.md](./EVENT_BURST_50K.md) (auto burst, join/session rate limits, `warm_event`).
+**Runbook:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · **Railway:** [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) · **Dysk:** [DISK_GUARD.md](./DISK_GUARD.md)
+
+> **Dzień eventu (~50k):** [EVENT_BURST_50K.md](./EVENT_BURST_50K.md)
 
 ## Root cause (Railway 300k run)
 

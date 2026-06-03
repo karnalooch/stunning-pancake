@@ -1,6 +1,15 @@
 # 📈 Updates Guide — Przewodnik Aktualizacji
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy |
+
 Przewodnik aktualizacji platformy 4VELO — aktualizacja zależności, migracje, obrazy Docker i changelog.
+
+**Powiązane:** [CHANGELOG](../CHANGELOG.md) · [MIGRATION.md](./MIGRATION.md)
 
 ---
 

@@ -1,12 +1,16 @@
 # Simulator Architecture — Redis + Celery Redesign
 
-> **Status (2026-06-02):** **Zaimplementowane** — stan w Redis, taski Celery (`simulation`), frontend z pollingiem.  
-> **Operacje na produkcji** (batch → live, env, BRouter, mapa): [operations/SIMULATOR.md](./operations/SIMULATOR.md).  
-> Ten dokument pozostaje **specyfikacją** (API, klucze Redis, diagramy). Sekcja §1 opisuje **stary** model wątków — historycznie, jako uzasadnienie redesignu.
+| | |
+|--|--|
+| **Status** | ✅ Active (implemented) |
+| **Owner role** | Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Backend, Platform Operator |
 
-**Version:** 1.1 (ops cross-links)  
-**Date:** 2026-05-17 (spec), ops update 2026-06-02  
-**Replaces:** In-process threading in [`backend/activities/admin_views.py`](../backend/activities/admin_views.py)
+**Operacje (runbook):** [operations/SIMULATOR.md](./operations/SIMULATOR.md) — batch → live, env, BRouter, mapa.  
+Ten dokument = **spec** (API, klucze Redis, diagramy). §1 = stary model wątków (historycznie).
+
+**Version:** 1.2 · **ADR:** [adr/010-simulator-redis-celery.md](./adr/010-simulator-redis-celery.md)
 
 ---
 

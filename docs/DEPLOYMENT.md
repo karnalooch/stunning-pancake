@@ -1,6 +1,15 @@
 # 🌐 Deployment — Przewodnik Wdrożeniowy
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator / DevOps |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | DevOps, release |
+
 Kompletny przewodnik wdrożenia platformy 4VELO na środowisko produkcyjne — Railway, Docker Compose, SSL, backupy i monitoring.
+
+**SSOT Railway workers:** [operations/RAILWAY_PRODUCTION_CHECKLIST.md](./operations/RAILWAY_PRODUCTION_CHECKLIST.md)
 
 ---
 

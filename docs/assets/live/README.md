@@ -1,6 +1,13 @@
 # Zrzuty ekranu — Live Map
 
-Opcjonalne screenshoty do dokumentacji (Simulator / Live Map).
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Admin / Frontend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Autorzy dokumentacji |
+
+Opcjonalne screenshoty do dokumentacji (Simulator / Live Map). **Nie** commituj PII ani sekretów na zrzutach.
 
 | Plik | Opis |
 |------|------|
@@ -13,4 +20,4 @@ Po zmianach zoom/markers (2026-06) warto dodać:
 - `live-map-zoom-9.png` — klastry + kompaktowe ikony
 - `live-map-zoom-12.png` — etykiety zawodników
 
-Nie commituj danych osobowych ani produkcyjnych secretów na zrzutach.
+**Runbook:** [operations/SIMULATOR.md](../../operations/SIMULATOR.md)

@@ -4,7 +4,7 @@
  * This is the PRIMARY visual theme for the SPORT mobile app.
  * Supersedes octopath (dark) and solar (light) themes.
  * 
- * All color tokens are sourced from docs/designmobile.md §2 Color Palette.
+ * All color tokens are sourced from docs/archive/designmobile.md §2 Color Palette.
  * Typography: Space Grotesk (primary) + VT323 (HUD metrics only).
  */
 

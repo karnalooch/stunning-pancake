@@ -1,6 +1,13 @@
 # Kubernetes Runbook — SPORT Platform
 
-> **Produkcja na Railway?** Railway nie uruchamia tych manifestów. Zobacz [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) (decyzja Railway vs K8s, mapowanie env, checklista migracji).
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | DevOps |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | DevOps |
+
+> **Produkcja na Railway?** Railway nie uruchamia tych manifestów — [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md).
 
 Production-ready, pragmatic baseline for deploying:
 - Django backend API

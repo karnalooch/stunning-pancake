@@ -1,6 +1,13 @@
 # Raporty audytowe (archiwum)
 
-Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/](../operations/).
+| | |
+|--|--|
+| **Status** | ✅ Active (indeks) |
+| **Owner role** | QA / Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Release Manager, audyt |
+
+Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/](../operations/). Nowy audyt = **nowy plik** z datą w nazwie.
 
 | Plik | Data |
 |------|------|

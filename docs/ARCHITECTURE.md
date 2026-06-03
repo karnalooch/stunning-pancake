@@ -1,6 +1,15 @@
 # 🏛️ Architektura Systemu 4VELO
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Tech Lead / Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, architekci |
+
 Kompletny opis architektury platformy 4VELO — wysokowydajnego ekosystemu sportowego B2B/B2C.
+
+**Powiązane:** [diagrams/architecture_c4.md](./diagrams/architecture_c4.md) · [adr/008-backend-strategy.md](./adr/008-backend-strategy.md) · [operations/SIMULATOR.md](./operations/SIMULATOR.md)
 
 ---
 

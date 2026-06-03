@@ -1,8 +1,17 @@
 # P0 Admin Smoke Checklist
 
-> **Purpose:** Printable post-deploy verification after P0 closure (2026-06-02).  
-> **Prerequisite:** Redeploy admin + API to the target environment before testing.  
-> **Reference:** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) §8 · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)
+| | |
+|--|--|
+| **Status** | ✅ Active (P0 closure **DONE** 2026-06-02) |
+| **Owner role** | Release Manager / QA |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | GLOBAL_OWNER, TENANT_ADMIN, TENANT_MODERATOR testers |
+| **Index** | [ADMIN_INDEX.md](./ADMIN_INDEX.md) |
+
+**Purpose:** Printable post-deploy verification.  
+**Prerequisite:** Redeploy admin + API to target environment before testing.  
+**Reference:** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) §8 · [P1_ROADMAP.md](./P1_ROADMAP.md) · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)  
+**Railway (if sim):** [../operations/RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1`
 
 ---
 

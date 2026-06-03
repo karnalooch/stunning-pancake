@@ -1,5 +1,14 @@
 # ADR 009: Admin User Customization and Dynamic Inter-Tenant Matchmaking
 
+| | |
+|--|--|
+| **Status** | Accepted |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Language** | English |
+| **Index** | [docs/README.md](../README.md) |
+
+
 ## Status
 Accepted (2026-05-21)
 

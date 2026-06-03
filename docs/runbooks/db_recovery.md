@@ -1,39 +1,92 @@
-# RUNBOOK: Disaster Recovery — Utrata Bazy Danych
+# RUNBOOK: Disaster Recovery — utrata bazy danych
 
-## Cel
-Przywrócenie pełnej sprawności platformy SPORT po krytycznej awarii klastra Citus.
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator / DBA |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | On-call, DevOps |
+| **Cel** | Przywrócenie spójności platformy po krytycznej awarii klastra DB (Citus / Postgres). |
 
-## Procedura (Krok po kroku)
+---
 
-### 1. Izolacja Ingestii
-Zatrzymaj przyjmowanie nowych danych telemetrii, aby uniknąć niespójności.
+## Wymagania wstępne
+
+| Wymaganie | Uwagi |
+|-----------|--------|
+| Dostęp do backupów | S3 / object storage — **bez** wklejania kluczy w docs |
+| `aws` / narzędzie storage | Lista bucketów zgodna z polityką firmy |
+| Uprawnienia prod | Railway / hosting — tylko role on-call |
+| Komunikacja | Kanał incydentu (nie w repo) |
+
+**Powiązane:** [DISK_GUARD.md](../DISK_GUARD.md) · [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) · [operations/OPERATIONS_INDEX.md](../operations/OPERATIONS_INDEX.md)
+
+---
+
+## Procedura
+
+### 1. Izolacja ingestii (rola: Platform Operator)
+
+Zatrzymaj przyjmowanie nowej telemetrii, aby uniknąć niespójności.
+
 ```bash
-# Na serwerze Load Balancer
-nginx -s reload # Z konfiguracją zwracającą 503 dla /api/telemetry
+# Przykład: LB zwraca 503 dla /api/telemetry
+nginx -s reload
 ```
 
-### 2. Weryfikacja ostatniego backupu
-Sprawdź dostępność obrazów w S3/Cloud Storage.
+### 2. Weryfikacja ostatniego backupu (rola: Platform Operator)
+
 ```bash
-# Przykład dla AWS CLI
 aws s3 ls s3://sport-backups/citus-main/
 ```
 
-### 3. Odtworzenie Koordynatora
-Uruchom nową instancję koordynatora Citus z ostatniego snapshota.
+Potwierdź timestamp ostatniego snapshota przed restore.
 
-### 4. Re-atachowanie Workerów
-Jeśli dane workerów ocalały, podepnij je do nowego koordynatora. Jeśli nie, odtwórz je z backupu rozproszonego.
+### 3. Odtworzenie koordynatora (rola: DBA)
 
-### 5. Walidacja Integralności
-Uruchom skrypt sprawdzający spójność między tabelami `users` i `participations`.
+Uruchom nową instancję koordynatora Citus z ostatniego snapshota (procedura specyficzna dla hostingu).
+
+### 4. Re-atachowanie workerów (rola: DBA)
+
+Jeśli dane workerów ocalały — podepnij do nowego koordynatora; w przeciwnym razie restore rozproszony.
+
+### 5. Walidacja integralności (rola: Platform Operator)
+
 ```bash
 python manage.py check_db_integrity --env production
 ```
 
-### 6. Przywrócenie Ruchu
-Włącz stopniowo ruch (Canary Rollout), zaczynając od telemetrii (Ingestion Layer).
+### 6. Przywrócenie ruchu (rola: Platform Operator)
 
-## Kontakt Awaryjny
-- System On-Call: [Twoje Dane Kontaktowe]
-- Hosting Support: Railway / AWS Priority Support
+Canary rollout: najpierw telemetria, potem API użytkowników.
+
+---
+
+## Weryfikacja
+
+- [ ] `check_db_integrity` bez błędów krytycznych
+- [ ] Próbka loginu + odczyt `users` / `participations`
+- [ ] Monitoring: brak spike 5xx po włączeniu ruchu
+
+---
+
+## Rollback
+
+Jeśli restore jest uszkodzony: **nie** włączaj pełnego ruchu; wróć do poprzedniego snapshota lub zamroź platformę (503) do czasu drugiego restore.
+
+---
+
+## Troubleshooting
+
+| Objaw | Przyczyna | Akcja |
+|-------|-----------|--------|
+| Niespójność users vs participations | Partial restore | Ponów walidację; restore z wcześniejszego snapshota |
+| Telemetria „dubluje” okres awarii | Ingestia włączona za wcześnie | Ponowna izolacja ingestii |
+| Brak backupu w S3 | Retencja / błąd joba | Eskalacja hosting; DR wg umowy SLA |
+
+---
+
+## Kontakt awaryjny
+
+- On-call: kanał firmowy (nie commituj numerów w repo)
+- Hosting: Railway / AWS Priority Support — wg umowy

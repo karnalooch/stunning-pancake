@@ -1,5 +1,13 @@
 # Pre-release Verification (single command + checklist)
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Release Manager |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Release Manager |
+| **Compliance** | [COMPLIANCE_INDEX.md](../compliance/COMPLIANCE_INDEX.md) |
+
 Krótki runbook spinający CI, niezawodność i compliance przed wypuszczeniem release.
 
 ## 1) Single command (lokalny quick gate)

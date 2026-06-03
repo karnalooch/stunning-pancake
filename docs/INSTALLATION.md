@@ -1,6 +1,15 @@
 # 📦 Instalacja — Przewodnik Instalacji
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Developer onboarding |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy |
+
 Szczegółowa instrukcja instalacji platformy 4VELO w trzech wariantach: lokalny development, Docker Compose i Railway.
+
+**Powiązane:** [operations/BROUTER.md](./operations/BROUTER.md) · [GETTING_STARTED.md](./GETTING_STARTED.md)
 
 ---
 

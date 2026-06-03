@@ -1,61 +1,70 @@
 # Dokumentacja — utrzymanie i świeżość
 
-**Ostatni przegląd indeksu:** 2026-06-02 (CI link check, CONTRIBUTING, pełny przegląd)  
-**Właściciel treści operacyjnych:** zespół backend / DevOps (symulator, Railway, BRouter)
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Tech Lead / Platform Operator |
+| **Last reviewed** | 2026-06-03 |
 
 ---
 
-## Zasady (jak w poważnym developmencie)
+## Zasady
 
-1. **Jeden punkt wejścia:** [README.md](./README.md) — zawsze aktualny spis z linkami.
-2. **Runbooki operacyjne** (co robić na produkcji): [operations/](./operations/) — krótkie, sprawdzone kroki.
-3. **Specyfikacje / ADR** — zmieniają się rzadko; na górze pliku data statusu i link do runbooka jeśli implementacja żyje w kodzie.
-4. **Raporty audytowe** — snapshot w czasie; nie edytujemy ich „na żywo”, tylko dodajemy nowy plik w [reports/](./reports/).
-5. **Po każdej większej zmianie w symulatorze / BRouter / Live Map** — aktualizuj `operations/SIMULATOR.md`, `operations/BROUTER.md`, [TROUBLESHOOTING.md](./TROUBLESHOOTING.md), wpis w [CHANGELOG](../CHANGELOG.md).
+1. **Jeden punkt wejścia:** [README.md](./README.md) — pełne drzewo + ścieżki per rola.
+2. **Standard:** [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md).
+3. **Indeksy sekcji:** [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) · [admin/ADMIN_INDEX.md](./admin/ADMIN_INDEX.md) · [compliance/COMPLIANCE_INDEX.md](./compliance/COMPLIANCE_INDEX.md).
+4. **Runbooki** — krótkie kroki w [operations/](./operations/); spec w korzeniu / ADR.
+5. **Raporty** — snapshot; nowy plik z datą w [reports/](./reports/).
+6. **Po zmianie symulatora / BRouter / Railway workers** — SIMULATOR, BROUTER, `RAILWAY_*`, [TROUBLESHOOTING.md](./TROUBLESHOOTING.md), [CHANGELOG](../CHANGELOG.md).
 
 ---
 
-## Inwentarz plików (ostatni commit Git)
+## Inwentarz (stan 2026-06-03)
 
-| Ostatnia zmiana | Plik | Kategoria | Uwagi |
-|-----------------|------|-----------|--------|
-| 2026-06-01 | [operations/*](./operations/) (nowe) | Operacje | Symulator, BRouter, Railway |
-| 2026-06-01 | [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) | Operacje | Worker `simulation` |
-| 2026-06-01 | [DISK_GUARD.md](./DISK_GUARD.md) | Operacje | Postgres budget |
-| 2026-06-01 | [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) | Operacje | Test obciążeniowy |
-| 2026-06-01 | [EVENT_BURST_50K.md](./EVENT_BURST_50K.md) | Operacje | Event day burst |
-| 2026-06-01 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Pomoc | CORS 502, symulator |
-| 2026-06-01 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Wdrożenie | Railway |
-| 2026-05-17 | [SIMULATOR_ARCHITECTURE.md](./SIMULATOR_ARCHITECTURE.md) | Spec | Zaimplementowane; runbook → operations |
-| 2026-05-16 | [README.md](./README.md) | Indeks | **Zaktualizowano 2026-06-02** |
-| 2026-05-16 | [DEVELOPMENT.md](./DEVELOPMENT.md) | Dev | Struktura repo |
-| 2026-05-15 | [CONFIGURATION.md](./CONFIGURATION.md) | Konfig | Brak sekcji SCALE_* — uzupełniono linkiem |
-| 2026-05-15 | [UPDATES.md](./UPDATES.md) | Proces | Ogólny guide aktualizacji |
-| 2026-05-27 | [reports/*](./reports/) | Archiwum | Snapshoty audytów |
-| 2026-04-29 | [adr/](./adr/) | ADR | Stabilne decyzje |
-| 2026-04-23 | [archive/](./archive/) | Archiwum | CHARTER, TECH_SPEC — historyczne |
-| — | [mockups/](./mockups/) | Design | Nie w Git — opcjonalne |
+| Sekcja | Pliki .md (szac.) | Ostatni przegląd enterprise |
+|--------|-------------------|-----------------------------|
+| Korzeń `docs/` | 18 | 2026-06-03 — metadane + SSOT linki |
+| `operations/` | 9 + README + INDEX | 2026-06-03 |
+| `admin/` | 6 + README + ADMIN_INDEX | 2026-06-03 — P0 DONE, P1 1a done |
+| `compliance/` | 4 + INDEX | 2026-06-03 |
+| `adr/` | 10 | 2026-06-03 — nagłówki metadanych |
+| `reports/` | 8 + README | Snapshot — bez edycji treści |
+| `archive/` | 5 + plans README | Deprecated bannery |
+| `onboarding/`, `product/` | 2 | 2026-06-03 |
+| `runbooks/` | 1 | 2026-06-03 — db_recovery rozszerzony |
+| `diagrams/`, `assets/` | 2 | 2026-06-03 |
 
-### Znane luki (backlog)
+**Łącznie:** ~68 plików w scope `check_docs_links.py` (bez duplikatów ścieżek Windows).
 
-| Temat | Status docs |
-|-------|-------------|
-| `SCALE_*` / `BROUTER_*` env | ✅ operations + CONFIGURATION |
-| Live Map zoom / znaczniki | ✅ operations/SIMULATOR |
-| Batch przed live | ✅ API.md + operations + ADR-010 |
-| BRouter Railway | ✅ operations/BROUTER + INSTALLATION |
-| Mobile GPS resilience | ✅ operations/MOBILE + DATA_RESILIENCE |
-| API admin simulator | ✅ API.md § Admin |
+---
+
+## Statusy produktowe (docs muszą się zgadzać)
+
+| Temat | Status w docs |
+|-------|----------------|
+| Admin P0 smoke | ✅ DONE — [P0_SMOKE_CHECKLIST](./admin/P0_SMOKE_CHECKLIST.md) |
+| Admin P1 Paczka 1a | ✅ done — [P1_ROADMAP](./admin/P1_ROADMAP.md) |
+| Admin P1 1b + Sponsor | 🚧 next |
+| Railway verify script | ✅ — [RAILWAY_PRODUCTION_CHECKLIST](./operations/RAILWAY_PRODUCTION_CHECKLIST.md) |
+
+---
+
+## Znane luki (backlog dokumentacji)
+
+| Temat | Status |
+|-------|--------|
 | OpenAPI drift | Ręczna weryfikacja `/api/docs/` po zmianach API |
-| Zrzuty Live Map w `docs/assets/live/` | Opcjonalnie po UI change |
-| CI: link check | ✅ `.github/workflows/docs.yml` + `scripts/check_docs_links.py` |
-| `plans/`, `.kilo/plans/` | Pozostają poza `docs/` — nie archiwizowane |
+| Zrzuty Live Map | Opcjonalnie `docs/assets/live/` po UI change |
+| `plans/`, `.kilo/plans/` | Poza `docs/` — [archive/plans/README](./archive/plans/README.md) |
+| Staging admin | Brak — deploy bez stagingu (P1 §4) |
 
 ---
 
-## Szybka checklista po release
+## Checklista po release
 
-- [ ] Wpis w [CHANGELOG](../CHANGELOG.md)
-- [ ] Jeśli env / Railway: [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) + operations
-- [ ] Jeśli UI mapy: zrzut ekranu w `docs/assets/live/` (opcjonalnie)
-- [ ] Data „Ostatni przegląd” w [README.md](./README.md)
+- [ ] [CHANGELOG](../CHANGELOG.md)
+- [ ] Env / Railway → [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) + operations
+- [ ] Admin deploy → [P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md)
+- [ ] Release publiczny → [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md)
+- [ ] **Last reviewed** w [README.md](./README.md)
+- [ ] `python scripts/check_docs_links.py`

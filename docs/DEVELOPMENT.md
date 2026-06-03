@@ -1,6 +1,15 @@
 # 💻 Development Guide — Przewodnik Deweloperski
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy |
+
 Przewodnik deweloperski platformy 4VELO — struktura projektu, standardy kodowania, testy, debugging i Git workflow.
+
+**Powiązane:** [GETTING_STARTED.md](./GETTING_STARTED.md) · [CONTRIBUTING.md](../CONTRIBUTING.md)
 
 ---
 

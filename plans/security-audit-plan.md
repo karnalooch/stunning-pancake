@@ -290,4 +290,4 @@ flowchart TD
 
 ---
 
-*Dokument wygenerowany na podstawie analizy kodu źródłowego, [`designmobile.md`](../docs/designmobile.md), [`CHARTER.md`](../docs/CHARTER.md), [`HANDOVER.md`](../HANDOVER.md), [`settings.py`](../backend/core/settings.py).*
+*Dokument wygenerowany na podstawie analizy kodu źródłowego, [`designmobile.md`](../docs/archive/designmobile.md), [`CHARTER.md`](../docs/archive/CHARTER.md), [`HANDOVER.md`](../HANDOVER.md), [`settings.py`](../backend/core/settings.py).*

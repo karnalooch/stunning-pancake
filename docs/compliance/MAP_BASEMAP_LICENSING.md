@@ -1,6 +1,12 @@
 # Map basemap licensing (admin)
 
-Last updated: 2026-06-02
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Product / Legal |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Product, Legal |
+| **Index** | [COMPLIANCE_INDEX.md](./COMPLIANCE_INDEX.md) |
 
 ## Provider in use
 

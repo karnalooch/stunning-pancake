@@ -1,6 +1,14 @@
 # 🗺️ 4VELO Admin Portal v3.0 Roadmap & Architectural Specification
 
-This document specifies the architectural designs and technical layouts for the next-generation **4VELO Admin/Owner Portal (React 19 + Mantine v9)**. It outlines the immediate refactoring and provides detailed designs for the future premium modules, serving as the official reference for backend and frontend engineering.
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Admin / Frontend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Frontend, backend engineers |
+| **Index** | [ADMIN_INDEX.md](./ADMIN_INDEX.md) |
+
+This document specifies architectural designs for **4VELO Admin/Owner Portal (React 19 + Mantine v9)** — reference for backend and frontend engineering.
 
 ---
 

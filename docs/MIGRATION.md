@@ -1,5 +1,12 @@
 # 🔄 Migration Guide — Przewodnik Migracji
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Backend Lead / DBA |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, DevOps |
+
 Przewodnik migracji bazy danych, migracji RBAC, strategii zero-downtime deployment i procedur rollback.
 
 ---

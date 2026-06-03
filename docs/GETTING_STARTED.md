@@ -1,6 +1,15 @@
 # 🏁 Getting Started — Przewodnik Szybkiego Startu
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Developer onboarding |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Nowi deweloperzy |
+
 Uruchom platformę 4VELO w 15 minut.
+
+**Powiązane:** [INSTALLATION.md](./INSTALLATION.md) · [DEVELOPMENT.md](./DEVELOPMENT.md) · [README.md](./README.md)
 
 ---
 

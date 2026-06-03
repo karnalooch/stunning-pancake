@@ -1,6 +1,15 @@
 # 🔍 Troubleshooting — Rozwiązywanie Problemów
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator / On-call |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, operatorzy |
+
 Przewodnik rozwiązywania typowych problemów z platformą 4VELO — błędy, baza danych, Redis, Celery, CORS, autoryzacja, wydajność i analiza logów.
+
+**SSOT operacyjne:** [operations/RAILWAY_CELERY_MEMORY.md](./operations/RAILWAY_CELERY_MEMORY.md) · [operations/SIMULATOR.md](./operations/SIMULATOR.md) · [OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md)
 
 ---
 

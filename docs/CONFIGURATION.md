@@ -1,8 +1,15 @@
 # ⚙️ Konfiguracja — Przewodnik Konfiguracyjny
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, Platform Operator |
+
 Kompletny przewodnik konfiguracji platformy 4VELO — zmienne środowiskowe, ustawienia Django, Celery, Redis, PostGIS i integracje zewnętrzne.
 
-**Ostatnia aktualizacja:** 2026-06-02
+**SSOT caps produkcji:** [operations/RAILWAY_CELERY_MEMORY.md](./operations/RAILWAY_CELERY_MEMORY.md) — nie duplikuj pełnych tabel `SCALE_*` tutaj.
 
 ---
 

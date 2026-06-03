@@ -1,6 +1,15 @@
 # Release Legal + Compliance Package
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Release Manager / Legal |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Release Manager |
+| **Index** | [COMPLIANCE_INDEX.md](./COMPLIANCE_INDEX.md) |
+
 Praktyczny pakiet go-to-market dla każdego release produkcyjnego.
+
 Używaj razem z:
 - `docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md`
 - `docs/operations/PRE_RELEASE_VERIFICATION.md`

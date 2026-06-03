@@ -1,6 +1,15 @@
 # SYSTEM ARCHITECTURE — MODEL C4 (v0.1.0-beta.2)
 
-> Legenda: ✅ = deployed on production | ⚠️ = dev only | 📋 = planned
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Architekci, nowi deweloperzy |
+
+> Legenda: ✅ = deployed on production | ⚠️ = dev only | 📋 = planned  
+
+**Powiązane:** [ARCHITECTURE.md](../ARCHITECTURE.md)
 
 ## 1. Context Diagram (Diagram Kontekstowy)
 ```mermaid

@@ -1,6 +1,15 @@
 # 🔌 API Reference — Dokumentacja API
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Integratorzy, deweloperzy frontend/mobile |
+
 Kompletna referencja API platformy 4VELO — autoryzacja, endpointy, webhooks i odpowiedzi błędów.
+
+**Powiązane:** [RBAC.md](./RBAC.md) · [operations/SIMULATOR.md](./operations/SIMULATOR.md) (admin simulator)
 
 ---
 

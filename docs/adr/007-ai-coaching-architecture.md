@@ -1,5 +1,14 @@
 # ADR 007: AI Coaching Architecture
 
+| | |
+|--|--|
+| **Status** | Accepted |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Language** | English |
+| **Index** | [docs/README.md](../README.md) |
+
+
 ## Status
 Accepted (2026-05-13)
 

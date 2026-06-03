@@ -1,5 +1,13 @@
 # SPECYFIKACJA API & STANDARDY TECHNICZNE — v0.1.0-beta.2
 
+| | |
+|--|--|
+| **Status** | 📦 Deprecated |
+| **Last reviewed** | 2026-06-03 |
+| **Redirect** | [API.md](../API.md) · [ARCHITECTURE.md](../ARCHITECTURE.md) |
+
+> Historyczna spec v0.1 — nie edytuj; aktualne API w [API.md](../API.md).
+
 ## 1. Standardy Komunikacji
 - **REST API**: Django REST Framework (DRF) dla danych relacyjnych.
 - **Streaming**: WebSocket (FastAPI) dla Live-Ghost i telemetrii — dev only, nie na produkcji.

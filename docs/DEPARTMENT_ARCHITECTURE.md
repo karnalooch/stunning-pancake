@@ -1,6 +1,15 @@
 # 🏢 Architektura Departamentów — Hierarchia Organizacyjna 4VELO
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Product / Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Deweloperzy, product |
+
 Kompletny plan dodania hierarchii "Department/Class" do wielodzierżawczej platformy SaaS 4VELO.
+
+**Powiązane:** [RBAC.md](./RBAC.md) · [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ---
 

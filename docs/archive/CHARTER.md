@@ -1,5 +1,13 @@
 # KONSTYTUCJA PROJEKTU (PROJECT CHARTER) — 4VELO v0.1.0-beta.2
 
+| | |
+|--|--|
+| **Status** | 📦 Deprecated |
+| **Last reviewed** | 2026-06-03 |
+| **Redirect** | **[CONSTITUTION.md](../CONSTITUTION.md)** — aktualny dokument |
+
+> ⚠️ Ten plik jest historycznym charterem v0.1. Nie edytuj — zmiany zasad w [CONSTITUTION.md](../CONSTITUTION.md).
+
 > "Kontrakt ze samym sobą: Suwerenność poprzez kod, wydajność poprzez dyscyplinę."
 
 ## 1. Uzasadnienie Biznesowe

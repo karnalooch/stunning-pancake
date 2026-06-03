@@ -7,8 +7,9 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 ## Zanim zaczniesz
 
 1. Przeczytaj [docs/README.md](docs/README.md) — indeks dokumentacji.
-2. Uruchom środowisko: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) lub `.\dev.ps1`.
-3. Dla zmian w symulatorze / Railway: [docs/operations/](docs/operations/).
+2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
+3. Uruchom środowisko: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) lub `.\dev.ps1`.
+4. Dla zmian w symulatorze / Railway: [docs/operations/](docs/operations/).
 
 ---
 

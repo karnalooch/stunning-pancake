@@ -1,7 +1,13 @@
 # Runbook — BRouter (routing live sim)
 
-**Ostatnia aktualizacja:** 2026-06-02  
-**Obraz:** `infrastructure/brouter/Dockerfile` (BRouter 1.7.9, `RouteServer` HTTP :17777)
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Platform Operator |
+
+**Obraz:** `infrastructure/brouter/Dockerfile` (BRouter 1.7.9, `RouteServer` HTTP :17777) · **Caps:** [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md)
 
 ---
 

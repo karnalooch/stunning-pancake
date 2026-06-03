@@ -1,8 +1,15 @@
 # Konstytucja Projektu 4VELO
 
-> **Wersja:** v0.2.0-rc.1
-> **Data przyjęcia:** 2026-05-15
-> **Motto:** *„Suwerenność poprzez kod, wydajność poprzez dyscyplinę”*
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Product / Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Cały zespół |
+
+> **Wersja:** v0.2.0-rc.1 · **Data przyjęcia:** 2026-05-15  
+> **Motto:** *„Suwerenność poprzez kod, wydajność poprzez dyscyplinę”*  
+> **Historyczny charter:** [archive/CHARTER.md](./archive/CHARTER.md) (deprecated)
 
 ---
 
@@ -459,9 +466,9 @@ Wszystkie typowe incydenty muszą mieć **runbook** w [`docs/runbooks/`](runbook
 
 | Runbook | Opis |
 |---|---|
-| `database-outage.md` | Baza danych niedostępna |
+| [db_recovery.md](runbooks/db_recovery.md) | Baza danych niedostępna |
 | `redis-outage.md` | Redis / cache niedostępny |
-| `celery-backlog.md` | Kolejki Celery rosną |
+| [celery-backlog.md](runbooks/celery-backlog.md) | Kolejki Celery rosną |
 | `high-cpu.md` | Wysokie zużycie CPU |
 | `ssl-expiry.md` | Wygasający certyfikat SSL |
 | `data-breach.md` | Podejrzenie wycieku danych |

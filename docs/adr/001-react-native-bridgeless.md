@@ -1,5 +1,14 @@
 # ADR 001: Wybór React Native (Bridgeless) zamiast Fluttera
 
+| | |
+|--|--|
+| **Status** | Accepted |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Language** | English |
+| **Index** | [docs/README.md](../README.md) |
+
+
 ## Status
 Zaakceptowany (Zastępuje poprzednie założenia)
 

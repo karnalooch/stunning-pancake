@@ -1,5 +1,12 @@
 # ANALIZA SWOT — Platforma SPORT (v0.1.0-beta.2)
 
+| | |
+|--|--|
+| **Status** | 📦 Snapshot (historyczny) |
+| **Last reviewed** | 2026-06-03 |
+
+> Nie edytuj — analiza z fazy beta.2; aktualna architektura: [ARCHITECTURE.md](../ARCHITECTURE.md).
+
 ## S (Strengths - Mocne Strony)
 - **Wydajność**: Django + Redis zdolne obsłużyć bieżący ruch. FastAPI + Citus zaplanowane na skalowanie.
 - **Anti-Cheat**: 4-warstwowy system walidacji (Kinematic Gate → V-max → BRouter → Viterbi HMM). Warstwy 1-2 działają na produkcji.

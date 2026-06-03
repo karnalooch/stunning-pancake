@@ -1,7 +1,15 @@
 # ADR-010: Simulator state in Redis + Celery queue `simulation`
 
-**Status:** Accepted (implemented)  
-**Date:** 2026-05-17 (decision), documented 2026-06-02  
+| | |
+|--|--|
+| **Status** | Accepted |
+| **Owner role** | Tech Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Language** | English |
+| **Index** | [docs/README.md](../README.md) |
+| **Spec** | [SIMULATOR_ARCHITECTURE.md](../SIMULATOR_ARCHITECTURE.md) |
+| **Runbook** | [operations/SIMULATOR.md](../operations/SIMULATOR.md) |
+
 **Supersedes:** In-process `threading` + module dicts in `admin_views.py`
 
 ---
