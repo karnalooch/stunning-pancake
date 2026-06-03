@@ -3,6 +3,7 @@ Celery Tasks for Simulator
 ============================
 Background tasks that run the simulation logic with real-time telemetry.
 """
+import logging
 import math
 import os
 import random
@@ -15,7 +16,10 @@ from django.utils import timezone
 from django.core.cache import cache
 
 from . import simulator_state as sim
+from . import ride_fsm
 from .services import BRouterService
+
+logger = logging.getLogger('activities.simulator')
 
 _EARTH_RADIUS_M = 6_371_000.0
 STRICT_ROAD_ROUTES = os.getenv('SCALE_SIM_STRICT_ROAD_ROUTES', '1').lower() in ('1', 'true', 'yes', 'on')
@@ -28,20 +32,54 @@ _brouter_grid_log_count = 0
 _brouter_grid_log_last_hour = 0.0
 _brouter_route_fail_log_count = 0
 _brouter_route_fail_log_last_hour = 0.0
+_brouter_unroutable_log_count = 0
+_brouter_unroutable_log_last_hour = 0.0
 
 
-def _maybe_log_brouter_route_failure(reason: str) -> None:
+def _async_routing_enabled() -> bool:
+    return os.getenv('SCALE_SIM_ASYNC_ROUTING', '1').lower() in ('1', 'true', 'yes', 'on')
+
+
+def _max_routing_dispatch_per_tick(scale_limits: dict) -> int:
+    try:
+        cap = int(os.getenv('SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK', '0'))
+    except (TypeError, ValueError):
+        cap = 0
+    if cap <= 0:
+        cap = int(scale_limits.get('max_starts_per_live_tick') or 30)
+    return max(1, cap)
+
+
+def _maybe_log_brouter_route_failure(reason: str, *, unroutable: bool = False) -> None:
     """Log why strict road-only mode skipped a start (throttled)."""
     global _brouter_route_fail_log_count, _brouter_route_fail_log_last_hour
+    global _brouter_unroutable_log_count, _brouter_unroutable_log_last_hour
+    if unroutable:
+        _brouter_unroutable_log_count += 1
+        if _brouter_unroutable_log_count <= 3:
+            sim.live_log(f"BRouter unroutable: {reason[:200]}")
+        else:
+            now = time.time()
+            if now - _brouter_unroutable_log_last_hour >= 3600:
+                _brouter_unroutable_log_last_hour = now
+                sim.live_log(f"BRouter unroutable (throttled): {reason[:160]}")
+        logger.info(
+            'sim.routing.unroutable',
+            extra={'reason': reason[:240], 'unroutable': True},
+        )
+        return
     _brouter_route_fail_log_count += 1
     if _brouter_route_fail_log_count <= 5:
         sim.live_log(f"BRouter routing failed: {reason[:240]}")
-        return
-    now = time.time()
-    if now - _brouter_route_fail_log_last_hour < 3600:
-        return
-    _brouter_route_fail_log_last_hour = now
-    sim.live_log(f"BRouter routing failed (throttled): {reason[:240]}")
+    else:
+        now = time.time()
+        if now - _brouter_route_fail_log_last_hour >= 3600:
+            _brouter_route_fail_log_last_hour = now
+            sim.live_log(f"BRouter routing failed (throttled): {reason[:240]}")
+    logger.warning(
+        'sim.routing.error',
+        extra={'reason': reason[:240], 'unroutable': False},
+    )
 
 
 def _maybe_log_brouter_grid_fallback() -> None:
@@ -175,9 +213,11 @@ def _brouter_profiles_for_activity(activity_type: str) -> list[str]:
 
 def _brouter_route_waypoints(
     start_lat: float, start_lon: float, end_lat: float, end_lon: float, activity_type: str,
+    *,
+    use_tick_budget: bool = True,
 ) -> list[tuple[float, float]] | None:
     """Request a road-following polyline; first point is snapped onto the network."""
-    if not _consume_brouter_tick_budget():
+    if use_tick_budget and not _consume_brouter_tick_budget():
         return None
     coords = [[start_lon, start_lat], [end_lon, end_lat]]
     last_err = 'unknown error'
@@ -206,15 +246,16 @@ def _brouter_route_waypoints(
         # "target island"/pass=0 are expected transient misses under dense concurrent starts.
         if (last_classification or {}).get('code') == BRouterService.UNROUTABLE_ERROR_CODE:
             _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> unroutable start ({last_err})"
+                f"{BRouterService.BASE_URL} -> unroutable start ({last_err})",
+                unroutable=True,
             )
         else:
             _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> {last_err}"
+                f"{BRouterService.BASE_URL} -> {last_err}",
             )
     except Exception as exc:
         _maybe_log_brouter_route_failure(
-            f"{BRouterService.BASE_URL} exception: {exc}"
+            f"{BRouterService.BASE_URL} exception: {exc}",
         )
     return None
 
@@ -255,6 +296,7 @@ def _generate_route_waypoints(
     anchor_lat: float | None = None,
     anchor_lon: float | None = None,
     start_radius_km: float | None = None,
+    use_tick_budget: bool = True,
 ) -> tuple[list[tuple[float, float]], str]:
     """
     Prefer BRouter road polyline from city center; grid fallback if unavailable.
@@ -318,7 +360,10 @@ def _generate_route_waypoints(
         bearing = random.uniform(0, 2 * math.pi)
         end_lat = start_lat + (km / 111.0) * math.cos(bearing)
         end_lon = start_lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
-        waypoints = _brouter_route_waypoints(start_lat, start_lon, end_lat, end_lon, activity_type)
+        waypoints = _brouter_route_waypoints(
+            start_lat, start_lon, end_lat, end_lon, activity_type,
+            use_tick_budget=use_tick_budget,
+        )
         if waypoints:
             payload = {'waypoints': waypoints, 'source': 'road'}
             cache.set(cache_key, payload, 3600)
@@ -707,7 +752,8 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
             f"(~{max_riders_hint} riders on map at once if all start) · "
             f"starts/tick≤{limits['max_starts_per_live_tick']}, "
             f"brouter/tick≤{limits['brouter_max_calls_per_tick']}, "
-            f"route tries={limits['brouter_route_attempts']}"
+            f"route tries={limits['brouter_route_attempts']}, "
+            f"async_routing={'on' if _async_routing_enabled() else 'off'}"
         )
 
     if not sim.get_live_state().get('running', False):
@@ -735,6 +781,72 @@ def run_live_simulation(self, total_users=100, active_ratio=0.25,
 
     self.apply_async(countdown=tick_seconds)
     return {'status': 'tick_complete', 'next_tick_in': tick_seconds}
+
+
+def _route_pending_ride(user_id: int, ride: dict) -> None:
+    """BRouter on dedicated worker — no live-tick HTTP budget."""
+    lat0 = float(ride.get('anchor_lat', ride.get('lat', 52.2297)))
+    lon0 = float(ride.get('anchor_lon', ride.get('lon', 21.0122)))
+    distance_m = float(ride.get('distance_m', 5000))
+    act_type = ride.get('act_type', 'RUN')
+    start_radius_km = ride.get('start_radius_km')
+    waypoints, route_source = _generate_route_waypoints(
+        lat0,
+        lon0,
+        distance_m,
+        act_type,
+        anchor_lat=lat0,
+        anchor_lon=lon0,
+        start_radius_km=start_radius_km,
+        use_tick_budget=False,
+    )
+    current = sim.get_live_rides().get(user_id) or ride
+    if ride_fsm.normalize_ride_state(current) != ride_fsm.ROUTING:
+        return
+    if waypoints and len(waypoints) >= 2 and route_source != 'unroutable':
+        start_lat, start_lon = waypoints[0][0], waypoints[0][1]
+        sim.set_live_ride(user_id, {
+            **current,
+            'ride_state': ride_fsm.ROUTED,
+            'waypoints': waypoints,
+            'route_source': route_source,
+            'lat': start_lat,
+            'lon': start_lon,
+        })
+        return
+    sim.set_live_ride(user_id, {**current, 'ride_state': ride_fsm.FAILED_UNROUTABLE})
+    if route_source == 'unroutable':
+        sim.increment_live_routing_counter('routing_unroutable_total')
+    else:
+        sim.increment_live_routing_counter('routing_transport_errors_total')
+    sim.delete_live_ride(user_id)
+
+
+@shared_task(
+    bind=True,
+    queue='routing',
+    max_retries=2,
+    autoretry_for=(WorkerLostError,),
+    retry_backoff=True,
+    retry_jitter=True,
+)
+def route_live_ride_task(self, user_id: int):
+    """Pre-compute road polyline off the live tick (queue: routing)."""
+    if not sim.get_live_state().get('running'):
+        sim.delete_live_ride(user_id)
+        return
+    rides = sim.get_live_rides()
+    ride = rides.get(user_id)
+    if not ride or not ride_fsm.can_dispatch_routing(ride):
+        return
+    sim.set_live_ride(user_id, {**ride, 'ride_state': ride_fsm.ROUTING})
+    try:
+        _route_pending_ride(user_id, ride)
+    except Exception as exc:
+        logger.exception('sim.routing.task_failed', extra={'user_id': user_id})
+        sim.delete_live_ride(user_id)
+        sim.increment_live_routing_counter('routing_transport_errors_total')
+        sim.live_log(f"Routing task failed for {user_id}: {exc!s:.120}")
 
 
 @shared_task(
@@ -796,9 +908,20 @@ def _run_live_tick_body():
     completed = 0
     cheaters = 0
 
-    # ── Phase 1: Finish expired rides ──
+    async_routing = _async_routing_enabled()
+
+    # Promote pre-routed rides to ACTIVE when start_time reached
+    for user_id, ride in list(active_rides.items()):
+        if ride_fsm.can_promote_to_active(ride, now):
+            sim.set_live_ride(user_id, {**ride, 'ride_state': ride_fsm.ACTIVE})
+
+    active_rides = sim.get_live_rides()
+
+    # ── Phase 1: Finish expired ACTIVE rides ──
     rides_to_remove = []
     for user_id, ride in active_rides.items():
+        if ride_fsm.normalize_ride_state(ride) != ride_fsm.ACTIVE:
+            continue
         end_time = ride.get('end_time')
         if isinstance(end_time, str):
             end_time = timezone.datetime.fromisoformat(end_time)
@@ -899,6 +1022,9 @@ def _run_live_tick_body():
         riding_ids = {str(uid) for uid in active_rides.keys()}
         riding_by_city: dict[str, int] = {}
         for ride in active_rides.values():
+            state = ride_fsm.normalize_ride_state(ride)
+            if state not in (ride_fsm.ACTIVE, ride_fsm.ROUTED, ride_fsm.ROUTING, ride_fsm.PENDING_ROUTE):
+                continue
             slug = ride.get('city_slug')
             if slug:
                 riding_by_city[slug] = riding_by_city.get(slug, 0) + 1
@@ -948,6 +1074,8 @@ def _run_live_tick_body():
                 for u in User.objects.filter(id__in=starters).select_related('tenant')
             }
 
+        routing_dispatched = 0
+        routing_dispatch_cap = _max_routing_dispatch_per_tick(scale_limits) if async_routing else 0
         unroutable = 0
         for user_id in starters:
             user = users_map_p3.get(str(user_id))
@@ -957,8 +1085,6 @@ def _run_live_tick_body():
             act_type = _pick_activity_type()
             distance_m, duration_s = _generate_activity_params(act_type)
             duration_s = max(300, min(3600, duration_s))
-            start_time = now
-            end_time = now + timedelta(seconds=duration_s)
             is_cheater = random.random() < cheat_ratio
 
             city_info = resolve_city_for_user(user)
@@ -974,6 +1100,31 @@ def _run_live_tick_body():
             ride_start = now + timedelta(seconds=start_delay_s)
             ride_end = ride_start + timedelta(seconds=duration_s)
 
+            ride_payload = {
+                'start_time': ride_start.isoformat(),
+                'end_time': ride_end.isoformat(),
+                'act_type': act_type,
+                'distance_m': distance_m,
+                'lat': lat0,
+                'lon': lon0,
+                'anchor_lat': lat0,
+                'anchor_lon': lon0,
+                'start_radius_km': start_radius_km,
+                'city_slug': city_info['slug'],
+                'is_cheater': is_cheater,
+                **motion,
+            }
+
+            if async_routing and routing_dispatched < routing_dispatch_cap:
+                sim.set_live_ride(user_id, {
+                    **ride_payload,
+                    'ride_state': ride_fsm.PENDING_ROUTE,
+                })
+                route_live_ride_task.delay(user_id)
+                routing_dispatched += 1
+                started += 1
+                continue
+
             waypoints, route_source = _generate_route_waypoints(
                 lat0,
                 lon0,
@@ -985,23 +1136,22 @@ def _run_live_tick_body():
             )
             if not waypoints or len(waypoints) < 2:
                 unroutable += 1
+                sim.increment_live_routing_counter('routing_unroutable_total')
                 continue
             if route_source == 'grid':
                 _maybe_log_brouter_grid_fallback()
             start_lat, start_lon = waypoints[0][0], waypoints[0][1]
+            initial_state = ride_fsm.ROUTED if async_routing else ride_fsm.ACTIVE
+            if async_routing and ride_start <= now:
+                initial_state = ride_fsm.ACTIVE
 
             sim.set_live_ride(user_id, {
-                'start_time': ride_start.isoformat(),
-                'end_time': ride_end.isoformat(),
-                'act_type': act_type,
-                'distance_m': distance_m,
-                'lat': start_lat,
-                'lon': start_lon,
-                'city_slug': city_info['slug'],
-                'is_cheater': is_cheater,
+                **ride_payload,
+                'ride_state': initial_state,
                 'waypoints': waypoints,
                 'route_source': route_source,
-                **motion,
+                'lat': start_lat,
+                'lon': start_lon,
             })
             started += 1
         if unroutable > 0 and STRICT_ROAD_ROUTES:
@@ -1009,12 +1159,16 @@ def _run_live_tick_body():
                 f"Road-only mode: skipped {unroutable} starts this tick "
                 f"(no routable street path; see BRouter routing failed lines above)."
             )
+        if async_routing and routing_dispatched > 0:
+            sim.live_log(f"Queued {routing_dispatched} rides on routing worker.")
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     active_rides = sim.get_live_rides()
     telemetry_entries = []
 
     for user_id, ride in active_rides.items():
+        if not ride_fsm.telemetry_eligible(ride):
+            continue
         start_time = ride.get('start_time')
         end_time = ride.get('end_time')
         if isinstance(start_time, str):
@@ -1054,12 +1208,14 @@ def _run_live_tick_body():
         telemetry_entries = telemetry_entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
     TelemetryService.push_bulk_positions(telemetry_entries)
 
-    new_riding = sim.get_live_ride_count()
+    active_rides = sim.get_live_rides()
+    fsm = ride_fsm.fsm_summary(active_rides)
     sim.set_live_state(
-        currently_riding=new_riding,
+        currently_riding=fsm['ride_on_map'],
         total_completed=int(state.get('total_completed', 0)) + completed,
         cheaters_caught=int(state.get('cheaters_caught', 0)) + cheaters,
     )
+    new_riding = fsm['ride_on_map']
 
     if started > 0 or completed > 0:
         ctx = []

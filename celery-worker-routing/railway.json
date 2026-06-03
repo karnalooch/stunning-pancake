@@ -1,0 +1,23 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "celery-worker-simulation/Dockerfile"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicy": "ALWAYS"
+  },
+  "variables": {
+    "BROUTER_URL": "http://brouter.railway.internal:17777/brouter",
+    "BROUTER_TIMEOUT": "30",
+    "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
+    "CELERY_WORKER_QUEUES": "routing",
+    "CELERY_WORKER_CONCURRENCY": "2",
+    "CELERY_WORKER_POOL": "solo",
+    "CELERY_WORKER_PREFETCH_MULTIPLIER": "1",
+    "CELERY_MAX_TASKS_PER_CHILD": "100",
+    "CELERY_WORKER_HOSTNAME": "routing@%h"
+  }
+}

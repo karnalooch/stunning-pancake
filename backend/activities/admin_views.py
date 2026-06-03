@@ -383,6 +383,11 @@ class LiveSimulationView(APIView):
 
             scale_overrides = parse_scale_overrides_from_state(state)
             effective_scale = resolve_live_scale_limits(state)
+            from activities.ride_fsm import fsm_summary
+            from activities.simulator_tasks import _async_routing_enabled
+
+            rides_map = sim.get_live_rides()
+            fsm = fsm_summary(rides_map)
             return Response({
                 'running': state['running'],
                 'batch_blocks_live': batch_blocked,
@@ -395,6 +400,14 @@ class LiveSimulationView(APIView):
                 'live_lock_held': live_lock,
                 'pool_size': pool_size,
                 'active_rides': active_rides,
+                'async_routing_enabled': _async_routing_enabled(),
+                'ride_warming': fsm['ride_warming'],
+                'ride_routing': fsm['ride_routing'],
+                'ride_pending_route': fsm['ride_pending_route'],
+                'ride_routed': fsm['ride_routed'],
+                'ride_active': fsm['ride_active'],
+                'routing_unroutable_total': int(state.get('routing_unroutable_total', 0)),
+                'routing_transport_errors_total': int(state.get('routing_transport_errors_total', 0)),
                 'total_users': int(state.get('total_users', 0)),
                 'active_ratio': float(state.get('active_ratio', 0)),
                 'cheat_ratio': float(state.get('cheat_ratio', 0)),

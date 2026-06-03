@@ -75,4 +75,23 @@ In **Simulator → Step 2 → Performance**, admins can tune live spawn rate wit
 
 **Presets:** Eco 25/21, Balanced 50/42, Fast 80/66 (starts / linked BRouter calls). Raise both together; if workers OOM, lower starts first, then route attempts.
 
-See also [RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md), [SIMULATOR.md](./SIMULATOR.md), [BROUTER.md](./BROUTER.md).
+### `celery-worker-routing` (queue `routing`, optional)
+
+Paczka 1: live sim wysyła `route_live_ride_task` na kolejkę **`routing`**, żeby `live_tick` nie wykonywał BRouter HTTP synchronicznie.
+
+| Opcja | Konfiguracja |
+|-------|----------------|
+| **A — drugi serwis Railway** | Skopiuj `celery-worker-simulation`, ustaw `CELERY_WORKER_QUEUES=routing`, `BROUTER_URL`, RAM ≥ 1 GB. Szablon: `celery-worker-routing/railway.json` (ten sam Dockerfile co simulation). |
+| **B — jeden worker** | `CELERY_WORKER_QUEUES=simulation,routing` na `celery-worker-simulation` (mniejsze deployy; większe ryzyko OOM — obniż `SCALE_MAX_STARTS_PER_LIVE_TICK`). |
+
+| Variable | Recommended |
+|----------|-------------|
+| `CELERY_WORKER_QUEUES` | `routing` |
+| `CELERY_WORKER_POOL` | `solo` |
+| `CELERY_WORKER_CONCURRENCY` | `2` |
+| `SCALE_SIM_ASYNC_ROUTING` | `1` (backend + simulation worker env) |
+| `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` (domyślnie = max starts) |
+
+Bez konsumenta kolejki `routing` jazdy zostaną w `PENDING_ROUTE` / `ROUTING` — status API pokaże `ride_warming` > 0.
+
+See also [RAILWAY_CELERY_SIMULATION.md](../RAILWAY_CELERY_SIMULATION.md), [SIMULATOR.md](./SIMULATOR.md), [BROUTER.md](./BROUTER.md), [../admin/P1_ROADMAP.md](../admin/P1_ROADMAP.md).

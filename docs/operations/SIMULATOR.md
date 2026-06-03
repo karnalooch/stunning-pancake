@@ -1,6 +1,6 @@
 # Runbook — symulator (batch + live map)
 
-**Ostatnia aktualizacja:** 2026-06-02  
+**Ostatnia aktualizacja:** 2026-06-03  
 **Kod:** `backend/activities/simulator_*.py`, `admin/src/modules/analytics/SimulatorPage.tsx`, `LiveMap.tsx`
 
 ---
@@ -20,7 +20,21 @@
 ### API
 
 - `POST /api/activities/admin/live-simulate/` → **409** jeśli batch w toku.
-- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `batch_block_reason`.
+- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `batch_block_reason`, `ride_warming`, `ride_routing`, `ride_routed`, `async_routing_enabled`.
+
+### FSM jazdy (Paczka 1)
+
+| Stan | Znaczenie |
+|------|-----------|
+| `PENDING_ROUTE` | Stub w Redis, czeka na `route_live_ride_task` (kolejka `routing`) |
+| `ROUTING` | Worker liczy trasę BRouter |
+| `ROUTED` | Polyline gotowa; telemetria po `start_time` → `ACTIVE` |
+| `ACTIVE` | Na mapie; tick publikuje GPS |
+| `FAILED_UNROUTABLE` | Usunięte z hasha; licznik `routing_unroutable_total` |
+
+Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live_tick`).
+
+**Routing worker:** [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md) § `celery-worker-routing`. Roadmap: [P1_ROADMAP.md](../admin/P1_ROADMAP.md).
 
 ---
 

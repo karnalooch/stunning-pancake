@@ -19,6 +19,9 @@ import { useAuth } from '../../core/auth/useAuth';
 interface LiveStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
     stuck?: boolean; live_lock_held?: boolean; pool_size?: number; active_rides?: number;
+    async_routing_enabled?: boolean;
+    ride_warming?: number; ride_routing?: number; ride_routed?: number; ride_active?: number;
+    routing_unroutable_total?: number;
     total_users: number; active_ratio: number; cheat_ratio: number; tick_seconds: number;
     currently_riding: number; total_completed: number; cheaters_caught: number;
     log: [string, string][];
@@ -608,9 +611,26 @@ export const SimulatorPage: React.FC = () => {
                                         <ThemeIcon size={24} radius="sm" color="teal" variant="light"><Activity size={14} /></ThemeIcon>
                                         <Text fw={600} size="sm">Live Telemetry Monitor</Text>
                                     </Group>
-                                    <Badge variant="light" color={isWipeActive ? 'red' : anyRunning ? 'green' : isStuck ? 'orange' : 'gray'}>
-                                        {isWipeActive ? 'WIPING' : anyRunning ? 'RUNNING' : isStuck ? 'STUCK' : 'IDLE'}
-                                    </Badge>
+                                    <Group gap={6}>
+                                        <Badge variant="light" color={isWipeActive ? 'red' : anyRunning ? 'green' : isStuck ? 'orange' : 'gray'}>
+                                            {isWipeActive ? 'WIPING' : anyRunning ? 'RUNNING' : isStuck ? 'STUCK' : 'IDLE'}
+                                        </Badge>
+                                        {isLiveRunning && (liveStatus?.ride_warming ?? 0) > 0 && (
+                                            <Badge variant="light" color="yellow" title="PENDING_ROUTE + ROUTING">
+                                                Warming {(liveStatus?.ride_warming ?? 0).toLocaleString()}
+                                            </Badge>
+                                        )}
+                                        {isLiveRunning && (liveStatus?.ride_routing ?? 0) > 0 && (
+                                            <Badge variant="light" color="cyan" title="BRouter on routing queue">
+                                                Routing {(liveStatus?.ride_routing ?? 0).toLocaleString()}
+                                            </Badge>
+                                        )}
+                                        {isLiveRunning && (liveStatus?.ride_routed ?? 0) > 0 && (
+                                            <Badge variant="light" color="violet" title="Routed, waiting for start_time">
+                                                Queued {(liveStatus?.ride_routed ?? 0).toLocaleString()}
+                                            </Badge>
+                                        )}
+                                    </Group>
                                 </Group>
 
                                 {isBatchRunning && (
@@ -629,8 +649,11 @@ export const SimulatorPage: React.FC = () => {
                                 {(anyRunning || hasOrphanedLive) ? (
                                     <SimpleGrid cols={2} spacing="xs" mb="md">
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">
-                                            <Text size="2xs" c="dimmed">Active Riders</Text>
+                                            <Text size="2xs" c="dimmed">On map (ACTIVE)</Text>
                                             <Text fw={700} size="lg" c="blue">{liveStatus?.currently_riding?.toLocaleString() ?? '0'}</Text>
+                                            {(liveStatus?.ride_warming ?? 0) > 0 && (
+                                                <Text size="2xs" c="yellow.7">+{(liveStatus?.ride_warming ?? 0).toLocaleString()} warming</Text>
+                                            )}
                                         </Card>
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">
                                             <Text size="2xs" c="dimmed">Rides Completed</Text>

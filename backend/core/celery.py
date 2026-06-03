@@ -24,6 +24,7 @@ app.conf.task_routes = {
     'activities.tasks.send_leaderboard_digest':       {'queue': 'notifications'},
     'activities.tasks.recalculate_city_leaderboard':  {'queue': 'default'},
     'activities.wipe_tasks.*':                        {'queue': 'default'},
+    'activities.simulator_tasks.route_live_ride_task': {'queue': 'routing'},
     'activities.simulator_tasks.*':                   {'queue': 'simulation'},
     '*':                                               {'queue': 'default'},
 }

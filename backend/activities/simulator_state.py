@@ -713,13 +713,27 @@ def get_live_ride_count() -> int:
 def get_live_city_counts() -> dict[str, int]:
     """Active riders per simulator city (for live-map overview badges)."""
     from simulate_active_cities import CITIES
+    from activities.ride_fsm import telemetry_eligible
 
     counts = {c['slug']: 0 for c in CITIES}
     for ride in get_live_rides().values():
+        if not telemetry_eligible(ride):
+            continue
         slug = ride.get('city_slug') or ''
         if slug in counts:
             counts[slug] += 1
     return counts
+
+
+def increment_live_routing_counter(field: str, delta: int = 1) -> int:
+    """Cumulative routing metrics on live state hash (unroutable vs transport errors)."""
+    if delta <= 0:
+        return _redis_int(get_live_state().get(field), 0)
+    try:
+        r = get_redis()
+        return int(r.hincrby(LIVE_STATE_KEY, field, int(delta)))
+    except Exception:
+        return 0
 
 
 # ─── Validation ──────────────────────────────────────────────────
