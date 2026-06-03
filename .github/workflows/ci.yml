@@ -240,7 +240,8 @@ jobs:
 
       # Run all filesystem scans before SARIF upload so a failed upload cannot skip later scans.
       - name: Trivy — Backend (Python)
-        uses: aquasecurity/trivy-action@0.33.1
+        # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: fs
           scan-ref: backend/
@@ -250,7 +251,8 @@ jobs:
           exit-code: '0'
 
       - name: Trivy — Admin Dashboard (JS/TS)
-        uses: aquasecurity/trivy-action@0.33.1
+        # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: fs
           scan-ref: admin/
@@ -260,7 +262,8 @@ jobs:
           exit-code: '0'
 
       - name: Trivy — Mobile (React Native)
-        uses: aquasecurity/trivy-action@0.33.1
+        # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: fs
           scan-ref: mobile/
