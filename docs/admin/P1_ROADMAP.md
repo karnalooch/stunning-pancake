@@ -80,9 +80,9 @@ Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRO
 | 1 | `python run_pytest.py … -m simulator_light` — PASS lokalnie / CI | ✅ 31/31 (2026-06-03) |
 | 2 | `.\scripts\railway-verify-production.ps1` — PASS (jeśli `RAILWAY_API_TOKEN`) | ✅ PASS 22/22 (2026-06-03, push `b9652e24`) |
 | 3 | P0 smoke GO — [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | 🟡 częściowo (2026-06-03) — infra/health auto: `/health/`→200, Admin SPA→200, API admin (`/admin/stats/`, `/admin/live-simulate/`, `/api/infra/health/`)→401 (poprawny guard), 7/7 serwisów Railway Online, workery `ready`. **Brakuje** ról UI (GLOBAL_OWNER/TENANT_ADMIN/MODERATOR/SPONSOR) — wymaga interaktywnego logowania → pełne GO niezamknięte |
-| 4 | Live sim: `ride_warming` → spadek; `routing_queue_depth` stabilne przy `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | 🟡 częściowo (2026-06-03) — `routing_queue_depth` **stabilny przy cap** (backpressure pinning), `celery-worker-routing` drenuje ~1,3–1,8 s/trasę, brak floodu błędów. `ride_warming` → spadek **niezweryfikowany** (warming pinned przy cap; wartości API auth-gated) |
+| 4 | Live sim: `ride_warming` → spadek; `routing_queue_depth` stabilne przy `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | 🟡 częściowo (2026-06-03) — `routing_queue_depth` **stabilny przy cap** (backpressure pinning), `celery-worker-routing` drenuje ~1,3–1,8 s/trasę, brak floodu błędów. `ride_warming` → spadek **niezweryfikowany** (warming pinned przy cap; wartości API auth-gated). **Update 2026-06-03:** skalowanie poziome routing `numReplicas=1→2` (railway.json + GraphQL `serviceInstanceUpdate`, ~1 GB/replikę), żeby zwiększyć przepustowość drenażu kolejki — obserwacja backpressure po redeployu |
 | 5 | Load-test 10k — wypełniony szablon metryk w SCALE_TEST_300K (bez prod 10k bez zgody) | ✅ (2026-06-03) — szablon + [snapshot obserwacyjny prod](../SCALE_TEST_300K.md#snapshot-obserwacyjny-prod-2026-06-03--bez-uruchamiania-10k) wypełnione; **właściwy 10k run odroczony** do zgody Platform Operator |
-| 6 | Logi prod: brak lawiny `sim.routing.backpressure` >15 min przy normalnym `active_ratio` | ☐ niezweryfikowane (2026-06-03) — `sim.routing.backpressure` **ciągły ~96% ticków przez ≥7,5 min i w toku** (23:24–23:32); `active_ratio` nieznany (API auth-gated). Nie można potwierdzić „brak floodu >15 min" — trend przeciwny. Zalecenie: odczyt/obniżenie `active_ratio` przez admina, potem re-check 15-min |
+| 6 | Logi prod: brak lawiny `sim.routing.backpressure` >15 min przy normalnym `active_ratio` | ☐ niezweryfikowane (2026-06-03) — `sim.routing.backpressure` **ciągły ~96% ticków przez ≥7,5 min i w toku** (23:24–23:32); `active_ratio` nieznany (API auth-gated). Nie można potwierdzić „brak floodu >15 min" — trend przeciwny. **Update 2026-06-03:** w odpowiedzi na backpressure **przeskalowano `celery-worker-routing` do 2 replik** (horizontal scale, `numReplicas=2`) zamiast obniżania `active_ratio`; obserwacja częstotliwości `sim.routing.backpressure` po redeployu (oczekiwany spadek przy 2× drenaż). Opcjonalnie nadal: obniżenie `active_ratio` przez admina. Re-check 15-min po ustabilizowaniu 2 replik |
 
 ---
 
@@ -160,6 +160,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-03 | Scaling routing: `celery-worker-routing` `numReplicas=1→2` (horizontal, ~1 GB/replikę) w odpowiedzi na sustained backpressure; aktualizacja p.4 i p.6 operational closure |
 | 2026-06-03 | Operational closure weryfikacja prod (read-only): p.3 🟡 (infra PASS, role UI manual), p.4 🟡 (queue stable, warming n/a), p.5 ✅ (szablon + snapshot), p.6 ☐ (backpressure ciągły ≥7,5 min) |
 | 2026-06-03 | Cross-link: pełna checklista GPX w P2 §2.3 (F1–F6) |
 | 2026-06-03 | GPX → P2_ROADMAP; wyjaśnienie P2 vs Paczka 6 |

@@ -114,9 +114,22 @@ Live sim wysyła `route_live_ride_task` na **`routing`**, żeby `live_tick` nie 
 | `SCALE_SIM_ASYNC_ROUTING` | `1` |
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` |
 | `SECRET_KEY` | **Ten sam** co backend/simulation |
-| Service RAM | **≥ 1 GB** |
+| `numReplicas` | **2** (poziomy scale — patrz niżej) |
+| Service RAM | **≥ 1 GB / replikę** (≈ 2 GB łącznie przy 2 replikach) |
 
 **Weryfikacja:** [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) + skrypt.
+
+#### Skalowanie poziome routing (2026-06-03)
+
+Przy sustained backpressure (`sim.routing.backpressure` ~96% ticków >7,5 min, kolejka `routing` pinned przy cap) pojedynczy worker `solo` (concurrency efektywnie 1, ~1,3–1,8 s/trasę) nie nadąża drenować kolejki przy bieżącym `active_ratio`.
+
+| Lever | Decyzja |
+|-------|---------|
+| **Horizontal (wybrane)** | `numReplicas=2` w `celery-worker-routing/railway.json`. Każda replika ~1 GB, łącznie ~2 GB. Czysty scale bez ryzyka OOM pojedynczego kontenera. |
+| Vertical (odrzucone) | `solo` nie skaluje `concurrency>1`; wymagałby `prefork` → wyższe ryzyko RAM/OOM. |
+| `active_ratio` | **Niezmieniony** (wybrano scaling, nie obniżenie obciążenia). Opcjonalnie: obniżenie `active_ratio` przez admina jako dodatkowa ulga, jeśli 2 repliki nie wystarczą. |
+
+Apply: edycja `railway.json` (SSOT — nadpisuje Dashboard/API przy każdym deployu) + `serviceInstanceUpdate(numReplicas:2)` przez GraphQL dla natychmiastowego efektu, następnie commit + push `main` (auto-redeploy z `karnalooch/stunning-pancake`). Weryfikacja: 2× `routing@` ready w logach, spadek częstotliwości `sim.routing.backpressure`.
 
 ### Niezawodność (wszystkie workery)
 
