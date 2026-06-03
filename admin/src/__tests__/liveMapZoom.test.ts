@@ -41,7 +41,8 @@ describe('liveMapZoom', () => {
 
     it('LOD crossfade bands do not overlap inconsistently', () => {
         expect(LIVE_MAP_LOD.dotFadeInEnd).toBeLessThan(LIVE_MAP_LOD.iconFadeInEnd);
-        expect(LIVE_MAP_LOD.iconFadeOutEnd).toBeGreaterThan(LIVE_MAP_LOD.labelFadeInStart);
+        expect(LIVE_MAP_LOD.iconMaxZoom).toBeGreaterThan(LIVE_MAP_LOD.labelFadeInStart);
+        expect(LIVE_MAP_LOD.dotFadeOutEnd).toBeLessThanOrEqual(LIVE_MAP_LOD.iconMaxZoom);
         expect(LIVE_MAP_LOD.cityHubFadeOutEnd).toBeLessThan(LIVE_MAP_LOD.clusterPeakEnd);
     });
 });
