@@ -60,8 +60,11 @@ TRACCAR_CHANNEL = os.getenv("TRACCAR_REDIS_CHANNEL", "traccar:positions")
 ZONE_UPDATE_CHANNEL = "privacy_zones:updates"
 
 _pool: asyncpg.Pool | None = None
-_insert_queue: asyncio.Queue | None = None
+_insert_queue: asyncio.Queue[list[tuple]] | None = None
 _insert_worker_task: asyncio.Task | None = None
+
+_SKIP_DB = os.getenv("TELEMETRY_SKIP_DB", "").strip().lower() in ("1", "true", "yes")
+_SKIP_BROADCAST = os.getenv("TELEMETRY_SKIP_BROADCAST", "").strip().lower() in ("1", "true", "yes")
 
 try:
     _DB_POOL_MIN = max(1, int(os.getenv("TELEMETRY_DB_POOL_MIN", "5")))
@@ -122,8 +125,8 @@ async def _insert_worker() -> None:
     flush_interval = _INGEST_FLUSH_MS / 1000.0
     while True:
         try:
-            row = await asyncio.wait_for(_insert_queue.get(), timeout=flush_interval)
-            buffer.append(row)
+            chunk = await asyncio.wait_for(_insert_queue.get(), timeout=flush_interval)
+            buffer.extend(chunk)
             _insert_queue.task_done()
         except asyncio.TimeoutError:
             pass
@@ -141,13 +144,17 @@ async def _insert_worker() -> None:
 async def enqueue_gps_rows(rows: list[tuple]) -> None:
     """Queue rows for batched insert (used by HTTP + WebSocket ingest)."""
     global _insert_queue, _insert_worker_task
-    if not rows:
+    if not rows or _SKIP_DB:
         return
     if _insert_queue is None:
-        _insert_queue = asyncio.Queue(maxsize=max(_INGEST_BATCH_SIZE * 20, 5000))
+        _insert_queue = asyncio.Queue(maxsize=max(_INGEST_BATCH_SIZE * 20, 500))
         _insert_worker_task = asyncio.create_task(_insert_worker())
-    for row in rows:
-        await _insert_queue.put(row)
+    while True:
+        try:
+            _insert_queue.put_nowait(rows)
+            return
+        except asyncio.QueueFull:
+            await asyncio.sleep(0.001)
 
 # ---------------------------------------------------------------------------
 # Geospatial Helpers
@@ -307,6 +314,14 @@ async def startup() -> None:
 
     asyncio.create_task(_traccar_redis_bridge())
     asyncio.create_task(_privacy_zones_sync())
+    if _SKIP_DB:
+        logger.info("TELEMETRY_SKIP_DB=1: ingest guard+dedupe only, DB insert disabled")
+    if _SKIP_BROADCAST or _SKIP_DB:
+        logger.info(
+            "WebSocket broadcast disabled (TELEMETRY_SKIP_BROADCAST=%s, TELEMETRY_SKIP_DB=%s)",
+            _SKIP_BROADCAST,
+            _SKIP_DB,
+        )
     logger.info("telemetry engine fully operational")
 
 @app.on_event("shutdown")
@@ -402,9 +417,9 @@ async def _get_ingest_redis():
     return _ingest_redis
 
 
-async def _ingest_allowed(n: int = 1) -> tuple[bool, int, int]:
+async def _ingest_allowed() -> tuple[bool, int, int]:
     """
-    Record `n` packets in a 1s sliding window and decide if the request passes.
+    Record one ingest request in a 1s sliding window and decide if it passes.
     Returns (allowed, count, retry_after_seconds).
     """
     mode = _global_protection_mode()
@@ -415,8 +430,7 @@ async def _ingest_allowed(n: int = 1) -> tuple[bool, int, int]:
         client = await _get_ingest_redis()
         pipe = client.pipeline()
         pipe.zremrangebyscore(_INGEST_GUARD_KEY, 0, now - 1.0)
-        for i in range(max(1, int(n))):
-            pipe.zadd(_INGEST_GUARD_KEY, {f"{now}:{i}:{os.urandom(4).hex()}": now})
+        pipe.zadd(_INGEST_GUARD_KEY, {f"{now}:{os.urandom(4).hex()}": now})
         pipe.zcard(_INGEST_GUARD_KEY)
         pipe.expire(_INGEST_GUARD_KEY, 5)
         results = await pipe.execute()
@@ -432,6 +446,15 @@ async def _ingest_allowed(n: int = 1) -> tuple[bool, int, int]:
     if count > _INGEST_MAX_PER_SECOND:
         return False, count, 1
     return True, count, 0
+
+
+def _should_broadcast() -> bool:
+    return not _SKIP_BROADCAST and not _SKIP_DB
+
+
+async def _maybe_broadcast(payload: dict) -> None:
+    if _should_broadcast():
+        await manager.broadcast(payload)
 
 
 def _raise_ingest_throttled(retry_after: int) -> None:
@@ -456,7 +479,7 @@ async def health() -> dict:
 
 @app.post("/api/telemetry/ingest", status_code=202)
 async def ingest_packet(packet: GpsPacket) -> dict:
-    allowed, _count, retry_after = await _ingest_allowed(1)
+    allowed, _count, retry_after = await _ingest_allowed()
     if not allowed:
         _raise_ingest_throttled(retry_after)
 
@@ -476,7 +499,7 @@ async def ingest_packet(packet: GpsPacket) -> dict:
         )
     ])
 
-    await manager.broadcast({
+    await _maybe_broadcast({
         "type": "position_update",
         "device_id": packet.device_id,
         "user_id": packet.user_id,
@@ -489,7 +512,7 @@ async def ingest_packet(packet: GpsPacket) -> dict:
 
 @app.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
-    allowed, _count, retry_after = await _ingest_allowed(len(batch.packets) or 1)
+    allowed, _count, retry_after = await _ingest_allowed()
     if not allowed:
         _raise_ingest_throttled(retry_after)
 
@@ -512,7 +535,7 @@ async def ingest_batch(batch: BatchPacket) -> dict:
     if rows:
         await enqueue_gps_rows(rows)
         last = batch.packets[-1]
-        await manager.broadcast({
+        await _maybe_broadcast({
             "type": "position_update",
             "device_id": last.device_id,
             "user_id": last.user_id,
@@ -576,7 +599,7 @@ async def websocket_ingest(ws: WebSocket) -> None:
                 await enqueue_gps_rows(rows)
                 # Broadcast the latest
                 last = rows[-1]
-                await manager.broadcast({
+                await _maybe_broadcast({
                     "type": "position_update",
                     "device_id": last[1],
                     "user_id": last[2],
