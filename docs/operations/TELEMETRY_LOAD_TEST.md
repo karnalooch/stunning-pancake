@@ -83,15 +83,18 @@ Record p95; target **< 300 ms** at country zoom (`?zoom=6` or default bbox).
 
 | Field | Value |
 |-------|-------|
-| Date | |
-| Environment | local / staging |
-| `TELEMETRY_SHARD_COUNT` | |
-| `REDIS_TELEMETRY_SHARD_NODES` | yes / no / cluster |
-| Ingest positions/s (sustained) | |
-| Ingest p95 ms | |
-| Live map p95 ms | |
-| 429 rate | |
-| Pass / Fail | |
+| Date | 2026-06-04 |
+| Environment | local Podman Compose (podman machine; no Docker Desktop) |
+| `TELEMETRY_SHARD_COUNT` | 4 (`.env` + `docker-compose.override.yml`) |
+| `REDIS_TELEMETRY_SHARD_NODES` | `redis://redis:6379/0-3` |
+edis://redis:6379/0-3 |
+| Ingest positions/s (sustained) | **9558** (50k profile: workers 50, 60s, batch 50, target 50000/s); smoke **2148** (workers 10, 15s, batch 20, target 5k/s) |
+| Ingest p95 ms | **409.6** (50k run); **61.1** (smoke); 0 errors, 0x429 both runs |
+| Live map p95 ms | **55.2** p95 but 3597 errors / 0 OK (empty Redis index, unauth) |
+| 429 rate | 0% |
+| Pass / Fail | **FAIL** vs 50k target (<90% of 50000/s); smoke also FAIL vs 5k/s |
+
+**Local run notes (2026-06-04):** Stack via podman compose: db, redis, brouter, backend (:8000), telemetry (:8001), celery_worker_simulation, traccar. **BRouter:** image localhost/sport_brouter:latest; HTTP **200** on :17777/brouter after pre-downloading minimal .rd5 tiles to infrastructure/brouter/segments4/ and BROUTER_SEGMENT_PRESET=minimal in docker-compose.override.yml (default poland preset fails on :ro volume — read-only file system). Windows: set PYTHONIOENCODING=utf-8 for ingest script.
 
 ## Script reference
 
