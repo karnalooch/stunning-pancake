@@ -17,7 +17,7 @@ The 4VELO Admin Panel has been redesigned with a world-class, premium UI system 
 **Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)  
 **P0 closure (2026-06-02):** audit §8 · post-deploy smoke → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)  
 **P1 roadmap (paczki 1–6; 1a ✅, 1b + Sponsor next):** [P1_ROADMAP.md](./P1_ROADMAP.md)  
-**P2 roadmap (GPX forensics, Auth/MFA):** [P2_ROADMAP.md](./P2_ROADMAP.md)  
+**P2 roadmap (GPX F1–F6 + checklista §2.3, Auth/MFA):** [P2_ROADMAP.md](./P2_ROADMAP.md)  
 **Railway prod verify:** [operations/RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1`
 
 ## Tech Stack

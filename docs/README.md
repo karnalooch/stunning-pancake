@@ -90,7 +90,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 |------|--------|------|
 | [P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md) | ✅ Active | Post-deploy smoke (**P0 DONE**) |
 | [P1_ROADMAP.md](./admin/P1_ROADMAP.md) | ✅ Active | Paczki 1–6; **1a done**, 1b + Paczka 2 |
-| [P2_ROADMAP.md](./admin/P2_ROADMAP.md) | ✅ Active | GPX forensics, Auth/MFA (post-P1) |
+| [P2_ROADMAP.md](./admin/P2_ROADMAP.md) | ✅ Active | GPX backlog (F1–F6, §2.3), Auth/MFA (post-P1) |
 | [ROADMAP_V3.md](./admin/ROADMAP_V3.md) | ✅ Active | Spec v3 |
 | [UI_AUDIT_2026-06-02.md](./admin/UI_AUDIT_2026-06-02.md) | 📦 Snapshot | Audyt UI; P0 zamknięte |
 

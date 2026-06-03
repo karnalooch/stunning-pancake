@@ -24,7 +24,7 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 | [README.md](./README.md) | Design system, moduły, dev, nawigacja RBAC | ✅ Active | Po większej zmianie UI |
 | [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | Post-deploy GO/NO-GO per rola | ✅ Active | **Każdy** deploy admin |
 | [P1_ROADMAP.md](./P1_ROADMAP.md) | Paczki 1–6; **1a ✅**, 1b + Paczka 2 | ✅ Active | Co sprint / po paczce |
-| [P2_ROADMAP.md](./P2_ROADMAP.md) | GPX forensics (F1–F5), Auth/MFA ex-Paczka 6 | ✅ Active | Przy kickoff P2 |
+| [P2_ROADMAP.md](./P2_ROADMAP.md) | GPX backlog (F1–F6, checklista §2.3), Auth/MFA ex-Paczka 6 | ✅ Active | Przy kickoff P2 |
 | [ROADMAP_V3.md](./ROADMAP_V3.md) | Spec v3 (mapa, paginacja, AI coach) | ✅ Active | Przy kickoff v3 |
 | [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) | Snapshot audytu tras i luk | 📦 Snapshot | Nie nadpisywać — nowy plik `UI_AUDIT_*` |
 

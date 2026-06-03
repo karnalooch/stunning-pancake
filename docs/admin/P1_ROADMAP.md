@@ -20,7 +20,7 @@
 | Sponsor | **Paczka 2** — **następna** (po domknięciu 1b operacyjnie) |
 | Tenant Admin | **Paczka 4** — za ~1 tydzień |
 | Auth / 2FA | **[P2_ROADMAP.md](./P2_ROADMAP.md)** § Auth (było Paczka 6) |
-| GPX / forensics | **[P2_ROADMAP.md](./P2_ROADMAP.md)** § GPX — **nie** Paczka 1c |
+| GPX / forensics | **[P2_ROADMAP.md](./P2_ROADMAP.md)** §2 GPX (F1–F6 + checklista §2.3) — **nie** Paczka 1c |
 | Moderatorzy | **Paczka 5** |
 | RAM / Railway | **10D** — SSOT [RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELERY_MEMORY.md) |
 | Deploy | **11C** — brak stagingu → §4 |
@@ -99,7 +99,7 @@ Szczegóły bez zmian merytorycznych — patrz poprzednia wersja dokumentu:
 
 | Temat | Dokument |
 |-------|----------|
-| GPX on-demand, archiwum S3, anty-cheat batch, forensics, RODO ZIP | [P2_ROADMAP.md](./P2_ROADMAP.md) § GPX (F1–F5) |
+| GPX: on-demand, S3, anty-cheat, forensics, RODO ZIP, retencja, import (F6) | [P2_ROADMAP.md](./P2_ROADMAP.md) §2 — **pełna checklista** §2.3 |
 
 **Uwaga:** „P2” w nazewnictwie to **osobny tor roadmapy** ([P2_ROADMAP.md](./P2_ROADMAP.md)), nie skrót od „Paczka 2 Sponsor”.
 
@@ -146,6 +146,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-03 | Cross-link: pełna checklista GPX w P2 §2.3 (F1–F6) |
 | 2026-06-03 | GPX → P2_ROADMAP; wyjaśnienie P2 vs Paczka 6 |
 | 2026-06-03 | Paczka 1b: routing backpressure + Dashboard sim KPI |
 | 2026-06-03 | Paczka 1a done; linki verify script; 1b + Paczka 2 next |

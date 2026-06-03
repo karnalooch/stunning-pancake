@@ -18,12 +18,12 @@
 
 | Tor P2 | Opis | Powiązanie P1 |
 |--------|------|----------------|
-| **GPX & activity forensics** | Eksport, archiwum, anty-cheat batch, forensics ops, RODO ZIP | Odłożone z wczesnego slice **1c** → P2 |
-| **Auth / MFA** | 2FA, hardening wipe, impersonation audit | Było **Paczka 6** w P1 — szczegóły §3 |
+| **GPX & activity forensics** | Eksport, archiwum, anty-cheat batch, forensics ops, RODO ZIP, retencja | Odłożone z wczesnego slice **1c** → P2 |
+| **Auth / MFA** | 2FA, hardening wipe, impersonation audit | Było **Paczka 6** w P1 — szczegóły §4 |
 
-**Decyzja produktowa:** GPX **nie jest wymagany** do zakończenia jazdy (real ani symulowanej). Źródło prawdy pozostaje `Activity.route_path` (PostGIS) + pipeline weryfikacji. GPX to **artefakt pochodny** (download, archiwum, compliance).
+**Decyzja produktowa:** GPX **nie jest wymagany** do zakończenia jazdy (real ani symulowanej). Źródło prawdy pozostaje `Activity.route_path` (PostGIS) + pipeline weryfikacji. GPX to **artefakt pochodny** (download, archiwum, compliance, dochodzenie).
 
-**Symulator:** jazdy symulowane muszą być oznaczone `simulated=true` w metadanych GPX / `Activity` — **nie** mieszać z rankingiem athlete bez jawnej etykiety.
+Pełna lista use-case’ów GPX (żeby nic nie umknęło): **§2.3**.
 
 ---
 
@@ -38,7 +38,16 @@
 | SSOT weryfikacji | [ARCHITECTURE.md](../ARCHITECTURE.md) · [operations/BROUTER.md](../operations/BROUTER.md) |
 | RODO / eksport | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 |
 
-### 2.2 Fazy implementacji
+### 2.2 Fazy implementacji (F1–F6)
+
+| Faza | Nazwa | Cel (skrót) | Gate |
+|------|-------|-------------|------|
+| **F1** | On-demand download | `GET /api/activities/{id}/gpx/` z `route_path` | Brak wymogu object storage |
+| **F2** | Async archiwum | Po verified → S3/R2 + `gpx_sha256` | Idempotencja po hash `route_path` |
+| **F3** | Anty-cheat (batch) | Re-verify, fingerprint, kinematyka, metadane | Nie zastępuje live BRouter/pluginów |
+| **F4** | Forensics / CI | OOM replay, golden GPX, routing failures | Overlap z ops + release gate |
+| **F5** | Bulk export RODO | `GET /api/users/me/export/` → ZIP | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 |
+| **F6** | Import upload | GPX → nowa aktywność (Strava/Garmin-style) | **Opcjonalny P2+** — osobny produkt |
 
 #### Faza 1 — on-demand download (MVP)
 
@@ -49,8 +58,6 @@
 | RBAC | Właściciel aktywności + admin GO / tenant scope |
 | Admin UI | Opcjonalnie „Pobierz GPX” przy debugu jazdy (sim + real) |
 | Test | Jedna jazda bike z LineString → plik z `<trkpt lat lon>` |
-
-**Gate:** brak wymogu zapisu w object storage — wystarczy generacja przy żądaniu.
 
 #### Faza 2 — async archiwum (verified complete)
 
@@ -68,11 +75,12 @@ GPX **nie zastępuje** live anty-cheatu (BRouter + pluginy) — to **archiwum do
 
 | Job / use case | Cel |
 |----------------|-----|
-| `reverify_gpx_batch` | Po update BRouter / nowych progach — ponowny `process_activity` na archiwum bez mutacji prod na żywo |
-| Duplicate route fingerprint | Hash polyline / fingerprint — ta sama trasa w wielu kontach (bot farm, copy-paste) |
+| `reverify_gpx_batch` | Po update BRouter / nowych progach — ponowny `process_activity` na archiwum |
+| Duplicate route fingerprint | Hash polyline / fingerprint — bot farm, copy-paste GPX |
 | Kinematic anomalies | Prędkość między `<trkpt>`, teleporty, nierealistyczne przyspieszenia — uzupełnienie `ml_anomaly` |
-| Metadata mismatch | Dystans GPX vs `Activity.distance` vs BRouter vs czas → flaga do [Paczka 5](./P1_ROADMAP.md#4-paczki-36-skrót) moderator inbox |
-| Sim vs real | Filtr `simulated=true` — sim GPX wyłączony z rankingów athlete |
+| Metadata mismatch | Dystans GPX vs `Activity.distance` vs BRouter vs czas → flaga moderatora |
+| Wearables cross-check | `external_id` Strava/Garmin vs wygenerowany GPX |
+| Sim vs real | `simulated=true` — sim GPX **nigdy** w rankingu athlete bez jawnej etykiety |
 
 **Powiązane:** moduł Anti-Cheat SOC w admin · [RBAC.md](../RBAC.md).
 
@@ -80,12 +88,12 @@ GPX **nie zastępuje** live anty-cheatu (BRouter + pluginy) — to **archiwum do
 
 | Use case | Przykład |
 |----------|----------|
-| Post-mortem OOM/SIGKILL | GPX przy COMPLETED pokazuje, gdzie jazda/sim faktycznie skończyła po utracie Redis FSM |
-| FSM / `live_tick` debug | GPX końcowy vs ostatni snapshot telemetry w Redis — zgodność z Live Map |
-| Routing failures | GPX przy `FAILED_UNROUTABLE` + log BRouter — dane OSM vs bug dispatch |
-| Golden files CI | Zestaw referencyjnych GPX z prod/staging → po release % verified nie spada |
-| Sim vs Redis replay | Ten sam GPX golden file → deterministyczny wynik weryfikacji w testach |
-| Support GO | „Km się nie liczą” — pobranie GPX + lokalny replay pipeline |
+| Post-mortem OOM/SIGKILL | GPX przy COMPLETED vs częściowa jazda po utracie Redis FSM |
+| FSM / `live_tick` debug | GPX końcowy vs ostatni snapshot telemetry w Redis |
+| Routing failures | GPX przy `FAILED_UNROUTABLE` + log BRouter |
+| Golden files CI | Zestaw referencyjnych GPX → po release % verified nie spada |
+| Sim vs Redis replay | Ten sam golden GPX → deterministyczny wynik weryfikacji w testach |
+| Support GO | Sporne km — pobranie GPX + lokalny replay pipeline |
 
 Runbooki: [operations/SIMULATOR.md](../operations/SIMULATOR.md) · [reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md).
 
@@ -101,31 +109,112 @@ Runbooki: [operations/SIMULATOR.md](../operations/SIMULATOR.md) · [reports/RELI
 
 **Uwaga:** Faza 5 może startować równolegle z Fazą 1 (ten sam generator GPX), ale pełny ZIP wymaga stabilnego kontraktu eksportu.
 
-### 2.3 Poza zakresem P2 (osobny tor)
+#### Faza 6 — import upload (opcjonalny P2+)
 
-| Temat | Uzasadnienie |
-|-------|--------------|
-| Upload GPX jako warunek finish | Duplikacja względem `route_path`; import Strava/Garmin = osobny produkt |
-| GPX co tick (surowa telemetria) | Retencja surowych punktów — [CONSTITUTION.md](../CONSTITUTION.md) §8.2 (90 dni anonimizacja) |
-| Import GPX → nowa aktywność | Faza 3 w starej rozmowie produktowej — **nie** w tym P2 slice |
+| Element | Spec |
+|---------|------|
+| Scope | Upload GPX z zewnętrznego źródła → nowa `Activity` (import Strava/Garmin) |
+| Status | **Nie** w core P2 F1–F5; osobny tor produktowy po stabilnym eksporcie |
+| Non-goal | Upload **nie** jako warunek `finish` jazdy w aplikacji |
 
-### 2.4 Architektura docelowa (skrót)
+---
+
+### 2.3 Backlog możliwości — pełna checklista
+
+Checklist z rozmowy produktowej (2026-06-03). Kolumna **Faza** wskazuje domyślne mapowanie na §2.2; pozycje bez fazy mogą wejść równolegle (np. Paczka 5).
+
+**Legenda:** ☐ = do zrobienia w P2 · — = poza core slice / później
+
+#### 2.3.1 Anty-cheat / oszuści
+
+| ☐ | Use case | Opis | Faza |
+|---|----------|------|------|
+| ☐ | Offline re-weryfikacja | Po zmianie BRouter / reguł — batch Celery `reverify_gpx_batch` na archiwum GPX | F3 |
+| ☐ | Anomalie kinematyczne | Prędkość między trackpointami, teleport, nierealistyczne przyspieszenie — **uzupełnienie** `ml_anomaly`, nie duplikat | F3 |
+| ☐ | Duplikat trasy (fingerprint) | Hash polyline / fingerprint — bot farmy, copy-paste GPX między kontami | F3 |
+| ☐ | Niespójność metadanych | Dystans GPX vs `Activity.distance` vs BRouter vs duration → flaga do kolejki moderatora | F3 · [Paczka 5](./P1_ROADMAP.md#4-paczki-36-skrót) |
+| ☐ | Cross-check wearables | `external_id` Strava/Garmin vs GPX wygenerowany z `route_path` | F3 |
+| ☐ | Simulator vs real | `simulated=true` w metadanych GPX / `Activity`; **nigdy** ranking athlete bez jawnej etykiety | F2–F3 |
+
+#### 2.3.2 Awarie systemu / debug
+
+| ☐ | Use case | Opis | Faza |
+|---|----------|------|------|
+| ☐ | Post-mortem OOM/SIGKILL | Porównanie częściowej jazdy vs finalny GPX po utracie workerów / Redis | F4 |
+| ☐ | Replay `live_tick` / FSM | GPX końcowy vs ostatnia telemetria w Redis — wykrycie bugów tick/FSM | F4 |
+| ☐ | Forensics routingu | `FAILED_UNROUTABLE` + logi BRouter + GPX — OSM vs bug dispatch | F4 |
+| ☐ | Golden set w CI | Regresja po release — zestaw referencyjnych GPX, % verified nie spada | F4 |
+| ☐ | Support GO — sporne km | Pobranie GPX przy sporze o dystans / weryfikację | F1 · F4 |
+
+#### 2.3.3 Produkt, compliance, dane (inne)
+
+| ☐ | Use case | Opis | Faza |
+|---|----------|------|------|
+| ☐ | RODO — przenoszenie danych | ZIP profil + GPX: `GET /api/users/me/export/` — [CONSTITUTION.md](../CONSTITUTION.md) §8.3 | F5 |
+| ☐ | Kolejka moderatora | Załącznik mapa + GPX w case — integracja [Paczka 5](./P1_ROADMAP.md#4-paczki-36-skrót) | F1 · overlap 5 |
+| ☐ | Retraining ML | Historyczne GPX do modeli anomalii (`ml_anomaly`) | F3 · — |
+| ☐ | Jakość mapy / BRouter | Agregacja problematycznych segmentów (bez PII) z failed/unroutable + GPX | F4 · — |
+| ☐ | Walidacja heatmapy | Unia GPX vs heatmapa w DB — wykrycie driftu | — |
+| ☐ | Udostępnianie społecznościowe | Uproszczony GPX ze stref prywatności wyciętych | F1 · — |
+| ☐ | Integralność czasu eventu | Timestampy GPX vs okno czasowe eventu | F3 · — |
+| ☐ | Retencja warstwowa | Surowy GPX ~90 dni (forensics); potem tylko hash + statystyki | F2 · [CONSTITUTION.md](../CONSTITUTION.md) §8.2 |
+
+#### 2.3.4 Mapowanie checklista → fazy (macierz)
+
+| Faza | Zakres checklisty (§2.3) |
+|------|---------------------------|
+| F1 | On-demand GET, GO support download, moderator preview (read) |
+| F2 | S3 archiwum, `gpx_sha256`, retencja 90d → hash+stats |
+| F3 | Re-verify batch, fingerprint, kinematyka, metadata, wearables, sim tag, event time, ML retrain input |
+| F4 | OOM/FSM/routing forensics, golden CI, BRouter quality aggregate |
+| F5 | RODO ZIP export |
+| F6 | Import upload (opcjonalny) |
+
+---
+
+### 2.4 Jawne non-goals (P2 core)
+
+| Non-goal | Uzasadnienie |
+|----------|--------------|
+| GPX wymagany do `finish` jazdy | `route_path` + live pipeline wystarczą; GPX artefakt pochodny |
+| `route_path` nie jest źródłem prawdy | **Źródło prawdy:** PostGIS `route_path` + weryfikacja BRouter |
+| GPX co tick (surowa telemetria) | Brak per-second storage; retencja zgodnie z [CONSTITUTION.md](../CONSTITUTION.md) §8.2 |
+| Import GPX w core P2 | F6 — osobny tor P2+ (Strava/Garmin import) |
+
+---
+
+### 2.5 Architektura docelowa (skrót)
 
 ```text
-Mobile/Sim → GPS/punkty → route_path → finalize → verify (BRouter)
+Mobile/Sim → GPS/punkty → route_path (SSOT) → finalize → verify (BRouter)
                                     ↓
-                         Faza 1: GET …/gpx/ (on-demand)
+                         F1: GET …/gpx/ (on-demand)
                                     ↓
-                         Faza 2: generate_gpx_task → S3/R2 + gpx_sha256
+                         F2: generate_gpx_task → S3/R2 + gpx_sha256
                                     ↓
-              Faza 3–4: reverify · fingerprint · forensics · golden CI
+              F3: reverify · fingerprint · kinematyka · wearables · sim tag
                                     ↓
-                         Faza 5: export_user_data_task → ZIP (RODO)
+              F4: OOM/FSM forensics · golden CI · routing failures
+                                    ↓
+                         F5: export_user_data_task → ZIP (RODO)
+                                    ↓
+                         F6: import upload (opcjonalny P2+)
 ```
 
 ---
 
-## 3. Auth / MFA (ex-P1 Paczka 6)
+## 3. Kolejność względem P1
+
+```text
+P1: 1a ✅ → 1b ✅ → 2 Sponsor → 3 GO tooling → 4 Tenant Admin → 5 Moderator → 6 Auth (skrót w P1)
+P2 GPX: F1–F2 (core) ──► F3 anty-cheat ──► F4 forensics ──► F5 RODO ZIP ──► F6 import (opcjonalnie)
+         ↑ start po 1b                          ↑ overlap z Paczka 5 (mapa + GPX w inbox)
+P2 Auth/MFA: po Paczka 4 lub równolegle (ryzyko security — priorytet dla GO)
+```
+
+---
+
+## 4. Auth / MFA (ex-P1 Paczka 6)
 
 Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.md#4-paczki-36-skrót) — realizacja w torze P2 **po** paczkach produktowych P1 (5–6 w kolejności P1, lub równolegle gdy zespół auth oddzielny).
 
@@ -141,23 +230,12 @@ Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.m
 
 ---
 
-## 4. Kolejność względem P1
-
-```text
-P1: 1a ✅ → 1b ✅ → 2 Sponsor → 3 GO tooling → 4 Tenant Admin → 5 Moderator → 6 Auth (skrót w P1)
-P2: GPX F1–F2 (core) ──► F3 anty-cheat ──► F4 forensics ──► F5 RODO ZIP
-         ↑ start po 1b                          ↑ overlap z Paczka 5
-P2 Auth/MFA: po Paczka 4 lub równolegle (ryzyko security — priorytet dla GO)
-```
-
----
-
 ## 5. Linki operacyjne
 
 | Dokument | Opis |
 |----------|------|
-| [P1_ROADMAP.md](./P1_ROADMAP.md) | Aktywna sekwencja paczek 1–6 |
-| [CONSTITUTION.md](../CONSTITUTION.md) | GPX w eksporcie RODO; Celery dla przetwarzania GPX |
+| [P1_ROADMAP.md](./P1_ROADMAP.md) | Aktywna sekwencja paczek 1–6; GPX odłożone → §2 tutaj |
+| [CONSTITUTION.md](../CONSTITUTION.md) | GPX w eksporcie RODO; retencja; Celery dla przetwarzania GPX |
 | [DATA_RESILIENCE.md](../DATA_RESILIENCE.md) | `route_path` vs telemetry — kontekst forensics |
 | [operations/SIMULATOR.md](../operations/SIMULATOR.md) | Sim FSM, `simulated` tagging |
 | [compliance/RCP.md](../compliance/RCP.md) | Rejestr czynności RODO |
@@ -168,4 +246,5 @@ P2 Auth/MFA: po Paczka 4 lub równolegle (ryzyko security — priorytet dla GO)
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-03 | Pełna checklista GPX (§2.3): anty-cheat, forensics, RODO, retencja; fazy F1–F6; non-goals |
 | 2026-06-03 | Utworzenie P2; GPX forensics (F1–F5) + Auth/MFA ex-Paczka 6; decyzja: GPX nie blokuje finish |
