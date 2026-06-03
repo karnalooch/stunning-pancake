@@ -90,6 +90,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 |------|--------|------|
 | [P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md) | ✅ Active | Post-deploy smoke (**P0 DONE**) |
 | [P1_ROADMAP.md](./admin/P1_ROADMAP.md) | ✅ Active | Paczki 1–6; **1a done**, 1b + Paczka 2 |
+| [P2_ROADMAP.md](./admin/P2_ROADMAP.md) | ✅ Active | GPX forensics, Auth/MFA (post-P1) |
 | [ROADMAP_V3.md](./admin/ROADMAP_V3.md) | ✅ Active | Spec v3 |
 | [UI_AUDIT_2026-06-02.md](./admin/UI_AUDIT_2026-06-02.md) | 📦 Snapshot | Audyt UI; P0 zamknięte |
 
@@ -162,7 +163,7 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 | **Nowy deweloper** | Getting Started → Installation → Development → Architecture → [ADR-008](./adr/008-backend-strategy.md) |
 | **Platform Operator** | [OPERATIONS_INDEX](./operations/OPERATIONS_INDEX.md) → RAILWAY_PRODUCTION_CHECKLIST → `railway-verify-production.ps1` → RAILWAY_CELERY_MEMORY → SIMULATOR |
 | **Release Manager** | PRE_RELEASE_VERIFICATION → [COMPLIANCE_INDEX](./compliance/COMPLIANCE_INDEX.md) → P0_SMOKE_CHECKLIST |
-| **Admin / Frontend** | [ADMIN_INDEX](./admin/ADMIN_INDEX.md) → P1_ROADMAP |
+| **Admin / Frontend** | [ADMIN_INDEX](./admin/ADMIN_INDEX.md) → P1_ROADMAP · [P2_ROADMAP](./admin/P2_ROADMAP.md) |
 | **Mobile release** | [MOBILE.md](./operations/MOBILE.md) → DATA_RESILIENCE |
 | **Integrator API** | API → RBAC → Getting Started |
 | **DPO / Legal** | [COMPLIANCE_INDEX](./compliance/COMPLIANCE_INDEX.md) → RCP |

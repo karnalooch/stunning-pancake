@@ -2,7 +2,7 @@
 
 | | |
 |--|--|
-| **Status** | ✅ Active — Paczka **1a** wdrożona; **1b** i Paczka **2** następne |
+| **Status** | ✅ Active — Paczka **1a** + **1b** (backpressure + sim KPI); Paczka **2** następna |
 | **Główny użytkownik** | `GLOBAL_OWNER` |
 | **Post-deploy gate** | [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) |
 | **Operacje Railway** | [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1` |
@@ -19,7 +19,8 @@
 | Simulator | **Paczka 1** — pierwsza, codzienne użycie |
 | Sponsor | **Paczka 2** — **następna** (po domknięciu 1b operacyjnie) |
 | Tenant Admin | **Paczka 4** — za ~1 tydzień |
-| Auth / 2FA | **P2** (Paczka 6) |
+| Auth / 2FA | **[P2_ROADMAP.md](./P2_ROADMAP.md)** § Auth (było Paczka 6) |
+| GPX / forensics | **[P2_ROADMAP.md](./P2_ROADMAP.md)** § GPX — **nie** Paczka 1c |
 | Moderatorzy | **Paczka 5** |
 | RAM / Railway | **10D** — SSOT [RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELERY_MEMORY.md) |
 | Deploy | **11C** — brak stagingu → §4 |
@@ -27,12 +28,12 @@
 
 ### Kolejność paczek (8A)
 
-1. **Simulator + skala** — 1a ✅ · 1b 🚧  
+1. **Simulator + skala** — 1a ✅ · 1b ✅ (core) · load-test / map FSM 🚧  
 2. **Sponsor** (Paczka 2) — **teraz (product)**  
 3. **GO tooling** (Paczka 3)  
 4. **Tenant Admin** (Paczka 4)  
 5. **Moderator queue** (Paczka 5)  
-6. **Auth P2** (Paczka 6)
+6. **Auth** (Paczka 6) — szczegóły w [P2_ROADMAP.md](./P2_ROADMAP.md) § Auth/MFA
 
 ---
 
@@ -59,15 +60,15 @@
 
 Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md).
 
-### Paczka 1b 🚧 (następny slice — backend/ops)
+### Paczka 1b ✅ (core 2026-06-03) · follow-up 🚧
 
-| Element | Kryterium akceptacji |
-|---------|----------------------|
-| Backpressure kolejki `routing` | Limit dispatch / metryki głębokości kolejki |
-| Dashboard KPI „sim ON” | Widoczność na prod bez mylenia z KPI athlete |
-| Live Map + FSM | Pełna spójność warstw mapy ze stanami Redis |
-| Load-test 10k | Osobny worker routing, raport w [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) / SIMULATOR |
-| Metryki | Datadog (opcjonalnie) — `sim.routing.*` |
+| Element | Status |
+|---------|--------|
+| Backpressure kolejki `routing` | ✅ `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH`, per-tick cap, API + log `sim.routing.backpressure` |
+| Dashboard KPI „sim ON” | ✅ sekcja **Live Simulator** na Dashboard GO (`sim_kpi` w `/admin/stats/`) |
+| Live Map + FSM | 🚧 pełna spójność warstw mapy ze stanami Redis |
+| Load-test 10k | 🚧 raport w [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) |
+| Metryki Datadog | 🚧 opcjonalnie — `sim.routing.*` już w logach strukturalnych |
 
 ---
 
@@ -92,7 +93,15 @@ Szczegóły bez zmian merytorycznych — patrz poprzednia wersja dokumentu:
 - **Paczka 3** — health strip GO, drill-down tenant  
 - **Paczka 4** — `TENANT_ADMIN` scoped IA  
 - **Paczka 5** — unified moderator inbox; fix `ModeratorWorklist` tenantId  
-- **Paczka 6** — MFA, impersonation audit  
+- **Paczka 6** — MFA, impersonation audit → pełny scope: [P2_ROADMAP.md](./P2_ROADMAP.md) § Auth/MFA  
+
+### Odłożone do P2 (nie P1)
+
+| Temat | Dokument |
+|-------|----------|
+| GPX on-demand, archiwum S3, anty-cheat batch, forensics, RODO ZIP | [P2_ROADMAP.md](./P2_ROADMAP.md) § GPX (F1–F5) |
+
+**Uwaga:** „P2” w nazewnictwie to **osobny tor roadmapy** ([P2_ROADMAP.md](./P2_ROADMAP.md)), nie skrót od „Paczka 2 Sponsor”.
 
 ---
 
@@ -137,5 +146,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-03 | GPX → P2_ROADMAP; wyjaśnienie P2 vs Paczka 6 |
+| 2026-06-03 | Paczka 1b: routing backpressure + Dashboard sim KPI |
 | 2026-06-03 | Paczka 1a done; linki verify script; 1b + Paczka 2 next |
 | 2026-06-03 | Utworzenie dokumentu; FSM + routing queue + API/UI |

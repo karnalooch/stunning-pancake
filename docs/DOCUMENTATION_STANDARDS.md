@@ -87,6 +87,7 @@ Dokumenty referencyjne (`ARCHITECTURE.md`, `API.md`): metadane + **Cel** + **Pow
 | Symulator (spec) | [SIMULATOR_ARCHITECTURE.md](./SIMULATOR_ARCHITECTURE.md) |
 | BRouter ops | [operations/BROUTER.md](./operations/BROUTER.md) |
 | P1 admin roadmap | [admin/P1_ROADMAP.md](./admin/P1_ROADMAP.md) |
+| P2 admin roadmap | [admin/P2_ROADMAP.md](./admin/P2_ROADMAP.md) |
 | Post-deploy admin smoke | [admin/P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md) |
 | Admin hub | [admin/README.md](./admin/README.md) |
 | Release legal gate | [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) |
