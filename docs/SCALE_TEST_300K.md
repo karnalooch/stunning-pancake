@@ -143,6 +143,26 @@ Service `celery_worker_simulation` should depend on `brouter` and set `BROUTER_U
 | Map API p95 (bbox, city zoom) | | `telemetry/live` |
 | Werdykt | PASS / FAIL | |
 
+### Snapshot obserwacyjny prod (2026-06-03) — bez uruchamiania 10k
+
+> Read-only z `railway logs` (`marvelous-gratitude / production`). **To nie jest** kontrolowany run 10k — to obserwacja **bieżącego live sim** na prod. Dokładne `active_ratio`, `routing_queue_depth`, `ride_warming` są **niedostępne bez autoryzacji** (`GET /admin/live-simulate/` → `IsAdminRole`, zwraca 401 bez tokena admina). Szablon powyżej pozostaje do wypełnienia podczas właściwego, kontrolowanego testu 10k.
+
+| Metryka | Wartość (obs: live sim 2026-06-03 ~23:24–23:32 UTC) | Uwagi |
+|---------|------------------------------------------------------|--------|
+| `target_users` / pool | — (10k batch nieuruchomiony) | obserwacja dot. istniejącego live sim, nie nowego batcha |
+| `active_ratio` | **nieznany** | API admin auth-gated (401 bez tokena) — nie odczytano |
+| `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | ustawiony (`> 0`) | backpressure aktywny ⇒ cap włączony; dokładna wartość env nieodczytana |
+| `routing_queue_depth` (peak / steady) | stabilny **przy cap** (pinned) | backpressure aktywny ~96% ticków; liczbowa wartość API-gated |
+| `routing_backpressure_active` (min) | **≥ 7,5 min ciągłej i w toku** | obserwacja 23:24:32 → 23:32:15+ bez przerwy |
+| `dispatches_throttled` (ticks) | ~80 / 83 ticków (okno 23:27–23:32) | ≈ co tick throttling |
+| `ride_warming` (peak) | nieodczytany (API-gated) | warming pinned przy cap (nie maleje przy bieżącym ratio) |
+| `ride_active` / `currently_riding` | nieodczytany (API-gated) | — |
+| `sim.routing.backpressure` (log count) | ~80 w oknie 5 min (≈ co tick) | `celery-worker-simulation` |
+| `sim.routing.unroutable` (log count) | **0** w oknie | brak wysp / brak braku trasy |
+| Tick stale / worker OOM | brak OOM; tick ~3 s stabilny | 1× `sim.routing.error` + clock drift 61 s (przejściowe, recovered) |
+| Map API p95 (bbox, city zoom) | nieodczytany | wymaga sesji admina |
+| Werdykt | **SZABLON GOTOWY** — właściwy 10k run **odroczony** (zgoda Platform Operator) | routing drenuje stabilnie (~1,3–1,8 s/trasę), backpressure chroni system, ale ciągły >7,5 min ⇒ p. 6 gate niezamknięty |
+
 **Gate:** wszystkie punkty [P1_ROADMAP.md](./admin/P1_ROADMAP.md) § Operational closure ✅ przed startem Paczki 2 Sponsor.
 
 ---
