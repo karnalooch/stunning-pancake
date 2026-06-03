@@ -8,7 +8,8 @@
 
 The 4VELO Admin Panel has been redesigned with a world-class, premium UI system featuring full dark mode support, fluid animations, and a comprehensive design token system.
 
-**Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)
+**Latest UI audit (routes, gaps, market-standard roadmap):** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md)  
+**P0 closure (2026-06-02):** audit §8 · post-deploy smoke → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)
 
 ## Tech Stack
 
@@ -266,7 +267,7 @@ node scripts/audit-admin-full.mjs   # → audit-screenshots/audit-report.json
 node scripts/explore-admin.mjs      # → probe-screenshots/report.json
 ```
 
-See [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) for findings and P0–P3 priorities.
+See [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) for findings and P0–P3 priorities. After redeploy, run [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) before starting P1.
 
 ### Reliability / release audit
 

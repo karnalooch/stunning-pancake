@@ -1,7 +1,7 @@
 import {
   Box, Table, Badge, Group, Text, Button, TextInput, Stack, ActionIcon,
   Drawer, Modal, ScrollArea, Tabs, Select, PasswordInput,
-  Switch, Textarea, Tooltip, Card, Checkbox, Progress
+  Switch, Textarea, Tooltip, Card, Checkbox, Progress, Skeleton
 } from '@mantine/core';
 import { useState, useEffect, useCallback } from 'react';
 import { useDebouncedValue } from '@mantine/hooks';
@@ -812,6 +812,15 @@ export const Users = () => {
       >
         {selectedUser && (
           <ScrollArea style={{ height: 'calc(100vh - 80px)' }} offsetScrollbars>
+            {drawerUserLoading ? (
+              <Stack gap="md" p="md">
+                <Skeleton height={72} radius="md" />
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} height={140} radius="md" />
+                ))}
+                <Skeleton height={44} radius="md" />
+              </Stack>
+            ) : (
             <Stack gap="xl" p="md">
               {/* Profile Card Summary */}
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
@@ -960,6 +969,7 @@ export const Users = () => {
                 )}
               </Stack>
             </Stack>
+            )}
           </ScrollArea>
         )}
       </Drawer>

@@ -11,7 +11,8 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [FULL_INDUSTRY_AUDIT_2026-05-27.md](./FULL_INDUSTRY_AUDIT_2026-05-27.md) | Branżowy |
 | [FRONTEND_BACKEND_GAP_REPORT.md](./FRONTEND_BACKEND_GAP_REPORT.md) | Luki FE/BE |
 | [RELIABILITY_AUDIT_PLAYBOOK.md](./RELIABILITY_AUDIT_PLAYBOOK.md) | Playbook niezawodnosci (release gate + incident runbook) |
-| [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02) |
+| [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02); §8 P0 done |
+| [../admin/P0_SMOKE_CHECKLIST.md](../admin/P0_SMOKE_CHECKLIST.md) | Post-deploy P0 smoke per role (printable) |
 
 Powiązane dokumenty operacyjne:
 - [../operations/PRE_RELEASE_VERIFICATION.md](../operations/PRE_RELEASE_VERIFICATION.md) — praktyczny gate przed release.
