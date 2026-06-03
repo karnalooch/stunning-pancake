@@ -28,7 +28,7 @@
 
 ### Kolejność paczek (8A)
 
-1. **Simulator + skala** — 1a ✅ · 1b ✅ (core) · load-test 10k 🚧 · operational gate 🚧  
+1. **Simulator + skala** — 1a ✅ · 1b ✅ (core) · load-test telemetry 🟧 · operational gate 🚧  
 2. **Sponsor** (Paczka 2) — **teraz (product)**  
 3. **GO tooling** (Paczka 3)  
 4. **Tenant Admin** (Paczka 4)  
@@ -68,7 +68,7 @@ Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRO
 | Dashboard KPI „sim ON” | ✅ sekcja **Live Simulator** na Dashboard GO (`sim_kpi` w `/admin/stats/`) |
 | Simulator page — queue KPI | ✅ `routing_queue_depth`, backpressure, throttled (live-simulate API) |
 | Live Map + FSM | ✅ `active_riding` / `ride_on_map` = ACTIVE; `city_counts` FSM; `ride_state` w payload; badge warming |
-| Load-test 10k | 🚧 szablon raportu — [SCALE_TEST_300K.md](../SCALE_TEST_300K.md) § Load-test 10k |
+| Load-test 10k | ✅ szablon + lokalny ingest/map — [TELEMETRY_LOAD_TEST.md](../operations/TELEMETRY_LOAD_TEST.md) · 50k sustained **odroczone** |
 | Metryki Datadog | ✅ log keys — [DATADOG_SIMULATOR.md](../operations/DATADOG_SIMULATOR.md) |
 | Testy pytest (backpressure + status + routing) | ✅ `-m simulator_light` via `run_pytest.py` |
 | Enterprise: markery `simulator_light` / `simulator_integration` + CI | ✅ `pyproject.toml`, `run_pytest.py`, Redis db/15 w CI |
@@ -81,7 +81,7 @@ Szczegóły env/RAM: [RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRO
 | 2 | `.\scripts\railway-verify-production.ps1` — PASS (jeśli `RAILWAY_API_TOKEN`) | ✅ PASS 22/22 (2026-06-03, push `b9652e24`) |
 | 3 | P0 smoke GO — [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | 🟡 częściowo (2026-06-03) — infra/health auto: `/health/`→200, Admin SPA→200, API admin (`/admin/stats/`, `/admin/live-simulate/`, `/api/infra/health/`)→401 (poprawny guard), 7/7 serwisów Railway Online, workery `ready`. **Brakuje** ról UI (GLOBAL_OWNER/TENANT_ADMIN/MODERATOR/SPONSOR) — wymaga interaktywnego logowania → pełne GO niezamknięte |
 | 4 | Live sim: `ride_warming` → spadek; `routing_queue_depth` stabilne przy `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | 🟡 częściowo (2026-06-03) — `routing_queue_depth` **stabilny przy cap** (backpressure pinning), `celery-worker-routing` drenuje ~1,3–1,8 s/trasę, brak floodu błędów. `ride_warming` → spadek **niezweryfikowany** (warming pinned przy cap; wartości API auth-gated). **Update 2026-06-03:** skalowanie poziome routing `numReplicas=1→2→3` (railway.json + GraphQL `serviceInstanceUpdate`, ~1 GB/replikę, łącznie ~3 GB). Pomiar prod po 3 replikach: 3× `routing@` ready (`mingle: sync`, brak OOM), drenaż agregat **~1,89/s** (~0,63/s × 3, ~liniowy scale). **Ale** `routing_queue_depth` **nadal przy cap** — backpressure przypięty (patrz p.6). Drenaż urósł liniowo, popyt nadal > drenaż przy bieżącym `active_ratio` |
-| 5 | Load-test 10k — wypełniony szablon metryk w SCALE_TEST_300K (bez prod 10k bez zgody) | ✅ (2026-06-03) — szablon + [snapshot obserwacyjny prod](../SCALE_TEST_300K.md#snapshot-obserwacyjny-prod-2026-06-03--bez-uruchamiania-10k) wypełnione; **właściwy 10k run odroczony** do zgody Platform Operator |
+| 5 | Load-test 10k — wypełniony szablon metryk w SCALE_TEST_300K (bez prod 10k bez zgody) | ✅ (2026-06-04) — szablon + [snapshot obserwacyjny prod](../SCALE_TEST_300K.md#snapshot-obserwacyjny-prod-2026-06-03--bez-uruchamiania-10k) + **lokalny harness** [TELEMETRY_LOAD_TEST.md](../operations/TELEMETRY_LOAD_TEST.md): ingest 6351–13338 pos/s (laptop), map p95 1177 ms @ 1020 riders (FAIL vs 300 ms — staging); **właściwy 50k run odroczony** |
 | 6 | Logi prod: brak lawiny `sim.routing.backpressure` >15 min przy normalnym `active_ratio` | ☐ niezweryfikowane (2026-06-03) — `sim.routing.backpressure` **ciągły ~96% ticków przez ≥7,5 min i w toku** (23:24–23:32); `active_ratio` nieznany (API auth-gated). Nie można potwierdzić „brak floodu >15 min" — trend przeciwny. **Update 2026-06-03:** w odpowiedzi na backpressure **przeskalowano `celery-worker-routing` do 3 replik** (horizontal, `numReplicas=2→3`, ~3 GB łącznie) zamiast obniżania `active_ratio`. **Wynik pomiaru prod:** drenaż agregat wzrósł ~liniowo (~1,4/s → **~1,89/s**), ale `sim.routing.backpressure` **nadal firing ~co tick** (1/4,7 s → **1/6,2 s**, kolejka przy cap). Skalowanie drenażu **nie zamknęło** backpressure — **wąskim gardłem jest popyt > drenaż przy bieżącym `active_ratio`**. **Decydująca dźwignia = obniżenie `active_ratio`** (strona popytu) przez admina; nie zmieniono jej (poza zakresem tego kroku). **p.6 niezamknięte** — wymaga obniżenia `active_ratio` LUB akceptacji że przy bieżącym popycie kolejka pozostaje przy cap. Brak OOM/SIGKILL w projekcie |
 
 ---
@@ -160,6 +160,7 @@ Pełna tabela: [operations/RAILWAY_CELERY_MEMORY.md](../operations/RAILWAY_CELER
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-04 | **Telemetry load-test closure:** lokalny map benchmark (290 OK, p95 1177 ms @ 1020 riders), `warm-simulator-for-map-test.ps1`, k6 stub, docker-compose.override local sim profile; Railway prod bez osobnego serwisu Telemetry |
 | 2026-06-04 | **Telemetry sharding Phase 2:** `TelemetryShardRouter.client_for()` + `REDIS_TELEMETRY_SHARD_NODES`, parallel read fan-out, FastAPI asyncpg pool/batching, load-test scaffold ([TELEMETRY_LOAD_TEST.md](../operations/TELEMETRY_LOAD_TEST.md)). Prod: `TELEMETRY_SHARD_COUNT=4` on backend + simulation |
 | 2026-06-03 | **Always-on protection + telemetry sharding (foundation):** globalny `core/load_guard.py` (always-on, load-driven, hysteresis, fail-open — join/session/ingest + concurrent cap), `TelemetryShardRouter` (`activities/telemetry_shard.py`, shard po `deviceId`/CRC32, hash-tag `{tel:i}`, read fan-out, `TELEMETRY_SHARD_COUNT=1` = legacy), always-on telemetry ingest backpressure (Django signal + FastAPI 429), 32 testy. Multi-instance per-shard = Faza 2 (patrz [operations/TELEMETRY_SHARDING.md](../operations/TELEMETRY_SHARDING.md)) |
 | 2026-06-03 | Scaling routing: `numReplicas=2→3` (horizontal, ~3 GB łącznie). Pomiar prod: drenaż ~1,89/s (~liniowy), backpressure nadal przypięty (1/6,2 s) → decydująca dźwignia = obniżenie `active_ratio`; p.6 niezamknięte. Brak OOM |

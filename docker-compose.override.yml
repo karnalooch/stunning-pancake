@@ -4,6 +4,7 @@
       TELEMETRY_SHARD_COUNT: ${TELEMETRY_SHARD_COUNT:-4}
       REDIS_TELEMETRY_SHARD_NODES: ${REDIS_TELEMETRY_SHARD_NODES}
       GLOBAL_MAX_INGEST_PER_SECOND: ${GLOBAL_MAX_INGEST_PER_SECOND:-60000}
+      BROUTER_URL: http://brouter:17777/brouter
   telemetry:
     environment:
       GLOBAL_MAX_INGEST_PER_SECOND: ${GLOBAL_MAX_INGEST_PER_SECOND:-60000}
@@ -16,6 +17,11 @@
     environment:
       TELEMETRY_SHARD_COUNT: ${TELEMETRY_SHARD_COUNT:-4}
       REDIS_TELEMETRY_SHARD_NODES: ${REDIS_TELEMETRY_SHARD_NODES}
+      BROUTER_URL: http://brouter:17777/brouter
+      # Local stack has no celery-worker-routing; sync tick + grid routes for map warm-up.
+      SCALE_SIM_ASYNC_ROUTING: "0"
+      SCALE_SIM_SKIP_BROUTER: "1"
+      SCALE_SIM_STRICT_ROAD_ROUTES: "0"
 
   brouter:
     environment:

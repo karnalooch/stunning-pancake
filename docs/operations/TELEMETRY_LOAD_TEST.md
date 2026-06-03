@@ -100,9 +100,9 @@ Record p95; target **< 300 ms** at country zoom (`?zoom=6` or default bbox).
 | `REDIS_TELEMETRY_SHARD_NODES` | `redis://redis:6379/0-3` |
 | Ingest positions/s (sustained) | **9558** baseline (pre-fix, 50k profile); see post-fix rows below |
 | Ingest p95 ms | **409.6** baseline (50k run) |
-| Live map p95 ms | **55.2** p95 but 3597 errors / 0 OK (empty Redis index, unauth) |
+| Live map p95 ms | **1177.4** (290 OK / 132 err, warmed Redis `ride_active=1020`) |
 | 429 rate | 0% |
-| Pass / Fail | **FAIL** vs 50k target (<90% of 50000/s) — see interpretation below |
+| Pass / Fail | **FAIL** vs 50k ingest target; **FAIL** vs live-map p95 <300 ms on laptop under 1k riders |
 
 ## Interpretacja FAIL przy target-rate 50000
 
@@ -155,9 +155,47 @@ python scripts/load-test-telemetry-ingest.py \
 |---------|-------------|--------|-------|
 | A skip-db, workers 80, batch 100, target 0 | **13338** | 2074.3 | TELEMETRY_SKIP_DB=1, 0 errors |
 | B normal DB, workers 50, batch 50, target 0 | **6351** | 1337.2 | full path, 0 errors |
+| C live map read, workers 10, 30s, warmed sim | — | **1177.4** | 290 OK / 132 err; `ride_active=1020`, JWT auth |
 | Baseline (pre-fix) 50k target | 9558 | 409.6 | workers 50, batch 50, throttled target |
 
-**Local run notes (2026-06-04):** Stack via podman compose: db, redis, brouter, backend (:8000), telemetry (:8001), celery_worker_simulation, traccar. **BRouter:** image localhost/sport_brouter:latest; HTTP **200** on :17777/brouter after pre-downloading minimal .rd5 tiles to infrastructure/brouter/segments4/ and BROUTER_SEGMENT_PRESET=minimal in docker-compose.override.yml (default poland preset fails on :ro volume — read-only file system). Windows: set `PYTHONIOENCODING=utf-8` if console encoding issues persist (script uses ASCII `>=` for PASS/FAIL).
+**Local run notes (2026-06-04):** Stack via podman compose: db, redis, brouter, backend (:8000), telemetry (:8001), celery_worker_simulation, traccar. **Map warm-up:** `scripts/warm-simulator-for-map-test.ps1` (grid routes via `SCALE_SIM_SKIP_BROUTER=1` + `SCALE_SIM_STRICT_ROAD_ROUTES=0` in `docker-compose.override.yml`; fixes wrong `.env` `BROUTER_URL` port 17878→17777). **BRouter:** image localhost/sport_brouter:latest; HTTP **200** on :17777/brouter after pre-downloading minimal .rd5 tiles to infrastructure/brouter/segments4/ and BROUTER_SEGMENT_PRESET=minimal in docker-compose.override.yml (default poland preset fails on :ro volume — read-only file system). Windows: set `PYTHONIOENCODING=utf-8` if console encoding issues persist (script uses ASCII `>=` for PASS/FAIL).
+
+### Map warm-up helper
+
+```powershell
+# Creates/syncs global_owner, bootstraps 6k athletes, starts live-sim, waits for ride_active >= 1000
+.\scripts\warm-simulator-for-map-test.ps1 -StopExisting
+
+# Then benchmark (paste JWT from script output):
+python scripts/load-test-telemetry-ingest.py `
+  --map-only --preflight `
+  --map-url http://localhost:8000/api/activities/telemetry/live/ `
+  --token $JWT --map-workers 10 --map-duration 30
+```
+
+## Phase 3 — distributed load (deferred)
+
+For multi-node soak / 50k sustained validation beyond laptop limits:
+
+| Tool | Status | Notes |
+|------|--------|-------|
+| **k6** | Stub | `scripts/load-test-telemetry-map.k6.js` — live-map read; `k6 run -e JWT=... scripts/load-test-telemetry-map.k6.js` |
+| **Locust** | Deferred | Reuse ingest URL + batch body from `load-test-telemetry-ingest.py` when a staging cluster is available |
+
+Requires explicit Platform Operator approval before prod or shared staging.
+
+## Closure (2026-06-04)
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Ingest scaffold + skip-db / DB-on profiles | **DONE** | Profiles A/B above; commit `ff0f0ba4` |
+| Live map warm-up + authenticated benchmark | **DONE** | Profile C; `warm-simulator-for-map-test.ps1`; 290 OK @ p95 1177 ms (laptop, 1020 riders) |
+| Live map p95 < 300 ms SLO | **DEFERRED** | Laptop FAIL (1177 ms p95, 132 timeouts); re-test on staging / prod observability |
+| 50k positions/s sustained | **DEFERRED** | Laptop ceiling ~13k skip-db; needs distributed k6/Locust + operator window |
+| Phase 2 sharding prod env | **DONE** | `TELEMETRY_SHARD_COUNT=4` on backend + simulation (prior session) |
+| Separate Railway Telemetry service | **N/A** | Prod project `marvelous-gratitude` has no dedicated Telemetry service (2026-06-04 `railway service list`); FastAPI ingest env (`TELEMETRY_DB_POOL_MAX`, `TELEMETRY_INGEST_BATCH_SIZE`) applies when/if service is added — **not** `TELEMETRY_SKIP_DB` on prod |
+| k6 distributed stub | **DONE** | `scripts/load-test-telemetry-map.k6.js` |
+| Locust full harness | **DEFERRED** | Phase 3 |
 
 ## Script reference
 
