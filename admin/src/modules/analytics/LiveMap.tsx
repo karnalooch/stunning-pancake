@@ -45,6 +45,7 @@ import {
 } from './liveMapViewport';
 import type { LiveApiDetail } from './liveMapZoom';
 import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
+import { classifyMapLibreError } from '../../core/map/mapErrorPolicy';
 import { isLiveMapE2eEnabled, publishLiveMapE2e } from './liveMapE2e';
 
 let _mlPromise: Promise<any> | null = null;
@@ -109,6 +110,7 @@ export const LiveMap: React.FC = () => {
     const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastRefreshRef = useRef<number | null>(null);
     const layersReadyRef = useRef(false);
+    const mapHasLoadedRef = useRef(false);
     const interpolatorRef = useRef<LivePositionInterpolator | null>(null);
     const fetchSeqRef = useRef(0);
     const lastMoveAtRef = useRef(0);
@@ -645,6 +647,7 @@ export const LiveMap: React.FC = () => {
         if (!mapContainer.current) return;
 
         setMapLoadError(null);
+        mapHasLoadedRef.current = false;
         loadMaplibregl().then((m: any) => {
             if (cancelled || !mapContainer.current) return;
             mlRef.current = m;
@@ -667,13 +670,21 @@ export const LiveMap: React.FC = () => {
                     map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
                 }
                 syncZoomUi();
+                mapHasLoadedRef.current = true;
+                setMapLoadError(null);
+                setLoading(false);
                 setMapReady(true);
             });
-            map.on('error', () => {
+            map.on('error', (e: { error?: { message?: string; status?: number; url?: string } }) => {
                 if (cancelled) return;
+                if (classifyMapLibreError(e, MAP_STYLE, mapHasLoadedRef.current) === 'ignorable') {
+                    return;
+                }
                 setMapLoadError('Nie udało się wczytać kafelków mapy (CDN / styl).');
                 setLoading(false);
-                setMapReady(false);
+                if (!mapHasLoadedRef.current) {
+                    setMapReady(false);
+                }
             });
             map.on('zoom', () => {
                 const z = map.getZoom();
@@ -773,6 +784,7 @@ export const LiveMap: React.FC = () => {
 
     const retryMapLoad = useCallback(() => {
         setMapLoadError(null);
+        mapHasLoadedRef.current = false;
         layersReadyRef.current = false;
         fitBoundsDoneRef.current = false;
         if (mapRef.current) {
