@@ -1,22 +1,10 @@
 /**
- * Live Map zoom tiers — readable, performant, smooth crossfades.
+ * Live Map zoom — enterprise 3-tier model (see liveMapEnterprise.ts).
  *
- * | Zoom    | Mode           | Render |
- * |---------|----------------|--------|
- * | 5–7     | country        | Huby miast + klastry (standard API) |
- * | < 5     | overview       | Huby z meta (summary, bez punktów) |
- * | 7–8.5   | region         | Huby + klastry |
- * | 8.5–9.5 | metro          | Huby zanikają, klastry |
- * | 9.5–10.5| city           | Klastry (główny widok miasta) |
- * | 10.5–11.5| district      | Ciaśniejsze klastry |
- * | 11.5–12.2| neighborhood  | Klastry (bez pojedynczych kropek — te od z≥12) |
- * | 12.2–12.8| handoff       | GL dots fade ↔ GPU symbol icons |
- * | 12.8–13.5| street-icons  | Ikony MapLibre + collision engine |
- * | 13.5–14.5| street-labels | Etykiety GPU (text-optional) |
- * | 14.5+   | detail         | Więcej etykiet dzięki collision |
- *
- * Paint crossfade bands: see LIVE_MAP_LOD (wider ranges than mode boundaries).
+ * Fine-grained modes below are UI labels inside meso/micro bands.
+ * Paint crossfade: LIVE_MAP_LOD (handoff micro: dots ↔ icons at z≥12).
  */
+import { LIVE_MAP_TIER, apiDetailForTier } from './liveMapEnterprise';
 
 export type LiveMapZoomMode =
     | 'country'
@@ -38,9 +26,11 @@ export const LIVE_MAP_LOD = {
     /** City hub rings visible from country zoom (incl. z=5). */
     cityHubMin: 4.5,
     cityHubFadeInEnd: 5.8,
-    cityHubFadeOutStart: 8.6,
-    cityHubFadeOutEnd: 10.8,
-    clusterVisibleStart: 5,
+    cityHubFadeOutStart: 8.2,
+    /** Huby tylko w tierze macro (z < 9) — bez nakładania na klastry. */
+    cityHubFadeOutEnd: LIVE_MAP_TIER.mesoMinZoom,
+    /** Klastry od tieru meso (z ≥ 9). */
+    clusterVisibleStart: LIVE_MAP_TIER.mesoMinZoom,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
     /** Individual GL dots only at z≥12 (matches apiDetailForZoom `full`). */
@@ -89,14 +79,16 @@ export function resolveLiveMapZoomMode(zoom: number): LiveMapZoomMode {
     return 'detail';
 }
 
-/** Backend payload LOD — summary = tylko city_counts, standard = bez nazw. */
-export type LiveApiDetail = 'summary' | 'standard' | 'full';
+export type { LiveApiDetail } from './liveMapEnterprise';
+import type { LiveApiDetail } from './liveMapEnterprise';
 
+/** Aligns HTTP/SSE `detail` with enterprise macro / meso / micro tiers. */
 export function apiDetailForZoom(zoom: number): LiveApiDetail {
-    if (zoom < 5) return 'summary';
-    if (zoom < CLUSTER_MAX_ZOOM) return 'standard';
-    return 'full';
+    return apiDetailForTier(zoom);
 }
+
+export { LIVE_MAP_TIER, resolveLiveMapTier, TIER_MODE_LABEL } from './liveMapEnterprise';
+export type { LiveMapTier } from './liveMapEnterprise';
 
 export function limitForZoom(zoom: number): number {
     if (zoom < 6) return 800;
@@ -207,6 +199,9 @@ export function clusterLayerOpacityAtZoom(zoom: number): number {
  * True when riders should be visible on canvas — accounts for MapLibre unclustering above clusterMaxZoom.
  */
 export function ridersVisibleAtZoom(zoom: number): boolean {
+    if (zoom < LIVE_MAP_TIER.mesoMinZoom) {
+        return false;
+    }
     if (zoom <= CLUSTER_MAX_ZOOM) {
         return clusterLayerOpacityAtZoom(zoom) > 0.2;
     }

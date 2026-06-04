@@ -14,11 +14,23 @@
 
 **Kod:** `admin/src/modules/analytics/LiveMap.tsx`, moduły `liveMap*`, API `GET /api/activities/telemetry/live/`
 
+## Enterprise LOD (3 tiery)
+
+| Tier | Zoom | API `detail` | Warstwy |
+|------|------|--------------|---------|
+| **Makro** | z &lt; 9 | `summary` | Huby miast (`city_counts`) |
+| **Meso** | 9 ≤ z &lt; 12 | `standard` | Klastry Supercluster |
+| **Mikro** | z ≥ 12 | `full` | Ikony + etykiety GPU |
+
+Kod: `liveMapEnterprise.ts`, `liveMapZoom.ts`, `liveMapLayers.ts` (`minzoom` per tier).
+
+Nagłówek: **active** (global FSM) + **in view** (`positions_returned` w bbox).
+
 ## Cele jakościowe
 
 | Obszar | Implementacja |
 |--------|----------------|
-| **LOD / zoom** | `liveMapZoom.ts`, `liveMapLayers.ts`, audyt `admin/scripts/audit-live-map-lod.mjs` |
+| **LOD / zoom** | `liveMapEnterprise.ts`, `liveMapZoom.ts`, `liveMapLayers.ts` |
 | **Płynność ruchu** | `liveMapInterp.ts` — blend + ekstrapolacja między pollami |
 | **Viewport** | `liveMapViewport.ts` — cache bust `refresh`, brak stale markerów po zoomie |
 | **Sync health** | `liveMapHealth.ts`, `LiveMapStatusBar.tsx` — Live / Stale / Degraded / Error / Paused |

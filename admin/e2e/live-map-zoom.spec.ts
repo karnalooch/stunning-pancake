@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { mockBackendWithLiveMap, seedPlaywrightE2e } from './helpers';
 
 /**
- * Live Map zoom LOD — visual regression per tier.
+ * Live Map enterprise tiers — visual regression (macro / meso / micro).
  *
  * Requires dev server with E2E bridge:
  *   cross-env VITE_E2E=1 npm run dev
@@ -12,16 +12,14 @@ import { mockBackendWithLiveMap, seedPlaywrightE2e } from './helpers';
  */
 
 const ZOOM_SAMPLES: { zoom: number; mode: string; slug: string }[] = [
-    { zoom: 6.5, mode: 'Kraj', slug: 'country' },
-    { zoom: 7.75, mode: 'Region', slug: 'region' },
-    { zoom: 9, mode: 'Aglomeracja', slug: 'metro' },
-    { zoom: 10, mode: 'Miasto', slug: 'city' },
-    { zoom: 11, mode: 'Dzielnica', slug: 'district' },
-    { zoom: 11.85, mode: 'Osiedle', slug: 'neighborhood' },
-    { zoom: 12.5, mode: 'Zbliżenie', slug: 'handoff' },
-    { zoom: 13.1, mode: 'Ulice (ikony)', slug: 'street-icons' },
-    { zoom: 14, mode: 'Ulice (etykiety)', slug: 'street-labels' },
-    { zoom: 15.2, mode: 'Detal', slug: 'detail' },
+    { zoom: 6.5, mode: 'Makro', slug: 'macro-country' },
+    { zoom: 8, mode: 'Makro', slug: 'macro-region' },
+    { zoom: 9.5, mode: 'Meso', slug: 'meso-metro' },
+    { zoom: 10, mode: 'Meso', slug: 'meso-city' },
+    { zoom: 11.5, mode: 'Meso', slug: 'meso-district' },
+    { zoom: 12.5, mode: 'Mikro', slug: 'micro-handoff' },
+    { zoom: 13.5, mode: 'Mikro', slug: 'micro-street' },
+    { zoom: 15, mode: 'Mikro', slug: 'micro-detail' },
 ];
 
 test.describe('Live Map zoom LOD screenshots', () => {
@@ -62,7 +60,6 @@ test.describe('Live Map zoom LOD screenshots', () => {
             );
             await expect(page.getByTestId('live-map-zoom-mode')).toHaveText(sample.mode);
 
-            // Tiles + symbol layout settle after jumpTo
             await page.waitForTimeout(1200);
 
             const map = page.getByTestId('live-map-canvas');

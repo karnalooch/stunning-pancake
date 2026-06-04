@@ -1,6 +1,7 @@
 import type { LiveMapPosition } from './liveMapMarkers';
 import { resolveActivityKind, speedToKmh } from './liveMapMarkers';
 import { POLAND_SIM_CITIES } from './liveMapCities';
+import { LIVE_MAP_TIER } from './liveMapEnterprise';
 import { CLUSTER_MAX_ZOOM, LIVE_MAP_LOD } from './liveMapZoom';
 import { ensureLiveMapSprites } from './liveMapSprite';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../core/map/mapBasemap';
@@ -112,6 +113,7 @@ export function installLiveMapLayers(
             id: LIVE_LAYERS.clusters,
             type: 'circle',
             source: LIVE_SOURCES.positions,
+            minzoom: LIVE_MAP_TIER.mesoMinZoom,
             filter: ['has', 'point_count'],
             paint: {
                 'circle-color': [
@@ -145,6 +147,7 @@ export function installLiveMapLayers(
             id: LIVE_LAYERS.clusterCount,
             type: 'symbol',
             source: LIVE_SOURCES.positions,
+            minzoom: LIVE_MAP_TIER.mesoMinZoom,
             filter: ['has', 'point_count'],
             layout: {
                 'text-field': ['get', 'point_count_abbreviated'],

@@ -9,8 +9,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
-# Align with admin liveMapZoom.ts CLUSTER_MAX_ZOOM / apiDetailForZoom.
-LIVE_MAP_FULL_DETAIL_MIN_ZOOM = 11.5
+# Align with admin liveMapEnterprise.ts micro tier (full detail from z≥12).
+LIVE_MAP_FULL_DETAIL_MIN_ZOOM = 12.0
 
 
 def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:

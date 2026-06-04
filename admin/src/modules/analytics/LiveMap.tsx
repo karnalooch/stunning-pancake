@@ -22,11 +22,11 @@ import {
 import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug } from './liveMapCities';
 import {
     CLUSTER_MAX_ZOOM,
-    ZOOM_MODE_LABEL,
     apiDetailForZoom,
     clusterRadiusForZoom,
     limitForZoom,
-    resolveLiveMapZoomMode,
+    resolveLiveMapTier,
+    TIER_MODE_LABEL,
 } from './liveMapZoom';
 import {
     installLiveMapLayers,
@@ -137,6 +137,7 @@ export const LiveMap: React.FC = () => {
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
     const [runners, setRunners] = useState(0);
+    const [viewportRiders, setViewportRiders] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
     const [mlReady, setMlReady] = useState(false);
@@ -171,7 +172,7 @@ export const LiveMap: React.FC = () => {
         if (!map) return;
         const z = map.getZoom();
         setMapZoom(Math.round(z * 10) / 10);
-        setZoomMode(ZOOM_MODE_LABEL[resolveLiveMapZoomMode(z)]);
+        setZoomMode(TIER_MODE_LABEL[resolveLiveMapTier(z)]);
     }, []);
 
     const showRiderPopup = useCallback((pos: UserPosition, lngLat: { lng: number; lat: number }) => {
@@ -269,6 +270,12 @@ export const LiveMap: React.FC = () => {
                         : list.length;
         const ridingN = typeof riding === 'number' && Number.isFinite(riding) ? riding : 0;
         setOnlineCount((prev) => (ridingN !== prev ? ridingN : prev));
+
+        const viewportReturned = meta?.positions_returned ?? meta?.viewport_returned;
+        const inView = typeof viewportReturned === 'number' && Number.isFinite(viewportReturned)
+            ? viewportReturned
+            : list.length;
+        setViewportRiders((prev) => (inView !== prev ? inView : prev));
         const warming = typeof meta?.ride_warming === 'number' ? meta.ride_warming : 0;
         setRideWarming((prev) => (warming !== prev ? warming : prev));
 
@@ -280,7 +287,6 @@ export const LiveMap: React.FC = () => {
                 : 1;
         if (pollMult >= 1) ingestPollMultRef.current = pollMult;
 
-        const viewportReturned = meta?.positions_returned ?? meta?.viewport_returned;
         if (list.length === 0 && viewportReturned === 0) {
             setCyclists(0);
             setRunners(0);
@@ -793,7 +799,7 @@ export const LiveMap: React.FC = () => {
                 map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
             },
             getZoom: () => map.getZoom(),
-            getZoomMode: () => ZOOM_MODE_LABEL[resolveLiveMapZoomMode(map.getZoom())],
+            getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
             isReady: () => layersReadyRef.current && map.isStyleLoaded(),
         });
         return () => publishLiveMapE2e(undefined);
@@ -923,9 +929,24 @@ export const LiveMap: React.FC = () => {
         >
             <Group style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }} justify="space-between">
                 <Group gap="xs" aria-live="polite" aria-atomic="true">
-                    <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
-                        {(onlineCount ?? 0).toLocaleString()} active
-                    </Badge>
+                    <Tooltip label="Aktywni jeźdźcy na mapie (FSM, cała symulacja)">
+                        <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
+                            {(onlineCount ?? 0).toLocaleString()} active
+                        </Badge>
+                    </Tooltip>
+                    {mapReady && (
+                        <Tooltip label="Pozycje w aktualnym oknie mapy (bbox)">
+                            <Badge
+                                variant="light"
+                                color={viewportRiders > 0 ? 'blue' : 'gray'}
+                                radius="sm"
+                                size="md"
+                                data-testid="live-map-viewport-count"
+                            >
+                                {viewportRiders.toLocaleString()} in view
+                            </Badge>
+                        </Tooltip>
+                    )}
                     {rideWarming > 0 && (
                         <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (not on map yet)">
                             +{rideWarming.toLocaleString()} warming

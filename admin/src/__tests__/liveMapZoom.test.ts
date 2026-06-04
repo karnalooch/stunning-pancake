@@ -34,12 +34,13 @@ describe('liveMapZoom', () => {
         expect(resolveLiveMapZoomMode(15)).toBe('detail');
     });
 
-    it('apiDetailForZoom switches at summary/standard/full thresholds', () => {
+    it('apiDetailForZoom follows enterprise tier thresholds', () => {
         expect(apiDetailForZoom(4.5)).toBe('summary');
-        expect(apiDetailForZoom(5)).toBe('standard');
+        expect(apiDetailForZoom(8)).toBe('summary');
+        expect(apiDetailForZoom(9)).toBe('standard');
         expect(apiDetailForZoom(10)).toBe('standard');
-        expect(apiDetailForZoom(12)).toBe('full');
         expect(apiDetailForZoom(11.4)).toBe('standard');
+        expect(apiDetailForZoom(12)).toBe('full');
     });
 
     it('clusterMaxZoom aligns with dot fade-in (no invisible band 11.5–12)', () => {
@@ -49,10 +50,16 @@ describe('liveMapZoom', () => {
         expect(ridersVisibleAtZoom(11.9)).toBe(true);
     });
 
-    it('auditLiveMapLodCrossfade has no gap at zoom 5', () => {
-        const gaps = auditLiveMapLodCrossfade(4.5, 7, 0.1).filter((i) => i.type === 'GAP');
-        const at5 = gaps.filter((i) => Math.abs(i.zoom - 5) < 0.05);
-        expect(at5, JSON.stringify(at5)).toHaveLength(0);
+    it('auditLiveMapLodCrossfade has no gap at macro zoom (hubs only)', () => {
+        const gaps = auditLiveMapLodCrossfade(4.5, 8.5, 0.1).filter((i) => i.type === 'GAP');
+        const at6 = gaps.filter((i) => Math.abs(i.zoom - 6) < 0.05);
+        expect(at6, JSON.stringify(at6)).toHaveLength(0);
+    });
+
+    it('auditLiveMapLodCrossfade has no gap at meso zoom 10', () => {
+        const gaps = auditLiveMapLodCrossfade(9.5, 11.5, 0.1).filter((i) => i.type === 'GAP');
+        const at10 = gaps.filter((i) => Math.abs(i.zoom - 10) < 0.05);
+        expect(at10, JSON.stringify(at10)).toHaveLength(0);
     });
 
     it('clusterRadiusForZoom decreases as zoom increases', () => {
