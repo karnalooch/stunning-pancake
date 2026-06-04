@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+from datetime import datetime, timezone
 
 import asyncpg
 
@@ -15,6 +17,12 @@ from config import (
     INGEST_FLUSH_MS,
     INSERT_SQL,
     SKIP_DB,
+)
+
+DRAIN_USE_COPY = os.getenv("TELEMETRY_DRAIN_USE_COPY", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
 )
 
 logger = logging.getLogger("telemetry")
@@ -42,12 +50,53 @@ async def get_pool() -> asyncpg.Pool:
     return _pool
 
 
+def _sort_rows(rows: list[tuple]) -> list[tuple]:
+    return sorted(rows, key=lambda r: (r[7] or 0, r[0], r[8] or 0))
+
+
+def _rows_for_copy(rows: list[tuple]) -> list[tuple]:
+    out: list[tuple] = []
+    for r in rows:
+        out.append(
+            (
+                datetime.fromtimestamp(float(r[0]), tz=timezone.utc),
+                r[1],
+                r[2],
+                float(r[3]),
+                float(r[4]),
+                float(r[5]),
+                float(r[6]),
+                r[7],
+                r[8],
+            )
+        )
+    return out
+
+
 async def flush_insert_buffer(rows: list[tuple]) -> None:
     if not rows:
         return
+    rows = _sort_rows(rows)
     pool = await get_pool()
     async with pool.acquire() as conn:
-        await conn.executemany(INSERT_SQL, rows)
+        if DRAIN_USE_COPY:
+            await conn.copy_records_to_table(
+                "gps_points",
+                records=_rows_for_copy(rows),
+                columns=[
+                    "time",
+                    "device_id",
+                    "user_id",
+                    "lat",
+                    "lon",
+                    "speed_ms",
+                    "accuracy_m",
+                    "activity_id",
+                    "seq",
+                ],
+            )
+        else:
+            await conn.executemany(INSERT_SQL, rows)
 
 
 async def _insert_worker() -> None:

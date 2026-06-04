@@ -6,12 +6,21 @@ import asyncio
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 
 from config import BACKFILL_MAX_POINTS, BACKFILL_WINDOW_MIN, WS_INGEST_BUFFER_MAX
 from db import get_pool
 from ingest_guard import check_ingest_allowed
-from ingest_queue import STREAM_KEY, queue_enabled, stream_depth
+from ingest_queue import (
+    DLQ_STREAM_KEY,
+    STREAM_KEY,
+    dlq_depth,
+    ops_secret,
+    pending_summary,
+    queue_enabled,
+    reclaim_pending,
+    stream_depth,
+)
 from ingest_service import (
     filter_privacy_packets,
     get_ingest_redis,
@@ -188,7 +197,33 @@ async def ingest_queue_stats() -> dict:
         return {"enabled": False}
     client = await get_ingest_redis()
     depth = await stream_depth(client)
-    return {"enabled": True, "stream": STREAM_KEY, "xlen": depth}
+    pending = await pending_summary(client)
+    dlq = await dlq_depth(client)
+    return {
+        "enabled": True,
+        "stream": STREAM_KEY,
+        "dlq_stream": DLQ_STREAM_KEY,
+        "xlen": depth,
+        "dlq_xlen": dlq,
+        "pel": pending,
+    }
+
+
+@router.post("/api/telemetry/ingest/queue/reclaim")
+async def ingest_queue_reclaim(
+    x_telemetry_ops_secret: str | None = Header(default=None, alias="X-Telemetry-Ops-Secret"),
+) -> dict:
+    """Manual PEL reclaim (ops). Requires TELEMETRY_OPS_SECRET when set."""
+    secret = ops_secret()
+    if secret and x_telemetry_ops_secret != secret:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if not queue_enabled():
+        return {"enabled": False}
+    from db import flush_insert_buffer
+
+    client = await get_ingest_redis()
+    stats = await reclaim_pending(client, flush_insert_buffer)
+    return {"enabled": True, "reclaim": stats}
 
 
 @router.websocket("/ws/telemetry/live")

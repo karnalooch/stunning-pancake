@@ -340,7 +340,13 @@ class ActivityViewSet(viewsets.ModelViewSet):
         activity = self.get_object()
         if activity.end_time:
             serializer = ActivitySerializer(activity)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            payload = dict(serializer.data)
+            payload["post_ride_telemetry"] = {
+                "backfill_endpoint": "/api/telemetry/ingest/backfill",
+                "backfill_window_min": 30,
+                "max_points": 5000,
+            }
+            return Response(payload, status=status.HTTP_200_OK)
 
         end_raw = request.data.get("end_time")
         end_time = parse_datetime(end_raw) if end_raw else timezone.now()
@@ -357,7 +363,14 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
         activity.save()
         serializer = ActivitySerializer(activity)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        payload = dict(serializer.data)
+        payload["post_ride_telemetry"] = {
+            "backfill_endpoint": "/api/telemetry/ingest/backfill",
+            "backfill_window_min": 30,
+            "max_points": 5000,
+            "note": "Late outbox drains may merge via telemetry backfill after finalize.",
+        }
+        return Response(payload, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["get"])
     def share_data(self, request, pk=None):

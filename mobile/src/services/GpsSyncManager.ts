@@ -36,6 +36,7 @@ import {
   TrackingState,
   type TrackingStats,
 } from './gpsSyncStorage';
+import { saveLocalRideSnapshot } from './gpsLocalExport';
 import {
   flushGpsUploadQueues,
   getGpsStorage,
@@ -628,6 +629,11 @@ export class GpsSyncManager {
 
     const pendingUpload = storage ? pendingPointCount(storage) : 0;
     const allPoints = storage ? loadBuffer(storage) : [];
+
+    if (activityId && allPoints.length >= 2) {
+      await saveLocalRideSnapshot(activityId, allPoints);
+    }
+
     const stats = storage
       ? JSON.parse(
           storage.getString(GPS_STORAGE_KEYS.CURRENT_STATS) ||

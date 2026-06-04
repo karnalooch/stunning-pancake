@@ -218,6 +218,16 @@ async def run_ingest(args: argparse.Namespace) -> None:
         ok = pps >= args.target_rate * 0.9
         print(f"Target met:    {'PASS' if ok else 'FAIL'} (>=90% of {args.target_rate}/s)")
 
+    if args.assert_outbox:
+        # ADR 011: instrumented mobile clients retain points until ACK; harness expects no 5xx.
+        outbox_ok = counters["errors"] == 0
+        print(
+            f"Outbox harness: {'PASS' if outbox_ok else 'FAIL'} "
+            "(0 HTTP errors; mobile outbox must not clear on 202 without ACK)"
+        )
+        if not outbox_ok:
+            sys.exit(2)
+
 
 async def _map_worker(
     client: httpx.AsyncClient,
@@ -322,6 +332,11 @@ def main() -> None:
         "--preflight-count",
         action="store_true",
         help="With --preflight, probe live-map index count (needs auth for prod-like stacks)",
+    )
+    parser.add_argument(
+        "--assert-outbox",
+        action="store_true",
+        help="ADR 011: fail if any ingest HTTP errors (companion to mobile outbox engaged-guard test)",
     )
     args = parser.parse_args()
 

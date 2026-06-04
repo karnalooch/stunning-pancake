@@ -115,6 +115,24 @@ A **FAIL** at `--target-rate 50000` often means the **client or laptop is server
 
 PASS/FAIL at a fixed target is a **harness check**, not a production SLO sign-off.
 
+## ADR 011 — ingest engaged + mobile outbox
+
+When `GLOBAL_MAX_INGEST_PER_SECOND` is exceeded (or `GLOBAL_PROTECTION_MODE=on`):
+
+1. Telemetry returns **202** (queued) or **429/503** with `Retry-After` — not silent drops for authenticated active sessions when queue admits.
+2. **Mobile clients with outbox enabled** must keep points until ACK (`202` with `acked` / `inserted` confirmation). Expect **0 point loss** on instrumented builds under engaged guard.
+3. Verify queue depth drains: `curl $TELEMETRY_URL/api/telemetry/ingest/queue/stats` — see [TELEMETRY_INGEST_QUEUE.md](./TELEMETRY_INGEST_QUEUE.md).
+
+```bash
+# Harness: no HTTP errors during ingest storm (mobile outbox tested separately in Jest)
+python scripts/load-test-telemetry-ingest.py \
+  --url http://localhost:8001/api/telemetry/ingest/batch \
+  --workers 30 --duration 45 --batch-size 20 --target-rate 0 \
+  --assert-outbox
+
+./scripts/verify-adr011-ingest.sh
+```
+
 ## ADR 011 — live map read shedding (P2)
 
 When `guard_snapshot().signals.ingest.engaged` is true (or force with `GLOBAL_PROTECTION_MODE=on` + synthetic load):
@@ -217,6 +235,7 @@ Requires explicit Platform Operator approval before prod or shared staging.
 - `--skip-map` — ingest only, no live-map phase
 - `--token` / `--auth-header` — JWT for map API
 - `--preflight` / `--preflight-count` — health checks before run
+- `--assert-outbox` — exit non-zero if any ingest HTTP errors (ADR 011 engaged-guard companion)
 - `--map-url` + `--map-only` — live-map read benchmark mode
 
 ## Production note

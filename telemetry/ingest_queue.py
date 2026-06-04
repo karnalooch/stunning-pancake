@@ -2,6 +2,7 @@
 Redis Stream ingest queue — accept-and-queue under load (ADR 011 §2).
 
 Producer: XADD with approximate MAXLEN. Consumer: XREADGROUP → Timescale batch insert.
+PEL reclaim via XAUTOCLAIM; DLQ after MAX_DELIVERY_ATTEMPTS.
 """
 
 from __future__ import annotations
@@ -40,7 +41,18 @@ try:
 except (TypeError, ValueError):
     MAX_DELIVERY_ATTEMPTS = 5
 
+try:
+    PEL_MIN_IDLE_MS = max(1_000, int(os.getenv("TELEMETRY_INGEST_PEL_IDLE_MS", "60000")))
+except (TypeError, ValueError):
+    PEL_MIN_IDLE_MS = 60_000
+
+try:
+    RECLAIM_INTERVAL_S = max(5.0, float(os.getenv("TELEMETRY_INGEST_RECLAIM_INTERVAL_S", "30")))
+except (TypeError, ValueError):
+    RECLAIM_INTERVAL_S = 30.0
+
 _drain_task: asyncio.Task | None = None
+_last_reclaim_at: float = 0.0
 
 
 def queue_enabled() -> bool:
@@ -50,6 +62,11 @@ def queue_enabled() -> bool:
         "no",
         "off",
     )
+
+
+def ops_secret() -> str | None:
+    secret = os.getenv("TELEMETRY_OPS_SECRET", "").strip()
+    return secret or None
 
 
 async def ensure_consumer_group(redis_client) -> None:
@@ -65,6 +82,37 @@ async def stream_depth(redis_client) -> int:
         return int(await redis_client.xlen(STREAM_KEY) or 0)
     except Exception:
         return 0
+
+
+async def dlq_depth(redis_client) -> int:
+    try:
+        return int(await redis_client.xlen(DLQ_STREAM_KEY) or 0)
+    except Exception:
+        return 0
+
+
+async def pending_summary(redis_client) -> dict[str, int]:
+    """XPENDING summary: total pending + min/max idle (ms)."""
+    try:
+        pending = await redis_client.xpending(STREAM_KEY, CONSUMER_GROUP)
+        if not pending:
+            return {"pending": 0, "min_idle_ms": 0, "max_idle_ms": 0}
+        # redis-py: {'pending': N, 'min', 'max', consumers: [...]}
+        if isinstance(pending, dict):
+            return {
+                "pending": int(pending.get("pending", 0) or 0),
+                "min_idle_ms": int(pending.get("min", 0) or 0),
+                "max_idle_ms": int(pending.get("max", 0) or 0),
+            }
+        if isinstance(pending, (list, tuple)) and len(pending) >= 4:
+            return {
+                "pending": int(pending[0] or 0),
+                "min_idle_ms": int(pending[1] or 0),
+                "max_idle_ms": int(pending[2] or 0),
+            }
+    except Exception as exc:
+        logger.debug("ingest_queue.xpending: %s", exc)
+    return {"pending": 0, "min_idle_ms": 0, "max_idle_ms": 0}
 
 
 async def is_queue_saturated(redis_client) -> bool:
@@ -122,6 +170,31 @@ def _parse_row(raw: Any) -> tuple | None:
     )
 
 
+def _sort_rows(rows: list[tuple]) -> list[tuple]:
+    return sorted(rows, key=lambda r: (r[7] or 0, r[0], r[8] or 0))
+
+
+async def _delivery_count(redis_client, message_id: str) -> int:
+    try:
+        details = await redis_client.xpending_range(
+            STREAM_KEY,
+            CONSUMER_GROUP,
+            min=message_id,
+            max=message_id,
+            count=1,
+        )
+        if not details:
+            return 1
+        entry = details[0]
+        if isinstance(entry, dict):
+            return int(entry.get("times_delivered", 1) or 1)
+        if isinstance(entry, (list, tuple)) and len(entry) >= 4:
+            return int(entry[3] or 1)
+    except Exception:
+        pass
+    return 1
+
+
 async def _move_to_dlq(redis_client, message_id: str, data: str, reason: str) -> None:
     try:
         await redis_client.xadd(
@@ -136,6 +209,57 @@ async def _move_to_dlq(redis_client, message_id: str, data: str, reason: str) ->
         )
     except Exception as exc:
         logger.error("ingest_queue.dlq_failed: %s", exc)
+
+
+async def _process_message(
+    redis_client,
+    msg_id: str,
+    fields: dict,
+    flush_fn,
+    *,
+    force_dlq: bool = False,
+) -> tuple[int, bool]:
+    """Parse one stream message, flush rows, ACK on success. Returns (rows, acked)."""
+    raw = fields.get("data") or fields.get(b"data")
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8")
+    raw_str = str(raw) if raw is not None else ""
+
+    deliveries = await _delivery_count(redis_client, msg_id)
+    if force_dlq or deliveries >= MAX_DELIVERY_ATTEMPTS:
+        await _move_to_dlq(
+            redis_client,
+            msg_id,
+            raw_str,
+            f"max_delivery_attempts={deliveries}",
+        )
+        await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
+        return 0, True
+
+    try:
+        body = json.loads(raw_str)
+    except Exception as exc:
+        await _move_to_dlq(redis_client, msg_id, raw_str, str(exc))
+        await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
+        return 0, True
+
+    rows: list[tuple] = []
+    for row in body.get("rows", []):
+        parsed = _parse_row(row)
+        if parsed:
+            rows.append(parsed)
+    if not rows:
+        await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
+        return 0, True
+
+    try:
+        await flush_fn(_sort_rows(rows))
+    except Exception as exc:
+        logger.error("ingest_queue.flush_failed id=%s: %s", msg_id, exc)
+        return 0, False
+
+    await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
+    return len(rows), True
 
 
 async def drain_once(redis_client, flush_fn) -> int:
@@ -156,38 +280,82 @@ async def drain_once(redis_client, flush_fn) -> int:
     if not entries:
         return 0
 
-    all_rows: list[tuple] = []
-    ack_ids: list[str] = []
+    inserted = 0
     for _stream, messages in entries:
         for msg_id, fields in messages:
-            raw = fields.get("data") or fields.get(b"data")
-            if isinstance(raw, bytes):
-                raw = raw.decode("utf-8")
-            try:
-                body = json.loads(raw)
-                for row in body.get("rows", []):
-                    parsed = _parse_row(row)
-                    if parsed:
-                        all_rows.append(parsed)
-                ack_ids.append(msg_id)
-            except Exception as exc:
-                await _move_to_dlq(redis_client, msg_id, str(raw), str(exc))
-                await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, msg_id)
+            n, _ = await _process_message(redis_client, msg_id, fields, flush_fn)
+            inserted += n
+    return inserted
 
-    if not all_rows:
-        return 0
 
-    all_rows.sort(key=lambda r: (r[7] or 0, r[0], r[8] or 0))
-    await flush_fn(all_rows)
-    if ack_ids:
-        await redis_client.xack(STREAM_KEY, CONSUMER_GROUP, *ack_ids)
-    return len(all_rows)
+async def reclaim_pending(redis_client, flush_fn) -> dict[str, int]:
+    """
+    XAUTOCLAIM idle PEL messages and retry drain; DLQ when delivery count exceeded.
+    """
+    await ensure_consumer_group(redis_client)
+    stats = {"claimed": 0, "reinserted": 0, "dlq": 0, "pending_left": 0}
+    start_id = "0-0"
+    while True:
+        try:
+            result = await redis_client.xautoclaim(
+                STREAM_KEY,
+                CONSUMER_GROUP,
+                CONSUMER_NAME,
+                PEL_MIN_IDLE_MS,
+                start_id,
+                count=100,
+            )
+        except Exception as exc:
+            logger.warning("ingest_queue.xautoclaim_failed: %s", exc)
+            break
+
+        # redis-py 5: (next_start_id, messages, deleted_ids)
+        if isinstance(result, (list, tuple)):
+            if len(result) >= 2:
+                start_id = result[0] or "0-0"
+                messages = result[1] or []
+            else:
+                break
+        else:
+            break
+
+        if not messages:
+            break
+
+        for msg_id, fields in messages:
+            stats["claimed"] += 1
+            n, acked = await _process_message(redis_client, msg_id, fields, flush_fn)
+            if n > 0 and acked:
+                stats["reinserted"] += n
+            elif acked and n == 0:
+                stats["dlq"] += 1
+
+        if len(messages) < 100:
+            break
+
+    summary = await pending_summary(redis_client)
+    stats["pending_left"] = summary["pending"]
+    return stats
+
+
+async def _maybe_reclaim(redis_client, flush_fn) -> None:
+    global _last_reclaim_at
+    if not queue_enabled():
+        return
+    now = time.monotonic()
+    if now - _last_reclaim_at < RECLAIM_INTERVAL_S:
+        return
+    _last_reclaim_at = now
+    stats = await reclaim_pending(redis_client, flush_fn)
+    if stats["claimed"] or stats["dlq"]:
+        logger.info("ingest_queue.reclaim %s", stats)
 
 
 async def _drain_loop(redis_client, flush_fn) -> None:
     while True:
         try:
             inserted = await drain_once(redis_client, flush_fn)
+            await _maybe_reclaim(redis_client, flush_fn)
             if inserted == 0:
                 await asyncio.sleep(0.05)
         except asyncio.CancelledError:

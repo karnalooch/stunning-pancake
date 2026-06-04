@@ -5,6 +5,7 @@
 import { MMKV } from 'react-native-mmkv';
 import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
+import { postTelemetryBatchViaWs, WS_INGEST_ENABLED } from './gpsWsIngest';
 import {
   appendToOutbox,
   createClientBatchId,
@@ -23,9 +24,9 @@ import {
   updateOutboxEntry,
 } from './gpsSyncStorage';
 
-export const TELEMETRY_URL =
-  process.env.EXPO_PUBLIC_TELEMETRY_URL ??
-  'https://docker-telemetry-production-123c.up.railway.app';
+import { TELEMETRY_URL } from './gpsTelemetryUrl';
+
+export { TELEMETRY_URL };
 
 export const MAX_RETRIES = 5;
 
@@ -140,8 +141,12 @@ async function postTelemetryBatch(
   const activityId = points[0]?.activity_id ?? null;
   const maxSeq = points.reduce(
     (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
-    0,
+    -1,
   );
+  if (WS_INGEST_ENABLED) {
+    const wsAck = await postTelemetryBatchViaWs(points, maxSeq >= 0 ? maxSeq : null);
+    if (wsAck?.acked) return wsAck;
+  }
   const res = await axios.post(
     `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
     {

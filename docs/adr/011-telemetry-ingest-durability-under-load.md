@@ -396,11 +396,14 @@ Mobile GPS/OS/UX checklist: [Mobile-side guarantees](#mobile-side-guarantees) (P
 | Change | Files | Status |
 |--------|--------|--------|
 | Live map throttle under `guard_snapshot().signals.ingest.engaged` | [`backend/activities/telemetry_shard.py`](../../backend/activities/telemetry_shard.py), [`services.py`](../../backend/activities/services.py), admin [`LiveMap.tsx`](../../admin/src/modules/analytics/LiveMap.tsx) | **Done** — `live_map_read_policy()`, cap/cache/detail ceiling, client poll multiplier |
-| Post-ride backfill API + bounded merge window | [`telemetry/main.py`](../../telemetry/main.py), Django activity finalize | **Done** (telemetry HTTP); Django finalize hook optional |
-| Evaluate Kafka only if Redis queue SLO breached | New ADR or amendment — out of P1 scope | Deferred |
-| Server `GET …/gpx/` | [P2_ROADMAP](../admin/P2_ROADMAP.md) F1 | Deferred |
-| Mobile WS ingest lane | HTTP remains SSOT | Deferred |
-| JWT on telemetry ingest | API gateway / future hardening | Deferred |
+| Post-ride backfill API + bounded merge window | [`telemetry/routes.py`](../../telemetry/routes.py), Django `finalize` `post_ride_telemetry` hint | **Done** |
+| Evaluate Kafka only if Redis queue SLO breached | New ADR or amendment — out of P1 scope | **Deferred** |
+| Server `GET …/gpx/` | [`backend/activities/gpx_export.py`](../../backend/activities/gpx_export.py) | **Done** |
+| Mobile WS ingest lane | [`mobile/src/services/gpsWsIngest.ts`](../../mobile/src/services/gpsWsIngest.ts) (`EXPO_PUBLIC_TELEMETRY_WS_INGEST=1`) | **Done** (opt-in) |
+| JWT on telemetry ingest | [`telemetry/ingest_auth.py`](../../telemetry/ingest_auth.py) (`TELEMETRY_INGEST_JWT_REQUIRED=0` default) | **Done** (optional env) |
+| Local GPX snapshot on stop | [`mobile/src/services/gpsLocalExport.ts`](../../mobile/src/services/gpsLocalExport.ts) | **Done** |
+| Redis PEL reclaim + DLQ | [`telemetry/ingest_queue.py`](../../telemetry/ingest_queue.py), [TELEMETRY_INGEST_QUEUE](../operations/TELEMETRY_INGEST_QUEUE.md) | **Done** |
+| Timescale drain (sort + optional COPY) | [`telemetry/db.py`](../../telemetry/db.py), [`ingest_queue.py`](../../telemetry/ingest_queue.py) | **Done** (default: sorted `executemany`) |
 
 ## Relation to existing decisions
 
@@ -417,11 +420,14 @@ Mobile GPS/OS/UX checklist: [Mobile-side guarantees](#mobile-side-guarantees) (P
 
 ## Verification
 
-- Load test: [TELEMETRY_LOAD_TEST](../operations/TELEMETRY_LOAD_TEST.md) with ingest engaged — assert 0 lost points for instrumented clients with outbox enabled.
+- Load test: [TELEMETRY_LOAD_TEST](../operations/TELEMETRY_LOAD_TEST.md) — engaged-guard section; `scripts/load-test-telemetry-ingest.py --assert-outbox`.
+- Queue ops: [TELEMETRY_INGEST_QUEUE](../operations/TELEMETRY_INGEST_QUEUE.md); smoke `scripts/verify-adr011-ingest.sh`.
 - Chaos: Redis unavailable → fail-open ingest (existing) but log `loadguard.*`; queue unavailable → fall back to 503/429 with client retry (P0).
-- Redis Stream: inject stuck PEL → assert reclaim + DLQ after N attempts.
+- Redis Stream: inject stuck PEL → assert reclaim + DLQ after N attempts (`TELEMETRY_INGEST_MAX_DELIVERY`, manual `POST .../queue/reclaim`).
 - Event day checklist: [EVENT_BURST_50K](../EVENT_BURST_50K.md) preflight + monitor queue lag (`XLEN`, consumer lag) metric (P1).
 - Client: kill app during `syncing` → assert batch retries and no buffer clear without `acked`.
+- Mobile: `npm test -- __tests__/services/gpsLocalExport.test.ts`; local snapshot on `stopTracking()` in [`GpsSyncManager.ts`](../../mobile/src/services/GpsSyncManager.ts).
+- Telemetry: `pytest` in `telemetry/` (incl. `test_ingest_queue.py`, `test_ingest_jwt.py`).
 
 ---
 
