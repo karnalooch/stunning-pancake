@@ -61,11 +61,16 @@ jobs:
           ruff check . --output-format=github
           ruff format --check .
 
-      - name: Type check with mypy (core modules)
+      - name: Type check with mypy (guarded modules)
         run: |
           pip install mypy django-stubs
           cd backend
-          mypy core users activities events clubs --ignore-missing-imports || true
+          mypy --config-file mypy-ci.ini \
+            core/load_guard.py \
+            core/fake_redis.py \
+            activities/services.py \
+            activities/telemetry_shard.py \
+            activities/simulator_routing_backpressure.py
 
       - name: Run Django system checks
         env:
@@ -135,7 +140,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://sport_user:sport_pass@localhost:5432/sport_test
           REDIS_URL: redis://localhost:6379/0
-        run: python -m pytest telemetry -q
+        run: cd telemetry && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin
 
   # ──────────────────────────────────────────
   # Mobile app (Jest)
@@ -156,6 +161,9 @@ jobs:
 
       - name: Install dependencies
         run: cd mobile && npm ci
+
+      - name: Lint with Expo ESLint
+        run: cd mobile && npm run lint
 
       - name: Run unit tests
         run: cd mobile && npm test -- --ci --passWithNoTests

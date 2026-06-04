@@ -9,12 +9,12 @@ Etykiety GitHub sugerowane: `quality-p0`, `quality-p1`, `quality-p2`.
 | ID | Obszar | Problem | Działanie |
 |----|--------|---------|-----------|
 | Q-P0-1 | **telemetry** | `main.py` ~1000 linii | **Done** — `routes.py`, `ingest_service.py`, `db.py`, `lifecycle.py`, … |
-| Q-P0-2 | **mobile** | `GpsSyncManager.ts` — storage+sync+UI | Rozdzielić moduły; test recovery po `stopTracking` |
-| Q-P0-3 | **backend** | `simulator_tasks.py` — monolit | Podmoduły tick / publish / routing |
-| Q-P0-4 | **CI** | mypy nie blokuje | `mypy core activities telemetry` bez `\|\| true` |
-| Q-P0-5 | **guard** | Django vs telemetry ingest | Wspólny plik wektorów testów JSON |
-| Q-P0-6 | **mobile** | Brak `npm run lint` | `expo lint` + job CI |
-| Q-P0-7 | **backend** | Ruff `ignore` dług | Co tydzień −1 reguła z ignore |
+| Q-P0-2 | **mobile** | `GpsSyncManager.ts` — storage+sync+UI | **Done** — `gpsSyncUpload.ts` + recovery test |
+| Q-P0-3 | **backend** | `simulator_tasks.py` — monolit | **Done (minimal)** — `simulator_route_waypoints.py`, `simulator_live_tick.py`; reszta tick/batch → P1 |
+| Q-P0-4 | **CI** | mypy nie blokuje | **Done** — `mypy-ci.ini` na 5 modułach bez `\|\| true` |
+| Q-P0-5 | **guard** | Django vs telemetry ingest | **Done** — `tests/fixtures/ingest_guard_parity.json` + `telemetry/test_guard_parity.py` |
+| Q-P0-6 | **mobile** | Brak `npm run lint` | **Done** — `expo lint` + job CI |
+| Q-P0-7 | **backend** | Ruff `ignore` dług | **Done (step)** — usunięto `C408` z ignore + fix 3× `dict()` w admin_views |
 
 ---
 
@@ -30,6 +30,7 @@ Etykiety GitHub sugerowane: `quality-p0`, `quality-p1`, `quality-p2`.
 | Q-P1-5b | **scripts** | Brak testów `check_docs_links` | pytest na parser linków |
 | Q-P1-6 | **infra** | OSRM/BRouter skrypty bez review | Checklist w PR przy `infrastructure/` |
 | Q-P1-7 | **security** | Dependabot high | [GitHub Security](https://github.com/karnalooch/stunning-pancake/security) |
+| Q-P1-8 | **backend** | `simulator_tasks.py` reszta | Wydzielić batch tasks / `run_live_simulation` orchestrator do osobnych modułów |
 
 ---
 

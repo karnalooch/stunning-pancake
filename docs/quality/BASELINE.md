@@ -6,7 +6,7 @@ Wynik **Fazy 0** dla całego monorepo. Odśwież po większych zmianach: `.\scri
 |-------|-------|-------|-------|
 | **backend** | `ruff check .` | ✅ PASS (po fix E741) | Duży `ignore` w `pyproject.toml` = dług stylu |
 | **backend** | `ruff format --check` | Uruchom w skrypcie | |
-| **backend** | `mypy` (CI) | ⚠️ `|| true` | Nie blokuje buildu — Faza 1 |
+| **backend** | `mypy` (CI) | ✅ PASS (5 modułów) | `mypy-ci.ini` — load_guard, telemetry_shard, … |
 | **backend** | `manage.py test` | CI | Długi; lokalnie opcjonalnie |
 | **telemetry** | `ruff check` | ✅ PASS | Po format + fix importów |
 | **telemetry** | `pytest` | ✅ 6 passed | Warnings: FastAPI `on_event` deprecated |
@@ -14,7 +14,7 @@ Wynik **Fazy 0** dla całego monorepo. Odśwież po większych zmianach: `.\scri
 | **admin** | `tsc --noEmit` | CI | |
 | **admin** | Playwright E2E | CI `e2e` | |
 | **mobile** | `npm test --ci` | ✅ 10 passed (GPS suites) | Pełny Jest — rozszerzyć CI |
-| **mobile** | ESLint | 🚧 BACKLOG | Brak `npm run lint` — dodać `expo lint` |
+| **mobile** | `npm run lint` (expo) | ✅ CI job | `expo lint` |
 | **scripts/** | `ruff check` (3 utrzymywane pliki) | ✅ PASS | Pełny `scripts/` — BACKLOG Q-P1-5 |
 | **docs** | `check_docs_links.py` | CI `docs.yml` | |
 | **shared/tokens** | `npm run tokens:check` | CI `repo-assets` | Root `package.json` |

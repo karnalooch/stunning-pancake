@@ -1,0 +1,83 @@
+[
+  {
+    "name": "off_always_allows",
+    "count": 50000,
+    "mode": "off",
+    "limit": 100,
+    "was_engaged": true,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": false, "retry_after": 0 }
+  },
+  {
+    "name": "disabled_limit",
+    "count": 50000,
+    "mode": "on",
+    "limit": 0,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": false, "retry_after": 0 }
+  },
+  {
+    "name": "on_under_limit",
+    "count": 5,
+    "mode": "on",
+    "limit": 10,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": false, "retry_after": 0 }
+  },
+  {
+    "name": "on_over_limit",
+    "count": 11,
+    "mode": "on",
+    "limit": 10,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": false, "engaged": true, "retry_after_min": 1 }
+  },
+  {
+    "name": "auto_below_trip",
+    "count": 50,
+    "mode": "auto",
+    "limit": 100,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": false, "retry_after": 0 }
+  },
+  {
+    "name": "auto_at_trip_engaged",
+    "count": 95,
+    "mode": "auto",
+    "limit": 100,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": true, "retry_after": 0 }
+  },
+  {
+    "name": "auto_engaged_over_limit",
+    "count": 105,
+    "mode": "auto",
+    "limit": 100,
+    "was_engaged": true,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": false, "engaged": true, "retry_after_min": 1 }
+  },
+  {
+    "name": "ingest_auto_engage_before_hard_cap",
+    "count": 18000,
+    "mode": "auto",
+    "limit": 20000,
+    "was_engaged": false,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": true, "engaged": true, "retry_after": 0 }
+  },
+  {
+    "name": "ingest_auto_reject_when_engaged_over",
+    "count": 25000,
+    "mode": "auto",
+    "limit": 20000,
+    "was_engaged": true,
+    "engage_ratio": 0.9,
+    "expected": { "allowed": false, "engaged": true, "retry_after_min": 1 }
+  }
+]

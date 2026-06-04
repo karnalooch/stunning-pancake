@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Set as AbstractSet
 from typing import Any
 
 
@@ -131,7 +132,7 @@ class FakeRedis:
             bucket.add(m.encode() if isinstance(m, str) else m)
         return len(bucket)
 
-    def smembers(self, key: str) -> set:
+    def smembers(self, key: str) -> AbstractSet[Any]:
         return set(self.storage.get(key, set()))
 
     def srem(self, key: str, *members: Any) -> int:
@@ -326,7 +327,7 @@ def install_pytest_redis() -> FakeRedis:
     def _get() -> FakeRedis:
         return instance
 
-    rc.get_redis = _get  # type: ignore[method-assign]
+    setattr(rc, "get_redis", _get)
 
     for mod_name in (
         "activities.simulator_state",
@@ -351,7 +352,7 @@ def install_pytest_redis() -> FakeRedis:
     ):
         mod = sys.modules.get(mod_name)
         if mod is not None and hasattr(mod, "get_redis"):
-            mod.get_redis = _get  # type: ignore[method-assign]
+            setattr(mod, "get_redis", _get)
 
     return instance
 

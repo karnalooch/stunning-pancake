@@ -662,18 +662,18 @@ class LiveSimulationView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             sim.reset_live_state()
-            live_kw = dict(
-                running=True,
-                started_at=time.time(),
-                total_users=total_users,
-                active_ratio=active_ratio,
-                cheat_ratio=cheat_ratio,
-                tick_seconds=tick_seconds,
-                currently_riding=0,
-                total_completed=0,
-                cheaters_caught=0,
-                last_tick_at=time.time(),
-            )
+            live_kw = {
+                "running": True,
+                "started_at": time.time(),
+                "total_users": total_users,
+                "active_ratio": active_ratio,
+                "cheat_ratio": cheat_ratio,
+                "tick_seconds": tick_seconds,
+                "currently_riding": 0,
+                "total_completed": 0,
+                "cheaters_caught": 0,
+                "last_tick_at": time.time(),
+            }
             if scale_json:
                 live_kw["scale_overrides"] = scale_json
             if sim_intensity is not None:
@@ -722,19 +722,19 @@ class LiveSimulationView(APIView):
                     status=status.HTTP_409_CONFLICT,
                 )
             sim.reset_live_state()
-            live_kw = dict(
-                running=True,
-                started_at=time.time(),
-                total_users=total_users,
-                active_ratio=active_ratio,
-                cheat_ratio=cheat_ratio,
-                tick_seconds=tick_seconds,
-                currently_riding=0,
-                total_completed=0,
-                cheaters_caught=0,
-                last_tick_at=time.time(),
-                error=None,
-            )
+            live_kw = {
+                "running": True,
+                "started_at": time.time(),
+                "total_users": total_users,
+                "active_ratio": active_ratio,
+                "cheat_ratio": cheat_ratio,
+                "tick_seconds": tick_seconds,
+                "currently_riding": 0,
+                "total_completed": 0,
+                "cheaters_caught": 0,
+                "last_tick_at": time.time(),
+                "error": None,
+            }
             if scale_json:
                 live_kw["scale_overrides"] = scale_json
             if sim_intensity is not None:
@@ -1202,17 +1202,17 @@ class RunSimulationView(APIView):
 
         # Reset and mark running=True explicitly to prevent frontend polling race conditions in async environments
         sim.reset_batch_state()
-        batch_kw = dict(
-            running=True,
-            current_phase="starting",
-            progress_pct=0,
-            users_created=0,
-            activities_created=0,
-            started_at=time.time(),
-            scale=scale,
-            days=days,
-            total_users=total_users or 0,
-        )
+        batch_kw = {
+            "running": True,
+            "current_phase": "starting",
+            "progress_pct": 0,
+            "users_created": 0,
+            "activities_created": 0,
+            "started_at": time.time(),
+            "scale": scale,
+            "days": days,
+            "total_users": total_users or 0,
+        }
         if scale_json:
             batch_kw["scale_overrides"] = scale_json
         sim.set_batch_state(**batch_kw)

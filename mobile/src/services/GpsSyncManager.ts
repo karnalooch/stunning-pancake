@@ -1,16 +1,14 @@
 /**
  * GPS Sync Manager — SPORT Mobile App (v2.2 Data Resilience)
- * Expo Location + Task Manager with MMKV buffer, outbox, and launch recovery.
+ * Expo Location + Task Manager with MMKV buffer; upload logic in gpsSyncUpload.ts.
  */
 
 import { AppState, type AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import { MMKV } from 'react-native-mmkv';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
-import axios from 'axios';
-import { firebaseCapture } from './FirebaseService';
 import { api } from './apiClient';
+import { firebaseCapture } from './FirebaseService';
 import {
   acceptGpsPoint,
   createGpsFilterState,
@@ -18,51 +16,43 @@ import {
 } from './gpsQualityFilter';
 import {
   appendToBuffer,
-  appendToOutbox,
   buildGpsPoint,
   buildRouteCoordinates,
   clearBuffer,
   clearPendingSession,
-  createClientBatchId,
   ensureBufferSchema,
-  getIngestPauseUntil,
   GPS_STORAGE_KEYS,
   GpsPoint,
-  GpsStorageAdapter,
-  isIngestPaused,
+  isRecoveryPending,
   loadBuffer,
   loadOutbox,
-  isRecoveryPending,
   loadPendingSession,
   loadTrackingState,
   mergeRouteCoordinates,
   nextPointSeq,
-  OutboxEntry,
   pendingPointCount,
-  PendingSessionPayload,
-  removeOutboxEntry,
-  removePointsFromBuffer,
   savePendingSession,
-  setIngestPauseUntil,
   setRecoveryPending,
   TrackingState,
-  updateOutboxEntry,
   type TrackingStats,
 } from './gpsSyncStorage';
+import {
+  flushGpsUploadQueues,
+  getGpsStorage,
+  getLastAckAt,
+  isGlobalIngestPaused,
+  MAX_RETRIES,
+  processGpsOutbox,
+  uploadBufferSnapshot,
+} from './gpsSyncUpload';
 
-const TELEMETRY_URL =
-  process.env.EXPO_PUBLIC_TELEMETRY_URL ??
-  'https://docker-telemetry-production-123c.up.railway.app';
 const BATCH_INTERVAL_MS = 30_000;
-const MAX_RETRIES = 5;
 const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 
-let _ingestPauseUntil = 0;
-let _lastAckAt: number | null = null;
-const _inflightByActivity = new Map<number, Promise<boolean>>();
 const _filterStateByActivity = new Map<number, GpsFilterState>();
 
-function loadFilterState(storage: GpsStorageAdapter, activityId: number): GpsFilterState {
+function loadFilterState(storage: ReturnType<typeof getGpsStorage>, activityId: number): GpsFilterState {
+  if (!storage) return createGpsFilterState();
   let state = _filterStateByActivity.get(activityId);
   if (state) return state;
   const raw = storage.getString(GPS_STORAGE_KEYS.FILTER_STATE);
@@ -83,7 +73,7 @@ function loadFilterState(storage: GpsStorageAdapter, activityId: number): GpsFil
   return state;
 }
 
-function persistFilterStates(storage: GpsStorageAdapter): void {
+function persistFilterStates(storage: NonNullable<ReturnType<typeof getGpsStorage>>): void {
   const payload: Record<string, GpsFilterState> = {};
   _filterStateByActivity.forEach((v, k) => {
     payload[String(k)] = v;
@@ -91,75 +81,8 @@ function persistFilterStates(storage: GpsStorageAdapter): void {
   storage.set(GPS_STORAGE_KEYS.FILTER_STATE, JSON.stringify(payload));
 }
 
-export interface IngestAckResult {
-  acked: boolean;
-  inserted: number;
-  queued?: boolean;
-  deduped?: boolean;
-}
-
-function parseIngestAck(data: unknown, sentCount: number): IngestAckResult {
-  if (!data || typeof data !== 'object') {
-    return { acked: false, inserted: 0 };
-  }
-  const body = data as Record<string, unknown>;
-  if (body.deduped === true) {
-    return { acked: true, inserted: 0, deduped: true };
-  }
-  if (body.acked === true) {
-    const inserted =
-      typeof body.inserted === 'number' ? body.inserted : sentCount;
-    return {
-      acked: true,
-      inserted,
-      queued: body.queued === true,
-    };
-  }
-  const status = body.status;
-  if (status === 'accepted' || status === 'dropped_privacy') {
-    const inserted =
-      typeof body.inserted === 'number' ? body.inserted : sentCount;
-    return { acked: true, inserted, queued: body.queued === true };
-  }
-  return { acked: false, inserted: 0 };
-}
-
-function applyGlobalIngestPause(headers: Record<string, unknown> | undefined): void {
-  if (!headers) return;
-  const retryAfter = headers['retry-after'] ?? headers['Retry-After'];
-  const retrySec =
-    typeof retryAfter === 'string'
-      ? parseInt(retryAfter, 10)
-      : typeof retryAfter === 'number'
-        ? retryAfter
-        : 0;
-  if (!retrySec || !Number.isFinite(retrySec)) return;
-  const until = Date.now() + retrySec * 1000;
-  _ingestPauseUntil = Math.max(_ingestPauseUntil, until);
-  const storage = getStorage();
-  if (storage) setIngestPauseUntil(storage, until);
-}
-
-function isGlobalIngestPaused(): boolean {
-  if (_ingestPauseUntil > Date.now()) return true;
-  const storage = getStorage();
-  return storage ? isIngestPaused(storage) : false;
-}
-
-export function getGpsSyncStatus(): {
-  pendingPoints: number;
-  ingestPaused: boolean;
-  pauseUntil: number;
-  lastAckAt: number | null;
-} {
-  const storage = getStorage();
-  return {
-    pendingPoints: storage ? pendingPointCount(storage) : 0,
-    ingestPaused: isGlobalIngestPaused(),
-    pauseUntil: Math.max(_ingestPauseUntil, storage ? getIngestPauseUntil(storage) : 0),
-    lastAckAt: _lastAckAt,
-  };
-}
+export { getGpsSyncStatus } from './gpsSyncUpload';
+export type { IngestAckResult } from './gpsSyncUpload';
 
 export enum PollingResolution {
   HYPERSCALE = 'HYPERSCALE',
@@ -185,194 +108,11 @@ const RESOLUTION_CONFIG = {
   },
 };
 
-let _storage: MMKV | null = null;
-
-function getStorage(): GpsStorageAdapter | null {
-  if (!_storage) {
-    try {
-      _storage = new MMKV({ id: 'gps-buffer' });
-    } catch (e) {
-      console.error('MMKV init failed in GpsSyncManager. Falling back to mock.', e);
-      _storage = {
-        getString: () => null,
-        set: () => {},
-        delete: () => {},
-      } as unknown as MMKV;
-    }
-  }
-  return _storage as GpsStorageAdapter;
-}
-
 export interface RecoveryResult {
   needsResumeUi: boolean;
   pendingBuffer: number;
   outboxCount: number;
   pendingSession: boolean;
-}
-
-async function postTelemetryBatch(
-  points: GpsPoint[],
-  clientBatchId: string,
-): Promise<IngestAckResult> {
-  const activityId = points[0]?.activity_id ?? null;
-  const maxSeq = points.reduce(
-    (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
-    0,
-  );
-  const res = await axios.post(
-    `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
-    {
-      packets: points,
-      client_batch_id: clientBatchId,
-      point_count: points.length,
-      max_seq: maxSeq || undefined,
-      activity_id: activityId,
-    },
-    { timeout: 15_000, validateStatus: (s) => s === 202 || s === 201 },
-  );
-  return parseIngestAck(res.data, points.length);
-}
-
-async function uploadPointsWithRetry(
-  points: GpsPoint[],
-  clientBatchId: string,
-  attempt = 1,
-): Promise<IngestAckResult> {
-  if (points.length === 0) return { acked: true, inserted: 0 };
-  if (isGlobalIngestPaused()) {
-    return { acked: false, inserted: 0 };
-  }
-
-  const activityId = points[0]?.activity_id;
-  if (activityId != null) {
-    const inflight = _inflightByActivity.get(activityId);
-    if (inflight) {
-      const ok = await inflight;
-      return ok
-        ? { acked: true, inserted: points.length }
-        : { acked: false, inserted: 0 };
-    }
-    const promise = uploadPointsWithRetryInner(points, clientBatchId, attempt);
-    _inflightByActivity.set(activityId, promise.then((r) => r.acked));
-    try {
-      return await promise;
-    } finally {
-      _inflightByActivity.delete(activityId);
-    }
-  }
-  return uploadPointsWithRetryInner(points, clientBatchId, attempt);
-}
-
-async function uploadPointsWithRetryInner(
-  points: GpsPoint[],
-  clientBatchId: string,
-  attempt = 1,
-): Promise<IngestAckResult> {
-  if (points.length === 0) return { acked: true, inserted: 0 };
-  try {
-    const ack = await postTelemetryBatch(points, clientBatchId);
-    if (ack.acked) {
-      _lastAckAt = Date.now();
-      return ack;
-    }
-    return { acked: false, inserted: 0 };
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const status = err.response?.status;
-      const headers = err.response?.headers as Record<string, unknown> | undefined;
-      if (status === 429 || status === 503) {
-        applyGlobalIngestPause(headers);
-        return { acked: false, inserted: 0 };
-      }
-    }
-    if (attempt < MAX_RETRIES) {
-      const jitter = Math.random() * 500;
-      const delay = Math.min(2 ** attempt * 1_000, 30_000) + jitter;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return uploadPointsWithRetryInner(points, clientBatchId, attempt + 1);
-    }
-    firebaseCapture(err, 'GPS_UPLOAD_FAILED');
-    return { acked: false, inserted: 0 };
-  }
-}
-
-async function flushOutboxEntry(entry: OutboxEntry): Promise<boolean> {
-  const storage = getStorage();
-  if (!storage) return false;
-  if (entry.state === 'acked') {
-    removeOutboxEntry(storage, entry.client_batch_id);
-    return true;
-  }
-  if (isGlobalIngestPaused()) return false;
-
-  updateOutboxEntry(storage, entry.client_batch_id, { state: 'syncing' });
-  const ack = await uploadPointsWithRetry(entry.points, entry.client_batch_id);
-  if (ack.acked) {
-    updateOutboxEntry(storage, entry.client_batch_id, { state: 'acked' });
-    removeOutboxEntry(storage, entry.client_batch_id);
-    return true;
-  }
-  updateOutboxEntry(storage, entry.client_batch_id, {
-    state: 'pending',
-    attempts: entry.attempts + 1,
-  });
-  return false;
-}
-
-export async function processGpsOutbox(): Promise<void> {
-  const storage = getStorage();
-  if (!storage) return;
-  ensureBufferSchema(storage);
-  const pending = loadOutbox(storage).filter(
-    (e) => e.state === 'pending' || e.state === 'syncing',
-  );
-  for (const entry of pending) {
-    await flushOutboxEntry(entry);
-  }
-}
-
-async function uploadBufferSnapshot(): Promise<void> {
-  const storage = getStorage();
-  if (!storage) return;
-  ensureBufferSchema(storage);
-  const points = loadBuffer(storage);
-  if (points.length === 0) return;
-  if (isGlobalIngestPaused()) return;
-
-  const clientBatchId = createClientBatchId();
-  const activityId = points[0]?.activity_id ?? null;
-  const maxSeq = points.reduce(
-    (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
-    0,
-  );
-
-  appendToOutbox(storage, {
-    client_batch_id: clientBatchId,
-    points: [...points],
-    created_at: Date.now(),
-    attempts: 0,
-    state: 'syncing',
-    activity_id: activityId,
-    point_count: points.length,
-    max_seq: maxSeq || undefined,
-  });
-  removePointsFromBuffer(storage, points);
-
-  const ack = await uploadPointsWithRetry([...points], clientBatchId);
-  if (ack.acked) {
-    removeOutboxEntry(storage, clientBatchId);
-    return;
-  }
-
-  updateOutboxEntry(storage, clientBatchId, {
-    state: 'pending',
-    attempts: 1,
-  });
-  if (__DEV__) {
-    console.warn(
-      `[GPS] batch retained in outbox (${points.length} pts), pending=${pendingPointCount(storage)}`,
-    );
-  }
 }
 
 function routePathHash(coords: [number, number][]): string {
@@ -434,7 +174,7 @@ async function finalizeActivity(
 }
 
 export async function retryPendingSessionCreate(): Promise<number | null> {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (!storage) return null;
   const pending = loadPendingSession(storage);
   if (!pending) return null;
@@ -475,7 +215,7 @@ export async function retryPendingSessionCreate(): Promise<number | null> {
 }
 
 export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   const empty: RecoveryResult = {
     needsResumeUi: false,
     pendingBuffer: 0,
@@ -496,7 +236,7 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
 
   const needsResumeUi =
     pendingSession ||
-  Boolean(state?.activityId && (state.isTracking || buffer.length > 0 || outbox.length > 0));
+    Boolean(state?.activityId && (state.isTracking || buffer.length > 0 || outbox.length > 0));
 
   setRecoveryPending(storage, needsResumeUi);
 
@@ -515,12 +255,12 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
 }
 
 export function isTrackingRecoveryPending(): boolean {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   return storage ? isRecoveryPending(storage) : false;
 }
 
 export function isRideTrackingActive(): boolean {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (!storage) return false;
   const state = loadTrackingState(storage);
   return Boolean(state?.isTracking && state.activityId);
@@ -528,7 +268,7 @@ export function isRideTrackingActive(): boolean {
 
 /** Restart Expo location task after app kill if MMKV still marks an active ride. */
 export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (!storage) return false;
   const state = loadTrackingState(storage);
   if (!state?.isTracking || !state.activityId) return false;
@@ -560,7 +300,7 @@ export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
 }
 
 export function clearTrackingRecoveryPending(): void {
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (storage) setRecoveryPending(storage, false);
 }
 
@@ -569,7 +309,7 @@ export async function runManualGpsRecovery(): Promise<boolean> {
   await processGpsOutbox();
   await uploadBufferSnapshot();
 
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (!storage) return true;
 
   const stillPending =
@@ -585,15 +325,11 @@ export async function runManualGpsRecovery(): Promise<boolean> {
 }
 
 export { createSessionWithDurability } from './sessionDurability';
+export { processGpsOutbox, uploadBufferSnapshot } from './gpsSyncUpload';
 
 let _syncInterval: ReturnType<typeof setInterval> | null = null;
 let _netInfoUnsubscribe: (() => void) | null = null;
 let _appStateSubscription: { remove: () => void } | null = null;
-
-async function flushGpsUploadQueues(): Promise<void> {
-  await processGpsOutbox();
-  await uploadBufferSnapshot();
-}
 
 function subscribeNetInfoReconnect(): void {
   if (_netInfoUnsubscribe) return;
@@ -645,15 +381,15 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     return;
   }
 
-  const storage = getStorage();
+  const storage = getGpsStorage();
   if (!storage) {
     await new Promise((r) => setTimeout(r, 500));
-    if (!getStorage()) return;
+    if (!getGpsStorage()) return;
   }
 
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
-    const safeStorage = getStorage()!;
+    const safeStorage = getGpsStorage()!;
     const state = loadTrackingState(safeStorage);
 
     if (!state?.isTracking || !state.activityId) return;
@@ -759,7 +495,6 @@ export type { GpsPoint, TrackingStats } from './gpsSyncStorage';
 export class GpsSyncManager {
   private _deviceId: string;
   private _userId: number | null;
-  private _batchTimer: ReturnType<typeof setInterval> | null = null;
   private _statsCheckTimer: ReturnType<typeof setInterval> | null = null;
   private _onUpdate: ((stats: TrackingStats) => void) | null = null;
 
@@ -778,7 +513,7 @@ export class GpsSyncManager {
 
   private _emitStats(): void {
     if (!this._onUpdate) return;
-    const storage = getStorage();
+    const storage = getGpsStorage();
     if (!storage) return;
 
     const currentStats = JSON.parse(
@@ -796,7 +531,7 @@ export class GpsSyncManager {
       ...currentStats,
       pendingPoints: pendingPointCount(storage),
       ingestPaused: isGlobalIngestPaused(),
-      lastAckAt: _lastAckAt,
+      lastAckAt: getLastAckAt(),
       rideWallClockS,
       gpsActiveTimeS: currentStats.gpsActiveTimeS,
     });
@@ -816,7 +551,7 @@ export class GpsSyncManager {
       throw new Error('Background location permission not granted');
     }
 
-    const storage = getStorage();
+    const storage = getGpsStorage();
     if (storage) {
       storage.set(
         GPS_STORAGE_KEYS.TRACKING_STATE,
@@ -859,7 +594,7 @@ export class GpsSyncManager {
   }
 
   async setResolution(resolution: PollingResolution): Promise<void> {
-    const storage = getStorage();
+    const storage = getGpsStorage();
     if (!storage) return;
     const state = loadTrackingState(storage);
     if (!state?.isTracking) return;
@@ -884,7 +619,7 @@ export class GpsSyncManager {
     stopGpsBackgroundSync();
     if (this._statsCheckTimer) clearInterval(this._statsCheckTimer);
 
-    const storage = getStorage();
+    const storage = getGpsStorage();
     const state = storage ? loadTrackingState(storage) : null;
     const activityId = state?.activityId ?? null;
 

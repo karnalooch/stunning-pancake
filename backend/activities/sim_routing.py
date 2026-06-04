@@ -42,9 +42,9 @@ def _osrm_route_waypoints(
     *,
     use_tick_budget: bool = True,
 ) -> list[tuple[float, float]] | None:
-    from activities import simulator_tasks as sim_tasks
+    from activities.simulator_route_waypoints import _consume_brouter_tick_budget
 
-    if use_tick_budget and not sim_tasks._consume_brouter_tick_budget():
+    if use_tick_budget and not _consume_brouter_tick_budget():
         return None
     coords = [[start_lon, start_lat], [end_lon, end_lat]]
     result = OsrmService.route_coordinates(activity_type, coords)
@@ -53,7 +53,9 @@ def _osrm_route_waypoints(
         if waypoints and len(waypoints) >= 2:
             return waypoints
     err = result.get("error") or "unknown"
-    sim_tasks._maybe_log_brouter_route_failure(
+    from activities.simulator_route_waypoints import _maybe_log_brouter_route_failure
+
+    _maybe_log_brouter_route_failure(
         f"{OsrmService.base_url()} (osrm) -> {err}",
         unroutable="NoRoute" in str(err) or "NoSegment" in str(err),
     )
@@ -70,12 +72,12 @@ def resolve_road_route_fn() -> RoadRouteFn | None:
     if backend == "auto":
         if OsrmService.health_check():
             return _osrm_route_waypoints
-        from activities import simulator_tasks as sim_tasks
+        from activities.simulator_route_waypoints import _brouter_route_waypoints
 
-        return sim_tasks._brouter_route_waypoints
-    from activities import simulator_tasks as sim_tasks
+        return _brouter_route_waypoints
+    from activities.simulator_route_waypoints import _brouter_route_waypoints
 
-    return sim_tasks._brouter_route_waypoints
+    return _brouter_route_waypoints
 
 
 def road_route_waypoints(
