@@ -3,6 +3,7 @@ import {
     computeLiveMapHealth,
     formatLastSyncAgo,
     parsePollAfterMs,
+    resolveStaleAfterMs,
     statusLabel,
 } from '../modules/analytics/liveMapHealth';
 
@@ -62,6 +63,21 @@ describe('liveMapHealth', () => {
             staleAfterMs: 5_000,
         });
         expect(h.status).toBe('stale');
+    });
+
+    it('resolveStaleAfterMs tolerates slow SSE + 15s poll', () => {
+        const ms = resolveStaleAfterMs({
+            pollDelayMs: 15_000,
+            lastLatencyMs: 7_051,
+            sseActive: true,
+            streamIntervalMs: 350,
+        });
+        expect(ms).toBeGreaterThan(20_000);
+    });
+
+    it('resolveStaleAfterMs stays at default for fast polls', () => {
+        expect(resolveStaleAfterMs({ pollDelayMs: 950, lastLatencyMs: 120, sseActive: false }))
+            .toBe(12_000);
     });
 
     it('formatLastSyncAgo', () => {

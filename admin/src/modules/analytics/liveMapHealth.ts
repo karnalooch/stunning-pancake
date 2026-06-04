@@ -40,7 +40,35 @@ export type LiveMapHealthInput = {
     staleAfterMs?: number;
 };
 
-const DEFAULT_STALE_AFTER_MS = 12_000;
+export const DEFAULT_STALE_AFTER_MS = 12_000;
+
+export type ResolveStaleAfterMsInput = {
+    pollDelayMs?: number | null;
+    lastLatencyMs?: number | null;
+    sseActive?: boolean;
+    streamIntervalMs?: number | null;
+};
+
+/**
+ * Stale threshold must exceed HTTP poll cadence (15s+ when SSE is active) and slow payloads.
+ */
+export function resolveStaleAfterMs(input: ResolveStaleAfterMsInput = {}): number {
+    const latency = Math.max(0, input.lastLatencyMs ?? 0);
+    const poll = Math.max(400, input.pollDelayMs ?? (input.sseActive ? 15_000 : 1_000));
+    const stream = Math.max(200, input.streamIntervalMs ?? 350);
+
+    if (input.sseActive) {
+        return Math.max(
+            DEFAULT_STALE_AFTER_MS,
+            Math.round(poll * 1.25 + latency * 2),
+            Math.round(stream * 25),
+        );
+    }
+    return Math.max(
+        DEFAULT_STALE_AFTER_MS,
+        Math.round(poll * 1.1 + latency * 2.5),
+    );
+}
 
 export function parseLiveMapReadMode(meta: Record<string, unknown> | null | undefined): LiveMapReadMode {
     if (!meta) return 'normal';

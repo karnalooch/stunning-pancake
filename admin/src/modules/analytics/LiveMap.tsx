@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
 import { LiveMapStatusBar } from './LiveMapStatusBar';
-import { computeLiveMapHealth, parsePollAfterMs } from './liveMapHealth';
+import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './liveMapHealth';
 import {
     resolveLiveMapPollDelayWithStream,
 } from './liveMapPoll';
@@ -121,6 +121,7 @@ export const LiveMap: React.FC = () => {
     const streamAbortRef = useRef<AbortController | null>(null);
     const wsDisconnectRef = useRef<(() => void) | null>(null);
     const streamIntervalMsRef = useRef(350);
+    const lastStreamAtRef = useRef<number | null>(null);
     const [sseActive, setSseActive] = useState(false);
     const lastTelemetryMetaRef = useRef<Record<string, unknown> | null>(null);
     const lastSuccessAtRef = useRef<number | null>(null);
@@ -463,6 +464,7 @@ export const LiveMap: React.FC = () => {
         if (streamMs != null) streamIntervalMsRef.current = streamMs;
         applyPositionPayload(list, meta, detail, false, false, true);
         const now = Date.now();
+        lastStreamAtRef.current = now;
         lastSuccessAtRef.current = now;
         setLastSuccessAt(now);
         consecutiveErrorsRef.current = 0;
@@ -474,6 +476,7 @@ export const LiveMap: React.FC = () => {
         streamAbortRef.current = null;
         wsDisconnectRef.current?.();
         wsDisconnectRef.current = null;
+        lastStreamAtRef.current = null;
         setSseActive(false);
     }, []);
 
@@ -782,6 +785,33 @@ export const LiveMap: React.FC = () => {
         return () => stopTelemetryStream();
     }, [mapReady, canFetch, tabVisible, liveFetchPaused, restartTelemetryStream, stopTelemetryStream]);
 
+    useEffect(() => {
+        if (!sseActive || !mapReady || !canFetch || liveFetchPaused || !tabVisible) return;
+        const check = () => {
+            const streamMs = streamIntervalMsRef.current ?? 350;
+            const staleLimit = resolveStaleAfterMs({
+                pollDelayMs: lastPollDelayRef.current,
+                lastLatencyMs: lastRefreshRef.current,
+                sseActive: true,
+                streamIntervalMs: streamMs,
+            });
+            const now = Date.now();
+            const sinceStream = lastStreamAtRef.current != null
+                ? now - lastStreamAtRef.current
+                : Infinity;
+            const sinceOk = lastSuccessAtRef.current != null
+                ? now - lastSuccessAtRef.current
+                : Infinity;
+            const streamSilence = Math.max(streamMs * 12, 8_000);
+            if (sinceStream > streamSilence || sinceOk > staleLimit) {
+                restartTelemetryStream();
+                fetchPositionsRef.current({ priority: true, snap: true });
+            }
+        };
+        const id = setInterval(check, 4_000);
+        return () => clearInterval(id);
+    }, [sseActive, mapReady, canFetch, liveFetchPaused, tabVisible, restartTelemetryStream]);
+
     const retryMapLoad = useCallback(() => {
         setMapLoadError(null);
         mapHasLoadedRef.current = false;
@@ -813,6 +843,13 @@ export const LiveMap: React.FC = () => {
         return () => { map.off('moveend', loadHeatmap); };
     }, [showHeatmap, loadHeatmap]);
 
+    const staleAfterMs = resolveStaleAfterMs({
+        pollDelayMs: lastPollDelayRef.current,
+        lastLatencyMs: lastRefreshMs,
+        sseActive,
+        streamIntervalMs: streamIntervalMsRef.current,
+    });
+
     return (
         <Box
             data-testid="live-map-root"
@@ -828,6 +865,7 @@ export const LiveMap: React.FC = () => {
                 consecutiveErrors,
                 lastLatencyMs: lastRefreshMs,
                 meta: lastTelemetryMetaRef.current,
+                staleAfterMs,
             }).status}
             style={{ position: 'relative', width: '100%', height: '100%', minHeight: 450, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}
             role="region"
@@ -924,9 +962,13 @@ export const LiveMap: React.FC = () => {
                 consecutiveErrors={consecutiveErrors}
                 lastLatencyMs={lastRefreshMs}
                 meta={lastTelemetryMetaRef.current}
+                staleAfterMs={staleAfterMs}
                 mapLoadError={mapLoadError}
                 onRetryMap={retryMapLoad}
-                onRetry={() => fetchPositions({ priority: true, snap: true })}
+                onRetry={() => {
+                    restartTelemetryStream();
+                    fetchPositions({ priority: true, snap: true });
+                }}
             />
             {mapReady && mapZoom != null && (
                 <Box
