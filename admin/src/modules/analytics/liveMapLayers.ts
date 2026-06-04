@@ -52,7 +52,7 @@ function positionsToFeatures(positions: LiveMapPosition[]) {
 }
 
 function cityHubFeatures(counts: Record<string, number>) {
-    return POLAND_SIM_CITIES.map((city) => ({
+    return POLAND_SIM_CITIES.filter((city) => (counts[city.slug] ?? 0) > 0).map((city) => ({
         type: 'Feature' as const,
         geometry: {
             type: 'Point' as const,
@@ -108,7 +108,8 @@ export function installLiveMapLayers(
                 ],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart, 0.32,
+                    LOD.clusterVisibleStart, 0.3,
+                    5.5, 0.42,
                     8, 0.72,
                     10.5, 0.88,
                     LOD.clusterPeakEnd, 0.94,
@@ -143,7 +144,8 @@ export function installLiveMapLayers(
                 'text-halo-width': 1.2,
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart, 0.45,
+                    LOD.clusterVisibleStart, 0.4,
+                    5.5, 0.55,
                     9, 0.92,
                     LOD.clusterPeakEnd, 1,
                     LOD.clusterFadeOutEnd - 0.8, 0.55,
@@ -163,7 +165,10 @@ export function installLiveMapLayers(
                     LOD.dotFadeInStart, 5,
                     9, 7,
                     11, 8,
-                    12.2, 7,
+                    LOD.dotFadeOutStart, 5.5,
+                    12, 3,
+                    12.2, 2.5,
+                    12.6, 1,
                     LOD.dotFadeOutEnd, 0,
                 ],
                 'circle-color': [
@@ -178,8 +183,10 @@ export function installLiveMapLayers(
                     'interpolate', ['linear'], ['zoom'],
                     LOD.dotFadeInStart, 0.35,
                     11.2, 0.82,
-                    LOD.dotFadeOutStart, 0.7,
-                    12.8, 0.35,
+                    LOD.dotFadeOutStart, 0.45,
+                    12, 0.32,
+                    12.2, 0.22,
+                    12.6, 0.1,
                     LOD.dotFadeOutEnd, 0,
                 ],
             },
@@ -215,7 +222,8 @@ export function installLiveMapLayers(
                     LOD.iconFadeInStart, 0.15,
                     LOD.iconFadeInEnd, 0.75,
                     12.6, 0.95,
-                    13.2, 0.85,
+                    LOD.iconFadeOutStart, 0.92,
+                    LOD.iconFadeOutEnd, LOD.labelIconOpacityAtHandoff,
                 ],
             },
         });
@@ -267,7 +275,7 @@ export function installLiveMapLayers(
                 'text-halo-width': 1.6,
                 'icon-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.labelFadeInStart, 0.5,
+                    LOD.labelFadeInStart, LOD.labelIconOpacityAtHandoff,
                     LOD.labelFadeInEnd, 1,
                 ],
                 'text-opacity': [
@@ -303,7 +311,8 @@ export function installLiveMapLayers(
             paint: {
                 'circle-radius': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 18,
+                    LOD.cityHubMin, 14,
+                    5, 18,
                     7.5, 22,
                     LOD.cityHubFadeOutStart, 24,
                     9, 26,
@@ -311,8 +320,8 @@ export function installLiveMapLayers(
                 'circle-color': ['get', 'color'],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0,
-                    LOD.cityHubFadeInEnd, 0.72,
+                    LOD.cityHubMin, 0.55,
+                    LOD.cityHubFadeInEnd, 0.85,
                     8.2, 0.95,
                     LOD.cityHubFadeOutStart, 0.88,
                     LOD.cityHubFadeOutEnd, 0,
@@ -333,7 +342,8 @@ export function installLiveMapLayers(
                 'text-font': [...MAP_TEXT_FONT_BOLD],
                 'text-size': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 11,
+                    LOD.cityHubMin, 10,
+                    5, 11,
                     8, 13,
                     9.5, 14,
                 ],
@@ -344,8 +354,8 @@ export function installLiveMapLayers(
                 'text-halo-width': 1.2,
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0,
-                    LOD.cityHubFadeInEnd, 0.75,
+                    LOD.cityHubMin, 0.6,
+                    LOD.cityHubFadeInEnd, 0.9,
                     8.2, 1,
                     LOD.cityHubFadeOutStart, 0.9,
                     LOD.cityHubFadeOutEnd, 0,

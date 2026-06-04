@@ -565,11 +565,17 @@ class TelemetryService:
         return max(1.0, math.sqrt(dx * dx + dy * dy) / 2.0)
 
     @classmethod
-    def _live_cache_key(cls, bbox: tuple[float, float, float, float] | None, cap: int) -> str:
+    def _live_cache_key(
+        cls,
+        bbox: tuple[float, float, float, float] | None,
+        cap: int,
+        zoom: float | None = None,
+    ) -> str:
         import hashlib
 
         bbox_s = ",".join(f"{x:.4f}" for x in bbox) if bbox else "all"
-        digest = hashlib.sha256(f"{bbox_s}|{cap}".encode()).hexdigest()[:20]
+        z = f"{zoom:.1f}" if zoom is not None else "na"
+        digest = hashlib.sha256(f"{bbox_s}|{cap}|{z}".encode()).hexdigest()[:20]
         return f"{cls.TELEMETRY_LIVE_CACHE_PREFIX}{digest}"
 
     @classmethod
@@ -879,6 +885,8 @@ class TelemetryService:
         bbox: tuple[float, float, float, float] | None = None,
         limit: int | None = None,
         zoom: float | None = None,
+        *,
+        skip_cache: bool = False,
     ) -> tuple[list[dict], dict]:
         """
         Fetch positions without scanning the full Redis hash.
@@ -922,8 +930,8 @@ class TelemetryService:
         if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
             effective_cache_ttl = max(TELEMETRY_LIVE_CACHE_TTL, read_policy.cache_ttl_seconds)
 
-        cache_key = cls._live_cache_key(bbox, cap) if bbox else None
-        if cache_key:
+        cache_key = cls._live_cache_key(bbox, cap, zoom) if bbox else None
+        if cache_key and not skip_cache:
             cached = cls._get_live_cached(cache_key, effective_cache_ttl)
             if cached is not None:
                 return cached
@@ -951,9 +959,9 @@ class TelemetryService:
                 float(TELEMETRY_GEO_RADIUS_KM),
                 zoom=zoom,
             )
+            if positions and cache_key:
+                cls._set_live_cached(cache_key, positions, meta, effective_cache_ttl)
             if positions:
-                if cache_key:
-                    cls._set_live_cached(cache_key, positions, meta, effective_cache_ttl)
                 return positions, meta
         except Exception:
             pass

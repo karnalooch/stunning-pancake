@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
 import { Map as MapIcon, Activity, Layers, Zap } from 'lucide-react';
+import { LiveMapStatusBar } from './LiveMapStatusBar';
+import { computeLiveMapHealth, parsePollAfterMs } from './liveMapHealth';
+import {
+    resolveLiveMapPollDelayWithStream,
+} from './liveMapPoll';
+import { connectLiveMapSse, parseStreamIntervalMs } from './liveMapStream';
+import { connectLiveMapWs } from './liveMapWs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient, TelemetryApi } from '../../api/client';
 import { formatQuickLaunchError, quickLaunchLiveMap, QuickLaunchBlockedError } from '../../api/simulatorBatch';
@@ -18,7 +25,6 @@ import {
     apiDetailForZoom,
     clusterRadiusForZoom,
     limitForZoom,
-    pollIntervalForZoom,
     resolveLiveMapZoomMode,
 } from './liveMapZoom';
 import {
@@ -32,8 +38,14 @@ import {
 } from './liveMapLayers';
 import { LivePositionInterpolator } from './liveMapInterp';
 import { bboxFromMap } from './liveMapBbox';
+import {
+    liveMapViewportKey,
+    shouldClearOnEmptyViewportChange,
+    shouldKeepStaleEmptyResponse,
+} from './liveMapViewport';
 import type { LiveApiDetail } from './liveMapZoom';
 import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
+import { isLiveMapE2eEnabled, publishLiveMapE2e } from './liveMapE2e';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {
@@ -102,6 +114,20 @@ export const LiveMap: React.FC = () => {
     const lastMoveAtRef = useRef(0);
     const lastDragFetchAtRef = useRef(0);
     const liveFetchPausedRef = useRef(false);
+    const lastViewportKeyRef = useRef('');
+    const viewportRefreshRef = useRef(0);
+    const streamAbortRef = useRef<AbortController | null>(null);
+    const wsDisconnectRef = useRef<(() => void) | null>(null);
+    const streamIntervalMsRef = useRef(350);
+    const [sseActive, setSseActive] = useState(false);
+    const lastTelemetryMetaRef = useRef<Record<string, unknown> | null>(null);
+    const lastSuccessAtRef = useRef<number | null>(null);
+    const lastErrorAtRef = useRef<number | null>(null);
+    const consecutiveErrorsRef = useRef(0);
+    const [lastSuccessAt, setLastSuccessAt] = useState<number | null>(null);
+    const [consecutiveErrors, setConsecutiveErrors] = useState(0);
+    const [mapLoadError, setMapLoadError] = useState<string | null>(null);
+    const [mapGeneration, setMapGeneration] = useState(0);
 
     const [onlineCount, setOnlineCount] = useState(0);
     const [cyclists, setCyclists] = useState(0);
@@ -120,6 +146,7 @@ export const LiveMap: React.FC = () => {
     const [liveFetchPaused, setLiveFetchPaused] = useState(false);
     const [ingestEngaged, setIngestEngaged] = useState(false);
     const ingestPollMultRef = useRef(1);
+    const lastPollDelayRef = useRef(1900);
 
     useEffect(() => {
         if (isAuthenticated && (token || hasStoredSession())) {
@@ -230,7 +257,8 @@ export const LiveMap: React.FC = () => {
                     : typeof meta?.redis_active === 'number'
                         ? meta.redis_active
                         : list.length;
-        setOnlineCount((prev) => (riding !== prev ? riding : prev));
+        const ridingN = typeof riding === 'number' && Number.isFinite(riding) ? riding : 0;
+        setOnlineCount((prev) => (ridingN !== prev ? ridingN : prev));
         const warming = typeof meta?.ride_warming === 'number' ? meta.ride_warming : 0;
         setRideWarming((prev) => (warming !== prev ? warming : prev));
 
@@ -289,7 +317,7 @@ export const LiveMap: React.FC = () => {
         if (opts?.snap) {
             interpolatorRef.current.snapTo(list);
         } else {
-            interpolatorRef.current.animateToward(list);
+            interpolatorRef.current.ingestSnapshot(list);
         }
     }, [pushPositionsToMap]);
 
@@ -298,18 +326,26 @@ export const LiveMap: React.FC = () => {
         meta: Record<string, unknown> | null | undefined,
         detail: LiveApiDetail,
         snap: boolean,
+        viewportChanged: boolean,
+        fromStream = false,
     ) => {
         const movedRecently = Date.now() - lastMoveAtRef.current < STALE_EMPTY_MS;
-        const keepStale =
-            list.length === 0
-            && detail !== 'summary'
-            && movedRecently
-            && positionsRef.current.length > 0;
+        const keepStale = !fromStream && shouldKeepStaleEmptyResponse({
+            listLength: list.length,
+            detail,
+            movedRecently,
+            currentPositions: positionsRef.current.length,
+            viewportChanged,
+        });
 
         applyMetaCounts(list, meta);
         applyCityCounts(list, meta);
 
         if (detail === 'summary') {
+            ingestPositions([], { snap: true });
+            return;
+        }
+        if (shouldClearOnEmptyViewportChange(list.length, detail, viewportChanged)) {
             ingestPositions([], { snap: true });
             return;
         }
@@ -334,27 +370,56 @@ export const LiveMap: React.FC = () => {
             const map = mapRef.current;
             const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
             const detail = apiDetailForZoom(zoom);
+            const bbox = map ? bboxFromMap(map) : undefined;
+            const viewportKey = liveMapViewportKey(detail, bbox);
+            const viewportChanged = viewportKey !== lastViewportKeyRef.current;
+            if (viewportChanged) {
+                lastViewportKeyRef.current = viewportKey;
+                viewportRefreshRef.current += 1;
+            }
+
             const params: Record<string, string | number> = {
                 limit: detail === 'summary' ? 0 : limitForZoom(zoom),
                 detail,
             };
             if (map) {
-                params.bbox = bboxFromMap(map);
+                params.bbox = bbox!;
                 params.zoom = Math.round(zoom * 10) / 10;
+            }
+            if (viewportChanged || priority) {
+                params.refresh = viewportRefreshRef.current;
             }
 
             const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal, silent: true });
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
+            if (liveMapViewportKey(detail, bbox) !== lastViewportKeyRef.current) return;
 
             const list = data?.positions ?? [];
             const meta = data?.meta;
+            if (meta && typeof meta === 'object') {
+                lastTelemetryMetaRef.current = meta as Record<string, unknown>;
+                const serverPoll = parsePollAfterMs(meta as Record<string, unknown>);
+                if (serverPoll != null) ingestPollMultRef.current = 1;
+            }
             if (Array.isArray(list)) {
-                applyPositionPayload(list, meta, detail, Boolean(opts?.snap) || priority);
+                applyPositionPayload(
+                    list,
+                    meta,
+                    detail,
+                    Boolean(opts?.snap) || priority,
+                    viewportChanged,
+                    false,
+                );
                 syncZoomUi();
             }
             const tookMs = Math.round(performance.now() - t0);
             lastRefreshRef.current = tookMs;
             setLastRefreshMs(tookMs);
+            const now = Date.now();
+            lastSuccessAtRef.current = now;
+            setLastSuccessAt(now);
+            consecutiveErrorsRef.current = 0;
+            setConsecutiveErrors(0);
         } catch (err: unknown) {
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
             const status = (err as { response?: { status?: number } })?.response?.status;
@@ -366,6 +431,10 @@ export const LiveMap: React.FC = () => {
                     clearTimeout(pollTimerRef.current);
                     pollTimerRef.current = null;
                 }
+            } else {
+                consecutiveErrorsRef.current += 1;
+                setConsecutiveErrors(consecutiveErrorsRef.current);
+                lastErrorAtRef.current = Date.now();
             }
         } finally {
             if (seq === fetchSeqRef.current) {
@@ -378,18 +447,76 @@ export const LiveMap: React.FC = () => {
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;
 
+    const applyStreamSnapshot = useCallback((
+        list: UserPosition[],
+        meta: Record<string, unknown> | null | undefined,
+    ) => {
+        const map = mapRef.current;
+        const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
+        const detail = apiDetailForZoom(zoom);
+        const streamMs = parseStreamIntervalMs(meta);
+        if (streamMs != null) streamIntervalMsRef.current = streamMs;
+        applyPositionPayload(list, meta, detail, false, false, true);
+        const now = Date.now();
+        lastSuccessAtRef.current = now;
+        setLastSuccessAt(now);
+        consecutiveErrorsRef.current = 0;
+        setConsecutiveErrors(0);
+    }, [applyPositionPayload]);
+
+    const stopTelemetryStream = useCallback(() => {
+        streamAbortRef.current?.abort();
+        streamAbortRef.current = null;
+        wsDisconnectRef.current?.();
+        wsDisconnectRef.current = null;
+        setSseActive(false);
+    }, []);
+
+    const restartTelemetryStream = useCallback(() => {
+        stopTelemetryStream();
+        if (isLiveMapE2eEnabled()) return;
+        if (!canFetch || liveFetchPausedRef.current || !tabVisibleRef.current) return;
+        const map = mapRef.current;
+        if (!map || !mapReady) return;
+        const zoom = map.getZoom();
+        const detail = apiDetailForZoom(zoom);
+        if (detail === 'summary') return;
+
+        const bbox = bboxFromMap(map);
+        const params: Record<string, string | number> = {
+            limit: limitForZoom(zoom),
+            detail,
+            bbox,
+            zoom: Math.round(zoom * 10) / 10,
+        };
+
+        streamAbortRef.current = connectLiveMapSse(params, {
+            onOpen: () => setSseActive(true),
+            onSnapshot: (list, meta) => {
+                if (Array.isArray(list)) applyStreamSnapshot(list, meta);
+            },
+            onError: () => setSseActive(false),
+        });
+
+        wsDisconnectRef.current = connectLiveMapWs(
+            (pos) => interpolatorRef.current?.pushDelta(pos),
+            () => { /* WS optional — SSE is primary */ },
+        );
+    }, [canFetch, mapReady, applyStreamSnapshot, stopTelemetryStream]);
+
     const scheduleMoveFetch = useCallback((immediate = false) => {
         lastMoveAtRef.current = Date.now();
         if (moveDebounceRef.current) clearTimeout(moveDebounceRef.current);
         const run = () => {
             fetchPositionsRef.current({ priority: true, snap: true });
+            restartTelemetryStream();
         };
         if (immediate) {
             run();
             return;
         }
         moveDebounceRef.current = setTimeout(run, MOVE_DEBOUNCE_MS);
-    }, []);
+    }, [restartTelemetryStream]);
 
     const scheduleDragFetch = useCallback(() => {
         lastMoveAtRef.current = Date.now();
@@ -499,16 +626,22 @@ export const LiveMap: React.FC = () => {
             const vis = !document.hidden;
             tabVisibleRef.current = vis;
             setTabVisible(vis);
-            if (vis) fetchPositionsRef.current();
+            if (vis) {
+                fetchPositionsRef.current();
+                restartTelemetryStream();
+            } else {
+                stopTelemetryStream();
+            }
         };
         document.addEventListener('visibilitychange', onVis);
         return () => document.removeEventListener('visibilitychange', onVis);
-    }, []);
+    }, [restartTelemetryStream, stopTelemetryStream]);
 
     useEffect(() => {
         let cancelled = false;
-        if (!mapContainer.current || mapRef.current) return;
+        if (!mapContainer.current) return;
 
+        setMapLoadError(null);
         loadMaplibregl().then((m: any) => {
             if (cancelled || !mapContainer.current) return;
             mlRef.current = m;
@@ -533,6 +666,12 @@ export const LiveMap: React.FC = () => {
                 syncZoomUi();
                 setMapReady(true);
             });
+            map.on('error', () => {
+                if (cancelled) return;
+                setMapLoadError('Nie udało się wczytać kafelków mapy (CDN / styl).');
+                setLoading(false);
+                setMapReady(false);
+            });
             map.on('zoom', () => {
                 const z = map.getZoom();
                 const src = map.getSource(LIVE_SOURCES.positions);
@@ -543,8 +682,8 @@ export const LiveMap: React.FC = () => {
                     } catch { /* MapLibre < 3.3 */ }
                 }
                 syncZoomUi();
-                scheduleMoveFetch(true);
             });
+            map.on('zoomend', () => scheduleMoveFetch(true));
             map.on('movestart', () => {
                 lastMoveAtRef.current = Date.now();
             });
@@ -553,6 +692,7 @@ export const LiveMap: React.FC = () => {
             mapRef.current = map;
         }).catch(() => {
             if (!cancelled) {
+                setMapLoadError('Nie udało się załadować biblioteki MapLibre.');
                 setLoading(false);
                 setMapReady(false);
             }
@@ -560,6 +700,8 @@ export const LiveMap: React.FC = () => {
 
         return () => {
             cancelled = true;
+            stopTelemetryStream();
+            publishLiveMapE2e(undefined);
             interpolatorRef.current?.cancel();
             popupRef.current?.remove();
             layersReadyRef.current = false;
@@ -570,7 +712,23 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi]);
+    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, mapGeneration]);
+
+    useEffect(() => {
+        if (!isLiveMapE2eEnabled() || !mapReady) return;
+        const map = mapRef.current;
+        if (!map) return;
+        const warsawCenter: [number, number] = [21.0122, 52.2297];
+        publishLiveMapE2e({
+            setZoom: (zoom, center) => {
+                map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
+            },
+            getZoom: () => map.getZoom(),
+            getZoomMode: () => ZOOM_MODE_LABEL[resolveLiveMapZoomMode(map.getZoom())],
+            isReady: () => layersReadyRef.current && map.isStyleLoaded(),
+        });
+        return () => publishLiveMapE2e(undefined);
+    }, [mapReady]);
 
     useEffect(() => {
         if (!mlReady || !canFetch || !tabVisible || liveFetchPaused) return;
@@ -578,12 +736,17 @@ export const LiveMap: React.FC = () => {
             await fetchPositionsRef.current();
             const map = mapRef.current;
             const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
-            const delay = pollIntervalForZoom(
+            const delay = resolveLiveMapPollDelayWithStream({
                 zoom,
-                lastRefreshRef.current,
+                lastRefreshMs: lastRefreshRef.current,
                 ingestEngaged,
-                ingestPollMultRef.current,
-            );
+                pollMultiplier: ingestPollMultRef.current,
+                serverPollAfterMs: parsePollAfterMs(lastTelemetryMetaRef.current),
+                consecutiveErrors: consecutiveErrorsRef.current,
+                sseActive,
+                streamIntervalMs: streamIntervalMsRef.current,
+            });
+            lastPollDelayRef.current = delay;
             pollTimerRef.current = setTimeout(loop, delay);
         };
         loop();
@@ -591,7 +754,31 @@ export const LiveMap: React.FC = () => {
             if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
             pollTimerRef.current = null;
         };
-    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused, ingestEngaged]);
+    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused, ingestEngaged, consecutiveErrors, sseActive]);
+
+    useEffect(() => {
+        if (!mapReady || !canFetch || !tabVisible || liveFetchPaused) {
+            stopTelemetryStream();
+            return;
+        }
+        restartTelemetryStream();
+        return () => stopTelemetryStream();
+    }, [mapReady, canFetch, tabVisible, liveFetchPaused, restartTelemetryStream, stopTelemetryStream]);
+
+    const retryMapLoad = useCallback(() => {
+        setMapLoadError(null);
+        layersReadyRef.current = false;
+        fitBoundsDoneRef.current = false;
+        if (mapRef.current) {
+            try {
+                mapRef.current.remove();
+            } catch { /* */ }
+        }
+        mapRef.current = null;
+        setMapReady(false);
+        setLoading(true);
+        setMapGeneration((g) => g + 1);
+    }, []);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -609,11 +796,29 @@ export const LiveMap: React.FC = () => {
     }, [showHeatmap, loadHeatmap]);
 
     return (
-        <Box style={{ position: 'relative', width: '100%', height: '100%', minHeight: 450, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}>
+        <Box
+            data-testid="live-map-root"
+            data-map-ready={mapReady ? 'true' : 'false'}
+            data-sync-status={computeLiveMapHealth({
+                mapReady,
+                canFetch,
+                tabVisible,
+                liveFetchPaused,
+                ingestEngaged,
+                lastSuccessAt,
+                lastErrorAt: lastErrorAtRef.current,
+                consecutiveErrors,
+                lastLatencyMs: lastRefreshMs,
+                meta: lastTelemetryMetaRef.current,
+            }).status}
+            style={{ position: 'relative', width: '100%', height: '100%', minHeight: 450, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}
+            role="region"
+            aria-label="Live mapa telemetryczna — rowerzyści i biegacze w czasie rzeczywistym"
+        >
             <Group style={{ position: 'absolute', top: 12, left: 12, right: 12, zIndex: 10 }} justify="space-between">
-                <Group gap="xs">
+                <Group gap="xs" aria-live="polite" aria-atomic="true">
                     <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
-                        {onlineCount.toLocaleString()} active
+                        {(onlineCount ?? 0).toLocaleString()} active
                     </Badge>
                     {rideWarming > 0 && (
                         <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (not on map yet)">
@@ -641,6 +846,13 @@ export const LiveMap: React.FC = () => {
                     )}
                     {zoomMode && mapReady && (
                         <Badge variant="outline" color="grape" radius="sm" size="sm">{zoomMode}</Badge>
+                    )}
+                    {sseActive && (
+                        <Tooltip label="SSE stream 200–500 ms (HTTP poll w tle co ~15 s)">
+                            <Badge variant="light" color="cyan" radius="sm" size="sm" data-testid="live-map-sse-badge">
+                                Stream
+                            </Badge>
+                        </Tooltip>
                     )}
                     {ingestEngaged && (
                         <Tooltip label="Ochrona ingest aktywna — mapa odświeża się rzadziej (ADR 011)">
@@ -675,7 +887,29 @@ export const LiveMap: React.FC = () => {
                 </Tooltip>
             </Group>
             {loading && <Skeleton height="100%" radius="md" style={{ position: 'absolute', inset: 0, zIndex: 5 }} />}
-            <div ref={mapContainer} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
+            <div
+                ref={mapContainer}
+                data-testid="live-map-canvas"
+                role="application"
+                aria-label="Interaktywna mapa MapLibre"
+                tabIndex={0}
+                style={{ width: '100%', height: '100%', cursor: 'grab' }}
+            />
+            <LiveMapStatusBar
+                mapReady={mapReady}
+                canFetch={canFetch}
+                tabVisible={tabVisible}
+                liveFetchPaused={liveFetchPaused}
+                ingestEngaged={ingestEngaged}
+                lastSuccessAt={lastSuccessAt}
+                lastErrorAt={lastErrorAtRef.current}
+                consecutiveErrors={consecutiveErrors}
+                lastLatencyMs={lastRefreshMs}
+                meta={lastTelemetryMetaRef.current}
+                mapLoadError={mapLoadError}
+                onRetryMap={retryMapLoad}
+                onRetry={() => fetchPositions({ priority: true, snap: true })}
+            />
             {mapReady && mapZoom != null && (
                 <Box
                     style={{
@@ -695,11 +929,17 @@ export const LiveMap: React.FC = () => {
                     <Text size="xs" c="gray.4" lh={1.2}>
                         zoom
                     </Text>
-                    <Text size="sm" c="white" fw={700} style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    <Text
+                        size="sm"
+                        c="white"
+                        fw={700}
+                        data-testid="live-map-zoom-value"
+                        style={{ fontVariantNumeric: 'tabular-nums' }}
+                    >
                         {mapZoom.toFixed(1)}
                     </Text>
                     {zoomMode && (
-                        <Text size="xs" c="indigo.3" mt={2}>
+                        <Text size="xs" c="indigo.3" mt={2} data-testid="live-map-zoom-mode">
                             {zoomMode}
                         </Text>
                     )}

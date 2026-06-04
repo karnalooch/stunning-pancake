@@ -3,7 +3,8 @@
  *
  * | Zoom    | Mode           | Render |
  * |---------|----------------|--------|
- * | < 7     | country        | Huby + lekkie klastry GL |
+ * | 5–7     | country        | Huby miast + klastry (standard API) |
+ * | < 5     | overview       | Huby z meta (summary, bez punktów) |
  * | 7–8.5   | region         | Huby + klastry |
  * | 8.5–9.5 | metro          | Huby zanikają, klastry |
  * | 9.5–10.5| city           | Klastry (główny widok miasta) |
@@ -36,24 +37,32 @@ export const CLUSTER_MAX_ZOOM = 14;
  * when switching between city hubs, clusters, GL dots, and GPU symbol layers.
  */
 export const LIVE_MAP_LOD = {
-    cityHubMin: 6,
-    cityHubFadeInEnd: 7.2,
+    /** City hub rings visible from country zoom (incl. z=5). */
+    cityHubMin: 4.5,
+    cityHubFadeInEnd: 5.8,
     cityHubFadeOutStart: 8.6,
     cityHubFadeOutEnd: 10.8,
-    clusterVisibleStart: 6.2,
+    clusterVisibleStart: 5,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
     dotFadeInStart: 7,
     dotFadeInEnd: 11.2,
-    dotFadeOutStart: 12.4,
+    /** Align with icon fade-in — avoids double GL dots + GPU icons in handoff. */
+    dotFadeOutStart: 11.8,
     dotFadeOutEnd: 13.2,
     iconMinZoom: 11.8,
-    iconMaxZoom: 13.45,
+    /** Same as labelMinZoom — one icon layer at a time (no 13.35–13.45 double draw). */
+    iconMaxZoom: 13.35,
     iconFadeInStart: 11.8,
     iconFadeInEnd: 12.2,
+    /** Hold icon strength until label layer takes over (no fade-to-zero dip). */
+    iconFadeOutStart: 13.15,
+    iconFadeOutEnd: 13.35,
     labelMinZoom: 13.35,
     labelFadeInStart: 13.35,
     labelFadeInEnd: 13.7,
+    /** Matches riderIcons opacity at handoff (labels layer picks up). */
+    labelIconOpacityAtHandoff: 0.85,
 } as const;
 
 /** Fade 0→1 between start (inclusive) and end (exclusive) zoom. */
@@ -79,7 +88,7 @@ export function resolveLiveMapZoomMode(zoom: number): LiveMapZoomMode {
 export type LiveApiDetail = 'summary' | 'standard' | 'full';
 
 export function apiDetailForZoom(zoom: number): LiveApiDetail {
-    if (zoom < 7.5) return 'summary';
+    if (zoom < 5) return 'summary';
     if (zoom < 12) return 'standard';
     return 'full';
 }
@@ -103,9 +112,9 @@ export function pollIntervalForZoom(
     pollMultiplier = 1,
 ): number {
     let base = 2200;
-    if (zoom >= 14) base = 1100;
-    else if (zoom >= 12.5) base = 1300;
-    else if (zoom >= 11) base = 1600;
+    if (zoom >= 14) base = 800;
+    else if (zoom >= 12) base = 950;
+    else if (zoom >= 11) base = 1500;
     else if (zoom >= 9) base = 1900;
     else if (zoom >= 7) base = 2100;
     else base = 2400;
@@ -122,6 +131,95 @@ export function clusterRadiusForZoom(zoom: number): number {
     if (zoom < 11.5) return 40;
     if (zoom < 12.2) return 36;
     return 32;
+}
+
+function maplibreInterp(zoom: number, stops: readonly (readonly [number, number])[]): number {
+    if (zoom <= stops[0][0]) return stops[0][1];
+    for (let i = 1; i < stops.length; i++) {
+        if (zoom <= stops[i][0]) {
+            const [z0, v0] = stops[i - 1];
+            const [z1, v1] = stops[i];
+            return v0 + ((v1 - v0) * (zoom - z0)) / (z1 - z0);
+        }
+    }
+    return stops[stops.length - 1][1];
+}
+
+export type LiveMapLodAuditIssue = {
+    zoom: number;
+    type: 'GAP' | 'DOUBLE' | 'ICON_OVERLAP' | 'ICON_STEP';
+    detail?: Record<string, number>;
+};
+
+/** Numeric crossfade audit (mirrors paint stops in liveMapLayers.ts). */
+export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveMapLodAuditIssue[] {
+    const L = LIVE_MAP_LOD;
+    const issues: LiveMapLodAuditIssue[] = [];
+    for (let z = zMin; z <= zMax + 1e-6; z = Math.round((z + step) * 10) / 10) {
+        const hubOp = maplibreInterp(z, [
+            [L.cityHubMin, 0.55],
+            [L.cityHubFadeInEnd, 0.85],
+            [8.2, 0.95],
+            [L.cityHubFadeOutStart, 0.88],
+            [L.cityHubFadeOutEnd, 0],
+        ]);
+        const clOp = maplibreInterp(z, [
+            [L.clusterVisibleStart, 0.32],
+            [8, 0.72],
+            [10.5, 0.88],
+            [L.clusterPeakEnd, 0.94],
+            [L.clusterFadeOutEnd - 1.2, 0.62],
+            [L.clusterFadeOutEnd, 0],
+        ]);
+        const dotOp = maplibreInterp(z, [
+            [L.dotFadeInStart, 0.35],
+            [11.2, 0.82],
+            [L.dotFadeOutStart, 0.45],
+            [12, 0.32],
+            [12.2, 0.22],
+            [12.6, 0.1],
+            [L.dotFadeOutEnd, 0],
+        ]);
+        const dotR = maplibreInterp(z, [
+            [L.dotFadeInStart, 5],
+            [9, 7],
+            [11, 8],
+            [L.dotFadeOutStart, 5.5],
+            [12, 3],
+            [12.2, 2.5],
+            [12.6, 1],
+            [L.dotFadeOutEnd, 0],
+        ]);
+        const iconLayer = z >= L.iconMinZoom && z < L.iconMaxZoom;
+        const iconOp = iconLayer
+            ? maplibreInterp(z, [
+                  [L.iconFadeInStart, 0.15],
+                  [L.iconFadeInEnd, 0.75],
+                  [12.6, 0.95],
+                  [L.iconFadeOutStart, 0.92],
+                  [L.iconFadeOutEnd, L.labelIconOpacityAtHandoff],
+              ])
+            : 0;
+        const labelLayer = z >= L.labelMinZoom;
+        const labelIconOp = labelLayer
+            ? maplibreInterp(z, [[L.labelFadeInStart, L.labelIconOpacityAtHandoff], [L.labelFadeInEnd, 1]])
+            : 0;
+        const dotVisible = dotOp > 0.2 && dotR > 3;
+        const riderVis = Math.max(dotOp * (dotR > 1 ? 1 : 0), iconOp, labelIconOp);
+        if (riderVis < 0.25 && clOp < 0.2 && hubOp < 0.2) {
+            issues.push({ zoom: z, type: 'GAP' });
+        }
+        if (dotVisible && iconOp > 0.5) {
+            issues.push({ zoom: z, type: 'DOUBLE', detail: { dotOp, iconOp } });
+        }
+        if (iconOp > 0.35 && labelIconOp > 0.35 && iconLayer && labelLayer) {
+            issues.push({ zoom: z, type: 'ICON_OVERLAP', detail: { iconOp, labelIconOp } });
+        }
+        if (labelLayer && iconLayer && Math.abs(iconOp - labelIconOp) > 0.4) {
+            issues.push({ zoom: z, type: 'ICON_STEP', detail: { iconOp, labelIconOp } });
+        }
+    }
+    return issues;
 }
 
 export const ZOOM_MODE_LABEL: Record<LiveMapZoomMode, string> = {

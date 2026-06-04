@@ -136,3 +136,36 @@ class TelemetryServiceScaleTest(SimpleTestCase):
         r.georadius.assert_called_once()
         r.hgetall.assert_not_called()
         self.assertIn("returned", meta)
+
+    @patch("core.redis_cluster.get_redis")
+    def test_get_live_positions_skips_empty_cache(self, mock_get_redis):
+        r = MagicMock()
+        mock_get_redis.return_value = r
+        r.hlen.return_value = 0
+        with patch.object(TelemetryService, "_get_live_cached", return_value=([], {"cached": True})):
+            with patch.object(TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})):
+                with patch("activities.services.requests.get") as mock_req:
+                    mock_req.side_effect = Exception("no traccar")
+                    positions, meta = TelemetryService.get_live_positions(
+                        bbox=(19.0, 52.0, 19.5, 52.5),
+                        limit=10,
+                        skip_cache=True,
+                    )
+        self.assertEqual(positions, [])
+        TelemetryService._get_live_cached.assert_not_called()
+
+    @patch("core.redis_cluster.get_redis")
+    def test_get_live_positions_does_not_write_empty_cache(self, mock_get_redis):
+        r = MagicMock()
+        mock_get_redis.return_value = r
+        r.hlen.return_value = 0
+        with patch.object(TelemetryService, "_get_live_cached", return_value=None):
+            with patch.object(TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})):
+                with patch.object(TelemetryService, "_set_live_cached") as mock_set:
+                    with patch("activities.services.requests.get") as mock_req:
+                        mock_req.side_effect = Exception("no traccar")
+                        TelemetryService.get_live_positions(
+                            bbox=(19.0, 52.0, 19.5, 52.5),
+                            limit=10,
+                        )
+        mock_set.assert_not_called()

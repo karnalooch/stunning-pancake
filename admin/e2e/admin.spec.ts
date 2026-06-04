@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
     await mockBackend(page);
     await page.goto('/');
     await expect(page.getByText('4VELO Platform')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
 
   test('successful login reveals admin shell', async ({ page }) => {

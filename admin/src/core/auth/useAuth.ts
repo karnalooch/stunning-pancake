@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { apiClient } from '../../api/client';
 import { clearStoredSession } from './tokens';
+import { isE2eMode } from './e2eEnv';
 
 export type Role = 'GLOBAL_OWNER' | 'TENANT_ADMIN' | 'TENANT_MODERATOR' | 'ATHLETE' | 'SPONSOR';
 
@@ -128,7 +129,8 @@ function isLoginRoute(): boolean {
 
 const storedToken = localStorage.getItem('access_token');
 const storedRefresh = localStorage.getItem('refresh_token');
-if (storedToken && storedRefresh && !isLoginRoute()) {
+/** E2E dev server: E2EAuthBootstrap owns session; skip profile fetch to /api (no backend). */
+if (storedToken && storedRefresh && !isLoginRoute() && !isE2eMode()) {
   useAuth.setState({ token: storedToken, refreshToken: storedRefresh });
   apiClient.get('/users/profile/')
     .then(res => {

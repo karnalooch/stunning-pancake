@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useState, useEffect } from 'react';
 import {
   SimpleGrid, Card, Text, Group, Badge, Progress, Table, Box, Stack,
-  Skeleton, Divider, ThemeIcon,
+  Skeleton, Divider, ThemeIcon, Alert,
 } from '@mantine/core';
 import { motion } from 'framer-motion';
 import {
@@ -13,6 +13,7 @@ import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 import { StatCard } from '../../core/components/StatCard';
 import { useAuth } from '../../core/auth/useAuth';
+import { isE2eMode } from '../../core/auth/e2eEnv';
 import { ModeratorWorklist } from './ModeratorWorklist';
 import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
@@ -450,9 +451,16 @@ export const Dashboard: React.FC = () => {
                 badgeColor="green"
               />
               <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
-              <Suspense fallback={<Skeleton height={450} radius="md" />}>
-                <LiveMapLazy />
-              </Suspense>
+              {isE2eMode() ? (
+                <Alert variant="light" color="blue" title="Tryb E2E (VITE_E2E=1)">
+                  Mapa na żywo i API wymagają backendu. Do pracy w przeglądarce uruchom{' '}
+                  <Text span fw={600}>npm run dev</Text> bez VITE_E2E, albo testy Playwright.
+                </Alert>
+              ) : (
+                <Suspense fallback={<Skeleton height={450} radius="md" />}>
+                  <LiveMapLazy />
+                </Suspense>
+              )}
             </Card>
           </SimpleGrid>
         </motion.div>

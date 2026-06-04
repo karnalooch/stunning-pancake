@@ -55,6 +55,8 @@ Live Map logic is split under `src/modules/analytics/` — keep new code in the 
 | `LiveMap.tsx` | Page composition only |
 
 Do not grow `LiveMap.tsx` with marker/layer math; extend the table above.
+
+**Zoom LOD E2E (screenshots):** `npm run test:e2e:live-map` — starts Vite with `VITE_E2E=1`, captures one PNG per tier (`e2e/live-map-zoom.spec.ts-snapshots/`). Update baselines: `npm run test:e2e:live-map:update`. Numeric crossfade audit: `node scripts/audit-live-map-lod.mjs`.
 - Anti-cheat moderation panel
 - City/competition management
 - Sponsor reward marketplace

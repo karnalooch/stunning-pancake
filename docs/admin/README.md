@@ -245,14 +245,18 @@ For deep-dive details on high-performance pagination, MapLibre GL GPS tracking i
 
 | Moduł | Opis |
 |-------|------|
-| `LiveMap.tsx` | MapLibre live map — GPU layers, LOD API, jeden popup DOM |
+| `LiveMap.tsx` | MapLibre live map — GPU layers, LOD API, sync status bar |
 | `liveMapLayers.ts` | Klastry, ikony, etykiety, huby miast (symbol/circle) |
 | `liveMapZoom.ts` | Tiery zoom + `detail=summary\|standard\|full` |
+| `liveMapHealth.ts` / `liveMapPoll.ts` / `LiveMapStatusBar.tsx` | Stan sync, polling SLO, degraded UX |
+| `liveMapStream.ts` / `liveMapWs.ts` | SSE + opcjonalny WS telemetry |
+| `liveMapRing.ts` / `liveMapPolyline.ts` | Ring 3 pkt + interpolacja po polilinii |
+| `liveMapViewport.ts` | Viewport key, stale-empty po zoom/pan |
 | `liveMapMarkers.ts` | Typy pozycji, `resolveActivityKind`, popup helpers |
 | `SimulatorPage.tsx` | Batch + live orchestration (`waitForBatchComplete`) |
 | `SimulationProgressBar.tsx` | Pasek postępu batch / wipe |
 
-Runbook operacyjny: [operations/SIMULATOR.md](../operations/SIMULATOR.md). API: [API.md](../API.md) § Admin.
+Runbook: [operations/LIVE_MAP.md](../operations/LIVE_MAP.md), [operations/SIMULATOR.md](../operations/SIMULATOR.md). API: [API.md](../API.md) § Admin.
 
 ## Development
 

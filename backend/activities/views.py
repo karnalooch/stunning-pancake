@@ -1,4 +1,5 @@
 import json
+import time
 from rest_framework import viewsets, permissions, status, generics, views
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -483,181 +484,71 @@ class TelemetryLiveView(generics.GenericAPIView):
 
     def get(self, request):
         from . import simulator_state as sim
-
-        sim.maybe_advance_live_simulation()
-
-        bbox_tuple = None
-        bbox_str = request.query_params.get("bbox", "")
-        if bbox_str:
-            try:
-                parts = [float(x) for x in bbox_str.split(",")]
-                if len(parts) == 4:
-                    bbox_tuple = tuple(parts)
-            except (ValueError, TypeError):
-                pass
-
-        try:
-            limit = int(request.query_params.get("limit", 0))
-        except (TypeError, ValueError):
-            limit = 0
-
-        zoom_param = None
-        try:
-            z = request.query_params.get("zoom", "")
-            if z != "":
-                zoom_param = float(z)
-        except (TypeError, ValueError):
-            zoom_param = None
-
+        from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
         from activities.telemetry_shard import live_map_read_policy
 
+        sim.maybe_advance_live_simulation()
+        req = parse_live_map_query_params(request.query_params)
+        body = build_live_map_payload(req)
         read_policy = live_map_read_policy()
-
-        detail = (request.query_params.get("detail") or "").strip().lower()
-        if detail not in ("summary", "standard", "full"):
-            if zoom_param is not None and zoom_param < 7.5:
-                detail = "summary"
-            elif zoom_param is not None and zoom_param < 12:
-                detail = "standard"
-            else:
-                detail = "full"
-
-        if read_policy.ingest_engaged and read_policy.detail_ceiling:
-            _rank = {"summary": 0, "standard": 1, "full": 2}
-            ceiling = read_policy.detail_ceiling
-            if _rank.get(detail, 2) > _rank.get(ceiling, 1):
-                detail = ceiling
-
-        fetch_limit = limit or None
-        if detail == "summary":
-            fetch_limit = 0
-
-        positions, telemetry_meta = TelemetryService.get_live_positions(
-            bbox=bbox_tuple,
-            limit=fetch_limit,
-            zoom=zoom_param,
-        )
-
-        if not isinstance(positions, list):
-            positions = []
-
-        need_devices = any(
-            isinstance(p, dict)
-            and p.get("deviceId") is not None
-            and not (p.get("name") or p.get("category") or p.get("type"))
-            for p in positions
-        )
-        device_info = {}
-        if need_devices:
-            devices = TelemetryService.get_devices()
-            if isinstance(devices, list):
-                device_info = {
-                    d.get("id"): {"name": d.get("name"), "type": d.get("category")}
-                    for d in devices
-                    if isinstance(d, dict)
-                }
-
-        ride_warming = 0
-        ride_on_map = 0
-        city_counts: dict[str, int] = {}
-        ride_states_by_device: dict[str, str] = {}
-        try:
-            from activities import simulator_state as sim_state
-            from activities.ride_fsm import fsm_summary, normalize_ride_state
-
-            rides_map = sim_state.get_live_rides()
-            fsm = fsm_summary(rides_map)
-            ride_on_map = fsm["ride_on_map"]
-            ride_warming = fsm["ride_warming"]
-            city_counts = sim_state.get_live_city_counts()
-            ride_states_by_device = {
-                str(uid): normalize_ride_state(ride) for uid, ride in rides_map.items()
-            }
-        except Exception:
-            pass
-
-        enriched_data = []
-        viewport_bike = 0
-        viewport_run = 0
-        _bike = frozenset({"bike", "bicycle", "cycling", "cyclist"})
-        _run = frozenset({"run", "running", "runner", "person", "walk", "walking", "foot"})
-
-        for pos in positions:
-            if not isinstance(pos, dict):
-                continue
-            device_id = pos.get("deviceId")
-            if device_id is None:
-                continue
-            info = device_info.get(device_id, {})
-            type_label = pos.get("category") or pos.get("type") or info.get("type", "person")
-            raw_type = (type_label or "").lower()
-            if raw_type in _bike:
-                viewport_bike += 1
-            elif raw_type in _run:
-                viewport_run += 1
-            ride_state = ride_states_by_device.get(str(device_id))
-            if detail == "standard":
-                row = {
-                    "deviceId": device_id,
-                    "type": type_label,
-                    "lat": pos.get("latitude", 0.0),
-                    "lng": pos.get("longitude", 0.0),
-                    "speed": pos.get("speed", 0.0),
-                    "course": pos.get("course", 0.0),
-                }
-                if ride_state:
-                    row["ride_state"] = ride_state
-                enriched_data.append(row)
-            else:
-                row = {
-                    "deviceId": device_id,
-                    "name": pos.get("name") or info.get("name", f"Athlete {device_id}"),
-                    "type": type_label,
-                    "lat": pos.get("latitude", 0.0),
-                    "lng": pos.get("longitude", 0.0),
-                    "speed": pos.get("speed", 0.0),
-                    "course": pos.get("course", 0.0),
-                    "lastUpdate": pos.get("deviceTime"),
-                }
-                if ride_state:
-                    row["ride_state"] = ride_state
-                enriched_data.append(row)
-
-        active_riding = ride_on_map or (
-            telemetry_meta.get("active_riding") or telemetry_meta.get("redis_active", 0)
-        )
-
-        resp = Response(
-            {
-                "positions": enriched_data,
-                "meta": {
-                    **telemetry_meta,
-                    "detail": detail,
-                    "redis_active": active_riding,
-                    "active_riding": active_riding,
-                    "ride_on_map": ride_on_map,
-                    "ride_warming": ride_warming,
-                    "viewport_bike": viewport_bike,
-                    "viewport_run": viewport_run,
-                    "city_counts": city_counts,
-                    "ingest_engaged": read_policy.ingest_engaged,
-                    "live_read_throttled": read_policy.ingest_engaged,
-                    "live_poll_interval_multiplier": (
-                        read_policy.poll_interval_multiplier
-                        if read_policy.ingest_engaged
-                        else 1.0
-                    ),
-                    "pool_note": (
-                        "active = ACTIVE riders on map (FSM); warming = PENDING_ROUTE + ROUTING; "
-                        "cyclists/runners = current viewport only."
-                    ),
-                },
-            }
-        )
+        resp = Response(body)
         max_age = 1
         if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
             max_age = read_policy.cache_ttl_seconds
         resp["Cache-Control"] = f"private, max-age={max_age}"
+        return resp
+
+
+class TelemetryLiveStreamView(views.APIView):
+    """
+    SSE stream of live map snapshots (200–500 ms cadence at street zoom).
+    Same auth and query params as TelemetryLiveView; not available for detail=summary.
+    """
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from django.http import StreamingHttpResponse
+
+        from . import simulator_state as sim
+        from activities.live_map_api import (
+            build_live_map_payload,
+            parse_live_map_query_params,
+            stream_interval_ms,
+        )
+        from activities.telemetry_shard import live_map_read_policy
+
+        req = parse_live_map_query_params(request.query_params, default_skip_cache=True)
+        if req.detail == "summary":
+            return Response(
+                {"detail": "Live stream unavailable at country summary zoom."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        read_policy = live_map_read_policy()
+        interval_s = (
+            stream_interval_ms(
+                req.zoom_param,
+                read_policy.ingest_engaged,
+                read_policy.poll_interval_multiplier if read_policy.ingest_engaged else 1.0,
+            )
+            / 1000.0
+        )
+
+        def event_stream():
+            try:
+                while True:
+                    sim.maybe_advance_live_simulation()
+                    payload = build_live_map_payload(req)
+                    payload["meta"]["transport"] = "sse"
+                    yield f"data: {json.dumps(payload, separators=(',', ':'))}\n\n"
+                    time.sleep(interval_s)
+            except GeneratorExit:
+                pass
+
+        resp = StreamingHttpResponse(event_stream(), content_type="text/event-stream")
+        resp["Cache-Control"] = "no-cache, no-store"
+        resp["X-Accel-Buffering"] = "no"
         return resp
 
 

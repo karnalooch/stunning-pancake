@@ -145,19 +145,36 @@ Testy jednostkowe mockują broker i `get_live_rides`; widoki statusu mają `auto
 
 ## Live Map (admin) — poziomy zoomu
 
-Moduły: `liveMapZoom.ts` (tiery + LOD API), `liveMapLayers.ts` (warstwy GPU), `liveMapInterp.ts` (płynny ruch), `liveMapSprite.ts` (atlas ikon). Badge na mapie = aktualny tryb.
+Moduły: `liveMapZoom.ts` (tiery + LOD API), `liveMapLayers.ts` (warstwy GPU), `liveMapInterp.ts` (płynny ruch), `liveMapSprite.ts` (atlas ikon), `liveMapHealth.ts` / `LiveMapStatusBar.tsx` (sync enterprise). Badge na mapie = aktualny tryb. Runbook: [LIVE_MAP.md](./LIVE_MAP.md).
 
 | Zoom | Tryb | Render |
 |------|------|--------|
 | &lt; 7 | Kraj | Huby GL + `detail=summary` (bez punktów w JSON) |
 | 7–8.5 | Region | Huby + klastry |
-| 8.5–9.5 | Aglomeracja | Huby (fade) + klastry |
-| 9.5–12.2 | Miasto → Osiedle | Klastry MapLibre (klik = zoom) |
-| 12.2–13.5 | Ulice (ikony) | **Symbol layer GPU**, collision engine |
-| ≥ 13.5 | Ulice (etykiety) | Ikona + tekst GPU (`text-optional`) |
+| 8.5–9.5 | Aglomeracja | Huby (fade do ~10.8) + klastry |
+| 9.5–10.5 | Miasto | Klastry MapLibre (klik = zoom) |
+| 10.5–11.5 | Dzielnica | Ciaśniejsze klastry |
+| 11.5–12.2 | Osiedle | Klastry + kropki GL |
+| 12.2–12.8 | Zbliżenie | Crossfade kropki → ikony GPU |
+| 12.8–13.35 | Ulice (ikony) | **Symbol layer GPU** (`iconMaxZoom` = `labelMinZoom`) |
+| 13.35–14.5 | Ulice (etykiety) | Ikona + tekst GPU (`text-optional`) |
+| ≥ 14.5 | Detal | Więcej etykiet (collision) |
 | Klik | Popup | Jedyny DOM — karta Athlete |
 
-**API LOD:** `detail=summary|standard|full` (auto z zoomu) — mniejszy payload przy widoku kraju (`standard` bez nazw).
+**API LOD:** `detail=summary|standard|full` (auto z zoomu) — `summary` &lt; 7.5, `standard` &lt; 12, potem `full`.
+
+**Crossfade (paint):** `LIVE_MAP_LOD` w `liveMapZoom.ts` — szersze pasma niż granice trybu; audyt: `node admin/scripts/audit-live-map-lod.mjs`.
+
+**E2E screenshoty (Playwright):**
+
+```bash
+cd admin
+npx playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom
+# pierwsze uruchomienie / zmiana stylu mapy:
+npx playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom --update-snapshots
+```
+
+Wymaga `VITE_E2E=1` (ustawiane przez `webServer` w `playwright.config.ts`). Snapshoty: `admin/e2e/live-map-zoom-snapshots/` (10 PNG, jeden na tryb LOD).
 
 - Brak setek markerów HTML — wydajność jak Mapbox/Uber.
 - Interpolacja pozycji między poll (~320 ms).

@@ -67,7 +67,7 @@ export const SystemHealth: React.FC = () => {
         );
     }
 
-    if (!health) {
+    if (!health?.backend?.status || !health?.celery?.status) {
         return (
             <div style={{ padding: 24 }}>
                 <Title order={2} mb="lg">System Health</Title>

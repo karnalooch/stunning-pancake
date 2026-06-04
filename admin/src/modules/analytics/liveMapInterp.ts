@@ -1,19 +1,32 @@
 import type { LiveMapPosition } from './liveMapMarkers';
+import { DevicePositionRing } from './liveMapRing';
 
 const MAX_INTERP_POINTS = 4000;
-const INTERP_MS = 320;
+const SET_DATA_MIN_INTERVAL_MS = 33;
 
-type Coord = { lng: number; lat: number };
+export type LiveInterpOptions = {
+    /** Legacy — ignored; polyline ring uses wall-clock sampling. */
+    durationMs?: number;
+};
 
+/** Clamp client blend window to poll cadence (used for status / docs). */
+export function resolveInterpDurationMs(pollIntervalMs: number): number {
+    const ms = Math.round(pollIntervalMs * 0.9);
+    return Math.max(450, Math.min(2600, ms));
+}
+
+/**
+ * GPU-friendly motion: 2–3 point ring per device, interpolate along polyline (smooth corners).
+ */
 export class LivePositionInterpolator {
-    private from = new Map<string, Coord>();
-    private to = new Map<string, Coord>();
+    private rings = new Map<string, DevicePositionRing>();
     private rafId: number | null = null;
-    private startedAt = 0;
+    private lastPushAt = 0;
+    private onFrame: (positions: LiveMapPosition[], t: number) => void;
 
-    constructor(
-        private onFrame: (positions: LiveMapPosition[], t: number) => void,
-    ) {}
+    constructor(onFrame: (positions: LiveMapPosition[], t: number) => void) {
+        this.onFrame = onFrame;
+    }
 
     cancel(): void {
         if (this.rafId != null) {
@@ -22,76 +35,97 @@ export class LivePositionInterpolator {
         }
     }
 
-    /** Instant update (pan/zoom fetch) — avoids dropping riders mid-interpolation. */
-    snapTo(next: LiveMapPosition[]): void {
-        this.cancel();
-        this.from.clear();
-        this.to.clear();
-        for (const p of next) {
-            if (!p.deviceId || !p.lat || !p.lng) continue;
-            this.from.set(p.deviceId, { lng: p.lng, lat: p.lat });
+    private buildPositions(now: number): LiveMapPosition[] {
+        const out: LiveMapPosition[] = [];
+        for (const ring of this.rings.values()) {
+            const coord = ring.sample(now);
+            const meta = ring.meta;
+            if (!coord || !meta) continue;
+            out.push({ ...meta, lng: coord.lng, lat: coord.lat });
         }
-        this.onFrame(next, 1);
+        return out;
     }
 
-    /** Smooth transition between poll updates (GPU-friendly single setData stream). */
-    animateToward(next: LiveMapPosition[]): void {
+    private pushFrame(t: number, force = false): void {
+        const now = performance.now();
+        if (!force && now - this.lastPushAt < SET_DATA_MIN_INTERVAL_MS) return;
+        this.lastPushAt = now;
+        this.onFrame(this.buildPositions(now), t);
+    }
+
+    private ensureLoop(): void {
+        if (this.rafId != null) return;
+        const tick = (now: number) => {
+            this.pushFrame(1);
+            this.rafId = requestAnimationFrame(tick);
+        };
+        this.rafId = requestAnimationFrame(tick);
+    }
+
+    /** Instant update (pan/zoom fetch). */
+    snapTo(next: LiveMapPosition[]): void {
         this.cancel();
+        this.rings.clear();
+        if (next.length > MAX_INTERP_POINTS) {
+            const now = performance.now();
+            for (const p of next.slice(0, MAX_INTERP_POINTS)) {
+                if (!p.deviceId || !p.lat || !p.lng) continue;
+                const ring = new DevicePositionRing();
+                ring.push(p, now);
+                this.rings.set(p.deviceId, ring);
+            }
+            this.pushFrame(1, true);
+            return;
+        }
+        const now = performance.now();
+        for (const p of next) {
+            if (!p.deviceId || !p.lat || !p.lng) continue;
+            const ring = new DevicePositionRing();
+            ring.push(p, now);
+            this.rings.set(p.deviceId, ring);
+        }
+        this.pushFrame(1, true);
+    }
+
+    /** SSE / HTTP snapshot — append to per-device rings. */
+    ingestSnapshot(next: LiveMapPosition[]): void {
         if (next.length > MAX_INTERP_POINTS) {
             this.snapTo(next);
             return;
         }
-
-        const nextMap = new Map<string, Coord>();
-        const nextById = new Map<string, LiveMapPosition>();
+        const now = performance.now();
+        const seen = new Set<string>();
         for (const p of next) {
             if (!p.deviceId || !p.lat || !p.lng) continue;
-            nextMap.set(p.deviceId, { lng: p.lng, lat: p.lat });
-            nextById.set(p.deviceId, p);
-        }
-
-        if (this.from.size === 0) {
-            this.from = nextMap;
-            this.onFrame(next, 1);
-            return;
-        }
-
-        this.to = nextMap;
-        this.startedAt = performance.now();
-
-        const tick = () => {
-            const elapsed = performance.now() - this.startedAt;
-            const t = Math.min(1, elapsed / INTERP_MS);
-            const eased = t * (2 - t);
-            const blended: LiveMapPosition[] = [];
-            const ids = new Set([...this.from.keys(), ...nextMap.keys()]);
-            for (const id of ids) {
-                const target = nextById.get(id);
-                if (!target) continue;
-                const a = this.from.get(id);
-                const b = nextMap.get(id) ?? a;
-                if (!b) {
-                    blended.push(target);
-                    continue;
-                }
-                if (!a) {
-                    blended.push(target);
-                    continue;
-                }
-                blended.push({
-                    ...target,
-                    lng: a.lng + (b.lng - a.lng) * eased,
-                    lat: a.lat + (b.lat - a.lat) * eased,
-                });
+            seen.add(p.deviceId);
+            let ring = this.rings.get(p.deviceId);
+            if (!ring) {
+                ring = new DevicePositionRing();
+                this.rings.set(p.deviceId, ring);
             }
-            this.onFrame(blended, eased);
-            if (t < 1) {
-                this.rafId = requestAnimationFrame(tick);
-            } else {
-                this.from = this.to;
-                this.rafId = null;
-            }
-        };
-        this.rafId = requestAnimationFrame(tick);
+            ring.push(p, now);
+        }
+        for (const id of [...this.rings.keys()]) {
+            if (!seen.has(id)) this.rings.delete(id);
+        }
+        this.pushFrame(1, true);
+        this.ensureLoop();
+    }
+
+    /** Single rider from optional telemetry WS broadcast. */
+    pushDelta(p: LiveMapPosition): void {
+        if (!p.deviceId || !p.lat || !p.lng) return;
+        let ring = this.rings.get(p.deviceId);
+        if (!ring) {
+            ring = new DevicePositionRing();
+            this.rings.set(p.deviceId, ring);
+        }
+        ring.push(p, performance.now());
+        this.ensureLoop();
+    }
+
+    /** @deprecated use ingestSnapshot — kept for call-site compat */
+    animateToward(next: LiveMapPosition[], _opts?: LiveInterpOptions): void {
+        this.ingestSnapshot(next);
     }
 }

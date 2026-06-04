@@ -11,6 +11,7 @@ import {
     apiDetailForZoom,
     clusterRadiusForZoom,
     LIVE_MAP_LOD,
+    auditLiveMapLodCrossfade,
 } from '../modules/analytics/liveMapZoom';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
 
@@ -30,9 +31,16 @@ describe('liveMapZoom', () => {
     });
 
     it('apiDetailForZoom switches at summary/standard/full thresholds', () => {
-        expect(apiDetailForZoom(6)).toBe('summary');
+        expect(apiDetailForZoom(4.5)).toBe('summary');
+        expect(apiDetailForZoom(5)).toBe('standard');
         expect(apiDetailForZoom(10)).toBe('standard');
         expect(apiDetailForZoom(13)).toBe('full');
+    });
+
+    it('auditLiveMapLodCrossfade has no gap at zoom 5', () => {
+        const gaps = auditLiveMapLodCrossfade(4.5, 7, 0.1).filter((i) => i.type === 'GAP');
+        const at5 = gaps.filter((i) => Math.abs(i.zoom - 5) < 0.05);
+        expect(at5, JSON.stringify(at5)).toHaveLength(0);
     });
 
     it('clusterRadiusForZoom decreases as zoom increases', () => {
@@ -41,9 +49,22 @@ describe('liveMapZoom', () => {
 
     it('LOD crossfade bands do not overlap inconsistently', () => {
         expect(LIVE_MAP_LOD.dotFadeInEnd).toBeLessThan(LIVE_MAP_LOD.iconFadeInEnd);
-        expect(LIVE_MAP_LOD.iconMaxZoom).toBeGreaterThan(LIVE_MAP_LOD.labelFadeInStart);
+        expect(LIVE_MAP_LOD.iconMaxZoom).toBe(LIVE_MAP_LOD.labelMinZoom);
+        expect(LIVE_MAP_LOD.dotFadeOutStart).toBe(LIVE_MAP_LOD.iconFadeInStart);
         expect(LIVE_MAP_LOD.dotFadeOutEnd).toBeLessThanOrEqual(LIVE_MAP_LOD.iconMaxZoom);
         expect(LIVE_MAP_LOD.cityHubFadeOutEnd).toBeLessThan(LIVE_MAP_LOD.clusterPeakEnd);
+    });
+
+    it('auditLiveMapLodCrossfade finds no gaps or double rider layers', () => {
+        const issues = auditLiveMapLodCrossfade();
+        const gaps = issues.filter((i) => i.type === 'GAP');
+        const doubles = issues.filter((i) => i.type === 'DOUBLE');
+        const overlaps = issues.filter((i) => i.type === 'ICON_OVERLAP');
+        const steps = issues.filter((i) => i.type === 'ICON_STEP');
+        expect(gaps, JSON.stringify(gaps)).toHaveLength(0);
+        expect(overlaps, JSON.stringify(overlaps)).toHaveLength(0);
+        expect(steps, JSON.stringify(steps)).toHaveLength(0);
+        expect(doubles.length, JSON.stringify(doubles.slice(0, 8))).toBe(0);
     });
 });
 

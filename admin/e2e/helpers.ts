@@ -1,13 +1,31 @@
-import { type Page } from '@playwright/test';
+import { type Page, expect } from '@playwright/test';
+import { mockLiveTelemetryBody } from './fixtures/liveMapTelemetry';
 
 /**
  * Shared E2E helpers — mockBackend and login for all admin E2E tests.
  */
 
 const API_GLOB = '**/api/**';
+const TELEMETRY_LIVE_GLOB = '**/activities/telemetry/live/**';
+
+/** Playwright session flag — read by E2EAuthBootstrap (no Vite env required). */
+export async function seedPlaywrightE2e(page: Page) {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('playwright-e2e', '1');
+  });
+}
+
+function isApiRequest(url: string): boolean {
+  try {
+    const path = new URL(url).pathname;
+    return path.startsWith('/api/');
+  } catch {
+    return false;
+  }
+}
 
 export async function mockBackend(page: Page) {
-  await page.route(API_GLOB, async (route) => {
+  await page.route((url) => isApiRequest(url.toString()), async (route) => {
     const url = route.request().url();
     const method = route.request().method();
 
@@ -37,6 +55,29 @@ export async function mockBackend(page: Page) {
       });
     }
 
+    if (url.includes('/users/rbac/user-roles/my_roles/')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    }
+
+    if (url.includes('/infra/health/')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          status: 'ok',
+          backend: { status: 'ok', uptime_seconds: 3600 },
+          postgresql: { status: 'ok', latency_ms: 2 },
+          redis: { status: 'ok', mode: 'standalone', latency_ms: 1 },
+          celery: { status: 'ok', workers: 1 },
+          storage: { status: 'ok', usage_pct: 12 },
+        }),
+      });
+    }
+
     // Dashboard stats
     if (url.includes('/activities/admin/stats/')) {
       return route.fulfill({
@@ -61,9 +102,27 @@ export async function mockBackend(page: Page) {
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ data: [], results: [], count: 0 }),
+      body: JSON.stringify({ data: {}, results: [], count: 0 }),
     });
   });
+}
+
+/** Live Map poll — positions + city_counts for zoom LOD screenshots. */
+export async function mockLiveMapTelemetry(page: Page) {
+  await page.route(TELEMETRY_LIVE_GLOB, async (route) => {
+    const url = new URL(route.request().url());
+    const detail = url.searchParams.get('detail');
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(mockLiveTelemetryBody(detail)),
+    });
+  });
+}
+
+export async function mockBackendWithLiveMap(page: Page) {
+  await mockBackend(page);
+  await mockLiveMapTelemetry(page);
 }
 
 export async function login(page: Page) {
@@ -72,10 +131,9 @@ export async function login(page: Page) {
   await page.waitForTimeout(500);
   const isOnLogin = page.url().includes('login') || (await page.getByRole('button', { name: 'Sign In' }).isVisible().catch(() => false));
   if (isOnLogin) {
-    await page.getByLabel('Email or Username').fill('admin');
+    await page.getByLabel('Username or Email').fill('admin');
     await page.getByLabel('Password', { exact: true }).fill('password');
-    await page.getByRole('button', { name: 'Sign In' }).click();
+    await page.getByRole('button', { name: 'Sign in' }).click();
   }
-  await page.waitForTimeout(500);
-  await expect(page.getByTestId('admin-sidebar')).toBeVisible({ timeout: 5000 });
+  await expect(page.getByTestId('admin-sidebar')).toBeVisible({ timeout: 15000 });
 }

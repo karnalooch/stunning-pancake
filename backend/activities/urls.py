@@ -5,6 +5,7 @@ from .views import (
     PrivacyZoneViewSet,
     VoucherRedeemView,
     TelemetryLiveView,
+    TelemetryLiveStreamView,
     AnomalyListView,
     POIViewSet,
     TelemetryConfigView,
@@ -64,6 +65,7 @@ urlpatterns = [
     path("admin/reject/<int:activity_id>/", ActivityRejectView.as_view(), name="admin-reject"),
     path("vouchers/redeem/<str:code>/", VoucherRedeemView.as_view(), name="voucher-redeem"),
     path("telemetry/live/", TelemetryLiveView.as_view(), name="telemetry-live"),
+    path("telemetry/live/stream/", TelemetryLiveStreamView.as_view(), name="telemetry-live-stream"),
     path("telemetry/anomalies/", AnomalyListView.as_view(), name="telemetry-anomalies"),
     path("telemetry/config/", TelemetryConfigView.as_view(), name="telemetry-config"),
     # Wearables (Milestone 4)

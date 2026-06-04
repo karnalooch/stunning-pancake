@@ -38,6 +38,7 @@ import { useAuth } from './core/auth/useAuth';
 import axios from 'axios';
 import { apiClient } from './api/client';
 import { clearStoredSession } from './core/auth/tokens';
+import { E2EAuthBootstrap } from './core/auth/E2EAuthBootstrap';
 const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
@@ -130,6 +131,7 @@ export default function App() {
 
   return (
     <MantineProvider defaultColorScheme="auto" theme={theme}>
+      <E2EAuthBootstrap />
       <Notifications position="top-right" zIndex={9999} />
       <HashRouter>
         {!isAuthenticated ? (
