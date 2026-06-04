@@ -10,6 +10,7 @@ import {
     resolveLiveMapZoomMode,
     apiDetailForZoom,
     clusterRadiusForZoom,
+    CLUSTER_MAX_ZOOM,
     LIVE_MAP_LOD,
     auditLiveMapLodCrossfade,
     riderUnclusteredOpacityAtZoom,
@@ -36,7 +37,12 @@ describe('liveMapZoom', () => {
         expect(apiDetailForZoom(4.5)).toBe('summary');
         expect(apiDetailForZoom(5)).toBe('standard');
         expect(apiDetailForZoom(10)).toBe('standard');
-        expect(apiDetailForZoom(13)).toBe('full');
+        expect(apiDetailForZoom(12)).toBe('full');
+        expect(apiDetailForZoom(11.4)).toBe('standard');
+    });
+
+    it('clusterMaxZoom ends before individual dots (z≥12)', () => {
+        expect(CLUSTER_MAX_ZOOM).toBeLessThan(LIVE_MAP_LOD.dotFadeInStart);
     });
 
     it('auditLiveMapLodCrossfade has no gap at zoom 5', () => {

@@ -69,7 +69,7 @@ export class LivePositionInterpolator {
         if (next.length > MAX_INTERP_POINTS) {
             const now = performance.now();
             for (const p of next.slice(0, MAX_INTERP_POINTS)) {
-                if (!p.deviceId || !p.lat || !p.lng) continue;
+                if (!p.deviceId || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
                 const ring = new DevicePositionRing();
                 ring.push(p, now);
                 this.rings.set(p.deviceId, ring);
@@ -79,7 +79,7 @@ export class LivePositionInterpolator {
         }
         const now = performance.now();
         for (const p of next) {
-            if (!p.deviceId || !p.lat || !p.lng) continue;
+            if (!p.deviceId || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
             const ring = new DevicePositionRing();
             ring.push(p, now);
             this.rings.set(p.deviceId, ring);
@@ -96,7 +96,7 @@ export class LivePositionInterpolator {
         const now = performance.now();
         const seen = new Set<string>();
         for (const p of next) {
-            if (!p.deviceId || !p.lat || !p.lng) continue;
+            if (!p.deviceId || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
             seen.add(p.deviceId);
             let ring = this.rings.get(p.deviceId);
             if (!ring) {
@@ -114,7 +114,7 @@ export class LivePositionInterpolator {
 
     /** Single rider from optional telemetry WS broadcast. */
     pushDelta(p: LiveMapPosition): void {
-        if (!p.deviceId || !p.lat || !p.lng) return;
+        if (!p.deviceId || !Number.isFinite(p.lat) || !Number.isFinite(p.lng)) return;
         let ring = this.rings.get(p.deviceId);
         if (!ring) {
             ring = new DevicePositionRing();

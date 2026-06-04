@@ -30,7 +30,11 @@ export type LiveMapZoomMode =
     | 'street-labels'
     | 'detail';
 
-export const CLUSTER_MAX_ZOOM = 14;
+/**
+ * MapLibre stops clustering above this zoom. Must be < dotFadeInStart (12) so GL dots/icons
+ * (layers filter `!point_count`) actually render between z≈12 and icon handoff — not only at z≥14.
+ */
+export const CLUSTER_MAX_ZOOM = 11.5;
 
 /**
  * Shared zoom bands for MapLibre paint crossfades — wider ranges reduce pop-in
@@ -90,7 +94,7 @@ export type LiveApiDetail = 'summary' | 'standard' | 'full';
 
 export function apiDetailForZoom(zoom: number): LiveApiDetail {
     if (zoom < 5) return 'summary';
-    if (zoom < 12) return 'standard';
+    if (zoom < CLUSTER_MAX_ZOOM) return 'standard';
     return 'full';
 }
 

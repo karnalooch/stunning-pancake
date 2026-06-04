@@ -21,6 +21,7 @@ import {
 } from './liveMapMarkers';
 import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug } from './liveMapCities';
 import {
+    CLUSTER_MAX_ZOOM,
     ZOOM_MODE_LABEL,
     apiDetailForZoom,
     clusterRadiusForZoom,
@@ -710,8 +711,11 @@ export const LiveMap: React.FC = () => {
                 const src = map.getSource(LIVE_SOURCES.positions);
                 if (src) {
                     try {
-                        (src as { setClusterOptions?: (o: { radius?: number }) => void })
-                            .setClusterOptions?.({ radius: clusterRadiusForZoom(z) });
+                        (src as { setClusterOptions?: (o: { radius?: number; clusterMaxZoom?: number }) => void })
+                            .setClusterOptions?.({
+                                radius: clusterRadiusForZoom(z),
+                                clusterMaxZoom: CLUSTER_MAX_ZOOM,
+                            });
                     } catch { /* MapLibre < 3.3 */ }
                 }
                 if (apiDetailForZoom(z) === 'summary') {
