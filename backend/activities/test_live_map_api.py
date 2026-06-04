@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase
 
 from activities.live_map_api import poll_after_ms_hint, stream_interval_ms
+from activities.views import EventStreamRenderer, TelemetryLiveStreamView
 
 
 class LiveMapApiTimingTest(SimpleTestCase):
@@ -17,3 +18,9 @@ class LiveMapApiTimingTest(SimpleTestCase):
         self.assertEqual(poll_after_ms_hint(12.0, False), 950)
         self.assertEqual(poll_after_ms_hint(14.0, False), 800)
         self.assertGreater(poll_after_ms_hint(10.0, False), poll_after_ms_hint(12.0, False))
+
+
+class TelemetryLiveStreamNegotiationTest(SimpleTestCase):
+    def test_event_stream_renderer_registered(self):
+        media_types = {r.media_type for r in TelemetryLiveStreamView().get_renderers()}
+        self.assertIn(EventStreamRenderer.media_type, media_types)

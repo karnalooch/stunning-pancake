@@ -2,6 +2,7 @@ import json
 import time
 from rest_framework import viewsets, permissions, status, generics, views
 from rest_framework.decorators import action
+from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
 from .models import Activity, PrivacyZone, Voucher, POI
@@ -499,6 +500,23 @@ class TelemetryLiveView(generics.GenericAPIView):
         return resp
 
 
+class EventStreamRenderer(BaseRenderer):
+    """Allow DRF content negotiation for Accept: text/event-stream (SSE)."""
+
+    media_type = "text/event-stream"
+    format = "event-stream"
+    charset = None
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        if data is None:
+            return b""
+        if isinstance(data, (bytes, bytearray)):
+            return bytes(data)
+        if isinstance(data, str):
+            return data.encode()
+        return json.dumps(data).encode()
+
+
 class TelemetryLiveStreamView(views.APIView):
     """
     SSE stream of live map snapshots (200–500 ms cadence at street zoom).
@@ -506,6 +524,7 @@ class TelemetryLiveStreamView(views.APIView):
     """
 
     permission_classes = (permissions.IsAuthenticated,)
+    renderer_classes = (EventStreamRenderer,)
 
     def get(self, request):
         from django.http import StreamingHttpResponse
