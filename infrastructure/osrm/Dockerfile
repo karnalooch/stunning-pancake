@@ -12,6 +12,6 @@ RUN chmod +x /entrypoint.sh
 ENV OSRM_DATA_DIR=/data
 ENV OSRM_PORT=5000
 EXPOSE 5000
-VOLUME ["/data"]
+# Volume mount /data is configured in Railway (osrm-volume), not via Dockerfile VOLUME.
 
 ENTRYPOINT ["/entrypoint.sh"]
