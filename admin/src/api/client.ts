@@ -16,7 +16,9 @@ export type WipeProgressStatus = {
   error?: string | null;
   warning?: string | null;
   stuck?: boolean;
+  stuck_reason?: string | null;
   started_at?: number | null;
+  last_progress_at?: number | null;
   completed_at?: number | null;
   log?: [string, string][];
 };
@@ -350,6 +352,19 @@ export const SimulatorApi = {
     return label === 'queued' || label === 'running';
   },
 
+  /** Clear sim lock/state then force-restart a stuck wipe. */
+  recoverStuckWipe: async (
+    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
+  ): Promise<WipeProgressStatus> => {
+    const confirm_phrase = opts?.confirmPhrase ?? '';
+    const mfa_confirmed = Boolean(opts?.mfaConfirmed);
+    await SimulatorApi.resetSimulator();
+    const { data } = await apiClient.delete('/activities/admin/wipe-data/', {
+      data: { confirm: true, force: true, confirm_phrase, mfa_confirmed },
+    });
+    return data;
+  },
+
   // Wipe Data (async chunked — poll until complete)
   wipeData: async (
     onProgress?: (s: WipeProgressStatus) => void,
@@ -388,7 +403,7 @@ export const SimulatorApi = {
       } else if (ax.response?.status === 409) {
         const status = await SimulatorApi.getWipeStatus();
         if (status.stuck) {
-          const restarted = await startWipe(true);
+          const restarted = await SimulatorApi.recoverStuckWipe(opts);
           onProgress?.(restarted);
         } else if (SimulatorApi.isWipeActive(status)) {
           onProgress?.(status);
@@ -414,7 +429,7 @@ export const SimulatorApi = {
       onProgress?.(status);
       if (status.stuck && !retriedStuck) {
         retriedStuck = true;
-        const restarted = await startWipe(true);
+        const restarted = await SimulatorApi.recoverStuckWipe(opts);
         onProgress?.(restarted);
         continue;
       }

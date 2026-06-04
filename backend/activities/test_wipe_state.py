@@ -65,6 +65,41 @@ class WipeStatusLabelTests(SimpleTestCase):
         state = {"running": False, "phase": "idle"}
         self.assertFalse(ws.is_wipe_stuck(state))
 
+    def test_users_phase_recent_progress_not_stuck(self):
+        import time as _time
+
+        state = {
+            "running": True,
+            "phase": "users",
+            "started_at": _time.time() - 600,
+            "last_progress_at": _time.time() - 30,
+        }
+        self.assertFalse(ws.is_wipe_stuck(state))
+
+    def test_users_phase_stale_progress_stuck(self):
+        import time as _time
+
+        state = {
+            "running": True,
+            "phase": "users",
+            "started_at": _time.time() - 600,
+            "last_progress_at": _time.time() - 300,
+        }
+        self.assertTrue(ws.is_wipe_stuck(state))
+        self.assertEqual(ws.wipe_stuck_reason(state), "no_progress")
+
+    def test_running_without_last_progress_uses_running_threshold(self):
+        import time as _time
+
+        state = {
+            "running": True,
+            "phase": "activities",
+            "started_at": _time.time() - 500,
+        }
+        self.assertFalse(ws.is_wipe_stuck(state))
+        state["started_at"] = _time.time() - 1000
+        self.assertTrue(ws.is_wipe_stuck(state))
+
     @patch("activities.wipe_state.get_redis")
     def test_none_error_not_serialized_as_string(self, mock_get_redis):
         mock_get_redis.return_value = _FakeRedis()
@@ -89,6 +124,7 @@ class WipeStatusLabelTests(SimpleTestCase):
         self.assertEqual(state["tables_total"], 6)
         self.assertEqual(state["rows_deleted"], 5000)
         self.assertEqual(state["deleted"]["activities"], 5000)
+        self.assertIsNotNone(state["last_progress_at"])
 
     def test_serialize_wipe_response_shape(self):
         state = ws.get_wipe_state()
@@ -97,3 +133,18 @@ class WipeStatusLabelTests(SimpleTestCase):
         self.assertIn("phase_label", payload)
         self.assertIn("stuck", payload)
         self.assertIn("tables_total", payload)
+        self.assertIn("last_progress_at", payload)
+
+    def test_serialize_includes_stuck_reason_when_stuck(self):
+        import time as _time
+
+        state = {
+            "running": True,
+            "phase": "users",
+            "started_at": _time.time() - 600,
+            "last_progress_at": _time.time() - 300,
+            "progress_pct": 60,
+        }
+        payload = ws.serialize_wipe_response(state)
+        self.assertTrue(payload["stuck"])
+        self.assertEqual(payload["stuck_reason"], "no_progress")

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Group, Progress, Text } from '@mantine/core';
+import { Alert, Box, Group, Progress, Text } from '@mantine/core';
 
 const PHASE_LABELS: Record<string, string> = {
     initializing: 'Inicjalizacja',
@@ -113,6 +113,8 @@ export interface WipeProgressProps {
     deleted?: Record<string, number>;
     error?: string | null;
     startedAt?: number | null;
+    stuck?: boolean;
+    stuckReason?: string | null;
 }
 
 export const WipeProgressBar: React.FC<WipeProgressProps> = ({
@@ -127,6 +129,8 @@ export const WipeProgressBar: React.FC<WipeProgressProps> = ({
     deleted,
     error,
     startedAt,
+    stuck = false,
+    stuckReason,
 }) => {
     const pct = Math.min(100, Math.max(0, progressPct));
     const elapsed = startedAt ? Math.max(0, Date.now() / 1000 - startedAt) : 0;
@@ -169,6 +173,14 @@ export const WipeProgressBar: React.FC<WipeProgressProps> = ({
             )}
             {error && (
                 <Text size="xs" c="red" mt={4}>{error}</Text>
+            )}
+            {stuck && running && !error && (
+                <Alert color="orange" variant="light" mt="sm" title="Czyszczenie zatrzymane">
+                    Brak postępu przez dłuższy czas
+                    {stuckReason ? ` (${stuckReason})` : ''}.
+                    Panel spróbuje automatycznie zresetować blokadę i wznowić wipe.
+                    Jeśli problem wraca, użyj ręcznego resetu symulatora i ponów operację.
+                </Alert>
             )}
         </Box>
     );

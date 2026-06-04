@@ -183,6 +183,8 @@ export const SettingsScreen: React.FC = () => {
                   deleted={wipeStatus?.deleted}
                   startedAt={wipeStatus?.started_at ?? undefined}
                   error={wipeStatus?.error ?? undefined}
+                  stuck={wipeStatus?.stuck}
+                  stuckReason={wipeStatus?.stuck_reason}
                 />
               )}
 

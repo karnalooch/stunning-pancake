@@ -12,8 +12,12 @@ WIPE_IN_PROGRESS_KEY = "{admin}:wipe:in_progress"
 WIPE_LOCK_TTL = 3600
 # Queued but Celery never picked up the task (common after worker restart).
 WIPE_STALE_QUEUED_SEC = int(__import__("os").getenv("WIPE_STALE_QUEUED_SEC", "120"))
-# Running wipe with no progress for too long (crashed worker mid-delete).
-WIPE_STALE_RUNNING_SEC = int(__import__("os").getenv("WIPE_STALE_RUNNING_SEC", "3600"))
+# Running phase with no last_progress_at updates (legacy / first chunk).
+WIPE_STALE_RUNNING_SEC = int(__import__("os").getenv("WIPE_STALE_RUNNING_SEC", "900"))
+# No Redis progress touch for this long while running (chunk stalled).
+WIPE_STALE_NO_PROGRESS_SEC = int(__import__("os").getenv("WIPE_STALE_NO_PROGRESS_SEC", "180"))
+# Users phase may use a shorter cap (min with NO_PROGRESS).
+WIPE_STALE_USERS_SEC = int(__import__("os").getenv("WIPE_STALE_USERS_SEC", "300"))
 
 # Ordered phases for tables_done / tables_total progress.
 WIPE_PHASE_ORDER = (
@@ -84,6 +88,7 @@ def get_wipe_state() -> dict:
     state["warning"] = _redis_optional_str(state.get("warning"))
     state["message"] = _redis_optional_str(state.get("message"))
     state["started_at"] = _parse_float(state.get("started_at"))
+    state["last_progress_at"] = _parse_float(state.get("last_progress_at"))
     state["completed_at"] = _parse_float(state.get("completed_at"))
     if state.get("deleted"):
         try:
@@ -114,11 +119,15 @@ def _empty_wipe_state() -> dict:
         "tables_total": tables_total,
         "rows_deleted": 0,
         "started_at": None,
+        "last_progress_at": None,
         "completed_at": None,
     }
 
 
 def set_wipe_state(**kwargs):
+    touch_progress = kwargs.pop("touch_progress", True)
+    if touch_progress:
+        kwargs["last_progress_at"] = time.time()
     deleted = kwargs.pop("deleted", None)
     if deleted is not None:
         kwargs["deleted"] = deleted
@@ -178,6 +187,7 @@ def mark_wipe_queued():
         rows_deleted=0,
         message=PHASE_MESSAGES["queued"],
         started_at=time.time(),
+        last_progress_at=time.time(),
         completed_at=None,
     )
 
@@ -202,14 +212,20 @@ def serialize_wipe_response(
 ) -> dict:
     """Structured payload for GET/DELETE wipe-data."""
     label = wipe_status_label(state)
+    stuck_reason = None
     if stuck is None:
-        stuck = is_wipe_stuck(state)
+        stuck_reason = wipe_stuck_reason(state)
+        stuck = stuck_reason is not None
+    elif stuck:
+        stuck_reason = wipe_stuck_reason(state)
     out = {
         **state,
         "status": label,
         "stuck": stuck,
         "phase_label": PHASE_MESSAGES.get(state.get("phase") or "idle", state.get("phase")),
     }
+    if stuck and stuck_reason:
+        out["stuck_reason"] = stuck_reason
     if log is not None:
         out["log"] = log
     return out
@@ -243,18 +259,37 @@ def _parse_started_at(state: dict) -> float | None:
     return _parse_float(state.get("started_at"))
 
 
-def is_wipe_stuck(state: dict) -> bool:
-    """True when Redis says running but no worker is making progress."""
+def wipe_stuck_reason(state: dict) -> str | None:
+    """Short reason when running but no worker progress; None if not stuck."""
     if not state.get("running"):
-        return False
+        return None
     started = _parse_started_at(state)
     if started is None:
-        return True
-    age = time.time() - started
+        return "no_started_at"
+    now = time.time()
     phase = (state.get("phase") or "").lower()
     if phase in ("queued", "starting"):
-        return age >= WIPE_STALE_QUEUED_SEC
-    return age >= WIPE_STALE_RUNNING_SEC
+        age = now - started
+        if age >= WIPE_STALE_QUEUED_SEC:
+            return "queued_timeout"
+        return None
+    last_prog = _parse_float(state.get("last_progress_at"))
+    anchor = last_prog if last_prog is not None else started
+    idle = now - anchor
+    if last_prog is None:
+        threshold = WIPE_STALE_RUNNING_SEC
+    else:
+        threshold = WIPE_STALE_NO_PROGRESS_SEC
+        if phase == "users":
+            threshold = min(WIPE_STALE_NO_PROGRESS_SEC, WIPE_STALE_USERS_SEC)
+    if idle >= threshold:
+        return "no_progress" if last_prog is not None else "running_timeout"
+    return None
+
+
+def is_wipe_stuck(state: dict) -> bool:
+    """True when Redis says running but no worker is making progress."""
+    return wipe_stuck_reason(state) is not None
 
 
 def force_reset_wipe() -> None:

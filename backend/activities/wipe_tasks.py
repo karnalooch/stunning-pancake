@@ -15,9 +15,17 @@ from activities.services import TelemetryService
 from activities.scale_config import WIPE_CHUNK_SIZE as CHUNK
 
 
-def _chunk_delete(qs, label: str, deleted: dict, progress_base: float, progress_span: float):
+def _chunk_delete(
+    qs,
+    label: str,
+    deleted: dict,
+    progress_base: float,
+    progress_span: float,
+    total_estimate: int | None = None,
+):
     total_removed = 0
     model = qs.model
+    estimate = max(int(total_estimate or 0), 1)
     while True:
         ids = list(qs.values_list("pk", flat=True)[:CHUNK])
         if not ids:
@@ -25,9 +33,9 @@ def _chunk_delete(qs, label: str, deleted: dict, progress_base: float, progress_
         n, _ = model.objects.filter(pk__in=ids).delete()
         total_removed += n
         deleted[label] = total_removed
-        ws.set_wipe_state(
-            deleted=deleted, progress_pct=round(progress_base + progress_span * 0.5, 1)
-        )
+        frac = min(1.0, total_removed / estimate)
+        progress_pct = round(progress_base + progress_span * frac, 1)
+        ws.set_wipe_state(deleted=deleted, progress_pct=progress_pct)
         ws.wipe_log(f"{label}: {total_removed:,} deleted…")
     return total_removed
 
@@ -82,8 +90,16 @@ def run_wipe_sync():
     deleted = {}
 
     try:
+        activity_estimate = Activity.objects.count()
         ws.set_wipe_state(phase="activities", progress_pct=5)
-        deleted["activities"] = _chunk_delete(Activity.objects.all(), "activities", deleted, 5, 35)
+        deleted["activities"] = _chunk_delete(
+            Activity.objects.all(),
+            "activities",
+            deleted,
+            5,
+            35,
+            total_estimate=activity_estimate,
+        )
 
         ws.set_wipe_state(phase="departments", progress_pct=40)
         deleted["user_departments"] = _chunk_delete(
@@ -93,14 +109,16 @@ def run_wipe_sync():
             Department.objects.all(), "departments", deleted, 50, 10
         )
 
-        ws.set_wipe_state(phase="users", progress_pct=60)
         User = get_user_model()
+        user_estimate = User.objects.exclude(role="GLOBAL_OWNER").count()
+        ws.set_wipe_state(phase="users", progress_pct=60)
         deleted["users"] = _chunk_delete(
             User.objects.exclude(role="GLOBAL_OWNER"),
             "users",
             deleted,
             60,
             30,
+            total_estimate=user_estimate,
         )
 
         ws.set_wipe_state(phase="tenants", progress_pct=92)

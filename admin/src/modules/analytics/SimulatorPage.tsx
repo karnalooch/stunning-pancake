@@ -605,6 +605,8 @@ export const SimulatorPage: React.FC = () => {
                                             rowsDeleted={wipeStatus?.rows_deleted}
                                             deleted={wipeStatus?.deleted}
                                             startedAt={wipeStatus?.started_at ?? undefined}
+                                            stuck={wipeStatus?.stuck}
+                                            stuckReason={wipeStatus?.stuck_reason}
                                         />
                                     </Box>
                                 ) : isStuck ? (
@@ -717,6 +719,8 @@ export const SimulatorPage: React.FC = () => {
                             deleted={wipeStatus?.deleted}
                             startedAt={wipeStatus?.started_at ?? undefined}
                             error={wipeStatus?.error ?? undefined}
+                            stuck={wipeStatus?.stuck}
+                            stuckReason={wipeStatus?.stuck_reason}
                         />
                     )}
                     <Button color="red" fullWidth loading={wiping}

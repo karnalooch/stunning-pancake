@@ -142,6 +142,22 @@ Stary admin z markerami HTML: deploy + Ctrl+F5.
 
 ---
 
+## Wipe danych — wykrywanie „stuck” i auto-recovery
+
+Chunkowany `DELETE /api/activities/admin/wipe-data/` zapisuje postęp w Redis (`last_progress_at` przy każdym `set_wipe_state`). API ustawia `stuck=true` gdy:
+
+| Warunek | Domyślny próg (env) |
+|---------|---------------------|
+| Faza `queued` / `starting` | `WIPE_STALE_QUEUED_SEC` (120 s) |
+| Brak `last_progress_at` | `WIPE_STALE_RUNNING_SEC` (900 s od `started_at`) |
+| Brak dotknięcia postępu | `WIPE_STALE_NO_PROGRESS_SEC` (180 s); faza `users` dodatkowo `min(…, WIPE_STALE_USERS_SEC=300)` |
+
+Admin (`SimulatorApi.wipeData`): przy `stuck` raz na sesję wywołuje `recoverStuckWipe` — `POST simulator-reset/` (czyści lock), potem `DELETE wipe-data/` z `force=true`. UI pokazuje alert na pasku postępu.
+
+Ręcznie: reset symulatora w panelu, potem ponów wipe z potwierdzeniem frazą.
+
+---
+
 ## Endpointy admin (skrót)
 
 | Metoda | Ścieżka |
