@@ -758,6 +758,7 @@ class WipeDataView(APIView):
     """
     DELETE /api/activities/admin/wipe-data/  — start chunked async wipe
     GET    /api/activities/admin/wipe-data/  — progress { running, progress_pct, deleted, log }
+    POST   /api/activities/admin/wipe-data/  — {action: "unstick"} clear stuck locks without restart
     """
 
     permission_classes = [IsGlobalOwner]
@@ -767,6 +768,26 @@ class WipeDataView(APIView):
 
         state = ws.get_wipe_state()
         return Response(ws.serialize_wipe_response(state, log=ws.get_wipe_log()))
+
+    def post(self, request):
+        from activities import wipe_state as ws
+
+        action = (request.data.get("action") or "").strip().lower()
+        if action != "unstick":
+            return Response(
+                {"error": 'Unsupported action. Use {"action": "unstick"}.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        state = ws.get_wipe_state()
+        if not state.get("running") and not ws.is_wipe_in_progress():
+            idle = ws.serialize_wipe_response(ws.get_wipe_state())
+            idle["message"] = "No wipe in progress."
+            return Response(idle)
+        ws.force_reset_wipe()
+        ws.wipe_log("Wipe force-unstuck via admin API.")
+        cleared = ws.serialize_wipe_response(ws.get_wipe_state())
+        cleared["message"] = "Wipe locks cleared. Start a new wipe when ready."
+        return Response(cleared)
 
     def delete(self, request):
         confirm = (

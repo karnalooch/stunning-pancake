@@ -136,25 +136,27 @@ export const WipeProgressBar: React.FC<WipeProgressProps> = ({
     const elapsed = startedAt ? Math.max(0, Date.now() / 1000 - startedAt) : 0;
     const title = formatPhase(phase, phaseLabel || message);
     const showTables = tablesTotal > 0;
+    const showSpinner = running && !stuck && !error;
+    const indeterminate = showSpinner && phase === 'users';
 
     return (
         <Box>
             <Group justify="space-between" mb={6} gap="xs">
                 <Text size="sm" fw={600}>
-                    {error ? 'Błąd czyszczenia' : title}
+                    {error ? 'Błąd czyszczenia' : stuck ? `${title} (zatrzymane)` : title}
                 </Text>
                 <Text size="xs" c="dimmed">
-                    {running && !error ? `${pct.toFixed(0)}%` : error ? '—' : '100%'}
+                    {showSpinner && !indeterminate ? `${pct.toFixed(0)}%` : stuck ? '—' : error ? '—' : `${pct.toFixed(0)}%`}
                     {elapsed > 0 ? ` · ${formatElapsed(elapsed)}` : ''}
                 </Text>
             </Group>
             <Progress
-                value={error ? 100 : pct}
-                color={error ? 'red' : 'red'}
+                value={error ? 100 : indeterminate ? 100 : pct}
+                color={error ? 'red' : stuck ? 'orange' : 'red'}
                 size="lg"
                 radius="xl"
-                striped={running && pct < 100 && !error}
-                animated={running && pct < 100 && !error}
+                striped={showSpinner && (indeterminate || pct < 100)}
+                animated={showSpinner && (indeterminate || pct < 100)}
             />
             <Group justify="space-between" mt={6} gap="xs">
                 {showTables && (
@@ -174,12 +176,11 @@ export const WipeProgressBar: React.FC<WipeProgressProps> = ({
             {error && (
                 <Text size="xs" c="red" mt={4}>{error}</Text>
             )}
-            {stuck && running && !error && (
+            {stuck && !error && (
                 <Alert color="orange" variant="light" mt="sm" title="Czyszczenie zatrzymane">
                     Brak postępu przez dłuższy czas
                     {stuckReason ? ` (${stuckReason})` : ''}.
-                    Panel spróbuje automatycznie zresetować blokadę i wznowić wipe.
-                    Jeśli problem wraca, użyj ręcznego resetu symulatora i ponów operację.
+                    Użyj „Reset i ponów” poniżej lub ręcznego resetu symulatora.
                 </Alert>
             )}
         </Box>

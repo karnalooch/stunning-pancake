@@ -16,7 +16,7 @@ WIPE_STALE_QUEUED_SEC = int(__import__("os").getenv("WIPE_STALE_QUEUED_SEC", "12
 WIPE_STALE_RUNNING_SEC = int(__import__("os").getenv("WIPE_STALE_RUNNING_SEC", "900"))
 # No Redis progress touch for this long while running (chunk stalled).
 WIPE_STALE_NO_PROGRESS_SEC = int(__import__("os").getenv("WIPE_STALE_NO_PROGRESS_SEC", "180"))
-# Users phase may use a shorter cap (min with NO_PROGRESS).
+# Users phase may use a longer cap (max with NO_PROGRESS) — large deletes can exceed 3 min/chunk.
 WIPE_STALE_USERS_SEC = int(__import__("os").getenv("WIPE_STALE_USERS_SEC", "300"))
 
 # Ordered phases for tables_done / tables_total progress.
@@ -281,7 +281,7 @@ def wipe_stuck_reason(state: dict) -> str | None:
     else:
         threshold = WIPE_STALE_NO_PROGRESS_SEC
         if phase == "users":
-            threshold = min(WIPE_STALE_NO_PROGRESS_SEC, WIPE_STALE_USERS_SEC)
+            threshold = max(WIPE_STALE_NO_PROGRESS_SEC, WIPE_STALE_USERS_SEC)
     if idle >= threshold:
         return "no_progress" if last_prog is not None else "running_timeout"
     return None

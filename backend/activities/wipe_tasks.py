@@ -40,6 +40,13 @@ def _chunk_delete(
         ids = list(base_qs.values_list("pk", flat=True)[:chunk])
         if not ids:
             break
+        # Heartbeat before slow delete so stuck detection does not fire mid-chunk.
+        frac_before = min(1.0, total_removed / estimate)
+        ws.set_wipe_state(
+            deleted=deleted,
+            progress_pct=round(progress_base + progress_span * frac_before, 1),
+            message=f"{label}: deleting {len(ids):,} rows…",
+        )
         batch_qs = model.objects.filter(pk__in=ids)
         if raw_delete:
             batch_qs._raw_delete(using=using)
@@ -231,7 +238,8 @@ def start_wipe_async() -> str:
     """
     import os
 
-    if os.getenv("WIPE_USE_BACKEND_THREAD", "").lower() in ("1", "true", "yes"):
+    thread_env = os.getenv("WIPE_ALWAYS_THREAD", "") or os.getenv("WIPE_USE_BACKEND_THREAD", "")
+    if thread_env.lower() in ("1", "true", "yes"):
         threading.Thread(target=run_wipe_sync, daemon=True, name="wipe-data").start()
         return "thread"
     if "sqlite" in os.getenv("DATABASE_URL", ""):

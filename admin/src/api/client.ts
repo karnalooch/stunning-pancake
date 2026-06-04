@@ -1,6 +1,12 @@
 import axios from 'axios';
 import { formatApiError, isAbsentError } from './apiErrors';
 import { useAuth } from '../core/auth/useAuth';
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  getStoredRefreshToken,
+  isAuthApiPath,
+} from '../core/auth/tokens';
 
 export type WipeProgressStatus = {
   running?: boolean;
@@ -23,13 +29,17 @@ export type WipeProgressStatus = {
   log?: [string, string][];
 };
 
+/** Thrown when wipe is stuck and auto-recovery failed; carries last server status. */
+export class WipeStuckError extends Error {
+  status: WipeProgressStatus;
+  constructor(message: string, status: WipeProgressStatus) {
+    super(message);
+    this.name = 'WipeStuckError';
+    this.status = status;
+  }
+}
+
 export { formatApiError, isAbsentError };
-import {
-  clearStoredSession,
-  getStoredAccessToken,
-  getStoredRefreshToken,
-  isAuthApiPath,
-} from '../core/auth/tokens';
 
 let baseURL = import.meta.env.VITE_API_URL || '';
 if (!baseURL) {
@@ -352,6 +362,18 @@ export const SimulatorApi = {
     return label === 'queued' || label === 'running';
   },
 
+  /** True while wipe is in-flight and not flagged stuck (controls spinners / disabled UI). */
+  isWipeBlocked(status: WipeProgressStatus | null | undefined): boolean {
+    if (!status || status.stuck) return false;
+    return SimulatorApi.isWipeActive(status);
+  },
+
+  /** Clear wipe locks only — does not restart wipe or reset simulator. */
+  forceUnstickWipe: async (): Promise<WipeProgressStatus> => {
+    const { data } = await apiClient.post('/activities/admin/wipe-data/', { action: 'unstick' });
+    return data;
+  },
+
   /** Clear sim lock/state then force-restart a stuck wipe. */
   recoverStuckWipe: async (
     opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
@@ -422,17 +444,39 @@ export const SimulatorApi = {
       await sleep(1000);
     }
 
-    let retriedStuck = false;
-    for (let i = 0; i < 600; i++) {
+    const maxStuckRetries = 3;
+    let stuckRetries = 0;
+    // 60 min @ 2s — large user deletes on Railway can exceed 20 min
+    const maxPolls = 1800;
+
+    for (let i = 0; i < maxPolls; i++) {
       await sleep(2000);
       const status = await SimulatorApi.getWipeStatus();
       onProgress?.(status);
-      if (status.stuck && !retriedStuck) {
-        retriedStuck = true;
-        const restarted = await SimulatorApi.recoverStuckWipe(opts);
-        onProgress?.(restarted);
-        continue;
+
+      if (status.stuck) {
+        if (stuckRetries < maxStuckRetries) {
+          stuckRetries += 1;
+          try {
+            const restarted = await SimulatorApi.recoverStuckWipe(opts);
+            onProgress?.(restarted);
+            continue;
+          } catch (recoverErr: unknown) {
+            if (stuckRetries >= maxStuckRetries) {
+              throw new WipeStuckError(
+                formatApiError(recoverErr, 'Wipe stuck — auto-recovery failed.'),
+                status,
+              );
+            }
+            continue;
+          }
+        }
+        throw new WipeStuckError(
+          'Wipe stuck with no progress. Use Reset and retry or force-unstick from the panel.',
+          status,
+        );
       }
+
       const end = wipeFinished(status);
       if (end.done) {
         if (!end.ok) {
@@ -443,7 +487,12 @@ export const SimulatorApi = {
         return { ...status, warning: end.warning || status.warning };
       }
     }
-    throw new Error('Wipe timed out after 20 minutes');
+    const last = await SimulatorApi.getWipeStatus();
+    onProgress?.(last);
+    throw new WipeStuckError(
+      'Wipe timed out after 60 minutes',
+      last,
+    );
   },
 };
 

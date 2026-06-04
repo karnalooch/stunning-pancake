@@ -11,7 +11,7 @@ import {
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
     AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route
 } from 'lucide-react';
-import { SimulatorApi, formatApiError, type WipeProgressStatus } from '../../api/client';
+import { SimulatorApi, formatApiError, WipeStuckError, type WipeProgressStatus } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
@@ -96,6 +96,8 @@ export const SimulatorPage: React.FC = () => {
     const isLiveRunning = liveStatus?.running ?? false;
     const anyRunning = isBatchRunning || isLiveRunning;
     const isWipeActive = wiping || SimulatorApi.isWipeActive(wipeStatus);
+    const isWipeBlocked = wiping || SimulatorApi.isWipeBlocked(wipeStatus);
+    const isWipeStuck = Boolean(wipeStatus?.stuck) && !wiping;
     const isStuck = !isWipeActive && Boolean(
         liveStatus?.stuck || batchStatus?.stuck || liveStatus?.error || batchStatus?.error
         || liveStatus?.live_lock_held || batchStatus?.batch_lock_held
@@ -165,7 +167,7 @@ export const SimulatorPage: React.FC = () => {
             setLiveStatus(ls);
             if (ws && SimulatorApi.isWipeActive(ws)) {
                 setWipeStatus(ws);
-                setWiping(true);
+                setWiping(SimulatorApi.isWipeBlocked(ws));
                 setWipeModalOpen(true);
             }
             if (bs?.running || ls?.running || bs?.stuck || ls?.stuck || ls?.live_lock_held) {
@@ -280,13 +282,85 @@ export const SimulatorPage: React.FC = () => {
                 color: warn ? 'yellow' : 'green',
             });
         } catch (err: unknown) {
+            if (err instanceof WipeStuckError) {
+                setWipeStatus(err.status);
+                notifications.show({
+                    title: 'Wipe stuck',
+                    message: err.message,
+                    color: 'orange',
+                });
+            } else {
+                notifications.show({
+                    title: 'Wipe failed',
+                    message: formatApiError(err, 'Wipe failed'),
+                    color: 'red',
+                });
+            }
+        } finally {
+            setWiping(false);
+        }
+    };
+
+    const handleWipeRecover = async () => {
+        setWiping(true);
+        try {
+            const restarted = await SimulatorApi.recoverStuckWipe({
+                confirmPhrase: wipeConfirmPhrase,
+                mfaConfirmed: wipeMfaAck,
+            });
+            setWipeStatus(restarted);
             notifications.show({
-                title: 'Wipe failed',
-                message: formatApiError(err, 'Wipe failed'),
+                title: 'Wipe restarted',
+                message: 'Simulator reset and wipe force-restarted.',
+                color: 'blue',
+            });
+            const result = await SimulatorApi.wipeData(
+                (s) => setWipeStatus(s),
+                {
+                    confirmPhrase: wipeConfirmPhrase,
+                    mfaConfirmed: wipeMfaAck,
+                },
+            );
+            setWipeStatus(result);
+            setWipeModalOpen(false);
+            setWipeConfirmPhrase('');
+            setWipeMfaAck(false);
+            notifications.show({
+                title: 'Wipe Complete',
+                message: result?.warning || 'All simulation and activity data has been wiped.',
+                color: result?.warning ? 'yellow' : 'green',
+            });
+        } catch (err: unknown) {
+            if (err instanceof WipeStuckError) {
+                setWipeStatus(err.status);
+            }
+            notifications.show({
+                title: 'Recovery failed',
+                message: formatApiError(err, 'Could not recover stuck wipe.'),
+                color: 'red',
+            });
+        } finally {
+            setWiping(false);
+        }
+    };
+
+    const handleWipeUnstick = async () => {
+        try {
+            const cleared = await SimulatorApi.forceUnstickWipe();
+            setWipeStatus(cleared);
+            setWiping(false);
+            notifications.show({
+                title: 'Wipe cleared',
+                message: 'Locks cleared. You can close this dialog or retry wipe.',
+                color: 'teal',
+            });
+        } catch (err: unknown) {
+            notifications.show({
+                title: 'Unstick failed',
+                message: formatApiError(err, 'Could not clear wipe locks.'),
                 color: 'red',
             });
         }
-        setWiping(false);
     };
 
     return (
@@ -679,10 +753,13 @@ export const SimulatorPage: React.FC = () => {
             <Modal
                 opened={wipeModalOpen}
                 onClose={() => {
+                    if (isWipeBlocked) return;
                     setWipeModalOpen(false);
                     setWipeConfirmPhrase('');
                     setWipeMfaAck(false);
                 }}
+                closeOnClickOutside={!isWipeBlocked}
+                closeOnEscape={!isWipeBlocked}
                 title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
                 <Stack gap="md">
                     <Text size="sm" c="dimmed">
@@ -706,9 +783,9 @@ export const SimulatorPage: React.FC = () => {
                         onChange={(e) => setWipeMfaAck(e.currentTarget.checked)}
                         label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
                     />
-                    {(wiping || SimulatorApi.isWipeActive(wipeStatus)) && (
+                    {(isWipeActive || wipeStatus) && (
                         <WipeProgressBar
-                            running={wiping || SimulatorApi.isWipeActive(wipeStatus)}
+                            running={SimulatorApi.isWipeBlocked(wipeStatus) || wiping}
                             progressPct={wipeStatus?.progress_pct ?? 0}
                             phase={wipeStatus?.phase}
                             phaseLabel={wipeStatus?.phase_label}
@@ -719,13 +796,23 @@ export const SimulatorPage: React.FC = () => {
                             deleted={wipeStatus?.deleted}
                             startedAt={wipeStatus?.started_at ?? undefined}
                             error={wipeStatus?.error ?? undefined}
-                            stuck={wipeStatus?.stuck}
+                            stuck={wipeStatus?.stuck || isWipeStuck}
                             stuckReason={wipeStatus?.stuck_reason}
                         />
                     )}
-                    <Button color="red" fullWidth loading={wiping}
-                        disabled={wiping || wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck} onClick={handleWipe}>
-                        {wiping
+                    {(wipeStatus?.stuck || isWipeStuck) && !isWipeBlocked && (
+                        <Group grow>
+                            <Button color="orange" variant="light" onClick={handleWipeRecover} loading={wiping}>
+                                Reset and retry
+                            </Button>
+                            <Button color="gray" variant="outline" onClick={handleWipeUnstick} disabled={wiping}>
+                                Clear locks only
+                            </Button>
+                        </Group>
+                    )}
+                    <Button color="red" fullWidth loading={isWipeBlocked}
+                        disabled={isWipeBlocked || wipeConfirmPhrase !== requiredWipePhrase || !wipeMfaAck} onClick={handleWipe}>
+                        {isWipeBlocked
                             ? `Wiping… ${(wipeStatus?.progress_pct ?? 0).toFixed(0)}%`
                             : 'Yes, Delete Everything'}
                     </Button>

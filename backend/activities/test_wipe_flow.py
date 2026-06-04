@@ -124,3 +124,42 @@ def test_run_wipe_sync_lock_conflict_does_not_override_running_state():
 
     assert result["status"] == "already_running"
     set_state.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_wipe_post_unstick_clears_running_state(api_client, owner_user):
+    api_client.force_authenticate(user=owner_user)
+    url = reverse("admin-wipe-data")
+    with (
+        patch("activities.wipe_state.get_wipe_state", return_value={"running": True, "phase": "users"}),
+        patch("activities.wipe_state.is_wipe_in_progress", return_value=True),
+        patch("activities.wipe_state.force_reset_wipe") as force_reset,
+        patch("activities.wipe_state.get_wipe_log", return_value=[]),
+        patch(
+            "activities.wipe_state.serialize_wipe_response",
+            side_effect=lambda state, **kw: {**state, "status": "idle", "stuck": False},
+        ),
+    ):
+        response = api_client.post(url, {"action": "unstick"}, format="json")
+
+    assert response.status_code == 200
+    force_reset.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_wipe_post_unstick_idle_when_nothing_running(api_client, owner_user):
+    api_client.force_authenticate(user=owner_user)
+    url = reverse("admin-wipe-data")
+    with (
+        patch("activities.wipe_state.get_wipe_state", return_value={"running": False, "phase": "idle"}),
+        patch("activities.wipe_state.is_wipe_in_progress", return_value=False),
+        patch("activities.wipe_state.force_reset_wipe") as force_reset,
+        patch(
+            "activities.wipe_state.serialize_wipe_response",
+            side_effect=lambda state, **kw: {**state, "status": "idle", "stuck": False},
+        ),
+    ):
+        response = api_client.post(url, {"action": "unstick"}, format="json")
+
+    assert response.status_code == 200
+    force_reset.assert_not_called()
