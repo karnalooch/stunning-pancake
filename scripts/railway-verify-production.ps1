@@ -89,12 +89,15 @@ if ($simBlock -match "repo:\s+$ExpectedRepo") {
 # --- Variables (simulation tuning) ---
 $simVars = railway variable list -s $SimulationService 2>&1 | Out-String
 $requiredSim = @{
-    'CELERY_WORKER_QUEUES'              = 'simulation'
-    'CELERY_WORKER_POOL'                = 'solo'
-    'CELERY_WORKER_CONCURRENCY'         = '2'
-    'CELERY_WORKER_PREFETCH_MULTIPLIER' = '1'
-    'CELERY_MAX_TASKS_PER_CHILD'        = '50'
-    'SCALE_SIM_ASYNC_ROUTING'           = '1'
+    'CELERY_WORKER_QUEUES'                      = 'simulation'
+    'CELERY_WORKER_POOL'                        = 'solo'
+    'CELERY_WORKER_CONCURRENCY'                 = '2'
+    'CELERY_WORKER_PREFETCH_MULTIPLIER'         = '1'
+    'CELERY_MAX_TASKS_PER_CHILD'                = '50'
+    'SCALE_SIM_ASYNC_ROUTING'                   = '1'
+    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'         = '120'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK'   = '50'
+    'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP'         = '0'
 }
 function Test-RailwayVarLine {
     param([string]$Output, [string]$Key, [string]$Value)
@@ -128,6 +131,17 @@ if ($routeVars -match 'DATABASE_URL' -and $routeVars -match 'REDIS_URL') {
     Add-Result "$RoutingService DB/Redis" $true 'DATABASE_URL and REDIS_URL set'
 } else {
     Add-Result "$RoutingService DB/Redis" $false 'Missing DATABASE_URL or REDIS_URL'
+}
+
+$backendService = 'Backend'
+$backendVars = railway variable list -s $backendService 2>&1 | Out-String
+$requiredBackend = @{
+    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'       = '120'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK' = '50'
+}
+foreach ($kv in $requiredBackend.GetEnumerator()) {
+    $ok = Test-RailwayVarLine -Output $backendVars -Key $kv.Key -Value $kv.Value
+    Add-Result "$backendService $($kv.Key)" $ok $(if ($ok) { $kv.Value } else { "expected $($kv.Value)" })
 }
 
 # --- Logs: routing must be Celery, not Expo ---

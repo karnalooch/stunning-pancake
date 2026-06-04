@@ -402,7 +402,47 @@ def _jitter_point_km(lat: float, lon: float, radius_km: float) -> tuple[float, f
     return lat + dlat, lon + dlon
 
 
-def _sample_athlete_motion_profile(activity_type: str) -> dict:
+def _ramp_start_delay_max(state: dict) -> int | None:
+    """
+    Shorter random start_delay during early live ticks so ROUTED rides reach ACTIVE sooner.
+    Unset SCALE_SIM_RAMP_START_DELAY_MAX or SCALE_SIM_RAMP_TICKS=0 disables the ramp window.
+    """
+    raw_max = os.getenv("SCALE_SIM_RAMP_START_DELAY_MAX", "20").strip()
+    if not raw_max:
+        return None
+    try:
+        delay_max = int(raw_max)
+    except (TypeError, ValueError):
+        return None
+    if delay_max < 0:
+        return None
+    try:
+        ramp_ticks = int(os.getenv("SCALE_SIM_RAMP_TICKS", "12"))
+    except (TypeError, ValueError):
+        ramp_ticks = 12
+    if ramp_ticks <= 0:
+        return None
+    started = state.get("started_at")
+    if started is None:
+        return delay_max
+    try:
+        elapsed = time.time() - float(started)
+    except (TypeError, ValueError):
+        return delay_max
+    try:
+        tick_s = max(1, int(state.get("tick_seconds") or 8))
+    except (TypeError, ValueError):
+        tick_s = 8
+    if elapsed < ramp_ticks * tick_s:
+        return delay_max
+    return None
+
+
+def _sample_athlete_motion_profile(
+    activity_type: str,
+    *,
+    start_delay_max: int | None = None,
+) -> dict:
     """
     Human-like pace profile:
     - base speed by tier (easy/steady/fast)
@@ -439,7 +479,10 @@ def _sample_athlete_motion_profile(activity_type: str) -> dict:
         "phase_offset": random.uniform(0, 2 * math.pi),
         "stop_cycle_s": random.randint(180, 520),
         "stop_duration_s": random.randint(8, 35) if random.random() < stop_chance else 0,
-        "start_delay_s": random.randint(0, 90),
+        "start_delay_s": random.randint(
+            0,
+            min(90, start_delay_max) if start_delay_max is not None else 90,
+        ),
     }
 
 
@@ -1181,7 +1224,10 @@ def _run_live_tick_body():
                 start_radius_km = 4.0
             start_radius_km = max(0.0, min(start_radius_km, 25.0))
 
-            motion = _sample_athlete_motion_profile(act_type)
+            motion = _sample_athlete_motion_profile(
+                act_type,
+                start_delay_max=_ramp_start_delay_max(state),
+            )
             start_delay_s = int(motion.get("start_delay_s", 0) or 0)
             ride_start = now + timedelta(seconds=start_delay_s)
             ride_end = ride_start + timedelta(seconds=duration_s)

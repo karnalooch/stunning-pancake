@@ -1,7 +1,11 @@
 """Tests for sim profile mapping and backpressure active_ratio auto-lower."""
 
+import time
+from unittest.mock import patch
+
 from django.test import SimpleTestCase
 
+from activities.simulator_tasks import _ramp_start_delay_max, _sample_athlete_motion_profile
 from activities.sim_profile import (
     evaluate_backpressure_active_ratio_lower,
     map_intensity,
@@ -55,6 +59,29 @@ class SimProfileMappingTest(SimpleTestCase):
         profile, err = parse_intensity_load_from_request({"intensity": 50, "load": 50})
         self.assertIsNone(err)
         self.assertEqual(profile["intensity"], 50)
+
+
+class RampStartDelayTest(SimpleTestCase):
+    def test_ramp_active_early(self):
+        state = {"started_at": time.time(), "tick_seconds": 8}
+        self.assertEqual(_ramp_start_delay_max(state), 20)
+
+    def test_ramp_off_after_window(self):
+        state = {"started_at": time.time() - 200, "tick_seconds": 8}
+        self.assertIsNone(_ramp_start_delay_max(state))
+
+    @patch.dict("os.environ", {"SCALE_SIM_RAMP_TICKS": "0"}, clear=False)
+    def test_ramp_disabled_via_ticks(self):
+        state = {"started_at": time.time(), "tick_seconds": 8}
+        self.assertIsNone(_ramp_start_delay_max(state))
+
+    def test_motion_respects_ramp_cap(self):
+        with patch(
+            "activities.simulator_tasks.random.randint",
+            return_value=15,
+        ):
+            motion = _sample_athlete_motion_profile("RUN", start_delay_max=20)
+        self.assertEqual(motion["start_delay_s"], 15)
 
 
 class BackpressureActiveRatioLowerTest(SimpleTestCase):
