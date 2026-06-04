@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](.././DATADOG_SIMULATOR.md) |
+| **translation** | [English](../../en/operations/DATADOG_SIMULATOR.md) |
 | **canonical_path** | docs/pl/operations/DATADOG_SIMULATOR.md |
 
 ---

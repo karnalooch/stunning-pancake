@@ -22,7 +22,7 @@
 
 > **Wersja:** v0.2.0-rc.1 · **Data przyjęcia:** 2026-05-15  
 > **Motto:** *„Suwerenność poprzez kod, wydajność poprzez dyscyplinę”*  
-> **Historyczny charter:** [archive/CHARTER.md](./archive/CHARTER.md) (deprecated)
+> **Historyczny charter:** [archive/CHARTER.md](../archive/CHARTER.md) (deprecated)
 
 ---
 

@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](.././README.md) |
+| **translation** | [English](../../en/operations/README.md) |
 | **canonical_path** | docs/pl/operations/README.md |
 
 ---
@@ -36,7 +36,7 @@
 | Runbook | Opis |
 |---------|------|
 | [SIMULATOR.md](./SIMULATOR.md) | Batch, live map, FSM, wizard Performance |
-| [LIVE_MAP.md](./LIVE_MAP.md) | Live Map SSE, LOD, ingest (PL · [EN](.././LIVE_MAP.md)) |
+| [LIVE_MAP.md](./LIVE_MAP.md) | Live Map SSE, LOD, ingest (PL · [EN](../../en/operations/LIVE_MAP.md)) |
 | [BROUTER.md](./BROUTER.md) | BRouter, kafelki Polski, `pass=0` |
 | [../DISK_GUARD.md](../../DISK_GUARD.md) | Budżet dysku Postgres |
 | [../SCALE_TEST_300K.md](../../SCALE_TEST_300K.md) | Test 300k |

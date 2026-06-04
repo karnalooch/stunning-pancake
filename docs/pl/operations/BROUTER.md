@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](.././BROUTER.md) |
+| **translation** | [English](../../en/operations/BROUTER.md) |
 | **canonical_path** | docs/pl/operations/BROUTER.md |
 
 ---

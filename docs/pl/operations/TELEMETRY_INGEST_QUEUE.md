@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](.././TELEMETRY_INGEST_QUEUE.md) |
+| **translation** | [English](../../en/operations/TELEMETRY_INGEST_QUEUE.md) |
 | **canonical_path** | docs/pl/operations/TELEMETRY_INGEST_QUEUE.md |
 
 ---

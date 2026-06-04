@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](.././KUBERNETES.md) |
+| **translation** | [English](../../en/operations/KUBERNETES.md) |
 | **canonical_path** | docs/pl/operations/KUBERNETES.md |
 
 ---

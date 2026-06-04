@@ -9,7 +9,7 @@
 
 **Auto-generated:** `python scripts/docs_i18n_update_registry.py` from `i18n_manifest.json`.
 
-**Snapshot:** 85 paired locales ready · 0 translation-debt (stub marker) · manifest v1
+**Snapshot:** 52 paired locales ready · 0 translation-debt (stub marker) · manifest v1
 
 **Legend:** `paired` · `en-only` · `pl-only` · `translation-debt` · `summary` · `n/a`
 
@@ -88,17 +88,6 @@
 | 009-admin-user-management-and-event-matchmaking.md | **en-only + pl summary** | `docs/pl/adr/009-admin-user-management-and-event-matchmaking.md` | `docs/adr/009-admin-user-management-and-event-matchmaking.md` | ADR EN canonical; PL summary mirror |
 | 010-simulator-redis-celery.md | **en-only + pl summary** | `docs/pl/adr/010-simulator-redis-celery.md` | `docs/adr/010-simulator-redis-celery.md` | ADR EN canonical; PL summary mirror |
 | 011-telemetry-ingest-durability-under-load.md | **en-only + pl summary** | `docs/pl/adr/011-telemetry-ingest-durability-under-load.md` | `docs/adr/011-telemetry-ingest-durability-under-load.md` | ADR EN canonical; PL summary mirror |
-| 001-react-native-bridgeless.md | **paired** | `docs/pl/adr/001-react-native-bridgeless.md` | `docs/en/pl/adr/001-react-native-bridgeless.md` | ADR EN canonical; PL summary mirror |
-| 002-unistyles-v3-initialization.md | **paired** | `docs/pl/adr/002-unistyles-v3-initialization.md` | `docs/en/pl/adr/002-unistyles-v3-initialization.md` | ADR EN canonical; PL summary mirror |
-| 003-state-management-legend-state.md | **paired** | `docs/pl/adr/003-state-management-legend-state.md` | `docs/en/pl/adr/003-state-management-legend-state.md` | ADR EN canonical; PL summary mirror |
-| 004-persistent-storage-mmkv.md | **paired** | `docs/pl/adr/004-persistent-storage-mmkv.md` | `docs/en/pl/adr/004-persistent-storage-mmkv.md` | ADR EN canonical; PL summary mirror |
-| 005-telemetry-tracking.md | **paired** | `docs/pl/adr/005-telemetry-tracking.md` | `docs/en/pl/adr/005-telemetry-tracking.md` | ADR EN canonical; PL summary mirror |
-| 006-design-system-stitch.md | **paired** | `docs/pl/adr/006-design-system-stitch.md` | `docs/en/pl/adr/006-design-system-stitch.md` | ADR EN canonical; PL summary mirror |
-| 007-ai-coaching-architecture.md | **paired** | `docs/pl/adr/007-ai-coaching-architecture.md` | `docs/en/pl/adr/007-ai-coaching-architecture.md` | ADR EN canonical; PL summary mirror |
-| 008-backend-strategy.md | **paired** | `docs/pl/adr/008-backend-strategy.md` | `docs/en/pl/adr/008-backend-strategy.md` | ADR EN canonical; PL summary mirror |
-| 009-admin-user-management-and-event-matchmaking.md | **paired** | `docs/pl/adr/009-admin-user-management-and-event-matchmaking.md` | `docs/en/pl/adr/009-admin-user-management-and-event-matchmaking.md` | ADR EN canonical; PL summary mirror |
-| 010-simulator-redis-celery.md | **paired** | `docs/pl/adr/010-simulator-redis-celery.md` | `docs/en/pl/adr/010-simulator-redis-celery.md` | ADR EN canonical; PL summary mirror |
-| 011-telemetry-ingest-durability-under-load.md | **paired** | `docs/pl/adr/011-telemetry-ingest-durability-under-load.md` | `docs/en/pl/adr/011-telemetry-ingest-durability-under-load.md` | ADR EN canonical; PL summary mirror |
 
 ## Admin (`docs/admin/` ↔ `docs/pl/admin/`)
 
@@ -111,24 +100,11 @@
 | README.md | **paired** | `docs/pl/admin/README.md` | `docs/admin/README.md` |  |
 | ROADMAP_V3.md | **paired** | `docs/pl/admin/ROADMAP_V3.md` | `docs/admin/ROADMAP_V3.md` |  |
 | UI_AUDIT_2026-06-02.md | **n/a** | `—` | `docs/admin/UI_AUDIT_2026-06-02.md` |  |
-| ADMIN_INDEX.md | **paired** | `docs/pl/admin/ADMIN_INDEX.md` | `docs/en/pl/admin/ADMIN_INDEX.md` |  |
-| P0_SMOKE_CHECKLIST.md | **paired** | `docs/pl/admin/P0_SMOKE_CHECKLIST.md` | `docs/en/pl/admin/P0_SMOKE_CHECKLIST.md` |  |
-| P1_ROADMAP.md | **paired** | `docs/pl/admin/P1_ROADMAP.md` | `docs/en/pl/admin/P1_ROADMAP.md` |  |
-| P2_ROADMAP.md | **paired** | `docs/pl/admin/P2_ROADMAP.md` | `docs/en/pl/admin/P2_ROADMAP.md` |  |
-| README.md | **paired** | `docs/pl/admin/README.md` | `docs/en/pl/admin/README.md` |  |
-| ROADMAP_V3.md | **paired** | `docs/pl/admin/ROADMAP_V3.md` | `docs/en/pl/admin/ROADMAP_V3.md` |  |
 
 ## Quality (`docs/quality/` ↔ `docs/pl/quality/`)
 
 | Document | Status | PL path | EN path | Notes |
 |----------|--------|---------|---------|-------|
-| BACKLOG.md | **paired** | `docs/pl/quality/BACKLOG.md` | `docs/en/pl/quality/BACKLOG.md` |  |
-| BASELINE.md | **paired** | `docs/pl/quality/BASELINE.md` | `docs/en/pl/quality/BASELINE.md` |  |
-| INFRA_PR_CHECKLIST.md | **paired** | `docs/pl/quality/INFRA_PR_CHECKLIST.md` | `docs/en/pl/quality/INFRA_PR_CHECKLIST.md` |  |
-| OPENAPI_DRIFT.md | **paired** | `docs/pl/quality/OPENAPI_DRIFT.md` | `docs/en/pl/quality/OPENAPI_DRIFT.md` |  |
-| PR_CHECKLIST.md | **paired** | `docs/pl/quality/PR_CHECKLIST.md` | `docs/en/pl/quality/PR_CHECKLIST.md` |  |
-| README.md | **paired** | `docs/pl/quality/README.md` | `docs/en/pl/quality/README.md` |  |
-| VERIFICATION.md | **paired** | `docs/pl/quality/VERIFICATION.md` | `docs/en/pl/quality/VERIFICATION.md` |  |
 | BACKLOG.md | **en-only + pl summary** | `docs/pl/quality/BACKLOG.md` | `docs/quality/BACKLOG.md` | PL: short summary in `docs/pl/adr/` |
 | BASELINE.md | **en-only + pl summary** | `docs/pl/quality/BASELINE.md` | `docs/quality/BASELINE.md` | PL: short summary in `docs/pl/adr/` |
 | INFRA_PR_CHECKLIST.md | **en-only + pl summary** | `docs/pl/quality/INFRA_PR_CHECKLIST.md` | `docs/quality/INFRA_PR_CHECKLIST.md` | PL: short summary in `docs/pl/adr/` |
@@ -146,8 +122,6 @@
 | RCP.md | **paired** | `docs/compliance/RCP.md` | `docs/en/compliance/RCP.md` |  |
 | README.md | **paired** | `docs/compliance/README.md` | `docs/en/compliance/README.md` |  |
 | RELEASE_LEGAL_COMPLIANCE_PACKAGE.md | **en-only + pl summary** | `docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md` | `docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md` | PL: short summary in `docs/pl/adr/` |
-| MAP_BASEMAP_LICENSING.md | **paired** | `docs/pl/compliance/MAP_BASEMAP_LICENSING.md` | `docs/en/pl/compliance/MAP_BASEMAP_LICENSING.md` |  |
-| RELEASE_LEGAL_COMPLIANCE_PACKAGE.md | **paired** | `docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md` | `docs/en/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md` |  |
 
 
 ---

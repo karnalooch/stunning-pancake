@@ -34,8 +34,8 @@ Jeden spójny format dla runbooków, specyfikacji i indeksów — łatwy przegl�
 |--------|--------|
 | Operacje | [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) |
 | Admin | [admin/ADMIN_INDEX.md](./admin/ADMIN_INDEX.md) |
-| Compliance | [compliance/COMPLIANCE_INDEX.md](./compliance/COMPLIANCE_INDEX.md) |
-| Raporty | [reports/README.md](./reports/README.md) |
+| Compliance | [compliance/COMPLIANCE_INDEX.md](../compliance/COMPLIANCE_INDEX.md) |
+| Raporty | [reports/README.md](../reports/README.md) |
 
 ---
 
@@ -81,7 +81,7 @@ Dokumenty referencyjne (`ARCHITECTURE.md`, `API.md`): metadane + **Cel** + **Pow
 - **Zakaz** tokenów, haseł, `DATABASE_URL` z wartością w docs.
 - Referencje: `RAILWAY_API_TOKEN`, `SECRET_KEY`, `REDIS_URL` — tylko nazwy i gdzie ustawić (User env, Railway Variables).
 - Przykłady lokalne: `.env.railway.local.example` → `.env.railway.local` (gitignored).
-- Na zrzutach ekranu: brak PII i sekretów — [assets/live/README.md](./assets/live/README.md).
+- Na zrzutach ekranu: brak PII i sekretów — [assets/live/README.md](../assets/live/README.md).
 
 ---
 
@@ -103,12 +103,12 @@ Dokumenty referencyjne (`ARCHITECTURE.md`, `API.md`): metadane + **Cel** + **Pow
 | P2 admin roadmap | [admin/P2_ROADMAP.md](./admin/P2_ROADMAP.md) |
 | Post-deploy admin smoke | [admin/P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md) |
 | Admin hub | [admin/README.md](./admin/README.md) |
-| Release legal gate | [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) |
-| RCP / RODO | [compliance/RCP.md](./compliance/RCP.md) |
+| Release legal gate | [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) |
+| RCP / RODO | [compliance/RCP.md](../compliance/RCP.md) |
 | Konfiguracja env (lista) | [CONFIGURATION.md](./CONFIGURATION.md) + `.env.example` |
 | RBAC | [RBAC.md](./RBAC.md) |
 | Troubleshooting cross-cutting | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) |
-| Konstytucja projektu | [CONSTITUTION.md](./CONSTITUTION.md) (nie [archive/CHARTER.md](./archive/CHARTER.md)) |
+| Konstytucja projektu | [CONSTITUTION.md](./CONSTITUTION.md) (nie [archive/CHARTER.md](../archive/CHARTER.md)) |
 
 Inne pliki **linkują**, nie duplikują pełnych tabel env.
 

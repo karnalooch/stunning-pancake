@@ -11,6 +11,7 @@ DOCS = REPO / "docs"
 LINK_RE = re.compile(r"\]\(([^)]+)\)")
 
 TEXT_REPLACEMENTS = [
+    (".././", "../../en/operations/"),
     ("../../../operations/", "../../operations/"),
     ("../../../compliance/", "../../compliance/"),
     ("../../../onboarding/", "../../onboarding/"),

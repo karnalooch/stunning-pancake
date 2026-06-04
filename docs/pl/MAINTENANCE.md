@@ -26,9 +26,9 @@
 1. **Jeden punkt wejścia:** [README.md](./README.md) — pełne drzewo + ścieżki per rola.
 2. **Standard:** [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md).
 2b. **Jakość kodu (monorepo):** [quality/README.md](./quality/README.md) · baseline: `scripts/run-quality-baseline.ps1`.
-3. **Indeksy sekcji:** [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) · [admin/ADMIN_INDEX.md](./admin/ADMIN_INDEX.md) · [compliance/COMPLIANCE_INDEX.md](./compliance/COMPLIANCE_INDEX.md).
+3. **Indeksy sekcji:** [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) · [admin/ADMIN_INDEX.md](./admin/ADMIN_INDEX.md) · [compliance/COMPLIANCE_INDEX.md](../compliance/COMPLIANCE_INDEX.md).
 4. **Runbooki** — krótkie kroki w [operations/](./operations/); spec w korzeniu / ADR.
-5. **Raporty** — snapshot; nowy plik z datą w [reports/](./reports/).
+5. **Raporty** — snapshot; nowy plik z datą w [reports/](../reports/).
 6. **Po zmianie symulatora / BRouter / Railway workers** — SIMULATOR, BROUTER, `RAILWAY_*`, [TROUBLESHOOTING.md](./TROUBLESHOOTING.md), [CHANGELOG](../../CHANGELOG.md).
 
 ---
@@ -69,7 +69,7 @@
 |-------|--------|
 | OpenAPI drift | Ręczna weryfikacja `/api/docs/` po zmianach API |
 | Zrzuty Live Map | Opcjonalnie `docs/assets/live/` po UI change |
-| `plans/`, `.kilo/plans/` | Poza `docs/` — [archive/plans/README](./archive/plans/README.md) |
+| `plans/`, `.kilo/plans/` | Poza `docs/` — [archive/plans/README](../archive/plans/README.md) |
 | Staging admin | Brak — deploy bez stagingu (P1 §4) |
 
 ---
@@ -79,6 +79,6 @@
 - [ ] [CHANGELOG](../../CHANGELOG.md)
 - [ ] Env / Railway → [RAILWAY_CELERY_SIMULATION.md](./RAILWAY_CELERY_SIMULATION.md) + operations
 - [ ] Admin deploy → [P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md)
-- [ ] Release publiczny → [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md)
+- [ ] Release publiczny → [compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md)
 - [ ] **Last reviewed** w [README.md](./README.md)
 - [ ] `python scripts/check_docs_links.py`
