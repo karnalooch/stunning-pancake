@@ -55,15 +55,19 @@ class TestScaleOsrm:
         assert out.detail == "routing_backend_not_osrm"
 
     @patch.dict("os.environ", {"SCALE_SIM_ROUTING_BACKEND": "osrm"}, clear=False)
+    @patch("activities.sim_live_guards.wait_for_osrm_ready")
     @patch("activities.railway_osrm_lifecycle.set_osrm_replicas", return_value=True)
-    def test_scaled_up(self, mock_set, monkeypatch):
+    def test_scaled_up(self, mock_set, mock_wait, monkeypatch):
+        from activities.sim_live_guards import OsrmReadyWaitResult
+
         monkeypatch.setenv("DATABASE_URL", "postgres://x")
         monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
         monkeypatch.setenv("RAILWAY_OSRM_SERVICE_ID", "svc-uuid")
-        mock_set.return_value = True
+        mock_wait.return_value = OsrmReadyWaitResult(True, 12.0, 3)
         out = lifecycle.scale_osrm_for_live_sim(running=True)
         assert out.action == "scaled_up"
         assert out.replicas == 1
+        assert out.osrm_ready is True
         mock_set.assert_called_once_with(1)
 
     @patch("activities.railway_osrm_lifecycle.set_osrm_replicas")

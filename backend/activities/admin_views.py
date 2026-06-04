@@ -656,11 +656,32 @@ class LiveSimulationView(APIView):
         total_athletes = User.objects.filter(role="ATHLETE").count()
         total_users = max(10, int(total_athletes * pool_pct))
 
+        pool_guard_notes: list[str] = []
+        if profile is None:
+            from activities.sim_live_guards import clamp_live_params_for_large_pool
+
+            clamped = clamp_live_params_for_large_pool(total_users, active_ratio, tick_seconds)
+            active_ratio = clamped.active_ratio
+            tick_seconds = clamped.tick_seconds
+            pool_guard_notes = list(clamped.notes)
+            for note in pool_guard_notes:
+                sim.live_log(f"Large pool guard: {note}")
+
         from activities.railway_osrm_lifecycle import scale_osrm_for_live_sim
 
         osrm_scale = scale_osrm_for_live_sim(running=True)
         if osrm_scale.action == "scaled_up":
-            sim.live_log("OSRM Railway: scaled to 1 replica (cold start may take minutes).")
+            if osrm_scale.osrm_ready:
+                sim.live_log(
+                    f"OSRM Railway: scaled to 1 replica; health OK after {osrm_scale.osrm_wait_seconds}s."
+                )
+            elif osrm_scale.osrm_ready is False:
+                sim.live_log(
+                    f"OSRM Railway: scaled up but not healthy yet ({osrm_scale.detail}). "
+                    "Routing should use auto/BRouter until OSRM is warm."
+                )
+            else:
+                sim.live_log("OSRM Railway: scaled to 1 replica.")
         elif osrm_scale.action == "failed":
             sim.live_log(f"OSRM Railway scale-up failed: {osrm_scale.detail}")
 
@@ -781,6 +802,11 @@ class LiveSimulationView(APIView):
         resp["osrm_lifecycle"] = osrm_scale.action
         resp["osrm_replicas"] = osrm_scale.replicas
         resp["osrm_lifecycle_detail"] = osrm_scale.detail
+        if osrm_scale.osrm_ready is not None:
+            resp["osrm_ready"] = osrm_scale.osrm_ready
+            resp["osrm_wait_seconds"] = osrm_scale.osrm_wait_seconds
+        if pool_guard_notes:
+            resp["pool_guard_notes"] = pool_guard_notes
         return Response(resp)
 
 

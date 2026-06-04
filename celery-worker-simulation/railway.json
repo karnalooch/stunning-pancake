@@ -18,7 +18,7 @@
   "variables": {
     "BROUTER_URLS": "http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter",
     "OSRM_URL": "http://osrm.railway.internal:5000",
-    "SCALE_SIM_ROUTING_BACKEND": "osrm",
+    "SCALE_SIM_ROUTING_BACKEND": "auto",
     "BROUTER_TIMEOUT": "30",
     "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
     "SCALE_SIM_SKIP_BROUTER": "0",

@@ -70,7 +70,7 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | `RAILWAY_OSRM_REGION` | `europe-west4-drams3a` (multiRegionConfig — **nie** top-level `numReplicas`) |
 | `SCALE_SIM_ROUTING_BACKEND` | Scale-up tylko przy `osrm` lub `auto`; scale-down zawsze gdy lifecycle włączone |
 
-**Cold start:** po scale-up graf z volume wczytuje się **kilka minut** — na starcie symulatora ustaw `auto`, żeby do czasu health `:5000` jechał BRouter.
+**Cold start:** backend po scale-up czeka do `RAILWAY_OSRM_READY_MAX_WAIT_S` (domyślnie 90 s) na `/health`. Workerzy: **`SCALE_SIM_ROUTING_BACKEND=auto`** (nie `osrm` na sztywno). Pula ≥5k userów: automatyczny clamp `active_ratio≤0.25`, `tick_seconds≥10` przy starcie live (bez profilu intensity).
 
 **Ręcznie (ops):** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1`
 

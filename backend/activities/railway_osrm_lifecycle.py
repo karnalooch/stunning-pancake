@@ -31,6 +31,8 @@ class OsrmScaleResult:
     action: str  # scaled_up | scaled_down | skipped | failed
     replicas: int | None = None
     detail: str | None = None
+    osrm_ready: bool | None = None
+    osrm_wait_seconds: float | None = None
 
 
 def _lifecycle_explicitly_disabled() -> bool:
@@ -185,7 +187,24 @@ def scale_osrm_for_live_sim(*, running: bool) -> OsrmScaleResult:
     try:
         set_osrm_replicas(replicas)
         action = "scaled_up" if running else "scaled_down"
-        return OsrmScaleResult(action=action, replicas=replicas)
+        ready: bool | None = None
+        waited: float | None = None
+        detail: str | None = None
+        if running and replicas == 1:
+            from activities.sim_live_guards import wait_for_osrm_ready
+
+            wait = wait_for_osrm_ready()
+            ready = wait.ready
+            waited = round(wait.waited_seconds, 1)
+            if not wait.ready:
+                detail = wait.detail
+        return OsrmScaleResult(
+            action=action,
+            replicas=replicas,
+            detail=detail,
+            osrm_ready=ready,
+            osrm_wait_seconds=waited,
+        )
     except Exception as exc:
         logger.exception("Railway OSRM scale to %s failed", replicas)
         return OsrmScaleResult(action="failed", replicas=replicas, detail=str(exc)[:300])

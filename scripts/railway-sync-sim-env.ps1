@@ -55,10 +55,14 @@ Set-Vars 'celery-worker-simulation' @(
     'BROUTER_RETRIES=3',
     'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter',
     'OSRM_URL=http://osrm.railway.internal:5000',
-    'SCALE_SIM_ROUTING_BACKEND=osrm',
+    'SCALE_SIM_ROUTING_BACKEND=auto',
     'OSRM_TIMEOUT=15',
     'OSRM_RETRIES=2',
     'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1',
+    'RAILWAY_OSRM_READY_MAX_WAIT_S=90',
+    'SCALE_SIM_LARGE_POOL_MIN_USERS=5000',
+    'SCALE_SIM_LARGE_POOL_MAX_ACTIVE_RATIO=0.25',
+    'SCALE_SIM_LARGE_POOL_MIN_TICK_SECONDS=10',
     'SIM_SLO_AUTO_THROTTLE=1',
     'SIM_SLO_WARMING_ABOVE=280',
     'SIM_SLO_AFTER_TICKS=6',
@@ -76,7 +80,7 @@ Set-Vars 'celery-worker-routing' @(
     'BROUTER_RETRIES=3',
     'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter',
     'OSRM_URL=http://osrm.railway.internal:5000',
-    'SCALE_SIM_ROUTING_BACKEND=osrm',
+    'SCALE_SIM_ROUTING_BACKEND=auto',
     'OSRM_TIMEOUT=15',
     'OSRM_RETRIES=2',
     'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1'
@@ -96,7 +100,12 @@ $backendVars = @(
     'RAILWAY_OSRM_REGION=europe-west4-drams3a',
     'RAILWAY_PROJECT_ID=ce13089b-76f4-4114-a892-ad13e23c8761',
     'RAILWAY_ENVIRONMENT_ID=f30e70a7-b4d2-42aa-8137-21faa091b969',
-    'SCALE_SIM_ROUTING_BACKEND=auto'
+    'RAILWAY_OSRM_REGION=europe-west4-drams3a',
+    'RAILWAY_OSRM_READY_MAX_WAIT_S=90',
+    'SCALE_SIM_ROUTING_BACKEND=auto',
+    'SCALE_SIM_LARGE_POOL_MIN_USERS=5000',
+    'SCALE_SIM_LARGE_POOL_MAX_ACTIVE_RATIO=0.25',
+    'SCALE_SIM_LARGE_POOL_MIN_TICK_SECONDS=10'
 )
 if ($env:RAILWAY_API_TOKEN) {
     $backendVars += "RAILWAY_API_TOKEN=$($env:RAILWAY_API_TOKEN)"

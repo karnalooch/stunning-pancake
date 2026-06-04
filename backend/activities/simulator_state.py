@@ -324,6 +324,7 @@ def get_live_state() -> dict:
     state["cheaters_caught"] = int(state.get("cheaters_caught", 0))
     state["started_at"] = _redis_float(state.get("started_at"))
     state["last_tick_at"] = _redis_float(state.get("last_tick_at"))
+    state["last_runner_at"] = _redis_float(state.get("last_runner_at"))
     err = state.get("error")
     if err is not None and str(err).strip().lower() == "none":
         state["error"] = None
@@ -461,7 +462,11 @@ def live_simulation_stuck() -> bool:
 
 
 def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bool:
-    """True when running=1 but no successful tick for several intervals (worker died / lock skip)."""
+    """
+    True when running=1 but no recent orchestrator/tick progress (worker died or solo queue blocked).
+
+    Large on-map counts get a higher threshold so long live_tick_task runs do not spam self-heal.
+    """
     state = get_live_state()
     if not state.get("running"):
         return False
@@ -470,13 +475,33 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     except (ValueError, TypeError):
         tick_seconds = 8.0
     try:
+        last_runner = float(state.get("last_runner_at") or 0)
+    except (ValueError, TypeError):
+        last_runner = 0.0
+    try:
         last_tick = float(state.get("last_tick_at") or 0)
     except (ValueError, TypeError):
         last_tick = 0.0
-    if last_tick <= 0:
+    last_progress = max(last_runner, last_tick)
+    if last_progress <= 0:
         return True
     threshold = max(min_seconds, tick_seconds * multiplier)
-    return (time.time() - last_tick) > threshold
+    try:
+        on_map = int(state.get("currently_riding") or 0)
+    except (TypeError, ValueError):
+        on_map = 0
+    try:
+        in_flight = get_live_rides_in_flight_count()
+    except Exception:
+        in_flight = 0
+    load = max(on_map, in_flight)
+    try:
+        per_hundred = float(os.getenv("SCALE_SIM_STALE_EXTRA_S_PER_100_RIDERS", "8"))
+        cap_extra = float(os.getenv("SCALE_SIM_STALE_EXTRA_CAP_S", "120"))
+    except (TypeError, ValueError):
+        per_hundred, cap_extra = 8.0, 120.0
+    threshold += min(cap_extra, max(0.0, load * per_hundred / 100.0))
+    return (time.time() - last_progress) > threshold
 
 
 def _heal_cooldown_ok() -> bool:

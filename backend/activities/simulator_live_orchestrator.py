@@ -49,6 +49,8 @@ def run_live_simulation(
         sim.release_live_lock()
         return {"status": "stopped"}
 
+    sim.set_live_state(last_runner_at=time.time())
+
     blocked, block_reason = sim.batch_blocks_live_simulation()
     if blocked:
         sim.live_log(f"Live sim stopped: {block_reason} (finish batch first)")
@@ -107,7 +109,7 @@ def run_live_simulation(
     except Exception as e:
         sim.live_log(f"Tick error: {e}")
 
-    sim.set_live_state(last_tick_at=time.time())
+    sim.set_live_state(last_runner_at=time.time())
 
     if not sim.get_live_state().get("running", False):
         sim.release_live_lock()
