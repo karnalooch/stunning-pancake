@@ -89,6 +89,7 @@ export class LivePositionInterpolator {
 
     /** SSE / HTTP snapshot — append to per-device rings. */
     ingestSnapshot(next: LiveMapPosition[]): void {
+        if (next.length === 0) return;
         if (next.length > MAX_INTERP_POINTS) {
             this.snapTo(next);
             return;

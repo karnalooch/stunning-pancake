@@ -42,7 +42,7 @@ import { bboxFromMap } from './liveMapBbox';
 import {
     liveMapViewportKey,
     shouldClearOnEmptyViewportChange,
-    shouldKeepStaleEmptyResponse,
+    shouldRetainMarkersOnEmptyPayload,
 } from './liveMapViewport';
 import type { LiveApiDetail } from './liveMapZoom';
 import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
@@ -365,13 +365,15 @@ export const LiveMap: React.FC = () => {
         fromStream = false,
     ) => {
         const movedRecently = Date.now() - lastMoveAtRef.current < STALE_EMPTY_MS;
-        const keepStale = !fromStream && shouldKeepStaleEmptyResponse({
+        const retainMarkers = shouldRetainMarkersOnEmptyPayload({
             listLength: list.length,
             detail,
             movedRecently,
             currentPositions: positionsRef.current.length,
             viewportChanged,
             cachedResponse: Boolean(meta?.cached),
+            fromStream,
+            meta,
         });
 
         applyMetaCounts(list, meta);
@@ -385,7 +387,7 @@ export const LiveMap: React.FC = () => {
             ingestPositions([], { snap: true });
             return;
         }
-        if (keepStale) {
+        if (retainMarkers) {
             flushPositionsToMapLayer();
             return;
         }
