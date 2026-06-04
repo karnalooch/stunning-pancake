@@ -63,7 +63,7 @@ One-time in Railway UI (if deploy fails without config):
     Config file path: $ConfigPath
     Root directory: /
   Resources: 8 GB RAM, 4 vCPU (match railway.json)
-  Volume: /data (>= 8 GB) — first boot downloads+builds Poland graph (10-40 min)
+  Volume: /data — **resize to >= 10 GB** in UI (CLI often creates ~5 GB; Poland needs ~10 GB)
 
 "@
 } else {

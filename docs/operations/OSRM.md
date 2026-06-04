@@ -58,6 +58,8 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 |-------|-----------|
 | Logi tylko `Mounting volume…`, brak `[osrm]` | Healthcheck na `:5000` przed `osrm-routed` — w `railway.json`: `healthcheckPath: null` |
 | `PBF error: blob contains no data` | Uszkodzony PBF na volume — entrypoint usuwa plik mniejszy niż `OSRM_PBF_MIN_BYTES` i pobiera ponownie |
+| `volume needs >= 8 GiB` / `df` ~4.6G | Powiększ **osrm-volume** w Railway UI do **≥ 10 GB** |
+| `Failed to connect to download.geofabrik.de` | Entrypoint próbuje lustra HEAnet/OSM.fr; albo wgraj PBF ręcznie na volume |
 | `Connection refused` na `OSRM_URL` | Kontener `osrm` jeszcze buduje graf — logi `osrm-extract` |
 | `NoRoute` / `NoSegment` | Punkt poza extractem (np. zły region) — sprawdź `OSRM_PBF_URL` |
 | Sim nadal woła BRouter | Dashboard nadpisuje env — redeploy z `railway.json` lub `railway-sync-sim-env` |

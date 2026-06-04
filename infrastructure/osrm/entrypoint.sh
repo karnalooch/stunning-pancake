@@ -30,18 +30,39 @@ pbf_ready() {
   [ "$size" -ge "$PBF_MIN_BYTES" ]
 }
 
+require_volume_space() {
+  # Poland PBF ~1.8 GiB + extract peaks ~6–8 GiB on volume.
+  need_kb="${OSRM_VOLUME_MIN_KB:-8388608}"
+  avail_kb="$(df -k . | awk 'NR==2 {print $4}')"
+  if [ -n "$avail_kb" ] && [ "$avail_kb" -lt "$need_kb" ]; then
+    echo "[osrm] ERROR: volume needs >= $((need_kb / 1024 / 1024)) GiB free (have ~$((avail_kb / 1024 / 1024)) GiB). Resize osrm-volume in Railway UI." >&2
+    df -h . 2>/dev/null || true
+    exit 1
+  fi
+}
+
 download_pbf() {
-  echo "[osrm] Downloading ${PBF_URL} (first run may take several minutes)..."
+  echo "[osrm] Downloading PBF (first run may take several minutes)..."
+  require_volume_space
   df -h . 2>/dev/null || true
   rm -f "$PBF_NAME" "${PBF_NAME}.tmp"
-  if curl -fSL --ipv4 --retry 5 --retry-delay 10 --connect-timeout 60 \
-      -o "${PBF_NAME}.tmp" "$PBF_URL"; then
-    :
-  elif wget -q --show-progress --tries=3 --timeout=120 -O "${PBF_NAME}.tmp" "$PBF_URL"; then
-    :
-  else
+  ok=0
+  for url in \
+    "$PBF_URL" \
+    "https://ftp.heanet.ie/mirrors/openstreetmap.ie/download.geofabrik.de/europe/poland-latest.osm.pbf" \
+    "https://download.openstreetmap.fr/extracts/europe/poland-latest.osm.pbf"
+  do
+    [ -n "$url" ] || continue
+    echo "[osrm] try: $url"
+    if curl -fSL --retry 5 --retry-delay 10 --connect-timeout 60 \
+        -o "${PBF_NAME}.tmp" "$url"; then
+      ok=1
+      break
+    fi
     rm -f "${PBF_NAME}.tmp"
-    echo "[osrm] download failed (curl/wget) — check egress, volume space, or upload ${PBF_NAME} to ${DATA_DIR}" >&2
+  done
+  if [ "$ok" -eq 0 ]; then
+    echo "[osrm] download failed — upload ${PBF_NAME} to volume ${DATA_DIR} or fix egress" >&2
     df -h . 2>/dev/null || true
     exit 1
   fi
