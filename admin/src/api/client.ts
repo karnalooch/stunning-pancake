@@ -315,6 +315,8 @@ export const SimulatorApi = {
     active_ratio: number;
     cheat_ratio: number;
     tick_seconds: number;
+    intensity?: number;
+    load?: number;
     scale_overrides?: ScaleOverrides;
   }) => {
     const { data } = await apiClient.post('/activities/admin/live-simulate/', params);

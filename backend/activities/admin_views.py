@@ -38,6 +38,26 @@ def _scale_overrides_from_request(request) -> tuple[dict[str, int] | None, str |
     return parsed, scale_overrides_for_storage(parsed)
 
 
+def _redis_int_or_none(value) -> int | None:
+    if value is None or str(value).strip() == "":
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _effective_sim_profile_echo(state: dict) -> dict | None:
+    """Echo resolved profile when intensity/load were stored at live start."""
+    from activities.sim_profile import resolve_sim_profile
+
+    i = _redis_int_or_none(state.get("sim_intensity"))
+    l = _redis_int_or_none(state.get("sim_load"))
+    if i is None or l is None:
+        return None
+    return resolve_sim_profile(i, l)
+
+
 def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     """
     Ensure a minimal ATHLETE pool exists so quick live-sim can start after wipe.
@@ -482,6 +502,9 @@ class LiveSimulationView(APIView):
                     "cheaters_caught": int(state.get("cheaters_caught", 0)),
                     "scale_overrides": scale_overrides,
                     "effective_scale_limits": effective_scale,
+                    "sim_intensity": _redis_int_or_none(state.get("sim_intensity")),
+                    "sim_load": _redis_int_or_none(state.get("sim_load")),
+                    "effective_sim_profile": _effective_sim_profile_echo(state),
                     "log": log,
                 }
             )
@@ -540,9 +563,32 @@ class LiveSimulationView(APIView):
             )
 
         pool_pct = float(request.data.get("pool_pct", 0.5))
-        active_ratio = float(request.data.get("active_ratio", 0.3))
-        cheat_ratio = float(request.data.get("cheat_ratio", 0.05))
-        tick_seconds = int(request.data.get("tick_seconds", 10))
+        from activities.sim_profile import parse_intensity_load_from_request
+        from activities.scale_config import (
+            parse_scale_overrides_payload,
+            scale_overrides_for_storage,
+        )
+
+        profile, profile_err = parse_intensity_load_from_request(request.data)
+        if profile_err:
+            return Response({"error": profile_err}, status=status.HTTP_400_BAD_REQUEST)
+
+        sim_intensity = None
+        sim_load = None
+        if profile:
+            # intensity + load override manual active_ratio, cheat_ratio, tick_seconds, scale_overrides
+            active_ratio = float(profile["active_ratio"])
+            cheat_ratio = float(profile["cheat_ratio"])
+            tick_seconds = int(profile["tick_seconds"])
+            scale_parsed = parse_scale_overrides_payload(profile["scale_overrides"])
+            scale_json = scale_overrides_for_storage(scale_parsed)
+            sim_intensity = profile["intensity"]
+            sim_load = profile["load"]
+        else:
+            active_ratio = float(request.data.get("active_ratio", 0.3))
+            cheat_ratio = float(request.data.get("cheat_ratio", 0.05))
+            tick_seconds = int(request.data.get("tick_seconds", 10))
+            scale_parsed, scale_json = _scale_overrides_from_request(request)
 
         if active_ratio <= 0 or active_ratio > 1:
             return Response({"error": "active_ratio must be 0–1"}, status=400)
@@ -551,8 +597,7 @@ class LiveSimulationView(APIView):
         if tick_seconds < 2 or tick_seconds > 300:
             return Response({"error": "tick_seconds must be 2–300"}, status=400)
 
-        scale_parsed, scale_json = _scale_overrides_from_request(request)
-        if request.data.get("scale_overrides") is not None and scale_parsed is None:
+        if not profile and request.data.get("scale_overrides") is not None and scale_parsed is None:
             return Response(
                 {
                     "error": "scale_overrides must be an object with optional integer fields: "
@@ -618,6 +663,9 @@ class LiveSimulationView(APIView):
             )
             if scale_json:
                 live_kw["scale_overrides"] = scale_json
+            if sim_intensity is not None:
+                live_kw["sim_intensity"] = sim_intensity
+                live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
             # Setup athlete pool
             from activities.scale_config import compute_batch_scaling
@@ -676,28 +724,34 @@ class LiveSimulationView(APIView):
             )
             if scale_json:
                 live_kw["scale_overrides"] = scale_json
+            if sim_intensity is not None:
+                live_kw["sim_intensity"] = sim_intensity
+                live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
             run_live_simulation.delay()
 
         from activities.scale_config import resolve_live_scale_limits
 
         limits = resolve_live_scale_limits(sim.get_live_state())
-        return Response(
-            {
-                "status": "started",
-                "running": True,
-                "total_users": total_users,
-                "active_ratio": active_ratio,
-                "cheat_ratio": cheat_ratio,
-                "tick_seconds": tick_seconds,
-                "scale_overrides": scale_parsed,
-                "effective_scale_limits": limits,
-                "message": (
-                    f"Live simulation: {total_users} users, {active_ratio * 100:.0f}% active, "
-                    f"{cheat_ratio * 100:.0f}% cheaters · starts/tick≤{limits['max_starts_per_live_tick']}"
-                ),
-            }
-        )
+        resp = {
+            "status": "started",
+            "running": True,
+            "total_users": total_users,
+            "active_ratio": active_ratio,
+            "cheat_ratio": cheat_ratio,
+            "tick_seconds": tick_seconds,
+            "scale_overrides": scale_parsed,
+            "effective_scale_limits": limits,
+            "message": (
+                f"Live simulation: {total_users} users, {active_ratio * 100:.0f}% active, "
+                f"{cheat_ratio * 100:.0f}% cheaters · starts/tick≤{limits['max_starts_per_live_tick']}"
+            ),
+        }
+        if profile:
+            resp["sim_intensity"] = sim_intensity
+            resp["sim_load"] = sim_load
+            resp["effective_sim_profile"] = profile
+        return Response(resp)
 
 
 class WipeDataView(APIView):

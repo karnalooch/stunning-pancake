@@ -1146,6 +1146,12 @@ def _run_live_tick_body():
         bp_snapshot = routing_bp.routing_backpressure_snapshot(
             fsm_pending=fsm_pre["ride_warming"],
         )
+        from activities.sim_profile import maybe_auto_lower_active_ratio_on_backpressure
+
+        lowered = maybe_auto_lower_active_ratio_on_backpressure(state, bp_snapshot)
+        if lowered is not None:
+            active_ratio = float(lowered)
+            state = sim.get_live_state()
         routing_dispatch_cap, dispatch_throttled = routing_bp.effective_routing_dispatch_cap(
             routing_dispatch_cap,
             bp_snapshot,

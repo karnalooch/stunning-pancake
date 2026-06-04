@@ -11,10 +11,11 @@ import {
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
     AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route
 } from 'lucide-react';
-import { SimulatorApi, formatApiError, type ScaleOverrides, type WipeProgressStatus } from '../../api/client';
+import { SimulatorApi, formatApiError, type WipeProgressStatus } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
+import { resolveSimProfile } from './simProfileMap';
 
 interface LiveStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
@@ -39,22 +40,6 @@ interface BatchStatus {
     log: [string, string][];
 }
 
-const SCALE_STARTS_MIN = 5;
-const SCALE_STARTS_MAX = 120;
-const SCALE_BROUTER_MIN = 5;
-const SCALE_BROUTER_MAX = 100;
-const SCALE_ROUTE_ATTEMPTS_MIN = 2;
-const SCALE_ROUTE_ATTEMPTS_MAX = 8;
-
-const SCALE_PRESETS: Record<string, ScaleOverrides> = {
-    eco: { max_starts_per_live_tick: 25, brouter_max_calls_per_tick: 21, brouter_route_attempts: 4 },
-    balanced: { max_starts_per_live_tick: 50, brouter_max_calls_per_tick: 42, brouter_route_attempts: 4 },
-    fast: { max_starts_per_live_tick: 80, brouter_max_calls_per_tick: 66, brouter_route_attempts: 5 },
-};
-
-const linkedBrouterFromStarts = (starts: number) =>
-    Math.min(SCALE_BROUTER_MAX, Math.max(SCALE_BROUTER_MIN, Math.round(starts * 0.83)));
-
 const extractStartConflictMessage = (err: any): string => {
     const statusCode = err?.response?.status;
     const code = err?.response?.data?.code;
@@ -71,34 +56,15 @@ export const SimulatorPage: React.FC = () => {
 
     const [cyclists, setCyclists] = useState<number>(1000);
     const [generateActivities, setGenerateActivities] = useState(true);
-    const [activeRatio, setActiveRatio] = useState(0.3);
-    const [cheatRatio, setCheatRatio] = useState(0.05);
-    const [tickSeconds, setTickSeconds] = useState<number>(8);
+    const [poolIntensity, setPoolIntensity] = useState(50);
+    const [systemLoad, setSystemLoad] = useState(50);
     const [liveEnabled, setLiveEnabled] = useState(true);
-    const [maxStartsPerTick, setMaxStartsPerTick] = useState(SCALE_PRESETS.balanced.max_starts_per_live_tick);
-    const [brouterCallsPerTick, setBrouterCallsPerTick] = useState(SCALE_PRESETS.balanced.brouter_max_calls_per_tick);
-    const [routeAttemptsPerStart, setRouteAttemptsPerStart] = useState(SCALE_PRESETS.balanced.brouter_route_attempts);
-    const [brouterLinkedToStarts, setBrouterLinkedToStarts] = useState(true);
 
-    const scaleOverrides = useMemo<ScaleOverrides>(() => ({
-        max_starts_per_live_tick: maxStartsPerTick,
-        brouter_max_calls_per_tick: brouterCallsPerTick,
-        brouter_route_attempts: routeAttemptsPerStart,
-    }), [maxStartsPerTick, brouterCallsPerTick, routeAttemptsPerStart]);
-
-    const applyScalePreset = (key: keyof typeof SCALE_PRESETS) => {
-        const p = SCALE_PRESETS[key];
-        setMaxStartsPerTick(p.max_starts_per_live_tick);
-        setBrouterCallsPerTick(p.brouter_max_calls_per_tick);
-        setRouteAttemptsPerStart(p.brouter_route_attempts);
-    };
-
-    const onMaxStartsChange = (v: number) => {
-        setMaxStartsPerTick(v);
-        if (brouterLinkedToStarts) {
-            setBrouterCallsPerTick(linkedBrouterFromStarts(v));
-        }
-    };
+    const simProfile = useMemo(
+        () => resolveSimProfile(poolIntensity, systemLoad),
+        [poolIntensity, systemLoad],
+    );
+    const { active_ratio: activeRatio, cheat_ratio: cheatRatio, tick_seconds: tickSeconds, scale_overrides: scaleOverrides } = simProfile;
 
     const [launching, setLaunching] = useState(false);
     const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
@@ -171,8 +137,8 @@ export const SimulatorPage: React.FC = () => {
     const applyScale300k = () => {
         setCyclists(300_000);
         setGenerateActivities(false);
-        setActiveRatio(0.1);
-        setTickSeconds(15);
+        setPoolIntensity(25);
+        setSystemLoad(15);
         setScaleReport(null);
     };
 
@@ -243,6 +209,8 @@ export const SimulatorPage: React.FC = () => {
             try {
                 await SimulatorApi.startLive({
                     pool_pct: 1.0,
+                    intensity: poolIntensity,
+                    load: systemLoad,
                     active_ratio: activeRatio,
                     cheat_ratio: cheatRatio,
                     tick_seconds: tickSeconds,
@@ -406,125 +374,62 @@ export const SimulatorPage: React.FC = () => {
 
                             {liveEnabled && (
                                 <Stack gap="md" mt="xs">
+                                    {liveStatus?.routing_backpressure_active && (
+                                        <Alert color="red" icon={<AlertTriangle size={16} />} title="Backpressure routing">
+                                            <Text size="xs">
+                                                Kolejka routingu jest pełna — obniż „Aktywność puli” lub „Obciążenie systemu”, albo poczekaj na opróżnienie kolejki.
+                                                Przy włączonym SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP backend może sam obniżyć active_ratio.
+                                            </Text>
+                                        </Alert>
+                                    )}
+
                                     <Box>
-                                        <Text size="sm" fw={600} mb={4}>Active Riders Pool: {(activeRatio * 100).toFixed(0)}%</Text>
+                                        <Text size="sm" fw={600} mb={4}>Aktywność puli: {poolIntensity}</Text>
                                         <Text size="xs" c="dimmed" mb="md">
-                                            ~{activeRiders.toLocaleString()} aktywnych w symulacji (widok mapy zależy od zoomu i bbox)
+                                            active_ratio {(activeRatio * 100).toFixed(0)}% · cheat {(cheatRatio * 100).toFixed(0)}% ·
+                                            ~{activeRiders.toLocaleString()} aktywnych (~{cheaters.toLocaleString()} cheaterów)
                                         </Text>
-                                        <Slider value={activeRatio} onChange={setActiveRatio} min={0.01} max={1.0} step={0.01}
-                                            marks={[{ value: 0.1, label: '10%' }, { value: 0.3, label: '30%' }, { value: 0.6, label: '60%' }]} />
+                                        <Slider
+                                            value={poolIntensity}
+                                            onChange={setPoolIntensity}
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            marks={[
+                                                { value: 0, label: '8%' },
+                                                { value: 50, label: '29%' },
+                                                { value: 100, label: '50%' },
+                                            ]}
+                                        />
                                     </Box>
 
                                     <Box mt="md">
-                                        <Group justify="space-between">
-                                            <Text size="sm" fw={600}>Simulated Cheater Ratio: {(cheatRatio * 100).toFixed(0)}%</Text>
-                                            <Badge color="red" variant="light">Anti-Cheat Testing</Badge>
-                                        </Group>
-                                        <Text size="xs" c="dimmed" mb="md">Percentage of riders generating non-compliant, fraudulent routes (~{cheaters.toLocaleString()} cheaters)</Text>
-                                        <Slider value={cheatRatio} onChange={setCheatRatio} min={0} max={0.3} step={0.01}
-                                            marks={[{ value: 0, label: '0%' }, { value: 0.05, label: '5%' }, { value: 0.15, label: '15%' }]} />
+                                        <Text size="sm" fw={600} mb={4}>Obciążenie systemu: {systemLoad}</Text>
+                                        <Text size="xs" c="dimmed" mb="md">
+                                            tick {tickSeconds}s · starts {scaleOverrides.max_starts_per_live_tick}/tick ·
+                                            BRouter {scaleOverrides.brouter_max_calls_per_tick}/tick ·
+                                            próby {scaleOverrides.brouter_route_attempts}
+                                        </Text>
+                                        <Slider
+                                            value={systemLoad}
+                                            onChange={setSystemLoad}
+                                            min={0}
+                                            max={100}
+                                            step={1}
+                                            marks={[
+                                                { value: 0, label: 'Eco' },
+                                                { value: 50, label: 'Balanced' },
+                                                { value: 100, label: 'Fast' },
+                                            ]}
+                                        />
                                     </Box>
-
-                                    <NumberInput
-                                        label="Telemetry Tick Interval"
-                                        description="How frequently (in seconds) the simulator pushes geographical updates"
-                                        value={tickSeconds} onChange={(v) => setTickSeconds(Number(v) || 8)}
-                                        min={3} max={60} leftSection={<Zap size={16} />}
-                                        size="md"
-                                        mt="md"
-                                    />
-
-                                    <Divider label="Performance (spawn rate)" labelPosition="center" />
 
                                     <Alert color="yellow" variant="light" icon={<AlertTriangle size={16} />}>
                                         <Text size="xs">
-                                            Higher values spawn riders faster but increase Celery worker RAM and BRouter load.
-                                            Keep BRouter calls near starts/tick. See docs/operations/RAILWAY_CELERY_MEMORY.md.
+                                            Wyższe obciążenie = szybszy spawn i większy RAM Celery/BRouter.
+                                            Zob. docs/operations/RAILWAY_CELERY_MEMORY.md.
                                         </Text>
                                     </Alert>
-
-                                    <Group gap="xs">
-                                        <Button size="xs" variant="light" onClick={() => applyScalePreset('eco')}>Eco (25)</Button>
-                                        <Button size="xs" variant="light" onClick={() => applyScalePreset('balanced')}>Balanced (50)</Button>
-                                        <Button size="xs" variant="light" onClick={() => applyScalePreset('fast')}>Fast (80)</Button>
-                                    </Group>
-
-                                    <Box>
-                                        <Text size="sm" fw={600} mb={4}>
-                                            New rides per tick: {maxStartsPerTick}
-                                        </Text>
-                                        <Text size="xs" c="dimmed" mb="md">
-                                            Max athletes starting a road route each telemetry tick (SCALE_MAX_STARTS_PER_LIVE_TICK).
-                                        </Text>
-                                        <Slider
-                                            value={maxStartsPerTick}
-                                            onChange={onMaxStartsChange}
-                                            min={SCALE_STARTS_MIN}
-                                            max={SCALE_STARTS_MAX}
-                                            step={1}
-                                            marks={[
-                                                { value: 25, label: '25' },
-                                                { value: 50, label: '50' },
-                                                { value: 80, label: '80' },
-                                            ]}
-                                        />
-                                    </Box>
-
-                                    <Box>
-                                        <Group justify="space-between" mb={4}>
-                                            <Text size="sm" fw={600}>
-                                                BRouter HTTP calls per tick: {brouterCallsPerTick}
-                                            </Text>
-                                            <Checkbox
-                                                size="xs"
-                                                label="Link to starts"
-                                                checked={brouterLinkedToStarts}
-                                                onChange={(e) => {
-                                                    const linked = e.currentTarget.checked;
-                                                    setBrouterLinkedToStarts(linked);
-                                                    if (linked) {
-                                                        setBrouterCallsPerTick(linkedBrouterFromStarts(maxStartsPerTick));
-                                                    }
-                                                }}
-                                            />
-                                        </Group>
-                                        <Text size="xs" c="dimmed" mb="md">
-                                            Hard cap on routing API calls per tick; each failed snap may retry profiles (SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK).
-                                        </Text>
-                                        <Slider
-                                            value={brouterCallsPerTick}
-                                            onChange={setBrouterCallsPerTick}
-                                            min={SCALE_BROUTER_MIN}
-                                            max={SCALE_BROUTER_MAX}
-                                            step={1}
-                                            disabled={brouterLinkedToStarts}
-                                            marks={[
-                                                { value: 25, label: '25' },
-                                                { value: 50, label: '50' },
-                                            ]}
-                                        />
-                                    </Box>
-
-                                    <Box>
-                                        <Text size="sm" fw={600} mb={4}>
-                                            Route snap attempts per start: {routeAttemptsPerStart}
-                                        </Text>
-                                        <Text size="xs" c="dimmed" mb="md">
-                                            Random start jitter retries before skipping (SCALE_SIM_BROUTER_ROUTE_ATTEMPTS). Lower = less RAM, more grid skips.
-                                        </Text>
-                                        <Slider
-                                            value={routeAttemptsPerStart}
-                                            onChange={setRouteAttemptsPerStart}
-                                            min={SCALE_ROUTE_ATTEMPTS_MIN}
-                                            max={SCALE_ROUTE_ATTEMPTS_MAX}
-                                            step={1}
-                                            marks={[
-                                                { value: 2, label: '2' },
-                                                { value: 4, label: '4' },
-                                                { value: 8, label: '8' },
-                                            ]}
-                                        />
-                                    </Box>
                                 </Stack>
                             )}
 
@@ -551,10 +456,10 @@ export const SimulatorPage: React.FC = () => {
                                         <Text size="sm">• Live Ride Simulation: <b>{liveEnabled ? 'Enabled' : 'Disabled'}</b></Text>
                                         {liveEnabled && (
                                             <>
-                                                <Text size="sm" c="blue">• Live Riders Pool: <b>~{activeRiders.toLocaleString()} ({(activeRatio * 100).toFixed(0)}%)</b></Text>
-                                                <Text size="sm" c="red">• Active Cheaters Pool: <b>~{cheaters.toLocaleString()} ({(cheatRatio * 100).toFixed(0)}%)</b></Text>
-                                                <Text size="sm">• Tick telemetry push: <b>Every {tickSeconds} seconds</b></Text>
-                                                <Text size="sm">• Spawn rate: <b>{maxStartsPerTick} starts/tick</b>, BRouter <b>{brouterCallsPerTick}/tick</b>, <b>{routeAttemptsPerStart}</b> route tries</Text>
+                                                <Text size="sm">• Profil: <b>aktywność {poolIntensity}</b> · <b>obciążenie {systemLoad}</b></Text>
+                                                <Text size="sm" c="blue">• Live pool: <b>~{activeRiders.toLocaleString()} ({(activeRatio * 100).toFixed(0)}% active_ratio)</b></Text>
+                                                <Text size="sm" c="red">• Cheaters: <b>~{cheaters.toLocaleString()} ({(cheatRatio * 100).toFixed(0)}%)</b></Text>
+                                                <Text size="sm">• Tick: <b>{tickSeconds}s</b> · starts <b>{scaleOverrides.max_starts_per_live_tick}</b> · BRouter <b>{scaleOverrides.brouter_max_calls_per_tick}</b> · próby <b>{scaleOverrides.brouter_route_attempts}</b></Text>
                                             </>
                                         )}
                                     </Stack>

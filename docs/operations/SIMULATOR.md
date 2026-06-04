@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-06-04 |
 | **Audience** | Platform Operator, Admin Owner |
 | **Spec** | [SIMULATOR_ARCHITECTURE.md](../SIMULATOR_ARCHITECTURE.md) |
 
@@ -24,10 +24,20 @@
 
 `SimulatorPage` używa `waitForBatchComplete()` — czeka aż batch **naprawdę wystartował**, potem aż się **skończy** (naprawia stary błąd: pierwszy poll z `running=false` przed startem Celery).
 
+**Krok 2 — dwa suwaki (0–100, domyślnie 50):**
+
+| Suwak | Mapowanie (SSOT: `sim_profile.py` / `simProfileMap.ts`) |
+|-------|-----------------------------------------------------------|
+| **Aktywność puli** | `active_ratio = clamp(0.08 + 0.42×I/100, 0.08–0.50)`; `cheat_ratio = clamp(0.12×I/100, 0–0.25)` |
+| **Obciążenie systemu** | starts 25→50→80 (0/50/100); BRouter `round(starts×0.83)`; próby 4 jeśli L&lt;75 else 5; tick 12→8→6 s |
+
+Przy aktywnym live na kroku 2 UI pokazuje alert **Backpressure**, gdy `routing_backpressure_active=true`.
+
 ### API
 
 - `POST /api/activities/admin/live-simulate/` → **409** jeśli batch w toku.
-- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `ride_warming`, `ride_routing`, `async_routing_enabled`, `routing_queue_depth`, `routing_backpressure_active`, `dispatches_throttled`.
+- `GET /api/activities/admin/live-simulate/` → `batch_blocks_live`, `ride_warming`, `ride_routing`, `async_routing_enabled`, `routing_queue_depth`, `routing_backpressure_active`, `dispatches_throttled`, opcjonalnie `sim_intensity`, `sim_load`, `effective_sim_profile`.
+- `POST /api/activities/admin/live-simulate/` — body legacy: `active_ratio`, `cheat_ratio`, `tick_seconds`, `scale_overrides`, `pool_pct`. **Albo** `intensity` + `load` (0–100, oba wymagane): profile **nadpisuje** jawne pola (precedencja: suwaki profilu).
 - `GET /api/activities/admin/stats/` (GLOBAL_OWNER) → `sim_kpi` — osobna sekcja **Live Simulator** na Dashboard (nie mylić z KPI athlete).
 
 ### FSM jazdy (Paczka 1)
@@ -51,7 +61,7 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 1. Railway: `SCALE_POSTGRES_DISK_BUDGET_GB=5` na **backend** i **celery-worker-simulation**.
 2. Batch: `total_users=10000`, `skip_activities=true`, `clear=true` (jeśli czysta baza).
 3. Log: `Done: N users` — sprawdź N ≈ oczekiwane (10 miast × ~999 zawodników + moderatorzy).
-4. Stop / reset jeśli trzeba, potem live: `pool_pct=1.0`, `active_ratio=0.2–0.3`, `tick_seconds=8`.
+4. Stop / reset jeśli trzeba, potem live: `pool_pct=1.0`, np. `intensity=50`, `load=50` (albo `active_ratio` / `tick_seconds` ręcznie).
 5. BRouter: `BROUTER_URL=http://brouter.railway.internal:17777/brouter`, `SCALE_SIM_STRICT_ROAD_ROUTES=1`.
 
 ---
@@ -73,6 +83,8 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `max_starts_per_live_tick` (~30) | Max nowych `route_live_ride_task.delay` na jeden `live_tick` (niezależnie od backpressure) |
 | `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | *(puste = wyłączone)* | Gdy ustawione (np. `500`) — **backpressure**: brak nowych dispatchy, gdy `max(ride_warming FSM, Celery LLEN routing)` ≥ cap |
 | `SCALE_SIM_ASYNC_ROUTING` | `1` | `0` = BRouter w `live_tick` (stary model); `1` = kolejka `routing` |
+| `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP` | `1` | Po N tickach z backpressure obniż `active_ratio` w Redis (bez Railway API) |
+| `SIM_BP_LOWER_AFTER_TICKS` | `6` | Liczba kolejnych ticków z `routing_backpressure_active` przed auto-obniżką |
 
 **Backpressure (Paczka 1b):** `routing_backpressure_snapshot` bierze głębszą z FSM `PENDING_ROUTE`/`ROUTING` i z brokera Redis (`LLEN routing`). Przy aktywnym backpressure `effective_routing_dispatch_cap` zwraca `0` na ticku. Log: `sim.routing.backpressure` / wpis w live log (rate-limit 60 s).
 
@@ -126,6 +138,7 @@ Stary admin z markerami HTML: deploy + Ctrl+F5.
 | `Road-only mode: skipped N starts` | `STRICT_ROAD_ROUTES=1` i brak trasy |
 | `Batch simulation is still in progress` | Live zablokowany — poprawna ochrona |
 | `Routing backpressure: skipped N dispatches` | Kolejka routing / FSM warming ≥ `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` |
+| `Auto-lowered active_ratio …` | `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP` — log `sim.profile.auto_lower` (rate-limit 60 s) |
 
 ---
 

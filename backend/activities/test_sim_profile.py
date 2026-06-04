@@ -1,0 +1,106 @@
+"""Tests for sim profile mapping and backpressure active_ratio auto-lower."""
+
+from django.test import SimpleTestCase
+
+from activities.sim_profile import (
+    evaluate_backpressure_active_ratio_lower,
+    map_intensity,
+    map_load,
+    parse_intensity_load_from_request,
+    piecewise_lerp,
+    resolve_sim_profile,
+)
+
+
+class SimProfileMappingTest(SimpleTestCase):
+    def test_piecewise_midpoint(self):
+        self.assertEqual(piecewise_lerp([(0, 25), (50, 50), (100, 80)], 50), 50.0)
+
+    def test_intensity_defaults(self):
+        m = map_intensity(50)
+        self.assertAlmostEqual(m["active_ratio"], 0.29, places=2)
+        self.assertAlmostEqual(m["cheat_ratio"], 0.06, places=2)
+
+    def test_intensity_clamps(self):
+        low = map_intensity(0)
+        self.assertEqual(low["active_ratio"], 0.08)
+        high = map_intensity(100)
+        self.assertEqual(high["active_ratio"], 0.50)
+        self.assertAlmostEqual(high["cheat_ratio"], 0.12, places=2)
+
+    def test_load_mid_and_high(self):
+        mid = map_load(50)
+        self.assertEqual(mid["max_starts_per_live_tick"], 50)
+        self.assertEqual(mid["brouter_max_calls_per_tick"], 42)
+        self.assertEqual(mid["brouter_route_attempts"], 4)
+        self.assertEqual(mid["tick_seconds"], 8)
+        high = map_load(100)
+        self.assertEqual(high["max_starts_per_live_tick"], 80)
+        self.assertEqual(high["brouter_route_attempts"], 5)
+        self.assertEqual(high["tick_seconds"], 6)
+
+    def test_resolve_sim_profile_50_50(self):
+        p = resolve_sim_profile(50, 50)
+        self.assertEqual(p["intensity"], 50)
+        self.assertEqual(p["load"], 50)
+        self.assertIn("scale_overrides", p)
+        self.assertEqual(p["scale_overrides"]["max_starts_per_live_tick"], 50)
+
+    def test_parse_request_requires_both(self):
+        profile, err = parse_intensity_load_from_request({"intensity": 50})
+        self.assertIsNone(profile)
+        self.assertIn("together", err or "")
+
+    def test_parse_request_ok(self):
+        profile, err = parse_intensity_load_from_request({"intensity": 50, "load": 50})
+        self.assertIsNone(err)
+        self.assertEqual(profile["intensity"], 50)
+
+
+class BackpressureActiveRatioLowerTest(SimpleTestCase):
+    def test_no_lower_before_threshold(self):
+        ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(
+            backpressure_active=True,
+            consecutive_bp_ticks=4,
+            current_active_ratio=0.3,
+            enabled=True,
+            after_ticks=6,
+        )
+        self.assertEqual(ratio, 0.3)
+        self.assertEqual(ticks, 5)
+        self.assertFalse(lowered)
+
+    def test_lowers_at_threshold(self):
+        ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(
+            backpressure_active=True,
+            consecutive_bp_ticks=5,
+            current_active_ratio=0.3,
+            enabled=True,
+            after_ticks=6,
+        )
+        self.assertTrue(lowered)
+        self.assertEqual(ticks, 0)
+        self.assertAlmostEqual(ratio, min(0.3 * 0.85, 0.12))
+
+    def test_resets_when_backpressure_off(self):
+        ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(
+            backpressure_active=False,
+            consecutive_bp_ticks=10,
+            current_active_ratio=0.2,
+            enabled=True,
+            after_ticks=6,
+        )
+        self.assertEqual(ratio, 0.2)
+        self.assertEqual(ticks, 0)
+        self.assertFalse(lowered)
+
+    def test_disabled(self):
+        ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(
+            backpressure_active=True,
+            consecutive_bp_ticks=99,
+            current_active_ratio=0.4,
+            enabled=False,
+            after_ticks=6,
+        )
+        self.assertEqual(ratio, 0.4)
+        self.assertFalse(lowered)

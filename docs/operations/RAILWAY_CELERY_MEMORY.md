@@ -164,6 +164,17 @@ Projekt `marvelous-gratitude` ma **8 GB RAM i 8 vCPU łącznie** (wszystkie serw
 
 **Łącznie compute (app):** ~6,5 GB cap + DB/Redis template overhead → mieści się w 8 GB planie.
 
+### Handoff / load test RAM
+
+Przed sprzedażą lub kontrolowanym load testem (10k pool) podnieś stabilność workerów w repo (`limitOverride` w `railway.json`):
+
+| Serwis | RAM (repo SSOT) | Uwagi |
+|--------|-----------------|--------|
+| `brouter` | **1 GB** | `infrastructure/brouter/railway.json` — mniej timeoutów przy burst routingu |
+| `celery-worker` | **1 GB** | `celery-worker/railway.json` — default/critical kolejki |
+
+Deploy `main` → Railway nadpisuje Dashboard. Pełna sekwencja: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
+
 Apply (Platform Operator):
 
 ```powershell
@@ -252,6 +263,12 @@ railway up -s celery-worker-routing -e production --detach
 1. Przywróć poprzedni deployment w Railway.
 2. Obniż caps `SCALE_*` (patrz tabele powyżej).
 3. Awaryjnie: `SCALE_SIM_ASYNC_ROUTING=0` (sync routing w tick — obciążenie CPU/RAM rośnie).
+
+---
+
+## Railway Pro (handoff)
+
+**Pro nie jest wymagane** do 1 GB `limitOverride` w `railway.json` (`brouter`, `celery-worker`). Rozważ **Pro na 1–2 miesiące** handoffu load-testu (wyższy cap RAM/vCPU projektu, szybszy support) — decyzja billingowa; szczegóły: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
 
 ---
 
