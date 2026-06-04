@@ -14,8 +14,10 @@ import {
     LIVE_MAP_LOD,
     auditLiveMapLodCrossfade,
     riderUnclusteredOpacityAtZoom,
+    riderLayerVisibilityAtZoom,
     shouldRenderIndividualRiders,
     ridersVisibleAtZoom,
+    riderIconOpacityAtZoom,
 } from '../modules/analytics/liveMapZoom';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
 
@@ -67,11 +69,19 @@ describe('liveMapZoom', () => {
     });
 
     it('LOD crossfade bands do not overlap inconsistently', () => {
-        expect(LIVE_MAP_LOD.dotFadeInEnd).toBeLessThan(LIVE_MAP_LOD.iconFadeInEnd);
+        expect(LIVE_MAP_LOD.dotFadeInEnd).toBeLessThanOrEqual(LIVE_MAP_LOD.iconFadeInEnd);
         expect(LIVE_MAP_LOD.iconMaxZoom).toBe(LIVE_MAP_LOD.labelMinZoom);
-        expect(LIVE_MAP_LOD.dotFadeOutStart).toBe(LIVE_MAP_LOD.iconFadeInStart);
-        expect(LIVE_MAP_LOD.dotFadeOutEnd).toBeLessThanOrEqual(LIVE_MAP_LOD.iconMaxZoom);
+        expect(LIVE_MAP_LOD.dotFadeOutEnd).toBe(LIVE_MAP_LOD.labelMinZoom);
+        expect(LIVE_MAP_LOD.dotFadeOutStart).toBeLessThan(LIVE_MAP_LOD.dotFadeOutEnd);
         expect(LIVE_MAP_LOD.cityHubFadeOutEnd).toBeLessThan(LIVE_MAP_LOD.clusterPeakEnd);
+    });
+
+    it('micro handoff band z=12.5–12.9 keeps riders visible (dots or icons)', () => {
+        for (const z of [12.5, 12.9, 13.0]) {
+            expect(riderLayerVisibilityAtZoom(z), `z=${z}`).toBeGreaterThan(0.5);
+            expect(ridersVisibleAtZoom(z), `z=${z}`).toBe(true);
+            expect(riderIconOpacityAtZoom(z), `z=${z}`).toBeGreaterThanOrEqual(0.85);
+        }
     });
 
     it('auditLiveMapLodCrossfade finds no gaps or double rider layers', () => {
@@ -94,6 +104,8 @@ describe('liveMapZoom', () => {
         expect(shouldRenderIndividualRiders(6)).toBe(false);
         expect(shouldRenderIndividualRiders(11.5)).toBe(false);
         expect(shouldRenderIndividualRiders(12.3)).toBe(true);
+        expect(shouldRenderIndividualRiders(12.9)).toBe(true);
+        expect(ridersVisibleAtZoom(12.9)).toBe(true);
         expect(LIVE_MAP_LOD.dotFadeInStart).toBe(12);
         expect(apiDetailForZoom(12)).toBe('full');
         expect(LIVE_MAP_LOD.iconMinZoom).toBeGreaterThanOrEqual(LIVE_MAP_LOD.dotFadeInStart);

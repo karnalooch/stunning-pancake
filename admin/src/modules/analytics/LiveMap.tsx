@@ -34,6 +34,7 @@ import {
     LIVE_SOURCES,
     prepareLiveMapStyle,
     setCityHubData,
+    countLivePositionFeatures,
     setLivePositionsData,
     type LiveMapClickEvent,
 } from './liveMapLayers';
@@ -139,6 +140,7 @@ export const LiveMap: React.FC = () => {
     const [runners, setRunners] = useState(0);
     const [viewportRiders, setViewportRiders] = useState(0);
     const [drawnOnMap, setDrawnOnMap] = useState(0);
+    const [renderedOnMap, setRenderedOnMap] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
     const [mlReady, setMlReady] = useState(false);
@@ -341,16 +343,47 @@ export const LiveMap: React.FC = () => {
         if (map && layersReadyRef.current) setCityHubData(map, cityCountsRef.current);
     }, [aggregateCityCounts]);
 
+    const countRenderedRiderFeatures = useCallback((map: {
+        queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
+    }) => {
+        if (!map.queryRenderedFeatures) return 0;
+        try {
+            const layers = [
+                LIVE_LAYERS.clusters,
+                LIVE_LAYERS.unclustered,
+                LIVE_LAYERS.riderIcons,
+                LIVE_LAYERS.riderLabels,
+            ];
+            const features = map.queryRenderedFeatures({ layers });
+            return features.filter((f) => {
+                const p = f.properties;
+                if (!p) return false;
+                if (p.cluster_id != null || p.point_count != null) return true;
+                return p.deviceId != null;
+            }).length;
+        } catch {
+            return 0;
+        }
+    }, []);
+
+    const scheduleRenderedCount = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !layersReadyRef.current) return;
+        requestAnimationFrame(() => {
+            const n = countRenderedRiderFeatures(map);
+            setRenderedOnMap((prev) => (n !== prev ? n : prev));
+        });
+    }, [countRenderedRiderFeatures]);
+
     const flushPositionsToMapLayer = useCallback(() => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
         const list = positionsRef.current;
         setLivePositionsData(map, list);
-        setDrawnOnMap((prev) => {
-            const n = list.length;
-            return n !== prev ? n : prev;
-        });
-    }, []);
+        const featureN = countLivePositionFeatures(list);
+        setDrawnOnMap((prev) => (featureN !== prev ? featureN : prev));
+        scheduleRenderedCount();
+    }, [scheduleRenderedCount]);
 
     const ingestPositions = useCallback((list: LiveMapPosition[], opts?: { snap?: boolean }) => {
         positionsRef.current = list;
@@ -658,6 +691,7 @@ export const LiveMap: React.FC = () => {
                         id: 'heatmap-fill',
                         type: 'fill',
                         source: 'heatmap-cells',
+                        before: LIVE_LAYERS.unclustered,
                         paint: {
                             'fill-color': [
                                 'interpolate', ['linear'], ['get', 'weight'],
@@ -673,6 +707,7 @@ export const LiveMap: React.FC = () => {
                         id: 'heatmap-outline',
                         type: 'line',
                         source: 'heatmap-cells',
+                        before: LIVE_LAYERS.unclustered,
                         paint: { 'line-color': 'rgba(255,255,255,0.06)', 'line-width': 0.5 },
                     });
                 } else if (source?.setData) {
@@ -943,7 +978,7 @@ export const LiveMap: React.FC = () => {
                         </Badge>
                     </Tooltip>
                     {mapReady && (
-                        <Tooltip label="Pozycje z ostatniego payloadu API (bbox). „On map” = faktycznie narysowane na warstwie GeoJSON.">
+                        <Tooltip label="Pozycje z ostatniego payloadu API (bbox). „On map” = features GeoJSON po filtrze współrzędnych. „Rendered” = widoczne piksele MapLibre.">
                             <Badge
                                 variant="light"
                                 color={viewportRiders > 0 ? 'blue' : 'gray'}
@@ -964,6 +999,23 @@ export const LiveMap: React.FC = () => {
                             data-testid="live-map-drawn-count"
                         >
                             {drawnOnMap.toLocaleString()} on map
+                        </Badge>
+                    )}
+                    {mapReady && drawnOnMap > 0 && (
+                        <Badge
+                            variant="light"
+                            color={
+                                renderedOnMap === 0
+                                    ? 'red'
+                                    : renderedOnMap >= drawnOnMap
+                                        ? 'green'
+                                        : 'orange'
+                            }
+                            radius="sm"
+                            size="md"
+                            data-testid="live-map-rendered-count"
+                        >
+                            {renderedOnMap.toLocaleString()} rendered
                         </Badge>
                     )}
                     {rideWarming > 0 && (

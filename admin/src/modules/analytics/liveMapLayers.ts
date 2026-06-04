@@ -34,6 +34,10 @@ function isValidLiveCoord(n: number): boolean {
     return Number.isFinite(n) && Math.abs(n) <= 180;
 }
 
+export function countLivePositionFeatures(positions: LiveMapPosition[]): number {
+    return positionsToFeatures(positions).length;
+}
+
 function positionsToFeatures(positions: LiveMapPosition[]) {
     return positions
         .filter((p) => {
@@ -185,9 +189,8 @@ export function installLiveMapLayers(
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 5,
                     12.2, 8,
-                    LOD.dotFadeOutStart, 5.5,
-                    12.4, 3,
-                    12.6, 1,
+                    LOD.dotFadeInEnd, 7,
+                    LOD.dotFadeOutStart, 6,
                     LOD.dotFadeOutEnd, 0,
                 ],
                 'circle-color': [
@@ -204,9 +207,8 @@ export function installLiveMapLayers(
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 0.35,
                     LOD.dotFadeInEnd, 0.82,
-                    LOD.dotFadeOutStart, 0.45,
-                    12.4, 0.32,
-                    12.6, 0.1,
+                    LOD.iconFadeInEnd, LOD.dotMicroMinOpacity,
+                    LOD.dotFadeOutStart, LOD.dotMicroMinOpacity,
                     LOD.dotFadeOutEnd, 0,
                 ],
             },
@@ -228,8 +230,8 @@ export function installLiveMapLayers(
                 ],
                 'icon-size': [
                     'interpolate', ['linear'], ['zoom'],
-                    12, 0.5,
-                    13.5, 0.72,
+                    LOD.iconMinZoom, LOD.iconMicroMinSize,
+                    13.5, 0.88,
                     15, 0.88,
                 ],
                 'icon-allow-overlap': true,
@@ -239,10 +241,9 @@ export function installLiveMapLayers(
             paint: {
                 'icon-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.iconFadeInStart, 0.15,
-                    LOD.iconFadeInEnd, 0.75,
-                    12.6, 0.95,
-                    LOD.iconFadeOutStart, 0.92,
+                    LOD.iconFadeInStart, LOD.iconMicroMinOpacity,
+                    LOD.iconFadeInEnd, LOD.iconMicroMinOpacity,
+                    LOD.iconFadeOutStart, LOD.iconMicroMinOpacity,
                     LOD.iconFadeOutEnd, LOD.labelIconOpacityAtHandoff,
                 ],
             },

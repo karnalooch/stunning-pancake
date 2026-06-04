@@ -112,10 +112,11 @@ export async function mockLiveMapTelemetry(page: Page) {
   await page.route(TELEMETRY_LIVE_GLOB, async (route) => {
     const url = new URL(route.request().url());
     const detail = url.searchParams.get('detail');
+    const bbox = url.searchParams.get('bbox');
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify(mockLiveTelemetryBody(detail)),
+      body: JSON.stringify(mockLiveTelemetryBody(detail, bbox)),
     });
   });
 }

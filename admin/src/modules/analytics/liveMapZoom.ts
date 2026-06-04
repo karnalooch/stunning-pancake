@@ -36,14 +36,19 @@ export const LIVE_MAP_LOD = {
     /** Individual GL dots only at z≥12 (matches apiDetailForZoom `full`). */
     dotFadeInStart: 12,
     dotFadeInEnd: 12.15,
-    /** Align with icon fade-in — avoids double GL dots + GPU icons in handoff. */
-    dotFadeOutStart: 12.2,
-    dotFadeOutEnd: 13.2,
+    /** Dots stay visible through micro handoff until labels take over (no dead band at z≈12.9). */
+    dotFadeOutStart: 13.15,
+    dotFadeOutEnd: 13.35,
+    /** Minimum dot opacity while micro tier active (z ∈ [dotFadeInStart, dotFadeOutEnd]). */
+    dotMicroMinOpacity: 0.55,
     iconMinZoom: 12,
     /** Same as labelMinZoom — one icon layer at a time (no 13.35–13.45 double draw). */
     iconMaxZoom: 13.35,
-    iconFadeInStart: 12.2,
-    iconFadeInEnd: 12.2,
+    iconFadeInStart: 12,
+    iconFadeInEnd: 12.15,
+    /** Full-strength icons from micro tier entry (backup when symbol sprites fail). */
+    iconMicroMinOpacity: 0.85,
+    iconMicroMinSize: 0.72,
     /** Hold icon strength until label layer takes over (no fade-to-zero dip). */
     iconFadeOutStart: 13.15,
     iconFadeOutEnd: 13.35,
@@ -156,9 +161,8 @@ export function riderUnclusteredOpacityAtZoom(zoom: number): number {
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 0.35],
         [L.dotFadeInEnd, 0.82],
-        [L.dotFadeOutStart, 0.45],
-        [12.4, 0.32],
-        [12.6, 0.1],
+        [L.iconFadeInEnd, L.dotMicroMinOpacity],
+        [L.dotFadeOutStart, L.dotMicroMinOpacity],
         [L.dotFadeOutEnd, 0],
     ]);
 }
@@ -170,10 +174,31 @@ export function riderUnclusteredRadiusAtZoom(zoom: number): number {
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 5],
         [12.2, 8],
-        [L.dotFadeOutStart, 5.5],
-        [12.4, 3],
-        [12.6, 1],
+        [L.iconFadeInEnd, 7],
+        [L.dotFadeOutStart, 6],
         [L.dotFadeOutEnd, 0],
+    ]);
+}
+
+/** Rider icon layer opacity (live-rider-icons), z ∈ [iconMinZoom, iconMaxZoom). */
+export function riderIconOpacityAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    if (zoom < L.iconMinZoom || zoom >= L.iconMaxZoom) return 0;
+    return maplibreInterp(zoom, [
+        [L.iconFadeInStart, L.iconMicroMinOpacity],
+        [L.iconFadeInEnd, L.iconMicroMinOpacity],
+        [L.iconFadeOutStart, L.iconMicroMinOpacity],
+        [L.iconFadeOutEnd, L.labelIconOpacityAtHandoff],
+    ]);
+}
+
+export function riderIconSizeAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    if (zoom < L.iconMinZoom) return 0;
+    return maplibreInterp(zoom, [
+        [L.iconMinZoom, L.iconMicroMinSize],
+        [13.5, 0.88],
+        [15, 0.88],
     ]);
 }
 
@@ -195,8 +220,26 @@ export function clusterLayerOpacityAtZoom(zoom: number): number {
     ]);
 }
 
+/** Label-layer icon opacity (live-rider-labels), z ≥ labelMinZoom. */
+export function riderLabelIconOpacityAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    if (zoom < L.labelMinZoom) return 0;
+    return maplibreInterp(zoom, [
+        [L.labelFadeInStart, L.labelIconOpacityAtHandoff],
+        [L.labelFadeInEnd, 1],
+    ]);
+}
+
+/** Combined rider visibility (dots, icons, or labels) — mirrors auditLiveMapLodCrossfade riderVis. */
+export function riderLayerVisibilityAtZoom(zoom: number): number {
+    const dotOp = riderUnclusteredOpacityAtZoom(zoom);
+    const dotR = riderUnclusteredRadiusAtZoom(zoom);
+    const dotVis = dotOp > 0.2 && dotR > 3 ? dotOp : 0;
+    return Math.max(dotVis, riderIconOpacityAtZoom(zoom), riderLabelIconOpacityAtZoom(zoom));
+}
+
 /**
- * True when riders should be visible on canvas — accounts for MapLibre unclustering above clusterMaxZoom.
+ * True when riders should be visible on canvas — clusters (meso) or dots/icons/labels (micro).
  */
 export function ridersVisibleAtZoom(zoom: number): boolean {
     if (zoom < LIVE_MAP_TIER.mesoMinZoom) {
@@ -205,7 +248,7 @@ export function ridersVisibleAtZoom(zoom: number): boolean {
     if (zoom <= CLUSTER_MAX_ZOOM) {
         return clusterLayerOpacityAtZoom(zoom) > 0.2;
     }
-    return shouldRenderIndividualRiders(zoom);
+    return riderLayerVisibilityAtZoom(zoom) > 0.25;
 }
 
 /** Numeric crossfade audit (mirrors paint stops in liveMapLayers.ts). */
@@ -231,25 +274,15 @@ export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveM
         const dotOp = riderUnclusteredOpacityAtZoom(z);
         const dotR = riderUnclusteredRadiusAtZoom(z);
         const iconLayer = z >= L.iconMinZoom && z < L.iconMaxZoom;
-        const iconOp = iconLayer
-            ? maplibreInterp(z, [
-                  [L.iconFadeInStart, 0.15],
-                  [L.iconFadeInEnd, 0.75],
-                  [12.6, 0.95],
-                  [L.iconFadeOutStart, 0.92],
-                  [L.iconFadeOutEnd, L.labelIconOpacityAtHandoff],
-              ])
-            : 0;
+        const iconOp = riderIconOpacityAtZoom(z);
         const labelLayer = z >= L.labelMinZoom;
-        const labelIconOp = labelLayer
-            ? maplibreInterp(z, [[L.labelFadeInStart, L.labelIconOpacityAtHandoff], [L.labelFadeInEnd, 1]])
-            : 0;
+        const labelIconOp = riderLabelIconOpacityAtZoom(z);
         const dotVisible = dotOp > 0.2 && dotR > 3;
-        const riderVis = Math.max(dotOp * (dotR > 1 ? 1 : 0), iconOp, labelIconOp);
+        const riderVis = riderLayerVisibilityAtZoom(z);
         if (riderVis < 0.25 && clOp < 0.2 && hubOp < 0.2) {
             issues.push({ zoom: z, type: 'GAP' });
         }
-        const inHandoff = z >= L.dotFadeOutStart && z < 12.8;
+        const inHandoff = z >= L.iconFadeInStart && z < L.labelMinZoom;
         if (dotVisible && iconOp > 0.5 && !inHandoff) {
             issues.push({ zoom: z, type: 'DOUBLE', detail: { dotOp, iconOp } });
         }

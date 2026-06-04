@@ -79,7 +79,6 @@ export class LivePositionInterpolator {
                 ring.push(p, now);
                 this.rings.set(p.deviceId, ring);
             }
-            this.pushFrame(1, true);
             return;
         }
         const now = performance.now();
@@ -89,7 +88,7 @@ export class LivePositionInterpolator {
             ring.push(p, now);
             this.rings.set(p.deviceId, ring);
         }
-        this.pushFrame(1, true);
+        // Map layer updated by LiveMap.flushPositionsToMapLayer (positionsRef) — avoid RAF overwriting snap.
     }
 
     /** SSE / HTTP snapshot — append to per-device rings. */

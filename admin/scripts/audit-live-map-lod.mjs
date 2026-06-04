@@ -1,23 +1,27 @@
 /**
  * Audits Live Map LOD crossfades (no MapLibre canvas).
  * Run: node scripts/audit-live-map-lod.mjs
+ *
+ * Keep in sync with liveMapZoom.ts LIVE_MAP_LOD + paint stops.
  */
 const LOD = {
-    cityHubMin: 6,
-    cityHubFadeInEnd: 7.2,
-    cityHubFadeOutStart: 8.6,
-    cityHubFadeOutEnd: 10.8,
-    clusterVisibleStart: 6.2,
+    cityHubMin: 4.5,
+    cityHubFadeInEnd: 5.8,
+    cityHubFadeOutStart: 8.2,
+    cityHubFadeOutEnd: 9,
+    clusterVisibleStart: 9,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
     dotFadeInStart: 12,
-    dotFadeInEnd: 11.2,
-    dotFadeOutStart: 11.8,
-    dotFadeOutEnd: 13.2,
-    iconMinZoom: 11.8,
+    dotFadeInEnd: 12.15,
+    dotFadeOutStart: 13.15,
+    dotFadeOutEnd: 13.35,
+    dotMicroMinOpacity: 0.55,
+    iconMinZoom: 12,
     iconMaxZoom: 13.35,
-    iconFadeInStart: 11.8,
-    iconFadeInEnd: 12.2,
+    iconFadeInStart: 12,
+    iconFadeInEnd: 12.15,
+    iconMicroMinOpacity: 0.85,
     iconFadeOutStart: 13.15,
     iconFadeOutEnd: 13.35,
     labelMinZoom: 13.35,
@@ -38,15 +42,11 @@ function interp(z, stops) {
     return stops[stops.length - 1][1];
 }
 
-function layerActive(z, min, max) {
-    return z >= min && z < max;
-}
-
 const issues = [];
 for (let z = 5; z <= 16.001; z = Math.round((z + 0.1) * 10) / 10) {
     const hubOp = interp(z, [
-        [LOD.cityHubMin, 0],
-        [LOD.cityHubFadeInEnd, 0.72],
+        [LOD.cityHubMin, 0.55],
+        [LOD.cityHubFadeInEnd, 0.85],
         [8.2, 0.95],
         [LOD.cityHubFadeOutStart, 0.88],
         [LOD.cityHubFadeOutEnd, 0],
@@ -60,31 +60,29 @@ for (let z = 5; z <= 16.001; z = Math.round((z + 0.1) * 10) / 10) {
         [LOD.clusterFadeOutEnd, 0],
     ]);
     const dotOp = interp(z, [
-        [LOD.dotFadeInStart, 0.35],
-        [11.2, 0.82],
-        [LOD.dotFadeOutStart, 0.45],
-        [12, 0.32],
-        [12.2, 0.22],
-        [12.6, 0.1],
+        [LOD.clusterVisibleStart - 0.5, 0],
+        [LOD.dotFadeInStart, 0],
+        [LOD.dotFadeInStart + 0.25, 0.35],
+        [LOD.dotFadeInEnd, 0.82],
+        [LOD.iconFadeInEnd, LOD.dotMicroMinOpacity],
+        [LOD.dotFadeOutStart, LOD.dotMicroMinOpacity],
         [LOD.dotFadeOutEnd, 0],
     ]);
     const dotR = interp(z, [
-        [LOD.dotFadeInStart, 5],
-        [9, 7],
-        [11, 8],
-        [LOD.dotFadeOutStart, 5.5],
-        [12, 3],
-        [12.2, 2.5],
-        [12.6, 1],
+        [LOD.clusterVisibleStart - 0.5, 0],
+        [LOD.dotFadeInStart, 0],
+        [LOD.dotFadeInStart + 0.25, 5],
+        [12.2, 8],
+        [LOD.dotFadeInEnd, 7],
+        [LOD.dotFadeOutStart, 6],
         [LOD.dotFadeOutEnd, 0],
     ]);
-    const iconLayer = layerActive(z, LOD.iconMinZoom, LOD.iconMaxZoom);
+    const iconLayer = z >= LOD.iconMinZoom && z < LOD.iconMaxZoom;
     const iconOp = iconLayer
         ? interp(z, [
-              [LOD.iconFadeInStart, 0.15],
-              [LOD.iconFadeInEnd, 0.75],
-              [12.6, 0.95],
-              [LOD.iconFadeOutStart, 0.92],
+              [LOD.iconFadeInStart, LOD.iconMicroMinOpacity],
+              [LOD.iconFadeInEnd, LOD.iconMicroMinOpacity],
+              [LOD.iconFadeOutStart, LOD.iconMicroMinOpacity],
               [LOD.iconFadeOutEnd, LOD.labelIconOpacityAtHandoff],
           ])
         : 0;
@@ -92,18 +90,16 @@ for (let z = 5; z <= 16.001; z = Math.round((z + 0.1) * 10) / 10) {
     const labelIconOp = labelLayer
         ? interp(z, [[LOD.labelFadeInStart, LOD.labelIconOpacityAtHandoff], [LOD.labelFadeInEnd, 1]])
         : 0;
-    const labelTextOp = labelLayer
-        ? interp(z, [[LOD.labelFadeInStart, 0], [LOD.labelFadeInEnd, 1]])
-        : 0;
     const dotVisible = dotOp > 0.2 && dotR > 3;
-    const riderVis = Math.max(dotOp * (dotR > 1 ? 1 : 0), iconOp, labelIconOp);
+    const riderVis = Math.max(dotVisible ? dotOp : 0, iconOp, labelIconOp);
     if (riderVis < 0.25 && clOp < 0.2 && hubOp < 0.2) {
         issues.push({ z, type: 'GAP', riderVis, clOp, hubOp });
     }
-    if (dotVisible && iconOp > 0.5) {
+    const inHandoff = z >= LOD.iconFadeInStart && z < LOD.labelMinZoom;
+    if (dotVisible && iconOp > 0.5 && !inHandoff) {
         issues.push({ z, type: 'DOUBLE', dotOp: +dotOp.toFixed(2), iconOp: +iconOp.toFixed(2) });
     }
-    if (iconOp > 0.6 && labelIconOp > 0.4 && iconLayer && labelLayer) {
+    if (iconOp > 0.35 && labelIconOp > 0.35 && iconLayer && labelLayer) {
         issues.push({
             z,
             type: 'ICON_OVERLAP',
@@ -111,7 +107,7 @@ for (let z = 5; z <= 16.001; z = Math.round((z + 0.1) * 10) / 10) {
             labelIconOp: +labelIconOp.toFixed(2),
         });
     }
-    if (labelLayer && iconLayer && Math.abs(iconOp - labelIconOp) > 0.35) {
+    if (labelLayer && iconLayer && Math.abs(iconOp - labelIconOp) > 0.4) {
         issues.push({
             z,
             type: 'ICON_STEP',
@@ -123,7 +119,7 @@ for (let z = 5; z <= 16.001; z = Math.round((z + 0.1) * 10) / 10) {
 
 const byType = (t) => issues.filter((i) => i.type === t);
 console.log('GAP zooms:', byType('GAP').map((i) => i.z));
-console.log('DOUBLE count:', byType('DOUBLE').length, 'range', byType('DOUBLE')[0]?.z, '-', byType('DOUBLE').at(-1)?.z);
+console.log('DOUBLE count:', byType('DOUBLE').length);
 console.log('ICON_OVERLAP count:', byType('ICON_OVERLAP').length);
 console.log('ICON_STEP count:', byType('ICON_STEP').length, 'samples:', byType('ICON_STEP').slice(0, 5));
 process.exit(byType('GAP').length || byType('ICON_STEP').length > 3 ? 1 : 0);

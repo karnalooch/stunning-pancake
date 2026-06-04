@@ -1,8 +1,12 @@
-/** Synthetic telemetry for Live Map E2E (Warsaw grid + city_counts). */
+/** Synthetic telemetry for Live Map E2E (city grids + city_counts). */
 
-const WARSAW = { lng: 21.0122, lat: 52.2297 };
+export const WARSAW = { lng: 21.0122, lat: 52.2297 };
+export const KRAKOW = { lng: 19.945, lat: 50.0647 };
 
-export function buildMockLivePositions(count = 48): Array<Record<string, unknown>> {
+export function buildMockLivePositionsNear(
+    center: { lng: number; lat: number },
+    count = 48,
+): Array<Record<string, unknown>> {
     const positions: Array<Record<string, unknown>> = [];
     const cols = 8;
     const step = 0.004;
@@ -10,11 +14,11 @@ export function buildMockLivePositions(count = 48): Array<Record<string, unknown
         const row = Math.floor(i / cols);
         const col = i % cols;
         positions.push({
-            deviceId: `e2e-athlete-${i + 1}`,
+            deviceId: `e2e-athlete-${center.lat}-${i + 1}`,
             name: `Athlete ${i + 1}`,
             type: i % 3 === 0 ? 'running' : 'cycling',
-            lat: WARSAW.lat + (row - 3) * step,
-            lng: WARSAW.lng + (col - 3.5) * step,
+            lat: center.lat + (row - 3) * step,
+            lng: center.lng + (col - 3.5) * step,
             speed: 2.5 + (i % 7) * 0.4,
             course: (i * 37) % 360,
             ride_state: 'ACTIVE',
@@ -22,6 +26,15 @@ export function buildMockLivePositions(count = 48): Array<Record<string, unknown
         });
     }
     return positions;
+}
+
+/** @deprecated use buildMockLivePositionsNear(WARSAW) */
+export function buildMockLivePositions(count = 48): Array<Record<string, unknown>> {
+    return buildMockLivePositionsNear(WARSAW, count);
+}
+
+export function buildMockLivePositionsKrakow(count = 45): Array<Record<string, unknown>> {
+    return buildMockLivePositionsNear(KRAKOW, count);
 }
 
 export const MOCK_CITY_COUNTS: Record<string, number> = {
@@ -37,15 +50,36 @@ export const MOCK_CITY_COUNTS: Record<string, number> = {
     siedlce: 0,
 };
 
-export function mockLiveTelemetryBody(detail: string | null): object {
+/** Pick mock grid from bbox center (Kraków vs Warszawa) for viewport-aligned E2E. */
+export function mockPositionsForBbox(bbox: string | null | undefined): Array<Record<string, unknown>> {
+    if (!bbox) return buildMockLivePositions();
+    const parts = bbox.split(',').map((s) => Number.parseFloat(s.trim()));
+    if (parts.length !== 4 || parts.some((n) => !Number.isFinite(n))) {
+        return buildMockLivePositions();
+    }
+    const [west, south, east, north] = parts;
+    const clng = (west + east) / 2;
+    const clat = (south + north) / 2;
+    if (clat < 51.2 && clng < 20.5) {
+        return buildMockLivePositionsKrakow(45);
+    }
+    return buildMockLivePositions();
+}
+
+export function mockLiveTelemetryBody(detail: string | null, bbox?: string | null): object {
+    const positions = mockPositionsForBbox(bbox ?? null);
+    const bike = positions.filter((p) => (p.type as string) !== 'running').length;
+    const run = positions.length - bike;
     const meta = {
         ride_on_map: 48,
-        viewport_bike: 32,
-        viewport_run: 16,
+        positions_returned: positions.length,
+        viewport_returned: positions.length,
+        viewport_bike: bike,
+        viewport_run: run,
         city_counts: MOCK_CITY_COUNTS,
     };
     if (detail === 'summary') {
         return { positions: [], meta };
     }
-    return { positions: buildMockLivePositions(), meta };
+    return { positions, meta };
 }
