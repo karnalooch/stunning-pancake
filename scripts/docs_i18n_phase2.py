@@ -83,6 +83,15 @@ def legacy_stub(title: str, pl_canonical: str, en_path: str) -> str:
     en_name = Path(en_path).name
     pl_href = pl_canonical.removeprefix("docs/pl/")
     en_href = en_path.removeprefix("docs/en/")
+    # Root legacy stubs live in docs/ — use relative en/ pl/ not ../en/
+    if "/" not in pl_href:
+        pl_link = f"pl/{pl_href}"
+        en_link = f"en/{en_href}"
+        en_trans = f"en/{en_href}"
+    else:
+        pl_link = f"../pl/{pl_href}"
+        en_link = f"../en/{en_href}"
+        en_trans = f"../en/{en_href}"
     return f"""# {title}
 
 | | |
@@ -91,12 +100,12 @@ def legacy_stub(title: str, pl_canonical: str, en_path: str) -> str:
 | **Owner role** | Documentation maintainer |
 | **Last reviewed** | 2026-06-04 |
 | **lang** | pl |
-| **translation** | [English](../en/{en_href}) |
+| **translation** | [English]({en_trans}) |
 | **canonical_path** | {pl_canonical} |
 | **locale_redirect** | phase-2 |
 
-> **Przekierowanie (faza 2):** Kanoniczna treść PL — [{pl_name}](../pl/{pl_href}).  
-> English — [{en_name}](../en/{en_href}).
+> **Przekierowanie (faza 2):** Kanoniczna treść PL — [{pl_name}]({pl_link}).  
+> English — [{en_name}]({en_link}).
 
 ---
 
