@@ -305,8 +305,8 @@ export function installLiveMapLayers(
                     'interpolate', ['linear'], ['zoom'],
                     LOD.cityHubMin, 18,
                     7.5, 22,
-                    9, 26,
                     LOD.cityHubFadeOutStart, 24,
+                    9, 26,
                 ],
                 'circle-color': ['get', 'color'],
                 'circle-opacity': [
