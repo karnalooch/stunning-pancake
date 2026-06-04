@@ -118,6 +118,8 @@ export const LiveMap: React.FC = () => {
     const [zoomMode, setZoomMode] = useState('');
     const [mapZoom, setMapZoom] = useState<number | null>(null);
     const [liveFetchPaused, setLiveFetchPaused] = useState(false);
+    const [ingestEngaged, setIngestEngaged] = useState(false);
+    const ingestPollMultRef = useRef(1);
 
     useEffect(() => {
         if (isAuthenticated && (token || hasStoredSession())) {
@@ -231,6 +233,14 @@ export const LiveMap: React.FC = () => {
         setOnlineCount((prev) => (riding !== prev ? riding : prev));
         const warming = typeof meta?.ride_warming === 'number' ? meta.ride_warming : 0;
         setRideWarming((prev) => (warming !== prev ? warming : prev));
+
+        const engaged = Boolean(meta?.ingest_engaged ?? meta?.live_read_throttled);
+        setIngestEngaged((prev) => (engaged !== prev ? engaged : prev));
+        const pollMult =
+            typeof meta?.live_poll_interval_multiplier === 'number'
+                ? meta.live_poll_interval_multiplier
+                : 1;
+        if (pollMult >= 1) ingestPollMultRef.current = pollMult;
 
         const bikeMeta = meta?.viewport_bike;
         const runMeta = meta?.viewport_run;
@@ -568,7 +578,12 @@ export const LiveMap: React.FC = () => {
             await fetchPositionsRef.current();
             const map = mapRef.current;
             const zoom = map ? map.getZoom() : DEFAULT_ZOOM;
-            const delay = pollIntervalForZoom(zoom, lastRefreshRef.current);
+            const delay = pollIntervalForZoom(
+                zoom,
+                lastRefreshRef.current,
+                ingestEngaged,
+                ingestPollMultRef.current,
+            );
             pollTimerRef.current = setTimeout(loop, delay);
         };
         loop();
@@ -576,7 +591,7 @@ export const LiveMap: React.FC = () => {
             if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
             pollTimerRef.current = null;
         };
-    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused]);
+    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused, ingestEngaged]);
 
     useEffect(() => {
         const map = mapRef.current;
@@ -626,6 +641,13 @@ export const LiveMap: React.FC = () => {
                     )}
                     {zoomMode && mapReady && (
                         <Badge variant="outline" color="grape" radius="sm" size="sm">{zoomMode}</Badge>
+                    )}
+                    {ingestEngaged && (
+                        <Tooltip label="Ochrona ingest aktywna — mapa odświeża się rzadziej (ADR 011)">
+                            <Badge variant="light" color="orange" radius="sm" size="sm">
+                                Ingest load
+                            </Badge>
+                        </Tooltip>
                     )}
                     {lastRefreshMs != null && onlineCount > 0 && (
                         <Badge variant="outline" color="gray" radius="sm" size="sm">{lastRefreshMs}ms</Badge>

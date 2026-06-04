@@ -102,7 +102,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | Gate release OSS/GDPR/ToS |
 | [MAP_BASEMAP_LICENSING.md](./compliance/MAP_BASEMAP_LICENSING.md) | Licencje map bazowych |
 
-### `docs/adr/` (001–010)
+### `docs/adr/` (001–011)
 
 | ADR | Temat |
 |-----|--------|
@@ -116,6 +116,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [008](./adr/008-backend-strategy.md) | Backend strategy |
 | [009](./adr/009-admin-user-management-and-event-matchmaking.md) | Admin users / events |
 | [010](./adr/010-simulator-redis-celery.md) | Simulator Redis/Celery |
+| [011](./adr/011-telemetry-ingest-durability-under-load.md) | Telemetry ingest durability (burst); mobile-side guarantees (P0/P1) |
 
 ### `docs/reports/` — [README](./reports/README.md)
 

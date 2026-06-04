@@ -15,7 +15,7 @@ Burst protection is **automatic** by default (`EVENT_BURST_MODE=auto`). You do n
 >
 > Request flow: `request → global guard → event burst`. See [Always-on global protection](#always-on-global-protection-platform-wide) and [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md).
 
-**Powiązane:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) · [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md)
+**Powiązane:** [operations/SIMULATOR.md](./operations/SIMULATOR.md) · [SCALE_TEST_300K.md](./SCALE_TEST_300K.md) · [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md) · [adr/011-telemetry-ingest-durability-under-load.md](./adr/011-telemetry-ingest-durability-under-load.md) (proposed)
 
 ## Always-on global protection (platform-wide)
 

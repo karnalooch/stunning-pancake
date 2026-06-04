@@ -2,16 +2,23 @@
  * GPS sync persistence — pure helpers + MMKV keys (testable without native MMKV).
  */
 
+export const GPS_BUFFER_SCHEMA_VERSION = 2;
+
 export const GPS_STORAGE_KEYS = {
   BUFFER: 'gps_buffer',
   BUFFER_OVERFLOW: 'gps_buffer_overflow',
   OUTBOX: 'gps_outbox',
+  BUFFER_SCHEMA: 'gps_buffer_schema',
+  FILTER_STATE: 'gps_filter_state',
+  INGEST_PAUSE_UNTIL: 'gps_ingest_pause_until',
   TRACKING_STATE: 'tracking_state',
   CURRENT_STATS: 'current_stats',
   RECOVERY_PENDING: 'tracking_recovery_pending',
   PENDING_SESSION: 'pending_session',
   PENDING_METRICS: 'gps_pending_metrics',
 } as const;
+
+export type OutboxState = 'pending' | 'syncing' | 'acked';
 
 export const MAX_BUFFER_SIZE = 2000;
 export const OVERFLOW_CHUNK_SIZE = 500;
@@ -27,6 +34,9 @@ export interface GpsPoint {
   speed_ms: number;
   accuracy_m: number;
   timestamp: number;
+  seq?: number;
+  idempotency_key?: string;
+  segment_break?: boolean;
 }
 
 export interface OutboxEntry {
@@ -34,6 +44,10 @@ export interface OutboxEntry {
   points: GpsPoint[];
   created_at: number;
   attempts: number;
+  state: OutboxState;
+  activity_id?: number | null;
+  point_count?: number;
+  max_seq?: number;
 }
 
 export interface PendingSessionPayload {
@@ -61,6 +75,12 @@ export interface TrackingStats {
   speedMs: number;
   batteryPct: number;
   pendingPoints: number;
+  /** Wall-clock ride seconds when tracking (honest UX, ADR 011). */
+  rideWallClockS?: number;
+  /** Sum of intervals between accepted GPS samples. */
+  gpsActiveTimeS?: number;
+  ingestPaused?: boolean;
+  lastAckAt?: number | null;
 }
 
 export interface GpsStorageAdapter {
@@ -76,6 +96,42 @@ function parseJson<T>(raw: string | undefined | null, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function migratePoint(point: GpsPoint, seq: number, activityId: number | null): GpsPoint {
+  if (point.seq != null && point.idempotency_key) return point;
+  const ts = point.timestamp;
+  const nextSeq = point.seq ?? seq;
+  return {
+    ...point,
+    seq: nextSeq,
+    idempotency_key:
+      point.idempotency_key ??
+      `${activityId ?? 'na'}:${ts}:${nextSeq}`,
+  };
+}
+
+export function ensureBufferSchema(storage: GpsStorageAdapter): void {
+  const version = parseInt(
+    storage.getString(GPS_STORAGE_KEYS.BUFFER_SCHEMA) ?? '1',
+    10,
+  );
+  if (version >= GPS_BUFFER_SCHEMA_VERSION) return;
+
+  const state = loadTrackingState(storage);
+  const activityId = state?.activityId ?? null;
+  let seq = 0;
+  const buf = loadBuffer(storage).map((p) => migratePoint(p, ++seq, activityId));
+  if (buf.length > 0) saveBuffer(storage, buf);
+
+  const outbox = loadOutbox(storage).map((entry) => ({
+    ...entry,
+    state: entry.state ?? 'pending',
+    points: entry.points.map((p) => migratePoint(p, ++seq, entry.activity_id ?? activityId)),
+  }));
+  if (outbox.length > 0) saveOutbox(storage, outbox);
+
+  storage.set(GPS_STORAGE_KEYS.BUFFER_SCHEMA, String(GPS_BUFFER_SCHEMA_VERSION));
 }
 
 export function loadBuffer(storage: GpsStorageAdapter): GpsPoint[] {
@@ -148,8 +204,71 @@ export function appendToOutbox(
   entry: OutboxEntry,
 ): void {
   const outbox = loadOutbox(storage);
-  outbox.push(entry);
+  outbox.push({
+    ...entry,
+    state: entry.state ?? 'pending',
+    point_count: entry.point_count ?? entry.points.length,
+  });
   saveOutbox(storage, outbox);
+}
+
+export function updateOutboxEntry(
+  storage: GpsStorageAdapter,
+  clientBatchId: string,
+  patch: Partial<OutboxEntry>,
+): void {
+  saveOutbox(
+    storage,
+    loadOutbox(storage).map((e) =>
+      e.client_batch_id === clientBatchId ? { ...e, ...patch } : e,
+    ),
+  );
+}
+
+export function nextPointSeq(storage: GpsStorageAdapter, activityId: number): number {
+  let maxSeq = 0;
+  for (const p of loadBuffer(storage)) {
+    if (p.activity_id === activityId && p.seq != null) maxSeq = Math.max(maxSeq, p.seq);
+  }
+  for (const e of loadOutbox(storage)) {
+    if (e.activity_id === activityId) {
+      if (e.max_seq != null) maxSeq = Math.max(maxSeq, e.max_seq);
+      for (const p of e.points) {
+        if (p.seq != null) maxSeq = Math.max(maxSeq, p.seq);
+      }
+    }
+  }
+  return maxSeq + 1;
+}
+
+export function buildGpsPoint(
+  base: Omit<GpsPoint, 'seq' | 'idempotency_key'>,
+  seq: number,
+): GpsPoint {
+  return {
+    ...base,
+    seq,
+    idempotency_key: `${base.activity_id ?? 'na'}:${base.timestamp}:${seq}`,
+  };
+}
+
+export function getIngestPauseUntil(storage: GpsStorageAdapter): number {
+  const raw = storage.getString(GPS_STORAGE_KEYS.INGEST_PAUSE_UNTIL);
+  if (!raw) return 0;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function setIngestPauseUntil(storage: GpsStorageAdapter, untilMs: number): void {
+  if (untilMs <= Date.now()) {
+    storage.delete(GPS_STORAGE_KEYS.INGEST_PAUSE_UNTIL);
+  } else {
+    storage.set(GPS_STORAGE_KEYS.INGEST_PAUSE_UNTIL, String(untilMs));
+  }
+}
+
+export function isIngestPaused(storage: GpsStorageAdapter): boolean {
+  return getIngestPauseUntil(storage) > Date.now();
 }
 
 export function removeOutboxEntry(

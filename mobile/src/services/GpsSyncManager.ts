@@ -12,29 +12,41 @@ import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
 import { api } from './apiClient';
 import {
+  acceptGpsPoint,
+  createGpsFilterState,
+  type GpsFilterState,
+} from './gpsQualityFilter';
+import {
   appendToBuffer,
   appendToOutbox,
+  buildGpsPoint,
   buildRouteCoordinates,
   clearBuffer,
   clearPendingSession,
   createClientBatchId,
+  ensureBufferSchema,
+  getIngestPauseUntil,
   GPS_STORAGE_KEYS,
   GpsPoint,
   GpsStorageAdapter,
+  isIngestPaused,
   loadBuffer,
   loadOutbox,
   isRecoveryPending,
   loadPendingSession,
   loadTrackingState,
   mergeRouteCoordinates,
+  nextPointSeq,
   OutboxEntry,
   pendingPointCount,
   PendingSessionPayload,
   removeOutboxEntry,
   removePointsFromBuffer,
   savePendingSession,
+  setIngestPauseUntil,
   setRecoveryPending,
   TrackingState,
+  updateOutboxEntry,
   type TrackingStats,
 } from './gpsSyncStorage';
 
@@ -44,6 +56,110 @@ const TELEMETRY_URL =
 const BATCH_INTERVAL_MS = 30_000;
 const MAX_RETRIES = 5;
 const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
+
+let _ingestPauseUntil = 0;
+let _lastAckAt: number | null = null;
+const _inflightByActivity = new Map<number, Promise<boolean>>();
+const _filterStateByActivity = new Map<number, GpsFilterState>();
+
+function loadFilterState(storage: GpsStorageAdapter, activityId: number): GpsFilterState {
+  let state = _filterStateByActivity.get(activityId);
+  if (state) return state;
+  const raw = storage.getString(GPS_STORAGE_KEYS.FILTER_STATE);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, GpsFilterState>;
+      if (parsed[String(activityId)]) {
+        state = parsed[String(activityId)];
+        _filterStateByActivity.set(activityId, state!);
+        return state!;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  state = createGpsFilterState();
+  _filterStateByActivity.set(activityId, state);
+  return state;
+}
+
+function persistFilterStates(storage: GpsStorageAdapter): void {
+  const payload: Record<string, GpsFilterState> = {};
+  _filterStateByActivity.forEach((v, k) => {
+    payload[String(k)] = v;
+  });
+  storage.set(GPS_STORAGE_KEYS.FILTER_STATE, JSON.stringify(payload));
+}
+
+export interface IngestAckResult {
+  acked: boolean;
+  inserted: number;
+  queued?: boolean;
+  deduped?: boolean;
+}
+
+function parseIngestAck(data: unknown, sentCount: number): IngestAckResult {
+  if (!data || typeof data !== 'object') {
+    return { acked: false, inserted: 0 };
+  }
+  const body = data as Record<string, unknown>;
+  if (body.deduped === true) {
+    return { acked: true, inserted: 0, deduped: true };
+  }
+  if (body.acked === true) {
+    const inserted =
+      typeof body.inserted === 'number' ? body.inserted : sentCount;
+    return {
+      acked: true,
+      inserted,
+      queued: body.queued === true,
+    };
+  }
+  const status = body.status;
+  if (status === 'accepted' || status === 'dropped_privacy') {
+    const inserted =
+      typeof body.inserted === 'number' ? body.inserted : sentCount;
+    return { acked: true, inserted, queued: body.queued === true };
+  }
+  return { acked: false, inserted: 0 };
+}
+
+function applyGlobalIngestPause(headers: Record<string, unknown> | undefined): void {
+  if (!headers) return;
+  const retryAfter = headers['retry-after'] ?? headers['Retry-After'];
+  const retrySec =
+    typeof retryAfter === 'string'
+      ? parseInt(retryAfter, 10)
+      : typeof retryAfter === 'number'
+        ? retryAfter
+        : 0;
+  if (!retrySec || !Number.isFinite(retrySec)) return;
+  const until = Date.now() + retrySec * 1000;
+  _ingestPauseUntil = Math.max(_ingestPauseUntil, until);
+  const storage = getStorage();
+  if (storage) setIngestPauseUntil(storage, until);
+}
+
+function isGlobalIngestPaused(): boolean {
+  if (_ingestPauseUntil > Date.now()) return true;
+  const storage = getStorage();
+  return storage ? isIngestPaused(storage) : false;
+}
+
+export function getGpsSyncStatus(): {
+  pendingPoints: number;
+  ingestPaused: boolean;
+  pauseUntil: number;
+  lastAckAt: number | null;
+} {
+  const storage = getStorage();
+  return {
+    pendingPoints: storage ? pendingPointCount(storage) : 0,
+    ingestPaused: isGlobalIngestPaused(),
+    pauseUntil: Math.max(_ingestPauseUntil, storage ? getIngestPauseUntil(storage) : 0),
+    lastAckAt: _lastAckAt,
+  };
+}
 
 export enum PollingResolution {
   HYPERSCALE = 'HYPERSCALE',
@@ -97,48 +213,120 @@ export interface RecoveryResult {
 async function postTelemetryBatch(
   points: GpsPoint[],
   clientBatchId: string,
-): Promise<void> {
-  await axios.post(
-    `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
-    { packets: points, client_batch_id: clientBatchId },
-    { timeout: 15_000 },
+): Promise<IngestAckResult> {
+  const activityId = points[0]?.activity_id ?? null;
+  const maxSeq = points.reduce(
+    (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
+    0,
   );
+  const res = await axios.post(
+    `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
+    {
+      packets: points,
+      client_batch_id: clientBatchId,
+      point_count: points.length,
+      max_seq: maxSeq || undefined,
+      activity_id: activityId,
+    },
+    { timeout: 15_000, validateStatus: (s) => s === 202 || s === 201 },
+  );
+  return parseIngestAck(res.data, points.length);
 }
 
 async function uploadPointsWithRetry(
   points: GpsPoint[],
   clientBatchId: string,
   attempt = 1,
-): Promise<boolean> {
-  if (points.length === 0) return true;
+): Promise<IngestAckResult> {
+  if (points.length === 0) return { acked: true, inserted: 0 };
+  if (isGlobalIngestPaused()) {
+    return { acked: false, inserted: 0 };
+  }
+
+  const activityId = points[0]?.activity_id;
+  if (activityId != null) {
+    const inflight = _inflightByActivity.get(activityId);
+    if (inflight) {
+      const ok = await inflight;
+      return ok
+        ? { acked: true, inserted: points.length }
+        : { acked: false, inserted: 0 };
+    }
+    const promise = uploadPointsWithRetryInner(points, clientBatchId, attempt);
+    _inflightByActivity.set(activityId, promise.then((r) => r.acked));
+    try {
+      return await promise;
+    } finally {
+      _inflightByActivity.delete(activityId);
+    }
+  }
+  return uploadPointsWithRetryInner(points, clientBatchId, attempt);
+}
+
+async function uploadPointsWithRetryInner(
+  points: GpsPoint[],
+  clientBatchId: string,
+  attempt = 1,
+): Promise<IngestAckResult> {
+  if (points.length === 0) return { acked: true, inserted: 0 };
   try {
-    await postTelemetryBatch(points, clientBatchId);
-    return true;
+    const ack = await postTelemetryBatch(points, clientBatchId);
+    if (ack.acked) {
+      _lastAckAt = Date.now();
+      return ack;
+    }
+    return { acked: false, inserted: 0 };
   } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const status = err.response?.status;
+      const headers = err.response?.headers as Record<string, unknown> | undefined;
+      if (status === 429 || status === 503) {
+        applyGlobalIngestPause(headers);
+        return { acked: false, inserted: 0 };
+      }
+    }
     if (attempt < MAX_RETRIES) {
-      const delay = Math.min(2 ** attempt * 1_000, 30_000);
+      const jitter = Math.random() * 500;
+      const delay = Math.min(2 ** attempt * 1_000, 30_000) + jitter;
       await new Promise((resolve) => setTimeout(resolve, delay));
-      return uploadPointsWithRetry(points, clientBatchId, attempt + 1);
+      return uploadPointsWithRetryInner(points, clientBatchId, attempt + 1);
     }
     firebaseCapture(err, 'GPS_UPLOAD_FAILED');
-    return false;
+    return { acked: false, inserted: 0 };
   }
 }
 
 async function flushOutboxEntry(entry: OutboxEntry): Promise<boolean> {
-  const ok = await uploadPointsWithRetry(entry.points, entry.client_batch_id);
-  if (ok) {
-    const storage = getStorage();
-    if (storage) removeOutboxEntry(storage, entry.client_batch_id);
+  const storage = getStorage();
+  if (!storage) return false;
+  if (entry.state === 'acked') {
+    removeOutboxEntry(storage, entry.client_batch_id);
     return true;
   }
+  if (isGlobalIngestPaused()) return false;
+
+  updateOutboxEntry(storage, entry.client_batch_id, { state: 'syncing' });
+  const ack = await uploadPointsWithRetry(entry.points, entry.client_batch_id);
+  if (ack.acked) {
+    updateOutboxEntry(storage, entry.client_batch_id, { state: 'acked' });
+    removeOutboxEntry(storage, entry.client_batch_id);
+    return true;
+  }
+  updateOutboxEntry(storage, entry.client_batch_id, {
+    state: 'pending',
+    attempts: entry.attempts + 1,
+  });
   return false;
 }
 
 export async function processGpsOutbox(): Promise<void> {
   const storage = getStorage();
   if (!storage) return;
-  for (const entry of loadOutbox(storage)) {
+  ensureBufferSchema(storage);
+  const pending = loadOutbox(storage).filter(
+    (e) => e.state === 'pending' || e.state === 'syncing',
+  );
+  for (const entry of pending) {
     await flushOutboxEntry(entry);
   }
 }
@@ -146,26 +334,43 @@ export async function processGpsOutbox(): Promise<void> {
 async function uploadBufferSnapshot(): Promise<void> {
   const storage = getStorage();
   if (!storage) return;
+  ensureBufferSchema(storage);
   const points = loadBuffer(storage);
   if (points.length === 0) return;
+  if (isGlobalIngestPaused()) return;
 
   const clientBatchId = createClientBatchId();
-  const ok = await uploadPointsWithRetry([...points], clientBatchId);
-  if (ok) {
-    removePointsFromBuffer(storage, points);
-    return;
-  }
+  const activityId = points[0]?.activity_id ?? null;
+  const maxSeq = points.reduce(
+    (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
+    0,
+  );
 
   appendToOutbox(storage, {
     client_batch_id: clientBatchId,
     points: [...points],
     created_at: Date.now(),
-    attempts: MAX_RETRIES,
+    attempts: 0,
+    state: 'syncing',
+    activity_id: activityId,
+    point_count: points.length,
+    max_seq: maxSeq || undefined,
   });
   removePointsFromBuffer(storage, points);
+
+  const ack = await uploadPointsWithRetry([...points], clientBatchId);
+  if (ack.acked) {
+    removeOutboxEntry(storage, clientBatchId);
+    return;
+  }
+
+  updateOutboxEntry(storage, clientBatchId, {
+    state: 'pending',
+    attempts: 1,
+  });
   if (__DEV__) {
     console.warn(
-      `[GPS] batch moved to outbox (${points.length} pts), pending=${pendingPointCount(storage)}`,
+      `[GPS] batch retained in outbox (${points.length} pts), pending=${pendingPointCount(storage)}`,
     );
   }
 }
@@ -279,6 +484,7 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
   };
   if (!storage) return empty;
 
+  ensureBufferSchema(storage);
   await retryPendingSessionCreate();
   await processGpsOutbox();
   await uploadBufferSnapshot();
@@ -452,10 +658,12 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
     if (!state?.isTracking || !state.activityId) return;
 
+    ensureBufferSchema(safeStorage);
+
     locations.forEach((loc) => {
       const currentStats = JSON.parse(
         safeStorage.getString(GPS_STORAGE_KEYS.CURRENT_STATS) ||
-          '{"distanceM":0,"elevationGainM":0}',
+          '{"distanceM":0,"elevationGainM":0,"gpsActiveTimeS":0}',
       );
 
       let distanceIncrement = 0;
@@ -475,6 +683,35 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         elevationIncrement = loc.coords.altitude - state.lastAltitude;
       }
 
+      const filterState = loadFilterState(safeStorage, state.activityId);
+      const prevAcceptedTs = filterState.lastAccepted?.timestamp ?? 0;
+      const seq = nextPointSeq(safeStorage, state.activityId);
+      const candidate = buildGpsPoint(
+        {
+          device_id: state.deviceId,
+          user_id: state.userId,
+          activity_id: state.activityId,
+          lat: loc.coords.latitude,
+          lon: loc.coords.longitude,
+          altitude_m: loc.coords.altitude ?? 0,
+          speed_ms: loc.coords.speed ?? 0,
+          accuracy_m: loc.coords.accuracy ?? 5,
+          timestamp: loc.timestamp / 1000,
+        },
+        seq,
+      );
+      if (!acceptGpsPoint(candidate, filterState)) {
+        persistFilterStates(safeStorage);
+        return;
+      }
+      persistFilterStates(safeStorage);
+
+      const gpsActiveTimeS =
+        (currentStats.gpsActiveTimeS ?? 0) +
+        (prevAcceptedTs > 0
+          ? Math.max(0, candidate.timestamp - prevAcceptedTs)
+          : 0);
+
       const newStats = {
         distanceM: currentStats.distanceM + (distanceIncrement > 2 ? distanceIncrement : 0),
         elevationGainM: currentStats.elevationGainM + elevationIncrement,
@@ -483,7 +720,13 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           (loc.coords.speed ?? 0) > 0.5 ? 1000 / (loc.coords.speed ?? 0) : 0,
         batteryPct: 1.0,
         pendingPoints: 0,
+        gpsActiveTimeS,
       };
+
+      appendToBuffer(safeStorage, {
+        ...candidate,
+        segment_break: filterState.segmentBreak || undefined,
+      });
 
       safeStorage.set(GPS_STORAGE_KEYS.CURRENT_STATS, JSON.stringify(newStats));
       safeStorage.set(
@@ -494,18 +737,6 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
           lastAltitude: loc.coords.altitude,
         } satisfies TrackingState),
       );
-
-      appendToBuffer(safeStorage, {
-        device_id: state.deviceId,
-        user_id: state.userId,
-        activity_id: state.activityId,
-        lat: loc.coords.latitude,
-        lon: loc.coords.longitude,
-        altitude_m: loc.coords.altitude ?? 0,
-        speed_ms: loc.coords.speed ?? 0,
-        accuracy_m: loc.coords.accuracy ?? 5,
-        timestamp: loc.timestamp / 1000,
-      });
     });
   }
 });
@@ -554,9 +785,20 @@ export class GpsSyncManager {
       storage.getString(GPS_STORAGE_KEYS.CURRENT_STATS) ||
         '{"distanceM":0,"elevationGainM":0,"speedMs":0,"paceSecPerKm":0}',
     );
+    const tracking = loadTrackingState(storage);
+    const wallStart = storage.getString('ride_wall_start_ms');
+    const rideWallClockS =
+      wallStart && tracking?.isTracking
+        ? Math.max(0, Math.floor((Date.now() - parseInt(wallStart, 10)) / 1000))
+        : undefined;
+
     this._onUpdate({
       ...currentStats,
       pendingPoints: pendingPointCount(storage),
+      ingestPaused: isGlobalIngestPaused(),
+      lastAckAt: _lastAckAt,
+      rideWallClockS,
+      gpsActiveTimeS: currentStats.gpsActiveTimeS,
     });
   }
 
@@ -599,6 +841,7 @@ export class GpsSyncManager {
         }),
       );
       setRecoveryPending(storage, false);
+      storage.set('ride_wall_start_ms', String(Date.now()));
     }
 
     const config = RESOLUTION_CONFIG[resolution];
@@ -637,7 +880,7 @@ export class GpsSyncManager {
     });
   }
 
-  async stopTracking(): Promise<void> {
+  async stopTracking(): Promise<{ finalized: boolean; pendingUpload: number }> {
     stopGpsBackgroundSync();
     if (this._statsCheckTimer) clearInterval(this._statsCheckTimer);
 
@@ -648,6 +891,7 @@ export class GpsSyncManager {
     await processGpsOutbox();
     await uploadBufferSnapshot();
 
+    const pendingUpload = storage ? pendingPointCount(storage) : 0;
     const allPoints = storage ? loadBuffer(storage) : [];
     const stats = storage
       ? JSON.parse(
@@ -660,12 +904,18 @@ export class GpsSyncManager {
       await syncRoutePath(activityId, allPoints);
     }
 
-    if (activityId) {
+    let finalized = false;
+    if (activityId && pendingUpload === 0) {
       await finalizeActivity(activityId, stats.distanceM ?? 0);
+      finalized = true;
+    } else if (activityId && pendingUpload > 0 && storage) {
+      setRecoveryPending(storage, true);
     }
 
     if (storage) {
-      clearBuffer(storage);
+      if (pendingUpload === 0) {
+        clearBuffer(storage);
+      }
       storage.set(
         GPS_STORAGE_KEYS.TRACKING_STATE,
         JSON.stringify({
@@ -676,12 +926,15 @@ export class GpsSyncManager {
             lastAltitude: null,
           }),
           isTracking: false,
-          activityId: null,
+          activityId: pendingUpload > 0 ? activityId : null,
         }),
       );
-      setRecoveryPending(storage, false);
+      if (pendingUpload === 0) {
+        setRecoveryPending(storage, false);
+      }
     }
 
     await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    return { finalized, pendingUpload };
   }
 }

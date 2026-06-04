@@ -105,6 +105,59 @@ jobs:
           python manage.py test --verbosity=2
 
   # ──────────────────────────────────────────
+  # Telemetry service: ingest guard + queue tests (ADR 011)
+  # ──────────────────────────────────────────
+  telemetry:
+    name: Telemetry (FastAPI / ADR 011)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install telemetry dependencies
+        run: |
+          pip install -r telemetry/requirements.txt -r telemetry/requirements-dev.txt
+
+      - name: Run telemetry unit tests
+        env:
+          DATABASE_URL: postgresql://sport_user:sport_pass@localhost:5432/sport_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          cd telemetry
+          python -m pytest test_ingest_guard.py test_ingest_guard_packets.py test_ingest_dedupe.py -q
+
+  # ──────────────────────────────────────────
+  # Mobile: GPS outbox + quality filters (ADR 011)
+  # ──────────────────────────────────────────
+  mobile-gps:
+    name: Mobile GPS (ADR 011)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: cd mobile && npm ci
+
+      - name: Run GPS resilience unit tests
+        run: |
+          cd mobile
+          npm test -- __tests__/services/gpsQualityFilter.test.ts __tests__/services/gpsSyncStorage.test.ts --ci
+
+  # ──────────────────────────────────────────
   # Admin Dashboard: Lint + Type Check + Build
   # ──────────────────────────────────────────
   admin:

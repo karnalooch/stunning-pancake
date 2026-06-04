@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 sys.path.insert(0, os.path.dirname(__file__))
+os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
 
 from main import BatchPacket, GpsPacket, _is_duplicate_batch, ingest_batch
 

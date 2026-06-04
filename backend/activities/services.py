@@ -573,11 +573,14 @@ class TelemetryService:
         return f"{cls.TELEMETRY_LIVE_CACHE_PREFIX}{digest}"
 
     @classmethod
-    def _get_live_cached(cls, key: str) -> tuple[list[dict], dict] | None:
+    def _get_live_cached(
+        cls, key: str, cache_ttl: int | None = None
+    ) -> tuple[list[dict], dict] | None:
         import json as _json
         from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
 
-        if TELEMETRY_LIVE_CACHE_TTL <= 0:
+        ttl = cache_ttl if cache_ttl is not None else TELEMETRY_LIVE_CACHE_TTL
+        if ttl <= 0:
             return None
         try:
             from core.redis_cluster import get_redis
@@ -593,18 +596,21 @@ class TelemetryService:
         return None
 
     @classmethod
-    def _set_live_cached(cls, key: str, positions: list[dict], meta: dict) -> None:
+    def _set_live_cached(
+        cls, key: str, positions: list[dict], meta: dict, cache_ttl: int | None = None
+    ) -> None:
         import json as _json
         from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
 
-        if TELEMETRY_LIVE_CACHE_TTL <= 0:
+        ttl = cache_ttl if cache_ttl is not None else TELEMETRY_LIVE_CACHE_TTL
+        if ttl <= 0:
             return
         try:
             from core.redis_cluster import get_redis
 
             get_redis().setex(
                 key,
-                TELEMETRY_LIVE_CACHE_TTL,
+                ttl,
                 _json.dumps({"positions": positions, "meta": {**meta, "cached": False}}),
             )
         except Exception:
@@ -884,7 +890,11 @@ class TelemetryService:
             resolve_telemetry_api_limit,
         )
 
+        from activities.telemetry_shard import apply_live_map_cap, live_map_read_policy
+
+        read_policy = live_map_read_policy()
         cap = resolve_telemetry_api_limit(limit, zoom)
+        cap = apply_live_map_cap(cap, read_policy)
         if cap <= 0:
             try:
                 from activities import simulator_state as sim_state
@@ -892,17 +902,29 @@ class TelemetryService:
                 active_riding = sim_state.get_live_ride_count()
             except Exception:
                 active_riding = 0
-            return [], {
+            meta_empty = {
                 "returned": 0,
                 "capped": False,
                 "redis_active": active_riding,
                 "active_riding": active_riding,
                 "source": "redis",
+                "ingest_engaged": read_policy.ingest_engaged,
+                "live_read_throttled": read_policy.ingest_engaged,
             }
+            if read_policy.ingest_engaged:
+                meta_empty["live_poll_interval_multiplier"] = read_policy.poll_interval_multiplier
+                meta_empty["live_detail_ceiling"] = read_policy.detail_ceiling
+            return [], meta_empty
+
+        from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
+
+        effective_cache_ttl = TELEMETRY_LIVE_CACHE_TTL
+        if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
+            effective_cache_ttl = max(TELEMETRY_LIVE_CACHE_TTL, read_policy.cache_ttl_seconds)
 
         cache_key = cls._live_cache_key(bbox, cap) if bbox else None
         if cache_key:
-            cached = cls._get_live_cached(cache_key)
+            cached = cls._get_live_cached(cache_key, effective_cache_ttl)
             if cached is not None:
                 return cached
 
@@ -912,7 +934,13 @@ class TelemetryService:
             "capped": False,
             "redis_active": 0,
             "source": "redis",
+            "ingest_engaged": read_policy.ingest_engaged,
+            "live_read_throttled": read_policy.ingest_engaged,
         }
+        if read_policy.ingest_engaged:
+            meta["live_poll_interval_multiplier"] = read_policy.poll_interval_multiplier
+            meta["live_detail_ceiling"] = read_policy.detail_ceiling
+            meta["live_cache_ttl_seconds"] = read_policy.cache_ttl_seconds
 
         try:
             r = get_redis()
@@ -925,7 +953,7 @@ class TelemetryService:
             )
             if positions:
                 if cache_key:
-                    cls._set_live_cached(cache_key, positions, meta)
+                    cls._set_live_cached(cache_key, positions, meta, effective_cache_ttl)
                 return positions, meta
         except Exception:
             pass
@@ -946,7 +974,7 @@ class TelemetryService:
             pass
 
         if cache_key and positions:
-            cls._set_live_cached(cache_key, positions, meta)
+            cls._set_live_cached(cache_key, positions, meta, effective_cache_ttl)
         return positions[:cap], meta
 
     @classmethod

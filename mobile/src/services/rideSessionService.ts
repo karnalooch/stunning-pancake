@@ -56,9 +56,11 @@ export async function startRideSession(options: {
   return activityId;
 }
 
-export async function stopRideSession(userId: number | null): Promise<void> {
+export async function stopRideSession(
+  userId: number | null,
+): Promise<{ finalized: boolean; pendingUpload: number }> {
   const manager = getRideGpsManager(userId);
-  await manager.stopTracking();
+  return manager.stopTracking();
 }
 
 /** After app relaunch — restore UI + background GPS if a ride was in progress. */

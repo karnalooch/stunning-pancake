@@ -96,7 +96,12 @@ export function limitForZoom(zoom: number): number {
     return 11000;
 }
 
-export function pollIntervalForZoom(zoom: number, lastRefreshMs: number | null): number {
+export function pollIntervalForZoom(
+    zoom: number,
+    lastRefreshMs: number | null,
+    ingestEngaged = false,
+    pollMultiplier = 1,
+): number {
     let base = 2200;
     if (zoom >= 14) base = 1100;
     else if (zoom >= 12.5) base = 1300;
@@ -105,7 +110,8 @@ export function pollIntervalForZoom(zoom: number, lastRefreshMs: number | null):
     else if (zoom >= 7) base = 2100;
     else base = 2400;
     if (lastRefreshMs && lastRefreshMs > 900) base += 400;
-    return Math.max(900, base);
+    const mult = ingestEngaged ? Math.max(1, pollMultiplier) : 1;
+    return Math.max(900, Math.round(base * mult));
 }
 
 export function clusterRadiusForZoom(zoom: number): number {

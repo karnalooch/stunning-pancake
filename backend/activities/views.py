@@ -465,6 +465,10 @@ class TelemetryLiveView(generics.GenericAPIView):
         except (TypeError, ValueError):
             zoom_param = None
 
+        from activities.telemetry_shard import live_map_read_policy
+
+        read_policy = live_map_read_policy()
+
         detail = (request.query_params.get("detail") or "").strip().lower()
         if detail not in ("summary", "standard", "full"):
             if zoom_param is not None and zoom_param < 7.5:
@@ -473,6 +477,12 @@ class TelemetryLiveView(generics.GenericAPIView):
                 detail = "standard"
             else:
                 detail = "full"
+
+        if read_policy.ingest_engaged and read_policy.detail_ceiling:
+            _rank = {"summary": 0, "standard": 1, "full": 2}
+            ceiling = read_policy.detail_ceiling
+            if _rank.get(detail, 2) > _rank.get(ceiling, 1):
+                detail = ceiling
 
         fetch_limit = limit or None
         if detail == "summary":
@@ -586,6 +596,13 @@ class TelemetryLiveView(generics.GenericAPIView):
                     "viewport_bike": viewport_bike,
                     "viewport_run": viewport_run,
                     "city_counts": city_counts,
+                    "ingest_engaged": read_policy.ingest_engaged,
+                    "live_read_throttled": read_policy.ingest_engaged,
+                    "live_poll_interval_multiplier": (
+                        read_policy.poll_interval_multiplier
+                        if read_policy.ingest_engaged
+                        else 1.0
+                    ),
                     "pool_note": (
                         "active = ACTIVE riders on map (FSM); warming = PENDING_ROUTE + ROUTING; "
                         "cyclists/runners = current viewport only."
@@ -593,7 +610,10 @@ class TelemetryLiveView(generics.GenericAPIView):
                 },
             }
         )
-        resp["Cache-Control"] = "private, max-age=1"
+        max_age = 1
+        if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
+            max_age = read_policy.cache_ttl_seconds
+        resp["Cache-Control"] = f"private, max-age={max_age}"
         return resp
 
 

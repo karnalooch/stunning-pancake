@@ -258,3 +258,88 @@ class TelemetryShardRouter:
         n = shard_count()
         clients = cls._ensure_clients()
         return [clients[i] for i in range(n)]
+
+
+# ---------------------------------------------------------------------------
+# Live map read shedding (ADR 011 P2) — shed reads, not writes, when ingest engaged
+# ---------------------------------------------------------------------------
+
+
+def _live_map_float(name: str, default: float) -> float:
+    try:
+        return float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _live_map_int(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+@dataclass(frozen=True)
+class LiveMapReadPolicy:
+    """When global ingest guard is engaged, reduce live-map Redis/API pressure."""
+
+    ingest_engaged: bool
+    cap_multiplier: float
+    poll_interval_multiplier: float
+    cache_ttl_seconds: int
+    detail_ceiling: str | None
+
+
+def ingest_guard_engaged() -> bool:
+    """True when always-on ingest signal is in hysteresis (read-only, no window writes)."""
+    try:
+        from core.load_guard import guard_snapshot
+
+        snap = guard_snapshot()
+        ingest = snap.get("signals", {}).get("ingest", {})
+        return bool(ingest.get("engaged"))
+    except Exception as exc:
+        logger.debug("live_map.ingest_engaged_lookup_failed err=%s", exc)
+        return False
+
+
+def live_map_read_policy() -> LiveMapReadPolicy:
+    """
+    Policy for TelemetryService.get_live_positions and admin LiveMap polling.
+
+    Env (only applied when ingest engaged):
+        LIVE_MAP_INGEST_CAP_RATIO — multiply viewport cap (default 0.35)
+        LIVE_MAP_INGEST_POLL_RATIO — client poll slowdown hint (default 2.5)
+        LIVE_MAP_INGEST_CACHE_TTL — seconds Redis live cache (default 8)
+        LIVE_MAP_INGEST_DETAIL_CEILING — summary|standard|full cap (default standard)
+    """
+    engaged = ingest_guard_engaged()
+    if not engaged:
+        return LiveMapReadPolicy(
+            ingest_engaged=False,
+            cap_multiplier=1.0,
+            poll_interval_multiplier=1.0,
+            cache_ttl_seconds=0,
+            detail_ceiling=None,
+        )
+    ceiling = (os.getenv("LIVE_MAP_INGEST_DETAIL_CEILING", "standard") or "standard").strip().lower()
+    if ceiling not in ("summary", "standard", "full"):
+        ceiling = "standard"
+    cap_mult = max(0.05, min(1.0, _live_map_float("LIVE_MAP_INGEST_CAP_RATIO", 0.35)))
+    poll_mult = max(1.0, min(10.0, _live_map_float("LIVE_MAP_INGEST_POLL_RATIO", 2.5)))
+    cache_ttl = max(2, _live_map_int("LIVE_MAP_INGEST_CACHE_TTL", 8))
+    return LiveMapReadPolicy(
+        ingest_engaged=True,
+        cap_multiplier=cap_mult,
+        poll_interval_multiplier=poll_mult,
+        cache_ttl_seconds=cache_ttl,
+        detail_ceiling=ceiling,
+    )
+
+
+def apply_live_map_cap(cap: int, policy: LiveMapReadPolicy | None = None) -> int:
+    """Reduce GEORADIUS result cap under ingest pressure."""
+    pol = policy if policy is not None else live_map_read_policy()
+    if not pol.ingest_engaged or cap <= 0:
+        return cap
+    return max(1, int(cap * pol.cap_multiplier))

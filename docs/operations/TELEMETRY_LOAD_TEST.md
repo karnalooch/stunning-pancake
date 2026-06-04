@@ -115,6 +115,16 @@ A **FAIL** at `--target-rate 50000` often means the **client or laptop is server
 
 PASS/FAIL at a fixed target is a **harness check**, not a production SLO sign-off.
 
+## ADR 011 — live map read shedding (P2)
+
+When `guard_snapshot().signals.ingest.engaged` is true (or force with `GLOBAL_PROTECTION_MODE=on` + synthetic load):
+
+1. `GET /api/activities/telemetry/live/` response `meta` includes `ingest_engaged: true`, `live_poll_interval_multiplier` (default **2.5**), optional `live_detail_ceiling`.
+2. Admin Live Map shows an **Ingest load** badge and slows polling automatically.
+3. Tune via `.env`: `LIVE_MAP_INGEST_CAP_RATIO`, `LIVE_MAP_INGEST_POLL_RATIO`, `LIVE_MAP_INGEST_CACHE_TTL`, `LIVE_MAP_INGEST_DETAIL_CEILING`.
+
+Unit tests: `backend/activities/test_live_map_read_policy.py`.
+
 ## Benchmark profiles
 
 ### max-laptop (pure throughput)

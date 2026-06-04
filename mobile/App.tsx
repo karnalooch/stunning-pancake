@@ -375,9 +375,20 @@ const AppContent = observer(function AppContent() {
     const user = auth.user.get();
     const userId = user?.id != null ? Number(user.id) : null;
     try {
-      await stopRideSession(userId);
+      const { finalized, pendingUpload } = await stopRideSession(userId);
+      if (pendingUpload > 0) {
+        Alert.alert(
+          'Trasa zapisana lokalnie',
+          `${pendingUpload} punktów GPS czeka na wysłanie. Dotknij baneru „Wyślij niewysłane punkty GPS”, gdy masz sieć.`,
+        );
+      } else if (finalized) {
+        Alert.alert('Zapisano', 'Trasa została wysłana i sesja zakończona.');
+      } else {
+        Alert.alert('Zatrzymano', 'Nagrywanie GPS zakończone.');
+      }
     } catch (e) {
       console.warn('[GPS] stop ride failed', e);
+      Alert.alert('Błąd', 'Nie udało się poprawnie zakończyć jazdy. Sprawdź baner odzyskiwania GPS.');
     } finally {
       setIsRecording(false);
       setRidePaused(false);
@@ -385,7 +396,6 @@ const AppContent = observer(function AppContent() {
       setLiveDistanceKm(0);
       refreshGpsRecoveryFlag();
       navRef.current?.navigate('Ride' as never);
-      Alert.alert('Zapisano', 'Trasa została wysłana i sesja zakończona.');
     }
   }, [auth.user, refreshGpsRecoveryFlag]);
 
