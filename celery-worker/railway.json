@@ -14,5 +14,12 @@
                 "memoryBytes": 1073741824
             }
         }
+    },
+    "variables": {
+        "CELERY_WORKER_CONCURRENCY": "2",
+        "CELERY_WORKER_PREFETCH_MULTIPLIER": "2",
+        "CELERY_MAX_TASKS_PER_CHILD": "100",
+        "SCALE_WIPE_CHUNK_SIZE": "1000",
+        "SCALE_WIPE_USER_CHUNK_SIZE": "200"
     }
 }

@@ -88,11 +88,16 @@ Bez repo + Dockerfile Railway wybiera **Railpack** (np. `expo start` z `mobile/`
 
 ### `celery-worker` (critical / default / notifications)
 
+Obsługuje m.in. **`wipe_data_task`** (kolejka `default`). OOM w fazie `users` zwykle = zbyt duży chunk + Django cascade collector — patrz `SCALE_WIPE_*` i `_raw_delete` w `wipe_tasks.py`.
+
 | Variable | Recommended |
 |----------|-------------|
-| `CELERY_WORKER_CONCURRENCY` | `4` |
-| `CELERY_WORKER_PREFETCH_MULTIPLIER` | `4` |
-| `CELERY_MAX_TASKS_PER_CHILD` | `500` |
+| `CELERY_WORKER_CONCURRENCY` | `2` (mniej równoległych heapów przy prefork) |
+| `CELERY_WORKER_PREFETCH_MULTIPLIER` | `2` |
+| `CELERY_MAX_TASKS_PER_CHILD` | `100` |
+| `SCALE_WIPE_CHUNK_SIZE` | `1000` |
+| `SCALE_WIPE_USER_CHUNK_SIZE` | `200` |
+| Service RAM | **1 GB** (`celery-worker/railway.json`) |
 
 ### `celery-worker-routing` (kolejka `routing`) — Paczka 1a ✅
 
@@ -155,7 +160,7 @@ Projekt `marvelous-gratitude` ma **8 GB RAM i 8 vCPU łącznie** (wszystkie serw
 | `celery-worker-routing` | **512 MB** | 0.5 | **2** | ↓ z 3 replik (oszcz. ~1,5 GB); BRouter HTTP only |
 | `Backend` | **1 GB** | 1 | 1 | Status poll + heal |
 | `telemetry` | **1 GB** | 1 | 1 | FastAPI ingest; `UVICORN_WORKERS=2` |
-| `celery-worker` | **512 MB** | 0.5 | 1 | default/critical/notifications |
+| `celery-worker` | **1 GB** | 0.5 | 1 | default/critical/notifications + wipe |
 | `celery-beat` | **512 MB** | 0.5 | 1 | Scheduler |
 | `Admin` | **512 MB** | 0.5 | 1 | SPA static |
 | `brouter` | **512 MB** | 0.5 | 1 | `*.railway.internal:17777` |

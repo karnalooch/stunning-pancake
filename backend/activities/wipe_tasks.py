@@ -12,7 +12,7 @@ from activities.admin_stats import invalidate_dashboard_stats_cache
 from activities.services import TelemetryService
 
 
-from activities.scale_config import WIPE_CHUNK_SIZE as CHUNK
+from activities.scale_config import WIPE_CHUNK_SIZE as CHUNK, WIPE_USER_CHUNK_SIZE
 
 
 def _chunk_delete(
@@ -22,15 +22,30 @@ def _chunk_delete(
     progress_base: float,
     progress_span: float,
     total_estimate: int | None = None,
+    *,
+    chunk_size: int | None = None,
+    raw_delete: bool = False,
 ):
+    """
+    Delete in PK-ordered chunks. raw_delete skips Django's cascade collector (OOM on
+    large User batches); DB ON DELETE CASCADE still applies on PostgreSQL.
+    """
     total_removed = 0
     model = qs.model
+    using = qs.db
+    chunk = max(1, int(chunk_size if chunk_size is not None else CHUNK))
     estimate = max(int(total_estimate or 0), 1)
+    base_qs = qs.order_by("pk")
     while True:
-        ids = list(qs.values_list("pk", flat=True)[:CHUNK])
+        ids = list(base_qs.values_list("pk", flat=True)[:chunk])
         if not ids:
             break
-        n, _ = model.objects.filter(pk__in=ids).delete()
+        batch_qs = model.objects.filter(pk__in=ids)
+        if raw_delete:
+            batch_qs._raw_delete(using=using)
+            n = len(ids)
+        else:
+            n, _ = batch_qs.delete()
         total_removed += n
         deleted[label] = total_removed
         frac = min(1.0, total_removed / estimate)
@@ -99,6 +114,7 @@ def run_wipe_sync():
             5,
             35,
             total_estimate=activity_estimate,
+            raw_delete=True,
         )
 
         ws.set_wipe_state(phase="departments", progress_pct=40)
@@ -119,6 +135,8 @@ def run_wipe_sync():
             60,
             30,
             total_estimate=user_estimate,
+            chunk_size=WIPE_USER_CHUNK_SIZE,
+            raw_delete=True,
         )
 
         ws.set_wipe_state(phase="tenants", progress_pct=92)

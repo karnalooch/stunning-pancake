@@ -218,8 +218,9 @@ HEATMAP_MAX_ACTIVITIES_SAMPLE = _int("SCALE_HEATMAP_MAX_ACTIVITIES", 1500)
 HEATMAP_MIN_ZOOM = _int("SCALE_HEATMAP_MIN_ZOOM", 7)
 HEATMAP_CACHE_TTL = _int("SCALE_HEATMAP_CACHE_TTL", 300)
 
-# Wipe chunks (rows per DELETE batch)
-WIPE_CHUNK_SIZE = _int("SCALE_WIPE_CHUNK_SIZE", 5000)
+# Wipe chunks (rows per DELETE batch; keep low on celery-worker to avoid OOM)
+WIPE_CHUNK_SIZE = _int("SCALE_WIPE_CHUNK_SIZE", 1000)
+WIPE_USER_CHUNK_SIZE = _int("SCALE_WIPE_USER_CHUNK_SIZE", 200)
 
 # Celery batch: parallel user creation per city (requires skip_activities)
 BATCH_PARALLEL_CITIES = os.getenv("SCALE_BATCH_PARALLEL_CITIES", "true").lower() in (

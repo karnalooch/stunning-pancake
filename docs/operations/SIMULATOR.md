@@ -156,6 +156,22 @@ Admin (`SimulatorApi.wipeData`): przy `stuck` raz na sesję wywołuje `recoverSt
 
 Ręcznie: reset symulatora w panelu, potem ponów wipe z potwierdzeniem frazą.
 
+### Worker OOM podczas wipe (Railway)
+
+| Objaw | Przyczyna |
+|-------|-----------|
+| Modal utknął w fazie `users` (~60%), mało `rows_deleted`, spinner | `celery-worker` dostał **SIGKILL (OOM)** w trakcie `wipe_data_task` — Redis nadal pokazuje `running` |
+| Railway: `celery-worker` deploy failed, Out of Memory | Duże chunki + Django `delete()` collector na User CASCADE (prefork × concurrency) |
+
+**Natychmiast (operator):**
+
+1. Poczekaj aż `celery-worker` znów jest **Active** (redeploy z `main` lub ręczny restart).
+2. Admin → **Reset simulator locks** (`POST simulator-reset/`) — czyści lock wipe/sim.
+3. Ponów **Wipe** z potwierdzeniem frazą (UI może auto-recovery przy `stuck=true`).
+4. Opcjonalnie na serwisie `celery-worker`: `SCALE_WIPE_USER_CHUNK_SIZE=100`, `CELERY_WORKER_CONCURRENCY=2`.
+
+Repo SSOT: `celery-worker/railway.json` (1 GB RAM, mniejsze chunki), `wipe_tasks.py` używa `_raw_delete` w fazie users. Zobacz [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md).
+
 ---
 
 ## Endpointy admin (skrót)
