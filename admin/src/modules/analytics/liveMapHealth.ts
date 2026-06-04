@@ -244,7 +244,12 @@ export function computeLiveMapHealth(input: LiveMapHealthInput): LiveMapHealthSn
         let message: string | null = null;
         if (ingestDegraded) message = 'Tryb ochrony ingest (ADR 011) — rzadsze odświeżanie';
         else if (positionsCapped) message = 'Limit viewport — część rowerzystów nie jest rysowana';
-        else if (cachedResponse) message = 'Odpowiedź z cache serwera';
+        else if (cachedResponse) {
+            message =
+                readMode === 'ingest_protected'
+                    ? 'Tryb ochrony ingest — odpowiedź z krótkiego cache Redis'
+                    : 'Odpowiedź z cache serwera (krótki TTL bbox)';
+        }
         return {
             status: 'degraded',
             readMode,

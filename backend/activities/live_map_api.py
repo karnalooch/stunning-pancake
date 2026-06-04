@@ -81,7 +81,7 @@ def parse_live_map_query_params(
     if detail not in ("summary", "standard", "full"):
         if zoom_param is not None and zoom_param < 5:
             detail = "summary"
-        elif zoom_param is not None and zoom_param < 12:
+        elif zoom_param is not None and zoom_param < 11.5:
             detail = "standard"
         else:
             detail = "full"

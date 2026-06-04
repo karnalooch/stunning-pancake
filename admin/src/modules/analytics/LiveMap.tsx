@@ -238,6 +238,11 @@ export const LiveMap: React.FC = () => {
         });
         setCityHubData(map, cityCountsRef.current);
         layersReadyRef.current = true;
+        const cached = positionsRef.current;
+        if (cached.length > 0) {
+            setLivePositionsData(map, cached);
+            interpolatorRef.current?.snapTo(cached);
+        }
     }, [handleClusterClick, handleRiderClick]);
 
     const aggregateCityCounts = useCallback((list: UserPosition[]): Record<string, number> => {
@@ -771,7 +776,7 @@ export const LiveMap: React.FC = () => {
     }, [mapReady]);
 
     useEffect(() => {
-        if (!mlReady || !canFetch || !tabVisible || liveFetchPaused) return;
+        if (!mapReady || !canFetch || !tabVisible || liveFetchPaused) return;
         const loop = async () => {
             await fetchPositionsRef.current();
             const map = mapRef.current;
@@ -794,7 +799,7 @@ export const LiveMap: React.FC = () => {
             if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
             pollTimerRef.current = null;
         };
-    }, [fetchPositions, mlReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused, ingestEngaged, consecutiveErrors, sseActive]);
+    }, [fetchPositions, mapReady, canFetch, isAuthenticated, tabVisible, liveFetchPaused, ingestEngaged, consecutiveErrors, sseActive]);
 
     useEffect(() => {
         if (!mapReady || !canFetch || !tabVisible || liveFetchPaused) {
