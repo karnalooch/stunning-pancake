@@ -9,6 +9,10 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'scripts/check_docs_links.py'
+      - 'scripts/check_docs_i18n.py'
+      - 'docs/locales/**'
+      - 'docs/en/**'
+      - 'docs/pl/**'
   pull_request:
     branches: [main, develop]
     paths:
@@ -17,6 +21,10 @@ on:
       - 'CHANGELOG.md'
       - 'CONTRIBUTING.md'
       - 'scripts/check_docs_links.py'
+      - 'scripts/check_docs_i18n.py'
+      - 'docs/locales/**'
+      - 'docs/en/**'
+      - 'docs/pl/**'
 
 jobs:
   links:
@@ -31,3 +39,6 @@ jobs:
 
       - name: Check relative links in docs/
         run: python scripts/check_docs_links.py
+
+      - name: Check EN/PL paired docs (registry)
+        run: python scripts/check_docs_i18n.py

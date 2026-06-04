@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-06-04 |
 | **Audience** | Autorzy runbooków, operatorzy, tech lead |
 
 ---
@@ -140,17 +140,26 @@ Inne pliki **linkują**, nie duplikują pełnych tabel env.
 
 ---
 
-## Język
+## Język (EN + PL — enterprise)
 
-| Folder | Język |
-|--------|--------|
-| `docs/operations/`, `docs/runbooks/` | Polski |
-| `docs/admin/` | English (checklisty) + PL (roadmap produktowy) |
-| `docs/compliance/` | PL (RCP) / EN (release package, map licensing) |
-| `docs/product/`, `docs/onboarding/` | Polski |
-| `docs/adr/`, `API.md`, spec architektury | Angielski |
+Każdy dokument **Active** (poza snapshotami) docelowo ma **parę** EN/PL ze zwierciadlaną ścieżką w `docs/en/` i `docs/pl/`. ADR i kontrakty API pozostają **kanonicznie po angielsku**.
 
-Polityka w skrócie: [README.md § Polityka językowa](./README.md#polityka-językowa).
+| Element | Gdzie |
+|---------|--------|
+| Polityka i fazy migracji | [locales/STANDARD.pl.md](./locales/STANDARD.pl.md) · [STANDARD.en.md](./locales/STANDARD.en.md) |
+| Status plik po pliku | [locales/MIGRATION_REGISTRY.md](./locales/MIGRATION_REGISTRY.md) |
+| Indeks EN / PL | [en/README.md](./en/README.md) · [pl/README.md](./pl/README.md) |
+| CI par | `python scripts/check_docs_i18n.py` |
+
+| Folder (legacy) | Język domyślny | Para EN |
+|-----------------|----------------|---------|
+| `docs/operations/`, `docs/runbooks/` | Polski | `docs/en/operations/`, `docs/en/runbooks/` |
+| `docs/admin/` | EN (checklisty) + PL (roadmap) | `docs/pl/admin/` gdy potrzebne |
+| `docs/compliance/` | PL (RCP) / EN (release, map licensing) | wg rejestru |
+| `docs/product/`, `docs/onboarding/` | Polski | `docs/en/product/`, … |
+| `docs/adr/`, `API.md`, spec architektury | Angielski (kanoniczny) | Opcjonalne streszczenie PL |
+
+Skrót indeksu: [README.md § Polityka językowa](./README.md#polityka-językowa).
 
 ---
 

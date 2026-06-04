@@ -1,5 +1,15 @@
 # Live Map — operacje i standard enterprise
 
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Platform Operator / Admin Owner |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | Operatorzy, on-call, maintainerzy frontendu |
+| **lang** | pl |
+| **translation** | [English](../en/operations/LIVE_MAP.md) |
+| **canonical_path** | docs/operations/LIVE_MAP.md |
+
 **Kod:** `admin/src/modules/analytics/LiveMap.tsx`, moduły `liveMap*`, API `GET /api/activities/telemetry/live/`
 
 ## Cele jakościowe

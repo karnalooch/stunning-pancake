@@ -17,6 +17,7 @@
 | [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) | Decyzja Railway vs K8s, mapowanie | Tech Lead / DevOps | Kwartalnie lub przed migracją |
 | [KUBERNETES.md](./KUBERNETES.md) | `kubectl`, manifesty, HPA | DevOps | Przy zmianie `infrastructure/k8s/` |
 | [SIMULATOR.md](./SIMULATOR.md) | Batch → live, wizard, FSM | Platform Operator + Admin Owner | Po zmianie API symulatora |
+| [LIVE_MAP.md](./LIVE_MAP.md) · [EN](../en/operations/LIVE_MAP.md) | Live Map: SSE, LOD, ingest ADR 011 | Admin Owner + Platform Operator | Po zmianie `telemetry/live` lub admin Live Map |
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | Po zmianie presetów / volume |
 | [OSRM.md](./OSRM.md) | OSRM sim routing, volume, `SCALE_SIM_ROUTING_BACKEND` | Platform Operator | Po deploy serwisu `osrm` |
 | [MOBILE.md](./MOBILE.md) | Build EAS, env, GPS recovery | Mobile Lead | Przed release app store |

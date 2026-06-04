@@ -38,6 +38,12 @@ env/
 db.sqlite3
 *.sqlite3
 
+# 🧪 Test artifacts (local / CI output)
+backend/.coverage
+.coverage
+admin/test-results/
+admin/e2e-results.xml
+
 # 📊 Logs & Telemetry
 *.log
 infrastructure/traccar/logs/*

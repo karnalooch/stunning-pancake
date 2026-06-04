@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead / Documentation maintainer |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-06-04 |
 | **Standard treści** | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) |
 | **Utrzymanie** | [MAINTENANCE.md](./MAINTENANCE.md) |
 
@@ -18,17 +18,25 @@ Jeden punkt wejścia do całego drzewa `docs/`: architektura, operacje produkcyj
 
 ---
 
-## Polityka językowa
+## Polityka językowa (EN + PL)
 
-| Obszar | Język | Uzasadnienie |
-|--------|--------|--------------|
-| `operations/`, `runbooks/`, większość compliance (RCP) | **Polski** | Runbooki operatora na produkcji |
-| `admin/` (checklisty, roadmap techniczny) | **English** OK + fragmenty PL w roadmap | Zespół dev / release międzynarodowy |
-| `compliance/RELEASE_*`, `MAP_BASEMAP_*` | **English** | Pakiet prawny / licencje |
-| ADR, `API.md`, spec architektury | **English** | Decyzje techniczne i kontrakty API |
-| `product/FAQ.md`, `onboarding/` | **Polski** | Treść produktowa dla PL |
+Model **enterprise**: zwierciadlane drzewa `docs/en/` i `docs/pl/`, metadane `lang` + `translation`, rejestr migracji i CI — bez duplikowania tabel env między językami (link do SSOT).
 
-Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md#język).
+| Obszar | PL | EN | Uwagi |
+|--------|----|----|--------|
+| Runbooki `operations/`, `runbooks/` | Kanoniczny (legacy ścieżka) | `docs/en/operations/…` | Pilotaż: [LIVE_MAP](./operations/LIVE_MAP.md) ↔ [EN](./en/operations/LIVE_MAP.md) |
+| ADR, `API.md`, architektura | Opcjonalne streszczenie | **Kanoniczny** | Brak pełnej kopii ADR po PL |
+| `admin/` checklisty | Na żądanie | **Kanoniczny** | |
+| `compliance/RELEASE_*` | — | **Kanoniczny** | |
+| `product/`, `onboarding/` | Kanoniczny | W migracji | |
+
+| Dokument | Opis |
+|----------|------|
+| [locales/README.md](./locales/README.md) | Hub dwujęzyczny |
+| [locales/MIGRATION_REGISTRY.md](./locales/MIGRATION_REGISTRY.md) | Co już sparowane, co `pending` |
+| [locales/STANDARD.pl.md](./locales/STANDARD.pl.md) | Standard autora (PL) |
+
+Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md#język-en--pl--enterprise).
 
 ---
 
