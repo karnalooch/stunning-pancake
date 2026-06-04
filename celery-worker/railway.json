@@ -10,15 +10,15 @@
         "restartPolicy": "ALWAYS",
         "limitOverride": {
             "containers": {
-                "cpu": 1,
-                "memoryBytes": 2147483648
+                "cpu": 2,
+                "memoryBytes": 4294967296
             }
         }
     },
     "variables": {
         "CELERY_WORKER_CONCURRENCY": "2",
-        "CELERY_WORKER_PREFETCH_MULTIPLIER": "2",
-        "CELERY_MAX_TASKS_PER_CHILD": "100",
+        "CELERY_WORKER_PREFETCH_MULTIPLIER": "1",
+        "CELERY_MAX_TASKS_PER_CHILD": "50",
         "SCALE_WIPE_CHUNK_SIZE": "1000",
         "SCALE_WIPE_USER_CHUNK_SIZE": "200"
     }

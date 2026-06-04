@@ -97,7 +97,7 @@ Obsługuje m.in. **`wipe_data_task`** (kolejka `default`). OOM w fazie `users` z
 | `CELERY_MAX_TASKS_PER_CHILD` | `100` |
 | `SCALE_WIPE_CHUNK_SIZE` | `1000` |
 | `SCALE_WIPE_USER_CHUNK_SIZE` | `200` |
-| Service RAM | **2 GB** (`celery-worker/railway.json`) — wipe `users` / prefork |
+| Service RAM | **4 GB** (`celery-worker/railway.json`) — wipe `users` / prefork; prefetch=1 |
 
 ### `celery-worker-routing` (kolejka `routing`) — Paczka 1a ✅
 
@@ -120,7 +120,7 @@ Live sim wysyła `route_live_ride_task` na **`routing`**, żeby `live_tick` nie 
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` |
 | `SECRET_KEY` | **Ten sam** co backend/simulation |
 | `numReplicas` | **2** (Hobby — patrz budżet poniżej) |
-| Service RAM | **1 GB / replikę** (≈ 2 GB łącznie przy 2 replikach) |
+| Service RAM | **2 GB / replikę** (≈ 6 GB łącznie przy 3 replikach) |
 
 **Weryfikacja:** [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) + skrypt.
 
@@ -157,8 +157,8 @@ Plan Hobby: **$5 usage credits/mies.**, do **48 GB RAM / 48 vCPU na serwis**, do
 | Serwis | RAM | vCPU | Repliki | Plik SSOT |
 |--------|-----|------|---------|-----------|
 | `celery-worker-simulation` | **4 GB** | 1 | 1 | `celery-worker-simulation/railway.json` |
-| `celery-worker` | **2 GB** | 1 | 1 | `celery-worker/railway.json` |
-| `celery-worker-routing` | **1 GB** | 0.5 | **2** | `celery-worker-routing/railway.json` |
+| `celery-worker` | **4 GB** | 2 | 1 | `celery-worker/railway.json` |
+| `celery-worker-routing` | **2 GB** | 1 | **3** | `celery-worker-routing/railway.json` |
 | `Backend` | **1 GB** | 1 | 1 | `backend/railway.json` |
 | `telemetry` | **1 GB** | 1 | 1 | `telemetry/railway.json` |
 | `brouter` | **1 GB** | 0.5 | 1 | `infrastructure/brouter/railway.json` |
@@ -176,7 +176,7 @@ Przed sprzedażą lub kontrolowanym load testem (10k pool) podnieś stabilność
 | Serwis | RAM (repo SSOT) | Uwagi |
 |--------|-----------------|--------|
 | `brouter` | **1 GB** | `infrastructure/brouter/railway.json` — mniej timeoutów przy burst routingu |
-| `celery-worker` | **2 GB** | `celery-worker/railway.json` — wipe + default/critical |
+| `celery-worker` | **4 GB** | `celery-worker/railway.json` — wipe + default/critical (OOM fix) |
 | `celery-worker-simulation` | **4 GB** | 300k batch (patrz tabela Hobby powyżej) |
 
 Deploy `main` → Railway nadpisuje Dashboard. Pełna sekwencja: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
