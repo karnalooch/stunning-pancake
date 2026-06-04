@@ -7,13 +7,16 @@ PBF_URL="${OSRM_PBF_URL:-https://download.geofabrik.de/europe/poland-latest.osm.
 PROFILE="${OSRM_BUILD_PROFILE:-/opt/car.lua}"
 BASE_NAME="${OSRM_BASE_NAME:-poland-latest}"
 PORT="${OSRM_PORT:-5000}"
+OSRM_FILE="${BASE_NAME}.osrm"
+# MLD graph is a set of files; poland-latest.osrm is a prefix, not a single file.
+GRAPH_READY="${BASE_NAME}.osrm.mldgr"
+
+echo "[osrm] boot data_dir=${DATA_DIR} graph=${GRAPH_READY}"
 
 mkdir -p "$DATA_DIR"
 cd "$DATA_DIR"
 
-OSRM_FILE="${BASE_NAME}.osrm"
-
-if [ ! -f "$OSRM_FILE" ]; then
+if [ ! -f "$GRAPH_READY" ]; then
   if [ ! -f "$PBF_NAME" ]; then
     echo "[osrm] Downloading ${PBF_URL} (first run may take several minutes)..."
     wget -q --show-progress -O "$PBF_NAME" "$PBF_URL" || {
@@ -27,7 +30,7 @@ if [ ! -f "$OSRM_FILE" ]; then
   osrm-partition "${BASE_NAME}.osrm"
   echo "[osrm] osrm-customize..."
   osrm-customize "${BASE_NAME}.osrm"
-  echo "[osrm] Graph ready: ${OSRM_FILE}"
+  echo "[osrm] Graph ready: ${GRAPH_READY}"
 fi
 
 echo "[osrm] Starting osrm-routed on :${PORT} (MLD)..."

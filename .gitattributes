@@ -1,4 +1,5 @@
 infrastructure/brouter/Dockerfile text eol=lf
 infrastructure/brouter/entrypoint.sh text eol=lf
+infrastructure/osrm/entrypoint.sh text eol=lf
 celery-worker-simulation/start.sh text eol=lf
 celery-worker/start.sh text eol=lf
