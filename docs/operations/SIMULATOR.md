@@ -170,7 +170,7 @@ Ręcznie: reset symulatora w panelu, potem ponów wipe z potwierdzeniem frazą.
 3. Ponów **Wipe** z potwierdzeniem frazą (UI może auto-recovery przy `stuck=true`).
 4. Opcjonalnie na serwisie `celery-worker`: `SCALE_WIPE_USER_CHUNK_SIZE=100`, `CELERY_WORKER_CONCURRENCY=2`.
 
-Repo SSOT: `celery-worker/railway.json` (1 GB RAM, mniejsze chunki), `wipe_tasks.py` używa `_raw_delete` w fazie users. Zobacz [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md).
+Repo SSOT: `celery-worker/railway.json` (**2 GB** RAM, mniejsze chunki), `wipe_tasks.py` używa `_raw_delete` w fazie users. Zobacz [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md).
 
 ---
 

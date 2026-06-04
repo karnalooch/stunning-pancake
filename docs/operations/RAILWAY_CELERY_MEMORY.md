@@ -84,7 +84,7 @@ Bez repo + Dockerfile Railway wybiera **Railpack** (np. `expo start` z `mobile/`
 | `SCALE_MAX_STARTS_PER_LIVE_TICK` | `30` | |
 | `SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK` | `25` | |
 | `SCALE_SIM_BROUTER_ROUTE_ATTEMPTS` | `4` | |
-| Service RAM | **≥ 2 GB** | 512 MB–1 GB często OOM przy prefork=6–7 |
+| Service RAM | **≥ 4 GB** (Hobby SSOT) | 300k batch; 2 GB często OOM przy dużym batchu |
 
 ### `celery-worker` (critical / default / notifications)
 
@@ -97,7 +97,7 @@ Obsługuje m.in. **`wipe_data_task`** (kolejka `default`). OOM w fazie `users` z
 | `CELERY_MAX_TASKS_PER_CHILD` | `100` |
 | `SCALE_WIPE_CHUNK_SIZE` | `1000` |
 | `SCALE_WIPE_USER_CHUNK_SIZE` | `200` |
-| Service RAM | **1 GB** (`celery-worker/railway.json`) |
+| Service RAM | **2 GB** (`celery-worker/railway.json`) — wipe `users` / prefork |
 
 ### `celery-worker-routing` (kolejka `routing`) — Paczka 1a ✅
 
@@ -119,8 +119,8 @@ Live sim wysyła `route_live_ride_task` na **`routing`**, żeby `live_tick` nie 
 | `SCALE_SIM_ASYNC_ROUTING` | `1` |
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `30` |
 | `SECRET_KEY` | **Ten sam** co backend/simulation |
-| `numReplicas` | **2** (8 GB plan — patrz budżet poniżej) |
-| Service RAM | **512 MB / replikę** (≈ 1 GB łącznie przy 2 replikach) |
+| `numReplicas` | **2** (Hobby — patrz budżet poniżej) |
+| Service RAM | **1 GB / replikę** (≈ 2 GB łącznie przy 2 replikach) |
 
 **Weryfikacja:** [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) + skrypt.
 
@@ -150,24 +150,24 @@ Po skalowaniu `numReplicas=2→3` (railway.json + `serviceInstanceUpdate(numRepl
 
 **Wniosek (uczciwy):** 3. replika zwiększyła drenaż ~liniowo (~1,89/s), ale `sim.routing.backpressure` **pozostaje przypięty** (firing ~co tick, kolejka `routing` przy cap). Skalowanie drenażu nie zamyka backpressure, bo **popyt > drenaż** przy bieżącym `active_ratio`. **Decydująca dźwignia = obniżenie `active_ratio`** (strona popytu) przez admina — nie zmieniono jej w tym kroku (poza zakresem decyzji operatora).
 
-#### Budżet RAM/CPU — plan 8 GB / 8 vCPU (2026-06-04)
+#### Budżet RAM/CPU — Railway **Hobby** (2026-06-04)
 
-Projekt `marvelous-gratitude` ma **8 GB RAM i 8 vCPU łącznie** (wszystkie serwisy). SSOT w `railway.json` (`limitOverride`) + GraphQL `serviceInstanceLimitsUpdate` dla natychmiastowego efektu.
+Plan Hobby: **$5 usage credits/mies.**, do **48 GB RAM / 48 vCPU na serwis**, do **5 replik** (max **8 GB / 8 vCPU na replikę**). Limity **per serwis** — nie jeden wspólny pool 8 GB jak na starym Trial. SSOT: `*/railway.json` (`limitOverride`); deploy `main` nadpisuje Dashboard. Opcjonalnie GraphQL `serviceInstanceLimitsUpdate` przed redeployem.
 
-| Serwis | RAM | vCPU | Repliki | Uwagi |
-|--------|-----|------|---------|--------|
-| `celery-worker-simulation` | **2 GB** | 1 | 1 | OOM guard — solo pool |
-| `celery-worker-routing` | **512 MB** | 0.5 | **2** | ↓ z 3 replik (oszcz. ~1,5 GB); BRouter HTTP only |
-| `Backend` | **1 GB** | 1 | 1 | Status poll + heal |
-| `telemetry` | **1 GB** | 1 | 1 | FastAPI ingest; `UVICORN_WORKERS=2` |
-| `celery-worker` | **1 GB** | 0.5 | 1 | default/critical/notifications + wipe |
-| `celery-beat` | **512 MB** | 0.5 | 1 | Scheduler |
-| `Admin` | **512 MB** | 0.5 | 1 | SPA static |
-| `brouter` | **512 MB** | 0.5 | 1 | `*.railway.internal:17777` |
-| `Redis` | template | — | 1 | Managed image; minimal viable |
+| Serwis | RAM | vCPU | Repliki | Plik SSOT |
+|--------|-----|------|---------|-----------|
+| `celery-worker-simulation` | **4 GB** | 1 | 1 | `celery-worker-simulation/railway.json` |
+| `celery-worker` | **2 GB** | 1 | 1 | `celery-worker/railway.json` |
+| `celery-worker-routing` | **1 GB** | 0.5 | **2** | `celery-worker-routing/railway.json` |
+| `Backend` | **1 GB** | 1 | 1 | `backend/railway.json` |
+| `telemetry` | **1 GB** | 1 | 1 | `telemetry/railway.json` |
+| `brouter` | **1 GB** | 0.5 | 1 | `infrastructure/brouter/railway.json` |
+| `Admin` | **512 MB** | 0.5 | 1 | `admin/railway.json` |
+| `celery-beat` | **512 MB** (Dashboard) | 0.5 | 1 | brak `railway.json` w repo |
+| `Redis` | template | — | 1 | Managed |
 | `TimescaleDB` | template | — | 1 | Managed; volume 5 GB |
 
-**Łącznie compute (app):** ~6,5 GB cap + DB/Redis template overhead → mieści się w 8 GB planie.
+**Łącznie capy app (suma limitów):** ~12 GB (2+4+2+1+1+1+0,5+0,5) + Redis/Postgres — rozliczane usage, nie „zajęte zawsze”. Cel: ~$10–15/mies. przy typowym loadzie; unikaj maxowania 48 GB na serwis bez potrzeby.
 
 ### Handoff / load test RAM
 
@@ -176,7 +176,8 @@ Przed sprzedażą lub kontrolowanym load testem (10k pool) podnieś stabilność
 | Serwis | RAM (repo SSOT) | Uwagi |
 |--------|-----------------|--------|
 | `brouter` | **1 GB** | `infrastructure/brouter/railway.json` — mniej timeoutów przy burst routingu |
-| `celery-worker` | **1 GB** | `celery-worker/railway.json` — default/critical kolejki |
+| `celery-worker` | **2 GB** | `celery-worker/railway.json` — wipe + default/critical |
+| `celery-worker-simulation` | **4 GB** | 300k batch (patrz tabela Hobby powyżej) |
 
 Deploy `main` → Railway nadpisuje Dashboard. Pełna sekwencja: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
 
@@ -194,7 +195,7 @@ Apply (Platform Operator):
 | Akcja | Wynik |
 |-------|--------|
 | `active_ratio` 0.46 → **0.18** | Admin API (`global_owner`) + restart z `tick_seconds=8`, domyślne caps 30/25/4 |
-| Routing repliki 3 → **2** | Budżet 8 GB; GraphQL + `celery-worker-routing/railway.json` |
+| Routing repliki 3 → **2** | GraphQL + `celery-worker-routing/railway.json` (Hobby: 2×1 GB) |
 | Management command | `python manage.py set_live_active_ratio <ratio>` — in-place bez restartu (wymaga deploy + SSH) |
 | Skrypt operacyjny | `scripts/railway-set-live-active-ratio.ps1` |
 
@@ -271,9 +272,9 @@ railway up -s celery-worker-routing -e production --detach
 
 ---
 
-## Railway Pro (handoff)
+## Railway Hobby vs Pro (handoff)
 
-**Pro nie jest wymagane** do 1 GB `limitOverride` w `railway.json` (`brouter`, `celery-worker`). Rozważ **Pro na 1–2 miesiące** handoffu load-testu (wyższy cap RAM/vCPU projektu, szybszy support) — decyzja billingowa; szczegóły: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
+**Hobby** wystarcza do `limitOverride` w `railway.json` (do 8 GB/replika, 48 GB/serwis). Ten repo targetuje ~12 GB sumy capów app — monitoruj **Usage** w Dashboard. **Pro** tylko przy wyższym support SLA lub długim sustained load-test poza budżetem; szczegóły: [HANDOFF_AUTOMATION.md](./HANDOFF_AUTOMATION.md).
 
 ---
 

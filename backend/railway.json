@@ -7,7 +7,13 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
-    "restartPolicy": "ALWAYS"
+    "restartPolicy": "ALWAYS",
+    "limitOverride": {
+      "containers": {
+        "cpu": 1,
+        "memoryBytes": 1073741824
+      }
+    }
   },
   "variables": {
     "SECRET_KEY": "ZrC7TWnC5xgIaUI_SX43-Z4hXrHErAOUxA4Lfflk54VfkoAQbNAcJFVAaaYv6KRLqis",
