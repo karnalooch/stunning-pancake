@@ -7,7 +7,7 @@
  * | < 5     | overview       | Huby z meta (summary, bez punktów) |
  * | 7–8.5   | region         | Huby + klastry |
  * | 8.5–9.5 | metro          | Huby zanikają, klastry |
- * | 9.5–10.5| city           | Klastry (główny widok miasta) |
+ * | 9.5–10.5| city           | Klastry (huby znikają ≤9.5) |
  * | 10.5–11.5| district      | Ciaśniejsze klastry |
  * | 11.5–12.2| neighborhood  | Klastry (bez pojedynczych kropek — te od z≥12) |
  * | 12.2–12.8| handoff       | GL dots fade ↔ GPU symbol icons |
@@ -38,8 +38,9 @@ export const LIVE_MAP_LOD = {
     /** City hub rings visible from country zoom (incl. z=5). */
     cityHubMin: 4.5,
     cityHubFadeInEnd: 5.8,
-    cityHubFadeOutStart: 8.6,
-    cityHubFadeOutEnd: 10.8,
+    cityHubFadeOutStart: 8.2,
+    /** Gone by z≈9.5 (city tier) so rider clusters are not covered at z=10. */
+    cityHubFadeOutEnd: 9.5,
     clusterVisibleStart: 5,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,

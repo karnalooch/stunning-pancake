@@ -99,6 +99,109 @@ export function installLiveMapLayers(
         onRiderClick: (e: LiveMapClickEvent) => void;
     },
 ): void {
+    if (!map.getSource(LIVE_SOURCES.cityHubs)) {
+        map.addSource(LIVE_SOURCES.cityHubs, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+        });
+    }
+
+    if (!map.getLayer(LIVE_LAYERS.cityHubRing)) {
+        map.addLayer({
+            id: LIVE_LAYERS.cityHubRing,
+            type: 'circle',
+            source: LIVE_SOURCES.cityHubs,
+            minzoom: LOD.cityHubMin,
+            maxzoom: LOD.cityHubFadeOutEnd,
+            paint: {
+                'circle-radius': [
+                    'interpolate', ['linear'], ['zoom'],
+                    LOD.cityHubMin, 14,
+                    5, 18,
+                    7.5, 22,
+                    LOD.cityHubFadeOutStart, 24,
+                    9, 26,
+                ],
+                'circle-color': ['get', 'color'],
+                'circle-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    LOD.cityHubMin, 0.55,
+                    LOD.cityHubFadeInEnd, 0.85,
+                    8.2, 0.95,
+                    LOD.cityHubFadeOutStart, 0.88,
+                    LOD.cityHubFadeOutEnd, 0,
+                ],
+                'circle-stroke-width': 2.8,
+                'circle-stroke-color': 'rgba(255,255,255,0.92)',
+            },
+        });
+
+        map.addLayer({
+            id: LIVE_LAYERS.cityHubCount,
+            type: 'symbol',
+            source: LIVE_SOURCES.cityHubs,
+            minzoom: LOD.cityHubMin,
+            maxzoom: LOD.cityHubFadeOutEnd,
+            layout: {
+                'text-field': ['to-string', ['get', 'count']],
+                'text-font': [...MAP_TEXT_FONT_BOLD],
+                'text-size': [
+                    'interpolate', ['linear'], ['zoom'],
+                    LOD.cityHubMin, 10,
+                    5, 11,
+                    8, 13,
+                    9.5, 14,
+                ],
+            },
+            paint: {
+                'text-color': '#ffffff',
+                'text-halo-color': 'rgba(15,23,42,0.4)',
+                'text-halo-width': 1.2,
+                'text-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    LOD.cityHubMin, 0.6,
+                    LOD.cityHubFadeInEnd, 0.9,
+                    8.2, 1,
+                    LOD.cityHubFadeOutStart, 0.9,
+                    LOD.cityHubFadeOutEnd, 0,
+                ],
+            },
+        });
+
+        map.addLayer({
+            id: LIVE_LAYERS.cityHubName,
+            type: 'symbol',
+            source: LIVE_SOURCES.cityHubs,
+            minzoom: LOD.cityHubMin + 0.5,
+            maxzoom: LOD.cityHubFadeOutEnd,
+            layout: {
+                'text-field': ['get', 'name'],
+                'text-font': [...MAP_TEXT_FONT_REGULAR],
+                'text-size': [
+                    'interpolate', ['linear'], ['zoom'],
+                    6.8, 10,
+                    8.5, 11.5,
+                    9.5, 12,
+                ],
+                'text-offset': [0, 2.1],
+                'text-anchor': 'top',
+            },
+            paint: {
+                'text-color': '#27272a',
+                'text-halo-color': 'rgba(255,255,255,0.9)',
+                'text-halo-width': 1.4,
+                'text-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    LOD.cityHubMin + 0.5, 0,
+                    LOD.cityHubFadeInEnd + 0.3, 0.65,
+                    8.5, 1,
+                    LOD.cityHubFadeOutStart, 0.85,
+                    LOD.cityHubFadeOutEnd, 0,
+                ],
+            },
+        });
+    }
+
     if (!map.getSource(LIVE_SOURCES.positions)) {
         map.addSource(LIVE_SOURCES.positions, {
             type: 'geojson',
@@ -107,7 +210,9 @@ export function installLiveMapLayers(
             clusterMaxZoom: CLUSTER_MAX_ZOOM,
             clusterRadius,
         });
+    }
 
+    if (!map.getLayer(LIVE_LAYERS.clusters)) {
         map.addLayer({
             id: LIVE_LAYERS.clusters,
             type: 'circle',
@@ -311,107 +416,6 @@ export function installLiveMapLayers(
         };
         map.on('mouseenter', CLUSTER_CLICK_LAYERS, () => setCursor('pointer'));
         map.on('mouseleave', CLUSTER_CLICK_LAYERS, () => setCursor(''));
-    }
-
-    if (!map.getSource(LIVE_SOURCES.cityHubs)) {
-        map.addSource(LIVE_SOURCES.cityHubs, {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] },
-        });
-
-        map.addLayer({
-            id: LIVE_LAYERS.cityHubRing,
-            type: 'circle',
-            source: LIVE_SOURCES.cityHubs,
-            minzoom: LOD.cityHubMin,
-            maxzoom: LOD.cityHubFadeOutEnd,
-            paint: {
-                'circle-radius': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 14,
-                    5, 18,
-                    7.5, 22,
-                    LOD.cityHubFadeOutStart, 24,
-                    9, 26,
-                ],
-                'circle-color': ['get', 'color'],
-                'circle-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0.55,
-                    LOD.cityHubFadeInEnd, 0.85,
-                    8.2, 0.95,
-                    LOD.cityHubFadeOutStart, 0.88,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
-                'circle-stroke-width': 2.8,
-                'circle-stroke-color': 'rgba(255,255,255,0.92)',
-            },
-        });
-
-        map.addLayer({
-            id: LIVE_LAYERS.cityHubCount,
-            type: 'symbol',
-            source: LIVE_SOURCES.cityHubs,
-            minzoom: LOD.cityHubMin,
-            maxzoom: LOD.cityHubFadeOutEnd,
-            layout: {
-                'text-field': ['to-string', ['get', 'count']],
-                'text-font': [...MAP_TEXT_FONT_BOLD],
-                'text-size': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 10,
-                    5, 11,
-                    8, 13,
-                    9.5, 14,
-                ],
-            },
-            paint: {
-                'text-color': '#ffffff',
-                'text-halo-color': 'rgba(15,23,42,0.4)',
-                'text-halo-width': 1.2,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0.6,
-                    LOD.cityHubFadeInEnd, 0.9,
-                    8.2, 1,
-                    LOD.cityHubFadeOutStart, 0.9,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
-            },
-        });
-
-        map.addLayer({
-            id: LIVE_LAYERS.cityHubName,
-            type: 'symbol',
-            source: LIVE_SOURCES.cityHubs,
-            minzoom: LOD.cityHubMin + 0.5,
-            maxzoom: LOD.cityHubFadeOutEnd,
-            layout: {
-                'text-field': ['get', 'name'],
-                'text-font': [...MAP_TEXT_FONT_REGULAR],
-                'text-size': [
-                    'interpolate', ['linear'], ['zoom'],
-                    6.8, 10,
-                    8.5, 11.5,
-                    9.5, 12,
-                ],
-                'text-offset': [0, 2.1],
-                'text-anchor': 'top',
-            },
-            paint: {
-                'text-color': '#27272a',
-                'text-halo-color': 'rgba(255,255,255,0.9)',
-                'text-halo-width': 1.4,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin + 0.5, 0,
-                    LOD.cityHubFadeInEnd + 0.3, 0.65,
-                    8.5, 1,
-                    LOD.cityHubFadeOutStart, 0.85,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
-            },
-        });
     }
 
     try {
