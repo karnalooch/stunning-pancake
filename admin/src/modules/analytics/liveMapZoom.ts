@@ -9,7 +9,7 @@
  * | 8.5–9.5 | metro          | Huby zanikają, klastry |
  * | 9.5–10.5| city           | Klastry (główny widok miasta) |
  * | 10.5–11.5| district      | Ciaśniejsze klastry |
- * | 11.5–12.2| neighborhood  | Klastry + pojedyncze kropki GL |
+ * | 11.5–12.2| neighborhood  | Klastry (bez pojedynczych kropek — te od z≥12) |
  * | 12.2–12.8| handoff       | GL dots fade ↔ GPU symbol icons |
  * | 12.8–13.5| street-icons  | Ikony MapLibre + collision engine |
  * | 13.5–14.5| street-labels | Etykiety GPU (text-optional) |
@@ -45,15 +45,16 @@ export const LIVE_MAP_LOD = {
     clusterVisibleStart: 5,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
-    dotFadeInStart: 7,
-    dotFadeInEnd: 11.2,
+    /** Individual GL dots only at z≥12 (matches apiDetailForZoom `full`). */
+    dotFadeInStart: 12,
+    dotFadeInEnd: 12.15,
     /** Align with icon fade-in — avoids double GL dots + GPU icons in handoff. */
-    dotFadeOutStart: 11.8,
+    dotFadeOutStart: 12.2,
     dotFadeOutEnd: 13.2,
-    iconMinZoom: 11.8,
+    iconMinZoom: 12,
     /** Same as labelMinZoom — one icon layer at a time (no 13.35–13.45 double draw). */
     iconMaxZoom: 13.35,
-    iconFadeInStart: 11.8,
+    iconFadeInStart: 12.2,
     iconFadeInEnd: 12.2,
     /** Hold icon strength until label layer takes over (no fade-to-zero dip). */
     iconFadeOutStart: 13.15,
@@ -147,9 +148,43 @@ function maplibreInterp(zoom: number, stops: readonly (readonly [number, number]
 
 export type LiveMapLodAuditIssue = {
     zoom: number;
-    type: 'GAP' | 'DOUBLE' | 'ICON_OVERLAP' | 'ICON_STEP';
+    type: 'GAP' | 'DOUBLE' | 'AGGREGATE_DOUBLE' | 'ICON_OVERLAP' | 'ICON_STEP';
     detail?: Record<string, number>;
 };
+
+/** MapLibre holds the first stop below min zoom — explicit zeros avoid stray rider dots. */
+export function riderUnclusteredOpacityAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    return maplibreInterp(zoom, [
+        [L.clusterVisibleStart - 0.5, 0],
+        [L.dotFadeInStart, 0],
+        [L.dotFadeInStart + 0.25, 0.35],
+        [L.dotFadeInEnd, 0.82],
+        [L.dotFadeOutStart, 0.45],
+        [12.4, 0.32],
+        [12.6, 0.1],
+        [L.dotFadeOutEnd, 0],
+    ]);
+}
+
+export function riderUnclusteredRadiusAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    return maplibreInterp(zoom, [
+        [L.clusterVisibleStart - 0.5, 0],
+        [L.dotFadeInStart, 0],
+        [L.dotFadeInStart + 0.25, 5],
+        [12.2, 8],
+        [L.dotFadeOutStart, 5.5],
+        [12.4, 3],
+        [12.6, 1],
+        [L.dotFadeOutEnd, 0],
+    ]);
+}
+
+/** True when unclustered GL dots should be visible (z≥12 handoff band). */
+export function shouldRenderIndividualRiders(zoom: number): boolean {
+    return riderUnclusteredOpacityAtZoom(zoom) > 0.2 && riderUnclusteredRadiusAtZoom(zoom) > 3;
+}
 
 /** Numeric crossfade audit (mirrors paint stops in liveMapLayers.ts). */
 export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveMapLodAuditIssue[] {
@@ -171,25 +206,8 @@ export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveM
             [L.clusterFadeOutEnd - 1.2, 0.62],
             [L.clusterFadeOutEnd, 0],
         ]);
-        const dotOp = maplibreInterp(z, [
-            [L.dotFadeInStart, 0.35],
-            [11.2, 0.82],
-            [L.dotFadeOutStart, 0.45],
-            [12, 0.32],
-            [12.2, 0.22],
-            [12.6, 0.1],
-            [L.dotFadeOutEnd, 0],
-        ]);
-        const dotR = maplibreInterp(z, [
-            [L.dotFadeInStart, 5],
-            [9, 7],
-            [11, 8],
-            [L.dotFadeOutStart, 5.5],
-            [12, 3],
-            [12.2, 2.5],
-            [12.6, 1],
-            [L.dotFadeOutEnd, 0],
-        ]);
+        const dotOp = riderUnclusteredOpacityAtZoom(z);
+        const dotR = riderUnclusteredRadiusAtZoom(z);
         const iconLayer = z >= L.iconMinZoom && z < L.iconMaxZoom;
         const iconOp = iconLayer
             ? maplibreInterp(z, [
@@ -209,8 +227,12 @@ export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveM
         if (riderVis < 0.25 && clOp < 0.2 && hubOp < 0.2) {
             issues.push({ zoom: z, type: 'GAP' });
         }
-        if (dotVisible && iconOp > 0.5) {
+        const inHandoff = z >= L.dotFadeOutStart && z < 12.8;
+        if (dotVisible && iconOp > 0.5 && !inHandoff) {
             issues.push({ zoom: z, type: 'DOUBLE', detail: { dotOp, iconOp } });
+        }
+        if (z < L.dotFadeInStart && dotVisible && (hubOp > 0.25 || clOp > 0.25)) {
+            issues.push({ zoom: z, type: 'AGGREGATE_DOUBLE', detail: { dotOp, hubOp, clOp } });
         }
         if (iconOp > 0.35 && labelIconOp > 0.35 && iconLayer && labelLayer) {
             issues.push({ zoom: z, type: 'ICON_OVERLAP', detail: { iconOp, labelIconOp } });

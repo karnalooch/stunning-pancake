@@ -321,6 +321,9 @@ export const LiveMap: React.FC = () => {
         }
     }, [pushPositionsToMap]);
 
+    const ingestPositionsRef = useRef(ingestPositions);
+    ingestPositionsRef.current = ingestPositions;
+
     const applyPositionPayload = useCallback((
         list: UserPosition[],
         meta: Record<string, unknown> | null | undefined,
@@ -680,6 +683,9 @@ export const LiveMap: React.FC = () => {
                         (src as { setClusterOptions?: (o: { radius?: number }) => void })
                             .setClusterOptions?.({ radius: clusterRadiusForZoom(z) });
                     } catch { /* MapLibre < 3.3 */ }
+                }
+                if (apiDetailForZoom(z) === 'summary') {
+                    ingestPositionsRef.current([], { snap: true });
                 }
                 syncZoomUi();
             });

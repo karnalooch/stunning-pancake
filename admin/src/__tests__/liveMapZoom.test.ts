@@ -12,6 +12,8 @@ import {
     clusterRadiusForZoom,
     LIVE_MAP_LOD,
     auditLiveMapLodCrossfade,
+    riderUnclusteredOpacityAtZoom,
+    shouldRenderIndividualRiders,
 } from '../modules/analytics/liveMapZoom';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
 
@@ -59,12 +61,25 @@ describe('liveMapZoom', () => {
         const issues = auditLiveMapLodCrossfade();
         const gaps = issues.filter((i) => i.type === 'GAP');
         const doubles = issues.filter((i) => i.type === 'DOUBLE');
+        const aggregateDoubles = issues.filter((i) => i.type === 'AGGREGATE_DOUBLE');
         const overlaps = issues.filter((i) => i.type === 'ICON_OVERLAP');
         const steps = issues.filter((i) => i.type === 'ICON_STEP');
         expect(gaps, JSON.stringify(gaps)).toHaveLength(0);
         expect(overlaps, JSON.stringify(overlaps)).toHaveLength(0);
         expect(steps, JSON.stringify(steps)).toHaveLength(0);
         expect(doubles.length, JSON.stringify(doubles.slice(0, 8))).toBe(0);
+        expect(aggregateDoubles, JSON.stringify(aggregateDoubles.slice(0, 8))).toHaveLength(0);
+    });
+
+    it('hides individual riders below z=12 (country/region zoom-out bug)', () => {
+        expect(riderUnclusteredOpacityAtZoom(6)).toBe(0);
+        expect(riderUnclusteredOpacityAtZoom(10)).toBe(0);
+        expect(shouldRenderIndividualRiders(6)).toBe(false);
+        expect(shouldRenderIndividualRiders(11.5)).toBe(false);
+        expect(shouldRenderIndividualRiders(12.3)).toBe(true);
+        expect(LIVE_MAP_LOD.dotFadeInStart).toBe(12);
+        expect(apiDetailForZoom(12)).toBe('full');
+        expect(LIVE_MAP_LOD.iconMinZoom).toBeGreaterThanOrEqual(LIVE_MAP_LOD.dotFadeInStart);
     });
 });
 
