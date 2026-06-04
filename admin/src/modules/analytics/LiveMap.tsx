@@ -293,6 +293,8 @@ export const LiveMap: React.FC = () => {
             list.length === 0
             && (typeof bikeMeta === 'number' || typeof runMeta === 'number')
         ) {
+            setCyclists(typeof bikeMeta === 'number' ? bikeMeta : 0);
+            setRunners(typeof runMeta === 'number' ? runMeta : 0);
             return;
         }
         if (typeof bikeMeta === 'number' && typeof runMeta === 'number') {

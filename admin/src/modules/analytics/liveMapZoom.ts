@@ -31,12 +31,6 @@ export type LiveMapZoomMode =
     | 'detail';
 
 /**
- * MapLibre stops clustering above this zoom. Must be < dotFadeInStart (12) so GL dots/icons
- * (layers filter `!point_count`) actually render between z≈12 and icon handoff — not only at z≥14.
- */
-export const CLUSTER_MAX_ZOOM = 11.5;
-
-/**
  * Shared zoom bands for MapLibre paint crossfades — wider ranges reduce pop-in
  * when switching between city hubs, clusters, GL dots, and GPU symbol layers.
  */
@@ -69,6 +63,12 @@ export const LIVE_MAP_LOD = {
     /** Matches riderIcons opacity at handoff (labels layer picks up). */
     labelIconOpacityAtHandoff: 0.85,
 } as const;
+
+/**
+ * MapLibre stops clustering when zoom > clusterMaxZoom. Must match dotFadeInStart (12) so
+ * unclustered GL dots are visible as soon as clustering ends (avoids empty band at z≈11.5–12).
+ */
+export const CLUSTER_MAX_ZOOM = LIVE_MAP_LOD.dotFadeInStart;
 
 /** Fade 0→1 between start (inclusive) and end (exclusive) zoom. */
 export function zoomFade(zoom: number, start: number, end: number): number {
@@ -188,6 +188,29 @@ export function riderUnclusteredRadiusAtZoom(zoom: number): number {
 /** True when unclustered GL dots should be visible (z≥12 handoff band). */
 export function shouldRenderIndividualRiders(zoom: number): boolean {
     return riderUnclusteredOpacityAtZoom(zoom) > 0.2 && riderUnclusteredRadiusAtZoom(zoom) > 3;
+}
+
+/** Cluster circle paint opacity (mirrors live-clusters layer). */
+export function clusterLayerOpacityAtZoom(zoom: number): number {
+    const L = LIVE_MAP_LOD;
+    return maplibreInterp(zoom, [
+        [L.clusterVisibleStart, 0.32],
+        [8, 0.72],
+        [10.5, 0.88],
+        [L.clusterPeakEnd, 0.94],
+        [L.clusterFadeOutEnd - 1.2, 0.62],
+        [L.clusterFadeOutEnd, 0],
+    ]);
+}
+
+/**
+ * True when riders should be visible on canvas — accounts for MapLibre unclustering above clusterMaxZoom.
+ */
+export function ridersVisibleAtZoom(zoom: number): boolean {
+    if (zoom <= CLUSTER_MAX_ZOOM) {
+        return clusterLayerOpacityAtZoom(zoom) > 0.2;
+    }
+    return shouldRenderIndividualRiders(zoom);
 }
 
 /** Numeric crossfade audit (mirrors paint stops in liveMapLayers.ts). */

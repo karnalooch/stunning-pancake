@@ -15,6 +15,7 @@ import {
     auditLiveMapLodCrossfade,
     riderUnclusteredOpacityAtZoom,
     shouldRenderIndividualRiders,
+    ridersVisibleAtZoom,
 } from '../modules/analytics/liveMapZoom';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
 
@@ -41,8 +42,11 @@ describe('liveMapZoom', () => {
         expect(apiDetailForZoom(11.4)).toBe('standard');
     });
 
-    it('clusterMaxZoom ends before individual dots (z≥12)', () => {
-        expect(CLUSTER_MAX_ZOOM).toBeLessThan(LIVE_MAP_LOD.dotFadeInStart);
+    it('clusterMaxZoom aligns with dot fade-in (no invisible band 11.5–12)', () => {
+        expect(CLUSTER_MAX_ZOOM).toBe(LIVE_MAP_LOD.dotFadeInStart);
+        expect(ridersVisibleAtZoom(11.5)).toBe(true);
+        expect(ridersVisibleAtZoom(11.6)).toBe(true);
+        expect(ridersVisibleAtZoom(11.9)).toBe(true);
     });
 
     it('auditLiveMapLodCrossfade has no gap at zoom 5', () => {
