@@ -997,9 +997,11 @@ def _run_live_tick_body():
     async_routing = _async_routing_enabled()
 
     # Promote pre-routed rides to ACTIVE when start_time reached
+    promoted = 0
     for user_id, ride in list(active_rides.items()):
         if ride_fsm.can_promote_to_active(ride, now):
             sim.set_live_ride(user_id, {**ride, "ride_state": ride_fsm.ACTIVE})
+            promoted += 1
 
     active_rides = sim.get_live_rides()
 
@@ -1426,8 +1428,10 @@ def _run_live_tick_body():
     )
     new_riding = fsm["ride_on_map"]
 
-    if started > 0 or completed > 0:
+    if started > 0 or completed > 0 or promoted > 0:
         ctx = []
+        if promoted > 0:
+            ctx.append(f"{promoted} → ACTIVE")
         if started > 0:
             ctx.append(f"{started} started")
         if completed > 0:
@@ -1435,5 +1439,5 @@ def _run_live_tick_body():
             if cheaters > 0:
                 ctx.append(f"{cheaters} cheater{'s' if cheaters > 1 else ''}")
         sim.live_log(
-            f"Tick: {', '.join(ctx)} — {new_riding} riding, 📡 {len(telemetry_entries)} positions"
+            f"Tick: {', '.join(ctx)} — {new_riding} on map, 📡 {len(telemetry_entries)} positions"
         )

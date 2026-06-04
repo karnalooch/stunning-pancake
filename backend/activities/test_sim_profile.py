@@ -18,7 +18,7 @@ from activities.sim_profile import (
 
 class SimProfileMappingTest(SimpleTestCase):
     def test_piecewise_midpoint(self):
-        self.assertEqual(piecewise_lerp([(0, 25), (50, 50), (100, 80)], 50), 50.0)
+        self.assertEqual(piecewise_lerp([(0, 25), (50, 50), (75, 100), (100, 150)], 50), 50.0)
 
     def test_intensity_defaults(self):
         m = map_intensity(50)
@@ -38,8 +38,10 @@ class SimProfileMappingTest(SimpleTestCase):
         self.assertEqual(mid["brouter_max_calls_per_tick"], 42)
         self.assertEqual(mid["brouter_route_attempts"], 4)
         self.assertEqual(mid["tick_seconds"], 8)
+        turbo = map_load(75)
+        self.assertEqual(turbo["max_starts_per_live_tick"], 100)
         high = map_load(100)
-        self.assertEqual(high["max_starts_per_live_tick"], 80)
+        self.assertEqual(high["max_starts_per_live_tick"], 150)
         self.assertEqual(high["brouter_route_attempts"], 5)
         self.assertEqual(high["tick_seconds"], 6)
 

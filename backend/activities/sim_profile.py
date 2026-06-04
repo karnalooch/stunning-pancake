@@ -55,7 +55,8 @@ def map_intensity(intensity: int) -> dict[str, float]:
 def map_load(load: int) -> dict[str, int]:
     """Obciążenie systemu → tick + scale_overrides."""
     l = _clamp_int(load)
-    starts = int(round(piecewise_lerp([(0, 25), (50, 50), (100, 80)], l)))
+    # 75→100 starts/tick, 100→150 (hard cap enforced in scale_config overrides)
+    starts = int(round(piecewise_lerp([(0, 25), (50, 50), (75, 100), (100, 150)], l)))
     brouter = int(round(starts * 0.83))
     attempts = 4 if l < 75 else 5
     tick_seconds = int(round(piecewise_lerp([(0, 12), (50, 8), (100, 6)], l)))

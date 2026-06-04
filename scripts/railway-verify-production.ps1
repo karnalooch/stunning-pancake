@@ -95,14 +95,15 @@ $requiredSim = @{
     'CELERY_WORKER_PREFETCH_MULTIPLIER'         = '1'
     'CELERY_MAX_TASKS_PER_CHILD'                = '50'
     'SCALE_SIM_ASYNC_ROUTING'                   = '1'
-    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'         = '120'
-    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK'   = '50'
+    'SCALE_MAX_STARTS_PER_LIVE_TICK'              = '150'
+    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'         = '200'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK'   = '150'
     'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP'         = '0'
     'SIM_BP_MIN_DISPATCH_PER_TICK'                = '12'
     'SIM_BP_DRAIN_DISPATCH_PER_TICK'              = '20'
     'SIM_BP_QUEUE_HEADROOM'                       = '25'
-    'SCALE_SIM_RAMP_START_DELAY_MAX'              = '20'
-    'SCALE_SIM_RAMP_TICKS'                        = '12'
+    'SCALE_SIM_RAMP_START_DELAY_MAX'              = '8'
+    'SCALE_SIM_RAMP_TICKS'                        = '10'
 }
 function Test-RailwayVarLine {
     param([string]$Output, [string]$Key, [string]$Value)
@@ -141,8 +142,8 @@ if ($routeVars -match 'DATABASE_URL' -and $routeVars -match 'REDIS_URL') {
 $backendService = 'Backend'
 $backendVars = railway variable list -s $backendService 2>&1 | Out-String
 $requiredBackend = @{
-    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'       = '120'
-    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK' = '50'
+    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'       = '200'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK' = '150'
 }
 foreach ($kv in $requiredBackend.GetEnumerator()) {
     $ok = Test-RailwayVarLine -Output $backendVars -Key $kv.Key -Value $kv.Value

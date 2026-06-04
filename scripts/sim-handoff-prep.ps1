@@ -116,7 +116,7 @@ function Resolve-SimProfile {
     $l = [Math]::Max(0, [Math]::Min(100, $L))
     $active = [Math]::Max(0.08, [Math]::Min(0.50, 0.08 + 0.42 * ($i / 100.0)))
     $cheat = [Math]::Max(0.0, [Math]::Min(0.25, 0.12 * ($i / 100.0)))
-    $starts = [int][Math]::Round((Get-PiecewiseLerp -X $l -Points @(@(0, 25), @(50, 50), @(100, 80))))
+    $starts = [int][Math]::Round((Get-PiecewiseLerp -X $l -Points @(@(0, 25), @(50, 50), @(75, 100), @(100, 150))))
     $brouter = [int][Math]::Round($starts * 0.83)
     $attempts = if ($l -lt 75) { 4 } else { 5 }
     $tick = [int][Math]::Round((Get-PiecewiseLerp -X $l -Points @(@(0, 12), @(50, 8), @(100, 6))))

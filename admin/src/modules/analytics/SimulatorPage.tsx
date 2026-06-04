@@ -144,6 +144,13 @@ export const SimulatorPage: React.FC = () => {
         setScaleReport(null);
     };
 
+    /** ~150 starts/tick + szybszy ramp ACTIVE (wymaga deploy railway.json turbo). */
+    const applyTurboMapRamp = () => {
+        setPoolIntensity(100);
+        setSystemLoad(100);
+        setScaleReport(null);
+    };
+
     const startPolling = useCallback(() => {
         if (batchPollRef.current) clearInterval(batchPollRef.current);
         if (livePollRef.current) clearInterval(livePollRef.current);
@@ -493,15 +500,21 @@ export const SimulatorPage: React.FC = () => {
                                             marks={[
                                                 { value: 0, label: 'Eco' },
                                                 { value: 50, label: 'Balanced' },
-                                                { value: 100, label: 'Fast' },
+                                                { value: 75, label: '100/s' },
+                                                { value: 100, label: '150/s' },
                                             ]}
                                         />
                                     </Box>
 
+                                    <Group gap="xs">
+                                        <Button variant="light" size="xs" color="teal" onClick={applyTurboMapRamp}>
+                                            Preset: Turbo map (150 warm / tick)
+                                        </Button>
+                                    </Group>
                                     <Alert color="yellow" variant="light" icon={<AlertTriangle size={16} />}>
                                         <Text size="xs">
-                                            Wyższe obciążenie = szybszy spawn i większy RAM Celery/BRouter.
-                                            Zob. docs/operations/RAILWAY_CELERY_MEMORY.md.
+                                            Load 75≈100 starts/tick, 100≈150. ACTIVE na mapie zależy od routingu (3× worker).
+                                            Przy dużym warming obniż load lub poczekaj na drain kolejki.
                                         </Text>
                                     </Alert>
                                 </Stack>

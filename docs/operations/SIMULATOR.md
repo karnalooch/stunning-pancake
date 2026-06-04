@@ -29,7 +29,7 @@
 | Suwak | Mapowanie (SSOT: `sim_profile.py` / `simProfileMap.ts`) |
 |-------|-----------------------------------------------------------|
 | **Aktywność puli** | `active_ratio = clamp(0.08 + 0.42×I/100, 0.08–0.50)`; `cheat_ratio = clamp(0.12×I/100, 0–0.25)` |
-| **Obciążenie systemu** | starts 25→50→80 (0/50/100); BRouter `round(starts×0.83)`; próby 4 jeśli L&lt;75 else 5; tick 12→8→6 s |
+| **Obciążenie systemu** | starts 25→50→**100**→**150** (0/50/75/100); BRouter `round(starts×0.83)`; próby 4 jeśli L&lt;75 else 5; tick 12→8→6 s |
 
 Przy aktywnym live na kroku 2 UI pokazuje alert **Backpressure**, gdy `routing_backpressure_active=true`.
 
@@ -103,7 +103,9 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | Koszt ~30 USD/mies. | Przy capach ~12 GB app + usage-based typowo **poniżej** tego budżetu; nie ustawiaj wszystkiego na 48 GB „na zapas”. |
 | Regresja UX | Unikaj: `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=1`, pustego `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH`, load=100 przy pinned queue, wyłączenia ramp (`SCALE_SIM_RAMP_TICKS=0`) na starcie. |
 
-**SSOT w repo (`railway.json`):** depth **120**, dispatch **50**, auto-lower **0**, BP min/drain/headroom **12/20/25**, ramp **20 s × 12 ticków**. Po deploy: `.\scripts\railway-verify-production.ps1` — wszystkie te zmienne na `celery-worker-simulation` i `Backend`.
+**SSOT turbo (`railway.json`):** depth **200**, dispatch **150**, starts env **150**, routing **3 repliki**, auto-lower **0**, BP **25/40**, ramp **8 s × 10 ticków**. Admin: preset **Turbo map** (intensity/load 100). Po deploy: `.\scripts\railway-verify-production.ps1`.
+
+**Uwaga:** ~100 ACTIVE/tick wymaga ~100 ukończonych tras/tick (BRouter + 3× routing). Jeśli `ride_warming` rośnie — kolejka routingu; obniż load lub dodaj replikę.
 
 **Operacja po deploy:** Stop live → start **Aktywność 50 / Obciążenie 50** (nie stary `active_ratio` z calm restart). Oczekiwane: `ride_warming` spada, backpressure okazjonalne (nie ciągłe `skipped 50`), mapa nabiera ACTIVE w rampie.
 
