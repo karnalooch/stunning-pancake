@@ -57,6 +57,25 @@ Railway SSOT: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 
 ---
 
+## Live simulator lifecycle (numReplicas 0↔1)
+
+**No redeploy:** backend `POST /live-simulate/` sets OSRM **1** replica; `DELETE` (stop) sets **0**. Code: `backend/activities/railway_osrm_lifecycle.py` (GraphQL `serviceInstanceUpdate`).
+
+| Env (Railway **backend** service) | Description |
+|-----------------------------------|-------------|
+| `RAILWAY_API_TOKEN` | Railway → Account → Tokens |
+| `RAILWAY_OSRM_LIFECYCLE` | `0` disables; default on when token set (non-SQLite) |
+| `RAILWAY_OSRM_SERVICE_ID` | Optional UUID; else lookup by name `osrm` |
+| `SCALE_SIM_ROUTING_BACKEND` | Scale-up only for `osrm` or `auto`; scale-down when lifecycle enabled |
+
+**Cold start:** after scale-up, graph load from volume takes **minutes** — use `auto` until `:5000` health is OK.
+
+**Manual:** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1`
+
+**Volume:** disk cost remains at 0 replicas; process RAM — no.
+
+---
+
 ## `auto` and `template`
 
 | Backend | Behavior |
@@ -77,5 +96,7 @@ Railway SSOT: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | `Connection refused` on `OSRM_URL` | `osrm` container still building the graph — check `osrm-extract` logs |
 | `NoRoute` / `NoSegment` | Point outside extract (wrong region) — check `OSRM_PBF_URL` |
 | Sim still calls BRouter | Dashboard overwrites env — redeploy with `railway.json` or `railway-sync-sim-env` |
+| `osrm_lifecycle: failed` in API | Missing backend token or wrong service id — check backend Variables |
+| OSRM off after stop, no routes | Expected until scale-up; use `auto` or wait for cold start |
 
 **Related:** [SIMULATOR.md](./SIMULATOR.md) · [BROUTER.md](./BROUTER.md) · [infrastructure/osrm/README.md](../../../infrastructure/osrm/README.md)

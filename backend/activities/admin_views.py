@@ -451,6 +451,8 @@ class LiveSimulationView(APIView):
                 fsm_pending=fsm["ride_warming"],
                 fsm_routing=fsm.get("ride_routing", 0),
             )
+            from activities.railway_osrm_lifecycle import osrm_lifecycle_echo
+
             routing_queue_depth = int(state.get("routing_queue_depth") or bp["routing_queue_depth"])
             routing_backpressure_active = (
                 str(state.get("routing_backpressure_active", "")).lower() == "true"
@@ -518,6 +520,7 @@ class LiveSimulationView(APIView):
                     "sim_intensity": _redis_int_or_none(state.get("sim_intensity")),
                     "sim_load": _redis_int_or_none(state.get("sim_load")),
                     "effective_sim_profile": _effective_sim_profile_echo(state),
+                    "osrm_lifecycle": osrm_lifecycle_echo(),
                     "log": log,
                 }
             )
@@ -532,14 +535,17 @@ class LiveSimulationView(APIView):
             )
 
     def delete(self, request):
-        sim.force_stop_live_simulation()
-        return Response(
-            {
-                "status": "stopped",
-                "live_lock_held": sim.is_live_lock_held(),
-                "message": "Live simulation stopped and locks cleared.",
-            }
-        )
+        osrm_scale = sim.force_stop_live_simulation()
+        body = {
+            "status": "stopped",
+            "live_lock_held": sim.is_live_lock_held(),
+            "message": "Live simulation stopped and locks cleared.",
+        }
+        if osrm_scale is not None:
+            body["osrm_lifecycle"] = osrm_scale.action
+            body["osrm_replicas"] = osrm_scale.replicas
+            body["osrm_lifecycle_detail"] = osrm_scale.detail
+        return Response(body)
 
     def post(self, request):
         from activities import wipe_state as ws
@@ -649,6 +655,14 @@ class LiveSimulationView(APIView):
 
         total_athletes = User.objects.filter(role="ATHLETE").count()
         total_users = max(10, int(total_athletes * pool_pct))
+
+        from activities.railway_osrm_lifecycle import scale_osrm_for_live_sim
+
+        osrm_scale = scale_osrm_for_live_sim(running=True)
+        if osrm_scale.action == "scaled_up":
+            sim.live_log("OSRM Railway: scaled to 1 replica (cold start may take minutes).")
+        elif osrm_scale.action == "failed":
+            sim.live_log(f"OSRM Railway scale-up failed: {osrm_scale.detail}")
 
         # Spawn Celery task or run synchronously on SQLite
         if "sqlite" in os.getenv("DATABASE_URL", ""):
@@ -764,6 +778,9 @@ class LiveSimulationView(APIView):
             resp["sim_intensity"] = sim_intensity
             resp["sim_load"] = sim_load
             resp["effective_sim_profile"] = profile
+        resp["osrm_lifecycle"] = osrm_scale.action
+        resp["osrm_replicas"] = osrm_scale.replicas
+        resp["osrm_lifecycle_detail"] = osrm_scale.detail
         return Response(resp)
 
 

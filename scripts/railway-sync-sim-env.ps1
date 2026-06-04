@@ -82,15 +82,28 @@ Set-Vars 'celery-worker-routing' @(
     'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1'
 )
 
-Write-Host 'Syncing backend...'
-Set-Vars 'Backend' @(
+Write-Host 'Syncing backend (OSRM lifecycle vars need RAILWAY_API_TOKEN from caller env)...'
+$backendVars = @(
     'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter',
     'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH=200',
     'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK=150',
     'SCALE_SIM_MAX_ROUTING_BACKLOG=500',
     'SCALE_SIM_INSTANT_ACTIVE_ON_ROUTE=1',
-    'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0'
+    'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0',
+    'RAILWAY_OSRM_LIFECYCLE=1',
+    'RAILWAY_OSRM_SERVICE_ID=4d0355ff-03fd-4e3c-a88e-99cbe853876c',
+    'RAILWAY_OSRM_SERVICE_NAME=osrm',
+    'RAILWAY_OSRM_REGION=europe-west4-drams3a',
+    'RAILWAY_PROJECT_ID=ce13089b-76f4-4114-a892-ad13e23c8761',
+    'RAILWAY_ENVIRONMENT_ID=f30e70a7-b4d2-42aa-8137-21faa091b969',
+    'SCALE_SIM_ROUTING_BACKEND=auto'
 )
+if ($env:RAILWAY_API_TOKEN) {
+    $backendVars += "RAILWAY_API_TOKEN=$($env:RAILWAY_API_TOKEN)"
+} else {
+    Write-Warning 'RAILWAY_API_TOKEN not set — skip copying token to Backend (run railway-setup-osrm-lifecycle-env.ps1)'
+}
+Set-Vars 'Backend' $backendVars
 
 Write-Host 'Syncing brouter (threads + heap — deploy brouter service after this)...'
 Set-Vars 'brouter' @(

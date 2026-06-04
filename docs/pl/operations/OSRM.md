@@ -58,6 +58,26 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 
 ---
 
+## Lifecycle z live symulatorem (numReplicas 0↔1)
+
+**Bez redeployu:** backend przy `POST /live-simulate/` ustawia **1** replikę serwisu `osrm`, przy `DELETE` (stop) — **0**. Implementacja: `backend/activities/railway_osrm_lifecycle.py` (GraphQL `serviceInstanceUpdate`).
+
+| Env (serwis **backend** na Railway) | Opis |
+|-------------------------------------|------|
+| `RAILWAY_API_TOKEN` | Token z Railway → Account → Tokens |
+| `RAILWAY_OSRM_LIFECYCLE` | `0` wyłącza; domyślnie włączone gdy jest token i nie SQLite |
+| `RAILWAY_OSRM_SERVICE_ID` | Opcjonalnie UUID; inaczej lookup po nazwie `osrm` |
+| `RAILWAY_OSRM_REGION` | `europe-west4-drams3a` (multiRegionConfig — **nie** top-level `numReplicas`) |
+| `SCALE_SIM_ROUTING_BACKEND` | Scale-up tylko przy `osrm` lub `auto`; scale-down zawsze gdy lifecycle włączone |
+
+**Cold start:** po scale-up graf z volume wczytuje się **kilka minut** — na starcie symulatora ustaw `auto`, żeby do czasu health `:5000` jechał BRouter.
+
+**Ręcznie (ops):** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1`
+
+**Volume:** po scale-down nadal płacisz za dysk; RAM procesu — nie.
+
+---
+
 ## `auto` i `template`
 
 | Backend | Zachowanie |
@@ -78,5 +98,7 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | `Connection refused` na `OSRM_URL` | Kontener `osrm` jeszcze buduje graf — logi `osrm-extract` |
 | `NoRoute` / `NoSegment` | Punkt poza extractem (np. zły region) — sprawdź `OSRM_PBF_URL` |
 | Sim nadal woła BRouter | Dashboard nadpisuje env — redeploy z `railway.json` lub `railway-sync-sim-env` |
+| `osrm_lifecycle: failed` w API | Brak tokena na backendzie lub złe `RAILWAY_OSRM_SERVICE_ID` — sprawdź Variables backendu |
+| OSRM zgaszony po stopie, sim nie startuje routingu | Oczekiwane do scale-up; użyj `auto` lub poczekaj na cold start |
 
 **Powiązane:** [SIMULATOR.md](./SIMULATOR.md) · [BROUTER.md](./BROUTER.md) · [infrastructure/osrm/README.md](../../../infrastructure/osrm/README.md)

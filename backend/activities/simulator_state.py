@@ -416,12 +416,26 @@ def is_live_lock_held() -> bool:
 
 
 def force_stop_live_simulation():
-    """Abort live sim, stop tick loop, and release all live locks."""
+    """Abort live sim, stop tick loop, release locks; scale OSRM down when configured."""
+    from activities.railway_osrm_lifecycle import OsrmScaleResult, scale_osrm_for_live_sim
+
     set_live_state(running=False, error=None)
     release_live_lock()
     release_live_tick_lock()
     stop_live_tick_loop()
+    osrm_scale: OsrmScaleResult | None = None
+    try:
+        osrm_scale = scale_osrm_for_live_sim(running=False)
+        if osrm_scale.action == "scaled_down":
+            live_log("OSRM Railway: scaled to 0 replicas (compute stopped).")
+        elif osrm_scale.action == "failed":
+            live_log(f"OSRM Railway scale-down failed: {osrm_scale.detail}")
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception("OSRM Railway scale-down")
     live_log("⚠️ Stopped by user (locks cleared).")
+    return osrm_scale
 
 
 def reset_simulator_locks():
