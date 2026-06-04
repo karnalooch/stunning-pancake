@@ -488,7 +488,7 @@ class TelemetryLiveView(generics.GenericAPIView):
         from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
         from activities.telemetry_shard import live_map_read_policy
 
-        sim.maybe_advance_live_simulation()
+        sim.maybe_advance_live_simulation_from_poll()
         req = parse_live_map_query_params(request.query_params)
         body = build_live_map_payload(req)
         read_policy = live_map_read_policy()
@@ -557,7 +557,7 @@ class TelemetryLiveStreamView(views.APIView):
         def event_stream():
             try:
                 while True:
-                    sim.maybe_advance_live_simulation()
+                    sim.maybe_advance_live_simulation_from_poll()
                     payload = build_live_map_payload(req)
                     payload["meta"]["transport"] = "sse"
                     yield f"data: {json.dumps(payload, separators=(',', ':'))}\n\n"

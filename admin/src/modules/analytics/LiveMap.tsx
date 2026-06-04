@@ -106,6 +106,7 @@ export const LiveMap: React.FC = () => {
     const moveDebounceRef = useRef<ReturnType<typeof setTimeout>>();
     const abortRef = useRef<AbortController | null>(null);
     const fetchInFlightRef = useRef(false);
+    const inflightViewportKeyRef = useRef('');
     const tabVisibleRef = useRef(typeof document === 'undefined' || !document.hidden);
     const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastRefreshRef = useRef<number | null>(null);
@@ -373,11 +374,9 @@ export const LiveMap: React.FC = () => {
         if (!priority && fetchInFlightRef.current) return;
 
         fetchInFlightRef.current = true;
-        if (priority) abortRef.current?.abort();
 
         const seq = ++fetchSeqRef.current;
         const ac = new AbortController();
-        abortRef.current = ac;
         const t0 = performance.now();
         try {
             const map = mapRef.current;
@@ -385,6 +384,16 @@ export const LiveMap: React.FC = () => {
             const detail = apiDetailForZoom(zoom);
             const bbox = map ? bboxFromMap(map) : undefined;
             const viewportKey = liveMapViewportKey(detail, bbox);
+            if (
+                priority
+                && abortRef.current
+                && inflightViewportKeyRef.current
+                && inflightViewportKeyRef.current !== viewportKey
+            ) {
+                abortRef.current.abort();
+            }
+            abortRef.current = ac;
+            inflightViewportKeyRef.current = viewportKey;
             const viewportChanged = viewportKey !== lastViewportKeyRef.current;
             if (viewportChanged) {
                 lastViewportKeyRef.current = viewportKey;

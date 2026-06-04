@@ -286,10 +286,14 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     elif telemetry_meta.get("capped"):
         read_mode = "viewport_capped"
 
+    if telemetry_meta.get("cached") and not enriched_data:
+        telemetry_meta = {**telemetry_meta, "cached": False, "cache_stale_empty": True}
+
     return {
         "positions": enriched_data,
         "meta": {
             **telemetry_meta,
+            "positions_returned": len(enriched_data),
             "detail": detail,
             "redis_active": active_riding,
             "active_riding": active_riding,

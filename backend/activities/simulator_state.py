@@ -1004,6 +1004,24 @@ def release_live_tick_lock():
     r.delete(LIVE_TICK_LOCK_KEY)
 
 
+LIVE_POLL_ADVANCE_GATE_KEY = "{sim}:live:poll_advance_gate"
+LIVE_POLL_ADVANCE_GATE_SEC = 2
+
+
+def maybe_advance_live_simulation_from_poll() -> bool:
+    """
+    Rate-limit tick enqueue from hot telemetry polls (avoids heal/tick storms per pan).
+    Admin actions should call maybe_advance_live_simulation() directly.
+    """
+    try:
+        r = get_redis()
+        if not r.set(LIVE_POLL_ADVANCE_GATE_KEY, "1", nx=True, ex=LIVE_POLL_ADVANCE_GATE_SEC):
+            return False
+    except Exception:
+        pass
+    return maybe_advance_live_simulation()
+
+
 def maybe_advance_live_simulation() -> bool:
     """Trigger a live sim tick if the interval elapsed. Safe from any poll endpoint."""
     state = get_live_state()
