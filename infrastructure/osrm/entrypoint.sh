@@ -32,12 +32,19 @@ pbf_ready() {
 
 download_pbf() {
   echo "[osrm] Downloading ${PBF_URL} (first run may take several minutes)..."
+  df -h . 2>/dev/null || true
   rm -f "$PBF_NAME" "${PBF_NAME}.tmp"
-  wget -q --show-progress -O "${PBF_NAME}.tmp" "$PBF_URL" || {
+  if curl -fSL --ipv4 --retry 5 --retry-delay 10 --connect-timeout 60 \
+      -o "${PBF_NAME}.tmp" "$PBF_URL"; then
+    :
+  elif wget -q --show-progress --tries=3 --timeout=120 -O "${PBF_NAME}.tmp" "$PBF_URL"; then
+    :
+  else
     rm -f "${PBF_NAME}.tmp"
-    echo "[osrm] wget failed — place ${PBF_NAME} in volume ${DATA_DIR}" >&2
+    echo "[osrm] download failed (curl/wget) — check egress, volume space, or upload ${PBF_NAME} to ${DATA_DIR}" >&2
+    df -h . 2>/dev/null || true
     exit 1
-  }
+  fi
   mv "${PBF_NAME}.tmp" "$PBF_NAME"
   echo "[osrm] PBF ready ($(pbf_size) bytes)"
 }
