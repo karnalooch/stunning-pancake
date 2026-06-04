@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/DOCUMENTATION_STANDARDS.md) |
+| **translation** | [English](../en/DOCUMENTATION_STANDARDS.md) |
 | **canonical_path** | docs/pl/DOCUMENTATION_STANDARDS.md |
 
 ---
@@ -159,18 +159,21 @@ Każdy dokument **Active** (poza snapshotami) docelowo ma **parę** EN/PL ze zwi
 
 | Element | Gdzie |
 |---------|--------|
-| Polityka i fazy migracji | [locales/STANDARD.pl.md](./locales/STANDARD.pl.md) · [STANDARD.en.md](./locales/STANDARD.en.md) |
-| Status plik po pliku | [locales/MIGRATION_REGISTRY.md](./locales/MIGRATION_REGISTRY.md) |
-| Indeks EN / PL | [en/README.md](./en/README.md) · [pl/README.md](./pl/README.md) |
+| Polityka i fazy migracji | [locales/STANDARD.pl.md](../locales/STANDARD.pl.md) · [STANDARD.en.md](../locales/STANDARD.en.md) |
+| Status plik po pliku | [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md) |
+| Indeks EN / PL | [en/README.md](../en/README.md) · [pl/README.md](./README.md) |
 | CI par | `python scripts/check_docs_i18n.py` |
 
-| Folder (legacy) | Język domyślny | Para EN |
-|-----------------|----------------|---------|
-| `docs/operations/`, `docs/runbooks/` | Polski | `docs/en/operations/`, `docs/en/runbooks/` |
+| Ścieżka | Kanoniczny PL | Para EN | Uwagi |
+|---------|---------------|---------|--------|
+| `docs/pl/operations/`, `docs/pl/runbooks/` | ✅ | `docs/en/…` | Faza 2 — edycja tutaj |
+| `docs/operations/`, `docs/runbooks/` (legacy) | stub redirect | linki w stubie | Nie edytować treści |
 | `docs/admin/` | EN (checklisty) + PL (roadmap) | `docs/pl/admin/` gdy potrzebne |
 | `docs/compliance/` | PL (RCP) / EN (release, map licensing) | wg rejestru |
 | `docs/product/`, `docs/onboarding/` | Polski | `docs/en/product/`, … |
 | `docs/adr/`, `API.md`, spec architektury | Angielski (kanoniczny) | Opcjonalne streszczenie PL |
+
+**Metadane pary (P0 runbooki):** `translation_status` = `reviewed` \| `machine-translated`; opcjonalnie `translation_reviewed` (ISO data). CI wymaga `reviewed` na P0 ops — patrz `scripts/check_docs_i18n.py`.
 
 Skrót indeksu: [README.md § Polityka językowa](./README.md#polityka-językowa).
 
