@@ -116,6 +116,55 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
         self.assertTrue(snap["routing_backpressure_active"])
 
 
+class LiveStartBudgetTest(SimpleTestCase):
+    @patch.dict("os.environ", {"SCALE_SIM_START_BUDGET_MODE": "active_on_map"}, clear=False)
+    def test_active_on_map_ignores_warming_for_starts(self):
+        budget = bp.compute_live_start_budget(
+            total_users=999,
+            active_ratio=0.29,
+            max_riders=50_000,
+            active_on_map=245,
+            pipeline_count=283,
+            global_start_cap=150,
+        )
+        self.assertEqual(budget["target_on_map"], 289)
+        self.assertEqual(budget["slots_free_on_map"], 44)
+        self.assertEqual(budget["starts_budget"], 44)
+
+    @patch.dict("os.environ", {"SCALE_SIM_START_BUDGET_MODE": "all_in_flight"}, clear=False)
+    def test_legacy_all_in_flight_small_needed(self):
+        budget = bp.compute_live_start_budget(
+            total_users=999,
+            active_ratio=0.29,
+            max_riders=50_000,
+            active_on_map=245,
+            pipeline_count=283,
+            global_start_cap=150,
+        )
+        self.assertEqual(budget["starts_budget"], 6)
+
+    @patch.dict(
+        "os.environ",
+        {
+            "SCALE_SIM_START_BUDGET_MODE": "active_on_map",
+            "SCALE_SIM_MAX_PIPELINE_MULTIPLIER": "2.5",
+            "SCALE_SIM_MAX_PIPELINE_ABSOLUTE": "2000",
+        },
+        clear=False,
+    )
+    def test_pipeline_cap_limits_starts(self):
+        budget = bp.compute_live_start_budget(
+            total_users=500,
+            active_ratio=0.5,
+            max_riders=50_000,
+            active_on_map=50,
+            pipeline_count=1990,
+            global_start_cap=150,
+        )
+        self.assertTrue(budget["pipeline_capped"])
+        self.assertLess(budget["starts_budget"], 200)
+
+
 class AutoLowerDefaultsTest(SimpleTestCase):
     def test_auto_lower_off_by_default(self):
         import os

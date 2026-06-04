@@ -1102,31 +1102,41 @@ def _run_live_tick_body():
         sim.delete_live_ride(uid)
 
     # ── Phase 2: Start new rides (capped globally + balanced per city) ──
+    from activities.simulator_routing_backpressure import compute_live_start_budget
+
     max_riders = effective_event_concurrent_cap(state)
     tick_seconds = int(state.get("tick_seconds", 8))
-    current_riding = sim.get_live_rides_in_flight_count()
-    target_riding = min(
-        max_riders,
-        max(1, int(total_users * active_ratio)),
-    )
-    needed = max(0, target_riding - current_riding)
+    pipeline_count = sim.get_live_rides_in_flight_count()
+    fsm_for_budget = ride_fsm.fsm_summary(active_rides)
+    active_on_map = int(fsm_for_budget["ride_on_map"])
     event_stagger_cap = None
     if state.get("event_id") or state.get("event_load_test"):
         event_stagger_cap = max_starts_per_live_tick(total_users, active_ratio, tick_seconds)
     global_start_cap = int(scale_limits["max_starts_per_live_tick"] or 0)
-    if event_stagger_cap is not None:
-        needed = min(needed, event_stagger_cap)
-    if global_start_cap > 0:
-        needed = min(needed, global_start_cap)
+    start_budget = compute_live_start_budget(
+        total_users=total_users,
+        active_ratio=active_ratio,
+        max_riders=max_riders,
+        active_on_map=active_on_map,
+        pipeline_count=pipeline_count,
+        global_start_cap=global_start_cap,
+        event_stagger_cap=event_stagger_cap,
+    )
+    target_riding = int(start_budget["target_on_map"])
+    needed = int(start_budget["starts_budget"])
     started = 0
 
     db_pool = sim.is_live_pool_db_mode()
     if needed > 0 and (pool_size > 0 or db_pool):
         riding_ids = {str(uid) for uid in active_rides.keys()}
         riding_by_city: dict[str, int] = {}
+        count_active_only = start_budget["start_budget_mode"] == "active_on_map"
         for ride in active_rides.values():
             ride_state = ride_fsm.normalize_ride_state(ride)
-            if ride_state not in (
+            if count_active_only:
+                if ride_state != ride_fsm.ACTIVE:
+                    continue
+            elif ride_state not in (
                 ride_fsm.ACTIVE,
                 ride_fsm.ROUTED,
                 ride_fsm.ROUTING,
@@ -1366,6 +1376,14 @@ def _run_live_tick_body():
             dispatches_throttled=dispatches_skipped > 0 or dispatch_throttled,
             dispatches_throttled_last_tick=dispatches_skipped,
         )
+
+    sim.set_live_state(
+        target_on_map=start_budget["target_on_map"],
+        slots_free_on_map=start_budget["slots_free_on_map"],
+        starts_budget_last_tick=needed,
+        max_pipeline_rides=start_budget["max_pipeline_rides"],
+        pipeline_capped_last_tick=start_budget["pipeline_capped"],
+    )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     active_rides = sim.get_live_rides()

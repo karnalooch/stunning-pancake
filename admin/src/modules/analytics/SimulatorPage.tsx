@@ -28,6 +28,8 @@ interface LiveStatus {
     dispatches_throttled?: boolean;
     max_routing_queue_depth?: number | null;
     total_users: number; active_ratio: number; cheat_ratio: number; tick_seconds: number;
+    target_on_map?: number; slots_free_on_map?: number; starts_budget_last_tick?: number;
+    max_pipeline_rides?: number; pipeline_capped_last_tick?: boolean;
     currently_riding: number; total_completed: number; cheaters_caught: number;
     log: [string, string][];
 }
@@ -649,6 +651,15 @@ export const SimulatorPage: React.FC = () => {
                                             <Text fw={700} size="lg" c="blue">{liveStatus?.currently_riding?.toLocaleString() ?? '0'}</Text>
                                             {(liveStatus?.ride_warming ?? 0) > 0 && (
                                                 <Text size="2xs" c="yellow.7">+{(liveStatus?.ride_warming ?? 0).toLocaleString()} warming</Text>
+                                            )}
+                                            {isLiveRunning && (liveStatus?.slots_free_on_map ?? 0) > 0 && (
+                                                <Text size="2xs" c="teal.7">
+                                                    Wolne sloty mapy: {(liveStatus?.slots_free_on_map ?? 0).toLocaleString()}
+                                                    {' '}(startów/tick ≤ {(liveStatus?.starts_budget_last_tick ?? 0).toLocaleString()})
+                                                </Text>
+                                            )}
+                                            {liveStatus?.pipeline_capped_last_tick && (
+                                                <Text size="2xs" c="orange.7">Pipeline pełny — zwolnij warming lub obniż load</Text>
                                             )}
                                         </Card>
                                         <Card withBorder padding="xs" bg="var(--surface-secondary)">

@@ -171,6 +171,74 @@ def effective_routing_dispatch_cap(
     return max(0, effective), throttled
 
 
+def start_budget_mode() -> str:
+    """active_on_map (default): fast ramp — warming does not block new starts. all_in_flight: legacy."""
+    raw = os.getenv("SCALE_SIM_START_BUDGET_MODE", "active_on_map").strip().lower()
+    return raw if raw in ("active_on_map", "all_in_flight") else "active_on_map"
+
+
+def max_pipeline_rides(target_on_map: int) -> int:
+    """Hard cap on Redis live_rides hash (ACTIVE + pipeline) — memory / stability."""
+    try:
+        mult = float(os.getenv("SCALE_SIM_MAX_PIPELINE_MULTIPLIER", "2.5"))
+    except (TypeError, ValueError):
+        mult = 2.5
+    try:
+        abs_cap = int(os.getenv("SCALE_SIM_MAX_PIPELINE_ABSOLUTE", "2000"))
+    except (TypeError, ValueError):
+        abs_cap = 2000
+    try:
+        headroom = int(os.getenv("SCALE_SIM_MAX_PIPELINE_HEADROOM", "150"))
+    except (TypeError, ValueError):
+        headroom = 150
+    mult = max(1.0, min(5.0, mult))
+    return min(abs_cap, max(target_on_map + headroom, int(target_on_map * mult) + headroom))
+
+
+def compute_live_start_budget(
+    *,
+    total_users: int,
+    active_ratio: float,
+    max_riders: int,
+    active_on_map: int,
+    pipeline_count: int,
+    global_start_cap: int,
+    event_stagger_cap: int | None = None,
+) -> dict[str, Any]:
+    """
+    How many new rides to start this tick (before city balancing).
+
+    Fast path (active_on_map): fill toward target ACTIVE count; pipeline capped separately.
+    Legacy (all_in_flight): target minus full hash length (warming blocks starts).
+    """
+    target_on_map = min(max_riders, max(1, int(total_users * active_ratio)))
+    mode = start_budget_mode()
+    if mode == "all_in_flight":
+        demand_gap = max(0, target_on_map - int(pipeline_count))
+    else:
+        demand_gap = max(0, target_on_map - int(active_on_map))
+
+    max_pipe = max_pipeline_rides(target_on_map)
+    pipeline_room = max(0, max_pipe - int(pipeline_count))
+    needed = min(demand_gap, pipeline_room)
+
+    if event_stagger_cap is not None:
+        needed = min(needed, int(event_stagger_cap))
+    if global_start_cap > 0:
+        needed = min(needed, int(global_start_cap))
+
+    return {
+        "target_on_map": target_on_map,
+        "starts_budget": max(0, needed),
+        "slots_free_on_map": max(0, target_on_map - int(active_on_map)),
+        "pipeline_count": int(pipeline_count),
+        "max_pipeline_rides": max_pipe,
+        "pipeline_room": pipeline_room,
+        "start_budget_mode": mode,
+        "pipeline_capped": demand_gap > 0 and pipeline_room < demand_gap,
+    }
+
+
 def maybe_log_routing_backpressure(
     *,
     snapshot: dict[str, Any],

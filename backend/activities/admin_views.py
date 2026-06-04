@@ -497,6 +497,14 @@ class LiveSimulationView(APIView):
                     ),
                     "max_routing_queue_depth": bp.get("max_routing_queue_depth"),
                     "total_users": int(state.get("total_users", 0)),
+                    "target_on_map": int(state.get("target_on_map", 0) or 0),
+                    "slots_free_on_map": int(state.get("slots_free_on_map", 0) or 0),
+                    "starts_budget_last_tick": int(state.get("starts_budget_last_tick", 0) or 0),
+                    "max_pipeline_rides": int(state.get("max_pipeline_rides", 0) or 0),
+                    "pipeline_capped_last_tick": str(
+                        state.get("pipeline_capped_last_tick", "false")
+                    ).lower()
+                    == "true",
                     "active_ratio": float(state.get("active_ratio", 0)),
                     "cheat_ratio": float(state.get("cheat_ratio", 0)),
                     "tick_seconds": int(state.get("tick_seconds", 10)),
