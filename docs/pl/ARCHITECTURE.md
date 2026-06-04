@@ -24,46 +24,42 @@ Kompletny opis architektury platformy 4VELO — wysokowydajnego ekosystemu sport
 
 ---
 
-## 📐 Diagram architektury (wysoki poziom)```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         KLIENT (Frontend)                               │
-├──────────────────────┬──────────────────────┬───────────────────────────┤
-│  📱 Mobile App       │  🖥️ Admin Panel      │  🌐 Public Landing        │
-│  React Native + Expo │  React + Mantine     │  React + Vite             │
-│  (iOS/Android)       │  (Web)               │  (Web)                    │
-└──────────┬───────────┴──────────┬───────────┴─────────────┬─────────────┘
-           │                      │                         │
-           │ REST API             │ REST API                │ REST API
-           │ WebSocket            │                         │
-           ▼                      ▼                         ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         BACKEND (Django + DRF)                          │
-├─────────────────────────────────────────────────────────────────────────┤
-│  🔐 Authentication    │  🏃 Activities       │  👥 Users & RBAC        │
-│  JWT + SimpleJWT      │  CRUD + Validation   │  Roles + Permissions    │
-│                       │                      │                         │
-│  🏆 Leaderboards      │  💳 Payments         │  📊 Analytics           │
-│  Redis Sorted Sets    │  Stripe Integration  │  Heatmap + BI           │
-│                       │                      │                         │
-│  🛡️ Anti-Cheat        │  🔗 Wearables        │  🎁 Rewards             │
-│  4-Layer Pipeline     │  Strava + Garmin     │  Vouchers + Points      │
-└──────────┬───────────┴──────────┬───────────┴─────────────┬─────────────┘
-           │                      │                         │
-           ▼                      ▼                         ▼
-┌──────────────────┐  ┌──────────────────┐  ┌─────────────────────────────┐
-│  🐘 PostgreSQL   │  │  🔴 Redis        │  │  📡 Telemetry (FastAPI)     │
-│  + PostGIS       │  │  Cache + Queue   │  │  Real-time ingestion        │
-│  + TimescaleDB   │  │  Leaderboards    │  │  GPS tracking               │
-│  + RLS           │  │  Sessions        │  │  WebSocket live             │
-└──────────────────┘  └──────────────────┘  └─────────────────────────────┘
-           │                      │                         │
-           ▼                      ▼                         ▼
-┌──────────────────┐  ┌──────────────────┐  ┌─────────────────────────────┐
-│  🗺️ BRouter      │  │  📧 SendGrid     │  │  💳 Stripe                  │
-│  Route validation│  │  Email delivery  │  │  Payments + Payouts         │
-│  + live sim      │  │                  │  │                             │
-└──────────────────┘  └──────────────────┘  └─────────────────────────────┘
-```### BRouter (produkcja i dev)
+## 📐 Diagram architektury (wysoki poziom)
+
+```mermaid
+flowchart TB
+  subgraph FE["Klient (Frontend)"]
+    MOB["📱 Mobile App<br/>React Native + Expo"]
+    ADM["🖥️ Admin Panel<br/>React + Mantine"]
+    LND["🌐 Public Landing<br/>React + Vite"]
+  end
+  subgraph BE["Backend (Django + DRF)"]
+    BE1["🔐 Auth · 🏃 Activities · 👥 RBAC"]
+    BE2["🏆 Leaderboards · 💳 Payments · 📊 Analytics"]
+    BE3["🛡️ Anti-Cheat · 🔗 Wearables · 🎁 Rewards"]
+  end
+  subgraph DATA["Dane i realtime"]
+    PG["🐘 PostgreSQL + PostGIS + TimescaleDB + RLS"]
+    RD["🔴 Redis cache / queue / leaderboards"]
+    TEL["📡 Telemetry FastAPI"]
+  end
+  subgraph EXT["Integracje"]
+    BRO["🗺️ BRouter"]
+    SG["📧 SendGrid"]
+    STR["💳 Stripe"]
+  end
+  MOB -->|REST / WebSocket| BE
+  ADM -->|REST API| BE
+  LND -->|REST API| BE
+  BE --> PG
+  BE --> RD
+  BE --> TEL
+  PG --> BRO
+  RD --> SG
+  TEL --> STR
+```
+
+### BRouter (produkcja i dev)
 
 | Użycie | Środowisko | URL / serwis |
 |--------|------------|--------------|
@@ -209,40 +205,19 @@ interface AuthState {
 
 ## 🗄️ Schemat bazy danych
 
-### Główne tabele```
-┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-│   Tenant    │       │    User     │       │  Activity   │
-├─────────────┤       ├─────────────┤       ├─────────────┤
-│ id (UUID)   │──┐    │ id (PK)     │──┐    │ id (PK)     │
-│ name        │  │    │ username    │  │    │ user_id (FK)│
-│ logo        │  │    │ role        │  │    │ tenant_id   │
-│ primary_color│ │    │ tenant_id   │──┘    │ type        │
-│ config_json │  │    │ is_premium  │       │ start_time  │
-│ is_active   │  │    │ stripe_*    │       │ end_time    │
-│ max_users   │  │    └─────────────┘       │ distance    │
-└─────────────┘  │           │               │ route_path  │
-                 │           │               │ is_verified │
-                 │           ▼               └─────────────┘
-                 │    ┌─────────────┐
-                 │    │  UserRole   │       ┌─────────────┐
-                 │    ├─────────────┤       │    POI      │
-                 └─── │ id (UUID)   │       ├─────────────┤
-                      │ user_id     │       │ id (PK)     │
-                      │ role_id     │       │ tenant_id   │
-                      │ tenant_id   │       │ name        │
-                      │ expires_at  │       │ location    │
-                      └─────────────┘       │ category    │
-                           │                └─────────────┘
-                           ▼
-                    ┌─────────────┐
-                    │    Role     │
-                    ├─────────────┤
-                    │ id (PK)     │
-                    │ slug        │
-                    │ name        │
-                    │ is_system   │
-                    └─────────────┘
-```### Relacje
+### Główne tabele
+
+```mermaid
+erDiagram
+  Tenant ||--o{ User : has
+  Tenant ||--o{ POI : has
+  User ||--o{ Activity : creates
+  User ||--o{ UserRole : assigns
+  UserRole }o--|| Role : role
+  POI ||--o{ Voucher : offers
+```
+
+### Relacje
 
 | Tabela | Relacja | Opis |
 |--------|---------|------|
@@ -257,18 +232,16 @@ interface AuthState {
 
 ## 🔴 Serwis komunikacji — Redis + Celery
 
-### Architektura```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│  Django      │────▶│  Redis       │◀────│  Celery      │
-│  (Producer)  │     │  (Broker)    │     │  (Worker)    │
-└──────────────┘     └──────────────┘     └──────────────┘
-                            │
-                            ▼
-                     ┌──────────────┐
-                     │  Celery Beat │
-                     │  (Scheduler) │
-                     └──────────────┘
-```### Kolejki Redis
+### Architektura
+
+```mermaid
+flowchart TB
+  DJ[Django Producer] --> R[(Redis Broker)]
+  CW[Celery Worker] --> R
+  R --> CB[Celery Beat Scheduler]
+```
+
+### Kolejki Redis
 
 | Kolejka | Opis |
 |---------|------|
@@ -289,34 +262,18 @@ interface AuthState {
 
 ## 🛡️ Pipeline Anti-Cheat
 
-### 4-warstwowa walidacja```
-┌─────────────────────────────────────────────────────────────┐
-│                    ANTI-CHEAT PIPELINE                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Layer 1: Fast Selection Gate (kinematyczny)               │
-│  ├── Teleport check (max 500m jump)                        │
-│  ├── Acceleration check (max 6.0 m/s²)                     │
-│  ├── Motor fingerprint (σ/μ < 5%)                          │
-│  └── Straight-line ratio (disp/track > 92%)                │
-│                                                             │
-│  Layer 2: V-max Kinematic Check                            │
-│  ├── Anomaly ratio < 20%                                   │
-│  ├── Max 3 consecutive violations                            │
-│  └── Speed margin < 110%                                   │
-│                                                             │
-│  Layer 3: BRouter Topological Path Validation              │
-│  ├── Route matches OSM network                             │
-│  ├── Validates against cycling/walking paths               │
-│  └── Rejects impossible routes                             │
-│                                                             │
-│  Layer 4: HMM Viterbi Signal Processing                    │
-│  ├── Hidden Markov Model matching                          │
-│  ├── Probabilistic path validation                         │
-│  └── Final verification score                              │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```### Konfiguracja (zmienne środowiskowe)
+### 4-warstwowa walidacja
+
+```mermaid
+flowchart TB
+  L1["Layer 1: Fast Selection Gate<br/>Teleport · Accel · Motor · Straight-line"]
+  L2["Layer 2: V-max Kinematic<br/>Anomaly ratio · Consecutive · Speed margin"]
+  L3["Layer 3: BRouter Path<br/>OSM network · cycling/walking · reject impossible"]
+  L4["Layer 4: HMM Viterbi<br/>HMM matching · probabilistic · final score"]
+  L1 --> L2 --> L3 --> L4
+```
+
+### Konfiguracja (zmienne środowiskowe)
 
 | Zmienna | Domyślna | Opis |
 |---------|----------|------|
@@ -334,23 +291,19 @@ interface AuthState {
 
 ## 🔐 Row Level Security (RLS)
 
-### Architektura izolacji tenantów```
-┌─────────────────────────────────────────────────────────────┐
-│                    RLS FLOW                                 │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Request → TenantRLSMiddleware → SET app.tenant_id = '...' │
-│                                                             │
-│  PostgreSQL RLS Policy:                                     │
-│  CREATE POLICY tenant_isolation ON activities              │
-│    USING (tenant_id = current_setting('app.tenant_id'));   │
-│                                                             │
-│  GLOBAL_OWNER → bypasses RLS (app.tenant_id = '')          │
-│  TENANT_ADMIN → sees only own tenant data                  │
-│  ATHLETE → sees only own data                              │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```---
+### Architektura izolacji tenantów
+
+```mermaid
+flowchart TB
+  REQ[Request] --> MW[TenantRLSMiddleware]
+  MW --> SET["SET app.tenant_id"]
+  SET --> POL["RLS: tenant_id = current_setting"]
+  POL --> GO[GLOBAL_OWNER bypass empty tenant_id]
+  POL --> TA[TENANT_ADMIN own tenant]
+  POL --> AT[ATHLETE own data]
+```
+
+---
 
 ### Department Hierarchy (Organizational Units)
 

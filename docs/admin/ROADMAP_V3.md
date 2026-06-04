@@ -138,18 +138,11 @@ Replaces static, non-functional activity graphics with a fully interactive routi
 
 A premium visual editor showing tenant brandings in real time.
 
-```
-┌─────────────────────────────────┐      ┌───────────────────────────┐
-│  🎨 White-Label Config Panel    │      │   📱 Interactive Phone    │
-│  ─────────────────────────────  │      │   ┌───────────────────┐   │
-│  City Name: [ Warszawa        ] │      │   │ 🔋 12:00    📶 5G │   │
-│                                 │      │   │ ───────────────── │   │
-│  Primary Color:   [ #6366F1 ]   │ ───> │   │   Warszawa 4VELO  │   │
-│  Secondary Color: [ #8B5CF6 ]   │      │   │   [ Start Ride ]  │   │
-│                                 │      │   │   [ Leaders  ]    │   │
-│  Logo Upload:     [ Choose  ]   │      │   │                       │   │
-│  Splash Image:    [ Choose  ]   │      │   │   (Vibrant Theme)     │   │
-└─────────────────────────────────┘      └───────────────────────────┘
+```mermaid
+flowchart LR
+  CFG["White-Label Config Panel<br/>City · Colors · Logo"]
+  PH["Interactive Phone Preview"]
+  CFG -->|live CSS variables| PH
 ```
 
 ### Technical Workflow:

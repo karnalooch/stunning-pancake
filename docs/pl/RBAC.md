@@ -32,22 +32,14 @@ Platforma 4VELO używa hybrydowego systemu uprawnień — nowego systemu RBAC z 
 
 ### Architektura
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    RBAC SYSTEM                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  User ──(legacy)──▶ role: CharField                        │
-│       ──(new)──▶ UserRole[] ──▶ Role ──▶ Permission[]      │
-│                                                             │
-│  Permission = {codename, resource, action}                  │
-│  Role = {slug, name, permissions[], is_system}              │
-│  UserRole = {user, role, tenant, expires_at, granted_by}    │
-│                                                             │
-│  Fallback: Jeśli RBAC nie zwraca uprawnień,                │
-│  system używa legacy role → permission mapping.             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+  U[User] -->|legacy| LR[role CharField]
+  U -->|new| UR[UserRole]
+  UR --> R[Role]
+  R --> P[Permission]
+  FB[Fallback: legacy role to permission mapping]
+  U -.-> FB
 ```
 
 ### Modele danych

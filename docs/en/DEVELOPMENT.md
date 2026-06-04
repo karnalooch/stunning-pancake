@@ -444,20 +444,31 @@ python manage.py shell_plus
 
 ## 🔄 Git Workflow
 
-### Branching strategy```
-main ────────────────────────────────────────────────▶
-     │         │         │
-     ├─feature─┤         │
-     │         │         │
-     │         ├─feature─┤
-     │         │         │
-     │         └─fix─────┤
-     │                   │
-     └─release───────────┤
-                         │
-                         ▼
-                      production
-```### Nazewnictwo branchy
+### Branching strategy
+
+```mermaid
+gitGraph
+  commit id: "main"
+  branch feature/a
+  checkout feature/a
+  commit
+  checkout main
+  merge feature/a
+  branch feature/b
+  checkout feature/b
+  commit
+  checkout main
+  branch fix
+  checkout fix
+  commit
+  checkout main
+  merge fix
+  branch release
+  checkout release
+  commit id: "production"
+```
+
+### Branch naming
 
 | Typ | Przykład |
 |-----|----------|

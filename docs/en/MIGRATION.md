@@ -119,24 +119,25 @@ role_perms = {
 
 ## 🚀 Zero-Downtime Deployment Strategy
 
-### Strategia```
-┌─────────────────────────────────────────────────────────────┐
-│              ZERO-DOWNTIME DEPLOYMENT                       │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. Deploy new code (backward compatible)                  │
-│  2. Run migrations (additive only)                         │
-│  3. Switch traffic to new version                          │
-│  4. Remove old code (next deploy)                          │
-│                                                             │
-│  ZASADY:                                                    │
-│  - Nigdy nie usuwaj kolumn w tym samym deployu             │
-│  - Dodawaj kolumny z DEFAULT/NULL                          │
-│  - Zmieniaj nazwy przez: ADD new → MIGRATE data → DROP old │
-│  - Używaj feature flags dla breaking changes               │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```### Step by step
+### Strategy
+
+```mermaid
+flowchart TB
+  S1["1. Deploy backward-compatible code"]
+  S2["2. Run additive migrations"]
+  S3["3. Switch traffic to new version"]
+  S4["4. Remove old code on next deploy"]
+  S1 --> S2 --> S3 --> S4
+```
+
+Rules:
+
+- Never drop columns in the same deploy
+- Add columns with DEFAULT/NULL
+- Rename via: ADD new → MIGRATE data → DROP old
+- Use feature flags for breaking changes
+
+### Step by step
 
 #### Phase 1: Preparation```bash
 # 1. Stwórz branch feature

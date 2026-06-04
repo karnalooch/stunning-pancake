@@ -28,23 +28,19 @@ A complete guide to the role-based access control (RBAC) system in the 4VELO pla
 
 The 4VELO platform uses a hybrid permission system - a new RBAC system with granular permissions and a legacy system based on a single `role' field in the User model.
 
-### Architecture```
-┌─────────────────────────────────────────────────────────────┐
-│                    RBAC SYSTEM                              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  User ──(legacy)──▶ role: CharField                        │
-│       ──(new)──▶ UserRole[] ──▶ Role ──▶ Permission[]      │
-│                                                             │
-│  Permission = {codename, resource, action}                  │
-│  Role = {slug, name, permissions[], is_system}              │
-│  UserRole = {user, role, tenant, expires_at, granted_by}    │
-│                                                             │
-│  Fallback: Jeśli RBAC nie zwraca uprawnień,                │
-│  system używa legacy role → permission mapping.             │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```### Data models
+### Architecture
+
+```mermaid
+flowchart LR
+  U[User] -->|legacy| LR[role CharField]
+  U -->|new| UR[UserRole]
+  UR --> R[Role]
+  R --> P[Permission]
+  FB[Fallback: legacy role to permission mapping]
+  U -.-> FB
+```
+
+### Data models
 
 | Model | File | Description |
 |-------|------|------|

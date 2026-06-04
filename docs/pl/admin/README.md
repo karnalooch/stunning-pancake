@@ -155,42 +155,29 @@ admin/src/
 
 ## Struktura nawigacji
 
-Menu paska bocznego jest logicznie pogrupowane w 6 głównych sekcjach biznesowych, aby uniknąć nadmiarowości, z uprawnieniami ograniczonymi przez rolę użytkownika.```
-┌─────────────────────────────────┐
-│ 4VELO Admin OS                  │
-│ ─────────────────────────────── │
-│ OVERVIEW                        │
-│  📊  Dashboard                  │
-│  📱  Smartphone Simulator       │
-│                                 │
-│ MANAGEMENT                      │
-│  🏢  Tenants & Branding         │
-│  👥  Users Manager (Drawer CRUD)│
-│  🏢  Departments                │
-│                                 │
-│ OPERATIONS                      │
-│  🏃  Activities                 │
-│  🛡️  Anti-Cheat SOC Console     │
-│  🏆  Events Manager CRUD        │
-│                                 │
-│ SPONSORSHIP & REWARDS           │
-│  📍  Sponsor POI Map Editor     │
-│  📊  Sponsorship Analytics      │
-│  🎫  Vouchers & Rewards         │
-│                                 │
-│ ANALYTICS & FEEDBACK            │
-│  📈  Department Analytics       │
-│  🗺️  Global Heatmaps            │
-│  💬  Beta Feedback Logs         │
-│                                 │
-│ SYSTEM                          │
-│  ⚙️  Settings                   │
-│  🛡️  RBAC permissions           │
-│ ─────────────────────────────── │
-│  🌙 Dark mode                   │
-│  👤 Admin (Global Owner)  [⏻]  │
-└─────────────────────────────────┘
-```Trasy są ściśle filtrowane na poziomie routera według roli użytkownika:
+Menu paska bocznego jest logicznie pogrupowane w 6 głównych sekcjach biznesowych, aby uniknąć nadmiarowości, z uprawnieniami ograniczonymi przez rolę użytkownika.
+
+```mermaid
+flowchart TB
+  subgraph NAV["4VELO Admin OS"]
+    subgraph OVR[OVERVIEW]
+      D[Dashboard]
+      S[Smartphone Simulator]
+    end
+    subgraph MGT[MANAGEMENT]
+      T[Tenants and Branding]
+      U[Users Manager]
+      DE[Departments]
+    end
+    subgraph OPS[OPERATIONS]
+      A[Activities]
+      AC[Anti-Cheat SOC]
+      E[Events Manager]
+    end
+  end
+```
+
+Trasy są ściśle filtrowane na poziomie routera według roli użytkownika:
 
 | Trasa / Moduł | WŁAŚCICIEL GLOBALNY | ADMIN_NAJEMCA | TENANT_MODERATOR | SPONSOR | SPORTOWCA |
 |----------------|-------------|-------------|--------------------------------|---------|---------|

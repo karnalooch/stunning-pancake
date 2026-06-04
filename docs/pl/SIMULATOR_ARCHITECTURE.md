@@ -60,20 +60,16 @@ Praca w tle jest wykonywana poprzez `threading.Thread(daemon=True)`:
 
 ### 1.2 Wektory błędów będących przyczyną źródłową
 
-#### Błąd 1: Niewidzialność stanu wielu pracowników```
-┌──────────┐   ┌──────────┐   ┌──────────┐
-│ Worker 1 │   │ Worker 2 │   │ Worker 3 │
-│ (port X) │   │ (port Y) │   │ (port Z) │
-│          │   │          │   │          │
-│ _live_   │   │ _live_   │   │ _live_   │
-│  state   │   │  state   │   │  state   │
-│  = {...} │   │  = {}    │   │  = {}    │
-└────┬─────┘   └────┬─────┘   └────┬─────┘
-     │              │              │
-     ▼              ▼              ▼
-  Thread A       GET /status     GET /status
-  running here   → returns {}    → returns {}
-```Każdy proces roboczy Gunicorn ma swój własny proces Pythona z własną kopią `_live_state` i `_simulation_state`. Wątek, który rozpoczął symulację, działa tylko w procesie roboczym, który obsługiwał operację POST. Wszyscy pozostali pracownicy widzą stan pusty. Frontend odpytuje `GET /live-simulate/` za pośrednictwem modułu równoważenia obciążenia (lub działania okrężnego) i zostaje przekierowany do innego procesu roboczego — otrzymując komunikat „running: false”, mimo że symulacja JEST uruchomiona.
+#### Błąd 1: Niewidzialność stanu wielu pracowników
+
+```mermaid
+flowchart LR
+  W1[Worker 1 _live_state] --> T1[Thread running]
+  W2[Worker 2 empty state] --> G2[GET /status returns empty]
+  W3[Worker 3 empty state] --> G3[GET /status returns empty]
+```
+
+Każdy proces roboczy Gunicorn ma swój własny proces Pythona z własną kopią `_live_state` i `_simulation_state`. Wątek, który rozpoczął symulację, działa tylko w procesie roboczym, który obsługiwał operację POST. Wszyscy pozostali pracownicy widzą stan pusty. Frontend odpytuje `GET /live-simulate/` za pośrednictwem modułu równoważenia obciążenia (lub działania okrężnego) i zostaje przekierowany do innego procesu roboczego — otrzymując komunikat „running: false”, mimo że symulacja JEST uruchomiona.
 
 #### Błąd 2: Brak sprawdzania pustych pul zawodników
 W [`_live_simulation_thread`](../../backend/activities/admin_views.py:596), wierszu [615–617](../../backend/activities/admin_views.py:615):```python
@@ -120,35 +116,20 @@ await apiClient.post('/activities/admin/simulate/', {
 4. **Weryfikacja przed wykonaniem** — Warunki wstępne sprawdzane PRZED pojawieniem się zadania Seler, a nie wewnątrz niego.
 5. **Czysta separacja** — Generator wsadowy (użytkownicy + działy + działania) to jeden łańcuch zadań Celery. Symulator jazdy na żywo to okresowe zadanie Selera.
 
-### 2.2 Schemat komponentów wysokiego poziomu```
-┌──────────────────────────────────────────────────────────────┐
-│                     FRONTEND (React Admin)                     │
-│  SimulatorPage.tsx  ◄── polling every 1.5s ──►  REST API     │
-└──────────────────────────────────────┬───────────────────────┘
-                                       │
-┌──────────────────────────────────────▼───────────────────────┐
-│                   DJANGO WSGI (Gunicorn)                      │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │  Simulator Views (stateless, read/write Redis only)   │   │
-│  │  POST /simulate/    → spawns Celery task              │   │
-│  │  GET  /simulate/    → reads Redis status              │   │
-│  │  POST /live-simulate/ → spawns Celery beat or task    │   │
-│  │  GET  /live-simulate/  → reads Redis status           │   │
-│  └───────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────┬───────────────────────┘
-                                       │
-                    ┌──────────────────┼──────────────────┐
-                    │                  │                  │
-              ┌─────▼─────┐    ┌──────▼──────┐    ┌─────▼─────┐
-              │  Redis     │    │   Celery    │    │PostgreSQL │
-              │  (State)   │    │  (Workers)  │    │ (Models)  │
-              │            │    │             │    │           │
-              │ sim:batch  │◄──►│ batch_gen   │───►│ User      │
-              │ sim:live   │    │ live_tick   │    │ Tenant    │
-              │ sim:lock   │    │ live_runner │    │ Department│
-              └────────────┘    └─────────────┘    │ Activity  │
-                                                   └───────────┘
-```---
+### 2.2 Schemat komponentów wysokiego poziomu
+
+```mermaid
+flowchart TB
+  FE[Frontend SimulatorPage polling 1.5s] --> API[REST API]
+  API --> GW[Django Gunicorn Simulator Views]
+  GW --> RED[(Redis sim:batch sim:live sim:lock)]
+  GW --> CEL[Celery batch_gen live_tick live_runner]
+  GW --> PG[(PostgreSQL User Tenant Department Activity)]
+  CEL --> RED
+  CEL --> PG
+```
+
+---
 
 ## 3. Schemat klucza Redis
 
@@ -852,17 +833,17 @@ Te kontrole odbywają się wewnątrz zadania po jego uruchomieniu:
 | **Osierocony zamek** | Zabity pracownik selera | TTL wygasa automatycznie, nie jest wymagana ręczna interwencja |
 | **Zaznacz limit czasu** | Zaznaczenie trwa > 300 s | Blokada wygasa, następny tik działa niezależnie, praca zatrzymanego ticka może zostać zduplikowana |
 
-### 9.2 Przebieg propagacji błędów```
-Celery Task Error
-    │
-    ├──→ Redis: HSET sim:batch:status error="message" running=0
-    │
-    ├──→ Redis: LPUSH sim:batch:log ["HH:MM:SS", "ERROR: message"]
-    │
-    ├──→ Sentry: capture_exception() (via existing sentry integration)
-    │
-    └──→ Frontend: next poll picks up error field, shows red Alert
-```### 9.3 Łagodna degradacja
+### 9.2 Przebieg propagacji błędów
+
+```mermaid
+flowchart TB
+  ERR[Celery Task Error] --> R1[Redis HSET sim:batch:status]
+  ERR --> R2[Redis LPUSH sim:batch:log]
+  ERR --> SEN[Sentry capture_exception]
+  ERR --> FE[Frontend poll shows Alert]
+```
+
+### 9.3 Łagodna degradacja
 
 - **Jeśli Redis nie działa:** Widoki API zwracają 503 z `{"errorem": "Redis niedostępny", "retry_after": 5}`. Frontend wyświetla baner błędu i próbuje ponownie po 5 sekundach.
 - **Jeśli Celery nie działa:** Punkt końcowy POST wykonuje próbę `.delay()`, przechwytuje błąd połączenia z brokerem i zwraca 500 z komunikatem `{"error": "Kolejka zadań niedostępna. Spróbuj ponownie za chwilę."}`.

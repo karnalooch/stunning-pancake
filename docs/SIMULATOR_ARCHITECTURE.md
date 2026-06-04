@@ -63,19 +63,12 @@ Background work is dispatched via `threading.Thread(daemon=True)`:
 ### 1.2 Root-Cause Bug Vectors
 
 #### Bug 1: Multi-Worker State Invisibility
-```
-┌──────────┐   ┌──────────┐   ┌──────────┐
-│ Worker 1 │   │ Worker 2 │   │ Worker 3 │
-│ (port X) │   │ (port Y) │   │ (port Z) │
-│          │   │          │   │          │
-│ _live_   │   │ _live_   │   │ _live_   │
-│  state   │   │  state   │   │  state   │
-│  = {...} │   │  = {}    │   │  = {}    │
-└────┬─────┘   └────┬─────┘   └────┬─────┘
-     │              │              │
-     ▼              ▼              ▼
-  Thread A       GET /status     GET /status
-  running here   → returns {}    → returns {}
+
+```mermaid
+flowchart LR
+  W1[Worker 1 _live_state] --> T1[Thread running]
+  W2[Worker 2 empty state] --> G2[GET /status returns empty]
+  W3[Worker 3 empty state] --> G3[GET /status returns empty]
 ```
 
 Each Gunicorn worker has its own Python process with its own copy of `_live_state` and `_simulation_state`. The thread that started the simulation runs only in the worker that handled the `POST`. All other workers see empty state. The frontend polls `GET /live-simulate/` via a load balancer (or round-robin) and gets routed to a different worker — receiving `running: false` even though the simulation IS running.
@@ -135,34 +128,15 @@ The `skip_activities` parameter is hardcoded to `true`. This means the batch gen
 
 ### 2.2 High-Level Component Diagram
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     FRONTEND (React Admin)                     │
-│  SimulatorPage.tsx  ◄── polling every 1.5s ──►  REST API     │
-└──────────────────────────────────────┬───────────────────────┘
-                                       │
-┌──────────────────────────────────────▼───────────────────────┐
-│                   DJANGO WSGI (Gunicorn)                      │
-│  ┌───────────────────────────────────────────────────────┐   │
-│  │  Simulator Views (stateless, read/write Redis only)   │   │
-│  │  POST /simulate/    → spawns Celery task              │   │
-│  │  GET  /simulate/    → reads Redis status              │   │
-│  │  POST /live-simulate/ → spawns Celery beat or task    │   │
-│  │  GET  /live-simulate/  → reads Redis status           │   │
-│  └───────────────────────────────────────────────────────┘   │
-└──────────────────────────────────────┬───────────────────────┘
-                                       │
-                    ┌──────────────────┼──────────────────┐
-                    │                  │                  │
-              ┌─────▼─────┐    ┌──────▼──────┐    ┌─────▼─────┐
-              │  Redis     │    │   Celery    │    │PostgreSQL │
-              │  (State)   │    │  (Workers)  │    │ (Models)  │
-              │            │    │             │    │           │
-              │ sim:batch  │◄──►│ batch_gen   │───►│ User      │
-              │ sim:live   │    │ live_tick   │    │ Tenant    │
-              │ sim:lock   │    │ live_runner │    │ Department│
-              └────────────┘    └─────────────┘    │ Activity  │
-                                                   └───────────┘
+```mermaid
+flowchart TB
+  FE[Frontend SimulatorPage polling 1.5s] --> API[REST API]
+  API --> GW[Django Gunicorn Simulator Views]
+  GW --> RED[(Redis sim:batch sim:live sim:lock)]
+  GW --> CEL[Celery batch_gen live_tick live_runner]
+  GW --> PG[(PostgreSQL User Tenant Department Activity)]
+  CEL --> RED
+  CEL --> PG
 ```
 
 ---
@@ -931,16 +905,12 @@ These checks happen inside the task after it starts:
 
 ### 9.2 Error Propagation Flow
 
-```
-Celery Task Error
-    │
-    ├──→ Redis: HSET sim:batch:status error="message" running=0
-    │
-    ├──→ Redis: LPUSH sim:batch:log ["HH:MM:SS", "ERROR: message"]
-    │
-    ├──→ Sentry: capture_exception() (via existing sentry integration)
-    │
-    └──→ Frontend: next poll picks up error field, shows red Alert
+```mermaid
+flowchart TB
+  ERR[Celery Task Error] --> R1[Redis HSET sim:batch:status]
+  ERR --> R2[Redis LPUSH sim:batch:log]
+  ERR --> SEN[Sentry capture_exception]
+  ERR --> FE[Frontend poll shows Alert]
 ```
 
 ### 9.3 Graceful Degradation
