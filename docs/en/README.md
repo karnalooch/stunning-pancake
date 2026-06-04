@@ -12,7 +12,7 @@
 
 ## Localization
 
-Paired documents live under `docs/en/` (this tree) and Polish under `docs/pl/` or legacy paths. Policy: [locales/STANDARD.en.md](../locales/STANDARD.en.md). Progress: [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md).
+Paired documents: **English** under `docs/en/`, **Polish canonical** under `docs/pl/`. Legacy paths (`docs/operations/`, root `docs/GETTING_STARTED.md`, …) are **phase-2 redirect stubs** — edit content in `docs/pl/`, not the stub. Policy: [locales/STANDARD.en.md](../locales/STANDARD.en.md). Progress: [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md).
 
 ---
 
@@ -38,7 +38,7 @@ Hub: [operations/README.md](./operations/README.md) · Matrix: [operations/OPERA
 | [operations/DATADOG_SIMULATOR.md](./operations/DATADOG_SIMULATOR.md) | Datadog + simulator metrics |
 | [operations/HANDOFF_AUTOMATION.md](./operations/HANDOFF_AUTOMATION.md) | Handoff automation |
 
-Polish canonical (legacy path): [operations/LIVE_MAP.md](../operations/LIVE_MAP.md) and siblings under `docs/operations/`.
+Polish canonical: [operations/LIVE_MAP.md](../pl/operations/LIVE_MAP.md) and siblings under `docs/pl/operations/`.
 
 ---
 
@@ -57,4 +57,4 @@ PL summaries: [pl/adr/](../pl/adr/) · [pl/API.md](../pl/API.md) · [pl/ARCHITEC
 
 ## Full tree
 
-The master index (Polish-first, all links): [../README.md](../README.md).
+The master index (Polish-first, all links): [../pl/README.md](../pl/README.md). Legacy entry: [../README.md](../README.md) (redirect).

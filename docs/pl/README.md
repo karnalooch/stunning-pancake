@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/README.md) |
+| **translation** | [English](../en/README.md) |
 | **canonical_path** | docs/pl/README.md |
 
 ---
@@ -37,7 +37,7 @@ Model **enterprise**: zwierciadlane drzewa `docs/en/` i `docs/pl/`, metadane `la
 
 | Obszar | PL | EN | Uwagi |
 |--------|----|----|--------|
-| Runbooki `operations/`, `runbooks/` | Kanoniczny (legacy ścieżka) | `docs/en/operations/…` | Pilotaż: [LIVE_MAP](./operations/LIVE_MAP.md) ↔ [EN](./en/operations/LIVE_MAP.md) |
+| Runbooki `operations/`, `runbooks/` | **`docs/pl/operations/`** (kanoniczny) | `docs/en/operations/…` | Legacy `docs/operations/*.md` = stub redirect (faza 2) |
 | ADR, `API.md`, architektura | Opcjonalne streszczenie | **Kanoniczny** | Brak pełnej kopii ADR po PL |
 | `admin/` checklisty | Na żądanie | **Kanoniczny** | |
 | `compliance/RELEASE_*` | — | **Kanoniczny** | |
@@ -93,7 +93,9 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [EVENT_BURST_50K.md](./EVENT_BURST_50K.md) | ✅ Active | Burst przy dniu eventu |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | ✅ Active | CORS, DB, Celery, symulator |
 
-### `docs/operations/` — [README](./operations/README.md) · [OPERATIONS_INDEX](./operations/OPERATIONS_INDEX.md)
+### `docs/pl/operations/` (kanoniczny PL) — [README](./operations/README.md) · [OPERATIONS_INDEX](./operations/OPERATIONS_INDEX.md)
+
+Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`.
 
 | Plik | Status | Opis |
 |------|--------|------|

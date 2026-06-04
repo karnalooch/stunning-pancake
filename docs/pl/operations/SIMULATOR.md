@@ -169,7 +169,7 @@ Moduły: `liveMapZoom.ts` (tiery + LOD API), `liveMapLayers.ts` (warstwy GPU), `
 | 8.5–9.5 | Aglomeracja | Huby (fade do ~10.8) + klastry |
 | 9.5–10.5 | Miasto | Klastry MapLibre (klik = zoom) |
 | 10.5–11.5 | Dzielnica | Ciaśniejsze klastry |
-| 11.5–12.2 | Osiedle | Klastry + kropki GL |
+| 11.5–12.2 | Osiedle | Klastry (pojedyncze kropki od **z≥12**) |
 | 12.2–12.8 | Zbliżenie | Crossfade kropki → ikony GPU |
 | 12.8–13.35 | Ulice (ikony) | **Symbol layer GPU** (`iconMaxZoom` = `labelMinZoom`) |
 | 13.35–14.5 | Ulice (etykiety) | Ikona + tekst GPU (`text-optional`) |

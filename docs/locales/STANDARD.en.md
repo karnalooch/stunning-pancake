@@ -37,7 +37,9 @@ Add to the metadata table at the top of **both** files:
 
 ```markdown
 | **lang** | en \| pl |
-| **translation** | [Polski](../operations/LIVE_MAP.md) |
+| **translation** | [Polski](../../pl/operations/LIVE_MAP.md) |
+| **translation_status** | reviewed \| machine-translated |
+| **translation_reviewed** | 2026-06-04 (when reviewed) |
 | **canonical_path** | docs/en/operations/LIVE_MAP.md |
 ```
 
@@ -53,7 +55,7 @@ Legacy Polish-only paths include the same row; **translation** points to `docs/e
 
 | Content type | Canonical language | EN path | PL path |
 |--------------|-------------------|---------|---------|
-| Operations runbook | PL (operator audience) | `docs/en/operations/<NAME>.md` | `docs/pl/operations/<NAME>.md` or legacy `docs/operations/<NAME>.md` |
+| Operations runbook | PL (operator audience) | `docs/en/operations/<NAME>.md` | `docs/pl/operations/<NAME>.md` (legacy `docs/operations/<NAME>.md` = redirect stub) |
 | ADR | EN | `docs/adr/<NNN>-*.md` | Optional `docs/pl/adr/<NNN>-summary.md` (short, not full duplicate) |
 | API / architecture spec | EN | `docs/API.md`, `docs/ARCHITECTURE.md` | `docs/pl/API.md` when migrated |
 | Admin smoke / checklists | EN | `docs/admin/*.md` | `docs/pl/admin/*.md` when migrated |
