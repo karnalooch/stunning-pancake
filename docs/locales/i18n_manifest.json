@@ -4,129 +4,129 @@
   "entries": [
     {
       "mode": "paired",
-      "canonical": "docs/pl/admin/ADMIN_INDEX.md",
-      "pl": "docs/pl/admin/ADMIN_INDEX.md",
-      "en": "docs/en/pl/admin/ADMIN_INDEX.md"
+      "canonical": "docs/admin/ADMIN_INDEX.md",
+      "en": "docs/admin/ADMIN_INDEX.md",
+      "pl": "docs/pl/admin/ADMIN_INDEX.md"
+    },
+    {
+      "mode": "en_only",
+      "canonical": "docs/admin/P0_SMOKE_CHECKLIST.md",
+      "en": "docs/admin/P0_SMOKE_CHECKLIST.md",
+      "pl": "docs/pl/admin/P0_SMOKE_CHECKLIST.md"
     },
     {
       "mode": "paired",
-      "canonical": "docs/pl/admin/P0_SMOKE_CHECKLIST.md",
-      "pl": "docs/pl/admin/P0_SMOKE_CHECKLIST.md",
-      "en": "docs/en/pl/admin/P0_SMOKE_CHECKLIST.md"
+      "canonical": "docs/admin/P1_ROADMAP.md",
+      "en": "docs/admin/P1_ROADMAP.md",
+      "pl": "docs/pl/admin/P1_ROADMAP.md"
     },
     {
       "mode": "paired",
-      "canonical": "docs/pl/admin/P1_ROADMAP.md",
-      "pl": "docs/pl/admin/P1_ROADMAP.md",
-      "en": "docs/en/pl/admin/P1_ROADMAP.md"
+      "canonical": "docs/admin/P2_ROADMAP.md",
+      "en": "docs/admin/P2_ROADMAP.md",
+      "pl": "docs/pl/admin/P2_ROADMAP.md"
     },
     {
       "mode": "paired",
-      "canonical": "docs/pl/admin/P2_ROADMAP.md",
-      "pl": "docs/pl/admin/P2_ROADMAP.md",
-      "en": "docs/en/pl/admin/P2_ROADMAP.md"
+      "canonical": "docs/admin/README.md",
+      "en": "docs/admin/README.md",
+      "pl": "docs/pl/admin/README.md"
     },
     {
       "mode": "paired",
-      "canonical": "docs/pl/admin/README.md",
-      "pl": "docs/pl/admin/README.md",
-      "en": "docs/en/pl/admin/README.md"
+      "canonical": "docs/admin/ROADMAP_V3.md",
+      "en": "docs/admin/ROADMAP_V3.md",
+      "pl": "docs/pl/admin/ROADMAP_V3.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/admin/ROADMAP_V3.md",
-      "pl": "docs/pl/admin/ROADMAP_V3.md",
-      "en": "docs/en/pl/admin/ROADMAP_V3.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/001-react-native-bridgeless.md",
+      "en": "docs/adr/001-react-native-bridgeless.md",
+      "pl": "docs/pl/adr/001-react-native-bridgeless.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/001-react-native-bridgeless.md",
-      "pl": "docs/pl/adr/001-react-native-bridgeless.md",
-      "en": "docs/en/pl/adr/001-react-native-bridgeless.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/002-unistyles-v3-initialization.md",
+      "en": "docs/adr/002-unistyles-v3-initialization.md",
+      "pl": "docs/pl/adr/002-unistyles-v3-initialization.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/002-unistyles-v3-initialization.md",
-      "pl": "docs/pl/adr/002-unistyles-v3-initialization.md",
-      "en": "docs/en/pl/adr/002-unistyles-v3-initialization.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/003-state-management-legend-state.md",
+      "en": "docs/adr/003-state-management-legend-state.md",
+      "pl": "docs/pl/adr/003-state-management-legend-state.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/003-state-management-legend-state.md",
-      "pl": "docs/pl/adr/003-state-management-legend-state.md",
-      "en": "docs/en/pl/adr/003-state-management-legend-state.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/004-persistent-storage-mmkv.md",
+      "en": "docs/adr/004-persistent-storage-mmkv.md",
+      "pl": "docs/pl/adr/004-persistent-storage-mmkv.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/004-persistent-storage-mmkv.md",
-      "pl": "docs/pl/adr/004-persistent-storage-mmkv.md",
-      "en": "docs/en/pl/adr/004-persistent-storage-mmkv.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/005-telemetry-tracking.md",
+      "en": "docs/adr/005-telemetry-tracking.md",
+      "pl": "docs/pl/adr/005-telemetry-tracking.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/005-telemetry-tracking.md",
-      "pl": "docs/pl/adr/005-telemetry-tracking.md",
-      "en": "docs/en/pl/adr/005-telemetry-tracking.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/006-design-system-stitch.md",
+      "en": "docs/adr/006-design-system-stitch.md",
+      "pl": "docs/pl/adr/006-design-system-stitch.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/006-design-system-stitch.md",
-      "pl": "docs/pl/adr/006-design-system-stitch.md",
-      "en": "docs/en/pl/adr/006-design-system-stitch.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/007-ai-coaching-architecture.md",
+      "en": "docs/adr/007-ai-coaching-architecture.md",
+      "pl": "docs/pl/adr/007-ai-coaching-architecture.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/007-ai-coaching-architecture.md",
-      "pl": "docs/pl/adr/007-ai-coaching-architecture.md",
-      "en": "docs/en/pl/adr/007-ai-coaching-architecture.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/008-backend-strategy.md",
+      "en": "docs/adr/008-backend-strategy.md",
+      "pl": "docs/pl/adr/008-backend-strategy.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/008-backend-strategy.md",
-      "pl": "docs/pl/adr/008-backend-strategy.md",
-      "en": "docs/en/pl/adr/008-backend-strategy.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/009-admin-user-management-and-event-matchmaking.md",
+      "en": "docs/adr/009-admin-user-management-and-event-matchmaking.md",
+      "pl": "docs/pl/adr/009-admin-user-management-and-event-matchmaking.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/009-admin-user-management-and-event-matchmaking.md",
-      "pl": "docs/pl/adr/009-admin-user-management-and-event-matchmaking.md",
-      "en": "docs/en/pl/adr/009-admin-user-management-and-event-matchmaking.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/010-simulator-redis-celery.md",
+      "en": "docs/adr/010-simulator-redis-celery.md",
+      "pl": "docs/pl/adr/010-simulator-redis-celery.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/010-simulator-redis-celery.md",
-      "pl": "docs/pl/adr/010-simulator-redis-celery.md",
-      "en": "docs/en/pl/adr/010-simulator-redis-celery.md"
+      "mode": "en_only",
+      "canonical": "docs/adr/011-telemetry-ingest-durability-under-load.md",
+      "en": "docs/adr/011-telemetry-ingest-durability-under-load.md",
+      "pl": "docs/pl/adr/011-telemetry-ingest-durability-under-load.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/adr/011-telemetry-ingest-durability-under-load.md",
-      "pl": "docs/pl/adr/011-telemetry-ingest-durability-under-load.md",
-      "en": "docs/en/pl/adr/011-telemetry-ingest-durability-under-load.md"
+      "mode": "en_only",
+      "canonical": "docs/API.md",
+      "en": "docs/API.md",
+      "pl": "docs/pl/API.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/API.md",
-      "pl": "docs/pl/API.md",
-      "en": "docs/en/pl/API.md"
+      "mode": "en_only",
+      "canonical": "docs/ARCHITECTURE.md",
+      "en": "docs/ARCHITECTURE.md",
+      "pl": "docs/pl/ARCHITECTURE.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/ARCHITECTURE.md",
-      "pl": "docs/pl/ARCHITECTURE.md",
-      "en": "docs/en/pl/ARCHITECTURE.md"
+      "mode": "en_only",
+      "canonical": "docs/compliance/MAP_BASEMAP_LICENSING.md",
+      "en": "docs/compliance/MAP_BASEMAP_LICENSING.md",
+      "pl": "docs/pl/compliance/MAP_BASEMAP_LICENSING.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/compliance/MAP_BASEMAP_LICENSING.md",
-      "pl": "docs/pl/compliance/MAP_BASEMAP_LICENSING.md",
-      "en": "docs/en/pl/compliance/MAP_BASEMAP_LICENSING.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
-      "pl": "docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
-      "en": "docs/en/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md"
+      "mode": "en_only",
+      "canonical": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
+      "en": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
+      "pl": "docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md"
     },
     {
       "mode": "paired",
@@ -141,16 +141,16 @@
       "en": "docs/en/CONSTITUTION.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/DATA_RESILIENCE.md",
-      "pl": "docs/pl/DATA_RESILIENCE.md",
-      "en": "docs/en/pl/DATA_RESILIENCE.md"
+      "mode": "en_only",
+      "canonical": "docs/DATA_RESILIENCE.md",
+      "en": "docs/DATA_RESILIENCE.md",
+      "pl": "docs/pl/DATA_RESILIENCE.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/DEPARTMENT_ARCHITECTURE.md",
-      "pl": "docs/pl/DEPARTMENT_ARCHITECTURE.md",
-      "en": "docs/en/pl/DEPARTMENT_ARCHITECTURE.md"
+      "mode": "en_only",
+      "canonical": "docs/DEPARTMENT_ARCHITECTURE.md",
+      "en": "docs/DEPARTMENT_ARCHITECTURE.md",
+      "pl": "docs/pl/DEPARTMENT_ARCHITECTURE.md"
     },
     {
       "mode": "paired",
@@ -165,10 +165,10 @@
       "en": "docs/en/DEVELOPMENT.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/diagrams/architecture_c4.md",
-      "pl": "docs/pl/diagrams/architecture_c4.md",
-      "en": "docs/en/pl/diagrams/architecture_c4.md"
+      "mode": "en_only",
+      "canonical": "docs/diagrams/architecture_c4.md",
+      "en": "docs/diagrams/architecture_c4.md",
+      "pl": "docs/pl/diagrams/architecture_c4.md"
     },
     {
       "mode": "paired",
@@ -327,46 +327,46 @@
       "en": "docs/en/product/FAQ.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/BACKLOG.md",
-      "pl": "docs/pl/quality/BACKLOG.md",
-      "en": "docs/en/pl/quality/BACKLOG.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/BACKLOG.md",
+      "en": "docs/quality/BACKLOG.md",
+      "pl": "docs/pl/quality/BACKLOG.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/BASELINE.md",
-      "pl": "docs/pl/quality/BASELINE.md",
-      "en": "docs/en/pl/quality/BASELINE.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/BASELINE.md",
+      "en": "docs/quality/BASELINE.md",
+      "pl": "docs/pl/quality/BASELINE.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/INFRA_PR_CHECKLIST.md",
-      "pl": "docs/pl/quality/INFRA_PR_CHECKLIST.md",
-      "en": "docs/en/pl/quality/INFRA_PR_CHECKLIST.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/INFRA_PR_CHECKLIST.md",
+      "en": "docs/quality/INFRA_PR_CHECKLIST.md",
+      "pl": "docs/pl/quality/INFRA_PR_CHECKLIST.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/OPENAPI_DRIFT.md",
-      "pl": "docs/pl/quality/OPENAPI_DRIFT.md",
-      "en": "docs/en/pl/quality/OPENAPI_DRIFT.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/OPENAPI_DRIFT.md",
+      "en": "docs/quality/OPENAPI_DRIFT.md",
+      "pl": "docs/pl/quality/OPENAPI_DRIFT.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/PR_CHECKLIST.md",
-      "pl": "docs/pl/quality/PR_CHECKLIST.md",
-      "en": "docs/en/pl/quality/PR_CHECKLIST.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/PR_CHECKLIST.md",
+      "en": "docs/quality/PR_CHECKLIST.md",
+      "pl": "docs/pl/quality/PR_CHECKLIST.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/README.md",
-      "pl": "docs/pl/quality/README.md",
-      "en": "docs/en/pl/quality/README.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/README.md",
+      "en": "docs/quality/README.md",
+      "pl": "docs/pl/quality/README.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/quality/VERIFICATION.md",
-      "pl": "docs/pl/quality/VERIFICATION.md",
-      "en": "docs/en/pl/quality/VERIFICATION.md"
+      "mode": "en_only",
+      "canonical": "docs/quality/VERIFICATION.md",
+      "en": "docs/quality/VERIFICATION.md",
+      "pl": "docs/pl/quality/VERIFICATION.md"
     },
     {
       "mode": "paired",
@@ -387,10 +387,10 @@
       "en": "docs/en/README.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "pl": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "en": "docs/en/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md"
+      "mode": "en_only",
+      "canonical": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
+      "en": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
+      "pl": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md"
     },
     {
       "mode": "paired",
@@ -411,10 +411,10 @@
       "en": "docs/en/SCALE_TEST_300K.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/SIMULATOR_ARCHITECTURE.md",
-      "pl": "docs/pl/SIMULATOR_ARCHITECTURE.md",
-      "en": "docs/en/pl/SIMULATOR_ARCHITECTURE.md"
+      "mode": "en_only",
+      "canonical": "docs/SIMULATOR_ARCHITECTURE.md",
+      "en": "docs/SIMULATOR_ARCHITECTURE.md",
+      "pl": "docs/pl/SIMULATOR_ARCHITECTURE.md"
     },
     {
       "mode": "paired",
@@ -429,122 +429,8 @@
       "en": "docs/en/UPDATES.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/admin/ADMIN_INDEX.md",
-      "en": "docs/admin/ADMIN_INDEX.md",
-      "pl": "docs/pl/admin/ADMIN_INDEX.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/admin/P0_SMOKE_CHECKLIST.md",
-      "en": "docs/admin/P0_SMOKE_CHECKLIST.md",
-      "pl": "docs/pl/admin/P0_SMOKE_CHECKLIST.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/admin/P1_ROADMAP.md",
-      "en": "docs/admin/P1_ROADMAP.md",
-      "pl": "docs/pl/admin/P1_ROADMAP.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/admin/P2_ROADMAP.md",
-      "en": "docs/admin/P2_ROADMAP.md",
-      "pl": "docs/pl/admin/P2_ROADMAP.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/admin/README.md",
-      "en": "docs/admin/README.md",
-      "pl": "docs/pl/admin/README.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/admin/ROADMAP_V3.md",
-      "en": "docs/admin/ROADMAP_V3.md",
-      "pl": "docs/pl/admin/ROADMAP_V3.md"
-    },
-    {
       "mode": "n/a",
       "canonical": "docs/admin/UI_AUDIT_2026-06-02.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/001-react-native-bridgeless.md",
-      "en": "docs/adr/001-react-native-bridgeless.md",
-      "pl": "docs/pl/adr/001-react-native-bridgeless.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/002-unistyles-v3-initialization.md",
-      "en": "docs/adr/002-unistyles-v3-initialization.md",
-      "pl": "docs/pl/adr/002-unistyles-v3-initialization.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/003-state-management-legend-state.md",
-      "en": "docs/adr/003-state-management-legend-state.md",
-      "pl": "docs/pl/adr/003-state-management-legend-state.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/004-persistent-storage-mmkv.md",
-      "en": "docs/adr/004-persistent-storage-mmkv.md",
-      "pl": "docs/pl/adr/004-persistent-storage-mmkv.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/005-telemetry-tracking.md",
-      "en": "docs/adr/005-telemetry-tracking.md",
-      "pl": "docs/pl/adr/005-telemetry-tracking.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/006-design-system-stitch.md",
-      "en": "docs/adr/006-design-system-stitch.md",
-      "pl": "docs/pl/adr/006-design-system-stitch.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/007-ai-coaching-architecture.md",
-      "en": "docs/adr/007-ai-coaching-architecture.md",
-      "pl": "docs/pl/adr/007-ai-coaching-architecture.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/008-backend-strategy.md",
-      "en": "docs/adr/008-backend-strategy.md",
-      "pl": "docs/pl/adr/008-backend-strategy.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/009-admin-user-management-and-event-matchmaking.md",
-      "en": "docs/adr/009-admin-user-management-and-event-matchmaking.md",
-      "pl": "docs/pl/adr/009-admin-user-management-and-event-matchmaking.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/010-simulator-redis-celery.md",
-      "en": "docs/adr/010-simulator-redis-celery.md",
-      "pl": "docs/pl/adr/010-simulator-redis-celery.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/adr/011-telemetry-ingest-durability-under-load.md",
-      "en": "docs/adr/011-telemetry-ingest-durability-under-load.md",
-      "pl": "docs/pl/adr/011-telemetry-ingest-durability-under-load.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/API.md",
-      "en": "docs/API.md",
-      "pl": "docs/pl/API.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/ARCHITECTURE.md",
-      "en": "docs/ARCHITECTURE.md",
-      "pl": "docs/pl/ARCHITECTURE.md"
     },
     {
       "mode": "paired",
@@ -565,12 +451,6 @@
       "en": "docs/en/compliance/COMPLIANCE_INDEX.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/compliance/MAP_BASEMAP_LICENSING.md",
-      "en": "docs/compliance/MAP_BASEMAP_LICENSING.md",
-      "pl": "docs/pl/compliance/MAP_BASEMAP_LICENSING.md"
-    },
-    {
       "mode": "paired",
       "canonical": "docs/compliance/RCP.md",
       "pl": "docs/compliance/RCP.md",
@@ -581,12 +461,6 @@
       "canonical": "docs/compliance/README.md",
       "pl": "docs/compliance/README.md",
       "en": "docs/en/compliance/README.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
-      "en": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
-      "pl": "docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md"
     },
     {
       "mode": "legacy_redirect",
@@ -603,18 +477,6 @@
       "legacy": "docs/CONSTITUTION.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/DATA_RESILIENCE.md",
-      "en": "docs/DATA_RESILIENCE.md",
-      "pl": "docs/pl/DATA_RESILIENCE.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/DEPARTMENT_ARCHITECTURE.md",
-      "en": "docs/DEPARTMENT_ARCHITECTURE.md",
-      "pl": "docs/pl/DEPARTMENT_ARCHITECTURE.md"
-    },
-    {
       "mode": "legacy_redirect",
       "canonical": "docs/pl/DEPLOYMENT.md",
       "pl": "docs/pl/DEPLOYMENT.md",
@@ -627,12 +489,6 @@
       "pl": "docs/pl/DEVELOPMENT.md",
       "en": "docs/en/DEVELOPMENT.md",
       "legacy": "docs/DEVELOPMENT.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/diagrams/architecture_c4.md",
-      "en": "docs/diagrams/architecture_c4.md",
-      "pl": "docs/pl/diagrams/architecture_c4.md"
     },
     {
       "mode": "legacy_redirect",
@@ -815,48 +671,6 @@
       "en": "docs/en/product/FAQ.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/quality/BACKLOG.md",
-      "en": "docs/quality/BACKLOG.md",
-      "pl": "docs/pl/quality/BACKLOG.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/BASELINE.md",
-      "en": "docs/quality/BASELINE.md",
-      "pl": "docs/pl/quality/BASELINE.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/INFRA_PR_CHECKLIST.md",
-      "en": "docs/quality/INFRA_PR_CHECKLIST.md",
-      "pl": "docs/pl/quality/INFRA_PR_CHECKLIST.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/OPENAPI_DRIFT.md",
-      "en": "docs/quality/OPENAPI_DRIFT.md",
-      "pl": "docs/pl/quality/OPENAPI_DRIFT.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/PR_CHECKLIST.md",
-      "en": "docs/quality/PR_CHECKLIST.md",
-      "pl": "docs/pl/quality/PR_CHECKLIST.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/README.md",
-      "en": "docs/quality/README.md",
-      "pl": "docs/pl/quality/README.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/quality/VERIFICATION.md",
-      "en": "docs/quality/VERIFICATION.md",
-      "pl": "docs/pl/quality/VERIFICATION.md"
-    },
-    {
       "mode": "legacy_redirect",
       "canonical": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
       "pl": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
@@ -906,12 +720,6 @@
       "en": "docs/en/reports/README.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "en": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "pl": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md"
-    },
-    {
       "mode": "n/a",
       "canonical": "docs/reports/STRATEGIC_AUDIT_REPORT_2026-05-16.md"
     },
@@ -935,12 +743,6 @@
       "pl": "docs/pl/SCALE_TEST_300K.md",
       "en": "docs/en/SCALE_TEST_300K.md",
       "legacy": "docs/SCALE_TEST_300K.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/SIMULATOR_ARCHITECTURE.md",
-      "en": "docs/SIMULATOR_ARCHITECTURE.md",
-      "pl": "docs/pl/SIMULATOR_ARCHITECTURE.md"
     },
     {
       "mode": "legacy_redirect",

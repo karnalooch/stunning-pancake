@@ -6,12 +6,12 @@
 | **Owner role** | Documentation maintainer |
 | **Last reviewed** | 2026-06-04 |
 | **lang** | pl |
-| **translation** | [English](../en/INSTALLATION.md) |
+| **translation** | [English](en/INSTALLATION.md) |
 | **canonical_path** | docs/pl/INSTALLATION.md |
 | **locale_redirect** | phase-2 |
 
-> **Przekierowanie (faza 2):** Kanoniczna treść PL — [INSTALLATION.md](../pl/INSTALLATION.md).  
-> English — [INSTALLATION.md](../en/INSTALLATION.md).
+> **Przekierowanie (faza 2):** Kanoniczna treść PL — [INSTALLATION.md](pl/INSTALLATION.md).  
+> English — [INSTALLATION.md](en/INSTALLATION.md).
 
 ---
 

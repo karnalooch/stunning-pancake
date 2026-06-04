@@ -6,12 +6,12 @@
 | **Owner role** | Documentation maintainer |
 | **Last reviewed** | 2026-06-04 |
 | **lang** | pl |
-| **translation** | [English](../en/DEVELOPMENT.md) |
+| **translation** | [English](en/DEVELOPMENT.md) |
 | **canonical_path** | docs/pl/DEVELOPMENT.md |
 | **locale_redirect** | phase-2 |
 
-> **Przekierowanie (faza 2):** Kanoniczna treść PL — [DEVELOPMENT.md](../pl/DEVELOPMENT.md).  
-> English — [DEVELOPMENT.md](../en/DEVELOPMENT.md).
+> **Przekierowanie (faza 2):** Kanoniczna treść PL — [DEVELOPMENT.md](pl/DEVELOPMENT.md).  
+> English — [DEVELOPMENT.md](en/DEVELOPMENT.md).
 
 ---
 

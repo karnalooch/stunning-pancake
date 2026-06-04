@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/CONSTITUTION.md) |
+| **translation** | [English](../en/CONSTITUTION.md) |
 | **canonical_path** | docs/pl/CONSTITUTION.md |
 
 ---

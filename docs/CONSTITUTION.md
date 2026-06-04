@@ -6,12 +6,12 @@
 | **Owner role** | Documentation maintainer |
 | **Last reviewed** | 2026-06-04 |
 | **lang** | pl |
-| **translation** | [English](../en/CONSTITUTION.md) |
+| **translation** | [English](en/CONSTITUTION.md) |
 | **canonical_path** | docs/pl/CONSTITUTION.md |
 | **locale_redirect** | phase-2 |
 
-> **Przekierowanie (faza 2):** Kanoniczna treść PL — [CONSTITUTION.md](../pl/CONSTITUTION.md).  
-> English — [CONSTITUTION.md](../en/CONSTITUTION.md).
+> **Przekierowanie (faza 2):** Kanoniczna treść PL — [CONSTITUTION.md](pl/CONSTITUTION.md).  
+> English — [CONSTITUTION.md](en/CONSTITUTION.md).
 
 ---
 

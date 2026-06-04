@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/MIGRATION.md) |
+| **translation** | [English](../en/MIGRATION.md) |
 | **canonical_path** | docs/pl/MIGRATION.md |
 
 ---

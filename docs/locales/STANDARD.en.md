@@ -37,7 +37,7 @@ Add to the metadata table at the top of **both** files:
 
 ```markdown
 | **lang** | en \| pl |
-| **translation** | [Polski](../../pl/operations/LIVE_MAP.md) |
+| **translation** | [Polski](../pl/operations/LIVE_MAP.md) |
 | **translation_status** | reviewed \| machine-translated |
 | **translation_reviewed** | 2026-06-04 (when reviewed) |
 | **canonical_path** | docs/en/operations/LIVE_MAP.md |

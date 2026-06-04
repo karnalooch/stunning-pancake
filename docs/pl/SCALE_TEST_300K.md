@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/SCALE_TEST_300K.md) |
+| **translation** | [English](../en/SCALE_TEST_300K.md) |
 | **canonical_path** | docs/pl/SCALE_TEST_300K.md |
 
 ---

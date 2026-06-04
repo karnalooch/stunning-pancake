@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/GETTING_STARTED.md) |
+| **translation** | [English](../en/GETTING_STARTED.md) |
 | **canonical_path** | docs/pl/GETTING_STARTED.md |
 
 ---

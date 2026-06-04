@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/CONFIGURATION.md) |
+| **translation** | [English](../en/CONFIGURATION.md) |
 | **canonical_path** | docs/pl/CONFIGURATION.md |
 
 ---

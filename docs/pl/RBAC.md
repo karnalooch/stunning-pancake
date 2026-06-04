@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/RBAC.md) |
+| **translation** | [English](../en/RBAC.md) |
 | **canonical_path** | docs/pl/RBAC.md |
 
 ---

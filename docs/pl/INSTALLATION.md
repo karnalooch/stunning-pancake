@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/INSTALLATION.md) |
+| **translation** | [English](../en/INSTALLATION.md) |
 | **canonical_path** | docs/pl/INSTALLATION.md |
 
 ---

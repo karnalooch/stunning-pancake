@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/EVENT_BURST_50K.md) |
+| **translation** | [English](../en/EVENT_BURST_50K.md) |
 | **canonical_path** | docs/pl/EVENT_BURST_50K.md |
 
 ---

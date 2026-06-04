@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/RAILWAY_CELERY_SIMULATION.md) |
+| **translation** | [English](../en/RAILWAY_CELERY_SIMULATION.md) |
 | **canonical_path** | docs/pl/RAILWAY_CELERY_SIMULATION.md |
 
 ---

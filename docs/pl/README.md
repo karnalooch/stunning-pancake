@@ -45,9 +45,9 @@ Model **enterprise**: zwierciadlane drzewa `docs/en/` i `docs/pl/`, metadane `la
 
 | Dokument | Opis |
 |----------|------|
-| [locales/README.md](./locales/README.md) | Hub dwujęzyczny |
-| [locales/MIGRATION_REGISTRY.md](./locales/MIGRATION_REGISTRY.md) | Co już sparowane, co `pending` |
-| [locales/STANDARD.pl.md](./locales/STANDARD.pl.md) | Standard autora (PL) |
+| [locales/README.md](../locales/README.md) | Hub dwujęzyczny |
+| [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md) | Co już sparowane, co `pending` |
+| [locales/STANDARD.pl.md](../locales/STANDARD.pl.md) | Standard autora (PL) |
 
 Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md#język-en--pl--enterprise).
 
@@ -108,41 +108,41 @@ Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`
 | [MOBILE.md](./operations/MOBILE.md) | ✅ Active | EAS build/release, GPS recovery |
 | [PRE_RELEASE_VERIFICATION.md](./operations/PRE_RELEASE_VERIFICATION.md) | ✅ Active | Gate przed release |
 
-### `docs/admin/` — [README](./admin/README.md) · [ADMIN_INDEX](./admin/ADMIN_INDEX.md)
+### `docs/admin/` — [README](../admin/README.md) · [ADMIN_INDEX](../admin/ADMIN_INDEX.md)
 
 | Plik | Status | Opis |
 |------|--------|------|
-| [P0_SMOKE_CHECKLIST.md](./admin/P0_SMOKE_CHECKLIST.md) | ✅ Active | Post-deploy smoke (**P0 DONE**) |
-| [P1_ROADMAP.md](./admin/P1_ROADMAP.md) | ✅ Active | Paczki 1–6; **1a done**, 1b + Paczka 2 |
-| [P2_ROADMAP.md](./admin/P2_ROADMAP.md) | ✅ Active | GPX backlog (F1–F6, §2.3), Auth/MFA (post-P1) |
-| [ROADMAP_V3.md](./admin/ROADMAP_V3.md) | ✅ Active | Spec v3 |
-| [UI_AUDIT_2026-06-02.md](./admin/UI_AUDIT_2026-06-02.md) | 📦 Snapshot | Audyt UI; P0 zamknięte |
+| [P0_SMOKE_CHECKLIST.md](../admin/P0_SMOKE_CHECKLIST.md) | ✅ Active | Post-deploy smoke (**P0 DONE**) |
+| [P1_ROADMAP.md](../admin/P1_ROADMAP.md) | ✅ Active | Paczki 1–6; **1a done**, 1b + Paczka 2 |
+| [P2_ROADMAP.md](../admin/P2_ROADMAP.md) | ✅ Active | GPX backlog (F1–F6, §2.3), Auth/MFA (post-P1) |
+| [ROADMAP_V3.md](../admin/ROADMAP_V3.md) | ✅ Active | Spec v3 |
+| [UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | 📦 Snapshot | Audyt UI; P0 zamknięte |
 
-### `docs/compliance/` — [README](./compliance/README.md) · [COMPLIANCE_INDEX](./compliance/COMPLIANCE_INDEX.md)
+### `docs/compliance/` — [README](../compliance/README.md) · [COMPLIANCE_INDEX](../compliance/COMPLIANCE_INDEX.md)
 
 | Plik | Opis |
 |------|------|
-| [RCP.md](./compliance/RCP.md) | RODO — rejestr czynności |
-| [RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | Gate release OSS/GDPR/ToS |
-| [MAP_BASEMAP_LICENSING.md](./compliance/MAP_BASEMAP_LICENSING.md) | Licencje map bazowych |
+| [RCP.md](../compliance/RCP.md) | RODO — rejestr czynności |
+| [RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | Gate release OSS/GDPR/ToS |
+| [MAP_BASEMAP_LICENSING.md](../compliance/MAP_BASEMAP_LICENSING.md) | Licencje map bazowych |
 
 ### `docs/adr/` (001–011)
 
 | ADR | Temat |
 |-----|--------|
-| [001](./adr/001-react-native-bridgeless.md) | React Native bridgeless |
-| [002](./adr/002-unistyles-v3-initialization.md) | Unistyles v3 |
-| [003](./adr/003-state-management-legend-state.md) | Legend State |
-| [004](./adr/004-persistent-storage-mmkv.md) | MMKV |
-| [005](./adr/005-telemetry-tracking.md) | Telemetria |
-| [006](./adr/006-design-system-stitch.md) | Design system |
-| [007](./adr/007-ai-coaching-architecture.md) | AI coaching |
-| [008](./adr/008-backend-strategy.md) | Backend strategy |
-| [009](./adr/009-admin-user-management-and-event-matchmaking.md) | Admin users / events |
-| [010](./adr/010-simulator-redis-celery.md) | Simulator Redis/Celery |
-| [011](./adr/011-telemetry-ingest-durability-under-load.md) | Telemetry ingest durability (burst); mobile-side guarantees (P0/P1) |
+| [001](../adr/001-react-native-bridgeless.md) | React Native bridgeless |
+| [002](../adr/002-unistyles-v3-initialization.md) | Unistyles v3 |
+| [003](../adr/003-state-management-legend-state.md) | Legend State |
+| [004](../adr/004-persistent-storage-mmkv.md) | MMKV |
+| [005](../adr/005-telemetry-tracking.md) | Telemetria |
+| [006](../adr/006-design-system-stitch.md) | Design system |
+| [007](../adr/007-ai-coaching-architecture.md) | AI coaching |
+| [008](../adr/008-backend-strategy.md) | Backend strategy |
+| [009](../adr/009-admin-user-management-and-event-matchmaking.md) | Admin users / events |
+| [010](../adr/010-simulator-redis-celery.md) | Simulator Redis/Celery |
+| [011](../adr/011-telemetry-ingest-durability-under-load.md) | Telemetry ingest durability (burst); mobile-side guarantees (P0/P1) |
 
-### `docs/reports/` — [README](./reports/README.md)
+### `docs/reports/` — [README](../reports/README.md)
 
 Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejnym audycie.
 
@@ -160,24 +160,24 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 | [onboarding/GUIDE.md](./onboarding/GUIDE.md) | Onboarding dev + tenant + wizard mobile |
 | [product/FAQ.md](./product/FAQ.md) | FAQ użytkownika końcowego |
 
-**Design mobile (STITCH HTML):** katalog `mockups/` — np. `02-active-ride-hud.html` (referencja UI; pliki `*.html` mogą być gitignored lokalnie). Spec kolorów: [archive/designmobile.md](./archive/designmobile.md) · ADR [006](./adr/006-design-system-stitch.md).
+**Design mobile (STITCH HTML):** katalog `mockups/` — np. `02-active-ride-hud.html` (referencja UI; pliki `*.html` mogą być gitignored lokalnie). Spec kolorów: [archive/designmobile.md](../archive/designmobile.md) · ADR [006](../adr/006-design-system-stitch.md).
 
 ### `docs/archive/` — historyczne
 
 | Plik | Uwaga |
 |------|--------|
-| [CHARTER.md](./archive/CHARTER.md) | 📦 Deprecated → [CONSTITUTION.md](./CONSTITUTION.md) |
-| [TECH_SPEC.md](./archive/TECH_SPEC.md) | 📦 Historyczny |
-| [SWOT_ANALYSIS.md](./archive/SWOT_ANALYSIS.md) | 📦 Historyczny |
-| [designmobile.md](./archive/designmobile.md) | 📦 Historyczny design mobile |
-| [plans/README.md](./archive/plans/README.md) | Redirect do `plans/` poza docs |
+| [CHARTER.md](../archive/CHARTER.md) | 📦 Deprecated → [CONSTITUTION.md](./CONSTITUTION.md) |
+| [TECH_SPEC.md](../archive/TECH_SPEC.md) | 📦 Historyczny |
+| [SWOT_ANALYSIS.md](../archive/SWOT_ANALYSIS.md) | 📦 Historyczny |
+| [designmobile.md](../archive/designmobile.md) | 📦 Historyczny design mobile |
+| [plans/README.md](../archive/plans/README.md) | Redirect do `plans/` poza docs |
 
 ### `docs/assets/` · `docs/mockups/`
 
 | Ścieżka | Opis |
 |---------|------|
-| [assets/README.md](./assets/README.md) | SSOT zasobów graficznych w docs |
-| [assets/live/](./assets/live/README.md) | Zrzuty Live Map (opcjonalne PNG) |
+| [assets/README.md](../assets/README.md) | SSOT zasobów graficznych w docs |
+| [assets/live/](../assets/live/README.md) | Zrzuty Live Map (opcjonalne PNG) |
 
 ---
 
@@ -185,13 +185,13 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 
 | Rola | Ścieżka |
 |------|---------|
-| **Nowy deweloper** | Getting Started → Installation → Development → Architecture → [ADR-008](./adr/008-backend-strategy.md) |
+| **Nowy deweloper** | Getting Started → Installation → Development → Architecture → [ADR-008](../adr/008-backend-strategy.md) |
 | **Platform Operator** | [OPERATIONS_INDEX](./operations/OPERATIONS_INDEX.md) → RAILWAY_PRODUCTION_CHECKLIST → `railway-verify-production.ps1` → RAILWAY_CELERY_MEMORY → SIMULATOR |
-| **Release Manager** | PRE_RELEASE_VERIFICATION → [COMPLIANCE_INDEX](./compliance/COMPLIANCE_INDEX.md) → P0_SMOKE_CHECKLIST |
-| **Admin / Frontend** | [ADMIN_INDEX](./admin/ADMIN_INDEX.md) → P1_ROADMAP · [P2_ROADMAP](./admin/P2_ROADMAP.md) |
+| **Release Manager** | PRE_RELEASE_VERIFICATION → [COMPLIANCE_INDEX](../compliance/COMPLIANCE_INDEX.md) → P0_SMOKE_CHECKLIST |
+| **Admin / Frontend** | [ADMIN_INDEX](../admin/ADMIN_INDEX.md) → P1_ROADMAP · [P2_ROADMAP](../admin/P2_ROADMAP.md) |
 | **Mobile release** | [MOBILE.md](./operations/MOBILE.md) → DATA_RESILIENCE |
 | **Integrator API** | API → RBAC → Getting Started |
-| **DPO / Legal** | [COMPLIANCE_INDEX](./compliance/COMPLIANCE_INDEX.md) → RCP |
+| **DPO / Legal** | [COMPLIANCE_INDEX](../compliance/COMPLIANCE_INDEX.md) → RCP |
 
 ---
 

@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](en/DISK_GUARD.md) |
+| **translation** | [English](../en/DISK_GUARD.md) |
 | **canonical_path** | docs/pl/DISK_GUARD.md |
 
 ---
