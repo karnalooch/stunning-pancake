@@ -2,7 +2,7 @@
 
 A state-of-the-art, high-precision B2B/B2C sports ecosystem designed for city-wide competitions, corporate wellness, and elite telemetry analysis.
 
-> **Docs:** [docs/README.md](docs/README.md) · **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Changelog:** [CHANGELOG.md](CHANGELOG.md) (current: `v0.3.3-dev` + unreleased on `main`)
+> **Docs (PL):** [docs/pl/](docs/pl/) · **Docs (EN):** [docs/en/](docs/en/) · **Legacy redirects:** [docs/README.md](docs/README.md) · **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Changelog:** [CHANGELOG.md](CHANGELOG.md) (current: `v0.3.3-dev` + unreleased on `main`)
 
 ## 🌟 Key Features
 
@@ -33,9 +33,11 @@ The platform will be available at `localhost` with automated port-forwarding.
 
 ## 📂 Documentation & Guides
 
--   **[📚 Documentation index](./docs/README.md)** — główny spis (start, operacje, architektura, API).
--   **[⚙️ Operations runbooks](./docs/operations/)** — symulator batch/live, BRouter, Railway worker.
--   **[☸️ Kubernetes runbook](./docs/operations/KUBERNETES.md)** — baseline manifests for API, Celery, Redis, BRouter.
+-   **[📚 Documentation (Polish)](./docs/pl/README.md)** — canonical index (start, operations, architecture, API).
+-   **[📚 Documentation (English)](./docs/en/README.md)** — English mirrors and ADR/API links.
+-   **[⚙️ Operations runbooks (PL)](./docs/pl/operations/)** — simulator batch/live, BRouter, Railway workers.
+-   **[☸️ Kubernetes runbook](./docs/pl/operations/KUBERNETES.md)** — baseline manifests for API, Celery, Redis, BRouter.
+-   Legacy paths (`docs/GETTING_STARTED.md`, `docs/operations/`, …) redirect to `docs/pl/` or `docs/en/` — edit canonical files there.
 -   **[📦 Changelog](./CHANGELOG.md)** — historia wydań.
 -   **[🛡️ Admin Panel](./docs/admin/README.md)** — design system i komponenty.
 -   **[🏛️ Architecture](./docs/ARCHITECTURE.md)** — PostGIS, anti-cheat, multi-tenant.

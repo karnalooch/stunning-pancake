@@ -10,7 +10,7 @@ const LOD = {
     clusterVisibleStart: 6.2,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
-    dotFadeInStart: 7,
+    dotFadeInStart: 12,
     dotFadeInEnd: 11.2,
     dotFadeOutStart: 11.8,
     dotFadeOutEnd: 13.2,

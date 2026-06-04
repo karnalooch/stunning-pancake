@@ -6,7 +6,7 @@
 | **Owner role** | Documentation maintainer |
 | **Last reviewed** | 2026-06-04 |
 | **lang** | en |
-| **translation** | [Indeks główny (PL)](../README.md) |
+| **translation** | [Indeks główny (PL)](../pl/README.md) |
 
 ---
 

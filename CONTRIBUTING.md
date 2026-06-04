@@ -6,10 +6,10 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 
 ## Zanim zaczniesz
 
-1. Przeczytaj [docs/README.md](docs/README.md) — indeks dokumentacji.
+1. Przeczytaj [docs/pl/README.md](docs/pl/README.md) (PL, kanoniczny) lub [docs/en/README.md](docs/en/README.md) (EN). Stare ścieżki (`docs/README.md`, `docs/GETTING_STARTED.md`, …) to przekierowania fazy 2.
 2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
-3. Uruchom środowisko: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) lub `.\dev.ps1`.
-4. Dla zmian w symulatorze / Railway: [docs/operations/](docs/operations/).
+3. Uruchom środowisko: [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md) lub `.\dev.ps1` (legacy: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)).
+4. Dla zmian w symulatorze / Railway: [docs/pl/operations/](docs/pl/operations/) (EN: [docs/en/operations/](docs/en/operations/)).
 
 ---
 
@@ -32,10 +32,10 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 
 | Zmieniasz | Zaktualizuj |
 |----------|-------------|
-| API admin / symulator | [docs/API.md](docs/API.md), [docs/operations/SIMULATOR.md](docs/operations/SIMULATOR.md) |
-| Env `SCALE_*`, `BROUTER_*` | [docs/CONFIGURATION.md](docs/CONFIGURATION.md), `.env.example`, [docs/operations/](docs/operations/) |
-| BRouter / Docker | [infrastructure/brouter/README.md](infrastructure/brouter/README.md), [docs/operations/BROUTER.md](docs/operations/BROUTER.md) |
-| Mobile GPS / telemetry | [docs/DATA_RESILIENCE.md](docs/DATA_RESILIENCE.md), [docs/operations/MOBILE.md](docs/operations/MOBILE.md) |
+| API admin / symulator | [docs/API.md](docs/API.md), [docs/pl/operations/SIMULATOR.md](docs/pl/operations/SIMULATOR.md) |
+| Env `SCALE_*`, `BROUTER_*` | [docs/pl/CONFIGURATION.md](docs/pl/CONFIGURATION.md), `.env.example`, [docs/pl/operations/](docs/pl/operations/) |
+| BRouter / Docker | [infrastructure/brouter/README.md](infrastructure/brouter/README.md), [docs/pl/operations/BROUTER.md](docs/pl/operations/BROUTER.md) |
+| Mobile GPS / telemetry | [docs/pl/DATA_RESILIENCE.md](docs/pl/DATA_RESILIENCE.md), [docs/pl/operations/MOBILE.md](docs/pl/operations/MOBILE.md) |
 | Live Map UI | [docs/admin/README.md](docs/admin/README.md) |
 | Decyzja architektoniczna | Nowy plik w [docs/adr/](docs/adr/) |
 | Wydanie użytkownika | [CHANGELOG.md](CHANGELOG.md) |

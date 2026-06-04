@@ -1,4 +1,4 @@
-# Document
+# Datadog — simulator log keys
 
 | | |
 |--|--|
@@ -8,8 +8,10 @@
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/DATADOG_SIMULATOR.md) |
-| **translation_status** | machine-translated |
+| **translation_status** | reviewed |
+| **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/en/operations/DATADOG_SIMULATOR.md |
+
 ---
 
 | | |
@@ -47,4 +49,4 @@ BRouter could not produce a road path for a start (island / no pass). Increments
 | Live sim API | `routing_queue_depth`, `routing_backpressure_active`, `dispatches_throttled` on `GET /api/activities/admin/live-simulate/` |
 | Dashboard | `sim_kpi` in `GET /api/activities/admin/stats/` |
 
-No application Datadog tracer is required for Paczka 1b; use log-based monitors if needed.
+No application Datadog tracer is required for package 1b; use log-based monitors if needed.

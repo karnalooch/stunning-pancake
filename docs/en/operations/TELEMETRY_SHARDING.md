@@ -1,4 +1,4 @@
-# Document
+# Telemetry horizontal sharding
 
 | | |
 |--|--|
@@ -8,8 +8,10 @@
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/TELEMETRY_SHARDING.md) |
-| **translation_status** | machine-translated |
+| **translation_status** | reviewed |
+| **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/en/operations/TELEMETRY_SHARDING.md |
+
 ---
 
 | | |
@@ -19,7 +21,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | Platform Operator, Backend |
 
-**Powiązane:** [EVENT_BURST_50K.md](../EVENT_BURST_50K.md) · [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) · [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md)
+**Related:** [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md) · [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) · [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md)
 
 ## Problem
 
@@ -36,25 +38,32 @@ never `HGETALL`), but the **write/index side does not scale horizontally**.
 ## Design
 
 A deterministic **shard router** (`backend/activities/telemetry_shard.py`) spreads
-the live-position index across `N` logical shards keyed by `deviceId`.```
+the live-position index across `N` logical shards keyed by `deviceId`.
+
+```
 shard = crc32(deviceId) % TELEMETRY_SHARD_COUNT
-```- `crc32` (not Python `hash()`) → stable across processes and restarts.
+```
+
+- `crc32` (not Python `hash()`) → stable across processes and restarts.
 - Each shard gets its own key pair with a **Redis Cluster hash tag** `{tel:<i>}`
   so the pair shares a slot and pipelines stay single-slot:
   - `{tel:3}:telemetry:positions`
   - `{tel:3}:telemetry:geo`
 
 ### Write path (single shard per device)
+
 `push_simulator_position` and `replace_active_positions` route each device to its
 own shard via `TelemetryShardRouter.client_for(index)`. The full-replace path
 deletes per shard pair and re-writes via one pipeline **per shard client**.
 
 ### Read path (parallel fan-out + merge)
+
 `get_live_positions` fans the `GEORADIUS` query across **all** shards **in parallel**
 (`ThreadPoolExecutor`, capped by `TELEMETRY_SHARD_READ_WORKERS`), then merges and
 de-duplicates by `deviceId`, capped at the requested limit.
 
 ### Backward compatibility (critical)
+
 `TELEMETRY_SHARD_COUNT=1` (**default**) returns the **exact legacy key names**
 (`telemetry:positions`, `telemetry:geo`). No data migration, no behaviour change.
 Sharding only activates when an operator sets the count `> 1`. Hard-capped at 256.
@@ -74,24 +83,35 @@ URLs). When unset, all shards share `core.redis_cluster.get_redis()` (standalone
 ## Rollout
 
 ### Phase 0 — default (no change)
+
 `TELEMETRY_SHARD_COUNT=1`. Identical to today.
 
 ### Phase 1 — shard on Redis Cluster (recommended when cluster exists)
+
 1. Run a Redis Cluster and set `REDIS_CLUSTER_NODES` (see `core/redis_cluster.py`).
 2. Set `TELEMETRY_SHARD_COUNT` to a multiple of the master count (e.g. `12` for
    3 masters → 4 shards/master). Keys' hash tags distribute across masters.
-3. Live-map reads fan out across shards automatically in parallel.```env
+3. Live-map reads fan out across shards automatically in parallel.
+
+```env
 REDIS_CLUSTER_NODES=redis-1:6379,redis-2:6379,redis-3:6379
 TELEMETRY_SHARD_COUNT=12
-```### Phase 2 — per-shard Redis routing (shipped)
+```
+
+### Phase 2 — per-shard Redis routing (shipped)
+
 Set `REDIS_TELEMETRY_SHARD_NODES` so each shard index maps to a dedicated URL.
 
 **Railway prod (single Redis addon — Phase 2a interim):** derive four logical DBs from
-the same host (replace `REDIS_HOST` / password from Railway Variables):```env
+the same host (replace `REDIS_HOST` / password from Railway Variables):
+
+```env
 TELEMETRY_SHARD_COUNT=4
 REDIS_TELEMETRY_SHARD_NODES=redis://default:PASSWORD@REDIS_HOST:6379/0,redis://default:PASSWORD@REDIS_HOST:6379/1,redis://default:PASSWORD@REDIS_HOST:6379/2,redis://default:PASSWORD@REDIS_HOST:6379/3
-```**True horizontal (Phase 2b):** provision separate Redis services on Railway (or
-Redis Cluster addon) and list one URL per shard. Session/leaderboard Redis stays on
+```
+
+**True horizontal (Phase 2b):** provision separate Redis services on Railway (or
+a Redis Cluster addon) and list one URL per shard. Session/leaderboard Redis stays on
 `REDIS_URL`; telemetry shards scale independently.
 
 ### Services that need these env vars (Railway `marvelous-gratitude` / production)
@@ -107,12 +127,15 @@ telemetry service handles GPS **history** ingest to Postgres. Both need ingest
 backpressure vars; only backend + simulation need shard routing for Redis.
 
 ### Acceptance for "true 50k simultaneous ingest"
+
 Phase 2b (or Phase 1 cluster) + load test showing sustained **≥ 50k positions/s**
 ingest and live-map **p95 < 300 ms** at country zoom. See [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md).
 
 **Do not run full 50k against production without Platform Operator sign-off.**
 
-## Env reference```env
+## Env reference
+
+```env
 # 1 (default) = legacy single key. >1 = N shards (hash-tagged). Hard cap 256.
 TELEMETRY_SHARD_COUNT=4
 
@@ -127,6 +150,10 @@ TELEMETRY_SHARD_COUNT=4
 # TELEMETRY_DB_POOL_MAX=30
 # TELEMETRY_INGEST_BATCH_SIZE=100
 # TELEMETRY_INGEST_FLUSH_MS=50
-```## Tests```bash
+```
+
+## Tests
+
+```bash
 cd backend && python run_pytest.py activities/test_telemetry_shard.py core/test_load_guard.py -m simulator_light -v --tb=short
 ```

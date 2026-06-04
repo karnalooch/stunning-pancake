@@ -11,6 +11,8 @@
 | **translation** | [English](../en/README.md) |
 | **canonical_path** | docs/pl/README.md |
 
+Legacy entry points (`docs/README.md`, `docs/GETTING_STARTED.md`, `docs/operations/`, …) are phase-2 redirect stubs (~19 lines) — edit content here or under `docs/en/`, not the stub.
+
 ---
 
 | | |

@@ -9,6 +9,8 @@
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/PRE_RELEASE_VERIFICATION.md) |
+| **translation_status** | reviewed |
+| **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/pl/operations/PRE_RELEASE_VERIFICATION.md |
 
 ---

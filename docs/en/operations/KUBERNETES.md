@@ -1,4 +1,4 @@
-# Document
+# Kubernetes runbook — SPORT platform
 
 | | |
 |--|--|
@@ -8,8 +8,10 @@
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/KUBERNETES.md) |
-| **translation_status** | machine-translated |
+| **translation_status** | reviewed |
+| **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/en/operations/KUBERNETES.md |
+
 ---
 
 | | |
@@ -19,9 +21,10 @@
 | **Last reviewed** | 2026-06-03 |
 | **Audience** | DevOps |
 
-> **Produkcja na Railway?** Railway nie uruchamia tych manifestów — [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md).
+> **Production on Railway?** Railway does not run these manifests — see [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md).
 
 Production-ready, pragmatic baseline for deploying:
+
 - Django backend API
 - Celery workers (default + simulation)
 - Celery Beat
@@ -58,6 +61,7 @@ Before first deployment, copy and edit:
 3. Optionally set integrations (`SENTRY_DSN`, Stripe, email, Matrix).
 
 Also update `infrastructure/k8s/config/app-configmap.yaml`:
+
 - `ALLOWED_HOSTS`
 - `CORS_ALLOWED_ORIGINS`
 - ingress domains (`api.example.com`, `admin.example.com`)
@@ -67,7 +71,9 @@ Also update `infrastructure/k8s/config/app-configmap.yaml`:
 
 ## 3) Apply order (exact)
 
-Run from repo root:```bash
+Run from repo root:
+
+```bash
 kubectl apply -f infrastructure/k8s/namespace.yaml
 kubectl apply -f infrastructure/k8s/config/app-configmap.yaml
 kubectl apply -f infrastructure/k8s/config/app-secrets.template.yaml
@@ -82,31 +88,42 @@ kubectl apply -f infrastructure/k8s/workloads/beat.yaml
 kubectl apply -f infrastructure/k8s/policy/pdb.yaml
 kubectl apply -f infrastructure/k8s/policy/hpa.yaml
 kubectl apply -f infrastructure/k8s/network/ingress.yaml
-```Optional admin:```bash
+```
+
+Optional admin:
+
+```bash
 kubectl apply -f infrastructure/k8s/workloads/admin.optional.yaml
-```Optional local PostgreSQL (not recommended for production):```bash
+```
+
+Optional local PostgreSQL (not recommended for production):
+
+```bash
 kubectl apply -f infrastructure/k8s/optional/postgres.optional.yaml
-```---
+```
+
+---
 
 ## 4) Scaling knobs
 
 Primary scaling controls:
 
 - API:
-  - `workloads/api.yaml` -> `spec.replicas`
-  - `policy/hpa.yaml` -> min/max/CPU target for `sport-backend-api`
+  - `workloads/api.yaml` → `spec.replicas`
+  - `policy/hpa.yaml` → min/max/CPU target for `sport-backend-api`
 - Default workers:
-  - `workloads/worker.yaml` -> `spec.replicas`
-  - `policy/hpa.yaml` -> min/max/CPU target for `sport-celery-worker`
+  - `workloads/worker.yaml` → `spec.replicas`
+  - `policy/hpa.yaml` → min/max/CPU target for `sport-celery-worker`
 - Simulation workers:
-  - `workloads/worker-simulation.yaml` -> `spec.replicas`
-  - `policy/hpa.yaml` -> min/max/CPU target for `sport-celery-worker-simulation`
+  - `workloads/worker-simulation.yaml` → `spec.replicas`
+  - `policy/hpa.yaml` → min/max/CPU target for `sport-celery-worker-simulation`
 - Worker concurrency and queue split:
   - `config/app-configmap.yaml`
   - `CELERY_WORKER_*_CONCURRENCY`
   - `CELERY_WORKER_*_QUEUES`
 
 Queue isolation recommendation:
+
 - Default worker (`critical,default,notifications`) for user-facing and routine tasks.
 - Simulation worker (`simulation`) isolated from user-facing queues.
 - Keep dedicated queues reserved for `routing` and `wipe` for further split-out workers when traffic grows.
@@ -131,34 +148,47 @@ Queue isolation recommendation:
 
 ## 6) Rollout, rollback, and restart
 
-Check rollout:```bash
+Check rollout:
+
+```bash
 kubectl rollout status deployment/sport-backend-api -n sport
 kubectl rollout status deployment/sport-celery-worker -n sport
 kubectl rollout status deployment/sport-celery-worker-simulation -n sport
 kubectl rollout status deployment/sport-celery-beat -n sport
-```Rollback:```bash
+```
+
+Rollback:
+
+```bash
 kubectl rollout undo deployment/sport-backend-api -n sport
 kubectl rollout undo deployment/sport-celery-worker -n sport
 kubectl rollout undo deployment/sport-celery-worker-simulation -n sport
 kubectl rollout undo deployment/sport-celery-beat -n sport
-```Force restart after ConfigMap/Secret change:```bash
+```
+
+Force restart after ConfigMap/Secret change:
+
+```bash
 kubectl rollout restart deployment/sport-backend-api -n sport
 kubectl rollout restart deployment/sport-celery-worker -n sport
 kubectl rollout restart deployment/sport-celery-worker-simulation -n sport
 kubectl rollout restart deployment/sport-celery-beat -n sport
-```---
+```
+
+---
 
 ## 7) Common failure playbook
 
 ### A) API pods CrashLoopBackOff
-- Check env/secret mismatch:
-  - `kubectl describe pod <pod> -n sport`
+
+- Check env/secret mismatch: `kubectl describe pod <pod> -n sport`
 - Validate DB connectivity from `DATABASE_URL`.
 - Re-run migration job:
   - `kubectl delete job sport-backend-migrate -n sport`
   - `kubectl apply -f infrastructure/k8s/jobs/migrate-job.yaml`
 
 ### B) Worker backlog growing
+
 - Scale workers quickly:
   - `kubectl scale deployment/sport-celery-worker -n sport --replicas=6`
   - `kubectl scale deployment/sport-celery-worker-simulation -n sport --replicas=3`
@@ -166,27 +196,31 @@ kubectl rollout restart deployment/sport-celery-beat -n sport
 - Split heavy queues (`routing`, `wipe`) into dedicated deployments.
 
 ### C) BRouter slow/unavailable
+
 - Verify PVC is bound and tiles are present.
 - Check pod logs for tile download/lookup mismatch.
 - Temporarily lower simulation load (replicas/concurrency).
 
 ### D) HPA not scaling
+
 - Ensure `metrics-server` is installed.
-- Check:
-  - `kubectl describe hpa sport-backend-api -n sport`
-  - `kubectl top pods -n sport`
+- Check: `kubectl describe hpa sport-backend-api -n sport`, `kubectl top pods -n sport`
 
 ### E) Ingress returns 404/502
+
 - Verify ingress class and controller match.
-- Validate service endpoints:
-  - `kubectl get endpoints -n sport`
+- Validate service endpoints: `kubectl get endpoints -n sport`
 - Confirm DNS points to ingress load balancer.
 
 ---
 
 ## 8) Validation
 
-Recommended pre-apply checks:```bash
+Recommended pre-apply checks:
+
+```bash
 kubectl apply --dry-run=client -k infrastructure/k8s
 kubectl kustomize infrastructure/k8s
-```If `kubectl` is unavailable in local environment, validate YAML in CI with a schema-aware validator (for example `kubeconform` or `kubeval`) before production apply.
+```
+
+If `kubectl` is unavailable locally, validate YAML in CI with a schema-aware validator (for example `kubeconform` or `kubeval`) before production apply.
