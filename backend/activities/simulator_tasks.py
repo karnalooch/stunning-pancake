@@ -87,7 +87,7 @@ def _maybe_log_brouter_grid_fallback() -> None:
     if _brouter_grid_log_count <= 3:
         sim.live_log(
             "BRouter unavailable — grid fallback "
-            "(set BROUTER_URL on celery-worker-simulation, e.g. http://brouter:17777/brouter)"
+            "(set BROUTER_URL or BROUTER_URLS on celery-worker-simulation)"
         )
         return
     now = time.time()
@@ -95,7 +95,7 @@ def _maybe_log_brouter_grid_fallback() -> None:
         return
     _brouter_grid_log_last_hour = now
     sim.live_log(
-        "BRouter unavailable — grid fallback (throttled; configure BROUTER_URL on simulation worker)"
+        "BRouter unavailable — grid fallback (throttled; configure BROUTER_URL/BROUTER_URLS on simulation worker)"
     )
 
 
@@ -250,16 +250,16 @@ def _brouter_route_waypoints(
         # "target island"/pass=0 are expected transient misses under dense concurrent starts.
         if (last_classification or {}).get("code") == BRouterService.UNROUTABLE_ERROR_CODE:
             _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> island/unroutable (section 0, pass=0): {last_err}",
+                f"{BRouterService.endpoints_display()} -> island/unroutable (section 0, pass=0): {last_err}",
                 unroutable=True,
             )
         else:
             _maybe_log_brouter_route_failure(
-                f"{BRouterService.BASE_URL} -> {last_err}",
+                f"{BRouterService.endpoints_display()} -> {last_err}",
             )
     except Exception as exc:
         _maybe_log_brouter_route_failure(
-            f"{BRouterService.BASE_URL} exception: {exc}",
+            f"{BRouterService.endpoints_display()} exception: {exc}",
         )
     return None
 

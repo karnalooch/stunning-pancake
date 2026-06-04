@@ -16,7 +16,7 @@
     }
   },
   "variables": {
-    "BROUTER_URL": "http://brouter.railway.internal:17777/brouter",
+    "BROUTER_URLS": "http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter",
     "BROUTER_TIMEOUT": "25",
     "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
     "CELERY_WORKER_QUEUES": "routing",

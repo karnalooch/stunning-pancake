@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 
 import requests
@@ -12,9 +13,11 @@ class BRouterService:
     """
     Client for interacting with the BRouter engine.
     Used for topological track validation and anti-cheat checks.
+
+    Multiple Railway services (brouter + brouter-2) share load via BROUTER_URLS
+    (comma-separated). Falls back to BROUTER_URL when unset.
     """
 
-    BASE_URL = os.getenv("BROUTER_URL", "http://brouter:17777/brouter").rstrip("/")
     PROFILE_MAP = {
         "RUN": "foot-all",
         "BIKE": "bicycle",
@@ -24,6 +27,45 @@ class BRouterService:
     UNROUTABLE_ERROR_CODE = "BROUTER_UNROUTABLE_START"
     TRANSPORT_ERROR_CODE = "BROUTER_TRANSPORT_FAILURE"
     _http_session: requests.Session | None = None
+    _base_urls_cache: tuple[str, ...] | None = None
+    _rr_lock = threading.Lock()
+    _rr_index = 0
+
+    @classmethod
+    def _load_base_urls(cls) -> list[str]:
+        multi = (os.getenv("BROUTER_URLS") or "").strip()
+        if multi:
+            urls = [u.strip().rstrip("/") for u in multi.split(",") if u.strip()]
+            if urls:
+                return urls
+        single = (os.getenv("BROUTER_URL") or "http://brouter:17777/brouter").strip().rstrip("/")
+        return [single or "http://brouter:17777/brouter"]
+
+    @classmethod
+    def base_urls(cls) -> tuple[str, ...]:
+        if cls._base_urls_cache is None:
+            cls._base_urls_cache = tuple(cls._load_base_urls())
+        return cls._base_urls_cache
+
+    @classmethod
+    def primary_base_url(cls) -> str:
+        return cls.base_urls()[0]
+
+    @classmethod
+    def endpoints_display(cls) -> str:
+        urls = cls.base_urls()
+        return urls[0] if len(urls) == 1 else ",".join(urls)
+
+    @classmethod
+    def _next_request_index(cls, url_count: int) -> int:
+        with cls._rr_lock:
+            idx = cls._rr_index
+            cls._rr_index = (idx + 1) % max(1, url_count)
+            return idx
+
+    @classmethod
+    def _url_for_attempt(cls, start_index: int, attempt: int, urls: tuple[str, ...]) -> str:
+        return urls[(start_index + attempt) % len(urls)]
 
     @classmethod
     def _timeout_seconds(cls) -> float:
@@ -140,10 +182,13 @@ class BRouterService:
 
         last_exc = None
         retries = cls._retry_count()
+        urls = cls.base_urls()
+        start_index = cls._next_request_index(len(urls))
         for attempt in range(retries):
+            base_url = cls._url_for_attempt(start_index, attempt, urls)
             try:
                 response = cls._http().get(
-                    cls.BASE_URL,
+                    base_url,
                     params=params,
                     timeout=cls._timeout_seconds(),
                 )

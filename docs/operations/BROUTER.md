@@ -15,18 +15,20 @@
 
 | Klient | URL |
 |--------|-----|
-| `celery-worker-simulation`, backend | `http://brouter.railway.internal:17777/brouter` |
-| Docker Compose | `http://brouter:17777/brouter` |
+| `celery-worker-simulation`, routing, backend | `BROUTER_URLS` (prod): `http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter` — round-robin w `BRouterService` |
+| Pojedynczy (Compose / dev) | `BROUTER_URL=http://brouter:17777/brouter` |
 | Przeglądarka / curl z laptopa | tylko jeśli wystawiony publicznie (zwykle **nie**) |
 
 ---
 
 ## Wdrożenie (skrót)
 
-1. Serwis **brouter** z Dockerfile `infrastructure/brouter/Dockerfile`, build context = **root repo**.
-2. Volume **`/brouter/segments4`** (≥ 2 GB) — kafelki `.rd5` przetrwają redeploy.
-3. Preset **`poland`** — 16 kafelków, ~1 GB; pierwszy start 10–30 min.
-4. `BROUTER_SYNC_LOOKUPS=1` — `lookups.dat` v11 zgodne z segmentami z brouter.de.
+1. Serwis **brouter** z Dockerfile `infrastructure/brouter/Dockerfile`, build context = **root repo** (`numReplicas: 1` — volume).
+2. Opcjonalnie **brouter-2** — ten sam Dockerfile, config `infrastructure/brouter-2/railway.json`, osobny volume **`/brouter/segments4`** (pierwszy start ~10–30 min pobierania PL).
+3. Volume na każdym serwisie BRouter (≥ 2 GB) — kafelki `.rd5` przetrwają redeploy.
+4. Workery: `BROUTER_URLS` (dwa hosty); `BROUTER_URL` opcjonalny fallback do czasu deployu kodu z `main`.
+5. Preset **`poland`** — 16 kafelków, ~1 GB; pierwszy start 10–30 min na nowym volume.
+6. `BROUTER_SYNC_LOOKUPS=1` — `lookups.dat` v11 zgodne z segmentami z brouter.de.
 
 Szczegóły build/volume: [infrastructure/brouter/README.md](../../infrastructure/brouter/README.md).
 

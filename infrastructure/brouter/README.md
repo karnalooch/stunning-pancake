@@ -25,16 +25,19 @@ The container **downloads missing `.rd5` tiles on startup** from [brouter.de/seg
 
 **Railway:** mount a volume at `/brouter/segments4` so tiles are **not re-downloaded** on every redeploy. Size the volume to **≥ 2 GB** (Hobby live-resize if needed).
 
+**Railway caveat:** a service with a volume **cannot** use `numReplicas > 1`. For ~2× throughput add a second service **`brouter-2`** (own volume, same Dockerfile) and set `BROUTER_URLS` on workers — see `infrastructure/brouter-2/railway.json` and `scripts/railway-setup-brouter-2.ps1`.
+
 Manual upload is optional (`railway volume files upload`).
 
 ## Throughput (live sim)
 
-One `RouteServer` instance handles at most **`BROUTER_MAX_THREADS`** concurrent route requests. Extra Celery routing workers queue at BRouter unless you raise threads and/or add replicas.
+One `RouteServer` instance handles at most **`BROUTER_MAX_THREADS`** concurrent route requests. Extra Celery routing workers queue at BRouter unless you raise threads and/or add another service.
 
 | Setup | Approx. concurrent BRouter routes |
 |-------|-----------------------------------|
-| Default (4 threads, 1 replica) | **4** |
-| Railway prod (`railway.json`: 12 threads × 2 replicas) | **~24** |
+| Default (4 threads, 1 instance) | **4** |
+| Railway prod (`brouter`: 12 threads, 1 instance + volume) | **~12** |
+| Railway prod (`brouter` + `brouter-2`, 12 threads each) | **~24** |
 
 RAM alone does not help if `BROUTER_MAX_THREADS` stays at 4. Pair **4 GB container** with **Xmx≈3g** and **threads≈2× CPU**.
 
