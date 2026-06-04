@@ -98,7 +98,10 @@ def build_sim_kpi_snapshot() -> dict:
         live = sim.get_live_state()
         rides = sim.get_live_rides()
         fsm = fsm_summary(rides)
-        bp = routing_backpressure_snapshot(fsm_pending=fsm["ride_warming"])
+        bp = routing_backpressure_snapshot(
+            fsm_pending=fsm["ride_warming"],
+            fsm_routing=fsm.get("ride_routing", 0),
+        )
         live_running = bool(live.get("running"))
         batch_running = bool(batch.get("running"))
         return {

@@ -49,10 +49,31 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
         self.assertIsNone(snap["max_routing_queue_depth"])
 
     @patch.dict("os.environ", {"SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "10"}, clear=False)
-    def test_effective_cap_zero_when_active(self):
-        snap = bp.routing_backpressure_snapshot(fsm_pending=12)
+    def test_effective_cap_reduced_not_zero_when_active(self):
+        with patch(
+            "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
+            return_value=12,
+        ):
+            snap = bp.routing_backpressure_snapshot(fsm_pending=12, fsm_routing=0)
         cap, throttled = bp.effective_routing_dispatch_cap(30, snap, starters_remaining=5)
-        self.assertEqual(cap, 0)
+        self.assertGreater(cap, 0)
+        self.assertTrue(throttled)
+        self.assertLess(cap, 30)
+
+    @patch.dict("os.environ", {"SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "10"}, clear=False)
+    def test_effective_cap_zero_when_deep_over_cap(self):
+        with patch(
+            "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
+            return_value=40,
+        ):
+            snap = bp.routing_backpressure_snapshot(fsm_pending=5, fsm_routing=0)
+        with patch.dict(
+            "os.environ",
+            {"SIM_BP_MIN_DISPATCH_PER_TICK": "8", "SIM_BP_QUEUE_HEADROOM": "5"},
+            clear=False,
+        ):
+            cap, throttled = bp.effective_routing_dispatch_cap(30, snap, starters_remaining=5)
+        self.assertEqual(cap, 8)
         self.assertTrue(throttled)
 
     @patch.dict("os.environ", {"SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "100"}, clear=False)
@@ -68,8 +89,8 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
             "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
             return_value=80,
         ):
-            snap = bp.routing_backpressure_snapshot(fsm_pending=5)
-        self.assertEqual(snap["routing_queue_depth"], 80)
+            snap = bp.routing_backpressure_snapshot(fsm_pending=5, fsm_routing=2)
+        self.assertEqual(snap["routing_queue_depth"], 82)
         self.assertTrue(snap["routing_backpressure_active"])
 
 

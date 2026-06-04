@@ -47,6 +47,14 @@ class BRouterServiceParseTest(SimpleTestCase):
         self.assertTrue(cls["retryable"])
         self.assertEqual(cls["code"], BRouterService.TRANSPORT_ERROR_CODE)
 
+    def test_classify_remote_disconnected_as_transport(self):
+        cls = BRouterService.classify_error(
+            "RemoteDisconnected('Remote end closed connection without response')",
+            0,
+        )
+        self.assertTrue(cls["retryable"])
+        self.assertEqual(cls["code"], BRouterService.TRANSPORT_ERROR_CODE)
+
 
 class BrouterProfilesFallbackTest(SimpleTestCase):
     def test_bike_includes_trekking_fallback(self):

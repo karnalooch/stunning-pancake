@@ -449,7 +449,10 @@ class LiveSimulationView(APIView):
             fsm = fsm_summary(rides_map)
             from activities.simulator_routing_backpressure import routing_backpressure_snapshot
 
-            bp = routing_backpressure_snapshot(fsm_pending=fsm["ride_warming"])
+            bp = routing_backpressure_snapshot(
+                fsm_pending=fsm["ride_warming"],
+                fsm_routing=fsm.get("ride_routing", 0),
+            )
             routing_queue_depth = int(state.get("routing_queue_depth") or bp["routing_queue_depth"])
             routing_backpressure_active = (
                 str(state.get("routing_backpressure_active", "")).lower() == "true"

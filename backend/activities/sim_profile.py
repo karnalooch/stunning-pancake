@@ -113,7 +113,7 @@ def parse_intensity_load_from_request(data: dict) -> tuple[dict[str, Any] | None
 
 
 def auto_lower_active_ratio_enabled() -> bool:
-    return os.getenv("SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP", "1").lower() in (
+    return os.getenv("SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP", "0").lower() in (
         "1",
         "true",
         "yes",
@@ -123,9 +123,24 @@ def auto_lower_active_ratio_enabled() -> bool:
 
 def backpressure_lower_after_ticks() -> int:
     try:
-        return max(1, int(os.getenv("SIM_BP_LOWER_AFTER_TICKS", "6")))
+        return max(1, int(os.getenv("SIM_BP_LOWER_AFTER_TICKS", "12")))
     except (TypeError, ValueError):
-        return 6
+        return 12
+
+
+def backpressure_lower_factor() -> float:
+    try:
+        return max(0.5, min(1.0, float(os.getenv("SIM_BP_LOWER_FACTOR", "0.95"))))
+    except (TypeError, ValueError):
+        return 0.95
+
+
+def backpressure_lower_max_ratio() -> float:
+    """Do not auto-lower below this ceiling on each step (only applies when lowering)."""
+    try:
+        return max(0.08, min(0.50, float(os.getenv("SIM_BP_LOWER_MAX_RATIO", "0.30"))))
+    except (TypeError, ValueError):
+        return 0.30
 
 
 def evaluate_backpressure_active_ratio_lower(
@@ -139,7 +154,7 @@ def evaluate_backpressure_active_ratio_lower(
     """
     Track consecutive backpressure ticks; lower active_ratio when threshold reached.
 
-    new_ratio = min(current * 0.85, 0.12), floored at 0.08.
+    new_ratio = current * SIM_BP_LOWER_FACTOR (default 0.95), floored at 0.08.
     Returns (new_ratio, updated_consecutive_ticks, did_lower).
     """
     enabled = auto_lower_active_ratio_enabled() if enabled is None else enabled
@@ -155,8 +170,12 @@ def evaluate_backpressure_active_ratio_lower(
     if consecutive < after_ticks:
         return current_active_ratio, consecutive, False
 
-    lowered = min(float(current_active_ratio) * 0.85, 0.12)
+    factor = backpressure_lower_factor()
+    ceiling = backpressure_lower_max_ratio()
+    lowered = min(float(current_active_ratio) * factor, ceiling)
     lowered = max(0.08, lowered)
+    if lowered >= float(current_active_ratio):
+        return current_active_ratio, 0, False
     return lowered, 0, True
 
 

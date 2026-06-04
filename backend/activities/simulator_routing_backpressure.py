@@ -46,6 +46,28 @@ def max_routing_dispatch_per_tick(scale_limits: dict) -> int:
     return max(1, cap)
 
 
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+def backpressure_min_dispatch_per_tick() -> int:
+    """Floor on routing dispatches per tick while backpressure is active (never fully stall)."""
+    return max(0, _int_env("SIM_BP_MIN_DISPATCH_PER_TICK", 12))
+
+
+def backpressure_drain_dispatch_per_tick() -> int:
+    """Target dispatches per tick when depth is at cap (slightly over)."""
+    return max(0, _int_env("SIM_BP_DRAIN_DISPATCH_PER_TICK", 20))
+
+
+def backpressure_queue_headroom() -> int:
+    """Extra depth above cap before applying the minimum dispatch floor."""
+    return max(0, _int_env("SIM_BP_QUEUE_HEADROOM", 25))
+
+
 def get_broker_routing_queue_depth() -> int | None:
     """Celery Redis list length for queue `routing`; None if broker unavailable."""
     try:
@@ -81,23 +103,30 @@ def get_broker_routing_queue_depth() -> int | None:
         return None
 
 
-def routing_backpressure_snapshot(*, fsm_pending: int) -> dict[str, Any]:
+def routing_backpressure_snapshot(
+    *,
+    fsm_pending: int,
+    fsm_routing: int = 0,
+) -> dict[str, Any]:
     """
     Snapshot for status API and live tick dispatch decisions.
 
-    routing_queue_depth = max(FSM warming, broker depth) when broker is readable.
+    When the Celery broker is readable, depth = broker LLEN + in-flight ROUTING tasks
+    (undispatched PENDING_ROUTE does not inflate depth — starts can queue separately).
+    Otherwise falls back to full FSM warming count.
     """
     broker_depth = get_broker_routing_queue_depth()
     if broker_depth is None:
         depth = int(fsm_pending)
     else:
-        depth = max(int(fsm_pending), int(broker_depth))
+        depth = int(broker_depth) + max(0, int(fsm_routing))
     max_depth = max_routing_queue_depth()
     active = bool(max_depth is not None and depth >= max_depth)
     return {
         "routing_queue_depth": depth,
         "routing_broker_queue_depth": broker_depth,
         "routing_fsm_pending": int(fsm_pending),
+        "routing_fsm_routing": int(fsm_routing),
         "routing_backpressure_active": active,
         "max_routing_queue_depth": max_depth,
     }
@@ -112,14 +141,34 @@ def effective_routing_dispatch_cap(
     """
     Returns (effective_cap, dispatches_will_be_throttled).
 
-    When backpressure is active, no new routing tasks are queued this tick.
+    When backpressure is active, throttle dispatches but keep a drain budget so
+    riders still ramp up while the routing queue drains (avoid full stall at cap).
     """
     base_cap = max(0, int(base_cap))
     if not snapshot.get("routing_backpressure_active"):
         return base_cap, False
-    if starters_remaining > 0 and base_cap > 0:
-        return 0, True
-    return 0, False
+
+    depth = int(snapshot.get("routing_queue_depth") or 0)
+    max_depth = snapshot.get("max_routing_queue_depth")
+    if max_depth is None or int(max_depth) <= 0:
+        return base_cap, False
+
+    max_depth = int(max_depth)
+    drain_cap = backpressure_drain_dispatch_per_tick()
+    min_cap = backpressure_min_dispatch_per_tick()
+    headroom = backpressure_queue_headroom()
+
+    if depth <= max_depth:
+        return base_cap, False
+
+    if depth >= max_depth + headroom:
+        effective = min(base_cap, min_cap)
+    else:
+        # Between cap and cap+headroom: partial throttle (helps queue drain).
+        effective = min(base_cap, max(min_cap, drain_cap))
+
+    throttled = starters_remaining > 0 and effective < base_cap
+    return max(0, effective), throttled
 
 
 def maybe_log_routing_backpressure(

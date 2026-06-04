@@ -73,14 +73,14 @@ class BackpressureActiveRatioLowerTest(SimpleTestCase):
     def test_lowers_at_threshold(self):
         ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(
             backpressure_active=True,
-            consecutive_bp_ticks=5,
+            consecutive_bp_ticks=11,
             current_active_ratio=0.3,
             enabled=True,
-            after_ticks=6,
+            after_ticks=12,
         )
         self.assertTrue(lowered)
         self.assertEqual(ticks, 0)
-        self.assertAlmostEqual(ratio, min(0.3 * 0.85, 0.12))
+        self.assertAlmostEqual(ratio, 0.3 * 0.95, places=3)
 
     def test_resets_when_backpressure_off(self):
         ratio, ticks, lowered = evaluate_backpressure_active_ratio_lower(

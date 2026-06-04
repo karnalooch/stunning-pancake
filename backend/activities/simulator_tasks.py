@@ -11,6 +11,7 @@ import random
 import time
 from datetime import timedelta
 
+import requests
 from celery import shared_task
 from celery.exceptions import WorkerLostError
 from django.utils import timezone
@@ -862,8 +863,8 @@ def _route_pending_ride(user_id: int, ride: dict) -> None:
 @shared_task(
     bind=True,
     queue="routing",
-    max_retries=2,
-    autoretry_for=(WorkerLostError,),
+    max_retries=3,
+    autoretry_for=(WorkerLostError, requests.exceptions.RequestException),
     retry_backoff=True,
     retry_jitter=True,
 )
@@ -1137,7 +1138,6 @@ def _run_live_tick_body():
                 str(u.id): u for u in User.objects.filter(id__in=starters).select_related("tenant")
             }
 
-        routing_dispatched = 0
         routing_dispatch_cap = (
             routing_bp.max_routing_dispatch_per_tick(scale_limits) if async_routing else 0
         )
@@ -1145,6 +1145,7 @@ def _run_live_tick_body():
         fsm_pre = ride_fsm.fsm_summary(active_rides_pre)
         bp_snapshot = routing_bp.routing_backpressure_snapshot(
             fsm_pending=fsm_pre["ride_warming"],
+            fsm_routing=fsm_pre.get("ride_routing", 0),
         )
         from activities.sim_profile import maybe_auto_lower_active_ratio_on_backpressure
 
@@ -1157,8 +1158,11 @@ def _run_live_tick_body():
             bp_snapshot,
             starters_remaining=len(starters),
         )
+
+        routing_dispatched = 0
         dispatches_skipped = 0
         unroutable = 0
+        pending_dispatch_ids: list[int] = []
         for user_id in starters:
             user = users_map_p3.get(str(user_id))
             if not user:
@@ -1197,7 +1201,7 @@ def _run_live_tick_body():
                 **motion,
             }
 
-            if async_routing and routing_dispatched < routing_dispatch_cap:
+            if async_routing:
                 sim.set_live_ride(
                     user_id,
                     {
@@ -1205,13 +1209,8 @@ def _run_live_tick_body():
                         "ride_state": ride_fsm.PENDING_ROUTE,
                     },
                 )
-                route_live_ride_task.delay(user_id)
-                routing_dispatched += 1
+                pending_dispatch_ids.append(user_id)
                 started += 1
-                continue
-
-            if async_routing and dispatch_throttled:
-                dispatches_skipped += 1
                 continue
 
             waypoints, route_source = _generate_route_waypoints(
@@ -1230,9 +1229,7 @@ def _run_live_tick_body():
             if route_source == "grid":
                 _maybe_log_brouter_grid_fallback()
             start_lat, start_lon = waypoints[0][0], waypoints[0][1]
-            initial_state = ride_fsm.ROUTED if async_routing else ride_fsm.ACTIVE
-            if async_routing and ride_start <= now:
-                initial_state = ride_fsm.ACTIVE
+            initial_state = ride_fsm.ACTIVE
 
             sim.set_live_ride(
                 user_id,
@@ -1246,6 +1243,23 @@ def _run_live_tick_body():
                 },
             )
             started += 1
+
+        if async_routing and (pending_dispatch_ids or routing_dispatch_cap > 0):
+            active_now = sim.get_live_rides()
+            backlog = [
+                uid
+                for uid, ride in active_now.items()
+                if ride_fsm.can_dispatch_routing(ride)
+            ]
+            dispatch_order = pending_dispatch_ids + [
+                uid for uid in backlog if uid not in pending_dispatch_ids
+            ]
+            for user_id in dispatch_order:
+                if routing_dispatched >= routing_dispatch_cap:
+                    break
+                route_live_ride_task.delay(user_id)
+                routing_dispatched += 1
+            dispatches_skipped = max(0, len(dispatch_order) - routing_dispatched)
         if unroutable > 0 and STRICT_ROAD_ROUTES:
             sim.live_log(
                 f"Road-only mode: skipped {unroutable} starts this tick "
@@ -1266,6 +1280,44 @@ def _run_live_tick_body():
                 dispatches_throttled=dispatches_skipped > 0 or dispatch_throttled,
                 dispatches_throttled_last_tick=dispatches_skipped,
             )
+
+    elif async_routing:
+        active_rides_pre = sim.get_live_rides()
+        fsm_pre = ride_fsm.fsm_summary(active_rides_pre)
+        bp_snapshot = routing_bp.routing_backpressure_snapshot(
+            fsm_pending=fsm_pre["ride_warming"],
+            fsm_routing=fsm_pre.get("ride_routing", 0),
+        )
+        routing_dispatch_cap = routing_bp.max_routing_dispatch_per_tick(scale_limits)
+        routing_dispatch_cap, dispatch_throttled = routing_bp.effective_routing_dispatch_cap(
+            routing_dispatch_cap,
+            bp_snapshot,
+            starters_remaining=0,
+        )
+        backlog = [
+            uid for uid, ride in active_rides_pre.items() if ride_fsm.can_dispatch_routing(ride)
+        ]
+        routing_dispatched = 0
+        for user_id in backlog:
+            if routing_dispatched >= routing_dispatch_cap:
+                break
+            route_live_ride_task.delay(user_id)
+            routing_dispatched += 1
+        dispatches_skipped = max(0, len(backlog) - routing_dispatched)
+        if routing_dispatched > 0:
+            sim.live_log(f"Queued {routing_dispatched} backlog rides on routing worker.")
+        if dispatches_skipped > 0:
+            routing_bp.maybe_log_routing_backpressure(
+                snapshot=bp_snapshot,
+                skipped=dispatches_skipped,
+                base_cap=routing_bp.max_routing_dispatch_per_tick(scale_limits),
+            )
+        sim.set_live_state(
+            routing_queue_depth=bp_snapshot["routing_queue_depth"],
+            routing_backpressure_active=bp_snapshot["routing_backpressure_active"],
+            dispatches_throttled=dispatches_skipped > 0 or dispatch_throttled,
+            dispatches_throttled_last_tick=dispatches_skipped,
+        )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     active_rides = sim.get_live_rides()

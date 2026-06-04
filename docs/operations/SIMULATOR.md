@@ -81,12 +81,19 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | `SCALE_BATCH_PARALLEL_CITIES` | `true` | Równoległe miasta przy dużym batchu |
 | `SCALE_MAX_CONCURRENT_RIDERS` | `5000` | Limit jednoczesnych jazd |
 | `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK` | `max_starts_per_live_tick` (~30) | Max nowych `route_live_ride_task.delay` na jeden `live_tick` (niezależnie od backpressure) |
-| `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | *(puste = wyłączone)* | Gdy ustawione (np. `500`) — **backpressure**: brak nowych dispatchy, gdy `max(ride_warming FSM, Celery LLEN routing)` ≥ cap |
+| `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH` | *(puste = wyłączone)* | Gdy ustawione (np. `120` przy 2 replikach routing) — **backpressure**: ogranicza dispatchy, gdy `LLEN routing` + `ROUTING` FSM ≥ cap |
 | `SCALE_SIM_ASYNC_ROUTING` | `1` | `0` = BRouter w `live_tick` (stary model); `1` = kolejka `routing` |
-| `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP` | `1` | Po N tickach z backpressure obniż `active_ratio` w Redis (bez Railway API) |
-| `SIM_BP_LOWER_AFTER_TICKS` | `6` | Liczba kolejnych ticków z `routing_backpressure_active` przed auto-obniżką |
+| `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP` | `0` | Po N tickach z backpressure obniż `active_ratio` w Redis (domyślnie **wyłączone** — suwaki operatora mają pierwszeństwo) |
+| `SIM_BP_LOWER_AFTER_TICKS` | `12` | Liczba kolejnych ticków z `routing_backpressure_active` przed auto-obniżką |
+| `SIM_BP_LOWER_FACTOR` | `0.95` | Mnożnik przy auto-obniżce (mniej agresywny niż wcześniejsze 0.85) |
+| `SIM_BP_MIN_DISPATCH_PER_TICK` | `12` | Min. dispatchy routingu na tick przy backpressure (nie blokuj całkowicie) |
+| `SIM_BP_DRAIN_DISPATCH_PER_TICK` | `20` | Dispatchy/tick gdy depth tuż nad capem |
+| `SIM_BP_QUEUE_HEADROOM` | `25` | Gdy depth ≥ cap+headroom → stosuj min dispatch |
+| `BROUTER_RETRIES` | `3` | Ponowienia HTTP przy `RemoteDisconnected` / 5xx (pool `requests.Session`) |
 
-**Backpressure (Paczka 1b):** `routing_backpressure_snapshot` bierze głębszą z FSM `PENDING_ROUTE`/`ROUTING` i z brokera Redis (`LLEN routing`). Przy aktywnym backpressure `effective_routing_dispatch_cap` zwraca `0` na ticku. Log: `sim.routing.backpressure` / wpis w live log (rate-limit 60 s).
+**Backpressure (Paczka 1b+):** głębokość = `LLEN routing` + liczba jazd w stanie `ROUTING` (undispatched `PENDING_ROUTE` nie podbija depth). Przy backpressure dispatch cap jest **obniżany**, nie zerowany — kolejka może się drenować przy jednoczesnym ramp-up. Log: `sim.routing.backpressure` / wpis w live log (rate-limit 60 s).
+
+**Railway (szybszy ramp, Hobby 2×1 GB routing):** ustaw na `celery-worker-simulation` + `Backend`: `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH=120`, `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK=50`, `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0`. Live start: `intensity=50`, `load=50` (≈ `active_ratio=0.29`, 50 starts/tick). Jeśli depth nadal pinned >15 min — podnieś cap do `150` lub dodaj 3. replikę routing (patrz [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md)).
 
 Pełna lista: `backend/activities/scale_config.py`, [SCALE_TEST_300K.md](../SCALE_TEST_300K.md).
 

@@ -1,6 +1,8 @@
 import os
+import time
 
 import requests
+from requests.adapters import HTTPAdapter
 from django.contrib.gis.geos import Point, LineString
 from django.utils import timezone
 from .models import PrivacyZone
@@ -21,6 +23,7 @@ class BRouterService:
     }
     UNROUTABLE_ERROR_CODE = "BROUTER_UNROUTABLE_START"
     TRANSPORT_ERROR_CODE = "BROUTER_TRANSPORT_FAILURE"
+    _http_session: requests.Session | None = None
 
     @classmethod
     def _timeout_seconds(cls) -> float:
@@ -28,6 +31,24 @@ class BRouterService:
             return float(os.getenv("BROUTER_TIMEOUT", "30"))
         except (TypeError, ValueError):
             return 30.0
+
+    @classmethod
+    def _retry_count(cls) -> int:
+        try:
+            return max(1, int(os.getenv("BROUTER_RETRIES", "3")))
+        except (TypeError, ValueError):
+            return 3
+
+    @classmethod
+    def _http(cls) -> requests.Session:
+        if cls._http_session is None:
+            session = requests.Session()
+            pool_size = max(4, cls._retry_count() + 2)
+            adapter = HTTPAdapter(pool_connections=pool_size, pool_maxsize=pool_size)
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
+            cls._http_session = session
+        return cls._http_session
 
     @classmethod
     def profile_for_activity(cls, activity_type: str) -> str:
@@ -41,6 +62,13 @@ class BRouterService:
         text = (error or "").strip()
         normalized = text.lower()
         status = int(status_code or 0)
+        is_connection_drop = (
+            "remotedisconnected" in normalized
+            or "connection aborted" in normalized
+            or "connection reset" in normalized
+            or "connection refused" in normalized
+            or "broken pipe" in normalized
+        )
         is_unroutable = (
             "target island" in normalized
             or "pass=0" in normalized
@@ -53,7 +81,7 @@ class BRouterService:
                 "code": cls.UNROUTABLE_ERROR_CODE,
                 "message": text or "Start point not routable on road graph.",
             }
-        if status >= 500 or status in (0, 502, 503, 504):
+        if is_connection_drop or status >= 500 or status in (0, 502, 503, 504):
             return {
                 "severity": "error",
                 "retryable": True,
@@ -103,49 +131,69 @@ class BRouterService:
             "format": "geojson",
         }
 
-        try:
-            response = requests.get(
-                cls.BASE_URL,
-                params=params,
-                timeout=cls._timeout_seconds(),
-            )
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                except ValueError:
+        last_exc = None
+        retries = cls._retry_count()
+        for attempt in range(retries):
+            try:
+                response = cls._http().get(
+                    cls.BASE_URL,
+                    params=params,
+                    timeout=cls._timeout_seconds(),
+                )
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                    except ValueError:
+                        return {
+                            "success": False,
+                            "error": f"non-JSON response: {response.text[:200]}",
+                        }
+                    points = cls.extract_line_coordinates(data)
+                    if not points:
+                        return {
+                            "success": False,
+                            "error": "no LineString in GeoJSON response",
+                            "raw_data": data,
+                        }
+                    props = (data.get("features") or [{}])[0].get("properties") or {}
                     return {
-                        "success": False,
-                        "error": f"non-JSON response: {response.text[:200]}",
-                    }
-                points = cls.extract_line_coordinates(data)
-                if not points:
-                    return {
-                        "success": False,
-                        "error": "no LineString in GeoJSON response",
+                        "success": True,
+                        "brouter_distance": props.get("track-length"),
                         "raw_data": data,
+                        "coordinates": points,
                     }
-                props = (data.get("features") or [{}])[0].get("properties") or {}
+                err = (response.text or "").strip()
+                if len(err) > 300:
+                    err = err[:300] + "…"
+                classification = cls.classify_error(err, response.status_code)
+                if (
+                    attempt + 1 < retries
+                    and classification.get("retryable")
+                    and classification.get("code") == cls.TRANSPORT_ERROR_CODE
+                ):
+                    time.sleep(0.15 * (attempt + 1))
+                    continue
                 return {
-                    "success": True,
-                    "brouter_distance": props.get("track-length"),
-                    "raw_data": data,
-                    "coordinates": points,
+                    "success": False,
+                    "error": f"HTTP {response.status_code}: {err}",
+                    "status_code": response.status_code,
+                    "classification": classification,
                 }
-            err = (response.text or "").strip()
-            if len(err) > 300:
-                err = err[:300] + "…"
-            return {
-                "success": False,
-                "error": f"HTTP {response.status_code}: {err}",
-                "status_code": response.status_code,
-                "classification": cls.classify_error(err, response.status_code),
-            }
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "classification": cls.classify_error(str(e), 0),
-            }
+            except requests.exceptions.RequestException as e:
+                last_exc = e
+                if attempt + 1 < retries:
+                    time.sleep(0.15 * (attempt + 1))
+                    continue
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "classification": cls.classify_error(str(e), 0),
+                }
+        return {
+            "success": False,
+            "error": str(last_exc or "unknown error"),
+            "classification": cls.classify_error(str(last_exc), 0),
+        }
 
 
 # Privacy Zone v2 — Default radii per zone type (metres)
