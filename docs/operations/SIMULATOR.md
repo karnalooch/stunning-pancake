@@ -107,6 +107,18 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 
 **Uwaga:** ~100 ACTIVE/tick wymaga ~100 ukończonych tras/tick (BRouter + 3× routing). Jeśli `ride_warming` rośnie — kolejka routingu; obniż load lub dodaj replikę.
 
+### Wąskie gardła (kolejność)
+
+| # | Gardło | Objaw | Mitigacja (repo + Railway) |
+|---|--------|-------|----------------------------|
+| 1 | **Stare env w Dashboard** | log `cap=80`, starts≤30 | `.\scripts\railway-sync-sim-env.ps1` → depth **200**, dispatch **150** |
+| 2 | **BRouter + routing throughput** | 150 queued, 1–4 ACTIVE/tick | 4× routing @ 2 GB, brouter 2 GB; `INSTANT_ACTIVE_ON_ROUTE=1` |
+| 3 | **Backlog starved** | warming rośnie | dispatch **backlog first** (kod `b51efaca`) |
+| 4 | **Target puli** (`active_ratio×users`) | ~6 startów przy pełnej mapie | `active_on_map` budget + wyższa Aktywność |
+| 5 | **Pipeline Redis** | OOM / wolny status | `MAX_PIPELINE_ABSOLUTE=2000` |
+
+Sync env: `.\scripts\railway-sync-sim-env.ps1` (wymaga `RAILWAY_API_TOKEN`).
+
 **Szybko + bezpiecznie (`SCALE_SIM_START_BUDGET_MODE=active_on_map`, domyślnie):** nowe starty liczone od **wolnych slotów na mapie** (`target_on_map − ACTIVE`), nie od całego warming. Twardy limit: `max_pipeline_rides` (~2.5× target). UI pokazuje **Wolne sloty mapy** i **startów/tick**. Przy ~999 userów i 245 ACTIVE oczekuj **~40–150 startów/tick** (nie ~6).
 
 **Operacja po deploy:** Stop live → start **Aktywność 50 / Obciążenie 50** (nie stary `active_ratio` z calm restart). Oczekiwane: `ride_warming` spada, backpressure okazjonalne (nie ciągłe `skipped 50`), mapa nabiera ACTIVE w rampie.
