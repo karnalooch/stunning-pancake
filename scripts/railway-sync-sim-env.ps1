@@ -19,7 +19,7 @@ if (-not $env:RAILWAY_API_TOKEN) {
 }
 
 Push-Location $PSScriptRoot\..
-railway link --project $ProjectName --environment $Environment 2>&1 | Out-Null
+railway link -w "karnalooch's Projects" -p $ProjectName -e $Environment 2>&1 | Out-Null
 
 $extra = @()
 if ($SkipDeploys) { $extra = @('--skip-deploys') }
