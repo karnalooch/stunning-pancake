@@ -1,5 +1,18 @@
 # 🗺️ 4VELO Admin Portal v3.0 Roadmap & Architectural Specification
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/admin/ROADMAP_V3.md) |
+| **canonical_path** | docs/admin/ROADMAP_V3.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

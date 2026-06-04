@@ -1,5 +1,18 @@
 # Dokumentacja — zasoby graficzne (`docs/assets/`)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../en/assets/README.md) |
+| **canonical_path** | docs/assets/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

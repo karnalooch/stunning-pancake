@@ -1,5 +1,18 @@
 # ADR 007: AI Coaching Architecture
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/007-ai-coaching-architecture.md) |
+| **canonical_path** | docs/adr/007-ai-coaching-architecture.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

@@ -1,5 +1,18 @@
 # Quality backlog — cały projekt
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/BACKLOG.md) |
+| **canonical_path** | docs/quality/BACKLOG.md |
+
+---
+
 Etykiety GitHub sugerowane: `quality-p0`, `quality-p1`, `quality-p2`.
 
 ---

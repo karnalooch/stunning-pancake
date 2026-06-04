@@ -1,5 +1,18 @@
 # ADR 009: Admin User Customization and Dynamic Inter-Tenant Matchmaking
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/009-admin-user-management-and-event-matchmaking.md) |
+| **canonical_path** | docs/adr/009-admin-user-management-and-event-matchmaking.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

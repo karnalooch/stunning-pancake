@@ -1,5 +1,18 @@
 # OpenAPI / API documentation drift
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/OPENAPI_DRIFT.md) |
+| **canonical_path** | docs/quality/OPENAPI_DRIFT.md |
+
+---
+
 **Last reviewed:** 2026-06-04
 
 ## SSOT

@@ -1,5 +1,18 @@
 # 🏢 Architektura Departamentów — Hierarchia Organizacyjna 4VELO
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](pl/DEPARTMENT_ARCHITECTURE.md) |
+| **canonical_path** | docs/DEPARTMENT_ARCHITECTURE.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

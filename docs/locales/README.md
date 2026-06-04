@@ -68,3 +68,12 @@ W modelu enterprise jest **jedno źródło merytoryczne** i **dwa języki** (zwy
 - Locale pairs (registry): `python scripts/check_docs_i18n.py`
 
 Both run in [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml).
+
+### Bulk translate (mirrors with stub marker)
+
+```bash
+pip install -r scripts/requirements-docs-i18n.txt
+python scripts/docs_i18n_translate_mirrors.py --workers 4
+```
+
+`docs/pl/adr/*.md` get a short PL summary + link to canonical `docs/adr/` (not full MT).

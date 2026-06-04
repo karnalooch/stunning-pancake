@@ -1,5 +1,18 @@
 # Pull request checklist (Faza 4)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/PR_CHECKLIST.md) |
+| **canonical_path** | docs/quality/PR_CHECKLIST.md |
+
+---
+
 Skopiuj do opisu PR lub użyj szablonu `.github/pull_request_template.md`.
 
 ## Zachowanie i dokumentacja

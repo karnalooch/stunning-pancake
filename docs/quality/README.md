@@ -1,5 +1,18 @@
 # Jakość kodu — program monorepo 4VELO
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/README.md) |
+| **canonical_path** | docs/quality/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Active |

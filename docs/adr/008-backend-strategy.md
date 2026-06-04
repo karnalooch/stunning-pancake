@@ -1,5 +1,18 @@
 # ADR 008: Backend Integration Strategy (Power Couple)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/008-backend-strategy.md) |
+| **canonical_path** | docs/adr/008-backend-strategy.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

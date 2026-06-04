@@ -1,5 +1,18 @@
 # Admin Panel — World-Class Dashboard Redesign
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/admin/README.md) |
+| **canonical_path** | docs/admin/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

@@ -1,5 +1,18 @@
 # Odporność na utratę danych — 4VELO
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](pl/DATA_RESILIENCE.md) |
+| **canonical_path** | docs/DATA_RESILIENCE.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

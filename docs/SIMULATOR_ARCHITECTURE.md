@@ -1,5 +1,18 @@
 # Simulator Architecture — Redis + Celery Redesign
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](pl/SIMULATOR_ARCHITECTURE.md) |
+| **canonical_path** | docs/SIMULATOR_ARCHITECTURE.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active (implemented) |

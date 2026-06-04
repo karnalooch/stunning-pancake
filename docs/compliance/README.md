@@ -1,5 +1,18 @@
 # Compliance — hub
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../en/compliance/README.md) |
+| **canonical_path** | docs/compliance/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

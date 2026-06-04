@@ -1,5 +1,18 @@
 # P1 — Roadmap panelu admin (decyzje 2026-06-03)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/admin/P1_ROADMAP.md) |
+| **canonical_path** | docs/admin/P1_ROADMAP.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active — Paczka **1a** + **1b** (core ✅); **operational gate** przed Paczką **2** Sponsor |

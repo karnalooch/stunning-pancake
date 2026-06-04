@@ -1,5 +1,18 @@
 # 🔌 API Reference — Dokumentacja API
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](pl/API.md) |
+| **canonical_path** | docs/API.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

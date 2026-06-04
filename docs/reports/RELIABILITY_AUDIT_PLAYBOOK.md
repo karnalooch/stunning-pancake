@@ -1,5 +1,18 @@
 # Reliability Audit Playbook (Admin)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md) |
+| **canonical_path** | docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md |
+
+---
+
 Praktyczny playbook audytu niezawodnosci dla krytycznych flow administracyjnych. Cel: zatrzymac regresje typu konflikt wipe-data/simulator, rozjazdy FE/BE i bledy uprawnien przed releasem.
 
 ## 1) Cel i zakres

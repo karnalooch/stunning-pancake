@@ -1,5 +1,18 @@
 # ADR 004: Persistent Storage & Offline-First (MMKV)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/004-persistent-storage-mmkv.md) |
+| **canonical_path** | docs/adr/004-persistent-storage-mmkv.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

@@ -1,5 +1,18 @@
 # 🏛️ Architektura Systemu 4VELO
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](pl/ARCHITECTURE.md) |
+| **canonical_path** | docs/ARCHITECTURE.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

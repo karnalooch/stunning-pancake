@@ -1,5 +1,18 @@
 # Zrzuty ekranu — Live Map
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../../en/assets/live/README.md) |
+| **canonical_path** | docs/assets/live/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

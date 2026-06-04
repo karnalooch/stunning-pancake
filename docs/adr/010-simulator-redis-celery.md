@@ -1,5 +1,18 @@
 # ADR-010: Simulator state in Redis + Celery queue `simulation`
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/010-simulator-redis-celery.md) |
+| **canonical_path** | docs/adr/010-simulator-redis-celery.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

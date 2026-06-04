@@ -1,5 +1,18 @@
 # ADR 003: State Management with Legend State
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/003-state-management-legend-state.md) |
+| **canonical_path** | docs/adr/003-state-management-legend-state.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

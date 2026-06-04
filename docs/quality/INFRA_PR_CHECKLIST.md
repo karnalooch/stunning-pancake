@@ -1,5 +1,18 @@
 # Infrastructure PR checklist
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/INFRA_PR_CHECKLIST.md) |
+| **canonical_path** | docs/quality/INFRA_PR_CHECKLIST.md |
+
+---
+
 Use when the diff touches `infrastructure/`, `docker-compose*`, `*/railway.json`, OSRM/BRouter scripts, or routing service images.
 
 ## Before merge

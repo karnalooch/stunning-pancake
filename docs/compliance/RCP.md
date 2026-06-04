@@ -1,5 +1,18 @@
 # REJESTR CZYNNOŚCI PRZETWARZANIA (RCP) — SPORT
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../en/compliance/RCP.md) |
+| **canonical_path** | docs/compliance/RCP.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

@@ -1,5 +1,18 @@
 # P2 — Roadmap panelu admin (post-P1)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/admin/P2_ROADMAP.md) |
+| **canonical_path** | docs/admin/P2_ROADMAP.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active — planowanie; implementacja **po** domknięciu P1 Paczki 1b operacyjnie |

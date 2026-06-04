@@ -1,5 +1,18 @@
 # SYSTEM ARCHITECTURE — MODEL C4 (v0.1.0-beta.2)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/diagrams/architecture_c4.md) |
+| **canonical_path** | docs/diagrams/architecture_c4.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

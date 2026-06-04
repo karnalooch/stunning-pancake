@@ -1,5 +1,18 @@
 # P0 Admin Smoke Checklist
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/admin/P0_SMOKE_CHECKLIST.md) |
+| **canonical_path** | docs/admin/P0_SMOKE_CHECKLIST.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active (P0 closure **DONE** 2026-06-02) |

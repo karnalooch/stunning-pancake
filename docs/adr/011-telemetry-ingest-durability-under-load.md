@@ -1,5 +1,18 @@
 # ADR 011: Telemetry ingest durability under burst load
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/011-telemetry-ingest-durability-under-load.md) |
+| **canonical_path** | docs/adr/011-telemetry-ingest-durability-under-load.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

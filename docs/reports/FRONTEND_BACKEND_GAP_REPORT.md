@@ -1,5 +1,18 @@
 # 📊 Frontend vs Backend Gap Report
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../en/reports/FRONTEND_BACKEND_GAP_REPORT.md) |
+| **canonical_path** | docs/reports/FRONTEND_BACKEND_GAP_REPORT.md |
+
+---
+
 ## Stan projektu: 30 ekranów admin (46 łącznie z mobile)
 
 ---

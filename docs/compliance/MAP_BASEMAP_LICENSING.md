@@ -1,5 +1,18 @@
 # Map basemap licensing (admin)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/compliance/MAP_BASEMAP_LICENSING.md) |
+| **canonical_path** | docs/compliance/MAP_BASEMAP_LICENSING.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

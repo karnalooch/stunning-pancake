@@ -1,0 +1,2 @@
+# Optional deps for docs EN/PL migration scripts (translate mirrors).
+deep-translator>=1.11.4

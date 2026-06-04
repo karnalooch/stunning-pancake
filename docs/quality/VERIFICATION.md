@@ -1,5 +1,18 @@
 # Weryfikacja jakości pod produkcją (Faza 5)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/VERIFICATION.md) |
+| **canonical_path** | docs/quality/VERIFICATION.md |
+
+---
+
 Dowód, że kod **działa** pod obciążeniem — uzupełnia lint i testy jednostkowe.
 
 ---

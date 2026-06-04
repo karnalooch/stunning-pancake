@@ -1,5 +1,18 @@
 # Release Legal + Compliance Package
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) |
+| **canonical_path** | docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active |

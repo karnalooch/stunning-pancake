@@ -1,5 +1,18 @@
 # ADR 005: Telemetry & Background Tracking
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/005-telemetry-tracking.md) |
+| **canonical_path** | docs/adr/005-telemetry-tracking.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

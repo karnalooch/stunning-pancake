@@ -1,5 +1,18 @@
 # Raporty audytowe (archiwum)
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | pl |
+| **translation** | [English](../en/reports/README.md) |
+| **canonical_path** | docs/reports/README.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | ✅ Active (indeks) |

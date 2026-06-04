@@ -1,0 +1,563 @@
+# Document
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | Zobacz dokument kanoniczny |
+| **lang** | pl |
+| **translation** | [English](../API.md) |
+| **canonical_path** | docs/pl/API.md |
+---
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Backend Lead |
+| **Last reviewed** | 2026-06-03 |
+| **Audience** | Integratorzy, deweloperzy frontend/mobile |
+
+Kompletna referencja API platformy 4VELO — autoryzacja, endpointy, webhooks i odpowiedzi błędów.
+
+**Powiązane:** [RBAC.md](../RBAC.md) · [operations/SIMULATOR.md](../operations/SIMULATOR.md) (admin simulator)
+
+---
+
+## 📋 Przegląd
+
+| Parametr | Wartość |
+|----------|---------|
+| Base URL | `https://<domena>/api/` |
+| Format | JSON |
+| Autoryzacja | JWT Bearer Token |
+| Paginacja | PageNumberPagination (domyślnie 50) |
+| Dokumentacja Swagger | `/api/docs/` |
+| OpenAPI Schema | `/api/schema/` |
+
+---
+
+## 🔐 Autoryzacja (JWT)
+
+### Uzyskanie tokena```
+POST /api/auth/token/
+Content-Type: application/json
+
+{
+  "username": "global_owner",
+  "password": "admin123"
+}
+```**Odpowiedź:**```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```### Odświeżenie tokena```
+POST /api/auth/token/refresh/
+Content-Type: application/json
+
+{
+  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```**Odpowiedź:**```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```### Weryfikacja tokena```
+POST /api/auth/token/verify/
+Content-Type: application/json
+
+{
+  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+}
+```**Odpowiedź (200 OK):**```json
+{}
+```**Odpowiedź (401 Unauthorized):**```json
+{
+  "detail": "Token is invalid or expired",
+  "code": "token_not_valid"
+}
+```### Użycie tokena w requestach```bash
+curl -H "Authorization: Bearer <access_token>" \
+  https://<domena>/api/users/profile/
+```---
+
+## 👤 User Endpoints
+
+### Base URL: `/api/users/`
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/register/` | POST | Rejestracja nowego użytkownika | Public |
+| `/profile/` | GET | Profil zalogowanego użytkownika | Authenticated |
+| `/profile/` | PUT/PATCH | Aktualizacja profilu | Authenticated |
+| `/password/change/` | POST | Zmiana hasła | Authenticated |
+| `/password/reset/` | POST | Żądanie resetu hasła | Public |
+| `/password/reset/confirm/` | POST | Potwierdzenie resetu hasła | Public |
+| `/all/` | GET | Lista wszystkich użytkowników | GLOBAL_OWNER, TENANT_ADMIN |
+| `/create/` | POST | Utworzenie użytkownika | GLOBAL_OWNER, TENANT_ADMIN |
+| `/<id>/update/` | PUT/PATCH | Aktualizacja użytkownika (w tym avatar, bio) | GLOBAL_OWNER, TENANT_ADMIN |
+| `/<id>/delete/` | DELETE | Usunięcie użytkownika | GLOBAL_OWNER, TENANT_ADMIN |
+| `/impersonate/<id>/` | POST | Impersonacja użytkownika | GLOBAL_OWNER |
+| `/tenants/all/` | GET | Lista tenantów | Authenticated (now: IsTenantAdmin+) |
+| `/audit-log/` | GET | Logi audytowe | GLOBAL_OWNER |
+| `/invitation/` | POST | Wysłanie zaproszenia | GLOBAL_OWNER, TENANT_ADMIN |
+| `/branding/<tenant_id>/` | GET | Branding tenantu | Public |
+| `/branding/<id>/update/` | PUT/PATCH | Aktualizacja brandingu | GLOBAL_OWNER, TENANT_ADMIN |
+
+### Rejestracja```
+POST /api/users/register/
+Content-Type: application/json
+
+{
+  "username": "new_user",
+  "email": "user@example.com",
+  "password": "secure_password",
+  "tenant_id": "uuid-tenant-id"
+}
+```### Profil użytkownika```
+GET /api/users/profile/
+Authorization: Bearer <token>
+```**Odpowiedź:**```json
+{
+  "id": 1,
+  "username": "global_owner",
+  "email": "admin@4velo.app",
+  "role": "GLOBAL_OWNER",
+  "tenant_id": null,
+  "is_premium": false,
+  "avatar": "https://<domena>/media/avatars/avatar.jpg",
+  "bio": "Administrator platformy"
+}
+```### Aktualizacja użytkownika przez administratora
+
+Modyfikuje dane konta użytkownika (w tym hasło, avatar i bio). Dostępne dla `GLOBAL_OWNER` oraz `TENANT_ADMIN` (z uwzględnieniem RLS).```
+PATCH /api/users/<id>/update/
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "username": "new_nickname",
+  "email": "user_email@example.com",
+  "role": "ATHLETE",
+  "tenant_id": "uuid-tenant-id",
+  "is_active": true,
+  "avatar": "https://host/media/avatars/custom_pic.png",
+  "bio": "New athlete bio text...",
+  "password": "optional_new_password_8_chars_min"
+}
+```**Odpowiedź (200 OK):**```json
+{
+  "status": "success",
+  "message": "User new_nickname updated successfully.",
+  "data": {
+    "id": 42,
+    "username": "new_nickname",
+    "email": "user_email@example.com",
+    "role": "ATHLETE",
+    "tenant_id": "uuid-tenant-id",
+    "tenant_name": "City Name",
+    "avatar": "https://host/media/avatars/custom_pic.png",
+    "bio": "New athlete bio text...",
+    "is_active": true
+  }
+}
+```### Impersonacja```
+POST /api/users/impersonate/<target_user_id>/
+Authorization: Bearer <token>
+```**Odpowiedź:**```json
+{
+  "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "impersonated": true,
+  "impersonator_id": 1
+}
+```---
+
+## 🏃 Activity Endpoints
+
+### Base URL: `/api/activities/`
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/sessions/` | GET | Lista aktywności użytkownika | Authenticated |
+| `/sessions/` | POST | Utworzenie aktywności | Authenticated |
+| `/sessions/<id>/` | GET | Szczegóły aktywności | Authenticated |
+| `/sessions/<id>/` | PUT/PATCH | Aktualizacja aktywności | Owner, Admin |
+| `/sessions/<id>/` | DELETE | Usunięcie aktywności | Owner, Admin |
+| `/privacy-zones/` | GET | Lista stref prywatności | Authenticated |
+| `/privacy-zones/` | POST | Utworzenie strefy prywatności | Authenticated |
+| `/pois/` | GET | Lista punktów POI | Authenticated |
+| `/pois/` | POST | Utworzenie POI | TENANT_ADMIN, SPONSOR |
+| `/vouchers/redeem/<code>/` | POST | Redeem vouchera | Authenticated |
+| `/telemetry/live/` | GET | Live telemetry (WebSocket) | Authenticated |
+| `/telemetry/anomalies/` | GET | Lista anomalii | Authenticated |
+| `/telemetry/config/` | GET | Konfiguracja telemetrii | Authenticated |
+| `/telemetry/config/` | POST | Aktualizacja konfiguracji | Authenticated |
+
+### Wearables
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/wearables/strava/auth/` | GET | URL autoryzacji Strava |
+| `/wearables/strava/callback/` | GET | Callback Strava OAuth |
+| `/wearables/garmin/auth/` | GET | URL autoryzacji Garmin |
+| `/wearables/garmin/callback/` | GET | Callback Garmin OAuth |
+| `/wearables/sync/` | POST | Manualna synchronizacja |
+
+### Admin Activities
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/admin/all/` | GET | Wszystkie aktywności (global) | GLOBAL_OWNER |
+| `/admin/tenant/` | GET | Aktywności tenantu | TENANT_ADMIN, TENANT_MODERATOR |
+| `/admin/stats/` | GET | Statystyki dashboardu | TENANT_ADMIN+ |
+| `/admin/approve/<id>/` | POST | Zatwierdzenie aktywności | TENANT_ADMIN, TENANT_MODERATOR |
+| `/admin/reject/<id>/` | POST | Odrzucenie aktywności | TENANT_ADMIN, TENANT_MODERATOR |
+
+### Leaderboard
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/leaderboard/<city_id>/` | GET | Ranking miasta |
+| `/leaderboard/<city_id>/me/` | GET | Moja pozycja w rankingu |
+
+### Analytics
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/heatmap/` | GET | Heatmap aktywności | Authenticated |
+| `/analytics/` | GET | Podsumowanie analityki | Premium users |
+| `/ai/insights/` | GET | Spostrzeżenia AI | Authenticated |
+| `/activity-detail/<id>/` | GET | Szczegóły aktywności | Authenticated |
+
+### Export
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/export/activities/` | GET | Eksport aktywności (CSV/JSON) |
+| `/export/users/` | GET | Eksport użytkowników (JSON) |
+| `/export/statistics/` | GET | Eksport statystyk (PDF) |
+
+### Beta Feedback
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/beta-feedback/` | POST | Utworzenie feedbacku |
+| `/beta-feedback/list/` | GET | Lista feedbacków |
+| `/beta-feedback/<id>/resolve/` | POST | Rozwiązanie feedbacku |
+
+---
+
+## 🏢 Tenant Endpoints
+
+### Base URL: `/api/users/tenants/`
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/all/` | GET | Lista wszystkich tenantów | Authenticated |
+
+### Model Tenant```json
+{
+  "id": "uuid",
+  "name": "Warsaw",
+  "logo": "https://<domena>/media/tenants/logo.png",
+  "primary_color": "#00d2ff",
+  "secondary_color": "#92fe9d",
+  "is_active": true,
+  "max_users": 1000,
+  "has_heatmap_analytics": true,
+  "white_label_domain": "warsaw.4velo.app",
+  "config_json": {},
+  "created_at": "2026-01-01T00:00:00Z"
+}
+```---
+
+## 🛡️ RBAC Endpoints
+
+### Base URL: `/api/users/rbac/`
+
+| Endpoint | Metoda | Opis | Wymagana rola |
+|----------|--------|------|---------------|
+| `/permissions/` | GET | Lista uprawnień | Authenticated |
+| `/permissions/by_resource/` | GET | Uprawnienia po zasobie | Authenticated |
+| `/roles/` | GET | Lista ról | GLOBAL_OWNER |
+| `/roles/` | POST | Utworzenie roli | GLOBAL_OWNER |
+| `/roles/<id>/` | GET | Szczegóły roli | GLOBAL_OWNER |
+| `/roles/<id>/` | PUT/PATCH | Edycja roli | GLOBAL_OWNER |
+| `/roles/<id>/` | DELETE | Usunięcie roli | GLOBAL_OWNER |
+| `/user-roles/` | GET | Lista przypisań ról | TENANT_ADMIN+ |
+| `/user-roles/` | POST | Przypisanie roli | TENANT_ADMIN+ |
+| `/user-roles/<id>/` | DELETE | Usunięcie przypisania | TENANT_ADMIN+ |
+| `/user-roles/<id>/revoke/` | POST | Cofnięcie roli | TENANT_ADMIN+ |
+| `/user-roles/my_roles/` | GET | Moje role | Authenticated |
+
+---
+
+## 🏛️ Department Endpoints
+
+### Base URL: `/api/users/departments/`
+
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | `/api/users/departments/` | `departments.view` |
+| POST | `/api/users/departments/` | `departments.create` |
+| PUT | `/api/users/departments/{id}/` | `departments.edit` |
+| DELETE | `/api/users/departments/{id}/` | `departments.delete` |
+| GET | `/api/users/departments/tree/` | `departments.view` |
+| GET | `/api/users/departments/my/` | Authenticated |
+| GET | `/api/users/departments/{id}/users/` | `departments.view_users` |
+| POST | `/api/users/departments/{id}/assign/` | `departments.assign_users` |
+| POST | `/api/users/departments/{id}/remove/` | `departments.remove_users` |
+
+---
+
+## 🏆 Leaderboard Endpoints
+
+### Base URL: `/api/activities/leaderboard/`
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/<city_id>/` | GET | Ranking miasta (TOP 100) |
+| `/<city_id>/me/` | GET | Pozycja zalogowanego użytkownika |
+
+**Odpowiedź — ranking miasta:**```json
+{
+  "city_id": "warsaw",
+  "leaderboard": [
+    {"rank": 1, "user_id": 42, "username": "cyclist_pro", "distance_km": 1250.5},
+    {"rank": 2, "user_id": 15, "username": "runner_fast", "distance_km": 980.2}
+  ]
+}
+```---
+
+## 🪝 Punkty końcowe webhooka
+
+### Hak internetowy w paski```
+POST /api/activities/payments/webhook/
+Content-Type: application/json
+Stripe-Signature: whsec_...
+```**Obsługiwane wydarzenie:**
+- `sesja.zakupu.zakończona`
+- `intencja_płatności.powiodła się`
+- `intencja_płatności.nieudana_płatność`
+
+### Kasa w paski```
+POST /api/activities/payments/checkout/
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "price_id": "price_xxx",
+  "success_url": "https://<domena>/success",
+  "cancel_url": "https://<domena>/cancel"
+}
+```**Odpowiedź:**```json
+{
+  "session_id": "cs_test_xxx",
+  "url": "https://checkout.stripe.com/pay/cs_test_xxx"
+}
+```---
+
+## 📡 Zdrowie infrastruktury
+
+| Punkt końcowy | Metoda | Opis | Wymagana rola |
+|---------|--------|------|--------------|
+| `/api/infra/zdrowie/` | OTRZYMAJ | Ogólna kontrola stanu zdrowia | Uwierzytelnione |
+| `/api/infra/health/redis/` | OTRZYMAJ | Zdrowie Redisa | Uwierzytelnione |
+| `/api/infra/health/citus/` | OTRZYMAJ | Zdrowie Citus | Uwierzytelnione |
+
+**Odpowiedź:**```json
+{
+  "status": "healthy",
+  "services": {
+    "database": "ok",
+    "redis": "ok",
+    "celery": "ok"
+  }
+}
+```---
+
+## 🔗 Matrix E2EE Verification
+
+| Endpoint | Metoda | Opis |
+|----------|--------|------|
+| `/api/matrix/verify/initiate/` | POST | Inicjacja weryfikacji |
+| `/api/matrix/verify/accept/` | POST | Akceptacja weryfikacji |
+| `/api/matrix/verify/confirm/` | POST | Potwierdzenie weryfikacji |
+| `/api/matrix/verify/status/` | GET | Status weryfikacji |
+
+---
+
+## 🤖 LLM Proxy```
+POST /api/llm/proxy/
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "message": "Jak poprawić mój wynik?",
+  "context": {"distance_km": 50, "avg_speed": 25}
+}
+```---
+
+## ❌ Odpowiedzi błędów
+
+### Standardowy format błędu```json
+{
+  "detail": "Opis błędu",
+  "code": "error_code"
+}
+```### Kody błędów
+
+| Kod HTTP | Opis | Przykład |
+|----------|------|----------|
+| `400` | Bad Request — niepoprawne dane | Błędne dane w formularzu |
+| `401` | Unauthorized — brak autoryzacji | Brak tokena, wygasły token |
+| `403` | Forbidden — brak uprawnień | Użytkownik nie ma uprawnień |
+| `404` | Not Found — zasób nie istnieje | Nieznany ID użytkownika |
+| `409` | Conflict — konflikt | Duplicate entry |
+| `500` | Internal Server Error | Błąd serwera |
+
+### Przykłady
+
+**401 Unauthorized:**```json
+{
+  "detail": "Authentication credentials were not provided.",
+  "code": "not_authenticated"
+}
+```**403 Zabronione:**```json
+{
+  "detail": "You do not have permission to perform this action.",
+  "code": "permission_denied"
+}
+```**400 złych żądań:**```json
+{
+  "username": ["This field is required."],
+  "email": ["Enter a valid email address."]
+}
+```---
+
+## 📄 Paginacja
+
+Wszystkie listy używają paginacji:```json
+{
+  "count": 150,
+  "next": "https://<domena>/api/activities/sessions/?page=2",
+  "previous": null,
+  "results": [...]
+}
+```### Parametry paginacji
+
+| Parametr | Opis | Domyślna | Max |
+|----------|------|----------|-----|
+| `page` | Numer strony | 1 | — |
+| `page_size` | Liczba wyników na stronę | 50 | 500 |
+
+---
+
+## Admin — symulator skali i live map
+
+**Uprawnienia:** `IsAdminRole` (JWT).  
+**Runbook:** [operations/SIMULATOR.md](../operations/SIMULATOR.md).
+
+> **OpenAPI:** te same ścieżki są w schemacie pod `/api/schema/` i UI `/api/docs/` — po zmianach w `admin_views.py` zweryfikuj w Swaggerze.
+
+### `GET /api/activities/admin/scale-preflight/`
+
+Analiza ryzyka przed dużym testem (dysk, ETA, parallel cities).
+
+| Query | Wymagane | Opis |
+|-------|----------|------|
+| `target_users` | tak | Np. `10000`, `300000` |
+| `active_ratio` | nie | Domyślnie `0.3` |
+| `skip_activities` | nie | `true` / `1` |
+
+### `GET /api/activities/admin/disk-audit/`
+
+Log zdarzeń disk guard + bieżący snapshot.
+
+| Query | Domyślnie | Max |
+|-------|-----------|-----|
+| `limit` | 100 | 500 |
+
+**Odpowiedź (skrót):** `{ "events": [...], "current": { "used_gb", "budget_gb", "pct", "simulation_paused", "writes_blocked" } }`
+
+### Batch — `POST/GET/DELETE /api/activities/admin/simulate/`
+
+**POST — start batch**```json
+{
+  "total_users": 10000,
+  "days": 7,
+  "clear": true,
+  "skip_activities": true,
+  "scale": 0.01
+}
+```| Pole | Opis |
+|------|------|
+| `total_users` | Docelowi użytkownicy (preferowane nad `scale`) |
+| `skip_activities` | `true` = tylko użytkownicy (szybciej) |
+| `clear` | Wyczyść dane symulacji przed startem |
+
+**Odpowiedź 202:** task Celery w kolejce `simulation`.
+
+**409 — batch już działa:**```json
+{
+  "error": "Simulation already running (120s elapsed). Wait for it to finish.",
+  "running": true,
+  "elapsed_seconds": 120.0
+}
+```**GET — status:** `running`, `current_phase`, `progress_pct`, `users_created`, `batch_lock_held`, `log` (pary timestamp + wiadomość).
+
+**DELETE — abort:** zatrzymuje batch i zwalnia lock.
+
+### Live — `POST/GET/DELETE /api/activities/admin/live-simulate/`
+
+**POST — start live** (dopiero po zakończeniu batcha)```json
+{
+  "pool_pct": 1.0,
+  "active_ratio": 0.3,
+  "cheat_ratio": 0.05,
+  "tick_seconds": 8
+}
+```| Pole | Zakres |
+|------|--------|
+| `pool_pct` | 0.01–1.0 — ułamek puli zawodników z DB |
+| `active_ratio` | 0–1 — ułamek puli jeżdżących jednocześnie |
+| `tick_seconds` | 2–300 |
+
+**409 — batch w toku (live zablokowany):**```json
+{
+  "error": "Batch simulation is still in progress. Wait until it finishes (phase complete, lock released), then start Live Map.",
+  "batch_running": true,
+  "batch_lock_held": true,
+  "batch_current_phase": "creating_users",
+  "batch_block_reason": "batch lock held"
+}
+```**409 — live już działa:** `{ "error": "Live simulation already running." }`
+
+**GET — status:** `running`, `pool_size`, `active_rides`, `currently_riding`, `batch_blocks_live`, `batch_block_reason`, `log`.
+
+**DELETE — stop live:** zatrzymuje symulację i zwalnia lock.
+
+### `POST /api/activities/admin/simulator-reset/`
+
+Czyści flagi Redis batch/live (bez kasowania użytkowników). Użyj po zawieszeniu lub przed ponownym testem.```json
+{
+  "status": "reset",
+  "live_lock_held": false,
+  "batch_lock_held": false,
+  "live_stuck": false,
+  "wipe_cleared": true
+}
+```### `GET /api/activities/admin/worker-status/`
+
+Status workerów Celery (kolejki, aktywne taski) — weryfikacja, że `celery-worker-simulation` nasłuchuje na `simulation`.
+
+### Telemetria live (mapa admin)
+
+`GET /api/activities/telemetry/live/?bbox=…&limit=…&zoom=…` — pozycje na Live Map (osobna ścieżka, patrz implementacja `TelemetryLiveView`).
+
+---
+
+> **Zobacz także:** [🛡️ RBAC Guide](../RBAC.md) — system uprawnień  
+> **Zobacz także:** [operations/SIMULATOR.md](../operations/SIMULATOR.md) — kolejność batch → live  
+> **Zobacz także:** [📡 Swagger Docs](http://localhost:8000/api/docs/) — interaktywna dokumentacja

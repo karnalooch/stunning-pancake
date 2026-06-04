@@ -1,5 +1,18 @@
 # ADR 001: Wybór React Native (Bridgeless) zamiast Fluttera
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/adr/001-react-native-bridgeless.md) |
+| **canonical_path** | docs/adr/001-react-native-bridgeless.md |
+
+---
+
 | | |
 |--|--|
 | **Status** | Accepted |

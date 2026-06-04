@@ -1,5 +1,18 @@
 # Quality baseline — 2026-06-04
 
+
+| | |
+|--|--|
+| **Status** | ✅ Active |
+| **Owner role** | Documentation maintainer |
+| **Last reviewed** | 2026-06-04 |
+| **Audience** | See canonical document |
+| **lang** | en |
+| **translation** | [Polski](../pl/quality/BASELINE.md) |
+| **canonical_path** | docs/quality/BASELINE.md |
+
+---
+
 Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.\scripts\run-quality-baseline.ps1`.
 
 | Moduł | Check | Wynik | Uwagi |
