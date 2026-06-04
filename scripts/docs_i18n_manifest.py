@@ -130,10 +130,46 @@ def is_legacy_redirect(path: Path) -> bool:
     return r in LEGACY_REDIRECT_FILES
 
 
+def classify_pl_mirror(path: Path) -> dict | None:
+    """Classify files under docs/pl/ (skipped by main tree walk)."""
+    r = rel(path)
+    if not r.startswith("docs/pl/"):
+        return None
+    rel_under = path.relative_to(DOCS / "pl").as_posix()
+    legacy = f"docs/{rel_under}"
+    en_mirror = f"docs/en/{rel_under}"
+
+    if legacy in EN_CANONICAL_ADMIN:
+        return {"mode": "paired", "canonical": legacy, "en": legacy, "pl": r}
+
+    for prefix in EN_ONLY_PREFIXES:
+        if legacy.startswith(prefix):
+            return {"mode": "en_only", "canonical": legacy, "en": legacy, "pl": r}
+
+    if legacy in EN_ONLY_FILES:
+        return {"mode": "en_only", "canonical": legacy, "en": legacy, "pl": r}
+
+    for prefix in PL_CANONICAL_PREFIXES:
+        if r.startswith(prefix):
+            return {"mode": "paired", "canonical": r, "pl": r, "en": en_mirror}
+
+    if r in PL_MIRROR_FILES:
+        return {"mode": "paired", "canonical": r, "pl": r, "en": en_mirror}
+
+    if legacy in LEGACY_PL_PAIRED_FILES:
+        return {"mode": "paired", "canonical": legacy, "pl": legacy, "en": en_mirror}
+
+    return None
+
+
 def classify(path: Path) -> dict:
     r = rel(path)
     if is_snapshot(path):
         return {"mode": "n/a", "canonical": r}
+
+    pl_entry = classify_pl_mirror(path)
+    if pl_entry is not None:
+        return pl_entry
 
     if is_legacy_redirect(path):
         rel_under = path.relative_to(DOCS)
