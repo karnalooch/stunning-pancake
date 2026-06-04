@@ -742,6 +742,34 @@ def delete_live_ride(user_id: int):
     r.hdel(LIVE_RIDES_KEY, str(user_id))
 
 
+def requeue_stale_routing_rides(*, max_age_seconds: float = 90) -> int:
+    """
+    Recover rides stuck in ROUTING after worker loss or hung BRouter HTTP.
+    Without routing_since (legacy rows), requeue immediately.
+    """
+    from activities.ride_fsm import PENDING_ROUTE, ROUTING, normalize_ride_state
+
+    now = time.time()
+    requeued = 0
+    for uid, ride in get_live_rides().items():
+        if normalize_ride_state(ride) != ROUTING:
+            continue
+        since = ride.get("routing_since")
+        if since is not None:
+            try:
+                age = now - float(since)
+            except (TypeError, ValueError):
+                age = max_age_seconds + 1.0
+            if age <= max_age_seconds:
+                continue
+        set_live_ride(
+            uid,
+            {**ride, "ride_state": PENDING_ROUTE, "routing_since": None},
+        )
+        requeued += 1
+    return requeued
+
+
 def get_live_rides_in_flight_count() -> int:
     """All entries in the live rides hash (ACTIVE + warming/routing pipeline)."""
     r = get_redis()

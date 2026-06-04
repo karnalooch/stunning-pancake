@@ -172,6 +172,50 @@ def effective_routing_dispatch_cap(
     return max(0, effective), throttled
 
 
+def routing_backlog_boost_cap() -> int:
+    """Max dispatches/tick when broker is shallow but Redis has a large PENDING backlog."""
+    return max(50, _int_env("SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP", 500))
+
+
+def should_pause_new_starts(*, warming_count: int, pending_count: int = 0) -> bool:
+    """Stop adding PENDING_ROUTE until routing drains (prevents 2k warming / 0 ACTIVE)."""
+    warm_thr = _int_env("SCALE_SIM_PAUSE_STARTS_WARMING_ABOVE", 350)
+    pend_thr = _int_env("SCALE_SIM_PAUSE_STARTS_PENDING_ABOVE", 300)
+    return int(warming_count) >= warm_thr or int(pending_count) >= pend_thr
+
+
+def resolve_routing_dispatch_cap(
+    base_cap: int,
+    snapshot: dict[str, Any],
+    *,
+    pending_route_count: int,
+    starters_remaining: int,
+) -> tuple[int, bool, bool]:
+    """
+    Returns (effective_cap, queue_throttled, backlog_boosted).
+
+    When Celery broker depth is low but many rides sit in PENDING_ROUTE, raise the
+    per-tick dispatch cap (otherwise 150/tick vs 1800 backlog → map stays at 0).
+    """
+    cap, queue_throttled = effective_routing_dispatch_cap(
+        base_cap,
+        snapshot,
+        starters_remaining=starters_remaining,
+    )
+    pending = max(0, int(pending_route_count))
+    if pending <= cap:
+        return cap, queue_throttled, False
+
+    max_depth = snapshot.get("max_routing_queue_depth")
+    depth = int(snapshot.get("routing_queue_depth") or 0)
+    shallow_broker = max_depth is None or depth < max(20, int(max_depth) // 4)
+    if shallow_broker and not snapshot.get("routing_backpressure_active"):
+        boosted = min(routing_backlog_boost_cap(), pending)
+        if boosted > cap:
+            return boosted, queue_throttled, True
+    return cap, queue_throttled, False
+
+
 def start_budget_mode() -> str:
     """active_on_map (default): fast ramp — warming does not block new starts. all_in_flight: legacy."""
     raw = os.getenv("SCALE_SIM_START_BUDGET_MODE", "active_on_map").strip().lower()

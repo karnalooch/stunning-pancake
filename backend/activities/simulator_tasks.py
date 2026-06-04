@@ -932,7 +932,10 @@ def route_live_ride_task(self, user_id: int):
     ride = rides.get(user_id)
     if not ride or not ride_fsm.can_dispatch_routing(ride):
         return
-    sim.set_live_ride(user_id, {**ride, "ride_state": ride_fsm.ROUTING})
+    sim.set_live_ride(
+        user_id,
+        {**ride, "ride_state": ride_fsm.ROUTING, "routing_since": time.time()},
+    )
     try:
         _route_pending_ride(user_id, ride)
     except Exception as exc:
@@ -1007,6 +1010,10 @@ def _run_live_tick_body():
     cheaters = 0
 
     async_routing = _async_routing_enabled()
+
+    requeued_routing = sim.requeue_stale_routing_rides()
+    if requeued_routing > 0:
+        sim.live_log(f"Requeued {requeued_routing} stale ROUTING rides → PENDING_ROUTE.")
 
     # Promote pre-routed rides to ACTIVE when start_time reached
     promoted = 0
@@ -1136,6 +1143,12 @@ def _run_live_tick_body():
     )
     target_riding = int(start_budget["target_on_map"])
     needed = int(start_budget["starts_budget"])
+    if async_routing and routing_bp.should_pause_new_starts(
+        warming_count=int(fsm_for_budget["ride_warming"]),
+        pending_count=int(fsm_for_budget.get("ride_pending_route", 0)),
+    ):
+        needed = 0
+
     started = 0
 
     db_pool = sim.is_live_pool_db_mode()
@@ -1220,12 +1233,20 @@ def _run_live_tick_body():
         if lowered is not None:
             active_ratio = float(lowered)
             state = sim.get_live_state()
-        routing_dispatch_cap, dispatch_throttled = routing_bp.effective_routing_dispatch_cap(
-            routing_dispatch_cap,
-            bp_snapshot,
-            starters_remaining=len(starters),
+        routing_dispatch_cap, dispatch_throttled, backlog_boosted = (
+            routing_bp.resolve_routing_dispatch_cap(
+                routing_dispatch_cap,
+                bp_snapshot,
+                pending_route_count=int(fsm_pre.get("ride_pending_route", 0)),
+                starters_remaining=len(starters),
+            )
         )
         bp_snapshot["effective_dispatch_cap"] = routing_dispatch_cap
+        if backlog_boosted and routing_dispatch_cap > 0:
+            sim.live_log(
+                f"Backlog drain: dispatch_cap={routing_dispatch_cap} "
+                f"(pending={fsm_pre.get('ride_pending_route', 0)}, depth={bp_snapshot['routing_queue_depth']})"
+            )
 
         routing_dispatched = 0
         dispatches_skipped = 0
@@ -1369,11 +1390,19 @@ def _run_live_tick_body():
             fsm_routing=fsm_pre.get("ride_routing", 0),
         )
         routing_dispatch_cap = routing_bp.max_routing_dispatch_per_tick(scale_limits)
-        routing_dispatch_cap, dispatch_throttled = routing_bp.effective_routing_dispatch_cap(
-            routing_dispatch_cap,
-            bp_snapshot,
-            starters_remaining=0,
+        routing_dispatch_cap, dispatch_throttled, backlog_boosted = (
+            routing_bp.resolve_routing_dispatch_cap(
+                routing_dispatch_cap,
+                bp_snapshot,
+                pending_route_count=int(fsm_pre.get("ride_pending_route", 0)),
+                starters_remaining=0,
+            )
         )
+        if backlog_boosted and routing_dispatch_cap > 0:
+            sim.live_log(
+                f"Backlog drain: dispatch_cap={routing_dispatch_cap} "
+                f"(pending={fsm_pre.get('ride_pending_route', 0)}, depth={bp_snapshot['routing_queue_depth']})"
+            )
         backlog = [
             uid for uid, ride in active_rides_pre.items() if ride_fsm.can_dispatch_routing(ride)
         ]

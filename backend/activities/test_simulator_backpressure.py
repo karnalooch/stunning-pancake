@@ -93,6 +93,38 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
     @patch.dict(
         "os.environ",
         {
+            "SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "200",
+            "SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP": "500",
+        },
+        clear=False,
+    )
+    def test_backlog_boost_when_shallow_broker(self):
+        with patch(
+            "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
+            return_value=4,
+        ):
+            snap = bp.routing_backpressure_snapshot(fsm_pending=1800, fsm_routing=0)
+        cap, _throttled, boosted = bp.resolve_routing_dispatch_cap(
+            150,
+            snap,
+            pending_route_count=1800,
+            starters_remaining=0,
+        )
+        self.assertTrue(boosted)
+        self.assertEqual(cap, 500)
+
+    @patch.dict(
+        "os.environ",
+        {"SCALE_SIM_PAUSE_STARTS_WARMING_ABOVE": "400"},
+        clear=False,
+    )
+    def test_pause_new_starts_when_warming_high(self):
+        self.assertTrue(bp.should_pause_new_starts(warming_count=1800))
+        self.assertFalse(bp.should_pause_new_starts(warming_count=10))
+
+    @patch.dict(
+        "os.environ",
+        {
             "SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "120",
             "SIM_BP_MIN_DISPATCH_PER_TICK": "12",
             "SIM_BP_DRAIN_DISPATCH_PER_TICK": "20",
