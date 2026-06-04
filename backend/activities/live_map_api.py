@@ -4,9 +4,34 @@ Shared live-map read path for HTTP GET and SSE stream (admin Live Map).
 
 from __future__ import annotations
 
+import math
 import time
 from dataclasses import dataclass
 from typing import Any
+
+
+def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:
+    for key in keys:
+        raw = pos.get(key)
+        if raw is None:
+            continue
+        try:
+            val = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(val):
+            return val
+    return default
+
+
+def _live_coords(pos: dict) -> tuple[float, float] | None:
+    lat = _live_float(pos, "latitude", "lat")
+    lng = _live_float(pos, "longitude", "lng", "lon")
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return None
+    if lat == 0.0 and lng == 0.0:
+        return None
+    return lat, lng
 
 
 @dataclass(frozen=True)
@@ -197,6 +222,10 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         device_id = pos.get("deviceId")
         if device_id is None:
             continue
+        coords = _live_coords(pos)
+        if coords is None:
+            continue
+        lat, lng = coords
         info = device_info.get(device_id, {})
         type_label = pos.get("category") or pos.get("type") or info.get("type", "person")
         raw_type = (type_label or "").lower()
@@ -205,14 +234,16 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         elif raw_type in _run:
             viewport_run += 1
         ride_state = ride_states_by_device.get(str(device_id))
+        speed = _live_float(pos, "speed", default=0.0)
+        course = _live_float(pos, "course", default=0.0)
         if detail == "standard":
             row = {
                 "deviceId": device_id,
                 "type": type_label,
-                "lat": pos.get("latitude", 0.0),
-                "lng": pos.get("longitude", 0.0),
-                "speed": pos.get("speed", 0.0),
-                "course": pos.get("course", 0.0),
+                "lat": lat,
+                "lng": lng,
+                "speed": speed,
+                "course": course,
             }
             if ride_state:
                 row["ride_state"] = ride_state
@@ -222,10 +253,10 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
                 "deviceId": device_id,
                 "name": pos.get("name") or info.get("name", f"Athlete {device_id}"),
                 "type": type_label,
-                "lat": pos.get("latitude", 0.0),
-                "lng": pos.get("longitude", 0.0),
-                "speed": pos.get("speed", 0.0),
-                "course": pos.get("course", 0.0),
+                "lat": lat,
+                "lng": lng,
+                "speed": speed,
+                "course": course,
                 "lastUpdate": pos.get("deviceTime"),
             }
             if ride_state:

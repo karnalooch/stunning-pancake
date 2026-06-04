@@ -275,6 +275,12 @@ export const LiveMap: React.FC = () => {
 
         const bikeMeta = meta?.viewport_bike;
         const runMeta = meta?.viewport_run;
+        if (
+            list.length === 0
+            && (typeof bikeMeta === 'number' || typeof runMeta === 'number')
+        ) {
+            return;
+        }
         if (typeof bikeMeta === 'number' && typeof runMeta === 'number') {
             setCyclists((prev) => (bikeMeta !== prev ? bikeMeta : prev));
             setRunners((prev) => (runMeta !== prev ? runMeta : prev));
@@ -342,6 +348,7 @@ export const LiveMap: React.FC = () => {
             movedRecently,
             currentPositions: positionsRef.current.length,
             viewportChanged,
+            cachedResponse: Boolean(meta?.cached),
         });
 
         applyMetaCounts(list, meta);

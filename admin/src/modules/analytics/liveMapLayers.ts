@@ -29,26 +29,42 @@ const CLUSTER_CLICK_LAYERS = [
 
 const LOD = LIVE_MAP_LOD;
 
+function isValidLiveCoord(n: number): boolean {
+    return Number.isFinite(n) && Math.abs(n) <= 180;
+}
+
 function positionsToFeatures(positions: LiveMapPosition[]) {
     return positions
-        .filter((p) => p.lat && p.lng && p.deviceId)
-        .map((pos) => ({
+        .filter((p) => {
+            if (!p.deviceId) return false;
+            const lat = Number(p.lat);
+            const lng = Number(p.lng);
+            if (!isValidLiveCoord(lat) || !isValidLiveCoord(lng)) return false;
+            return lat !== 0 || lng !== 0;
+        })
+        .map((pos) => {
+            const lat = Number(pos.lat);
+            const lng = Number(pos.lng);
+            const speed = Number(pos.speed);
+            const course = Number(pos.course);
+            return {
             type: 'Feature' as const,
             geometry: {
                 type: 'Point' as const,
-                coordinates: [pos.lng, pos.lat] as [number, number],
+                coordinates: [lng, lat] as [number, number],
             },
             properties: {
                 deviceId: pos.deviceId,
                 name: pos.name || `Athlete ${pos.deviceId}`,
                 type: pos.type || '',
                 kind: resolveActivityKind(pos.type),
-                speed: pos.speed ?? 0,
-                speedKmh: speedToKmh(pos.speed ?? 0),
-                course: pos.course ?? 0,
+                speed: Number.isFinite(speed) ? speed : 0,
+                speedKmh: speedToKmh(Number.isFinite(speed) ? speed : 0),
+                course: Number.isFinite(course) ? course : 0,
                 ride_state: pos.ride_state || 'ACTIVE',
             },
-        }));
+        };
+        });
 }
 
 function cityHubFeatures(counts: Record<string, number>) {

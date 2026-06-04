@@ -594,9 +594,12 @@ class TelemetryService:
             raw = get_redis().get(key)
             if raw:
                 payload = _json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+                positions = payload.get("positions") or []
+                if not positions:
+                    return None
                 meta = dict(payload.get("meta", {}))
                 meta["cached"] = True
-                return payload.get("positions", []), meta
+                return positions, meta
         except Exception:
             pass
         return None

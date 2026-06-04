@@ -11,6 +11,8 @@ export type LiveMapStaleEmptyInput = {
     movedRecently: boolean;
     currentPositions: number;
     viewportChanged: boolean;
+    /** Server returned cached payload — empty positions must not wipe the map. */
+    cachedResponse?: boolean;
 };
 
 /**
@@ -26,6 +28,14 @@ export function shouldKeepStaleEmptyResponse(input: LiveMapStaleEmptyInput): boo
         viewportChanged,
     } = input;
     if (viewportChanged) return false;
+    if (
+        listLength === 0
+        && detail !== 'summary'
+        && currentPositions > 0
+        && input.cachedResponse
+    ) {
+        return true;
+    }
     return (
         listLength === 0
         && detail !== 'summary'

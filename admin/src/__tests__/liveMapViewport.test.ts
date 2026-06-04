@@ -35,6 +35,19 @@ describe('liveMapViewport', () => {
         ).toBe(true);
     });
 
+    it('keeps markers when server cache returns empty positions', () => {
+        expect(
+            shouldKeepStaleEmptyResponse({
+                listLength: 0,
+                detail: 'standard',
+                movedRecently: false,
+                currentPositions: 40,
+                viewportChanged: false,
+                cachedResponse: true,
+            }),
+        ).toBe(true);
+    });
+
     it('clears map on empty response after viewport change', () => {
         expect(shouldClearOnEmptyViewportChange(0, 'standard', true)).toBe(true);
         expect(shouldClearOnEmptyViewportChange(0, 'summary', true)).toBe(false);

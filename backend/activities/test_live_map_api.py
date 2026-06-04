@@ -1,7 +1,19 @@
 from django.test import SimpleTestCase
 
-from activities.live_map_api import poll_after_ms_hint, stream_interval_ms
+from activities.live_map_api import _live_coords, poll_after_ms_hint, stream_interval_ms
 from activities.views import EventStreamRenderer, TelemetryLiveStreamView
+
+
+class LiveMapCoordTest(SimpleTestCase):
+    def test_live_coords_from_latitude_longitude(self):
+        self.assertEqual(
+            _live_coords({"latitude": 52.23, "longitude": 21.01}),
+            (52.23, 21.01),
+        )
+
+    def test_live_coords_rejects_null_and_zero(self):
+        self.assertIsNone(_live_coords({"latitude": None, "longitude": 21.0}))
+        self.assertIsNone(_live_coords({"lat": 0.0, "lng": 0.0}))
 
 
 class LiveMapApiTimingTest(SimpleTestCase):
