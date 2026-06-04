@@ -182,14 +182,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Ruff (maintained scripts)
+      - name: Ruff (scripts/)
         run: |
           pip install "ruff>=0.8,<0.16"
-          ruff check \
-            scripts/check_docs_links.py \
-            scripts/load-test-telemetry-ingest.py \
-            scripts/release/pre_release_check.py \
-            --config pyproject.toml --output-format=github
+          ruff check scripts --config pyproject.toml --output-format=github
+
+      - name: OpenAPI docs drift (critical paths)
+        run: python scripts/check_openapi_drift.py
+
+      - name: Test check_docs_links parser
+        run: |
+          pip install pytest
+          python -m pytest scripts/test_check_docs_links.py -q
 
   repo-assets:
     name: Shared tokens

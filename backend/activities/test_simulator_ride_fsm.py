@@ -80,9 +80,9 @@ class LiveTickStateShadowRegressionTest(SimpleTestCase):
     def test_city_balance_loop_uses_ride_state_variable(self):
         import inspect
 
-        from activities import simulator_tasks as st
+        from activities import simulator_live_tick as tick_mod
 
-        body = inspect.getsource(st._run_live_tick_body)
+        body = inspect.getsource(tick_mod._run_live_tick_body)
         self.assertIn(
             "ride_state = ride_fsm.normalize_ride_state(ride)",
             body,

@@ -24,7 +24,7 @@ Step "backend: ruff format --check" { ruff format --check backend }
 Step "telemetry: ruff check" { ruff check telemetry }
 Step "telemetry: ruff format --check" { ruff format --check telemetry }
 Step "scripts: ruff check (maintained)" {
-    ruff check scripts/check_docs_links.py scripts/load-test-telemetry-ingest.py scripts/release/pre_release_check.py --config pyproject.toml
+    ruff check scripts --config pyproject.toml
 }
 Step "telemetry: pytest" { python -m pytest telemetry -q --tb=no }
 Step "backend: pytest (light)" {

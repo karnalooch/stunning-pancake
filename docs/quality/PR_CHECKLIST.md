@@ -22,6 +22,8 @@ Skopiuj do opisu PR lub użyj szablonu `.github/pull_request_template.md`.
 - [ ] **RBAC admin:** zgodność z [RBAC.md](../RBAC.md), `npm run audit:rbac`
 - [ ] **Symulator:** kolejność batch → live bez uzasadnionego łamania
 - [ ] **Env:** `.env.example` + Railway docs
+- [ ] **Infra:** [INFRA_PR_CHECKLIST.md](./INFRA_PR_CHECKLIST.md) if `infrastructure/`, compose, or routing images
+- [ ] **API docs:** `python scripts/check_openapi_drift.py` if REST paths changed — [OPENAPI_DRIFT.md](./OPENAPI_DRIFT.md)
 
 ## Review
 

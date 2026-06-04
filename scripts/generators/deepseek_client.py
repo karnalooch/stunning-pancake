@@ -9,9 +9,12 @@ Used for:
 """
 
 import json
-import time
 import logging
-from typing import Optional, Dict, Any
+import time
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from asset_definitions import AssetDef
 
 import requests
 
@@ -69,8 +72,8 @@ class DeepSeekClient:
     def __init__(
         self,
         api_key: str,
-        model: Optional[str] = None,
-        base_url: Optional[str] = None,
+        model: str | None = None,
+        base_url: str | None = None,
     ):
         self.api_key = api_key
         self.model = model or self.DEFAULT_MODEL
@@ -107,7 +110,7 @@ class DeepSeekClient:
         system_prompt: str,
         user_prompt: str,
         temperature: float = 0.1,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Generate structured JSON output.
 
         Args:
@@ -210,7 +213,7 @@ class DeepSeekClient:
             "temperature": temperature,
         }
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for attempt in range(self.MAX_RETRIES):
             try:
                 response = self._session.post(
@@ -299,7 +302,7 @@ class DeepSeekClient:
         system: str,
         user: str,
         temperature: float = 0.1,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Call chat and parse JSON response."""
         content = self._call_chat(system, user, temperature=temperature)
 

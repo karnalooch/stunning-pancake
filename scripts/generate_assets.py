@@ -34,9 +34,9 @@ import logging
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 # ─── Add script directory to path for sibling imports ─────────────
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -56,13 +56,13 @@ except ImportError:
 # ─── Project imports ─────────────────────────────────────────────
 from asset_definitions import (
     get_all_assets,
-    get_assets_by_model,
-    get_assets_by_category,
     get_asset_by_id,
-    list_asset_ids,
+    get_assets_by_category,
+)
+from asset_definitions import (
     print_summary as print_asset_summary,
 )
-from generators import DeepSeekClient, GeminiClient, SFX_PARAMS
+from generators import SFX_PARAMS, DeepSeekClient, GeminiClient
 
 # ─── Logging ─────────────────────────────────────────────────────
 logging.basicConfig(
@@ -187,13 +187,13 @@ class AssetGenerator:
         self.batch_delay = batch_delay
 
         # Stats
-        self.generated: List[str] = []
-        self.skipped: List[str] = []
-        self.failed: List[Dict[str, str]] = []
+        self.generated: list[str] = []
+        self.skipped: list[str] = []
+        self.failed: list[dict[str, str]] = []
 
         # Clients (lazy initialized)
-        self._deepseek: Optional[DeepSeekClient] = None
-        self._gemini: Optional[GeminiClient] = None
+        self._deepseek: DeepSeekClient | None = None
+        self._gemini: GeminiClient | None = None
 
         # Ensure output directory
         if not self.dry_run:
@@ -236,7 +236,7 @@ class AssetGenerator:
 
     # ── Main Generation Loop ─────────────────────────────────────
 
-    def generate_all(self, assets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def generate_all(self, assets: list[dict[str, Any]]) -> dict[str, Any]:
         """Generate all provided assets.
 
         Args:
@@ -251,7 +251,6 @@ class AssetGenerator:
         for i, asset in enumerate(assets, 1):
             asset_id = asset["id"]
             model = asset["model"]
-            category = asset["category"]
 
             # Check if this model is enabled
             if model == "deepseek" and not self.enable_deepseek:
@@ -295,7 +294,7 @@ class AssetGenerator:
 
     # ── Single Asset Generation ──────────────────────────────────
 
-    def _generate_single(self, asset: Dict[str, Any]) -> None:
+    def _generate_single(self, asset: dict[str, Any]) -> None:
         """Generate a single asset based on its model routing.
 
         Args:
@@ -324,7 +323,7 @@ class AssetGenerator:
                 f"Unknown asset type: model={model}, format={fmt}"
             )
 
-    def _generate_svg(self, asset: Dict[str, Any], output_path: Path) -> None:
+    def _generate_svg(self, asset: dict[str, Any], output_path: Path) -> None:
         """Generate SVG via DeepSeek."""
         svg_content = self.deepseek.generate_svg(asset)
 
@@ -335,7 +334,7 @@ class AssetGenerator:
         output_path.write_text(svg_content, encoding="utf-8")
         logger.debug("  Wrote SVG to %s (%d bytes)", output_path, len(svg_content))
 
-    def _generate_png(self, asset: Dict[str, Any], output_path: Path) -> None:
+    def _generate_png(self, asset: dict[str, Any], output_path: Path) -> None:
         """Generate PNG via Gemini."""
         category = asset["category"]
 
@@ -356,7 +355,7 @@ class AssetGenerator:
         )
         logger.debug("  Wrote SFX params to %s", output_path)
 
-    def _dry_run_preview(self, asset: Dict[str, Any]) -> None:
+    def _dry_run_preview(self, asset: dict[str, Any]) -> None:
         """Print what would be generated for this asset."""
         size = asset.get("size")
         if size:
@@ -379,7 +378,7 @@ class AssetGenerator:
         manifest_path = self.output_dir / "ASSET_MANIFEST.json"
 
         manifest = {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "generated_at": datetime.now(UTC).isoformat(),
             "project": "SPORT Mobile",
             "description": (
                 "Auto-generated pixel-art assets for the SPORT cycling app. "
@@ -416,7 +415,7 @@ class AssetGenerator:
 
     # ── Summary ──────────────────────────────────────────────────
 
-    def _build_summary(self) -> Dict[str, Any]:
+    def _build_summary(self) -> dict[str, Any]:
         """Build a generation summary dict."""
         return {
             "total": len(self.generated) + len(self.skipped) + len(self.failed),
@@ -430,7 +429,7 @@ class AssetGenerator:
             "dry_run": self.dry_run,
         }
 
-    def print_summary(self, summary: Dict[str, Any]) -> None:
+    def print_summary(self, summary: dict[str, Any]) -> None:
         """Print a human-readable summary of the generation results."""
         print()
         print("=" * 60)
@@ -500,12 +499,12 @@ def main() -> int:
         return 0
 
     # Print what we're about to do
-    model_counts: Dict[str, int] = {}
+    model_counts: dict[str, int] = {}
     for a in assets:
         m = a.get("model", "unknown")
         model_counts[m] = model_counts.get(m, 0) + 1
 
-    print(f"\nSPORT Asset Generator")
+    print("\nSPORT Asset Generator")
     print(f"{'-' * 40}")
     print(f"Assets to process: {len(assets)}")
     print(f"  DeepSeek v4 Pro:  {model_counts.get('deepseek', 0)}")

@@ -3,8 +3,10 @@ Imagen 4 Pixel Art Generator for SPORT cycling app.
 Uses google-genai SDK with Imagen 4 for all image generation.
 """
 
-import io, logging, os, time
-from typing import Optional, Any
+import io
+import logging
+import time
+
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ class GeminiClient:
     IMAGEN_MODEL = "imagen-4.0-fast-generate-001"
     MAX_RETRIES, RETRY_DELAYS = 2, [3.0, 6.0]
 
-    def __init__(self, api_key: str, model: Optional[str] = None, use_imagen: Optional[bool] = None):
+    def __init__(self, api_key: str, model: str | None = None, use_imagen: bool | None = None):
         if not api_key: raise ValueError("GOOGLE_API_KEY required")
         from google import genai as g2
         self._c = g2.Client(api_key=api_key)

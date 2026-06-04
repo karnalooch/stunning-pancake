@@ -17,7 +17,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from lifecycle import register_lifecycle
+from lifecycle import lifespan
 from routes import router
 
 logger = logging.getLogger("telemetry")
@@ -29,6 +29,7 @@ app = FastAPI(
     version="1.2.0",
     docs_url="/api/telemetry/docs",
     openapi_url="/api/telemetry/openapi.json",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -39,7 +40,6 @@ app.add_middleware(
 )
 
 app.include_router(router)
-register_lifecycle(app)
 
 # Backward-compatible exports for tests and uvicorn (main:app)
 from ingest_service import is_duplicate_batch as _is_duplicate_batch  # noqa: E402

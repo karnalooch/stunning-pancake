@@ -13,10 +13,10 @@ Model routing:
   - 'gemini'   → Sprite sheets, textures, avatar expressions
 """
 
-from typing import Dict, Any, List
+from typing import Any
 
 # ─── Type alias ───────────────────────────────────────────────────
-AssetDef = Dict[str, Any]
+AssetDef = dict[str, Any]
 
 # ─── Color palette reference (embedded for prompts) ───────────────
 TOKEN_COLORS = {
@@ -38,7 +38,7 @@ TOKEN_COLORS = {
 
 # ─── All Asset Definitions ────────────────────────────────────────
 
-def get_all_assets() -> List[AssetDef]:
+def get_all_assets() -> list[AssetDef]:
     """Return the complete ordered list of asset definitions.
 
     Order follows the proposal phases:
@@ -493,7 +493,7 @@ def get_all_assets() -> List[AssetDef]:
     ]
 
 
-def get_assets_by_model(model: str) -> List[AssetDef]:
+def get_assets_by_model(model: str) -> list[AssetDef]:
     """Filter assets by target model.
 
     Args:
@@ -505,7 +505,7 @@ def get_assets_by_model(model: str) -> List[AssetDef]:
     return [a for a in get_all_assets() if a.get("model") == model]
 
 
-def get_assets_by_category(category: str) -> List[AssetDef]:
+def get_assets_by_category(category: str) -> list[AssetDef]:
     """Filter assets by category.
 
     Args:
@@ -536,7 +536,7 @@ def get_asset_by_id(asset_id: str) -> AssetDef:
     raise KeyError(f"Unknown asset ID: '{asset_id}'. Available: {available}")
 
 
-def list_asset_ids() -> List[str]:
+def list_asset_ids() -> list[str]:
     """Return all asset IDs in definition order."""
     return [a["id"] for a in get_all_assets()]
 
@@ -562,7 +562,7 @@ def print_summary():
     print(f"  -> DeepSeek v4 Pro: {len(deepseek_assets)} (SVG icons, manifest)")
     print(f"  -> Gemini 3:        {len(gemini_assets)} (sprites, textures, expressions)")
     print()
-    print(f"By category:")
+    print("By category:")
     print(f"  Icons:       {len(icons)}")
     print(f"  Sprites:     {len(sprites)}")
     print(f"  Expressions: {len(expressions)}")
@@ -574,7 +574,7 @@ def print_summary():
     svg_count = len([a for a in all_assets if a.get("format") == "svg"])
     png_count = len([a for a in all_assets if a.get("format") == "png"])
     json_count = len([a for a in all_assets if a.get("format") == "json"])
-    print(f"Output formats:")
+    print("Output formats:")
     print(f"  SVG:  {svg_count}")
     print(f"  PNG:  {png_count}")
     print(f"  JSON: {json_count}")

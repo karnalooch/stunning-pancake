@@ -10,14 +10,14 @@ can be fed into any sfxr-compatible JavaScript/WebAudio generator
 (e.g., https://sfxr.me/).
 """
 
-from typing import Dict, Any
+from typing import Any
 
 # ─── Type alias ───────────────────────────────────────────────────
-SfxPreset = Dict[str, Any]
+SfxPreset = dict[str, Any]
 
 # ─── All 9 sound effect presets ───────────────────────────────────
 
-SFX_PARAMS: Dict[str, SfxPreset] = {
+SFX_PARAMS: dict[str, SfxPreset] = {
     # ── UI Click ──────────────────────────────────────────────────
     # Short <100ms square-wave button click
     "ui_click": {

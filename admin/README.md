@@ -40,6 +40,21 @@ Output: `dist-exe/4VELO Admin.exe`
 ## Features
 - Multi-tenant dashboard with real-time telemetry
 - Live-Ghost athlete tracking via WebSocket
+
+### Live Map module boundaries (SSOT)
+
+Live Map logic is split under `src/modules/analytics/` — keep new code in the matching file:
+
+| Module | Responsibility |
+|--------|----------------|
+| `liveMapMarkers.ts` | Position types, activity kind, speed helpers |
+| `liveMapCities.ts` | Poland sim cities, bounds |
+| `liveMapZoom.ts` | Zoom LOD tiers |
+| `liveMapLayers.ts` | MapLibre layers, sprites |
+| `liveMapInterp.ts` | Position interpolation |
+| `LiveMap.tsx` | Page composition only |
+
+Do not grow `LiveMap.tsx` with marker/layer math; extend the table above.
 - Anti-cheat moderation panel
 - City/competition management
 - Sponsor reward marketplace

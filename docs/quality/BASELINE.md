@@ -1,34 +1,37 @@
 # Quality baseline — 2026-06-04
 
-Wynik **Fazy 0** dla całego monorepo. Odśwież po większych zmianach: `.\scripts\run-quality-baseline.ps1`.
+Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.\scripts\run-quality-baseline.ps1`.
 
 | Moduł | Check | Wynik | Uwagi |
 |-------|-------|-------|-------|
 | **backend** | `ruff check .` | ✅ PASS (po fix E741) | Duży `ignore` w `pyproject.toml` = dług stylu |
 | **backend** | `ruff format --check` | Uruchom w skrypcie | |
-| **backend** | `mypy` (CI) | ✅ PASS (5 modułów) | `mypy-ci.ini` — load_guard, telemetry_shard, … |
+| **backend** | `mypy` (CI) | ✅ PASS (5 modułów) | `mypy-ci.ini` |
 | **backend** | `manage.py test` | CI | Długi; lokalnie opcjonalnie |
-| **telemetry** | `ruff check` | ✅ PASS | Po format + fix importów |
-| **telemetry** | `pytest` | ✅ 6 passed | Warnings: FastAPI `on_event` deprecated |
-| **admin** | `npm run lint` | CI | + `audit:*` (routes, RBAC, env) |
+| **backend** | simulator_light pytest | ✅ PASS | `simulator_batch_tasks`, `simulator_live_orchestrator` |
+| **telemetry** | `ruff check` | ✅ PASS | |
+| **telemetry** | `pytest` | ✅ 15 passed | Brak ostrzeżeń `on_event` (lifespan) |
+| **admin** | `npm run lint` | CI | + `audit:*` |
 | **admin** | `tsc --noEmit` | CI | |
 | **admin** | Playwright E2E | CI `e2e` | |
-| **mobile** | `npm test --ci` | ✅ 10 passed (GPS suites) | Pełny Jest — rozszerzyć CI |
-| **mobile** | `npm run lint` (expo) | ✅ CI job | `expo lint` |
-| **scripts/** | `ruff check` (3 utrzymywane pliki) | ✅ PASS | Pełny `scripts/` — BACKLOG Q-P1-5 |
+| **mobile** | `npm test --ci` | ✅ ride + GPS suites | `rideSessionService.test.ts` + recovery; AvatarTrainer timeouts = osobny dług |
+| **mobile** | `npm run lint` (expo) | ✅ CI job | |
+| **scripts/** | `ruff check scripts` | ✅ PASS | Pełny katalog; ignore na `generate_assets` / `gemini_client` |
+| **scripts** | `check_openapi_drift.py` | ✅ PASS | CI `scripts-python` |
+| **scripts** | `test_check_docs_links.py` | ✅ 3 passed | |
 | **docs** | `check_docs_links.py` | CI `docs.yml` | |
-| **shared/tokens** | `npm run tokens:check` | CI `repo-assets` | Root `package.json` |
+| **shared/tokens** | `npm run tokens:check` | CI `repo-assets` | |
 
 ## Rozjazdy Konstytucja ↔ narzędzia
 
-| Konstytucja | Stan repo | Akcja (BACKLOG) |
-|-------------|-----------|-----------------|
+| Konstytucja | Stan repo | Akcja (BACKLOG P2) |
+|-------------|-----------|---------------------|
 | Linia 120 znaków | Ruff 100 w `pyproject.toml` | Ujednolicić doc lub config |
-| mypy strict | CI opcjonalne (`|| true`) | Faza 1: fail na `core`, `telemetry` |
-| Coverage >80% backend | Brak gate w CI | Faza 3: pytest-cov próg etapami |
-| Mobile ESLint | Brak skryptu | `expo lint` + job CI |
+| mypy strict | CI na 5 modułach | Rozszerzać `mypy-ci.ini` etapami |
+| Coverage >80% backend | Brak gate w CI | P2: pytest-cov |
+| Mobile ESLint ajv moderate | Dev dependency chain | P1-7 partial — po bump eslint-config-expo |
 
 ## Następny krok
 
-1. Utrzymać zielony CI po [Fazie 1](../quality/README.md#fazy-0--5-co-robić-w-praktyce).
-2. Zamykać pozycje [BACKLOG.md](./BACKLOG.md) P0 w małych PR-ach.
+1. Zamykać pozycje [BACKLOG.md](./BACKLOG.md) **P2** w małych PR-ach.
+2. Utrzymać zielony CI — [README](./README.md#fazy-0--5-co-robić-w-praktyce).

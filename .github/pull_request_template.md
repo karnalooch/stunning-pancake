@@ -10,6 +10,8 @@
 
 Pełna lista: [docs/quality/PR_CHECKLIST.md](docs/quality/PR_CHECKLIST.md)
 
+Infra / Docker / OSRM / BRouter / Railway: [docs/quality/INFRA_PR_CHECKLIST.md](docs/quality/INFRA_PR_CHECKLIST.md)
+
 - [ ] Lokalnie: `.\scripts\run-quality-baseline.ps1` (lub moduły z diff) — zielone
 - [ ] Testy dodane lub uzasadnienie
 - [ ] `.env.example` + docs jeśli env / API / zachowanie
