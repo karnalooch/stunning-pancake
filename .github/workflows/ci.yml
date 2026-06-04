@@ -59,6 +59,7 @@ jobs:
           pip install "ruff>=0.8,<0.16"
           cd backend
           ruff check . --output-format=github
+          ruff format --check .
 
       - name: Type check with mypy (core modules)
         run: |
@@ -108,7 +109,7 @@ jobs:
   # Telemetry service: ingest guard + queue tests (ADR 011)
   # ──────────────────────────────────────────
   telemetry:
-    name: Telemetry (FastAPI / ADR 011)
+    name: Telemetry (FastAPI)
     runs-on: ubuntu-latest
 
     steps:
@@ -122,21 +123,25 @@ jobs:
 
       - name: Install telemetry dependencies
         run: |
+          pip install "ruff>=0.8,<0.16"
           pip install -r telemetry/requirements.txt -r telemetry/requirements-dev.txt
+
+      - name: Ruff (telemetry)
+        run: |
+          ruff check telemetry --output-format=github
+          ruff format --check telemetry
 
       - name: Run telemetry unit tests
         env:
           DATABASE_URL: postgresql://sport_user:sport_pass@localhost:5432/sport_test
           REDIS_URL: redis://localhost:6379/0
-        run: |
-          cd telemetry
-          python -m pytest test_ingest_guard.py test_ingest_guard_packets.py test_ingest_dedupe.py -q
+        run: python -m pytest telemetry -q
 
   # ──────────────────────────────────────────
-  # Mobile: GPS outbox + quality filters (ADR 011)
+  # Mobile app (Jest)
   # ──────────────────────────────────────────
-  mobile-gps:
-    name: Mobile GPS (ADR 011)
+  mobile:
+    name: Mobile (React Native)
     runs-on: ubuntu-latest
 
     steps:
@@ -152,10 +157,59 @@ jobs:
       - name: Install dependencies
         run: cd mobile && npm ci
 
-      - name: Run GPS resilience unit tests
+      - name: Run unit tests
+        run: cd mobile && npm test -- --ci --passWithNoTests
+
+  # ──────────────────────────────────────────
+  # Repo scripts (Python) + design tokens
+  # ──────────────────────────────────────────
+  scripts-python:
+    name: Scripts (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Ruff (maintained scripts)
         run: |
-          cd mobile
-          npm test -- __tests__/services/gpsQualityFilter.test.ts __tests__/services/gpsSyncStorage.test.ts --ci
+          pip install "ruff>=0.8,<0.16"
+          ruff check \
+            scripts/check_docs_links.py \
+            scripts/load-test-telemetry-ingest.py \
+            scripts/release/pre_release_check.py \
+            --config pyproject.toml --output-format=github
+
+  repo-assets:
+    name: Shared tokens
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Verify design tokens build
+        run: npm run tokens:check
+
+  docs-links:
+    name: Documentation links
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Check relative links in docs/
+        run: python scripts/check_docs_links.py
 
   # ──────────────────────────────────────────
   # Admin Dashboard: Lint + Type Check + Build

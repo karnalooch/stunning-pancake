@@ -54,12 +54,12 @@ def map_intensity(intensity: int) -> dict[str, float]:
 
 def map_load(load: int) -> dict[str, int]:
     """Obciążenie systemu → tick + scale_overrides."""
-    l = _clamp_int(load)
+    load_pct = _clamp_int(load)
     # 75→100 starts/tick, 100→150 (hard cap enforced in scale_config overrides)
-    starts = int(round(piecewise_lerp([(0, 25), (50, 50), (75, 100), (100, 150)], l)))
+    starts = int(round(piecewise_lerp([(0, 25), (50, 50), (75, 100), (100, 150)], load_pct)))
     brouter = int(round(starts * 0.83))
-    attempts = 4 if l < 75 else 5
-    tick_seconds = int(round(piecewise_lerp([(0, 12), (50, 8), (100, 6)], l)))
+    attempts = 4 if load_pct < 75 else 5
+    tick_seconds = int(round(piecewise_lerp([(0, 12), (50, 8), (100, 6)], load_pct)))
     return {
         "tick_seconds": tick_seconds,
         "max_starts_per_live_tick": starts,
@@ -75,12 +75,12 @@ def resolve_sim_profile(intensity: int, load: int) -> dict[str, Any]:
     Returns active_ratio, cheat_ratio, tick_seconds, scale_overrides, and echo intensity/load.
     """
     i = _clamp_int(intensity)
-    l = _clamp_int(load)
+    load_pct = _clamp_int(load)
     intensity_part = map_intensity(i)
-    load_part = map_load(l)
+    load_part = map_load(load_pct)
     return {
         "intensity": i,
-        "load": l,
+        "load": load_pct,
         "active_ratio": intensity_part["active_ratio"],
         "cheat_ratio": intensity_part["cheat_ratio"],
         "tick_seconds": load_part["tick_seconds"],
@@ -105,12 +105,12 @@ def parse_intensity_load_from_request(data: dict) -> tuple[dict[str, Any] | None
         return None, "intensity and load must be sent together (0–100)"
     try:
         i = int(data["intensity"])
-        l = int(data["load"])
+        load_pct = int(data["load"])
     except (TypeError, ValueError):
         return None, "intensity and load must be integers 0–100"
-    if i < 0 or i > 100 or l < 0 or l > 100:
+    if i < 0 or i > 100 or load_pct < 0 or load_pct > 100:
         return None, "intensity and load must be 0–100"
-    return resolve_sim_profile(i, l), None
+    return resolve_sim_profile(i, load_pct), None
 
 
 def auto_lower_active_ratio_enabled() -> bool:

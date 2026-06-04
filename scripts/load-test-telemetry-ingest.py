@@ -25,17 +25,15 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import statistics
 import sys
 import time
 import uuid
-from typing import Any
 from urllib.parse import urlparse
 
 try:
     import httpx
-except ImportError:
-    raise SystemExit("Install httpx: pip install httpx")
+except ImportError as exc:
+    raise SystemExit("Install httpx: pip install httpx") from exc
 
 
 def _percentile(values: list[float], pct: float) -> float:

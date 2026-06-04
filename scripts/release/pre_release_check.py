@@ -1,6 +1,5 @@
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 REQUIRED_FILES = [
     "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",

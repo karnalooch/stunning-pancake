@@ -1,0 +1,16 @@
+# Default review for structural / quality changes
+* @karnalooch
+
+/backend/core/load_guard.py @karnalooch
+/backend/activities/simulator_tasks.py @karnalooch
+/backend/activities/telemetry_shard.py @karnalooch
+
+/telemetry/ @karnalooch
+/mobile/src/services/GpsSyncManager.ts @karnalooch
+/mobile/src/services/gpsSyncStorage.ts @karnalooch
+/mobile/src/services/gpsQualityFilter.ts @karnalooch
+
+/docs/adr/ @karnalooch
+/docs/quality/ @karnalooch
+
+/.github/workflows/ @karnalooch

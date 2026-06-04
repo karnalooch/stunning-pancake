@@ -37,6 +37,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | Dokument | Opis |
 |----------|------|
 | [CONTRIBUTING.md](../CONTRIBUTING.md) | PR, testy, kiedy aktualizować docs |
+| [quality/README.md](./quality/README.md) | Program jakości kodu (cały monorepo, fazy 0–5) |
 | [SECURITY.md](../SECURITY.md) | Zgłaszanie luk, wersje wspierane, zależności |
 | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) | Szablon sekcji, SSOT, bezpieczeństwo |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Inwentarz świeżości, checklista po release |

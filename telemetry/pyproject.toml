@@ -1,0 +1,3 @@
+[tool.ruff]
+extend = "../backend/pyproject.toml"
+# Telemetry CI uses repo-root + backend rules; local runs from this directory.

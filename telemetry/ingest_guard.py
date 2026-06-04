@@ -6,7 +6,6 @@ Counts `n` packets per request (not one slot per HTTP request). Fail-open on Red
 
 from __future__ import annotations
 
-import math
 import os
 import time
 import uuid
@@ -34,7 +33,9 @@ def _ingest_max_per_second() -> int:
 
 def _engage_ratio() -> float:
     try:
-        return max(0.1, min(1.0, float(os.getenv("GLOBAL_PROTECTION_ENGAGE_RATIO", "0.9"))))
+        return max(
+            0.1, min(1.0, float(os.getenv("GLOBAL_PROTECTION_ENGAGE_RATIO", "0.9")))
+        )
     except (TypeError, ValueError):
         return 0.9
 

@@ -12,6 +12,7 @@
 
 1. **Jeden punkt wejścia:** [README.md](./README.md) — pełne drzewo + ścieżki per rola.
 2. **Standard:** [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md).
+2b. **Jakość kodu (monorepo):** [quality/README.md](./quality/README.md) · baseline: `scripts/run-quality-baseline.ps1`.
 3. **Indeksy sekcji:** [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) · [admin/ADMIN_INDEX.md](./admin/ADMIN_INDEX.md) · [compliance/COMPLIANCE_INDEX.md](./compliance/COMPLIANCE_INDEX.md).
 4. **Runbooki** — krótkie kroki w [operations/](./operations/); spec w korzeniu / ADR.
 5. **Raporty** — snapshot; nowy plik z datą w [reports/](./reports/).

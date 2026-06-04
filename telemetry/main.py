@@ -20,7 +20,6 @@ import json
 import logging
 import os
 import time
-from typing import Any
 from math import radians, cos, sin, asin, sqrt
 
 import asyncpg
@@ -64,7 +63,11 @@ _insert_queue: asyncio.Queue[list[tuple]] | None = None
 _insert_worker_task: asyncio.Task | None = None
 
 _SKIP_DB = os.getenv("TELEMETRY_SKIP_DB", "").strip().lower() in ("1", "true", "yes")
-_SKIP_BROADCAST = os.getenv("TELEMETRY_SKIP_BROADCAST", "").strip().lower() in ("1", "true", "yes")
+_SKIP_BROADCAST = os.getenv("TELEMETRY_SKIP_BROADCAST", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+)
 
 try:
     _DB_POOL_MIN = max(1, int(os.getenv("TELEMETRY_DB_POOL_MIN", "5")))
@@ -158,9 +161,11 @@ async def enqueue_gps_rows(rows: list[tuple]) -> None:
         except asyncio.QueueFull:
             await asyncio.sleep(0.001)
 
+
 # ---------------------------------------------------------------------------
 # Geospatial Helpers
 # ---------------------------------------------------------------------------
+
 
 def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Haversine formula to calculate distance in meters."""
@@ -169,63 +174,89 @@ def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     dLon = radians(lon2 - lon1)
     lat1 = radians(lat1)
     lat2 = radians(lat2)
-    a = sin(dLat/2)**2 + cos(lat1)*cos(lat2)*sin(dLon/2)**2
-    c = 2*asin(sqrt(a))
+    a = sin(dLat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dLon / 2) ** 2
+    c = 2 * asin(sqrt(a))
     return R * c
+
 
 def is_in_privacy_zone(user_id: int | None, lat: float, lon: float) -> bool:
     """Checks if a point is within any of the user's privacy zones (Live-Ghost Phase 4)."""
     if user_id is None or user_id not in _privacy_zones:
         return False
-    
+
     for zone in _privacy_zones[user_id]:
-        if calculate_distance(lat, lon, zone['lat'], zone['lon']) <= zone['radius']:
+        if calculate_distance(lat, lon, zone["lat"], zone["lon"]) <= zone["radius"]:
             return True
     return False
+
 
 # ---------------------------------------------------------------------------
 # Background Tasks
 # ---------------------------------------------------------------------------
 
+
 async def _privacy_zones_sync() -> None:
     """Listens for privacy zone updates from Django via Redis."""
     import redis.asyncio as redis_lib
+
     logger.info("privacy_zones_sync: initializing listener on %s", ZONE_UPDATE_CHANNEL)
     client = redis_lib.from_url(REDIS_URL, decode_responses=True)
-    
+
     while True:
         try:
             async with client.pubsub() as pubsub:
                 await pubsub.subscribe(ZONE_UPDATE_CHANNEL)
                 async for message in pubsub.listen():
-                    if message["type"] != "message": continue
+                    if message["type"] != "message":
+                        continue
                     data = json.loads(message["data"])
                     uid = int(data["user_id"])
-                    
+
                     if data["type"] == "ZONE_UPDATE":
-                        if uid not in _privacy_zones: _privacy_zones[uid] = []
+                        if uid not in _privacy_zones:
+                            _privacy_zones[uid] = []
                         zone = {
-                            'lat': float(data['lat']), 
-                            'lon': float(data['lon']), 
-                            'radius': float(data['radius']), 
-                            'id': data['zone_id']
+                            "lat": float(data["lat"]),
+                            "lon": float(data["lon"]),
+                            "radius": float(data["radius"]),
+                            "id": data["zone_id"],
                         }
                         # Remove existing version of this zone if present
-                        _privacy_zones[uid] = [z for z in _privacy_zones[uid] if z.get('id') != data['zone_id']]
+                        _privacy_zones[uid] = [
+                            z
+                            for z in _privacy_zones[uid]
+                            if z.get("id") != data["zone_id"]
+                        ]
                         _privacy_zones[uid].append(zone)
-                        logger.info("privacy_zones: updated zone %d for user %d", data['zone_id'], uid)
+                        logger.info(
+                            "privacy_zones: updated zone %d for user %d",
+                            data["zone_id"],
+                            uid,
+                        )
                     elif data["type"] == "ZONE_DELETE":
                         if uid in _privacy_zones:
-                            _privacy_zones[uid] = [z for z in _privacy_zones[uid] if z.get('id') != data['zone_id']]
-                            logger.info("privacy_zones: deleted zone %d for user %d", data['zone_id'], uid)
+                            _privacy_zones[uid] = [
+                                z
+                                for z in _privacy_zones[uid]
+                                if z.get("id") != data["zone_id"]
+                            ]
+                            logger.info(
+                                "privacy_zones: deleted zone %d for user %d",
+                                data["zone_id"],
+                                uid,
+                            )
 
         except Exception as e:
-            logger.error("privacy_zones_sync: connection error (%s). Retrying in 5s...", e)
+            logger.error(
+                "privacy_zones_sync: connection error (%s). Retrying in 5s...", e
+            )
             await asyncio.sleep(5)
+
 
 async def _traccar_redis_bridge() -> None:
     """Consumes Traccar positions from Redis and broadcasts to UI."""
     import redis.asyncio as redis_lib
+
     batch_buffer: list[tuple] = []
     MAX_BATCH_SIZE = _INGEST_BATCH_SIZE
     last_flush = time.time()
@@ -236,14 +267,19 @@ async def _traccar_redis_bridge() -> None:
             async with client.pubsub() as pubsub:
                 await pubsub.subscribe(TRACCAR_CHANNEL)
                 async for message in pubsub.listen():
-                    if message["type"] != "message": continue
+                    if message["type"] != "message":
+                        continue
                     try:
-                        data = json.loads(message["data"]) if isinstance(message["data"], str) else message["data"]
+                        data = (
+                            json.loads(message["data"])
+                            if isinstance(message["data"], str)
+                            else message["data"]
+                        )
                         device_id = str(data.get("deviceId", "unknown"))
                         lat = float(data.get("latitude", 0))
                         lon = float(data.get("longitude", 0))
                         speed_ms = float(data.get("speed", 0)) * 0.514444
-                        ts = float(data.get("fixTime", time.time()*1000)) / 1000.0
+                        ts = float(data.get("fixTime", time.time() * 1000)) / 1000.0
 
                         # Traccar doesn't usually have user_id in the packet, needs resolution
                         # For now, bridge points are always stored but might skip broadcast if filtered
@@ -251,35 +287,41 @@ async def _traccar_redis_bridge() -> None:
 
                         batch_buffer.append((ts, device_id, lat, lon, speed_ms))
 
-                        if len(batch_buffer) >= MAX_BATCH_SIZE or (time.time() - last_flush > 2.0):
+                        if len(batch_buffer) >= MAX_BATCH_SIZE or (
+                            time.time() - last_flush > 2.0
+                        ):
                             if batch_buffer:
                                 pool = await get_pool()
                                 async with pool.acquire() as conn:
                                     await conn.executemany(
                                         "INSERT INTO gps_points (time, device_id, lat, lon, speed_ms) VALUES (to_timestamp($1), $2, $3, $4, $5) ON CONFLICT DO NOTHING",
-                                        batch_buffer
+                                        batch_buffer,
                                     )
                                 batch_buffer = []
                                 last_flush = time.time()
 
-                        await manager.broadcast({
-                            "type": "position_update",
-                            "device_id": device_id,
-                            "lat": lat,
-                            "lon": lon,
-                            "speed_ms": round(speed_ms, 2),
-                            "ts": ts,
-                            "source": "traccar_bridge"
-                        })
+                        await manager.broadcast(
+                            {
+                                "type": "position_update",
+                                "device_id": device_id,
+                                "lat": lat,
+                                "lon": lon,
+                                "speed_ms": round(speed_ms, 2),
+                                "ts": ts,
+                                "source": "traccar_bridge",
+                            }
+                        )
                     except Exception as e:
                         logger.warning("traccar_bridge: skip malformed packet: %s", e)
         except Exception as e:
             logger.error("traccar_bridge: error: %s", e)
             await asyncio.sleep(5)
 
+
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
+
 
 @app.on_event("startup")
 async def startup() -> None:
@@ -308,21 +350,39 @@ async def startup() -> None:
             WHERE activity_id IS NOT NULL AND seq IS NOT NULL;
         """)
         try:
-            await conn.execute("SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);")
+            await conn.execute(
+                "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
+            )
         except Exception:
             pass
 
     # Load initial privacy zones
     try:
         async with pool.acquire() as conn:
-            rows = await conn.fetch("SELECT user_id, ST_Y(center::geometry) as lat, ST_X(center::geometry) as lon, radius, id FROM activities_privacyzone")
+            rows = await conn.fetch(
+                "SELECT user_id, ST_Y(center::geometry) as lat, ST_X(center::geometry) as lon, radius, id FROM activities_privacyzone"
+            )
             for r in rows:
-                uid = int(r['user_id'])
-                if uid not in _privacy_zones: _privacy_zones[uid] = []
-                _privacy_zones[uid].append({'lat': r['lat'], 'lon': r['lon'], 'radius': r['radius'], 'id': r['id']})
-        logger.info("privacy_zones: loaded %d zones for %d users", len(rows), len(_privacy_zones))
+                uid = int(r["user_id"])
+                if uid not in _privacy_zones:
+                    _privacy_zones[uid] = []
+                _privacy_zones[uid].append(
+                    {
+                        "lat": r["lat"],
+                        "lon": r["lon"],
+                        "radius": r["radius"],
+                        "id": r["id"],
+                    }
+                )
+        logger.info(
+            "privacy_zones: loaded %d zones for %d users",
+            len(rows),
+            len(_privacy_zones),
+        )
     except Exception as e:
-        logger.warning("privacy_zones: initial load skipped (table missing or empty): %s", e)
+        logger.warning(
+            "privacy_zones: initial load skipped (table missing or empty): %s", e
+        )
 
     asyncio.create_task(_traccar_redis_bridge())
     asyncio.create_task(_privacy_zones_sync())
@@ -338,6 +398,7 @@ async def startup() -> None:
         )
     logger.info("telemetry engine fully operational")
 
+
 @app.on_event("shutdown")
 async def shutdown() -> None:
     global _insert_worker_task
@@ -351,30 +412,44 @@ async def shutdown() -> None:
     if _pool:
         await _pool.close()
 
+
 # ---------------------------------------------------------------------------
 # WebSocket Management
 # ---------------------------------------------------------------------------
 
+
 class ConnectionManager:
     def __init__(self) -> None:
         self._connections: list[WebSocket] = []
+
     async def connect(self, ws: WebSocket) -> None:
         await ws.accept()
         self._connections.append(ws)
+
     def disconnect(self, ws: WebSocket) -> None:
-        if ws in self._connections: self._connections.remove(ws)
+        if ws in self._connections:
+            self._connections.remove(ws)
+
     async def broadcast(self, payload: dict) -> None:
-        if not self._connections: return
+        if not self._connections:
+            return
         tasks = [ws.send_json(payload) for ws in self._connections]
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        dead = [ws for ws, res in zip(self._connections, results) if isinstance(res, Exception)]
-        for ws in dead: self.disconnect(ws)
+        dead = [
+            ws
+            for ws, res in zip(self._connections, results)
+            if isinstance(res, Exception)
+        ]
+        for ws in dead:
+            self.disconnect(ws)
+
 
 manager = ConnectionManager()
 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 class GpsPacket(BaseModel):
     device_id: str
@@ -388,9 +463,11 @@ class GpsPacket(BaseModel):
     seq: int | None = None
     idempotency_key: str | None = None
 
+
 class BatchPacket(BaseModel):
     packets: list[GpsPacket]
     client_batch_id: str | None = None
+
 
 DEDUPE_TTL_S = int(os.getenv("TELEMETRY_DEDUPE_TTL_S", str(7 * 24 * 3600)))
 
@@ -529,8 +606,10 @@ async def _persist_ingest_rows(
         return {"inserted": 0, "queued": False, "ingest_mode": "direct"}
 
     use_stream = False
-    if guard.should_queue_active_sessions and activity_id and await _is_active_activity(
-        activity_id
+    if (
+        guard.should_queue_active_sessions
+        and activity_id
+        and await _is_active_activity(activity_id)
     ):
         use_stream = True
     elif not guard.allowed:
@@ -565,6 +644,7 @@ async def _persist_ingest_rows(
     await enqueue_gps_rows(rows)
     return {"inserted": len(rows), "queued": False, "ingest_mode": "direct"}
 
+
 async def _is_duplicate_batch(client_batch_id: str | None) -> bool:
     """Redis SET NX — duplicate batch ids skip INSERT (7d TTL)."""
     if not client_batch_id:
@@ -574,9 +654,11 @@ async def _is_duplicate_batch(client_batch_id: str | None) -> bool:
     was_new = await client.set(key, "1", nx=True, ex=DEDUPE_TTL_S)
     return not was_new
 
+
 @app.get("/api/telemetry/health")
 async def health() -> dict:
     return {"status": "ok", "zones_cached": len(_privacy_zones)}
+
 
 @app.post("/api/telemetry/ingest", status_code=202)
 async def ingest_packet(packet: GpsPacket) -> dict:
@@ -592,15 +674,17 @@ async def ingest_packet(packet: GpsPacket) -> dict:
         guard=guard,
     )
 
-    await _maybe_broadcast({
-        "type": "position_update",
-        "device_id": packet.device_id,
-        "user_id": packet.user_id,
-        "lat": packet.lat,
-        "lon": packet.lon,
-        "speed_ms": packet.speed_ms,
-        "activity_id": packet.activity_id
-    })
+    await _maybe_broadcast(
+        {
+            "type": "position_update",
+            "device_id": packet.device_id,
+            "user_id": packet.user_id,
+            "lat": packet.lat,
+            "lon": packet.lon,
+            "speed_ms": packet.speed_ms,
+            "activity_id": packet.activity_id,
+        }
+    )
     return {
         "status": "accepted",
         "inserted": result["inserted"],
@@ -608,6 +692,7 @@ async def ingest_packet(packet: GpsPacket) -> dict:
         "ingest_mode": result["ingest_mode"],
         "acked": True,
     }
+
 
 @app.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
@@ -646,16 +731,18 @@ async def ingest_batch(batch: BatchPacket) -> dict:
             guard=guard,
         )
         last = batch.packets[-1]
-        await _maybe_broadcast({
-            "type": "position_update",
-            "device_id": last.device_id,
-            "user_id": last.user_id,
-            "lat": last.lat,
-            "lon": last.lon,
-            "speed_ms": last.speed_ms,
-            "activity_id": last.activity_id,
-            "batch_size": len(rows)
-        })
+        await _maybe_broadcast(
+            {
+                "type": "position_update",
+                "device_id": last.device_id,
+                "user_id": last.user_id,
+                "lat": last.lat,
+                "lon": last.lon,
+                "speed_ms": last.speed_ms,
+                "activity_id": last.activity_id,
+                "batch_size": len(rows),
+            }
+        )
 
     return {
         "status": "accepted",
@@ -688,7 +775,9 @@ async def ingest_backfill(batch: BatchPacket, activity_id: int = Query(...)) -> 
     if row is None:
         raise HTTPException(status_code=404, detail="activity not found")
     if row["end_time"] is None:
-        raise HTTPException(status_code=409, detail="activity still active — use live ingest")
+        raise HTTPException(
+            status_code=409, detail="activity still active — use live ingest"
+        )
 
     end_time = row["end_time"].timestamp()
     if time.time() - end_time > _BACKFILL_WINDOW_MIN * 60:
@@ -748,9 +837,11 @@ async def ingest_queue_stats() -> dict:
     depth = await stream_depth(client)
     return {"enabled": True, "stream": STREAM_KEY, "xlen": depth}
 
+
 # ---------------------------------------------------------------------------
 # WebSockets
 # ---------------------------------------------------------------------------
+
 
 @app.websocket("/ws/telemetry/live")
 async def websocket_live(ws: WebSocket) -> None:
@@ -761,6 +852,7 @@ async def websocket_live(ws: WebSocket) -> None:
             await ws.send_json({"type": "ping"})
     except WebSocketDisconnect:
         manager.disconnect(ws)
+
 
 @app.websocket("/ws/telemetry/ingest")
 async def websocket_ingest(ws: WebSocket) -> None:
@@ -776,7 +868,9 @@ async def websocket_ingest(ws: WebSocket) -> None:
                 continue
             if isinstance(data, dict) and data.get("type") == "resume":
                 last_acked_seq = data.get("last_acked_seq")
-                await ws.send_json({"type": "resume_ack", "last_acked_seq": last_acked_seq})
+                await ws.send_json(
+                    {"type": "resume_ack", "last_acked_seq": last_acked_seq}
+                )
                 continue
 
             packets = data if isinstance(data, list) else [data]
@@ -819,12 +913,16 @@ async def websocket_ingest(ws: WebSocket) -> None:
                     guard=guard,
                 )
             except HTTPException as exc:
-                await ws.send_json({
-                    "type": "error",
-                    "status": exc.status_code,
-                    "detail": exc.detail,
-                    "retry_after": exc.headers.get("Retry-After", "1") if exc.headers else "1",
-                })
+                await ws.send_json(
+                    {
+                        "type": "error",
+                        "status": exc.status_code,
+                        "detail": exc.detail,
+                        "retry_after": exc.headers.get("Retry-After", "1")
+                        if exc.headers
+                        else "1",
+                    }
+                )
                 if exc.status_code == 429:
                     await ws.close(code=1013, reason="ingest throttled")
                 elif exc.status_code == 503:
@@ -834,46 +932,73 @@ async def websocket_ingest(ws: WebSocket) -> None:
             if max_seq is not None:
                 last_acked_seq = max_seq
             last = rows[-1]
-            await ws.send_json({
-                "type": "ack",
-                "inserted": result["inserted"],
-                "queued": result["queued"],
-                "last_acked_seq": last_acked_seq,
-            })
-            await _maybe_broadcast({
-                "type": "position_update",
-                "device_id": last[1],
-                "user_id": last[2],
-                "lat": last[3],
-                "lon": last[4],
-                "speed_ms": last[5],
-                "source": "ws_ingest",
-            })
+            await ws.send_json(
+                {
+                    "type": "ack",
+                    "inserted": result["inserted"],
+                    "queued": result["queued"],
+                    "last_acked_seq": last_acked_seq,
+                }
+            )
+            await _maybe_broadcast(
+                {
+                    "type": "position_update",
+                    "device_id": last[1],
+                    "user_id": last[2],
+                    "lat": last[3],
+                    "lon": last[4],
+                    "speed_ms": last[5],
+                    "source": "ws_ingest",
+                }
+            )
     except WebSocketDisconnect:
         logger.info("ws.ingest: mobile client disconnected")
     except Exception as e:
         logger.error("ws.ingest: unexpected error: %s", e)
 
+
 # ---------------------------------------------------------------------------
 # Query Endpoints (History, Live)
 # ---------------------------------------------------------------------------
 
+
 @app.get("/api/telemetry/live")
-async def get_live_positions(device_id: str | None = None, limit: int = 50) -> list[dict]:
+async def get_live_positions(
+    device_id: str | None = None, limit: int = 50
+) -> list[dict]:
     pool = await get_pool()
     async with pool.acquire() as conn:
         if device_id:
-            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 ORDER BY time DESC LIMIT $2", device_id, limit)
+            rows = await conn.fetch(
+                "SELECT * FROM gps_points WHERE device_id = $1 ORDER BY time DESC LIMIT $2",
+                device_id,
+                limit,
+            )
         else:
-            rows = await conn.fetch("SELECT DISTINCT ON (device_id) * FROM gps_points ORDER BY device_id, time DESC LIMIT $1", limit)
+            rows = await conn.fetch(
+                "SELECT DISTINCT ON (device_id) * FROM gps_points ORDER BY device_id, time DESC LIMIT $1",
+                limit,
+            )
     return [dict(r) for r in rows]
 
+
 @app.get("/api/telemetry/history/{device_id}")
-async def get_device_history(device_id: str, since_unix: float, until_unix: float | None = None) -> list[dict]:
+async def get_device_history(
+    device_id: str, since_unix: float, until_unix: float | None = None
+) -> list[dict]:
     pool = await get_pool()
     async with pool.acquire() as conn:
         if until_unix:
-            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 AND time BETWEEN to_timestamp($2) AND to_timestamp($3) ORDER BY time ASC", device_id, since_unix, until_unix)
+            rows = await conn.fetch(
+                "SELECT * FROM gps_points WHERE device_id = $1 AND time BETWEEN to_timestamp($2) AND to_timestamp($3) ORDER BY time ASC",
+                device_id,
+                since_unix,
+                until_unix,
+            )
         else:
-            rows = await conn.fetch("SELECT * FROM gps_points WHERE device_id = $1 AND time >= to_timestamp($2) ORDER BY time ASC", device_id, since_unix)
+            rows = await conn.fetch(
+                "SELECT * FROM gps_points WHERE device_id = $1 AND time >= to_timestamp($2) ORDER BY time ASC",
+                device_id,
+                since_unix,
+            )
     return [dict(r) for r in rows]

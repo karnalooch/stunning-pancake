@@ -52,10 +52,10 @@ def _effective_sim_profile_echo(state: dict) -> dict | None:
     from activities.sim_profile import resolve_sim_profile
 
     i = _redis_int_or_none(state.get("sim_intensity"))
-    l = _redis_int_or_none(state.get("sim_load"))
-    if i is None or l is None:
+    load_pct = _redis_int_or_none(state.get("sim_load"))
+    if i is None or load_pct is None:
         return None
-    return resolve_sim_profile(i, l)
+    return resolve_sim_profile(i, load_pct)
 
 
 def _bootstrap_live_athletes(min_users: int = 500) -> dict:

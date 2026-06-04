@@ -20,12 +20,11 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
    - `feat(admin): …`
    - `fix(simulator): …`
    - `docs: …`
-3. Przed PR:
-   ```bash
-   cd backend && python run_tests.py
-   cd admin && npm run lint && npm run build
-   python scripts/check_docs_links.py
+3. Przed PR — **cały monorepo** (Faza 0):
+   ```powershell
+   .\scripts\run-quality-baseline.ps1
    ```
+   Lub ręcznie: [docs/quality/README.md](docs/quality/README.md). Checklista PR: [docs/quality/PR_CHECKLIST.md](docs/quality/PR_CHECKLIST.md).
 
 ---
 
@@ -47,8 +46,9 @@ Checklist utrzymania: [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ## CI
 
-- **SPORT CI/CD** — backend, admin, audit, E2E (`.github/workflows/ci.yml`).
-- **Documentation** — `python scripts/check_docs_links.py` (`.github/workflows/docs.yml`).
+- **SPORT CI/CD** — backend, telemetry, mobile, admin, scripts, tokens, docs links, audit, E2E (`.github/workflows/ci.yml`).
+- **Documentation** (push do `docs/` tylko) — `.github/workflows/docs.yml`.
+- **Jakość** — program faz 0–5: [docs/quality/README.md](docs/quality/README.md).
 
 ---
 

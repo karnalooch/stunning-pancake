@@ -1,4 +1,5 @@
 """Telemetry ingest guard — packet-count semantics via ingest_guard module."""
+
 import os
 import sys
 from unittest.mock import AsyncMock, MagicMock
