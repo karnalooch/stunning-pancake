@@ -7,7 +7,8 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | en |
-| **translation** | [Polski](../../operations/OPERATIONS_INDEX.md) |
+| **translation** | [Polski](../../pl/operations/OPERATIONS_INDEX.md) |
+| **translation_status** | machine-translated |
 | **canonical_path** | docs/en/operations/OPERATIONS_INDEX.md |
 ---
 

@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](../../en/operations/TELEMETRY_SHARDING.md) |
+| **translation** | [English](.././TELEMETRY_SHARDING.md) |
 | **canonical_path** | docs/pl/operations/TELEMETRY_SHARDING.md |
 
 ---

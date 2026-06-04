@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](../../en/operations/OSRM.md) |
+| **translation** | [English](.././OSRM.md) |
 | **canonical_path** | docs/pl/operations/OSRM.md |
 
 ---

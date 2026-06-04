@@ -7,7 +7,8 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | en |
-| **translation** | [Polski](../../operations/RAILWAY_KUBERNETES.md) |
+| **translation** | [Polski](../../pl/operations/RAILWAY_KUBERNETES.md) |
+| **translation_status** | machine-translated |
 | **canonical_path** | docs/en/operations/RAILWAY_KUBERNETES.md |
 ---
 

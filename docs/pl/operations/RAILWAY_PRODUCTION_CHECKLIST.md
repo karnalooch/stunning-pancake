@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](../../en/operations/RAILWAY_PRODUCTION_CHECKLIST.md) |
+| **translation** | [English](.././RAILWAY_PRODUCTION_CHECKLIST.md) |
 | **translation_status** | reviewed |
 | **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md |

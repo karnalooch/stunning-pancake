@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](../../en/operations/README.md) |
+| **translation** | [English](.././README.md) |
 | **canonical_path** | docs/pl/operations/README.md |
 
 ---

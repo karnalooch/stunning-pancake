@@ -8,7 +8,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | See canonical document |
 | **lang** | pl |
-| **translation** | [English](../../en/operations/HANDOFF_AUTOMATION.md) |
+| **translation** | [English](.././HANDOFF_AUTOMATION.md) |
 | **canonical_path** | docs/pl/operations/HANDOFF_AUTOMATION.md |
 
 ---
