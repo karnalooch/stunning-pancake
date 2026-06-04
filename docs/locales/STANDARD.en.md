@@ -79,6 +79,22 @@ If only one language is updated, set registry status to `translation-debt` until
 
 ---
 
+## Layer diagrams (Mermaid)
+
+For **client → services → databases** flows (GPS, sessions, ingest):
+
+| Element | Rule |
+|---------|------|
+| Heading | `## Layers (client to server)` (PL: `Warstwy (od klienta do serwera)`) |
+| Fence | Blank line before/after a ` ```mermaid ` block — never glue heading and fence on one line |
+| Syntax | `flowchart LR` or `flowchart TB`; code identifiers in backticks |
+| Reference | [pl/DATA_RESILIENCE.md](../pl/DATA_RESILIENCE.md) (canonical PL body + diagram) |
+| C4 | [diagrams/architecture_c4.md](../diagrams/architecture_c4.md) — complementary, not a replacement |
+
+GitHub renders Mermaid in Markdown preview; link checks do not validate Mermaid syntax.
+
+---
+
 ## Migration phases
 
 | Phase | Action |

@@ -71,6 +71,22 @@ Tylko jeden język zaktualizowany → status `translation-debt` w rejestrze.
 
 ---
 
+## Diagramy warstw (Mermaid)
+
+Dla przepływów **klient → usługi → bazy** (np. GPS, sesje, ingest):
+
+| Element | Zasada |
+|---------|--------|
+| Nagłówek | `## Warstwy (od klienta do serwera)` |
+| Blok | Osobna linia przed i po: ` ```mermaid ` … ` ``` ` |
+| Składnia | `flowchart LR` lub `flowchart TB` — węzły po polsku/angielsku, nazwy kodu w backtickach |
+| Wzorzec | [pl/DATA_RESILIENCE.md](../pl/DATA_RESILIENCE.md) |
+| C4 / kontekst | [diagrams/architecture_c4.md](../diagrams/architecture_c4.md) — nie zastępuje diagramu warstw |
+
+GitHub renderuje Mermaid w podglądzie `.md` bez osobnego CI. Linki w podpisie diagramu → kanoniczne `docs/pl/` / `docs/en/`.
+
+---
+
 ## Fazy migracji
 
 | Faza | Działanie |

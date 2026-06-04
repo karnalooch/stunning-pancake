@@ -1,28 +1,24 @@
-# Document
-
-| | |
-|--|--|
-| **Status** | ✅ Active |
-| **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
-| **Audience** | Zobacz dokument kanoniczny |
-| **lang** | pl |
-| **translation** | [English](../DATA_RESILIENCE.md) |
-| **canonical_path** | docs/pl/DATA_RESILIENCE.md |
----
+# Odporność na utratę danych — 4VELO
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-06-04 |
 | **Audience** | Mobile, backend |
+| **lang** | pl |
+| **translation** | [English](../DATA_RESILIENCE.md) |
+| **canonical_path** | docs/pl/DATA_RESILIENCE.md |
+
+---
 
 Dokument opisuje warstwy trwałości danych GPS i sesji treningowych oraz pozostałe ryzyka.
 
-**Runbook:** [operations/MOBILE.md](../operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](./adr/004-persistent-storage-mmkv.md)
+**Runbook:** [operations/MOBILE.md](./operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](../adr/004-persistent-storage-mmkv.md)
 
-## Warstwy (od klienta do serwera)```mermaid
+## Warstwy (od klienta do serwera)
+
+```mermaid
 flowchart LR
   GPS[GPS / Expo Location] --> BUF[MMKV gps_buffer]
   BUF -->|overflow| OF[gps_buffer_overflow]
@@ -37,7 +33,9 @@ flowchart LR
   PATH --> ACT
   FIN --> ACT
   ACT --> VERIFY[Celery anti-cheat]
-```### 1. MMKV na urządzeniu (`mobile/src/services/gpsSyncStorage.ts`, `GpsSyncManager.ts`)
+```
+
+### 1. MMKV na urządzeniu (`mobile/src/services/gpsSyncStorage.ts`, `GpsSyncManager.ts`)
 
 | Klucz | Rola |
 |-------|------|

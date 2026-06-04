@@ -22,7 +22,7 @@
 
 Dokument opisuje warstwy trwałości danych GPS i sesji treningowych oraz pozostałe ryzyka.
 
-**Runbook:** [operations/MOBILE.md](./operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](./adr/004-persistent-storage-mmkv.md)
+**Runbook:** [operations/MOBILE.md](./pl/operations/MOBILE.md) · **ADR:** [adr/004-persistent-storage-mmkv.md](./adr/004-persistent-storage-mmkv.md)
 
 ## Warstwy (od klienta do serwera)
 
