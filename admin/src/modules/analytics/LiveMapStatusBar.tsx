@@ -14,6 +14,7 @@ export type LiveMapStatusBarProps = LiveMapHealthInput & {
     mapLoadError?: string | null;
     onRetryMap?: () => void;
     staleAfterMs?: number;
+    cachedPositionCount?: number;
 };
 
 export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {

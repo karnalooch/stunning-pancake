@@ -32,10 +32,16 @@ class TestLifecycleEnabled:
         monkeypatch.setenv("RAILWAY_OSRM_LIFECYCLE", "0")
         assert lifecycle.lifecycle_enabled() is False
 
-    def test_enabled_with_token(self, monkeypatch):
+    def test_disabled_by_default_even_with_token(self, monkeypatch):
         monkeypatch.setenv("DATABASE_URL", "postgres://x")
         monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
         monkeypatch.delenv("RAILWAY_OSRM_LIFECYCLE", raising=False)
+        assert lifecycle.lifecycle_enabled() is False
+
+    def test_enabled_when_explicit_on(self, monkeypatch):
+        monkeypatch.setenv("DATABASE_URL", "postgres://x")
+        monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
+        monkeypatch.setenv("RAILWAY_OSRM_LIFECYCLE", "1")
         assert lifecycle.lifecycle_enabled() is True
 
 
@@ -62,6 +68,7 @@ class TestScaleOsrm:
 
         monkeypatch.setenv("DATABASE_URL", "postgres://x")
         monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
+        monkeypatch.setenv("RAILWAY_OSRM_LIFECYCLE", "1")
         monkeypatch.setenv("RAILWAY_OSRM_SERVICE_ID", "svc-uuid")
         mock_wait.return_value = OsrmReadyWaitResult(True, 12.0, 3)
         out = lifecycle.scale_osrm_for_live_sim(running=True)
@@ -74,6 +81,7 @@ class TestScaleOsrm:
     def test_scaled_down_always_when_enabled(self, mock_set, monkeypatch):
         monkeypatch.setenv("DATABASE_URL", "postgres://x")
         monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
+        monkeypatch.setenv("RAILWAY_OSRM_LIFECYCLE", "1")
         monkeypatch.setenv("RAILWAY_OSRM_SERVICE_ID", "svc-uuid")
         monkeypatch.setenv("SCALE_SIM_ROUTING_BACKEND", "brouter")
         mock_set.return_value = True

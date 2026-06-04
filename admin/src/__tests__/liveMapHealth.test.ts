@@ -85,4 +85,21 @@ describe('liveMapHealth', () => {
         expect(formatLastSyncAgo(Date.now() - 500)).toBe('teraz');
         expect(statusLabel('live')).toBe('Live');
     });
+
+    it('reports stale not error when polls fail but map has cached riders', () => {
+        const h = computeLiveMapHealth({
+            mapReady: true,
+            canFetch: true,
+            tabVisible: true,
+            liveFetchPaused: false,
+            ingestEngaged: false,
+            lastSuccessAt: Date.now() - 60_000,
+            lastErrorAt: Date.now(),
+            consecutiveErrors: 4,
+            lastLatencyMs: null,
+            cachedPositionCount: 785,
+        });
+        expect(h.status).toBe('stale');
+        expect(h.message).toContain('ostatnie znane pozycje');
+    });
 });

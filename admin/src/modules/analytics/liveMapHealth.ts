@@ -38,6 +38,8 @@ export type LiveMapHealthInput = {
     lastLatencyMs: number | null;
     meta?: Record<string, unknown> | null;
     staleAfterMs?: number;
+    /** Riders still drawn from last good payload while HTTP poll fails */
+    cachedPositionCount?: number;
 };
 
 export const DEFAULT_STALE_AFTER_MS = 12_000;
@@ -164,10 +166,27 @@ export function computeLiveMapHealth(input: LiveMapHealthInput): LiveMapHealthSn
     }
 
     if (input.consecutiveErrors > 0) {
-        const errMsg =
-            input.consecutiveErrors >= 3
-                ? 'Wielokrotny błąd telemetry — dane mogą być nieaktualne'
-                : 'Błąd odświeżania telemetry';
+        const cached = (input.cachedPositionCount ?? 0) > 0;
+        const manyErrors = input.consecutiveErrors >= 3;
+        if (cached && manyErrors) {
+            return {
+                status: 'stale',
+                readMode,
+                lastSuccessAt: input.lastSuccessAt,
+                lastErrorAt: input.lastErrorAt,
+                consecutiveErrors: input.consecutiveErrors,
+                lastLatencyMs: input.lastLatencyMs,
+                positionsCapped,
+                cachedResponse,
+                detailCeiling,
+                pollAfterMs,
+                message:
+                    'Odświeżanie telemetrii chwilowo niedostępne — mapa pokazuje ostatnie znane pozycje (backend może być obciążony symulatorem)',
+            };
+        }
+        const errMsg = manyErrors
+            ? 'Wielokrotny błąd telemetrii — dane mogą być nieaktualne'
+            : 'Błąd odświeżania telemetrii';
         return {
             status: 'error',
             readMode,

@@ -40,7 +40,7 @@ function Set-Var([string]$Name, [string]$Value) {
 
 Write-Host "Configuring OSRM lifecycle on $BackendService ..."
 Set-Var 'RAILWAY_API_TOKEN' $env:RAILWAY_API_TOKEN
-Set-Var 'RAILWAY_OSRM_LIFECYCLE' '1'
+Set-Var 'RAILWAY_OSRM_LIFECYCLE' '0'
 Set-Var 'RAILWAY_OSRM_SERVICE_ID' $OsrmServiceId
 Set-Var 'RAILWAY_OSRM_SERVICE_NAME' 'osrm'
 Set-Var 'RAILWAY_PROJECT_ID' $ProjectId

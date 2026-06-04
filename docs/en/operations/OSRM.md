@@ -64,13 +64,13 @@ Railway SSOT: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | Env (Railway **backend** service) | Description |
 |-----------------------------------|-------------|
 | `RAILWAY_API_TOKEN` | Railway → Account → Tokens |
-| `RAILWAY_OSRM_LIFECYCLE` | `0` disables; default on when token set (non-SQLite) |
+| `RAILWAY_OSRM_LIFECYCLE` | **`1` enables** backend scale; default **off** (GraphQL from container often 403 — use CLI) |
 | `RAILWAY_OSRM_SERVICE_ID` | Optional UUID; else lookup by name `osrm` |
 | `SCALE_SIM_ROUTING_BACKEND` | Scale-up only for `osrm` or `auto`; scale-down when lifecycle enabled |
 
 **Cold start:** after scale-up, graph load from volume takes **minutes** — use `auto` until `:5000` health is OK.
 
-**Manual:** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1`
+**Manual:** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1` (always `europe-west4-drams3a` + `us-west2=0`)
 
 **Volume:** disk cost remains at 0 replicas; process RAM — no.
 
@@ -96,7 +96,8 @@ Railway SSOT: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | `Connection refused` on `OSRM_URL` | `osrm` container still building the graph — check `osrm-extract` logs |
 | `NoRoute` / `NoSegment` | Point outside extract (wrong region) — check `OSRM_PBF_URL` |
 | Sim still calls BRouter | Dashboard overwrites env — redeploy with `railway.json` or `railway-sync-sim-env` |
-| `osrm_lifecycle: failed` in API | Missing backend token or wrong service id — check backend Variables |
+| After scale: **US West** + empty `osrm-volume-*` (0 MB) | Scale EU **and** `us-west2=0`; detach empty volume, attach **`osrm-volume`**, redeploy |
+| `osrm_lifecycle: failed` / HTTP 403 from backend | Set `RAILWAY_OSRM_LIFECYCLE=0`; use `railway-osrm-scale.ps1` from local CLI |
 | OSRM off after stop, no routes | Expected until scale-up; use `auto` or wait for cold start |
 
 **Related:** [SIMULATOR.md](./SIMULATOR.md) · [BROUTER.md](./BROUTER.md) · [infrastructure/osrm/README.md](../../../infrastructure/osrm/README.md)

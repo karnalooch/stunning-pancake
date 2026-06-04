@@ -65,14 +65,14 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | Env (serwis **backend** na Railway) | Opis |
 |-------------------------------------|------|
 | `RAILWAY_API_TOKEN` | Token z Railway → Account → Tokens |
-| `RAILWAY_OSRM_LIFECYCLE` | `0` wyłącza; domyślnie włączone gdy jest token i nie SQLite |
+| `RAILWAY_OSRM_LIFECYCLE` | **`1` włącza** scale z backendu; domyślnie **wyłączone** (GraphQL z kontenera często 403 — użyj CLI) |
 | `RAILWAY_OSRM_SERVICE_ID` | Opcjonalnie UUID; inaczej lookup po nazwie `osrm` |
 | `RAILWAY_OSRM_REGION` | `europe-west4-drams3a` (multiRegionConfig — **nie** top-level `numReplicas`) |
 | `SCALE_SIM_ROUTING_BACKEND` | Scale-up tylko przy `osrm` lub `auto`; scale-down zawsze gdy lifecycle włączone |
 
 **Cold start:** backend po scale-up czeka do `RAILWAY_OSRM_READY_MAX_WAIT_S` (domyślnie 90 s) na `/health`. Workerzy: **`SCALE_SIM_ROUTING_BACKEND=auto`** (nie `osrm` na sztywno). Pula ≥5k userów: automatyczny clamp `active_ratio≤0.25`, `tick_seconds≥10` przy starcie live (bez profilu intensity).
 
-**Ręcznie (ops):** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1`
+**Ręcznie (ops):** `.\scripts\railway-osrm-scale.ps1 -Replicas 0|1` (zawsze `europe-west4-drams3a` + `us-west2=0`)
 
 **Volume:** po scale-down nadal płacisz za dysk; RAM procesu — nie.
 
@@ -100,5 +100,7 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 | Sim nadal woła BRouter | Dashboard nadpisuje env — redeploy z `railway.json` lub `railway-sync-sim-env` |
 | `osrm_lifecycle: failed` w API | Brak tokena na backendzie lub złe `RAILWAY_OSRM_SERVICE_ID` — sprawdź Variables backendu |
 | OSRM zgaszony po stopie, sim nie startuje routingu | Oczekiwane do scale-up; użyj `auto` lub poczekaj na cold start |
+| Po scale **US West** + pusty volume `osrm-volume-*` (0 MB) | Scale tylko EU **i** `us-west2=0`; odłącz pusty volume, podepnij **`osrm-volume`** (~148 MB+), redeploy |
+| `osrm_lifecycle: failed` / HTTP 403 z backendu | Ustaw `RAILWAY_OSRM_LIFECYCLE=0`; scale: `railway-osrm-scale.ps1` z lokalnego CLI |
 
 **Powiązane:** [SIMULATOR.md](./SIMULATOR.md) · [BROUTER.md](./BROUTER.md) · [infrastructure/osrm/README.md](../../../infrastructure/osrm/README.md)

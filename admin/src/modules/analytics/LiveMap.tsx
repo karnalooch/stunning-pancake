@@ -866,6 +866,7 @@ export const LiveMap: React.FC = () => {
                 lastLatencyMs: lastRefreshMs,
                 meta: lastTelemetryMetaRef.current,
                 staleAfterMs,
+                cachedPositionCount: onlineCount,
             }).status}
             style={{ position: 'relative', width: '100%', height: '100%', minHeight: 450, borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)' }}
             role="region"
@@ -966,9 +967,12 @@ export const LiveMap: React.FC = () => {
                 mapLoadError={mapLoadError}
                 onRetryMap={retryMapLoad}
                 onRetry={() => {
+                    consecutiveErrorsRef.current = 0;
+                    setConsecutiveErrors(0);
                     restartTelemetryStream();
                     fetchPositions({ priority: true, snap: true });
                 }}
+                cachedPositionCount={onlineCount}
             />
             {mapReady && mapZoom != null && (
                 <Box

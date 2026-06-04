@@ -22,6 +22,9 @@ DEFAULT_PROJECT_ID = "ce13089b-76f4-4114-a892-ad13e23c8761"
 DEFAULT_ENVIRONMENT_ID = "f30e70a7-b4d2-42aa-8137-21faa091b969"
 DEFAULT_SERVICE_NAME = "osrm"
 DEFAULT_OSRM_REGION = "europe-west4-drams3a"
+# Scale EU only must also pin US-West to 0 — otherwise Railway can leave a US replica
+# with a fresh empty volume while EU is at 0 replicas.
+_PIN_OTHER_REGIONS = ("us-west2",)
 
 _SERVICE_ID_CACHE: str | None = None
 
@@ -53,10 +56,8 @@ def lifecycle_enabled() -> bool:
         return False
     if not (os.getenv("RAILWAY_API_TOKEN") or "").strip():
         return False
-    if _lifecycle_explicitly_enabled():
-        return True
-    # Default: on when token present (prod backend with Railway vars).
-    return True
+    # Opt-in only: GraphQL from backend often hits Cloudflare 403; use CLI scale instead.
+    return _lifecycle_explicitly_enabled()
 
 
 def _sim_wants_osrm() -> bool:
@@ -139,12 +140,20 @@ def resolve_osrm_service_id() -> str:
     raise RuntimeError(f"Railway service not found: {name!r} in project {_project_id()}")
 
 
+def _multi_region_config(replicas: int) -> dict[str, dict[str, int]]:
+    region = _osrm_region()
+    cfg: dict[str, dict[str, int]] = {region: {"numReplicas": replicas}}
+    for other in _PIN_OTHER_REGIONS:
+        if other != region:
+            cfg[other] = {"numReplicas": 0}
+    return cfg
+
+
 def set_osrm_replicas(replicas: int) -> bool:
     """
     Scale OSRM via multiRegionConfig (top-level numReplicas rejects 0 on Railway).
-    Triggers serviceInstanceRedeploy so runtime matches config (same as CLI scale).
+    Does not redeploy — Railway applies replica changes like `railway service scale`.
     """
-    region = _osrm_region()
     update_mutation = """
     mutation($serviceId: String!, $environmentId: String!, $input: ServiceInstanceUpdateInput!) {
       serviceInstanceUpdate(serviceId: $serviceId, environmentId: $environmentId, input: $input)
@@ -153,24 +162,13 @@ def set_osrm_replicas(replicas: int) -> bool:
     variables = {
         "serviceId": resolve_osrm_service_id(),
         "environmentId": _environment_id(),
-        "input": {"multiRegionConfig": {region: {"numReplicas": replicas}}},
+        "input": {"multiRegionConfig": _multi_region_config(replicas)},
     }
     out = _gql(update_mutation, variables)
     ok = (out.get("data") or {}).get("serviceInstanceUpdate")
     if ok is not True and ok is not False:
         logger.warning("serviceInstanceUpdate unexpected payload: %s", ok)
-
-    redeploy_mutation = """
-    mutation($serviceId: String!, $environmentId: String!) {
-      serviceInstanceRedeploy(serviceId: $serviceId, environmentId: $environmentId)
-    }
-    """
-    redeploy = _gql(
-        redeploy_mutation,
-        {"serviceId": variables["serviceId"], "environmentId": variables["environmentId"]},
-    )
-    redeploy_ok = (redeploy.get("data") or {}).get("serviceInstanceRedeploy")
-    return bool(ok) and redeploy_ok is not False
+    return bool(ok)
 
 
 def scale_osrm_for_live_sim(*, running: bool) -> OsrmScaleResult:

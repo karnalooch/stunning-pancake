@@ -15,7 +15,8 @@ param(
     [int]$Replicas = 1,
     [string]$ServiceName = 'osrm',
     [string]$Environment = 'production',
-    [string]$Region = 'europe-west4-drams3a'
+    [string]$PrimaryRegion = 'europe-west4-drams3a',
+    [string]$PinRegion = 'us-west2'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,8 +24,9 @@ if (-not $env:RAILWAY_API_TOKEN) {
     Write-Error 'RAILWAY_API_TOKEN required (User env or Railway Variables).'
 }
 
-Write-Host "Scaling $ServiceName -> $Region=$Replicas (triggers Railway apply/redeploy)..."
-railway service scale --service $ServiceName -e $Environment "${Region}=${Replicas}" 2>&1 | Out-Host
+# Always pin the non-EU region to 0 — scaling EU alone left US-West up with an empty volume.
+Write-Host "Scaling $ServiceName -> ${PrimaryRegion}=$Replicas ${PinRegion}=0 ..."
+railway service scale --service $ServiceName -e $Environment "${PrimaryRegion}=${Replicas}" "${PinRegion}=0" 2>&1 | Out-Host
 if ($Replicas -eq 1) {
     Write-Host 'OSRM cold start: graph load on volume may take several minutes. Use SCALE_SIM_ROUTING_BACKEND=auto until :5000 is healthy.'
 }
