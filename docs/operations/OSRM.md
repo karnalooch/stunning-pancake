@@ -56,6 +56,7 @@ SSOT Railway: `celery-worker-simulation/railway.json`, `celery-worker-routing/ra
 
 | Objaw | Działanie |
 |-------|-----------|
+| Logi tylko `Mounting volume…`, brak `[osrm]` | Healthcheck na `:5000` przed `osrm-routed` — w `railway.json`: `healthcheckPath: null` |
 | `Connection refused` na `OSRM_URL` | Kontener `osrm` jeszcze buduje graf — logi `osrm-extract` |
 | `NoRoute` / `NoSegment` | Punkt poza extractem (np. zły region) — sprawdź `OSRM_PBF_URL` |
 | Sim nadal woła BRouter | Dashboard nadpisuje env — redeploy z `railway.json` lub `railway-sync-sim-env` |

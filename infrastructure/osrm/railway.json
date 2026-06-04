@@ -8,6 +8,8 @@
   "deploy": {
     "numReplicas": 1,
     "sleepApplication": false,
+    "healthcheckPath": null,
+    "healthcheckTimeout": null,
     "restartPolicy": "ALWAYS",
     "limitOverride": {
       "containers": {
