@@ -14,6 +14,22 @@ from datetime import timedelta
 from django.db import IntegrityError
 
 
+def _get_or_create_poi(*, name: str, tenant, defaults: dict | None = None):
+    """
+    Idempotent POI seed — tolerates duplicate rows (no unique on name+tenant).
+    Keeps the oldest row and removes extras so get_or_create does not explode.
+    """
+    defaults = defaults or {}
+    qs = POI.objects.filter(name=name, tenant=tenant).order_by("pk")
+    existing = qs.first()
+    if existing is not None:
+        dupes = qs.exclude(pk=existing.pk)
+        if dupes.exists():
+            dupes.delete()
+        return existing, False
+    return POI.objects.create(name=name, tenant=tenant, **defaults), True
+
+
 def seed():
     print("🌱 Seeding SPORT Platform...")
 
@@ -50,7 +66,7 @@ def seed():
     siedlce_admin.save()
 
     # 4. Create POIs & Vouchers
-    coffee_poi, _ = POI.objects.get_or_create(
+    coffee_poi, _ = _get_or_create_poi(
         name="Eco Coffee Siedlce",
         tenant=siedlce,
         defaults={"location": Point(22.2906, 52.1672)},  # lon, lat
