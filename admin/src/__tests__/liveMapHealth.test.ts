@@ -28,6 +28,27 @@ describe('liveMapHealth', () => {
         expect(h.status).toBe('paused');
     });
 
+    it('stays live when server bbox cache returns riders (normal TTL)', () => {
+        const now = Date.now();
+        const h = computeLiveMapHealth({
+            mapReady: true,
+            canFetch: true,
+            tabVisible: true,
+            liveFetchPaused: false,
+            ingestEngaged: false,
+            lastSuccessAt: now,
+            lastErrorAt: null,
+            consecutiveErrors: 0,
+            lastLatencyMs: 539,
+            cachedPositionCount: 120,
+            meta: { cached: true, positions_returned: 45 },
+            now,
+        });
+        expect(h.status).toBe('live');
+        expect(h.readMode).toBe('cached');
+        expect(h.message).toBeNull();
+    });
+
     it('reports degraded under ingest protection', () => {
         const now = Date.now();
         const h = computeLiveMapHealth({

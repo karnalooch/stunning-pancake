@@ -240,17 +240,13 @@ export function computeLiveMapHealth(input: LiveMapHealthInput): LiveMapHealthSn
         };
     }
 
-    const showCachedDegraded =
-        readMode === 'cached' && (input.cachedPositionCount ?? 0) > 0;
-    if (ingestDegraded || positionsCapped || showCachedDegraded) {
+    const cacheStaleEmpty = Boolean(meta?.cache_stale_empty);
+    if (ingestDegraded || positionsCapped || cacheStaleEmpty) {
         let message: string | null = null;
         if (ingestDegraded) message = 'Tryb ochrony ingest (ADR 011) — rzadsze odświeżanie';
         else if (positionsCapped) message = 'Limit viewport — część rowerzystów nie jest rysowana';
-        else if (cachedResponse) {
-            message =
-                readMode === 'ingest_protected'
-                    ? 'Tryb ochrony ingest — odpowiedź z krótkiego cache Redis'
-                    : 'Odpowiedź z cache serwera (krótki TTL bbox)';
+        else if (cacheStaleEmpty) {
+            message = 'Cache bbox bez pozycji w viewport — odświeżanie z Redis';
         }
         return {
             status: 'degraded',
