@@ -7,7 +7,7 @@ User anti-cheat continues to use BRouterService only.
 from __future__ import annotations
 
 import os
-from typing import Callable
+from collections.abc import Callable
 
 from activities.osrm_service import OsrmService
 from activities.services import BRouterService

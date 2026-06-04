@@ -63,7 +63,7 @@ One-time in Railway UI (if deploy fails without config):
     Config file path: $ConfigPath
     Root directory: /
   Resources: 8 GB RAM, 4 vCPU (match railway.json)
-  Volume: /data — **resize to >= 10 GB** in UI (CLI often creates ~5 GB; Poland needs ~10 GB)
+  Volume: /data — Pro: ~50 GB default; Hobby: resize to >= 15 GB (.\scripts\railway-resize-osrm-volume.ps1)
 
 "@
 } else {

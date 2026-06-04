@@ -259,7 +259,7 @@ class FakeRedis:
             hits = hits[: int(count)]
         return [m for _d, m in hits]
 
-    def pipeline(self) -> "FakePipeline":
+    def pipeline(self) -> FakePipeline:
         return FakePipeline(self)
 
 
@@ -287,7 +287,7 @@ class _GeoDict(dict):
 class FakePipeline:
     """Queues commands and replays them on execute(), like redis-py pipelines."""
 
-    def __init__(self, client: "FakeRedis") -> None:
+    def __init__(self, client: FakeRedis) -> None:
         self._client = client
         self._ops: list[tuple] = []
 

@@ -222,7 +222,7 @@ class TelemetryShardRouter:
             from core.redis_cluster import get_redis
 
             shared = get_redis()
-            cls._clients = {i: shared for i in range(n)}
+            cls._clients = dict.fromkeys(range(n), shared)
             return cls._clients
 
         clients: dict[int, Any] = {}
