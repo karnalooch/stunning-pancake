@@ -240,7 +240,9 @@ export function computeLiveMapHealth(input: LiveMapHealthInput): LiveMapHealthSn
         };
     }
 
-    if (ingestDegraded || positionsCapped || readMode === 'cached') {
+    const showCachedDegraded =
+        readMode === 'cached' && (input.cachedPositionCount ?? 0) > 0;
+    if (ingestDegraded || positionsCapped || showCachedDegraded) {
         let message: string | null = null;
         if (ingestDegraded) message = 'Tryb ochrony ingest (ADR 011) — rzadsze odświeżanie';
         else if (positionsCapped) message = 'Limit viewport — część rowerzystów nie jest rysowana';

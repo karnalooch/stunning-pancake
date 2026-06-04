@@ -66,7 +66,8 @@ Set-Vars 'celery-worker-simulation' @(
     'SIM_SLO_AUTO_THROTTLE=1',
     'SIM_SLO_WARMING_ABOVE=280',
     'SIM_SLO_AFTER_TICKS=6',
-    'SIM_SLO_STARTS_CAP=50'
+    'SIM_SLO_STARTS_CAP=50',
+    'SCALE_POSTGRES_DISK_BUDGET_GB=5'
 )
 
 Write-Host 'Syncing routing...'
@@ -83,7 +84,8 @@ Set-Vars 'celery-worker-routing' @(
     'SCALE_SIM_ROUTING_BACKEND=auto',
     'OSRM_TIMEOUT=15',
     'OSRM_RETRIES=2',
-    'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1'
+    'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1',
+    'SCALE_POSTGRES_DISK_BUDGET_GB=5'
 )
 
 Write-Host 'Syncing backend (OSRM lifecycle vars need RAILWAY_API_TOKEN from caller env)...'
@@ -105,7 +107,8 @@ $backendVars = @(
     'SCALE_SIM_ROUTING_BACKEND=auto',
     'SCALE_SIM_LARGE_POOL_MIN_USERS=5000',
     'SCALE_SIM_LARGE_POOL_MAX_ACTIVE_RATIO=0.25',
-    'SCALE_SIM_LARGE_POOL_MIN_TICK_SECONDS=10'
+    'SCALE_SIM_LARGE_POOL_MIN_TICK_SECONDS=10',
+    'SCALE_POSTGRES_DISK_BUDGET_GB=5'
 )
 if ($env:RAILWAY_API_TOKEN) {
     $backendVars += "RAILWAY_API_TOKEN=$($env:RAILWAY_API_TOKEN)"

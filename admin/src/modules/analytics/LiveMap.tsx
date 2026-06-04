@@ -249,7 +249,7 @@ export const LiveMap: React.FC = () => {
         const counts: Record<string, number> = {};
         for (const c of POLAND_SIM_CITIES) counts[c.slug] = 0;
         for (const p of list) {
-            if (!p.lat || !p.lng) continue;
+            if (!Number.isFinite(p.lat) || !Number.isFinite(p.lng)) continue;
             const slug = nearestCitySlug(p.lat, p.lng);
             counts[slug] = (counts[slug] ?? 0) + 1;
         }
@@ -279,6 +279,13 @@ export const LiveMap: React.FC = () => {
                 ? meta.live_poll_interval_multiplier
                 : 1;
         if (pollMult >= 1) ingestPollMultRef.current = pollMult;
+
+        const viewportReturned = meta?.positions_returned ?? meta?.viewport_returned;
+        if (list.length === 0 && viewportReturned === 0) {
+            setCyclists(0);
+            setRunners(0);
+            return;
+        }
 
         const bikeMeta = meta?.viewport_bike;
         const runMeta = meta?.viewport_run;
@@ -323,7 +330,13 @@ export const LiveMap: React.FC = () => {
         if (map && layersReadyRef.current) setCityHubData(map, cityCountsRef.current);
     }, [aggregateCityCounts]);
 
-    const ingestPositions = useCallback((list: UserPosition[], opts?: { snap?: boolean }) => {
+    const flushPositionsToMapLayer = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !layersReadyRef.current) return;
+        setLivePositionsData(map, positionsRef.current);
+    }, []);
+
+    const ingestPositions = useCallback((list: LiveMapPosition[], opts?: { snap?: boolean }) => {
         positionsRef.current = list;
         if (!interpolatorRef.current) {
             interpolatorRef.current = new LivePositionInterpolator((blended) => {
@@ -332,10 +345,11 @@ export const LiveMap: React.FC = () => {
         }
         if (opts?.snap) {
             interpolatorRef.current.snapTo(list);
+            flushPositionsToMapLayer();
         } else {
             interpolatorRef.current.ingestSnapshot(list);
         }
-    }, [pushPositionsToMap]);
+    }, [pushPositionsToMap, flushPositionsToMapLayer]);
 
     const ingestPositionsRef = useRef(ingestPositions);
     ingestPositionsRef.current = ingestPositions;
@@ -369,10 +383,13 @@ export const LiveMap: React.FC = () => {
             ingestPositions([], { snap: true });
             return;
         }
-        if (keepStale) return;
+        if (keepStale) {
+            flushPositionsToMapLayer();
+            return;
+        }
 
         ingestPositions(list, { snap });
-    }, [applyMetaCounts, applyCityCounts, ingestPositions]);
+    }, [applyMetaCounts, applyCityCounts, ingestPositions, flushPositionsToMapLayer]);
 
     const fetchPositions = useCallback(async (opts?: { priority?: boolean; snap?: boolean }) => {
         if (!canFetch || liveFetchPausedRef.current || !tabVisibleRef.current) return;
@@ -699,6 +716,9 @@ export const LiveMap: React.FC = () => {
                 setMapLoadError(null);
                 setLoading(false);
                 setMapReady(true);
+                if (canFetch && !liveFetchPausedRef.current) {
+                    fetchPositionsRef.current({ priority: true, snap: true });
+                }
             });
             map.on('error', (e: { error?: { message?: string; status?: number; url?: string } }) => {
                 if (cancelled) return;

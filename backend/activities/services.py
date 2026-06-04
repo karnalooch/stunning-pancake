@@ -438,18 +438,24 @@ class TelemetryService:
         device_id = str(e.get("deviceId", ""))
         lat = float(e.get("lat", 0))
         lon = float(e.get("lng", 0))
+        raw_type = str(e.get("type", "person") or "person")
+        norm_type = raw_type.strip().lower()
+        if norm_type in ("bike", "bicycle", "cycling", "cyclist"):
+            norm_type = "bike"
+        elif norm_type in ("run", "running", "runner", "walk", "walking", "foot", "person"):
+            norm_type = "run" if norm_type != "person" else "person"
         payload = _json.dumps(
             {
                 "id": device_id,
                 "deviceId": device_id,
                 "name": e.get("name", f"Athlete {device_id}"),
-                "type": e.get("type", "person"),
+                "type": norm_type,
                 "latitude": lat,
                 "longitude": lon,
                 "speed": e.get("speed", 0),
                 "course": e.get("course", 0),
                 "deviceTime": timezone.now().isoformat(),
-                "category": e.get("type", "person"),
+                "category": norm_type,
             }
         )
         return device_id, payload, lon, lat
@@ -867,17 +873,49 @@ class TelemetryService:
             meta["returned"] = 0
             return positions, meta
 
-        for pos in raw_positions:
-            if bbox and not country_overview:
-                west, south, east, north = bbox
-                lon = pos.get("longitude", pos.get("lng", 0))
-                lat = pos.get("latitude", pos.get("lat", 0))
-                if not (west <= lon <= east and south <= lat <= north):
-                    continue
-            positions.append(pos)
-            if len(positions) >= cap:
+        def _in_bbox(pos: dict, west: float, south: float, east: float, north: float) -> bool:
+            try:
+                lon = float(pos.get("longitude", pos.get("lng", 0)))
+                lat = float(pos.get("latitude", pos.get("lat", 0)))
+            except (TypeError, ValueError):
+                return False
+            return west <= lon <= east and south <= lat <= north
+
+        if bbox and not country_overview:
+            west, south, east, north = bbox
+            for pos in raw_positions:
+                if _in_bbox(pos, west, south, east, north):
+                    positions.append(pos)
+                    if len(positions) >= cap:
+                        meta["capped"] = True
+                        break
+            # Street zoom: strict bbox often drops riders on the edge — relax once.
+            if (
+                not positions
+                and raw_positions
+                and zoom is not None
+                and zoom >= 11.5
+            ):
+                pad_lon = max(0.01, (east - west) * 0.12)
+                pad_lat = max(0.01, (north - south) * 0.12)
+                for pos in raw_positions:
+                    if _in_bbox(
+                        pos,
+                        west - pad_lon,
+                        south - pad_lat,
+                        east + pad_lon,
+                        north + pad_lat,
+                    ):
+                        positions.append(pos)
+                        if len(positions) >= cap:
+                            meta["capped"] = True
+                            break
+                if positions:
+                    meta["bbox_relaxed"] = True
+        else:
+            positions = list(raw_positions[:cap])
+            if len(raw_positions) > cap:
                 meta["capped"] = True
-                break
 
         meta["returned"] = len(positions)
         return positions[:cap], meta
@@ -934,7 +972,9 @@ class TelemetryService:
             effective_cache_ttl = max(TELEMETRY_LIVE_CACHE_TTL, read_policy.cache_ttl_seconds)
 
         cache_key = cls._live_cache_key(bbox, cap, zoom) if bbox else None
-        if cache_key and not skip_cache:
+        # Ingest guard: skip bbox cache — stale snapshots caused empty map + live meta counts.
+        use_live_cache = cache_key and not skip_cache and not read_policy.ingest_engaged
+        if use_live_cache:
             cached = cls._get_live_cached(cache_key, effective_cache_ttl)
             if cached is not None:
                 return cached

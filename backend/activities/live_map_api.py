@@ -9,6 +9,9 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+# Align with admin liveMapZoom.ts CLUSTER_MAX_ZOOM / apiDetailForZoom.
+LIVE_MAP_FULL_DETAIL_MIN_ZOOM = 11.5
+
 
 def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:
     for key in keys:
@@ -81,7 +84,7 @@ def parse_live_map_query_params(
     if detail not in ("summary", "standard", "full"):
         if zoom_param is not None and zoom_param < 5:
             detail = "summary"
-        elif zoom_param is not None and zoom_param < 11.5:
+        elif zoom_param is not None and zoom_param < LIVE_MAP_FULL_DETAIL_MIN_ZOOM:
             detail = "standard"
         else:
             detail = "full"
@@ -263,6 +266,7 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
                 row["ride_state"] = ride_state
             enriched_data.append(row)
 
+    viewport_returned = len(enriched_data)
     active_riding = ride_on_map or (
         telemetry_meta.get("active_riding") or telemetry_meta.get("redis_active", 0)
     )
@@ -281,7 +285,7 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     read_mode = "normal"
     if read_policy.ingest_engaged:
         read_mode = "ingest_protected"
-    elif telemetry_meta.get("cached"):
+    elif telemetry_meta.get("cached") and viewport_returned > 0:
         read_mode = "cached"
     elif telemetry_meta.get("capped"):
         read_mode = "viewport_capped"
@@ -293,7 +297,8 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         "positions": enriched_data,
         "meta": {
             **telemetry_meta,
-            "positions_returned": len(enriched_data),
+            "positions_returned": viewport_returned,
+            "viewport_returned": viewport_returned,
             "detail": detail,
             "redis_active": active_riding,
             "active_riding": active_riding,

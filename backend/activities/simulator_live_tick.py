@@ -545,11 +545,13 @@ def _run_live_tick_body():
             clon = ride.get("lon", 21.0122)
             course = 0
 
+        act = str(ride.get("act_type", "BIKE") or "BIKE").strip().lower()
+        sim_type = "bike" if act in ("bike", "bicycle", "cycling") else "run"
         telemetry_entries.append(
             {
                 "deviceId": str(user_id),
                 "name": f"Athlete {user_id}",
-                "type": ride.get("act_type", "BIKE"),
+                "type": sim_type,
                 "lat": clat,
                 "lng": clon,
                 "speed": speed_kmh / 3.6,
