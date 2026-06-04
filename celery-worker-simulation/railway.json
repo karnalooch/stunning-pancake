@@ -17,6 +17,8 @@
   },
   "variables": {
     "BROUTER_URLS": "http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter",
+    "OSRM_URL": "http://osrm.railway.internal:5000",
+    "SCALE_SIM_ROUTING_BACKEND": "osrm",
     "BROUTER_TIMEOUT": "30",
     "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
     "SCALE_SIM_SKIP_BROUTER": "0",
@@ -40,6 +42,11 @@
     "SCALE_SIM_MAX_PIPELINE_ABSOLUTE": "2000",
     "SCALE_SIM_RAMP_START_DELAY_MAX": "8",
     "SCALE_SIM_RAMP_TICKS": "15",
-    "BROUTER_RETRIES": "3"
+    "BROUTER_RETRIES": "3",
+    "SCALE_SIM_ROUTE_TEMPLATE_CACHE": "1",
+    "SIM_SLO_AUTO_THROTTLE": "1",
+    "SIM_SLO_WARMING_ABOVE": "280",
+    "SIM_SLO_AFTER_TICKS": "6",
+    "SIM_SLO_STARTS_CAP": "50"
   }
 }

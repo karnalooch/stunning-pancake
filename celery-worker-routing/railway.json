@@ -17,6 +17,8 @@
   },
   "variables": {
     "BROUTER_URLS": "http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter",
+    "OSRM_URL": "http://osrm.railway.internal:5000",
+    "SCALE_SIM_ROUTING_BACKEND": "osrm",
     "BROUTER_TIMEOUT": "25",
     "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
     "CELERY_WORKER_QUEUES": "routing",
@@ -31,6 +33,7 @@
     "SIM_BP_MIN_DISPATCH_PER_TICK": "25",
     "SIM_BP_DRAIN_DISPATCH_PER_TICK": "50",
     "SIM_BP_QUEUE_HEADROOM": "25",
-    "BROUTER_RETRIES": "3"
+    "BROUTER_RETRIES": "3",
+    "SCALE_SIM_ROUTE_TEMPLATE_CACHE": "1"
   }
 }

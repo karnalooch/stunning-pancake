@@ -19,7 +19,14 @@ if (-not $env:RAILWAY_API_TOKEN) {
 }
 
 Push-Location $PSScriptRoot\..
-railway link -w "karnalooch's Projects" -p $ProjectName -e $Environment 2>&1 | Out-Null
+$ProjectId = if ($env:RAILWAY_PROJECT_ID) { $env:RAILWAY_PROJECT_ID } else { 'ce13089b-76f4-4114-a892-ad13e23c8761' }
+$statusOut = railway status 2>&1 | Out-String
+if ($statusOut -notmatch [regex]::Escape($ProjectName)) {
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    railway link -p $ProjectId -e $Environment --json 2>&1 | Out-Null
+    $ErrorActionPreference = $prevEap
+}
 
 $extra = @()
 if ($SkipDeploys) { $extra = @('--skip-deploys') }
@@ -46,7 +53,16 @@ Set-Vars 'celery-worker-simulation' @(
     'SCALE_SIM_RAMP_START_DELAY_MAX=8',
     'SCALE_SIM_RAMP_TICKS=15',
     'BROUTER_RETRIES=3',
-    'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter'
+    'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter',
+    'OSRM_URL=http://osrm.railway.internal:5000',
+    'SCALE_SIM_ROUTING_BACKEND=osrm',
+    'OSRM_TIMEOUT=15',
+    'OSRM_RETRIES=2',
+    'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1',
+    'SIM_SLO_AUTO_THROTTLE=1',
+    'SIM_SLO_WARMING_ABOVE=280',
+    'SIM_SLO_AFTER_TICKS=6',
+    'SIM_SLO_STARTS_CAP=50'
 )
 
 Write-Host 'Syncing routing...'
@@ -58,7 +74,12 @@ Set-Vars 'celery-worker-routing' @(
     'SIM_BP_DRAIN_DISPATCH_PER_TICK=50',
     'SIM_BP_QUEUE_HEADROOM=25',
     'BROUTER_RETRIES=3',
-    'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter'
+    'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter',
+    'OSRM_URL=http://osrm.railway.internal:5000',
+    'SCALE_SIM_ROUTING_BACKEND=osrm',
+    'OSRM_TIMEOUT=15',
+    'OSRM_RETRIES=2',
+    'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1'
 )
 
 Write-Host 'Syncing backend...'
@@ -87,6 +108,14 @@ Set-Vars 'brouter-2' @(
     'BROUTER_SEGMENT_PRESET=poland'
 )
 
-Write-Host 'Done. Redeploy: brouter, brouter-2, celery-worker-routing, celery-worker-simulation.'
+Write-Host 'Syncing osrm (if service exists)...'
+Set-Vars 'osrm' @(
+    'OSRM_PORT=5000',
+    'OSRM_BUILD_PROFILE=/opt/car.lua',
+    'OSRM_PBF_URL=https://download.geofabrik.de/europe/poland-latest.osm.pbf'
+)
+
+Write-Host 'Done. Redeploy: osrm, brouter, brouter-2, celery-worker-routing, celery-worker-simulation.'
+Write-Host 'First-time OSRM: .\scripts\railway-setup-osrm.ps1'
 Write-Host 'Verify: .\scripts\railway-verify-production.ps1'
 Pop-Location

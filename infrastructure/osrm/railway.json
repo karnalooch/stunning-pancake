@@ -1,0 +1,24 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "infrastructure/osrm/Dockerfile",
+    "watchPatterns": ["infrastructure/osrm/**"]
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "sleepApplication": false,
+    "restartPolicy": "ALWAYS",
+    "limitOverride": {
+      "containers": {
+        "cpu": 4,
+        "memoryBytes": 8589934592
+      }
+    }
+  },
+  "variables": {
+    "OSRM_PORT": "5000",
+    "OSRM_BUILD_PROFILE": "/opt/car.lua",
+    "OSRM_PBF_URL": "https://download.geofabrik.de/europe/poland-latest.osm.pbf"
+  }
+}

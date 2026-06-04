@@ -67,7 +67,7 @@ class GenerateRouteWaypointsCacheTest(SimpleTestCase):
     @patch.dict("os.environ", {"SCALE_SIM_STRICT_ROAD_ROUTES": "1"}, clear=False)
     @patch("activities.simulator_tasks._skip_brouter_now", return_value=False)
     @patch("activities.simulator_tasks.cache")
-    @patch("activities.simulator_tasks._brouter_route_waypoints", return_value=None)
+    @patch("activities.sim_routing.road_route_waypoints", return_value=None)
     @patch("activities.scale_config.resolve_live_scale_limits")
     @patch("activities.simulator_tasks.sim.get_live_state", return_value={})
     def test_unroutable_not_negative_cached(
@@ -92,7 +92,7 @@ class GenerateRouteWaypointsCacheTest(SimpleTestCase):
     )
     @patch("activities.simulator_tasks._skip_brouter_now", return_value=False)
     @patch("activities.simulator_tasks.cache.get", return_value=None)
-    @patch("activities.simulator_tasks._brouter_route_waypoints")
+    @patch("activities.sim_routing.road_route_waypoints")
     @patch("activities.simulator_tasks._jitter_point_km", return_value=(52.24, 21.02))
     @patch("activities.scale_config.resolve_live_scale_limits")
     @patch("activities.simulator_tasks.sim.get_live_state", return_value={})

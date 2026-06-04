@@ -441,11 +441,10 @@ class LiveSimulationView(APIView):
 
             scale_overrides = parse_scale_overrides_from_state(state)
             effective_scale = resolve_live_scale_limits(state)
-            from activities.ride_fsm import fsm_summary
             from activities.simulator_tasks import _async_routing_enabled
+            from activities.sim_routing import sim_routing_backend
 
-            rides_map = sim.get_live_rides()
-            fsm = fsm_summary(rides_map)
+            fsm = sim.get_live_fsm_summary()
             from activities.simulator_routing_backpressure import routing_backpressure_snapshot
 
             bp = routing_backpressure_snapshot(
@@ -477,6 +476,7 @@ class LiveSimulationView(APIView):
                     "pool_size": pool_size,
                     "active_rides": active_rides,
                     "async_routing_enabled": _async_routing_enabled(),
+                    "sim_routing_backend": sim_routing_backend(),
                     "ride_warming": fsm["ride_warming"],
                     "ride_routing": fsm["ride_routing"],
                     "ride_pending_route": fsm["ride_pending_route"],
@@ -490,6 +490,9 @@ class LiveSimulationView(APIView):
                     "routing_broker_queue_depth": bp.get("routing_broker_queue_depth"),
                     "routing_fsm_pending": bp["routing_fsm_pending"],
                     "routing_backpressure_active": routing_backpressure_active,
+                    "slo_throttle_engaged": str(state.get("slo_throttle_engaged", "")).lower()
+                    == "true",
+                    "slo_max_starts_per_tick": _redis_int_or_none(state.get("slo_max_starts_per_tick")),
                     "dispatches_throttled": dispatches_throttled,
                     "dispatches_throttled_last_tick": int(
                         state.get("dispatches_throttled_last_tick", 0) or 0

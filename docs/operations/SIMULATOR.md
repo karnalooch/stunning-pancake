@@ -70,7 +70,9 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 
 | Zmienna | Domyślnie | Opis |
 |---------|-----------|------|
-| `BROUTER_URL` | — | **Wymagane** dla tras po drogach, np. `http://brouter.railway.internal:17777/brouter` |
+| `BROUTER_URL` | — | Anti-cheat + fallback sim; sim prod: **`SCALE_SIM_ROUTING_BACKEND=osrm`** + `OSRM_URL` — [OSRM.md](./OSRM.md) |
+| `SCALE_SIM_ROUTING_BACKEND` | `brouter` | `osrm` \| `brouter` \| `auto` \| `template` — tylko symulator |
+| `OSRM_URL` | — | np. `http://osrm.railway.internal:5000` |
 | `SCALE_SIM_STRICT_ROAD_ROUTES` | `1` | Bez BRouter nie startują jazdy (brak siatki) |
 | `SCALE_SIM_SKIP_BROUTER` | `0` | `1` = siatka zamiast BRouter (batch / awaria) |
 | `SCALE_SIM_BROUTER_MAX_LEG_KM` | `4` | Max odcinek A→B do routingu |
@@ -112,10 +114,11 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | # | Gardło | Objaw | Mitigacja (repo + Railway) |
 |---|--------|-------|----------------------------|
 | 1 | **Stare env w Dashboard** | log `cap=80`, starts≤30 | `.\scripts\railway-sync-sim-env.ps1` → depth **200**, dispatch **150** |
-| 2 | **BRouter + routing throughput** | 150 queued, 1–4 ACTIVE/tick | **2× brouter** 4 GB, `BROUTER_MAX_THREADS=12`, Java **3g**; 4× routing @ 2 GB; `INSTANT_ACTIVE_ON_ROUTE=1` |
-| 3 | **Backlog starved** | warming rośnie | dispatch **backlog first** (kod `b51efaca`) |
+| 2 | **BRouter + routing throughput** | 150 queued, 1–4 ACTIVE/tick | **2× brouter** 4 GB; 4× routing @ 2 GB; `INSTANT_ACTIVE_ON_ROUTE=1`; `SCALE_SIM_ROUTE_TEMPLATE_CACHE=1` |
+| 3 | **Backlog starved** | warming rośnie | dispatch **backlog first**; `SIM_SLO_AUTO_THROTTLE=1` (cap starts przy warming ≥ 280) |
 | 4 | **Target puli** (`active_ratio×users`) | ~6 startów przy pełnej mapie | `active_on_map` budget + wyższa Aktywność |
-| 5 | **Pipeline Redis** | OOM / wolny status | `MAX_PIPELINE_ABSOLUTE=2000` |
+| 5 | **Pipeline Redis** | OOM / wolny status | `MAX_PIPELINE_ABSOLUTE=2000`; 1× HGETALL/tick; FSM snapshot na status/map |
+| 6 | **Mapa live (Backend)** | wolny GET | Backend 2 GB / 2 CPU; `SCALE_TELEMETRY_LIVE_CACHE_TTL=3` |
 
 Sync env: `.\scripts\railway-sync-sim-env.ps1` (wymaga `RAILWAY_API_TOKEN`).
 

@@ -8,9 +8,13 @@ All state is stored in Redis so any WSGI worker can read/write it.
 import json
 import threading
 import time
+from contextlib import contextmanager
 from typing import Any
 
 from core.redis_cluster import get_redis
+
+# Per-tick in-process cache: one HGETALL per live_tick instead of 4–6.
+_live_rides_tick_cache: dict[int, dict] | None = None
 
 REDIS_PREFIX = "sim:"
 
@@ -718,11 +722,10 @@ def remove_from_live_pool(user_ids: list):
         r.srem(LIVE_POOL_KEY, *[str(uid) for uid in user_ids])
 
 
-def get_live_rides() -> dict:
-    """Get all active rides from Redis hash."""
+def _load_live_rides_from_redis() -> dict[int, dict]:
     r = get_redis()
     raw = r.hgetall(LIVE_RIDES_KEY)
-    rides = {}
+    rides: dict[int, dict] = {}
     for user_id, ride_json in raw.items():
         uid = int(user_id.decode() if isinstance(user_id, bytes) else user_id)
         ride_data = json.loads(ride_json.decode() if isinstance(ride_json, bytes) else ride_json)
@@ -730,19 +733,129 @@ def get_live_rides() -> dict:
     return rides
 
 
+def begin_live_rides_tick_cache() -> dict[int, dict]:
+    """Load live_rides once for the current live_tick (simulation worker)."""
+    global _live_rides_tick_cache
+    _live_rides_tick_cache = _load_live_rides_from_redis()
+    return _live_rides_tick_cache
+
+
+def end_live_rides_tick_cache() -> None:
+    global _live_rides_tick_cache
+    _live_rides_tick_cache = None
+
+
+@contextmanager
+def live_rides_tick_cache():
+    begin_live_rides_tick_cache()
+    try:
+        yield
+    finally:
+        end_live_rides_tick_cache()
+
+
+def get_live_ride(user_id: int) -> dict | None:
+    """Single ride — used by routing worker (no full-hash scan)."""
+    global _live_rides_tick_cache
+    uid = int(user_id)
+    if _live_rides_tick_cache is not None:
+        return _live_rides_tick_cache.get(uid)
+    r = get_redis()
+    raw = r.hget(LIVE_RIDES_KEY, str(uid))
+    if not raw:
+        return None
+    return json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+
+
+def get_live_rides(*, force_refresh: bool = False) -> dict[int, dict]:
+    """Get all active rides; uses tick cache when inside live_tick."""
+    global _live_rides_tick_cache
+    if not force_refresh and _live_rides_tick_cache is not None:
+        return _live_rides_tick_cache
+    return _load_live_rides_from_redis()
+
+
 def set_live_ride(user_id: int, ride_data: dict):
     """Set a single ride in the Redis hash."""
+    global _live_rides_tick_cache
     r = get_redis()
     r.hset(LIVE_RIDES_KEY, str(user_id), json.dumps(ride_data))
+    if _live_rides_tick_cache is not None:
+        _live_rides_tick_cache[int(user_id)] = ride_data
 
 
 def delete_live_ride(user_id: int):
     """Delete a ride from the Redis hash."""
+    global _live_rides_tick_cache
     r = get_redis()
     r.hdel(LIVE_RIDES_KEY, str(user_id))
+    if _live_rides_tick_cache is not None:
+        _live_rides_tick_cache.pop(int(user_id), None)
 
 
-def requeue_stale_routing_rides(*, max_age_seconds: float = 90) -> int:
+def fsm_snapshot_fresh(state: dict | None, *, multiplier: float = 2.5) -> bool:
+    """True when tick-persisted FSM counters are recent enough for status/map reads."""
+    if not state or not state.get("running"):
+        return False
+    last = _redis_float(state.get("last_tick_at"))
+    if last is None:
+        return False
+    try:
+        tick_s = float(state.get("tick_seconds", 8) or 8)
+    except (TypeError, ValueError):
+        tick_s = 8.0
+    return (time.time() - last) <= max(12.0, tick_s * multiplier)
+
+
+def persist_live_fsm_snapshot(fsm: dict[str, int], city_counts: dict[str, int] | None = None) -> None:
+    """Store FSM aggregates on live state — avoids HGETALL on admin status polls."""
+    payload: dict[str, Any] = {
+        "fsm_ride_pending_route": int(fsm.get("ride_pending_route", 0)),
+        "fsm_ride_routing": int(fsm.get("ride_routing", 0)),
+        "fsm_ride_routed": int(fsm.get("ride_routed", 0)),
+        "fsm_ride_active": int(fsm.get("ride_active", 0)),
+        "fsm_ride_warming": int(fsm.get("ride_warming", 0)),
+        "fsm_ride_on_map": int(fsm.get("ride_on_map", 0)),
+        "fsm_snapshot_at": time.time(),
+    }
+    if city_counts is not None:
+        payload["fsm_city_counts"] = json.dumps(city_counts, sort_keys=True)
+    set_live_state(**payload)
+
+
+def fsm_summary_from_state(state: dict) -> dict[str, int] | None:
+    if not fsm_snapshot_fresh(state):
+        return None
+    try:
+        return {
+            "ride_pending_route": _redis_int(state.get("fsm_ride_pending_route"), 0),
+            "ride_routing": _redis_int(state.get("fsm_ride_routing"), 0),
+            "ride_routed": _redis_int(state.get("fsm_ride_routed"), 0),
+            "ride_active": _redis_int(state.get("fsm_ride_active"), 0),
+            "ride_warming": _redis_int(state.get("fsm_ride_warming"), 0),
+            "ride_on_map": _redis_int(state.get("fsm_ride_on_map"), 0),
+            "ride_failed_unroutable": 0,
+        }
+    except Exception:
+        return None
+
+
+def get_live_fsm_summary() -> dict[str, int]:
+    """FSM for status/API: Redis snapshot when fresh, else one HGETALL."""
+    from activities.ride_fsm import fsm_summary
+
+    state = get_live_state()
+    cached = fsm_summary_from_state(state)
+    if cached is not None:
+        return cached
+    return fsm_summary(get_live_rides())
+
+
+def requeue_stale_routing_rides(
+    *,
+    max_age_seconds: float = 90,
+    rides: dict[int, dict] | None = None,
+) -> int:
     """
     Recover rides stuck in ROUTING after worker loss or hung BRouter HTTP.
     Without routing_since (legacy rows), requeue immediately.
@@ -751,7 +864,7 @@ def requeue_stale_routing_rides(*, max_age_seconds: float = 90) -> int:
 
     now = time.time()
     requeued = 0
-    for uid, ride in get_live_rides().items():
+    for uid, ride in (rides if rides is not None else get_live_rides()).items():
         if normalize_ride_state(ride) != ROUTING:
             continue
         since = ride.get("routing_since")
@@ -785,6 +898,11 @@ def get_live_ride_count(*, active_only: bool = True) -> int:
     """
     if not active_only:
         return get_live_rides_in_flight_count()
+    state = get_live_state()
+    if fsm_snapshot_fresh(state):
+        on_map = _redis_int(state.get("fsm_ride_on_map"), -1)
+        if on_map >= 0:
+            return on_map
     from activities.ride_fsm import telemetry_eligible
 
     return sum(1 for ride in get_live_rides().values() if telemetry_eligible(ride))
@@ -793,6 +911,22 @@ def get_live_ride_count(*, active_only: bool = True) -> int:
 def get_live_city_counts() -> dict[str, int]:
     """Active riders per simulator city (for live-map overview badges)."""
     from simulate_active_cities import CITIES
+
+    state = get_live_state()
+    if fsm_snapshot_fresh(state):
+        raw = state.get("fsm_city_counts")
+        if raw:
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict):
+                    base = {c["slug"]: 0 for c in CITIES}
+                    for slug, n in parsed.items():
+                        if slug in base:
+                            base[slug] = int(n)
+                    return base
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+
     from activities.ride_fsm import telemetry_eligible
 
     counts = {c["slug"]: 0 for c in CITIES}

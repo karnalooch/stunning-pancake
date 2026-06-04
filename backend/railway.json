@@ -10,8 +10,8 @@
     "restartPolicy": "ALWAYS",
     "limitOverride": {
       "containers": {
-        "cpu": 1,
-        "memoryBytes": 1073741824
+        "cpu": 2,
+        "memoryBytes": 2147483648
       }
     }
   },
@@ -56,6 +56,12 @@
     "SCALE_SIM_MAX_PIPELINE_ABSOLUTE": "2000",
     "SCALE_SIM_RAMP_START_DELAY_MAX": "12",
     "SCALE_SIM_RAMP_TICKS": "20",
+    "SCALE_SIM_ROUTE_TEMPLATE_CACHE": "1",
+    "SIM_SLO_AUTO_THROTTLE": "1",
+    "SIM_SLO_WARMING_ABOVE": "280",
+    "SIM_SLO_AFTER_TICKS": "6",
+    "SIM_SLO_STARTS_CAP": "50",
+    "SCALE_TELEMETRY_LIVE_CACHE_TTL": "3",
     "TRACCAR_URL": "http://traccar:8082",
     "TRACCAR_REDIS_CHANNEL": "traccar:positions",
     "LEADERBOARD_CACHE_TTL": "30",

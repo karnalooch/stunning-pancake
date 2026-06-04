@@ -35,6 +35,20 @@ services:
     volumes:
       - ./infrastructure/brouter/segments4:/brouter/segments4:ro
 
+  # OSRM — live simulator routing (BSD engine; OSM ODbL). First start builds graph in volume.
+  osrm:
+    build:
+      context: .
+      dockerfile: infrastructure/osrm/Dockerfile
+    container_name: 4velo_osrm
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - osrm_data:/data
+    environment:
+      OSRM_PBF_URL: ${OSRM_PBF_URL:-https://download.geofabrik.de/europe/poland-latest.osm.pbf}
+
   # Traccar for real-time telemetry collection
   traccar:
     image: traccar/traccar:latest
@@ -71,6 +85,8 @@ services:
       MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
       MATRIX_TOKEN: ${MATRIX_TOKEN:-}
       BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
+      OSRM_URL: ${OSRM_URL:-http://osrm:5000}
+      SCALE_SIM_ROUTING_BACKEND: ${SCALE_SIM_ROUTING_BACKEND:-osrm}
       TRACCAR_URL: ${TRACCAR_URL:-http://traccar:8082}
     ports:
       - "8000:8000"
@@ -80,6 +96,7 @@ services:
       - db
       - redis
       - traccar
+      - osrm
 
   # Telemetry Microservice (FastAPI — Constitution §24.1)
   telemetry:
@@ -178,6 +195,8 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
+      OSRM_URL: ${OSRM_URL:-http://osrm:5000}
+      SCALE_SIM_ROUTING_BACKEND: ${SCALE_SIM_ROUTING_BACKEND:-osrm}
       CELERY_WORKER_CONCURRENCY: "6"
       CELERY_WORKER_QUEUES: simulation
       SCALE_AUTO_DISK_GUARD: "true"
@@ -195,6 +214,7 @@ services:
       - db
       - redis
       - brouter
+      - osrm
 
   # Celery Beat — periodic task scheduler
   celery_beat:
@@ -215,3 +235,4 @@ services:
 
 volumes:
   pgdata:
+  osrm_data:

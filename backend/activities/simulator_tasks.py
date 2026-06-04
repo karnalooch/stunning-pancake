@@ -300,6 +300,7 @@ def _generate_route_waypoints(
     anchor_lat: float | None = None,
     anchor_lon: float | None = None,
     start_radius_km: float | None = None,
+    city_slug: str | None = None,
     use_tick_budget: bool = True,
 ) -> tuple[list[tuple[float, float]], str]:
     """
@@ -330,6 +331,23 @@ def _generate_route_waypoints(
 
     anchor_lat = anchor_lat if anchor_lat is not None else lat
     anchor_lon = anchor_lon if anchor_lon is not None else lon
+
+    if city_slug:
+        from activities.sim_route_cache import apply_route_template, get_route_template
+
+        tpl = get_route_template(
+            city_slug=city_slug,
+            activity_type=activity_type,
+            distance_m=distance_m,
+        )
+        if tpl:
+            shifted = apply_route_template(
+                tpl, anchor_lat=anchor_lat, anchor_lon=anchor_lon
+            )
+            if len(shifted) >= 2:
+                payload = {"waypoints": shifted, "source": tpl.get("source", "road")}
+                cache.set(cache_key, payload, 3600)
+                return shifted, str(tpl.get("source", "road"))
     try:
         route_radius_km = float(
             start_radius_km
@@ -362,7 +380,9 @@ def _generate_route_waypoints(
         bearing = random.uniform(0, 2 * math.pi)
         end_lat = start_lat + (km / 111.0) * math.cos(bearing)
         end_lon = start_lon + (km / (111.0 * cos_lat)) * math.sin(bearing)
-        waypoints = _brouter_route_waypoints(
+        from activities.sim_routing import road_route_waypoints
+
+        waypoints = road_route_waypoints(
             start_lat,
             start_lon,
             end_lat,
@@ -373,6 +393,18 @@ def _generate_route_waypoints(
         if waypoints:
             payload = {"waypoints": waypoints, "source": "road"}
             cache.set(cache_key, payload, 3600)
+            if city_slug:
+                from activities.sim_route_cache import set_route_template
+
+                set_route_template(
+                    city_slug=city_slug,
+                    activity_type=activity_type,
+                    distance_m=distance_m,
+                    anchor_lat=anchor_lat,
+                    anchor_lon=anchor_lon,
+                    waypoints=waypoints,
+                    source="road",
+                )
             return waypoints, "road"
 
     if STRICT_ROAD_ROUTES:
@@ -885,9 +917,10 @@ def _route_pending_ride(user_id: int, ride: dict) -> None:
         anchor_lat=lat0,
         anchor_lon=lon0,
         start_radius_km=start_radius_km,
+        city_slug=ride.get("city_slug"),
         use_tick_budget=False,
     )
-    current = sim.get_live_rides().get(user_id) or ride
+    current = sim.get_live_ride(user_id) or ride
     if ride_fsm.normalize_ride_state(current) != ride_fsm.ROUTING:
         return
     if waypoints and len(waypoints) >= 2 and route_source != "unroutable":
@@ -928,8 +961,7 @@ def route_live_ride_task(self, user_id: int):
     if not sim.get_live_state().get("running"):
         sim.delete_live_ride(user_id)
         return
-    rides = sim.get_live_rides()
-    ride = rides.get(user_id)
+    ride = sim.get_live_ride(user_id)
     if not ride or not ride_fsm.can_dispatch_routing(ride):
         return
     sim.set_live_ride(
@@ -960,7 +992,8 @@ def live_tick_task(self):
 
     _reset_brouter_tick_budget()
     try:
-        _run_live_tick_body()
+        with sim.live_rides_tick_cache():
+            _run_live_tick_body()
     finally:
         sim.set_live_state(last_tick_at=time.time())
         sim.release_live_tick_lock()
@@ -1011,18 +1044,18 @@ def _run_live_tick_body():
 
     async_routing = _async_routing_enabled()
 
-    requeued_routing = sim.requeue_stale_routing_rides()
+    requeued_routing = sim.requeue_stale_routing_rides(rides=active_rides)
     if requeued_routing > 0:
         sim.live_log(f"Requeued {requeued_routing} stale ROUTING rides → PENDING_ROUTE.")
+        active_rides = sim.get_live_rides()
 
     # Promote pre-routed rides to ACTIVE when start_time reached
     promoted = 0
     for user_id, ride in list(active_rides.items()):
         if ride_fsm.can_promote_to_active(ride, now):
             sim.set_live_ride(user_id, {**ride, "ride_state": ride_fsm.ACTIVE})
+            active_rides[user_id] = {**ride, "ride_state": ride_fsm.ACTIVE}
             promoted += 1
-
-    active_rides = sim.get_live_rides()
 
     # ── Phase 1: Finish expired ACTIVE rides ──
     rides_to_remove = []
@@ -1119,6 +1152,7 @@ def _run_live_tick_body():
 
     for uid in rides_to_remove:
         sim.delete_live_ride(uid)
+        active_rides.pop(uid, None)
 
     # ── Phase 2: Start new rides (capped globally + balanced per city) ──
     from activities.simulator_routing_backpressure import compute_live_start_budget
@@ -1132,6 +1166,13 @@ def _run_live_tick_body():
     if state.get("event_id") or state.get("event_load_test"):
         event_stagger_cap = max_starts_per_live_tick(total_users, active_ratio, tick_seconds)
     global_start_cap = int(scale_limits["max_starts_per_live_tick"] or 0)
+    from activities.sim_slo import maybe_apply_starts_slo
+
+    fsm_for_slo = ride_fsm.fsm_summary(active_rides)
+    global_start_cap = maybe_apply_starts_slo(
+        state, fsm_for_slo, base_max_starts=global_start_cap
+    )
+    state = sim.get_live_state()
     start_budget = compute_live_start_budget(
         total_users=total_users,
         active_ratio=active_ratio,
@@ -1221,8 +1262,7 @@ def _run_live_tick_body():
         routing_dispatch_cap = (
             routing_bp.max_routing_dispatch_per_tick(scale_limits) if async_routing else 0
         )
-        active_rides_pre = sim.get_live_rides()
-        fsm_pre = ride_fsm.fsm_summary(active_rides_pre)
+        fsm_pre = ride_fsm.fsm_summary(active_rides)
         bp_snapshot = routing_bp.routing_backpressure_snapshot(
             fsm_pending=fsm_pre["ride_warming"],
             fsm_routing=fsm_pre.get("ride_routing", 0),
@@ -1313,6 +1353,7 @@ def _run_live_tick_body():
                 anchor_lat=lat0,
                 anchor_lon=lon0,
                 start_radius_km=start_radius_km,
+                city_slug=city_info["slug"],
             )
             if not waypoints or len(waypoints) < 2:
                 unroutable += 1
@@ -1337,10 +1378,9 @@ def _run_live_tick_body():
             started += 1
 
         if async_routing and (pending_dispatch_ids or routing_dispatch_cap > 0):
-            active_now = sim.get_live_rides()
             backlog = [
                 uid
-                for uid, ride in active_now.items()
+                for uid, ride in active_rides.items()
                 if ride_fsm.can_dispatch_routing(ride)
             ]
             pending_set = set(pending_dispatch_ids)
@@ -1383,8 +1423,7 @@ def _run_live_tick_body():
             )
 
     elif async_routing:
-        active_rides_pre = sim.get_live_rides()
-        fsm_pre = ride_fsm.fsm_summary(active_rides_pre)
+        fsm_pre = ride_fsm.fsm_summary(active_rides)
         bp_snapshot = routing_bp.routing_backpressure_snapshot(
             fsm_pending=fsm_pre["ride_warming"],
             fsm_routing=fsm_pre.get("ride_routing", 0),
@@ -1404,7 +1443,7 @@ def _run_live_tick_body():
                 f"(pending={fsm_pre.get('ride_pending_route', 0)}, depth={bp_snapshot['routing_queue_depth']})"
             )
         backlog = [
-            uid for uid, ride in active_rides_pre.items() if ride_fsm.can_dispatch_routing(ride)
+            uid for uid, ride in active_rides.items() if ride_fsm.can_dispatch_routing(ride)
         ]
         routing_dispatched = 0
         for user_id in backlog:
@@ -1437,7 +1476,6 @@ def _run_live_tick_body():
     )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
-    active_rides = sim.get_live_rides()
     telemetry_entries = []
 
     for user_id, ride in active_rides.items():
@@ -1488,8 +1526,17 @@ def _run_live_tick_body():
         telemetry_entries = telemetry_entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
     TelemetryService.push_bulk_positions(telemetry_entries)
 
-    active_rides = sim.get_live_rides()
     fsm = ride_fsm.fsm_summary(active_rides)
+    from simulate_active_cities import CITIES
+
+    city_counts = {c["slug"]: 0 for c in CITIES}
+    for ride in active_rides.values():
+        if not ride_fsm.telemetry_eligible(ride):
+            continue
+        slug = ride.get("city_slug") or ""
+        if slug in city_counts:
+            city_counts[slug] += 1
+    sim.persist_live_fsm_snapshot(fsm, city_counts=city_counts)
     sim.set_live_state(
         currently_riding=fsm["ride_on_map"],
         total_completed=int(state.get("total_completed", 0)) + completed,

@@ -104,6 +104,8 @@ $requiredSim = @{
     'SIM_BP_QUEUE_HEADROOM'                       = '25'
     'SCALE_SIM_RAMP_START_DELAY_MAX'              = '8'
     'SCALE_SIM_RAMP_TICKS'                        = '15'
+    'SCALE_SIM_ROUTING_BACKEND'                   = 'osrm'
+    'OSRM_URL'                                    = 'http://osrm.railway.internal:5000'
 }
 function Test-RailwayVarLine {
     param([string]$Output, [string]$Key, [string]$Value)
@@ -127,6 +129,8 @@ $requiredRoute = @{
     'CELERY_WORKER_PREFETCH_MULTIPLIER' = '1'
     'CELERY_MAX_TASKS_PER_CHILD'        = '50'
     'SCALE_SIM_ASYNC_ROUTING'           = '1'
+    'SCALE_SIM_ROUTING_BACKEND'         = 'osrm'
+    'OSRM_URL'                          = 'http://osrm.railway.internal:5000'
 }
 foreach ($kv in $requiredRoute.GetEnumerator()) {
     $ok = Test-RailwayVarLine -Output $routeVars -Key $kv.Key -Value $kv.Value
@@ -148,6 +152,21 @@ $requiredBackend = @{
 foreach ($kv in $requiredBackend.GetEnumerator()) {
     $ok = Test-RailwayVarLine -Output $backendVars -Key $kv.Key -Value $kv.Value
     Add-Result "$backendService $($kv.Key)" $ok $(if ($ok) { $kv.Value } else { "expected $($kv.Value)" })
+}
+
+# --- OSRM service ---
+if ($svcList -match '\bosrm\b') {
+    Add-Result 'osrm service exists' $true 'Listed in railway service list'
+    $osrmLogs = railway logs -s osrm --lines 80 2>&1 | Out-String
+    if ($osrmLogs -match 'Starting osrm-routed|osrm-routed') {
+        Add-Result 'osrm logs (routed ready)' $true 'osrm-routed started'
+    } elseif ($osrmLogs -match 'osrm-extract|osrm-customize|Downloading') {
+        Add-Result 'osrm logs (routed ready)' $false 'Still building graph — wait and re-run verify'
+    } else {
+        Add-Result 'osrm logs (routed ready)' $false 'No osrm-routed in last 80 lines'
+    }
+} else {
+    Add-Result 'osrm service exists' $false 'Run .\scripts\railway-setup-osrm.ps1'
 }
 
 # --- Logs: routing must be Celery, not Expo ---
