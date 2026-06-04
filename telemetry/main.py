@@ -17,6 +17,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ingest_auth import IngestJwtMiddleware
 from lifecycle import lifespan
 from routes import router
 
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(IngestJwtMiddleware)
 
 app.include_router(router)
 

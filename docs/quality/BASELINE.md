@@ -14,7 +14,7 @@ Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.
 | **admin** | `npm run lint` | CI | + `audit:*` |
 | **admin** | `tsc --noEmit` | CI | |
 | **admin** | Playwright E2E | CI `e2e` | |
-| **mobile** | `npm test --ci` | ✅ ride + GPS suites | `rideSessionService.test.ts` + recovery; AvatarTrainer timeouts = osobny dług |
+| **mobile** | `npm test --ci` | ✅ 74 passed | AvatarTrainer: bez fake timers, spy na `triggerEngine.push` |
 | **mobile** | `npm run lint` (expo) | ✅ CI job | |
 | **scripts/** | `ruff check scripts` | ✅ PASS | Pełny katalog; ignore na `generate_assets` / `gemini_client` |
 | **scripts** | `check_openapi_drift.py` | ✅ PASS | CI `scripts-python` |
@@ -28,7 +28,10 @@ Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.
 |-------------|-----------|---------------------|
 | Linia 120 znaków | Ruff 100 w `pyproject.toml` | Ujednolicić doc lub config |
 | mypy strict | CI na 5 modułach | Rozszerzać `mypy-ci.ini` etapami |
-| Coverage >80% backend | Brak gate w CI | P2: pytest-cov |
+| Coverage >80% backend | Gate **40%** phased (pytest-cov) | Podnieść etapami do 80% |
+| Vitest admin | CI `admin` job | `npm run test -- --run` |
+| GPX F1 | `GET …/sessions/{id}/gpx/` | F2+ w P2_ROADMAP |
+| Telemetry JWT ingest | Opcjonalne (`TELEMETRY_INGEST_JWT_REQUIRED`) | ADR 011 |
 | Mobile ESLint ajv moderate | Dev dependency chain | P1-7 partial — po bump eslint-config-expo |
 
 ## Następny krok

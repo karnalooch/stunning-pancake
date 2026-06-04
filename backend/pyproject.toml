@@ -57,6 +57,15 @@ strict = true
 ignore_missing_imports = true
 plugins = ["mypy_django_plugin.main"]
 
+[tool.coverage.run]
+source = ["core", "activities"]
+omit = ["*/migrations/*", "*/tests/*", "manage.py", "run_dev.py", "run_pytest.py"]
+
+[tool.coverage.report]
+# Phased goal: raise toward 80% (see docs/quality/BACKLOG.md Q-P2-3)
+fail_under = 40
+show_missing = true
+
 [tool.django-stubs]
 django_settings_module = "core.settings"
 

@@ -388,6 +388,37 @@ class ActivityDetailView(generics.RetrieveAPIView):
         return Activity.objects.filter(user=user).select_related("user")
 
 
+class ActivityGpxExportView(ActivityDetailView):
+    """
+    P2 F1: on-demand GPX download from route_path.
+    Same RBAC scope as ActivityDetailView.
+    """
+
+    def get(self, request, *args, **kwargs):
+        activity = self.get_object()
+        if not activity.route_path or activity.route_path.num_coords < 2:
+            return Response(
+                {"detail": "Activity has no exportable route."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        from .gpx_export import linestring_to_gpx
+
+        type_map = {"BIKE": "cycling", "RUN": "running", "WALK": "walking"}
+        gpx_type = type_map.get(activity.type, "other")
+        gpx_body = linestring_to_gpx(
+            activity.route_path,
+            track_name=f"Activity {activity.pk}",
+            activity_type=gpx_type,
+        )
+
+        from django.http import HttpResponse
+
+        response = HttpResponse(gpx_body, content_type="application/gpx+xml")
+        response["Content-Disposition"] = f'attachment; filename="activity-{activity.pk}.gpx"'
+        return response
+
+
 class PrivacyZoneViewSet(viewsets.ModelViewSet):
     """
     ViewSet for managing user privacy zones.

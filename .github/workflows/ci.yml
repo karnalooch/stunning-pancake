@@ -101,6 +101,23 @@ jobs:
           pip install pytest pytest-django
           python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py -m simulator_light -v
 
+      - name: Backend coverage gate (phased P2, 40% on guarded modules)
+        env:
+          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          REDIS_URL: redis://localhost:6379/15
+          SECRET_KEY: ci-insecure-key
+        run: |
+          cd backend
+          pip install pytest-cov
+          python run_pytest.py \
+            --cov=core.load_guard --cov=core.fake_redis \
+            --cov=activities.gpx_export --cov=activities.telemetry_shard \
+            --cov=activities.simulator_routing_backpressure \
+            --cov-report=term-missing --cov-fail-under=40 -q \
+            activities/test_gpx_export.py \
+            activities/test_simulator_backpressure.py activities/test_simulator_status_views.py \
+            -m simulator_light -q
+
       - name: Run tests
         env:
           DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
@@ -166,7 +183,7 @@ jobs:
         run: cd mobile && npm run lint
 
       - name: Run unit tests
-        run: cd mobile && npm test -- --ci --passWithNoTests
+        run: cd mobile && npm test -- --ci --forceExit --passWithNoTests
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -249,6 +266,9 @@ jobs:
         run: |
           cd admin
           npm run lint
+
+      - name: Vitest unit tests
+        run: cd admin && npm run test -- --run
 
       - name: TypeScript type check
         run: |

@@ -14,6 +14,7 @@ from .views import (
     GarminCallbackView,
     WearableSyncView,
     ActivityDetailView,
+    ActivityGpxExportView,
     AIInsightsView,
 )
 
@@ -54,6 +55,7 @@ router.register(r"pois", POIViewSet, basename="poi")
 
 urlpatterns = [
     path("sessions/<int:pk>/detail/", ActivityDetailView.as_view(), name="activity-detail"),
+    path("sessions/<int:pk>/gpx/", ActivityGpxExportView.as_view(), name="activity-gpx"),
     path("", include(router.urls)),
     path("admin/all/", GlobalActivityListView.as_view(), name="global-activities"),
     path("admin/tenant/", TenantActivityListView.as_view(), name="tenant-activities"),
