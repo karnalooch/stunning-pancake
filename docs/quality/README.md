@@ -17,7 +17,7 @@ Program **całego repozytorium** (nie tylko telemetry/ADR): backend, telemetry, 
 | Obszar | Ścieżka | Lint / format | Testy | CI job |
 |--------|---------|---------------|-------|--------|
 | **Backend** | `backend/` | Ruff check + format (`pyproject.toml`) | `manage.py test`, `run_pytest.py` | `backend` |
-| **Telemetry** | `telemetry/` | Ruff (extends backend) | `pytest` | `telemetry` |
+| **Telemetry** | `telemetry/` — `main.py` + `routes`, `ingest_service`, `db`, … | Ruff (extends backend) | `pytest` | `telemetry` |
 | **Admin** | `admin/` | ESLint, `tsc --noEmit` | Playwright E2E | `admin`, `e2e`, `audit` |
 | **Mobile** | `mobile/` | Expo lint (docelowo) | Jest | `mobile` |
 | **Skrypty Python** | `scripts/*.py` | Ruff (root `pyproject.toml`) | — | `scripts-python` |

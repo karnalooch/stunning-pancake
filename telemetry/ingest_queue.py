@@ -21,9 +21,7 @@ CONSUMER_GROUP = os.getenv("TELEMETRY_INGEST_CONSUMER_GROUP", "telemetry-drainer
 CONSUMER_NAME = os.getenv("TELEMETRY_INGEST_CONSUMER_NAME", "drain-1")
 
 try:
-    STREAM_MAXLEN = max(
-        1_000, int(os.getenv("TELEMETRY_INGEST_STREAM_MAXLEN", "500000"))
-    )
+    STREAM_MAXLEN = max(1_000, int(os.getenv("TELEMETRY_INGEST_STREAM_MAXLEN", "500000")))
 except (TypeError, ValueError):
     STREAM_MAXLEN = 500_000
 
@@ -56,9 +54,7 @@ def queue_enabled() -> bool:
 
 async def ensure_consumer_group(redis_client) -> None:
     try:
-        await redis_client.xgroup_create(
-            STREAM_KEY, CONSUMER_GROUP, id="0", mkstream=True
-        )
+        await redis_client.xgroup_create(STREAM_KEY, CONSUMER_GROUP, id="0", mkstream=True)
     except Exception as exc:
         if "BUSYGROUP" not in str(exc):
             logger.debug("ingest_queue.group_create: %s", exc)
@@ -206,9 +202,7 @@ def start_drain_worker(redis_client, flush_fn) -> None:
     if not queue_enabled() or _drain_task is not None:
         return
     _drain_task = asyncio.create_task(_drain_loop(redis_client, flush_fn))
-    logger.info(
-        "ingest_queue.drain_started stream=%s group=%s", STREAM_KEY, CONSUMER_GROUP
-    )
+    logger.info("ingest_queue.drain_started stream=%s group=%s", STREAM_KEY, CONSUMER_GROUP)
 
 
 async def stop_drain_worker() -> None:

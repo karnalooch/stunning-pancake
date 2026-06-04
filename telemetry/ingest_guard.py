@@ -33,9 +33,7 @@ def _ingest_max_per_second() -> int:
 
 def _engage_ratio() -> float:
     try:
-        return max(
-            0.1, min(1.0, float(os.getenv("GLOBAL_PROTECTION_ENGAGE_RATIO", "0.9")))
-        )
+        return max(0.1, min(1.0, float(os.getenv("GLOBAL_PROTECTION_ENGAGE_RATIO", "0.9"))))
     except (TypeError, ValueError):
         return 0.9
 
@@ -74,17 +72,13 @@ def evaluate_ingest(
     if mode == "on":
         engaged_now = count > limit or was_engaged
         if count > limit:
-            return IngestGuardResult(
-                False, count, limit, _retry_after_seconds(), True, mode
-            )
+            return IngestGuardResult(False, count, limit, _retry_after_seconds(), True, mode)
         return IngestGuardResult(True, count, limit, 0, engaged_now, mode)
 
     trip_at = int(engage_ratio_val * limit)
     engaged_now = was_engaged or count >= trip_at
     if engaged_now and count > limit:
-        return IngestGuardResult(
-            False, count, limit, _retry_after_seconds(), True, mode
-        )
+        return IngestGuardResult(False, count, limit, _retry_after_seconds(), True, mode)
     return IngestGuardResult(True, count, limit, 0, engaged_now, mode)
 
 

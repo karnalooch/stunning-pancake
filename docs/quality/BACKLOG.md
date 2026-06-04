@@ -8,7 +8,7 @@ Etykiety GitHub sugerowane: `quality-p0`, `quality-p1`, `quality-p2`.
 
 | ID | Obszar | Problem | Działanie |
 |----|--------|---------|-----------|
-| Q-P0-1 | **telemetry** | `main.py` ~1000 linii | Wydzielić `routes_ingest.py`, `ws_handlers.py` |
+| Q-P0-1 | **telemetry** | `main.py` ~1000 linii | **Done** — `routes.py`, `ingest_service.py`, `db.py`, `lifecycle.py`, … |
 | Q-P0-2 | **mobile** | `GpsSyncManager.ts` — storage+sync+UI | Rozdzielić moduły; test recovery po `stopTracking` |
 | Q-P0-3 | **backend** | `simulator_tasks.py` — monolit | Podmoduły tick / publish / routing |
 | Q-P0-4 | **CI** | mypy nie blokuje | `mypy core activities telemetry` bez `\|\| true` |

@@ -12,15 +12,11 @@ from ingest_guard import check_ingest_allowed, evaluate_ingest
 
 
 def test_evaluate_ingest_auto_engages_before_hard_cap():
-    d = evaluate_ingest(
-        18_000, mode="auto", limit=20_000, was_engaged=False, engage_ratio_val=0.9
-    )
+    d = evaluate_ingest(18_000, mode="auto", limit=20_000, was_engaged=False, engage_ratio_val=0.9)
     assert d.engaged is True
     assert d.allowed is True
 
-    d2 = evaluate_ingest(
-        25_000, mode="auto", limit=20_000, was_engaged=True, engage_ratio_val=0.9
-    )
+    d2 = evaluate_ingest(25_000, mode="auto", limit=20_000, was_engaged=True, engage_ratio_val=0.9)
     assert d2.allowed is False
     assert d2.retry_after >= 1
 

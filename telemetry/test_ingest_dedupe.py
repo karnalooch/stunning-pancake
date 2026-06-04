@@ -27,7 +27,7 @@ async def test_is_duplicate_batch_first_call_not_duplicate():
 
 @pytest.mark.asyncio
 async def test_ingest_batch_skips_insert_when_deduped():
-    with patch("main._is_duplicate_batch", AsyncMock(return_value=True)):
+    with patch("routes.is_duplicate_batch", AsyncMock(return_value=True)):
         result = await ingest_batch(
             BatchPacket(
                 client_batch_id="dup-id",

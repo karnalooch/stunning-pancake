@@ -14,6 +14,7 @@ import {
   loadOutbox,
   mergeRouteCoordinates,
   MAX_BUFFER_SIZE,
+  pendingPointCount,
   removeOutboxEntry,
   saveBuffer,
   setRecoveryPending,
@@ -98,6 +99,20 @@ describe('gpsSyncStorage', () => {
     appendToBuffer(storage, samplePoint(100));
     appendToBuffer(storage, samplePoint(101));
     expect(loadBuffer(storage)).toHaveLength(2);
+  });
+
+  test('pendingPointCount includes buffer and outbox points', () => {
+    const storage = mockStorage();
+    appendToBuffer(storage, samplePoint(1));
+    appendToOutbox(storage, {
+      client_batch_id: 'batch-pending',
+      points: [samplePoint(2), samplePoint(3)],
+      created_at: Date.now(),
+      attempts: 0,
+      state: 'syncing',
+      activity_id: 42,
+    });
+    expect(pendingPointCount(storage)).toBe(3);
   });
 
   test('recovery pending flag round-trips', () => {
