@@ -62,7 +62,12 @@ export class LivePositionInterpolator {
         this.rafId = requestAnimationFrame(tick);
     }
 
-    /** Instant update (pan/zoom fetch). */
+    /** True when a server snapshot should hit the map layer immediately (enterprise setData path). */
+    shouldSnapSnapshot(next: LiveMapPosition[]): boolean {
+        return next.length > 0;
+    }
+
+    /** Instant update (pan/zoom fetch + full SSE snapshots). */
     snapTo(next: LiveMapPosition[]): void {
         this.cancel();
         this.rings.clear();

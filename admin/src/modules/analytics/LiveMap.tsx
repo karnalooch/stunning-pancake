@@ -138,6 +138,7 @@ export const LiveMap: React.FC = () => {
     const [cyclists, setCyclists] = useState(0);
     const [runners, setRunners] = useState(0);
     const [viewportRiders, setViewportRiders] = useState(0);
+    const [drawnOnMap, setDrawnOnMap] = useState(0);
     const [loading, setLoading] = useState(true);
     const [mapReady, setMapReady] = useState(false);
     const [mlReady, setMlReady] = useState(false);
@@ -272,9 +273,11 @@ export const LiveMap: React.FC = () => {
         setOnlineCount((prev) => (ridingN !== prev ? ridingN : prev));
 
         const viewportReturned = meta?.positions_returned ?? meta?.viewport_returned;
-        const inView = typeof viewportReturned === 'number' && Number.isFinite(viewportReturned)
-            ? viewportReturned
-            : list.length;
+        const inView = list.length > 0
+            ? list.length
+            : (typeof viewportReturned === 'number' && Number.isFinite(viewportReturned)
+                ? viewportReturned
+                : 0);
         setViewportRiders((prev) => (inView !== prev ? inView : prev));
         const warming = typeof meta?.ride_warming === 'number' ? meta.ride_warming : 0;
         setRideWarming((prev) => (warming !== prev ? warming : prev));
@@ -341,7 +344,12 @@ export const LiveMap: React.FC = () => {
     const flushPositionsToMapLayer = useCallback(() => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
-        setLivePositionsData(map, positionsRef.current);
+        const list = positionsRef.current;
+        setLivePositionsData(map, list);
+        setDrawnOnMap((prev) => {
+            const n = list.length;
+            return n !== prev ? n : prev;
+        });
     }, []);
 
     const ingestPositions = useCallback((list: LiveMapPosition[], opts?: { snap?: boolean }) => {
@@ -398,7 +406,7 @@ export const LiveMap: React.FC = () => {
             return;
         }
 
-        ingestPositions(list, { snap });
+        ingestPositions(list, { snap: snap || list.length > 0 });
     }, [applyMetaCounts, applyCityCounts, ingestPositions, flushPositionsToMapLayer]);
 
     const fetchPositions = useCallback(async (opts?: { priority?: boolean; snap?: boolean }) => {
@@ -935,7 +943,7 @@ export const LiveMap: React.FC = () => {
                         </Badge>
                     </Tooltip>
                     {mapReady && (
-                        <Tooltip label="Pozycje w aktualnym oknie mapy (bbox)">
+                        <Tooltip label="Pozycje z ostatniego payloadu API (bbox). „On map” = faktycznie narysowane na warstwie GeoJSON.">
                             <Badge
                                 variant="light"
                                 color={viewportRiders > 0 ? 'blue' : 'gray'}
@@ -946,6 +954,17 @@ export const LiveMap: React.FC = () => {
                                 {viewportRiders.toLocaleString()} in view
                             </Badge>
                         </Tooltip>
+                    )}
+                    {mapReady && drawnOnMap > 0 && (
+                        <Badge
+                            variant="light"
+                            color={drawnOnMap === viewportRiders ? 'green' : 'orange'}
+                            radius="sm"
+                            size="md"
+                            data-testid="live-map-drawn-count"
+                        >
+                            {drawnOnMap.toLocaleString()} on map
+                        </Badge>
                     )}
                     {rideWarming > 0 && (
                         <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (not on map yet)">

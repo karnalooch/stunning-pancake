@@ -12,17 +12,19 @@ export class DevicePositionRing {
     meta: LiveMapPosition | null = null;
 
     push(pos: LiveMapPosition, now = performance.now()): void {
-        if (!pos.deviceId || !pos.lat || !pos.lng) return;
+        const lat = Number(pos.lat);
+        const lng = Number(pos.lng);
+        if (!pos.deviceId || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
         this.meta = pos;
         const last = this.points[this.points.length - 1];
         if (last) {
-            const d = segmentLengthM(last, { lng: pos.lng, lat: pos.lat });
+            const d = segmentLengthM(last, { lng, lat });
             if (d < MIN_MOVE_M) {
-                this.points[this.points.length - 1] = { lng: pos.lng, lat: pos.lat, t: now };
+                this.points[this.points.length - 1] = { lng, lat, t: now };
                 return;
             }
         }
-        this.points.push({ lng: pos.lng, lat: pos.lat, t: now });
+        this.points.push({ lng, lat, t: now });
         while (this.points.length > LIVE_MAP_RING_SIZE) {
             this.points.shift();
         }
