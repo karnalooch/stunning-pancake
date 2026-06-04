@@ -402,6 +402,15 @@ def _jitter_point_km(lat: float, lon: float, radius_km: float) -> tuple[float, f
     return lat + dlat, lon + dlon
 
 
+def _instant_active_on_route_enabled() -> bool:
+    return os.getenv("SCALE_SIM_INSTANT_ACTIVE_ON_ROUTE", "1").lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
 def _ramp_start_delay_max(state: dict) -> int | None:
     """
     Shorter random start_delay during early live ticks so ROUTED rides reach ACTIVE sooner.
@@ -883,17 +892,20 @@ def _route_pending_ride(user_id: int, ride: dict) -> None:
         return
     if waypoints and len(waypoints) >= 2 and route_source != "unroutable":
         start_lat, start_lon = waypoints[0][0], waypoints[0][1]
-        sim.set_live_ride(
-            user_id,
-            {
-                **current,
-                "ride_state": ride_fsm.ROUTED,
-                "waypoints": waypoints,
-                "route_source": route_source,
-                "lat": start_lat,
-                "lon": start_lon,
-            },
-        )
+        now_dt = timezone.now()
+        payload = {
+            **current,
+            "waypoints": waypoints,
+            "route_source": route_source,
+            "lat": start_lat,
+            "lon": start_lon,
+        }
+        if _instant_active_on_route_enabled():
+            payload["ride_state"] = ride_fsm.ACTIVE
+            payload["start_time"] = now_dt.isoformat()
+        else:
+            payload["ride_state"] = ride_fsm.ROUTED
+        sim.set_live_ride(user_id, payload)
         return
     sim.set_live_ride(user_id, {**current, "ride_state": ride_fsm.FAILED_UNROUTABLE})
     if route_source == "unroutable":
@@ -1213,6 +1225,7 @@ def _run_live_tick_body():
             bp_snapshot,
             starters_remaining=len(starters),
         )
+        bp_snapshot["effective_dispatch_cap"] = routing_dispatch_cap
 
         routing_dispatched = 0
         dispatches_skipped = 0
@@ -1309,9 +1322,18 @@ def _run_live_tick_body():
                 for uid, ride in active_now.items()
                 if ride_fsm.can_dispatch_routing(ride)
             ]
-            dispatch_order = pending_dispatch_ids + [
-                uid for uid in backlog if uid not in pending_dispatch_ids
-            ]
+            pending_set = set(pending_dispatch_ids)
+            # Drain older PENDING_ROUTE first — avoids 150 new/tick starving backlog.
+            dispatch_order = [
+                uid for uid in backlog if uid not in pending_set
+            ] + list(pending_dispatch_ids)
+            backlog_cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_BACKLOG", "400") or "400")
+            if len(backlog) > backlog_cap and pending_dispatch_ids:
+                allow_new = max(0, routing_dispatch_cap // 3)
+                pending_dispatch_ids = pending_dispatch_ids[:allow_new]
+                dispatch_order = [
+                    uid for uid in backlog if uid not in pending_set
+                ] + pending_dispatch_ids
             for user_id in dispatch_order:
                 if routing_dispatched >= routing_dispatch_cap:
                     break

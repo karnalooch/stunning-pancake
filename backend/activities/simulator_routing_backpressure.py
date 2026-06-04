@@ -21,11 +21,12 @@ _last_backpressure_log_at = 0.0
 def max_routing_queue_depth() -> int | None:
     """
     Max combined pending depth before throttling dispatches.
-    Unset or 0 = disabled (dispatch cap only applies per tick, not queue depth).
+    Unset in Dashboard still uses code default 200 (avoids stale prod cap=80).
+    Set to 0 to disable depth-based backpressure.
     """
-    raw = os.getenv("SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH", "")
+    raw = os.getenv("SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH", "200")
     if not str(raw).strip():
-        return None
+        return 200
     try:
         cap = int(raw)
     except (TypeError, ValueError):
@@ -38,7 +39,7 @@ def max_routing_queue_depth() -> int | None:
 def max_routing_dispatch_per_tick(scale_limits: dict) -> int:
     """Per-tick cap on new PENDING_ROUTE + route_live_ride_task.delay calls."""
     try:
-        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "0"))
+        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "150"))
     except (TypeError, ValueError):
         cap = 0
     if cap <= 0:
@@ -254,10 +255,12 @@ def maybe_log_routing_backpressure(
     from activities import simulator_state as sim
 
     now = time.time()
+    eff = snapshot.get("effective_dispatch_cap", base_cap)
     msg = (
-        f"Routing backpressure: skipped {skipped} dispatches "
+        f"Routing throttle: skipped {skipped} dispatches "
         f"(depth={snapshot.get('routing_queue_depth')}, "
-        f"cap={snapshot.get('max_routing_queue_depth')}, per_tick_cap={base_cap})"
+        f"depth_cap={snapshot.get('max_routing_queue_depth')}, "
+        f"tick_cap={base_cap}, effective={eff})"
     )
     if now - _last_backpressure_log_at >= _BACKPRESSURE_LOG_INTERVAL_S:
         _last_backpressure_log_at = now
