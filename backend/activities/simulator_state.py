@@ -275,7 +275,9 @@ def _clear_live_city_pools(r) -> None:
 
 
 LIVE_TICK_LOCK_KEY = "{sim}:live:tick_lock"
+LIVE_HEAL_COOLDOWN_KEY = "{sim}:live:heal_cooldown"
 LIVE_LOCK_TTL = 300  # 5 min (refreshed by runner)
+HEAL_COOLDOWN_SECONDS = 25
 
 _tick_loop_stop = threading.Event()
 _tick_loop_thread: threading.Thread | None = None
@@ -459,6 +461,17 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     return (time.time() - last_tick) > threshold
 
 
+def _heal_cooldown_ok() -> bool:
+    """Rate-limit heal+log from admin polls (avoids reschedule storms)."""
+    try:
+        r = get_redis()
+        return bool(
+            r.set(LIVE_HEAL_COOLDOWN_KEY, "1", nx=True, ex=HEAL_COOLDOWN_SECONDS)
+        )
+    except Exception:
+        return True
+
+
 def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool = False) -> dict:
     """
     Recover after Celery worker SIGKILL: release orphan locks, restart tick chain.
@@ -493,21 +506,21 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
             error=None,
         )
         actions.append("marked_stale_ticks")
-        if reschedule:
+        if reschedule and _heal_cooldown_ok():
             try:
-                from activities.simulator_tasks import live_tick_task, run_live_simulation
+                from activities.simulator_tasks import run_live_simulation
 
-                if is_live_lock_held():
-                    live_tick_task.delay()
-                    actions.append("rescheduled_live_tick")
-                else:
-                    run_live_simulation.delay()
-                    actions.append("rescheduled_live_runner")
+                # Always restart the orchestrator chain (run_live_simulation self-reschedules).
+                # When the live lock is still held, only live_tick_task.delay() leaves a gap
+                # if the countdown chain was lost (observed ~2min stall in prod logs).
+                run_live_simulation.delay()
+                actions.append("rescheduled_live_runner")
             except Exception as exc:
                 actions.append(f"reschedule_failed:{exc!s:.120}")
-        live_log(
-            "Self-heal: live ticks stalled (worker may have been killed); " + ", ".join(actions)
-        )
+            live_log(
+                "Self-heal: live ticks stalled (worker may have been killed); "
+                + ", ".join(actions)
+            )
 
     return {"healed": bool(actions), "actions": actions}
 

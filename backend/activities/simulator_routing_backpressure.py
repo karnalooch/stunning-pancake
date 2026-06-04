@@ -256,12 +256,18 @@ def maybe_log_routing_backpressure(
 
     now = time.time()
     eff = snapshot.get("effective_dispatch_cap", base_cap)
-    msg = (
-        f"Routing throttle: skipped {skipped} dispatches "
-        f"(depth={snapshot.get('routing_queue_depth')}, "
-        f"depth_cap={snapshot.get('max_routing_queue_depth')}, "
-        f"tick_cap={base_cap}, effective={eff})"
-    )
+    depth = snapshot.get("routing_queue_depth")
+    if snapshot.get("routing_backpressure_active"):
+        msg = (
+            f"Routing throttle: skipped {skipped} dispatches "
+            f"(depth={depth}, depth_cap={snapshot.get('max_routing_queue_depth')}, "
+            f"tick_cap={base_cap}, effective={eff})"
+        )
+    else:
+        msg = (
+            f"Routing dispatch cap: skipped {skipped} backlog dispatches "
+            f"(depth={depth}, tick_cap={base_cap}, queued>{base_cap})"
+        )
     if now - _last_backpressure_log_at >= _BACKPRESSURE_LOG_INTERVAL_S:
         _last_backpressure_log_at = now
         sim.live_log(msg)

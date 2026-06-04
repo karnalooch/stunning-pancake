@@ -422,7 +422,6 @@ class LiveSimulationView(APIView):
 
     def get(self, request):
         try:
-            sim.heal_stale_live_simulation(reschedule=True)
             sim.maybe_advance_live_simulation()
             state = sim.get_live_state()
             log = sim.get_live_log()

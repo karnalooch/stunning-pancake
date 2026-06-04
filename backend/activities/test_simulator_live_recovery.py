@@ -85,3 +85,29 @@ class HealStaleLiveTest(SimpleTestCase):
         out = sim.heal_stale_live_simulation(reschedule=True)
         self.assertTrue(out["healed"])
         mock_runner.delay.assert_called_once()
+
+    @patch("activities.simulator_state.live_log")
+    @patch("activities.simulator_tasks.run_live_simulation")
+    @patch("activities.simulator_state.set_live_state")
+    @patch("activities.simulator_state._heal_cooldown_ok", return_value=True)
+    @patch("activities.simulator_state.get_redis")
+    @patch("activities.simulator_state.is_live_lock_held", return_value=True)
+    @patch("activities.simulator_state.live_tick_stale", return_value=True)
+    @patch("activities.simulator_state.get_live_state")
+    def test_reschedules_runner_when_stale_with_lock_held(
+        self,
+        mock_state,
+        _stale,
+        _lock,
+        mock_redis,
+        _cooldown,
+        _set,
+        mock_runner,
+        _log,
+    ):
+        mock_redis.return_value.exists.return_value = False
+        mock_state.return_value = {"running": True, "tick_seconds": 6, "last_tick_at": 0}
+        out = sim.heal_stale_live_simulation(reschedule=True)
+        self.assertTrue(out["healed"])
+        mock_runner.delay.assert_called_once()
+        self.assertIn("rescheduled_live_runner", out["actions"])
