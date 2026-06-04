@@ -40,10 +40,17 @@ class BRouterService:
             return 3
 
     @classmethod
+    def _http_pool_size(cls) -> int:
+        try:
+            return max(8, int(os.getenv("BROUTER_HTTP_POOL_SIZE", "24")))
+        except (TypeError, ValueError):
+            return 24
+
+    @classmethod
     def _http(cls) -> requests.Session:
         if cls._http_session is None:
             session = requests.Session()
-            pool_size = max(4, cls._retry_count() + 2)
+            pool_size = cls._http_pool_size()
             adapter = HTTPAdapter(pool_connections=pool_size, pool_maxsize=pool_size)
             session.mount("http://", adapter)
             session.mount("https://", adapter)

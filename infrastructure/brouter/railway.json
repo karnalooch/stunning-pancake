@@ -6,14 +6,21 @@
     "watchPatterns": ["infrastructure/brouter/**"]
   },
   "deploy": {
-    "numReplicas": 1,
+    "numReplicas": 2,
     "sleepApplication": false,
     "restartPolicy": "ALWAYS",
     "limitOverride": {
       "containers": {
-        "cpu": 2,
-        "memoryBytes": 2147483648
+        "cpu": 4,
+        "memoryBytes": 4294967296
       }
     }
+  },
+  "variables": {
+    "BROUTER_JAVA_XMX": "3g",
+    "BROUTER_JAVA_XMS": "256m",
+    "BROUTER_MAX_THREADS": "12",
+    "BROUTER_SEGMENT_PRESET": "poland",
+    "BROUTER_AUTO_DOWNLOAD_SEGMENTS": "1"
   }
 }

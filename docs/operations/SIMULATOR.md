@@ -112,7 +112,7 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 | # | Gardło | Objaw | Mitigacja (repo + Railway) |
 |---|--------|-------|----------------------------|
 | 1 | **Stare env w Dashboard** | log `cap=80`, starts≤30 | `.\scripts\railway-sync-sim-env.ps1` → depth **200**, dispatch **150** |
-| 2 | **BRouter + routing throughput** | 150 queued, 1–4 ACTIVE/tick | 4× routing @ 2 GB, brouter 2 GB; `INSTANT_ACTIVE_ON_ROUTE=1` |
+| 2 | **BRouter + routing throughput** | 150 queued, 1–4 ACTIVE/tick | **2× brouter** 4 GB, `BROUTER_MAX_THREADS=12`, Java **3g**; 4× routing @ 2 GB; `INSTANT_ACTIVE_ON_ROUTE=1` |
 | 3 | **Backlog starved** | warming rośnie | dispatch **backlog first** (kod `b51efaca`) |
 | 4 | **Target puli** (`active_ratio×users`) | ~6 startów przy pełnej mapie | `active_on_map` budget + wyższa Aktywność |
 | 5 | **Pipeline Redis** | OOM / wolny status | `MAX_PIPELINE_ABSOLUTE=2000` |

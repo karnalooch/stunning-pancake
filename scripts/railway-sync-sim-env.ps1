@@ -68,5 +68,14 @@ Set-Vars 'Backend' @(
     'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0'
 )
 
-Write-Host 'Done. Run .\scripts\railway-verify-production.ps1 to confirm.'
+Write-Host 'Syncing brouter (threads + heap — deploy brouter service after this)...'
+Set-Vars 'brouter' @(
+    'BROUTER_JAVA_XMX=3g',
+    'BROUTER_JAVA_XMS=256m',
+    'BROUTER_MAX_THREADS=12',
+    'BROUTER_SEGMENT_PRESET=poland'
+)
+
+Write-Host 'Done. Redeploy: brouter, celery-worker-routing, celery-worker-simulation.'
+Write-Host 'Verify: .\scripts\railway-verify-production.ps1'
 Pop-Location
