@@ -95,6 +95,18 @@ Wyłączenie async: `SCALE_SIM_ASYNC_ROUTING=0` — stary model (BRouter w `live
 
 **Railway (szybszy ramp, Hobby 2×1 GB routing):** ustaw na `celery-worker-simulation` + `Backend`: `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH=120`, `SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK=50`, `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0`. Live start: `intensity=50`, `load=50` (≈ `active_ratio=0.29`, 50 starts/tick). Jeśli depth nadal pinned >15 min — podnieś cap do `150` lub dodaj 3. replikę routing (patrz [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md)).
 
+### Profil stabilny prod (Hobby, bez regresji UX)
+
+| Pytanie | Odpowiedź |
+|---------|-----------|
+| Czy to problem planu Hobby? | **Nie** — Hobby daje do **48 GB / serwis** i **8 GB / replika**. Wcześniejsze problemy wynikały z **cap depth=80** w prod (repo już ma **120**), **auto-obniżki `active_ratio`** (domyślnie **wyłączone**) i **OOM wipe/routing** (mniejsze chunki + RAM w `railway.json`), nie z limitu planu. |
+| Koszt ~30 USD/mies. | Przy capach ~12 GB app + usage-based typowo **poniżej** tego budżetu; nie ustawiaj wszystkiego na 48 GB „na zapas”. |
+| Regresja UX | Unikaj: `SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=1`, pustego `SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH`, load=100 przy pinned queue, wyłączenia ramp (`SCALE_SIM_RAMP_TICKS=0`) na starcie. |
+
+**SSOT w repo (`railway.json`):** depth **120**, dispatch **50**, auto-lower **0**, BP min/drain/headroom **12/20/25**, ramp **20 s × 12 ticków**. Po deploy: `.\scripts\railway-verify-production.ps1` — wszystkie te zmienne na `celery-worker-simulation` i `Backend`.
+
+**Operacja po deploy:** Stop live → start **Aktywność 50 / Obciążenie 50** (nie stary `active_ratio` z calm restart). Oczekiwane: `ride_warming` spada, backpressure okazjonalne (nie ciągłe `skipped 50`), mapa nabiera ACTIVE w rampie.
+
 Pełna lista: `backend/activities/scale_config.py`, [SCALE_TEST_300K.md](../SCALE_TEST_300K.md).
 
 ### Testy lokalne (pamięć)

@@ -83,6 +83,28 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
         self.assertEqual(cap, 30)
         self.assertFalse(throttled)
 
+    @patch.dict(
+        "os.environ",
+        {
+            "SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "120",
+            "SIM_BP_MIN_DISPATCH_PER_TICK": "12",
+            "SIM_BP_DRAIN_DISPATCH_PER_TICK": "20",
+            "SIM_BP_QUEUE_HEADROOM": "25",
+        },
+        clear=False,
+    )
+    def test_production_profile_never_zero_dispatch_under_backpressure(self):
+        """Regression: graduated BP must not fully stall ramp (old cap=0 behavior)."""
+        with patch(
+            "activities.simulator_routing_backpressure.get_broker_routing_queue_depth",
+            return_value=150,
+        ):
+            snap = bp.routing_backpressure_snapshot(fsm_pending=0, fsm_routing=0)
+        cap, throttled = bp.effective_routing_dispatch_cap(50, snap, starters_remaining=10)
+        self.assertGreaterEqual(cap, 12)
+        self.assertTrue(throttled)
+        self.assertLess(cap, 50)
+
     @patch.dict("os.environ", {"SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "60"}, clear=False)
     def test_depth_uses_broker_when_higher(self):
         with patch(
@@ -92,6 +114,17 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
             snap = bp.routing_backpressure_snapshot(fsm_pending=5, fsm_routing=2)
         self.assertEqual(snap["routing_queue_depth"], 82)
         self.assertTrue(snap["routing_backpressure_active"])
+
+
+class AutoLowerDefaultsTest(SimpleTestCase):
+    def test_auto_lower_off_by_default(self):
+        import os
+
+        from activities.sim_profile import auto_lower_active_ratio_enabled
+
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP", None)
+            self.assertFalse(auto_lower_active_ratio_enabled())
 
 
 class SimKpiSnapshotMockedTest(SimpleTestCase):
