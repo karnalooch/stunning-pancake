@@ -536,6 +536,23 @@ class TelemetryLiveReplayCompareView(generics.GenericAPIView):
         return Response(body)
 
 
+class TelemetryLiveAggregateView(generics.GenericAPIView):
+    """H3 / hexbin aggregate for high-density live map viewports."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from activities.live_map_aggregate import build_aggregate_payload, parse_aggregate_query_params
+
+        req = parse_aggregate_query_params(request.query_params, user=request.user)
+        if req is None:
+            return Response(
+                {"detail": "Require bbox=west,south,east,north and optional mode=h3|hexbin."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return Response(build_aggregate_payload(req))
+
+
 class TelemetryLiveAuditView(generics.GenericAPIView):
     """Fire-and-forget live map view audit (rate limited 1/30s per session+bbox)."""
 

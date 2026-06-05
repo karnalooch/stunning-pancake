@@ -106,8 +106,8 @@ Pełna architektura wzorców branżowych (hot/warm/cold, RBAC, H3, webhooki, aud
 | F1 Multi-tenant | ✅ | `live_map_rbac.py`, denormalizacja `tenantId`/`departmentId` |
 | F2 Timescale replay | ✅ | Hypertable `telemetry.live_position_events`, writer Celery 10s, `/replay/` |
 | F3 Audit + webhooki | ✅ | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook`, Celery delivery |
-| F4 White-label | 🔲 | `Tenant.map_theme`, dynamiczne kolory klastrów |
-| F5 H3 aggregate | 🔲 | Endpoint aggregate + auto LOD |
+| F4 White-label | ✅ | `Tenant.map_theme`, `liveMapTheme.ts`, layer v3 |
+| F5 H3 aggregate | ✅ | `/aggregate/`, `liveMapH3Layer`, auto LOD |
 
 ## Stany UI (`data-sync-status`)
 

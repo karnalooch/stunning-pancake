@@ -278,8 +278,8 @@ flowchart TB
 | Replay / compare API + UI | ✅ Shipped |
 | Audit POST | ✅ Shipped |
 | Webhooks | ✅ Shipped |
-| White-label `map_theme` | 🔲 Planned |
-| H3 aggregate + LOD | 🔲 Planned (meta `render_mode` stub) |
+| White-label `map_theme` | ✅ Shipped |
+| H3 aggregate + LOD | ✅ Shipped |
 
 ---
 

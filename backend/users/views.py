@@ -190,6 +190,7 @@ class TenantBrandingView(generics.RetrieveAPIView):
                     "name": tenant.name,
                     "primary_color": tenant.primary_color,
                     "secondary_color": tenant.secondary_color,
+                    "map_theme": tenant.map_theme or {},
                     "logo_url": tenant.logo.url if tenant.logo else None,
                 }
             )
@@ -212,12 +213,15 @@ class TenantUpdateView(generics.UpdateAPIView):
 
         tenant.primary_color = request.data.get("primary_color", tenant.primary_color)
         tenant.secondary_color = request.data.get("secondary_color", tenant.secondary_color)
+        if "map_theme" in request.data and isinstance(request.data.get("map_theme"), dict):
+            tenant.map_theme = request.data["map_theme"]
         tenant.save()
         return success(
             data={
                 "status": "success",
                 "primary_color": tenant.primary_color,
                 "secondary_color": tenant.secondary_color,
+                "map_theme": tenant.map_theme or {},
             }
         )
 

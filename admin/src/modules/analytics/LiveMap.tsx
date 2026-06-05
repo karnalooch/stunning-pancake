@@ -13,6 +13,8 @@ import {
     type ServerReplayStep,
 } from './liveMapServerReplay';
 import { buildAuditPayload, postLiveMapAudit } from './liveMapAudit';
+import { resolveLiveMapTheme, defaultLiveMapTheme, type LiveMapTheme } from './liveMapTheme';
+import { installH3Layer, setH3CellData, setLiveMapRenderMode } from './liveMapH3Layer';
 import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './liveMapHealth';
 import {
     DEFAULT_LIVE_MAP_FILTERS,
@@ -233,6 +235,8 @@ export const LiveMap: React.FC = () => {
     const replayIndexRef = useRef(-1);
     const auditDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const lastAuditHashRef = useRef('');
+    const liveMapThemeRef = useRef<LiveMapTheme>(defaultLiveMapTheme());
+    const renderModeRef = useRef<'points' | 'clusters' | 'aggregate'>('clusters');
 
     filtersRef.current = filters;
     replayPlayingRef.current = replayPlaying;
@@ -557,12 +561,19 @@ export const LiveMap: React.FC = () => {
         }
         if (layersReadyRef.current) return;
         await prepareLiveMapStyle(map);
-        installLiveMapLayers(map, clusterRadiusForZoom(map.getZoom()), {
-            onClusterClick: handleClusterClick,
-            onRiderClick: handleRiderClick,
-            onCityHubClick: handleCityHubClick,
-            onClusterHover: handleClusterHover,
-        });
+        installLiveMapLayers(
+            map,
+            clusterRadiusForZoom(map.getZoom()),
+            {
+                onClusterClick: handleClusterClick,
+                onRiderClick: handleRiderClick,
+                onCityHubClick: handleCityHubClick,
+                onClusterHover: handleClusterHover,
+            },
+            liveMapThemeRef.current,
+        );
+        installH3Layer(map, liveMapThemeRef.current);
+        setLiveMapRenderMode(map, renderModeRef.current);
         setCityHubData(map, {
             counts: cityCountsRef.current,
             bikeCounts: cityBikeCountsRef.current,
@@ -580,6 +591,53 @@ export const LiveMap: React.FC = () => {
             scheduleRenderedCountRef.current();
         }
     }, [handleClusterClick, handleRiderClick, handleCityHubClick, handleClusterHover]);
+
+    useEffect(() => {
+        if (!user?.tenantId) return;
+        void apiClient.get(`/users/branding/${user.tenantId}/`)
+            .then((res) => {
+                const payload = (res.data as { data?: Record<string, unknown> })?.data ?? res.data;
+                liveMapThemeRef.current = resolveLiveMapTheme(
+                    payload as { primary_color?: string; secondary_color?: string; map_theme?: Record<string, unknown> },
+                );
+            })
+            .catch(() => undefined);
+    }, [user?.tenantId]);
+
+    const fetchAggregateLayer = useCallback(async (aggregateUrl: string, bbox?: string) => {
+        const map = mapRef.current;
+        if (!map) return;
+        try {
+            let params: Record<string, string | number> = {};
+            if (aggregateUrl.includes('?')) {
+                const qs = new URLSearchParams(aggregateUrl.split('?')[1]);
+                qs.forEach((v, k) => { params[k] = v; });
+            } else if (bbox) {
+                params = { bbox, mode: 'h3', resolution: 8, ...filtersToApiParams(filtersRef.current) };
+            }
+            const data = await TelemetryApi.getLiveAggregate(params);
+            if (data?.features) {
+                setH3CellData(map, data);
+                setCellCount(Number(data.meta?.cells ?? data.features.length));
+            }
+        } catch { /* graceful */ }
+    }, []);
+
+    const applyRenderMode = useCallback((meta: Record<string, unknown> | null | undefined) => {
+        const raw = meta?.render_mode;
+        const mode = raw === 'points' || raw === 'clusters' || raw === 'aggregate' ? raw : 'clusters';
+        renderModeRef.current = mode;
+        const map = mapRef.current;
+        if (map && layersReadyRef.current) {
+            setLiveMapRenderMode(map, mode);
+        }
+        if (mode === 'aggregate') {
+            const url = typeof meta?.aggregate_url === 'string' ? meta.aggregate_url : '';
+            if (url) {
+                void fetchAggregateLayer(url);
+            }
+        }
+    }, [fetchAggregateLayer]);
 
     const aggregateCityCounts = useCallback((list: UserPosition[]): Record<string, number> => {
         const counts: Record<string, number> = {};
@@ -869,6 +927,7 @@ export const LiveMap: React.FC = () => {
                 if (typeof meta.timescale_available === 'boolean') {
                     setTimescaleAvailable(meta.timescale_available);
                 }
+                applyRenderMode(meta as Record<string, unknown>);
                 const serverPoll = parsePollAfterMs(meta as Record<string, unknown>);
                 if (serverPoll != null) ingestPollMultRef.current = 1;
             }

@@ -13,9 +13,11 @@ import {
 
 import { ensureLiveMapSprites } from './liveMapSprite';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../core/map/mapBasemap';
+import { clusterColorExpression, defaultLiveMapTheme, type LiveMapTheme } from './liveMapTheme';
+import { H3_LAYER, H3_SOURCE } from './liveMapH3Layer';
 
 /** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
-export const LIVE_MAP_LAYER_VERSION = 2;
+export const LIVE_MAP_LAYER_VERSION = 3;
 export const LIVE_MAP_LAYER_VERSION_KEY = 'live-map-layer-v';
 
 export const LIVE_SOURCES = {
@@ -74,11 +76,14 @@ export function removeLiveMapLayers(map: {
             if (map.getLayer(id)) map.removeLayer(id);
         } catch { /* */ }
     }
-    for (const id of Object.values(LIVE_SOURCES)) {
+    for (const id of [...Object.values(LIVE_SOURCES), H3_SOURCE]) {
         try {
             if (map.getSource(id)) map.removeSource(id);
         } catch { /* */ }
     }
+    try {
+        if (map.getLayer(H3_LAYER)) map.removeLayer(H3_LAYER);
+    } catch { /* */ }
 }
 
 function isValidLiveCoord(n: number): boolean {
@@ -168,7 +173,9 @@ export function installLiveMapLayers(
         onCityHubClick?: (e: LiveMapClickEvent) => void;
         onClusterHover?: (html: string | null, lngLat?: { lng: number; lat: number }) => void;
     },
+    theme: LiveMapTheme = defaultLiveMapTheme(),
 ): void {
+    const clusterColors = clusterColorExpression(theme);
     const setCursor = (cursor: string) => {
         const canvas = (map as { getCanvas?: () => HTMLCanvasElement }).getCanvas?.();
         if (canvas) canvas.style.cursor = cursor;
@@ -190,10 +197,7 @@ export function installLiveMapLayers(
             minzoom: LIVE_MAP_TIER.mesoMinZoom,
             filter: ['has', 'point_count'],
             paint: {
-                'circle-color': [
-                    'interpolate', ['linear'], ['get', 'point_count'],
-                    2, '#06b6d4', 12, '#6366f1', 35, '#a855f7', 70, '#ec4899', 120, '#e11d48',
-                ],
+                'circle-color': clusterColors,
                 'circle-radius': [
                     'interpolate', ['linear'], ['get', 'point_count'],
                     2, 24, 8, 28, 25, 34, 50, 40, 100, 48,
@@ -251,9 +255,9 @@ export function installLiveMapLayers(
             paint: {
                 'text-color': [
                     'match', ['get', 'kind'],
-                    'run', '#10b981',
-                    'bike', '#7c3aed',
-                    '#6366f1',
+                    'run', theme.runColor,
+                    'bike', theme.bikeColor,
+                    theme.hubAccent,
                 ],
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],

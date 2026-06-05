@@ -50,6 +50,11 @@ class Tenant(models.Model):
             "allowed_sports, push_notification_key, etc."
         ),
     )
+    map_theme = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Live Map cluster/hub palette overrides (white-label)",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 

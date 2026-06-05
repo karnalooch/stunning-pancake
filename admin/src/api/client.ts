@@ -267,6 +267,13 @@ export const TelemetryApi = {
     const { data } = await apiClient.post(`/activities/telemetry/live/webhooks/${id}/test/`);
     return data;
   },
+  getLiveAggregate: async (params: Record<string, string | number>) => {
+    const { data } = await apiClient.get('/activities/telemetry/live/aggregate/', {
+      params,
+      skipGlobalError: true,
+    } as ApiClientRequestConfig);
+    return data;
+  },
   getConfig: async () => {
     const { data } = await apiClient.get('/activities/telemetry/config/');
     return data;
