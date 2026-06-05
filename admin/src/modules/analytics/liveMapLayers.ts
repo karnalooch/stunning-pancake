@@ -139,10 +139,6 @@ export function installLiveMapLayers(
             cluster: true,
             clusterMaxZoom: CLUSTER_MAX_ZOOM,
             clusterRadius,
-            clusterProperties: {
-                bike_sum: ['+', ['case', ['==', ['get', 'kind'], 'bike'], 1, 0]],
-                run_sum: ['+', ['case', ['==', ['get', 'kind'], 'run'], 1, 0]],
-            },
         });
 
         map.addLayer({
@@ -153,12 +149,8 @@ export function installLiveMapLayers(
             filter: ['has', 'point_count'],
             paint: {
                 'circle-color': [
-                    'interpolate', ['linear'],
-                    ['/', ['coalesce', ['get', 'bike_sum'], 0], ['max', ['get', 'point_count'], 1]],
-                    0, '#10b981',
-                    0.45, '#6366f1',
-                    0.75, '#7c3aed',
-                    1, '#7c3aed',
+                    'interpolate', ['linear'], ['get', 'point_count'],
+                    2, '#06b6d4', 12, '#6366f1', 35, '#a855f7', 70, '#ec4899', 120, '#e11d48',
                 ],
                 'circle-radius': [
                     'interpolate', ['linear'], ['get', 'point_count'],
@@ -217,7 +209,7 @@ export function installLiveMapLayers(
             id: LIVE_LAYERS.directionDots,
             type: 'symbol',
             source: LIVE_SOURCES.positions,
-            minzoom: 11.5,
+            minzoom: LIVE_MAP_TIER.mesoMinZoom,
             maxzoom: LOD.dotFadeInStart,
             filter: ['!', ['has', 'point_count']],
             layout: {
@@ -240,7 +232,8 @@ export function installLiveMapLayers(
                 ],
                 'text-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    11.5, 0.45,
+                    LIVE_MAP_TIER.mesoMinZoom, 0.35,
+                    11.2, 0.55,
                     11.8, 0.72,
                     LOD.dotFadeInStart - 0.1, 0.35,
                     LOD.dotFadeInStart, 0,
@@ -388,19 +381,51 @@ export function installLiveMapLayers(
         map.on('mouseleave', CLUSTER_CLICK_LAYERS, () => setCursor(''));
 
         if (handlers.onClusterHover) {
-            const onClusterMove = (e: LiveMapClickEvent & { features?: Array<{ properties?: Record<string, unknown> }> }) => {
+            const onClusterMove = (e: LiveMapClickEvent & {
+                features?: Array<{ properties?: Record<string, unknown> }>;
+            }) => {
                 const f = e.features?.[0];
-                if (!f?.properties?.point_count) {
+                const clusterId = f?.properties?.cluster_id;
+                if (clusterId == null || !f?.properties?.point_count) {
                     handlers.onClusterHover?.(null);
                     return;
                 }
                 const total = Number(f.properties.point_count);
-                const bike = Number(f.properties.bike_sum ?? 0);
-                const run = Number(f.properties.run_sum ?? Math.max(0, total - bike));
-                handlers.onClusterHover!(
-                    `<strong>${total}</strong> w widoku<br/>${bike} rower · ${run} bieg`,
-                    e.lngLat,
-                );
+                const source = map.getSource(LIVE_SOURCES.positions) as {
+                    getClusterLeaves?: (
+                        id: number,
+                        limit: number,
+                        offset: number,
+                        cb: (err: Error | null, leaves: Array<{ properties?: Record<string, unknown> }>) => void,
+                    ) => void;
+                };
+                if (!source?.getClusterLeaves) {
+                    handlers.onClusterHover!(
+                        `<strong>${total}</strong> w widoku`,
+                        e.lngLat,
+                    );
+                    return;
+                }
+                source.getClusterLeaves(Number(clusterId), 200, 0, (err, leaves) => {
+                    if (err || !leaves?.length) {
+                        handlers.onClusterHover!(
+                            `<strong>${total}</strong> w widoku`,
+                            e.lngLat,
+                        );
+                        return;
+                    }
+                    let bike = 0;
+                    let run = 0;
+                    for (const leaf of leaves) {
+                        const k = leaf.properties?.kind;
+                        if (k === 'bike') bike += 1;
+                        else run += 1;
+                    }
+                    handlers.onClusterHover!(
+                        `<strong>${total}</strong> w widoku<br/>${bike} rower · ${run} bieg`,
+                        e.lngLat,
+                    );
+                });
             };
             map.on('mousemove', LIVE_LAYERS.clusters, onClusterMove as (e: LiveMapClickEvent) => void);
             map.on('mouseleave', LIVE_LAYERS.clusters, () => handlers.onClusterHover?.(null));
@@ -550,7 +575,10 @@ export type LiveMapClickEvent = {
 };
 
 export function setLivePositionsData(
-    map: { getSource: (id: string) => { setData?: (d: object) => void } | undefined },
+    map: {
+        getSource: (id: string) => { setData?: (d: object) => void } | undefined;
+        triggerRepaint?: () => void;
+    },
     positions: LiveMapPosition[],
 ): void {
     const source = map.getSource(LIVE_SOURCES.positions);
@@ -558,6 +586,7 @@ export function setLivePositionsData(
         type: 'FeatureCollection',
         features: positionsToFeatures(positions),
     });
+    map.triggerRepaint?.();
 }
 
 export function setCityHubData(

@@ -600,6 +600,8 @@ export const LiveMap: React.FC = () => {
         try {
             const layers = [
                 LIVE_LAYERS.clusters,
+                LIVE_LAYERS.clusterCount,
+                LIVE_LAYERS.directionDots,
                 LIVE_LAYERS.unclustered,
                 LIVE_LAYERS.riderIcons,
                 LIVE_LAYERS.riderLabels,
