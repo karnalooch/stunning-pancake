@@ -18,6 +18,13 @@ type WebhookRow = {
     enabled: boolean;
     failure_count: number;
     last_delivery_at: string | null;
+    delivery_log?: Array<{
+        event_id?: string;
+        event?: string;
+        status: string;
+        at?: string;
+        code?: number;
+    }>;
 };
 
 export const LiveMapWebhooksPanel: React.FC = () => {
@@ -55,6 +62,14 @@ export const LiveMapWebhooksPanel: React.FC = () => {
 
     const testPing = async (id: number) => {
         await TelemetryApi.testLiveMapWebhook(id);
+        await load();
+    };
+
+    const statusColor = (status: string) => {
+        if (status === 'ok') return 'teal';
+        if (status === 'queued') return 'blue';
+        if (status === 'client_error' || status === 'retry') return 'red';
+        return 'gray';
     };
 
     return (
@@ -83,6 +98,21 @@ export const LiveMapWebhooksPanel: React.FC = () => {
                             ? ` · ostatnia dostawa: ${new Date(row.last_delivery_at).toLocaleString()}`
                             : ' · brak dostaw'}
                     </Text>
+                    {(row.delivery_log?.length ?? 0) > 0 && (
+                        <Stack gap={2} data-testid={`live-map-webhook-log-${row.id}`}>
+                            {row.delivery_log!.slice(0, 5).map((entry, idx) => (
+                                <Group key={`${entry.event_id ?? idx}-${entry.at ?? idx}`} gap={6} wrap="nowrap">
+                                    <Badge size="xs" color={statusColor(entry.status)} variant="light">
+                                        {entry.status}
+                                    </Badge>
+                                    <Text size="2xs" c="dimmed" truncate style={{ flex: 1 }}>
+                                        {entry.event ?? '—'}
+                                        {entry.at ? ` · ${new Date(entry.at).toLocaleString()}` : ''}
+                                    </Text>
+                                </Group>
+                            ))}
+                        </Stack>
+                    )}
                 </Stack>
             ))}
             <TextInput

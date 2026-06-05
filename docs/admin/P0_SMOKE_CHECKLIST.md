@@ -125,11 +125,28 @@ Login as `SPONSOR`.
 
 Wymaga `ADMIN_PASS` w środowisku. Artefakty trafiają do `admin/audit-screenshots/` (nie commitować).
 
+**Lokalnie:**
+
 ```bash
 cd admin
 ADMIN_PASS='<secret>' node scripts/smoke-live-map-prod.mjs
 ADMIN_PASS='<secret>' node scripts/audit-webgl-live-map.mjs
 ```
+
+**GitHub Actions (opcjonalnie, po deploy):**
+
+Workflow [`.github/workflows/live-map-prod-smoke.yml`](../../.github/workflows/live-map-prod-smoke.yml) — uruchamiany ręcznie (`workflow_dispatch`) lub po udanym **SPORT Container Registry — Build & Push** na `main`.
+
+| Secret | Wymagane | Opis |
+|--------|:--------:|------|
+| `ADMIN_PASS` | tak | Hasło konta admin (np. GLOBAL_OWNER) |
+| `ADMIN_URL` | tak* | URL prod admin, np. `https://admin-production-083b.up.railway.app` |
+| `E2E_BASE_URL` | tak* | Alternatywa dla `ADMIN_URL` |
+| `ADMIN_USER` | nie | Domyślnie `global_owner` |
+
+\* Co najmniej jeden z `ADMIN_URL` / `E2E_BASE_URL`.
+
+Artefakty smoke (screenshoty + JSON) są uploadowane jako GitHub Actions artifact `live-map-prod-smoke` (14 dni).
 
 | # | Check | Pass |
 |---|--------|:----:|

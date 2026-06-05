@@ -638,7 +638,9 @@ class LiveMapWebhookTestView(generics.GenericAPIView):
     def post(self, request, pk):
         import uuid
 
-        from activities.models_webhooks import LiveMapAlertWebhook
+        from django.utils import timezone
+
+        from activities.models_webhooks import LiveMapAlertWebhook, append_delivery_log
         from activities.tasks import deliver_live_map_webhook
 
         user = request.user
@@ -657,6 +659,15 @@ class LiveMapWebhookTestView(generics.GenericAPIView):
             "timestamp": time.time(),
             "meta": {"message": "Live Map webhook test"},
         }
+        append_delivery_log(
+            wh.id,
+            {
+                "event_id": event_id,
+                "event": "test_ping",
+                "status": "queued",
+                "at": timezone.now().isoformat(),
+            },
+        )
         deliver_live_map_webhook.delay(wh.id, event_id, payload)
         return Response({"status": "queued", "event_id": event_id}, status=status.HTTP_202_ACCEPTED)
 

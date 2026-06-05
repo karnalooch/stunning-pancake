@@ -103,6 +103,7 @@ export function setLiveMapRenderMode(
     }
     if (map.getLayer(H3_LAYER)) {
         map.setLayoutProperty(H3_LAYER, 'visibility', showH3 ? 'visible' : 'none');
+        e2eVis[H3_LAYER] = showH3 ? 'visible' : 'none';
     }
     if (isPlaywrightE2eSession() && typeof window !== 'undefined') {
         (window as Window & { __liveMapLayerVis?: Record<string, string> }).__liveMapLayerVis = e2eVis;

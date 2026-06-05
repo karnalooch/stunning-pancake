@@ -1,0 +1,101 @@
+# Optional post-deploy Live Map smoke against production admin.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   ADMIN_PASS      — GLOBAL_OWNER (or ADMIN_USER) password; never commit.
+#   ADMIN_URL       — e.g. https://admin-production-083b.up.railway.app
+#                     (falls back to E2E_BASE_URL if ADMIN_URL unset)
+#
+# Optional:
+#   ADMIN_USER      — default: global_owner
+#
+# Triggers:
+#   - workflow_dispatch (manual)
+#   - workflow_run after container publish on main (post-deploy gate)
+
+name: Live Map Prod Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      admin_url:
+        description: 'Admin base URL (overrides ADMIN_URL secret)'
+        required: false
+        type: string
+  workflow_run:
+    workflows: ['SPORT Container Registry — Build & Push']
+    types: [completed]
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  live-map-prod-smoke:
+    name: Live Map prod smoke + WebGL audit
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.head_branch == 'main')
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+
+      - name: Install dependencies
+        run: cd admin && npm ci
+
+      - name: Install Playwright Chromium
+        run: cd admin && npx playwright install --with-deps chromium
+
+      - name: Verify secrets
+        env:
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          ADMIN_URL: ${{ secrets.ADMIN_URL }}
+          E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+        run: |
+          if [ -z "$ADMIN_PASS" ]; then
+            echo "::error::Missing secret ADMIN_PASS — add in repo Settings → Secrets → Actions"
+            exit 1
+          fi
+          BASE="${{ github.event.inputs.admin_url }}"
+          if [ -z "$BASE" ]; then BASE="$ADMIN_URL"; fi
+          if [ -z "$BASE" ]; then BASE="$E2E_BASE_URL"; fi
+          if [ -z "$BASE" ]; then
+            echo "::error::Set ADMIN_URL or E2E_BASE_URL secret (or pass admin_url on workflow_dispatch)"
+            exit 1
+          fi
+          echo "ADMIN_BASE=$BASE" >> "$GITHUB_ENV"
+
+      - name: Live Map prod smoke
+        env:
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_URL: ${{ env.ADMIN_BASE }}
+        run: cd admin && node scripts/smoke-live-map-prod.mjs
+
+      - name: WebGL audit (prod)
+        env:
+          ADMIN_PASS: ${{ secrets.ADMIN_PASS }}
+          ADMIN_USER: ${{ secrets.ADMIN_USER }}
+          ADMIN_URL: ${{ env.ADMIN_BASE }}
+        run: cd admin && node scripts/audit-webgl-live-map.mjs --prod
+
+      - name: Upload smoke artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-map-prod-smoke
+          path: |
+            admin/audit-screenshots/live-map-smoke-*.png
+            admin/audit-screenshots/live-map-smoke-report.json
+            admin/audit-screenshots/webgl-audit-prod-*.png
+            admin/audit-screenshots/webgl-audit-report.json
+          retention-days: 14

@@ -290,7 +290,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
     import requests
     from django.utils import timezone
 
-    from activities.models_webhooks import LiveMapAlertWebhook
+    from activities.models_webhooks import LiveMapAlertWebhook, append_delivery_log
 
     try:
         wh = LiveMapAlertWebhook.objects.get(pk=webhook_id, enabled=True)
@@ -308,6 +308,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         "X-LiveMap-Signature": signature,
         "X-Event-Id": event_id,
     }
+    event_name = payload.get("event") if isinstance(payload, dict) else None
     try:
         resp = requests.post(wh.url, data=body, headers=headers, timeout=10)
         if resp.status_code >= 500:
@@ -315,6 +316,16 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         if resp.status_code >= 400:
             LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
                 failure_count=wh.failure_count + 1
+            )
+            append_delivery_log(
+                wh.pk,
+                {
+                    "event_id": event_id,
+                    "event": event_name,
+                    "status": "client_error",
+                    "code": resp.status_code,
+                    "at": timezone.now().isoformat(),
+                },
             )
             logger.warning(
                 "live_map.webhook.delivery_status=client_error id=%s code=%s",
@@ -326,11 +337,31 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
             last_delivery_at=timezone.now(),
             failure_count=0,
         )
+        append_delivery_log(
+            wh.pk,
+            {
+                "event_id": event_id,
+                "event": event_name,
+                "status": "ok",
+                "code": resp.status_code,
+                "at": timezone.now().isoformat(),
+            },
+        )
         logger.info("live_map.webhook.delivery_status=ok id=%s event=%s", webhook_id, event_id)
         return {"status": "ok", "code": resp.status_code}
     except Exception as exc:
         LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
             failure_count=wh.failure_count + 1
+        )
+        append_delivery_log(
+            wh.pk,
+            {
+                "event_id": event_id,
+                "event": event_name,
+                "status": "retry",
+                "error": str(exc)[:200],
+                "at": timezone.now().isoformat(),
+            },
         )
         logger.warning("live_map.webhook.delivery_status=retry id=%s err=%s", webhook_id, exc)
         raise self.retry(exc=exc, countdown=min(600, 30 * (2 ** self.request.retries)))

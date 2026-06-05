@@ -47,7 +47,7 @@ export default defineConfig({
     },
     {
       name: 'live-map-zoom',
-      testMatch: ['**/live-map-zoom.spec.ts', '**/webgl-audit.spec.ts'],
+      testMatch: ['**/live-map-zoom.spec.ts', '**/webgl-audit.spec.ts', '**/live-map-h3-aggregate.spec.ts'],
       retries: process.env.CI ? 2 : 0,
       timeout: 180_000,
       use: {

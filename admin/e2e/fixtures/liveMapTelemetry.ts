@@ -141,3 +141,66 @@ export function mockLiveTelemetryBody(detail: string | null, bbox?: string | nul
     }
     return { positions, meta };
 }
+
+/** Synthetic H3/hexbin cells for aggregate-mode E2E (no real 10k load). */
+export function buildMockH3AggregateFeatures(cellCount = 1200): Array<Record<string, unknown>> {
+    const features: Array<Record<string, unknown>> = [];
+    const cols = Math.ceil(Math.sqrt(cellCount));
+    const originLng = 19.0;
+    const originLat = 49.5;
+    const step = 0.04;
+    for (let i = 0; i < cellCount; i += 1) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const lng = originLng + col * step;
+        const lat = originLat + row * step;
+        const half = step * 0.45;
+        features.push({
+            type: 'Feature',
+            properties: { weight: (i % 10) / 10, count: (i % 50) + 1 },
+            geometry: {
+                type: 'Polygon',
+                coordinates: [[
+                    [lng, lat],
+                    [lng + half, lat],
+                    [lng + half, lat + half],
+                    [lng, lat + half],
+                    [lng, lat],
+                ]],
+            },
+        });
+    }
+    return features;
+}
+
+export function mockH3AggregateBody(cellCount = 1200): object {
+    const features = buildMockH3AggregateFeatures(cellCount);
+    return {
+        type: 'FeatureCollection',
+        features,
+        meta: { cells: features.length, mode: 'h3', render_mode: 'aggregate' },
+    };
+}
+
+/** Live response forcing aggregate LOD (scale gate). */
+export function mockAggregateScaleTelemetryBody(bbox?: string | null): object {
+    const bboxParam = bbox ?? '19,49,24,55';
+    return {
+        positions: [],
+        meta: {
+            ride_on_map: 12_500,
+            positions_returned: 0,
+            viewport_returned: 0,
+            viewport_total_estimate: 12_500,
+            capped: true,
+            city_counts: MOCK_CITY_COUNTS,
+            city_bike_counts: MOCK_CITY_BIKE_COUNTS,
+            city_run_counts: MOCK_CITY_RUN_COUNTS,
+            city_trend: MOCK_CITY_TREND,
+            flagged_in_viewport: 0,
+            read_mode: 'normal',
+            render_mode: 'aggregate',
+            aggregate_url: `/api/activities/telemetry/live/aggregate/?bbox=${bboxParam}&mode=h3`,
+        },
+    };
+}
