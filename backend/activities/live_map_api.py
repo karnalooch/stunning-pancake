@@ -13,6 +13,10 @@ from typing import Any
 
 # Align with admin liveMapEnterprise.ts micro tier (full detail from z≥12).
 LIVE_MAP_FULL_DETAIL_MIN_ZOOM = 12.0
+# H3 aggregate LOD — lower than legacy 2000/10000 for faster Meso at scale.
+H3_AGGREGATE_VIEWPORT_CAPPED_MIN = 1200
+H3_AGGREGATE_VIEWPORT_ESTIMATE_MIN = 8000
+H3_AGGREGATE_MESO_CAPPED_MIN = 800
 
 
 def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:
@@ -52,6 +56,7 @@ class LiveMapRequest:
     tenant_id: str | None = None
     department_id: int | None = None
     department_ids: frozenset[int] | None = None
+    compact: bool = False
 
 
 def _normalize_activity_filter(raw: str | None) -> str | None:
@@ -149,6 +154,8 @@ def parse_live_map_query_params(
 
     activity_type = _normalize_activity_filter(query_params.get("activity_type") or query_params.get("type"))
     city_slug = (query_params.get("city") or query_params.get("city_slug") or "").strip().lower() or None
+    compact_raw = (query_params.get("compact") or "").strip().lower()
+    compact = compact_raw in ("1", "true", "yes")
 
     tenant_id = None
     department_id = None
@@ -180,6 +187,7 @@ def parse_live_map_query_params(
         tenant_id=tenant_id,
         department_id=department_id,
         department_ids=department_ids,
+        compact=compact,
     )
 
 
@@ -331,13 +339,18 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         if req.activity_type and kind != req.activity_type:
             continue
         if req.city_slug:
-            try:
-                from simulate_active_cities import nearest_city_slug_for_coords
+            pos_city = pos.get("citySlug") or pos.get("city_slug")
+            if pos_city:
+                pos_city = str(pos_city).strip().lower()
+            else:
+                try:
+                    from simulate_active_cities import nearest_city_slug_for_coords
 
-                if nearest_city_slug_for_coords(lat, lng) != req.city_slug:
-                    continue
-            except Exception:
-                pass
+                    pos_city = nearest_city_slug_for_coords(lat, lng)
+                except Exception:
+                    pos_city = None
+            if pos_city != req.city_slug:
+                continue
         if kind == "bike":
             viewport_bike += 1
         else:
@@ -352,10 +365,11 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
                 "type": type_label,
                 "lat": lat,
                 "lng": lng,
-                "speed": speed,
-                "course": course,
             }
-            if ride_state:
+            if not req.compact:
+                row["speed"] = speed
+                row["course"] = course
+            if ride_state and not req.compact:
                 row["ride_state"] = ride_state
             if flagged:
                 row["flagged"] = True
@@ -426,9 +440,15 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
 
     render_mode = "points"
     aggregate_url = None
-    if viewport_total_estimate is not None and viewport_total_estimate >= 10_000:
+    if viewport_total_estimate is not None and viewport_total_estimate >= H3_AGGREGATE_VIEWPORT_ESTIMATE_MIN:
         render_mode = "aggregate"
-    elif viewport_returned >= 2000 and telemetry_meta.get("capped"):
+    elif viewport_returned >= H3_AGGREGATE_VIEWPORT_CAPPED_MIN and telemetry_meta.get("capped"):
+        render_mode = "aggregate"
+    elif (
+        detail == "standard"
+        and viewport_returned >= H3_AGGREGATE_MESO_CAPPED_MIN
+        and telemetry_meta.get("capped")
+    ):
         render_mode = "aggregate"
     elif detail in ("standard", "summary") or viewport_returned > 50:
         render_mode = "clusters"

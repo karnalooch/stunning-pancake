@@ -133,9 +133,9 @@ ADMIN_PASS='<secret>' node scripts/smoke-live-map-prod.mjs
 ADMIN_PASS='<secret>' node scripts/audit-webgl-live-map.mjs
 ```
 
-**GitHub Actions (opcjonalnie, po deploy):**
+**GitHub Actions (post-deploy gate):**
 
-Workflow [`.github/workflows/live-map-prod-smoke.yml`](../../.github/workflows/live-map-prod-smoke.yml) — uruchamiany ręcznie (`workflow_dispatch`) lub po udanym **SPORT Container Registry — Build & Push** na `main`.
+Workflow [`.github/workflows/live-map-prod-smoke.yml`](../../.github/workflows/live-map-prod-smoke.yml) — uruchamiany ręcznie (`workflow_dispatch`) lub automatycznie po udanym **SPORT Container Registry — Build & Push** na `main` / `master`. Brak sekretów → workflow **fail** (wymagane przed GO).
 
 | Secret | Wymagane | Opis |
 |--------|:--------:|------|

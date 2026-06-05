@@ -33,10 +33,12 @@ jobs:
   live-map-prod-smoke:
     name: Live Map prod smoke + WebGL audit
     runs-on: ubuntu-latest
+    # Post-deploy gate: fails the workflow if Live Map / WebGL smoke fails on prod.
     if: >-
       github.event_name == 'workflow_dispatch'
       || (github.event.workflow_run.conclusion == 'success'
-          && github.event.workflow_run.head_branch == 'main')
+          && (github.event.workflow_run.head_branch == 'main'
+              || github.event.workflow_run.head_branch == 'master'))
     timeout-minutes: 25
 
     steps:

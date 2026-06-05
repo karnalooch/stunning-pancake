@@ -130,6 +130,64 @@ class LiveMapScopeFilterTest(SimpleTestCase):
         self.assertEqual(body["meta"]["viewport_filtered_out"], 1)
 
 
+class LiveMapCitySlugIngestTest(SimpleTestCase):
+    def test_encode_entry_includes_city_slug(self):
+        from activities.services import TelemetryService
+
+        _id, payload, _lon, _lat = TelemetryService._encode_entry(
+            {
+                "deviceId": "42",
+                "lat": 52.2297,
+                "lng": 21.0122,
+                "type": "bike",
+            }
+        )
+        import json
+
+        row = json.loads(payload)
+        self.assertEqual(row.get("citySlug"), "warszawa")
+
+
+class LiveMapCompactStandardTest(SimpleTestCase):
+    def test_compact_standard_omits_speed_and_ride_state(self):
+        from unittest.mock import patch
+
+        positions = [
+            {
+                "deviceId": "1",
+                "lat": 52.23,
+                "lng": 21.01,
+                "speed": 4.5,
+                "course": 90.0,
+                "type": "bike",
+            },
+        ]
+        req = LiveMapRequest(
+            bbox_tuple=(21.0, 52.2, 21.1, 52.3),
+            limit=100,
+            zoom_param=10.0,
+            detail="standard",
+            fetch_limit=100,
+            skip_cache=True,
+            activity_type=None,
+            city_slug=None,
+            compact=True,
+        )
+        with patch(
+            "activities.services.TelemetryService.get_live_positions",
+            return_value=(positions, {"capped": False, "redis_active": 1}),
+        ), patch(
+            "activities.simulator_state.get_live_rides",
+            return_value={"1": {"state": "RIDING"}},
+        ):
+            body = build_live_map_payload(req)
+        row = body["positions"][0]
+        self.assertEqual(row["deviceId"], "1")
+        self.assertNotIn("speed", row)
+        self.assertNotIn("course", row)
+        self.assertNotIn("ride_state", row)
+
+
 class LiveMapEtagTest(SimpleTestCase):
     def test_live_map_etag_stable_for_identical_payload(self):
         body = {"positions": [{"deviceId": "1", "lat": 52.0, "lng": 21.0}], "meta": {"detail": "full"}}

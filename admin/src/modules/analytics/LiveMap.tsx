@@ -68,6 +68,7 @@ import {
     limitForZoom,
     resolveLiveMapTier,
     TIER_MODE_LABEL,
+    LIVE_MAP_TIER,
 } from './liveMapZoom';
 import {
     installLiveMapLayers,
@@ -79,8 +80,17 @@ import {
     setCityHubData,
     countLivePositionFeatures,
     setLivePositionsData,
+    updateMesoClustersOnly,
     type LiveMapClickEvent,
 } from './liveMapLayers';
+import {
+    SSE_RESTART_DELAY_MS,
+    coalesceViewportSettle,
+    progressiveLimitForZoom,
+    shouldFetchFullLimitAfterFast,
+} from './liveMapViewportFetch';
+import { cityFlyParams, mesoBboxForCitySlug, mesoFlyZoom } from './liveMapCityNav';
+import { terminateMesoWorker } from './liveMapMesoWorkerClient';
 import { LivePositionInterpolator } from './liveMapInterp';
 import { bboxFromMap } from './liveMapBbox';
 import {
@@ -117,6 +127,8 @@ const DEFAULT_ZOOM = 6;
 const MOVE_DEBOUNCE_MS = 180;
 const MOVE_FETCH_THROTTLE_MS = 120;
 const STALE_EMPTY_MS = 3500;
+const PREFETCH_HOVER_DEBOUNCE_MS = 120;
+const MESO_ZOOM_RECLUSTER_EPS = 0.04;
 
 function featureToPosition(
     props: Record<string, unknown>,
@@ -183,6 +195,12 @@ export const LiveMap: React.FC = () => {
     const viewportRefreshRef = useRef(0);
     const viewportEtagRef = useRef<Record<string, string>>({});
     const warmStartDoneRef = useRef(false);
+    const viewportSettleTokenRef = useRef(0);
+    const streamRestartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pendingCityFlyRef = useRef<string | null>(null);
+    const prefetchHoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastMesoReclusterZoomRef = useRef<number | null>(null);
+    const scheduleStreamRestartRef = useRef<() => void>(() => { /* bound after scheduleStreamRestart */ });
     const streamAbortRef = useRef<AbortController | null>(null);
     const wsDisconnectRef = useRef<(() => void) | null>(null);
     const streamIntervalMsRef = useRef(350);
@@ -204,6 +222,7 @@ export const LiveMap: React.FC = () => {
     const [drawnOnMap, setDrawnOnMap] = useState(0);
     const [renderedOnMap, setRenderedOnMap] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [viewportRefreshing, setViewportRefreshing] = useState(false);
     const [mapReady, setMapReady] = useState(false);
     const [mlReady, setMlReady] = useState(false);
     const [tabVisible, setTabVisible] = useState(tabVisibleRef.current);
@@ -574,43 +593,71 @@ export const LiveMap: React.FC = () => {
             .addTo(map);
     }, []);
 
-    const prefetchMesoForCity = useCallback(async (slug: string) => {
+    const applyPrefetchPayloadRef = useRef((
+        _slug: string,
+        _list: UserPosition[],
+        _meta: Record<string, unknown> | null,
+        _detail: LiveApiDetail,
+    ) => { /* set after applyPositionPayload */ });
+
+    const prefetchMesoForCity = useCallback(async (slug: string, opts?: { paint?: boolean }) => {
         if (!canFetch || liveFetchPausedRef.current) return;
         const city = cityBySlug(slug);
         if (!city) return;
-        const zoom = 10.5;
+        const zoom = mesoFlyZoom();
         const detail = apiDetailForZoom(zoom);
-        const pad = 0.18;
-        const bbox = [
-            (city.lng - pad).toFixed(4),
-            (city.lat - pad).toFixed(4),
-            (city.lng + pad).toFixed(4),
-            (city.lat + pad).toFixed(4),
-        ].join(',');
+        const bbox = mesoBboxForCitySlug(slug);
+        if (!bbox) return;
         const nextFilters = mergeFilters(filtersRef.current, { citySlug: slug });
         const cacheKey = viewportCacheKey(detail, bbox, nextFilters);
+        const cached = getViewportCache(cacheKey);
+        if (cached && cached.positions.length > 0 && opts?.paint !== false) {
+            applyPrefetchPayloadRef.current(slug, cached.positions, cached.meta, detail);
+        }
         try {
             const data = await TelemetryApi.getLivePositions({
-                limit: limitForZoom(zoom),
+                limit: progressiveLimitForZoom(zoom),
                 detail,
                 bbox,
                 zoom: Math.round(zoom * 10) / 10,
+                compact: 1,
                 ...filtersToApiParams(nextFilters),
             }, { silent: true, etag: viewportEtagRef.current[cacheKey] });
-            if (data?.notModified) return;
+            if (data?.notModified) {
+                if (cached && opts?.paint !== false) {
+                    applyPrefetchPayloadRef.current(slug, cached.positions, cached.meta, detail);
+                }
+                return;
+            }
             const list = data?.positions ?? [];
             const meta = (data?.meta ?? null) as Record<string, unknown> | null;
             if (data?.etag) viewportEtagRef.current[cacheKey] = data.etag;
             setViewportCache(cacheKey, { positions: list, meta, etag: data?.etag ?? null });
+            if (opts?.paint !== false) {
+                applyPrefetchPayloadRef.current(slug, list, meta, detail);
+            }
         } catch { /* prefetch is best-effort */ }
     }, [canFetch]);
 
+    const schedulePrefetchOnHover = useCallback((slug: string) => {
+        if (prefetchHoverTimerRef.current) clearTimeout(prefetchHoverTimerRef.current);
+        prefetchHoverTimerRef.current = setTimeout(() => {
+            void prefetchMesoForCity(slug, { paint: false });
+        }, PREFETCH_HOVER_DEBOUNCE_MS);
+    }, [prefetchMesoForCity]);
+
     const flyToCity = useCallback((slug: string) => {
-        const city = cityBySlug(slug);
         const map = mapRef.current;
-        if (!city || !map) return;
+        if (!map) return;
+        const fly = cityFlyParams(slug, filtersRef.current);
+        if (!fly) return;
+        pendingCityFlyRef.current = slug;
         void prefetchMesoForCity(slug);
-        map.easeTo({ center: [city.lng, city.lat], zoom: 10.5, duration: 700 });
+        if (fly.instant && typeof map.jumpTo === 'function') {
+            map.jumpTo({ center: fly.center, zoom: fly.zoom });
+        } else {
+            map.easeTo({ center: fly.center, zoom: fly.zoom, duration: fly.duration });
+        }
         setFilters((prev) => mergeFilters(prev, { citySlug: slug }));
     }, [prefetchMesoForCity]);
 
@@ -874,7 +921,10 @@ export const LiveMap: React.FC = () => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
         const list = positionsRef.current;
+        const z = map.getZoom?.() ?? DEFAULT_ZOOM;
+        const mesoOnly = resolveLiveMapTier(z) === 'meso';
         setLivePositionsData(map, list, {
+            mesoOnly,
             onPositionsSet: () => scheduleRenderedCountRef.current(),
         });
         const featureN = countLivePositionFeatures(list);
@@ -941,17 +991,51 @@ export const LiveMap: React.FC = () => {
         ingestPositions(list, { snap: snap || list.length > 0 });
     }, [applyMetaCounts, applyCityCounts, ingestPositions, flushPositionsToMapLayer]);
 
+    applyPrefetchPayloadRef.current = (
+        slug: string,
+        list: UserPosition[],
+        meta: Record<string, unknown> | null,
+        detail: LiveApiDetail,
+    ) => {
+        if (!layersReadyRef.current || list.length === 0) return;
+        const map = mapRef.current;
+        if (!map) return;
+        if (resolveLiveMapTier(map.getZoom()) === 'macro') return;
+        const cityMatch = filtersRef.current.citySlug === slug || pendingCityFlyRef.current === slug;
+        if (!cityMatch) return;
+        applyPositionPayload(list, meta, detail, true, false, false);
+    };
+
+    const reclusterMesoLocal = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !layersReadyRef.current) return;
+        const list = positionsRef.current;
+        if (list.length === 0) return;
+        updateMesoClustersOnly(map, list, {
+            onPositionsSet: () => scheduleRenderedCountRef.current(),
+        });
+        scheduleRenderedCount();
+    }, [scheduleRenderedCount]);
+
+    const reclusterMesoLocalRef = useRef(reclusterMesoLocal);
+    reclusterMesoLocalRef.current = reclusterMesoLocal;
+
     const fetchPositions = useCallback(async (opts?: {
         priority?: boolean;
         snap?: boolean;
         forceRefresh?: boolean;
+        phase?: 'fast' | 'full';
     }) => {
         if (!canFetch || liveFetchPausedRef.current || !tabVisibleRef.current) return;
         const priority = Boolean(opts?.priority);
         const forceRefresh = Boolean(opts?.forceRefresh);
+        const phase = opts?.phase ?? (priority ? 'fast' : 'full');
         if (!priority && fetchInFlightRef.current) return;
 
         fetchInFlightRef.current = true;
+        if (priority && phase === 'fast') {
+            setViewportRefreshing(true);
+        }
 
         const seq = ++fetchSeqRef.current;
         const ac = new AbortController();
@@ -979,7 +1063,12 @@ export const LiveMap: React.FC = () => {
                 viewportRefreshRef.current += 1;
             }
 
-            if (!forceRefresh && priority) {
+            const fullLimit = detail === 'summary' ? 0 : limitForZoom(zoom);
+            const requestLimit = detail === 'summary'
+                ? 0
+                : (phase === 'fast' ? progressiveLimitForZoom(zoom) : fullLimit);
+
+            if (!forceRefresh && priority && phase === 'fast') {
                 const cached = getViewportCache(swrKey);
                 if (cached && cached.positions.length > 0) {
                     applyPositionPayload(
@@ -995,10 +1084,13 @@ export const LiveMap: React.FC = () => {
             }
 
             const params: Record<string, string | number> = {
-                limit: detail === 'summary' ? 0 : limitForZoom(zoom),
+                limit: requestLimit,
                 detail,
                 ...filtersToApiParams(filtersRef.current),
             };
+            if (detail === 'standard') {
+                params.compact = 1;
+            }
             if (map) {
                 params.bbox = bbox!;
                 params.zoom = Math.round(zoom * 10) / 10;
@@ -1061,6 +1153,20 @@ export const LiveMap: React.FC = () => {
                 );
                 syncZoomUi();
             }
+            pendingCityFlyRef.current = null;
+            const metaObj = (meta && typeof meta === 'object') ? meta as Record<string, unknown> : null;
+            if (
+                phase === 'fast'
+                && detail !== 'summary'
+                && shouldFetchFullLimitAfterFast(
+                    requestLimit,
+                    fullLimit,
+                    list.length,
+                    Boolean(metaObj?.capped),
+                )
+            ) {
+                void fetchPositionsRef.current({ priority: false, snap: true, phase: 'full' });
+            }
             const tookMs = Math.round(performance.now() - t0);
             lastRefreshRef.current = tookMs;
             setLastRefreshMs(tookMs);
@@ -1122,6 +1228,9 @@ export const LiveMap: React.FC = () => {
         } finally {
             if (seq === fetchSeqRef.current) {
                 fetchInFlightRef.current = false;
+                if (phase === 'fast' || phase === 'full') {
+                    setViewportRefreshing(false);
+                }
             }
             setLoading(false);
         }
@@ -1188,9 +1297,32 @@ export const LiveMap: React.FC = () => {
             (pos) => interpolatorRef.current?.pushDelta(pos),
             () => { /* WS optional — SSE is primary */ },
         );
-
-        void fetchPositionsRef.current({ priority: true, snap: true });
     }, [canFetch, mapReady, applyStreamSnapshot, stopTelemetryStream]);
+
+    const scheduleStreamRestart = useCallback(() => {
+        if (streamRestartTimerRef.current) clearTimeout(streamRestartTimerRef.current);
+        streamRestartTimerRef.current = setTimeout(() => {
+            restartTelemetryStream();
+        }, SSE_RESTART_DELAY_MS);
+    }, [restartTelemetryStream]);
+
+    const scheduleViewportUpdate = useCallback((immediate = false) => {
+        lastMoveAtRef.current = Date.now();
+        const run = () => {
+            void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
+            scheduleStreamRestart();
+        };
+        if (immediate) {
+            coalesceViewportSettle(viewportSettleTokenRef, run);
+            return;
+        }
+        if (moveDebounceRef.current) clearTimeout(moveDebounceRef.current);
+        moveDebounceRef.current = setTimeout(run, MOVE_DEBOUNCE_MS);
+    }, [scheduleStreamRestart]);
+    scheduleStreamRestartRef.current = scheduleStreamRestart;
+
+    const scheduleViewportUpdateRef = useRef(scheduleViewportUpdate);
+    scheduleViewportUpdateRef.current = scheduleViewportUpdate;
 
     const forceRefreshViewport = useCallback(() => {
         const map = mapRef.current;
@@ -1203,36 +1335,22 @@ export const LiveMap: React.FC = () => {
             deleteViewportCache(swrKey);
             delete viewportEtagRef.current[swrKey];
         }
-        restartTelemetryStream();
-        void fetchPositionsRef.current({ priority: true, snap: true, forceRefresh: true });
-    }, [restartTelemetryStream]);
+        void fetchPositionsRef.current({ priority: true, snap: true, forceRefresh: true, phase: 'full' });
+        scheduleStreamRestart();
+    }, [scheduleStreamRestart]);
 
     useEffect(() => {
         if (!mapReady) return;
-        fetchPositionsRef.current?.({ priority: true, snap: true });
-        restartTelemetryStream();
-    }, [filters.activityType, filters.citySlug, mapReady, restartTelemetryStream]);
-
-    const scheduleMoveFetch = useCallback((immediate = false) => {
-        lastMoveAtRef.current = Date.now();
-        if (moveDebounceRef.current) clearTimeout(moveDebounceRef.current);
-        const run = () => {
-            fetchPositionsRef.current({ priority: true, snap: true });
-            restartTelemetryStream();
-        };
-        if (immediate) {
-            run();
-            return;
-        }
-        moveDebounceRef.current = setTimeout(run, MOVE_DEBOUNCE_MS);
-    }, [restartTelemetryStream]);
+        void fetchPositionsRef.current?.({ priority: true, snap: true, phase: 'fast' });
+        scheduleStreamRestart();
+    }, [filters.activityType, filters.citySlug, mapReady, scheduleStreamRestart]);
 
     const scheduleDragFetch = useCallback(() => {
         lastMoveAtRef.current = Date.now();
         const now = Date.now();
         if (now - lastDragFetchAtRef.current < MOVE_FETCH_THROTTLE_MS) return;
         lastDragFetchAtRef.current = now;
-        fetchPositionsRef.current({ priority: true, snap: true });
+        void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
     }, []);
 
     const handleQuickLaunch = useCallback(async () => {
@@ -1338,15 +1456,15 @@ export const LiveMap: React.FC = () => {
             tabVisibleRef.current = vis;
             setTabVisible(vis);
             if (vis) {
-                fetchPositionsRef.current();
-                restartTelemetryStream();
+                void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
+                scheduleStreamRestartRef.current();
             } else {
                 stopTelemetryStream();
             }
         };
         document.addEventListener('visibilitychange', onVis);
         return () => document.removeEventListener('visibilitychange', onVis);
-    }, [restartTelemetryStream, stopTelemetryStream]);
+    }, [stopTelemetryStream]);
 
     const bindLiveMapE2eBridge = useCallback((map: {
         jumpTo: (o: { zoom: number; center?: [number, number]; duration?: number }) => void;
@@ -1468,11 +1586,17 @@ export const LiveMap: React.FC = () => {
                                 center: [city.lng, city.lat],
                                 zoom: initialZ,
                             });
+                            if (initialZ >= LIVE_MAP_TIER.mesoMinZoom) {
+                                pendingCityFlyRef.current = city.slug;
+                                void prefetchMesoForCity(city.slug);
+                            }
                         } else if (city) {
                             map.jumpTo({
                                 center: [city.lng, city.lat],
                                 zoom: 10.5,
                             });
+                            pendingCityFlyRef.current = city.slug;
+                            void prefetchMesoForCity(city.slug);
                         } else if (initialZ != null) {
                             map.setZoom(initialZ);
                         } else {
@@ -1489,7 +1613,8 @@ export const LiveMap: React.FC = () => {
                 setMapReady(true);
                 bindLiveMapE2eBridge(map);
                 if (canFetch && !liveFetchPausedRef.current) {
-                    fetchPositionsRef.current({ priority: true, snap: true });
+                    void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
+                    scheduleStreamRestartRef.current();
                 }
             });
             map.on('error', (e: { error?: { message?: string; status?: number; url?: string } }) => {
@@ -1507,6 +1632,17 @@ export const LiveMap: React.FC = () => {
                 const z = map.getZoom();
                 if (apiDetailForZoom(z) === 'summary') {
                     ingestPositionsRef.current([], { snap: true });
+                    lastMesoReclusterZoomRef.current = null;
+                } else if (
+                    resolveLiveMapTier(z) === 'meso'
+                    && positionsRef.current.length > 0
+                    && layersReadyRef.current
+                ) {
+                    const prev = lastMesoReclusterZoomRef.current;
+                    if (prev == null || Math.abs(z - prev) >= MESO_ZOOM_RECLUSTER_EPS) {
+                        lastMesoReclusterZoomRef.current = z;
+                        reclusterMesoLocalRef.current();
+                    }
                 }
                 syncZoomUi();
             });
@@ -1519,7 +1655,7 @@ export const LiveMap: React.FC = () => {
             };
             map.on('idle', onMapIdle);
             map.on('zoomend', () => {
-                scheduleMoveFetch(true);
+                scheduleViewportUpdateRef.current(true);
                 scheduleRenderedCountRef.current();
             });
             map.on('movestart', () => {
@@ -1527,7 +1663,7 @@ export const LiveMap: React.FC = () => {
             });
             map.on('move', scheduleDragFetch);
             map.on('moveend', () => {
-                scheduleMoveFetch(true);
+                scheduleViewportUpdateRef.current(true);
                 scheduleRenderedCountRef.current();
             });
             mapRef.current = map;
@@ -1542,6 +1678,9 @@ export const LiveMap: React.FC = () => {
         return () => {
             cancelled = true;
             stopTelemetryStream();
+            if (streamRestartTimerRef.current) clearTimeout(streamRestartTimerRef.current);
+            if (prefetchHoverTimerRef.current) clearTimeout(prefetchHoverTimerRef.current);
+            terminateMesoWorker();
             publishLiveMapE2e(undefined);
             interpolatorRef.current?.cancel();
             popupRef.current?.remove();
@@ -1554,7 +1693,7 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, flushRenderedCount, mapGeneration, bindLiveMapE2eBridge]);
+    }, [ensureMapLayers, scheduleViewportUpdate, scheduleDragFetch, syncZoomUi, flushRenderedCount, mapGeneration, bindLiveMapE2eBridge]);
 
     useEffect(() => {
         if (!mapReady || !canFetch || !tabVisible || liveFetchPaused) return;
@@ -1610,13 +1749,13 @@ export const LiveMap: React.FC = () => {
                 : Infinity;
             const streamSilence = Math.max(streamMs * 12, 8_000);
             if (sinceStream > streamSilence || sinceOk > staleLimit) {
-                restartTelemetryStream();
-                fetchPositionsRef.current({ priority: true, snap: true });
+                scheduleStreamRestartRef.current();
+                void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
             }
         };
         const id = setInterval(check, 4_000);
         return () => clearInterval(id);
-    }, [sseActive, mapReady, canFetch, liveFetchPaused, tabVisible, restartTelemetryStream]);
+    }, [sseActive, mapReady, canFetch, liveFetchPaused, tabVisible]);
 
     const retryMapLoad = useCallback(() => {
         setMapLoadError(null);
@@ -1865,9 +2004,30 @@ export const LiveMap: React.FC = () => {
                 trend={cityTrend}
                 compareDeltas={cityCompareDeltas}
                 onCityClick={flyToCity}
+                onCityHover={schedulePrefetchOnHover}
                 visible={mapReady && resolveLiveMapTier(mapZoom ?? DEFAULT_ZOOM) === 'macro'}
             />
             {loading && <Skeleton height="100%" radius="md" style={{ position: 'absolute', inset: 0, zIndex: 5 }} />}
+            {viewportRefreshing && mapReady && !loading && (
+                <Box
+                    data-testid="live-map-viewport-refreshing"
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 6,
+                        pointerEvents: 'none',
+                        background: 'rgba(9,9,11,0.12)',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        paddingBottom: 16,
+                    }}
+                >
+                    <Badge variant="light" color="cyan" size="sm">
+                        Aktualizowanie widoku…
+                    </Badge>
+                </Box>
+            )}
             <div
                 ref={mapContainer}
                 data-testid="live-map-canvas"
@@ -1893,8 +2053,8 @@ export const LiveMap: React.FC = () => {
                 onRetry={() => {
                     consecutiveErrorsRef.current = 0;
                     setConsecutiveErrors(0);
-                    restartTelemetryStream();
-                    fetchPositions({ priority: true, snap: true });
+                    scheduleStreamRestart();
+                    void fetchPositions({ priority: true, snap: true, phase: 'fast' });
                 }}
                 onForceRefresh={forceRefreshViewport}
                 cachedPositionCount={onlineCount}

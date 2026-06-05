@@ -33,7 +33,20 @@ Od fixa meso (Supercluster po stronie klienta):
 | `live-positions` | mikro (z ≥ 12) | Surowe punkty → ikony GPU |
 | `live-meso-clusters` | meso (9–12) | GeoJSON z `liveMapMesoClusters.ts` (Supercluster w przeglądarce) |
 
-`setLivePositionsData` aktualizuje oba źródła; `querySourceFeatures('live-meso-clusters')` i `queryRenderedFeatures` służą audytom WebGL/E2E. Warstwy klastrów (`live-clusters`, `live-direction-dots`) czytają z `live-meso-clusters`, nie z wbudowanego cluster workera MapLibre.
+`setLivePositionsData` w tierze **meso** aktualizuje tylko `live-meso-clusters` (bez `live-positions`); w **mikro** oba źródła. Supercluster budowany w **Web Worker** (`liveMapMeso.worker.ts`) z fallbackiem sync. `querySourceFeatures('live-meso-clusters')` i `queryRenderedFeatures` służą audytom WebGL/E2E. Warstwy klastrów (`live-clusters`, `live-direction-dots`) czytają z `live-meso-clusters`, nie z wbudowanego cluster workera MapLibre.
+
+### Meso — szybkie wejście (P0–P3)
+
+| Mechanizm | Plik |
+|-----------|------|
+| Dedup fetch `zoomend`/`moveend` + opóźniony restart SSE (300 ms) | `liveMapViewportFetch.ts`, `LiveMap.tsx` |
+| Prefetch + paint z cache SWR (klik / hover ranking) | `liveMapCityNav.ts`, `LiveMap.tsx` |
+| `jumpTo` zamiast `easeTo` gdy cache meso gotowy | `cityFlyParams()` |
+| Progressive limit 1200 → pełny cap w tle | `liveMapViewportFetch.ts` |
+| Overlay „Aktualizowanie widoku…” | `data-testid=live-map-viewport-refreshing` |
+| Recluster lokalny przy zoom w Meso (bez HTTP) | `updateMesoClustersOnly()` |
+| `citySlug` w Redis przy ingest | `TelemetryService._encode_entry` |
+| H3 aggregate od 800 capped (meso) / 1200 / 8000 estimate | `live_map_api.py` |
 
 Nagłówek: **active** (global FSM) + **in view** (`positions_returned` w bbox).
 
@@ -66,7 +79,8 @@ Ruch na mapie: **ring buffer 3 punkty / device** + interpolacja po **polilinii**
 | `bbox` | `west,south,east,north` (+22% padding po stronie klienta) |
 | `zoom` | Zoom MapLibre (zaokrąglony) |
 | `detail` | `summary` \| `standard` \| `full` |
-| `limit` | Cap pozycji (0 przy summary) |
+| `limit` | Cap pozycji (0 przy summary); progressive fast cap **1200** przy pierwszym wejściu w viewport |
+| `compact` | `1` przy `detail=standard` — mniejszy JSON (bez speed/course/ride_state) |
 | `refresh` | Niepuste → pomija Redis cache odpowiedzi |
 | `If-None-Match` | Nagłówek klienta — odpowiedź **304** gdy payload bez zmian (ETag z hash body) |
 | `tenant_id` / `tenant` | Filtr tenantu (GLOBAL_OWNER); wymuszony dla TENANT_ADMIN |

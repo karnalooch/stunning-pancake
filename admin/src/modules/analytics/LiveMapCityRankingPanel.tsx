@@ -9,6 +9,7 @@ export type LiveMapCityRankingPanelProps = {
     trend: Record<string, number>;
     compareDeltas?: Record<string, number>;
     onCityClick: (slug: string) => void;
+    onCityHover?: (slug: string) => void;
     visible: boolean;
 };
 
@@ -37,16 +38,19 @@ function Row({
     row,
     compareDelta,
     onClick,
+    onHover,
 }: {
     row: CityRankingRow;
     compareDelta?: number;
     onClick: () => void;
+    onHover?: () => void;
 }) {
     return (
         <Box
             component="button"
             type="button"
             onClick={onClick}
+            onMouseEnter={onHover}
             style={{
                 display: 'block',
                 width: '100%',
@@ -86,6 +90,7 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
     trend,
     compareDeltas,
     onCityClick,
+    onCityHover,
     visible,
 }) => {
     if (!visible) return null;
@@ -119,6 +124,7 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
                         row={row}
                         compareDelta={compareDeltas?.[row.city.slug]}
                         onClick={() => onCityClick(row.city.slug)}
+                        onHover={onCityHover ? () => onCityHover(row.city.slug) : undefined}
                     />
                 ))}
             </ScrollArea.Autosize>

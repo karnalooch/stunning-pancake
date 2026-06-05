@@ -20,7 +20,7 @@ import {
     type LiveMapTheme,
 } from './liveMapTheme';
 import { H3_LAYER, H3_SOURCE } from './liveMapH3Layer';
-import { buildMesoClusterFeatureCollection } from './liveMapMesoClusters';
+import { buildMesoClusterFeatureCollectionAsync } from './liveMapMesoClusters';
 
 /** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
 export const LIVE_MAP_LAYER_VERSION = 8;
@@ -606,54 +606,122 @@ export type LiveMapClickEvent = {
     lngLat: { lng: number; lat: number };
 };
 
-export function setLivePositionsData(
-    map: {
-        getZoom?: () => number;
-        getBounds?: () => { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number };
-        getSource: (id: string) => { setData?: (d: object) => void; loaded?: () => boolean } | undefined;
-        isSourceLoaded?: (id: string) => boolean;
-        triggerRepaint?: () => void;
-        once?: (event: string, cb: (...args: unknown[]) => void) => void;
-    },
-    positions: LiveMapPosition[],
-    opts?: { onPositionsSet?: () => void },
-): void {
-    const posSource = map.getSource(LIVE_SOURCES.positions);
-    const mesoSource = map.getSource(LIVE_SOURCES.mesoClusters);
-    if (!posSource?.setData) return;
-    const features = positionsToFeatures(positions);
-    const payload = { type: 'FeatureCollection', features };
-    const zoom = map.getZoom?.() ?? 10;
-    let bbox: [number, number, number, number] | undefined;
+type LiveMapDataHost = {
+    getZoom?: () => number;
+    getBounds?: () => { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number };
+    getSource: (id: string) => { setData?: (d: object) => void; loaded?: () => boolean } | undefined;
+    isSourceLoaded?: (id: string) => boolean;
+    triggerRepaint?: () => void;
+    once?: (event: string, cb: (...args: unknown[]) => void) => void;
+};
+
+function mapBbox(map: LiveMapDataHost): [number, number, number, number] | undefined {
     try {
         const b = map.getBounds?.();
-        if (b) bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+        if (b) return [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
     } catch { /* */ }
-    const mesoPayload = buildMesoClusterFeatureCollection(positions, zoom, bbox);
-    const fire = () => opts?.onPositionsSet?.();
-    const commit = () => {
-        posSource.setData!(payload);
-        mesoSource?.setData?.(mesoPayload);
+    return undefined;
+}
+
+function afterSourcePaint(
+    map: LiveMapDataHost,
+    sourceId: string,
+    commit: () => void,
+    onDone?: () => void,
+): void {
+    const fire = () => onDone?.();
+    const run = () => {
+        commit();
         map.triggerRepaint?.();
         if (typeof map.once === 'function') {
-            map.once('idle', () => {
-                map.triggerRepaint?.();
-                map.once!('idle', fire);
-            });
+            map.once('idle', fire);
         } else {
             fire();
         }
     };
-    if (map.isSourceLoaded?.(LIVE_SOURCES.positions) || posSource.loaded?.()) {
-        commit();
+    const src = map.getSource(sourceId);
+    if (map.isSourceLoaded?.(sourceId) || src?.loaded?.()) {
+        run();
     } else if (typeof map.once === 'function') {
         map.once('sourcedata', (e: unknown) => {
             const ev = e as { sourceId?: string; isSourceLoaded?: boolean };
-            if (ev.sourceId === LIVE_SOURCES.positions && ev.isSourceLoaded) commit();
+            if (ev.sourceId === sourceId && ev.isSourceLoaded) run();
         });
     } else {
-        commit();
+        run();
     }
+}
+
+let mesoClusterGen = 0;
+
+function applyMesoPayload(
+    map: LiveMapDataHost,
+    mesoPayload: GeoJSON.FeatureCollection,
+    opts?: { onPositionsSet?: () => void; mesoOnly?: boolean },
+): void {
+    const mesoSource = map.getSource(LIVE_SOURCES.mesoClusters);
+    if (!mesoSource?.setData) return;
+    afterSourcePaint(
+        map,
+        LIVE_SOURCES.mesoClusters,
+        () => mesoSource.setData!(mesoPayload),
+        opts?.onPositionsSet,
+    );
+}
+
+function commitMesoClusters(
+    map: LiveMapDataHost,
+    positions: LiveMapPosition[],
+    opts?: { onPositionsSet?: () => void; mesoOnly?: boolean },
+): void {
+    const zoom = map.getZoom?.() ?? 10;
+    const bbox = mapBbox(map);
+    const gen = ++mesoClusterGen;
+    void buildMesoClusterFeatureCollectionAsync(positions, zoom, bbox).then((mesoPayload) => {
+        if (gen !== mesoClusterGen) return;
+        if (opts?.mesoOnly) {
+            applyMesoPayload(map, mesoPayload, opts);
+            return;
+        }
+        const posSource = map.getSource(LIVE_SOURCES.positions);
+        if (!posSource?.setData) return;
+        const features = positionsToFeatures(positions);
+        const payload = { type: 'FeatureCollection', features };
+        afterSourcePaint(
+            map,
+            LIVE_SOURCES.positions,
+            () => {
+                posSource.setData!(payload);
+                mesoSourceSetData(map, mesoPayload);
+            },
+            opts?.onPositionsSet,
+        );
+    });
+}
+
+function mesoSourceSetData(map: LiveMapDataHost, mesoPayload: GeoJSON.FeatureCollection): void {
+    map.getSource(LIVE_SOURCES.mesoClusters)?.setData?.(mesoPayload);
+}
+
+/** Meso-only recluster — no HTTP, no live-positions setData. */
+export function updateMesoClustersOnly(
+    map: LiveMapDataHost,
+    positions: LiveMapPosition[],
+    opts?: { onPositionsSet?: () => void },
+): void {
+    commitMesoClusters(map, positions, { ...opts, mesoOnly: true });
+}
+
+export function setLivePositionsData(
+    map: LiveMapDataHost,
+    positions: LiveMapPosition[],
+    opts?: { onPositionsSet?: () => void; mesoOnly?: boolean },
+): void {
+    if (!opts?.mesoOnly) {
+        const posSource = map.getSource(LIVE_SOURCES.positions);
+        if (!posSource?.setData) return;
+    }
+    commitMesoClusters(map, positions, opts);
 }
 
 /** Sync supercluster radius after zoom change — triggers worker rebuild. */

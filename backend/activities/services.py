@@ -464,6 +464,15 @@ class TelemetryService:
                 entry["departmentId"] = int(raw_dept)
             except (TypeError, ValueError):
                 pass
+        if e.get("citySlug") or e.get("city_slug"):
+            entry["citySlug"] = str(e.get("citySlug") or e.get("city_slug")).strip().lower()
+        elif lat != 0.0 or lon != 0.0:
+            try:
+                from simulate_active_cities import nearest_city_slug_for_coords
+
+                entry["citySlug"] = nearest_city_slug_for_coords(lat, lon)
+            except Exception:
+                pass
         payload = _json.dumps(entry)
         return device_id, payload, lon, lat
 
