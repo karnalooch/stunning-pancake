@@ -444,20 +444,27 @@ class TelemetryService:
             norm_type = "bike"
         elif norm_type in ("run", "running", "runner", "walk", "walking", "foot", "person"):
             norm_type = "run" if norm_type != "person" else "person"
-        payload = _json.dumps(
-            {
-                "id": device_id,
-                "deviceId": device_id,
-                "name": e.get("name", f"Athlete {device_id}"),
-                "type": norm_type,
-                "latitude": lat,
-                "longitude": lon,
-                "speed": e.get("speed", 0),
-                "course": e.get("course", 0),
-                "deviceTime": timezone.now().isoformat(),
-                "category": norm_type,
-            }
-        )
+        entry = {
+            "id": device_id,
+            "deviceId": device_id,
+            "name": e.get("name", f"Athlete {device_id}"),
+            "type": norm_type,
+            "latitude": lat,
+            "longitude": lon,
+            "speed": e.get("speed", 0),
+            "course": e.get("course", 0),
+            "deviceTime": timezone.now().isoformat(),
+            "category": norm_type,
+        }
+        if e.get("tenantId") or e.get("tenant_id"):
+            entry["tenantId"] = str(e.get("tenantId") or e.get("tenant_id"))
+        if e.get("departmentId") is not None or e.get("department_id") is not None:
+            raw_dept = e.get("departmentId") if e.get("departmentId") is not None else e.get("department_id")
+            try:
+                entry["departmentId"] = int(raw_dept)
+            except (TypeError, ValueError):
+                pass
+        payload = _json.dumps(entry)
         return device_id, payload, lon, lat
 
     @classmethod

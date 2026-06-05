@@ -489,7 +489,7 @@ class TelemetryLiveView(generics.GenericAPIView):
         from activities.telemetry_shard import live_map_read_policy
 
         sim.maybe_advance_live_simulation_from_poll()
-        req = parse_live_map_query_params(request.query_params)
+        req = parse_live_map_query_params(request.query_params, user=request.user)
         body = build_live_map_payload(req)
         read_policy = live_map_read_policy()
         resp = Response(body)
@@ -537,7 +537,9 @@ class TelemetryLiveStreamView(views.APIView):
         )
         from activities.telemetry_shard import live_map_read_policy
 
-        req = parse_live_map_query_params(request.query_params, default_skip_cache=True)
+        req = parse_live_map_query_params(
+            request.query_params, user=request.user, default_skip_cache=True
+        )
         if req.detail == "summary":
             return Response(
                 {"detail": "Live stream unavailable at country summary zoom."},

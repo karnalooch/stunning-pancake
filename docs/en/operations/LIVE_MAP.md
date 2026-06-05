@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Platform Operator / Admin Owner |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-06-05 |
 | **Audience** | Operators, on-call, frontend maintainers |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/LIVE_MAP.md) |
@@ -57,6 +57,8 @@ On-map motion: **3-point ring buffer / device** + polyline interpolation (`liveM
 | `detail` | `summary` \| `standard` \| `full` |
 | `limit` | Position cap (0 for summary) |
 | `refresh` | Non-empty → bypass Redis response cache |
+| `tenant_id` / `tenant` | Tenant filter (GLOBAL_OWNER); forced for TENANT_ADMIN |
+| `department_id` / `department` | Department filter (within tenant scope) |
 
 ### Meta (enterprise)
 
@@ -70,6 +72,22 @@ On-map motion: **3-point ring buffer / device** + polyline interpolation (`liveM
 | `ingest_engaged` | ADR 011 — throttling active |
 | `capped` | GEORADIUS returned more than viewport limit |
 | `city_counts` | City hubs (summary / region) |
+| `filters_applied` | Active tenant/dept/activity/city filters |
+| `viewport_filtered_out` | Positions dropped by tenant/dept RBAC |
+| `render_mode` | `points` \| `clusters` \| `aggregate` (scale LOD) |
+| `aggregate_url` | H3/hexbin URL when `render_mode=aggregate` |
+
+## Enterprise Phase 2 (B2B)
+
+Full industry patterns (hot/warm/cold, RBAC, H3, webhooks, audit) — **[ADR 012](../../adr/012-live-map-enterprise-phase2.md)**.
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| F1 Multi-tenant | ✅ | `live_map_rbac.py`, `tenantId`/`departmentId` denormalization |
+| F2 Timescale replay | 🔲 | `telemetry.live_position_events` hypertable, Celery writer 10s |
+| F3 Audit + webhooks | 🔲 | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook` |
+| F4 White-label | 🔲 | `Tenant.map_theme`, dynamic cluster colors |
+| F5 H3 aggregate | 🔲 | Aggregate endpoint + auto LOD |
 
 ## UI states (`data-sync-status`)
 
@@ -115,3 +133,4 @@ npx playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom
 - [SIMULATOR.md](./SIMULATOR.md) — zoom tiers, E2E screenshots
 - [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) — live read p95
 - [ADR 011](../../adr/011-telemetry-ingest-durability-under-load.md) — read shedding
+- [ADR 012](../../adr/012-live-map-enterprise-phase2.md) — enterprise Phase 2 (Timescale, RBAC, H3, webhooks)

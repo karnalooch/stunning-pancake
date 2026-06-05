@@ -72,3 +72,26 @@ class UserDepartment(models.Model):
 
     def __str__(self):
         return f"{self.user} → {self.department}"
+
+
+def resolve_primary_department_id(user) -> int | None:
+    """First active department membership (v1 primary dept for live map scope)."""
+    if user is None:
+        return None
+    return (
+        UserDepartment.objects.filter(user=user, department__is_active=True)
+        .order_by("joined_at")
+        .values_list("department_id", flat=True)
+        .first()
+    )
+
+
+def ride_scope_from_user(user) -> dict[str, str | int | None]:
+    """Denormalized tenant/dept fields stored on live ride + telemetry payloads."""
+    tenant_id = None
+    if user is not None and getattr(user, "tenant_id", None):
+        tenant_id = str(user.tenant_id)
+    return {
+        "tenant_id": tenant_id,
+        "primary_department_id": resolve_primary_department_id(user),
+    }

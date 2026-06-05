@@ -47,6 +47,9 @@ class LiveMapRequest:
     skip_cache: bool
     activity_type: str | None
     city_slug: str | None
+    tenant_id: str | None = None
+    department_id: int | None = None
+    department_ids: frozenset[int] | None = None
 
 
 def _normalize_activity_filter(raw: str | None) -> str | None:
@@ -71,9 +74,23 @@ def _position_activity_kind(type_label: str | None) -> str:
     return "bike"
 
 
+def _pos_scope_fields(pos: dict) -> tuple[str | None, int | None]:
+    raw_tenant = pos.get("tenantId") or pos.get("tenant_id")
+    tenant = str(raw_tenant).strip() if raw_tenant else None
+    raw_dept = pos.get("departmentId") or pos.get("department_id")
+    dept = None
+    if raw_dept is not None and raw_dept != "":
+        try:
+            dept = int(raw_dept)
+        except (TypeError, ValueError):
+            dept = None
+    return tenant or None, dept
+
+
 def parse_live_map_query_params(
     query_params,
     *,
+    user=None,
     default_skip_cache: bool = False,
 ) -> LiveMapRequest:
     """Parse bbox, limit, zoom, detail from DRF request.query_params."""
@@ -131,6 +148,24 @@ def parse_live_map_query_params(
     activity_type = _normalize_activity_filter(query_params.get("activity_type") or query_params.get("type"))
     city_slug = (query_params.get("city") or query_params.get("city_slug") or "").strip().lower() or None
 
+    tenant_id = None
+    department_id = None
+    department_ids = None
+    if user is not None:
+        from activities.live_map_rbac import resolve_live_map_scope
+
+        scope = resolve_live_map_scope(user, query_params)
+        tenant_id = scope.tenant_id
+        department_id = scope.department_id
+        if getattr(user, "has_role", None) and user.has_role("department_moderator"):
+            moderated = list(
+                user.moderated_departments.filter(is_active=True).values_list("id", flat=True)
+            )
+            if moderated:
+                department_ids = frozenset(moderated)
+                if department_id is not None and department_id not in department_ids:
+                    department_id = None
+
     return LiveMapRequest(
         bbox_tuple=bbox_tuple,
         limit=limit,
@@ -140,6 +175,9 @@ def parse_live_map_query_params(
         skip_cache=skip_cache,
         activity_type=activity_type,
         city_slug=city_slug,
+        tenant_id=tenant_id,
+        department_id=department_id,
+        department_ids=department_ids,
     )
 
 
@@ -255,6 +293,13 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     viewport_bike = 0
     viewport_run = 0
     detail = req.detail
+    scope_active = bool(
+        req.tenant_id or req.department_id is not None or req.department_ids
+    )
+    viewport_total_before_filter = 0
+    viewport_filtered_out = 0
+
+    from activities.live_map_rbac import position_matches_scope
 
     for pos in positions:
         if not isinstance(pos, dict):
@@ -266,6 +311,18 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         if coords is None:
             continue
         lat, lng = coords
+        if scope_active:
+            viewport_total_before_filter += 1
+            pos_tenant, pos_dept = _pos_scope_fields(pos)
+            if not position_matches_scope(
+                req.tenant_id,
+                req.department_id,
+                pos_tenant,
+                pos_dept,
+                department_ids=req.department_ids,
+            ):
+                viewport_filtered_out += 1
+                continue
         info = device_info.get(device_id, {})
         type_label = pos.get("category") or pos.get("type") or info.get("type", "person")
         kind = _position_activity_kind(str(type_label))
@@ -356,6 +413,33 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         active_filters["activity_type"] = req.activity_type
     if req.city_slug:
         active_filters["city"] = req.city_slug
+    if req.tenant_id:
+        active_filters["tenant_id"] = req.tenant_id
+    if req.department_id is not None:
+        active_filters["department_id"] = str(req.department_id)
+
+    filters_applied = dict(active_filters)
+    if req.department_ids and req.department_id is None:
+        filters_applied["department_ids"] = ",".join(str(i) for i in sorted(req.department_ids))
+
+    render_mode = "points"
+    aggregate_url = None
+    if viewport_total_estimate is not None and viewport_total_estimate >= 10_000:
+        render_mode = "aggregate"
+    elif viewport_returned >= 2000 and telemetry_meta.get("capped"):
+        render_mode = "aggregate"
+    elif detail in ("standard", "summary") or viewport_returned > 50:
+        render_mode = "clusters"
+    if render_mode == "aggregate":
+        agg_params = []
+        if req.bbox_tuple:
+            agg_params.append(f"bbox={','.join(str(x) for x in req.bbox_tuple)}")
+        if req.tenant_id:
+            agg_params.append(f"tenant_id={req.tenant_id}")
+        if req.department_id is not None:
+            agg_params.append(f"department_id={req.department_id}")
+        agg_params.append("mode=h3")
+        aggregate_url = "/api/activities/telemetry/live/aggregate/?" + "&".join(agg_params)
 
     return {
         "positions": enriched_data,
@@ -380,6 +464,13 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
             ),
             "viewport_total_estimate": viewport_total_estimate,
             "filters": active_filters,
+            "filters_applied": filters_applied,
+            "viewport_total_before_filter": (
+                viewport_total_before_filter if scope_active else None
+            ),
+            "viewport_filtered_out": viewport_filtered_out if scope_active else None,
+            "render_mode": render_mode,
+            "aggregate_url": aggregate_url,
             "ingest_engaged": read_policy.ingest_engaged,
             "live_read_throttled": read_policy.ingest_engaged,
             "live_poll_interval_multiplier": (

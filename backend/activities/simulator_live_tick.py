@@ -353,6 +353,9 @@ def _run_live_tick_body():
             ride_start = now + timedelta(seconds=start_delay_s)
             ride_end = ride_start + timedelta(seconds=duration_s)
 
+            from users.departments import ride_scope_from_user
+
+            scope = ride_scope_from_user(user)
             ride_payload = {
                 "start_time": ride_start.isoformat(),
                 "end_time": ride_end.isoformat(),
@@ -365,6 +368,8 @@ def _run_live_tick_body():
                 "start_radius_km": start_radius_km,
                 "city_slug": city_info["slug"],
                 "is_cheater": is_cheater,
+                "tenant_id": scope["tenant_id"],
+                "primary_department_id": scope["primary_department_id"],
                 **motion,
             }
 
@@ -556,6 +561,8 @@ def _run_live_tick_body():
                 "lng": clon,
                 "speed": speed_kmh / 3.6,
                 "course": course,
+                "tenantId": ride.get("tenant_id"),
+                "departmentId": ride.get("primary_department_id"),
             }
         )
 

@@ -1,6 +1,15 @@
 from django.test import SimpleTestCase
+from unittest.mock import MagicMock
 
-from activities.live_map_api import _live_coords, poll_after_ms_hint, stream_interval_ms
+from activities.live_map_api import (
+    LiveMapRequest,
+    _live_coords,
+    _pos_scope_fields,
+    build_live_map_payload,
+    poll_after_ms_hint,
+    stream_interval_ms,
+)
+from activities.live_map_rbac import position_matches_scope, resolve_live_map_scope
 from activities.views import EventStreamRenderer, TelemetryLiveStreamView
 
 
@@ -36,3 +45,85 @@ class TelemetryLiveStreamNegotiationTest(SimpleTestCase):
     def test_event_stream_renderer_registered(self):
         media_types = {r.media_type for r in TelemetryLiveStreamView().get_renderers()}
         self.assertIn(EventStreamRenderer.media_type, media_types)
+
+
+class LiveMapScopeFilterTest(SimpleTestCase):
+    def test_position_matches_tenant(self):
+        self.assertTrue(
+            position_matches_scope("aaa", None, "aaa", None)
+        )
+        self.assertFalse(
+            position_matches_scope("aaa", None, "bbb", None)
+        )
+        self.assertFalse(
+            position_matches_scope("aaa", None, None, None)
+        )
+
+    def test_position_matches_department(self):
+        self.assertTrue(position_matches_scope(None, 5, None, 5))
+        self.assertFalse(position_matches_scope(None, 5, None, 3))
+        self.assertFalse(position_matches_scope(None, 5, None, None))
+
+    def test_position_matches_department_ids_set(self):
+        allowed = frozenset({1, 2})
+        self.assertTrue(
+            position_matches_scope(None, None, None, 1, department_ids=allowed)
+        )
+        self.assertFalse(
+            position_matches_scope(None, None, None, 9, department_ids=allowed)
+        )
+
+    def test_pos_scope_fields_aliases(self):
+        self.assertEqual(
+            _pos_scope_fields({"tenantId": "t1", "departmentId": 3}),
+            ("t1", 3),
+        )
+
+    def test_tenant_admin_scope_forced_from_user(self):
+        user = MagicMock(role="TENANT_ADMIN", tenant_id="tenant-a")
+        scope = resolve_live_map_scope(user, {"tenant_id": "other-tenant"})
+        self.assertEqual(scope.tenant_id, "tenant-a")
+
+    def test_build_payload_meta_includes_tenant_filter(self):
+        from unittest.mock import patch
+
+        positions = [
+            {
+                "deviceId": "1",
+                "lat": 52.23,
+                "lng": 21.01,
+                "tenantId": "tenant-a",
+                "departmentId": 1,
+                "type": "bike",
+            },
+            {
+                "deviceId": "2",
+                "lat": 52.24,
+                "lng": 21.02,
+                "tenantId": "tenant-b",
+                "departmentId": 2,
+                "type": "run",
+            },
+        ]
+        req = LiveMapRequest(
+            bbox_tuple=(21.0, 52.2, 21.1, 52.3),
+            limit=100,
+            zoom_param=13.0,
+            detail="full",
+            fetch_limit=100,
+            skip_cache=True,
+            activity_type=None,
+            city_slug=None,
+            tenant_id="tenant-a",
+            department_id=None,
+            department_ids=None,
+        )
+        with patch(
+            "activities.services.TelemetryService.get_live_positions",
+            return_value=(positions, {"capped": False, "redis_active": 2}),
+        ):
+            body = build_live_map_payload(req)
+        self.assertEqual(len(body["positions"]), 1)
+        self.assertEqual(body["positions"][0]["deviceId"], "1")
+        self.assertEqual(body["meta"]["filters"]["tenant_id"], "tenant-a")
+        self.assertEqual(body["meta"]["viewport_filtered_out"], 1)
