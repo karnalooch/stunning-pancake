@@ -118,11 +118,13 @@ describe('liveMapZoom', () => {
         expect(expr.slice(3)).toEqual([5.5, 0.42, 8, 0.72, 9, 0.4, 10.5, 0.88]);
     });
 
-    it('hides individual riders below z=12 (country/region zoom-out bug)', () => {
+    it('meso singleton dots visible z=9–11.5, full micro dots from z≥12', () => {
         expect(riderUnclusteredOpacityAtZoom(6)).toBe(0);
-        expect(riderUnclusteredOpacityAtZoom(10)).toBe(0);
+        expect(riderUnclusteredOpacityAtZoom(10)).toBeGreaterThan(0.35);
+        expect(riderUnclusteredOpacityAtZoom(11.5)).toBeGreaterThan(0.35);
+        expect(riderUnclusteredOpacityAtZoom(12)).toBeCloseTo(0, 3);
         expect(shouldRenderIndividualRiders(6)).toBe(false);
-        expect(shouldRenderIndividualRiders(11.5)).toBe(false);
+        expect(shouldRenderIndividualRiders(11.5)).toBe(true);
         expect(shouldRenderIndividualRiders(12.3)).toBe(true);
         expect(shouldRenderIndividualRiders(12.9)).toBe(true);
         expect(ridersVisibleAtZoom(12.9)).toBe(true);

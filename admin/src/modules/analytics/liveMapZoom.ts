@@ -175,7 +175,9 @@ export type LiveMapLodAuditIssue = {
 export function riderUnclusteredOpacityAtZoom(zoom: number): number {
     const L = LIVE_MAP_LOD;
     return maplibreInterp(zoom, [
-        [L.clusterVisibleStart - 0.5, 0],
+        [L.clusterVisibleStart - 0.001, 0],
+        [L.clusterVisibleStart, 0.38],
+        [L.dotFadeInStart - 0.15, 0.42],
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 0.35],
         [L.dotFadeInEnd, 0.82],
@@ -188,7 +190,9 @@ export function riderUnclusteredOpacityAtZoom(zoom: number): number {
 export function riderUnclusteredRadiusAtZoom(zoom: number): number {
     const L = LIVE_MAP_LOD;
     return maplibreInterp(zoom, [
-        [L.clusterVisibleStart - 0.5, 0],
+        [L.clusterVisibleStart - 0.001, 0],
+        [L.clusterVisibleStart, 5],
+        [L.dotFadeInStart - 0.15, 6],
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 5],
         [12.2, 8],
@@ -319,7 +323,10 @@ export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveM
         if (dotVisible && iconOp > 0.5 && !inHandoff) {
             issues.push({ zoom: z, type: 'DOUBLE', detail: { dotOp, iconOp } });
         }
-        if (z < L.dotFadeInStart && dotVisible && (hubOp > 0.25 || clOp > 0.25)) {
+        const inMesoSingletonBand = z >= L.clusterVisibleStart && z < L.dotFadeInStart;
+        if (z < L.clusterVisibleStart && dotVisible && hubOp > 0.25) {
+            issues.push({ zoom: z, type: 'AGGREGATE_DOUBLE', detail: { dotOp, hubOp, clOp } });
+        } else if (z < L.dotFadeInStart && dotVisible && clOp > 0.25 && !inMesoSingletonBand) {
             issues.push({ zoom: z, type: 'AGGREGATE_DOUBLE', detail: { dotOp, hubOp, clOp } });
         }
         if (iconOp > 0.35 && labelIconOp > 0.35 && iconLayer && labelLayer) {

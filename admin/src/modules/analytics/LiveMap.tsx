@@ -28,9 +28,11 @@ import { maskRiderName } from './liveMapPrivacy';
 import {
     appendRequestLog,
     buildIncidentBundle,
+    auditWebGlLiveMap,
     renderedBadgeColor,
     type LiveMapRequestLogEntry,
 } from './liveMapDiagnostics';
+import { classifyRenderedFeatures, queryRenderedFeaturesInViewport } from './liveMapMapQuery';
 import { addLiveMapBookmark, loadLiveMapBookmarks } from './liveMapBookmarks';
 import { LiveMapReplayBuffer } from './liveMapReplay';
 import { handleLiveMapKeyDown } from './liveMapKeyboard';
@@ -427,6 +429,8 @@ export const LiveMap: React.FC = () => {
     const pushPositionsToMap = useCallback((list: UserPosition[]) => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
+        // Supercluster needs stable GeoJSON — skip 33ms RAF setData while clustering (z ≤ clusterMaxZoom).
+        if ((map.getZoom?.() ?? DEFAULT_ZOOM) <= CLUSTER_MAX_ZOOM) return;
         setLivePositionsData(map, list, {
             onPositionsSet: () => scheduleRenderedCountRef.current(),
         });
@@ -767,24 +771,25 @@ export const LiveMap: React.FC = () => {
 
     const countRenderedRiderFeatures = useCallback((map: {
         getZoom?: () => number;
-        queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
+        getCanvas?: () => HTMLCanvasElement;
+        queryRenderedFeatures?: (
+            geometryOrOptions?: [number, number] | [[number, number], [number, number]] | { layers?: string[] },
+            options?: { layers?: string[] },
+        ) => Array<{ properties?: Record<string, unknown> }>;
     }) => {
-        if (!map.queryRenderedFeatures) return 0;
         try {
             const tier = resolveLiveMapTier(map.getZoom?.() ?? DEFAULT_ZOOM);
             const layers = tier === 'macro'
                 ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
                 : tier === 'meso'
-                    ? [LIVE_LAYERS.clusters, LIVE_LAYERS.clusterCount, LIVE_LAYERS.directionDots]
+                    ? [
+                        LIVE_LAYERS.clusters,
+                        LIVE_LAYERS.clusterCount,
+                        LIVE_LAYERS.directionDots,
+                    ]
                     : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
-            const features = map.queryRenderedFeatures({ layers });
-            return features.filter((f) => {
-                const p = f.properties;
-                if (!p) return false;
-                if (tier === 'macro') return p.slug != null || p.count != null;
-                if (p.cluster_id != null || p.point_count != null) return true;
-                return p.deviceId != null;
-            }).length;
+            const features = queryRenderedFeaturesInViewport(map, layers);
+            return classifyRenderedFeatures(features, tier).total;
         } catch {
             return 0;
         }
@@ -830,7 +835,9 @@ export const LiveMap: React.FC = () => {
                 pushPositionsToMap(blended);
             });
         }
-        if (opts?.snap) {
+        const z = mapRef.current?.getZoom?.() ?? DEFAULT_ZOOM;
+        if (opts?.snap || z <= CLUSTER_MAX_ZOOM) {
+            interpolatorRef.current.cancel();
             interpolatorRef.current.snapTo(list);
             flushPositionsToMapLayer();
         } else {
@@ -1227,17 +1234,45 @@ export const LiveMap: React.FC = () => {
         isStyleLoaded?: () => boolean;
         getLayoutProperty?: (id: string, prop: string) => unknown;
         queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
+        querySourceFeatures?: (sourceId: string) => Array<{ properties?: Record<string, unknown> }>;
+        getCanvas?: () => HTMLCanvasElement;
     }) => {
         if (!isLiveMapE2eEnabled()) return;
         const warsawCenter: [number, number] = [21.0122, 52.2297];
+        (window as Window & { __liveMapDebugMap?: unknown }).__liveMapDebugMap = map;
         publishLiveMapE2e({
             setZoom: (zoom, center) => {
                 map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
                 if (layersReadyRef.current) {
+                    interpolatorRef.current?.cancel();
                     setLiveMapRenderMode(map, renderModeRef.current, zoom);
-                    scheduleRenderedCountRef.current();
+                    const cached = positionsRef.current;
+                    if (cached.length > 0) {
+                        setLivePositionsData(map, cached, {
+                            onPositionsSet: () => scheduleRenderedCountRef.current(),
+                        });
+                    } else {
+                        scheduleRenderedCountRef.current();
+                    }
                 }
             },
+            waitForPaint: () => new Promise<void>((resolve) => {
+                const done = () => {
+                    scheduleRenderedCountRef.current();
+                    resolve();
+                };
+                try {
+                    const src = (map as { getSource?: (id: string) => { loaded?: () => boolean } | null })
+                        .getSource?.('live-positions');
+                    if (src?.loaded?.()) {
+                        map.once?.('idle', done);
+                    } else {
+                        map.once?.('sourcedata', () => map.once?.('idle', done));
+                    }
+                } catch {
+                    done();
+                }
+            }),
             getZoom: () => map.getZoom(),
             getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
             isReady: () => {
@@ -1261,6 +1296,13 @@ export const LiveMap: React.FC = () => {
                 }
             },
             getRenderedCount: () => countRenderedRiderFeaturesRef.current(map),
+            getWebGlAudit: () => {
+                try {
+                    return auditWebGlLiveMap(map);
+                } catch {
+                    return null;
+                }
+            },
         });
     }, []);
 
@@ -1281,6 +1323,8 @@ export const LiveMap: React.FC = () => {
                 center: DEFAULT_CENTER,
                 zoom: DEFAULT_ZOOM,
                 attributionControl: false,
+                fadeDuration: 0,
+                preserveDrawingBuffer: isLiveMapE2eEnabled(),
             });
             map.addControl(new m.NavigationControl(), 'top-right');
             map.addControl(new m.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
@@ -1314,16 +1358,6 @@ export const LiveMap: React.FC = () => {
             });
             map.on('zoom', () => {
                 const z = map.getZoom();
-                const src = map.getSource(LIVE_SOURCES.positions);
-                if (src) {
-                    try {
-                        (src as { setClusterOptions?: (o: { radius?: number; clusterMaxZoom?: number }) => void })
-                            .setClusterOptions?.({
-                                radius: clusterRadiusForZoom(z),
-                                clusterMaxZoom: CLUSTER_MAX_ZOOM,
-                            });
-                    } catch { /* MapLibre < 3.3 */ }
-                }
                 if (apiDetailForZoom(z) === 'summary') {
                     ingestPositionsRef.current([], { snap: true });
                 }

@@ -13,15 +13,22 @@ import {
 
 import { ensureLiveMapSprites } from './liveMapSprite';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../core/map/mapBasemap';
-import { clusterColorExpression, defaultLiveMapTheme, type LiveMapTheme } from './liveMapTheme';
+import {
+    clusterColorExpression,
+    clusterRadiusExpression,
+    defaultLiveMapTheme,
+    type LiveMapTheme,
+} from './liveMapTheme';
 import { H3_LAYER, H3_SOURCE } from './liveMapH3Layer';
+import { buildMesoClusterFeatureCollection } from './liveMapMesoClusters';
 
 /** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
-export const LIVE_MAP_LAYER_VERSION = 3;
+export const LIVE_MAP_LAYER_VERSION = 8;
 export const LIVE_MAP_LAYER_VERSION_KEY = 'live-map-layer-v';
 
 export const LIVE_SOURCES = {
     positions: 'live-positions',
+    mesoClusters: 'live-meso-clusters',
     cityHubs: 'live-city-hubs',
 } as const;
 
@@ -76,7 +83,7 @@ export function removeLiveMapLayers(map: {
             if (map.getLayer(id)) map.removeLayer(id);
         } catch { /* */ }
     }
-    for (const id of [...Object.values(LIVE_SOURCES), H3_SOURCE]) {
+    for (const id of [...Object.values(LIVE_SOURCES), H3_SOURCE] as string[]) {
         try {
             if (map.getSource(id)) map.removeSource(id);
         } catch { /* */ }
@@ -181,50 +188,50 @@ export function installLiveMapLayers(
         if (canvas) canvas.style.cursor = cursor;
     };
 
+    if (!map.getSource(LIVE_SOURCES.mesoClusters)) {
+        map.addSource(LIVE_SOURCES.mesoClusters, {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] },
+        });
+    }
+
     if (!map.getSource(LIVE_SOURCES.positions)) {
         map.addSource(LIVE_SOURCES.positions, {
             type: 'geojson',
             data: { type: 'FeatureCollection', features: [] },
-            cluster: true,
-            clusterMaxZoom: CLUSTER_MAX_ZOOM,
-            clusterRadius,
         });
 
         map.addLayer({
             id: LIVE_LAYERS.clusters,
             type: 'circle',
-            source: LIVE_SOURCES.positions,
-            minzoom: LIVE_MAP_TIER.mesoMinZoom,
+            source: LIVE_SOURCES.mesoClusters,
             filter: ['has', 'point_count'],
             paint: {
                 'circle-color': clusterColors,
-                'circle-radius': [
-                    'interpolate', ['linear'], ['get', 'point_count'],
-                    2, 24, 8, 28, 25, 34, 50, 40, 100, 48,
-                ],
+                'circle-radius': clusterRadiusExpression(),
                 'circle-opacity': zoomInterpolate(...CLUSTER_CIRCLE_OPACITY_STOPS),
                 'circle-stroke-width': [
                     'interpolate', ['linear'], ['zoom'],
                     7, 2, 11, 2.8, 13, 2.2,
                 ],
                 'circle-stroke-color': 'rgba(255,255,255,0.72)',
-                'circle-blur': 0.08,
             },
         });
 
         map.addLayer({
             id: LIVE_LAYERS.clusterCount,
             type: 'symbol',
-            source: LIVE_SOURCES.positions,
-            minzoom: LIVE_MAP_TIER.mesoMinZoom,
+            source: LIVE_SOURCES.mesoClusters,
             filter: ['has', 'point_count'],
             layout: {
-                'text-field': ['get', 'point_count_abbreviated'],
+                'text-field': '{point_count_abbreviated}',
                 'text-font': [...MAP_TEXT_FONT_BOLD],
                 'text-size': [
                     'interpolate', ['linear'], ['zoom'],
                     7, 11, 10, 12.5, 12.5, 13.5,
                 ],
+                'text-allow-overlap': true,
+                'text-ignore-placement': true,
             },
             paint: {
                 'text-color': '#ffffff',
@@ -237,9 +244,7 @@ export function installLiveMapLayers(
         map.addLayer({
             id: LIVE_LAYERS.directionDots,
             type: 'symbol',
-            source: LIVE_SOURCES.positions,
-            minzoom: LIVE_MAP_TIER.mesoMinZoom,
-            maxzoom: LOD.dotFadeInStart,
+            source: LIVE_SOURCES.mesoClusters,
             filter: ['!', ['has', 'point_count']],
             layout: {
                 'text-field': '▸',
@@ -278,7 +283,9 @@ export function installLiveMapLayers(
             paint: {
                 'circle-radius': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart - 0.5, 0,
+                    LOD.clusterVisibleStart - 0.001, 0,
+                    LOD.clusterVisibleStart, 5,
+                    LOD.dotFadeInStart - 0.15, 6,
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 5,
                     12.2, 8,
@@ -300,7 +307,9 @@ export function installLiveMapLayers(
                 ],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart - 0.5, 0,
+                    LOD.clusterVisibleStart - 0.001, 0,
+                    LOD.clusterVisibleStart, 0.38,
+                    LOD.dotFadeInStart - 0.15, 0.42,
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 0.35,
                     LOD.dotFadeInEnd, 0.82,
@@ -599,19 +608,69 @@ export type LiveMapClickEvent = {
 
 export function setLivePositionsData(
     map: {
-        getSource: (id: string) => { setData?: (d: object) => void } | undefined;
+        getZoom?: () => number;
+        getBounds?: () => { getWest: () => number; getSouth: () => number; getEast: () => number; getNorth: () => number };
+        getSource: (id: string) => { setData?: (d: object) => void; loaded?: () => boolean } | undefined;
+        isSourceLoaded?: (id: string) => boolean;
         triggerRepaint?: () => void;
+        once?: (event: string, cb: (...args: unknown[]) => void) => void;
     },
     positions: LiveMapPosition[],
     opts?: { onPositionsSet?: () => void },
 ): void {
-    const source = map.getSource(LIVE_SOURCES.positions);
-    source?.setData?.({
-        type: 'FeatureCollection',
-        features: positionsToFeatures(positions),
+    const posSource = map.getSource(LIVE_SOURCES.positions);
+    const mesoSource = map.getSource(LIVE_SOURCES.mesoClusters);
+    if (!posSource?.setData) return;
+    const features = positionsToFeatures(positions);
+    const payload = { type: 'FeatureCollection', features };
+    const zoom = map.getZoom?.() ?? 10;
+    let bbox: [number, number, number, number] | undefined;
+    try {
+        const b = map.getBounds?.();
+        if (b) bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()];
+    } catch { /* */ }
+    const mesoPayload = buildMesoClusterFeatureCollection(positions, zoom, bbox);
+    const fire = () => opts?.onPositionsSet?.();
+    const commit = () => {
+        posSource.setData!(payload);
+        mesoSource?.setData?.(mesoPayload);
+        map.triggerRepaint?.();
+        if (typeof map.once === 'function') {
+            map.once('idle', () => {
+                map.triggerRepaint?.();
+                map.once!('idle', fire);
+            });
+        } else {
+            fire();
+        }
+    };
+    if (map.isSourceLoaded?.(LIVE_SOURCES.positions) || posSource.loaded?.()) {
+        commit();
+    } else if (typeof map.once === 'function') {
+        map.once('sourcedata', (e: unknown) => {
+            const ev = e as { sourceId?: string; isSourceLoaded?: boolean };
+            if (ev.sourceId === LIVE_SOURCES.positions && ev.isSourceLoaded) commit();
+        });
+    } else {
+        commit();
+    }
+}
+
+/** Sync supercluster radius after zoom change — triggers worker rebuild. */
+export function syncClusterOptions(
+    map: {
+        getZoom: () => number;
+        getSource: (id: string) => unknown;
+    },
+    clusterRadius: number,
+): void {
+    const src = map.getSource(LIVE_SOURCES.positions) as {
+        setClusterOptions?: (o: { radius?: number; clusterMaxZoom?: number }) => void;
+    } | null;
+    src?.setClusterOptions?.({
+        radius: clusterRadius,
+        clusterMaxZoom: CLUSTER_MAX_ZOOM,
     });
-    map.triggerRepaint?.();
-    opts?.onPositionsSet?.();
 }
 
 export function setCityHubData(

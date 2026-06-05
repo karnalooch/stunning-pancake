@@ -104,10 +104,24 @@ export function resolveLiveMapTheme(branding?: BrandingInput | null): LiveMapThe
     };
 }
 
+/** Step expression — matches MapLibre official cluster example (reliable vs linear interpolate). */
 export function clusterColorExpression(theme: LiveMapTheme): unknown[] {
-    const stops: unknown[] = ['interpolate', ['linear'], ['get', 'point_count']];
+    const stops: unknown[] = ['step', ['get', 'point_count'], theme.clusterStops[0]?.[1] ?? '#6366f1'];
     for (const [n, color] of theme.clusterStops) {
         stops.push(n, color);
     }
     return stops;
+}
+
+/** Step-based cluster radii — MapLibre official pattern. */
+export function clusterRadiusExpression(): unknown[] {
+    return [
+        'step',
+        ['get', 'point_count'],
+        22,
+        8, 28,
+        25, 36,
+        50, 44,
+        100, 52,
+    ];
 }

@@ -1,3 +1,5 @@
+import type { LiveMapWebGlAudit } from './liveMapDiagnostics';
+
 /** Playwright-only bridge (enabled when `VITE_E2E=1`). */
 export type LiveMapE2EApi = {
     setZoom: (zoom: number, center?: [number, number]) => void;
@@ -6,6 +8,8 @@ export type LiveMapE2EApi = {
     isReady: () => boolean;
     getLayerVisibility: (layerId: string) => string | null;
     getRenderedCount: () => number;
+    getWebGlAudit: () => LiveMapWebGlAudit | null;
+    waitForPaint: () => Promise<void>;
 };
 
 declare global {

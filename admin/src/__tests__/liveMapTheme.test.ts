@@ -8,10 +8,10 @@ describe('liveMapTheme', () => {
         expect(theme.hubAccent).toBe('#ff0000');
     });
 
-    it('clusterColorExpression is valid interpolate', () => {
+    it('clusterColorExpression is valid step', () => {
         const theme = resolveLiveMapTheme({ primary_color: '#112233', secondary_color: '#aabbcc' });
         const expr = clusterColorExpression(theme);
-        expect(expr[0]).toBe('interpolate');
+        expect(expr[0]).toBe('step');
         expect(expr.length).toBeGreaterThan(4);
     });
 });

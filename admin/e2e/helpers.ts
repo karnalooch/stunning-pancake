@@ -12,6 +12,7 @@ const TELEMETRY_LIVE_GLOB = '**/activities/telemetry/live/**';
 export async function seedPlaywrightE2e(page: Page) {
   await page.addInitScript(() => {
     sessionStorage.setItem('playwright-e2e', '1');
+    sessionStorage.removeItem('live-map-layer-v');
   });
 }
 
