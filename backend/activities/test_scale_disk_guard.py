@@ -66,11 +66,25 @@ class ScaleDiskGuardTest(SimpleTestCase):
 
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=8.0)
     @patch("activities.scale_disk_guard.get_user_model")
-    def test_auto_wipe_reseed(self, mock_user, _db):
+    def test_auto_wipe_grow_without_wipe(self, mock_user, _db):
         mock_user.objects.filter.return_value.count.return_value = 50_000
         do, reason = _should_auto_wipe(
             100_000,
             50_000,
+            skip_activities=True,
+            db_gb=8.0,
+            clear=False,
+        )
+        self.assertFalse(do)
+        self.assertEqual(reason, "")
+
+    @patch("activities.scale_disk_guard.get_database_size_gb", return_value=8.0)
+    @patch("activities.scale_disk_guard.get_user_model")
+    def test_auto_wipe_reseed_at_capacity(self, mock_user, _db):
+        mock_user.objects.filter.return_value.count.return_value = 100_000
+        do, reason = _should_auto_wipe(
+            100_000,
+            100_000,
             skip_activities=True,
             db_gb=8.0,
             clear=False,

@@ -158,6 +158,15 @@ def _batch_user_insert_flags(skip_activities: bool) -> tuple[bool, bool]:
     return skip_dept, fast_insert
 
 
+def _existing_athlete_count(city_slug: str) -> int:
+    from users.models import User
+
+    return User.objects.filter(
+        role="ATHLETE",
+        username__startswith=f"{city_slug}_athlete_",
+    ).count()
+
+
 def _bulk_create_athletes(
     city: dict,
     tenant,
@@ -169,6 +178,7 @@ def _bulk_create_athletes(
     on_batch_created=None,
     skip_dept: bool = False,
     fast_insert: bool = False,
+    username_offset: int = 0,
 ) -> int:
     """Insert athletes via bulk_create; returns count actually linked in DB."""
     from users.models import User
@@ -187,7 +197,7 @@ def _bulk_create_athletes(
         for i in range(batch_count):
             idx = batch_start + i
             first, last = _pick_name()
-            username = f"{city['slug']}_athlete_{idx + 1:06d}"
+            username = f"{city['slug']}_athlete_{username_offset + idx + 1:06d}"
             users_to_create.append(
                 User(
                     username=username,
@@ -961,8 +971,18 @@ def run(
 
         n_moderators = max(1, int(5 * scale))
         n_athletes = users_per_city - n_moderators
+        existing_athletes = _existing_athlete_count(city["slug"])
+        athletes_to_create = max(0, n_athletes - existing_athletes)
 
-        print(f"   🏙️  {city['name']}: creating {users_per_city} users...")
+        if athletes_to_create <= 0:
+            print(f"   🏙️  {city['name']}: pool OK ({existing_athletes} athletes)")
+            users_by_city[city["name"]] = city_users
+            continue
+
+        print(
+            f"   🏙️  {city['name']}: top-up {athletes_to_create} athletes "
+            f"({existing_athletes} → {n_athletes})..."
+        )
 
         # Create moderators
         for i in range(n_moderators):
@@ -995,7 +1015,7 @@ def run(
             users_so_far = (
                 sum(len(v) for v in users_by_city.values()) + len(city_users) + athletes_created
             )
-            city_frac = athletes_created / max(1, n_athletes)
+            city_frac = athletes_created / max(1, athletes_to_create)
             overall = (city_index + city_frac) / max(1, len(selected_cities))
             pct = 22 + 63 * overall
             report("creating_users", pct, users_created=users_so_far, activities_created=0)
@@ -1004,13 +1024,14 @@ def run(
         n_athletes_created = _bulk_create_athletes(
             city,
             tenant,
-            n_athletes,
+            athletes_to_create,
             city_depts,
             batch_size,
             pg_batch_size,
             on_batch_created=_on_batch,
             skip_dept=skip_dept,
             fast_insert=fast_insert,
+            username_offset=existing_athletes,
         )
         if not skip_activities and n_athletes_created:
             city_users.extend(
@@ -1230,8 +1251,17 @@ def create_users_for_city(
 
     n_moderators = max(1, int(5 * scale))
     n_athletes = users_per_city - n_moderators
+    existing_athletes = _existing_athlete_count(city["slug"])
+    athletes_to_create = max(0, n_athletes - existing_athletes)
 
-    print(f"   🏙️  {city['name']}: creating {users_per_city} users (worker)...")
+    if athletes_to_create <= 0:
+        print(f"   🏙️  {city['name']}: pool OK ({existing_athletes} athletes, target {n_athletes})")
+        return moderator_count
+
+    print(
+        f"   🏙️  {city['name']}: top-up {athletes_to_create} athletes "
+        f"({existing_athletes} → {n_athletes})..."
+    )
 
     for i in range(n_moderators):
         first, last = _pick_name()
@@ -1261,7 +1291,7 @@ def create_users_for_city(
         nonlocal athletes_done
         athletes_done += n_saved
         users_so_far = sim.increment_batch_users_created_throttled(n_saved)
-        city_frac = athletes_done / max(1, n_athletes)
+        city_frac = athletes_done / max(1, athletes_to_create)
         overall = (city_index + city_frac) / max(1, total_cities)
         pct = 22 + 63 * overall
         if progress_callback:
@@ -1277,13 +1307,14 @@ def create_users_for_city(
     n_athletes_created = _bulk_create_athletes(
         city,
         tenant,
-        n_athletes,
+        athletes_to_create,
         city_depts,
         batch_size,
         pg_batch_size,
         on_batch_created=_on_parallel_batch,
         skip_dept=skip_dept,
         fast_insert=fast_insert,
+        username_offset=existing_athletes,
     )
     sim.flush_batch_users_progress()
     created_count = moderator_count + n_athletes_created

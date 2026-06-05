@@ -256,14 +256,19 @@ def _should_auto_wipe(
     if not AUTO_WIPE_BEFORE_BATCH:
         return False, ""
 
-    estimated = estimate_batch_disk_gb(target_users, skip_activities=skip_activities)
-    ratio, _budget, _src = _usage_ratio(db_gb, estimated)
-
     if clear and athlete_count > 0:
         return True, "clear=true — automatyczny wipe przed batch"
 
+    # Growing pool (50k → 100k → 300k): top-up only — no auto-wipe.
+    delta_users = max(0, target_users - athlete_count)
+    estimated = estimate_batch_disk_gb(
+        delta_users if athlete_count > 0 and delta_users > 0 else target_users,
+        skip_activities=skip_activities,
+    )
+    ratio, _budget, _src = _usage_ratio(db_gb, estimated)
+
     if target_users >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
-        if athlete_count >= target_users * 0.25:
+        if athlete_count >= target_users:
             return True, (f"re-seed: {athlete_count:,} athlete w bazie, cel {target_users:,}")
         if ratio is not None and ratio >= 0.75:
             return True, (
