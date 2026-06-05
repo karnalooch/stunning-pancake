@@ -225,15 +225,24 @@ export const TelemetryApi = {
   },
   getLivePositions: async (
     params?: Record<string, string | number>,
-    options?: { signal?: AbortSignal; silent?: boolean },
+    options?: { signal?: AbortSignal; silent?: boolean; etag?: string },
   ) => {
-    const { data } = await apiClient.get('/activities/telemetry/live/', {
+    const headers: Record<string, string> = {};
+    if (options?.etag) headers['If-None-Match'] = options.etag;
+    const response = await apiClient.get('/activities/telemetry/live/', {
       params,
       signal: options?.signal,
       skipGlobalError: options?.silent,
+      headers,
+      validateStatus: (status) => status === 200 || status === 304,
     } as ApiClientRequestConfig);
-    if (Array.isArray(data)) return { positions: data, meta: {} };
-    return data;
+    if (response.status === 304) {
+      return { notModified: true as const, etag: options?.etag ?? response.headers.etag };
+    }
+    const data = response.data;
+    const etag = typeof response.headers.etag === 'string' ? response.headers.etag : undefined;
+    if (Array.isArray(data)) return { positions: data, meta: {}, etag };
+    return { ...data, etag };
   },
   getLiveReplay: async (
     params: Record<string, string | number>,

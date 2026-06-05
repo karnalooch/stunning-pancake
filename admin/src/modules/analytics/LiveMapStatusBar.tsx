@@ -11,6 +11,7 @@ import {
 
 export type LiveMapStatusBarProps = LiveMapHealthInput & {
     onRetry?: () => void;
+    onForceRefresh?: () => void;
     mapLoadError?: string | null;
     onRetryMap?: () => void;
     staleAfterMs?: number;
@@ -20,6 +21,7 @@ export type LiveMapStatusBarProps = LiveMapHealthInput & {
 export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
     const {
         onRetry,
+        onForceRefresh,
         mapLoadError,
         onRetryMap,
         staleAfterMs,
@@ -66,6 +68,8 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
         || health.message != null
         || health.positionsCapped;
 
+    const showCachedBadge = health.readMode === 'cached' || health.cachedResponse;
+
     if (!needsBanner && health.status === 'live') {
         return (
             <Group
@@ -77,7 +81,7 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
                     bottom: 12,
                     right: 12,
                     zIndex: 12,
-                    pointerEvents: 'none',
+                    pointerEvents: showCachedBadge && onForceRefresh ? 'auto' : 'none',
                     padding: '4px 10px',
                     borderRadius: 8,
                     background: 'rgba(24,24,27,0.9)',
@@ -87,10 +91,27 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
                 <Badge size="xs" color={statusColor(health.status)} variant="dot">
                     {statusLabel(health.status)}
                 </Badge>
+                {showCachedBadge && (
+                    <Badge size="xs" color="cyan" variant="light" data-testid="live-map-cached-badge">
+                        cached
+                    </Badge>
+                )}
                 <Text size="xs" c="gray.4" style={{ fontVariantNumeric: 'tabular-nums' }}>
                     sync {formatLastSyncAgo(health.lastSuccessAt)}
                     {health.lastLatencyMs != null ? ` · ${health.lastLatencyMs}ms` : ''}
                 </Text>
+                {showCachedBadge && onForceRefresh && (
+                    <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        color="gray"
+                        leftSection={<RefreshCw size={12} />}
+                        onClick={onForceRefresh}
+                        data-testid="live-map-force-refresh"
+                    >
+                        Odśwież
+                    </Button>
+                )}
             </Group>
         );
     }
@@ -124,6 +145,22 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
                 </Text>
                 {health.detailCeiling && (
                     <Badge size="xs" variant="outline">detail ≤ {health.detailCeiling}</Badge>
+                )}
+                {showCachedBadge && (
+                    <Badge size="xs" color="cyan" variant="light" data-testid="live-map-cached-badge">
+                        cached
+                    </Badge>
+                )}
+                {showCachedBadge && onForceRefresh && (
+                    <Button
+                        size="xs"
+                        variant="light"
+                        leftSection={<RefreshCw size={14} />}
+                        onClick={onForceRefresh}
+                        data-testid="live-map-force-refresh"
+                    >
+                        Wymuś odświeżenie
+                    </Button>
                 )}
                 {showRetry && (
                     <Button

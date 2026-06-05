@@ -70,3 +70,42 @@ export function classifyRenderedFeatures(
     }
     return { total: clusters + points + hubs, clusters, points, hubs };
 }
+
+export type RenderedCountResult = ReturnType<typeof classifyRenderedFeatures> & {
+    usedSourceFallback: boolean;
+};
+
+/**
+ * MapLibre symbol layers (rider icons) often return 0 from queryRenderedFeatures in
+ * headless/ANGLE — fall back to querySourceFeatures when viewport query is empty.
+ */
+export function countRenderedWithSymbolFallback(
+    map: MapQuerySurface & {
+        querySourceFeatures?: (sourceId: string) => Array<{ properties?: Record<string, unknown> }>;
+    },
+    layerIds: string[],
+    tier: 'macro' | 'meso' | 'micro',
+    sourceId?: string,
+): RenderedCountResult {
+    const rendered = queryRenderedFeaturesInViewport(map, layerIds);
+    const classified = classifyRenderedFeatures(rendered, tier);
+    if (
+        tier === 'micro'
+        && classified.total === 0
+        && sourceId
+        && map.querySourceFeatures
+    ) {
+        const sourceFeatures = map.querySourceFeatures(sourceId);
+        const sourcePoints = sourceFeatures.filter((f) => f.properties?.point_count == null).length;
+        if (sourcePoints > 0) {
+            return {
+                total: sourcePoints,
+                clusters: 0,
+                points: sourcePoints,
+                hubs: 0,
+                usedSourceFallback: true,
+            };
+        }
+    }
+    return { ...classified, usedSourceFallback: false };
+}

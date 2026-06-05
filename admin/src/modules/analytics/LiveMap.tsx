@@ -22,8 +22,15 @@ import {
     filtersToSearchParams,
     mergeFilters,
     parseFiltersFromSearch,
+    parseInitialZoom,
     type LiveMapFilters,
 } from './liveMapFilters';
+import {
+    deleteViewportCache,
+    getViewportCache,
+    setViewportCache,
+    viewportCacheKey,
+} from './liveMapViewportCache';
 import { maskRiderName } from './liveMapPrivacy';
 import {
     appendRequestLog,
@@ -32,7 +39,7 @@ import {
     renderedBadgeColor,
     type LiveMapRequestLogEntry,
 } from './liveMapDiagnostics';
-import { classifyRenderedFeatures, queryRenderedFeaturesInViewport } from './liveMapMapQuery';
+import { countRenderedWithSymbolFallback } from './liveMapMapQuery';
 import { addLiveMapBookmark, loadLiveMapBookmarks } from './liveMapBookmarks';
 import { LiveMapReplayBuffer } from './liveMapReplay';
 import { handleLiveMapKeyDown } from './liveMapKeyboard';
@@ -174,6 +181,8 @@ export const LiveMap: React.FC = () => {
     const liveFetchPausedRef = useRef(false);
     const lastViewportKeyRef = useRef('');
     const viewportRefreshRef = useRef(0);
+    const viewportEtagRef = useRef<Record<string, string>>({});
+    const warmStartDoneRef = useRef(false);
     const streamAbortRef = useRef<AbortController | null>(null);
     const wsDisconnectRef = useRef<(() => void) | null>(null);
     const streamIntervalMsRef = useRef(350);
@@ -471,7 +480,7 @@ export const LiveMap: React.FC = () => {
             ? `<div style="font-size:11px;color:#ef4444;margin-bottom:4px">⚠ Podejrzana aktywność</div>`
             : '';
         const cheatLink = pos.flagged && user?.role === 'GLOBAL_OWNER'
-            ? `<a href="#/owner/anti-cheat" style="font-size:11px;color:#6366f1">Otwórz Anti-Cheat →</a>`
+            ? `<a href="#/owner/anti-cheat?device=${encodeURIComponent(pos.deviceId)}" style="font-size:11px;color:#6366f1">Otwórz Anti-Cheat →</a>`
             : '';
         const html = `
             <div style="font-family:system-ui,sans-serif;min-width:140px;padding:2px 0">
@@ -486,6 +495,14 @@ export const LiveMap: React.FC = () => {
             .setHTML(html)
             .addTo(map);
     }, [user?.role]);
+
+    useEffect(() => {
+        if (!mapReady || !filters.focusDeviceId) return;
+        const pos = positionsRef.current.find((p) => p.deviceId === filters.focusDeviceId);
+        if (!pos || !mapRef.current) return;
+        mapRef.current.easeTo({ center: [pos.lng, pos.lat], zoom: 14, duration: 500 });
+        showRiderPopup(pos, { lng: pos.lng, lat: pos.lat });
+    }, [mapReady, filters.focusDeviceId, viewportRiders, showRiderPopup]);
 
     const handleClusterClick = useCallback((e: LiveMapClickEvent) => {
         const map = mapRef.current;
@@ -557,13 +574,45 @@ export const LiveMap: React.FC = () => {
             .addTo(map);
     }, []);
 
+    const prefetchMesoForCity = useCallback(async (slug: string) => {
+        if (!canFetch || liveFetchPausedRef.current) return;
+        const city = cityBySlug(slug);
+        if (!city) return;
+        const zoom = 10.5;
+        const detail = apiDetailForZoom(zoom);
+        const pad = 0.18;
+        const bbox = [
+            (city.lng - pad).toFixed(4),
+            (city.lat - pad).toFixed(4),
+            (city.lng + pad).toFixed(4),
+            (city.lat + pad).toFixed(4),
+        ].join(',');
+        const nextFilters = mergeFilters(filtersRef.current, { citySlug: slug });
+        const cacheKey = viewportCacheKey(detail, bbox, nextFilters);
+        try {
+            const data = await TelemetryApi.getLivePositions({
+                limit: limitForZoom(zoom),
+                detail,
+                bbox,
+                zoom: Math.round(zoom * 10) / 10,
+                ...filtersToApiParams(nextFilters),
+            }, { silent: true, etag: viewportEtagRef.current[cacheKey] });
+            if (data?.notModified) return;
+            const list = data?.positions ?? [];
+            const meta = (data?.meta ?? null) as Record<string, unknown> | null;
+            if (data?.etag) viewportEtagRef.current[cacheKey] = data.etag;
+            setViewportCache(cacheKey, { positions: list, meta, etag: data?.etag ?? null });
+        } catch { /* prefetch is best-effort */ }
+    }, [canFetch]);
+
     const flyToCity = useCallback((slug: string) => {
         const city = cityBySlug(slug);
         const map = mapRef.current;
         if (!city || !map) return;
+        void prefetchMesoForCity(slug);
         map.easeTo({ center: [city.lng, city.lat], zoom: 10.5, duration: 700 });
         setFilters((prev) => mergeFilters(prev, { citySlug: slug }));
-    }, []);
+    }, [prefetchMesoForCity]);
 
     const ensureMapLayers = useCallback(async (map: any) => {
         if (needsLiveMapLayerReinstall()) {
@@ -788,8 +837,13 @@ export const LiveMap: React.FC = () => {
                         LIVE_LAYERS.directionDots,
                     ]
                     : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
-            const features = queryRenderedFeaturesInViewport(map, layers);
-            return classifyRenderedFeatures(features, tier).total;
+            const sourceId = tier === 'meso' ? LIVE_SOURCES.mesoClusters : LIVE_SOURCES.positions;
+            return countRenderedWithSymbolFallback(
+                map as Parameters<typeof countRenderedWithSymbolFallback>[0],
+                layers,
+                tier,
+                sourceId,
+            ).total;
         } catch {
             return 0;
         }
@@ -887,9 +941,14 @@ export const LiveMap: React.FC = () => {
         ingestPositions(list, { snap: snap || list.length > 0 });
     }, [applyMetaCounts, applyCityCounts, ingestPositions, flushPositionsToMapLayer]);
 
-    const fetchPositions = useCallback(async (opts?: { priority?: boolean; snap?: boolean }) => {
+    const fetchPositions = useCallback(async (opts?: {
+        priority?: boolean;
+        snap?: boolean;
+        forceRefresh?: boolean;
+    }) => {
         if (!canFetch || liveFetchPausedRef.current || !tabVisibleRef.current) return;
         const priority = Boolean(opts?.priority);
+        const forceRefresh = Boolean(opts?.forceRefresh);
         if (!priority && fetchInFlightRef.current) return;
 
         fetchInFlightRef.current = true;
@@ -903,6 +962,7 @@ export const LiveMap: React.FC = () => {
             const detail = apiDetailForZoom(zoom);
             const bbox = map ? bboxFromMap(map) : undefined;
             const viewportKey = liveMapViewportKey(detail, bbox);
+            const swrKey = viewportCacheKey(detail, bbox, filtersRef.current);
             if (
                 priority
                 && abortRef.current
@@ -919,6 +979,21 @@ export const LiveMap: React.FC = () => {
                 viewportRefreshRef.current += 1;
             }
 
+            if (!forceRefresh && priority) {
+                const cached = getViewportCache(swrKey);
+                if (cached && cached.positions.length > 0) {
+                    applyPositionPayload(
+                        cached.positions,
+                        cached.meta,
+                        detail,
+                        Boolean(opts?.snap) || priority,
+                        false,
+                        false,
+                    );
+                    syncZoomUi();
+                }
+            }
+
             const params: Record<string, string | number> = {
                 limit: detail === 'summary' ? 0 : limitForZoom(zoom),
                 detail,
@@ -928,16 +1003,44 @@ export const LiveMap: React.FC = () => {
                 params.bbox = bbox!;
                 params.zoom = Math.round(zoom * 10) / 10;
             }
-            if (viewportChanged || priority) {
+            if (viewportChanged || priority || forceRefresh) {
                 params.refresh = viewportRefreshRef.current;
             }
 
-            const data = await TelemetryApi.getLivePositions(params, { signal: ac.signal, silent: true });
+            const data = await TelemetryApi.getLivePositions(params, {
+                signal: ac.signal,
+                silent: true,
+                etag: forceRefresh ? undefined : viewportEtagRef.current[swrKey],
+            });
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
             if (liveMapViewportKey(detail, bbox) !== lastViewportKeyRef.current) return;
 
+            if (data?.notModified) {
+                const cached = getViewportCache(swrKey);
+                if (cached) {
+                    applyPositionPayload(
+                        cached.positions,
+                        cached.meta,
+                        detail,
+                        Boolean(opts?.snap) || priority,
+                        false,
+                        false,
+                    );
+                    syncZoomUi();
+                }
+                return;
+            }
+
             const list = data?.positions ?? [];
             const meta = data?.meta;
+            if (data?.etag) viewportEtagRef.current[swrKey] = data.etag;
+            if (Array.isArray(list)) {
+                setViewportCache(swrKey, {
+                    positions: list,
+                    meta: (meta as Record<string, unknown> | null) ?? null,
+                    etag: data?.etag ?? null,
+                });
+            }
             if (meta && typeof meta === 'object') {
                 lastTelemetryMetaRef.current = meta as Record<string, unknown>;
                 if (typeof meta.timescale_available === 'boolean') {
@@ -1085,7 +1188,24 @@ export const LiveMap: React.FC = () => {
             (pos) => interpolatorRef.current?.pushDelta(pos),
             () => { /* WS optional — SSE is primary */ },
         );
+
+        void fetchPositionsRef.current({ priority: true, snap: true });
     }, [canFetch, mapReady, applyStreamSnapshot, stopTelemetryStream]);
+
+    const forceRefreshViewport = useCallback(() => {
+        const map = mapRef.current;
+        viewportRefreshRef.current += 1;
+        if (map) {
+            const zoom = map.getZoom();
+            const detail = apiDetailForZoom(zoom);
+            const bbox = bboxFromMap(map);
+            const swrKey = viewportCacheKey(detail, bbox, filtersRef.current);
+            deleteViewportCache(swrKey);
+            delete viewportEtagRef.current[swrKey];
+        }
+        restartTelemetryStream();
+        void fetchPositionsRef.current({ priority: true, snap: true, forceRefresh: true });
+    }, [restartTelemetryStream]);
 
     useEffect(() => {
         if (!mapReady) return;
@@ -1303,6 +1423,7 @@ export const LiveMap: React.FC = () => {
                     return null;
                 }
             },
+            getRenderMode: () => renderModeRef.current,
         });
     }, []);
 
@@ -1333,7 +1454,33 @@ export const LiveMap: React.FC = () => {
                 await ensureMapLayers(map);
                 if (!fitBoundsDoneRef.current) {
                     fitBoundsDoneRef.current = true;
-                    map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
+                    if (!warmStartDoneRef.current) {
+                        warmStartDoneRef.current = true;
+                        const hashQ = window.location.hash.includes('?')
+                            ? window.location.hash.split('?')[1]
+                            : '';
+                        const initialZ = parseInitialZoom(hashQ);
+                        const city = filtersRef.current.citySlug
+                            ? cityBySlug(filtersRef.current.citySlug)
+                            : null;
+                        if (city && initialZ != null) {
+                            map.jumpTo({
+                                center: [city.lng, city.lat],
+                                zoom: initialZ,
+                            });
+                        } else if (city) {
+                            map.jumpTo({
+                                center: [city.lng, city.lat],
+                                zoom: 10.5,
+                            });
+                        } else if (initialZ != null) {
+                            map.setZoom(initialZ);
+                        } else {
+                            map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
+                        }
+                    } else {
+                        map.fitBounds(polandCitiesBounds(), { padding: 48, duration: 0, maxZoom: 7 });
+                    }
                 }
                 syncZoomUi();
                 mapHasLoadedRef.current = true;
@@ -1660,7 +1807,9 @@ export const LiveMap: React.FC = () => {
                                 radius="md"
                                 onClick={() => {
                                     setReplayPanelOpen(true);
-                                    if (replaySource === 'client' && replayBufferRef.current.length >= 2) {
+                                    if (timescaleAvailable) {
+                                        setReplaySource('server');
+                                    } else if (replaySource === 'client' && replayBufferRef.current.length >= 2) {
                                         setReplayPlaying(false);
                                         const n = replayBufferRef.current.length;
                                         setReplayIndex(n - 1);
@@ -1747,6 +1896,7 @@ export const LiveMap: React.FC = () => {
                     restartTelemetryStream();
                     fetchPositions({ priority: true, snap: true });
                 }}
+                onForceRefresh={forceRefreshViewport}
                 cachedPositionCount={onlineCount}
             />
             {mapReady && mapZoom != null && (

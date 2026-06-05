@@ -8,12 +8,14 @@ from activities.scale_config import (
     MAX_CONCURRENT_RIDERS,
     MAX_BATCH_USERS,
     TELEMETRY_API_MAX_LIMIT,
+    TELEMETRY_LIVE_CACHE_TTL,
     compute_batch_scaling,
     adaptive_pg_bulk_batch_size,
     adaptive_user_bulk_batch_size,
     live_pool_mode_for_target,
     plan_batch_cities,
     resolve_telemetry_api_limit,
+    resolve_telemetry_live_cache_ttl,
 )
 from activities.scale_preflight import analyze_scale
 from activities.services import TelemetryService
@@ -24,6 +26,14 @@ class ScaleConfigTest(SimpleTestCase):
         self.assertGreaterEqual(MAX_BATCH_USERS, 300_000)
         self.assertLessEqual(MAX_CONCURRENT_RIDERS, 100_000)
         self.assertGreaterEqual(MAX_CONCURRENT_RIDERS, 5_000)
+
+    def test_resolve_telemetry_live_cache_ttl_per_zoom(self):
+        self.assertGreaterEqual(resolve_telemetry_live_cache_ttl(7.0), TELEMETRY_LIVE_CACHE_TTL)
+        self.assertGreater(resolve_telemetry_live_cache_ttl(7.0), resolve_telemetry_live_cache_ttl(13.0))
+        self.assertEqual(
+            resolve_telemetry_live_cache_ttl(13.0, ingest_engaged=True, ingest_cache_ttl=8),
+            8,
+        )
 
     def test_adaptive_batch_10k_100k_300k(self):
         for total, min_bulk, max_cities in (

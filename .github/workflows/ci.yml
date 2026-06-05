@@ -473,10 +473,10 @@ jobs:
           cd admin
           npx playwright install --with-deps chromium
 
-      - name: Build admin for preview
+      - name: Build admin for preview (VITE_E2E=1 — Live Map bridge)
         run: |
           cd admin
-          npm run build
+          VITE_E2E=1 npm run build
 
       - name: Start preview server and run E2E
         run: |
@@ -486,6 +486,14 @@ jobs:
           npx playwright test --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
+
+      - name: Live Map LOD + WebGL audit gate
+        run: |
+          cd admin
+          npx playwright test --project=live-map-zoom --reporter=github
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

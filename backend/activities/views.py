@@ -492,7 +492,17 @@ class TelemetryLiveView(generics.GenericAPIView):
         req = parse_live_map_query_params(request.query_params, user=request.user)
         body = build_live_map_payload(req)
         read_policy = live_map_read_policy()
+        from activities.live_map_api import live_map_etag
+
+        etag = live_map_etag(body)
+        inm = (request.META.get("HTTP_IF_NONE_MATCH") or "").strip()
+        if inm and inm == etag:
+            resp = Response(status=304)
+            resp["ETag"] = etag
+            resp["Cache-Control"] = "private, max-age=1"
+            return resp
         resp = Response(body)
+        resp["ETag"] = etag
         max_age = 1
         if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
             max_age = read_policy.cache_ttl_seconds

@@ -64,15 +64,26 @@ export const LiveMapWebhooksPanel: React.FC = () => {
                 Integracja Slack/PagerDuty — dostawa async z podpisem HMAC.
             </Text>
             {rows.map((row) => (
-                <Group key={row.id} gap="xs" wrap="wrap">
-                    <Text size="xs" truncate style={{ flex: 1, minWidth: 120 }}>{row.url}</Text>
-                    <Badge size="xs" color={row.failure_count > 0 ? 'red' : 'teal'}>
-                        fail={row.failure_count}
-                    </Badge>
-                    <Button size="xs" variant="light" onClick={() => testPing(row.id)}>
-                        Test
-                    </Button>
-                </Group>
+                <Stack key={row.id} gap={4}>
+                    <Group gap="xs" wrap="wrap">
+                        <Text size="xs" truncate style={{ flex: 1, minWidth: 120 }}>{row.url}</Text>
+                        <Badge size="xs" color={row.enabled ? 'teal' : 'gray'} variant="dot">
+                            {row.enabled ? 'on' : 'off'}
+                        </Badge>
+                        <Badge size="xs" color={row.failure_count > 0 ? 'red' : 'teal'}>
+                            fail={row.failure_count}
+                        </Badge>
+                        <Button size="xs" variant="light" onClick={() => testPing(row.id)}>
+                            Test ping
+                        </Button>
+                    </Group>
+                    <Text size="2xs" c="dimmed">
+                        {row.events.join(', ')}
+                        {row.last_delivery_at
+                            ? ` · ostatnia dostawa: ${new Date(row.last_delivery_at).toLocaleString()}`
+                            : ' · brak dostaw'}
+                    </Text>
+                </Stack>
             ))}
             <TextInput
                 size="xs"

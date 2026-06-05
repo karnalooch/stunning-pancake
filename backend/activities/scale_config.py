@@ -185,6 +185,33 @@ TELEMETRY_GEO_RADIUS_KM = _int("SCALE_TELEMETRY_GEO_RADIUS_KM", 80)
 TELEMETRY_LIVE_CACHE_TTL = _int("SCALE_TELEMETRY_LIVE_CACHE_TTL", 2)
 
 
+def resolve_telemetry_live_cache_ttl(
+    zoom: float | None,
+    *,
+    ingest_engaged: bool = False,
+    ingest_cache_ttl: int = 0,
+) -> int:
+    """
+    Redis live-map cache TTL scaled by zoom tier.
+
+    Macro/meso viewports change slowly — longer TTL; micro (z≥12) needs fresher data.
+    When ingest guard is engaged, honour LIVE_MAP_INGEST_CACHE_TTL floor.
+    """
+    base = TELEMETRY_LIVE_CACHE_TTL
+    if ingest_engaged and ingest_cache_ttl > 0:
+        return max(base, ingest_cache_ttl)
+    if zoom is None:
+        return base
+    z = float(zoom)
+    if z < 8:
+        return max(base, 4)
+    if z < 10:
+        return max(base, 3)
+    if z < 12:
+        return base
+    return max(1, base - 1)
+
+
 def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
     """Cap live-map API responses by zoom (fewer points when zoomed out)."""
     if limit is not None and int(limit) == 0:

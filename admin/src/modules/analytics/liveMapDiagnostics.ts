@@ -1,7 +1,7 @@
 import type { LiveApiDetail } from './liveMapEnterprise';
 import { resolveLiveMapTier } from './liveMapEnterprise';
 import { LIVE_LAYERS, LIVE_SOURCES } from './liveMapLayers';
-import { classifyRenderedFeatures, queryRenderedFeaturesInViewport } from './liveMapMapQuery';
+import { countRenderedWithSymbolFallback } from './liveMapMapQuery';
 
 export type LiveMapWebGlAudit = {
     zoom: number;
@@ -86,8 +86,7 @@ export function auditWebGlLiveMap(map: {
                 ]
                 : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
 
-    const rendered = queryRenderedFeaturesInViewport(map, layerIds);
-    const classified = classifyRenderedFeatures(rendered, tier);
+    const classified = countRenderedWithSymbolFallback(map, layerIds, tier, sourceId);
     const renderedClusters = classified.clusters;
     const renderedPoints = classified.points;
 

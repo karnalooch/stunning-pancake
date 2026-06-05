@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, Switch, Stack, Box, Divider, Slider, Badge, SimpleGrid, ThemeIcon, Skeleton } from '@mantine/core';
-import { ShieldAlert, Activity, Gauge, Zap, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
+import { Card, Text, Group, Switch, Stack, Box, Divider, Slider, Badge, SimpleGrid, ThemeIcon, Skeleton, Button } from '@mantine/core';
+import { ShieldAlert, Activity, Gauge, Zap, AlertTriangle, CheckCircle2, MapPin } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
@@ -64,7 +64,20 @@ export const AntiCheat: React.FC = () => {
           <Stack gap="sm">{anomalies.slice(0, 15).map((a: any, i: number) => (
             <Group key={i} p="sm" style={{ borderRadius: 12, background: 'var(--surface-secondary)', border: '1px solid var(--border-subtle)' }} justify="space-between" wrap="nowrap">
               <Group gap="sm"><ThemeIcon size={32} radius="md" color="orange" variant="light"><AlertTriangle size={14} /></ThemeIcon><Stack gap={0}><Text fw={600} size="sm">{a.user}</Text><Text size="xs" c="dimmed">{a.type} · Score: {a.score?.toFixed(2)} · Distance: {a.distance}m · {a.time}</Text></Stack></Group>
-              <Badge color="orange" variant="filled" size="sm">Flagged</Badge>
+              <Group gap="xs" wrap="nowrap">
+                <Button
+                  component="a"
+                  href={`#/owner/analytics/live-map?flagged=1&activity=${a.activity_id ?? ''}`}
+                  size="xs"
+                  variant="light"
+                  color="indigo"
+                  leftSection={<MapPin size={14} />}
+                  data-testid="anti-cheat-show-on-map"
+                >
+                  Pokaż na mapie
+                </Button>
+                <Badge color="orange" variant="filled" size="sm">Flagged</Badge>
+              </Group>
             </Group>
           ))}</Stack>
         )}

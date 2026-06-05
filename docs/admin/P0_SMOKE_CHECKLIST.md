@@ -121,6 +121,25 @@ Login as `SPONSOR`.
 
 ---
 
+## Live Map — prod smoke (optional, GLOBAL_OWNER)
+
+Wymaga `ADMIN_PASS` w środowisku. Artefakty trafiają do `admin/audit-screenshots/` (nie commitować).
+
+```bash
+cd admin
+ADMIN_PASS='<secret>' node scripts/smoke-live-map-prod.mjs
+ADMIN_PASS='<secret>' node scripts/audit-webgl-live-map.mjs
+```
+
+| # | Check | Pass |
+|---|--------|:----:|
+| L1 | Login prod → `/#/owner/analytics/live-map` ładuje mapę (`data-map-ready=true`) | ☐ |
+| L2 | Badge sync **Live** lub **cached** + licznik `in view` > 0 przy aktywnym sim | ☐ |
+| L3 | Zoom meso (z≈10) — klastry widoczne; mikro (z≥12) — ikony rowerzystów | ☐ |
+| L4 | `webgl-e2e-audit.json` / smoke report — `renderedPoints` > 0 w mikro | ☐ |
+
+---
+
 ## Quick API spot-checks (optional)
 
 Run with tenant admin token (should fail):

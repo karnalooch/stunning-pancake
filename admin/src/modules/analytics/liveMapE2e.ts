@@ -9,6 +9,7 @@ export type LiveMapE2EApi = {
     getLayerVisibility: (layerId: string) => string | null;
     getRenderedCount: () => number;
     getWebGlAudit: () => LiveMapWebGlAudit | null;
+    getRenderMode: () => 'points' | 'clusters' | 'aggregate';
     waitForPaint: () => Promise<void>;
 };
 

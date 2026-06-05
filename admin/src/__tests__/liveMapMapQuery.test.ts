@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { classifyRenderedFeatures, queryRenderedFeaturesInViewport } from '../modules/analytics/liveMapMapQuery';
+import {
+    classifyRenderedFeatures,
+    countRenderedWithSymbolFallback,
+    queryRenderedFeaturesInViewport,
+} from '../modules/analytics/liveMapMapQuery';
 
 describe('liveMapMapQuery', () => {
     it('queryRenderedFeaturesInViewport prefers options-only then CSS bbox', () => {
@@ -36,6 +40,31 @@ describe('liveMapMapQuery', () => {
             clusters: 0,
             points: 0,
             hubs: 1,
+        });
+    });
+
+    it('countRenderedWithSymbolFallback uses source features for micro symbol layers', () => {
+        const map = {
+            getCanvas: () => ({ clientWidth: 800, clientHeight: 600 }) as HTMLCanvasElement,
+            getContainer: () => ({ clientWidth: 800, clientHeight: 600 }) as HTMLElement,
+            queryRenderedFeatures: () => [],
+            querySourceFeatures: () => [
+                { properties: { deviceId: 'a' } },
+                { properties: { deviceId: 'b' } },
+            ],
+        };
+        const out = countRenderedWithSymbolFallback(
+            map,
+            ['live-rider-icons'],
+            'micro',
+            'live-positions',
+        );
+        expect(out).toEqual({
+            total: 2,
+            clusters: 0,
+            points: 2,
+            hubs: 0,
+            usedSourceFallback: true,
         });
     });
 });

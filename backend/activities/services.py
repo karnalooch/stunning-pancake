@@ -1019,11 +1019,13 @@ class TelemetryService:
                 meta_empty["live_detail_ceiling"] = read_policy.detail_ceiling
             return [], meta_empty
 
-        from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
+        from activities.scale_config import resolve_telemetry_live_cache_ttl
 
-        effective_cache_ttl = TELEMETRY_LIVE_CACHE_TTL
-        if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
-            effective_cache_ttl = max(TELEMETRY_LIVE_CACHE_TTL, read_policy.cache_ttl_seconds)
+        effective_cache_ttl = resolve_telemetry_live_cache_ttl(
+            zoom,
+            ingest_engaged=read_policy.ingest_engaged,
+            ingest_cache_ttl=read_policy.cache_ttl_seconds,
+        )
 
         cache_key = cls._live_cache_key(bbox, cap, zoom) if bbox else None
         # Ingest guard: skip bbox cache — stale snapshots caused empty map + live meta counts.

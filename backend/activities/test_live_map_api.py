@@ -6,6 +6,7 @@ from activities.live_map_api import (
     _live_coords,
     _pos_scope_fields,
     build_live_map_payload,
+    live_map_etag,
     poll_after_ms_hint,
     stream_interval_ms,
 )
@@ -127,3 +128,10 @@ class LiveMapScopeFilterTest(SimpleTestCase):
         self.assertEqual(body["positions"][0]["deviceId"], "1")
         self.assertEqual(body["meta"]["filters"]["tenant_id"], "tenant-a")
         self.assertEqual(body["meta"]["viewport_filtered_out"], 1)
+
+
+class LiveMapEtagTest(SimpleTestCase):
+    def test_live_map_etag_stable_for_identical_payload(self):
+        body = {"positions": [{"deviceId": "1", "lat": 52.0, "lng": 21.0}], "meta": {"detail": "full"}}
+        self.assertEqual(live_map_etag(body), live_map_etag(body))
+        self.assertTrue(live_map_etag(body).startswith('W/"'))

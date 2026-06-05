@@ -4,6 +4,8 @@ Shared live-map read path for HTTP GET and SSE stream (admin Live Map).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import time
 from dataclasses import dataclass
@@ -497,3 +499,11 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
             ),
         },
     }
+
+
+def live_map_etag(body: dict) -> str:
+    """Weak ETag for identical live-map payloads (bbox+zoom+filters+positions)."""
+    digest = hashlib.sha256(
+        json.dumps(body, sort_keys=True, default=str, separators=(",", ":")).encode()
+    ).hexdigest()[:32]
+    return f'W/"{digest}"'

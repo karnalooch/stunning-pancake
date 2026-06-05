@@ -19,10 +19,21 @@
 | Tier | Zoom | API `detail` | Warstwy |
 |------|------|--------------|---------|
 | **Makro** | z &lt; 9 | `summary` | Huby miast (`city_counts`) |
-| **Meso** | 9 ≤ z &lt; 12 | `standard` | Klastry Supercluster |
+| **Meso** | 9 ≤ z &lt; 12 | `standard` | Klastry Supercluster (client-side) |
 | **Mikro** | z ≥ 12 | `full` | Ikony + etykiety GPU |
 
 Kod: `liveMapEnterprise.ts`, `liveMapZoom.ts`, `liveMapLayers.ts` (`minzoom` per tier).
+
+### Meso: dual source + client Supercluster
+
+Od fixa meso (Supercluster po stronie klienta):
+
+| Źródło MapLibre | Tier | Zawartość |
+|-----------------|------|-----------|
+| `live-positions` | mikro (z ≥ 12) | Surowe punkty → ikony GPU |
+| `live-meso-clusters` | meso (9–12) | GeoJSON z `liveMapMesoClusters.ts` (Supercluster w przeglądarce) |
+
+`setLivePositionsData` aktualizuje oba źródła; `querySourceFeatures('live-meso-clusters')` i `queryRenderedFeatures` służą audytom WebGL/E2E. Warstwy klastrów (`live-clusters`, `live-direction-dots`) czytają z `live-meso-clusters`, nie z wbudowanego cluster workera MapLibre.
 
 Nagłówek: **active** (global FSM) + **in view** (`positions_returned` w bbox).
 
@@ -57,6 +68,7 @@ Ruch na mapie: **ring buffer 3 punkty / device** + interpolacja po **polilinii**
 | `detail` | `summary` \| `standard` \| `full` |
 | `limit` | Cap pozycji (0 przy summary) |
 | `refresh` | Niepuste → pomija Redis cache odpowiedzi |
+| `If-None-Match` | Nagłówek klienta — odpowiedź **304** gdy payload bez zmian (ETag z hash body) |
 | `tenant_id` / `tenant` | Filtr tenantu (GLOBAL_OWNER); wymuszony dla TENANT_ADMIN |
 | `department_id` / `department` | Filtr działu (w scope tenantu) |
 
@@ -131,6 +143,7 @@ Pełna architektura wzorców branżowych (hot/warm/cold, RBAC, H3, webhooki, aud
 
 - Oczekiwane przy burst ingest (ADR 011).
 - Env: `LIVE_MAP_INGEST_CAP_RATIO`, `LIVE_MAP_INGEST_POLL_RATIO`, `LIVE_MAP_INGEST_CACHE_TTL`.
+- Redis TTL per zoom: `SCALE_TELEMETRY_LIVE_CACHE_TTL` (domyślnie 2 s) + `resolve_telemetry_live_cache_ttl()` — makro 4 s, meso 3 s, mikro 1 s; przy ingest guard min. `LIVE_MAP_INGEST_CACHE_TTL` (8 s).
 
 ### Sesja paused
 
@@ -144,9 +157,12 @@ Pełna architektura wzorców branżowych (hot/warm/cold, RBAC, H3, webhooki, aud
 
 ```bash
 cd admin
-npx vitest run src/__tests__/liveMapHealth.test.ts src/__tests__/liveMapPoll.test.ts src/__tests__/liveMapViewport.test.ts src/__tests__/liveMapZoom.test.ts
-npx playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom
+npx vitest run src/__tests__/liveMap*.test.ts
+VITE_E2E=1 npm run build
+npx playwright test e2e/live-map-zoom.spec.ts e2e/webgl-audit.spec.ts --project=live-map-zoom
 ```
+
+Deep link (warm start): `/#/owner/analytics/live-map?city=krakow&z=10.5&activity=bike&flagged=1&device=<deviceId>`.
 
 ## Powiązane dokumenty
 

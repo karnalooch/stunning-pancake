@@ -77,6 +77,7 @@ test.describe('Live Map WebGL audit', () => {
 
         expect(micro?.layoutVisibility['live-unclustered']).toBe('visible');
         expect(micro?.sourcePoints ?? 0).toBeGreaterThan(0);
+        expect(micro?.renderedPoints ?? 0).toBeGreaterThan(0);
         await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d* on map/);
 
         console.log('WEBGL_AUDIT', JSON.stringify({ mesoAudit, micro }));
