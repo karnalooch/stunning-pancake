@@ -25,6 +25,7 @@ WIPE_PHASE_ORDER = (
     "quiescing",
     "activities",
     "departments",
+    "audit_logs",
     "users",
     "tenants",
     "finalizing",
@@ -37,6 +38,7 @@ PHASE_MESSAGES = {
     "starting": "Starting wipe",
     "activities": "Deleting activities",
     "departments": "Deleting departments and memberships",
+    "audit_logs": "Clearing audit logs (FK to users)",
     "users": "Deleting users (except Global Owner)",
     "tenants": "Deleting tenants",
     "finalizing": "Recreating Global Owner and reclaiming disk",
@@ -297,3 +299,9 @@ def force_reset_wipe() -> None:
     release_wipe_lock()
     set_wipe_in_progress(False)
     reset_wipe_state()
+    try:
+        from activities.wipe_tasks import _release_simulator_redis_after_wipe
+
+        _release_simulator_redis_after_wipe()
+    except Exception:
+        pass

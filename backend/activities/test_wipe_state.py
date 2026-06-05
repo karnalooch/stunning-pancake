@@ -116,12 +116,12 @@ class WipeStatusLabelTests(SimpleTestCase):
             progress_pct=12.5,
             deleted={"activities": 5000},
             tables_done=2,
-            tables_total=6,
+            tables_total=7,
             message="Deleting activities",
         )
         state = ws.get_wipe_state()
         self.assertEqual(state["tables_done"], 2)
-        self.assertEqual(state["tables_total"], 6)
+        self.assertEqual(state["tables_total"], 7)
         self.assertEqual(state["rows_deleted"], 5000)
         self.assertEqual(state["deleted"]["activities"], 5000)
         self.assertIsNotNone(state["last_progress_at"])

@@ -72,6 +72,31 @@ def wipe_data_task(self):
     return run_wipe_sync()
 
 
+def _release_simulator_redis_after_wipe():
+    """
+    Clear sim locks, live/batch Redis, and telemetry shards.
+
+    Runs on successful wipe and on failure so Live Map recovers after a partial wipe.
+    """
+    try:
+        from activities import simulator_state as sim
+
+        sim.force_stop_live_simulation()
+        sim.force_stop_batch_simulation()
+        sim.reset_batch_state()
+        sim.reset_live_state()
+    except Exception:
+        pass
+    try:
+        TelemetryService.clear_simulator_positions()
+    except Exception:
+        pass
+    try:
+        invalidate_dashboard_stats_cache()
+    except Exception:
+        pass
+
+
 def _clear_disk_guard_after_wipe():
     """Drop pause/block flags so sim can restart after reclaiming space."""
     try:
@@ -109,6 +134,8 @@ def run_wipe_sync():
         deleted={},
     )
     ws.wipe_log("Quiescing simulators…")
+    sim.force_stop_live_simulation()
+    sim.force_stop_batch_simulation()
     deleted = {}
 
     try:
@@ -130,6 +157,31 @@ def run_wipe_sync():
         )
         deleted["departments"] = _chunk_delete(
             Department.objects.all(), "departments", deleted, 50, 10
+        )
+
+        from users.models import AuditLog
+        from users.rbac_models import UserRole
+
+        audit_estimate = AuditLog.objects.count()
+        ws.set_wipe_state(phase="audit_logs", progress_pct=55)
+        deleted["audit_logs"] = _chunk_delete(
+            AuditLog.objects.all(),
+            "audit_logs",
+            deleted,
+            55,
+            5,
+            total_estimate=audit_estimate,
+            raw_delete=True,
+        )
+        role_estimate = UserRole.objects.exclude(user__role="GLOBAL_OWNER").count()
+        deleted["user_roles"] = _chunk_delete(
+            UserRole.objects.exclude(user__role="GLOBAL_OWNER"),
+            "user_roles",
+            deleted,
+            58,
+            2,
+            total_estimate=role_estimate,
+            raw_delete=True,
         )
 
         User = get_user_model()
@@ -165,10 +217,7 @@ def run_wipe_sync():
         owner.role = "GLOBAL_OWNER"
         owner.save()
 
-        sim.reset_batch_state()
-        sim.reset_live_state()
-        TelemetryService.clear_simulator_positions()
-        invalidate_dashboard_stats_cache()
+        _release_simulator_redis_after_wipe()
 
         ws.wipe_log("Postgres VACUUM (reclaim space)…")
         vacuum_err = _vacuum_postgres_if_needed()
@@ -206,6 +255,13 @@ def run_wipe_sync():
         ws.wipe_log(f"ERROR: {err_msg}")
         return {"status": "error", "error": err_msg, "deleted": deleted}
     finally:
+        state = ws.get_wipe_state()
+        if state.get("phase") == "error" or state.get("error"):
+            try:
+                _release_simulator_redis_after_wipe()
+                ws.wipe_log("Simulator Redis/telemetry cleared after wipe error (Live Map recovery).")
+            except Exception:
+                pass
         ws.set_wipe_in_progress(False)
         ws.release_wipe_lock()
 
