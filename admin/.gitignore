@@ -23,3 +23,7 @@ dist-exe
 *.njsproj
 *.sln
 *.sw?
+
+# E2E test artifacts
+playwright-report/
+test-results/
