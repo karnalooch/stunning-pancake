@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     zoomFade,
+    zoomStops,
     resolveLiveMapZoomMode,
     apiDetailForZoom,
     clusterRadiusForZoom,
@@ -18,6 +19,8 @@ import {
     shouldRenderIndividualRiders,
     ridersVisibleAtZoom,
     riderIconOpacityAtZoom,
+    cityHubOpacityAtZoom,
+    clusterLayerOpacityAtZoom,
 } from '../modules/analytics/liveMapZoom';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
 
@@ -96,6 +99,23 @@ describe('liveMapZoom', () => {
         expect(steps, JSON.stringify(steps)).toHaveLength(0);
         expect(doubles.length, JSON.stringify(doubles.slice(0, 8))).toBe(0);
         expect(aggregateDoubles, JSON.stringify(aggregateDoubles.slice(0, 8))).toHaveLength(0);
+    });
+
+    it('cityHubOpacityAtZoom stays visible at z=8.9 (macro handoff)', () => {
+        expect(cityHubOpacityAtZoom(8.9)).toBeGreaterThanOrEqual(0.85);
+        const gaps = auditLiveMapLodCrossfade(8.5, 9.2, 0.1).filter((i) => i.type === 'GAP');
+        const at89 = gaps.filter((i) => Math.abs(i.zoom - 8.9) < 0.05);
+        expect(at89, JSON.stringify(at89)).toHaveLength(0);
+    });
+
+    it('clusterLayerOpacityAtZoom is strong at meso z=11.6', () => {
+        expect(clusterLayerOpacityAtZoom(11.6)).toBeGreaterThanOrEqual(0.8);
+    });
+
+    it('zoomStops sorts pairs by zoom ascending', () => {
+        const expr = zoomStops([9, 0.4], [5.5, 0.42], [8, 0.72], [10.5, 0.88]) as unknown[];
+        expect(expr[0]).toBe('interpolate');
+        expect(expr.slice(3)).toEqual([5.5, 0.42, 8, 0.72, 9, 0.4, 10.5, 0.88]);
     });
 
     it('hides individual riders below z=12 (country/region zoom-out bug)', () => {

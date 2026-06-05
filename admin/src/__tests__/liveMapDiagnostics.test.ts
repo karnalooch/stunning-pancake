@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { appendRequestLog, formatCapHonestyMessage } from '../modules/analytics/liveMapDiagnostics';
+import {
+    appendRequestLog,
+    formatCapHonestyMessage,
+    renderedBadgeColor,
+} from '../modules/analytics/liveMapDiagnostics';
 
 describe('liveMapDiagnostics', () => {
     it('formatCapHonestyMessage when capped with estimate', () => {
@@ -10,6 +14,12 @@ describe('liveMapDiagnostics', () => {
         });
         expect(msg).toContain('2');
         expect(msg).toContain('4');
+    });
+
+    it('renderedBadgeColor pending vs error', () => {
+        expect(renderedBadgeColor(96, 0, 500)).toBe('orange');
+        expect(renderedBadgeColor(96, 0, 2500)).toBe('red');
+        expect(renderedBadgeColor(17, 17, null)).toBe('green');
     });
 
     it('appendRequestLog caps history', () => {

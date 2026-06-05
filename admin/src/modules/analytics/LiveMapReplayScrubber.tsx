@@ -3,6 +3,7 @@ import { Group, Slider, Text, Badge, ActionIcon, Tooltip } from '@mantine/core';
 import { Play, Pause, RotateCcw } from 'lucide-react';
 
 export type LiveMapReplayScrubberProps = {
+    visible: boolean;
     frameCount: number;
     index: number;
     playing: boolean;
@@ -12,6 +13,7 @@ export type LiveMapReplayScrubberProps = {
 };
 
 export const LiveMapReplayScrubber: React.FC<LiveMapReplayScrubberProps> = ({
+    visible,
     frameCount,
     index,
     playing,
@@ -19,7 +21,7 @@ export const LiveMapReplayScrubber: React.FC<LiveMapReplayScrubberProps> = ({
     onTogglePlay,
     onClear,
 }) => {
-    if (frameCount < 2) return null;
+    if (!visible || frameCount < 2) return null;
     return (
         <Group
             gap="sm"

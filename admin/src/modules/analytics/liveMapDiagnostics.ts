@@ -54,6 +54,23 @@ export function buildIncidentBundle(input: {
     };
 }
 
+export type RenderedBadgeColor = 'green' | 'orange' | 'red';
+
+/** Badge color when drawn features exist but MapLibre paint may still be pending. */
+export function renderedBadgeColor(
+    drawn: number,
+    rendered: number,
+    mismatchAgeMs: number | null,
+    pendingThresholdMs = 2000,
+): RenderedBadgeColor {
+    if (rendered === 0 && drawn > 0) {
+        if (mismatchAgeMs == null || mismatchAgeMs < pendingThresholdMs) return 'orange';
+        return 'red';
+    }
+    if (rendered >= drawn) return 'green';
+    return 'orange';
+}
+
 export function formatCapHonestyMessage(meta: Record<string, unknown> | null | undefined): string | null {
     if (!meta?.capped) return null;
     const returned = meta.positions_returned ?? meta.viewport_returned;

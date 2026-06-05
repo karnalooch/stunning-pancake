@@ -26,7 +26,8 @@ export const LIVE_MAP_LOD = {
     /** City hub rings visible from country zoom (incl. z=5). */
     cityHubMin: 4.5,
     cityHubFadeInEnd: 5.8,
-    cityHubFadeOutStart: 8.2,
+    /** Hold full hub opacity until just before meso handoff (z=9). */
+    cityHubFadeOutStart: 8.95,
     /** Huby tylko w tierze macro (z < 9) — bez nakładania na klastry. */
     cityHubFadeOutEnd: LIVE_MAP_TIER.mesoMinZoom,
     /** Klastry od tieru meso (z ≥ 9). */
@@ -135,7 +136,24 @@ export function clusterRadiusForZoom(zoom: number): number {
     return 32;
 }
 
-function maplibreInterp(zoom: number, stops: readonly (readonly [number, number])[]): number {
+export type ZoomStopPair = readonly [number, number];
+
+/** Sort zoom/value pairs and build a MapLibre `interpolate` expression (ascending zoom required). */
+export function zoomInterpolate(...pairs: ZoomStopPair[]): unknown[] {
+    const sorted = [...pairs].sort((a, b) => a[0] - b[0]);
+    const flat: number[] = [];
+    for (const [z, v] of sorted) {
+        flat.push(z, v);
+    }
+    return ['interpolate', ['linear'], ['zoom'], ...flat];
+}
+
+/** @deprecated use zoomInterpolate — alias for tests */
+export function zoomStops(...pairs: ZoomStopPair[]): unknown[] {
+    return zoomInterpolate(...pairs);
+}
+
+function maplibreInterp(zoom: number, stops: readonly ZoomStopPair[]): number {
     if (zoom <= stops[0][0]) return stops[0][1];
     for (let i = 1; i < stops.length; i++) {
         if (zoom <= stops[i][0]) {
@@ -210,15 +228,43 @@ export function shouldRenderIndividualRiders(zoom: number): boolean {
 /** Cluster circle paint opacity (mirrors live-clusters layer). */
 export function clusterLayerOpacityAtZoom(zoom: number): number {
     const L = LIVE_MAP_LOD;
-    return maplibreInterp(zoom, [
-        [L.clusterVisibleStart, 0.32],
-        [8, 0.72],
-        [10.5, 0.88],
-        [L.clusterPeakEnd, 0.94],
-        [L.clusterFadeOutEnd - 1.2, 0.62],
-        [L.clusterFadeOutEnd, 0],
-    ]);
+    return maplibreInterp(zoom, CLUSTER_CIRCLE_OPACITY_STOPS);
 }
+
+/** Cluster count label opacity (mirrors live-cluster-count layer). */
+export function clusterCountOpacityAtZoom(zoom: number): number {
+    return maplibreInterp(zoom, CLUSTER_COUNT_OPACITY_STOPS);
+}
+
+/** City hub ring opacity (mirrors live-city-hub-ring layer). */
+export function cityHubOpacityAtZoom(zoom: number): number {
+    return maplibreInterp(zoom, CITY_HUB_RING_OPACITY_STOPS);
+}
+
+/** SSOT paint stops — must stay sorted by zoom ascending. */
+export const CLUSTER_CIRCLE_OPACITY_STOPS: readonly ZoomStopPair[] = [
+    [LIVE_MAP_LOD.clusterVisibleStart, 0.32],
+    [10.5, 0.88],
+    [LIVE_MAP_LOD.clusterPeakEnd, 0.94],
+    [LIVE_MAP_LOD.clusterFadeOutEnd - 1.2, 0.62],
+    [LIVE_MAP_LOD.clusterFadeOutEnd, 0],
+] as const;
+
+export const CLUSTER_COUNT_OPACITY_STOPS: readonly ZoomStopPair[] = [
+    [LIVE_MAP_LOD.clusterVisibleStart, 0.4],
+    [10, 0.92],
+    [LIVE_MAP_LOD.clusterPeakEnd, 1],
+    [LIVE_MAP_LOD.clusterFadeOutEnd - 0.8, 0.55],
+    [LIVE_MAP_LOD.clusterFadeOutEnd, 0],
+] as const;
+
+export const CITY_HUB_RING_OPACITY_STOPS: readonly ZoomStopPair[] = [
+    [LIVE_MAP_LOD.cityHubMin, 0.55],
+    [LIVE_MAP_LOD.cityHubFadeInEnd, 0.85],
+    [8, 0.95],
+    [LIVE_MAP_LOD.cityHubFadeOutStart, 0.92],
+    [LIVE_MAP_LOD.cityHubFadeOutEnd, 0],
+] as const;
 
 /** Label-layer icon opacity (live-rider-labels), z ≥ labelMinZoom. */
 export function riderLabelIconOpacityAtZoom(zoom: number): number {
@@ -256,21 +302,8 @@ export function auditLiveMapLodCrossfade(zMin = 5, zMax = 16, step = 0.1): LiveM
     const L = LIVE_MAP_LOD;
     const issues: LiveMapLodAuditIssue[] = [];
     for (let z = zMin; z <= zMax + 1e-6; z = Math.round((z + step) * 10) / 10) {
-        const hubOp = maplibreInterp(z, [
-            [L.cityHubMin, 0.55],
-            [L.cityHubFadeInEnd, 0.85],
-            [8.2, 0.95],
-            [L.cityHubFadeOutStart, 0.88],
-            [L.cityHubFadeOutEnd, 0],
-        ]);
-        const clOp = maplibreInterp(z, [
-            [L.clusterVisibleStart, 0.32],
-            [8, 0.72],
-            [10.5, 0.88],
-            [L.clusterPeakEnd, 0.94],
-            [L.clusterFadeOutEnd - 1.2, 0.62],
-            [L.clusterFadeOutEnd, 0],
-        ]);
+        const hubOp = cityHubOpacityAtZoom(z);
+        const clOp = clusterLayerOpacityAtZoom(z);
         const dotOp = riderUnclusteredOpacityAtZoom(z);
         const dotR = riderUnclusteredRadiusAtZoom(z);
         const iconLayer = z >= L.iconMinZoom && z < L.iconMaxZoom;

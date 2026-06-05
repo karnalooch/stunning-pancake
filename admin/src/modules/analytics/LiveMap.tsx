@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Box, Text, Badge, Group, Skeleton, ActionIcon, Tooltip, Button } from '@mantine/core';
-import { Map as MapIcon, Activity, Layers, Zap, Stethoscope, AlertTriangle } from 'lucide-react';
+import { Map as MapIcon, Activity, Layers, Zap, Stethoscope, AlertTriangle, History } from 'lucide-react';
 import { LiveMapStatusBar } from './LiveMapStatusBar';
 import { LiveMapFiltersBar } from './LiveMapFiltersBar';
 import { LiveMapCapBanner } from './LiveMapCapBanner';
@@ -17,7 +17,12 @@ import {
     type LiveMapFilters,
 } from './liveMapFilters';
 import { maskRiderName } from './liveMapPrivacy';
-import { appendRequestLog, buildIncidentBundle, type LiveMapRequestLogEntry } from './liveMapDiagnostics';
+import {
+    appendRequestLog,
+    buildIncidentBundle,
+    renderedBadgeColor,
+    type LiveMapRequestLogEntry,
+} from './liveMapDiagnostics';
 import { addLiveMapBookmark, loadLiveMapBookmarks } from './liveMapBookmarks';
 import { LiveMapReplayBuffer } from './liveMapReplay';
 import { handleLiveMapKeyDown } from './liveMapKeyboard';
@@ -51,7 +56,9 @@ import {
     installLiveMapLayers,
     LIVE_LAYERS,
     LIVE_SOURCES,
+    needsLiveMapLayerReinstall,
     prepareLiveMapStyle,
+    removeLiveMapLayers,
     setCityHubData,
     countLivePositionFeatures,
     setLivePositionsData,
@@ -204,6 +211,10 @@ export const LiveMap: React.FC = () => {
     const [replayIndex, setReplayIndex] = useState(-1);
     const [replayPlaying, setReplayPlaying] = useState(false);
     const [replayFrameCount, setReplayFrameCount] = useState(0);
+    const [renderedMismatchAgeMs, setRenderedMismatchAgeMs] = useState<number | null>(null);
+    const pendingRenderedCountRef = useRef(false);
+    const idleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const scheduleRenderedCountRef = useRef<() => void>(() => {});
     const [bookmarks, setBookmarks] = useState(() => loadLiveMapBookmarks());
     const replayPlayingRef = useRef(false);
     const replayIndexRef = useRef(-1);
@@ -211,6 +222,17 @@ export const LiveMap: React.FC = () => {
     filtersRef.current = filters;
     replayPlayingRef.current = replayPlaying;
     replayIndexRef.current = replayIndex;
+
+    useEffect(() => {
+        if (drawnOnMap > 0 && renderedOnMap === 0) {
+            const start = Date.now();
+            setRenderedMismatchAgeMs(0);
+            const tick = setInterval(() => setRenderedMismatchAgeMs(Date.now() - start), 400);
+            return () => clearInterval(tick);
+        }
+        setRenderedMismatchAgeMs(null);
+        return undefined;
+    }, [drawnOnMap, renderedOnMap]);
 
     useEffect(() => {
         if (isAuthenticated && (token || hasStoredSession())) {
@@ -331,7 +353,9 @@ export const LiveMap: React.FC = () => {
     const pushPositionsToMap = useCallback((list: UserPosition[]) => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
-        setLivePositionsData(map, list);
+        setLivePositionsData(map, list, {
+            onPositionsSet: () => scheduleRenderedCountRef.current(),
+        });
     }, []);
 
     const syncZoomUi = useCallback(() => {
@@ -340,6 +364,15 @@ export const LiveMap: React.FC = () => {
         const z = map.getZoom();
         setMapZoom(Math.round(z * 10) / 10);
         setZoomMode(TIER_MODE_LABEL[resolveLiveMapTier(z)]);
+        if (layersReadyRef.current && resolveLiveMapTier(z) === 'macro') {
+            setCityHubData(map, {
+                counts: cityCountsRef.current,
+                bikeCounts: cityBikeCountsRef.current,
+                runCounts: cityRunCountsRef.current,
+                trend: cityTrendRef.current,
+            });
+            scheduleRenderedCountRef.current();
+        }
     }, []);
 
     const showRiderPopup = useCallback((pos: UserPosition, lngLat: { lng: number; lat: number }) => {
@@ -452,6 +485,10 @@ export const LiveMap: React.FC = () => {
     }, []);
 
     const ensureMapLayers = useCallback(async (map: any) => {
+        if (needsLiveMapLayerReinstall()) {
+            removeLiveMapLayers(map);
+            layersReadyRef.current = false;
+        }
         if (layersReadyRef.current) return;
         await prepareLiveMapStyle(map);
         installLiveMapLayers(map, clusterRadiusForZoom(map.getZoom()), {
@@ -469,8 +506,12 @@ export const LiveMap: React.FC = () => {
         layersReadyRef.current = true;
         const cached = positionsRef.current;
         if (cached.length > 0) {
-            setLivePositionsData(map, cached);
+            setLivePositionsData(map, cached, {
+                onPositionsSet: () => scheduleRenderedCountRef.current(),
+            });
             interpolatorRef.current?.snapTo(cached);
+        } else {
+            scheduleRenderedCountRef.current();
         }
     }, [handleClusterClick, handleRiderClick, handleCityHubClick, handleClusterHover]);
 
@@ -594,22 +635,22 @@ export const LiveMap: React.FC = () => {
     }, [aggregateCityCounts]);
 
     const countRenderedRiderFeatures = useCallback((map: {
+        getZoom?: () => number;
         queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
     }) => {
         if (!map.queryRenderedFeatures) return 0;
         try {
-            const layers = [
-                LIVE_LAYERS.clusters,
-                LIVE_LAYERS.clusterCount,
-                LIVE_LAYERS.directionDots,
-                LIVE_LAYERS.unclustered,
-                LIVE_LAYERS.riderIcons,
-                LIVE_LAYERS.riderLabels,
-            ];
+            const tier = resolveLiveMapTier(map.getZoom?.() ?? DEFAULT_ZOOM);
+            const layers = tier === 'macro'
+                ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
+                : tier === 'meso'
+                    ? [LIVE_LAYERS.clusters, LIVE_LAYERS.clusterCount, LIVE_LAYERS.directionDots]
+                    : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
             const features = map.queryRenderedFeatures({ layers });
             return features.filter((f) => {
                 const p = f.properties;
                 if (!p) return false;
+                if (tier === 'macro') return p.slug != null || p.count != null;
                 if (p.cluster_id != null || p.point_count != null) return true;
                 return p.deviceId != null;
             }).length;
@@ -618,20 +659,32 @@ export const LiveMap: React.FC = () => {
         }
     }, []);
 
+    const flushRenderedCount = useCallback(() => {
+        const map = mapRef.current;
+        if (!map || !layersReadyRef.current) return;
+        const n = countRenderedRiderFeatures(map);
+        setRenderedOnMap((prev) => (n !== prev ? n : prev));
+        pendingRenderedCountRef.current = false;
+    }, [countRenderedRiderFeatures]);
+
     const scheduleRenderedCount = useCallback(() => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
-        requestAnimationFrame(() => {
-            const n = countRenderedRiderFeatures(map);
-            setRenderedOnMap((prev) => (n !== prev ? n : prev));
-        });
-    }, [countRenderedRiderFeatures]);
+        pendingRenderedCountRef.current = true;
+        if (typeof map.triggerRepaint === 'function') {
+            map.triggerRepaint();
+        }
+    }, []);
+
+    scheduleRenderedCountRef.current = scheduleRenderedCount;
 
     const flushPositionsToMapLayer = useCallback(() => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
         const list = positionsRef.current;
-        setLivePositionsData(map, list);
+        setLivePositionsData(map, list, {
+            onPositionsSet: () => scheduleRenderedCountRef.current(),
+        });
         const featureN = countLivePositionFeatures(list);
         setDrawnOnMap((prev) => (featureN !== prev ? featureN : prev));
         scheduleRenderedCount();
@@ -1075,12 +1128,26 @@ export const LiveMap: React.FC = () => {
                 }
                 syncZoomUi();
             });
-            map.on('zoomend', () => scheduleMoveFetch(true));
+            const onMapIdle = () => {
+                if (!pendingRenderedCountRef.current) return;
+                if (idleDebounceRef.current) clearTimeout(idleDebounceRef.current);
+                idleDebounceRef.current = setTimeout(() => {
+                    flushRenderedCount();
+                }, 50);
+            };
+            map.on('idle', onMapIdle);
+            map.on('zoomend', () => {
+                scheduleMoveFetch(true);
+                scheduleRenderedCountRef.current();
+            });
             map.on('movestart', () => {
                 lastMoveAtRef.current = Date.now();
             });
             map.on('move', scheduleDragFetch);
-            map.on('moveend', () => scheduleMoveFetch(true));
+            map.on('moveend', () => {
+                scheduleMoveFetch(true);
+                scheduleRenderedCountRef.current();
+            });
             mapRef.current = map;
         }).catch(() => {
             if (!cancelled) {
@@ -1096,6 +1163,7 @@ export const LiveMap: React.FC = () => {
             publishLiveMapE2e(undefined);
             interpolatorRef.current?.cancel();
             popupRef.current?.remove();
+            if (idleDebounceRef.current) clearTimeout(idleDebounceRef.current);
             layersReadyRef.current = false;
             if (mapRef.current) {
                 try {
@@ -1104,7 +1172,7 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, mapGeneration]);
+    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, flushRenderedCount, mapGeneration]);
 
     useEffect(() => {
         if (!isLiveMapE2eEnabled() || !mapReady) return;
@@ -1117,7 +1185,11 @@ export const LiveMap: React.FC = () => {
             },
             getZoom: () => map.getZoom(),
             getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
-            isReady: () => layersReadyRef.current && map.isStyleLoaded(),
+            isReady: () => {
+                if (!layersReadyRef.current) return false;
+                if (typeof map.isStyleLoaded === 'function') return map.isStyleLoaded();
+                return true;
+            },
         });
         return () => publishLiveMapE2e(undefined);
     }, [mapReady]);
@@ -1282,21 +1354,23 @@ export const LiveMap: React.FC = () => {
                         </Badge>
                     )}
                     {!filters.presentationMode && mapReady && drawnOnMap > 0 && (
-                        <Badge
-                            variant="light"
-                            color={
-                                renderedOnMap === 0
-                                    ? 'red'
-                                    : renderedOnMap >= drawnOnMap
-                                        ? 'green'
-                                        : 'orange'
+                        <Tooltip
+                            label={
+                                renderedOnMap === 0 && (renderedMismatchAgeMs ?? 0) < 2000
+                                    ? 'Oczekiwanie na paint MapLibre (idle)'
+                                    : 'Widoczne piksele w warstwach aktywnego tieru LOD'
                             }
-                            radius="sm"
-                            size="md"
-                            data-testid="live-map-rendered-count"
                         >
-                            {renderedOnMap.toLocaleString()} rendered
-                        </Badge>
+                            <Badge
+                                variant="light"
+                                color={renderedBadgeColor(drawnOnMap, renderedOnMap, renderedMismatchAgeMs)}
+                                radius="sm"
+                                size="md"
+                                data-testid="live-map-rendered-count"
+                            >
+                                {renderedOnMap.toLocaleString()} rendered
+                            </Badge>
+                        </Tooltip>
                     )}
                     {flaggedCount > 0 && (
                         <Tooltip label="Podejrzane aktywności w viewport">
@@ -1362,6 +1436,33 @@ export const LiveMap: React.FC = () => {
                     )}
                 </Group>
                 <Group gap="xs">
+                    {!filters.presentationMode && (
+                        <Tooltip label={replayFrameCount >= 2 ? 'Historia pozycji (bufor replay)' : 'Bufor replay — za mało klatek'}>
+                            <ActionIcon
+                                variant={replayIndex >= 0 || replayPlaying ? 'filled' : 'light'}
+                                color="cyan"
+                                size="lg"
+                                radius="md"
+                                disabled={replayFrameCount < 2}
+                                onClick={() => {
+                                    if (replayFrameCount < 2) return;
+                                    setReplayPlaying(false);
+                                    setReplayIndex(replayFrameCount - 1);
+                                    const frame = replayBufferRef.current.frameAt(replayFrameCount - 1);
+                                    if (frame) ingestPositionsRef.current(frame.positions, { snap: true });
+                                }}
+                                aria-label="Historia replay"
+                                data-testid="live-map-replay-open"
+                            >
+                                <History size={18} />
+                            </ActionIcon>
+                        </Tooltip>
+                    )}
+                    {!filters.presentationMode && replayFrameCount >= 2 && replayIndex < 0 && !replayPlaying && (
+                        <Badge variant="outline" color="cyan" radius="sm" size="sm">
+                            {replayFrameCount} frames
+                        </Badge>
+                    )}
                     <Tooltip label="Diagnostyka operatora (D)">
                         <ActionIcon
                             variant={diagnosticsOpen ? 'filled' : 'light'}
@@ -1482,8 +1583,9 @@ export const LiveMap: React.FC = () => {
                 </Group>
             )}
             <LiveMapReplayScrubber
+                visible={replayPlaying || replayIndex >= 0}
                 frameCount={replayFrameCount}
-                index={replayIndex < 0 ? Math.max(0, replayFrameCount - 1) : replayIndex}
+                index={Math.max(0, replayIndex)}
                 playing={replayPlaying}
                 onIndexChange={(n) => {
                     setReplayPlaying(false);

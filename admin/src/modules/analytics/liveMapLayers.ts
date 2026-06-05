@@ -2,9 +2,21 @@ import type { LiveMapPosition } from './liveMapMarkers';
 import { resolveActivityKind, speedToKmh } from './liveMapMarkers';
 import { POLAND_SIM_CITIES } from './liveMapCities';
 import { LIVE_MAP_TIER } from './liveMapEnterprise';
-import { CLUSTER_MAX_ZOOM, LIVE_MAP_LOD } from './liveMapZoom';
+import {
+    CLUSTER_MAX_ZOOM,
+    CLUSTER_CIRCLE_OPACITY_STOPS,
+    CLUSTER_COUNT_OPACITY_STOPS,
+    CITY_HUB_RING_OPACITY_STOPS,
+    LIVE_MAP_LOD,
+    zoomInterpolate,
+} from './liveMapZoom';
+
 import { ensureLiveMapSprites } from './liveMapSprite';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../core/map/mapBasemap';
+
+/** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
+export const LIVE_MAP_LAYER_VERSION = 2;
+export const LIVE_MAP_LAYER_VERSION_KEY = 'live-map-layer-v';
 
 export const LIVE_SOURCES = {
     positions: 'live-positions',
@@ -38,6 +50,36 @@ const CLUSTER_CLICK_LAYERS = [
 ];
 
 const LOD = LIVE_MAP_LOD;
+
+const ALL_LIVE_LAYER_IDS = Object.values(LIVE_LAYERS);
+
+export function needsLiveMapLayerReinstall(): boolean {
+    if (typeof sessionStorage === 'undefined') return false;
+    return sessionStorage.getItem(LIVE_MAP_LAYER_VERSION_KEY) !== String(LIVE_MAP_LAYER_VERSION);
+}
+
+export function markLiveMapLayerInstalled(): void {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(LIVE_MAP_LAYER_VERSION_KEY, String(LIVE_MAP_LAYER_VERSION));
+}
+
+export function removeLiveMapLayers(map: {
+    getLayer: (id: string) => unknown;
+    removeLayer: (id: string) => void;
+    getSource: (id: string) => unknown;
+    removeSource: (id: string) => void;
+}): void {
+    for (const id of ALL_LIVE_LAYER_IDS) {
+        try {
+            if (map.getLayer(id)) map.removeLayer(id);
+        } catch { /* */ }
+    }
+    for (const id of Object.values(LIVE_SOURCES)) {
+        try {
+            if (map.getSource(id)) map.removeSource(id);
+        } catch { /* */ }
+    }
+}
 
 function isValidLiveCoord(n: number): boolean {
     return Number.isFinite(n) && Math.abs(n) <= 180;
@@ -156,16 +198,7 @@ export function installLiveMapLayers(
                     'interpolate', ['linear'], ['get', 'point_count'],
                     2, 24, 8, 28, 25, 34, 50, 40, 100, 48,
                 ],
-                'circle-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart, 0.3,
-                    5.5, 0.42,
-                    8, 0.72,
-                    10.5, 0.88,
-                    LOD.clusterPeakEnd, 0.94,
-                    LOD.clusterFadeOutEnd - 1.2, 0.62,
-                    LOD.clusterFadeOutEnd, 0,
-                ],
+                'circle-opacity': zoomInterpolate(...CLUSTER_CIRCLE_OPACITY_STOPS),
                 'circle-stroke-width': [
                     'interpolate', ['linear'], ['zoom'],
                     7, 2, 11, 2.8, 13, 2.2,
@@ -193,15 +226,7 @@ export function installLiveMapLayers(
                 'text-color': '#ffffff',
                 'text-halo-color': 'rgba(15,23,42,0.35)',
                 'text-halo-width': 1.2,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart, 0.4,
-                    5.5, 0.55,
-                    9, 0.92,
-                    LOD.clusterPeakEnd, 1,
-                    LOD.clusterFadeOutEnd - 0.8, 0.55,
-                    LOD.clusterFadeOutEnd, 0,
-                ],
+                'text-opacity': zoomInterpolate(...CLUSTER_COUNT_OPACITY_STOPS),
             },
         });
 
@@ -446,22 +471,14 @@ export function installLiveMapLayers(
             maxzoom: LOD.cityHubFadeOutEnd,
             paint: {
                 'circle-radius': [
-                    'interpolate', ['linear'], ['get', 'count'],
-                    1, 16,
-                    8, 20,
-                    20, 24,
-                    50, 30,
-                    120, 36,
+                    '*',
+                    ['interpolate', ['linear'], ['get', 'count'],
+                        1, 16, 8, 20, 20, 24, 50, 30, 120, 36,
+                    ],
+                    zoomInterpolate([5, 1], [LOD.cityHubFadeOutEnd, 1.3]),
                 ],
                 'circle-color': ['get', 'color'],
-                'circle-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0.55,
-                    LOD.cityHubFadeInEnd, 0.85,
-                    8.2, 0.95,
-                    LOD.cityHubFadeOutStart, 0.88,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
+                'circle-opacity': zoomInterpolate(...CITY_HUB_RING_OPACITY_STOPS),
                 'circle-stroke-width': 2.8,
                 'circle-stroke-color': 'rgba(255,255,255,0.92)',
             },
@@ -488,14 +505,13 @@ export function installLiveMapLayers(
                 'text-color': '#ffffff',
                 'text-halo-color': 'rgba(15,23,42,0.4)',
                 'text-halo-width': 1.2,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 0.6,
-                    LOD.cityHubFadeInEnd, 0.9,
-                    8.2, 1,
-                    LOD.cityHubFadeOutStart, 0.9,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
+                'text-opacity': zoomInterpolate(
+                    [LOD.cityHubMin, 0.6],
+                    [LOD.cityHubFadeInEnd, 0.9],
+                    [8, 1],
+                    [LOD.cityHubFadeOutStart, 0.92],
+                    [LOD.cityHubFadeOutEnd, 0],
+                ),
             },
         });
 
@@ -516,10 +532,12 @@ export function installLiveMapLayers(
                 'text-color': '#52525b',
                 'text-halo-color': 'rgba(255,255,255,0.85)',
                 'text-halo-width': 1,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    7, 0.5, 8.5, 0.9, LOD.cityHubFadeOutStart, 0.75, LOD.cityHubFadeOutEnd, 0,
-                ],
+                'text-opacity': zoomInterpolate(
+                    [7, 0.5],
+                    [8.5, 0.9],
+                    [LOD.cityHubFadeOutStart, 0.88],
+                    [LOD.cityHubFadeOutEnd, 0],
+                ),
             },
         });
 
@@ -545,14 +563,13 @@ export function installLiveMapLayers(
                 'text-color': '#27272a',
                 'text-halo-color': 'rgba(255,255,255,0.9)',
                 'text-halo-width': 1.4,
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin + 0.5, 0,
-                    LOD.cityHubFadeInEnd + 0.3, 0.65,
-                    8.5, 1,
-                    LOD.cityHubFadeOutStart, 0.85,
-                    LOD.cityHubFadeOutEnd, 0,
-                ],
+                'text-opacity': zoomInterpolate(
+                    [LOD.cityHubMin + 0.5, 0],
+                    [LOD.cityHubFadeInEnd + 0.3, 0.65],
+                    [8.5, 1],
+                    [LOD.cityHubFadeOutStart, 0.9],
+                    [LOD.cityHubFadeOutEnd, 0],
+                ),
             },
         });
 
@@ -567,6 +584,8 @@ export function installLiveMapLayers(
     try {
         if (map.getLayer('live-dots')) map.removeLayer('live-dots');
     } catch { /* legacy */ }
+
+    markLiveMapLayerInstalled();
 }
 
 export type LiveMapClickEvent = {
@@ -580,6 +599,7 @@ export function setLivePositionsData(
         triggerRepaint?: () => void;
     },
     positions: LiveMapPosition[],
+    opts?: { onPositionsSet?: () => void },
 ): void {
     const source = map.getSource(LIVE_SOURCES.positions);
     source?.setData?.({
@@ -587,6 +607,7 @@ export function setLivePositionsData(
         features: positionsToFeatures(positions),
     });
     map.triggerRepaint?.();
+    opts?.onPositionsSet?.();
 }
 
 export function setCityHubData(
