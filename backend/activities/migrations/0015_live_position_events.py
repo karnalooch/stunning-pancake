@@ -53,6 +53,12 @@ class Migration(migrations.Migration):
                     );
                 END IF;
                 IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'add_compression_policy') THEN
+                    -- TimescaleDB requires compression enabled on the hypertable before add_compression_policy.
+                    ALTER TABLE telemetry.live_position_events SET (
+                        timescaledb.compress,
+                        timescaledb.compress_segmentby = 'device_id',
+                        timescaledb.compress_orderby = 'time DESC'
+                    );
                     PERFORM add_compression_policy(
                         'telemetry.live_position_events',
                         INTERVAL '7 days',
