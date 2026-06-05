@@ -104,7 +104,7 @@ $requiredSim = @{
     'SIM_BP_QUEUE_HEADROOM'                       = '25'
     'SCALE_SIM_RAMP_START_DELAY_MAX'              = '8'
     'SCALE_SIM_RAMP_TICKS'                        = '15'
-    'SCALE_SIM_ROUTING_BACKEND'                   = 'osrm'
+    'SCALE_SIM_ROUTING_BACKEND'                   = 'auto'
     'OSRM_URL'                                    = 'http://osrm.railway.internal:5000'
 }
 function Test-RailwayVarLine {
@@ -129,7 +129,7 @@ $requiredRoute = @{
     'CELERY_WORKER_PREFETCH_MULTIPLIER' = '1'
     'CELERY_MAX_TASKS_PER_CHILD'        = '50'
     'SCALE_SIM_ASYNC_ROUTING'           = '1'
-    'SCALE_SIM_ROUTING_BACKEND'         = 'osrm'
+    'SCALE_SIM_ROUTING_BACKEND'         = 'auto'
     'OSRM_URL'                          = 'http://osrm.railway.internal:5000'
 }
 foreach ($kv in $requiredRoute.GetEnumerator()) {
