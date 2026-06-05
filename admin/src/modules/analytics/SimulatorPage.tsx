@@ -503,19 +503,19 @@ export const SimulatorPage: React.FC = () => {
                                                 { value: 0, label: 'Eco' },
                                                 { value: 50, label: 'Balanced' },
                                                 { value: 75, label: '100/s' },
-                                                { value: 100, label: '150/s' },
+                                                { value: 100, label: '1000/s' },
                                             ]}
                                         />
                                     </Box>
 
                                     <Group gap="xs">
                                         <Button variant="light" size="xs" color="teal" onClick={applyTurboMapRamp}>
-                                            Preset: Turbo map (150 warm / tick)
+                                            Preset: Turbo map (1000 warm / tick)
                                         </Button>
                                     </Group>
                                     <Alert color="yellow" variant="light" icon={<AlertTriangle size={16} />}>
                                         <Text size="xs">
-                                            Load 75≈100 starts/tick, 100≈150. ACTIVE na mapie zależy od routingu (3× worker).
+                                            Load 75≈100 starts/tick, 100≈1000. ACTIVE na mapie zależy od routingu (6× worker).
                                             Przy dużym warming obniż load lub poczekaj na drain kolejki.
                                         </Text>
                                     </Alert>

@@ -23,9 +23,20 @@ if (-not $Password) {
     if (-not $Password) { throw "Set ADMIN_PASS or -Password" }
 }
 
-$authBody = @{ username = $Username; password = $Password } | ConvertTo-Json
-$token = (Invoke-RestMethod -Uri "$ApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody).access
-$headers = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+function Get-AuthHeaders {
+    $authBody = @{ username = $Username; password = $Password } | ConvertTo-Json
+    $token = (Invoke-RestMethod -Uri "$ApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody).access
+    return @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+}
+
+function Invoke-Api([string]$Method, [string]$Uri, [string]$Body = $null) {
+    $headers = Get-AuthHeaders
+    $params = @{ Uri = $Uri; Method = $Method; Headers = $headers }
+    if ($Body) { $params.Body = $Body; $params.ContentType = "application/json; charset=utf-8" }
+    return Invoke-RestMethod @params
+}
+
+$headers = Get-AuthHeaders
 
 Log "Stop live sim"
 try {
@@ -36,7 +47,7 @@ try {
 }
 
 Log "Start wipe"
-$wipeBody = '{"confirm":true,"confirm_phrase":"DELETE ALL DATA \u2014 PRODUCTION \u2014 GLOBAL_OWNER","mfa_confirmed":true}'
+$wipeBody = '{"confirm":true,"confirm_phrase":"DELETE ALL DATA \u2014 PRODUCTION \u2014 GLOBAL_OWNER","mfa_confirmed":true,"force":true}'
 try {
     $w = Invoke-RestMethod -Uri "$ApiBase/activities/admin/wipe-data/" -Method DELETE -Headers $headers -Body $wipeBody -ContentType "application/json; charset=utf-8"
     Log ("Wipe started: " + $w.message)
@@ -51,13 +62,26 @@ try {
 
 $wipeDeadline = (Get-Date).AddMinutes($WipeTimeoutMinutes)
 $wipeDone = $false
+$seenRunning = $false
+$lastRows = -1
+$stallPolls = 0
 while ((Get-Date) -lt $wipeDeadline) {
     Start-Sleep -Seconds $PollSeconds
-    $ws = Invoke-RestMethod -Uri "$ApiBase/activities/admin/wipe-data/" -Headers $headers
-    $wmsg = "Wipe running={0} phase={1} progress={2}% rows={3} error={4}" -f $ws.running, $ws.phase, $ws.progress_pct, $ws.rows_deleted, $ws.error
+    $ws = Invoke-Api GET "$ApiBase/activities/admin/wipe-data/"
+    if ($ws.running) { $seenRunning = $true }
+    if ($ws.rows_deleted -eq $lastRows) { $stallPolls++ } else { $stallPolls = 0; $lastRows = $ws.rows_deleted }
+    $wmsg = "Wipe running={0} phase={1} progress={2}% rows={3} stuck={4} error={5}" -f $ws.running, $ws.phase, $ws.progress_pct, $ws.rows_deleted, $ws.stuck, $ws.error
     Log $wmsg
     if ($ws.error) { throw "Wipe failed: $($ws.error)" }
-    if ((-not $ws.running) -and ($ws.phase -eq "complete")) { $wipeDone = $true; break }
+    if ($ws.stuck -and $stallPolls -ge 4) {
+        Log "Wipe stuck - force-restarting"
+        $wipeBody = '{"confirm":true,"confirm_phrase":"DELETE ALL DATA \u2014 PRODUCTION \u2014 GLOBAL_OWNER","mfa_confirmed":true,"force":true}'
+        Invoke-Api DELETE "$ApiBase/activities/admin/wipe-data/" $wipeBody | Out-Null
+        $seenRunning = $false
+        $stallPolls = 0
+        continue
+    }
+    if ($seenRunning -and (-not $ws.running) -and ($ws.phase -eq "complete")) { $wipeDone = $true; break }
 }
 if (-not $wipeDone) { throw "Wipe timeout after $WipeTimeoutMinutes min" }
 Log "Wipe done"
@@ -86,7 +110,7 @@ $batchDeadline = (Get-Date).AddMinutes($BatchTimeoutMinutes)
 $batchDone = $false
 while ((Get-Date) -lt $batchDeadline) {
     Start-Sleep -Seconds $PollSeconds
-    $bs = Invoke-RestMethod -Uri "$ApiBase/activities/admin/simulate/" -Headers $headers
+    $bs = Invoke-Api GET "$ApiBase/activities/admin/simulate/"
     $bmsg = "Batch running={0} phase={1} progress={2}% users={3}/{4} error={5}" -f $bs.running, $bs.current_phase, $bs.progress_pct, $bs.users_created, $bs.total_users, $bs.error
     Log $bmsg
     if ($bs.error) { throw "Batch failed: $($bs.error)" }

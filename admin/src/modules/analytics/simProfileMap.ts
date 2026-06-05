@@ -47,7 +47,7 @@ export function mapLoad(load: number): {
     brouter_route_attempts: number;
 } {
     const l = Math.max(0, Math.min(100, load));
-    const starts = Math.round(piecewiseLerp([[0, 25], [50, 50], [75, 100], [100, 150]], l));
+    const starts = Math.round(piecewiseLerp([[0, 25], [50, 50], [75, 100], [100, 1000]], l));
     const brouter = Math.round(starts * 0.83);
     const attempts = l < 75 ? 4 : 5;
     const tick_seconds = Math.round(piecewiseLerp([[0, 12], [50, 8], [100, 6]], l));

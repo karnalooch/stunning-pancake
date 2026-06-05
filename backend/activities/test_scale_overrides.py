@@ -17,8 +17,12 @@ from activities.scale_config import (
 
 class ParseScaleOverridesTest(SimpleTestCase):
     def test_clamps_starts_to_hard_cap(self):
-        parsed = parse_scale_overrides_payload({"max_starts_per_live_tick": 999})
+        parsed = parse_scale_overrides_payload({"max_starts_per_live_tick": 2000})
         self.assertEqual(parsed["max_starts_per_live_tick"], OVERRIDE_MAX_STARTS_HARD_CAP)
+
+    def test_accepts_1000_starts(self):
+        parsed = parse_scale_overrides_payload({"max_starts_per_live_tick": 1000})
+        self.assertEqual(parsed["max_starts_per_live_tick"], 1000)
 
     def test_clamps_brouter_calls(self):
         parsed = parse_scale_overrides_payload({"brouter_max_calls_per_tick": 500})
