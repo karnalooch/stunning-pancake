@@ -4,6 +4,8 @@ export type LiveMapE2EApi = {
     getZoom: () => number;
     getZoomMode: () => string;
     isReady: () => boolean;
+    getLayerVisibility: (layerId: string) => string | null;
+    getRenderedCount: () => number;
 };
 
 declare global {

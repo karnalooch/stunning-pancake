@@ -48,11 +48,14 @@ export default defineConfig({
     {
       name: 'live-map-zoom',
       testMatch: '**/live-map-zoom.spec.ts',
-      retries: process.env.CI ? 2 : 1,
+      retries: process.env.CI ? 2 : 0,
       timeout: 180_000,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },
+        launchOptions: {
+          args: ['--use-gl=angle', '--enable-webgl'],
+        },
       },
     },
     {

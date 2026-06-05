@@ -105,14 +105,26 @@ export function mockPositionsForBbox(bbox: string | null | undefined): Array<Rec
     return buildMockLivePositions();
 }
 
+/** Mirrors backend live_map_api.py render_mode selection. */
+export function mockRenderModeForDetail(
+    detail: string | null,
+    viewportReturned: number,
+): 'points' | 'clusters' | 'aggregate' {
+    if (detail === 'standard' || detail === 'summary' || viewportReturned > 50) {
+        return 'clusters';
+    }
+    return 'points';
+}
+
 export function mockLiveTelemetryBody(detail: string | null, bbox?: string | null): object {
     const positions = mockPositionsForBbox(bbox ?? null);
     const bike = positions.filter((p) => (p.type as string) !== 'running').length;
     const run = positions.length - bike;
+    const viewportReturned = positions.length;
     const meta = {
         ride_on_map: 48,
-        positions_returned: positions.length,
-        viewport_returned: positions.length,
+        positions_returned: viewportReturned,
+        viewport_returned: viewportReturned,
         viewport_bike: bike,
         viewport_run: run,
         city_counts: MOCK_CITY_COUNTS,
@@ -122,6 +134,7 @@ export function mockLiveTelemetryBody(detail: string | null, bbox?: string | nul
         flagged_device_ids: ['e2e-athlete-52.2297-3'],
         flagged_in_viewport: 1,
         read_mode: 'normal',
+        render_mode: mockRenderModeForDetail(detail, viewportReturned),
     };
     if (detail === 'summary') {
         return { positions: [], meta };

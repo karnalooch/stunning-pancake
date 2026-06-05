@@ -230,6 +230,10 @@ export const LiveMap: React.FC = () => {
     const pendingRenderedCountRef = useRef(false);
     const idleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const scheduleRenderedCountRef = useRef<() => void>(() => {});
+    const countRenderedRiderFeaturesRef = useRef<(map: {
+        getZoom?: () => number;
+        queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
+    }) => number>(() => 0);
     const [bookmarks, setBookmarks] = useState(() => loadLiveMapBookmarks());
     const replayPlayingRef = useRef(false);
     const replayIndexRef = useRef(-1);
@@ -434,13 +438,16 @@ export const LiveMap: React.FC = () => {
         const z = map.getZoom();
         setMapZoom(Math.round(z * 10) / 10);
         setZoomMode(TIER_MODE_LABEL[resolveLiveMapTier(z)]);
-        if (layersReadyRef.current && resolveLiveMapTier(z) === 'macro') {
-            setCityHubData(map, {
-                counts: cityCountsRef.current,
-                bikeCounts: cityBikeCountsRef.current,
-                runCounts: cityRunCountsRef.current,
-                trend: cityTrendRef.current,
-            });
+        if (layersReadyRef.current) {
+            setLiveMapRenderMode(map, renderModeRef.current, z);
+            if (resolveLiveMapTier(z) === 'macro') {
+                setCityHubData(map, {
+                    counts: cityCountsRef.current,
+                    bikeCounts: cityBikeCountsRef.current,
+                    runCounts: cityRunCountsRef.current,
+                    trend: cityTrendRef.current,
+                });
+            }
             scheduleRenderedCountRef.current();
         }
     }, []);
@@ -573,7 +580,7 @@ export const LiveMap: React.FC = () => {
             liveMapThemeRef.current,
         );
         installH3Layer(map, liveMapThemeRef.current);
-        setLiveMapRenderMode(map, renderModeRef.current);
+        setLiveMapRenderMode(map, renderModeRef.current, map.getZoom());
         setCityHubData(map, {
             counts: cityCountsRef.current,
             bikeCounts: cityBikeCountsRef.current,
@@ -629,7 +636,7 @@ export const LiveMap: React.FC = () => {
         renderModeRef.current = mode;
         const map = mapRef.current;
         if (map && layersReadyRef.current) {
-            setLiveMapRenderMode(map, mode);
+            setLiveMapRenderMode(map, mode, map.getZoom());
         }
         if (mode === 'aggregate') {
             const url = typeof meta?.aggregate_url === 'string' ? meta.aggregate_url : '';
@@ -782,6 +789,8 @@ export const LiveMap: React.FC = () => {
             return 0;
         }
     }, []);
+
+    countRenderedRiderFeaturesRef.current = countRenderedRiderFeatures;
 
     const flushRenderedCount = useCallback(() => {
         const map = mapRef.current;
@@ -1216,12 +1225,18 @@ export const LiveMap: React.FC = () => {
         jumpTo: (o: { zoom: number; center?: [number, number]; duration?: number }) => void;
         getZoom: () => number;
         isStyleLoaded?: () => boolean;
+        getLayoutProperty?: (id: string, prop: string) => unknown;
+        queryRenderedFeatures?: (opts: { layers: string[] }) => Array<{ properties?: Record<string, unknown> }>;
     }) => {
         if (!isLiveMapE2eEnabled()) return;
         const warsawCenter: [number, number] = [21.0122, 52.2297];
         publishLiveMapE2e({
             setZoom: (zoom, center) => {
                 map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
+                if (layersReadyRef.current) {
+                    setLiveMapRenderMode(map, renderModeRef.current, zoom);
+                    scheduleRenderedCountRef.current();
+                }
             },
             getZoom: () => map.getZoom(),
             getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
@@ -1231,6 +1246,21 @@ export const LiveMap: React.FC = () => {
                 if (typeof map.isStyleLoaded === 'function') return map.isStyleLoaded();
                 return true;
             },
+            getLayerVisibility: (layerId: string) => {
+                const cached = (window as Window & { __liveMapLayerVis?: Record<string, string> })
+                    .__liveMapLayerVis?.[layerId];
+                if (cached) return cached;
+                try {
+                    const getLayer = (map as { getLayer?: (id: string) => unknown }).getLayer;
+                    if (!getLayer?.(layerId)) return 'missing';
+                    const v = map.getLayoutProperty?.(layerId, 'visibility');
+                    if (typeof v === 'string') return v;
+                    return 'visible';
+                } catch {
+                    return null;
+                }
+            },
+            getRenderedCount: () => countRenderedRiderFeaturesRef.current(map),
         });
     }, []);
 

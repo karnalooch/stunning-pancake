@@ -1,17 +1,48 @@
 import type { LiveMapTheme } from './liveMapTheme';
 import { defaultLiveMapTheme } from './liveMapTheme';
+import { resolveLiveMapTier } from './liveMapEnterprise';
+import { isPlaywrightE2eSession } from '../../core/auth/e2eEnv';
 
 export const H3_SOURCE = 'live-h3-cells';
 export const H3_LAYER = 'live-h3-cells-fill';
 
-const MESO_CLUSTER_LAYERS = [
+export const MESO_RIDER_LAYERS = [
     'live-clusters',
     'live-cluster-count',
     'live-direction-dots',
+] as const;
+
+export const MICRO_RIDER_LAYERS = [
     'live-unclustered',
     'live-rider-icons',
     'live-rider-labels',
-];
+] as const;
+
+const ALL_RIDER_LAYERS = [...MESO_RIDER_LAYERS, ...MICRO_RIDER_LAYERS];
+
+export function layerVisibilityForRenderMode(
+    layerId: string,
+    mode: 'points' | 'clusters' | 'aggregate',
+    zoom?: number,
+): boolean {
+    if (mode === 'aggregate') {
+        return false;
+    }
+    const tier = zoom != null ? resolveLiveMapTier(zoom) : null;
+    if (tier === 'macro') {
+        return false;
+    }
+    const isMicroLayer = (MICRO_RIDER_LAYERS as readonly string[]).includes(layerId);
+    const isMesoLayer = (MESO_RIDER_LAYERS as readonly string[]).includes(layerId);
+
+    if (isMesoLayer) {
+        return tier === null || tier === 'meso';
+    }
+    if (isMicroLayer) {
+        return tier === 'micro';
+    }
+    return false;
+}
 
 export function installH3Layer(
     map: {
@@ -59,19 +90,21 @@ export function setLiveMapRenderMode(
         setLayoutProperty: (id: string, prop: string, value: unknown) => void;
     },
     mode: 'points' | 'clusters' | 'aggregate',
+    zoom?: number,
 ): void {
-    const showPoints = mode === 'points' || mode === 'clusters';
-    const showMeso = mode === 'clusters';
     const showH3 = mode === 'aggregate';
 
-    for (const id of MESO_CLUSTER_LAYERS) {
+    const e2eVis: Record<string, string> = {};
+    for (const id of ALL_RIDER_LAYERS) {
+        const visible = layerVisibilityForRenderMode(id, mode, zoom);
+        e2eVis[id] = visible ? 'visible' : 'none';
         if (!map.getLayer(id)) continue;
-        const visible = id === 'live-unclustered' || id === 'live-rider-icons' || id === 'live-rider-labels'
-            ? showPoints && mode === 'points'
-            : showMeso;
         map.setLayoutProperty(id, 'visibility', visible ? 'visible' : 'none');
     }
     if (map.getLayer(H3_LAYER)) {
         map.setLayoutProperty(H3_LAYER, 'visibility', showH3 ? 'visible' : 'none');
+    }
+    if (isPlaywrightE2eSession() && typeof window !== 'undefined') {
+        (window as Window & { __liveMapLayerVis?: Record<string, string> }).__liveMapLayerVis = e2eVis;
     }
 }
