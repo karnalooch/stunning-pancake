@@ -307,6 +307,7 @@ if "sqlite" in os.getenv("DATABASE_URL", ""):
 
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
+    "activities.tasks.snapshot_live_positions_to_timescale": {"queue": "default"},
     "activities.tasks.monitor_postgres_disk": {"queue": "default"},
     "activities.wipe_tasks.*": {"queue": "default"},
     "activities.tasks.*": {"queue": "critical"},
@@ -358,6 +359,12 @@ CELERY_BEAT_SCHEDULE = {
     "postgres-disk-monitor": {
         "task": "activities.tasks.monitor_postgres_disk",
         "schedule": crontab(minute="*/5"),
+        "options": {"queue": "default"},
+    },
+    # Live Map Timescale snapshot — warm path writer (Redis → telemetry hypertable)
+    "live-map-timescale-snapshot": {
+        "task": "activities.tasks.snapshot_live_positions_to_timescale",
+        "schedule": 10.0,
         "options": {"queue": "default"},
     },
 }

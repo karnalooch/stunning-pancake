@@ -500,6 +500,42 @@ class TelemetryLiveView(generics.GenericAPIView):
         return resp
 
 
+class TelemetryLiveReplayView(generics.GenericAPIView):
+    """Server replay from Timescale warm path (30d retention)."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from activities.live_map_replay import build_replay_payload, parse_replay_query_params
+
+        req = parse_replay_query_params(request.query_params, user=request.user)
+        if req is None:
+            return Response(
+                {"detail": "Invalid replay window. Require from, to (ISO), optional step=5s|30s|60s, bbox."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        body = build_replay_payload(req)
+        return Response(body)
+
+
+class TelemetryLiveReplayCompareView(generics.GenericAPIView):
+    """Replay + compare vs baseline window (default 24h offset)."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        from activities.live_map_replay import build_compare_payload, parse_replay_query_params
+
+        req = parse_replay_query_params(request.query_params, user=request.user)
+        if req is None:
+            return Response(
+                {"detail": "Invalid replay window. Require from, to (ISO), optional compare_offset=24h."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        body = build_compare_payload(req)
+        return Response(body)
+
+
 class EventStreamRenderer(BaseRenderer):
     """Allow DRF content negotiation for Accept: text/event-stream (SSE)."""
 

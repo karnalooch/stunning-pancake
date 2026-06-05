@@ -6,7 +6,12 @@ import { LiveMapFiltersBar } from './LiveMapFiltersBar';
 import { LiveMapCapBanner } from './LiveMapCapBanner';
 import { LiveMapCityRankingPanel } from './LiveMapCityRankingPanel';
 import { LiveMapDiagnosticsDrawer } from './LiveMapDiagnosticsDrawer';
-import { LiveMapReplayScrubber } from './LiveMapReplayScrubber';
+import { LiveMapReplayScrubber, type LiveMapReplaySource } from './LiveMapReplayScrubber';
+import {
+    defaultReplayRange,
+    serverFramesToBuffer,
+    type ServerReplayStep,
+} from './liveMapServerReplay';
 import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './liveMapHealth';
 import {
     DEFAULT_LIVE_MAP_FILTERS,
@@ -142,6 +147,7 @@ export const LiveMap: React.FC = () => {
     const cityTrendRef = useRef<Record<string, number>>({});
     const filtersRef = useRef<LiveMapFilters>(parseInitialFilters());
     const replayBufferRef = useRef(new LiveMapReplayBuffer());
+    const serverFramesRef = useRef<ReturnType<typeof serverFramesToBuffer>>([]);
     const fpsMonitorRef = useRef(new LiveMapFpsMonitor());
     const rafFpsRef = useRef<number | null>(null);
     const fitBoundsDoneRef = useRef(false);
@@ -211,6 +217,12 @@ export const LiveMap: React.FC = () => {
     const [replayIndex, setReplayIndex] = useState(-1);
     const [replayPlaying, setReplayPlaying] = useState(false);
     const [replayFrameCount, setReplayFrameCount] = useState(0);
+    const [replayPanelOpen, setReplayPanelOpen] = useState(false);
+    const [replaySource, setReplaySource] = useState<LiveMapReplaySource>('client');
+    const [replayStep, setReplayStep] = useState<ServerReplayStep>('30s');
+    const [serverReplayLoading, setServerReplayLoading] = useState(false);
+    const [timescaleAvailable, setTimescaleAvailable] = useState(false);
+    const [cityCompareDeltas, setCityCompareDeltas] = useState<Record<string, number>>({});
     const [renderedMismatchAgeMs, setRenderedMismatchAgeMs] = useState<number | null>(null);
     const pendingRenderedCountRef = useRef(false);
     const idleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -279,11 +291,62 @@ export const LiveMap: React.FC = () => {
         };
     }, [mapReady]);
 
+    const activeReplayFrames = useCallback(() => (
+        replaySource === 'server'
+            ? serverFramesRef.current
+            : replayBufferRef.current.getFrames()
+    ), [replaySource]);
+
+    const loadServerReplay = useCallback(async () => {
+        const map = mapRef.current;
+        if (!map) return;
+        setServerReplayLoading(true);
+        try {
+            const bbox = bboxFromMap(map);
+            const { from, to } = defaultReplayRange(1);
+            const data = await TelemetryApi.getLiveReplay({
+                from,
+                to,
+                step: replayStep,
+                bbox: bbox!,
+                ...filtersToApiParams(filtersRef.current),
+            }, { compare: true });
+            if (!data?.meta?.timescale_available) {
+                notifications.show({
+                    color: 'yellow',
+                    title: 'Replay serwerowy niedostępny',
+                    message: 'Używam bufora klienta (Timescale wyłączony lub brak danych).',
+                });
+                setReplaySource('client');
+                setReplayFrameCount(replayBufferRef.current.length);
+                return;
+            }
+            const frames = serverFramesToBuffer(data.frames ?? []);
+            serverFramesRef.current = frames;
+            setReplayFrameCount(frames.length);
+            if (data.compare?.city_deltas) {
+                setCityCompareDeltas(data.compare.city_deltas);
+            }
+            if (frames.length > 0) {
+                setReplayIndex(frames.length - 1);
+                ingestPositionsRef.current(frames[frames.length - 1].positions, { snap: true });
+            }
+        } catch {
+            notifications.show({
+                color: 'red',
+                title: 'Błąd replay',
+                message: 'Nie udało się załadować klatek z serwera.',
+            });
+        } finally {
+            setServerReplayLoading(false);
+        }
+    }, [replayStep]);
+
     useEffect(() => {
         if (!replayPlaying) return;
         const id = setInterval(() => {
             setReplayIndex((prev) => {
-                const frames = replayBufferRef.current.getFrames();
+                const frames = activeReplayFrames();
                 const next = prev < 0 ? 0 : prev + 1;
                 if (next >= frames.length) {
                     setReplayPlaying(false);
@@ -295,7 +358,7 @@ export const LiveMap: React.FC = () => {
             });
         }, 400);
         return () => clearInterval(id);
-    }, [replayPlaying]);
+    }, [replayPlaying, activeReplayFrames]);
 
     const healthSnapshot = useMemo(() => computeLiveMapHealth({
         mapReady,
@@ -800,6 +863,9 @@ export const LiveMap: React.FC = () => {
             const meta = data?.meta;
             if (meta && typeof meta === 'object') {
                 lastTelemetryMetaRef.current = meta as Record<string, unknown>;
+                if (typeof meta.timescale_available === 'boolean') {
+                    setTimescaleAvailable(meta.timescale_available);
+                }
                 const serverPoll = parsePollAfterMs(meta as Record<string, unknown>);
                 if (serverPoll != null) ingestPollMultRef.current = 1;
             }
@@ -1437,19 +1503,22 @@ export const LiveMap: React.FC = () => {
                 </Group>
                 <Group gap="xs">
                     {!filters.presentationMode && (
-                        <Tooltip label={replayFrameCount >= 2 ? 'Historia pozycji (bufor replay)' : 'Bufor replay — za mało klatek'}>
+                        <Tooltip label="Historia pozycji (bufor lub replay serwerowy)">
                             <ActionIcon
-                                variant={replayIndex >= 0 || replayPlaying ? 'filled' : 'light'}
+                                variant={replayPanelOpen || replayIndex >= 0 || replayPlaying ? 'filled' : 'light'}
                                 color="cyan"
                                 size="lg"
                                 radius="md"
-                                disabled={replayFrameCount < 2}
                                 onClick={() => {
-                                    if (replayFrameCount < 2) return;
-                                    setReplayPlaying(false);
-                                    setReplayIndex(replayFrameCount - 1);
-                                    const frame = replayBufferRef.current.frameAt(replayFrameCount - 1);
-                                    if (frame) ingestPositionsRef.current(frame.positions, { snap: true });
+                                    setReplayPanelOpen(true);
+                                    if (replaySource === 'client' && replayBufferRef.current.length >= 2) {
+                                        setReplayPlaying(false);
+                                        const n = replayBufferRef.current.length;
+                                        setReplayIndex(n - 1);
+                                        setReplayFrameCount(n);
+                                        const frame = replayBufferRef.current.frameAt(n - 1);
+                                        if (frame) ingestPositionsRef.current(frame.positions, { snap: true });
+                                    }
                                 }}
                                 aria-label="Historia replay"
                                 data-testid="live-map-replay-open"
@@ -1496,6 +1565,7 @@ export const LiveMap: React.FC = () => {
                 bikeCounts={cityBikeCounts}
                 runCounts={cityRunCounts}
                 trend={cityTrend}
+                compareDeltas={cityCompareDeltas}
                 onCityClick={flyToCity}
                 visible={mapReady && resolveLiveMapTier(mapZoom ?? DEFAULT_ZOOM) === 'macro'}
             />
@@ -1583,32 +1653,55 @@ export const LiveMap: React.FC = () => {
                 </Group>
             )}
             <LiveMapReplayScrubber
-                visible={replayPlaying || replayIndex >= 0}
+                visible={replayPanelOpen || replayPlaying || replayIndex >= 0}
                 frameCount={replayFrameCount}
                 index={Math.max(0, replayIndex)}
                 playing={replayPlaying}
+                source={replaySource}
+                onSourceChange={(src) => {
+                    setReplaySource(src);
+                    if (src === 'client') {
+                        setReplayFrameCount(replayBufferRef.current.length);
+                    } else {
+                        setReplayFrameCount(serverFramesRef.current.length);
+                    }
+                    setReplayIndex(-1);
+                    setReplayPlaying(false);
+                }}
+                serverAvailable={timescaleAvailable}
+                step={replayStep}
+                onStepChange={setReplayStep}
+                onLoadServer={loadServerReplay}
+                serverLoading={serverReplayLoading}
                 onIndexChange={(n) => {
                     setReplayPlaying(false);
                     setReplayIndex(n);
-                    const frame = replayBufferRef.current.frameAt(n);
+                    const frames = activeReplayFrames();
+                    const frame = frames[n];
                     if (frame) ingestPositionsRef.current(frame.positions, { snap: true });
                 }}
                 onTogglePlay={() => {
                     if (replayPlaying) {
                         setReplayPlaying(false);
                         setReplayIndex(-1);
+                        setReplayPanelOpen(false);
                         fetchPositionsRef.current?.({ priority: true, snap: true });
                         return;
                     }
                     if (replayFrameCount < 2) return;
                     setReplayPlaying(true);
                     setReplayIndex(0);
+                    const frames = activeReplayFrames();
+                    if (frames[0]) ingestPositionsRef.current(frames[0].positions, { snap: true });
                 }}
                 onClear={() => {
                     replayBufferRef.current.clear();
+                    serverFramesRef.current = [];
                     setReplayFrameCount(0);
                     setReplayIndex(-1);
                     setReplayPlaying(false);
+                    setReplayPanelOpen(false);
+                    setCityCompareDeltas({});
                 }}
             />
             <LiveMapDiagnosticsDrawer

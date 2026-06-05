@@ -441,10 +441,18 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         agg_params.append("mode=h3")
         aggregate_url = "/api/activities/telemetry/live/aggregate/?" + "&".join(agg_params)
 
+    try:
+        from activities.live_map_timescale import timescale_available
+
+        ts_available = timescale_available()
+    except Exception:
+        ts_available = False
+
     return {
         "positions": enriched_data,
         "meta": {
             **telemetry_meta,
+            "timescale_available": ts_available,
             "positions_returned": viewport_returned,
             "viewport_returned": viewport_returned,
             "detail": detail,

@@ -274,8 +274,8 @@ flowchart TB
 |-----------|--------|
 | `live_map_rbac.py` + API scope filter | ✅ Shipped |
 | Ride/telemetry denormalization | ✅ Shipped |
-| Timescale hypertable + writer | 🔲 Planned |
-| Replay / compare API + UI | 🔲 Planned |
+| Timescale hypertable + writer | ✅ Shipped |
+| Replay / compare API + UI | ✅ Shipped |
 | Audit POST | 🔲 Planned |
 | Webhooks | 🔲 Planned |
 | White-label `map_theme` | 🔲 Planned |

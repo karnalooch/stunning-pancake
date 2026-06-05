@@ -639,6 +639,53 @@ class TelemetryService:
             pass
 
     @classmethod
+    def scan_all_live_positions(cls, limit: int = 5000) -> list[dict]:
+        """Read all current positions from telemetry shards (bounded, for Timescale writer)."""
+        import json as _json
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+        from activities.telemetry_shard import (
+            TelemetryShardRouter,
+            all_shard_keys,
+            parallel_shard_workers,
+        )
+
+        shards = all_shard_keys()
+        cap = max(1, min(int(limit), 5000))
+
+        def _scan_shard(sk) -> list[dict]:
+            client = TelemetryShardRouter.client_for(sk.index)
+            try:
+                raw = client.hgetall(sk.positions)
+            except Exception:
+                return []
+            out: list[dict] = []
+            for _did, pos_json in (raw or {}).items():
+                if not pos_json:
+                    continue
+                try:
+                    pos = _json.loads(
+                        pos_json.decode() if isinstance(pos_json, bytes) else pos_json
+                    )
+                    if isinstance(pos, dict):
+                        out.append(pos)
+                except Exception:
+                    continue
+            return out
+
+        merged: list[dict] = []
+        if len(shards) <= 1:
+            merged = _scan_shard(shards[0])
+        else:
+            workers = parallel_shard_workers(len(shards))
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                futures = [pool.submit(_scan_shard, sk) for sk in shards]
+                for fut in as_completed(futures):
+                    merged.extend(fut.result())
+
+        return merged[:cap]
+
+    @classmethod
     def _total_positions(cls, r=None) -> int:
         """Sum of position-hash sizes across all telemetry shards."""
         from concurrent.futures import ThreadPoolExecutor, as_completed

@@ -7,6 +7,7 @@ export type LiveMapCityRankingPanelProps = {
     bikeCounts: Record<string, number>;
     runCounts: Record<string, number>;
     trend: Record<string, number>;
+    compareDeltas?: Record<string, number>;
     onCityClick: (slug: string) => void;
     visible: boolean;
 };
@@ -22,7 +23,25 @@ function TrendBadge({ n }: { n: number }) {
     );
 }
 
-function Row({ row, onClick }: { row: CityRankingRow; onClick: () => void }) {
+function CompareDeltaBadge({ n }: { n: number }) {
+    const color = n > 0 ? 'teal' : 'red';
+    const label = n > 0 ? `Δ+${n}` : `Δ${n}`;
+    return (
+        <Badge size="xs" variant="outline" color={color} title="vs wczoraj (replay compare)">
+            {label}
+        </Badge>
+    );
+}
+
+function Row({
+    row,
+    compareDelta,
+    onClick,
+}: {
+    row: CityRankingRow;
+    compareDelta?: number;
+    onClick: () => void;
+}) {
     return (
         <Box
             component="button"
@@ -47,6 +66,9 @@ function Row({ row, onClick }: { row: CityRankingRow; onClick: () => void }) {
                 </Text>
                 <Group gap={4} wrap="nowrap">
                     <TrendBadge n={row.trend} />
+                    {compareDelta != null && compareDelta !== 0 && (
+                        <CompareDeltaBadge n={compareDelta} />
+                    )}
                     <Badge size="xs" color="violet" variant="filled">{row.total}</Badge>
                 </Group>
             </Group>
@@ -62,6 +84,7 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
     bikeCounts,
     runCounts,
     trend,
+    compareDeltas,
     onCityClick,
     visible,
 }) => {
@@ -91,7 +114,12 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
             </Text>
             <ScrollArea.Autosize mah={240} type="scroll">
                 {rows.map((row) => (
-                    <Row key={row.city.slug} row={row} onClick={() => onCityClick(row.city.slug)} />
+                    <Row
+                        key={row.city.slug}
+                        row={row}
+                        compareDelta={compareDeltas?.[row.city.slug]}
+                        onClick={() => onCityClick(row.city.slug)}
+                    />
                 ))}
             </ScrollArea.Autosize>
         </Box>

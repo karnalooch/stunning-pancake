@@ -6,6 +6,8 @@ from .views import (
     VoucherRedeemView,
     TelemetryLiveView,
     TelemetryLiveStreamView,
+    TelemetryLiveReplayView,
+    TelemetryLiveReplayCompareView,
     AnomalyListView,
     POIViewSet,
     TelemetryConfigView,
@@ -66,6 +68,12 @@ urlpatterns = [
     path("vouchers/redeem/<str:code>/", VoucherRedeemView.as_view(), name="voucher-redeem"),
     path("telemetry/live/", TelemetryLiveView.as_view(), name="telemetry-live"),
     path("telemetry/live/stream/", TelemetryLiveStreamView.as_view(), name="telemetry-live-stream"),
+    path("telemetry/live/replay/", TelemetryLiveReplayView.as_view(), name="telemetry-live-replay"),
+    path(
+        "telemetry/live/replay/compare/",
+        TelemetryLiveReplayCompareView.as_view(),
+        name="telemetry-live-replay-compare",
+    ),
     path("telemetry/anomalies/", AnomalyListView.as_view(), name="telemetry-anomalies"),
     path("telemetry/config/", TelemetryConfigView.as_view(), name="telemetry-config"),
     # Wearables (Milestone 4)

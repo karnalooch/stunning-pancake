@@ -76,6 +76,16 @@ On-map motion: **3-point ring buffer / device** + polyline interpolation (`liveM
 | `viewport_filtered_out` | Positions dropped by tenant/dept RBAC |
 | `render_mode` | `points` \| `clusters` \| `aggregate` (scale LOD) |
 | `aggregate_url` | H3/hexbin URL when `render_mode=aggregate` |
+| `timescale_available` | Warm path (server replay) available |
+
+### Replay (warm path)
+
+| Endpoint | Parameters |
+|----------|------------|
+| `GET /api/activities/telemetry/live/replay/` | `from`, `to` (ISO), `step` (5s/30s/60s), `bbox`, tenant/dept filters |
+| `GET /api/activities/telemetry/live/replay/compare/` | same + `compare_offset=24h` (default) |
+
+Writer: Celery Beat every **10 s** → `activities.tasks.snapshot_live_positions_to_timescale` (flag `live_map_timescale_writer`).
 
 ## Enterprise Phase 2 (B2B)
 
@@ -84,7 +94,7 @@ Full industry patterns (hot/warm/cold, RBAC, H3, webhooks, audit) — **[ADR 012
 | Phase | Status | Description |
 |-------|--------|-------------|
 | F1 Multi-tenant | ✅ | `live_map_rbac.py`, `tenantId`/`departmentId` denormalization |
-| F2 Timescale replay | 🔲 | `telemetry.live_position_events` hypertable, Celery writer 10s |
+| F2 Timescale replay | ✅ | `telemetry.live_position_events` hypertable, Celery writer 10s, `/replay/` |
 | F3 Audit + webhooks | 🔲 | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook` |
 | F4 White-label | 🔲 | `Tenant.map_theme`, dynamic cluster colors |
 | F5 H3 aggregate | 🔲 | Aggregate endpoint + auto LOD |

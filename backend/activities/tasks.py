@@ -262,6 +262,18 @@ def recalculate_city_leaderboard(city_id: str = "") -> None:
             refresh_city_rankings_mv.delay()
 
 
+@shared_task(
+    queue="default",
+    name="activities.tasks.snapshot_live_positions_to_timescale",
+    ignore_result=True,
+)
+def snapshot_live_positions_to_timescale() -> dict:
+    """Scheduled every 10s — batch Redis positions into Timescale warm path."""
+    from activities.live_map_timescale import snapshot_live_positions_to_timescale as _run
+
+    return _run()
+
+
 @shared_task(queue="default", name="activities.tasks.monitor_postgres_disk")
 def monitor_postgres_disk() -> dict:
     """Periodic disk check — Redis safeguards + DiskAuditEvent (Celery beat)."""

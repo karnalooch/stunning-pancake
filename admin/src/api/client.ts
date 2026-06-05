@@ -235,6 +235,20 @@ export const TelemetryApi = {
     if (Array.isArray(data)) return { positions: data, meta: {} };
     return data;
   },
+  getLiveReplay: async (
+    params: Record<string, string | number>,
+    options?: { compare?: boolean; signal?: AbortSignal },
+  ) => {
+    const path = options?.compare
+      ? '/activities/telemetry/live/replay/compare/'
+      : '/activities/telemetry/live/replay/';
+    const { data } = await apiClient.get(path, {
+      params,
+      signal: options?.signal,
+      skipGlobalError: true,
+    } as ApiClientRequestConfig);
+    return data;
+  },
   getConfig: async () => {
     const { data } = await apiClient.get('/activities/telemetry/config/');
     return data;
