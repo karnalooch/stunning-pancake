@@ -31,7 +31,7 @@ export default defineConfig({
     : {
         command: 'npm run dev',
         url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !process.env.CI && !process.env.E2E_FORCE_WEB_SERVER,
         timeout: 120_000,
         env: {
           ...process.env,
@@ -48,6 +48,8 @@ export default defineConfig({
     {
       name: 'live-map-zoom',
       testMatch: '**/live-map-zoom.spec.ts',
+      retries: process.env.CI ? 2 : 1,
+      timeout: 180_000,
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 800 },

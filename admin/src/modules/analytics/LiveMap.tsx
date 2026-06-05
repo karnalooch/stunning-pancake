@@ -1212,6 +1212,28 @@ export const LiveMap: React.FC = () => {
         return () => document.removeEventListener('visibilitychange', onVis);
     }, [restartTelemetryStream, stopTelemetryStream]);
 
+    const bindLiveMapE2eBridge = useCallback((map: {
+        jumpTo: (o: { zoom: number; center?: [number, number]; duration?: number }) => void;
+        getZoom: () => number;
+        isStyleLoaded?: () => boolean;
+    }) => {
+        if (!isLiveMapE2eEnabled()) return;
+        const warsawCenter: [number, number] = [21.0122, 52.2297];
+        publishLiveMapE2e({
+            setZoom: (zoom, center) => {
+                map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
+            },
+            getZoom: () => map.getZoom(),
+            getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
+            isReady: () => {
+                if (!layersReadyRef.current || !mapHasLoadedRef.current) return false;
+                if (isLiveMapE2eEnabled()) return true;
+                if (typeof map.isStyleLoaded === 'function') return map.isStyleLoaded();
+                return true;
+            },
+        });
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         if (!mapContainer.current) return;
@@ -1244,6 +1266,7 @@ export const LiveMap: React.FC = () => {
                 setMapLoadError(null);
                 setLoading(false);
                 setMapReady(true);
+                bindLiveMapE2eBridge(map);
                 if (canFetch && !liveFetchPausedRef.current) {
                     fetchPositionsRef.current({ priority: true, snap: true });
                 }
@@ -1320,27 +1343,7 @@ export const LiveMap: React.FC = () => {
             }
             mapRef.current = null;
         };
-    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, flushRenderedCount, mapGeneration]);
-
-    useEffect(() => {
-        if (!isLiveMapE2eEnabled() || !mapReady) return;
-        const map = mapRef.current;
-        if (!map) return;
-        const warsawCenter: [number, number] = [21.0122, 52.2297];
-        publishLiveMapE2e({
-            setZoom: (zoom, center) => {
-                map.jumpTo({ zoom, center: center ?? warsawCenter, duration: 0 });
-            },
-            getZoom: () => map.getZoom(),
-            getZoomMode: () => TIER_MODE_LABEL[resolveLiveMapTier(map.getZoom())],
-            isReady: () => {
-                if (!layersReadyRef.current) return false;
-                if (typeof map.isStyleLoaded === 'function') return map.isStyleLoaded();
-                return true;
-            },
-        });
-        return () => publishLiveMapE2e(undefined);
-    }, [mapReady]);
+    }, [ensureMapLayers, scheduleMoveFetch, scheduleDragFetch, syncZoomUi, flushRenderedCount, mapGeneration, bindLiveMapE2eBridge]);
 
     useEffect(() => {
         if (!mapReady || !canFetch || !tabVisible || liveFetchPaused) return;

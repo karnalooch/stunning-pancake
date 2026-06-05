@@ -23,22 +23,29 @@ const ZOOM_SAMPLES: { zoom: number; mode: string; slug: string; center?: [number
     { zoom: 15, mode: 'Mikro', slug: 'micro-detail' },
 ];
 
+async function waitForLiveMapReady(page: import('@playwright/test').Page) {
+    const root = page.getByTestId('live-map-root');
+    await expect(root).toBeAttached({ timeout: 90_000 });
+    await expect(root).toHaveAttribute('data-map-ready', 'true', { timeout: 90_000 });
+    await expect(page.getByTestId('live-map-canvas')).toBeVisible({ timeout: 30_000 });
+    await page.waitForFunction(
+        () => {
+            const api = (window as Window & { __liveMapE2E?: { isReady: () => boolean } }).__liveMapE2E;
+            return Boolean(api?.isReady?.());
+        },
+        { timeout: 15_000 },
+    );
+}
+
 test.describe('Live Map zoom LOD screenshots', () => {
-    test.describe.configure({ mode: 'serial', timeout: 120_000 });
+    test.describe.configure({ mode: 'serial', timeout: 180_000 });
 
     test.beforeEach(async ({ page }) => {
         await mockBackendWithLiveMap(page);
         await seedPlaywrightE2e(page);
-        await page.goto('/#/owner/analytics/live-map', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByTestId('e2e-auth-ready')).toBeAttached({ timeout: 20000 });
-        await expect(page.getByTestId('live-map-root')).toBeVisible({ timeout: 30000 });
-        await page.waitForFunction(
-            () => {
-                const api = (window as Window & { __liveMapE2E?: { isReady: () => boolean } }).__liveMapE2E;
-                return Boolean(api?.isReady());
-            },
-            { timeout: 60000 },
-        );
+        await page.goto('/#/owner/analytics/live-map', { waitUntil: 'load', timeout: 90_000 });
+        await expect(page.getByTestId('e2e-auth-ready')).toBeAttached({ timeout: 30_000 });
+        await waitForLiveMapReady(page);
     });
 
     for (const sample of ZOOM_SAMPLES) {

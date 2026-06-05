@@ -111,6 +111,29 @@ export async function mockBackend(page: Page) {
 export async function mockLiveMapTelemetry(page: Page) {
   await page.route(TELEMETRY_LIVE_GLOB, async (route) => {
     const url = new URL(route.request().url());
+    const path = url.pathname;
+    const method = route.request().method();
+
+    if (path.includes('/telemetry/live/audit') && method === 'POST') {
+      return route.fulfill({ status: 204, body: '' });
+    }
+
+    if (path.includes('/telemetry/live/aggregate')) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          type: 'FeatureCollection',
+          features: [],
+          meta: { cells: 0, mode: 'hexbin', render_mode: 'clusters' },
+        }),
+      });
+    }
+
+    if (path.includes('/telemetry/live/stream')) {
+      return route.fulfill({ status: 200, contentType: 'text/event-stream', body: '' });
+    }
+
     const detail = url.searchParams.get('detail');
     const bbox = url.searchParams.get('bbox');
     return route.fulfill({
