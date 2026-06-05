@@ -50,6 +50,45 @@ export const MOCK_CITY_COUNTS: Record<string, number> = {
     siedlce: 0,
 };
 
+export const MOCK_CITY_BIKE_COUNTS: Record<string, number> = {
+    warszawa: 28,
+    krakow: 7,
+    wroclaw: 3,
+    poznan: 2,
+    gdansk: 1,
+    lodz: 1,
+    lublin: 0,
+    bydgoszcz: 0,
+    katowice: 0,
+    siedlce: 0,
+};
+
+export const MOCK_CITY_RUN_COUNTS: Record<string, number> = {
+    warszawa: 4,
+    krakow: 1,
+    wroclaw: 1,
+    poznan: 0,
+    gdansk: 0,
+    lodz: 0,
+    lublin: 0,
+    bydgoszcz: 0,
+    katowice: 0,
+    siedlce: 0,
+};
+
+export const MOCK_CITY_TREND: Record<string, number> = {
+    warszawa: 2,
+    krakow: -1,
+    wroclaw: 0,
+    poznan: 0,
+    gdansk: 0,
+    lodz: 0,
+    lublin: 0,
+    bydgoszcz: 0,
+    katowice: 0,
+    siedlce: 0,
+};
+
 /** Pick mock grid from bbox center (Kraków vs Warszawa) for viewport-aligned E2E. */
 export function mockPositionsForBbox(bbox: string | null | undefined): Array<Record<string, unknown>> {
     if (!bbox) return buildMockLivePositions();
@@ -77,6 +116,12 @@ export function mockLiveTelemetryBody(detail: string | null, bbox?: string | nul
         viewport_bike: bike,
         viewport_run: run,
         city_counts: MOCK_CITY_COUNTS,
+        city_bike_counts: MOCK_CITY_BIKE_COUNTS,
+        city_run_counts: MOCK_CITY_RUN_COUNTS,
+        city_trend: MOCK_CITY_TREND,
+        flagged_device_ids: ['e2e-athlete-52.2297-3'],
+        flagged_in_viewport: 1,
+        read_mode: 'normal',
     };
     if (detail === 'summary') {
         return { positions: [], meta };

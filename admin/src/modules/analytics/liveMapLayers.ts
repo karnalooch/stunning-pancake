@@ -14,13 +14,22 @@ export const LIVE_SOURCES = {
 export const LIVE_LAYERS = {
     clusters: 'live-clusters',
     clusterCount: 'live-cluster-count',
+    directionDots: 'live-direction-dots',
     unclustered: 'live-unclustered',
     cityHubRing: 'live-city-hub-ring',
     cityHubCount: 'live-city-hub-count',
+    cityHubSub: 'live-city-hub-sub',
     cityHubName: 'live-city-hub-name',
     riderIcons: 'live-rider-icons',
     riderLabels: 'live-rider-labels',
 } as const;
+
+export type CityHubDataInput = {
+    counts: Record<string, number>;
+    bikeCounts?: Record<string, number>;
+    runCounts?: Record<string, number>;
+    trend?: Record<string, number>;
+};
 
 const CLUSTER_CLICK_LAYERS = [
     LIVE_LAYERS.clusters,
@@ -67,26 +76,38 @@ function positionsToFeatures(positions: LiveMapPosition[]) {
                 speedKmh: speedToKmh(Number.isFinite(speed) ? speed : 0),
                 course: Number.isFinite(course) ? course : 0,
                 ride_state: pos.ride_state || 'ACTIVE',
+                flagged: Boolean(pos.flagged),
             },
         };
         });
 }
 
-function cityHubFeatures(counts: Record<string, number>) {
-    return POLAND_SIM_CITIES.filter((city) => (counts[city.slug] ?? 0) > 0).map((city) => ({
-        type: 'Feature' as const,
-        geometry: {
-            type: 'Point' as const,
-            coordinates: [city.lng, city.lat] as [number, number],
-        },
-        properties: {
-            slug: city.slug,
-            name: city.name,
-            count: counts[city.slug] ?? 0,
-            color: city.colors[0],
-            color2: city.colors[1],
-        },
-    }));
+function cityHubFeatures(input: CityHubDataInput) {
+    const { counts, bikeCounts = {}, runCounts = {}, trend = {} } = input;
+    return POLAND_SIM_CITIES.filter((city) => (counts[city.slug] ?? 0) > 0).map((city) => {
+        const bike = bikeCounts[city.slug] ?? 0;
+        const run = runCounts[city.slug] ?? 0;
+        const tr = trend[city.slug] ?? 0;
+        const trendLabel = tr > 0 ? `+${tr}` : tr < 0 ? String(tr) : '';
+        return {
+            type: 'Feature' as const,
+            geometry: {
+                type: 'Point' as const,
+                coordinates: [city.lng, city.lat] as [number, number],
+            },
+            properties: {
+                slug: city.slug,
+                name: city.name,
+                count: counts[city.slug] ?? 0,
+                bike,
+                run,
+                trend: tr,
+                sublabel: `${bike}🚴 ${run}🏃${trendLabel ? ` ${trendLabel}` : ''}`,
+                color: city.colors[0],
+                color2: city.colors[1],
+            },
+        };
+    });
 }
 
 export function installLiveMapLayers(
@@ -102,8 +123,15 @@ export function installLiveMapLayers(
     handlers: {
         onClusterClick: (e: LiveMapClickEvent) => void;
         onRiderClick: (e: LiveMapClickEvent) => void;
+        onCityHubClick?: (e: LiveMapClickEvent) => void;
+        onClusterHover?: (html: string | null, lngLat?: { lng: number; lat: number }) => void;
     },
 ): void {
+    const setCursor = (cursor: string) => {
+        const canvas = (map as { getCanvas?: () => HTMLCanvasElement }).getCanvas?.();
+        if (canvas) canvas.style.cursor = cursor;
+    };
+
     if (!map.getSource(LIVE_SOURCES.positions)) {
         map.addSource(LIVE_SOURCES.positions, {
             type: 'geojson',
@@ -111,6 +139,10 @@ export function installLiveMapLayers(
             cluster: true,
             clusterMaxZoom: CLUSTER_MAX_ZOOM,
             clusterRadius,
+            clusterProperties: {
+                bike_sum: ['+', ['case', ['==', ['get', 'kind'], 'bike'], 1, 0]],
+                run_sum: ['+', ['case', ['==', ['get', 'kind'], 'run'], 1, 0]],
+            },
         });
 
         map.addLayer({
@@ -121,8 +153,12 @@ export function installLiveMapLayers(
             filter: ['has', 'point_count'],
             paint: {
                 'circle-color': [
-                    'interpolate', ['linear'], ['get', 'point_count'],
-                    2, '#06b6d4', 12, '#6366f1', 35, '#a855f7', 70, '#ec4899', 120, '#e11d48',
+                    'interpolate', ['linear'],
+                    ['/', ['coalesce', ['get', 'bike_sum'], 0], ['max', ['get', 'point_count'], 1]],
+                    0, '#10b981',
+                    0.45, '#6366f1',
+                    0.75, '#7c3aed',
+                    1, '#7c3aed',
                 ],
                 'circle-radius': [
                     'interpolate', ['linear'], ['get', 'point_count'],
@@ -178,6 +214,41 @@ export function installLiveMapLayers(
         });
 
         map.addLayer({
+            id: LIVE_LAYERS.directionDots,
+            type: 'symbol',
+            source: LIVE_SOURCES.positions,
+            minzoom: 11.5,
+            maxzoom: LOD.dotFadeInStart,
+            filter: ['!', ['has', 'point_count']],
+            layout: {
+                'text-field': '▸',
+                'text-size': [
+                    'interpolate', ['linear'], ['zoom'],
+                    11.5, 10, 12, 12,
+                ],
+                'text-rotate': ['coalesce', ['get', 'course'], 0],
+                'text-allow-overlap': true,
+                'text-ignore-placement': true,
+                'text-font': [...MAP_TEXT_FONT_BOLD],
+            },
+            paint: {
+                'text-color': [
+                    'match', ['get', 'kind'],
+                    'run', '#10b981',
+                    'bike', '#7c3aed',
+                    '#6366f1',
+                ],
+                'text-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    11.5, 0.45,
+                    11.8, 0.72,
+                    LOD.dotFadeInStart - 0.1, 0.35,
+                    LOD.dotFadeInStart, 0,
+                ],
+            },
+        });
+
+        map.addLayer({
             id: LIVE_LAYERS.unclustered,
             type: 'circle',
             source: LIVE_SOURCES.positions,
@@ -199,8 +270,12 @@ export function installLiveMapLayers(
                     'bike', '#7c3aed',
                     '#6366f1',
                 ],
-                'circle-stroke-width': 1.5,
-                'circle-stroke-color': '#312e81',
+                'circle-stroke-width': [
+                    'case', ['boolean', ['get', 'flagged'], false], 2.5, 1.5,
+                ],
+                'circle-stroke-color': [
+                    'case', ['boolean', ['get', 'flagged'], false], '#ef4444', '#312e81',
+                ],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
                     LOD.clusterVisibleStart - 0.5, 0,
@@ -309,12 +384,27 @@ export function installLiveMapLayers(
 
         map.on('click', LIVE_LAYERS.clusters, handlers.onClusterClick);
         map.on('click', [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels], handlers.onRiderClick);
-        const setCursor = (cursor: string) => {
-            const canvas = (map as { getCanvas?: () => HTMLCanvasElement }).getCanvas?.();
-            if (canvas) canvas.style.cursor = cursor;
-        };
         map.on('mouseenter', CLUSTER_CLICK_LAYERS, () => setCursor('pointer'));
         map.on('mouseleave', CLUSTER_CLICK_LAYERS, () => setCursor(''));
+
+        if (handlers.onClusterHover) {
+            const onClusterMove = (e: LiveMapClickEvent & { features?: Array<{ properties?: Record<string, unknown> }> }) => {
+                const f = e.features?.[0];
+                if (!f?.properties?.point_count) {
+                    handlers.onClusterHover?.(null);
+                    return;
+                }
+                const total = Number(f.properties.point_count);
+                const bike = Number(f.properties.bike_sum ?? 0);
+                const run = Number(f.properties.run_sum ?? Math.max(0, total - bike));
+                handlers.onClusterHover!(
+                    `<strong>${total}</strong> w widoku<br/>${bike} rower · ${run} bieg`,
+                    e.lngLat,
+                );
+            };
+            map.on('mousemove', LIVE_LAYERS.clusters, onClusterMove as (e: LiveMapClickEvent) => void);
+            map.on('mouseleave', LIVE_LAYERS.clusters, () => handlers.onClusterHover?.(null));
+        }
     }
 
     if (!map.getSource(LIVE_SOURCES.cityHubs)) {
@@ -331,12 +421,12 @@ export function installLiveMapLayers(
             maxzoom: LOD.cityHubFadeOutEnd,
             paint: {
                 'circle-radius': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.cityHubMin, 14,
-                    5, 18,
-                    7.5, 22,
-                    LOD.cityHubFadeOutStart, 24,
-                    9, 26,
+                    'interpolate', ['linear'], ['get', 'count'],
+                    1, 16,
+                    8, 20,
+                    20, 24,
+                    50, 30,
+                    120, 36,
                 ],
                 'circle-color': ['get', 'color'],
                 'circle-opacity': [
@@ -385,6 +475,30 @@ export function installLiveMapLayers(
         });
 
         map.addLayer({
+            id: LIVE_LAYERS.cityHubSub,
+            type: 'symbol',
+            source: LIVE_SOURCES.cityHubs,
+            minzoom: LOD.cityHubFadeInEnd,
+            maxzoom: LOD.cityHubFadeOutEnd,
+            layout: {
+                'text-field': ['get', 'sublabel'],
+                'text-font': [...MAP_TEXT_FONT_REGULAR],
+                'text-size': 9,
+                'text-offset': [0, 1.35],
+                'text-anchor': 'top',
+            },
+            paint: {
+                'text-color': '#52525b',
+                'text-halo-color': 'rgba(255,255,255,0.85)',
+                'text-halo-width': 1,
+                'text-opacity': [
+                    'interpolate', ['linear'], ['zoom'],
+                    7, 0.5, 8.5, 0.9, LOD.cityHubFadeOutStart, 0.75, LOD.cityHubFadeOutEnd, 0,
+                ],
+            },
+        });
+
+        map.addLayer({
             id: LIVE_LAYERS.cityHubName,
             type: 'symbol',
             source: LIVE_SOURCES.cityHubs,
@@ -416,6 +530,13 @@ export function installLiveMapLayers(
                 ],
             },
         });
+
+        if (handlers.onCityHubClick) {
+            const hubLayers = [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount];
+            map.on('click', hubLayers, handlers.onCityHubClick);
+            map.on('mouseenter', hubLayers, () => setCursor('pointer'));
+            map.on('mouseleave', hubLayers, () => setCursor(''));
+        }
     }
 
     try {
@@ -441,12 +562,15 @@ export function setLivePositionsData(
 
 export function setCityHubData(
     map: { getSource: (id: string) => { setData?: (d: object) => void } | undefined },
-    counts: Record<string, number>,
+    input: CityHubDataInput | Record<string, number>,
 ): void {
+    const payload: CityHubDataInput = typeof input === 'object' && 'counts' in input
+        ? input as CityHubDataInput
+        : { counts: input };
     const source = map.getSource(LIVE_SOURCES.cityHubs);
     source?.setData?.({
         type: 'FeatureCollection',
-        features: cityHubFeatures(counts),
+        features: cityHubFeatures(payload),
     });
 }
 

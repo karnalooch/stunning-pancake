@@ -14,6 +14,8 @@ export interface LiveMapPosition {
     lastUpdate: string;
     /** FSM state when backend attaches it (ACTIVE riders on map). */
     ride_state?: string;
+    /** Anti-cheat / simulator cheater flag from live API. */
+    flagged?: boolean;
 }
 
 const CYCLIST_TYPES = new Set(['bike', 'bicycle', 'cycling', 'cyclist']);

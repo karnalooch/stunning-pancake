@@ -45,6 +45,30 @@ class LiveMapRequest:
     detail: str
     fetch_limit: int | None
     skip_cache: bool
+    activity_type: str | None
+    city_slug: str | None
+
+
+def _normalize_activity_filter(raw: str | None) -> str | None:
+    if not raw:
+        return None
+    val = raw.strip().lower()
+    if val in ("", "all", "any"):
+        return None
+    if val in ("bike", "bicycle", "cycling", "cyclist"):
+        return "bike"
+    if val in ("run", "running", "runner", "walk", "walking"):
+        return "run"
+    return None
+
+
+def _position_activity_kind(type_label: str | None) -> str:
+    raw = (type_label or "").lower()
+    if raw in ("bike", "bicycle", "cycling", "cyclist"):
+        return "bike"
+    if raw in ("run", "running", "runner", "person", "walk", "walking", "foot"):
+        return "run"
+    return "bike"
 
 
 def parse_live_map_query_params(
@@ -104,6 +128,9 @@ def parse_live_map_query_params(
     if refresh not in ("", "0", "false"):
         skip_cache = True
 
+    activity_type = _normalize_activity_filter(query_params.get("activity_type") or query_params.get("type"))
+    city_slug = (query_params.get("city") or query_params.get("city_slug") or "").strip().lower() or None
+
     return LiveMapRequest(
         bbox_tuple=bbox_tuple,
         limit=limit,
@@ -111,6 +138,8 @@ def parse_live_map_query_params(
         detail=detail,
         fetch_limit=fetch_limit,
         skip_cache=skip_cache,
+        activity_type=activity_type,
+        city_slug=city_slug,
     )
 
 
@@ -196,6 +225,10 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     ride_warming = 0
     ride_on_map = 0
     city_counts: dict[str, int] = {}
+    city_bike_counts: dict[str, int] = {}
+    city_run_counts: dict[str, int] = {}
+    city_trend: dict[str, int] = {}
+    flagged_device_ids: list[str] = []
     ride_states_by_device: dict[str, str] = {}
     try:
         from activities import simulator_state as sim_state
@@ -206,17 +239,21 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         ride_on_map = fsm["ride_on_map"]
         ride_warming = fsm["ride_warming"]
         city_counts = sim_state.get_live_city_counts()
+        activity_by_city = sim_state.get_live_city_activity_counts()
+        city_bike_counts = {slug: int(v.get("bike", 0)) for slug, v in activity_by_city.items()}
+        city_run_counts = {slug: int(v.get("run", 0)) for slug, v in activity_by_city.items()}
+        city_trend = sim_state.get_live_city_trend()
+        flagged_device_ids = sim_state.get_flagged_live_device_ids()
         ride_states_by_device = {
             str(uid): normalize_ride_state(ride) for uid, ride in rides_map.items()
         }
     except Exception:
         pass
 
+    flagged_set = frozenset(flagged_device_ids)
     enriched_data = []
     viewport_bike = 0
     viewport_run = 0
-    _bike = frozenset({"bike", "bicycle", "cycling", "cyclist"})
-    _run = frozenset({"run", "running", "runner", "person", "walk", "walking", "foot"})
     detail = req.detail
 
     for pos in positions:
@@ -231,14 +268,25 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
         lat, lng = coords
         info = device_info.get(device_id, {})
         type_label = pos.get("category") or pos.get("type") or info.get("type", "person")
-        raw_type = (type_label or "").lower()
-        if raw_type in _bike:
+        kind = _position_activity_kind(str(type_label))
+        if req.activity_type and kind != req.activity_type:
+            continue
+        if req.city_slug:
+            try:
+                from simulate_active_cities import nearest_city_slug_for_coords
+
+                if nearest_city_slug_for_coords(lat, lng) != req.city_slug:
+                    continue
+            except Exception:
+                pass
+        if kind == "bike":
             viewport_bike += 1
-        elif raw_type in _run:
+        else:
             viewport_run += 1
         ride_state = ride_states_by_device.get(str(device_id))
         speed = _live_float(pos, "speed", default=0.0)
         course = _live_float(pos, "course", default=0.0)
+        flagged = str(device_id) in flagged_set
         if detail == "standard":
             row = {
                 "deviceId": device_id,
@@ -250,6 +298,8 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
             }
             if ride_state:
                 row["ride_state"] = ride_state
+            if flagged:
+                row["flagged"] = True
             enriched_data.append(row)
         else:
             row = {
@@ -264,6 +314,8 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
             }
             if ride_state:
                 row["ride_state"] = ride_state
+            if flagged:
+                row["flagged"] = True
             enriched_data.append(row)
 
     viewport_returned = len(enriched_data)
@@ -293,6 +345,18 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     if telemetry_meta.get("cached") and not enriched_data:
         telemetry_meta = {**telemetry_meta, "cached": False, "cache_stale_empty": True}
 
+    viewport_total_estimate = None
+    if telemetry_meta.get("capped"):
+        raw_total = telemetry_meta.get("telemetry_positions") or telemetry_meta.get("redis_active")
+        if isinstance(raw_total, (int, float)) and raw_total > viewport_returned:
+            viewport_total_estimate = int(raw_total)
+
+    active_filters: dict[str, str] = {}
+    if req.activity_type:
+        active_filters["activity_type"] = req.activity_type
+    if req.city_slug:
+        active_filters["city"] = req.city_slug
+
     return {
         "positions": enriched_data,
         "meta": {
@@ -307,6 +371,15 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
             "viewport_bike": viewport_bike,
             "viewport_run": viewport_run,
             "city_counts": city_counts,
+            "city_bike_counts": city_bike_counts,
+            "city_run_counts": city_run_counts,
+            "city_trend": city_trend,
+            "flagged_device_ids": flagged_device_ids,
+            "flagged_in_viewport": sum(
+                1 for p in enriched_data if isinstance(p, dict) and p.get("flagged")
+            ),
+            "viewport_total_estimate": viewport_total_estimate,
+            "filters": active_filters,
             "ingest_engaged": read_policy.ingest_engaged,
             "live_read_throttled": read_policy.ingest_engaged,
             "live_poll_interval_multiplier": (

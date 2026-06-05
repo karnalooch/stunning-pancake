@@ -344,6 +344,19 @@ CITIES = [
     },
 ]
 
+
+def nearest_city_slug_for_coords(lat: float, lng: float) -> str:
+    """Nearest simulator city slug for a coordinate (live-map city filter)."""
+    best = CITIES[0]["slug"]
+    best_d = float("inf")
+    for city in CITIES:
+        d = (city["lat"] - lat) ** 2 + (city["lon"] - lng) ** 2
+        if d < best_d:
+            best_d = d
+            best = city["slug"]
+    return best
+
+
 # ---------------------------------------------------------------------------
 # Polish name pools
 # ---------------------------------------------------------------------------

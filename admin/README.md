@@ -52,6 +52,13 @@ Live Map logic is split under `src/modules/analytics/` — keep new code in the 
 | `liveMapZoom.ts` | Zoom LOD tiers |
 | `liveMapLayers.ts` | MapLibre layers, sprites |
 | `liveMapInterp.ts` | Position interpolation |
+| `liveMapFilters.ts` | Activity/city filters, URL sync |
+| `liveMapPrivacy.ts` | Role-based PII masking |
+| `liveMapDiagnostics.ts` | Request log, cap honesty, incident bundle |
+| `liveMapKeyboard.ts` | Operator keyboard shortcuts |
+| `liveMapReplay.ts` | Client replay ring buffer |
+| `LiveMapFiltersBar.tsx` | Filter toolbar UI |
+| `LiveMapDiagnosticsDrawer.tsx` | NOC diagnostics drawer |
 | `LiveMap.tsx` | Page composition only |
 
 Do not grow `LiveMap.tsx` with marker/layer math; extend the table above.

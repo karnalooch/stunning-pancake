@@ -40,6 +40,32 @@ export function polandCitiesBounds(): [[number, number], [number, number]] {
     ];
 }
 
+export type CityHubStats = {
+    total: number;
+    bike: number;
+    run: number;
+    trend: number;
+};
+
+export function cityHubStatsForSlug(
+    slug: string,
+    counts: Record<string, number>,
+    bikeCounts: Record<string, number>,
+    runCounts: Record<string, number>,
+    trend: Record<string, number>,
+): CityHubStats {
+    return {
+        total: counts[slug] ?? 0,
+        bike: bikeCounts[slug] ?? 0,
+        run: runCounts[slug] ?? 0,
+        trend: trend[slug] ?? 0,
+    };
+}
+
+export function cityBySlug(slug: string): LiveMapCity | undefined {
+    return POLAND_SIM_CITIES.find((c) => c.slug === slug);
+}
+
 /** Nearest city slug for a coordinate (for client-side aggregation). */
 export function nearestCitySlug(lat: number, lng: number): string {
     let best = POLAND_SIM_CITIES[0].slug;

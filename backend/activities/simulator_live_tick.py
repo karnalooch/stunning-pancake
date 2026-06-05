@@ -567,13 +567,26 @@ def _run_live_tick_body():
     from simulate_active_cities import CITIES
 
     city_counts = {c["slug"]: 0 for c in CITIES}
+    city_bike_counts = {c["slug"]: 0 for c in CITIES}
+    city_run_counts = {c["slug"]: 0 for c in CITIES}
     for ride in active_rides.values():
         if not ride_fsm.telemetry_eligible(ride):
             continue
         slug = ride.get("city_slug") or ""
-        if slug in city_counts:
-            city_counts[slug] += 1
-    sim.persist_live_fsm_snapshot(fsm, city_counts=city_counts)
+        if slug not in city_counts:
+            continue
+        city_counts[slug] += 1
+        act = str(ride.get("act_type", "BIKE") or "BIKE").upper()
+        if act == "RUN":
+            city_run_counts[slug] += 1
+        else:
+            city_bike_counts[slug] += 1
+    sim.persist_live_fsm_snapshot(
+        fsm,
+        city_counts=city_counts,
+        city_bike_counts=city_bike_counts,
+        city_run_counts=city_run_counts,
+    )
     sim.set_live_state(
         currently_riding=fsm["ride_on_map"],
         total_completed=int(state.get("total_completed", 0)) + completed,

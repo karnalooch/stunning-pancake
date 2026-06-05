@@ -847,7 +847,13 @@ def fsm_snapshot_fresh(state: dict | None, *, multiplier: float = 2.5) -> bool:
     return (time.time() - last) <= max(12.0, tick_s * multiplier)
 
 
-def persist_live_fsm_snapshot(fsm: dict[str, int], city_counts: dict[str, int] | None = None) -> None:
+def persist_live_fsm_snapshot(
+    fsm: dict[str, int],
+    city_counts: dict[str, int] | None = None,
+    *,
+    city_bike_counts: dict[str, int] | None = None,
+    city_run_counts: dict[str, int] | None = None,
+) -> None:
     """Store FSM aggregates on live state — avoids HGETALL on admin status polls."""
     payload: dict[str, Any] = {
         "fsm_ride_pending_route": int(fsm.get("ride_pending_route", 0)),
@@ -859,7 +865,15 @@ def persist_live_fsm_snapshot(fsm: dict[str, int], city_counts: dict[str, int] |
         "fsm_snapshot_at": time.time(),
     }
     if city_counts is not None:
+        state = get_live_state()
+        prev_raw = state.get("fsm_city_counts")
+        if prev_raw:
+            payload["fsm_city_counts_prev"] = prev_raw
         payload["fsm_city_counts"] = json.dumps(city_counts, sort_keys=True)
+    if city_bike_counts is not None:
+        payload["fsm_city_bike_counts"] = json.dumps(city_bike_counts, sort_keys=True)
+    if city_run_counts is not None:
+        payload["fsm_city_run_counts"] = json.dumps(city_run_counts, sort_keys=True)
     set_live_state(**payload)
 
 
@@ -950,33 +964,81 @@ def get_live_ride_count(*, active_only: bool = True) -> int:
 
 def get_live_city_counts() -> dict[str, int]:
     """Active riders per simulator city (for live-map overview badges)."""
+    activity = get_live_city_activity_counts()
+    return {slug: int(v.get("total", 0)) for slug, v in activity.items()}
+
+
+def get_live_city_activity_counts() -> dict[str, dict[str, int]]:
+    """Per-city bike/run/total counts for live-map macro hubs."""
     from simulate_active_cities import CITIES
 
+    empty = {c["slug"]: {"bike": 0, "run": 0, "total": 0} for c in CITIES}
     state = get_live_state()
     if fsm_snapshot_fresh(state):
-        raw = state.get("fsm_city_counts")
-        if raw:
+        raw_bike = state.get("fsm_city_bike_counts")
+        raw_run = state.get("fsm_city_run_counts")
+        if raw_bike and raw_run:
             try:
-                parsed = json.loads(raw)
-                if isinstance(parsed, dict):
-                    base = {c["slug"]: 0 for c in CITIES}
-                    for slug, n in parsed.items():
-                        if slug in base:
-                            base[slug] = int(n)
-                    return base
+                bike_parsed = json.loads(raw_bike)
+                run_parsed = json.loads(raw_run)
+                if isinstance(bike_parsed, dict) and isinstance(run_parsed, dict):
+                    out = {slug: {"bike": 0, "run": 0, "total": 0} for slug in empty}
+                    for slug in out:
+                        bike_n = int(bike_parsed.get(slug, 0) or 0)
+                        run_n = int(run_parsed.get(slug, 0) or 0)
+                        out[slug] = {"bike": bike_n, "run": run_n, "total": bike_n + run_n}
+                    return out
             except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
     from activities.ride_fsm import telemetry_eligible
 
-    counts = {c["slug"]: 0 for c in CITIES}
+    counts = {slug: {"bike": 0, "run": 0, "total": 0} for slug in empty}
     for ride in get_live_rides().values():
         if not telemetry_eligible(ride):
             continue
         slug = ride.get("city_slug") or ""
-        if slug in counts:
-            counts[slug] += 1
+        if slug not in counts:
+            continue
+        act = str(ride.get("act_type", "BIKE") or "BIKE").upper()
+        if act == "RUN":
+            counts[slug]["run"] += 1
+        else:
+            counts[slug]["bike"] += 1
+        counts[slug]["total"] += 1
     return counts
+
+
+def get_live_city_trend() -> dict[str, int]:
+    """Delta active riders per city vs previous FSM snapshot."""
+    from simulate_active_cities import CITIES
+
+    state = get_live_state()
+    current = get_live_city_counts()
+    prev: dict[str, int] = {c["slug"]: 0 for c in CITIES}
+    raw_prev = state.get("fsm_city_counts_prev")
+    if raw_prev:
+        try:
+            parsed = json.loads(raw_prev)
+            if isinstance(parsed, dict):
+                for slug in prev:
+                    prev[slug] = int(parsed.get(slug, 0) or 0)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            pass
+    return {slug: int(current.get(slug, 0)) - prev.get(slug, 0) for slug in prev}
+
+
+def get_flagged_live_device_ids() -> list[str]:
+    """Simulator cheater rides currently on map (deviceId = user id)."""
+    from activities.ride_fsm import telemetry_eligible
+
+    flagged: list[str] = []
+    for uid, ride in get_live_rides().items():
+        if not telemetry_eligible(ride):
+            continue
+        if ride.get("is_cheater"):
+            flagged.append(str(uid))
+    return flagged
 
 
 def increment_live_routing_counter(field: str, delta: int = 1) -> int:
