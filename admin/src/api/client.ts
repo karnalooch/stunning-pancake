@@ -249,6 +249,24 @@ export const TelemetryApi = {
     } as ApiClientRequestConfig);
     return data;
   },
+  postLiveMapAudit: async (payload: Record<string, unknown>) => {
+    const { data } = await apiClient.post('/activities/telemetry/live/audit/', payload, {
+      skipGlobalError: true,
+    } as ApiClientRequestConfig);
+    return data;
+  },
+  listLiveMapWebhooks: async () => {
+    const { data } = await apiClient.get('/activities/telemetry/live/webhooks/');
+    return data;
+  },
+  createLiveMapWebhook: async (body: Record<string, unknown>) => {
+    const { data } = await apiClient.post('/activities/telemetry/live/webhooks/', body);
+    return data;
+  },
+  testLiveMapWebhook: async (id: number) => {
+    const { data } = await apiClient.post(`/activities/telemetry/live/webhooks/${id}/test/`);
+    return data;
+  },
   getConfig: async () => {
     const { data } = await apiClient.get('/activities/telemetry/config/');
     return data;

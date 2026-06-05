@@ -140,6 +140,7 @@ class AuditLog(models.Model):
         help_text="Tenant context at the time of the action (denormalized for multi-tenant filtering)",
     )
     action = models.CharField(max_length=255)
+    details = models.JSONField(default=dict, blank=True)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     status_code = models.IntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)

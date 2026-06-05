@@ -5,6 +5,7 @@ import {
 import { Copy, X } from 'lucide-react';
 import type { LiveMapRequestLogEntry, IncidentBundle } from './liveMapDiagnostics';
 import type { LiveMapHealthSnapshot } from './liveMapHealth';
+import { LiveMapWebhooksPanel } from './LiveMapWebhooksPanel';
 
 export type LiveMapDiagnosticsDrawerProps = {
     opened: boolean;
@@ -90,6 +91,7 @@ export const LiveMapDiagnosticsDrawer: React.FC<LiveMapDiagnosticsDrawerProps> =
                         2,
                     )}
                 </Code>
+                <LiveMapWebhooksPanel />
                 <Group>
                     <Button size="xs" leftSection={<Copy size={14} />} onClick={copyBundle}>
                         Kopiuj incident bundle

@@ -481,6 +481,9 @@ class AuditLogListView(generics.ListAPIView):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        action = self.request.query_params.get("action")
+        if action:
+            qs = qs.filter(action=action)
         limit = self.request.query_params.get("limit")
         if limit:
             try:

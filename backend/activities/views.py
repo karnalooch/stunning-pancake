@@ -536,6 +536,104 @@ class TelemetryLiveReplayCompareView(generics.GenericAPIView):
         return Response(body)
 
 
+class TelemetryLiveAuditView(generics.GenericAPIView):
+    """Fire-and-forget live map view audit (rate limited 1/30s per session+bbox)."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        from activities.live_map_audit import record_live_map_view
+
+        result = record_live_map_view(request, request.data if isinstance(request.data, dict) else {})
+        return Response(result, status=status.HTTP_202_ACCEPTED)
+
+
+class LiveMapWebhookListCreateView(generics.ListCreateAPIView):
+    """List/create Live Map alert webhooks for tenant."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = None
+
+    def get_serializer_class(self):
+        from activities.serializers_webhooks import LiveMapAlertWebhookSerializer
+
+        return LiveMapAlertWebhookSerializer
+
+    def get_queryset(self):
+        from activities.models_webhooks import LiveMapAlertWebhook
+
+        user = self.request.user
+        qs = LiveMapAlertWebhook.objects.select_related("tenant")
+        if getattr(user, "role", "") == "GLOBAL_OWNER":
+            tenant_id = self.request.query_params.get("tenant_id")
+            if tenant_id:
+                qs = qs.filter(tenant_id=tenant_id)
+            return qs
+        if user.tenant_id:
+            return qs.filter(tenant_id=user.tenant_id)
+        return LiveMapAlertWebhook.objects.none()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if getattr(user, "role", "") != "GLOBAL_OWNER":
+            serializer.save(tenant_id=user.tenant_id)
+        else:
+            tenant_id = self.request.data.get("tenant") or self.request.data.get("tenant_id")
+            serializer.save(tenant_id=tenant_id or user.tenant_id)
+
+
+class LiveMapWebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = None
+
+    def get_serializer_class(self):
+        from activities.serializers_webhooks import LiveMapAlertWebhookSerializer
+
+        return LiveMapAlertWebhookSerializer
+
+    def get_queryset(self):
+        from activities.models_webhooks import LiveMapAlertWebhook
+
+        user = self.request.user
+        qs = LiveMapAlertWebhook.objects.all()
+        if getattr(user, "role", "") == "GLOBAL_OWNER":
+            return qs
+        if user.tenant_id:
+            return qs.filter(tenant_id=user.tenant_id)
+        return LiveMapAlertWebhook.objects.none()
+
+
+class LiveMapWebhookTestView(generics.GenericAPIView):
+    """Send test_ping to configured webhook URL."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, pk):
+        import uuid
+
+        from activities.models_webhooks import LiveMapAlertWebhook
+        from activities.tasks import deliver_live_map_webhook
+
+        user = request.user
+        qs = LiveMapAlertWebhook.objects.filter(pk=pk, enabled=True)
+        if getattr(user, "role", "") != "GLOBAL_OWNER" and user.tenant_id:
+            qs = qs.filter(tenant_id=user.tenant_id)
+        wh = qs.first()
+        if not wh:
+            return Response({"detail": "Webhook not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        event_id = str(uuid.uuid4())
+        payload = {
+            "event": "test_ping",
+            "event_id": event_id,
+            "tenant_id": str(wh.tenant_id),
+            "timestamp": time.time(),
+            "meta": {"message": "Live Map webhook test"},
+        }
+        deliver_live_map_webhook.delay(wh.id, event_id, payload)
+        return Response({"status": "queued", "event_id": event_id}, status=status.HTTP_202_ACCEPTED)
+
+
 class EventStreamRenderer(BaseRenderer):
     """Allow DRF content negotiation for Accept: text/event-stream (SSE)."""
 

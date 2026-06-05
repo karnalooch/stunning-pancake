@@ -259,3 +259,4 @@ class DiskAuditEvent(models.Model):
 # Ensure BetaFeedback model is discovered by Django's model registry.
 # Defined in beta_feedback.py with app_label='activities'.
 from .beta_feedback import BetaFeedback  # noqa: E402, F401
+from .models_webhooks import LiveMapAlertWebhook  # noqa: E402, F401

@@ -276,8 +276,8 @@ flowchart TB
 | Ride/telemetry denormalization | ✅ Shipped |
 | Timescale hypertable + writer | ✅ Shipped |
 | Replay / compare API + UI | ✅ Shipped |
-| Audit POST | 🔲 Planned |
-| Webhooks | 🔲 Planned |
+| Audit POST | ✅ Shipped |
+| Webhooks | ✅ Shipped |
 | White-label `map_theme` | 🔲 Planned |
 | H3 aggregate + LOD | 🔲 Planned (meta `render_mode` stub) |
 

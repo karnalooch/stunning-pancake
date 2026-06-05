@@ -87,6 +87,16 @@ Ruch na mapie: **ring buffer 3 punkty / device** + interpolacja po **polilinii**
 
 Writer: Celery Beat co **10 s** → `activities.tasks.snapshot_live_positions_to_timescale` (feature flag `live_map_timescale_writer`).
 
+### Audit i webhooki (F3)
+
+| Endpoint | Opis |
+|----------|------|
+| `POST /api/activities/telemetry/live/audit/` | `LIVE_MAP_VIEW` — debounced 1/30s per session+bbox |
+| `GET/POST /api/activities/telemetry/live/webhooks/` | Konfiguracja webhooków per tenant |
+| `POST .../webhooks/<id>/test/` | Test ping (`test_ping`) |
+
+Detector: Celery Beat co **60 s** (`evaluate_live_map_alerts`), dostawa na kolejce `notifications`, dedupe Redis 10 min.
+
 ## Enterprise Phase 2 (B2B)
 
 Pełna architektura wzorców branżowych (hot/warm/cold, RBAC, H3, webhooki, audit) — **[ADR 012](../../adr/012-live-map-enterprise-phase2.md)**.
@@ -95,7 +105,7 @@ Pełna architektura wzorców branżowych (hot/warm/cold, RBAC, H3, webhooki, aud
 |------|--------|------|
 | F1 Multi-tenant | ✅ | `live_map_rbac.py`, denormalizacja `tenantId`/`departmentId` |
 | F2 Timescale replay | ✅ | Hypertable `telemetry.live_position_events`, writer Celery 10s, `/replay/` |
-| F3 Audit + webhooki | 🔲 | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook` |
+| F3 Audit + webhooki | ✅ | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook`, Celery delivery |
 | F4 White-label | 🔲 | `Tenant.map_theme`, dynamiczne kolory klastrów |
 | F5 H3 aggregate | 🔲 | Endpoint aggregate + auto LOD |
 

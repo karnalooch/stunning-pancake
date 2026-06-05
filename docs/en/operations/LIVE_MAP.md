@@ -95,7 +95,7 @@ Full industry patterns (hot/warm/cold, RBAC, H3, webhooks, audit) — **[ADR 012
 |-------|--------|-------------|
 | F1 Multi-tenant | ✅ | `live_map_rbac.py`, `tenantId`/`departmentId` denormalization |
 | F2 Timescale replay | ✅ | `telemetry.live_position_events` hypertable, Celery writer 10s, `/replay/` |
-| F3 Audit + webhooks | 🔲 | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook` |
+| F3 Audit + webhooks | ✅ | `LIVE_MAP_VIEW`, `LiveMapAlertWebhook`, Celery delivery |
 | F4 White-label | 🔲 | `Tenant.map_theme`, dynamic cluster colors |
 | F5 H3 aggregate | 🔲 | Aggregate endpoint + auto LOD |
 

@@ -12,6 +12,7 @@ import {
     serverFramesToBuffer,
     type ServerReplayStep,
 } from './liveMapServerReplay';
+import { buildAuditPayload, postLiveMapAudit } from './liveMapAudit';
 import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './liveMapHealth';
 import {
     DEFAULT_LIVE_MAP_FILTERS,
@@ -230,6 +231,8 @@ export const LiveMap: React.FC = () => {
     const [bookmarks, setBookmarks] = useState(() => loadLiveMapBookmarks());
     const replayPlayingRef = useRef(false);
     const replayIndexRef = useRef(-1);
+    const auditDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastAuditHashRef = useRef('');
 
     filtersRef.current = filters;
     replayPlayingRef.current = replayPlaying;
@@ -902,6 +905,26 @@ export const LiveMap: React.FC = () => {
             setLastSuccessAt(now);
             consecutiveErrorsRef.current = 0;
             setConsecutiveErrors(0);
+
+            if (!filtersRef.current.presentationMode && meta && typeof meta === 'object') {
+                const auditPayload = buildAuditPayload({
+                    bbox: params.bbox as string | undefined,
+                    zoom: map ? map.getZoom() : undefined,
+                    detail,
+                    meta: meta as Record<string, unknown>,
+                    filters: (meta.filters as Record<string, string> | undefined)
+                        ?? filtersToApiParams(filtersRef.current),
+                    positionsReturned: list.length,
+                });
+                const auditKey = `${auditPayload.session_id}:${auditPayload.bbox_hash}:${auditPayload.detail}`;
+                if (auditKey !== lastAuditHashRef.current) {
+                    lastAuditHashRef.current = auditKey;
+                    if (auditDebounceRef.current) clearTimeout(auditDebounceRef.current);
+                    auditDebounceRef.current = setTimeout(() => {
+                        void postLiveMapAudit(auditPayload).catch(() => undefined);
+                    }, 1500);
+                }
+            }
         } catch (err: unknown) {
             if (ac.signal.aborted || seq !== fetchSeqRef.current) return;
             const status = (err as { response?: { status?: number } })?.response?.status;

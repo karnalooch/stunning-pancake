@@ -308,6 +308,8 @@ if "sqlite" in os.getenv("DATABASE_URL", ""):
 # Separate queues: critical (telemetry/BRouter) and notifications (push/email)
 CELERY_TASK_ROUTES = {
     "activities.tasks.snapshot_live_positions_to_timescale": {"queue": "default"},
+    "activities.tasks.deliver_live_map_webhook": {"queue": "notifications"},
+    "activities.tasks.evaluate_live_map_alerts": {"queue": "default"},
     "activities.tasks.monitor_postgres_disk": {"queue": "default"},
     "activities.wipe_tasks.*": {"queue": "default"},
     "activities.tasks.*": {"queue": "critical"},
@@ -365,6 +367,12 @@ CELERY_BEAT_SCHEDULE = {
     "live-map-timescale-snapshot": {
         "task": "activities.tasks.snapshot_live_positions_to_timescale",
         "schedule": 10.0,
+        "options": {"queue": "default"},
+    },
+    # Live Map alert detector — evaluate webhook conditions per tenant
+    "live-map-alert-detector": {
+        "task": "activities.tasks.evaluate_live_map_alerts",
+        "schedule": 60.0,
         "options": {"queue": "default"},
     },
 }

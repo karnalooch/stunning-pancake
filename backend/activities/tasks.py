@@ -274,6 +274,80 @@ def snapshot_live_positions_to_timescale() -> dict:
     return _run()
 
 
+@shared_task(
+    bind=True,
+    queue="notifications",
+    max_retries=3,
+    default_retry_delay=30,
+    name="activities.tasks.deliver_live_map_webhook",
+)
+def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict) -> dict:
+    """Deliver signed webhook POST with exponential backoff."""
+    import hashlib
+    import hmac
+    import json
+
+    import requests
+    from django.utils import timezone
+
+    from activities.models_webhooks import LiveMapAlertWebhook
+
+    try:
+        wh = LiveMapAlertWebhook.objects.get(pk=webhook_id, enabled=True)
+    except LiveMapAlertWebhook.DoesNotExist:
+        return {"status": "missing"}
+
+    body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    signature = hmac.new(
+        wh.secret.encode("utf-8"),
+        body.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+    headers = {
+        "Content-Type": "application/json",
+        "X-LiveMap-Signature": signature,
+        "X-Event-Id": event_id,
+    }
+    try:
+        resp = requests.post(wh.url, data=body, headers=headers, timeout=10)
+        if resp.status_code >= 500:
+            raise requests.RequestException(f"HTTP {resp.status_code}")
+        if resp.status_code >= 400:
+            LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
+                failure_count=wh.failure_count + 1
+            )
+            logger.warning(
+                "live_map.webhook.delivery_status=client_error id=%s code=%s",
+                webhook_id,
+                resp.status_code,
+            )
+            return {"status": "client_error", "code": resp.status_code}
+        LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
+            last_delivery_at=timezone.now(),
+            failure_count=0,
+        )
+        logger.info("live_map.webhook.delivery_status=ok id=%s event=%s", webhook_id, event_id)
+        return {"status": "ok", "code": resp.status_code}
+    except Exception as exc:
+        LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
+            failure_count=wh.failure_count + 1
+        )
+        logger.warning("live_map.webhook.delivery_status=retry id=%s err=%s", webhook_id, exc)
+        raise self.retry(exc=exc, countdown=min(600, 30 * (2 ** self.request.retries)))
+
+
+@shared_task(
+    queue="default",
+    name="activities.tasks.evaluate_live_map_alerts",
+    ignore_result=True,
+)
+def evaluate_live_map_alerts() -> dict:
+    """Scheduled every 60s — detect alert conditions per tenant."""
+    from activities.live_map_alerts import evaluate_all_tenant_alerts
+
+    return evaluate_all_tenant_alerts()
+
+
 @shared_task(queue="default", name="activities.tasks.monitor_postgres_disk")
 def monitor_postgres_disk() -> dict:
     """Periodic disk check — Redis safeguards + DiskAuditEvent (Celery beat)."""
