@@ -72,3 +72,8 @@ def test_prod_heavy_sim_allowed_with_proxy(monkeypatch):
     monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
     monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
     assert assert_prod_heavy_sim_allowed(total_users=300_000) is None
+
+
+def test_prod_heavy_sim_allowed_on_sim_lab_tenant(monkeypatch):
+    monkeypatch.setenv("SENTRY_ENVIRONMENT", "sim-lab")
+    assert assert_prod_heavy_sim_allowed(total_users=300_000) is None

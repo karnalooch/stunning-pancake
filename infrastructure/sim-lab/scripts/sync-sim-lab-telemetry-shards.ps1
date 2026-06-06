@@ -25,11 +25,25 @@ function Invoke-RailwayQuiet([string[]]$RailwayArgs) {
 }
 
 function Get-RedisUrlFromRailway {
-    $tmp = Join-Path $env:TEMP ("railway-redis-{0}.txt" -f [guid]::NewGuid().ToString("n"))
+    $tmp = Join-Path $env:TEMP ("railway-redis-{0}.json" -f [guid]::NewGuid().ToString("n"))
     try {
-        Invoke-RailwayQuiet @("variable", "get", "REDIS_URL", "-s", "backend", "-e", $Environment, "--json")
-        & railway variable get REDIS_URL -s backend -e $Environment 2>$null | Out-File -FilePath $tmp -Encoding utf8
-        $raw = (Get-Content $tmp -Raw).Trim()
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        & railway variable list -s backend -e $Environment --json 1> $tmp 2>$null
+        $ErrorActionPreference = $prev
+        if (-not (Test-Path $tmp)) { throw "railway variable list failed" }
+        $vars = Get-Content $tmp -Raw | ConvertFrom-Json
+        $raw = $null
+        if ($vars -is [array]) {
+            $item = $vars | Where-Object { $_.name -eq 'REDIS_URL' -or $_.key -eq 'REDIS_URL' } | Select-Object -First 1
+            if ($item) { $raw = if ($item.value) { $item.value } else { $item.PSObject.Properties['value'].Value } }
+        } elseif ($vars.REDIS_URL) {
+            $raw = $vars.REDIS_URL
+        } else {
+            $list = railway variable list -s backend -e $Environment -k 2>$null | Out-String
+            if ($list -match '(?m)^REDIS_URL=(.+)$') { $raw = $Matches[1].Trim() }
+        }
+        if (-not $raw) { throw "REDIS_URL not found in backend variables" }
         if ($raw -match '^redis://') { return $raw }
         if ($raw -match 'redis://[^\s"]+') { return $Matches[0] }
         throw "Could not parse REDIS_URL from railway output"

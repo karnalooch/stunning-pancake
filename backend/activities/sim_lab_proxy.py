@@ -30,6 +30,13 @@ def sim_lab_proxy_enabled() -> bool:
     )
 
 
+def sim_lab_tenant() -> bool:
+    """True on isolated sim-lab backend (not prod with proxy enabled)."""
+    if os.getenv("SIM_LAB_ACCEPT_PROXY", "0").lower() in ("1", "true", "yes"):
+        return True
+    return (os.getenv("SENTRY_ENVIRONMENT") or "").strip().lower() == "sim-lab"
+
+
 def sim_lab_proxy_public_label() -> str | None:
     if not sim_lab_proxy_enabled():
         return None
@@ -134,7 +141,7 @@ def assert_prod_heavy_sim_allowed(
     target_active: int | None = None,
 ) -> Response | None:
     """Block heavy sim on prod when proxy is off. Return error Response or None."""
-    if sim_lab_proxy_enabled():
+    if sim_lab_proxy_enabled() or sim_lab_tenant():
         return None
     if os.getenv("ALLOW_PROD_HEAVY_SIM", "0").lower() in ("1", "true", "yes"):
         return None

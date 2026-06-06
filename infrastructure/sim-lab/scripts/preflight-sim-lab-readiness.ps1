@@ -85,7 +85,7 @@ $failed = @($checks | Where-Object { -not $_.pass })
 foreach ($c in $checks) {
     $icon = if ($c.pass) { "OK" } else { "FAIL" }
     $color = if ($c.pass) { "Green" } else { "Red" }
-    Write-Host ("  [{0}] {1} — {2}" -f $icon, $c.name, $c.detail) -ForegroundColor $color
+    Write-Host ("  [{0}] {1} - {2}" -f $icon, $c.name, $c.detail) -ForegroundColor $color
 }
 
 Write-Host ""

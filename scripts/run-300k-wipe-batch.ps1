@@ -98,7 +98,7 @@ while ((Get-Date) -lt $wipeDeadline) {
         $stallPolls = 0
         continue
     }
-    if ($seenRunning -and (-not $ws.running) -and ($ws.phase -eq "complete")) { $wipeDone = $true; break }
+    if ((-not $ws.running) -and ($ws.phase -eq "complete")) { $wipeDone = $true; break }
 }
 if (-not $wipeDone) { throw "Wipe timeout after $WipeTimeoutMinutes min" }
 Log "Wipe done"

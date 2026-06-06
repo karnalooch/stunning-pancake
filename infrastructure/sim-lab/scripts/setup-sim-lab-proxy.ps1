@@ -11,6 +11,8 @@ param(
     [string]$ProdProjectId = "ce13089b-76f4-4114-a892-ad13e23c8761",
     [string]$SimLabProjectId = "098b5266-2d8b-43f3-ba29-925aaa6b7b64",
     [string]$SimLabBackendUrl = "https://backend-production-80cf.up.railway.app",
+    [string]$ProdBackendService = "Backend",
+    [string]$SimLabBackendService = "backend",
     [string]$Environment = "production",
     [string]$WorkspaceId = "8aa1f35e-a716-4526-8209-5aadcaae2246",
     [string]$SecretFile = "",
@@ -39,16 +41,16 @@ function Invoke-RailwayQuiet([string[]]$RailwayArgs) {
     try { & railway @RailwayArgs 2>&1 | Out-Null } finally { $ErrorActionPreference = $prev }
 }
 
-function Set-BackendVars([string]$ProjectId, [string[]]$Pairs, [string]$Label) {
-    Write-Host "=== $Label (project $ProjectId) ===" -ForegroundColor Cyan
+function Set-BackendVars([string]$ProjectId, [string[]]$Pairs, [string]$Label, [string]$ServiceName) {
+    Write-Host "=== $Label (project $ProjectId, service $ServiceName) ===" -ForegroundColor Cyan
     Invoke-RailwayQuiet @("link", "-p", $ProjectId, "-e", $Environment, "-w", $WorkspaceId, "--json")
     foreach ($pair in $Pairs) {
-        Invoke-RailwayQuiet @("variable", "set", $pair, "-s", "backend", "-e", $Environment)
-        Write-Host "  backend : $pair"
+        Invoke-RailwayQuiet @("variable", "set", $pair, "-s", $ServiceName, "-e", $Environment)
+        Write-Host "  $ServiceName : $pair"
     }
     if ($Redeploy) {
-        Write-Host "  redeploy backend..."
-        Invoke-RailwayQuiet @("redeploy", "-s", "backend", "-y", "--detach")
+        Write-Host "  redeploy $ServiceName..."
+        Invoke-RailwayQuiet @("redeploy", "-s", $ServiceName, "-y")
     }
 }
 
@@ -77,7 +79,7 @@ $simVars = @(
     "SIM_LAB_PROXY_SECRET=$secret"
 )
 
-Set-BackendVars $ProdProjectId $prodVars "Prod marvelous backend"
-Set-BackendVars $SimLabProjectId $simVars "Sim-lab backend"
+Set-BackendVars $ProdProjectId $prodVars "Prod marvelous backend" $ProdBackendService
+Set-BackendVars $SimLabProjectId $simVars "Sim-lab backend" $SimLabBackendService
 
 Write-Host "Proxy configured. Verify: GET prod /api/activities/admin/sim-target/ -> mode=sim-lab-proxy" -ForegroundColor Green

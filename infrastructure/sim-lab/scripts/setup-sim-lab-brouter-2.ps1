@@ -53,7 +53,7 @@ try {
 
     if (-not $has) {
         Write-Host "Creating $ServiceName..."
-        railway add --service $ServiceName --repo $Repo 2>&1 | Out-Null
+        railway add --service $ServiceName --repo $Repo --json 2>&1 | Out-Null
         if (Test-Path $ConfigureScript) {
             & $ConfigureScript -ServiceName $ServiceName -RootDirectory "/" -DockerfilePath "/infrastructure/brouter/Dockerfile" -ConfigFilePath $ConfigPath
         }
