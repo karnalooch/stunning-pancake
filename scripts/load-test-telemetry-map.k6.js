@@ -1,6 +1,9 @@
 /**
- * Phase 3 — k6 distributed live-map read stub (local/staging only).
+ * Legacy stub — canonical k6 live-map script: scripts/load/k6/live-map.js
  *
+ *   k6 run -e JWT=eyJ... scripts/load/k6/live-map.js
+ *
+ * This file remains for backward-compatible one-liners:
  *   k6 run -e JWT=eyJ... -e MAP_URL=http://localhost:8000/api/activities/telemetry/live/ scripts/load-test-telemetry-map.k6.js
  */
 import http from "k6/http";

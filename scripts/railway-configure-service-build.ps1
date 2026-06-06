@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 <#
 .SYNOPSIS
   Set Railway service build config (dockerfile + railway.json) via GraphQL.
@@ -14,8 +14,8 @@ param(
     [string]$ServiceName = 'osrm',
     [string]$EnvironmentId = 'f30e70a7-b4d2-42aa-8137-21faa091b969',
     [string]$RootDirectory = '/',
-    [string]$DockerfilePath = '/infrastructure/osrm/Dockerfile',
-    [string]$ConfigFilePath = '/infrastructure/osrm/railway.json'
+    [string]$DockerfilePath = $null,
+    [string]$ConfigFilePath = $null
 )
 
 $ErrorActionPreference = 'Stop'
@@ -48,11 +48,9 @@ $body = @{
     variables = @{
         serviceId     = $ServiceId
         environmentId = $EnvironmentId
-        input         = @{
-            rootDirectory     = $RootDirectory
-            dockerfilePath    = $DockerfilePath
-            railwayConfigFile = $ConfigFilePath
-        }
+        input         = ( @{
+            rootDirectory = $RootDirectory
+        } + $(if ($DockerfilePath) { @{ dockerfilePath = $DockerfilePath } } else { @{} }) + $(if ($ConfigFilePath) { @{ railwayConfigFile = $ConfigFilePath } } else { @{} }) )
     }
 } | ConvertTo-Json -Depth 6
 

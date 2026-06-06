@@ -5,6 +5,8 @@
 .env.local
 .env.*.local
 .env.railway.local
+.env.sim-lab
+infrastructure/sim-lab/railway/sim-lab.created.env
 mobile/.env
 
 # 📦 Dependencies
@@ -43,6 +45,10 @@ backend/.coverage
 .coverage
 admin/test-results/
 admin/e2e-results.xml
+
+# Load test artifacts (local reports, Railway ramp logs)
+scripts/load/reports/
+scripts/.railway-load-test-*
 
 # 📊 Logs & Telemetry
 *.log

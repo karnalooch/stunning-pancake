@@ -21,7 +21,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | Platform Operator, Backend |
 
-**Related:** [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md) · [../EVENT_BURST_50K.md](../EVENT_BURST_50K.md) · [../SCALE_TEST_300K.md](../SCALE_TEST_300K.md)
+**Related:** [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) · [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md) · [../EVENT_BURST_50K.md](../EVENT_BURST_50K.md) · [../SCALE_TEST_300K.md](../SCALE_TEST_300K.md)
 
 ## Goal
 
@@ -191,12 +191,13 @@ python scripts/load-test-telemetry-ingest.py `
   --token $JWT --map-workers 10 --map-duration 30
 ```
 
-## Phase 3 — distributed load (deferred)
+## Phase 3 — distributed load
 
 | Tool | Status | Notes |
 |------|--------|-------|
-| **k6** | Stub | `scripts/load-test-telemetry-map.k6.js` |
-| **Locust** | Deferred | staging cluster required |
+| **Suite orchestrator** | Active | `scripts/load/run-suite.ps1` — see [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) |
+| **k6** | Active | `scripts/load/k6/live-map.js`, `scripts/load/k6/ingest-batch.js`; legacy `scripts/load-test-telemetry-map.k6.js` |
+| **Locust** | Active | `scripts/load/locust/locustfile.py` — shared batch via `scripts/load/lib/packets.py` |
 
 Requires Platform Operator approval before prod or shared staging.
 
@@ -207,13 +208,15 @@ Requires Platform Operator approval before prod or shared staging.
 | Ingest scaffold + profiles A/B | **DONE** |
 | Live map warm-up + benchmark | **DONE** |
 | Live map p95 < 300 ms SLO | **DEFERRED** (laptop; re-test staging/prod) |
-| 50k positions/s sustained | **DEFERRED** (distributed harness + operator window) |
+| 50k positions/s sustained | **DEFERRED** (cluster or operator window) |
+| k6 / Locust harness | **DONE** (`scripts/load/k6/`, `scripts/load/locust/`) |
+| Enterprise load standard | **DONE** ([PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md), `scripts/load/`) |
 | Phase 2 sharding prod | **DONE** (`TELEMETRY_SHARD_COUNT=4`) |
 | Railway `telemetry` service | **DONE** (2026-06-04) |
 
 ## Script reference
 
-`scripts/load-test-telemetry-ingest.py` — async `httpx` client: `--workers`, `--batch-size`, `--target-rate`, `--skip-map`, `--token`, `--preflight`, `--assert-outbox`, `--map-url`, `--map-only`.
+`scripts/load-test-telemetry-ingest.py` — async `httpx` client: `--workers`, `--batch-size`, `--target-rate`, `--skip-map`, `--token`, `--preflight`, `--assert-outbox`, `--json-out`, `--report-tier`, `--map-url`, `--map-only`.
 
 ## Production note
 

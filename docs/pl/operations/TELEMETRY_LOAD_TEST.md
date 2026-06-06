@@ -22,7 +22,7 @@
 | **Last reviewed** | 2026-06-04 |
 | **Audience** | Platform Operator, Backend |
 
-**Powiązane:** [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md) · [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md) · [SCALE_TEST_300K.md](../../SCALE_TEST_300K.md)
+**Powiązane:** [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) · [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md) · [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md) · [SCALE_TEST_300K.md](../../SCALE_TEST_300K.md)
 
 ## Goal
 
@@ -222,8 +222,9 @@ For multi-node soak / 50k sustained validation beyond laptop limits:
 
 | Tool | Status | Notes |
 |------|--------|-------|
-| **k6** | Stub | `scripts/load-test-telemetry-map.k6.js` — live-map read; `k6 run -e JWT=... scripts/load-test-telemetry-map.k6.js` |
-| **Locust** | Deferred | Reuse ingest URL + batch body from `load-test-telemetry-ingest.py` when a staging cluster is available |
+| **Suite orchestrator** | Active | `scripts/load/run-suite.ps1` — tiers smoke/baseline/stress-50k; see [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) |
+| **k6** | Active | `scripts/load/k6/live-map.js`, `scripts/load/k6/ingest-batch.js`; legacy stub `scripts/load-test-telemetry-map.k6.js` |
+| **Locust** | Active | `scripts/load/locust/locustfile.py` — shared batch via `scripts/load/lib/packets.py` |
 
 Requires explicit Platform Operator approval before prod or shared staging.
 
@@ -237,8 +238,9 @@ Requires explicit Platform Operator approval before prod or shared staging.
 | 50k positions/s sustained | **DEFERRED** | Laptop ceiling ~13k skip-db; Railway prod **8 CPU / 8 GB** total — distributed k6/Locust + operator window; **no prod 50k without consent** |
 | Phase 2 sharding prod env | **DONE** | `TELEMETRY_SHARD_COUNT=4` on backend + simulation (prior session) |
 | Separate Railway Telemetry service | **DONE** (2026-06-04) | Serwis `telemetry` w `marvelous-gratitude`; `rootDirectory=/telemetry`, `TELEMETRY_SKIP_DB=0`, `TELEMETRY_DB_POOL_MAX=30`, `TELEMETRY_INGEST_BATCH_SIZE=200`, `UVICORN_WORKERS=2`, Backend `TELEMETRY_URL=http://telemetry.railway.internal:8001`, RAM 1 GB |
-| k6 distributed stub | **DONE** | `scripts/load-test-telemetry-map.k6.js` |
-| Locust full harness | **DEFERRED** | Phase 3 |
+| k6 harness | **DONE** | `scripts/load/k6/` |
+| Locust harness | **DONE** | `scripts/load/locust/locustfile.py` |
+| Enterprise load standard | **DONE** | [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md), `scripts/load/` |
 
 ## Script reference
 
@@ -251,6 +253,8 @@ Requires explicit Platform Operator approval before prod or shared staging.
 - `--token` / `--auth-header` — JWT for map API
 - `--preflight` / `--preflight-count` — health checks before run
 - `--assert-outbox` — exit non-zero if any ingest HTTP errors (ADR 011 engaged-guard companion)
+- `--json-out PATH` — unified JSON report (`scripts/load/report_schema.json` v1)
+- `--report-tier` — threshold tier for `--json-out` (smoke, baseline, stress-50k, soak)
 - `--map-url` + `--map-only` — live-map read benchmark mode
 
 ## Production note

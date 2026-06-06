@@ -316,6 +316,12 @@
     },
     {
       "mode": "paired",
+      "canonical": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "pl": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "en": "docs/en/operations/PERFORMANCE_TESTING.md"
+    },
+    {
+      "mode": "paired",
       "canonical": "docs/pl/operations/TELEMETRY_SHARDING.md",
       "pl": "docs/pl/operations/TELEMETRY_SHARDING.md",
       "en": "docs/en/operations/TELEMETRY_SHARDING.md"
@@ -656,6 +662,13 @@
       "pl": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
       "en": "docs/en/operations/TELEMETRY_LOAD_TEST.md",
       "legacy": "docs/operations/TELEMETRY_LOAD_TEST.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "pl": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "en": "docs/en/operations/PERFORMANCE_TESTING.md",
+      "legacy": "docs/operations/PERFORMANCE_TESTING.md"
     },
     {
       "mode": "legacy_redirect",

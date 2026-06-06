@@ -1,6 +1,6 @@
 #Requires -Version 5.1
 param(
-    [string]$ApiBase = "https://backend-production-55c7.up.railway.app/api",
+    [string]$ApiBase = "",
     [string]$Username = "global_owner",
     [string]$Password = "",
     [int]$TargetUsers = 300000,
@@ -10,6 +10,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "..\infrastructure\sim-lab\scripts\_sim-lab-resolve.ps1")
+$ApiBase = Resolve-SimLabApiBase -ApiBase $ApiBase
+Test-ProdApiGuard -ApiBase $ApiBase
+
 $logPath = Join-Path $PSScriptRoot ".run-300k-wipe-batch.log"
 
 function Log([string]$msg) {

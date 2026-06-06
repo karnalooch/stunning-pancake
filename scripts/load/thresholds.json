@@ -1,0 +1,31 @@
+{
+  "version": "1",
+  "description": "SSOT SLO thresholds for performance/load test tiers",
+  "tiers": {
+    "smoke": {
+      "ingest_positions_per_second_min": 500,
+      "map_p95_ms_max": 3000,
+      "error_rate_max": 0.05,
+      "notes": "Quick sanity on local Docker; not a production sign-off"
+    },
+    "baseline": {
+      "ingest_positions_per_second_min": 5000,
+      "map_p95_ms_max": 1000,
+      "error_rate_max": 0.01,
+      "notes": "Laptop-friendly sustained profile with DB path enabled"
+    },
+    "stress-50k": {
+      "ingest_positions_per_second_min": 45000,
+      "map_p95_ms_max": 300,
+      "error_rate_max": 0.001,
+      "notes": "Target 50k positions/s; requires cluster or operator-approved window"
+    },
+    "soak": {
+      "ingest_positions_per_second_min": 10000,
+      "map_p95_ms_max": 500,
+      "error_rate_max": 0.001,
+      "duration_minutes_min": 30,
+      "notes": "Long-run stability; error rate and map p95 must hold over full soak"
+    }
+  }
+}

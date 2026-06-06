@@ -1,0 +1,82 @@
+{
+  "started": "2026-06-05T16:14:33.185Z",
+  "base": "http://localhost:3000",
+  "prod": false,
+  "profiles": [
+    {
+      "profile": "headless-angle",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: page.waitForSelector: Timeout 120000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=live-map-root]') to be visible\n"
+    },
+    {
+      "profile": "headless-swiftshader",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "vendor": "Google Inc. (Google)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: page.waitForSelector: Timeout 120000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=live-map-root]') to be visible\n"
+    },
+    {
+      "profile": "headless-default",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "vendor": "Google Inc. (Google)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: page.waitForSelector: Timeout 120000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=live-map-root]') to be visible\n"
+    },
+    {
+      "profile": "headed-angle",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: page.waitForSelector: Timeout 120000ms exceeded.\nCall log:\n  - waiting for locator('[data-testid=live-map-root]') to be visible\n"
+    }
+  ],
+  "finished": "2026-06-05T16:22:35.630Z",
+  "summary": [
+    {
+      "profile": "headless-angle",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "mesoGap": false,
+      "microOk": true
+    },
+    {
+      "profile": "headless-swiftshader",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "mesoGap": false,
+      "microOk": true
+    },
+    {
+      "profile": "headless-default",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "mesoGap": false,
+      "microOk": true
+    },
+    {
+      "profile": "headed-angle",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "mesoGap": false,
+      "microOk": true
+    }
+  ]
+}

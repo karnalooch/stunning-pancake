@@ -25,10 +25,24 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import sys
 import time
 import uuid
+from pathlib import Path
 from urllib.parse import urlparse
+
+_LOAD_ROOT = Path(__file__).resolve().parent / "load"
+if str(_LOAD_ROOT) not in sys.path:
+    sys.path.insert(0, str(_LOAD_ROOT))
+
+from lib.report import (  # noqa: E402
+    build_report,
+    evaluate_thresholds,
+    ingest_metrics_from_counters,
+    map_metrics_from_counters,
+    validate_report,
+)
 
 try:
     import httpx
@@ -168,6 +182,62 @@ async def _ingest_worker(
             counters["errors"] += 1
 
 
+def _write_json_report(
+    args: argparse.Namespace,
+    *,
+    mode: str,
+    ingest_stats: dict[str, float] | None = None,
+    ingest_counters: dict[str, int] | None = None,
+    map_stats: dict[str, float] | None = None,
+    map_counters: dict[str, int] | None = None,
+) -> None:
+    if not args.json_out:
+        return
+
+    metrics: dict = {}
+    if ingest_counters and ingest_stats is not None:
+        metrics["ingest"] = ingest_metrics_from_counters(
+            duration_s=args.duration,
+            batch_size=args.batch_size,
+            accepted=ingest_counters["accepted"],
+            throttled=ingest_counters["throttled"],
+            errors=ingest_counters["errors"],
+            latency_ms=ingest_stats,
+        )
+    if map_counters and map_stats is not None:
+        metrics["map"] = map_metrics_from_counters(
+            ok=map_counters["ok"],
+            errors=map_counters["errors"],
+            latency_ms=map_stats,
+        )
+
+    tier = args.report_tier or "baseline"
+    report = build_report(
+        suite=args.report_suite or "python-ingest",
+        tier=tier,
+        environment={
+            "target": args.report_target or "local",
+            "ingest_url": args.url,
+            "map_url": args.map_url,
+        },
+        tools=[
+            {
+                "name": mode,
+                "duration_s": args.duration if mode == "python-ingest" else args.map_duration,
+            }
+        ],
+        metrics=metrics,
+    )
+    report["threshold_evaluation"] = evaluate_thresholds(report, tier)
+    errors = validate_report(report)
+    if errors:
+        report["validation_errors"] = errors
+
+    out = Path(args.json_out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
 async def run_ingest(args: argparse.Namespace) -> None:
     deadline = time.monotonic() + args.duration
     latencies: list[float] = []
@@ -217,6 +287,13 @@ async def run_ingest(args: argparse.Namespace) -> None:
     if args.target_rate > 0:
         ok = pps >= args.target_rate * 0.9
         print(f"Target met:    {'PASS' if ok else 'FAIL'} (>=90% of {args.target_rate}/s)")
+
+    _write_json_report(
+        args,
+        mode="python-ingest",
+        ingest_stats=stats,
+        ingest_counters=counters,
+    )
 
     if args.assert_outbox:
         # ADR 011: instrumented mobile clients retain points until ACK; harness expects no 5xx.
@@ -279,6 +356,13 @@ async def run_map(args: argparse.Namespace) -> None:
     print(f"Latency ms:    p50={stats['p50']:.1f}  p95={stats['p95']:.1f}  p99={stats['p99']:.1f}")
     print(f"p95 < 300ms:   {'PASS' if stats['p95'] < 300 else 'FAIL'}")
 
+    _write_json_report(
+        args,
+        mode="python-map",
+        map_stats=stats,
+        map_counters=counters,
+    )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Telemetry ingest / live-map load test")
@@ -337,6 +421,26 @@ def main() -> None:
         "--assert-outbox",
         action="store_true",
         help="ADR 011: fail if any ingest HTTP errors (companion to mobile outbox engaged-guard test)",
+    )
+    parser.add_argument(
+        "--json-out",
+        default="",
+        help="Write unified load report JSON (scripts/load/report_schema.json v1)",
+    )
+    parser.add_argument(
+        "--report-tier",
+        default="baseline",
+        help="Threshold tier for --json-out (smoke, baseline, stress-50k, soak)",
+    )
+    parser.add_argument(
+        "--report-suite",
+        default="",
+        help="Suite name embedded in --json-out report",
+    )
+    parser.add_argument(
+        "--report-target",
+        default="local",
+        help="Environment label in --json-out report",
     )
     args = parser.parse_args()
 

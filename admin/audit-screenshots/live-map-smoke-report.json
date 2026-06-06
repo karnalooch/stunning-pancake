@@ -1,0 +1,17 @@
+{
+  "steps": [
+    "login ok",
+    "map ready",
+    "meso tier",
+    "on map > 0",
+    "screenshot saved"
+  ],
+  "badges": {
+    "drawn": "289 ON MAP",
+    "rendered": "0 RENDERED",
+    "mode": "MESO"
+  },
+  "layerVis": {
+    "source": "none"
+  }
+}

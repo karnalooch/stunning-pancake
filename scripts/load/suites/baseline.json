@@ -1,0 +1,33 @@
+{
+  "name": "baseline",
+  "tier": "baseline",
+  "description": "Laptop-friendly sustained ingest + optional live-map read",
+  "preflight": true,
+  "environment": {
+    "target": "local-docker",
+    "ingest_url": "http://localhost:8001/api/telemetry/ingest/batch",
+    "map_url": "http://localhost:8000/api/activities/telemetry/live/"
+  },
+  "steps": [
+    {
+      "tool": "python-ingest",
+      "params": {
+        "workers": 30,
+        "duration": 30,
+        "batch_size": 50,
+        "target_rate": 0,
+        "skip_map": true,
+        "preflight": true
+      }
+    },
+    {
+      "tool": "python-map",
+      "optional": true,
+      "requires_env": ["JWT"],
+      "params": {
+        "map_workers": 5,
+        "map_duration": 15
+      }
+    }
+  ]
+}

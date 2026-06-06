@@ -1,0 +1,86 @@
+# Performance harness CI: lint + unit tests; optional live smoke against local Docker.
+#
+# Live smoke (workflow_dispatch, run_live_smoke=true) expects docker compose services
+# on the runner host. Skips gracefully when telemetry/backend are unreachable.
+
+name: Performance Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_live_smoke:
+        description: "Run smoke suite against localhost (requires Docker stack)"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "0 6 1 * *"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  harness-unit:
+    name: Load harness (ruff + pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Ruff (scripts/load)
+        run: |
+          pip install "ruff>=0.8,<0.16"
+          ruff check scripts/load --config pyproject.toml --output-format=github
+
+      - name: Unit tests (report.py)
+        run: |
+          pip install pytest
+          python -m pytest scripts/test_load_report.py -q
+
+  live-smoke:
+    name: Live smoke suite (optional)
+    runs-on: ubuntu-latest
+    needs: [harness-unit]
+    if: github.event_name == 'workflow_dispatch' && inputs.run_live_smoke == true
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install httpx for ingest harness
+        run: pip install httpx
+
+      - name: Preflight localhost services
+        id: preflight
+        run: |
+          ok=true
+          if ! curl -sf http://localhost:8001/api/telemetry/health >/dev/null 2>&1; then
+            echo "Telemetry not reachable on :8001 - skipping live smoke"
+            ok=false
+          fi
+          if ! curl -sf http://localhost:8000/health/ >/dev/null 2>&1; then
+            echo "Backend not reachable on :8000 - skipping live smoke"
+            ok=false
+          fi
+          echo "reachable=$ok" >> "$GITHUB_OUTPUT"
+
+      - name: Run smoke suite
+        if: steps.preflight.outputs.reachable == 'true'
+        run: |
+          chmod +x scripts/load/run-suite.sh
+          ./scripts/load/run-suite.sh smoke
+
+      - name: Skip notice
+        if: steps.preflight.outputs.reachable != 'true'
+        run: echo "Live smoke skipped - start docker compose locally or on a self-hosted runner."

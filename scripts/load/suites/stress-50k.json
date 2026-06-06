@@ -1,0 +1,45 @@
+{
+  "name": "stress-50k",
+  "tier": "stress-50k",
+  "description": "50k positions/s target profile; operator approval required for non-local targets",
+  "preflight": true,
+  "environment": {
+    "target": "local-docker",
+    "ingest_url": "http://localhost:8001/api/telemetry/ingest/batch",
+    "map_url": "http://localhost:8000/api/activities/telemetry/live/",
+    "notes": "Requires TELEMETRY_SHARD_COUNT>=4 and tuned pool sizes; prod needs explicit approval"
+  },
+  "steps": [
+    {
+      "tool": "python-ingest",
+      "params": {
+        "workers": 50,
+        "duration": 60,
+        "batch_size": 50,
+        "target_rate": 50000,
+        "skip_map": true,
+        "preflight": true
+      }
+    },
+    {
+      "tool": "k6-ingest",
+      "optional": true,
+      "params": {
+        "vus": 50,
+        "duration": "60s",
+        "batch_size": 50,
+        "ingest_pps_min": 45000
+      }
+    },
+    {
+      "tool": "k6-map",
+      "optional": true,
+      "requires_env": ["JWT"],
+      "params": {
+        "vus": 10,
+        "duration": "30s",
+        "map_p95_max": 300
+      }
+    }
+  ]
+}

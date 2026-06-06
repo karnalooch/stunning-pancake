@@ -27,11 +27,21 @@ Dowód, że kod **działa** pod obciążeniem — uzupełnia lint i testy jednos
 
 ---
 
+## Performance / load (enterprise)
+
+| Scenariusz | Runbook |
+|------------|---------|
+| Tier smoke/baseline/stress | [PERFORMANCE_TESTING.md](../operations/PERFORMANCE_TESTING.md), `scripts/load/run-suite.ps1` |
+| JSON reports + SLO | `scripts/load/thresholds.json`, `scripts/load/report_schema.json` |
+| CI harness | `.github/workflows/performance-smoke.yml` |
+
+---
+
 ## Telemetry ingest (ADR 011)
 
 | Scenariusz | Komenda / oczekiwanie |
 |------------|----------------------|
-| Load ingest | `python scripts/load-test-telemetry-ingest.py` |
+| Load ingest | `python scripts/load-test-telemetry-ingest.py` (`--json-out` dla raportu) |
 | Queue depth | `GET /api/telemetry/ingest/queue/stats` |
 | Guard engaged | `GLOBAL_PROTECTION_MODE=on` (staging only) |
 | Redis down | Fail-open guard; queue off → 503 + Retry-After |

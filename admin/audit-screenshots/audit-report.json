@@ -1,5 +1,5 @@
 {
-  "started": "2026-06-02T00:36:49.168Z",
+  "started": "2026-06-05T15:59:09.382Z",
   "findings": [
     {
       "login": "ok",
@@ -35,16 +35,39 @@
     },
     {
       "section": "dashboard",
-      "clickFail": "Zoom in",
+      "clicked": "Zapisz widok"
+    },
+    {
+      "section": "dashboard",
+      "clicked": "Quick Launch"
+    },
+    {
+      "section": "dashboard",
+      "clicked": "Historia replay"
+    },
+    {
+      "section": "dashboard",
+      "clicked": "Diagnostyka"
+    },
+    {
+      "section": "dashboard",
+      "clickFail": "Heatmapa",
       "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
     },
     {
       "section": "dashboard",
-      "clicked": "Zoom out"
+      "clickFail": "Łódź\n\n296\n\n187 rower · 109 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
     },
     {
       "section": "dashboard",
-      "clicked": "Drag to rotate map, click to reset north"
+      "clickFail": "Siedlce\n\n288\n\n173 rower · 115 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "dashboard",
+      "clickFail": "Warszawa\n\n287\n\n189 rower · 98 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
     },
     {
       "section": "white-label",
@@ -95,20 +118,89 @@
     {
       "section": "departments",
       "clicked": "New Department"
+    },
+    {
+      "section": "heatmaps",
+      "clicked": "Zoom in"
+    },
+    {
+      "section": "heatmaps",
+      "clicked": "Zoom out"
+    },
+    {
+      "section": "heatmaps",
+      "clicked": "Drag to rotate map, click to reset north"
+    },
+    {
+      "section": "live-map",
+      "clicked": "Zapisz widok"
+    },
+    {
+      "section": "live-map",
+      "clicked": "Quick Launch"
+    },
+    {
+      "section": "live-map",
+      "clicked": "Historia replay"
+    },
+    {
+      "section": "live-map",
+      "clickFail": "Diagnostyka",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "live-map",
+      "clickFail": "Wrocław\n\n292\n\n194 rower · 98 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "live-map",
+      "clickFail": "Łódź\n\n290\n\n182 rower · 108 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "live-map",
+      "clickFail": "Warszawa\n\n288\n\n188 rower · 100 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "live-map",
+      "clickFail": "Siedlce\n\n286\n\n173 rower · 113 bieg",
+      "err": "locator.click: Timeout 3000ms exceeded.\nCall log:\n  - waiting for locator('.mant"
+    },
+    {
+      "section": "simulator",
+      "clicked": "Step 1\nConfigure Cyclists"
+    },
+    {
+      "section": "simulator",
+      "clicked": "Step 2\nLive Telemetry Tuning"
+    },
+    {
+      "section": "simulator",
+      "clicked": "Step 3\nReview & Monitor"
+    },
+    {
+      "section": "simulator",
+      "skip": "Launch 1000 Cyclists"
+    },
+    {
+      "section": "simulator",
+      "skip": "Stop Active Simulation"
     }
   ],
   "routes": [
     {
       "id": "rbac",
-      "ms": 2232,
+      "ms": 2337,
       "title": "RBAC Manager",
       "empty": false,
       "error": false,
-      "snippet": "RBAC Manager Visual role & permission management Roles Athlete athlete 5 PERMISSIONS SYSTEM MANAGE Department Moderator department_moderator 11 PERMISSIONS SYSTEM MANAGE Global Owner global_owner 36 PERMISSIONS SYSTEM MANAGE Sponsor sponsor 7 PERMISSIONS SYSTEM MANAGE Tenant Admi"
+      "snippet": "RBAC Manager Visual role & permission management Roles Athlete athlete 5 PERMISSIONS SYSTEM EDIT Department Moderator department_moderator 11 PERMISSIONS SYSTEM EDIT Global Owner global_owner 36 PERMISSIONS SYSTEM EDIT Sponsor sponsor 7 PERMISSIONS SYSTEM EDIT Tenant Admin tenant"
     },
     {
       "id": "feature-flags",
-      "ms": 2213,
+      "ms": 2216,
       "title": "Feature Flags",
       "empty": false,
       "error": false,
@@ -116,7 +208,7 @@
     },
     {
       "id": "leaderboards",
-      "ms": 2217,
+      "ms": 2213,
       "title": "Leaderboard Manager",
       "empty": true,
       "error": false,
@@ -132,7 +224,7 @@
     },
     {
       "id": "api-playground",
-      "ms": 2217,
+      "ms": 2212,
       "title": "Recalculating",
       "empty": false,
       "error": false,
@@ -140,7 +232,7 @@
     },
     {
       "id": "settings",
-      "ms": 2225,
+      "ms": 2214,
       "title": "Settings",
       "empty": false,
       "error": false,
@@ -148,15 +240,15 @@
     },
     {
       "id": "dashboard",
-      "ms": 2216,
-      "title": "Good morning, global_owner 👋",
+      "ms": 2239,
+      "title": "Good afternoon, global_owner 👋",
       "empty": false,
       "error": false,
-      "snippet": "Good morning, global_owner 👋 Global platform overview — all tenants combined TOTAL ATHLETES TOTAL ACTIVITIES TOTAL DISTANCE VERIFICATION RATE System Intelligence AI Live Activity 0 ACTIVE © CARTO, © OpenStreetMap contributors Activity & System Monitoring Activity Timeline Audit "
+      "snippet": "Good afternoon, global_owner 👋 Global platform overview — all tenants combined TOTAL ATHLETES 10 015 10 014 new last 7d TOTAL ACTIVITIES 23 23 new last 7d TOTAL DISTANCE 101.4 km VERIFICATION RATE 91.3% 2 pending review (total) Live Simulator ON State RUNNING On map 1999 Warming"
     },
     {
       "id": "white-label",
-      "ms": 2234,
+      "ms": 2258,
       "title": "White-Label Engine",
       "empty": false,
       "error": false,
@@ -164,20 +256,108 @@
     },
     {
       "id": "users",
-      "ms": 2222,
+      "ms": 2229,
       "title": "Branding",
       "empty": false,
       "error": false,
-      "snippet": "Users Registry Audit Log Create User Invite Staff Showing 15 of 10 014 users USER ID IDENTITY CITY / TENANT SYSTEM ROLE STATUS U-1476285 athlete_warsaw athlete_warsaw@sport-platform.com Warsaw Runners ATHLETE ACTIVE U-1476284 athlete_01 athlete_01@sport-platform.com Siedlce City "
+      "snippet": "Users Registry Audit Log Create User Invite Staff Loading users... USER ID IDENTITY CITY / TENANT SYSTEM ROLE STATUS Loading... Previous Next"
     },
     {
       "id": "departments",
-      "ms": 32242,
+      "ms": 2216,
+      "title": "Account Locked",
+      "empty": false,
+      "error": false,
+      "snippet": "Departments / Classes List Tree New Department NAME TYPE MEMBERS MODERATOR PARENT ACTIONS"
+    },
+    {
+      "id": "activities",
+      "ms": 2217,
+      "title": "All Activities",
+      "empty": false,
+      "error": false,
+      "snippet": "All Activities 26 activities recorded # USER TYPE DISTANCE DURATION DATE STATUS #658475 lublin_athlete_000056 BIKE 6.2 km 13 min 5.06.2026 VERIFIED #658464 warszawa_athlete_000625 BIKE 5.8 km 12 min 5.06.2026 VERIFIED #658477 warszawa_athlete_000545 BIKE 6.2 km 14 min 5.06.2026 V"
+    },
+    {
+      "id": "anti-cheat",
+      "ms": 2220,
+      "title": "Anti-Cheat Engine",
+      "empty": false,
+      "error": false,
+      "snippet": "Anti-Cheat Engine 4-layer integrity monitoring & detection configuration BRouter Cutoff 1.5x ML Sensitivity 0.8 Auto-Ban ON Anomalies 2 Detection Configuration BRouter Topological Validation Cutoff ratio for GPS vs map distance 1.5 2.0 3.0 ML Sensitivity IsolationForest anomaly t"
+    },
+    {
+      "id": "events",
+      "ms": 32208,
+      "title": "",
+      "empty": true,
+      "error": false,
+      "snippet": "Events Manager 0 Active Events 0 Total Events 0 Upcoming Event List No events found."
+    },
+    {
+      "id": "sponsor",
+      "ms": 2215,
+      "title": "Sponsor Dashboard",
+      "empty": true,
+      "error": false,
+      "snippet": "Sponsor Dashboard Track voucher performance and ROI Active Vouchers — Redemptions — Reach — Conversion — Recent Activity Voucher activity data will appear here."
+    },
+    {
+      "id": "sponsorship-analytics",
+      "ms": 32225,
       "title": "",
       "empty": false,
       "error": false,
-      "snippet": "Departments / Classes List Tree New Department NAME TYPE MEMBERS MODERATOR PARENT ACTIONS Akademia Medyczna w Katowice FACULTY 1 — — Akademia Medyczna w Lublin FACULTY 0 — — Akademia Medyczna w Łódź FACULTY 0 — — Akademia Medyczna — Bydgoszcz FACULTY 0 — Uniwersytet Przyrodniczy "
+      "snippet": "Sponsorship Analytics 0 Active Vouchers 0% Redemption Rate 0 Total Distributed 0 Redeemed Summary Active Redeemed Expired 0 1 2 3 4"
+    },
+    {
+      "id": "vouchers",
+      "ms": 32226,
+      "title": "",
+      "empty": false,
+      "error": false,
+      "snippet": "Rewards & Vouchers 0 Active Vouchers 0 Total Available 0 Pools Active 0 Your Points Active Vouchers No active voucher pools."
+    },
+    {
+      "id": "dept-analytics",
+      "ms": 2220,
+      "title": "Department Analytics",
+      "empty": false,
+      "error": false,
+      "snippet": "Department Analytics Activity breakdown by department Activities by Department"
+    },
+    {
+      "id": "heatmaps",
+      "ms": 32251,
+      "title": "",
+      "empty": false,
+      "error": false,
+      "snippet": "Activity Heatmaps All Run Bike Walk OpenFreeMap | © OpenStreetMap | OpenFreeMap © OpenMapTiles Data from OpenStreetMap Low Medium High Very High"
+    },
+    {
+      "id": "live-map",
+      "ms": 2498,
+      "title": "Connecting",
+      "empty": false,
+      "error": false,
+      "snippet": "0 ACTIVE 0 IN VIEW Z 6.0 MAKRO Quick Launch OpenFreeMap | © OpenStreetMap | OpenFreeMap © OpenMapTiles Data from OpenStreetMap Connecting Pierwsze pobranie pozycji… Ostatnia synchronizacja: — zoom 6.0 Makro"
+    },
+    {
+      "id": "feedback",
+      "ms": 32276,
+      "title": "",
+      "empty": false,
+      "error": false,
+      "snippet": "Beta Feedback Dashboard No feedback items."
+    },
+    {
+      "id": "simulator",
+      "ms": 2213,
+      "title": "🚴 Cycling Simulator",
+      "empty": false,
+      "error": false,
+      "snippet": "🚴 Cycling Simulator Interactive step-by-step wizard to configure, generate, and monitor live cyclists Step 1 Configure Cyclists Step 2 Live Telemetry Tuning Step 3 Review & Monitor Simulation Configuration Summary • Total Cyclists: 1000 • Historical Activities: 2000 • Live Ride "
     }
   ],
-  "fatal": "TimeoutError: locator.getAttribute: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('.mantine-AppShell-main, [class*=\"AppShell-main\"], main').first().locator('button:visible, [role=\"button\"]:visible').nth(3)\n"
+  "finished": "2026-06-05T16:03:35.459Z"
 }

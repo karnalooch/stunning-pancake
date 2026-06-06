@@ -1,13 +1,17 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Railway prod load test: batch seed + live sim ramp to find user/active limits.
+  Sim-lab load test: batch seed + live sim ramp to find user/active limits.
+
+.DESCRIPTION
+  Default target: SIM_LAB_API_BASE (see infrastructure/sim-lab/).
+  Prod requires ALLOW_PROD_LOAD_TEST=1.
 
 .OUTPUTS
   scripts/.railway-load-test-report.json
 #>
 param(
-    [string]$ApiBase = "https://backend-production-55c7.up.railway.app/api",
+    [string]$ApiBase = "",
     [string]$Username = "global_owner",
     [string]$Password = "",
     [int[]]$UserSteps = @(50000, 100000, 200000, 300000),
@@ -19,6 +23,10 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "..\infrastructure\sim-lab\scripts\_sim-lab-resolve.ps1")
+$ApiBase = Resolve-SimLabApiBase -ApiBase $ApiBase
+Test-ProdApiGuard -ApiBase $ApiBase
+
 $reportPath = Join-Path $PSScriptRoot ".railway-load-test-report.json"
 $logPath = Join-Path $PSScriptRoot ".railway-load-test.log"
 
@@ -32,15 +40,32 @@ function Get-AuthHeaders {
     if (-not $Password) { $Password = $env:ADMIN_PASS }
     if (-not $Password) { throw "Set ADMIN_PASS" }
     $authBody = @{ username = $Username; password = $Password } | ConvertTo-Json
-    $token = (Invoke-RestMethod -Uri "$ApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody).access
-    return @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+    for ($i = 0; $i -lt 5; $i++) {
+        try {
+            $token = (Invoke-RestMethod -Uri "$ApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 60).access
+            return @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+        } catch {
+            if ($i -ge 4) { throw }
+            Start-Sleep -Seconds ([math]::Min(30, 5 * ($i + 1)))
+        }
+    }
+    throw "Auth failed after retries"
 }
 
 function Invoke-Api([string]$Method, [string]$Uri, [string]$Body = $null) {
-    $headers = Get-AuthHeaders
-    $params = @{ Uri = $Uri; Method = $Method; Headers = $headers; TimeoutSec = 120 }
-    if ($Body) { $params.Body = $Body; $params.ContentType = "application/json; charset=utf-8" }
-    return Invoke-RestMethod @params
+    for ($i = 0; $i -lt 5; $i++) {
+        try {
+            $headers = Get-AuthHeaders
+            $params = @{ Uri = $Uri; Method = $Method; Headers = $headers; TimeoutSec = 120 }
+            if ($Body) { $params.Body = $Body; $params.ContentType = "application/json; charset=utf-8" }
+            return Invoke-RestMethod @params
+        } catch {
+            if ($i -ge 4) { throw }
+            Log ("API retry $($i + 1)/5 $Method $Uri : $($_.Exception.Message)")
+            Start-Sleep -Seconds ([math]::Min(30, 5 * ($i + 1)))
+        }
+    }
+    throw "API failed after retries"
 }
 
 function Stop-Live {
@@ -86,7 +111,7 @@ function Start-Batch([int]$Target, [int]$AthletesInDb) {
     $useClear = ($AthletesInDb -lt 1000)
     if (-not $useClear) {
         $ok = Wait-WipeComplete 5
-        if (-not $ok) { Log "wipe idle — continuing with top-up batch" }
+        if (-not $ok) { Log "wipe idle - continuing with top-up batch" }
     }
     $body = @{
         total_users     = $Target
@@ -108,7 +133,7 @@ function Start-Batch([int]$Target, [int]$AthletesInDb) {
                 return
             }
             if ($err -match "WIPE_IN_PROGRESS") {
-                Log "batch blocked by wipe — waiting..."
+                Log "batch blocked by wipe - waiting..."
                 Wait-WipeComplete 30 | Out-Null
                 continue
             }

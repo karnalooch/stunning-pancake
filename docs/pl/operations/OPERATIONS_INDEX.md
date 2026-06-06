@@ -39,6 +39,8 @@
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Jednolite gate CI + checklist | Release Manager | Każdy release tag |
 | [../DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Przed testem 300k |
 | [../SCALE_TEST_300K.md](../../SCALE_TEST_300K.md) | Test 300k | Platform Operator | Planowany test (rzadko) |
+| [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) | Enterprise load: tiers, k6/Locust, raporty JSON, CI | Platform Operator | Przed testem skali / po zmianie ingest |
+| [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) | Telemetry ingest 50k scaffold | Platform Operator | Przed burst 50k |
 | [../EVENT_BURST_50K.md](../../EVENT_BURST_50K.md) | Dzień eventu | Platform Operator | Przed eventem |
 | [../TROUBLESHOOTING.md](../../TROUBLESHOOTING.md) | Objawy cross-cutting | On-call | Po nowym incydencie |
 | [../SIMULATOR_ARCHITECTURE.md](../../SIMULATOR_ARCHITECTURE.md) | Spec implementacji | Backend Lead | Rzadko (spec) |
@@ -49,6 +51,8 @@
 
 | Artefakt | Cel | Rola | Kadencja |
 |----------|-----|------|----------|
+| [infrastructure/sim-lab/README.md](../../../infrastructure/sim-lab/README.md) | Izolowany sim-lab: Docker / Railway load test | Platform Operator | Przed ramp 300k (nie prod) |
+| [`scripts/load/run-suite.ps1`](../../../scripts/load/run-suite.ps1) | Suite smoke/baseline/stress-50k (lokalny Docker) | Platform Operator | Po zmianie ingest / live-map |
 | [`scripts/railway-verify-production.ps1`](../../../scripts/railway-verify-production.ps1) | Weryfikacja routing + simulation (CLI + opcjonalnie GraphQL build config) | Platform Operator | Po deploy workerów Celery |
 | [`.env.railway.local.example`](../../../.env.railway.local.example) | Szablon lokalny (bez sekretów w Git) | Deweloper | Przy onboardingu Railway CLI |
 

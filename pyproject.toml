@@ -18,5 +18,11 @@ line-ending = "lf"
 [tool.ruff.lint.per-file-ignores]
 # Asset CLI: argparse + sys.path before local imports
 "scripts/generate_assets.py" = ["E402"]
+# Load harness: sys.path bootstrap before lib.* imports
+"scripts/load-test-telemetry-ingest.py" = ["E402", "I001"]
+"scripts/load/locust/locustfile.py" = ["E402", "I001"]
+"scripts/load/merge_partial_reports.py" = ["E402", "I001"]
+"scripts/load/finalize_suite_report.py" = ["E402", "I001"]
+"scripts/test_load_report.py" = ["E402", "I001"]
 # Legacy compact Imagen helper — refactor separately
 "scripts/generators/gemini_client.py" = ["E701", "E702", "E722"]

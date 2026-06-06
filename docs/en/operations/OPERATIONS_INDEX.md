@@ -40,6 +40,8 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Unified CI gate + checklist | Release Manager | Each release tag |
 | [DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Before 300k test |
 | [SCALE_TEST_300K.md](../../SCALE_TEST_300K.md) | 300k test | Platform Operator | Scheduled test (rare) |
+| [PERFORMANCE_TESTING.md](./PERFORMANCE_TESTING.md) | Enterprise load: tiers, k6/Locust, JSON reports, CI | Platform Operator | Before scale test / after ingest changes |
+| [TELEMETRY_LOAD_TEST.md](./TELEMETRY_LOAD_TEST.md) | Telemetry ingest 50k scaffold | Platform Operator | Before 50k burst |
 | [EVENT_BURST_50K.md](../../EVENT_BURST_50K.md) | Event day | Platform Operator | Before event |
 | [TROUBLESHOOTING.md](../TROUBLESHOOTING.md) | Cross-cutting symptoms | On-call | After new incident class |
 | [SIMULATOR_ARCHITECTURE.md](../../SIMULATOR_ARCHITECTURE.md) | Implementation spec | Backend Lead | Rare (spec) |
@@ -50,6 +52,8 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 
 | Artifact | Purpose | Role | Cadence |
 |----------|---------|------|---------|
+| [infrastructure/sim-lab/README.md](../../../infrastructure/sim-lab/README.md) | Isolated sim-lab: Docker / Railway load test | Platform Operator | Before 300k ramp (not prod) |
+| [`scripts/load/run-suite.ps1`](../../../scripts/load/run-suite.ps1) | Suite smoke/baseline/stress-50k (local Docker) | Platform Operator | After ingest / live-map changes |
 | [`scripts/railway-verify-production.ps1`](../../../scripts/railway-verify-production.ps1) | Verify routing + simulation (CLI + optional GraphQL build config) | Platform Operator | After Celery worker deploy |
 | [`.env.railway.local.example`](../../../.env.railway.local.example) | Local template (no Git secrets) | Developer | Onboarding Railway CLI |
 

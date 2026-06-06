@@ -212,6 +212,9 @@ jobs:
           pip install pytest
           python -m pytest scripts/test_check_docs_links.py -q
 
+      - name: Test load report helpers
+        run: python -m pytest scripts/test_load_report.py -q
+
   repo-assets:
     name: Shared tokens
     runs-on: ubuntu-latest
