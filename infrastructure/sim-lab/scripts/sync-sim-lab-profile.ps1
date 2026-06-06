@@ -16,7 +16,8 @@ param(
     [string]$ProjectId = "",
     [string]$Environment = "production",
     [switch]$SkipDeploys,
-    [switch]$Redeploy
+    [switch]$Redeploy,
+    [string[]]$RedeployServices = @()
 )
 
 $ErrorActionPreference = "Stop"
@@ -120,7 +121,12 @@ try {
     }
 
     if ($Redeploy -and -not $SkipDeploys) {
-        foreach ($svc in @("backend", "celery-worker-simulation", "celery-worker-routing", "telemetry")) {
+        $targets = if ($RedeployServices.Count -gt 0) {
+            $RedeployServices
+        } else {
+            @("backend", "celery-worker-simulation", "celery-worker-routing", "telemetry")
+        }
+        foreach ($svc in $targets) {
             Write-Host "Redeploy $svc..."
             Invoke-RailwayQuiet @("redeploy", "-s", $svc, "-y")
         }

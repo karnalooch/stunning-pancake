@@ -484,6 +484,12 @@ class TelemetryLiveView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        from activities.sim_lab_proxy import try_forward_sim_lab_activities
+
+        proxied = try_forward_sim_lab_activities(request, "telemetry/live/")
+        if proxied is not None:
+            return proxied
+
         from . import simulator_state as sim
         from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
         from activities.telemetry_shard import live_map_read_policy
@@ -552,6 +558,12 @@ class TelemetryLiveAggregateView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        from activities.sim_lab_proxy import try_forward_sim_lab_activities
+
+        proxied = try_forward_sim_lab_activities(request, "telemetry/live/aggregate/")
+        if proxied is not None:
+            return proxied
+
         from activities.live_map_aggregate import build_aggregate_payload, parse_aggregate_query_params
 
         req = parse_aggregate_query_params(request.query_params, user=request.user)
@@ -569,6 +581,12 @@ class TelemetryLiveAuditView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def post(self, request):
+        from activities.sim_lab_proxy import try_forward_sim_lab_activities
+
+        proxied = try_forward_sim_lab_activities(request, "telemetry/live/audit/", timeout=30)
+        if proxied is not None:
+            return proxied
+
         from activities.live_map_audit import record_live_map_view
 
         result = record_live_map_view(request, request.data if isinstance(request.data, dict) else {})

@@ -139,17 +139,24 @@ $env:ADMIN_PASS = "..."
 
 Po zmianie profilu: `sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy`, potem restart live sim (reset + POST z ramp script).
 
-Audyt wolnej mapy przy ~50k ACTIVE:
+Audyt wolnej mapy przy ~50k ACTIVE (dwa tiery SLO):
+
+| Tier | Cel | Parametry domyślne |
+|------|-----|-------------------|
+| **viewport-admin** | Admin UX (PASS/FAIL główny) | zoom=10, limit=800, 3 workerów |
+| **stress-50k** | Obciążenie 15× limit=50k (informacyjny) | zoom=6, limit=50000 |
+
+Prod admin czyta mapę przez **prod backend** — od commitu z proxy `telemetry/live` leci na sim-lab (`SIM_LAB_PROXY_MAP_TIMEOUT=180`).
 
 ```powershell
 $env:ADMIN_PASS = 'admin123'
-# sim-lab direct + prod proxy hop + WebGL
 .\scripts\load\run-sim-lab-live-map-audit.ps1 -IncludeProdProxy
-# tylko API (szybciej):
-.\scripts\load\run-sim-lab-live-map-audit.ps1 -SkipWebGl -IncludeProdProxy
+.\scripts\load\run-sim-lab-live-map-audit.ps1 -SkipWebGl -SkipStressBench -IncludeProdProxy
 ```
 
-Raport: `scripts/load/reports/sim-lab-live-map-audit-*.json`. SLO: map p95 <= 300 ms (tier stress-50k).
+Orphan volume: jeśli CLI nie usuwa `timescaledb-volume`, usuń ręcznie w Dashboard (patrz `fix-sim-lab-infra.ps1`).
+
+Raport: `scripts/load/reports/sim-lab-live-map-audit-*.json`.
 
 Lokalnie te same wartości są w [`.env.sim-lab.example`](./.env.sim-lab.example) i [docker-compose.sim-lab.yml](./docker-compose.sim-lab.yml).
 

@@ -10,6 +10,7 @@ from activities.sim_lab_proxy import (
     assert_prod_heavy_sim_allowed,
     sim_lab_proxy_enabled,
     try_forward_sim_lab,
+    try_forward_sim_lab_activities,
 )
 
 
@@ -77,3 +78,59 @@ def test_prod_heavy_sim_allowed_with_proxy(monkeypatch):
 def test_prod_heavy_sim_allowed_on_sim_lab_tenant(monkeypatch):
     monkeypatch.setenv("SENTRY_ENVIRONMENT", "sim-lab")
     assert assert_prod_heavy_sim_allowed(total_users=300_000) is None
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_activities_url_and_query(mock_request, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    monkeypatch.setenv("SIM_LAB_PROXY_MAP_TIMEOUT", "120")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"positions": []}'
+    mock_resp.json.return_value = {"positions": []}
+    mock_resp.headers = {"ETag": '"abc"', "Cache-Control": "private, max-age=4"}
+    mock_request.return_value = mock_resp
+
+    factory = APIRequestFactory()
+    request = factory.get(
+        "/api/activities/telemetry/live/?zoom=10&limit=800",
+        HTTP_IF_NONE_MATCH='"prev"',
+    )
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab_activities(request, "telemetry/live/")
+    assert proxied is not None
+    assert proxied.status_code == 200
+    assert proxied.data["sim_lab_proxy"] is True
+    assert proxied["ETag"] == '"abc"'
+
+    call_kw = mock_request.call_args.kwargs
+    assert call_kw["url"] == (
+        "https://sim.example.com/api/activities/telemetry/live/?zoom=10&limit=800"
+    )
+    assert call_kw["timeout"] == 120
+    assert call_kw["headers"]["If-None-Match"] == '"prev"'
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_activities_passthrough_304(mock_request, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 304
+    mock_resp.content = b""
+    mock_resp.headers = {"ETag": '"xyz"', "Cache-Control": "private, max-age=8"}
+    mock_request.return_value = mock_resp
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/telemetry/live/?zoom=6")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab_activities(request, "telemetry/live/")
+    assert proxied.status_code == 304
+    assert proxied["ETag"] == '"xyz"'

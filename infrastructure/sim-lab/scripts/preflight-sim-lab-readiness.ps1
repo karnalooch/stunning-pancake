@@ -67,6 +67,15 @@ if ($hdr) {
     } catch {
         Add-Check "routing_workers" $false $_.Exception.Message
     }
+
+    try {
+        $ls = Invoke-RestMethod -Uri "$ApiBase/activities/admin/live-simulate/" -Headers $hdr -TimeoutSec 60
+        $unr = [int]$ls.routing_unroutable_total
+        $terr = [int]$ls.routing_transport_errors_total
+        Add-Check "brouter_routing" (($unr + $terr) -eq 0) ("unroutable={0} transport_err={1}" -f $unr, $terr)
+    } catch {
+        Add-Check "brouter_routing" $false $_.Exception.Message
+    }
 }
 
 if ($env:PROD_ADMIN_PASS) {
@@ -97,7 +106,7 @@ Write-Host "  Redis RAM >= 4 GB"
 Write-Host "  backend >= 8 GB RAM (sim-lab map reads at 50k; scale-sim-lab-backend.ps1)"
 Write-Host "  celery-worker-routing >= 8 replicas x 2 GB (CELERY_WORKER_CONCURRENCY=4)"
 Write-Host "  telemetry >= 4 GB RAM, UVICORN_WORKERS=4"
-Write-Host "  brouter volume segments PL > 1 GB"
+Write-Host "  brouter: verify logs 'segment present' x15 (Railway volume MB may show 0 on sparse 50GB vols)"
 Write-Host "  TELEMETRY_SHARD_COUNT=4 + REDIS_TELEMETRY_SHARD_NODES (sync-sim-lab-telemetry-shards.ps1)"
 
 if ($failed.Count -gt 0) {

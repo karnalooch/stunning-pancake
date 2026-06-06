@@ -73,6 +73,7 @@ $prodVars = @(
     "SIM_LAB_PROXY_BASE_URL=$base"
     "SIM_LAB_PROXY_SECRET=$secret"
     "SIM_LAB_PROXY_PUBLIC_LABEL=4velo-sim-lab"
+    "SIM_LAB_PROXY_MAP_TIMEOUT=180"
 )
 $simVars = @(
     "SIM_LAB_ACCEPT_PROXY=1"

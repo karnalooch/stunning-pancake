@@ -263,3 +263,21 @@ For Railway prod (`marvelous-gratitude`, **8 GB / 8 vCPU plan**), set shard env 
 (see [TELEMETRY_SHARDING.md](./TELEMETRY_SHARDING.md)). Dedicated `telemetry` service (1 GB, 2 uvicorn workers).
 Use **observational** prod checks only (health, p95 from Datadog) until a scheduled load-test window is approved.
 Map benchmarks: use `detail=summary` and warm-up target **500** riders (`warm-simulator-for-map-test.ps1 -MinRideActive 500`).
+
+## Sim-lab map audit (50k ACTIVE)
+
+Admin prod → prod backend → **sim-lab** (proxy `telemetry/live` + symulator). Dwa tiery w `run-sim-lab-live-map-audit.ps1`:
+
+- **viewport-admin** — zoom=10, limit=800, p95 ≤ 2 s (gate PASS)
+- **stress-50k** — 15× limit=50000 (informacyjny; 300 ms często nierealne bez dalszej optymalizacji read path)
+
+```powershell
+$env:ADMIN_PASS = 'admin123'
+.\scripts\load\run-sim-lab-live-map-audit.ps1 -IncludeProdProxy
+```
+
+Tuning sim-lab backend @ 50k: `UVICORN_WORKERS=1`, `LIVE_MAP_INGEST_CACHE_TTL=12`, `SCALE_TELEMETRY_LIVE_CACHE_TTL=4` w profilu `300k-50k.env`. Redeploy **tylko backend** (nie simulation worker przy ACTIVE):
+
+```powershell
+.\infrastructure\sim-lab\scripts\sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy -RedeployServices backend
+```

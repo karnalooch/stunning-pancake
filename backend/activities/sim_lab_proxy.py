@@ -69,12 +69,27 @@ def _proxy_headers(request) -> dict[str, str]:
     return headers
 
 
+def _proxy_map_timeout(default: int = 180) -> int:
+    try:
+        return max(30, int(os.getenv("SIM_LAB_PROXY_MAP_TIMEOUT", str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
 def _build_url(admin_suffix: str) -> str:
     base = (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
     suffix = admin_suffix.lstrip("/")
     if not base.endswith("/api"):
         base = f"{base}/api"
     return f"{base}/activities/admin/{suffix}"
+
+
+def _build_activities_url(suffix: str) -> str:
+    base = (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
+    suffix = suffix.lstrip("/")
+    if not base.endswith("/api"):
+        base = f"{base}/api"
+    return f"{base}/activities/{suffix}"
 
 
 def _query_string(request) -> str:
@@ -96,13 +111,25 @@ def _request_body(request) -> bytes | None:
     return request.body
 
 
-def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Response | None:
-    """Return DRF Response when proxied; None to handle locally."""
-    if not sim_lab_proxy_enabled():
-        return None
-
-    url = _build_url(admin_suffix) + _query_string(request)
+def _forward_headers(request) -> dict[str, str]:
     headers = _proxy_headers(request)
+    inm = (request.META.get("HTTP_IF_NONE_MATCH") or "").strip()
+    if inm:
+        headers["If-None-Match"] = inm
+    accept = (request.META.get("HTTP_ACCEPT") or "").strip()
+    if accept:
+        headers["Accept"] = accept
+    return headers
+
+
+def _forward_upstream(
+    request,
+    url: str,
+    *,
+    timeout: int,
+    passthrough_status: bool = False,
+) -> Response:
+    headers = _forward_headers(request)
     body = _request_body(request)
 
     try:
@@ -124,6 +151,16 @@ def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Res
             status=503,
         )
 
+    if passthrough_status and upstream.status_code == 304:
+        resp = Response(status=304)
+        etag = upstream.headers.get("ETag")
+        if etag:
+            resp["ETag"] = etag
+        cache = upstream.headers.get("Cache-Control")
+        if cache:
+            resp["Cache-Control"] = cache
+        return resp
+
     try:
         payload = upstream.json() if upstream.content else {}
     except json.JSONDecodeError:
@@ -132,7 +169,44 @@ def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Res
     if isinstance(payload, dict):
         payload.setdefault("sim_lab_proxy", True)
 
-    return Response(payload, status=upstream.status_code)
+    resp = Response(payload, status=upstream.status_code)
+    if passthrough_status:
+        etag = upstream.headers.get("ETag")
+        if etag:
+            resp["ETag"] = etag
+        cache = upstream.headers.get("Cache-Control")
+        if cache:
+            resp["Cache-Control"] = cache
+    return resp
+
+
+def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Response | None:
+    """Return DRF Response when proxied; None to handle locally."""
+    if not sim_lab_proxy_enabled():
+        return None
+
+    url = _build_url(admin_suffix) + _query_string(request)
+    return _forward_upstream(request, url, timeout=timeout)
+
+
+def try_forward_sim_lab_activities(
+    request,
+    activities_suffix: str,
+    *,
+    timeout: int | None = None,
+) -> Response | None:
+    """Forward telemetry/live and related activity endpoints to sim-lab."""
+    if not sim_lab_proxy_enabled():
+        return None
+
+    effective_timeout = timeout if timeout is not None else _proxy_map_timeout()
+    url = _build_activities_url(activities_suffix) + _query_string(request)
+    return _forward_upstream(
+        request,
+        url,
+        timeout=effective_timeout,
+        passthrough_status=True,
+    )
 
 
 def assert_prod_heavy_sim_allowed(

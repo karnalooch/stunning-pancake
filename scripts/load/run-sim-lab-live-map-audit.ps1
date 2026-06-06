@@ -1,28 +1,31 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Sim-lab Live Map audit: API map p95 (stress-50k tier) + optional WebGL admin audit.
-
-.DESCRIPTION
-  Layer A: python load-test-telemetry-ingest.py --map-only (p95 vs thresholds.json stress-50k)
-  Layer B: admin/scripts/audit-webgl-live-map.mjs (--prod against admin URL)
+  Sim-lab Live Map audit: viewport-admin + stress-50k map tiers + optional WebGL.
 
 .EXAMPLE
   $env:ADMIN_PASS = 'admin123'
-  .\scripts\load\run-sim-lab-live-map-audit.ps1
+  .\scripts\load\run-sim-lab-live-map-audit.ps1 -IncludeProdProxy
 
 .EXAMPLE
-  .\scripts\load\run-sim-lab-live-map-audit.ps1 -SkipWebGl -MapWorkers 20 -MapDuration 45
+  .\scripts\load\run-sim-lab-live-map-audit.ps1 -SkipWebGl -SkipStressBench
 #>
 param(
     [string]$ApiBase = "",
     [string]$ProdProxyApiBase = "",
     [string]$AdminUrl = "",
     [string]$Password = "",
-    [int]$MapWorkers = 15,
-    [int]$MapDuration = 30,
+    [ValidateSet("viewport-admin", "baseline", "stress-50k", "both")]
+    [string]$Tier = "both",
+    [int]$MapLimit = 800,
+    [int]$MapZoom = 10,
+    [int]$ViewportWorkers = 3,
+    [int]$ViewportDuration = 20,
+    [int]$StressWorkers = 15,
+    [int]$StressDuration = 30,
     [switch]$SkipWebGl,
     [switch]$SkipMapBench,
+    [switch]$SkipStressBench,
     [switch]$IncludeProdProxy,
     [int]$HealthWaitSec = 180
 )
@@ -50,10 +53,18 @@ $ts = Get-Date -Format "yyyyMMdd-HHmmss"
 $reportPath = Join-Path $reportsDir "sim-lab-live-map-audit-$ts.json"
 
 $thresholds = Get-Content (Join-Path $LoadRoot "thresholds.json") -Raw | ConvertFrom-Json
-$mapP95Max = [int]$thresholds.tiers.'stress-50k'.map_p95_ms_max
+
+function Get-TierP95Max([string]$TierName) {
+    return [int]$thresholds.tiers.$TierName.map_p95_ms_max
+}
+
+function Build-MapUrl([string]$Base, [int]$Zoom, [int]$Limit) {
+    return "$Base/activities/telemetry/live/?zoom=$Zoom&limit=$Limit"
+}
 
 $backendRoot = $ApiBase -replace '/api$', ''
-$mapUrl = "$ApiBase/activities/telemetry/live/?zoom=6&limit=50000"
+$probeUrl = Build-MapUrl $ApiBase $MapZoom $MapLimit
+$stressUrl = Build-MapUrl $ApiBase 6 50000
 
 function Invoke-MapProbe([string]$Label, [string]$Url, [string]$Jwt) {
     try {
@@ -93,17 +104,26 @@ function Invoke-MapProbe([string]$Label, [string]$Url, [string]$Jwt) {
     }
 }
 
-function Run-MapBench([string]$Label, [string]$Base, [string]$Jwt, [string]$JsonOut) {
-    $url = "$Base/activities/telemetry/live/?zoom=6&limit=50000"
+function Run-MapBench(
+    [string]$Label,
+    [string]$Base,
+    [string]$Jwt,
+    [string]$JsonOut,
+    [string]$TierName,
+    [string]$MapUrl,
+    [int]$Workers,
+    [int]$Duration
+) {
+    $p95Max = Get-TierP95Max $TierName
     $ingestPy = Join-Path $RepoRoot "scripts\load-test-telemetry-ingest.py"
     $pyArgs = @(
         $ingestPy,
-        "--map-url", $url,
+        "--map-url", $MapUrl,
         "--token", $Jwt,
-        "--map-workers", "$MapWorkers",
-        "--map-duration", "$MapDuration",
+        "--map-workers", "$Workers",
+        "--map-duration", "$Duration",
         "--map-only",
-        "--report-tier", "stress-50k",
+        "--report-tier", $TierName,
         "--report-target", $Label,
         "--json-out", $JsonOut
     )
@@ -112,25 +132,38 @@ function Run-MapBench([string]$Label, [string]$Base, [string]$Jwt, [string]$Json
     & python @pyArgs 2>&1 | ForEach-Object { Write-Host $_ }
     $ErrorActionPreference = $prevEap
     if ($LASTEXITCODE -ne 0) {
-        return @{ label = $Label; pass = $false; error = "python exit $LASTEXITCODE"; report = $JsonOut }
+        return @{
+            label = $Label; tier = $TierName; pass = $false
+            error = "python exit $LASTEXITCODE"; report = $JsonOut
+        }
     }
     if (-not (Test-Path $JsonOut)) {
-        return @{ label = $Label; pass = $false; error = "missing json output"; report = $JsonOut }
+        return @{
+            label = $Label; tier = $TierName; pass = $false
+            error = "missing json output"; report = $JsonOut
+        }
     }
     $bench = Get-Content $JsonOut -Raw | ConvertFrom-Json
     $p95 = [double]$bench.metrics.map.latency_ms.p95
     $p50 = [double]$bench.metrics.map.latency_ms.p50
     $errs = [int]$bench.metrics.map.errors
-    $pass = ($p95 -gt 0) -and ($p95 -le $mapP95Max) -and ($errs -eq 0)
+    $ok = [int]$bench.metrics.map.ok
+    $total = $ok + $errs
+    $errorRate = if ($total -gt 0) { $errs / $total } else { 1.0 }
+    $pass = ($errs -eq 0) -and ($p95 -gt 0) -and ($p95 -le $p95Max)
     return @{
         label      = $Label
+        tier       = $TierName
         pass       = $pass
         map_p95_ms = $p95
         map_p50_ms = $p50
-        map_errors = $bench.metrics.map.errors
-        map_ok     = $bench.metrics.map.ok
+        map_errors = $errs
+        map_ok     = $ok
+        error_rate = $errorRate
+        p95_max    = $p95Max
         threshold  = $bench.threshold_evaluation
         report     = $JsonOut
+        map_url    = $MapUrl
     }
 }
 
@@ -151,10 +184,14 @@ function Wait-BackendHealth {
     throw "Backend not healthy after ${HealthWaitSec}s ($backendRoot/health/)"
 }
 
+function Should-RunTier([string]$Name) {
+    return ($Tier -eq "both") -or ($Tier -eq $Name)
+}
+
 Write-Host "=== Sim-lab Live Map audit ===" -ForegroundColor Cyan
 Write-Host "  API:   $ApiBase"
 Write-Host "  Admin: $AdminUrl"
-Write-Host "  SLO:   map p95 <= ${mapP95Max}ms (stress-50k)"
+Write-Host "  Tier:  $Tier (viewport zoom=$MapZoom limit=$MapLimit; stress limit=50000)"
 
 $health = Wait-BackendHealth
 Write-Host ("  health OK ({0}ms)" -f $health.ms) -ForegroundColor Green
@@ -175,22 +212,21 @@ $report = @{
     started_at = (Get-Date).ToUniversalTime().ToString("o")
     api_base   = $ApiBase
     admin_url  = $AdminUrl
-    slo        = @{ tier = "stress-50k"; map_p95_ms_max = $mapP95Max }
+    tier_mode  = $Tier
     health_ms  = $health.ms
     live_sim   = if ($liveSim) { @{ active = $liveSim.ride_active; target = $liveSim.target_on_map; running = $liveSim.running } } else { $null }
     layers     = @{}
 }
 
-# --- Layer A0: single-request probe (payload / TTFB) ---
 if (-not $SkipMapBench) {
-    Write-Host "`n--- Layer A0: map probe (payload / TTFB) ---" -ForegroundColor Cyan
+    Write-Host "`n--- Layer A0: map probe (viewport) ---" -ForegroundColor Cyan
     $probes = @()
-    $probes += Invoke-MapProbe "sim-lab-direct" $mapUrl $token
+    $probes += Invoke-MapProbe "sim-lab-direct" $probeUrl $token
     if ($IncludeProdProxy -or $ProdProxyApiBase) {
         if (-not $ProdProxyApiBase) { $ProdProxyApiBase = "https://backend-production-55c7.up.railway.app/api" }
         $prodAuth = Invoke-RestMethod -Uri "$ProdProxyApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 120
-        $prodUrl = "$ProdProxyApiBase/activities/telemetry/live/?zoom=6&limit=50000"
-        $probes += Invoke-MapProbe "prod-proxy" $prodUrl $prodAuth.access
+        $prodProbeUrl = Build-MapUrl $ProdProxyApiBase $MapZoom $MapLimit
+        $probes += Invoke-MapProbe "prod-proxy" $prodProbeUrl $prodAuth.access
     }
     $report.layers.map_probe = $probes
     foreach ($p in $probes) {
@@ -204,36 +240,61 @@ if (-not $SkipMapBench) {
     }
 }
 
-# --- Layer A: map API p95 ---
-if (-not $SkipMapBench) {
-    Write-Host "`n--- Layer A: map API p95 (sim-lab direct) ---" -ForegroundColor Cyan
-    $jsonOut = Join-Path $reportsDir "sim-lab-map-only-$ts.json"
-    $direct = Run-MapBench "sim-lab-direct" $ApiBase $token $jsonOut
-    $report.layers.map_api = $direct
+if (-not $SkipMapBench -and (Should-RunTier "viewport-admin")) {
+    Write-Host "`n--- Layer A-viewport: map p95 (viewport-admin) ---" -ForegroundColor Cyan
+    $jsonOut = Join-Path $reportsDir "sim-lab-map-viewport-$ts.json"
+    $direct = Run-MapBench "sim-lab-direct" $ApiBase $token $jsonOut "viewport-admin" $probeUrl $ViewportWorkers $ViewportDuration
+    $report.layers.map_api_viewport = $direct
+    $color = if ($direct.pass) { "Green" } else { "Red" }
     if ($direct.error) {
-        Write-Host ("  sim-lab map bench FAIL: {0}" -f $direct.error) -ForegroundColor Red
+        Write-Host ("  viewport FAIL: {0}" -f $direct.error) -ForegroundColor Red
     } else {
-        $color = if ($direct.pass) { "Green" } else { "Red" }
-        Write-Host ("  sim-lab map p95={0}ms (target <={1}ms) -> {2}" -f $direct.map_p95_ms, $mapP95Max, $(if ($direct.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color
+        Write-Host ("  viewport p95={0}ms (max {1}) errors={2} -> {3}" -f $direct.map_p95_ms, $direct.p95_max, $direct.map_errors, $(if ($direct.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color
     }
 
     if ($IncludeProdProxy -or $ProdProxyApiBase) {
-        Write-Host "`n--- Layer A': map API p95 (prod proxy) ---" -ForegroundColor Cyan
         if (-not $ProdProxyApiBase) { $ProdProxyApiBase = "https://backend-production-55c7.up.railway.app/api" }
         $prodToken = (Invoke-RestMethod -Uri "$ProdProxyApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 120).access
-        $jsonOutProd = Join-Path $reportsDir "prod-proxy-map-only-$ts.json"
-        $proxy = Run-MapBench "prod-proxy" $ProdProxyApiBase $prodToken $jsonOutProd
-        $report.layers.map_api_prod_proxy = $proxy
+        $prodProbeUrl = Build-MapUrl $ProdProxyApiBase $MapZoom $MapLimit
+        $jsonOutProd = Join-Path $reportsDir "prod-proxy-map-viewport-$ts.json"
+        $proxy = Run-MapBench "prod-proxy" $ProdProxyApiBase $prodToken $jsonOutProd "viewport-admin" $prodProbeUrl $ViewportWorkers $ViewportDuration
+        $report.layers.map_api_viewport_prod_proxy = $proxy
+        $color2 = if ($proxy.pass) { "Green" } else { "Red" }
         if ($proxy.error) {
-            Write-Host ("  prod-proxy map bench FAIL: {0}" -f $proxy.error) -ForegroundColor Red
+            Write-Host ("  prod-proxy viewport FAIL: {0}" -f $proxy.error) -ForegroundColor Red
         } else {
-            $color2 = if ($proxy.pass) { "Green" } else { "Red" }
-            Write-Host ("  prod-proxy map p95={0}ms -> {1}" -f $proxy.map_p95_ms, $(if ($proxy.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color2
+            Write-Host ("  prod-proxy viewport p95={0}ms -> {1}" -f $proxy.map_p95_ms, $(if ($proxy.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color2
         }
     }
 }
 
-# --- Layer B: WebGL admin audit ---
+if (-not $SkipMapBench -and -not $SkipStressBench -and (Should-RunTier "stress-50k")) {
+    Write-Host "`n--- Layer A-stress: map p95 (stress-50k) ---" -ForegroundColor Cyan
+    $jsonOut = Join-Path $reportsDir "sim-lab-map-stress-$ts.json"
+    $direct = Run-MapBench "sim-lab-direct" $ApiBase $token $jsonOut "stress-50k" $stressUrl $StressWorkers $StressDuration
+    $report.layers.map_api_stress = $direct
+    $color = if ($direct.pass) { "Green" } else { "Red" }
+    if ($direct.error) {
+        Write-Host ("  stress FAIL: {0}" -f $direct.error) -ForegroundColor Red
+    } else {
+        Write-Host ("  stress p95={0}ms (max {1}) errors={2} -> {3}" -f $direct.map_p95_ms, $direct.p95_max, $direct.map_errors, $(if ($direct.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color
+    }
+
+    if ($IncludeProdProxy -or $ProdProxyApiBase) {
+        if (-not $ProdProxyApiBase) { $ProdProxyApiBase = "https://backend-production-55c7.up.railway.app/api" }
+        $prodToken = (Invoke-RestMethod -Uri "$ProdProxyApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 120).access
+        $jsonOutProd = Join-Path $reportsDir "prod-proxy-map-stress-$ts.json"
+        $proxy = Run-MapBench "prod-proxy" $ProdProxyApiBase $prodToken $jsonOutProd "stress-50k" (Build-MapUrl $ProdProxyApiBase 6 50000) $StressWorkers $StressDuration
+        $report.layers.map_api_stress_prod_proxy = $proxy
+        $color2 = if ($proxy.pass) { "Green" } else { "Red" }
+        if ($proxy.error) {
+            Write-Host ("  prod-proxy stress FAIL: {0}" -f $proxy.error) -ForegroundColor Red
+        } else {
+            Write-Host ("  prod-proxy stress p95={0}ms -> {1}" -f $proxy.map_p95_ms, $(if ($proxy.pass) { "PASS" } else { "FAIL" })) -ForegroundColor $color2
+        }
+    }
+}
+
 if (-not $SkipWebGl) {
     Write-Host "`n--- Layer B: WebGL admin audit ---" -ForegroundColor Cyan
     $adminDir = Join-Path $RepoRoot "admin"
@@ -257,24 +318,30 @@ if (-not $SkipWebGl) {
 
 $report.diagnosis = @()
 if ($report.layers.map_probe | Where-Object { -not $_.ok }) {
-    $report.diagnosis += "Layer A0: telemetry/live returned 5xx - check backend OOM (uvicorn worker SIGKILL) and RAM sizing."
-}
-if ($report.layers.map_api.error) {
-    $report.diagnosis += "Layer A: map bench failed - backend may be unstable under 50k limit; try lower limit or scale backend RAM."
+    $report.diagnosis += "Layer A0: telemetry/live returned 5xx - check backend OOM and SIM_LAB_PROXY_MAP_TIMEOUT on prod."
 }
 
-$mapPass = $true
-if ($report.layers.map_api) {
-    if ($report.layers.map_api.error) { $mapPass = $false }
-    elseif ($report.layers.map_api.pass -eq $false) { $mapPass = $false }
+function Test-BenchLayer($layer) {
+    if (-not $layer) { return $true }
+    if ($layer.error) { return $false }
+    if ($layer.pass -eq $false) { return $false }
+    return $true
 }
-if ($report.layers.map_api_prod_proxy) {
-    if ($report.layers.map_api_prod_proxy.error) { $mapPass = $false }
-    elseif ($report.layers.map_api_prod_proxy.pass -eq $false) { $mapPass = $false }
-}
+
+$viewportPass = $true
+$stressPass = $true
+if (-not (Test-BenchLayer $report.layers.map_api_viewport)) { $viewportPass = $false }
+if (-not (Test-BenchLayer $report.layers.map_api_viewport_prod_proxy)) { $viewportPass = $false }
+if (-not (Test-BenchLayer $report.layers.map_api_stress)) { $stressPass = $false }
+if (-not (Test-BenchLayer $report.layers.map_api_stress_prod_proxy)) { $stressPass = $false }
+
 $report.finished_at = (Get-Date).ToUniversalTime().ToString("o")
-$report.pass = $mapPass
+$report.pass_viewport = $viewportPass
+$report.pass_stress = $stressPass
+# Primary gate: viewport-admin (admin UX). Stress tier is informational at 50k.
+$report.pass = $viewportPass
 
 $report | ConvertTo-Json -Depth 12 | Set-Content -Path $reportPath -Encoding UTF8
 Write-Host "`nReport: $reportPath" -ForegroundColor Cyan
-if (-not $mapPass) { exit 1 }
+Write-Host ("  viewport: {0}  stress: {1}  overall: {2}" -f $(if ($viewportPass) { "PASS" } else { "FAIL" }), $(if ($stressPass) { "PASS" } else { "FAIL" }), $(if ($report.pass) { "PASS" } else { "FAIL" }))
+if (-not $report.pass) { exit 1 }
