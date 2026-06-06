@@ -96,16 +96,17 @@ export function apiDetailForZoom(zoom: number): LiveApiDetail {
 export { LIVE_MAP_TIER, resolveLiveMapTier, TIER_MODE_LABEL } from './liveMapEnterprise';
 export type { LiveMapTier } from './liveMapEnterprise';
 
+/** Requested live-map position cap by zoom — backend clamps to SCALE_TELEMETRY_API_MAX_LIMIT (50k). */
 export function limitForZoom(zoom: number): number {
-    if (zoom < 6) return 800;
-    if (zoom < 7) return 1200;
-    if (zoom < 8.5) return 2000;
-    if (zoom < 10) return 2800;
-    if (zoom < 11) return 4000;
-    if (zoom < 12) return 5500;
-    if (zoom < 13) return 7000;
-    if (zoom < 14) return 9000;
-    return 11000;
+    if (zoom < 6) return 12_000;
+    if (zoom < 7) return 18_000;
+    if (zoom < 8.5) return 25_000;
+    if (zoom < 10) return 32_000;
+    if (zoom < 11) return 40_000;
+    if (zoom < 12) return 45_000;
+    if (zoom < 13) return 48_000;
+    if (zoom < 14) return 50_000;
+    return 50_000;
 }
 
 export function pollIntervalForZoom(

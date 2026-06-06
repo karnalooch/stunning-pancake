@@ -11,7 +11,13 @@ import {
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
     AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route
 } from 'lucide-react';
-import { SimulatorApi, formatApiError, WipeStuckError, type WipeProgressStatus } from '../../api/client';
+import {
+    SimulatorApi,
+    formatApiError,
+    WipeStuckError,
+    type SimTargetInfo,
+    type WipeProgressStatus,
+} from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
@@ -79,6 +85,7 @@ export const SimulatorPage: React.FC = () => {
     const [wipeStatus, setWipeStatus] = useState<WipeProgressStatus | null>(null);
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
+    const [simTarget, setSimTarget] = useState<SimTargetInfo | null>(null);
 
     const environmentLabel = useMemo(
         () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
@@ -116,6 +123,10 @@ export const SimulatorPage: React.FC = () => {
     const cheaters = Math.round(activeRiders * cheatRatio);
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
     const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
+
+    useEffect(() => {
+        SimulatorApi.getSimTarget().then(setSimTarget).catch(() => setSimTarget(null));
+    }, []);
 
     useEffect(() => {
         if (cyclists >= FORCE_SKIP_ACTIVITIES_ABOVE && generateActivities) {
@@ -375,6 +386,18 @@ export const SimulatorPage: React.FC = () => {
     return (
         <Box p="md">
             <PageHeader title="🚴 Cycling Simulator" subtitle="Interactive step-by-step wizard to configure, generate, and monitor live cyclists" />
+
+            {simTarget?.mode === 'sim-lab-proxy' && (
+                <Alert variant="light" color="teal" icon={<ShieldCheck size={18} />} title="Symulacja na sim-lab">
+                    Batch, live sim i wipe działają na izolowanej infrastrukturze ({simTarget.sim_lab_label || 'sim-lab'}).
+                    Panel admina i reszta API pozostają na produkcji — testy nie powinny zawieszać list użytkowników ani ustawień.
+                </Alert>
+            )}
+            {simTarget?.prod_heavy_sim_guard && simTarget.mode !== 'sim-lab-proxy' && (
+                <Alert variant="light" color="orange" icon={<AlertTriangle size={18} />} title="Ciężkie testy zablokowane na prod">
+                    Duże batch/live sim są odrzucane na tym backendzie. Włącz SIM_LAB_PROXY na backendzie prod lub użyj skryptów sim-lab.
+                </Alert>
+            )}
 
             <Card withBorder radius="md" p="xl" mb="md">
                 <Stepper active={activeStep} onStepClick={anyRunning ? undefined : setActiveStep} breakpoint="sm" allowNextStepsSelect={false}>

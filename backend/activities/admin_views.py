@@ -20,6 +20,11 @@ from users.models import Tenant
 from users.permissions import IsAdminOrModerator, IsGlobalOwner
 from . import simulator_state as sim
 from .simulator_tasks import run_batch_simulation, run_live_simulation
+from .sim_lab_proxy import (
+    assert_prod_heavy_sim_allowed,
+    sim_lab_proxy_target_info,
+    try_forward_sim_lab,
+)
 
 # Keep IsAdminRole as an alias for backward compatibility
 IsAdminRole = IsAdminOrModerator
@@ -421,6 +426,9 @@ class LiveSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=45)
+        if proxied is not None:
+            return proxied
         try:
             sim.maybe_advance_live_simulation()
             state = sim.get_live_state()
@@ -535,6 +543,9 @@ class LiveSimulationView(APIView):
             )
 
     def delete(self, request):
+        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=60)
+        if proxied is not None:
+            return proxied
         osrm_scale = sim.force_stop_live_simulation()
         body = {
             "status": "stopped",
@@ -548,6 +559,9 @@ class LiveSimulationView(APIView):
         return Response(body)
 
     def post(self, request):
+        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=120)
+        if proxied is not None:
+            return proxied
         from activities import wipe_state as ws
 
         if ws.is_wipe_in_progress():
@@ -655,6 +669,10 @@ class LiveSimulationView(APIView):
 
         total_athletes = User.objects.filter(role="ATHLETE").count()
         total_users = max(10, int(total_athletes * pool_pct))
+        target_active = max(1, int(total_users * active_ratio))
+        blocked = assert_prod_heavy_sim_allowed(target_active=target_active)
+        if blocked is not None:
+            return blocked
 
         pool_guard_notes: list[str] = []
         if profile is None:
@@ -820,12 +838,18 @@ class WipeDataView(APIView):
     permission_classes = [IsGlobalOwner]
 
     def get(self, request):
+        proxied = try_forward_sim_lab(request, "wipe-data/", timeout=45)
+        if proxied is not None:
+            return proxied
         from activities import wipe_state as ws
 
         state = ws.get_wipe_state()
         return Response(ws.serialize_wipe_response(state, log=ws.get_wipe_log()))
 
     def post(self, request):
+        proxied = try_forward_sim_lab(request, "wipe-data/", timeout=60)
+        if proxied is not None:
+            return proxied
         from activities import wipe_state as ws
 
         action = (request.data.get("action") or "").strip().lower()
@@ -846,6 +870,9 @@ class WipeDataView(APIView):
         return Response(cleared)
 
     def delete(self, request):
+        proxied = try_forward_sim_lab(request, "wipe-data/", timeout=120)
+        if proxied is not None:
+            return proxied
         confirm = (
             request.data.get("confirm", False) or request.query_params.get("confirm") == "true"
         )
@@ -931,6 +958,9 @@ class SimulatorResetView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request):
+        proxied = try_forward_sim_lab(request, "simulator-reset/", timeout=60)
+        if proxied is not None:
+            return proxied
         from activities import wipe_state as ws
 
         sim.reset_simulator_locks()
@@ -955,6 +985,9 @@ class WorkerStatusView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        proxied = try_forward_sim_lab(request, "worker-status/", timeout=45)
+        if proxied is not None:
+            return proxied
         try:
             from core.celery import app
 
@@ -1079,6 +1112,18 @@ class DiskAuditListView(APIView):
         )
 
 
+class SimTargetView(APIView):
+    """
+    GET /api/activities/admin/sim-target/
+    Where simulator admin APIs execute (local prod vs proxied sim-lab).
+    """
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        return Response(sim_lab_proxy_target_info())
+
+
 class ScalePreflightView(APIView):
     """
     GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.3
@@ -1088,6 +1133,9 @@ class ScalePreflightView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        proxied = try_forward_sim_lab(request, "scale-preflight/", timeout=60)
+        if proxied is not None:
+            return proxied
         from activities.scale_preflight import analyze_scale
 
         try:
@@ -1125,6 +1173,9 @@ class RunSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
+        proxied = try_forward_sim_lab(request, "simulate/", timeout=45)
+        if proxied is not None:
+            return proxied
         try:
             state = sim.get_batch_state()
             log = sim.get_batch_log()
@@ -1161,6 +1212,9 @@ class RunSimulationView(APIView):
             )
 
     def delete(self, request):
+        proxied = try_forward_sim_lab(request, "simulate/", timeout=60)
+        if proxied is not None:
+            return proxied
         sim.force_stop_batch_simulation()
         return Response(
             {
@@ -1171,6 +1225,9 @@ class RunSimulationView(APIView):
         )
 
     def post(self, request):
+        proxied = try_forward_sim_lab(request, "simulate/", timeout=120)
+        if proxied is not None:
+            return proxied
         from activities import wipe_state as ws
 
         if ws.is_wipe_in_progress():
@@ -1213,6 +1270,9 @@ class RunSimulationView(APIView):
                     {"error": f"total_users exceeds limit ({MAX_BATCH_USERS:,})"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            blocked = assert_prod_heavy_sim_allowed(total_users=total_users)
+            if blocked is not None:
+                return blocked
             if total_users >= FORCE_SKIP_ACTIVITIES_ABOVE and not skip_activities:
                 skip_activities = True
                 sim.batch_log(f"Auto skip_activities for {total_users:,} users (scale safety).")

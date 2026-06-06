@@ -179,7 +179,7 @@ def resolve_live_scale_limits(state: dict | None = None) -> dict[str, int]:
 
 # Live map API (viewport + zoom; see resolve_telemetry_api_limit)
 TELEMETRY_API_DEFAULT_LIMIT = _int("SCALE_TELEMETRY_API_LIMIT", 800)
-TELEMETRY_API_MAX_LIMIT = _int("SCALE_TELEMETRY_API_MAX_LIMIT", 15_000)
+TELEMETRY_API_MAX_LIMIT = _int("SCALE_TELEMETRY_API_MAX_LIMIT", 50_000)
 TELEMETRY_GEO_RADIUS_KM = _int("SCALE_TELEMETRY_GEO_RADIUS_KM", 80)
 # Short TTL for identical bbox+limit live-map polls (seconds)
 TELEMETRY_LIVE_CACHE_TTL = _int("SCALE_TELEMETRY_LIVE_CACHE_TTL", 2)
@@ -220,12 +220,13 @@ def resolve_telemetry_api_limit(limit: int | None, zoom: float | None) -> int:
     ceiling = TELEMETRY_API_MAX_LIMIT
     if zoom is not None:
         z = float(zoom)
+        # Macro/meso: higher caps so viewport can carry full event scale (clusters/H3 at low z).
         if z < 8:
-            ceiling = min(ceiling, 1_500)
+            ceiling = min(ceiling, 12_000)
         elif z < 10:
-            ceiling = min(ceiling, 4_000)
+            ceiling = min(ceiling, 25_000)
         elif z < 12:
-            ceiling = min(ceiling, 8_000)
+            ceiling = min(ceiling, 40_000)
     return min(req, ceiling)
 
 

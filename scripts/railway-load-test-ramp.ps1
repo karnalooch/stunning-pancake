@@ -28,12 +28,27 @@ $ApiBase = Resolve-SimLabApiBase -ApiBase $ApiBase
 Test-ProdApiGuard -ApiBase $ApiBase
 
 $reportPath = Join-Path $PSScriptRoot ".railway-load-test-report.json"
+$reportsDir = Join-Path $PSScriptRoot "load\reports"
+New-Item -ItemType Directory -Force -Path $reportsDir | Out-Null
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$archiveReportPath = Join-Path $reportsDir "railway-ramp-$timestamp.json"
 $logPath = Join-Path $PSScriptRoot ".railway-load-test.log"
+$healthSamples = [System.Collections.Generic.List[int]]::new()
+$authFailures = 0
 
 function Log([string]$msg) {
     $line = "[{0}] {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $msg
     Add-Content -Path $logPath -Value $line
     Write-Host $line
+}
+
+function Sample-Health {
+    $root = $ApiBase -replace '/api$', ''
+    try {
+        $sw = [Diagnostics.Stopwatch]::StartNew()
+        $r = Invoke-WebRequest -Uri "$root/health/" -UseBasicParsing -TimeoutSec 30
+        if ($r.StatusCode -eq 200) { [void]$script:healthSamples.Add([int]$sw.ElapsedMilliseconds) }
+    } catch { }
 }
 
 function Get-AuthHeaders {
@@ -45,6 +60,7 @@ function Get-AuthHeaders {
             $token = (Invoke-RestMethod -Uri "$ApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 60).access
             return @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
         } catch {
+            $script:authFailures++
             if ($i -ge 4) { throw }
             Start-Sleep -Seconds ([math]::Min(30, 5 * ($i + 1)))
         }
@@ -172,6 +188,7 @@ function Measure-LiveRamp([int]$PoolUsers, [double]$ActiveRatio, [int]$TimeoutMi
 
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Seconds $PollSeconds
+        Sample-Health
         $ls = Invoke-Api GET "$ApiBase/activities/admin/live-simulate/"
         $active = [int]$ls.ride_active
         $target = [int]$ls.target_on_map
@@ -287,6 +304,24 @@ foreach ($userTarget in $UserSteps) {
 }
 
 $report.finished_at = (Get-Date).ToString("o")
-$report | ConvertTo-Json -Depth 8 | Set-Content -Path $reportPath -Encoding UTF8
+if ($healthSamples.Count -gt 0) {
+    $sorted = $healthSamples | Sort-Object
+    $p95Idx = [math]::Min($sorted.Count - 1, [math]::Ceiling($sorted.Count * 0.95) - 1)
+    $report.health = @{
+        samples    = $healthSamples.Count
+        p95_ms     = $sorted[$p95Idx]
+        max_ms     = ($sorted | Measure-Object -Maximum).Maximum
+        auth_failures = $authFailures
+    }
+}
+$report.pass_criteria = @{
+    target_active_riders = 50000
+    health_p95_max_ms    = 5000
+    reached_50k          = ($report.summary.max_active_riders -ge 50000)
+}
+$json = $report | ConvertTo-Json -Depth 10
+Set-Content -Path $reportPath -Value $json -Encoding UTF8
+Set-Content -Path $archiveReportPath -Value $json -Encoding UTF8
 Log "Report: $reportPath"
+Log "Archive: $archiveReportPath"
 Log ("SUMMARY batch_max={0} live_active_peak={1} ratio_max={2}" -f $report.summary.max_users_batch, $report.summary.max_active_riders, $report.summary.max_stable_ratio)

@@ -59,10 +59,43 @@ Outputs `infrastructure/sim-lab/railway/sim-lab.created.env`. Uses **TimescaleDB
 
 **Deployed instance (2026-06-06):** project `098b5266-…`, API `https://backend-production-80cf.up.railway.app/api` — volumes, `SECRET_KEY`, brouter mount done via CLI. Fresh DB: `global_owner` / seed `admin123` (`create_admin`). Preflight PASS.
 
+### Admin prod → sim-lab (proxy)
+
+Żeby **panel admin na marvelous** uruchamiał symulator na sim-lab (bez obciążania prod Postgres/Celery), ustaw na **prod backend**:
+
+```text
+SIM_LAB_PROXY_ENABLED=1
+SIM_LAB_PROXY_BASE_URL=https://backend-production-80cf.up.railway.app
+SIM_LAB_PROXY_SECRET=<ten sam losowy secret>
+SIM_LAB_PROXY_PUBLIC_LABEL=4velo-sim-lab
+```
+
+Na **sim-lab backend**:
+
+```text
+SIM_LAB_ACCEPT_PROXY=1
+SIM_LAB_PROXY_SECRET=<ten sam secret>
+```
+
+Po redeploy admin pokaże baner „Symulacja na sim-lab”. Bez proxy: prod blokuje batch &gt; `PROD_MAX_BATCH_USERS` (domyślnie 10k) i live &gt; `PROD_MAX_LIVE_ACTIVE` (5k).
+
 ```powershell
+.\infrastructure\sim-lab\scripts\setup-sim-lab-proxy.ps1 -Redeploy
+.\infrastructure\sim-lab\scripts\sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy
+.\infrastructure\sim-lab\scripts\sync-sim-lab-telemetry-shards.ps1
+.\infrastructure\sim-lab\scripts\setup-sim-lab-brouter-2.ps1
+.\infrastructure\sim-lab\scripts\preflight-sim-lab-readiness.ps1
+
 $env:SIM_LAB_API_BASE = 'https://backend-production-80cf.up.railway.app/api'
-$env:ADMIN_PASS = 'admin123'   # or your rotated password
-.\infrastructure\sim-lab\scripts\preflight-sim-lab.ps1
+$env:ADMIN_PASS = 'admin123'
+.\scripts\run-300k-wipe-batch.ps1
+.\scripts\railway-load-test-ramp.ps1
+.\scripts\load\run-sim-lab-stress.ps1 -Suite stress-50k
+
+# Prod wipe only:
+$env:ALLOW_PROD_LOAD_TEST = '1'
+$env:ADMIN_PASS = '<prod password>'
+.\scripts\run-300k-wipe-batch.ps1 -ApiBase 'https://backend-production-55c7.up.railway.app/api' -WipeOnly -ConfirmProdWipe
 ```
 
 

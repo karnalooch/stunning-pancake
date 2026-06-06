@@ -54,6 +54,8 @@ $liveCaps = @(
     'SCALE_SIM_MAX_PIPELINE_MULTIPLIER=2.5'
     'SCALE_SIM_MAX_PIPELINE_HEADROOM=500'
     'SCALE_SIM_START_BUDGET_MODE=active_on_map'
+    'SCALE_TELEMETRY_API_MAX_LIMIT=50000'
+    'LIVE_MAP_FULL_SCALE=1'
 )
 
 # Routing throughput (50k ramp needs deep queue + high dispatch)

@@ -314,12 +314,23 @@ def live_map_read_policy() -> LiveMapReadPolicy:
         LIVE_MAP_INGEST_DETAIL_CEILING — summary|standard|full cap (default standard)
     """
     engaged = ingest_guard_engaged()
+    full_scale = os.getenv("LIVE_MAP_FULL_SCALE", "0").lower() in ("1", "true", "yes")
     if not engaged:
         return LiveMapReadPolicy(
             ingest_engaged=False,
             cap_multiplier=1.0,
             poll_interval_multiplier=1.0,
             cache_ttl_seconds=0,
+            detail_ceiling=None,
+        )
+    if full_scale:
+        return LiveMapReadPolicy(
+            ingest_engaged=True,
+            cap_multiplier=1.0,
+            poll_interval_multiplier=max(
+                1.0, min(3.0, _live_map_float("LIVE_MAP_INGEST_POLL_RATIO", 1.5))
+            ),
+            cache_ttl_seconds=max(2, _live_map_int("LIVE_MAP_INGEST_CACHE_TTL", 4)),
             detail_ceiling=None,
         )
     ceiling = (os.getenv("LIVE_MAP_INGEST_DETAIL_CEILING", "standard") or "standard").strip().lower()

@@ -56,8 +56,8 @@ EVENT_BURST_LOAD_SPIKE_JOIN_THRESHOLD = _int("EVENT_BURST_LOAD_SPIKE_JOIN_THRESH
 # How long load-driven auto burst stays on
 EVENT_BURST_AUTO_TTL_SECONDS = _int("EVENT_BURST_AUTO_TTL_SECONDS", 7200)
 
-# Concurrent riders on map during event load tests (live sim + real GPS cap guidance)
-EVENT_MAX_CONCURRENT_RIDERS = _int("EVENT_MAX_CONCURRENT_RIDERS", 10_000)
+# Concurrent riders on map during events (live sim publish + live-map index target)
+EVENT_MAX_CONCURRENT_RIDERS = _int("EVENT_MAX_CONCURRENT_RIDERS", 50_000)
 
 # Spread synthetic live-sim ride starts across this window (seconds)
 EVENT_START_STAGGER_SECONDS = _int("EVENT_START_STAGGER_SECONDS", 600)

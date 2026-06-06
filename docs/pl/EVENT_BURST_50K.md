@@ -66,7 +66,7 @@ Structured logs: `loadguard.engaged`, `loadguard.throttled` (same style as `sim.
 |----------|----------------|--------------|
 | **50k app opens** | Users open the app, browse, tap “join event” | Soft-capped by `EVENT_JOIN_RATE_PER_MINUTE` (default 5k/min per event) when burst is active |
 | **50k session starts** | Users tap “start ride” at once | `EVENT_SESSION_START_RATE_PER_MINUTE` (default 3k/min); excess gets 429 + queue |
-| **50k simultaneous GPS** | All publishing live telemetry | **Not supported** — map/Redis capped at `EVENT_MAX_CONCURRENT_RIDERS` (default 10k); live API returns bounded bbox sample |
+| **50k simultaneous GPS** | All publishing live telemetry | **Target** — `EVENT_MAX_CONCURRENT_RIDERS=50000`, telemetry shards, `LIVE_MAP_FULL_SCALE=1` on event day; map uses LOD (H3/meso counts + micro markers), not random subsampling |
 
 Graceful degradation: Postgres and Django see staggered joins and session creates, not a single thundering herd.
 
@@ -103,7 +103,9 @@ EVENT_BURST_LOAD_SESSION_THRESHOLD=300
 EVENT_BURST_AUTO_TTL_SECONDS=7200
 
 # Rate limits when burst is active
-EVENT_MAX_CONCURRENT_RIDERS=10000
+EVENT_MAX_CONCURRENT_RIDERS=50000
+LIVE_MAP_FULL_SCALE=1
+SCALE_TELEMETRY_API_MAX_LIMIT=50000
 EVENT_START_STAGGER_SECONDS=600
 EVENT_JOIN_RATE_PER_MINUTE=5000
 EVENT_SESSION_START_RATE_PER_MINUTE=3000
@@ -137,7 +139,7 @@ Legacy: `EVENT_BURST_MODE=1` → `on`, `EVENT_BURST_MODE=0` → `off`.
 ## Honest limits
 
 - **50k registrations over ~10 minutes** is realistic with default join rate (5k/min).
-- **10k concurrent GPS dots** on the live map is the intended ceiling (`EVENT_MAX_CONCURRENT_RIDERS`).
+- **50k concurrent riders** on the live index is the target (`EVENT_MAX_CONCURRENT_RIDERS=50000`); at country zoom use H3/meso aggregates with full counts, at z≥12 request up to 50k micro positions per viewport.
 - The live-position index is **horizontally sharded** across N Redis shards with Phase 2 per-shard client routing — see [operations/TELEMETRY_SHARDING.md](./operations/TELEMETRY_SHARDING.md). Set `TELEMETRY_SHARD_COUNT=4+` on backend + simulation worker; optional `REDIS_TELEMETRY_SHARD_NODES` for dedicated Redis per shard. Load-test scaffold: [operations/TELEMETRY_LOAD_TEST.md](./operations/TELEMETRY_LOAD_TEST.md).
 - Use staggered starts and client-side retry on 429 (global guard + event burst).
 

@@ -1,7 +1,7 @@
 import { limitForZoom } from './liveMapZoom';
 
 /** Fast first-paint cap for Meso/micro viewport loads (P2 progressive limit). */
-export const PROGRESSIVE_FAST_LIMIT = 1200;
+export const PROGRESSIVE_FAST_LIMIT = 4000;
 
 export function progressiveLimitForZoom(zoom: number): number {
     return Math.min(PROGRESSIVE_FAST_LIMIT, limitForZoom(zoom));

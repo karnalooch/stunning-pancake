@@ -330,7 +330,19 @@ export type ScaleOverrides = {
   brouter_route_attempts: number;
 };
 
+export type SimTargetInfo = {
+  mode: 'local' | 'sim-lab-proxy';
+  sim_lab_label?: string | null;
+  sim_lab_base_url?: string | null;
+  prod_heavy_sim_guard?: boolean;
+};
+
 export const SimulatorApi = {
+  getSimTarget: async (): Promise<SimTargetInfo> => {
+    const { data } = await apiClient.get('/activities/admin/sim-target/');
+    return data;
+  },
+
   getScalePreflight: async (params: {
     target_users: number;
     active_ratio?: number;
