@@ -105,10 +105,24 @@ try {
         }
     }
 
+    foreach ($line in @("CELERY_WORKER_QUEUES=simulation", "CELERY_WORKER_HOSTNAME=simulation@%h")) {
+        Set-RailwayVar "celery-worker-simulation" $line
+        Write-Host "  celery-worker-simulation : $line"
+    }
+    foreach ($line in @(
+        "CELERY_WORKER_QUEUES=routing"
+        "CELERY_WORKER_HOSTNAME=routing@%h"
+        "CELERY_WORKER_POOL=solo"
+        "CELERY_WORKER_CONCURRENCY=3"
+    )) {
+        Set-RailwayVar "celery-worker-routing" $line
+        Write-Host "  celery-worker-routing : $line"
+    }
+
     if ($Redeploy -and -not $SkipDeploys) {
         foreach ($svc in @("backend", "celery-worker-simulation", "celery-worker-routing", "telemetry")) {
             Write-Host "Redeploy $svc..."
-            Invoke-RailwayQuiet @("redeploy", "-s", $svc, "-y", "--detach")
+            Invoke-RailwayQuiet @("redeploy", "-s", $svc, "-y")
         }
     }
 
