@@ -223,7 +223,7 @@ function Measure-LiveRamp([int]$PoolUsers, [double]$ActiveRatio, [int]$TimeoutMi
             Stop-Live
             return @{ ok = $true; active = $active; target = $target; peak = $peak; samples = $samples }
         }
-        if ($stable -ge $RampStableTicks -and $active -gt 0) {
+        if ($stable -ge $RampStableTicks -and $active -gt 0 -and $target -gt 0 -and $active -lt ($target * 0.05)) {
             Stop-Live
             return @{ ok = $true; active = $active; target = $target; peak = $peak; plateau = $true; samples = $samples }
         }

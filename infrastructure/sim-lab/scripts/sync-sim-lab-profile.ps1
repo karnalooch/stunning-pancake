@@ -20,10 +20,16 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-function Invoke-RailwayQuiet([string[]]$Args) {
+function Invoke-RailwayQuiet([string[]]$RailwayArgs) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    try { & railway @Args 2>&1 | Out-Null } finally { $ErrorActionPreference = $prev }
+    try { & railway @RailwayArgs 2>&1 | Out-Null } finally { $ErrorActionPreference = $prev }
+}
+
+function Set-RailwayVar([string]$Service, [string]$Line) {
+    $railwayArgs = @("variable", "set", $Line, "-s", $Service, "-e", $Environment)
+    if ($SkipDeploys) { $railwayArgs += "--skip-deploys" }
+    Invoke-RailwayQuiet $railwayArgs
 }
 $SimLabRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $ProfilePath = Join-Path $SimLabRoot "railway\profiles\$Profile.env"
@@ -62,9 +68,6 @@ try {
     Invoke-RailwayQuiet @("link", "-p", $ProjectId, "-e", $Environment, "-w", "8aa1f35e-a716-4526-8209-5aadcaae2246", "--json")
     $ErrorActionPreference = $prevEap
 
-    $extra = @()
-    if ($SkipDeploys) { $extra = @("--skip-deploys") }
-
     $sharedServices = @(
         "backend",
         "celery-worker-simulation",
@@ -78,26 +81,26 @@ try {
     foreach ($svc in $sharedServices) {
         foreach ($line in $lines) {
             if ($line -notmatch '=') { continue }
-            Invoke-RailwayQuiet @("variable", "set", $line, "-s", $svc, "-e", $Environment) + $extra
+            Set-RailwayVar $svc $line
             Write-Host "  $svc : $line"
         }
     }
 
     foreach ($svc in @("brouter", "brouter-2")) {
         foreach ($line in $brouterOnly) {
-            Invoke-RailwayQuiet @("variable", "set", $line, "-s", $svc, "-e", $Environment) + $extra
+            Set-RailwayVar $svc $line
             Write-Host "  $svc : $line"
         }
     }
 
     foreach ($line in $telemetryOnly) {
-        Invoke-RailwayQuiet @("variable", "set", $line, "-s", "telemetry", "-e", $Environment) + $extra
+        Set-RailwayVar "telemetry" $line
         Write-Host "  telemetry : $line"
     }
 
     foreach ($svc in @("celery-worker-simulation", "celery-worker-routing", "backend")) {
         foreach ($line in $routingOnly) {
-            Invoke-RailwayQuiet @("variable", "set", $line, "-s", $svc, "-e", $Environment) + $extra
+            Set-RailwayVar $svc $line
             Write-Host "  $svc : $line"
         }
     }
