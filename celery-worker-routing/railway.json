@@ -5,7 +5,7 @@
     "dockerfilePath": "celery-worker-simulation/Dockerfile"
   },
   "deploy": {
-    "numReplicas": 6,
+    "numReplicas": 8,
     "sleepApplication": false,
     "restartPolicy": "ALWAYS",
     "limitOverride": {
@@ -19,24 +19,24 @@
     "BROUTER_URLS": "http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter",
     "OSRM_URL": "http://osrm.railway.internal:5000",
     "SCALE_SIM_ROUTING_BACKEND": "auto",
-    "BROUTER_TIMEOUT": "25",
     "SCALE_SIM_STRICT_ROAD_ROUTES": "1",
+    "BROUTER_TIMEOUT": "25",
     "CELERY_WORKER_QUEUES": "routing",
-    "CELERY_WORKER_CONCURRENCY": "3",
+    "CELERY_WORKER_CONCURRENCY": "4",
     "CELERY_WORKER_POOL": "solo",
     "CELERY_WORKER_PREFETCH_MULTIPLIER": "1",
     "CELERY_MAX_TASKS_PER_CHILD": "30",
     "CELERY_WORKER_HOSTNAME": "routing@%h",
     "SCALE_SIM_ASYNC_ROUTING": "1",
-    "SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "500",
-    "SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK": "200",
-    "SCALE_SIM_MAX_ROUTING_BACKLOG": "2000",
+    "SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "0",
+    "SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK": "10000",
+    "SCALE_SIM_MAX_ROUTING_BACKLOG": "100000",
     "SCALE_SIM_INSTANT_ACTIVE_ON_ROUTE": "1",
-    "SIM_BP_MIN_DISPATCH_PER_TICK": "40",
-    "SIM_BP_DRAIN_DISPATCH_PER_TICK": "80",
-    "SIM_BP_QUEUE_HEADROOM": "50",
+    "SIM_BP_MIN_DISPATCH_PER_TICK": "5000",
+    "SIM_BP_DRAIN_DISPATCH_PER_TICK": "10000",
+    "SIM_BP_QUEUE_HEADROOM": "100000",
     "BROUTER_RETRIES": "3",
     "SCALE_SIM_ROUTE_TEMPLATE_CACHE": "1",
-    "SCALE_POSTGRES_DISK_BUDGET_GB": "20"
+    "SCALE_POSTGRES_DISK_BUDGET_GB": "30"
   }
 }

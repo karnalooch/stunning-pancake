@@ -125,7 +125,19 @@ $env:ADMIN_PASS = "..."
 | Plik | Użycie |
 |------|--------|
 | [`railway/profiles/smoke.env`](./railway/profiles/smoke.env) | Szybka walidacja, mały pool |
-| [`railway/profiles/300k-50k.env`](./railway/profiles/300k-50k.env) | Pełny load test |
+| [`railway/profiles/300k-50k.env`](./railway/profiles/300k-50k.env) | Pełny load test (enterprise fast ramp) |
+
+### Fast ramp (prod-realistic, 50k ACTIVE)
+
+| Dźwignia | Wartość | Gdzie |
+|----------|---------|--------|
+| Starts/tick | 5000 | `300k-50k.env`, `railway-load-test-ramp.ps1` (`-MaxStartsPerTick`) |
+| Tick | 4 s | ramp script (`-TickSeconds`) |
+| Routing | 8× repliki, concurrency 4 | `celery-worker-routing/railway.json` |
+| Budget mode | `active_on_map` | profil env |
+| Pipeline prefetch | 250k abs, mult 5.0 | profil env |
+
+Po zmianie profilu: `sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy`, potem restart live sim (reset + POST z ramp script).
 
 Lokalnie te same wartości są w [`.env.sim-lab.example`](./.env.sim-lab.example) i [docker-compose.sim-lab.yml](./docker-compose.sim-lab.yml).
 

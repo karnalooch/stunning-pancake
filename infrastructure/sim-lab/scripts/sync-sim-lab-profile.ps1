@@ -113,7 +113,7 @@ try {
         "CELERY_WORKER_QUEUES=routing"
         "CELERY_WORKER_HOSTNAME=routing@%h"
         "CELERY_WORKER_POOL=solo"
-        "CELERY_WORKER_CONCURRENCY=3"
+        "CELERY_WORKER_CONCURRENCY=4"
     )) {
         Set-RailwayVar "celery-worker-routing" $line
         Write-Host "  celery-worker-routing : $line"

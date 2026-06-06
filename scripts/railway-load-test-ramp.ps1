@@ -19,7 +19,10 @@ param(
     [int]$PollSeconds = 12,
     [int]$RampStableTicks = 3,
     [int]$BatchTimeoutMin = 60,
-    [int]$LiveStepTimeoutMin = 15
+    [int]$LiveStepTimeoutMin = 15,
+    [int]$MaxStartsPerTick = 5000,
+    [int]$TickSeconds = 4,
+    [int]$BrouterMaxCallsPerTick = 5000
 )
 
 $ErrorActionPreference = "Stop"
@@ -166,10 +169,10 @@ function Measure-LiveRamp([int]$PoolUsers, [double]$ActiveRatio, [int]$TimeoutMi
         pool_pct        = 1.0
         active_ratio    = $ActiveRatio
         cheat_ratio     = 0.05
-        tick_seconds    = 10
+        tick_seconds    = $TickSeconds
         scale_overrides = @{
-            max_starts_per_live_tick     = 1000
-            brouter_max_calls_per_tick   = 500
+            max_starts_per_live_tick     = $MaxStartsPerTick
+            brouter_max_calls_per_tick   = $BrouterMaxCallsPerTick
             brouter_route_attempts       = 4
         }
     } | ConvertTo-Json -Depth 4
@@ -240,6 +243,7 @@ $report = @{
 }
 
 Log "=== Railway load test ramp ==="
+Log ("fast ramp: tick={0}s starts={1}/tick brouter={2}/tick (prod-realistic BRouter)" -f $TickSeconds, $MaxStartsPerTick, $BrouterMaxCallsPerTick)
 $pf = Invoke-Api GET "$ApiBase/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.17&skip_activities=true"
 $report.preflight = @{
     athletes_in_db           = $pf.athletes_in_db
