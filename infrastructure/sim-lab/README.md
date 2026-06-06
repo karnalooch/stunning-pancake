@@ -139,6 +139,18 @@ $env:ADMIN_PASS = "..."
 
 Po zmianie profilu: `sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy`, potem restart live sim (reset + POST z ramp script).
 
+Audyt wolnej mapy przy ~50k ACTIVE:
+
+```powershell
+$env:ADMIN_PASS = 'admin123'
+# sim-lab direct + prod proxy hop + WebGL
+.\scripts\load\run-sim-lab-live-map-audit.ps1 -IncludeProdProxy
+# tylko API (szybciej):
+.\scripts\load\run-sim-lab-live-map-audit.ps1 -SkipWebGl -IncludeProdProxy
+```
+
+Raport: `scripts/load/reports/sim-lab-live-map-audit-*.json`. SLO: map p95 <= 300 ms (tier stress-50k).
+
 Lokalnie te same wartości są w [`.env.sim-lab.example`](./.env.sim-lab.example) i [docker-compose.sim-lab.yml](./docker-compose.sim-lab.yml).
 
 ## Zmienne dla skryptów

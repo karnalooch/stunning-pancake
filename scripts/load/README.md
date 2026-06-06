@@ -29,6 +29,7 @@ Reports are written to `scripts/load/reports/` (gitignored). Schema: `report_sch
 | **k6 ingest batch** | `k6/ingest-batch.js` | Distributed ingest POST |
 | **Locust** | `locust/locustfile.py` | Swarm ingest + optional map |
 | **Sim-lab ramp** | `../railway-load-test-ramp.ps1` | Default `SIM_LAB_API_BASE`; prod needs `ALLOW_PROD_LOAD_TEST=1` |
+| **Sim-lab map audit** | `run-sim-lab-live-map-audit.ps1` | Map p95 + WebGL audit at ~50k ACTIVE |
 | **Sim-lab infra** | `../../infrastructure/sim-lab/README.md` | Isolated Docker / Railway project |
 
 Shared batch body: `lib/packets.py` (`make_batch_body`). Report helpers: `lib/report.py`.

@@ -60,7 +60,9 @@ if ($hdr) {
 
     try {
         $ws = Invoke-RestMethod -Uri "$ApiBase/activities/admin/worker-status/" -Headers $hdr -TimeoutSec 60
-        $routing = @($ws.workers | Where-Object { $_.queues -match 'routing' }).Count
+        $routing = @($ws.workers | Where-Object {
+                ($_.queues -match 'routing') -or ($_.name -match '^routing@')
+            }).Count
         Add-Check "routing_workers" ($routing -ge 6) ("count={0} (want >=6 for 50k ramp)" -f $routing)
     } catch {
         Add-Check "routing_workers" $false $_.Exception.Message
@@ -92,7 +94,7 @@ Write-Host ""
 Write-Host "Manual Railway checks:" -ForegroundColor Yellow
 Write-Host "  TimescaleDB volume >= 30 GB"
 Write-Host "  Redis RAM >= 4 GB"
-Write-Host "  celery-worker-simulation >= 4 GB RAM"
+Write-Host "  backend >= 8 GB RAM (sim-lab map reads at 50k; scale-sim-lab-backend.ps1)"
 Write-Host "  celery-worker-routing >= 8 replicas x 2 GB (CELERY_WORKER_CONCURRENCY=4)"
 Write-Host "  telemetry >= 4 GB RAM, UVICORN_WORKERS=4"
 Write-Host "  brouter volume segments PL > 1 GB"
