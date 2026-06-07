@@ -17,6 +17,7 @@ import {
     WipeStuckError,
     type SimTargetInfo,
     type WipeProgressStatus,
+    type WipeTarget,
 } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
 import { PageHeader } from '../../core/components/PageHeader';
@@ -91,6 +92,8 @@ export const SimulatorPage: React.FC = () => {
         () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
         [],
     );
+
+    const wipeTarget: WipeTarget = simTarget?.mode === 'sim-lab-proxy' ? 'sim-lab' : 'prod-local';
 
     const requiredWipePhrase = useMemo(
         () => `DELETE ALL DATA — ${environmentLabel} — GLOBAL_OWNER`,
@@ -181,7 +184,7 @@ export const SimulatorPage: React.FC = () => {
             const [bs, ls, ws] = await Promise.all([
                 SimulatorApi.getBatchStatus().catch(() => null),
                 SimulatorApi.getLiveStatus().catch(() => null),
-                SimulatorApi.getWipeStatus().catch(() => null),
+                SimulatorApi.getWipeStatus(wipeTarget).catch(() => null),
             ]);
             setBatchStatus(bs);
             setLiveStatus(ls);
@@ -199,7 +202,7 @@ export const SimulatorPage: React.FC = () => {
             if (batchPollRef.current) clearInterval(batchPollRef.current);
             if (livePollRef.current) clearInterval(livePollRef.current);
         };
-    }, [startPolling]);
+    }, [startPolling, wipeTarget]);
 
     useEffect(() => {
         logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -285,6 +288,7 @@ export const SimulatorPage: React.FC = () => {
                 {
                     confirmPhrase: wipeConfirmPhrase,
                     mfaConfirmed: wipeMfaAck,
+                    target: wipeTarget,
                 },
             );
             setBatchStatus(null);
@@ -327,6 +331,7 @@ export const SimulatorPage: React.FC = () => {
             const restarted = await SimulatorApi.recoverStuckWipe({
                 confirmPhrase: wipeConfirmPhrase,
                 mfaConfirmed: wipeMfaAck,
+                target: wipeTarget,
             });
             setWipeStatus(restarted);
             notifications.show({
@@ -339,6 +344,7 @@ export const SimulatorPage: React.FC = () => {
                 {
                     confirmPhrase: wipeConfirmPhrase,
                     mfaConfirmed: wipeMfaAck,
+                    target: wipeTarget,
                 },
             );
             setWipeStatus(result);
@@ -366,7 +372,7 @@ export const SimulatorPage: React.FC = () => {
 
     const handleWipeUnstick = async () => {
         try {
-            const cleared = await SimulatorApi.forceUnstickWipe();
+            const cleared = await SimulatorApi.forceUnstickWipe(wipeTarget);
             setWipeStatus(cleared);
             setWiping(false);
             notifications.show({
@@ -389,8 +395,9 @@ export const SimulatorPage: React.FC = () => {
 
             {simTarget?.mode === 'sim-lab-proxy' && (
                 <Alert variant="light" color="teal" icon={<ShieldCheck size={18} />} title="Symulacja na sim-lab">
-                    Batch, live sim i wipe działają na izolowanej infrastrukturze ({simTarget.sim_lab_label || 'sim-lab'}).
-                    Panel admina i reszta API pozostają na produkcji — testy nie powinny zawieszać list użytkowników ani ustawień.
+                    Batch, live sim i wipe z tej strony działają na izolowanej infrastrukturze ({simTarget.sim_lab_label || 'sim-lab'}).
+                    KPI na dashboardzie czytają prod DB — aby je wyczyścić, użyj <b>Settings → Danger Zone</b> lub{' '}
+                    <code>node scripts/wipe-prod-local.mjs</code>.
                 </Alert>
             )}
             {simTarget?.prod_heavy_sim_guard && simTarget.mode !== 'sim-lab-proxy' && (
@@ -807,8 +814,17 @@ export const SimulatorPage: React.FC = () => {
                 }}
                 closeOnClickOutside={!isWipeBlocked}
                 closeOnEscape={!isWipeBlocked}
-                title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>} centered>
+                title={<Text fw={700} c="red">⚠️ Wipe simulation data</Text>} centered>
                 <Stack gap="md">
+                    {simTarget?.mode === 'sim-lab-proxy' ? (
+                        <Alert color="teal" variant="light" icon={<Database size={16} />} title="Cel: sim-lab">
+                            Usuwa dane symulacji na {simTarget.sim_lab_label || 'sim-lab'}. Nie czyści KPI na dashboardzie prod.
+                        </Alert>
+                    ) : (
+                        <Alert color="orange" variant="light" icon={<Database size={16} />} title="Cel: prod DB">
+                            Usuwa lokalną bazę prod (użytkownicy, aktywności, tenanty).
+                        </Alert>
+                    )}
                     <Text size="sm" c="dimmed">
                         Stop 1/2: Type the exact phrase (role + environment).
                     </Text>

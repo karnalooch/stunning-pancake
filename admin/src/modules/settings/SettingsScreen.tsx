@@ -6,7 +6,13 @@ import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
 import { WipeProgressBar } from '../analytics/SimulationProgressBar';
-import { formatApiError, SimulatorApi, WipeStuckError, type WipeProgressStatus } from '../../api/client';
+import {
+  formatApiError,
+  SimulatorApi,
+  WipeStuckError,
+  type SimTargetInfo,
+  type WipeProgressStatus,
+} from '../../api/client';
 
 export const SettingsScreen: React.FC = () => {
   const { user } = useAuth();
@@ -127,27 +133,44 @@ export const SettingsScreen: React.FC = () => {
     },
   ];
 
+  const [simTarget, setSimTarget] = useState<SimTargetInfo | null>(null);
   const [wipeModalOpen, setWipeModalOpen] = useState(false);
   const [wipeConfirmPhrase, setWipeConfirmPhrase] = useState('');
   const [wipeMfaAck, setWipeMfaAck] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [wipeStatus, setWipeStatus] = useState<WipeProgressStatus | null>(null);
 
+  const prodWipeTarget = 'prod-local' as const;
+
+  useEffect(() => {
+    SimulatorApi.getSimTarget().then(setSimTarget).catch(() => setSimTarget(null));
+    SimulatorApi.getWipeStatus(prodWipeTarget)
+      .then((ws) => {
+        if (SimulatorApi.isWipeActive(ws)) {
+          setWipeStatus(ws);
+          setWiping(SimulatorApi.isWipeBlocked(ws));
+          setWipeModalOpen(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const isWipeBlocked = wiping || SimulatorApi.isWipeBlocked(wipeStatus);
   const isWipeStuck = Boolean(wipeStatus?.stuck) && !wiping;
 
   const handleWipe = async () => {
     setWiping(true);
-    setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: 'Starting wipe…' });
+    setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: 'Starting prod wipe…' });
     try {
       const result = await SimulatorApi.wipeData((s) => setWipeStatus(s), {
         confirmPhrase: wipeConfirmPhrase,
         mfaConfirmed: wipeMfaAck,
+        target: prodWipeTarget,
       });
       const warn = result?.warning;
       notifications.show({
-        title: 'Data Wiped',
-        message: warn || 'All data except Global Owner has been deleted.',
+        title: 'Prod data wiped',
+        message: warn || 'Prod DB cleared (dashboard KPIs will refresh).',
         color: warn ? 'yellow' : 'green',
       });
       setWipeModalOpen(false);
@@ -179,11 +202,13 @@ export const SettingsScreen: React.FC = () => {
       const restarted = await SimulatorApi.recoverStuckWipe({
         confirmPhrase: wipeConfirmPhrase,
         mfaConfirmed: wipeMfaAck,
+        target: prodWipeTarget,
       });
       setWipeStatus(restarted);
       const result = await SimulatorApi.wipeData((s) => setWipeStatus(s), {
         confirmPhrase: wipeConfirmPhrase,
         mfaConfirmed: wipeMfaAck,
+        target: prodWipeTarget,
       });
       notifications.show({
         title: 'Data Wiped',
@@ -209,7 +234,7 @@ export const SettingsScreen: React.FC = () => {
 
   const handleWipeUnstick = async () => {
     try {
-      const cleared = await SimulatorApi.forceUnstickWipe();
+      const cleared = await SimulatorApi.forceUnstickWipe(prodWipeTarget);
       setWipeStatus(cleared);
       setWiping(false);
       notifications.show({
@@ -253,7 +278,11 @@ export const SettingsScreen: React.FC = () => {
             </Text>
           </Group>
           <Text size="sm" c="dimmed" mb="md">
-            Permanently deletes ALL users (except Global Owner), tenants, departments, and activities. This action cannot be undone.
+            Czyści <b>prod DB</b> (KPI na dashboardzie): użytkownicy, tenanty, działy i aktywności.
+            {simTarget?.mode === 'sim-lab-proxy' && (
+              <> Wipe w Simulatorze idzie na {simTarget.sim_lab_label || 'sim-lab'} — nie dotyka tych danych.</>
+            )}
+            {' '}CLI: <Code>node scripts/wipe-prod-local.mjs</Code>
           </Text>
           <Button color="red" variant="outline" leftSection={<Trash2 size={16} />} onClick={() => setWipeModalOpen(true)}>
             Wipe All Data
@@ -273,11 +302,14 @@ export const SettingsScreen: React.FC = () => {
             centered
           >
             <Stack gap="md">
+              <Text size="sm" c="orange" fw={600}>
+                Cel: prod Postgres (force_local) — status: GET wipe-data/?local=1
+              </Text>
               <Text size="sm" c="dimmed">
                 Stop 1/2: Type the exact phrase (role + environment).
               </Text>
               <Text size="sm">
-                This will delete ALL activities, users (except <b>GLOBAL_OWNER</b>), tenants, and departments.
+                Usuwa z prod DB: aktywności, użytkowników (oprócz <b>GLOBAL_OWNER</b>), tenanty i działy.
                 Type <b>exactly</b>: <span style={{ fontFamily: 'monospace' }}>&quot;{requiredWipePhrase}&quot;</span>
               </Text>
 

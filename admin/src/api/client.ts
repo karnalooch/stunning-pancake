@@ -8,6 +8,9 @@ import {
   isAuthApiPath,
 } from '../core/auth/tokens';
 
+/** sim-lab = proxied wipe (sim data). prod-local = prod Postgres (dashboard KPIs). */
+export type WipeTarget = 'sim-lab' | 'prod-local';
+
 export type WipeProgressStatus = {
   running?: boolean;
   status?: string;
@@ -27,7 +30,20 @@ export type WipeProgressStatus = {
   last_progress_at?: number | null;
   completed_at?: number | null;
   log?: [string, string][];
+  sim_lab_proxy?: boolean;
 };
+
+function wipeDataPath(target: WipeTarget = 'sim-lab'): string {
+  return target === 'prod-local'
+    ? '/activities/admin/wipe-data/?local=1'
+    : '/activities/admin/wipe-data/';
+}
+
+function simulatorResetPath(target: WipeTarget = 'sim-lab'): string {
+  return target === 'prod-local'
+    ? '/activities/admin/simulator-reset/?local=1'
+    : '/activities/admin/simulator-reset/';
+}
 
 /** Thrown when wipe is stuck and auto-recovery failed; carries last server status. */
 export class WipeStuckError extends Error {
@@ -399,8 +415,8 @@ export const SimulatorApi = {
     return data;
   },
 
-  resetSimulator: async () => {
-    const { data } = await apiClient.post('/activities/admin/simulator-reset/');
+  resetSimulator: async (target: WipeTarget = 'sim-lab') => {
+    const { data } = await apiClient.post(simulatorResetPath(target));
     return data;
   },
 
@@ -410,8 +426,8 @@ export const SimulatorApi = {
     return data;
   },
 
-  getWipeStatus: async (): Promise<WipeProgressStatus> => {
-    const { data } = await apiClient.get('/activities/admin/wipe-data/');
+  getWipeStatus: async (target: WipeTarget = 'sim-lab'): Promise<WipeProgressStatus> => {
+    const { data } = await apiClient.get(wipeDataPath(target));
     return data;
   },
 
@@ -429,36 +445,52 @@ export const SimulatorApi = {
   },
 
   /** Clear wipe locks only — does not restart wipe or reset simulator. */
-  forceUnstickWipe: async (): Promise<WipeProgressStatus> => {
-    const { data } = await apiClient.post('/activities/admin/wipe-data/', { action: 'unstick' });
+  forceUnstickWipe: async (target: WipeTarget = 'sim-lab'): Promise<WipeProgressStatus> => {
+    const { data } = await apiClient.post(wipeDataPath(target), { action: 'unstick' });
     return data;
   },
 
   /** Clear sim lock/state then force-restart a stuck wipe. */
   recoverStuckWipe: async (
-    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
+    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean; target?: WipeTarget },
   ): Promise<WipeProgressStatus> => {
+    const target = opts?.target ?? 'sim-lab';
     const confirm_phrase = opts?.confirmPhrase ?? '';
     const mfa_confirmed = Boolean(opts?.mfaConfirmed);
-    await SimulatorApi.resetSimulator();
-    const { data } = await apiClient.delete('/activities/admin/wipe-data/', {
-      data: { confirm: true, force: true, confirm_phrase, mfa_confirmed },
-    });
+    await SimulatorApi.resetSimulator(target);
+    const body: Record<string, unknown> = {
+      confirm: true,
+      force: true,
+      confirm_phrase,
+      mfa_confirmed,
+    };
+    if (target === 'prod-local') {
+      body.force_local = true;
+    }
+    const { data } = await apiClient.delete(wipeDataPath(target), { data: body });
     return data;
   },
 
   // Wipe Data (async chunked — poll until complete)
   wipeData: async (
     onProgress?: (s: WipeProgressStatus) => void,
-    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean },
+    opts?: { confirmPhrase?: string; mfaConfirmed?: boolean; target?: WipeTarget },
   ): Promise<WipeProgressStatus> => {
+    const target = opts?.target ?? 'sim-lab';
     const confirm_phrase = opts?.confirmPhrase ?? '';
     const mfa_confirmed = Boolean(opts?.mfaConfirmed);
 
     const startWipe = async (force = false): Promise<WipeProgressStatus> => {
-      const { data } = await apiClient.delete('/activities/admin/wipe-data/', {
-        data: { confirm: true, force, confirm_phrase, mfa_confirmed },
-      });
+      const body: Record<string, unknown> = {
+        confirm: true,
+        force,
+        confirm_phrase,
+        mfa_confirmed,
+      };
+      if (target === 'prod-local') {
+        body.force_local = true;
+      }
+      const { data } = await apiClient.delete(wipeDataPath(target), { data: body });
       return data;
     };
 
@@ -483,9 +515,9 @@ export const SimulatorApi = {
       if (ax.response?.status === 202 && ax.response.data) {
         onProgress?.(ax.response.data);
       } else if (ax.response?.status === 409) {
-        const status = await SimulatorApi.getWipeStatus();
+        const status = await SimulatorApi.getWipeStatus(target);
         if (status.stuck) {
-          const restarted = await SimulatorApi.recoverStuckWipe(opts);
+          const restarted = await SimulatorApi.recoverStuckWipe({ ...opts, target });
           onProgress?.(restarted);
         } else if (SimulatorApi.isWipeActive(status)) {
           onProgress?.(status);
@@ -498,7 +530,7 @@ export const SimulatorApi = {
     }
 
     for (let i = 0; i < 30; i++) {
-      const status = await SimulatorApi.getWipeStatus();
+      const status = await SimulatorApi.getWipeStatus(target);
       onProgress?.(status);
       if (SimulatorApi.isWipeActive(status)) break;
       await sleep(1000);
@@ -511,14 +543,14 @@ export const SimulatorApi = {
 
     for (let i = 0; i < maxPolls; i++) {
       await sleep(2000);
-      const status = await SimulatorApi.getWipeStatus();
+      const status = await SimulatorApi.getWipeStatus(target);
       onProgress?.(status);
 
       if (status.stuck) {
         if (stuckRetries < maxStuckRetries) {
           stuckRetries += 1;
           try {
-            const restarted = await SimulatorApi.recoverStuckWipe(opts);
+            const restarted = await SimulatorApi.recoverStuckWipe({ ...opts, target });
             onProgress?.(restarted);
             continue;
           } catch (recoverErr: unknown) {
@@ -547,7 +579,7 @@ export const SimulatorApi = {
         return { ...status, warning: end.warning || status.warning };
       }
     }
-    const last = await SimulatorApi.getWipeStatus();
+    const last = await SimulatorApi.getWipeStatus(target);
     onProgress?.(last);
     throw new WipeStuckError(
       'Wipe timed out after 60 minutes',
