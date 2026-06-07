@@ -27,9 +27,14 @@ export const MAP_ATTRIBUTION_CONTROL_OPTIONS = {
 } as const;
 
 /**
- * Font stacks available from OpenFreeMap positron/dark glyphs endpoint
- * (`https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf`).
- * Positron style uses Noto Sans only — Open Sans stacks 404.
+ * Glyphs CDN with full Noto Sans coverage (incl. emoji Unicode blocks).
+ * OpenFreeMap's bundled fonts omit ranges like 128512–128767 → noisy 404s in console.
+ */
+export const MAP_GLYPHS_URL = 'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf';
+
+/**
+ * Font stacks used by OpenFreeMap positron/dark and live-map label layers.
+ * Positron style uses Noto Sans only — Open Sans stacks 404 on any CDN.
  */
 export const MAP_TEXT_FONT_BOLD = ['Noto Sans Bold'] as const;
 export const MAP_TEXT_FONT_REGULAR = ['Noto Sans Regular'] as const;
@@ -54,4 +59,22 @@ export function resolveMapStyleUrl(variant: MapBasemapVariant): string {
             ? envTrim('VITE_MAP_STYLE_URL_LIGHT')
             : envTrim('VITE_MAP_STYLE_URL_DARK');
     return specific ?? global ?? DEFAULT_BY_VARIANT[variant];
+}
+
+/** Override order: `VITE_MAP_GLYPHS_URL` → {@link MAP_GLYPHS_URL}. */
+export function resolveMapGlyphsUrl(): string {
+    return envTrim('VITE_MAP_GLYPHS_URL') ?? MAP_GLYPHS_URL;
+}
+
+type MapStyleGlyphs = { glyphs?: string };
+
+/** MapLibre `transformStyle` hook — keeps tiles/sprites, swaps glyphs to {@link resolveMapGlyphsUrl}. */
+export function transformMapGlyphsStyle(
+    _previous: MapStyleGlyphs,
+    next: MapStyleGlyphs,
+): MapStyleGlyphs {
+    return {
+        ...next,
+        glyphs: resolveMapGlyphsUrl(),
+    };
 }

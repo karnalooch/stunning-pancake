@@ -3,7 +3,11 @@ import { Box, Text, SegmentedControl, Group, Skeleton, Alert, Badge } from '@man
 import { AlertCircle, Map as MapIcon } from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
-import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
+import {
+    MAP_ATTRIBUTION_CONTROL_OPTIONS,
+    resolveMapStyleUrl,
+    transformMapGlyphsStyle,
+} from '../../core/map/mapBasemap';
 
 // Lazy-init maplibregl — flatten double/triple-wrapped CJS interop from Rollup/Vite
 let _mlPromise: Promise<any> | null = null;
@@ -45,6 +49,7 @@ export const GlobalHeatmap: React.FC = () => {
       const map = new m.Map({
         container: mapContainer.current,
         style: MAP_STYLE,
+        transformStyle: transformMapGlyphsStyle,
         center: DEFAULT_CENTER,
         zoom: DEFAULT_ZOOM,
         attributionControl: false,

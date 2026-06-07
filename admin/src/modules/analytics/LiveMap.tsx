@@ -99,7 +99,11 @@ import {
     shouldRetainMarkersOnEmptyPayload,
 } from './liveMapViewport';
 import type { LiveApiDetail } from './liveMapZoom';
-import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl } from '../../core/map/mapBasemap';
+import {
+    MAP_ATTRIBUTION_CONTROL_OPTIONS,
+    resolveMapStyleUrl,
+    transformMapGlyphsStyle,
+} from '../../core/map/mapBasemap';
 import { classifyMapLibreError } from '../../core/map/mapErrorPolicy';
 import { isLiveMapE2eEnabled, publishLiveMapE2e } from './liveMapE2e';
 
@@ -1559,6 +1563,7 @@ export const LiveMap: React.FC = () => {
             const map = new m.Map({
                 container: mapContainer.current,
                 style: MAP_STYLE,
+                transformStyle: transformMapGlyphsStyle,
                 center: DEFAULT_CENTER,
                 zoom: DEFAULT_ZOOM,
                 attributionControl: false,

@@ -22,7 +22,12 @@ import {
     cityHubOpacityAtZoom,
     clusterLayerOpacityAtZoom,
 } from '../modules/analytics/liveMapZoom';
-import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../core/map/mapBasemap';
+import {
+    MAP_GLYPHS_URL,
+    MAP_TEXT_FONT_BOLD,
+    MAP_TEXT_FONT_REGULAR,
+    transformMapGlyphsStyle,
+} from '../core/map/mapBasemap';
 
 describe('liveMapZoom', () => {
     it('zoomFade returns 0 below start and 1 at/above end', () => {
@@ -135,9 +140,20 @@ describe('liveMapZoom', () => {
 });
 
 describe('mapBasemap fonts', () => {
-    it('uses Noto Sans stacks compatible with OpenFreeMap glyphs', () => {
+    it('uses Noto Sans stacks compatible with OpenMapTiles glyphs', () => {
         expect(MAP_TEXT_FONT_BOLD).toEqual(['Noto Sans Bold']);
         expect(MAP_TEXT_FONT_REGULAR).toEqual(['Noto Sans Regular']);
         expect(MAP_TEXT_FONT_BOLD.join(' ')).not.toMatch(/Open Sans/i);
+    });
+
+    it('transformMapGlyphsStyle overrides OpenFreeMap glyphs URL', () => {
+        const incoming = {
+            glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+            version: 8,
+        };
+        expect(transformMapGlyphsStyle(incoming, incoming)).toEqual({
+            ...incoming,
+            glyphs: MAP_GLYPHS_URL,
+        });
     });
 });
