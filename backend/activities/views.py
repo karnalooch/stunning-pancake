@@ -484,9 +484,11 @@ class TelemetryLiveView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        from activities.sim_lab_proxy import try_forward_sim_lab_activities
+        from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
-        proxied = try_forward_sim_lab_activities(request, "telemetry/live/")
+        proxied = try_forward_sim_lab_activities(
+            request, "telemetry/live/", allow_local_fallback=True
+        )
         if proxied is not None:
             return proxied
 
@@ -497,6 +499,10 @@ class TelemetryLiveView(generics.GenericAPIView):
         sim.maybe_advance_live_simulation_from_poll()
         req = parse_live_map_query_params(request.query_params, user=request.user)
         body = build_live_map_payload(req)
+        if sim_lab_proxy_enabled():
+            meta = body.setdefault("meta", {})
+            if isinstance(meta, dict):
+                meta["sim_lab_proxy_fallback"] = True
         read_policy = live_map_read_policy()
         from activities.live_map_api import live_map_etag
 

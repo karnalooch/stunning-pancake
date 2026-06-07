@@ -58,8 +58,17 @@ Reports: `admin/audit-screenshots/perf-audit-*.json`, `admin/audit-screenshots/a
 
 ---
 
+## Fixes applied (2026-06-07 follow-up)
+
+| Issue | Fix |
+|-------|-----|
+| `telemetry/live` 500 via sim-lab proxy | `allow_local_fallback=True` — prod serves local map with `meta.sim_lab_proxy_fallback` instead of 500 |
+| Cold `admin/stats` ~10s | Batch `recent_unverified` (1 query); cache TTL 300s; Celery warm task every 4 min |
+| Slow `departments/tree` | Single annotated query + in-memory tree |
+
 ## Post-deploy verification checklist
 
 - [ ] `audit-admin-perf.mjs`: warm `ai/insights` and `analytics/department` p95 &lt; 200ms
-- [ ] `audit-admin-full.mjs`: no `loading_gap` on departments, settings, sponsor
+- [ ] `telemetry/live` returns 200 (fallback or proxy), not 500
+- [ ] `departments/tree` p95 &lt; 800ms
 - [ ] Manual: Dashboard cold `?refresh=1` shows boot overlay then KPI fade-in

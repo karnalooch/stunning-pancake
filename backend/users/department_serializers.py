@@ -35,6 +35,9 @@ class DepartmentSerializer(serializers.ModelSerializer):
         read_only_fields = ["created_at"]
 
     def get_member_count(self, obj):
+        annotated = getattr(obj, "_member_count", None)
+        if annotated is not None:
+            return int(annotated)
         return obj.get_member_count()
 
 

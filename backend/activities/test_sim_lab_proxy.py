@@ -116,6 +116,29 @@ def test_try_forward_activities_url_and_query(mock_request, monkeypatch):
 
 
 @patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_activities_fallback_on_500(mock_request, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 500
+    mock_resp.content = b"<html>Internal Server Error</html>"
+    mock_resp.json.side_effect = ValueError("not json")
+    mock_resp.text = "<html>Internal Server Error</html>"
+    mock_request.return_value = mock_resp
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/telemetry/live/?zoom=6")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab_activities(
+        request, "telemetry/live/", allow_local_fallback=True
+    )
+    assert proxied is None
+
+
+@patch("activities.sim_lab_proxy.requests.request")
 def test_try_forward_activities_passthrough_304(mock_request, monkeypatch):
     monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
     monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")

@@ -423,6 +423,29 @@ def generate_gpx_task(activity_id: int) -> dict:
     return {"status": "ok", "activity_id": activity_id, "sha256": digest, "storage_key": storage_key}
 
 
+@shared_task(name="activities.tasks.warm_dashboard_stats_cache", ignore_result=True)
+def warm_dashboard_stats_cache() -> dict:
+    """Keep admin dashboard KPI cache warm — avoids 10s cold aggregates on first owner visit."""
+    from django.contrib.auth import get_user_model
+
+    from activities.admin_stats import build_dashboard_stats
+
+    User = get_user_model()
+    owner = (
+        User.objects.filter(role="GLOBAL_OWNER", is_active=True)
+        .order_by("id")
+        .first()
+    )
+    if not owner:
+        return {"status": "skipped", "reason": "no_global_owner"}
+    try:
+        build_dashboard_stats(owner, refresh=True)
+        return {"status": "ok"}
+    except Exception as exc:
+        logger.exception("warm_dashboard_stats_cache failed")
+        return {"status": "error", "detail": str(exc)[:200]}
+
+
 # Register Celery tasks in sibling modules (autodiscover only loads tasks.py).
 from . import simulator_tasks  # noqa: F401
 from . import wipe_tasks  # noqa: F401

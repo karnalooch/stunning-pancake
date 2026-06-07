@@ -19,7 +19,7 @@ from users.models import Tenant
 logger = logging.getLogger(__name__)
 
 STATS_CACHE_KEY = "{admin}:dashboard:stats"
-STATS_CACHE_TTL = 120  # seconds
+STATS_CACHE_TTL = 300  # seconds — warm path for 300k dashboards
 DEPT_ANALYTICS_CACHE_TTL = 120
 
 
@@ -171,6 +171,18 @@ def _empty_stats(*, stale: bool = False, note: str | None = None) -> dict:
     return payload
 
 
+def _activity_to_unverified_row(a) -> dict:
+    return {
+        "id": a.id,
+        "activity_id": a.id,
+        "user": a.user.username if a.user_id else "Unknown",
+        "username": a.user.username if a.user_id else "Unknown",
+        "type": a.type,
+        "distance": a.distance,
+        "score": float(a.verification_score or 0),
+    }
+
+
 def _recent_unverified_for_tenant(tenant_id: str, *, limit: int = 25) -> list[dict]:
     """Pending moderation queue for a single tenant."""
     qs = (
@@ -178,18 +190,29 @@ def _recent_unverified_for_tenant(tenant_id: str, *, limit: int = 25) -> list[di
         .select_related("user")
         .order_by("-created_at")[:limit]
     )
-    return [
-        {
-            "id": a.id,
-            "activity_id": a.id,
-            "user": a.user.username if a.user_id else "Unknown",
-            "username": a.user.username if a.user_id else "Unknown",
-            "type": a.type,
-            "distance": a.distance,
-            "score": float(a.verification_score or 0),
-        }
-        for a in qs
-    ]
+    return [_activity_to_unverified_row(a) for a in qs]
+
+
+def _recent_unverified_by_tenant(
+    tenant_ids: list[str], *, limit_per_tenant: int = 25
+) -> dict[str, list[dict]]:
+    """Batch moderation queue — one query instead of N per-tenant loops."""
+    from collections import defaultdict
+
+    if not tenant_ids:
+        return {}
+    cap = limit_per_tenant * len(tenant_ids)
+    qs = (
+        Activity.objects.filter(tenant_id__in=tenant_ids, is_verified=False)
+        .select_related("user")
+        .order_by("-created_at")[:cap]
+    )
+    grouped: dict[str, list[dict]] = defaultdict(list)
+    for activity in qs:
+        tid = str(activity.tenant_id)
+        if len(grouped[tid]) < limit_per_tenant:
+            grouped[tid].append(_activity_to_unverified_row(activity))
+    return dict(grouped)
 
 
 def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
@@ -227,6 +250,8 @@ def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
         logger.exception("admin/stats per_tenant group aggregates failed")
         return rows
 
+    unverified_by_tenant = _recent_unverified_by_tenant([str(t.id) for t in tenant_list])
+
     for tid in tenant_ids:
         tenant = tenant_by_id[tid]
         try:
@@ -234,9 +259,10 @@ def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
             act_count = agg.get("activities") or 0
             dist = agg.get("distance") or 0
             verified = agg.get("verified") or 0
+            tid_str = str(tenant.id)
             rows.append(
                 {
-                    "tenant_id": str(tenant.id),
+                    "tenant_id": tid_str,
                     "tenant_name": tenant.name,
                     "users": users_by_tenant.get(tid, 0),
                     "activities": act_count,
@@ -244,7 +270,7 @@ def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
                     "verified_pct": round((verified / act_count * 100), 1) if act_count else 0.0,
                     "primary_color": tenant.primary_color,
                     "secondary_color": tenant.secondary_color,
-                    "recent_unverified": _recent_unverified_for_tenant(str(tenant.id)),
+                    "recent_unverified": unverified_by_tenant.get(tid_str, []),
                 }
             )
         except Exception:

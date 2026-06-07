@@ -361,6 +361,12 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(hour=2, minute=0),
         "options": {"queue": "default"},
     },
+    # Admin dashboard KPI cache — every 4 minutes (TTL 300s)
+    "warm-dashboard-stats-cache": {
+        "task": "activities.tasks.warm_dashboard_stats_cache",
+        "schedule": crontab(minute="*/4"),
+        "options": {"queue": "default"},
+    },
     # Postgres disk guard — every 5 minutes (simulation safeguards + audit)
     "postgres-disk-monitor": {
         "task": "activities.tasks.monitor_postgres_disk",

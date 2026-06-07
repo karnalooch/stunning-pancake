@@ -122,13 +122,24 @@ def _forward_headers(request) -> dict[str, str]:
     return headers
 
 
+def _upstream_should_fallback(payload: Any, status_code: int) -> bool:
+    if status_code >= 500:
+        return True
+    if isinstance(payload, dict):
+        err = str(payload.get("error") or payload.get("detail") or "")
+        if "Internal Server Error" in err:
+            return True
+    return False
+
+
 def _forward_upstream(
     request,
     url: str,
     *,
     timeout: int,
     passthrough_status: bool = False,
-) -> Response:
+    allow_local_fallback: bool = False,
+) -> Response | None:
     headers = _forward_headers(request)
     body = _request_body(request)
 
@@ -142,6 +153,8 @@ def _forward_upstream(
         )
     except requests.RequestException as exc:
         logger.warning("sim-lab proxy failed %s %s: %s", request.method, url, exc)
+        if allow_local_fallback:
+            return None
         return Response(
             {
                 "error": "Sim-lab proxy unreachable. Check SIM_LAB_PROXY_* on backend.",
@@ -165,6 +178,14 @@ def _forward_upstream(
         payload = upstream.json() if upstream.content else {}
     except json.JSONDecodeError:
         payload = {"error": upstream.text or "Non-JSON sim-lab response", "sim_lab_proxy": True}
+
+    if allow_local_fallback and _upstream_should_fallback(payload, upstream.status_code):
+        logger.warning(
+            "sim-lab proxy %s returned %s — falling back to local handler",
+            url,
+            upstream.status_code,
+        )
+        return None
 
     if isinstance(payload, dict):
         payload.setdefault("sim_lab_proxy", True)
@@ -194,6 +215,7 @@ def try_forward_sim_lab_activities(
     activities_suffix: str,
     *,
     timeout: int | None = None,
+    allow_local_fallback: bool = False,
 ) -> Response | None:
     """Forward telemetry/live and related activity endpoints to sim-lab."""
     if not sim_lab_proxy_enabled():
@@ -206,6 +228,7 @@ def try_forward_sim_lab_activities(
         url,
         timeout=effective_timeout,
         passthrough_status=True,
+        allow_local_fallback=allow_local_fallback,
     )
 
 

@@ -5,6 +5,7 @@ Endpoints for managing departments and user assignments.
 """
 
 from django.conf import settings
+from django.db.models import Count
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -29,7 +30,9 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if not getattr(settings, "DEPARTMENTS_ENABLED", True):
             return Department.objects.none()
-        qs = super().get_queryset().filter(is_active=True)
+        qs = super().get_queryset().filter(is_active=True).annotate(
+            _member_count=Count("userdepartment", distinct=True)
+        )
         # Global owners see all, tenant admins see their tenant
         if self.request.user.role == "GLOBAL_OWNER":
             return qs
@@ -44,15 +47,33 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def tree(self, request):
-        """Get department hierarchy as a tree."""
-        if request.user.role == "GLOBAL_OWNER":
-            roots = self.get_queryset().filter(parent__isnull=True)
-        else:
-            roots = self.get_queryset().filter(
-                parent__isnull=True, tenant_id=request.user.tenant_id
+        """Get department hierarchy as a tree (single query + in-memory build)."""
+        qs = self.get_queryset()
+        if request.user.role != "GLOBAL_OWNER":
+            qs = qs.filter(tenant_id=request.user.tenant_id)
+
+        by_parent: dict[int | None, list] = {}
+        direct_counts: dict[int, int] = {}
+        for dept in qs.only("id", "name", "department_type", "parent_id"):
+            direct_counts[dept.id] = int(getattr(dept, "_member_count", 0) or 0)
+            by_parent.setdefault(dept.parent_id, []).append(dept)
+
+        def build_node(dept) -> dict:
+            child_nodes = by_parent.get(dept.id, [])
+            children = [build_node(child) for child in child_nodes]
+            full_count = direct_counts.get(dept.id, 0) + sum(
+                c["member_count"] for c in children
             )
-        serializer = DepartmentTreeSerializer(roots, many=True)
-        return Response(serializer.data)
+            return {
+                "id": dept.id,
+                "name": dept.name,
+                "department_type": dept.department_type,
+                "member_count": full_count,
+                "children": children,
+            }
+
+        roots = by_parent.get(None, [])
+        return Response([build_node(root) for root in roots])
 
     @action(detail=False, methods=["get"])
     def my(self, request):
