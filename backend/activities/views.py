@@ -905,17 +905,35 @@ class AIInsightsView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        return Response(generate_insights())
+        return Response(generate_insights(request.user))
 
 
-def generate_insights():
+def generate_insights(request_user=None):
+    from activities.admin_stats import get_cached_dashboard_stats, _scoped_tenant_id
     from .models import Activity
-    from django.db.models import Sum, Count
+    from django.db.models import Count, Q
 
-    total = Activity.objects.count()
-    verified = Activity.objects.filter(is_verified=True).count()
-    pct = round(verified / max(total, 1) * 100, 1)
-    anomalies = Activity.objects.filter(verification_score__lt=0.3).count()
+    cached = get_cached_dashboard_stats(request_user) if request_user is not None else None
+    if cached:
+        total = cached.get("total_activities", 0)
+        verified = cached.get("verified_total", 0)
+        anomalies = cached.get("low_score_total", 0)
+        pct = round(verified / max(total, 1) * 100, 1)
+    else:
+        scoped_tid = _scoped_tenant_id(request_user) if request_user is not None else None
+        qs = Activity.objects.all()
+        if scoped_tid:
+            qs = qs.filter(tenant_id=scoped_tid)
+        totals = qs.aggregate(
+            total=Count("id"),
+            verified=Count("id", filter=Q(is_verified=True)),
+            low_score=Count("id", filter=Q(verification_score__lt=0.3)),
+        )
+        total = totals["total"] or 0
+        verified = totals["verified"] or 0
+        anomalies = totals["low_score"] or 0
+        pct = round(verified / max(total, 1) * 100, 1)
+
     return [
         {
             "type": "positive",

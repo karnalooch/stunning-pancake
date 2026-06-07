@@ -1138,7 +1138,7 @@ class AntiCheatEngine:
     def get_recent_anomalies(tenant_id=None, limit=20):
         from .models import Activity
 
-        qs = Activity.objects.filter(is_verified=False)
+        qs = Activity.objects.filter(is_verified=False).select_related("user")
         if tenant_id:
             qs = qs.filter(tenant_id=tenant_id)
 

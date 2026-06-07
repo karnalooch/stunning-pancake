@@ -199,39 +199,10 @@ class DepartmentAnalyticsView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def get(self, request):
-        from users.departments import Department
+        from activities.admin_stats import build_department_analytics
 
-        # GLOBAL_OWNER sees all active departments; tenant-scoped roles see only their own
-        if request.user.role == "GLOBAL_OWNER":
-            departments = Department.objects.filter(is_active=True)
-        elif request.user.role in ("TENANT_ADMIN", "TENANT_MODERATOR") and request.user.tenant_id:
-            departments = Department.objects.filter(
-                tenant_id=request.user.tenant_id, is_active=True
-            )
-        else:
-            departments = Department.objects.none()
-
-        result = []
-        for dept in departments:
-            dept_user_ids = dept.members.values_list("id", flat=True)
-            dept_activities = Activity.objects.filter(user_id__in=dept_user_ids)
-            dept_act_count = dept_activities.count()
-            dept_distance = dept_activities.aggregate(Sum("distance"))["distance__sum"] or 0
-            dept_verified = dept_activities.filter(is_verified=True).count()
-            result.append(
-                {
-                    "department_id": dept.id,
-                    "department_name": dept.name,
-                    "users": dept.members.count(),
-                    "activities": dept_act_count,
-                    "distance_km": round(float(dept_distance / 1000.0), 1),
-                    "verified_pct": round((dept_verified / dept_act_count * 100), 1)
-                    if dept_act_count > 0
-                    else 0.0,
-                }
-            )
-
-        return Response(result)
+        refresh = request.query_params.get("refresh") == "1"
+        return Response(build_department_analytics(request.user, refresh=refresh))
 
 
 class ActivityApproveView(APIView):
@@ -399,19 +370,31 @@ class ExportDataView(APIView):
         return {"resource": "users", "format": fmt, "count": len(users), "data": users}
 
     def _export_statistics(self, fmt):
-        total_activities = Activity.objects.count()
-        total_users = get_user_model().objects.count()
-        total_distance = Activity.objects.aggregate(Sum("distance"))["distance__sum"] or 0
-        verified = Activity.objects.filter(is_verified=True).count()
+        from activities.admin_stats import get_cached_dashboard_stats
+
+        cached = get_cached_dashboard_stats()
+        if cached:
+            total_activities = cached.get("total_activities", 0)
+            total_users = cached.get("total_users", 0)
+            total_distance_km = cached.get("total_distance_km", 0.0)
+            verified = cached.get("verified_total", 0)
+            verified_pct = cached.get("verified_pct", 0.0)
+        else:
+            total_activities = Activity.objects.count()
+            total_users = get_user_model().objects.count()
+            total_distance = Activity.objects.aggregate(Sum("distance"))["distance__sum"] or 0
+            verified = Activity.objects.filter(is_verified=True).count()
+            total_distance_km = round(float(total_distance) / 1000.0, 1)
+            verified_pct = round(verified / max(total_activities, 1) * 100, 1)
         return {
             "resource": "statistics",
             "format": fmt,
             "data": {
                 "total_activities": total_activities,
                 "total_users": total_users,
-                "total_distance_km": round(float(total_distance) / 1000.0, 1),
+                "total_distance_km": total_distance_km,
                 "verified_count": verified,
-                "verified_pct": round(verified / max(total_activities, 1) * 100, 1),
+                "verified_pct": verified_pct,
             },
         }
 

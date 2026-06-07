@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Title, Table, Button, Modal, TextInput, Select, Text, Badge, ActionIcon, Group, Stack, Tree, Paper } from '@mantine/core';
+import { Box, Title, Table, Button, Modal, TextInput, Select, Text, Badge, ActionIcon, Group, Stack, Tree, Paper, Skeleton } from '@mantine/core';
 import { useAuth } from '../../core/auth/useAuth';
 import { apiClient } from '../../api/client';
 import { IconPlus, IconEdit, IconTrash, IconUsers } from '@tabler/icons-react';
@@ -32,6 +32,7 @@ export const Departments: React.FC = () => {
     const { hasPermission } = useAuth();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [tree, setTree] = useState<DepartmentTreeNode[]>([]);
+    const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingDept, setEditingDept] = useState<Department | null>(null);
     const [viewMode, setViewMode] = useState<'list' | 'tree'>('list');
@@ -62,10 +63,8 @@ export const Departments: React.FC = () => {
     };
 
     useEffect(() => {
-        Promise.resolve().then(() => {
-            fetchDepartments();
-            fetchTree();
-        });
+        setLoading(true);
+        Promise.all([fetchDepartments(), fetchTree()]).finally(() => setLoading(false));
     }, []);
 
     const handleDelete = async (id: number) => {
@@ -123,7 +122,11 @@ export const Departments: React.FC = () => {
                 </Group>
             </Group>
 
-            {viewMode === 'list' ? (
+            {loading ? (
+                <Stack gap="sm">
+                    {[...Array(5)].map((_, i) => <Skeleton key={i} height={44} radius="md" />)}
+                </Stack>
+            ) : viewMode === 'list' ? (
                 <Paper withBorder>
                     <Table>
                         <Table.Thead>

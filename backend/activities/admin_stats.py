@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 STATS_CACHE_KEY = "{admin}:dashboard:stats"
 STATS_CACHE_TTL = 120  # seconds
+DEPT_ANALYTICS_CACHE_TTL = 120
 
 
 def _scoped_tenant_id(request_user) -> str | None:
@@ -158,6 +159,7 @@ def _empty_stats(*, stale: bool = False, note: str | None = None) -> dict:
         "verified_total": 0,
         "verified_pct": 0.0,
         "unverified_total": 0,
+        "low_score_total": 0,
         "per_tenant": [],
         "per_department": [],
         "stale": stale,
@@ -191,30 +193,52 @@ def _recent_unverified_for_tenant(tenant_id: str, *, limit: int = 25) -> list[di
 
 
 def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
-    """
-    Per-tenant KPIs via separate aggregates (avoids broken SQL from
-    multiple Count(distinct=True, filter=...) on the same join).
-    """
+    """Per-tenant KPIs via GROUP BY aggregates (one pass over activities + users)."""
     rows: list[dict] = []
     tenants = Tenant.objects.filter(is_active=True)
     if tenant_id:
         tenants = tenants.filter(id=tenant_id)
-    for tenant in tenants.only("id", "name", "primary_color", "secondary_color"):
-        try:
-            users = tenant.users.count()
-            agg = Activity.objects.filter(tenant_id=tenant.id).aggregate(
+    tenant_list = list(tenants.only("id", "name", "primary_color", "secondary_color"))
+    if not tenant_list:
+        return rows
+
+    tenant_ids = [t.id for t in tenant_list]
+    tenant_by_id = {t.id: t for t in tenant_list}
+
+    try:
+        activity_by_tenant = {
+            row["tenant_id"]: row
+            for row in Activity.objects.filter(tenant_id__in=tenant_ids)
+            .values("tenant_id")
+            .annotate(
                 activities=Count("id"),
                 distance=Sum("distance", filter=Q(is_verified=True)),
                 verified=Count("id", filter=Q(is_verified=True)),
             )
-            act_count = agg["activities"] or 0
-            dist = agg["distance"] or 0
-            verified = agg["verified"] or 0
+        }
+        User = get_user_model()
+        users_by_tenant = {
+            row["tenant_id"]: row["users"]
+            for row in User.objects.filter(tenant_id__in=tenant_ids)
+            .values("tenant_id")
+            .annotate(users=Count("id"))
+        }
+    except Exception:
+        logger.exception("admin/stats per_tenant group aggregates failed")
+        return rows
+
+    for tid in tenant_ids:
+        tenant = tenant_by_id[tid]
+        try:
+            agg = activity_by_tenant.get(tid, {})
+            act_count = agg.get("activities") or 0
+            dist = agg.get("distance") or 0
+            verified = agg.get("verified") or 0
             rows.append(
                 {
                     "tenant_id": str(tenant.id),
                     "tenant_name": tenant.name,
-                    "users": users,
+                    "users": users_by_tenant.get(tid, 0),
                     "activities": act_count,
                     "distance_km": round(float(dist) / 1000.0, 1),
                     "verified_pct": round((verified / act_count * 100), 1) if act_count else 0.0,
@@ -301,6 +325,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
             total_activities=Count("id"),
             total_distance=Sum("distance"),
             verified_total=Count("id", filter=Q(is_verified=True)),
+            low_score_total=Count("id", filter=Q(verification_score__lt=0.3)),
             new_activities_last_7d=Count("id", filter=Q(created_at__gte=seven_days_ago)),
         )
         user_totals = user_qs.aggregate(
@@ -337,6 +362,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         "verified_total": total_verified,
         "verified_pct": verified_pct,
         "unverified_total": total_activities - total_verified,
+        "low_score_total": totals.get("low_score_total") or 0,
         "per_tenant": per_tenant,
         "per_department": _per_department_breakdown(request_user),
         "recent_unverified": recent_unverified,
@@ -349,3 +375,99 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         payload["sim_kpi"] = build_sim_kpi_snapshot()
     set_cached_dashboard_stats(payload, request_user)
     return payload
+
+
+def _dept_analytics_cache_key(request_user) -> str:
+    tid = _scoped_tenant_id(request_user)
+    if tid:
+        return f"{{admin}}:analytics:department:tenant:{tid}"
+    return "{admin}:analytics:department:global"
+
+
+def get_cached_department_analytics(request_user) -> list | None:
+    try:
+        raw = _redis().get(_dept_analytics_cache_key(request_user))
+        if raw:
+            return json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+    except Exception:
+        pass
+    return None
+
+
+def set_cached_department_analytics(request_user, payload: list) -> None:
+    try:
+        _redis().setex(
+            _dept_analytics_cache_key(request_user),
+            DEPT_ANALYTICS_CACHE_TTL,
+            json.dumps(payload),
+        )
+    except Exception:
+        pass
+
+
+def build_department_analytics(request_user, *, refresh: bool = False) -> list[dict]:
+    """Grouped department stats — replaces N+1 loop in DepartmentAnalyticsView."""
+    if not refresh:
+        cached = get_cached_department_analytics(request_user)
+        if cached is not None:
+            return cached
+
+    from users.departments import Department
+
+    role = getattr(request_user, "role", None)
+    if role == "GLOBAL_OWNER":
+        departments = Department.objects.filter(is_active=True)
+    elif role in ("TENANT_ADMIN", "TENANT_MODERATOR") and request_user.tenant_id:
+        departments = Department.objects.filter(tenant_id=request_user.tenant_id, is_active=True)
+    else:
+        return []
+
+    dept_list = list(departments.only("id", "name"))
+    if not dept_list:
+        return []
+
+    dept_ids = [d.id for d in dept_list]
+    dept_by_id = {d.id: d for d in dept_list}
+
+    try:
+        activity_stats = {
+            row["user__departments"]: row
+            for row in Activity.objects.filter(user__departments__in=dept_ids)
+            .values("user__departments")
+            .annotate(
+                activities=Count("id"),
+                distance=Sum("distance"),
+                verified=Count("id", filter=Q(is_verified=True)),
+            )
+        }
+        member_stats = {
+            row["id"]: row["users"]
+            for row in Department.objects.filter(id__in=dept_ids)
+            .annotate(users=Count("members"))
+            .values("id", "users")
+        }
+    except Exception:
+        logger.exception("admin/analytics/department group aggregates failed")
+        cached = get_cached_department_analytics(request_user)
+        return cached if cached is not None else []
+
+    result: list[dict] = []
+    for dept_id in dept_ids:
+        dept = dept_by_id[dept_id]
+        stats = activity_stats.get(dept_id, {})
+        act_count = stats.get("activities") or 0
+        dept_distance = stats.get("distance") or 0
+        dept_verified = stats.get("verified") or 0
+        result.append(
+            {
+                "department_id": dept.id,
+                "department_name": dept.name,
+                "users": member_stats.get(dept_id, 0),
+                "activities": act_count,
+                "distance_km": round(float(dept_distance) / 1000.0, 1),
+                "verified_pct": round((dept_verified / act_count * 100), 1) if act_count > 0 else 0.0,
+            }
+        )
+
+    set_cached_department_analytics(request_user, result)
+    return result

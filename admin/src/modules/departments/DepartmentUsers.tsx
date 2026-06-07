@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Title, Table, Button, Modal, Select, Text, Group, Paper, Badge, Stack } from '@mantine/core';
+import { Box, Title, Table, Button, Modal, Select, Text, Group, Paper, Badge, Stack, Skeleton } from '@mantine/core';
 import { apiClient } from '../../api/client';
 import { useAuth } from '../../core/auth/useAuth';
 import { IconUserPlus, IconUserMinus } from '@tabler/icons-react';
@@ -95,7 +95,16 @@ export const DepartmentUsers: React.FC = () => {
     const assignedUserIds = new Set(users.map((u) => u.id));
     const availableUsers = allUsers.filter((u) => !assignedUserIds.has(u.id));
 
-    if (loading) return <Text>Loading...</Text>;
+    if (loading) {
+        return (
+            <Box>
+                <Skeleton height={32} width={240} mb="md" radius="md" />
+                <Stack gap="sm">
+                    {[...Array(6)].map((_, i) => <Skeleton key={i} height={44} radius="md" />)}
+                </Stack>
+            </Box>
+        );
+    }
     if (!department) return <Text>Department not found.</Text>;
 
     return (

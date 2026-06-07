@@ -16,14 +16,26 @@ import { StatCard } from '../../core/components/StatCard';
 import { useAuth } from '../../core/auth/useAuth';
 import { isE2eMode } from '../../core/auth/e2eEnv';
 import { ModeratorWorklist } from './ModeratorWorklist';
-import { SystemIntelligence } from '../analytics/SystemIntelligence';
 import { CityAnalytics } from '../analytics/CityAnalytics';
 const LiveMapLazy = lazy(() => import('../analytics/LiveMap').then(m => ({ default: m.LiveMap })));
-import { ActivityTimeline } from '../analytics/ActivityTimeline';
-import { AuditLog } from '../analytics/AuditLog';
-import { TrendAnalysis } from '../analytics/TrendAnalysis';
-import { SystemHealth } from '../analytics/SystemHealth';
+const SystemIntelligenceLazy = lazy(() =>
+  import('../analytics/SystemIntelligence').then(m => ({ default: m.SystemIntelligence })),
+);
+const ActivityTimelineLazy = lazy(() =>
+  import('../analytics/ActivityTimeline').then(m => ({ default: m.ActivityTimeline })),
+);
+const AuditLogLazy = lazy(() => import('../analytics/AuditLog').then(m => ({ default: m.AuditLog })));
+const TrendAnalysisLazy = lazy(() =>
+  import('../analytics/TrendAnalysis').then(m => ({ default: m.TrendAnalysis })),
+);
+const SystemHealthLazy = lazy(() =>
+  import('../analytics/SystemHealth').then(m => ({ default: m.SystemHealth })),
+);
 import { GoHealthStrip } from '../../core/components/GoHealthStrip';
+import {
+  DashboardBootOverlay,
+  type DashboardBootStep,
+} from '../../core/components/DashboardBootOverlay';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface TenantRow {
@@ -116,6 +128,10 @@ export const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [apiLatencyMs, setApiLatencyMs] = useState<number | null>(null);
+  const [bootOverlayVisible, setBootOverlayVisible] = useState(false);
+  const [bootStep, setBootStep] = useState<DashboardBootStep>('session');
+  const [bootElapsedMs, setBootElapsedMs] = useState(0);
+  const [heavyWidgetsReady, setHeavyWidgetsReady] = useState(false);
   const loadStarted = useRef(0);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
@@ -125,8 +141,12 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!user) {
       setLoading(false);
+      setHeavyWidgetsReady(true);
       return;
     }
+    setHeavyWidgetsReady(false);
+    setBootOverlayVisible(false);
+    setBootStep('session');
     loadStarted.current = performance.now();
     apiClient.get('/activities/admin/stats/')
       .then((res) => {
@@ -138,6 +158,42 @@ export const Dashboard: React.FC = () => {
       )
       .finally(() => setLoading(false));
   }, [user]);
+
+  /* Delayed boot overlay — avoids flash on fast cache hits (enterprise pattern). */
+  useEffect(() => {
+    if (!isGlobalOwner || !loading) return;
+    const showTimer = window.setTimeout(() => setBootOverlayVisible(true), 450);
+    const stepTimer = window.setTimeout(() => setBootStep('metrics'), 180);
+    const elapsedTimer = window.setInterval(() => {
+      setBootElapsedMs(Math.round(performance.now() - loadStarted.current));
+    }, 400);
+    return () => {
+      window.clearTimeout(showTimer);
+      window.clearTimeout(stepTimer);
+      window.clearInterval(elapsedTimer);
+    };
+  }, [isGlobalOwner, loading]);
+
+  useEffect(() => {
+    if (!isGlobalOwner) {
+      if (!loading) setHeavyWidgetsReady(true);
+      return;
+    }
+    if (loading) return;
+    setBootStep('widgets');
+    if (!bootOverlayVisible) {
+      setHeavyWidgetsReady(true);
+      return;
+    }
+    const hideTimer = window.setTimeout(() => {
+      setBootOverlayVisible(false);
+      window.setTimeout(() => setHeavyWidgetsReady(true), 160);
+    }, 420);
+    return () => window.clearTimeout(hideTimer);
+  }, [loading, isGlobalOwner, bootOverlayVisible]);
+
+  const showGlobalBoot = isGlobalOwner && (loading || bootOverlayVisible);
+  const kpiLoading = loading && !showGlobalBoot;
 
   const drillDownTenant = (tenantId: string) => {
     navigate(`/owner/users?tenant_id=${encodeURIComponent(tenantId)}`);
@@ -188,6 +244,23 @@ export const Dashboard: React.FC = () => {
         />
       )}
 
+      <Box style={{ position: 'relative', minHeight: showGlobalBoot ? 420 : undefined }}>
+        {isGlobalOwner && (
+          <DashboardBootOverlay
+            visible={showGlobalBoot}
+            step={bootStep}
+            elapsedMs={bootElapsedMs}
+            activityCount={stats?.total_activities}
+          />
+        )}
+
+        <Box
+          style={{
+            opacity: showGlobalBoot ? 0 : 1,
+            pointerEvents: showGlobalBoot ? 'none' : 'auto',
+            transition: 'opacity 0.32s ease',
+          }}
+        >
       {/* ── KPI stat cards ────────────────────────────── */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="md">
         <StatCard
@@ -196,7 +269,7 @@ export const Dashboard: React.FC = () => {
           label={isTenantAdmin ? 'Athletes (your tenant)' : 'Total Athletes'}
           value={stats ? stats.total_users.toLocaleString() : null}
           variant="indigo"
-          loading={loading}
+          loading={kpiLoading}
           trend={
             stats
               ? {
@@ -213,7 +286,7 @@ export const Dashboard: React.FC = () => {
           label="Total Activities"
           value={stats ? stats.total_activities.toLocaleString() : null}
           variant="green"
-          loading={loading}
+          loading={kpiLoading}
           trend={
             stats
               ? {
@@ -230,7 +303,7 @@ export const Dashboard: React.FC = () => {
           label="Total Distance"
           value={stats ? `${stats.total_distance_km.toFixed(1)} km` : null}
           variant="violet"
-          loading={loading}
+          loading={kpiLoading}
         />
         <StatCard
           index={3}
@@ -238,7 +311,7 @@ export const Dashboard: React.FC = () => {
           label="Verification Rate"
           value={stats ? `${stats.verified_pct}%` : null}
           variant={stats && stats.unverified_total > 10 ? 'orange' : 'green'}
-          loading={loading}
+          loading={kpiLoading}
           trend={
             stats
               ? {
@@ -459,7 +532,13 @@ export const Dashboard: React.FC = () => {
                 badgeColor="violet"
               />
               <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
-              <SystemIntelligence />
+              {heavyWidgetsReady ? (
+                <Suspense fallback={<Skeleton height={180} radius="md" />}>
+                  <SystemIntelligenceLazy />
+                </Suspense>
+              ) : (
+                <Skeleton height={180} radius="md" />
+              )}
             </Card>
 
             {/* Live Activity */}
@@ -483,10 +562,12 @@ export const Dashboard: React.FC = () => {
                   Mapa na żywo i API wymagają backendu. Do pracy w przeglądarce uruchom{' '}
                   <Text span fw={600}>npm run dev</Text> bez VITE_E2E, albo testy Playwright.
                 </Alert>
-              ) : (
+              ) : heavyWidgetsReady ? (
                 <Suspense fallback={<Skeleton height={450} radius="md" />}>
                   <LiveMapLazy />
                 </Suspense>
+              ) : (
+                <Skeleton height={450} radius="md" />
               )}
             </Card>
           </SimpleGrid>
@@ -601,19 +682,37 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* ── Live activity timeline ───────────────────── */}
-      {isGlobalOwner && (
+      {isGlobalOwner && heavyWidgetsReady && (
         <Stack mt="xl" gap="md">
           <Divider label="Activity & System Monitoring" labelPosition="center" />
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-            <Box><ActivityTimeline /></Box>
-            <Box><AuditLog /></Box>
+            <Box>
+              <Suspense fallback={<Skeleton height={320} radius="md" />}>
+                <ActivityTimelineLazy />
+              </Suspense>
+            </Box>
+            <Box>
+              <Suspense fallback={<Skeleton height={400} radius="md" />}>
+                <AuditLogLazy />
+              </Suspense>
+            </Box>
           </SimpleGrid>
           <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
-            <Box><TrendAnalysis /></Box>
-            <Box><SystemHealth /></Box>
+            <Box>
+              <Suspense fallback={<Skeleton height={320} radius="md" />}>
+                <TrendAnalysisLazy />
+              </Suspense>
+            </Box>
+            <Box>
+              <Suspense fallback={<Skeleton height={320} radius="md" />}>
+                <SystemHealthLazy />
+              </Suspense>
+            </Box>
           </SimpleGrid>
         </Stack>
       )}
+        </Box>
+      </Box>
     </Box>
   );
 };

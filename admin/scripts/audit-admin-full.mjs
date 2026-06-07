@@ -33,7 +33,41 @@ const ROUTES = [
     { id: 'live-map', hash: '#/owner/analytics/live-map' },
     { id: 'feedback', hash: '#/owner/analytics/feedback' },
     { id: 'simulator', hash: '#/owner/analytics/simulator' },
+    { id: 'moderation', hash: '#/owner/moderation' },
+    { id: 'premium-ai-coach', hash: '#/owner/premium/ai-coach' },
+    { id: 'premium-voucher-3d', hash: '#/owner/premium/voucher-3d' },
+    { id: 'premium-esg', hash: '#/owner/premium/esg' },
 ];
+
+/** Routes known to lack explicit loading UI on first paint */
+const NO_LOADING_UI = new Set(['departments', 'settings', 'sponsor', 'premium-ai-coach', 'premium-voucher-3d', 'premium-esg']);
+
+function attachApiCollector(page) {
+    const apiTimes = [];
+    const onResponse = (res) => {
+        const url = res.url();
+        if (url.includes('/api/') && res.request().method() === 'GET') {
+            apiTimes.push({ url: url.split('/api/').pop()?.split('?')[0] || url, status: res.status() });
+        }
+    };
+    page.on('response', onResponse);
+    return {
+        detach: () => page.off('response', onResponse),
+        snapshot: async (routeId, t0) => {
+            const skeletonOnLoad = await page.locator('.mantine-Skeleton-root:visible').count().catch(() => 0);
+            await page.waitForTimeout(800);
+            const skeletonAfter = await page.locator('.mantine-Skeleton-root:visible').count().catch(() => 0);
+            return {
+                dataReadyMs: Date.now() - t0,
+                skeletonOnLoad: skeletonOnLoad > 0,
+                skeletonAfterWait: skeletonAfter > 0,
+                apiCalls: apiTimes.length,
+                apiEndpoints: [...new Set(apiTimes.map((t) => t.url))].slice(0, 12),
+                missingLoadingUi: NO_LOADING_UI.has(routeId) && skeletonOnLoad === 0 && skeletonAfter === 0,
+            };
+        },
+    };
+}
 
 const SKIP_CLICK =
     /wipe all|delete user|stop active simulation|launch \d+ cyclists|logout|collapse sidebar|toggle colour|toggle color|toggle menu|sign in|toggle password|impersonate/i;
@@ -164,6 +198,7 @@ async function main() {
 
         for (const route of ROUTES) {
             console.log(`→ ${route.id}`);
+            const collector = attachApiCollector(page);
             const t0 = Date.now();
             await page.goto(`${BASE}/${route.hash}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
             await page.waitForTimeout(2200);
@@ -173,6 +208,8 @@ async function main() {
             const body = await page.locator('main, [class*="AppShell-main"], .mantine-AppShell-main').first().innerText().catch(() =>
                 page.locator('body').innerText(),
             );
+            const perf = await collector.snapshot(route.id, t0);
+            collector.detach();
             const entry = {
                 id: route.id,
                 ms: Date.now() - t0,
@@ -180,6 +217,14 @@ async function main() {
                 empty: /will appear here|no .* found|unable to load/i.test(body),
                 error: /failed to load|access denied|error/i.test(body.slice(0, 1500)),
                 snippet: body.replace(/\s+/g, ' ').slice(0, 280),
+                perf,
+                verdict: perf.missingLoadingUi
+                    ? 'loading_gap'
+                    : perf.skeletonAfterWait && perf.dataReadyMs > 3000
+                      ? 'slow_loading'
+                      : /failed to load|access denied|error/i.test(body.slice(0, 1500))
+                        ? 'error'
+                        : 'ok',
             };
             report.routes.push(entry);
 
