@@ -493,7 +493,7 @@ class TelemetryLiveView(generics.GenericAPIView):
             request,
             "telemetry/live/",
             allow_local_fallback=True,
-            timeout=8,
+            timeout=4,
         )
         if proxied is not None:
             return proxied
