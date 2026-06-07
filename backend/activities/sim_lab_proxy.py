@@ -201,9 +201,19 @@ def _forward_upstream(
     return resp
 
 
+def _skip_sim_lab_proxy(request) -> bool:
+    """Allow destructive/local ops on prod DB when explicitly requested."""
+    if request.query_params.get("local") in ("1", "true", "yes"):
+        return True
+    data = getattr(request, "data", None) or {}
+    if isinstance(data, dict) and data.get("force_local") in (True, "true", "1", 1):
+        return True
+    return False
+
+
 def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Response | None:
     """Return DRF Response when proxied; None to handle locally."""
-    if not sim_lab_proxy_enabled():
+    if not sim_lab_proxy_enabled() or _skip_sim_lab_proxy(request):
         return None
 
     url = _build_url(admin_suffix) + _query_string(request)
