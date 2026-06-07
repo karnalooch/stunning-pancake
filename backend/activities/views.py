@@ -493,37 +493,50 @@ class TelemetryLiveView(generics.GenericAPIView):
             request,
             "telemetry/live/",
             allow_local_fallback=True,
-            timeout=12,
+            timeout=8,
         )
         if proxied is not None:
             return proxied
 
-        from . import simulator_state as sim
-        from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
-        from activities.telemetry_shard import live_map_read_policy
-
-        log = logging.getLogger(__name__)
-        try:
-            if not proxy_enabled:
-                sim.maybe_advance_live_simulation_from_poll()
-            req = parse_live_map_query_params(request.query_params, user=request.user)
-            body = build_live_map_payload(req)
-        except Exception as exc:
-            log.exception("telemetry/live local build failed")
+        if proxy_enabled:
+            qp = request.query_params
+            agg_hint = "/api/activities/telemetry/live/aggregate/"
+            if qp:
+                agg_hint += "?" + qp.urlencode()
             body = {
                 "positions": [],
                 "meta": {
                     "positions_returned": 0,
                     "viewport_returned": 0,
                     "degraded": True,
-                    "sim_lab_proxy_fallback": proxy_enabled,
-                    "error": str(exc)[:160],
+                    "sim_lab_proxy_fallback": True,
+                    "render_mode": "aggregate",
+                    "aggregate_url": agg_hint,
+                    "hint": "sim_lab_unreachable_use_aggregate",
                 },
             }
-        if proxy_enabled:
-            meta = body.setdefault("meta", {})
-            if isinstance(meta, dict):
-                meta["sim_lab_proxy_fallback"] = True
+        else:
+            from . import simulator_state as sim
+            from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
+
+            log = logging.getLogger(__name__)
+            try:
+                sim.maybe_advance_live_simulation_from_poll()
+                req = parse_live_map_query_params(request.query_params, user=request.user)
+                body = build_live_map_payload(req)
+            except Exception as exc:
+                log.exception("telemetry/live local build failed")
+                body = {
+                    "positions": [],
+                    "meta": {
+                        "positions_returned": 0,
+                        "viewport_returned": 0,
+                        "degraded": True,
+                        "error": str(exc)[:160],
+                    },
+                }
+
+        from activities.telemetry_shard import live_map_read_policy
         read_policy = live_map_read_policy()
         from activities.live_map_api import live_map_etag
 
