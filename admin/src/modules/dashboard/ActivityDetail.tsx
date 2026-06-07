@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, Title, Group, Badge, Card, Skeleton, Alert, Stack } from '@mantine/core';
+import { Box, Text, Title, Group, Badge, Card, Skeleton, Alert, Stack, Button } from '@mantine/core';
+import { Download } from 'lucide-react';
 import { MapPin, Clock, ShieldCheck, Bike, Footprints, PersonStanding } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { apiClient } from '../../api/client';
@@ -46,6 +47,21 @@ export const ActivityDetail: React.FC = () => {
     }, [id]);
 
     const TypeIcon = typeIcons[data?.type || ''] || Clock;
+
+    const downloadGpx = async () => {
+        if (!id) return;
+        try {
+            const res = await apiClient.get(`/activities/sessions/${id}/gpx/`, { responseType: 'blob' });
+            const url = URL.createObjectURL(res.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `activity-${id}.gpx`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch {
+            setError('GPX export failed or route unavailable.');
+        }
+    };
 
     const routePointCount = data?.route_coords?.length ?? 0;
     const routeStats = routePointCount > 0 ? `${routePointCount.toLocaleString()} GPS points` : null;
@@ -160,10 +176,17 @@ export const ActivityDetail: React.FC = () => {
 
             {/* GPS Route Card */}
             <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }} mb="md">
-                <Group mb="md">
-                    <MapPin size={20} style={{ color: 'var(--accent)' }} />
-                    <Text fw={700}>GPS Route</Text>
-                    {routeStats && <Badge color="indigo" variant="light">{routeStats}</Badge>}
+                <Group mb="md" justify="space-between">
+                    <Group gap="sm">
+                        <MapPin size={20} style={{ color: 'var(--accent)' }} />
+                        <Text fw={700}>GPS Route</Text>
+                        {routeStats && <Badge color="indigo" variant="light">{routeStats}</Badge>}
+                    </Group>
+                    {routePointCount > 0 && (
+                        <Button size="xs" variant="light" leftSection={<Download size={14} />} onClick={downloadGpx}>
+                            Download GPX
+                        </Button>
+                    )}
                 </Group>
                 <Box style={{
                     height: 300,

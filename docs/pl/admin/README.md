@@ -25,6 +25,7 @@
 
 Panel administracyjny 4VELO został przeprojektowany, dodając światowej klasy system premium UI z pełną obsługą trybu ciemnego, płynnymi animacjami i kompleksowym systemem tokenów projektowych.
 
+**Zunifikowana roadmapa (SSOT):** [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md)  
 **Najnowszy audyt interfejsu użytkownika (trasy, luki, plan działania zgodny ze standardami rynkowymi):** [UI_AUDIT_2026-06-02.md](../../admin/UI_AUDIT_2026-06-02.md)  
 **Zamknięcie P0 (2026-06-02):** audyt §8 · dym po wdrożeniu → [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md)  
 **Mapa drogowa P1 (paczki 1–6; 1a ✅, 1b rdzeń ✅ — brama operacyjna przed Paczką 2 Sponsor):** [P1_ROADMAP.md](./P1_ROADMAP.md)  

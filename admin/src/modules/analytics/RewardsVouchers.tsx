@@ -1,26 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Card, Text, Table, Badge, SimpleGrid, ThemeIcon, Skeleton, Stack } from '@mantine/core';
-import { Gift, Users, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Box, Card, Text, Table, Badge, SimpleGrid, ThemeIcon, Skeleton, Stack, Button, Group } from '@mantine/core';
+import { Gift, Users, TrendingUp, CheckCircle2, Plus, MapPin } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
+import { useAuth } from '../../core/auth/useAuth';
 
 export const RewardsVouchers: React.FC = () => {
+    const { user } = useAuth();
+    const isSponsor = user?.role === 'SPONSOR';
     const [pools, setPools] = useState<any[]>([]);
     const [balance, setBalance] = useState<{ points: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        Promise.all([
-            apiClient.get('/rewards/pools/'),
-            apiClient.get('/rewards/balance/'),
-        ])
+        const reqs = [apiClient.get('/rewards/pools/')];
+        if (!isSponsor) reqs.push(apiClient.get('/rewards/balance/'));
+        Promise.all(reqs)
             .then(([poolsRes, balanceRes]) => {
                 setPools(Array.isArray(poolsRes.data) ? poolsRes.data : []);
-                setBalance(balanceRes.data ?? { points: 0 });
+                setBalance(balanceRes?.data ?? { points: 0 });
             })
             .catch(() => setError('Failed to load rewards data.'))
             .finally(() => setLoading(false));
-    }, []);
+    }, [isSponsor]);
 
     const activeCount = pools.length;
     const totalAvailable = pools.reduce((sum, p) => sum + (p.available || 0), 0);
@@ -50,7 +53,20 @@ export const RewardsVouchers: React.FC = () => {
                 ) : error ? (
                     <Text c="red" size="sm" ta="center">{error}</Text>
                 ) : pools.length === 0 ? (
-                    <Text c="dimmed" ta="center">No active voucher pools.</Text>
+                    <Stack align="center" py="xl" gap="md">
+                        <Gift size={40} style={{ opacity: 0.4 }} />
+                        <Text c="dimmed">No active voucher pools.</Text>
+                        {isSponsor && (
+                            <Group>
+                                <Button component={Link} to="/owner/sponsor" leftSection={<Plus size={16} />}>
+                                    Create first voucher
+                                </Button>
+                                <Button component={Link} to="/owner/sponsor/poi" variant="light" leftSection={<MapPin size={16} />}>
+                                    Add POI
+                                </Button>
+                            </Group>
+                        )}
+                    </Stack>
                 ) : (
                     <Table>
                         <thead><tr><th>Code</th><th>Value</th><th>POI</th><th>Available</th><th>Expires</th></tr></thead>

@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   SimpleGrid, Card, Text, Group, Badge, Progress, Table, Box, Stack,
   Skeleton, Divider, ThemeIcon, Alert,
@@ -22,6 +23,7 @@ import { ActivityTimeline } from '../analytics/ActivityTimeline';
 import { AuditLog } from '../analytics/AuditLog';
 import { TrendAnalysis } from '../analytics/TrendAnalysis';
 import { SystemHealth } from '../analytics/SystemHealth';
+import { GoHealthStrip } from '../../core/components/GoHealthStrip';
 
 /* ─── Types ─────────────────────────────────────────────── */
 interface TenantRow {
@@ -110,10 +112,14 @@ const SectionHeader: React.FC<{ icon: React.ReactNode; title: string; badge?: st
 /* ─── Dashboard ─────────────────────────────────────────── */
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiLatencyMs, setApiLatencyMs] = useState<number | null>(null);
+  const loadStarted = useRef(0);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
+  const isTenantAdmin = user?.role === 'TENANT_ADMIN';
   const isModerator = user?.role === 'TENANT_MODERATOR';
 
   useEffect(() => {
@@ -121,13 +127,21 @@ export const Dashboard: React.FC = () => {
       setLoading(false);
       return;
     }
+    loadStarted.current = performance.now();
     apiClient.get('/activities/admin/stats/')
-      .then((res) => setStats(res.data))
+      .then((res) => {
+        setStats(res.data);
+        setApiLatencyMs(Math.round(performance.now() - loadStarted.current));
+      })
       .catch(() =>
         notifications.show({ title: 'Dashboard', message: 'Failed to load stats.', color: 'red' }),
       )
       .finally(() => setLoading(false));
   }, [user]);
+
+  const drillDownTenant = (tenantId: string) => {
+    navigate(`/owner/users?tenant_id=${encodeURIComponent(tenantId)}`);
+  };
 
   /* ── Greeting ────────────────────────────────────────── */
   const hour = new Date().getHours();
@@ -163,12 +177,23 @@ export const Dashboard: React.FC = () => {
         )}
       </PageHeader>
 
+      {isGlobalOwner && (
+        <GoHealthStrip
+          loading={loading}
+          unverifiedTotal={stats?.unverified_total}
+          simOn={Boolean(stats?.sim_kpi?.sim_on)}
+          routingQueueDepth={stats?.sim_kpi?.routing_queue_depth}
+          routingBackpressure={Boolean(stats?.sim_kpi?.routing_backpressure_active)}
+          apiLatencyMs={apiLatencyMs}
+        />
+      )}
+
       {/* ── KPI stat cards ────────────────────────────── */}
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mb="xl" spacing="md">
         <StatCard
           index={0}
           icon={<Users size={18} />}
-          label="Total Athletes"
+          label={isTenantAdmin ? 'Athletes (your tenant)' : 'Total Athletes'}
           value={stats ? stats.total_users.toLocaleString() : null}
           variant="indigo"
           loading={loading}
@@ -349,7 +374,9 @@ export const Dashboard: React.FC = () => {
                       <motion.tr
                         key={t.tenant_id}
                         variants={rowVariants}
-                        style={{ cursor: 'default' }}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => drillDownTenant(t.tenant_id)}
+                        title="Drill down — filter Users by tenant"
                       >
                         <Table.Td>
                           <Group gap="xs">

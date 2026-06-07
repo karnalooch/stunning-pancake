@@ -4,6 +4,7 @@ import {
   Switch, Textarea, Tooltip, Card, Checkbox, Progress, Skeleton
 } from '@mantine/core';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@mantine/hooks';
 import {
   Search, ShieldAlert, UserCog, Eye, UserPlus, ClipboardList,
@@ -48,6 +49,7 @@ interface AuditLogEntry {
 
 export const Users = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [usersList, setUsersList] = useState<UserRow[]>([]);
   const [usersLoading, setUsersLoading] = useState(true);
   const [tenantsList, setTenantsList] = useState<TenantRow[]>([]);
@@ -68,7 +70,12 @@ export const Users = () => {
   // Filters
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedTenant, setSelectedTenant] = useState<string>('');
-  
+
+  useEffect(() => {
+    const tid = searchParams.get('tenant_id');
+    if (tid) setSelectedTenant(tid);
+  }, [searchParams]);
+
   // Cursor pagination (scales to 300k+ without offset scans).
   const pageSize = 25;
   const [cursorStack, setCursorStack] = useState<(string | null)[]>([null]);

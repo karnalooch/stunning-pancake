@@ -23,7 +23,8 @@
 
 **Purpose:** Printable post-deploy verification.  
 **Prerequisite:** Redeploy admin + API to target environment before testing.  
-**Reference:** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) §8 · [P1_ROADMAP.md](./P1_ROADMAP.md) · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)  
+**Reference:** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) §8 · [P1_ROADMAP.md](./P1_ROADMAP.md) · [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md) · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)  
+**Automation:** `admin/scripts/p0-role-smoke.mjs` (Playwright nav smoke per role)  
 **Railway (if sim):** [../operations/RAILWAY_PRODUCTION_CHECKLIST.md](../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1`
 
 ---

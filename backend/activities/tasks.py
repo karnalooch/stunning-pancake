@@ -389,6 +389,40 @@ def monitor_postgres_disk() -> dict:
     return result
 
 
+@shared_task(queue="default", name="activities.tasks.generate_gpx_task")
+def generate_gpx_task(activity_id: int) -> dict:
+    """P2 F2: Archive GPX after verified activity (local key + sha256; S3 when configured)."""
+    import hashlib
+    from django.utils import timezone
+
+    from activities.gpx_export import linestring_to_gpx
+    from activities.models import Activity
+
+    try:
+        activity = Activity.objects.get(pk=activity_id)
+    except Activity.DoesNotExist:
+        return {"status": "missing", "activity_id": activity_id}
+
+    if not activity.route_path or activity.route_path.num_coords < 2:
+        return {"status": "no_route", "activity_id": activity_id}
+
+    if activity.gpx_sha256 and activity.gpx_storage_key:
+        return {"status": "skipped", "activity_id": activity_id, "sha256": activity.gpx_sha256}
+
+    gpx_xml = linestring_to_gpx(
+        activity.route_path,
+        track_name=f"Activity {activity_id}",
+        activity_type=activity.type.lower(),
+    )
+    digest = hashlib.sha256(gpx_xml.encode("utf-8")).hexdigest()
+    storage_key = f"activities/{activity_id}.gpx"
+    activity.gpx_storage_key = storage_key
+    activity.gpx_sha256 = digest
+    activity.gpx_generated_at = timezone.now()
+    activity.save(update_fields=["gpx_storage_key", "gpx_sha256", "gpx_generated_at"])
+    return {"status": "ok", "activity_id": activity_id, "sha256": digest, "storage_key": storage_key}
+
+
 # Register Celery tasks in sibling modules (autodiscover only loads tasks.py).
 from . import simulator_tasks  # noqa: F401
 from . import wipe_tasks  # noqa: F401

@@ -21,7 +21,8 @@
 
 **Cel:** Możliwość wydrukowania weryfikacji po wdrożeniu.  
 **Wymaganie wstępne:** Przed testowaniem ponownie wdróż administratora i interfejs API w środowisku docelowym.  
-**Numer referencyjny:** [UI_AUDIT_2026-06-02.md](../../admin/UI_AUDIT_2026-06-02.md) §8 · [P1_ROADMAP.md](./P1_ROADMAP.md) · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)  
+**Numer referencyjny:** [UI_AUDIT_2026-06-02.md](../../admin/UI_AUDIT_2026-06-02.md) §8 · [P1_ROADMAP.md](./P1_ROADMAP.md) · [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md) · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md)  
+**Automatyzacja:** `admin/scripts/p0-role-smoke.mjs` (Playwright — smoke nawigacji per rola)  
 **Kolej (jeśli sim):** [../../operations/RAILWAY_PRODUCTION_CHECKLIST.md](../../operations/RAILWAY_PRODUCTION_CHECKLIST.md) · `scripts/railway-verify-production.ps1`
 
 ---

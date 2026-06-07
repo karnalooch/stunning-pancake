@@ -9,7 +9,8 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
   LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
   Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
-  Calendar, TrendingUp, MessageSquare, Map, Play, Bike,
+  Calendar, TrendingUp, MessageSquare, Map, Play, Bike, MapPin,
+  Inbox, Sparkles, Leaf,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
@@ -60,6 +61,12 @@ const NAV_SECTIONS = [
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
       },
       {
+        icon: Inbox,
+        label: 'Moderation Inbox',
+        path: '/owner/moderation',
+        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
+      },
+      {
         icon: ShieldAlert,
         label: 'Anti-Cheat',
         path: '/owner/anti-cheat',
@@ -80,6 +87,12 @@ const NAV_SECTIONS = [
         icon: Gift,
         label: 'Sponsor Dashboard',
         path: '/owner/sponsor',
+        roles: ['GLOBAL_OWNER', 'SPONSOR'],
+      },
+      {
+        icon: MapPin,
+        label: 'POI Map',
+        path: '/owner/sponsor/poi',
         roles: ['GLOBAL_OWNER', 'SPONSOR'],
       },
       {
@@ -122,6 +135,24 @@ const NAV_SECTIONS = [
         icon: MessageSquare,
         label: 'Feedback',
         path: '/owner/analytics/feedback',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: Sparkles,
+        label: 'AI Coach Studio',
+        path: '/owner/premium/ai-coach',
+        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
+      },
+      {
+        icon: Gift,
+        label: 'Voucher 3D Designer',
+        path: '/owner/premium/voucher-3d',
+        roles: ['GLOBAL_OWNER', 'SPONSOR'],
+      },
+      {
+        icon: Leaf,
+        label: 'ESG Portal',
+        path: '/owner/premium/esg',
         roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
       },
       {

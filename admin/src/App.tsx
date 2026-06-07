@@ -6,6 +6,7 @@ import '@mantine/notifications/styles.css';
 import { theme } from './theme/index';
 
 import { Layout } from './core/Layout';
+import { RoleHomeRedirect } from './core/RoleHomeRedirect';
 import { PermissionGuard } from './core/guards/PermissionGuard';
 import { LoginPage } from './core/auth/LoginPage';
 import { LandingPage } from './modules/public/LandingPage';
@@ -15,6 +16,11 @@ const AntiCheat = lazy(() => import('./modules/anti-cheat/AntiCheat').then(m => 
 const Users = lazy(() => import('./modules/users/Users').then(m => ({ default: m.Users })));
 const WhiteLabelEngine = lazy(() => import('./modules/tenants/WhiteLabelEngine').then(m => ({ default: m.WhiteLabelEngine })));
 const SponsorDashboard = lazy(() => import('./modules/sponsor/SponsorDashboard').then(m => ({ default: m.SponsorDashboard })));
+const SponsorPOIMap = lazy(() => import('./modules/sponsor/SponsorPOIMap').then(m => ({ default: m.SponsorPOIMap })));
+const ModeratorInbox = lazy(() => import('./modules/dashboard/ModeratorInbox').then(m => ({ default: m.ModeratorInbox })));
+const AiCoachStudio = lazy(() => import('./modules/premium/AiCoachStudio').then(m => ({ default: m.AiCoachStudio })));
+const VoucherCustomizer3D = lazy(() => import('./modules/premium/VoucherCustomizer3D').then(m => ({ default: m.VoucherCustomizer3D })));
+const EsgPortal = lazy(() => import('./modules/premium/EsgPortal').then(m => ({ default: m.EsgPortal })));
 const SettingsScreen = lazy(() => import('./modules/settings/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
 const Departments = lazy(() => import('./modules/departments/Departments').then(m => ({ default: m.Departments })));
 const DepartmentUsers = lazy(() => import('./modules/departments/DepartmentUsers').then(m => ({ default: m.DepartmentUsers })));
@@ -145,7 +151,7 @@ export default function App() {
             <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/owner" element={<Layout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route index element={<RoleHomeRedirect />} />
               <Route
                 path="dashboard"
                 element={
@@ -183,6 +189,22 @@ export default function App() {
                 element={
                   <PermissionGuard permissions={['poi.view', 'vouchers.view']}>
                     <SponsorDashboard />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="sponsor/poi"
+                element={
+                  <PermissionGuard permissions={['poi.view']}>
+                    <SponsorPOIMap />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="moderation"
+                element={
+                  <PermissionGuard permissions={['activities.approve']}>
+                    <ModeratorInbox />
                   </PermissionGuard>
                 }
               />
@@ -333,6 +355,30 @@ export default function App() {
                   </PermissionGuard>
                 }
               />
+              <Route
+                path="premium/ai-coach"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                    <AiCoachStudio />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="premium/voucher-3d"
+                element={
+                  <PermissionGuard permissions={['vouchers.view']}>
+                    <VoucherCustomizer3D />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="premium/esg"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                    <EsgPortal />
+                  </PermissionGuard>
+                }
+              />
             </Route>
             <Route
               path="/unauthorized"
@@ -344,7 +390,7 @@ export default function App() {
                 </Box>
               }
             />
-            <Route path="*" element={<Navigate to="/owner/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/owner" replace />} />
           </Routes>
           </Suspense>
         )}

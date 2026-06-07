@@ -32,6 +32,7 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 
 | Dokument | Cel (skrót) | Status | Kadencja |
 |----------|-------------|--------|----------|
+| [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md) | **SSOT** — zunifikowana oś czasu P0→P1→P2→V3 | ✅ Active | Po każdej paczce / gate |
 | [README.md](./README.md) | Design system, moduły, dev, nawigacja RBAC | ✅ Active | Po większej zmianie UI |
 | [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | Post-deploy GO/NO-GO per rola | ✅ Active | **Każdy** deploy admin |
 | [P1_ROADMAP.md](./P1_ROADMAP.md) | Paczki 1–6; **1a ✅**, 1b + Paczka 2 | ✅ Active | Co sprint / po paczce |

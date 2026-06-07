@@ -60,6 +60,11 @@ class Activity(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # GPX archive (P2 F2)
+    gpx_storage_key = models.CharField(max_length=512, blank=True, default="")
+    gpx_sha256 = models.CharField(max_length=64, blank=True, default="")
+    gpx_generated_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         verbose_name_plural = "Activities"
         constraints = [

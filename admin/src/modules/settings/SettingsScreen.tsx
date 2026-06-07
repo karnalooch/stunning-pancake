@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon, Modal, Checkbox } from '@mantine/core';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Card, Text, Group, Stack, Switch, Select, Button, Box, SimpleGrid, ThemeIcon, Modal, Checkbox, TextInput, Code } from '@mantine/core';
+import { apiClient } from '../../api/client';
 import { Bell, PaintBucket, Shield, Zap, Trash2, AlertTriangle } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
@@ -28,6 +29,36 @@ export const SettingsScreen: React.FC = () => {
     language: 'en',
   });
 
+  const [mfaEnabled, setMfaEnabled] = useState(false);
+  const [mfaSetupUri, setMfaSetupUri] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+
+  useEffect(() => {
+    apiClient.get('/users/mfa/status/').then((r) => setMfaEnabled(Boolean(r.data?.mfa_enabled))).catch(() => {});
+  }, []);
+
+  const startMfaSetup = async () => {
+    try {
+      const { data } = await apiClient.post('/users/mfa/setup/');
+      setMfaSetupUri(data.provisioning_uri || null);
+      notifications.show({ title: 'MFA', message: 'Scan URI in authenticator app, then enter code.', color: 'blue' });
+    } catch {
+      notifications.show({ title: 'MFA', message: 'Setup failed.', color: 'red' });
+    }
+  };
+
+  const confirmMfa = async () => {
+    try {
+      await apiClient.post('/users/mfa/enable/', { code: mfaCode });
+      setMfaEnabled(true);
+      setMfaSetupUri(null);
+      setMfaCode('');
+      notifications.show({ title: 'MFA', message: 'Two-factor authentication enabled.', color: 'green' });
+    } catch {
+      notifications.show({ title: 'MFA', message: 'Invalid code.', color: 'red' });
+    }
+  };
+
   const handleSave = () => {
     notifications.show({ title: 'Settings', message: 'Settings saved successfully.', color: 'green' });
   };
@@ -51,7 +82,28 @@ export const SettingsScreen: React.FC = () => {
     },
     {
       icon: <Shield size={22} />, color: 'red', title: 'Security', children: (
-        <Stack gap="md"><Button variant="light" color="red" leftSection={<Shield size={16} />}>Change Password</Button></Stack>
+        <Stack gap="md">
+          <Button variant="light" color="red" leftSection={<Shield size={16} />}>Change Password</Button>
+          <Group justify="space-between">
+            <Box>
+              <Text fw={600} size="sm">Two-Factor Authentication (TOTP)</Text>
+              <Text size="xs" c="dimmed">{mfaEnabled ? 'Enabled' : 'Recommended for Global Owner'}</Text>
+            </Box>
+            <Switch checked={mfaEnabled} readOnly />
+          </Group>
+          {!mfaEnabled && (
+            <>
+              <Button variant="light" onClick={startMfaSetup}>Set up MFA</Button>
+              {mfaSetupUri && <Code block style={{ fontSize: 10, wordBreak: 'break-all' }}>{mfaSetupUri}</Code>}
+              {mfaSetupUri && (
+                <Group>
+                  <TextInput placeholder="6-digit code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} maw={160} />
+                  <Button onClick={confirmMfa}>Enable</Button>
+                </Group>
+              )}
+            </>
+          )}
+        </Stack>
       )
     },
     {

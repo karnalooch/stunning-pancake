@@ -78,7 +78,7 @@ def balance_view(request: Request) -> Response:
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def pool_list_view(request: Request) -> Response:
-    """Lists all currently active voucher pools."""
+    """Lists active voucher pools. SPONSOR role sees only own sponsor pools."""
     now = timezone.now()
     pools = (
         VoucherPool.objects.filter(
@@ -88,6 +88,13 @@ def pool_list_view(request: Request) -> Response:
         .select_related("sponsor")
         .order_by("points_required")
     )
+    role = getattr(request.user, "role", None)
+    if role == "SPONSOR":
+        try:
+            sponsor = request.user.sponsor_profile
+            pools = pools.filter(sponsor=sponsor)
+        except Sponsor.DoesNotExist:
+            pools = pools.none()
     return Response(VoucherPoolSerializer(pools, many=True).data)
 
 
@@ -110,13 +117,21 @@ def sponsor_stats_view(request: Request) -> Response:
         )
 
     try:
+        from activities.models import POI
+
         pools = sponsor.pools.all()
         total_vouchers = Voucher.objects.filter(pool__in=pools).count()
         redeemed_vouchers = Voucher.objects.filter(pool__in=pools, user__isnull=False).count()
+        tenant_uuid = getattr(request.user, "tenant_id", None) or sponsor.tenant_id or None
+        poi_qs = POI.objects.all()
+        if tenant_uuid:
+            poi_qs = poi_qs.filter(tenant_id=tenant_uuid)
+        elif sponsor.tenant_id:
+            poi_qs = poi_qs.filter(tenant_id=sponsor.tenant_id)
 
         return Response(
             {
-                "poi_count": sponsor.pools.count(),
+                "poi_count": poi_qs.count(),
                 "vouchers_distributed": total_vouchers,
                 "redeemed_count": redeemed_vouchers,
                 "redemption_rate": (redeemed_vouchers / total_vouchers)

@@ -1,4 +1,6 @@
 from django.urls import path
+from .export_views import user_data_export_view
+from .mfa_views import mfa_disable_view, mfa_enable_view, mfa_setup_view, mfa_status_view
 from .views import (
     RegisterView,
     UserProfileView,
@@ -43,4 +45,9 @@ urlpatterns = [
     path("bulk/change-role/", UserBulkChangeRoleView.as_view(), name="users-bulk-change-role"),
     path("bulk/jobs/<str:job_id>/", UserBulkJobStatusView.as_view(), name="users-bulk-job-status"),
     path("invitation/", InvitationTokenView.as_view(), name="invitation"),
+    path("mfa/status/", mfa_status_view, name="mfa-status"),
+    path("mfa/setup/", mfa_setup_view, name="mfa-setup"),
+    path("mfa/enable/", mfa_enable_view, name="mfa-enable"),
+    path("mfa/disable/", mfa_disable_view, name="mfa-disable"),
+    path("me/export/", user_data_export_view, name="user-data-export"),
 ]

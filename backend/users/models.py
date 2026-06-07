@@ -76,6 +76,11 @@ class User(AbstractUser):
     stripe_customer_id = models.CharField(max_length=100, null=True, blank=True)
     stripe_connect_id = models.CharField(max_length=100, null=True, blank=True)
 
+    # MFA (P2 Auth — TOTP)
+    mfa_enabled = models.BooleanField(default=False)
+    mfa_secret = models.CharField(max_length=64, blank=True, default="")
+    mfa_secret_pending = models.CharField(max_length=64, blank=True, default="")
+
     # Department hierarchy
     departments = models.ManyToManyField(
         "users.Department",
