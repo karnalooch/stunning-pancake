@@ -484,10 +484,16 @@ class TelemetryLiveView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        import logging
+
         from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
+        proxy_enabled = sim_lab_proxy_enabled()
         proxied = try_forward_sim_lab_activities(
-            request, "telemetry/live/", allow_local_fallback=True
+            request,
+            "telemetry/live/",
+            allow_local_fallback=True,
+            timeout=12,
         )
         if proxied is not None:
             return proxied
@@ -496,10 +502,25 @@ class TelemetryLiveView(generics.GenericAPIView):
         from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
         from activities.telemetry_shard import live_map_read_policy
 
-        sim.maybe_advance_live_simulation_from_poll()
-        req = parse_live_map_query_params(request.query_params, user=request.user)
-        body = build_live_map_payload(req)
-        if sim_lab_proxy_enabled():
+        log = logging.getLogger(__name__)
+        try:
+            if not proxy_enabled:
+                sim.maybe_advance_live_simulation_from_poll()
+            req = parse_live_map_query_params(request.query_params, user=request.user)
+            body = build_live_map_payload(req)
+        except Exception as exc:
+            log.exception("telemetry/live local build failed")
+            body = {
+                "positions": [],
+                "meta": {
+                    "positions_returned": 0,
+                    "viewport_returned": 0,
+                    "degraded": True,
+                    "sim_lab_proxy_fallback": proxy_enabled,
+                    "error": str(exc)[:160],
+                },
+            }
+        if proxy_enabled:
             meta = body.setdefault("meta", {})
             if isinstance(meta, dict):
                 meta["sim_lab_proxy_fallback"] = True

@@ -69,7 +69,7 @@ def _proxy_headers(request) -> dict[str, str]:
     return headers
 
 
-def _proxy_map_timeout(default: int = 180) -> int:
+def _proxy_map_timeout(default: int = 28) -> int:
     try:
         return max(30, int(os.getenv("SIM_LAB_PROXY_MAP_TIMEOUT", str(default))))
     except (TypeError, ValueError):
