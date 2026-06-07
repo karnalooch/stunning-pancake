@@ -163,6 +163,43 @@ def test_try_forward_activities_fallback_on_500(mock_request, monkeypatch):
 
 
 @patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_post_serializes_parsed_data(mock_request, monkeypatch):
+    """POST must forward JSON after DRF consumed the raw stream (no RawPostDataException)."""
+    import json
+
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"status":"started"}'
+    mock_resp.json.return_value = {"status": "started"}
+    mock_request.return_value = mock_resp
+
+    from rest_framework.parsers import JSONParser
+    from rest_framework.request import Request
+
+    factory = APIRequestFactory()
+    django_req = factory.post(
+        "/api/activities/admin/simulate/",
+        {"total_users": 100, "skip_activities": True},
+        format="json",
+    )
+    django_req.user = MagicMock(username="global_owner")
+    drf_req = Request(django_req, parsers=[JSONParser()])
+    assert drf_req.data["total_users"] == 100
+
+    proxied = try_forward_sim_lab(drf_req, "simulate/")
+    assert proxied is not None
+    assert proxied.status_code == 200
+
+    sent = json.loads(mock_request.call_args.kwargs["data"].decode())
+    assert sent["total_users"] == 100
+    assert sent["skip_activities"] is True
+
+
+@patch("activities.sim_lab_proxy.requests.request")
 def test_try_forward_activities_passthrough_304(mock_request, monkeypatch):
     monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
     monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")

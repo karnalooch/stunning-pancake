@@ -104,11 +104,29 @@ def _query_string(request) -> str:
 
 
 def _request_body(request) -> bytes | None:
-    if request.method in ("GET", "DELETE") and not request.body:
+    """Serialize outbound proxy body.
+
+    DRF parses POST/PUT/PATCH into ``request.data`` before the view runs; reading
+    ``request.body`` then raises RawPostDataException and surfaced as HTTP 500.
+    """
+    if request.method in ("GET", "HEAD", "OPTIONS"):
         return None
-    if not request.body:
-        return None
-    return request.body
+
+    data = getattr(request, "data", None)
+    if data is not None and data != {}:
+        return json.dumps(data, default=str).encode("utf-8")
+
+    try:
+        raw = getattr(request, "_request", request)
+        body = raw.body
+    except Exception:
+        body = b""
+
+    if body:
+        return body
+    if request.method in ("POST", "PUT", "PATCH"):
+        return b"{}"
+    return None
 
 
 def _forward_headers(request) -> dict[str, str]:
