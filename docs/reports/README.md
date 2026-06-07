@@ -32,6 +32,7 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [FRONTEND_BACKEND_GAP_REPORT.md](./FRONTEND_BACKEND_GAP_REPORT.md) | Luki FE/BE |
 | [RELIABILITY_AUDIT_PLAYBOOK.md](./RELIABILITY_AUDIT_PLAYBOOK.md) | Playbook niezawodnosci (release gate + incident runbook) |
 | [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02); §8 P0 done |
+| [../admin/WEBGL_LIVE_MAP_AUDIT_2026-06-06.md](../admin/WEBGL_LIVE_MAP_AUDIT_2026-06-06.md) | Live Map WebGL prod audit; JSON w `admin/reports/` |
 | [../admin/P0_SMOKE_CHECKLIST.md](../admin/P0_SMOKE_CHECKLIST.md) | Post-deploy P0 smoke per role (printable) |
 | [../admin/P1_ROADMAP.md](../admin/P1_ROADMAP.md) | P1 paczki 1–6, decyzje Q&A, deploy bez staging |
 

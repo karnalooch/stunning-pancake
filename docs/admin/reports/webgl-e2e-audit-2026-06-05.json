@@ -1,0 +1,41 @@
+{
+  "mesoAudit": {
+    "zoom": 10,
+    "tier": "meso",
+    "glRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "glVendor": "Google Inc. (NVIDIA)",
+    "sourceTotal": 4,
+    "sourceClusters": 4,
+    "sourcePoints": 0,
+    "renderedTotal": 2,
+    "renderedClusters": 2,
+    "renderedPoints": 0,
+    "canvasColoredPixels": 0,
+    "canvasSampledPixels": 614052,
+    "layoutVisibility": {
+      "live-clusters": "visible",
+      "live-cluster-count": "visible",
+      "live-direction-dots": "visible"
+    }
+  },
+  "micro": {
+    "zoom": 13.5,
+    "tier": "micro",
+    "glRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "glVendor": "Google Inc. (NVIDIA)",
+    "sourceTotal": 111,
+    "sourceClusters": 0,
+    "sourcePoints": 111,
+    "renderedTotal": 111,
+    "renderedClusters": 0,
+    "renderedPoints": 111,
+    "canvasColoredPixels": 0,
+    "canvasSampledPixels": 614052,
+    "layoutVisibility": {
+      "live-unclustered": "visible",
+      "live-rider-icons": "visible",
+      "live-rider-labels": "visible"
+    }
+  },
+  "finished": "2026-06-05T17:36:33.009Z"
+}

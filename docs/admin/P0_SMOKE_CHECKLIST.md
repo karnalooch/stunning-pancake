@@ -124,7 +124,7 @@ Login as `SPONSOR`.
 
 ## Live Map — prod smoke (optional, GLOBAL_OWNER)
 
-Wymaga `ADMIN_PASS` w środowisku. Artefakty trafiają do `admin/audit-screenshots/` (nie commitować).
+Wymaga `ADMIN_PASS` w środowisku. Artefakty robocze: `admin/audit-screenshots/` (nie commitować). **Snapshot do docs:** [WEBGL_LIVE_MAP_AUDIT_2026-06-06.md](./WEBGL_LIVE_MAP_AUDIT_2026-06-06.md) + [reports/webgl-audit-report-2026-06-06.json](./reports/webgl-audit-report-2026-06-06.json).
 
 **Lokalnie:**
 

@@ -41,6 +41,7 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 | [P2_ROADMAP.md](./P2_ROADMAP.md) | GPX backlog (F1–F6, checklista §2.3), Auth/MFA ex-Paczka 6 | ✅ Active | Przy kickoff P2 |
 | [ROADMAP_V3.md](./ROADMAP_V3.md) | Spec v3 (mapa, paginacja, AI coach) | ✅ Active | Przy kickoff v3 |
 | [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) | Snapshot audytu tras i luk | 📦 Snapshot | Nie nadpisywać — nowy plik `UI_AUDIT_*` |
+| [WEBGL_LIVE_MAP_AUDIT_2026-06-06.md](./WEBGL_LIVE_MAP_AUDIT_2026-06-06.md) | WebGL Live Map prod audit + JSON | 📦 Snapshot | Po ponownym audycie — nowy plik datowany |
 
 ---
 

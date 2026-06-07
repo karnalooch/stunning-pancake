@@ -1,0 +1,46 @@
+{
+  "started": "2026-06-06T22:05:15.621Z",
+  "base": "https://admin-production-083b.up.railway.app",
+  "prod": true,
+  "profiles": [
+    {
+      "profile": "prod-headless-angle",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: page.waitForFunction: Timeout 120000ms exceeded."
+    },
+    {
+      "profile": "prod-headed-angle",
+      "webgl": {
+        "webgl1": true,
+        "webgl2": false,
+        "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+        "vendor": "Google Inc. (NVIDIA)"
+      },
+      "meso": null,
+      "micro": null,
+      "error": "TimeoutError: locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for getByTestId('live-map-city-ranking') to be visible\n"
+    }
+  ],
+  "finished": "2026-06-06T22:09:53.981Z",
+  "summary": [
+    {
+      "profile": "prod-headless-angle",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "mesoGap": false,
+      "microOk": true
+    },
+    {
+      "profile": "prod-headed-angle",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2070 SUPER (0x00001E84) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "mesoGap": false,
+      "microOk": true
+    }
+  ]
+}
