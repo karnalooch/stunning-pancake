@@ -399,6 +399,10 @@ class ExportDataView(APIView):
         }
 
 
+def _live_sim_status_light(request) -> bool:
+    return request.query_params.get("light") in ("1", "true", "yes")
+
+
 class LiveSimulationView(APIView):
     """
     POST   /api/activities/admin/live-simulate/   — start live ride simulation
@@ -409,13 +413,14 @@ class LiveSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=45)
+        light = _live_sim_status_light(request)
+        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=45 if not light else 20)
         if proxied is not None:
             return proxied
         try:
             sim.maybe_advance_live_simulation()
             state = sim.get_live_state()
-            log = sim.get_live_log()
+            log = sim.get_live_log_tail(30) if light else sim.get_live_log()
             elapsed = 0.0
             if state.get("started_at"):
                 elapsed = time.time() - state["started_at"]
@@ -442,7 +447,11 @@ class LiveSimulationView(APIView):
                 fsm_pending=fsm["ride_warming"],
                 fsm_routing=fsm.get("ride_routing", 0),
             )
-            from activities.railway_osrm_lifecycle import osrm_lifecycle_echo
+            osrm_lifecycle = None
+            if not light:
+                from activities.railway_osrm_lifecycle import osrm_lifecycle_echo
+
+                osrm_lifecycle = osrm_lifecycle_echo()
 
             routing_queue_depth = int(state.get("routing_queue_depth") or bp["routing_queue_depth"])
             routing_backpressure_active = (
@@ -511,8 +520,9 @@ class LiveSimulationView(APIView):
                     "sim_intensity": _redis_int_or_none(state.get("sim_intensity")),
                     "sim_load": _redis_int_or_none(state.get("sim_load")),
                     "effective_sim_profile": _effective_sim_profile_echo(state),
-                    "osrm_lifecycle": osrm_lifecycle_echo(),
+                    "osrm_lifecycle": osrm_lifecycle,
                     "log": log,
+                    "light": light,
                 }
             )
         except Exception as exc:
@@ -542,6 +552,23 @@ class LiveSimulationView(APIView):
         return Response(body)
 
     def post(self, request):
+        from activities.sim_lab_proxy import probe_sim_lab_health, sim_lab_proxy_enabled
+
+        if sim_lab_proxy_enabled():
+            health = probe_sim_lab_health()
+            if not health.get("reachable"):
+                return Response(
+                    {
+                        "error": (
+                            "Sim-lab unreachable. Wait for sim-lab to recover "
+                            "before starting live simulation."
+                        ),
+                        "code": "SIM_LAB_UNREACHABLE",
+                        "sim_lab_health": health,
+                    },
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
         proxied = try_forward_sim_lab(request, "live-simulate/", timeout=120)
         if proxied is not None:
             return proxied

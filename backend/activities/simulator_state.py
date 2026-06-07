@@ -381,10 +381,7 @@ def live_log(msg: str):
     r.expire(LIVE_LOG_KEY, 86400)
 
 
-def get_live_log() -> list:
-    """Get all log lines from Redis."""
-    r = get_redis()
-    raw = r.lrange(LIVE_LOG_KEY, 0, -1)
+def _parse_live_log_lines(raw: list) -> list:
     lines = []
     for line in raw:
         try:
@@ -392,6 +389,19 @@ def get_live_log() -> list:
         except (json.JSONDecodeError, TypeError, ValueError):
             continue
     return lines
+
+
+def get_live_log() -> list:
+    """Get all log lines from Redis."""
+    r = get_redis()
+    return _parse_live_log_lines(r.lrange(LIVE_LOG_KEY, 0, -1))
+
+
+def get_live_log_tail(limit: int = 30) -> list:
+    """Tail of live sim log for lightweight status polls."""
+    r = get_redis()
+    n = max(1, min(int(limit), 120))
+    return _parse_live_log_lines(r.lrange(LIVE_LOG_KEY, -n, -1))
 
 
 def acquire_live_lock() -> bool:

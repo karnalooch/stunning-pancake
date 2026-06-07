@@ -1103,6 +1103,10 @@ export const LiveMap: React.FC = () => {
                 params.refresh = viewportRefreshRef.current;
             }
 
+            if (detail === 'summary' && bbox) {
+                void fetchAggregateLayer('', bbox);
+            }
+
             const data = await TelemetryApi.getLivePositions(params, {
                 signal: ac.signal,
                 silent: true,
@@ -1238,7 +1242,7 @@ export const LiveMap: React.FC = () => {
             }
             setLoading(false);
         }
-    }, [canFetch, applyPositionPayload, syncZoomUi]);
+    }, [canFetch, applyPositionPayload, syncZoomUi, fetchAggregateLayer]);
 
     const fetchPositionsRef = useRef(fetchPositions);
     fetchPositionsRef.current = fetchPositions;

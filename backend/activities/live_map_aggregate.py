@@ -234,6 +234,22 @@ def _h3_features(req: AggregateRequest, positions: list[dict]) -> dict[str, Any]
     }
 
 
+def build_aggregate_degraded_fallback() -> dict[str, Any]:
+    """Fast empty payload when sim-lab proxy is unreachable (prod first-paint path)."""
+    return {
+        "type": "FeatureCollection",
+        "features": [],
+        "meta": {
+            "degraded": True,
+            "sim_lab_proxy_fallback": True,
+            "enabled": True,
+            "h3_available": _HAS_H3,
+            "cells": 0,
+            "hint": "sim_lab_unreachable",
+        },
+    }
+
+
 def build_aggregate_payload(req: AggregateRequest) -> dict[str, Any]:
     from core.models import FeatureFlag
 

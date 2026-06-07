@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from typing import Any
 
 import requests
@@ -43,9 +44,68 @@ def sim_lab_proxy_public_label() -> str | None:
     return (os.getenv("SIM_LAB_PROXY_PUBLIC_LABEL") or "sim-lab").strip() or "sim-lab"
 
 
-def sim_lab_proxy_target_info() -> dict[str, Any]:
-    enabled = sim_lab_proxy_enabled()
+_HEALTH_CACHE: dict[str, Any] = {}
+_HEALTH_CACHE_TTL_SECONDS = 5.0
+
+
+def _proxy_headers_system() -> dict[str, str]:
+    secret = (os.getenv("SIM_LAB_PROXY_SECRET") or "").strip()
     return {
+        PROXY_HEADER: secret,
+        PROXY_ACTOR_HEADER: "system",
+        PROXY_FROM_HEADER: os.getenv("SENTRY_ENVIRONMENT", "production"),
+        "Accept": "application/json",
+    }
+
+
+def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -> dict[str, Any]:
+    """Quick reachability probe for sim-lab (cached a few seconds on prod)."""
+    if not sim_lab_proxy_enabled():
+        return {"reachable": True, "mode": "local"}
+
+    now = time.time()
+    cached = _HEALTH_CACHE.get("probe")
+    if (
+        not force
+        and isinstance(cached, dict)
+        and now - float(cached.get("_ts") or 0) < _HEALTH_CACHE_TTL_SECONDS
+    ):
+        return {k: v for k, v in cached.items() if k != "_ts"}
+
+    effective_timeout = timeout
+    if effective_timeout is None:
+        try:
+            effective_timeout = float(os.getenv("SIM_LAB_PROXY_HEALTH_TIMEOUT", "3"))
+        except (TypeError, ValueError):
+            effective_timeout = 3.0
+
+    url = _build_url("sim-target/")
+    started = time.time()
+    try:
+        upstream = requests.get(url, headers=_proxy_headers_system(), timeout=effective_timeout)
+        latency_ms = round((time.time() - started) * 1000)
+        reachable = upstream.status_code < 500
+        result: dict[str, Any] = {
+            "reachable": reachable,
+            "latency_ms": latency_ms,
+            "status_code": upstream.status_code,
+            "error": None if reachable else (upstream.text or "")[:160] or None,
+        }
+    except requests.RequestException as exc:
+        result = {
+            "reachable": False,
+            "latency_ms": round((time.time() - started) * 1000),
+            "status_code": None,
+            "error": str(exc)[:160],
+        }
+
+    _HEALTH_CACHE["probe"] = {**result, "_ts": now}
+    return result
+
+
+def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
+    enabled = sim_lab_proxy_enabled()
+    info: dict[str, Any] = {
         "mode": "sim-lab-proxy" if enabled else "local",
         "sim_lab_label": sim_lab_proxy_public_label() if enabled else None,
         "sim_lab_base_url": (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
@@ -54,6 +114,9 @@ def sim_lab_proxy_target_info() -> dict[str, Any]:
         "prod_heavy_sim_guard": not enabled
         and os.getenv("ALLOW_PROD_HEAVY_SIM", "0") not in ("1", "true", "yes"),
     }
+    if include_health and enabled:
+        info["sim_lab_health"] = probe_sim_lab_health()
+    return info
 
 
 def _proxy_headers(request) -> dict[str, str]:

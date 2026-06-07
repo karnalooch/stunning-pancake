@@ -8,7 +8,9 @@ from rest_framework.test import APIRequestFactory
 
 from activities.sim_lab_proxy import (
     assert_prod_heavy_sim_allowed,
+    probe_sim_lab_health,
     sim_lab_proxy_enabled,
+    sim_lab_proxy_target_info,
     try_forward_sim_lab,
     try_forward_sim_lab_activities,
 )
@@ -197,6 +199,69 @@ def test_try_forward_post_serializes_parsed_data(mock_request, monkeypatch):
     sent = json.loads(mock_request.call_args.kwargs["data"].decode())
     assert sent["total_users"] == 100
     assert sent["skip_activities"] is True
+
+
+@patch("activities.sim_lab_proxy.requests.get")
+def test_probe_sim_lab_health_reachable(mock_get, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.text = ""
+    mock_get.return_value = mock_resp
+
+    result = probe_sim_lab_health(force=True)
+    assert result["reachable"] is True
+    assert result["status_code"] == 200
+    assert result["latency_ms"] is not None
+
+
+@patch("activities.sim_lab_proxy.requests.get")
+def test_probe_sim_lab_health_unreachable(mock_get, monkeypatch):
+    import requests
+
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    mock_get.side_effect = requests.Timeout("timed out")
+
+    result = probe_sim_lab_health(force=True)
+    assert result["reachable"] is False
+    assert result["error"]
+
+
+def test_sim_lab_proxy_target_info_includes_health(monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    with patch("activities.sim_lab_proxy.probe_sim_lab_health", return_value={"reachable": True}):
+        info = sim_lab_proxy_target_info()
+    assert info["sim_lab_health"]["reachable"] is True
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_activities_aggregate_fallback_on_timeout(mock_request, monkeypatch):
+    import requests
+
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    mock_request.side_effect = requests.Timeout("timed out")
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/telemetry/live/aggregate/?bbox=1,2,3,4")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab_activities(
+        request,
+        "telemetry/live/aggregate/",
+        timeout=4,
+        allow_local_fallback=True,
+    )
+    assert proxied is None
 
 
 @patch("activities.sim_lab_proxy.requests.request")

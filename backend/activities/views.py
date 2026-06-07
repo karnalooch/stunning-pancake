@@ -598,11 +598,22 @@ class TelemetryLiveAggregateView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        from activities.sim_lab_proxy import try_forward_sim_lab_activities
+        from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
-        proxied = try_forward_sim_lab_activities(request, "telemetry/live/aggregate/")
+        proxy_enabled = sim_lab_proxy_enabled()
+        proxied = try_forward_sim_lab_activities(
+            request,
+            "telemetry/live/aggregate/",
+            timeout=4,
+            allow_local_fallback=True,
+        )
         if proxied is not None:
             return proxied
+
+        if proxy_enabled:
+            from activities.live_map_aggregate import build_aggregate_degraded_fallback
+
+            return Response(build_aggregate_degraded_fallback())
 
         from activities.live_map_aggregate import build_aggregate_payload, parse_aggregate_query_params
 

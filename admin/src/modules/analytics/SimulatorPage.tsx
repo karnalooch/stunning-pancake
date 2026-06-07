@@ -49,11 +49,20 @@ interface BatchStatus {
     log: [string, string][];
 }
 
+const LIVE_POLL_BASE_MS = 1500;
+const LIVE_POLL_MAX_MS = 15000;
+
 const extractStartConflictMessage = (err: any): string => {
     const statusCode = err?.response?.status;
     const code = err?.response?.data?.code;
     if (statusCode === 409 && code === 'WIPE_IN_PROGRESS') {
         return 'Data wipe is running. Wait for wipe completion before starting simulation.';
+    }
+    if (statusCode === 503 && code === 'SIM_LAB_UNREACHABLE') {
+        return 'Sim-lab is unreachable. Wait for recovery before starting live simulation.';
+    }
+    if (statusCode === 503) {
+        return err?.response?.data?.error || 'Sim-lab busy or unavailable (503). Retry in a minute.';
     }
     return err?.response?.data?.error || err?.message || 'Start request failed';
 };
@@ -101,8 +110,14 @@ export const SimulatorPage: React.FC = () => {
     );
 
     const batchPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const livePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const livePollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const livePollDelayRef = useRef(LIVE_POLL_BASE_MS);
+    const livePollFailuresRef = useRef(0);
     const logEndRef = useRef<HTMLDivElement>(null);
+
+    const simLabReachable = simTarget?.mode !== 'sim-lab-proxy'
+        || simTarget?.sim_lab_health?.reachable !== false;
+    const liveStartBlocked = liveEnabled && !simLabReachable;
 
     const isBatchRunning = batchStatus?.running ?? false;
     const isLiveRunning = liveStatus?.running ?? false;
@@ -127,9 +142,15 @@ export const SimulatorPage: React.FC = () => {
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
     const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
 
-    useEffect(() => {
+    const refreshSimTarget = useCallback(() => {
         SimulatorApi.getSimTarget().then(setSimTarget).catch(() => setSimTarget(null));
     }, []);
+
+    useEffect(() => {
+        refreshSimTarget();
+        const timer = window.setInterval(refreshSimTarget, 30_000);
+        return () => window.clearInterval(timer);
+    }, [refreshSimTarget]);
 
     useEffect(() => {
         if (cyclists >= FORCE_SKIP_ACTIVITIES_ABOVE && generateActivities) {
@@ -167,23 +188,48 @@ export const SimulatorPage: React.FC = () => {
         setScaleReport(null);
     };
 
+    const scheduleLivePoll = useCallback(() => {
+        if (livePollTimerRef.current) clearTimeout(livePollTimerRef.current);
+        livePollTimerRef.current = setTimeout(async () => {
+            try {
+                const d = await SimulatorApi.getLiveStatus({ silent: true, light: true });
+                setLiveStatus(d);
+                livePollFailuresRef.current = 0;
+                livePollDelayRef.current = LIVE_POLL_BASE_MS;
+            } catch (err: unknown) {
+                livePollFailuresRef.current += 1;
+                const status = (err as { response?: { status?: number } })?.response?.status;
+                if (status === 503) {
+                    livePollDelayRef.current = Math.min(LIVE_POLL_MAX_MS, 10_000);
+                    refreshSimTarget();
+                } else {
+                    livePollDelayRef.current = Math.min(
+                        LIVE_POLL_MAX_MS,
+                        LIVE_POLL_BASE_MS * 2 ** livePollFailuresRef.current,
+                    );
+                }
+            }
+            scheduleLivePoll();
+        }, livePollDelayRef.current);
+    }, [refreshSimTarget]);
+
     const startPolling = useCallback(() => {
         if (batchPollRef.current) clearInterval(batchPollRef.current);
-        if (livePollRef.current) clearInterval(livePollRef.current);
+        if (livePollTimerRef.current) clearTimeout(livePollTimerRef.current);
 
         batchPollRef.current = setInterval(async () => {
             try { const d = await SimulatorApi.getBatchStatus({ silent: true }); setBatchStatus(d); } catch {}
         }, 2000);
-        livePollRef.current = setInterval(async () => {
-            try { const d = await SimulatorApi.getLiveStatus({ silent: true }); setLiveStatus(d); } catch {}
-        }, 1500);
-    }, []);
+        livePollDelayRef.current = LIVE_POLL_BASE_MS;
+        livePollFailuresRef.current = 0;
+        scheduleLivePoll();
+    }, [scheduleLivePoll]);
 
     useEffect(() => {
         (async () => {
             const [bs, ls, ws] = await Promise.all([
                 SimulatorApi.getBatchStatus().catch(() => null),
-                SimulatorApi.getLiveStatus().catch(() => null),
+                SimulatorApi.getLiveStatus({ light: true }).catch(() => null),
                 SimulatorApi.getWipeStatus(wipeTarget).catch(() => null),
             ]);
             setBatchStatus(bs);
@@ -200,7 +246,7 @@ export const SimulatorPage: React.FC = () => {
         startPolling();
         return () => {
             if (batchPollRef.current) clearInterval(batchPollRef.current);
-            if (livePollRef.current) clearInterval(livePollRef.current);
+            if (livePollTimerRef.current) clearTimeout(livePollTimerRef.current);
         };
     }, [startPolling, wipeTarget]);
 
@@ -231,6 +277,15 @@ export const SimulatorPage: React.FC = () => {
         setLaunching(false);
 
         if (liveEnabled) {
+            if (!simLabReachable) {
+                notifications.show({
+                    title: 'Live sim blocked',
+                    message: 'Sim-lab is unreachable. Batch finished — start live sim after recovery.',
+                    color: 'orange',
+                });
+                startPolling();
+                return;
+            }
             try {
                 await SimulatorApi.startLive({
                     pool_pct: 1.0,
@@ -243,6 +298,9 @@ export const SimulatorPage: React.FC = () => {
                 });
                 notifications.show({ title: 'Live Simulation Started', message: `${activeRiders.toLocaleString()} visible on map`, color: 'teal' });
             } catch (err: any) {
+                if (err?.response?.status === 503) {
+                    refreshSimTarget();
+                }
                 notifications.show({ title: 'Live Sim Error', message: extractStartConflictMessage(err), color: 'orange' });
             }
         }
@@ -252,7 +310,7 @@ export const SimulatorPage: React.FC = () => {
     const refreshStatus = async () => {
         const [bs, ls] = await Promise.all([
             SimulatorApi.getBatchStatus().catch(() => null),
-            SimulatorApi.getLiveStatus().catch(() => null),
+            SimulatorApi.getLiveStatus({ light: false }).catch(() => null),
         ]);
         setBatchStatus(bs);
         setLiveStatus(ls);
@@ -403,6 +461,13 @@ export const SimulatorPage: React.FC = () => {
             {simTarget?.prod_heavy_sim_guard && simTarget.mode !== 'sim-lab-proxy' && (
                 <Alert variant="light" color="orange" icon={<AlertTriangle size={18} />} title="Ciężkie testy zablokowane na prod">
                     Duże batch/live sim są odrzucane na tym backendzie. Włącz SIM_LAB_PROXY na backendzie prod lub użyj skryptów sim-lab.
+                </Alert>
+            )}
+            {simTarget?.mode === 'sim-lab-proxy' && simTarget.sim_lab_health?.reachable === false && (
+                <Alert variant="light" color="red" icon={<AlertCircle size={18} />} title="Sim-lab niedostępny">
+                    Proxy nie dociera do {simTarget.sim_lab_label || 'sim-lab'}
+                    {simTarget.sim_lab_health.error ? ` (${simTarget.sim_lab_health.error})` : ''}.
+                    Live sim jest zablokowany do czasu recovery; mapa może ładować się wolno lub być pusta.
                 </Alert>
             )}
 
@@ -598,6 +663,11 @@ export const SimulatorPage: React.FC = () => {
                                 )}
 
                                 <Stack gap="md">
+                                    {liveStartBlocked && (
+                                        <Alert color="orange" variant="light" icon={<AlertTriangle size={16} />}>
+                                            Live sim wyłączony do czasu powrotu sim-lab. Batch nadal możesz uruchomić z odznaczonym live.
+                                        </Alert>
+                                    )}
                                     <Button size="lg" color="violet" fullWidth
                                         leftSection={anyRunning ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
                                         loading={launching} disabled={anyRunning}

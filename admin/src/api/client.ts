@@ -346,11 +346,20 @@ export type ScaleOverrides = {
   brouter_route_attempts: number;
 };
 
+export type SimLabHealth = {
+  reachable: boolean;
+  latency_ms?: number | null;
+  status_code?: number | null;
+  error?: string | null;
+  mode?: string;
+};
+
 export type SimTargetInfo = {
   mode: 'local' | 'sim-lab-proxy';
   sim_lab_label?: string | null;
   sim_lab_base_url?: string | null;
   prod_heavy_sim_guard?: boolean;
+  sim_lab_health?: SimLabHealth | null;
 };
 
 export const SimulatorApi = {
@@ -392,8 +401,10 @@ export const SimulatorApi = {
   },
 
   // Live Simulation
-  getLiveStatus: async (options?: { silent?: boolean }) => {
+  getLiveStatus: async (options?: { silent?: boolean; light?: boolean }) => {
+    const params = options?.light ? { light: 1 } : undefined;
     const { data } = await apiClient.get('/activities/admin/live-simulate/', {
+      params,
       skipGlobalError: options?.silent,
     } as ApiClientRequestConfig);
     return data;
