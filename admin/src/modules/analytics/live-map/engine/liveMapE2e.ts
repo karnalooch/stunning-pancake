@@ -19,7 +19,7 @@ declare global {
     }
 }
 
-import { isPlaywrightE2eSession } from '../../core/auth/e2eEnv';
+import { isPlaywrightE2eSession } from '../../../../core/auth/e2eEnv';
 
 export function isLiveMapE2eEnabled(): boolean {
     return isPlaywrightE2eSession();

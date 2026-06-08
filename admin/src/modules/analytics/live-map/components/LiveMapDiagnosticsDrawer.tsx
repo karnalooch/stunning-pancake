@@ -5,7 +5,7 @@ import {
 import { Copy, X } from 'lucide-react';
 import type { LiveMapRequestLogEntry, IncidentBundle } from '../engine/liveMapDiagnostics';
 import type { LiveMapHealthSnapshot } from '../engine/liveMapHealth';
-import { LiveMapWebhooksPanel } from '../engine/liveMapWebhooksPanel';
+import { LiveMapWebhooksPanel } from './LiveMapWebhooksPanel';
 
 export type LiveMapDiagnosticsDrawerProps = {
     opened: boolean;

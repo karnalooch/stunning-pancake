@@ -12,7 +12,7 @@ import {
 } from './liveMapZoom';
 
 import { ensureLiveMapSprites } from './liveMapSprite';
-import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../core/map/mapBasemap';
+import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../../../core/map/mapBasemap';
 import {
     clusterColorExpression,
     clusterRadiusExpression,

@@ -1,4 +1,4 @@
-import type { Role } from '../../core/auth/useAuth';
+import type { Role } from '../../../../core/auth/useAuth';
 import type { LiveMapPosition } from './liveMapMarkers';
 
 /** Roles that see full rider names on micro tier. */

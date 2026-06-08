@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     Stack, Text, TextInput, Button, Group, Switch, MultiSelect, Badge, Divider,
 } from '@mantine/core';
-import { TelemetryApi } from '../../api/client';
+import { TelemetryApi } from '../../../../api/client';
 
 const EVENT_OPTIONS = [
     { value: 'viewport_capped', label: 'Viewport capped' },

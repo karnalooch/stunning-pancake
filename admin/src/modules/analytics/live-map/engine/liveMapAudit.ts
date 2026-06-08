@@ -1,4 +1,4 @@
-import { apiClient } from '../../api/client';
+import { apiClient } from '../../../../api/client';
 import { resolveLiveMapTier, type LiveApiDetail } from './liveMapZoom';
 
 let sessionId: string | null = null;

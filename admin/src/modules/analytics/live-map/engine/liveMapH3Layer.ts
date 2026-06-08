@@ -1,7 +1,7 @@
 import type { LiveMapTheme } from './liveMapTheme';
 import { defaultLiveMapTheme } from './liveMapTheme';
 import { resolveLiveMapTier } from './liveMapEnterprise';
-import { isPlaywrightE2eSession } from '../../core/auth/e2eEnv';
+import { isPlaywrightE2eSession } from '../../../../core/auth/e2eEnv';
 
 export const H3_SOURCE = 'live-h3-cells';
 export const H3_LAYER = 'live-h3-cells-fill';

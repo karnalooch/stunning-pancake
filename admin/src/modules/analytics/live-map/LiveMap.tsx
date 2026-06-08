@@ -11,11 +11,11 @@ import {
     defaultReplayRange,
     serverFramesToBuffer,
     type ServerReplayStep,
-} from './components/LiveMapServerReplay';
-import { buildAuditPayload, postLiveMapAudit } from './components/LiveMapAudit';
-import { resolveLiveMapTheme, defaultLiveMapTheme, type LiveMapTheme } from './components/LiveMapTheme';
-import { installH3Layer, setH3CellData, setLiveMapRenderMode } from './components/LiveMapH3Layer';
-import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './components/LiveMapHealth';
+} from './engine/liveMapServerReplay';
+import { buildAuditPayload, postLiveMapAudit } from './engine/liveMapAudit';
+import { resolveLiveMapTheme, defaultLiveMapTheme, type LiveMapTheme } from './engine/liveMapTheme';
+import { installH3Layer, setH3CellData, setLiveMapRenderMode } from './engine/liveMapH3Layer';
+import { computeLiveMapHealth, parsePollAfterMs, resolveStaleAfterMs } from './engine/liveMapHealth';
 import {
     DEFAULT_LIVE_MAP_FILTERS,
     filtersToApiParams,
@@ -24,31 +24,31 @@ import {
     parseFiltersFromSearch,
     parseInitialZoom,
     type LiveMapFilters,
-} from './components/LiveMapFilters';
+} from './engine/liveMapFilters';
 import {
     deleteViewportCache,
     getViewportCache,
     setViewportCache,
     viewportCacheKey,
-} from './components/LiveMapViewportCache';
-import { maskRiderName } from './components/LiveMapPrivacy';
+} from './engine/liveMapViewportCache';
+import { maskRiderName } from './engine/liveMapPrivacy';
 import {
     appendRequestLog,
     buildIncidentBundle,
     auditWebGlLiveMap,
     renderedBadgeColor,
     type LiveMapRequestLogEntry,
-} from './components/LiveMapDiagnostics';
-import { countRenderedWithSymbolFallback } from './components/LiveMapMapQuery';
-import { addLiveMapBookmark, loadLiveMapBookmarks } from './components/LiveMapBookmarks';
-import { LiveMapReplayBuffer } from './components/LiveMapReplay';
-import { handleLiveMapKeyDown } from './components/LiveMapKeyboard';
-import { LiveMapFpsMonitor } from './components/LiveMapPerformance';
+} from './engine/liveMapDiagnostics';
+import { countRenderedWithSymbolFallback } from './engine/liveMapMapQuery';
+import { addLiveMapBookmark, loadLiveMapBookmarks } from './engine/liveMapBookmarks';
+import { LiveMapReplayBuffer } from './engine/liveMapReplay';
+import { handleLiveMapKeyDown } from './engine/liveMapKeyboard';
+import { LiveMapFpsMonitor } from './engine/liveMapPerformance';
 import {
     resolveLiveMapPollDelayWithStream,
-} from './components/LiveMapPoll';
-import { connectLiveMapSse, parseStreamIntervalMs } from './components/LiveMapStream';
-import { connectLiveMapWs } from './components/LiveMapWs';
+} from './engine/liveMapPoll';
+import { connectLiveMapSse, parseStreamIntervalMs } from './engine/liveMapStream';
+import { connectLiveMapWs } from './engine/liveMapWs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient, TelemetryApi } from '../../../api/client';
 import { formatQuickLaunchError, quickLaunchLiveMap, QuickLaunchBlockedError } from '../../../api/simulatorBatch';
@@ -59,8 +59,8 @@ import {
     resolveActivityKind,
     speedToKmh,
     type LiveMapPosition,
-} from './components/LiveMapMarkers';
-import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug, cityBySlug } from './components/LiveMapCities';
+} from './engine/liveMapMarkers';
+import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug, cityBySlug } from './engine/liveMapCities';
 import {
     CLUSTER_MAX_ZOOM,
     apiDetailForZoom,
@@ -69,7 +69,7 @@ import {
     resolveLiveMapTier,
     TIER_MODE_LABEL,
     LIVE_MAP_TIER,
-} from './components/LiveMapZoom';
+} from './engine/liveMapZoom';
 import {
     installLiveMapLayers,
     LIVE_LAYERS,
@@ -82,30 +82,30 @@ import {
     setLivePositionsData,
     updateMesoClustersOnly,
     type LiveMapClickEvent,
-} from './components/LiveMapLayers';
+} from './engine/liveMapLayers';
 import {
     SSE_RESTART_DELAY_MS,
     coalesceViewportSettle,
     progressiveLimitForZoom,
     shouldFetchFullLimitAfterFast,
-} from './components/LiveMapViewportFetch';
-import { cityFlyParams, mesoBboxForCitySlug, mesoFlyZoom } from './components/LiveMapCityNav';
-import { terminateMesoWorker } from './components/LiveMapMesoWorkerClient';
-import { LivePositionInterpolator } from './components/LiveMapInterp';
-import { bboxFromMap } from './components/LiveMapBbox';
+} from './engine/liveMapViewportFetch';
+import { cityFlyParams, mesoBboxForCitySlug, mesoFlyZoom } from './engine/liveMapCityNav';
+import { terminateMesoWorker } from './workers/liveMapMesoWorkerClient';
+import { LivePositionInterpolator } from './engine/liveMapInterp';
+import { bboxFromMap } from './engine/liveMapBbox';
 import {
     liveMapViewportKey,
     shouldClearOnEmptyViewportChange,
     shouldRetainMarkersOnEmptyPayload,
-} from './components/LiveMapViewport';
-import type { LiveApiDetail } from './components/LiveMapZoom';
+} from './engine/liveMapViewport';
+import type { LiveApiDetail } from './engine/liveMapZoom';
 import {
     MAP_ATTRIBUTION_CONTROL_OPTIONS,
     resolveMapStyleUrl,
     transformMapGlyphsStyle,
 } from '../../../core/map/mapBasemap';
 import { classifyMapLibreError } from '../../../core/map/mapErrorPolicy';
-import { isLiveMapE2eEnabled, publishLiveMapE2e } from './components/LiveMapE2e';
+import { isLiveMapE2eEnabled, publishLiveMapE2e } from './engine/liveMapE2e';
 
 let _mlPromise: Promise<any> | null = null;
 function loadMaplibregl(): Promise<any> {

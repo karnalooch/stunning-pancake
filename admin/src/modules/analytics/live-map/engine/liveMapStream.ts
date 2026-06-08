@@ -1,5 +1,5 @@
-import { getStoredAccessToken } from '../../core/auth/tokens';
-import { useAuth } from '../../core/auth/useAuth';
+import { getStoredAccessToken } from '../../../../core/auth/tokens';
+import { useAuth } from '../../../../core/auth/useAuth';
 import type { LiveMapPosition } from './liveMapMarkers';
 
 export type LiveMapStreamPayload = {
