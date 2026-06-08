@@ -1,0 +1,19 @@
+name: pnpm setup
+description: Install pnpm and workspace dependencies from repo root
+inputs:
+  node-version:
+    description: Node.js version
+    required: false
+    default: "20"
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 9.15.0
+    - uses: actions/setup-node@v6
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+    - run: pnpm install --frozen-lockfile
+      shell: bash

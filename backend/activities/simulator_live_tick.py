@@ -5,47 +5,41 @@ Extracted from simulator_tasks.py (Q-P0-3). Lock handling stays in live_tick_tas
 """
 
 import logging
-import math
 import os
 import random
-import time
 from datetime import timedelta
 
 from django.utils import timezone
 
-from . import simulator_state as sim
-from . import ride_fsm
-from . import simulator_routing_backpressure as routing_bp
+from . import ride_fsm, simulator_routing_backpressure as routing_bp, simulator_state as sim
 from .simulator_route_waypoints import (
     STRICT_ROAD_ROUTES,
     _async_routing_enabled,
     _compute_live_motion,
     _generate_route_waypoints,
     _heal_stale_batch_running_flag,
-    _instant_active_on_route_enabled,
     _interpolate_along_polyline,
     _maybe_log_brouter_grid_fallback,
     _ramp_start_delay_max,
-    _reset_brouter_tick_budget,
     _sample_athlete_motion_profile,
 )
 
 logger = logging.getLogger("activities.simulator")
 
+
 def _run_live_tick_body():
     """Core tick logic — separated so lock handling stays in the task wrapper."""
-    from activities.simulator_tasks import route_live_ride_task
-
-    from users.models import User
     from activities.models import Activity
-    from activities.services import TelemetryService
     from activities.scale_disk_monitor import check_sim_writes_allowed
+    from activities.services import TelemetryService
+    from activities.simulator_tasks import route_live_ride_task
     from simulate_active_cities import (
         CITIES,
-        _pick_activity_type,
         _generate_activity_params,
+        _pick_activity_type,
         resolve_city_for_user,
     )
+    from users.models import User
 
     state = sim.get_live_state()
     if not state.get("running", False):
@@ -204,9 +198,7 @@ def _run_live_tick_body():
     from activities.sim_slo import maybe_apply_starts_slo
 
     fsm_for_slo = ride_fsm.fsm_summary(active_rides)
-    global_start_cap = maybe_apply_starts_slo(
-        state, fsm_for_slo, base_max_starts=global_start_cap
-    )
+    global_start_cap = maybe_apply_starts_slo(state, fsm_for_slo, base_max_starts=global_start_cap)
     state = sim.get_live_state()
     start_budget = compute_live_start_budget(
         total_users=total_users,
@@ -419,15 +411,13 @@ def _run_live_tick_body():
 
         if async_routing and (pending_dispatch_ids or routing_dispatch_cap > 0):
             backlog = [
-                uid
-                for uid, ride in active_rides.items()
-                if ride_fsm.can_dispatch_routing(ride)
+                uid for uid, ride in active_rides.items() if ride_fsm.can_dispatch_routing(ride)
             ]
             pending_set = set(pending_dispatch_ids)
             # Drain older PENDING_ROUTE first — avoids 150 new/tick starving backlog.
-            dispatch_order = [
-                uid for uid in backlog if uid not in pending_set
-            ] + list(pending_dispatch_ids)
+            dispatch_order = [uid for uid in backlog if uid not in pending_set] + list(
+                pending_dispatch_ids
+            )
             backlog_cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_BACKLOG", "400") or "400")
             if len(backlog) > backlog_cap and pending_dispatch_ids:
                 allow_new = max(0, routing_dispatch_cap // 3)
@@ -482,9 +472,7 @@ def _run_live_tick_body():
                 f"Backlog drain: dispatch_cap={routing_dispatch_cap} "
                 f"(pending={fsm_pre.get('ride_pending_route', 0)}, depth={bp_snapshot['routing_queue_depth']})"
             )
-        backlog = [
-            uid for uid, ride in active_rides.items() if ride_fsm.can_dispatch_routing(ride)
-        ]
+        backlog = [uid for uid, ride in active_rides.items() if ride_fsm.can_dispatch_routing(ride)]
         routing_dispatched = 0
         for user_id in backlog:
             if routing_dispatched >= routing_dispatch_cap:

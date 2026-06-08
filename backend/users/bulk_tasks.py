@@ -5,11 +5,9 @@ Celery tasks for chunked async bulk user actions.
 from __future__ import annotations
 
 from celery import shared_task
-
 from django.db import transaction
 
 from users.bulk_state import bulk_log, mark_complete, mark_error, mark_running, set_state
-
 
 CHUNK_SIZE = 500
 
@@ -37,7 +35,6 @@ def bulk_action_task(
       - "change_role" (role must be provided)
     """
     from django.contrib.auth import get_user_model
-    from users.models import Tenant
 
     User = get_user_model()
 

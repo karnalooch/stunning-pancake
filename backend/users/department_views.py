@@ -6,18 +6,17 @@ Endpoints for managing departments and user assignments.
 
 from django.conf import settings
 from django.db.models import Count
-from rest_framework import viewsets, permissions, status
+from django.shortcuts import get_object_or_404
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from .departments import Department, UserDepartment
+
 from .department_serializers import (
     DepartmentSerializer,
-    DepartmentTreeSerializer,
     UserDepartmentSerializer,
 )
+from .departments import Department, UserDepartment
 from .models import User
-from .permissions import HasPermission, IsTenantAdmin
 
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -30,8 +29,11 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if not getattr(settings, "DEPARTMENTS_ENABLED", True):
             return Department.objects.none()
-        qs = super().get_queryset().filter(is_active=True).annotate(
-            _member_count=Count("userdepartment", distinct=True)
+        qs = (
+            super()
+            .get_queryset()
+            .filter(is_active=True)
+            .annotate(_member_count=Count("userdepartment", distinct=True))
         )
         # Global owners see all, tenant admins see their tenant
         if self.request.user.role == "GLOBAL_OWNER":
@@ -61,9 +63,7 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         def build_node(dept) -> dict:
             child_nodes = by_parent.get(dept.id, [])
             children = [build_node(child) for child in child_nodes]
-            full_count = direct_counts.get(dept.id, 0) + sum(
-                c["member_count"] for c in children
-            )
+            full_count = direct_counts.get(dept.id, 0) + sum(c["member_count"] for c in children)
             return {
                 "id": dept.id,
                 "name": dept.name,

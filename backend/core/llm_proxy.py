@@ -4,14 +4,14 @@ Routes OpenAI-compatible LLM requests through the backend server
 to prevent API key exposure in the mobile client bundle.
 """
 
-import os
 import json
 import logging
+import os
+
 import requests
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 

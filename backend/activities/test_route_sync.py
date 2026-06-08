@@ -9,7 +9,6 @@ from rest_framework.test import APIClient
 from activities.models import Activity
 from activities.route_sync import merge_linestrings, path_hash_for_coords
 
-
 User = get_user_model()
 
 

@@ -4,8 +4,8 @@ import {
     getViewportCache,
     setViewportCache,
     viewportCacheKey,
-} from '../modules/analytics/liveMapViewportCache';
-import { DEFAULT_LIVE_MAP_FILTERS } from '../modules/analytics/liveMapFilters';
+} from '../modules/analytics/live-map/engine/liveMapViewportCache';
+import { DEFAULT_LIVE_MAP_FILTERS } from '../modules/analytics/live-map/engine/liveMapFilters';
 
 describe('liveMapViewportCache', () => {
     it('viewportCacheKey includes detail, bbox, and filters', () => {

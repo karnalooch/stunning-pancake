@@ -1,26 +1,27 @@
 import base64
 import json
 
+from django.contrib.auth import update_session_auth_hash
 from django.db.models import Q, Value
 from django.db.models.functions import Coalesce
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from drf_spectacular.utils import extend_schema
-from django.contrib.auth import update_session_auth_hash
+
+from core.api_response import error, success
+from core.email_service import EmailService
+
+from .models import AuditLog, Role, Tenant, User
+from .permissions import IsGlobalOwner, IsTenantAdmin
 from .serializers import (
-    UserSerializer,
-    RegisterSerializer,
-    TenantSerializer,
     AuditLogSerializer,
     PasswordChangeSerializer,
+    RegisterSerializer,
+    TenantSerializer,
     UserAdminUpdateSerializer,
+    UserSerializer,
 )
-from .models import User, Tenant, AuditLog, Role
-from .permissions import IsGlobalOwner, IsTenantAdmin
-from core.api_response import success, error
-from core.email_service import EmailService
 
 
 def _allowed_role_values() -> set[str]:
@@ -737,8 +738,9 @@ class UserBulkSetStatusView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
     def post(self, request):
-        from users.bulk_state import mark_queued
         import uuid
+
+        from users.bulk_state import mark_queued
 
         user_ids = request.data.get("user_ids") or []
         desired_is_active = request.data.get("is_active")
@@ -798,8 +800,9 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
     def post(self, request):
-        from users.bulk_state import mark_queued
         import uuid
+
+        from users.bulk_state import mark_queued
 
         user_ids = request.data.get("user_ids") or []
         role = request.data.get("role") or ""
@@ -890,7 +893,7 @@ class UserBulkJobStatusView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
     def get(self, request, job_id: str):
-        from users.bulk_state import get_state, get_log
+        from users.bulk_state import get_log, get_state
 
         state = get_state(job_id)
 

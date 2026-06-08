@@ -4,6 +4,7 @@ Safe to run multiple times — uses get_or_create.
 """
 
 from django.core.management.base import BaseCommand
+
 from users.rbac_models import Permission, Role, RolePermission
 
 PERMISSIONS = [

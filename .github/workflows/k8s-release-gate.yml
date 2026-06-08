@@ -39,12 +39,10 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
 
-      - name: Set up Node
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
 
       - name: Backend smoke checks
         run: |
@@ -54,10 +52,8 @@ jobs:
 
       - name: Admin lint and build
         run: |
-          cd admin
-          npm ci
-          npm run lint
-          npm run build
+          pnpm --filter admin lint
+          pnpm --filter admin build
 
   docker_build_publish_placeholder:
     name: Docker Build/Publish Placeholder

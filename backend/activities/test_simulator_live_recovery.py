@@ -5,8 +5,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from activities import simulator_tasks as tasks
-from activities import simulator_state as sim
+from activities import simulator_state as sim, simulator_tasks as tasks
 
 
 class BrouterTickBudgetTest(SimpleTestCase):

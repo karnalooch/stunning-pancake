@@ -4,10 +4,10 @@ import {
     mesoBboxForCitySlug,
     cityFlyParams,
     mesoFlyZoom,
-} from '../modules/analytics/liveMapCityNav';
-import { DEFAULT_LIVE_MAP_FILTERS } from '../modules/analytics/liveMapFilters';
-import { setViewportCache, clearViewportCache, viewportCacheKey } from '../modules/analytics/liveMapViewportCache';
-import { apiDetailForZoom } from '../modules/analytics/liveMapZoom';
+} from '../modules/analytics/live-map/engine/liveMapCityNav';
+import { DEFAULT_LIVE_MAP_FILTERS } from '../modules/analytics/live-map/engine/liveMapFilters';
+import { setViewportCache, clearViewportCache, viewportCacheKey } from '../modules/analytics/live-map/engine/liveMapViewportCache';
+import { apiDetailForZoom } from '../modules/analytics/live-map/engine/liveMapZoom';
 
 describe('liveMapCityNav', () => {
     beforeEach(() => {

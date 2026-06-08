@@ -1,7 +1,6 @@
-import json
 from django.db import connection
+
 from users.models import AuditLog
-from users.rbac_models import UserRole
 
 
 class TenantRLSMiddleware:

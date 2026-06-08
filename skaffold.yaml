@@ -11,10 +11,10 @@ build:
       docker:
         dockerfile: Dockerfile
     - image: localhost/sport-owner
-      context: admin
+      context: .
       docker:
-        dockerfile: Dockerfile
+        dockerfile: admin/Dockerfile
 deploy:
   kustomize:
     paths:
-      - infrastructure/kubernetes/base
+      - infrastructure/k8s/overlays/local

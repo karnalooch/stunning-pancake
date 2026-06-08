@@ -27,9 +27,9 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
-from collections.abc import Callable
 
 import pluggy
 
@@ -310,8 +310,9 @@ class VoucherHotspotPlugin:
             return {"vouchers_awarded": 0}
 
         try:
-            from activities.models import POI, Voucher
             from django.contrib.gis.measure import Distance as D
+
+            from activities.models import POI, Voucher
 
             if not activity.route_path:
                 return {"vouchers_awarded": 0}

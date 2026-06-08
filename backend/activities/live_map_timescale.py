@@ -94,7 +94,9 @@ def _parse_position_row(
 
     tenant_raw = pos.get("tenantId") or pos.get("tenant_id") or ride.get("tenant_id")
     tenant_id = str(tenant_raw) if tenant_raw else None
-    dept_raw = pos.get("departmentId") if pos.get("departmentId") is not None else pos.get("department_id")
+    dept_raw = (
+        pos.get("departmentId") if pos.get("departmentId") is not None else pos.get("department_id")
+    )
     if dept_raw is None:
         dept_raw = ride.get("primary_department_id")
     department_id = int(dept_raw) if dept_raw is not None else None
@@ -132,7 +134,6 @@ def snapshot_live_positions_to_timescale(*, max_rows: int = 5000) -> dict[str, A
     """
     Batch Redis telemetry shards into Timescale (10s buckets, deduped per device).
     """
-    from core.models import FeatureFlag
 
     if not timescale_writer_enabled():
         return {"status": "disabled", "rows_written": 0}

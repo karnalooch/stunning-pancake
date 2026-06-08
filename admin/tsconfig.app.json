@@ -1,9 +1,10 @@
 {
+  "extends": "@4velo/tsconfig/react.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "target": "es2023",
+    "target": "ES2022",
     "lib": [
-      "ES2023",
+      "ES2022",
       "DOM"
     ],
     "module": "esnext",
@@ -36,7 +37,7 @@
     /* Path aliases */
     "paths": {
       "@tokens/*": [
-        "../shared/tokens/*"
+        "../packages/tokens/*"
       ]
     },
     /* Linting */

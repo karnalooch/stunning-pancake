@@ -59,8 +59,8 @@ def retrain_ml_model() -> dict:
         logger.error("ml_retrain: scikit-learn not installed — skipping")
         return {"status": "skipped", "reason": "scikit-learn not installed"}
 
-    from activities.models import Activity
     from activities.ml_anomaly import extract_features
+    from activities.models import Activity
     from activities.signal_processing import GpsPoint
 
     cutoff = timezone.now() - timedelta(days=LOOKBACK_DAYS)

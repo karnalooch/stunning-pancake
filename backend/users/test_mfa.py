@@ -1,7 +1,8 @@
+import time
+
 from django.test import TestCase
 
-from users.mfa import generate_totp_secret, verify_totp, _totp_at
-import time
+from users.mfa import _totp_at, generate_totp_secret, verify_totp
 
 
 class MfaTotpTests(TestCase):

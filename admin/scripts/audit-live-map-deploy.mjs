@@ -26,14 +26,14 @@ async function main() {
 
     // Dynamic imports from TS sources (tsx resolves via package)
     const { layerVisibilityForRenderMode, MESO_RIDER_LAYERS, MICRO_RIDER_LAYERS } = await import(
-        '../src/modules/analytics/liveMapH3Layer.ts'
+        '../src/modules/analytics/live-map/engine/liveMapH3Layer.ts'
     );
     const {
         clusterLayerOpacityAtZoom,
         ridersVisibleAtZoom,
         auditLiveMapLodCrossfade,
         resolveLiveMapTier,
-    } = await import('../src/modules/analytics/liveMapZoom.ts');
+    } = await import('../src/modules/analytics/live-map/engine/liveMapZoom.ts');
     const { mockRenderModeForDetail } = await import('../e2e/fixtures/liveMapTelemetry.ts');
 
     console.log('─── Layer visibility matrix ───');

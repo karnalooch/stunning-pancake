@@ -5,15 +5,17 @@ Tests for process_activity_async: fast rejection gate,
 already-verified skip, and not-found error handling.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import timedelta
-from django.utils import timezone
+from unittest.mock import patch
+
+import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString
-from users.models import Tenant
+from django.utils import timezone
+
 from activities.models import Activity
 from activities.tasks import process_activity_async
+from users.models import Tenant
 
 User = get_user_model()
 

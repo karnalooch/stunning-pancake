@@ -6,6 +6,7 @@ Milestone 3: All Matrix calls are now async (Celery notifications queue).
 """
 
 import logging
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -56,7 +57,7 @@ def notify_matrix_on_new_member(sender, instance: ClubMembership, created: bool,
     if not club.matrix_room_id:
         return
 
-    from clubs.tasks import send_matrix_notification_async, invite_member_to_matrix_async
+    from clubs.tasks import invite_member_to_matrix_async, send_matrix_notification_async
 
     # Welcome notification in club room
     message = (

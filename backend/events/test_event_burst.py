@@ -109,8 +109,9 @@ class AutoBurstModeTest(TestCase):
 
 class JoinEventTest(TestCase):
     def setUp(self):
-        from events.models import Event
         from django.contrib.auth import get_user_model
+
+        from events.models import Event
 
         User = get_user_model()
         self.user = User.objects.create_user(

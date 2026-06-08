@@ -1,3 +1,5 @@
+import { API_PATHS } from '@4velo/api-client';
+
 /** Read JWT tokens from localStorage (sync) — used before Zustand hydration completes. */
 export function getStoredAccessToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -23,5 +25,5 @@ export function clearStoredSession(): void {
 
 export function isAuthApiPath(url: string | undefined): boolean {
   if (!url) return false;
-  return url.includes('/auth/token/');
+  return url.includes(API_PATHS.authToken) || url.includes(API_PATHS.authTokenRefresh);
 }

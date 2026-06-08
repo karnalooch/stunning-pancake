@@ -1,7 +1,7 @@
-import sys
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
-from events.models import Participation, Event
+from django.core.management.base import BaseCommand
+
+from events.models import Participation
 
 
 class Command(BaseCommand):

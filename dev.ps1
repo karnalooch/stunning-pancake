@@ -4,8 +4,8 @@ function Start-SportDev {
 # --- DODANE PRZEZ GEMINI CLI: AUTOMATYCZNE TUNELE ---
 Write-Host "[INIT] Inicjalizacja tuneli (Port Forward)..." -ForegroundColor Cyan
 Get-Job -Name PortForwardBackend, PortForwardOwner | Stop-Job -ErrorAction SilentlyContinue | Remove-Job -ErrorAction SilentlyContinue
-Start-Job -Name PortForwardBackend -ScriptBlock { kubectl port-forward service/sport-backend-service 8000:80 }
-Start-Job -Name PortForwardOwner -ScriptBlock { kubectl port-forward service/sport-owner-service 8080:80 }
+Start-Job -Name PortForwardBackend -ScriptBlock { kubectl port-forward -n sport service/sport-backend-api 8000:8000 }
+Start-Job -Name PortForwardOwner -ScriptBlock { kubectl port-forward -n sport service/sport-admin 8080:80 }
 # ----------------------------------------------------
 
     $env:KIND_EXPERIMENTAL_PROVIDER = "podman"
@@ -26,7 +26,7 @@ Start-Job -Name PortForwardOwner -ScriptBlock { kubectl port-forward service/spo
             
             # Build Owner (Admin)
             Write-Host "[BUILD] Buduję Owner Panel..."
-            podman build -t localhost/sport-owner:gold-master-v2.1 -f admin/Dockerfile admin
+            podman build -t localhost/sport-owner:gold-master-v2.1 -f admin/Dockerfile .
             
             # Load do Kind
             Write-Host "[LOAD] Ładuję do klastra..."
@@ -36,8 +36,8 @@ Start-Job -Name PortForwardOwner -ScriptBlock { kubectl port-forward service/spo
             
             # Apply K8s
             Write-Host "[K8S] Odświeżam Kubernetes..."
-            kubectl apply -k infrastructure/kubernetes/base/
-            kubectl rollout restart deployment sport-backend sport-owner sport-celery-worker sport-celery-beat
+            kubectl apply -k infrastructure/k8s/overlays/local
+            kubectl rollout restart deployment -n sport sport-backend-api sport-admin sport-celery-worker sport-celery-beat
             
             $lastHash = $currentHash
             Write-Host "OK System gotowy. Czekam na zmiany..." -ForegroundColor Green

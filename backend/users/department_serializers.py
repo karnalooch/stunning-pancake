@@ -5,8 +5,9 @@ Serializers for department management API.
 """
 
 from rest_framework import serializers
+
 from .departments import Department, UserDepartment
-from .models import User, Tenant
+from .models import User
 
 
 class DepartmentSerializer(serializers.ModelSerializer):

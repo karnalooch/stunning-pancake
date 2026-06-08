@@ -8,8 +8,8 @@ from django.test import SimpleTestCase
 
 pytestmark = pytest.mark.simulator_light
 
-from activities.services import BRouterService
 from activities import simulator_state as sim
+from activities.services import BRouterService
 from activities.simulator_tasks import (
     _brouter_profiles_for_activity,
     _interpolate_along_polyline,
@@ -70,9 +70,7 @@ class GenerateRouteWaypointsCacheTest(SimpleTestCase):
     @patch("activities.sim_routing.road_route_waypoints", return_value=None)
     @patch("activities.scale_config.resolve_live_scale_limits")
     @patch("activities.simulator_tasks.sim.get_live_state", return_value={})
-    def test_unroutable_not_negative_cached(
-        self, _live, mock_limits, _route, mock_cache, _skip
-    ):
+    def test_unroutable_not_negative_cached(self, _live, mock_limits, _route, mock_cache, _skip):
         from activities.simulator_tasks import _generate_route_waypoints
 
         mock_limits.return_value = {"brouter_route_attempts": 2}
@@ -134,9 +132,7 @@ class BrouterIslandEarlyExitTest(SimpleTestCase):
     @patch("activities.simulator_tasks._consume_brouter_tick_budget", return_value=True)
     @patch("activities.simulator_tasks._maybe_log_brouter_route_failure")
     @patch("activities.simulator_tasks.BRouterService.validate_track")
-    def test_unroutable_log_mentions_island_section(
-        self, mock_validate, mock_log, _budget
-    ):
+    def test_unroutable_log_mentions_island_section(self, mock_validate, mock_log, _budget):
         from activities.simulator_tasks import _brouter_route_waypoints
 
         mock_validate.return_value = {

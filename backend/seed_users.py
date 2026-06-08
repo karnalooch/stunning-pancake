@@ -1,11 +1,12 @@
 import os
-import django
 import random
+
+import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
-from users.models import User, Tenant  # noqa: E402
+from users.models import Tenant, User  # noqa: E402
 
 
 def seed_athletes():

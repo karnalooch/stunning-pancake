@@ -42,10 +42,11 @@ const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').t
 const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
 import { useAuth } from './core/auth/useAuth';
 import axios from 'axios';
+import { API_PATHS } from '@4velo/api-client';
 import { apiClient } from './api/client';
 import { clearStoredSession } from './core/auth/tokens';
 import { E2EAuthBootstrap } from './core/auth/E2EAuthBootstrap';
-const LiveMapPage = lazy(() => import('./modules/analytics/LiveMap').then(m => ({ default: m.LiveMap })));
+const LiveMapPage = lazy(() => import('./modules/analytics/live-map/LiveMap').then(m => ({ default: m.LiveMap })));
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +70,7 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
       const finalRefresh = refresh;
       // Fetch user profile
       import('./api/client').then(({ apiClient }) => {
-        apiClient.get('/users/profile/', { headers: { Authorization: `Bearer ${finalAccess}` } })
+        apiClient.get(API_PATHS.usersProfile, { headers: { Authorization: `Bearer ${finalAccess}` } })
           .then(r => {
             const d = r.data?.data || r.data;
             onLogin(finalAccess, finalRefresh, {
@@ -104,14 +105,14 @@ export default function App() {
       useAuth.getState().logout();
 
       const baseURL = apiClient.defaults.baseURL || '/api';
-      const res = await axios.post(`${baseURL}/auth/token/`, { username, password });
+      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, { username, password });
       const { access, refresh } = res.data;
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
       useAuth.setState({ token: access, refreshToken: refresh });
 
-      const profileRes = await apiClient.get('/users/profile/');
+      const profileRes = await apiClient.get(API_PATHS.usersProfile);
       const profileData = profileRes.data?.data || profileRes.data;
 
       await login(access, refresh, {

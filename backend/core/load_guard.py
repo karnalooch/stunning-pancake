@@ -26,6 +26,7 @@ matching the `sim.routing.*` style.
 
 from __future__ import annotations
 
+import logging
 import math
 import os
 import time
@@ -33,8 +34,6 @@ import uuid
 from dataclasses import dataclass
 
 from core.redis_cluster import get_redis
-
-import logging
 
 logger = logging.getLogger("core.load_guard")
 
@@ -183,18 +182,14 @@ def evaluate_signal(
     if mode == "on":
         engaged_now = count > limit or was_engaged
         if count > limit:
-            return GuardDecision(
-                False, signal, count, limit, mode, True, _retry_after_for(signal)
-            )
+            return GuardDecision(False, signal, count, limit, mode, True, _retry_after_for(signal))
         return GuardDecision(True, signal, count, limit, mode, engaged_now, 0)
 
     # auto
     trip_at = int(engage_ratio_val * limit)
     engaged_now = was_engaged or count >= trip_at
     if engaged_now and count > limit:
-        return GuardDecision(
-            False, signal, count, limit, mode, True, _retry_after_for(signal)
-        )
+        return GuardDecision(False, signal, count, limit, mode, True, _retry_after_for(signal))
     return GuardDecision(True, signal, count, limit, mode, engaged_now, 0)
 
 

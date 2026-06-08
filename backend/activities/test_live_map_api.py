@@ -1,5 +1,6 @@
-from django.test import SimpleTestCase
 from unittest.mock import MagicMock
+
+from django.test import SimpleTestCase
 
 from activities.live_map_api import (
     LiveMapRequest,
@@ -50,15 +51,9 @@ class TelemetryLiveStreamNegotiationTest(SimpleTestCase):
 
 class LiveMapScopeFilterTest(SimpleTestCase):
     def test_position_matches_tenant(self):
-        self.assertTrue(
-            position_matches_scope("aaa", None, "aaa", None)
-        )
-        self.assertFalse(
-            position_matches_scope("aaa", None, "bbb", None)
-        )
-        self.assertFalse(
-            position_matches_scope("aaa", None, None, None)
-        )
+        self.assertTrue(position_matches_scope("aaa", None, "aaa", None))
+        self.assertFalse(position_matches_scope("aaa", None, "bbb", None))
+        self.assertFalse(position_matches_scope("aaa", None, None, None))
 
     def test_position_matches_department(self):
         self.assertTrue(position_matches_scope(None, 5, None, 5))
@@ -67,12 +62,8 @@ class LiveMapScopeFilterTest(SimpleTestCase):
 
     def test_position_matches_department_ids_set(self):
         allowed = frozenset({1, 2})
-        self.assertTrue(
-            position_matches_scope(None, None, None, 1, department_ids=allowed)
-        )
-        self.assertFalse(
-            position_matches_scope(None, None, None, 9, department_ids=allowed)
-        )
+        self.assertTrue(position_matches_scope(None, None, None, 1, department_ids=allowed))
+        self.assertFalse(position_matches_scope(None, None, None, 9, department_ids=allowed))
 
     def test_pos_scope_fields_aliases(self):
         self.assertEqual(
@@ -173,12 +164,15 @@ class LiveMapCompactStandardTest(SimpleTestCase):
             city_slug=None,
             compact=True,
         )
-        with patch(
-            "activities.services.TelemetryService.get_live_positions",
-            return_value=(positions, {"capped": False, "redis_active": 1}),
-        ), patch(
-            "activities.simulator_state.get_live_rides",
-            return_value={"1": {"state": "RIDING"}},
+        with (
+            patch(
+                "activities.services.TelemetryService.get_live_positions",
+                return_value=(positions, {"capped": False, "redis_active": 1}),
+            ),
+            patch(
+                "activities.simulator_state.get_live_rides",
+                return_value={"1": {"state": "RIDING"}},
+            ),
         ):
             body = build_live_map_payload(req)
         row = body["positions"][0]
@@ -190,6 +184,9 @@ class LiveMapCompactStandardTest(SimpleTestCase):
 
 class LiveMapEtagTest(SimpleTestCase):
     def test_live_map_etag_stable_for_identical_payload(self):
-        body = {"positions": [{"deviceId": "1", "lat": 52.0, "lng": 21.0}], "meta": {"detail": "full"}}
+        body = {
+            "positions": [{"deviceId": "1", "lat": 52.0, "lng": 21.0}],
+            "meta": {"detail": "full"},
+        }
         self.assertEqual(live_map_etag(body), live_map_etag(body))
         self.assertTrue(live_map_etag(body).startswith('W/"'))

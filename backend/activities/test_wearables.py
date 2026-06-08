@@ -4,13 +4,15 @@ P1 Tests — StravaService & GarminService
 RC v0.2: OAuth token exchange, activity sync, status, token refresh.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import timedelta
-from django.utils import timezone
+from unittest.mock import patch
+
+import pytest
 from django.contrib.auth import get_user_model
-from activities.models import WearableIntegration, Activity
-from activities.wearables import StravaService, GarminService
+from django.utils import timezone
+
+from activities.models import Activity, WearableIntegration
+from activities.wearables import GarminService, StravaService
 from users.models import Tenant
 
 User = get_user_model()

@@ -1,12 +1,12 @@
 {
-  "extends": "expo/tsconfig.base",
+  "extends": ["expo/tsconfig.base", "@4velo/tsconfig/base.json"],
   "compilerOptions": {
     "strict": true,
     "moduleResolution": "bundler",
     "skipLibCheck": true,
     "paths": {
       "@tokens/*": [
-        "../shared/tokens/*"
+        "../packages/tokens/*"
       ]
     }
   }

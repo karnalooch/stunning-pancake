@@ -5,6 +5,8 @@ on:
     branches: [master, main, develop]
   pull_request:
     branches: [master, main, develop]
+  schedule:
+    - cron: '0 2 * * *'
 
 # Default read-only; jobs that upload SARIF override security-events (and actions).
 permissions:
@@ -15,12 +17,62 @@ env:
   NODE_VERSION: '20'
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      telemetry: ${{ steps.filter.outputs.telemetry }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      admin: ${{ steps.filter.outputs.admin }}
+      packages: ${{ steps.filter.outputs.packages }}
+      scripts: ${{ steps.filter.outputs.scripts }}
+      docs: ${{ steps.filter.outputs.docs }}
+      workflow: ${{ steps.filter.outputs.workflow }}
+      full: ${{ steps.full.outputs.run }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            telemetry:
+              - 'telemetry/**'
+            mobile:
+              - 'mobile/**'
+            admin:
+              - 'admin/**'
+            packages:
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+            scripts:
+              - 'scripts/**'
+              - 'pyproject.toml'
+            docs:
+              - 'docs/**'
+            workflow:
+              - '.github/workflows/**'
+      - id: full
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   # ──────────────────────────────────────────
   # Backend: Lint + Type Check + Tests
   # ──────────────────────────────────────────
   backend:
     name: Backend (Django)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.backend == 'true'
 
     services:
       postgres:
@@ -133,6 +185,8 @@ jobs:
   telemetry:
     name: Telemetry (FastAPI)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.telemetry == 'true'
 
     steps:
       - uses: actions/checkout@v6
@@ -165,25 +219,22 @@ jobs:
   mobile:
     name: Mobile (React Native)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: mobile/package-lock.json
-
-      - name: Install dependencies
-        run: cd mobile && npm ci
 
       - name: Lint with Expo ESLint
-        run: cd mobile && npm run lint
+        run: pnpm --filter mobile lint
 
       - name: Run unit tests
-        run: cd mobile && npm test -- --ci --forceExit --passWithNoTests
+        run: pnpm --filter mobile test -- --ci --forceExit --passWithNoTests
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -191,6 +242,8 @@ jobs:
   scripts-python:
     name: Scripts (Python)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.scripts == 'true' || needs.changes.outputs.backend == 'true'
 
     steps:
       - uses: actions/checkout@v6
@@ -218,20 +271,28 @@ jobs:
   repo-assets:
     name: Shared tokens
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify design tokens build
-        run: npm run tokens:check
+        run: pnpm tokens:check
+
+      - name: Verify API client OpenAPI paths
+        run: pnpm api:codegen:check
 
   docs-links:
     name: Documentation links
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.docs == 'true'
 
     steps:
       - uses: actions/checkout@v6
@@ -249,39 +310,28 @@ jobs:
   admin:
     name: Admin Dashboard (React/TypeScript)
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.admin == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd admin
-          npm ci
 
       - name: ESLint
-        run: |
-          cd admin
-          npm run lint
+        run: pnpm --filter admin lint
 
       - name: Vitest unit tests
-        run: cd admin && npm run test -- --run
+        run: pnpm --filter admin test -- --run
 
       - name: TypeScript type check
-        run: |
-          cd admin
-          npx tsc --noEmit
+        run: pnpm --filter admin typecheck
 
       - name: Build production bundle
-        run: |
-          cd admin
-          npm run build
+        run: pnpm --filter admin build
 
   # ──────────────────────────────────────────
   # Audit: Route parity, dead screens, RBAC consistency, env drift
@@ -289,49 +339,45 @@ jobs:
   audit:
     name: Audit (Routes + Screens + RBAC + Env)
     runs-on: ubuntu-latest
-    needs: [admin]
+    needs: [changes, admin]
+    if: |
+      always() && needs.admin.result == 'success' && (
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.admin == 'true' ||
+        needs.changes.outputs.scripts == 'true'
+      )
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd admin
-          npm ci
-
-      - name: Install tsx (TypeScript runner)
-        run: cd admin && npm i -D tsx
 
       - name: Route Parity Check
-        run: cd admin && npm run audit:routes
+        run: pnpm audit:routes
 
       - name: Dead Screen Detection
-        run: cd admin && npm run audit:screens
+        run: pnpm audit:screens
 
       - name: Mobile Screen Parity
-        run: cd admin && npm run audit:mobile
+        run: pnpm audit:mobile
 
       - name: API Gap Analysis
-        run: cd admin && npm run audit:api
+        run: pnpm audit:api
 
       - name: RBAC Consistency Audit
-        run: cd admin && npm run audit:rbac
+        run: pnpm audit:rbac
 
       - name: Redirect Chain Audit
-        run: cd admin && npm run audit:redirects
+        run: pnpm audit:redirects
 
       - name: Environment Variable Drift
-        run: cd admin && npm run audit:env
+        run: pnpm audit:env
 
       - name: Dead Import Detection
-        run: cd admin && npm run audit:imports
+        run: pnpm audit:imports
 
   # ──────────────────────────────────────────
   # Security: Dependency vulnerability scan
@@ -339,7 +385,18 @@ jobs:
   security:
     name: Security Scan (pip-audit + npm audit)
     runs-on: ubuntu-latest
-    needs: [backend, admin]
+    needs: [changes, backend, admin]
+    if: |
+      always() && (
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.backend == 'true' ||
+        needs.changes.outputs.admin == 'true' ||
+        needs.changes.outputs.mobile == 'true'
+      ) && (
+        needs.backend.result == 'success' || needs.backend.result == 'skipped'
+      ) && (
+        needs.admin.result == 'success' || needs.admin.result == 'skipped'
+      )
 
     steps:
       - uses: actions/checkout@v6
@@ -354,20 +411,15 @@ jobs:
           pip install pip-audit
           pip-audit -r backend/requirements.txt --ignore-vuln PYSEC-2024-60 || true
 
-      - name: Audit Node dependencies (npm audit)
-        run: |
-          cd admin
-          npm audit --audit-level=high || true
-
-      - name: Set up Node.js (license inventory)
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
 
-      - name: Install admin lockfile (license scan)
-        run: cd admin && npm ci
+      - name: Audit Node dependencies (pnpm audit)
+        run: |
+          pnpm --filter admin audit --audit-level=high || true
+          pnpm --filter mobile audit --audit-level=high || true
 
       - name: License compliance check (OSS inventory)
         run: |
@@ -382,6 +434,8 @@ jobs:
   trivy:
     name: Trivy CVE Scan
     runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true'
     permissions:
       contents: read
       security-events: write
@@ -454,46 +508,40 @@ jobs:
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
-    needs: [admin]
+    needs: [changes, admin]
+    if: |
+      always() && needs.admin.result == 'success' && (
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.admin == 'true'
+      )
 
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v6
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-          cache-dependency-path: admin/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd admin
-          npm ci
 
       - name: Install Playwright browsers
-        run: |
-          cd admin
-          npx playwright install --with-deps chromium
+        run: pnpm --filter admin exec playwright install --with-deps chromium
 
       - name: Build admin for preview (VITE_E2E=1 — Live Map bridge)
-        run: |
-          cd admin
-          VITE_E2E=1 npm run build
+        run: VITE_E2E=1 pnpm --filter admin build
 
       - name: Start preview server and run E2E
         run: |
           cd admin
-          npx vite preview --port 3000 &
+          pnpm exec vite preview --port 3000 &
           sleep 3
-          npx playwright test --reporter=github
+          pnpm exec playwright test --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
 
       - name: Live Map LOD + WebGL audit gate
         run: |
           cd admin
-          npx playwright test --project=live-map-zoom --reporter=github
+          pnpm exec playwright test --project=live-map-zoom --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_SKIP_WEB_SERVER: '1'

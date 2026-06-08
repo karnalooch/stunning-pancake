@@ -1,60 +1,60 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from .views import (
-    ActivityViewSet,
-    PrivacyZoneViewSet,
-    VoucherRedeemView,
-    TelemetryLiveView,
-    TelemetryLiveStreamView,
-    TelemetryLiveReplayView,
-    TelemetryLiveReplayCompareView,
-    TelemetryLiveAggregateView,
-    TelemetryLiveAuditView,
-    LiveMapWebhookListCreateView,
-    LiveMapWebhookDetailView,
-    LiveMapWebhookTestView,
-    AnomalyListView,
-    POIViewSet,
-    TelemetryConfigView,
-    StravaAuthView,
-    StravaCallbackView,
-    GarminAuthView,
-    GarminCallbackView,
-    WearableSyncView,
-    ActivityDetailView,
-    ActivityGpxExportView,
-    AIInsightsView,
-)
 
 from .admin_views import (
-    GlobalActivityListView,
-    TenantActivityListView,
-    AdminDashboardStatsView,
-    DepartmentAnalyticsView,
     ActivityApproveView,
     ActivityRejectView,
+    AdminDashboardStatsView,
+    DepartmentAnalyticsView,
+    DiskAuditListView,
     ExportDataView,
-    RunSimulationView,
+    GlobalActivityListView,
     LiveSimulationView,
-    WipeDataView,
-    WorkerStatusView,
+    RunSimulationView,
     ScalePreflightView,
     SimTargetView,
     SimulatorResetView,
-    DiskAuditListView,
+    TenantActivityListView,
+    WipeDataView,
+    WorkerStatusView,
 )
-from .payments_views import CreateCheckoutSessionView, StripeWebhookView
+from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
+from .heatmap import analytics_summary_view, heatmap_view
 from .leaderboard_views import (
+    admin_clear_leaderboard,
+    admin_leaderboard_list,
+    admin_recalculate_leaderboards,
     city_leaderboard,
-    my_rank,
     department_leaderboard,
     leaderboard_list,
-    admin_recalculate_leaderboards,
-    admin_leaderboard_list,
-    admin_clear_leaderboard,
+    my_rank,
 )
-from .heatmap import heatmap_view, analytics_summary_view
-from .beta_feedback import BetaFeedbackCreateView, BetaFeedbackListView, BetaFeedbackResolveView
+from .payments_views import CreateCheckoutSessionView, StripeWebhookView
+from .views import (
+    ActivityDetailView,
+    ActivityGpxExportView,
+    ActivityViewSet,
+    AIInsightsView,
+    AnomalyListView,
+    GarminAuthView,
+    GarminCallbackView,
+    LiveMapWebhookDetailView,
+    LiveMapWebhookListCreateView,
+    LiveMapWebhookTestView,
+    POIViewSet,
+    PrivacyZoneViewSet,
+    StravaAuthView,
+    StravaCallbackView,
+    TelemetryConfigView,
+    TelemetryLiveAggregateView,
+    TelemetryLiveAuditView,
+    TelemetryLiveReplayCompareView,
+    TelemetryLiveReplayView,
+    TelemetryLiveStreamView,
+    TelemetryLiveView,
+    VoucherRedeemView,
+    WearableSyncView,
+)
 
 router = DefaultRouter()
 router.register(r"sessions", ActivityViewSet, basename="activity")
@@ -80,10 +80,20 @@ urlpatterns = [
         TelemetryLiveReplayCompareView.as_view(),
         name="telemetry-live-replay-compare",
     ),
-    path("telemetry/live/aggregate/", TelemetryLiveAggregateView.as_view(), name="telemetry-live-aggregate"),
+    path(
+        "telemetry/live/aggregate/",
+        TelemetryLiveAggregateView.as_view(),
+        name="telemetry-live-aggregate",
+    ),
     path("telemetry/live/audit/", TelemetryLiveAuditView.as_view(), name="telemetry-live-audit"),
-    path("telemetry/live/webhooks/", LiveMapWebhookListCreateView.as_view(), name="live-map-webhooks"),
-    path("telemetry/live/webhooks/<int:pk>/", LiveMapWebhookDetailView.as_view(), name="live-map-webhook-detail"),
+    path(
+        "telemetry/live/webhooks/", LiveMapWebhookListCreateView.as_view(), name="live-map-webhooks"
+    ),
+    path(
+        "telemetry/live/webhooks/<int:pk>/",
+        LiveMapWebhookDetailView.as_view(),
+        name="live-map-webhook-detail",
+    ),
     path(
         "telemetry/live/webhooks/<int:pk>/test/",
         LiveMapWebhookTestView.as_view(),

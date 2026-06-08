@@ -5,7 +5,6 @@ Live Map view audit — fire-and-forget operator access logging.
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 from typing import Any
 

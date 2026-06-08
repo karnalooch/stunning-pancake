@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Union
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +80,9 @@ def _build_standalone_client():
     Supports both REDIS_URL (with embedded credentials)
     and REDIS_HOST / REDIS_PORT / REDIS_PASSWORD (managed services).
     """
-    import redis
     import urllib.parse
+
+    import redis
 
     url = REDIS_URL
     redis_password = os.getenv("REDIS_PASSWORD", "")

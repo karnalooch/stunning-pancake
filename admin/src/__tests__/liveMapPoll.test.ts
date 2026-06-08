@@ -6,7 +6,7 @@ import {
     resolveLiveMapPollDelayMs,
     resolveLiveMapPollDelayWithStream,
     streamIntervalForZoom,
-} from '../modules/analytics/liveMapPoll';
+} from '../modules/analytics/live-map/engine/liveMapPoll';
 
 describe('liveMapPoll', () => {
     it('backs off on consecutive errors', () => {

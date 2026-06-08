@@ -1,7 +1,6 @@
-import unittest
-from unittest.mock import patch, MagicMock
-import json
 import os
+import unittest
+from unittest.mock import patch
 
 
 # Mocking parts of the system to test logic without full environment

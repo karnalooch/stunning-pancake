@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { resolveInterpDurationMs } from '../modules/analytics/liveMapInterp';
+import { resolveInterpDurationMs } from '../modules/analytics/live-map/engine/liveMapInterp';
 
 describe('liveMapInterp', () => {
     it('resolveInterpDurationMs tracks poll interval (~90%)', () => {

@@ -15,11 +15,6 @@ Architecture Validation:
 - Celery: Massive background anti-cheat processing.
 """
 
-import random
-import time
-import uuid
-from datetime import datetime, timedelta
-
 
 # Mocking the load for validation reporting
 def simulate_load_metrics():

@@ -1,6 +1,7 @@
 import os
-from django.core.management.base import BaseCommand
+
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 
 
 class Command(BaseCommand):
@@ -59,8 +60,8 @@ class Command(BaseCommand):
         google_client_id = os.getenv("GOOGLE_CLIENT_ID", "")
         google_secret = os.getenv("GOOGLE_SECRET", "")
         if google_client_id and google_secret:
-            from django.contrib.sites.models import Site
             from allauth.socialaccount.models import SocialApp
+            from django.contrib.sites.models import Site
 
             site, _ = Site.objects.get_or_create(
                 id=1, defaults={"domain": "4velo.app", "name": "4VELO"}

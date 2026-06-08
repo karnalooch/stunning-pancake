@@ -6,7 +6,7 @@ import {
     tierShowsCityHubs,
     tierShowsRiderClusters,
     tierShowsRiderDetail,
-} from '../modules/analytics/liveMapEnterprise';
+} from '../modules/analytics/live-map/engine/liveMapEnterprise';
 
 describe('liveMapEnterprise', () => {
     it('resolves macro / meso / micro bands', () => {

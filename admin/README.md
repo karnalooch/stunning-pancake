@@ -13,7 +13,8 @@ Professional admin panel for the 4VELO platform — built with Vite, React 19, a
 
 ### Dev Server
 ```bash
-npm run dev
+pnpm install   # from repo root
+pnpm --filter admin dev
 ```
 
 ### Electron Dev (Vite + Electron)
@@ -23,8 +24,15 @@ npm run electron:dev
 
 ### Production Build
 ```bash
-npm run build
+pnpm --filter admin build
 ```
+
+### Docker (Railway / local)
+Build context is **repo root** (pnpm monorepo):
+```bash
+docker build -f admin/Dockerfile -t sport-admin .
+```
+Railway: `rootDirectory=/`, `dockerfilePath=admin/Dockerfile` — see `admin/railway.json`.
 
 ### Windows Executable
 ```bash
@@ -43,25 +51,16 @@ Output: `dist-exe/4VELO Admin.exe`
 
 ### Live Map module boundaries (SSOT)
 
-Live Map logic is split under `src/modules/analytics/` — keep new code in the matching file:
+Live Map lives under `src/modules/analytics/live-map/`:
 
-| Module | Responsibility |
-|--------|----------------|
-| `liveMapMarkers.ts` | Position types, activity kind, speed helpers |
-| `liveMapCities.ts` | Poland sim cities, bounds |
-| `liveMapZoom.ts` | Zoom LOD tiers |
-| `liveMapLayers.ts` | MapLibre layers, sprites |
-| `liveMapInterp.ts` | Position interpolation |
-| `liveMapFilters.ts` | Activity/city filters, URL sync |
-| `liveMapPrivacy.ts` | Role-based PII masking |
-| `liveMapDiagnostics.ts` | Request log, cap honesty, incident bundle |
-| `liveMapKeyboard.ts` | Operator keyboard shortcuts |
-| `liveMapReplay.ts` | Client replay ring buffer |
-| `LiveMapFiltersBar.tsx` | Filter toolbar UI |
-| `LiveMapDiagnosticsDrawer.tsx` | NOC diagnostics drawer |
+| Path | Responsibility |
+|------|----------------|
 | `LiveMap.tsx` | Page composition only |
+| `components/*.tsx` | Toolbar, drawers, panels |
+| `engine/*.ts` | Markers, LOD, layers, poll/WS, filters, privacy |
+| `workers/*` | Meso cluster Web Worker |
 
-Do not grow `LiveMap.tsx` with marker/layer math; extend the table above.
+Public export: `live-map/index.ts`. Do not grow `LiveMap.tsx` with marker/layer math; extend `engine/` or `components/`.
 
 **Zoom LOD E2E (screenshots):** `npm run test:e2e:live-map` — starts Vite with `VITE_E2E=1`, captures one PNG per tier (`e2e/live-map-zoom.spec.ts-snapshots/`). Update baselines: `npm run test:e2e:live-map:update`. Numeric crossfade audit: `node scripts/audit-live-map-lod.mjs`.
 - Anti-cheat moderation panel

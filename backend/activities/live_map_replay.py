@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone as dt_timezone
 from typing import Any
 
-from activities.live_map_api import LiveMapRequest, _pos_scope_fields, parse_live_map_query_params
+from activities.live_map_api import LiveMapRequest, parse_live_map_query_params
 from activities.live_map_rbac import position_matches_scope
 
 logger = logging.getLogger(__name__)
@@ -144,7 +144,19 @@ def _query_frames(
         with connection.cursor() as cursor:
             cursor.execute(sql, params)
             for row in cursor.fetchall():
-                bucket, device_id, lat, lng, speed, course, act_type, tenant_id, dept_id, city_slug, flagged = row
+                (
+                    bucket,
+                    device_id,
+                    lat,
+                    lng,
+                    speed,
+                    course,
+                    act_type,
+                    tenant_id,
+                    dept_id,
+                    city_slug,
+                    flagged,
+                ) = row
                 pos = {
                     "deviceId": str(device_id),
                     "lat": float(lat) if lat is not None else 0.0,
@@ -201,7 +213,13 @@ def _count_in_window(req: ReplayRequest, time_from: datetime, time_to: datetime)
         return 0
 
 
-def _city_deltas(req: ReplayRequest, time_from: datetime, time_to: datetime, baseline_from: datetime, baseline_to: datetime) -> dict[str, int]:
+def _city_deltas(
+    req: ReplayRequest,
+    time_from: datetime,
+    time_to: datetime,
+    baseline_from: datetime,
+    baseline_to: datetime,
+) -> dict[str, int]:
     from django.db import connection
 
     if not req.base.bbox_tuple:

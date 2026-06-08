@@ -308,6 +308,7 @@ def cleanup_simulated_activities(*, source: str = "cron") -> dict[str, Any]:
     from datetime import timedelta
 
     from django.utils import timezone
+
     from activities.models import Activity
 
     cutoff = timezone.now() - timedelta(days=days)

@@ -1,26 +1,27 @@
 from django.urls import path
+
 from .export_views import user_data_export_view
 from .mfa_views import mfa_disable_view, mfa_enable_view, mfa_setup_view, mfa_status_view
 from .views import (
-    RegisterView,
-    UserProfileView,
-    PasswordChangeView,
-    PasswordResetRequestView,
-    PasswordResetConfirmView,
-    TenantBrandingView,
-    TenantUpdateView,
-    ImpersonateUserView,
-    UserListView,
-    UserDetailView,
-    TenantListView,
     AuditLogListView,
-    UserCreateView,
-    UserUpdateView,
-    UserDeleteView,
+    ImpersonateUserView,
     InvitationTokenView,
-    UserBulkSetStatusView,
+    PasswordChangeView,
+    PasswordResetConfirmView,
+    PasswordResetRequestView,
+    RegisterView,
+    TenantBrandingView,
+    TenantListView,
+    TenantUpdateView,
     UserBulkChangeRoleView,
     UserBulkJobStatusView,
+    UserBulkSetStatusView,
+    UserCreateView,
+    UserDeleteView,
+    UserDetailView,
+    UserListView,
+    UserProfileView,
+    UserUpdateView,
 )
 
 urlpatterns = [

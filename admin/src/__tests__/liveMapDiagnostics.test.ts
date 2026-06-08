@@ -3,7 +3,7 @@ import {
     appendRequestLog,
     formatCapHonestyMessage,
     renderedBadgeColor,
-} from '../modules/analytics/liveMapDiagnostics';
+} from '../modules/analytics/live-map/engine/liveMapDiagnostics';
 
 describe('liveMapDiagnostics', () => {
     it('formatCapHonestyMessage when capped with estimate', () => {

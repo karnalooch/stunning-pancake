@@ -4,17 +4,15 @@ Permits running on Windows without installing native libraries.
 Usage: python run_dev.py
 """
 
+import io
 import os
 import sys
-import io
 from types import ModuleType
 
 # Force UTF-8 stdout/stderr on Windows to avoid UnicodeEncodeErrors with emojis
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8")
-
-import json
 
 
 class FakeRedis:

@@ -211,7 +211,21 @@ kubectl rollout restart deployment/sport-celery-beat -n sport
 
 ---
 
-## 8) Validation
+## 8) Local dev (Skaffold / Kind / dev.ps1)
+
+Canonical production manifests: `infrastructure/k8s/`. For local clusters use the **local overlay**:
+
+```bash
+kubectl apply -k infrastructure/k8s/overlays/local
+# or
+skaffold dev   # uses infrastructure/k8s/overlays/local via skaffold.yaml
+```
+
+The overlay enables optional admin + postgres + telemetry + traccar workloads and patches images to `localhost/sport-backend` / `localhost/sport-owner` (`gold-master-v2.1` tag). Legacy path `infrastructure/kubernetes/base/` is deprecated.
+
+---
+
+## 9) Validation
 
 Recommended pre-apply checks:
 

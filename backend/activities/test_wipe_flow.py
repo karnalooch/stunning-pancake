@@ -1,10 +1,10 @@
-import pytest
 from unittest.mock import patch
 
-from django.urls import reverse
+import pytest
 from django.conf import settings
-from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
+from django.urls import reverse
+from rest_framework.test import APIClient
 
 from activities.test_wipe_state import _FakeRedis
 from activities.wipe_tasks import run_wipe_sync
@@ -132,7 +132,9 @@ def test_wipe_post_unstick_clears_running_state(api_client, owner_user):
     api_client.force_authenticate(user=owner_user)
     url = reverse("admin-wipe-data")
     with (
-        patch("activities.wipe_state.get_wipe_state", return_value={"running": True, "phase": "users"}),
+        patch(
+            "activities.wipe_state.get_wipe_state", return_value={"running": True, "phase": "users"}
+        ),
         patch("activities.wipe_state.is_wipe_in_progress", return_value=True),
         patch("activities.wipe_state.force_reset_wipe") as force_reset,
         patch("activities.wipe_state.get_wipe_log", return_value=[]),
@@ -152,7 +154,9 @@ def test_wipe_post_unstick_idle_when_nothing_running(api_client, owner_user):
     api_client.force_authenticate(user=owner_user)
     url = reverse("admin-wipe-data")
     with (
-        patch("activities.wipe_state.get_wipe_state", return_value={"running": False, "phase": "idle"}),
+        patch(
+            "activities.wipe_state.get_wipe_state", return_value={"running": False, "phase": "idle"}
+        ),
         patch("activities.wipe_state.is_wipe_in_progress", return_value=False),
         patch("activities.wipe_state.force_reset_wipe") as force_reset,
         patch(

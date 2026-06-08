@@ -1,6 +1,6 @@
 import os
+
 import django
-from django.db import connection
 
 # Temporarily use superuser for applying RLS
 os.environ["DATABASE_URL"] = "postgres://sportuser:sportpass@db-service:5432/sport"

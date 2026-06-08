@@ -6,10 +6,11 @@ AdminDashboardStatsView single-query optimization.
 """
 
 import pytest
-from django.test import RequestFactory
 from django.contrib.auth import get_user_model
-from users.models import Tenant
+from django.test import RequestFactory
+
 from activities.admin_views import AdminDashboardStatsView, IsAdminRole
+from users.models import Tenant
 
 User = get_user_model()
 
@@ -118,6 +119,7 @@ class TestAdminDashboardStats:
     def test_dashboard_stats_tenant_admin_with_departments(self, user):
         """TENANT_ADMIN with departments must not 500 (get_member_count path)."""
         from rest_framework.test import force_authenticate
+
         from users.departments import Department
 
         user.role = "TENANT_ADMIN"

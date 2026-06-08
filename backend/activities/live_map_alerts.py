@@ -81,9 +81,7 @@ def evaluate_live_map_alerts(meta: dict[str, Any], tenant_id: str | None) -> lis
 
     from activities.models_webhooks import LiveMapAlertWebhook
 
-    webhooks = list(
-        LiveMapAlertWebhook.objects.filter(tenant_id=tenant_id, enabled=True)
-    )
+    webhooks = list(LiveMapAlertWebhook.objects.filter(tenant_id=tenant_id, enabled=True))
     if not webhooks:
         return []
 

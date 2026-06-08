@@ -3,7 +3,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.utils import timezone
 
-from activities.models_webhooks import LiveMapAlertWebhook, append_delivery_log, MAX_DELIVERY_LOG
+from activities.models_webhooks import MAX_DELIVERY_LOG, LiveMapAlertWebhook, append_delivery_log
 from users.models import Tenant
 
 

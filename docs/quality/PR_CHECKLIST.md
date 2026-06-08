@@ -24,7 +24,8 @@ Skopiuj do opisu PR lub użyj szablonu `.github/pull_request_template.md`.
 
 ## Jakość kodu
 
-- [ ] `.\scripts\run-quality-baseline.ps1` zielony (lub odpowiednie moduły z [README](./README.md))
+- [ ] `pnpm install` + `.\scripts\run-quality-baseline.ps1` zielony (lub odpowiednie moduły z [README](./README.md))
+- [ ] `pre-commit run --all-files` jeśli masz hooki (`.pre-commit-config.yaml`)
 - [ ] Test dodany lub uzasadnienie (bugfix na ścieżce krytycznej = test)
 - [ ] Brak sekretów w diff
 - [ ] PR < ~500 linii logiki (rozbić jeśli większy)
@@ -32,7 +33,7 @@ Skopiuj do opisu PR lub użyj szablonu `.github/pull_request_template.md`.
 ## Ścieżki krytyczne (jeśli dotykasz)
 
 - [ ] **GPS / ingest:** outbox, 202/ACK, nie czyścić bufora na samym 2xx
-- [ ] **RBAC admin:** zgodność z [RBAC.md](../RBAC.md), `npm run audit:rbac`
+- [ ] **RBAC admin:** zgodność z [RBAC.md](../RBAC.md), `pnpm audit:rbac`
 - [ ] **Symulator:** kolejność batch → live bez uzasadnionego łamania
 - [ ] **Env:** `.env.example` + Railway docs
 - [ ] **Infra:** [INFRA_PR_CHECKLIST.md](./INFRA_PR_CHECKLIST.md) if `infrastructure/`, compose, or routing images

@@ -4,11 +4,12 @@ Unit Tests — Events Engine
 Tests for EventProgressService, EventNormalizationService, and LeaderboardService.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from events.services import EventProgressService, EventNormalizationService
-from activities.leaderboards import LeaderboardService
 
+import pytest
+
+from activities.leaderboards import LeaderboardService
+from events.services import EventNormalizationService
 
 # ---------------------------------------------------------------------------
 # LeaderboardService tests (mocked Redis)
@@ -85,7 +86,7 @@ class TestLeaderboardService:
 
 class TestEventNormalizationService:
     def test_returns_zero_when_no_participants(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
 
         mock_event = MagicMock()
         mock_event.sport_filter = "RUN"
@@ -97,7 +98,7 @@ class TestEventNormalizationService:
         assert result == 0.0
 
     def test_complexity_factor_applied_for_run(self):
-        from unittest.mock import patch, MagicMock
+        from unittest.mock import MagicMock, patch
 
         mock_event = MagicMock()
         mock_event.sport_filter = "RUN"
@@ -124,7 +125,7 @@ class TestEventNormalizationService:
 
 class TestPluginRegistry:
     def test_register_and_list(self):
-        from core.plugin_registry import PluginRegistry, PluginManifest
+        from core.plugin_registry import PluginManifest, PluginRegistry
 
         reg = PluginRegistry()
         manifest = PluginManifest(
@@ -139,7 +140,7 @@ class TestPluginRegistry:
         assert any(p["name"] == "test_plugin" for p in plugins)
 
     def test_double_register_raises(self):
-        from core.plugin_registry import PluginRegistry, PluginManifest
+        from core.plugin_registry import PluginManifest, PluginRegistry
 
         reg = PluginRegistry()
         manifest = PluginManifest(
@@ -154,7 +155,7 @@ class TestPluginRegistry:
             reg.register(manifest)
 
     def test_fire_calls_handler(self):
-        from core.plugin_registry import PluginRegistry, PluginManifest
+        from core.plugin_registry import PluginRegistry
 
         reg = PluginRegistry()
         called_with = {}
@@ -189,7 +190,7 @@ class TestPluginRegistry:
         assert results == []
 
     def test_unregister_removes_plugin(self):
-        from core.plugin_registry import PluginRegistry, PluginManifest
+        from core.plugin_registry import PluginManifest, PluginRegistry
 
         reg = PluginRegistry()
         manifest = PluginManifest(

@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import User, Tenant, AuditLog
+
+from .models import AuditLog, Tenant, User
 
 
 class TenantSerializer(serializers.ModelSerializer):

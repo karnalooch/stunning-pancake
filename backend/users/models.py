@@ -1,4 +1,5 @@
 import uuid
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -167,5 +168,4 @@ class AuditLog(models.Model):
 
 
 # Import other models in this app at the bottom to ensure they are registered with Django's app registry.
-from .departments import Department, UserDepartment
-from .rbac_models import Permission, Role, RolePermission, UserRole
+from .rbac_models import Role, UserRole

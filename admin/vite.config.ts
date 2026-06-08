@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
   ],
   resolve: {
     alias: {
-      '@tokens': path.resolve(__dirname, '../shared/tokens'),
+      '@tokens': path.resolve(__dirname, '../packages/tokens'),
     },
   },
   optimizeDeps: {

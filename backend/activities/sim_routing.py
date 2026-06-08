@@ -10,7 +10,6 @@ import os
 from collections.abc import Callable
 
 from activities.osrm_service import OsrmService
-from activities.services import BRouterService
 
 RoadRouteFn = Callable[
     [float, float, float, float, str, bool],

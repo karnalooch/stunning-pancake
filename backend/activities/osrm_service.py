@@ -105,7 +105,7 @@ class OsrmService:
         routes = data.get("routes") or []
         if not routes:
             return []
-        geom = (routes[0].get("geometry") or {})
+        geom = routes[0].get("geometry") or {}
         if geom.get("type") != "LineString":
             return []
         out: list[tuple[float, float]] = []
@@ -143,9 +143,7 @@ class OsrmService:
         retries = cls._retry_count()
         for attempt in range(retries):
             try:
-                response = cls._http().get(
-                    url, params=params, timeout=cls._timeout_seconds()
-                )
+                response = cls._http().get(url, params=params, timeout=cls._timeout_seconds())
                 if response.status_code == 200:
                     try:
                         data = response.json()

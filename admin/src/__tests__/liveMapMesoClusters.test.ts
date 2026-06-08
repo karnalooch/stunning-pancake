@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildMesoClusterFeatureCollection } from '../modules/analytics/liveMapMesoClusters';
+import { buildMesoClusterFeatureCollection } from '../modules/analytics/live-map/engine/liveMapMesoClusters';
 
 describe('liveMapMesoClusters', () => {
     it('builds cluster features for dense grid at z=10', () => {

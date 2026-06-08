@@ -30,8 +30,6 @@ ignore = [
     # Style debt — tracked separately; avoid blocking deploy CI on whitespace/import order.
     "W293",
     "W291",
-    "I001",
-    "F401",
     "E402",
     "SIM",
     "F841",

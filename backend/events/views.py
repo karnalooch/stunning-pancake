@@ -6,21 +6,21 @@ Includes OGC API — Moving Features compatible output (Constitution §24.4).
 """
 
 import logging
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from .models import Event, Participation, Achievement
+from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+from .burst import burst_protection_meta, join_event
+from .models import Achievement, Event, Participation
 from .serializers import (
+    AchievementSerializer,
     EventSerializer,
     ParticipationSerializer,
-    AchievementSerializer,
-    EventLeaderboardSerializer,
 )
-from .services import EventProgressService, EventNormalizationService
-from .burst import burst_protection_meta, join_event
+from .services import EventNormalizationService
 
 logger = logging.getLogger(__name__)
 

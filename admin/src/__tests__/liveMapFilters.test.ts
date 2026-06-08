@@ -5,7 +5,7 @@ import {
     filtersToSearchParams,
     mergeFilters,
     parseFiltersFromSearch,
-} from '../modules/analytics/liveMapFilters';
+} from '../modules/analytics/live-map/engine/liveMapFilters';
 
 describe('liveMapFilters', () => {
     it('maps activity and city to API params', () => {

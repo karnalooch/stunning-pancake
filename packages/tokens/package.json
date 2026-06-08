@@ -1,0 +1,12 @@
+{
+  "name": "@4velo/tokens",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsx build.ts",
+    "check": "tsx build.ts --check"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

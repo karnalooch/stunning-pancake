@@ -10,10 +10,11 @@ Handles:
 - System alerts to admins
 """
 
-import os
 import logging
+import os
+
 import sendgrid
-from sendgrid.helpers.mail import Mail, Email, To, Content, Subject, HtmlContent
+from sendgrid.helpers.mail import Email, HtmlContent, Mail, Subject, To
 
 logger = logging.getLogger(__name__)
 

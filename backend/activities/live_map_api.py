@@ -152,8 +152,12 @@ def parse_live_map_query_params(
     if refresh not in ("", "0", "false"):
         skip_cache = True
 
-    activity_type = _normalize_activity_filter(query_params.get("activity_type") or query_params.get("type"))
-    city_slug = (query_params.get("city") or query_params.get("city_slug") or "").strip().lower() or None
+    activity_type = _normalize_activity_filter(
+        query_params.get("activity_type") or query_params.get("type")
+    )
+    city_slug = (
+        query_params.get("city") or query_params.get("city_slug") or ""
+    ).strip().lower() or None
     compact_raw = (query_params.get("compact") or "").strip().lower()
     compact = compact_raw in ("1", "true", "yes")
 
@@ -303,9 +307,7 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
     viewport_bike = 0
     viewport_run = 0
     detail = req.detail
-    scope_active = bool(
-        req.tenant_id or req.department_id is not None or req.department_ids
-    )
+    scope_active = bool(req.tenant_id or req.department_id is not None or req.department_ids)
     viewport_total_before_filter = 0
     viewport_filtered_out = 0
 
@@ -440,7 +442,10 @@ def build_live_map_payload(req: LiveMapRequest) -> dict[str, Any]:
 
     render_mode = "points"
     aggregate_url = None
-    if viewport_total_estimate is not None and viewport_total_estimate >= H3_AGGREGATE_VIEWPORT_ESTIMATE_MIN:
+    if (
+        viewport_total_estimate is not None
+        and viewport_total_estimate >= H3_AGGREGATE_VIEWPORT_ESTIMATE_MIN
+    ):
         render_mode = "aggregate"
     elif viewport_returned >= H3_AGGREGATE_VIEWPORT_CAPPED_MIN and telemetry_meta.get("capped"):
         render_mode = "aggregate"

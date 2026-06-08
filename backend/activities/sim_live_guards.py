@@ -30,8 +30,10 @@ def clamp_live_params_for_large_pool(
     Reduce live-sim aggression after large batch pools (e.g. 10k cities test).
     Skipped when operator uses sim_intensity/sim_load profile (caller checks).
     """
-    limit = threshold if threshold is not None else int(
-        os.getenv("SCALE_SIM_LARGE_POOL_MIN_USERS", str(LARGE_POOL_MIN_USERS))
+    limit = (
+        threshold
+        if threshold is not None
+        else int(os.getenv("SCALE_SIM_LARGE_POOL_MIN_USERS", str(LARGE_POOL_MIN_USERS)))
     )
     if total_users < limit:
         return LargePoolClampResult(active_ratio, tick_seconds, False, ())
@@ -70,7 +72,11 @@ def wait_for_osrm_ready(*, max_wait_seconds: float | None = None) -> OsrmReadyWa
         return OsrmReadyWaitResult(True, 0.0, 0, "backend=brouter")
 
     try:
-        cap = float(max_wait_seconds if max_wait_seconds is not None else os.getenv("RAILWAY_OSRM_READY_MAX_WAIT_S", "90"))
+        cap = float(
+            max_wait_seconds
+            if max_wait_seconds is not None
+            else os.getenv("RAILWAY_OSRM_READY_MAX_WAIT_S", "90")
+        )
     except (TypeError, ValueError):
         cap = 90.0
     cap = max(0.0, min(cap, 300.0))

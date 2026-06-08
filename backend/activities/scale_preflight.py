@@ -25,6 +25,7 @@ from activities.scale_config import (
     estimate_batch_disk_gb,
     live_pool_mode_for_target,
 )
+from activities.services import TelemetryService
 from events.scale_config import (
     EVENT_BURST_AUTO_MIN_PARTICIPANTS,
     EVENT_BURST_MODE,
@@ -33,7 +34,6 @@ from events.scale_config import (
     EVENT_SESSION_START_RATE_PER_MINUTE,
     EVENT_TARGET_POOL_USERS,
 )
-from activities.services import TelemetryService
 
 
 def analyze_scale(

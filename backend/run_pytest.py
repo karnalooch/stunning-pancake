@@ -205,7 +205,6 @@ class _MockUUID(str):
 
 
 def _lenient_uuid_to_python(self, value):
-    import uuid as _uuid
 
     try:
         return _original_uuid_to_python(self, value)

@@ -334,9 +334,7 @@ def _generate_route_waypoints(
             distance_m=distance_m,
         )
         if tpl:
-            shifted = apply_route_template(
-                tpl, anchor_lat=anchor_lat, anchor_lon=anchor_lon
-            )
+            shifted = apply_route_template(tpl, anchor_lat=anchor_lat, anchor_lon=anchor_lon)
             if len(shifted) >= 2:
                 payload = {"waypoints": shifted, "source": tpl.get("source", "road")}
                 cache.set(cache_key, payload, 3600)
@@ -561,4 +559,3 @@ def _generate_road_waypoints(
     """Backward-compatible wrapper — returns waypoints only."""
     waypoints, _ = _generate_route_waypoints(lat, lon, distance_m, activity_type)
     return waypoints
-

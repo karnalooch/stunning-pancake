@@ -14,8 +14,8 @@ Optimized Pipeline:
 from __future__ import annotations
 
 import logging
+
 from celery import shared_task
-from kombu import Queue, Exchange
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +33,19 @@ def process_activity_async(self, activity_id: int) -> dict:
     Implements Milestone 2 'Lightweight Heuristics' (Constitution §24.3).
     """
     import json
-    from core.redis_cluster import get_redis
+
+    from django.contrib.gis.geos import LineString
+
     from activities.models import Activity
     from activities.services import BRouterService, PrivacyService
     from activities.signal_processing import (
-        GpsPoint,
-        process_gps_track,
-        analyze_anomalies,
         GpsKalmanSmoother,
+        GpsPoint,
+        analyze_anomalies,
         fast_rejection_gate,
+        process_gps_track,
     )
-    from django.contrib.gis.geos import LineString
+    from core.redis_cluster import get_redis
 
     # Fetch dynamic config
     r = get_redis()
@@ -236,8 +238,9 @@ def send_leaderboard_digest(city_id: str, top_n: int = 10) -> None:
 @shared_task(queue="default", name="activities.tasks.recalculate_city_leaderboard")
 def recalculate_city_leaderboard(city_id: str = "") -> None:
     from django.db.models import Sum
-    from activities.models import Activity
+
     from activities.leaderboards import LeaderboardService
+    from activities.models import Activity
 
     if city_id:
         cities = [city_id]
@@ -314,9 +317,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         if resp.status_code >= 500:
             raise requests.RequestException(f"HTTP {resp.status_code}")
         if resp.status_code >= 400:
-            LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
-                failure_count=wh.failure_count + 1
-            )
+            LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
             append_delivery_log(
                 wh.pk,
                 {
@@ -350,9 +351,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         logger.info("live_map.webhook.delivery_status=ok id=%s event=%s", webhook_id, event_id)
         return {"status": "ok", "code": resp.status_code}
     except Exception as exc:
-        LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(
-            failure_count=wh.failure_count + 1
-        )
+        LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
         append_delivery_log(
             wh.pk,
             {
@@ -364,7 +363,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
             },
         )
         logger.warning("live_map.webhook.delivery_status=retry id=%s err=%s", webhook_id, exc)
-        raise self.retry(exc=exc, countdown=min(600, 30 * (2 ** self.request.retries)))
+        raise self.retry(exc=exc, countdown=min(600, 30 * (2**self.request.retries)))
 
 
 @shared_task(
@@ -393,6 +392,7 @@ def monitor_postgres_disk() -> dict:
 def generate_gpx_task(activity_id: int) -> dict:
     """P2 F2: Archive GPX after verified activity (local key + sha256; S3 when configured)."""
     import hashlib
+
     from django.utils import timezone
 
     from activities.gpx_export import linestring_to_gpx
@@ -420,7 +420,12 @@ def generate_gpx_task(activity_id: int) -> dict:
     activity.gpx_sha256 = digest
     activity.gpx_generated_at = timezone.now()
     activity.save(update_fields=["gpx_storage_key", "gpx_sha256", "gpx_generated_at"])
-    return {"status": "ok", "activity_id": activity_id, "sha256": digest, "storage_key": storage_key}
+    return {
+        "status": "ok",
+        "activity_id": activity_id,
+        "sha256": digest,
+        "storage_key": storage_key,
+    }
 
 
 @shared_task(name="activities.tasks.warm_dashboard_stats_cache", ignore_result=True)
@@ -431,11 +436,7 @@ def warm_dashboard_stats_cache() -> dict:
     from activities.admin_stats import build_dashboard_stats
 
     User = get_user_model()
-    owner = (
-        User.objects.filter(role="GLOBAL_OWNER", is_active=True)
-        .order_by("id")
-        .first()
-    )
+    owner = User.objects.filter(role="GLOBAL_OWNER", is_active=True).order_by("id").first()
     if not owner:
         return {"status": "skipped", "reason": "no_global_owner"}
     try:
@@ -447,5 +448,7 @@ def warm_dashboard_stats_cache() -> dict:
 
 
 # Register Celery tasks in sibling modules (autodiscover only loads tasks.py).
-from . import simulator_tasks  # noqa: F401
-from . import wipe_tasks  # noqa: F401
+from . import (
+    simulator_tasks,  # noqa: F401
+    wipe_tasks,  # noqa: F401
+)

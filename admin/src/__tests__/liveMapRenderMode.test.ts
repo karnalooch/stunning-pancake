@@ -11,7 +11,7 @@ import {
     MESO_RIDER_LAYERS,
     H3_LAYER,
     setLiveMapRenderMode,
-} from '../modules/analytics/liveMapH3Layer';
+} from '../modules/analytics/live-map/engine/liveMapH3Layer';
 import { buildMockH3AggregateFeatures } from '../../e2e/fixtures/liveMapTelemetry';
 
 describe('layerVisibilityForRenderMode', () => {

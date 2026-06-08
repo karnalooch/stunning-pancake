@@ -36,7 +36,7 @@ Program **całego repozytorium** (nie tylko telemetry/ADR): backend, telemetry, 
 | **Skrypty Python** | `scripts/*.py` | Ruff (root `pyproject.toml`) | — | `scripts-python` |
 | **Performance** | `scripts/load/` | Ruff `scripts/load` | `test_load_report.py`, opcjonalny live smoke | `performance-smoke` |
 | **Dokumentacja** | `docs/` | `check_docs_links.py` | — | `docs` (workflow) |
-| **Tokeny design** | `shared/tokens/` | `npm run tokens:check` | — | `repo-assets` |
+| **Tokeny design** | `packages/tokens/` | `pnpm tokens:check` | — | `repo-assets` |
 | **Infrastruktura** | `infrastructure/`, `docker-compose*` | Review + Trivy | Manual / deploy | `trivy` |
 | **Root** | `.env.example`, workflows | Env drift (`audit:env`) | — | `audit` |
 

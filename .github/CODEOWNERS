@@ -10,6 +10,10 @@
 /mobile/src/services/gpsSyncStorage.ts @karnalooch
 /mobile/src/services/gpsQualityFilter.ts @karnalooch
 
+/packages/ @karnalooch
+/infrastructure/k8s/ @karnalooch
+/admin/src/modules/analytics/live-map/ @karnalooch
+
 /docs/adr/ @karnalooch
 /docs/quality/ @karnalooch
 

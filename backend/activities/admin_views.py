@@ -2,29 +2,30 @@ import csv
 import io
 import math
 import os
-import random
 import time
-from rest_framework import generics, permissions, status
-from rest_framework.views import APIView
-from rest_framework.response import Response
+
+from django.conf import settings as django_settings
 from django.contrib.auth import get_user_model
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.utils import timezone
-from django.conf import settings as django_settings
-from datetime import timedelta
+from rest_framework import generics, permissions, status
 from rest_framework.pagination import PageNumberPagination
-from .models import Activity
-from .serializers import ActivitySerializer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from users.models import Tenant
 from users.permissions import IsAdminOrModerator, IsGlobalOwner
+
 from . import simulator_state as sim
-from .simulator_tasks import run_batch_simulation, run_live_simulation
+from .models import Activity
+from .serializers import ActivitySerializer
 from .sim_lab_proxy import (
     assert_prod_heavy_sim_allowed,
     sim_lab_proxy_target_info,
     try_forward_sim_lab,
 )
+from .simulator_tasks import run_batch_simulation, run_live_simulation
 
 # Keep IsAdminRole as an alias for backward compatibility
 IsAdminRole = IsAdminOrModerator
@@ -69,8 +70,9 @@ def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     Creates city tenants on demand and lightweight athlete users (no activities/departments).
     """
     from django.contrib.auth.hashers import make_password
-    from users.models import User
+
     from simulate_active_cities import CITIES
+    from users.models import User
 
     current = User.objects.filter(role="ATHLETE").count()
     if current >= min_users:
@@ -166,12 +168,13 @@ class AdminDashboardStatsView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def get(self, request):
+        import logging
+
         from activities.admin_stats import (
+            _empty_stats,
             build_dashboard_stats,
             get_cached_dashboard_stats,
-            _empty_stats,
         )
-        import logging
 
         refresh = request.query_params.get("refresh") == "1"
         try:
@@ -437,8 +440,8 @@ class LiveSimulationView(APIView):
 
             scale_overrides = parse_scale_overrides_from_state(state)
             effective_scale = resolve_live_scale_limits(state)
-            from activities.simulator_tasks import _async_routing_enabled
             from activities.sim_routing import sim_routing_backend
+            from activities.simulator_tasks import _async_routing_enabled
 
             fsm = sim.get_live_fsm_summary()
             from activities.simulator_routing_backpressure import routing_backpressure_snapshot
@@ -494,7 +497,9 @@ class LiveSimulationView(APIView):
                     "routing_backpressure_active": routing_backpressure_active,
                     "slo_throttle_engaged": str(state.get("slo_throttle_engaged", "")).lower()
                     == "true",
-                    "slo_max_starts_per_tick": _redis_int_or_none(state.get("slo_max_starts_per_tick")),
+                    "slo_max_starts_per_tick": _redis_int_or_none(
+                        state.get("slo_max_starts_per_tick")
+                    ),
                     "dispatches_throttled": dispatches_throttled,
                     "dispatches_throttled_last_tick": int(
                         state.get("dispatches_throttled_last_tick", 0) or 0
@@ -606,11 +611,11 @@ class LiveSimulationView(APIView):
             )
 
         pool_pct = float(request.data.get("pool_pct", 0.5))
-        from activities.sim_profile import parse_intensity_load_from_request
         from activities.scale_config import (
             parse_scale_overrides_payload,
             scale_overrides_for_storage,
         )
+        from activities.sim_profile import parse_intensity_load_from_request
 
         profile, profile_err = parse_intensity_load_from_request(request.data)
         if profile_err:
@@ -912,9 +917,8 @@ class WipeDataView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from activities import wipe_state as ws
+        from activities import simulator_state as sim, wipe_state as ws
         from activities.wipe_tasks import start_wipe_async
-        from activities import simulator_state as sim
 
         force = request.data.get("force", False) or str(
             request.query_params.get("force", "")
@@ -1273,7 +1277,7 @@ class RunSimulationView(APIView):
                     {"error": "total_users must be an integer"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            from activities.scale_config import MAX_BATCH_USERS, FORCE_SKIP_ACTIVITIES_ABOVE
+            from activities.scale_config import FORCE_SKIP_ACTIVITIES_ABOVE, MAX_BATCH_USERS
 
             if total_users > MAX_BATCH_USERS:
                 return Response(
@@ -1335,7 +1339,6 @@ class RunSimulationView(APIView):
         batch_warnings: list[str] = []
         if total_users:
             from activities.scale_config import compute_batch_scaling
-            from django.contrib.auth import get_user_model
 
             batch_plan = compute_batch_scaling(int(total_users))
             eta_min = max(1, batch_plan["estimated_batch_seconds"] // 60)

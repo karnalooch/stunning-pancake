@@ -21,7 +21,7 @@ import {
     riderIconOpacityAtZoom,
     cityHubOpacityAtZoom,
     clusterLayerOpacityAtZoom,
-} from '../modules/analytics/liveMapZoom';
+} from '../modules/analytics/live-map/engine/liveMapZoom';
 import {
     MAP_GLYPHS_URL,
     MAP_TEXT_FONT_BOLD,

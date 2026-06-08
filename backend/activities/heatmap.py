@@ -77,9 +77,10 @@ def _build_heatmap_features(
     zoom: int,
     tenant_id: str,
 ) -> dict:
+    from django.contrib.gis.geos import Polygon
+
     from activities.models import Activity
     from activities.scale_config import HEATMAP_MAX_ACTIVITIES_SAMPLE
-    from django.contrib.gis.geos import Polygon
 
     cell_size = max(0.0001, DEFAULT_CELL_DEG / (2 ** max(0, zoom - 12)))
     bbox_poly = Polygon.from_bbox((lon_min, lat_min, lon_max, lat_max))
@@ -248,10 +249,12 @@ def analytics_summary_view(request: Request) -> Response:
     Returns premium analytics for the authenticated user.
     """
     from datetime import date, timedelta
-    from django.db.models import Sum, Q
-    from django.db.models.functions import TruncWeek, TruncDay
+
+    from django.db.models import Q, Sum
+    from django.db.models.functions import TruncDay, TruncWeek
+
+    from activities.analytics import predict_race_time, training_load, trend_analysis
     from activities.models import Activity
-    from activities.analytics import trend_analysis, predict_race_time, training_load
 
     user = request.user
     department_id = request.query_params.get("department")

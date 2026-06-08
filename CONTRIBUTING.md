@@ -8,8 +8,10 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 
 1. Przeczytaj [docs/pl/README.md](docs/pl/README.md) (PL, kanoniczny) lub [docs/en/README.md](docs/en/README.md) (EN). Stare ścieżki (`docs/README.md`, `docs/GETTING_STARTED.md`, …) to przekierowania fazy 2.
 2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
-3. Uruchom środowisko: [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md) lub `.\dev.ps1` (legacy: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)).
-4. Dla zmian w symulatorze / Railway: [docs/pl/operations/](docs/pl/operations/) (EN: [docs/en/operations/](docs/en/operations/)).
+3. Zainstaluj zależności z root monorepo: `pnpm install` (wymaga [pnpm](https://pnpm.io/) 9.x; `corepack enable` opcjonalnie).
+4. Opcjonalnie hooki lokalne: `pip install pre-commit && pre-commit install` (Ruff, `pnpm tokens:check`, docs links).
+5. Uruchom środowisko: [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md) lub `.\dev.ps1` (legacy: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)).
+6. Dla zmian w symulatorze / Railway: [docs/pl/operations/](docs/pl/operations/) (EN: [docs/en/operations/](docs/en/operations/)).
 
 ---
 

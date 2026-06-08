@@ -10,14 +10,17 @@ Handles:
 """
 
 import logging
-import secrets
-import requests
 import os
-from django.utils import timezone
+import secrets
 from datetime import timedelta
-from .models import WearableIntegration, Activity
+
+import requests
 from django.contrib.auth import get_user_model
+from django.utils import timezone
+
 from core.redis_cluster import get_redis
+
+from .models import Activity, WearableIntegration
 
 User = get_user_model()
 logger = logging.getLogger(__name__)

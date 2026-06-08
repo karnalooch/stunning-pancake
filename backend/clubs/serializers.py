@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import Club, ClubMembership, ClubChallenge
+
+from .models import Club, ClubChallenge, ClubMembership
 
 
 class ClubSerializer(serializers.ModelSerializer):

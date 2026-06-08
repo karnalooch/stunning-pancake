@@ -33,7 +33,7 @@ Wynik **Fazy 0 + P1** dla całego monorepo. Odśwież po większych zmianach: `.
 | **scripts** | `check_openapi_drift.py` | ✅ PASS | CI `scripts-python` |
 | **scripts** | `test_check_docs_links.py` | ✅ 3 passed | |
 | **docs** | `check_docs_links.py` | CI `docs.yml` | |
-| **shared/tokens** | `npm run tokens:check` | CI `repo-assets` | |
+| **packages/tokens** | `pnpm tokens:check` | CI `repo-assets` | |
 
 ## Rozjazdy Konstytucja ↔ narzędzia
 

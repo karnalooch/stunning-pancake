@@ -4,9 +4,10 @@ Safe to run multiple times — only updates if password is not hashed.
 """
 
 import os
-from django.core.management.base import BaseCommand
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import is_password_usable
+from django.core.management.base import BaseCommand
 from django.utils.crypto import get_random_string
 
 User = get_user_model()

@@ -1,6 +1,5 @@
 """Tests for sim-lab proxy helpers."""
 
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -158,9 +157,7 @@ def test_try_forward_activities_fallback_on_500(mock_request, monkeypatch):
     request = factory.get("/api/activities/telemetry/live/?zoom=6")
     request.user = MagicMock(username="global_owner")
 
-    proxied = try_forward_sim_lab_activities(
-        request, "telemetry/live/", allow_local_fallback=True
-    )
+    proxied = try_forward_sim_lab_activities(request, "telemetry/live/", allow_local_fallback=True)
     assert proxied is None
 
 

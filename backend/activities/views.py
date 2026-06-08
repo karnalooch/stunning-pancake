@@ -1,23 +1,24 @@
 import json
 import time
-from rest_framework import viewsets, permissions, status, generics, views
+
+from drf_spectacular.utils import extend_schema
+from rest_framework import generics, permissions, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema
-from .models import Activity, PrivacyZone, Voucher, POI
-from .serializers import (
-    ActivitySerializer,
-    ActivityCreateSerializer,
-    PrivacyZoneSerializer,
-    POISerializer,
-    ActivityDetailSerializer,
-)
 
-from .services import TelemetryService
-from .social import SocialSharingService
-from .wearables import StravaService, GarminService, _resolve_oauth_state
 from core.redis_cluster import get_redis
+
+from .models import POI, Activity, PrivacyZone, Voucher
+from .serializers import (
+    ActivityCreateSerializer,
+    ActivityDetailSerializer,
+    ActivitySerializer,
+    POISerializer,
+    PrivacyZoneSerializer,
+)
+from .social import SocialSharingService
+from .wearables import GarminService, StravaService, _resolve_oauth_state
 
 
 class StravaAuthView(views.APIView):
@@ -204,12 +205,12 @@ class ActivityViewSet(viewsets.ModelViewSet):
             burst_protection_meta,
             clear_active_session,
             get_active_session_activity_id,
+            is_burst_enabled_for_event,
             queue_session_start,
             resolve_event_for_session,
             session_start_rate_limit,
             set_active_session,
         )
-        from events.burst import is_burst_enabled_for_event
         from events.tasks import process_event_start_queue
 
         # Global always-on guard — platform-wide session-start protection that
@@ -516,8 +517,9 @@ class TelemetryLiveView(generics.GenericAPIView):
                 },
             }
         else:
-            from . import simulator_state as sim
             from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
+
+            from . import simulator_state as sim
 
             log = logging.getLogger(__name__)
             try:
@@ -537,6 +539,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                 }
 
         from activities.telemetry_shard import live_map_read_policy
+
         read_policy = live_map_read_policy()
         from activities.live_map_api import live_map_etag
 
@@ -567,7 +570,9 @@ class TelemetryLiveReplayView(generics.GenericAPIView):
         req = parse_replay_query_params(request.query_params, user=request.user)
         if req is None:
             return Response(
-                {"detail": "Invalid replay window. Require from, to (ISO), optional step=5s|30s|60s, bbox."},
+                {
+                    "detail": "Invalid replay window. Require from, to (ISO), optional step=5s|30s|60s, bbox."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         body = build_replay_payload(req)
@@ -585,7 +590,9 @@ class TelemetryLiveReplayCompareView(generics.GenericAPIView):
         req = parse_replay_query_params(request.query_params, user=request.user)
         if req is None:
             return Response(
-                {"detail": "Invalid replay window. Require from, to (ISO), optional compare_offset=24h."},
+                {
+                    "detail": "Invalid replay window. Require from, to (ISO), optional compare_offset=24h."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         body = build_compare_payload(req)
@@ -615,7 +622,10 @@ class TelemetryLiveAggregateView(generics.GenericAPIView):
 
             return Response(build_aggregate_degraded_fallback())
 
-        from activities.live_map_aggregate import build_aggregate_payload, parse_aggregate_query_params
+        from activities.live_map_aggregate import (
+            build_aggregate_payload,
+            parse_aggregate_query_params,
+        )
 
         req = parse_aggregate_query_params(request.query_params, user=request.user)
         if req is None:
@@ -640,7 +650,9 @@ class TelemetryLiveAuditView(generics.GenericAPIView):
 
         from activities.live_map_audit import record_live_map_view
 
-        result = record_live_map_view(request, request.data if isinstance(request.data, dict) else {})
+        result = record_live_map_view(
+            request, request.data if isinstance(request.data, dict) else {}
+        )
         return Response(result, status=status.HTTP_202_ACCEPTED)
 
 
@@ -770,13 +782,14 @@ class TelemetryLiveStreamView(views.APIView):
     def get(self, request):
         from django.http import StreamingHttpResponse
 
-        from . import simulator_state as sim
         from activities.live_map_api import (
             build_live_map_payload,
             parse_live_map_query_params,
             stream_interval_ms,
         )
         from activities.telemetry_shard import live_map_read_policy
+
+        from . import simulator_state as sim
 
         req = parse_live_map_query_params(
             request.query_params, user=request.user, default_skip_cache=True
@@ -847,8 +860,8 @@ class LeaderboardView(generics.GenericAPIView):
 
     def get(self, request):
 
-        from django.db.models import Q, Sum
         from django.contrib.auth import get_user_model
+        from django.db.models import Q, Sum
 
         User = get_user_model()
 
@@ -960,9 +973,11 @@ class AIInsightsView(generics.GenericAPIView):
 
 
 def generate_insights(request_user=None):
-    from activities.admin_stats import get_cached_dashboard_stats, _scoped_tenant_id
-    from .models import Activity
     from django.db.models import Count, Q
+
+    from activities.admin_stats import _scoped_tenant_id, get_cached_dashboard_stats
+
+    from .models import Activity
 
     cached = get_cached_dashboard_stats(request_user) if request_user is not None else None
     if cached:

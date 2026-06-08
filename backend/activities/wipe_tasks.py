@@ -9,10 +9,8 @@ from celery import shared_task
 
 from activities import wipe_state as ws
 from activities.admin_stats import invalidate_dashboard_stats_cache
-from activities.services import TelemetryService
-
-
 from activities.scale_config import WIPE_CHUNK_SIZE as CHUNK, WIPE_USER_CHUNK_SIZE
+from activities.services import TelemetryService
 
 
 def _chunk_delete(
@@ -118,10 +116,11 @@ def run_wipe_sync():
     ws.set_wipe_in_progress(True, ttl_seconds=ws.WIPE_LOCK_TTL)
 
     from django.contrib.auth import get_user_model
-    from users.models import User, Tenant
-    from users.departments import Department, UserDepartment
-    from activities.models import Activity
+
     from activities import simulator_state as sim
+    from activities.models import Activity
+    from users.departments import Department, UserDepartment
+    from users.models import Tenant, User
 
     ws.clear_wipe_log()
     ws.set_wipe_state(
@@ -259,7 +258,9 @@ def run_wipe_sync():
         if state.get("phase") == "error" or state.get("error"):
             try:
                 _release_simulator_redis_after_wipe()
-                ws.wipe_log("Simulator Redis/telemetry cleared after wipe error (Live Map recovery).")
+                ws.wipe_log(
+                    "Simulator Redis/telemetry cleared after wipe error (Live Map recovery)."
+                )
             except Exception:
                 pass
         ws.set_wipe_in_progress(False)

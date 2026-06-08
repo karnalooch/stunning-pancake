@@ -5,9 +5,9 @@ Tests the P0 Issue 2 fixes: skip static paths, tenant session
 variable setting, and impersonation audit logging for mutating requests.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from core.middleware import TenantRLSMiddleware, ImpersonationAuditMiddleware
+
+from core.middleware import ImpersonationAuditMiddleware, TenantRLSMiddleware
 
 
 class TestTenantRLSMiddleware:

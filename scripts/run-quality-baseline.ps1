@@ -34,22 +34,16 @@ Step "backend: pytest (light)" {
 }
 Step "docs: link check" { python scripts/check_docs_links.py }
 Step "admin: eslint" {
-    Push-Location admin
-    npm run lint --silent
-    Pop-Location
+    pnpm --filter admin lint
 }
 Step "admin: tsc" {
-    Push-Location admin
-    npx tsc --noEmit
-    Pop-Location
+    pnpm --filter admin typecheck
 }
 Step "mobile: jest" {
-    Push-Location mobile
-    npm test -- --ci --passWithNoTests
-    Pop-Location
+    pnpm --filter mobile test -- --ci --passWithNoTests
 }
 Step "repo: tokens check" {
-    if (Test-Path package.json) { npm run tokens:check --silent }
+    if (Test-Path package.json) { pnpm tokens:check }
 }
 
 Write-Host "`n========================================" -ForegroundColor Cyan

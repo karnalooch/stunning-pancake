@@ -1,15 +1,13 @@
+from unittest.mock import patch
+
 import pytest
-import json
-from unittest.mock import patch, MagicMock
-from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APIClient
 from django.contrib.auth import get_user_model
-from users.models import Tenant
+from rest_framework.test import APIClient
+
 from activities.models import Activity
-from rewards.models import Sponsor, VoucherPool
 from core.matrix_provisioner import MatrixProvisioner
 from rewards.stripe_service import StripeService
+from users.models import Tenant
 
 User = get_user_model()
 

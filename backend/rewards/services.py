@@ -40,8 +40,9 @@ class RewardsService:
         Returns:
             Total points balance (can be negative on admin corrections).
         """
-        from rewards.models import PointsLedger
         from django.db.models import Sum
+
+        from rewards.models import PointsLedger
 
         total = PointsLedger.objects.filter(user_id=user_id).aggregate(total=Sum("delta"))["total"]
         return total or 0
@@ -108,7 +109,7 @@ class RewardsService:
         Returns:
             The redeemed Voucher instance, or None on failure.
         """
-        from rewards.models import VoucherPool, Voucher, PointsLedger
+        from rewards.models import PointsLedger, Voucher, VoucherPool
 
         try:
             pool = VoucherPool.objects.get(pk=pool_id)

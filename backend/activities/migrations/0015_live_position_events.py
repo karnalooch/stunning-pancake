@@ -3,7 +3,10 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("activities", "0014_rename_activities__created_8a1f2d_idx_activities__created_121688_idx_and_more"),
+        (
+            "activities",
+            "0014_rename_activities__created_8a1f2d_idx_activities__created_121688_idx_and_more",
+        ),
     ]
 
     operations = [

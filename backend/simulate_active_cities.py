@@ -21,9 +21,7 @@ import argparse
 import math
 import os
 import random
-import sys
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 # ---------------------------------------------------------------------------
 # Django bootstrap (works both via `manage.py shell` and standalone)
@@ -35,7 +33,7 @@ import django
 if not django.conf.settings.configured:
     django.setup()
 
-from django.contrib.gis.geos import LineString, Point
+from django.contrib.gis.geos import LineString
 from django.db import transaction
 from django.utils import timezone as django_tz
 
@@ -181,8 +179,8 @@ def _bulk_create_athletes(
     username_offset: int = 0,
 ) -> int:
     """Insert athletes via bulk_create; returns count actually linked in DB."""
-    from users.models import User
     from users.departments import UserDepartment
+    from users.models import User
 
     pwd = _athlete_password_hash()
     total = 0
@@ -756,9 +754,9 @@ def run(
             )
 
     # Lazy imports — models must be loaded after Django is ready
-    from users.models import User, Tenant
-    from users.departments import Department, UserDepartment
     from activities.models import Activity
+    from users.departments import Department, UserDepartment
+    from users.models import Tenant, User
 
     try:
         from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
@@ -1221,10 +1219,10 @@ def create_users_for_city(
     Phase 4 for a single city — intended for parallel Celery workers.
     Returns number of user rows linked to the city (moderators + athletes).
     """
-    from users.models import User, Tenant
-    from users.departments import Department, UserDepartment
     from activities import simulator_state as sim
     from activities.scale_disk_monitor import check_simulation_allowed, run_disk_monitor
+    from users.departments import Department, UserDepartment
+    from users.models import Tenant, User
 
     allowed, reason = check_simulation_allowed("simulator")
     if not allowed:

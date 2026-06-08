@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from activities.simulator_tasks import _ramp_start_delay_max, _sample_athlete_motion_profile
 from activities.sim_profile import (
     evaluate_backpressure_active_ratio_lower,
     map_intensity,
@@ -14,6 +13,7 @@ from activities.sim_profile import (
     piecewise_lerp,
     resolve_sim_profile,
 )
+from activities.simulator_tasks import _ramp_start_delay_max, _sample_athlete_motion_profile
 
 
 class SimProfileMappingTest(SimpleTestCase):

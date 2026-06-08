@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canShowFullRiderPii, maskRiderName } from '../modules/analytics/liveMapPrivacy';
+import { canShowFullRiderPii, maskRiderName } from '../modules/analytics/live-map/engine/liveMapPrivacy';
 
 describe('liveMapPrivacy', () => {
     it('allows full PII for GLOBAL_OWNER', () => {

@@ -206,7 +206,11 @@ def _h3_features(req: AggregateRequest, positions: list[dict]) -> dict[str, Any]
             continue
 
     if not grid:
-        return {"type": "FeatureCollection", "features": [], "meta": {"mode": "h3", "cells": 0, "resolution": res}}
+        return {
+            "type": "FeatureCollection",
+            "features": [],
+            "meta": {"mode": "h3", "cells": 0, "resolution": res},
+        }
 
     max_count = max(grid.values())
     features = []

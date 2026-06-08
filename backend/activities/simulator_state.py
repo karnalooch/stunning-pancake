@@ -519,9 +519,7 @@ def _heal_cooldown_ok() -> bool:
     """Rate-limit heal+log from admin polls (avoids reschedule storms)."""
     try:
         r = get_redis()
-        return bool(
-            r.set(LIVE_HEAL_COOLDOWN_KEY, "1", nx=True, ex=HEAL_COOLDOWN_SECONDS)
-        )
+        return bool(r.set(LIVE_HEAL_COOLDOWN_KEY, "1", nx=True, ex=HEAL_COOLDOWN_SECONDS))
     except Exception:
         return True
 
@@ -572,8 +570,7 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
             except Exception as exc:
                 actions.append(f"reschedule_failed:{exc!s:.120}")
             live_log(
-                "Self-heal: live ticks stalled (worker may have been killed); "
-                + ", ".join(actions)
+                "Self-heal: live ticks stalled (worker may have been killed); " + ", ".join(actions)
             )
 
     return {"healed": bool(actions), "actions": actions}
@@ -624,8 +621,8 @@ def init_live_pool_db_mode(pool_target: int) -> int:
     Large-scale live sim: no Redis SET of all athlete IDs.
     Ticks sample per city via Postgres (order_by('?')[:n]).
     """
-    from users.models import User
     from activities.scale_config import MAX_LIVE_POOL
+    from users.models import User
 
     r = get_redis()
     r.delete(LIVE_POOL_KEY)
@@ -668,13 +665,13 @@ def set_live_pool_from_db(limit: int) -> int:
     Load athlete IDs into Redis per city — bounded [:quota] queries only (no table iterator).
     Large targets use DB sampling mode via live_pool_mode_for_target.
     """
-    from users.models import Tenant
-    from simulate_active_cities import CITIES
     from activities.scale_config import (
         POOL_SADD_BATCH,
         effective_redis_pool_limit,
         live_pool_mode_for_target,
     )
+    from simulate_active_cities import CITIES
+    from users.models import Tenant
 
     pool_target = int(limit)
     if live_pool_mode_for_target(pool_target) == "db":

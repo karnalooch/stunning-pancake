@@ -18,7 +18,9 @@ def user_data_export_view(request):
     from activities.tasks import generate_gpx_task
 
     user = request.user
-    activity_ids = list(user.activities.filter(route_path__isnull=False).values_list("id", flat=True)[:50])
+    activity_ids = list(
+        user.activities.filter(route_path__isnull=False).values_list("id", flat=True)[:50]
+    )
     for aid in activity_ids:
         generate_gpx_task.delay(aid)
 

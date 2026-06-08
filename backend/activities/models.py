@@ -1,10 +1,11 @@
-import logging
-import os
 import base64
 import hashlib
-from django.contrib.gis.db import models
-from django.conf import settings
+import logging
+import os
+
 from cryptography.fernet import Fernet, InvalidToken
+from django.conf import settings
+from django.contrib.gis.db import models
 
 logger = logging.getLogger(__name__)
 

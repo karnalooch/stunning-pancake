@@ -1,0 +1,34 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      - id: ruff
+        name: ruff (backend, telemetry, scripts)
+        args: [--fix]
+        files: ^(backend|telemetry|scripts)/.*\.py$
+      - id: ruff-format
+        name: ruff format
+        files: ^(backend|telemetry|scripts)/.*\.py$
+
+  - repo: local
+    hooks:
+      - id: tokens-check
+        name: design tokens check
+        entry: pnpm tokens:check
+        language: system
+        pass_filenames: false
+        files: ^packages/tokens/
+
+      - id: api-codegen-check
+        name: api client openapi paths
+        entry: pnpm api:codegen:check
+        language: system
+        pass_filenames: false
+        files: ^packages/api-client/
+
+      - id: docs-links
+        name: docs relative links
+        entry: python scripts/check_docs_links.py
+        language: system
+        pass_filenames: false
+        files: ^docs/

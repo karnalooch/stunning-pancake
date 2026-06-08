@@ -1,8 +1,10 @@
-from typing import Optional
 import logging
+
 from django.db import transaction
-from .models import Event, Participation, Achievement
+
 from activities.leaderboards import LeaderboardService
+
+from .models import Achievement, Event, Participation
 
 logger = logging.getLogger(__name__)
 

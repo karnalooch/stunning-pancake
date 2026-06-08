@@ -3,7 +3,7 @@ import {
     progressiveLimitForZoom,
     shouldFetchFullLimitAfterFast,
     PROGRESSIVE_FAST_LIMIT,
-} from '../modules/analytics/liveMapViewportFetch';
+} from '../modules/analytics/live-map/engine/liveMapViewportFetch';
 
 describe('liveMapViewportFetch', () => {
     it('caps fast limit at PROGRESSIVE_FAST_LIMIT', () => {

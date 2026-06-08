@@ -1,10 +1,11 @@
 # Generated migration — encrypts plaintext OAuth tokens at rest
-import os
 import base64
 import hashlib
-from django.db import migrations
-from django.conf import settings
+import os
+
 from cryptography.fernet import Fernet, InvalidToken
+from django.conf import settings
+from django.db import migrations
 
 
 def _get_fernet():

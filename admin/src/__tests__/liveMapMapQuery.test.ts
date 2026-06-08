@@ -3,7 +3,7 @@ import {
     classifyRenderedFeatures,
     countRenderedWithSymbolFallback,
     queryRenderedFeaturesInViewport,
-} from '../modules/analytics/liveMapMapQuery';
+} from '../modules/analytics/live-map/engine/liveMapMapQuery';
 
 describe('liveMapMapQuery', () => {
     it('queryRenderedFeaturesInViewport prefers options-only then CSS bbox', () => {

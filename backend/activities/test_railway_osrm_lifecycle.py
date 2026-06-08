@@ -102,14 +102,8 @@ class TestGraphQL:
         monkeypatch.delenv("RAILWAY_OSRM_SERVICE_ID", raising=False)
         payload = {
             "data": {
-                "project": {
-                    "services": {
-                        "edges": [{"node": {"id": "found-id", "name": "osrm"}}]
-                    }
-                }
+                "project": {"services": {"edges": [{"node": {"id": "found-id", "name": "osrm"}}]}}
             }
         }
-        mock_urlopen.return_value.__enter__.return_value = BytesIO(
-            json.dumps(payload).encode()
-        )
+        mock_urlopen.return_value.__enter__.return_value = BytesIO(json.dumps(payload).encode())
         assert lifecycle.resolve_osrm_service_id() == "found-id"

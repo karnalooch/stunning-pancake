@@ -159,7 +159,9 @@ def evaluate_backpressure_active_ratio_lower(
     Returns (new_ratio, updated_consecutive_ticks, did_lower).
     """
     enabled = auto_lower_active_ratio_enabled() if enabled is None else enabled
-    after_ticks = backpressure_lower_after_ticks() if after_ticks is None else max(1, int(after_ticks))
+    after_ticks = (
+        backpressure_lower_after_ticks() if after_ticks is None else max(1, int(after_ticks))
+    )
 
     if not enabled:
         return current_active_ratio, 0 if not backpressure_active else consecutive_bp_ticks, False
@@ -220,6 +222,8 @@ def maybe_auto_lower_active_ratio_on_backpressure(
             f"Auto-lowered active_ratio {current:.3f} → {new_ratio:.3f} "
             f"after {backpressure_lower_after_ticks()} backpressure ticks"
         )
-        logger.info("sim.profile.auto_lower", extra={"event": "sim.profile.auto_lower", "detail": msg})
+        logger.info(
+            "sim.profile.auto_lower", extra={"event": "sim.profile.auto_lower", "detail": msg}
+        )
         sim.live_log(msg)
     return new_ratio

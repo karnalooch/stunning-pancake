@@ -102,9 +102,9 @@ def run_batch_simulation(
     self, scale=0.01, days=30, clear=False, skip_activities=False, total_users=None
 ):
     """Generate tenants, departments, users, and activities."""
+    from activities.scale_config import compute_batch_scaling
     from simulate_active_cities import run
     from users.models import User
-    from activities.scale_config import compute_batch_scaling
 
     if not sim.acquire_batch_lock():
         sim.batch_log("ERROR: batch lock — another simulation running")

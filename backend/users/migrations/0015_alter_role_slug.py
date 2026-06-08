@@ -4,15 +4,25 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0014_department_rls'),
+        ("users", "0014_department_rls"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='role',
-            name='slug',
-            field=models.CharField(choices=[('global_owner', 'Global Owner'), ('tenant_admin', 'Tenant Admin'), ('tenant_moderator', 'Tenant Moderator'), ('department_moderator', 'Department Moderator'), ('sponsor', 'Sponsor'), ('athlete', 'Athlete')], max_length=50, unique=True),
+            model_name="role",
+            name="slug",
+            field=models.CharField(
+                choices=[
+                    ("global_owner", "Global Owner"),
+                    ("tenant_admin", "Tenant Admin"),
+                    ("tenant_moderator", "Tenant Moderator"),
+                    ("department_moderator", "Department Moderator"),
+                    ("sponsor", "Sponsor"),
+                    ("athlete", "Athlete"),
+                ],
+                max_length=50,
+                unique=True,
+            ),
         ),
     ]

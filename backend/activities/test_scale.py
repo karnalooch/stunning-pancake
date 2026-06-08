@@ -5,13 +5,13 @@ from unittest.mock import MagicMock, patch
 from django.test import SimpleTestCase
 
 from activities.scale_config import (
-    MAX_CONCURRENT_RIDERS,
     MAX_BATCH_USERS,
+    MAX_CONCURRENT_RIDERS,
     TELEMETRY_API_MAX_LIMIT,
     TELEMETRY_LIVE_CACHE_TTL,
-    compute_batch_scaling,
     adaptive_pg_bulk_batch_size,
     adaptive_user_bulk_batch_size,
+    compute_batch_scaling,
     live_pool_mode_for_target,
     plan_batch_cities,
     resolve_telemetry_api_limit,
@@ -29,7 +29,9 @@ class ScaleConfigTest(SimpleTestCase):
 
     def test_resolve_telemetry_live_cache_ttl_per_zoom(self):
         self.assertGreaterEqual(resolve_telemetry_live_cache_ttl(7.0), TELEMETRY_LIVE_CACHE_TTL)
-        self.assertGreater(resolve_telemetry_live_cache_ttl(7.0), resolve_telemetry_live_cache_ttl(13.0))
+        self.assertGreater(
+            resolve_telemetry_live_cache_ttl(7.0), resolve_telemetry_live_cache_ttl(13.0)
+        )
         self.assertEqual(
             resolve_telemetry_live_cache_ttl(13.0, ingest_engaged=True, ingest_cache_ttl=8),
             8,
@@ -152,8 +154,12 @@ class TelemetryServiceScaleTest(SimpleTestCase):
         r = MagicMock()
         mock_get_redis.return_value = r
         r.hlen.return_value = 0
-        with patch.object(TelemetryService, "_get_live_cached", return_value=([], {"cached": True})):
-            with patch.object(TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})):
+        with patch.object(
+            TelemetryService, "_get_live_cached", return_value=([], {"cached": True})
+        ):
+            with patch.object(
+                TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})
+            ):
                 with patch("activities.services.requests.get") as mock_req:
                     mock_req.side_effect = Exception("no traccar")
                     positions, meta = TelemetryService.get_live_positions(
@@ -170,7 +176,9 @@ class TelemetryServiceScaleTest(SimpleTestCase):
         mock_get_redis.return_value = r
         r.hlen.return_value = 0
         with patch.object(TelemetryService, "_get_live_cached", return_value=None):
-            with patch.object(TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})):
+            with patch.object(
+                TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})
+            ):
                 with patch.object(TelemetryService, "_set_live_cached") as mock_set:
                     with patch("activities.services.requests.get") as mock_req:
                         mock_req.side_effect = Exception("no traccar")

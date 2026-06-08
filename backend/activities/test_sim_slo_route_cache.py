@@ -1,14 +1,14 @@
 """SLO throttle + Redis route template cache (unit, no Redis)."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 pytestmark = pytest.mark.simulator_light
 
 from django.test import SimpleTestCase
 
-from activities import sim_route_cache as rc
-from activities import sim_slo as slo
+from activities import sim_route_cache as rc, sim_slo as slo
 
 
 class SimRouteCacheTest(SimpleTestCase):

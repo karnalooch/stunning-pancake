@@ -17,7 +17,7 @@ import { useAuth } from '../../core/auth/useAuth';
 import { isE2eMode } from '../../core/auth/e2eEnv';
 import { ModeratorWorklist } from './ModeratorWorklist';
 import { CityAnalytics } from '../analytics/CityAnalytics';
-const LiveMapLazy = lazy(() => import('../analytics/LiveMap').then(m => ({ default: m.LiveMap })));
+const LiveMapLazy = lazy(() => import('../analytics/live-map/LiveMap').then(m => ({ default: m.LiveMap })));
 const SystemIntelligenceLazy = lazy(() =>
   import('../analytics/SystemIntelligence').then(m => ({ default: m.SystemIntelligence })),
 );

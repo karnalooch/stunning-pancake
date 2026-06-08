@@ -4,7 +4,7 @@ import {
     shouldClearOnEmptyViewportChange,
     shouldKeepStaleEmptyResponse,
     shouldRetainMarkersOnEmptyPayload,
-} from '../modules/analytics/liveMapViewport';
+} from '../modules/analytics/live-map/engine/liveMapViewport';
 
 describe('liveMapViewport', () => {
     it('viewport key includes detail and bbox', () => {

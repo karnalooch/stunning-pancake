@@ -5,8 +5,8 @@ Tests the P0 Issue 1 fixes: webhook secret enforcement, signature
 verification, and checkout.session.completed event handling.
 """
 
-import pytest
 from unittest.mock import patch
+
 from activities.payments import PaymentService
 
 

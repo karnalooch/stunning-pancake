@@ -7,15 +7,16 @@ permission classes, and migration logic.
 
 import pytest
 from django.contrib.auth import get_user_model
-from users.rbac_models import Permission, Role, RolePermission, UserRole
+
+from users.models import Tenant
 from users.permissions import (
-    HasPermission,
     HasAnyPermission,
+    HasPermission,
+    IsAdminOrModerator,
     IsGlobalOwner,
     IsTenantAdmin,
-    IsAdminOrModerator,
 )
-from users.models import Tenant
+from users.rbac_models import Permission, Role, RolePermission, UserRole
 
 User = get_user_model()
 
@@ -129,8 +130,9 @@ class TestUserRoleModel:
             UserRole.objects.create(user=global_owner, role=role, tenant=tenant)
 
     def test_role_expiry(self, global_owner, rbac_roles):
-        from django.utils import timezone
         from datetime import timedelta
+
+        from django.utils import timezone
 
         role = Role.objects.get(slug="athlete")
         expires = timezone.now() + timedelta(days=30)

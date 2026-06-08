@@ -4,8 +4,9 @@ Run:
   cd backend && python run_pytest.py core/test_load_guard.py -m simulator_light -v --tb=short
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 pytestmark = pytest.mark.simulator_light
 
@@ -61,9 +62,7 @@ class EvaluateSignalPureTest(SimpleTestCase):
         self.assertGreater(d.retry_after, 0)
 
     def test_ingest_retry_after_is_one_second(self):
-        d = lg.evaluate_signal(
-            "ingest", 50, mode="on", limit=10, was_engaged=False
-        )
+        d = lg.evaluate_signal("ingest", 50, mode="on", limit=10, was_engaged=False)
         self.assertFalse(d.allowed)
         self.assertEqual(d.retry_after, 1)
 

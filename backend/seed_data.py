@@ -1,17 +1,18 @@
 import os
+
 import django
-import uuid
 from django.contrib.gis.geos import Point
 
 # Setup Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 django.setup()
 
-from users.models import User, Tenant
-from activities.models import Activity, POI, Voucher
-from django.utils import timezone
 from datetime import timedelta
-from django.db import IntegrityError
+
+from django.utils import timezone
+
+from activities.models import POI, Activity, Voucher
+from users.models import Tenant, User
 
 
 def _get_or_create_poi(*, name: str, tenant, defaults: dict | None = None):

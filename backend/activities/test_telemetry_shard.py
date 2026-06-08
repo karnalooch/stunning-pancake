@@ -4,8 +4,9 @@ Run:
   cd backend && python run_pytest.py activities/test_telemetry_shard.py -m simulator_light -v --tb=short
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 pytestmark = pytest.mark.simulator_light
 
@@ -165,7 +166,6 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
     @patch.dict("os.environ", {"TELEMETRY_SHARD_COUNT": "4"}, clear=False)
     def test_writes_land_on_multiple_shards(self):
         """Confirm sharding actually spreads keys (not all in one shard)."""
-        from activities.services import TelemetryService
         from activities.telemetry_shard import TelemetryShardRouter
 
         self._push_grid(40)
@@ -186,8 +186,8 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
     )
     def test_multi_client_routing_uses_separate_fake_redis(self):
         """Phase 2: each shard index gets its own client when nodes are configured."""
-        from core.fake_redis import FakeRedis
         from activities.services import TelemetryService
+        from core.fake_redis import FakeRedis
 
         shards = [FakeRedis() for _ in range(4)]
         ts.TelemetryShardRouter.reset()

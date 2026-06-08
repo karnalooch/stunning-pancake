@@ -6,8 +6,9 @@ Redis left over from load tests. Run locally:
   cd backend && python run_pytest.py activities/test_simulator_backpressure.py -m simulator_light -v
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 pytestmark = pytest.mark.simulator_light
 

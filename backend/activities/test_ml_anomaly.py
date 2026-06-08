@@ -5,8 +5,8 @@ Tests feature extraction and inference for the Isolation Forest
 anomaly detector (Layer 1.5 anti-cheat).
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from activities.ml_anomaly import extract_features, is_ml_anomaly, ml_anomaly_score
 from activities.signal_processing import GpsPoint
 
@@ -76,7 +76,6 @@ class TestMLAnomaly:
 
     def test_extract_features_constant_speed_track(self):
         """Track with constant speed should have near-zero std_dev and CV."""
-        import math
 
         # Points equally spaced in lat at 1-second intervals (~11.1 m/s each segment)
         points = [GpsPoint(lat=52.0 + i * 0.0001, lon=21.0, timestamp=float(i)) for i in range(25)]

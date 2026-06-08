@@ -4,7 +4,7 @@
  * This module defines the AppTheme interface for type-safe theming
  * using react-native-unistyles. All color tokens are sourced from
  * @tokens/generated/restyle-colors, which is auto-generated from
- * shared/tokens/colors.json.
+ * packages/tokens/colors.json.
  *
  * Theme names (octopath, solar) are registered via TypeScript
  * declaration merging with UnistylesThemes.

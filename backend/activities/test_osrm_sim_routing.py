@@ -1,7 +1,8 @@
 """OSRM client + sim routing backend selection (mocked HTTP)."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 pytestmark = pytest.mark.simulator_light
 

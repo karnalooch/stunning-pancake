@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pointAlongPolyline, segmentLengthM } from '../modules/analytics/liveMapPolyline';
+import { pointAlongPolyline, segmentLengthM } from '../modules/analytics/live-map/engine/liveMapPolyline';
 
 describe('liveMapPolyline', () => {
     it('segmentLengthM is positive for distinct points', () => {

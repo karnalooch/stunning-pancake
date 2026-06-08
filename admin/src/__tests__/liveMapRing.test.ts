@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DevicePositionRing, LIVE_MAP_RING_SIZE } from '../modules/analytics/liveMapRing';
-import type { LiveMapPosition } from '../modules/analytics/liveMapMarkers';
+import { DevicePositionRing, LIVE_MAP_RING_SIZE } from '../modules/analytics/live-map/engine/liveMapRing';
+import type { LiveMapPosition } from '../modules/analytics/live-map/engine/liveMapMarkers';
 
 function pos(id: string, lng: number, lat: number): LiveMapPosition {
     return {

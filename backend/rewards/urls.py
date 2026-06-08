@@ -1,6 +1,7 @@
 """Rewards app URL configuration."""
 
 from django.urls import path
+
 from rewards import views
 
 app_name = "rewards"

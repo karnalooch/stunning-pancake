@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sport-telemetry
+  labels:
+    app: sport-telemetry
+spec:
+  selector:
+    app: sport-telemetry
+  ports:
+    - name: http
+      port: 8001
+      targetPort: 8001
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sport-telemetry
+  labels:
+    app: sport-telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sport-telemetry
+  template:
+    metadata:
+      labels:
+        app: sport-telemetry
+    spec:
+      containers:
+        - name: telemetry
+          image: localhost/sport-telemetry:gold-master-v2.1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8001
+              name: http
+          envFrom:
+            - configMapRef:
+                name: sport-app-config
+            - secretRef:
+                name: sport-app-secrets

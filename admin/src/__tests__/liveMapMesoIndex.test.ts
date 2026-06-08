@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { MesoClusterIndex, positionsFingerprint } from '../modules/analytics/liveMapMesoIndex';
+import { MesoClusterIndex, positionsFingerprint } from '../modules/analytics/live-map/engine/liveMapMesoIndex';
 
 describe('liveMapMesoIndex', () => {
     const sample = Array.from({ length: 12 }, (_, i) => ({

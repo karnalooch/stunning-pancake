@@ -5,8 +5,8 @@ Supports: company departments, school classes, university faculties,
 NGO teams, city districts.
 """
 
-from django.db import models
 from django.conf import settings
+from django.db import models
 
 
 class Department(models.Model):

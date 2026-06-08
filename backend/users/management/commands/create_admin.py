@@ -4,8 +4,9 @@ Safe to run multiple times — skips if user already exists.
 """
 
 import os
-from django.core.management.base import BaseCommand
+
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils.crypto import get_random_string
 
 User = get_user_model()

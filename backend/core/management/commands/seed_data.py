@@ -1,10 +1,10 @@
-import os
-from django.core.management.base import BaseCommand
-from django.contrib.gis.geos import Point
-from django.utils import timezone
 from datetime import timedelta
-from users.models import User, Tenant
-from activities.models import Activity, POI, Voucher
+
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from activities.models import Activity
+from users.models import Tenant, User
 
 
 class Command(BaseCommand):

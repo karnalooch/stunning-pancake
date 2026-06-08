@@ -111,8 +111,9 @@ def department_leaderboard(request: Request, department_id: int) -> Response:
 
     Returns top 50 users in a specific department, ranked by verified distance.
     """
-    from django.shortcuts import get_object_or_404
     from django.db.models import Sum
+    from django.shortcuts import get_object_or_404
+
     from activities.models import Activity
     from users.departments import Department
 

@@ -89,11 +89,11 @@ def build_sim_kpi_snapshot() -> dict:
     try:
         from activities import simulator_state as sim
         from activities.ride_fsm import fsm_summary
-        from activities.simulator_tasks import _async_routing_enabled
         from activities.simulator_routing_backpressure import (
             max_routing_queue_depth,
             routing_backpressure_snapshot,
         )
+        from activities.simulator_tasks import _async_routing_enabled
 
         batch = sim.get_batch_state()
         live = sim.get_live_state()
@@ -491,7 +491,9 @@ def build_department_analytics(request_user, *, refresh: bool = False) -> list[d
                 "users": member_stats.get(dept_id, 0),
                 "activities": act_count,
                 "distance_km": round(float(dept_distance) / 1000.0, 1),
-                "verified_pct": round((dept_verified / act_count * 100), 1) if act_count > 0 else 0.0,
+                "verified_pct": round((dept_verified / act_count * 100), 1)
+                if act_count > 0
+                else 0.0,
             }
         )
 

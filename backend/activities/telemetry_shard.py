@@ -158,8 +158,9 @@ def _sanitize_url(url: str) -> str:
 
 def _build_standalone_client(url: str):
     """Build a standalone redis.Redis client from a URL (mirrors redis_cluster)."""
-    import redis
     import urllib.parse
+
+    import redis
 
     redis_password = os.getenv("REDIS_PASSWORD", "")
     if redis_password and "://" in url and "@" not in url.split("://", 1)[1]:
@@ -333,7 +334,9 @@ def live_map_read_policy() -> LiveMapReadPolicy:
             cache_ttl_seconds=max(2, _live_map_int("LIVE_MAP_INGEST_CACHE_TTL", 4)),
             detail_ceiling=None,
         )
-    ceiling = (os.getenv("LIVE_MAP_INGEST_DETAIL_CEILING", "standard") or "standard").strip().lower()
+    ceiling = (
+        (os.getenv("LIVE_MAP_INGEST_DETAIL_CEILING", "standard") or "standard").strip().lower()
+    )
     if ceiling not in ("summary", "standard", "full"):
         ceiling = "standard"
     cap_mult = max(0.05, min(1.0, _live_map_float("LIVE_MAP_INGEST_CAP_RATIO", 0.35)))

@@ -1,12 +1,13 @@
-import random
 import math
+import random
 from datetime import timedelta
 
+from django.contrib.gis.geos import LineString, Point
 from django.core.management.base import BaseCommand
-from django.contrib.gis.geos import Point, LineString
 from django.utils import timezone
-from users.models import User, Tenant
-from activities.models import Activity, POI, Voucher
+
+from activities.models import POI, Activity, Voucher
+from users.models import Tenant, User
 
 
 def generate_loop_gps(center_lon, center_lat, radius_km=1.5, jitter=0.0003, num_points=50):

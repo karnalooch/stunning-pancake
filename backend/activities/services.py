@@ -3,9 +3,10 @@ import threading
 import time
 
 import requests
-from requests.adapters import HTTPAdapter
-from django.contrib.gis.geos import Point, LineString
+from django.contrib.gis.geos import LineString, Point
 from django.utils import timezone
+from requests.adapters import HTTPAdapter
+
 from .models import PrivacyZone
 
 
@@ -459,7 +460,11 @@ class TelemetryService:
         if e.get("tenantId") or e.get("tenant_id"):
             entry["tenantId"] = str(e.get("tenantId") or e.get("tenant_id"))
         if e.get("departmentId") is not None or e.get("department_id") is not None:
-            raw_dept = e.get("departmentId") if e.get("departmentId") is not None else e.get("department_id")
+            raw_dept = (
+                e.get("departmentId")
+                if e.get("departmentId") is not None
+                else e.get("department_id")
+            )
             try:
                 entry["departmentId"] = int(raw_dept)
             except (TypeError, ValueError):
@@ -518,8 +523,8 @@ class TelemetryService:
         from activities.telemetry_shard import (
             TelemetryShardRouter,
             all_shard_keys,
-            shard_for_device,
             shard_count,
+            shard_for_device,
         )
 
         n_shards = shard_count()
@@ -528,9 +533,7 @@ class TelemetryService:
         if not entries:
             if not merge:
                 for sk in all_keys:
-                    TelemetryShardRouter.client_for(sk.index).delete(
-                        sk.positions, sk.geo
-                    )
+                    TelemetryShardRouter.client_for(sk.index).delete(sk.positions, sk.geo)
             return
 
         entries = entries[:MAX_TELEMETRY_PUBLISH_PER_TICK]
@@ -605,6 +608,7 @@ class TelemetryService:
         cls, key: str, cache_ttl: int | None = None
     ) -> tuple[list[dict], dict] | None:
         import json as _json
+
         from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
 
         ttl = cache_ttl if cache_ttl is not None else TELEMETRY_LIVE_CACHE_TTL
@@ -631,6 +635,7 @@ class TelemetryService:
         cls, key: str, positions: list[dict], meta: dict, cache_ttl: int | None = None
     ) -> None:
         import json as _json
+
         from activities.scale_config import TELEMETRY_LIVE_CACHE_TTL
 
         ttl = cache_ttl if cache_ttl is not None else TELEMETRY_LIVE_CACHE_TTL
@@ -771,9 +776,7 @@ class TelemetryService:
             if not pos_json:
                 continue
             try:
-                pos = _json.loads(
-                    pos_json.decode() if isinstance(pos_json, bytes) else pos_json
-                )
+                pos = _json.loads(pos_json.decode() if isinstance(pos_json, bytes) else pos_json)
                 out.append((did, pos))
             except Exception:
                 continue
@@ -798,9 +801,7 @@ class TelemetryService:
 
         shards = all_shard_keys()
         if len(shards) <= 1:
-            pairs = cls._geo_query_one_shard(
-                shards[0], center_lon, center_lat, radius_km, count
-            )
+            pairs = cls._geo_query_one_shard(shards[0], center_lon, center_lat, radius_km, count)
             return [pos for _did, pos in pairs[:count]]
 
         positions: list[dict] = []
@@ -872,9 +873,7 @@ class TelemetryService:
             if len(positions) >= cap:
                 meta["capped"] = True
                 break
-            city_positions = cls._geo_query_shards(
-                r, city["lon"], city["lat"], radius_km, per_city
-            )
+            city_positions = cls._geo_query_shards(r, city["lon"], city["lat"], radius_km, per_city)
             for pos in city_positions:
                 did = str(pos.get("deviceId") or pos.get("id") or "")
                 if did and did in seen:
@@ -953,12 +952,7 @@ class TelemetryService:
                         meta["capped"] = True
                         break
             # Street zoom: strict bbox often drops riders on the edge — relax once.
-            if (
-                not positions
-                and raw_positions
-                and zoom is not None
-                and zoom >= 11.5
-            ):
+            if not positions and raw_positions and zoom is not None and zoom >= 11.5:
                 pad_lon = max(0.01, (east - west) * 0.12)
                 pad_lat = max(0.01, (north - south) * 0.12)
                 for pos in raw_positions:
@@ -996,13 +990,12 @@ class TelemetryService:
         Fetch positions without scanning the full Redis hash.
         Returns (positions, meta) where meta includes counts and cap info.
         """
-        from core.redis_cluster import get_redis
         from activities.scale_config import (
             TELEMETRY_GEO_RADIUS_KM,
             resolve_telemetry_api_limit,
         )
-
         from activities.telemetry_shard import apply_live_map_cap, live_map_read_policy
+        from core.redis_cluster import get_redis
 
         read_policy = live_map_read_policy()
         cap = resolve_telemetry_api_limit(limit, zoom)
@@ -1124,9 +1117,6 @@ class TelemetryService:
 
         for sk in all_shard_keys():
             TelemetryShardRouter.client_for(sk.index).delete(sk.positions, sk.geo)
-
-
-import random
 
 
 class AntiCheatEngine:

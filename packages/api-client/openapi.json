@@ -1,0 +1,34 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "4VELO API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/auth/token/": {
+      "post": { "operationId": "auth_token_create", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/auth/token/refresh/": {
+      "post": { "operationId": "auth_token_refresh_create", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/users/profile/": {
+      "get": { "operationId": "users_profile_retrieve", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/users/register/": {
+      "post": { "operationId": "users_register_create", "responses": { "201": { "description": "Created" } } }
+    },
+    "/api/activities/sessions/": {
+      "get": { "operationId": "activities_sessions_list", "responses": { "200": { "description": "OK" } } },
+      "post": { "operationId": "activities_sessions_create", "responses": { "201": { "description": "Created" } } }
+    },
+    "/api/activities/admin/scale-preflight/": {
+      "get": { "operationId": "activities_admin_scale_preflight_retrieve", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/activities/admin/disk-audit/": {
+      "get": { "operationId": "activities_admin_disk_audit_retrieve", "responses": { "200": { "description": "OK" } } }
+    },
+    "/api/infra/health/": {
+      "get": { "operationId": "infra_health_retrieve", "responses": { "200": { "description": "OK" } } }
+    }
+  }
+}

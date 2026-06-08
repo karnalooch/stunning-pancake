@@ -2,16 +2,16 @@
 Tests for idempotent leaderboard credit and process-queue dedupe.
 """
 
-import pytest
-from unittest.mock import patch, MagicMock
 from datetime import timedelta
+from unittest.mock import MagicMock, patch
 
-from django.utils import timezone
+import pytest
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
-from users.models import Tenant
-from activities.models import Activity
 from activities.leaderboard_credit import credit_verified_activity
+from activities.models import Activity
+from users.models import Tenant
 
 User = get_user_model()
 

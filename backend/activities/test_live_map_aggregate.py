@@ -3,11 +3,11 @@ from unittest.mock import MagicMock
 from django.test import SimpleTestCase
 
 from activities.live_map_aggregate import (
+    AggregateRequest,
     _filter_positions,
     _hexbin_features,
     parse_aggregate_query_params,
 )
-from activities.live_map_aggregate import AggregateRequest
 
 
 class LiveMapAggregateParseTest(SimpleTestCase):

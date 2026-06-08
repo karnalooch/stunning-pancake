@@ -5,8 +5,9 @@ Serializers for role and permission management API.
 """
 
 from rest_framework import serializers
+
+from .models import Tenant, User
 from .rbac_models import Permission, Role, RolePermission, UserRole
-from .models import User, Tenant
 
 
 class PermissionSerializer(serializers.ModelSerializer):

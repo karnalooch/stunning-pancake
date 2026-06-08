@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clusterColorExpression, resolveLiveMapTheme } from '../modules/analytics/liveMapTheme';
+import { clusterColorExpression, resolveLiveMapTheme } from '../modules/analytics/live-map/engine/liveMapTheme';
 
 describe('liveMapTheme', () => {
     it('builds cluster stops from tenant colors', () => {

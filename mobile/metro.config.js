@@ -21,7 +21,7 @@ config.resolver = {
   ],
   extraNodeModules: {
     ...resolver.extraNodeModules,
-    '@tokens': path.resolve(__dirname, '../shared/tokens'),
+    '@tokens': path.resolve(__dirname, '../packages/tokens'),
   },
   resolveRequest: (context, moduleName, platform) => {
     if (moduleName === 'lucide-react-native') {
@@ -36,7 +36,9 @@ config.resolver = {
 
 config.watchFolders = [
   ...(config.watchFolders || []),
-  path.resolve(__dirname, '../shared'),
+  path.resolve(__dirname, '..'),
+  path.resolve(__dirname, '../packages/tokens'),
+  path.resolve(__dirname, '../packages/api-client'),
 ];
 
 module.exports = config;

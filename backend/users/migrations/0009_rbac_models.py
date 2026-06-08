@@ -3,9 +3,10 @@ Migration: Add RBAC models (Permission, Role, RolePermission, UserRole)
 Backward-compatible: preserves existing User.role field.
 """
 
-from django.db import migrations, models
-import django.db.models.deletion
 import uuid
+
+import django.db.models.deletion
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):

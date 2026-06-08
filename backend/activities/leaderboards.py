@@ -21,9 +21,8 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any
 
-from core.redis_cluster import get_redis, get_pipeline
+from core.redis_cluster import get_redis
 
 logger = logging.getLogger(__name__)
 

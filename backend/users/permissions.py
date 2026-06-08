@@ -6,7 +6,6 @@ Falls back to legacy role-based checks during transition.
 """
 
 from rest_framework import permissions
-from django.conf import settings
 
 
 class HasPermission(permissions.BasePermission):

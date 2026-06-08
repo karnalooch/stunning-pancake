@@ -1,18 +1,18 @@
 """Tests for automatic Postgres disk guard."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
+from activities.scale_config import compute_batch_scaling
 from activities.scale_disk_guard import (
+    _should_auto_wipe,
     adjust_batch_plan_for_disk_pressure,
     infer_volume_cap_from_db_usage,
     is_disk_full_error,
     prepare_batch_disk_guard,
     resolve_disk_budget_gb,
-    _should_auto_wipe,
 )
-from activities.scale_config import compute_batch_scaling
 
 
 class ScaleDiskGuardTest(SimpleTestCase):

@@ -1,7 +1,8 @@
-import pytest
-import httpx
 import asyncio
 import os
+
+import httpx
+import pytest
 
 # --- Configuration for SIT ---
 # In SIT, we test the interaction between services.

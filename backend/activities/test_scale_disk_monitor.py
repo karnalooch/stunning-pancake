@@ -1,9 +1,14 @@
 """Tests for proactive disk monitor and audit."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from django.test import SimpleTestCase, TestCase
 
+from activities.scale_config import (
+    DISK_BLOCK_WRITES_PCT,
+    DISK_PAUSE_SIM_PCT,
+    DISK_WARN_PCT,
+)
 from activities.scale_disk_monitor import (
     EVENT_BLOCK_WRITES,
     EVENT_BUDGET_UNCONFIGURED,
@@ -13,15 +18,10 @@ from activities.scale_disk_monitor import (
     REDIS_KEY_DISK_WRITES_BLOCKED,
     REDIS_KEY_SIMULATION_PAUSED,
     _evaluate_action,
-    check_simulation_allowed,
     check_sim_writes_allowed,
+    check_simulation_allowed,
     get_disk_usage_snapshot,
     run_disk_monitor,
-)
-from activities.scale_config import (
-    DISK_BLOCK_WRITES_PCT,
-    DISK_PAUSE_SIM_PCT,
-    DISK_WARN_PCT,
 )
 
 

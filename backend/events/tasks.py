@@ -25,8 +25,8 @@ def close_expired_events() -> None:
 
     Also resets the Redis leaderboard for completed events to free memory.
     """
-    from events.models import Event
     from activities.leaderboards import LeaderboardService
+    from events.models import Event
 
     now = timezone.now()
     expired = Event.objects.filter(status="ACTIVE", end_date__lt=now)
@@ -51,8 +51,8 @@ def publish_scheduled_events() -> None:
     Transitions PUBLISHED events to ACTIVE when their start_date arrives.
     Runs every 5 minutes (add to beat_schedule if needed).
     """
-    from events.models import Event
     from core.matrix_provisioner import MatrixProvisioner
+    from events.models import Event
 
     now = timezone.now()
     to_activate = Event.objects.filter(status="PUBLISHED", start_date__lte=now)
@@ -76,8 +76,8 @@ def warm_event_start(event_id: int) -> None:
     """
     Pre-cache event metadata in Redis and reset burst counters before go-live.
     """
-    from events.models import Event
     from events.burst import cache_event_meta, reset_burst_counters, set_burst_warm_active
+    from events.models import Event
 
     try:
         event = Event.objects.get(pk=event_id)

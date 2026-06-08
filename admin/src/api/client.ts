@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_PATHS } from '@4velo/api-client';
 import { formatApiError, isAbsentError } from './apiErrors';
 import { useAuth } from '../core/auth/useAuth';
 import {
@@ -113,7 +114,7 @@ apiClient.interceptors.response.use(
       const reqUrl = String(error.config?.url || '');
       const state = useAuth.getState();
       const refreshToken = state.refreshToken || getStoredRefreshToken();
-      const isProfileBootstrap = reqUrl.includes('/users/profile/');
+      const isProfileBootstrap = reqUrl.includes(API_PATHS.usersProfile);
       const isAuthRequest = isAuthApiPath(reqUrl);
 
       if (isAuthRequest) {
@@ -123,7 +124,7 @@ apiClient.interceptors.response.use(
       if (refreshToken && !error.config._retry) {
         error.config._retry = true;
         try {
-          const res = await axios.post(`${baseURL}/auth/token/refresh/`, {
+          const res = await axios.post(`${baseURL}${API_PATHS.authTokenRefresh}`, {
             refresh: refreshToken,
           });
           const { access } = res.data;

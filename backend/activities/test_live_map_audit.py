@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from activities.live_map_audit import record_live_map_view, should_skip_audit
 from activities.live_map_alerts import _detect_events
+from activities.live_map_audit import record_live_map_view, should_skip_audit
 
 
 class LiveMapAuditTest(SimpleTestCase):

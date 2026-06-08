@@ -2,7 +2,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("activities", "0017_livemapwebhook_delivery_log"),
     ]

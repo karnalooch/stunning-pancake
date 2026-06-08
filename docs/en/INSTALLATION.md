@@ -209,9 +209,9 @@ railway run python manage.py seed_rbac
 ```### Step 5: Deploy admin panel
 
 1. In the Railway Dashboard, add a new service
-2. Select "Deploy from GitHub repo"
-3. Select the `admin/` directory
-4. Railway will use `admin/railway.json`
+2. Select "Deploy from GitHub repo" (full monorepo, **not** `admin/` subfolder)
+3. Set **Root Directory** to `/` (repo root)
+4. Railway will use `admin/railway.json` with `dockerfilePath: admin/Dockerfile` (pnpm workspace build)
 
 ---
 

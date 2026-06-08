@@ -3,8 +3,9 @@ RBAC URL Routing
 =================
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+
 from .rbac_views import PermissionViewSet, RoleViewSet, UserRoleViewSet
 
 router = DefaultRouter()

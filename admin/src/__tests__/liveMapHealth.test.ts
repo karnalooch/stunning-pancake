@@ -5,7 +5,7 @@ import {
     parsePollAfterMs,
     resolveStaleAfterMs,
     statusLabel,
-} from '../modules/analytics/liveMapHealth';
+} from '../modules/analytics/live-map/engine/liveMapHealth';
 
 describe('liveMapHealth', () => {
     it('parsePollAfterMs rejects invalid values', () => {

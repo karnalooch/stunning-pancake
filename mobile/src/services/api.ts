@@ -1,20 +1,11 @@
+import { API_PATHS_FULL, type UserProfile, type TokenPair, type RegisterPayload } from '@4velo/api-client';
 import { api, setAuthToken } from './apiClient';
 import { createSessionWithDurability } from './sessionDurability';
 
 export { api, setAuthToken };
+export type { UserProfile };
 
 // ─── Typed services ────────────────────────────────────────────
-
-export interface UserProfile {
-  id: number;
-  username: string;
-  email: string;
-  role: string;
-  tenant_id: string | null;
-  tenant_name: string;
-  avatar: string | null;
-  bio: string;
-}
 
 export interface ActivityItem {
   id: number;
@@ -68,7 +59,7 @@ export const ActivityService = {
     api
       .post(`/api/activities/sessions/${activityId}/finalize/`, body)
       .then((r) => r.data),
-  getHistory: () => api.get<ActivityItem[]>('/api/activities/sessions/').then((r) => r.data),
+  getHistory: () => api.get<ActivityItem[]>(API_PATHS_FULL.activitiesSessions).then((r) => r.data),
   getLeaderboard: (cityId: string) =>
     api.get<any>(`/api/activities/leaderboard/${cityId}/`).then((r) => {
       const data = r.data;
@@ -82,10 +73,10 @@ export const ActivityService = {
 
 export const AuthService = {
   login: (username: string, password: string) =>
-    api.post<{ access: string; refresh: string }>('/api/auth/token/', { username, password }).then((r) => r.data),
-  register: (data: { username: string; email: string; password: string; tenant_id?: string }) =>
-    api.post('/api/users/register/', data).then((r) => r.data),
-  getProfile: () => api.get<UserProfile>('/api/users/profile/').then((r) => r.data),
+    api.post<TokenPair>(API_PATHS_FULL.authToken, { username, password }).then((r) => r.data),
+  register: (data: RegisterPayload) =>
+    api.post(API_PATHS_FULL.usersRegister, data).then((r) => r.data),
+  getProfile: () => api.get<UserProfile>(API_PATHS_FULL.usersProfile).then((r) => r.data),
 };
 
 export const PrivacyService = {

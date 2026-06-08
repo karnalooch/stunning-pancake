@@ -13,8 +13,7 @@ from celery import shared_task
 from celery.exceptions import WorkerLostError
 from django.utils import timezone
 
-from . import simulator_state as sim
-from . import ride_fsm
+from . import ride_fsm, simulator_state as sim
 from .simulator_batch_tasks import (  # noqa: F401 — Celery registration
     run_batch_city_users,
     run_batch_finalize,
@@ -29,20 +28,20 @@ from .simulator_route_waypoints import (  # noqa: F401 — re-export for tests/a
     _async_routing_enabled,
     _brouter_route_waypoints,
     _brouter_tick_budget_remaining,
+    _compute_live_motion,
     _consume_brouter_tick_budget,
     _generate_grid_waypoints,
-    _generate_route_waypoints,
     _generate_road_waypoints,
+    _generate_route_waypoints,
     _haversine_m,
+    _instant_active_on_route_enabled,
     _interpolate_along_polyline,
+    _jitter_point_km,
     _maybe_log_brouter_grid_fallback,
     _maybe_log_brouter_route_failure,
-    _reset_brouter_tick_budget,
     _ramp_start_delay_max,
+    _reset_brouter_tick_budget,
     _sample_athlete_motion_profile,
-    _compute_live_motion,
-    _instant_active_on_route_enabled,
-    _jitter_point_km,
 )
 
 logger = logging.getLogger("activities.simulator")

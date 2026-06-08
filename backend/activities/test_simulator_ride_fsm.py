@@ -7,7 +7,6 @@ from django.test import SimpleTestCase
 from django.utils import timezone
 
 from activities import ride_fsm
-from activities import simulator_state as sim
 
 
 class RideFsmSummaryTest(SimpleTestCase):

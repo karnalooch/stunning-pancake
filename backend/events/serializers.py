@@ -3,7 +3,8 @@ Events Serializers — SPORT Platform
 """
 
 from rest_framework import serializers
-from .models import Event, Participation, Achievement
+
+from .models import Achievement, Event, Participation
 
 
 class EventSerializer(serializers.ModelSerializer):
@@ -63,6 +64,7 @@ class EventSerializer(serializers.ModelSerializer):
         if value is None:
             return None
         import json
+
         from django.contrib.gis.geos import GEOSGeometry
 
         try:
