@@ -9,6 +9,7 @@ export interface GoHealthStripProps {
   routingQueueDepth?: number;
   routingBackpressure?: boolean;
   apiLatencyMs?: number | null;
+  dataSource?: 'production' | 'sim-lab';
 }
 
 export const GoHealthStrip: React.FC<GoHealthStripProps> = ({
@@ -18,6 +19,7 @@ export const GoHealthStrip: React.FC<GoHealthStripProps> = ({
   routingQueueDepth = 0,
   routingBackpressure = false,
   apiLatencyMs = null,
+  dataSource = 'production',
 }) => {
   if (loading) {
     return <Skeleton height={52} radius="md" mb="md" />;
@@ -76,9 +78,16 @@ export const GoHealthStrip: React.FC<GoHealthStripProps> = ({
             </Group>
           )}
         </Group>
-        <Text size="10px" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.06em' }}>
-          Control plane
-        </Text>
+        <Group gap="xs">
+          {dataSource === 'sim-lab' && (
+            <Badge size="sm" variant="light" color="teal">
+              sim-lab KPI
+            </Badge>
+          )}
+          <Text size="10px" c="dimmed" tt="uppercase" fw={600} style={{ letterSpacing: '0.06em' }}>
+            Control plane
+          </Text>
+        </Group>
       </Group>
     </Card>
   );

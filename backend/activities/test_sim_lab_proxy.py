@@ -6,12 +6,17 @@ import pytest
 from rest_framework.test import APIRequestFactory
 
 from activities.sim_lab_proxy import (
+    annotate_federated_payload,
+    annotate_production_payload,
     assert_prod_heavy_sim_allowed,
+    dashboard_data_source,
     probe_sim_lab_health,
     sim_lab_proxy_enabled,
     sim_lab_proxy_target_info,
+    sim_lab_read_federation_enabled,
     try_forward_sim_lab,
     try_forward_sim_lab_activities,
+    try_forward_sim_lab_read,
 )
 
 
@@ -20,11 +25,15 @@ def _clear_proxy_env(monkeypatch):
     monkeypatch.delenv("SIM_LAB_PROXY_ENABLED", raising=False)
     monkeypatch.delenv("SIM_LAB_PROXY_BASE_URL", raising=False)
     monkeypatch.delenv("SIM_LAB_PROXY_SECRET", raising=False)
+    monkeypatch.delenv("SIM_LAB_READ_FEDERATION_ENABLED", raising=False)
+    monkeypatch.delenv("SIM_LAB_PROXY_STATS_CACHE_TTL", raising=False)
     monkeypatch.delenv("ALLOW_PROD_HEAVY_SIM", raising=False)
 
 
 def test_sim_lab_proxy_disabled_by_default():
     assert sim_lab_proxy_enabled() is False
+    assert sim_lab_read_federation_enabled() is False
+    assert dashboard_data_source() == "production"
 
 
 def test_sim_lab_proxy_enabled_when_configured(monkeypatch):
@@ -237,6 +246,87 @@ def test_sim_lab_proxy_target_info_includes_health(monkeypatch):
     with patch("activities.sim_lab_proxy.probe_sim_lab_health", return_value={"reachable": True}):
         info = sim_lab_proxy_target_info()
     assert info["sim_lab_health"]["reachable"] is True
+    assert info["read_federation_enabled"] is False
+    assert info["dashboard_data_source"] == "production"
+
+
+def test_sim_lab_read_federation_enabled_requires_proxy(monkeypatch):
+    monkeypatch.setenv("SIM_LAB_READ_FEDERATION_ENABLED", "1")
+    assert sim_lab_read_federation_enabled() is False
+
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    assert sim_lab_read_federation_enabled() is True
+    assert dashboard_data_source() == "sim-lab"
+
+
+def test_annotate_federated_payload():
+    payload = annotate_federated_payload({"total_users": 20000})
+    assert payload["data_source"] == "sim-lab"
+    assert payload["synthetic"] is True
+    assert payload["sim_lab_proxy"] is True
+
+
+def test_annotate_production_payload():
+    payload = annotate_production_payload({"total_users": 10})
+    assert payload["data_source"] == "production"
+    assert payload["synthetic"] is False
+
+
+def test_try_forward_read_returns_none_when_federation_disabled():
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/stats/")
+    assert try_forward_sim_lab_read(request, "stats/") is None
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_read_stats(mock_request, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    monkeypatch.setenv("SIM_LAB_READ_FEDERATION_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_PUBLIC_LABEL", "test-sim-lab")
+    monkeypatch.setenv("SIM_LAB_PROXY_STATS_CACHE_TTL", "0")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"total_users": 20000}'
+    mock_resp.json.return_value = {"total_users": 20000}
+    mock_request.return_value = mock_resp
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/stats/?refresh=1")
+    request.user = MagicMock(username="global_owner", role="GLOBAL_OWNER", tenant_id=None)
+
+    proxied = try_forward_sim_lab_read(request, "stats/")
+    assert proxied is not None
+    assert proxied.status_code == 200
+    assert proxied.data["total_users"] == 20000
+    assert proxied.data["data_source"] == "sim-lab"
+    assert proxied.data["synthetic"] is True
+    assert proxied.data["sim_lab_label"] == "test-sim-lab"
+
+    call_kw = mock_request.call_args.kwargs
+    assert call_kw["url"] == "https://sim.example.com/api/activities/admin/stats/?refresh=1"
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_read_fallback_on_timeout(mock_request, monkeypatch):
+    import requests
+
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    monkeypatch.setenv("SIM_LAB_READ_FEDERATION_ENABLED", "1")
+    mock_request.side_effect = requests.Timeout("timed out")
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/stats/")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab_read(request, "stats/", allow_local_fallback=True)
+    assert proxied is None
 
 
 @patch("activities.sim_lab_proxy.requests.request")

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-import { Card, Text, Title, SimpleGrid, Skeleton, Badge, Stack } from '@mantine/core';
+import { Alert, Card, Text, Title, SimpleGrid, Skeleton, Badge, Stack } from '@mantine/core';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line } from 'recharts';
 
@@ -10,6 +10,7 @@ import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 
 import { RouteLoadingCard } from '../../core/components/RouteLoadingCard';
+import { useSimDataSource } from '../../hooks/useSimDataSource';
 
 
 
@@ -44,6 +45,8 @@ export const CityAnalytics: React.FC<Props> = ({ cityId }) => {
   const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState<string | null>(null);
+
+  const { showSyntheticBanner, simLabLabel } = useSimDataSource();
 
   const chartData = fallbackWeek;
 
@@ -84,6 +87,12 @@ export const CityAnalytics: React.FC<Props> = ({ cityId }) => {
         subtitle={cityId ? `Scoped to tenant ${cityId}` : 'Activity trends and performance metrics'}
 
       />
+
+      {showSyntheticBanner && (
+        <Alert variant="light" color="teal" mb="md" title="KPI z sim-lab">
+          Liczniki użytkowników/aktywności pochodzą z {simLabLabel}. Wykres tygodniowy pozostaje danymi przykładowymi (Faza 2).
+        </Alert>
+      )}
 
       {loading ? (
 

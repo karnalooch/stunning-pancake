@@ -81,6 +81,9 @@ interface DashboardStats {
   stale?: boolean;
   batch_running?: boolean;
   sim_kpi?: SimKpi;
+  data_source?: 'production' | 'sim-lab';
+  synthetic?: boolean;
+  federation_fallback?: boolean;
 }
 
 /* ─── Animation variants ────────────────────────────────── */
@@ -241,6 +244,7 @@ export const Dashboard: React.FC = () => {
           routingQueueDepth={stats?.sim_kpi?.routing_queue_depth}
           routingBackpressure={Boolean(stats?.sim_kpi?.routing_backpressure_active)}
           apiLatencyMs={apiLatencyMs}
+          dataSource={stats?.data_source}
         />
       )}
 

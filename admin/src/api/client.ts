@@ -355,12 +355,27 @@ export type SimLabHealth = {
   mode?: string;
 };
 
+export type DataSource = 'production' | 'sim-lab';
+
 export type SimTargetInfo = {
   mode: 'local' | 'sim-lab-proxy';
   sim_lab_label?: string | null;
   sim_lab_base_url?: string | null;
   prod_heavy_sim_guard?: boolean;
   sim_lab_health?: SimLabHealth | null;
+  read_federation_enabled?: boolean;
+  dashboard_data_source?: DataSource;
+};
+
+export type DashboardStatsPayload = {
+  data_source?: DataSource;
+  synthetic?: boolean;
+  sim_lab_proxy?: boolean;
+  sim_lab_label?: string | null;
+  federation_fallback?: boolean;
+  total_users?: number;
+  total_activities?: number;
+  [key: string]: unknown;
 };
 
 export const SimulatorApi = {

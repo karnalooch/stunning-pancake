@@ -49,6 +49,7 @@ infrastructure/sim-lab/
 | Railway profil | `.\infrastructure\sim-lab\scripts\sync-sim-lab-profile.ps1 -Profile 300k-50k` |
 | Batch 300k | `$env:SIM_LAB_API_BASE=...; .\scripts\run-300k-wipe-batch.ps1` |
 | Ramp | `.\scripts\railway-load-test-ramp.ps1` (domyslnie `SIM_LAB_API_BASE`) |
+| Read federation (prod dashboard KPI) | `SIM_LAB_READ_FEDERATION_ENABLED=1` — [docs/todo/sim-lab-read-federation.md](../../todo/sim-lab-read-federation.md) |
 
 ## Struktura harnessu
 

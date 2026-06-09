@@ -79,6 +79,22 @@ SIM_LAB_PROXY_SECRET=<ten sam secret>
 
 Po redeploy admin pokaże baner „Symulacja na sim-lab”. Bez proxy: prod blokuje batch &gt; `PROD_MAX_BATCH_USERS` (domyślnie 10k) i live &gt; `PROD_MAX_LIVE_ACTIVE` (5k).
 
+### Read federation (prod dashboard → sim-lab KPI)
+
+Żeby **karty KPI dashboardu prod** (użytkownicy, aktywności, `sim_kpi`) pokazywały dane z sim-lab bez replikacji do prod Postgres:
+
+```text
+SIM_LAB_READ_FEDERATION_ENABLED=1   # wymaga SIM_LAB_PROXY_ENABLED=1
+SIM_LAB_PROXY_STATS_TIMEOUT=15
+SIM_LAB_PROXY_STATS_CACHE_TTL=30    # opcjonalnie
+```
+
+Odpowiedzi federowane zawierają `data_source: "sim-lab"`, `synthetic: true`. Admin pokazuje baner „Widok symulacji”.
+
+Epic: [`docs/todo/sim-lab-read-federation.md`](../../docs/todo/sim-lab-read-federation.md) · ADR: [`docs/adr/013-sim-lab-read-federation.md`](../../docs/adr/013-sim-lab-read-federation.md)
+
+Sales demo: osobne środowisko — [`docs/todo/demo-environment.md`](../../docs/todo/demo-environment.md) (nie federation na prod).
+
 ```powershell
 .\infrastructure\sim-lab\scripts\setup-sim-lab-proxy.ps1 -Redeploy
 .\infrastructure\sim-lab\scripts\sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy

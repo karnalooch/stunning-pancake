@@ -175,10 +175,29 @@ class AdminDashboardStatsView(APIView):
             build_dashboard_stats,
             get_cached_dashboard_stats,
         )
+        from activities.sim_lab_proxy import (
+            annotate_federated_payload,
+            annotate_production_payload,
+            sim_lab_read_federation_enabled,
+            sim_lab_tenant,
+            try_forward_sim_lab_read,
+        )
+
+        if sim_lab_read_federation_enabled():
+            proxied = try_forward_sim_lab_read(request, "stats/", allow_local_fallback=True)
+            if proxied is not None:
+                return proxied
 
         refresh = request.query_params.get("refresh") == "1"
         try:
-            return Response(build_dashboard_stats(request.user, refresh=refresh))
+            payload = build_dashboard_stats(request.user, refresh=refresh)
+            if sim_lab_tenant():
+                annotate_federated_payload(payload)
+            else:
+                annotate_production_payload(payload)
+                if sim_lab_read_federation_enabled():
+                    payload["federation_fallback"] = True
+            return Response(payload)
         except Exception as exc:
             logging.getLogger(__name__).exception("admin/stats failed")
             cached = get_cached_dashboard_stats(request.user)
@@ -186,11 +205,17 @@ class AdminDashboardStatsView(APIView):
                 out = dict(cached)
                 out["stale"] = True
                 out["stats_note"] = "served_from_cache_after_error"
+                if sim_lab_tenant():
+                    annotate_federated_payload(out)
+                else:
+                    annotate_production_payload(out)
                 return Response(out)
-            return Response(
-                _empty_stats(stale=True, note=str(exc)[:120]),
-                status=status.HTTP_200_OK,
-            )
+            empty = _empty_stats(stale=True, note=str(exc)[:120])
+            if sim_lab_tenant():
+                annotate_federated_payload(empty)
+            else:
+                annotate_production_payload(empty)
+            return Response(empty, status=status.HTTP_200_OK)
 
 
 class DepartmentAnalyticsView(APIView):

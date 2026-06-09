@@ -44,8 +44,39 @@ def sim_lab_proxy_public_label() -> str | None:
     return (os.getenv("SIM_LAB_PROXY_PUBLIC_LABEL") or "sim-lab").strip() or "sim-lab"
 
 
+def sim_lab_read_federation_enabled() -> bool:
+    """When true, prod BFF federates read-only admin KPIs (e.g. admin/stats) to sim-lab."""
+    if not sim_lab_proxy_enabled():
+        return False
+    return os.getenv("SIM_LAB_READ_FEDERATION_ENABLED", "0").lower() in ("1", "true", "yes")
+
+
+def dashboard_data_source() -> str:
+    if sim_lab_read_federation_enabled():
+        return "sim-lab"
+    return "production"
+
+
+def annotate_federated_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Mark response as synthetic sim-lab data (read federation contract)."""
+    label = sim_lab_proxy_public_label() or "sim-lab"
+    payload["data_source"] = "sim-lab"
+    payload["synthetic"] = True
+    payload["sim_lab_proxy"] = True
+    payload["sim_lab_label"] = label
+    return payload
+
+
+def annotate_production_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    payload["data_source"] = "production"
+    payload["synthetic"] = False
+    return payload
+
+
 _HEALTH_CACHE: dict[str, Any] = {}
 _HEALTH_CACHE_TTL_SECONDS = 5.0
+
+_STATS_FEDERATION_CACHE: dict[str, Any] = {}
 
 
 def _proxy_headers_system() -> dict[str, str]:
@@ -105,6 +136,7 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
 
 def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
     enabled = sim_lab_proxy_enabled()
+    federation = sim_lab_read_federation_enabled()
     info: dict[str, Any] = {
         "mode": "sim-lab-proxy" if enabled else "local",
         "sim_lab_label": sim_lab_proxy_public_label() if enabled else None,
@@ -113,6 +145,8 @@ def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
         else None,
         "prod_heavy_sim_guard": not enabled
         and os.getenv("ALLOW_PROD_HEAVY_SIM", "0") not in ("1", "true", "yes"),
+        "read_federation_enabled": federation,
+        "dashboard_data_source": dashboard_data_source(),
     }
     if include_health and enabled:
         info["sim_lab_health"] = probe_sim_lab_health()
@@ -137,6 +171,27 @@ def _proxy_map_timeout(default: int = 28) -> int:
         return max(30, int(os.getenv("SIM_LAB_PROXY_MAP_TIMEOUT", str(default))))
     except (TypeError, ValueError):
         return default
+
+
+def _proxy_stats_timeout(default: int = 15) -> int:
+    try:
+        return max(3, int(os.getenv("SIM_LAB_PROXY_STATS_TIMEOUT", str(default))))
+    except (TypeError, ValueError):
+        return default
+
+
+def _proxy_stats_cache_ttl() -> int:
+    try:
+        return max(0, int(os.getenv("SIM_LAB_PROXY_STATS_CACHE_TTL", "30")))
+    except (TypeError, ValueError):
+        return 30
+
+
+def _stats_federation_cache_key(request) -> str:
+    user = getattr(request, "user", None)
+    scoped = str(getattr(user, "tenant_id", None) or "")
+    role = str(getattr(user, "role", None) or "")
+    return f"{role}:{scoped}:{_query_string(request)}"
 
 
 def _build_url(admin_suffix: str) -> str:
@@ -299,6 +354,51 @@ def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Res
 
     url = _build_url(admin_suffix) + _query_string(request)
     return _forward_upstream(request, url, timeout=timeout)
+
+
+def try_forward_sim_lab_read(
+    request,
+    admin_suffix: str,
+    *,
+    timeout: int | None = None,
+    allow_local_fallback: bool = False,
+) -> Response | None:
+    """Forward read-only admin GET endpoints to sim-lab (dashboard federation)."""
+    if request.method not in ("GET", "HEAD"):
+        return None
+    if not sim_lab_read_federation_enabled() or _skip_sim_lab_proxy(request):
+        return None
+
+    effective_timeout = timeout if timeout is not None else _proxy_stats_timeout()
+    refresh = getattr(request, "query_params", {}).get("refresh") == "1"
+    cache_ttl = _proxy_stats_cache_ttl()
+    cache_key = _stats_federation_cache_key(request)
+
+    if not refresh and cache_ttl > 0:
+        cached = _STATS_FEDERATION_CACHE.get(cache_key)
+        if isinstance(cached, dict) and time.time() - float(cached.get("_ts") or 0) < cache_ttl:
+            payload = dict(cached.get("payload") or {})
+            return Response(payload, status=int(cached.get("status_code") or 200))
+
+    url = _build_url(admin_suffix) + _query_string(request)
+    proxied = _forward_upstream(
+        request,
+        url,
+        timeout=effective_timeout,
+        allow_local_fallback=allow_local_fallback,
+    )
+    if proxied is None:
+        return None
+
+    if isinstance(proxied.data, dict):
+        annotate_federated_payload(proxied.data)
+        if proxied.status_code == 200 and cache_ttl > 0 and not refresh:
+            _STATS_FEDERATION_CACHE[cache_key] = {
+                "payload": dict(proxied.data),
+                "status_code": proxied.status_code,
+                "_ts": time.time(),
+            }
+    return proxied
 
 
 def try_forward_sim_lab_activities(

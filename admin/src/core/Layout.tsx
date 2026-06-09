@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { setGlobalErrorHandler } from '../api/client';
+import { DataSourceBanner } from './components/DataSourceBanner';
 
 /* ─── Navigation structure ──────────────────────────────── */
 const NAV_SECTIONS = [
@@ -644,6 +645,7 @@ export const Layout = () => {
           p={{ base: 'md', md: 'xl' }}
           style={{ minHeight: '100%', background: 'var(--surface-secondary)' }}
         >
+          {user?.role === 'GLOBAL_OWNER' && <DataSourceBanner />}
           <Outlet />
         </Box>
       </AppShell.Main>

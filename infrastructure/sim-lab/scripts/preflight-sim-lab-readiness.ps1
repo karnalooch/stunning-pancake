@@ -85,11 +85,19 @@ if ($env:PROD_ADMIN_PASS) {
         $prodHdr = @{ Authorization = "Bearer $prodToken" }
         $st = Invoke-RestMethod -Uri "$ProdApiBase/activities/admin/sim-target/" -Headers $prodHdr -TimeoutSec 30
         Add-Check "prod_sim_proxy" ($st.mode -eq 'sim-lab-proxy') ("mode={0}" -f $st.mode)
+        $fed = [bool]$st.read_federation_enabled
+        Add-Check "prod_read_federation" $fed ("dashboard_data_source={0}" -f $st.dashboard_data_source)
+        if ($fed) {
+            $stats = Invoke-RestMethod -Uri "$ProdApiBase/activities/admin/stats/" -Headers $prodHdr -TimeoutSec 45
+            $src = [string]$stats.data_source
+            Add-Check "prod_stats_federation" ($src -eq 'sim-lab') ("data_source={0} users={1}" -f $src, $stats.total_users)
+        }
     } catch {
         Add-Check "prod_sim_proxy" $false $_.Exception.Message
     }
 } else {
     Add-Check "prod_sim_proxy" $true "skipped (set PROD_ADMIN_PASS to verify)"
+    Add-Check "prod_read_federation" $true "skipped (set PROD_ADMIN_PASS to verify)"
 }
 
 $failed = @($checks | Where-Object { -not $_.pass })
