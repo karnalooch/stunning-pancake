@@ -104,6 +104,11 @@ export function resolveLiveMapTheme(branding?: BrandingInput | null): LiveMapThe
     };
 }
 
+/** Match expression for bike / run accent colors (circles, direction chevrons). */
+export function activityKindColorExpression(theme: LiveMapTheme): unknown[] {
+    return ['match', ['get', 'kind'], 'run', theme.runColor, 'bike', theme.bikeColor, theme.hubAccent];
+}
+
 /** Step expression — matches MapLibre official cluster example (reliable vs linear interpolate). */
 export function clusterColorExpression(theme: LiveMapTheme): unknown[] {
     const stops: unknown[] = ['step', ['get', 'point_count'], theme.clusterStops[0]?.[1] ?? '#6366f1'];

@@ -76,7 +76,7 @@ async function main() {
         '__liveMapLayerVis',
         'live-clusters',
         'live-unclustered',
-        'live-rider-icons',
+        'live-rider-labels',
         'getLayerVisibility',
         'clusterMaxZoom',
     ];

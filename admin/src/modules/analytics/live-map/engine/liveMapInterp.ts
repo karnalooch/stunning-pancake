@@ -129,8 +129,4 @@ export class LivePositionInterpolator {
         this.ensureLoop();
     }
 
-    /** @deprecated use ingestSnapshot — kept for call-site compat */
-    animateToward(next: LiveMapPosition[], _opts?: LiveInterpOptions): void {
-        this.ingestSnapshot(next);
-    }
 }

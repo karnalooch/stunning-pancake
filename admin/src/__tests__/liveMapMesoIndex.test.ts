@@ -31,4 +31,17 @@ describe('liveMapMesoIndex', () => {
         expect(z10.features.length).toBeGreaterThan(0);
         expect(z11.features.length).toBeGreaterThan(0);
     });
+
+    it('exposes supercluster expansion zoom and leaf breakdown', () => {
+        const index = new MesoClusterIndex();
+        const fc = index.getFeatureCollection(sample, 10, [20.9, 52.1, 21.2, 52.35]);
+        const cluster = fc.features.find((f) => f.properties?.point_count != null);
+        expect(cluster?.properties?.cluster_id).toBeDefined();
+        const clusterId = Number(cluster!.properties!.cluster_id);
+        const expansion = index.getClusterExpansionZoom(sample, 10, clusterId);
+        expect(expansion).toBeGreaterThan(10);
+        const kinds = index.getClusterLeafKinds(sample, 10, clusterId);
+        expect(kinds).not.toBeNull();
+        expect((kinds!.bike + kinds!.run)).toBeGreaterThan(0);
+    });
 });

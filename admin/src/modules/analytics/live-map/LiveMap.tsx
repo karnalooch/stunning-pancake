@@ -43,7 +43,9 @@ import { countRenderedWithSymbolFallback } from './engine/liveMapMapQuery';
 import { addLiveMapBookmark, loadLiveMapBookmarks } from './engine/liveMapBookmarks';
 import { LiveMapReplayBuffer } from './engine/liveMapReplay';
 import { handleLiveMapKeyDown } from './engine/liveMapKeyboard';
-import { LiveMapFpsMonitor } from './engine/liveMapPerformance';
+import { setHeatmapCellData } from './engine/liveMapHeatmapLayer';
+import { loadMaplibregl } from './engine/liveMapMaplibre';
+import { useLiveMapFps } from './hooks/useLiveMapFps';
 import {
     resolveLiveMapPollDelayWithStream,
 } from './engine/liveMapPoll';
@@ -62,7 +64,6 @@ import {
 } from './engine/liveMapMarkers';
 import { POLAND_SIM_CITIES, polandCitiesBounds, nearestCitySlug, cityBySlug } from './engine/liveMapCities';
 import {
-    CLUSTER_MAX_ZOOM,
     apiDetailForZoom,
     clusterRadiusForZoom,
     limitForZoom,
@@ -80,6 +81,7 @@ import {
     setCityHubData,
     countLivePositionFeatures,
     setLivePositionsData,
+    setMicroRiderDegrade,
     updateMesoClustersOnly,
     type LiveMapClickEvent,
 } from './engine/liveMapLayers';
@@ -91,6 +93,7 @@ import {
 } from './engine/liveMapViewportFetch';
 import { cityFlyParams, mesoBboxForCitySlug, mesoFlyZoom } from './engine/liveMapCityNav';
 import { terminateMesoWorker } from './workers/liveMapMesoWorkerClient';
+import { sharedMesoClusterIndex } from './engine/liveMapMesoIndex';
 import { LivePositionInterpolator } from './engine/liveMapInterp';
 import { bboxFromMap } from './engine/liveMapBbox';
 import {
@@ -106,22 +109,6 @@ import {
 } from '../../../core/map/mapBasemap';
 import { classifyMapLibreError } from '../../../core/map/mapErrorPolicy';
 import { isLiveMapE2eEnabled, publishLiveMapE2e } from './engine/liveMapE2e';
-
-let _mlPromise: Promise<any> | null = null;
-function loadMaplibregl(): Promise<any> {
-    if (!_mlPromise) {
-        _mlPromise = import('maplibre-gl').then((raw: any) => {
-            let m: any = raw;
-            while (m && m.default && typeof m.default === 'object' && !m.default.Map) {
-                m = m.default;
-            }
-            if (m.default && m.default.Map) return m.default;
-            if (m.Map) return m;
-            return raw.default || raw;
-        });
-    }
-    return _mlPromise;
-}
 
 type UserPosition = LiveMapPosition;
 
@@ -176,8 +163,6 @@ export const LiveMap: React.FC = () => {
     const filtersRef = useRef<LiveMapFilters>(parseInitialFilters());
     const replayBufferRef = useRef(new LiveMapReplayBuffer());
     const serverFramesRef = useRef<ReturnType<typeof serverFramesToBuffer>>([]);
-    const fpsMonitorRef = useRef(new LiveMapFpsMonitor());
-    const rafFpsRef = useRef<number | null>(null);
     const fitBoundsDoneRef = useRef(false);
     const positionsRef = useRef<UserPosition[]>([]);
     const heatmapDebounceRef = useRef<ReturnType<typeof setTimeout>>();
@@ -250,7 +235,6 @@ export const LiveMap: React.FC = () => {
     const [flaggedCount, setFlaggedCount] = useState(0);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
     const [requestLog, setRequestLog] = useState<LiveMapRequestLogEntry[]>([]);
-    const [fps, setFps] = useState(0);
     const [replayIndex, setReplayIndex] = useState(-1);
     const [replayPlaying, setReplayPlaying] = useState(false);
     const [replayFrameCount, setReplayFrameCount] = useState(0);
@@ -323,18 +307,7 @@ export const LiveMap: React.FC = () => {
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    useEffect(() => {
-        if (!mapReady) return;
-        const tick = (now: number) => {
-            const sample = fpsMonitorRef.current.tick(now);
-            if (sample) setFps(sample.fps);
-            rafFpsRef.current = requestAnimationFrame(tick);
-        };
-        rafFpsRef.current = requestAnimationFrame(tick);
-        return () => {
-            if (rafFpsRef.current != null) cancelAnimationFrame(rafFpsRef.current);
-        };
-    }, [mapReady]);
+    const { fps, degradeLevel } = useLiveMapFps(mapRef, mapReady, liveMapThemeRef);
 
     const activeReplayFrames = useCallback(() => (
         replaySource === 'server'
@@ -461,8 +434,8 @@ export const LiveMap: React.FC = () => {
     const pushPositionsToMap = useCallback((list: UserPosition[]) => {
         const map = mapRef.current;
         if (!map || !layersReadyRef.current) return;
-        // Supercluster needs stable GeoJSON — skip 33ms RAF setData while clustering (z ≤ clusterMaxZoom).
-        if ((map.getZoom?.() ?? DEFAULT_ZOOM) <= CLUSTER_MAX_ZOOM) return;
+        // Interpolation + setData only in micro tier (meso/macro use snapshot path).
+        if (resolveLiveMapTier(map.getZoom?.() ?? DEFAULT_ZOOM) !== 'micro') return;
         setLivePositionsData(map, list, {
             onPositionsSet: () => scheduleRenderedCountRef.current(),
         });
@@ -484,9 +457,12 @@ export const LiveMap: React.FC = () => {
                     trend: cityTrendRef.current,
                 });
             }
+            if (degradeLevel !== 'none') {
+                setMicroRiderDegrade(map, degradeLevel, liveMapThemeRef.current);
+            }
             scheduleRenderedCountRef.current();
         }
-    }, []);
+    }, [degradeLevel]);
 
     const showRiderPopup = useCallback((pos: UserPosition, lngLat: { lng: number; lat: number }) => {
         const ml = mlRef.current;
@@ -533,25 +509,38 @@ export const LiveMap: React.FC = () => {
         const features = map.queryRenderedFeatures(e.point, { layers: [LIVE_LAYERS.clusters] });
         const feature = features[0];
         if (!feature?.properties?.cluster_id) return;
-        const clusterId = feature.properties.cluster_id;
+        const clusterId = Number(feature.properties.cluster_id);
         const coords = (feature.geometry as { coordinates: [number, number] }).coordinates;
-        const source = map.getSource(LIVE_SOURCES.positions) as {
-            getClusterExpansionZoom?: (id: number, cb: (err: Error | null, z: number) => void) => void;
-        };
-        source?.getClusterExpansionZoom?.(clusterId, (err, expansionZoom) => {
-            if (err) return;
-            map.easeTo({
-                center: coords,
-                zoom: Math.min(expansionZoom + 0.5, 16),
-                duration: 450,
-            });
+        const zoom = map.getZoom();
+        const expansionZoom = sharedMesoClusterIndex.getClusterExpansionZoom(
+            positionsRef.current,
+            zoom,
+            clusterId,
+        );
+        const targetZoom = expansionZoom != null
+            ? Math.min(expansionZoom + 0.5, 16)
+            : Math.min(zoom + 1.5, 16);
+        map.easeTo({
+            center: coords,
+            zoom: targetZoom,
+            duration: 450,
         });
+    }, []);
+
+    const getClusterBreakdown = useCallback((clusterId: number) => {
+        const map = mapRef.current;
+        if (!map) return null;
+        return sharedMesoClusterIndex.getClusterLeafKinds(
+            positionsRef.current,
+            map.getZoom(),
+            clusterId,
+        );
     }, []);
 
     const handleRiderClick = useCallback((e: LiveMapClickEvent) => {
         const map = mapRef.current;
         if (!map) return;
-        const layers = [LIVE_LAYERS.riderLabels, LIVE_LAYERS.riderIcons, LIVE_LAYERS.unclustered];
+        const layers = [LIVE_LAYERS.riderLabels, LIVE_LAYERS.unclustered];
         const features = map.queryRenderedFeatures(e.point, { layers });
         const feature = features[0];
         if (!feature?.properties) return;
@@ -680,6 +669,7 @@ export const LiveMap: React.FC = () => {
                 onRiderClick: handleRiderClick,
                 onCityHubClick: handleCityHubClick,
                 onClusterHover: handleClusterHover,
+                getClusterBreakdown,
             },
             liveMapThemeRef.current,
         );
@@ -701,7 +691,7 @@ export const LiveMap: React.FC = () => {
         } else {
             scheduleRenderedCountRef.current();
         }
-    }, [handleClusterClick, handleRiderClick, handleCityHubClick, handleClusterHover]);
+    }, [handleClusterClick, handleRiderClick, handleCityHubClick, handleClusterHover, getClusterBreakdown]);
 
     useEffect(() => {
         if (!user?.tenantId) return;
@@ -887,7 +877,7 @@ export const LiveMap: React.FC = () => {
                         LIVE_LAYERS.clusterCount,
                         LIVE_LAYERS.directionDots,
                     ]
-                    : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
+                    : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels];
             const sourceId = tier === 'meso' ? LIVE_SOURCES.mesoClusters : LIVE_SOURCES.positions;
             return countRenderedWithSymbolFallback(
                 map as Parameters<typeof countRenderedWithSymbolFallback>[0],
@@ -944,7 +934,7 @@ export const LiveMap: React.FC = () => {
             });
         }
         const z = mapRef.current?.getZoom?.() ?? DEFAULT_ZOOM;
-        if (opts?.snap || z <= CLUSTER_MAX_ZOOM) {
+        if (opts?.snap || resolveLiveMapTier(z) !== 'micro') {
             interpolatorRef.current.cancel();
             interpolatorRef.current.snapTo(list);
             flushPositionsToMapLayer();
@@ -1418,38 +1408,7 @@ export const LiveMap: React.FC = () => {
                 });
                 const features = data?.features ?? [];
                 setCellCount(features.length);
-                const source = map.getSource('heatmap-cells');
-                if (!source && features.length > 0) {
-                    map.addSource('heatmap-cells', {
-                        type: 'geojson',
-                        data: { type: 'FeatureCollection', features },
-                    });
-                    map.addLayer({
-                        id: 'heatmap-fill',
-                        type: 'fill',
-                        source: 'heatmap-cells',
-                        before: LIVE_LAYERS.unclustered,
-                        paint: {
-                            'fill-color': [
-                                'interpolate', ['linear'], ['get', 'weight'],
-                                0, '#1a3a5c', 0.25, '#2d6a9f', 0.5, '#f59e0b', 0.75, '#ef4444', 1, '#dc2626',
-                            ],
-                            'fill-opacity': [
-                                'interpolate', ['linear'], ['get', 'weight'],
-                                0, 0.12, 0.5, 0.4, 1, 0.6,
-                            ],
-                        },
-                    });
-                    map.addLayer({
-                        id: 'heatmap-outline',
-                        type: 'line',
-                        source: 'heatmap-cells',
-                        before: LIVE_LAYERS.unclustered,
-                        paint: { 'line-color': 'rgba(255,255,255,0.06)', 'line-width': 0.5 },
-                    });
-                } else if (source?.setData) {
-                    source.setData({ type: 'FeatureCollection', features });
-                }
+                setHeatmapCellData(map, features);
             } catch {
                 setCellCount(0);
             } finally {
@@ -1918,6 +1877,13 @@ export const LiveMap: React.FC = () => {
                     )}
                     {!filters.presentationMode && fps > 0 && fps < 28 && (
                         <Badge variant="light" color="red" radius="sm" size="sm">{fps} FPS</Badge>
+                    )}
+                    {!filters.presentationMode && degradeLevel !== 'none' && (
+                        <Tooltip label="Auto-degrade — ukryte etykiety/ikony przy niskim FPS renderu mapy">
+                            <Badge variant="light" color="orange" radius="sm" size="sm">
+                                {degradeLevel === 'labels' ? 'Bez etykiet' : 'Tylko kropki'}
+                            </Badge>
+                        </Tooltip>
                     )}
                     {sseActive && !filters.presentationMode && (
                         <Tooltip label="SSE stream 200–500 ms (HTTP poll w tle co ~15 s)">

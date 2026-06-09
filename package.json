@@ -31,10 +31,17 @@
     "audit:all": "pnpm audit:auth && pnpm audit:platform:quick && pnpm audit:routes && pnpm audit:screens && pnpm audit:mobile && pnpm audit:api && pnpm audit:rbac && pnpm audit:redirects && pnpm audit:env && pnpm audit:imports && pnpm audit:orm && pnpm audit:async && pnpm audit:compat && pnpm audit:maplibre && pnpm audit:simulator",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:admin": "pnpm --filter admin test:run",
     "build": "turbo run build"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
     "turbo": "^2.5.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.7",
+      "react-dom": "19.2.7"
+    }
   }
 }

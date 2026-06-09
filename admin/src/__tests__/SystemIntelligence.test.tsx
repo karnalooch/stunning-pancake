@@ -4,8 +4,9 @@
  * Component shows skeleton loading, then 4 simulated AI insight cards:
  *   Platform Health, Growth Insight, Integrity Alert, Global Strategy
  *
- * Run from admin/: npx vitest run src/__tests__/SystemIntelligence.test.tsx
+ * Run from repo root: pnpm --filter admin exec vitest run src/__tests__/SystemIntelligence.test.tsx
  */
+// @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 

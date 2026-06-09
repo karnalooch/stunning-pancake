@@ -67,7 +67,7 @@ describe('setLiveMapRenderMode', () => {
         };
         setLiveMapRenderMode(map, 'clusters', 13);
         expect(visibility.get('live-unclustered')).toBe('visible');
-        expect(visibility.get('live-rider-icons')).toBe('visible');
+        expect(visibility.get('live-rider-labels')).toBe('visible');
         expect(visibility.get('live-clusters')).toBe('none');
     });
 

@@ -3,7 +3,6 @@ import { resolveActivityKind, speedToKmh } from './liveMapMarkers';
 import { POLAND_SIM_CITIES } from './liveMapCities';
 import { LIVE_MAP_TIER } from './liveMapEnterprise';
 import {
-    CLUSTER_MAX_ZOOM,
     CLUSTER_CIRCLE_OPACITY_STOPS,
     CLUSTER_COUNT_OPACITY_STOPS,
     CITY_HUB_RING_OPACITY_STOPS,
@@ -14,16 +13,19 @@ import {
 import { ensureLiveMapSprites } from './liveMapSprite';
 import { MAP_TEXT_FONT_BOLD, MAP_TEXT_FONT_REGULAR } from '../../../../core/map/mapBasemap';
 import {
+    activityKindColorExpression,
     clusterColorExpression,
     clusterRadiusExpression,
     defaultLiveMapTheme,
     type LiveMapTheme,
 } from './liveMapTheme';
+import type { PerformanceDegradeLevel } from './liveMapPerformance';
 import { H3_LAYER, H3_SOURCE } from './liveMapH3Layer';
+import { resolveLiveMapTier } from './liveMapEnterprise';
 import { buildMesoClusterFeatureCollectionAsync } from './liveMapMesoClusters';
 
 /** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
-export const LIVE_MAP_LAYER_VERSION = 8;
+export const LIVE_MAP_LAYER_VERSION = 9;
 export const LIVE_MAP_LAYER_VERSION_KEY = 'live-map-layer-v';
 
 export const LIVE_SOURCES = {
@@ -41,7 +43,7 @@ export const LIVE_LAYERS = {
     cityHubCount: 'live-city-hub-count',
     cityHubSub: 'live-city-hub-sub',
     cityHubName: 'live-city-hub-name',
-    riderIcons: 'live-rider-icons',
+    /** Single micro symbol layer — icons + optional labels (no duplicate icon draw). */
     riderLabels: 'live-rider-labels',
 } as const;
 
@@ -55,12 +57,65 @@ export type CityHubDataInput = {
 const CLUSTER_CLICK_LAYERS = [
     LIVE_LAYERS.clusters,
     LIVE_LAYERS.unclustered,
-    LIVE_LAYERS.riderIcons,
+    LIVE_LAYERS.riderLabels,
 ];
 
 const LOD = LIVE_MAP_LOD;
 
 const ALL_LIVE_LAYER_IDS = Object.values(LIVE_LAYERS);
+
+function riderLabelsIconOpacity(): unknown[] {
+    return [
+        'interpolate', ['linear'], ['zoom'],
+        LOD.iconFadeInStart, LOD.iconMicroMinOpacity,
+        LOD.iconFadeInEnd, LOD.iconMicroMinOpacity,
+        LOD.labelFadeInStart, LOD.labelIconOpacityAtHandoff,
+        LOD.labelFadeInEnd, 1,
+    ];
+}
+
+function riderLabelsTextOpacity(): unknown[] {
+    return [
+        'interpolate', ['linear'], ['zoom'],
+        LOD.labelFadeInStart, 0,
+        LOD.labelFadeInEnd, 1,
+    ];
+}
+
+/** Restore zoom-based paint after performance degrade is cleared. */
+export function applyRiderLabelsPaint(
+    map: { getLayer: (id: string) => unknown; setPaintProperty: (id: string, prop: string, value: unknown) => void },
+    _theme: LiveMapTheme = defaultLiveMapTheme(),
+): void {
+    if (!map.getLayer(LIVE_LAYERS.riderLabels)) return;
+    map.setPaintProperty(LIVE_LAYERS.riderLabels, 'icon-opacity', riderLabelsIconOpacity());
+    map.setPaintProperty(LIVE_LAYERS.riderLabels, 'text-opacity', riderLabelsTextOpacity());
+}
+
+/** Auto-degrade: hide labels first, then symbol layer (keep GL dots). */
+export function setMicroRiderDegrade(
+    map: {
+        getLayer: (id: string) => unknown;
+        setLayoutProperty: (id: string, prop: string, value: unknown) => void;
+        setPaintProperty: (id: string, prop: string, value: unknown) => void;
+    },
+    level: PerformanceDegradeLevel,
+    theme: LiveMapTheme = defaultLiveMapTheme(),
+): void {
+    const id = LIVE_LAYERS.riderLabels;
+    if (!map.getLayer(id)) return;
+    if (level === 'symbols') {
+        map.setLayoutProperty(id, 'visibility', 'none');
+        return;
+    }
+    map.setLayoutProperty(id, 'visibility', 'visible');
+    if (level === 'labels') {
+        map.setPaintProperty(id, 'icon-opacity', riderLabelsIconOpacity());
+        map.setPaintProperty(id, 'text-opacity', 0);
+        return;
+    }
+    applyRiderLabelsPaint(map, theme);
+}
 
 export function needsLiveMapLayerReinstall(): boolean {
     if (typeof sessionStorage === 'undefined') return false;
@@ -156,7 +211,7 @@ function cityHubFeatures(input: CityHubDataInput) {
                 bike,
                 run,
                 trend: tr,
-                sublabel: `${bike}🚴 ${run}🏃${trendLabel ? ` ${trendLabel}` : ''}`,
+                sublabel: `${bike}B ${run}R${trendLabel ? ` ${trendLabel}` : ''}`,
                 color: city.colors[0],
                 color2: city.colors[1],
             },
@@ -179,6 +234,7 @@ export function installLiveMapLayers(
         onRiderClick: (e: LiveMapClickEvent) => void;
         onCityHubClick?: (e: LiveMapClickEvent) => void;
         onClusterHover?: (html: string | null, lngLat?: { lng: number; lat: number }) => void;
+        getClusterBreakdown?: (clusterId: number) => { bike: number; run: number } | null;
     },
     theme: LiveMapTheme = defaultLiveMapTheme(),
 ): void {
@@ -247,24 +303,18 @@ export function installLiveMapLayers(
             source: LIVE_SOURCES.mesoClusters,
             filter: ['!', ['has', 'point_count']],
             layout: {
-                'text-field': '▸',
-                'text-size': [
+                'icon-image': 'live-icon-direction',
+                'icon-size': [
                     'interpolate', ['linear'], ['zoom'],
-                    11.5, 10, 12, 12,
+                    11.5, 0.55, 12, 0.65,
                 ],
-                'text-rotate': ['coalesce', ['get', 'course'], 0],
-                'text-allow-overlap': true,
-                'text-ignore-placement': true,
-                'text-font': [...MAP_TEXT_FONT_BOLD],
+                'icon-rotate': ['coalesce', ['get', 'course'], 0],
+                'icon-allow-overlap': true,
+                'icon-ignore-placement': true,
             },
             paint: {
-                'text-color': [
-                    'match', ['get', 'kind'],
-                    'run', theme.runColor,
-                    'bike', theme.bikeColor,
-                    theme.hubAccent,
-                ],
-                'text-opacity': [
+                'icon-color': activityKindColorExpression(theme),
+                'icon-opacity': [
                     'interpolate', ['linear'], ['zoom'],
                     LIVE_MAP_TIER.mesoMinZoom, 0.35,
                     11.2, 0.55,
@@ -293,12 +343,7 @@ export function installLiveMapLayers(
                     LOD.dotFadeOutStart, 6,
                     LOD.dotFadeOutEnd, 0,
                 ],
-                'circle-color': [
-                    'match', ['get', 'kind'],
-                    'run', '#10b981',
-                    'bike', '#7c3aed',
-                    '#6366f1',
-                ],
+                'circle-color': activityKindColorExpression(theme),
                 'circle-stroke-width': [
                     'case', ['boolean', ['get', 'flagged'], false], 2.5, 1.5,
                 ],
@@ -321,12 +366,11 @@ export function installLiveMapLayers(
         });
 
         map.addLayer({
-            id: LIVE_LAYERS.riderIcons,
+            id: LIVE_LAYERS.riderLabels,
             type: 'symbol',
             source: LIVE_SOURCES.positions,
             filter: ['!', ['has', 'point_count']],
             minzoom: LOD.iconMinZoom,
-            maxzoom: LOD.iconMaxZoom,
             layout: {
                 'icon-image': [
                     'match', ['get', 'kind'],
@@ -342,39 +386,6 @@ export function installLiveMapLayers(
                 ],
                 'icon-allow-overlap': true,
                 'icon-ignore-placement': true,
-                'symbol-sort-key': ['-', ['coalesce', ['get', 'speed'], 0]],
-            },
-            paint: {
-                'icon-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.iconFadeInStart, LOD.iconMicroMinOpacity,
-                    LOD.iconFadeInEnd, LOD.iconMicroMinOpacity,
-                    LOD.iconFadeOutStart, LOD.iconMicroMinOpacity,
-                    LOD.iconFadeOutEnd, LOD.labelIconOpacityAtHandoff,
-                ],
-            },
-        });
-
-        map.addLayer({
-            id: LIVE_LAYERS.riderLabels,
-            type: 'symbol',
-            source: LIVE_SOURCES.positions,
-            filter: ['!', ['has', 'point_count']],
-            minzoom: LOD.labelMinZoom,
-            layout: {
-                'icon-image': [
-                    'match', ['get', 'kind'],
-                    'run', 'live-icon-run',
-                    'bike', 'live-icon-bike',
-                    'live-icon-bike',
-                ],
-                'icon-size': [
-                    'interpolate', ['linear'], ['zoom'],
-                    13.5, 0.68,
-                    15, 0.88,
-                ],
-                'icon-allow-overlap': false,
-                'icon-ignore-placement': false,
                 'text-field': [
                     'format',
                     ['get', 'name'], { 'font-scale': 1 },
@@ -400,21 +411,13 @@ export function installLiveMapLayers(
                 'text-color': '#18181b',
                 'text-halo-color': 'rgba(255,255,255,0.94)',
                 'text-halo-width': 1.6,
-                'icon-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.labelFadeInStart, LOD.labelIconOpacityAtHandoff,
-                    LOD.labelFadeInEnd, 1,
-                ],
-                'text-opacity': [
-                    'interpolate', ['linear'], ['zoom'],
-                    LOD.labelFadeInStart, 0,
-                    LOD.labelFadeInEnd, 1,
-                ],
+                'icon-opacity': riderLabelsIconOpacity(),
+                'text-opacity': riderLabelsTextOpacity(),
             },
         });
 
         map.on('click', LIVE_LAYERS.clusters, handlers.onClusterClick);
-        map.on('click', [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels], handlers.onRiderClick);
+        map.on('click', [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels], handlers.onRiderClick);
         map.on('mouseenter', CLUSTER_CLICK_LAYERS, () => setCursor('pointer'));
         map.on('mouseleave', CLUSTER_CLICK_LAYERS, () => setCursor(''));
 
@@ -429,41 +432,18 @@ export function installLiveMapLayers(
                     return;
                 }
                 const total = Number(f.properties.point_count);
-                const source = map.getSource(LIVE_SOURCES.positions) as {
-                    getClusterLeaves?: (
-                        id: number,
-                        limit: number,
-                        offset: number,
-                        cb: (err: Error | null, leaves: Array<{ properties?: Record<string, unknown> }>) => void,
-                    ) => void;
-                };
-                if (!source?.getClusterLeaves) {
+                const breakdown = handlers.getClusterBreakdown?.(Number(clusterId));
+                if (breakdown) {
+                    handlers.onClusterHover!(
+                        `<strong>${total}</strong> w widoku<br/>${breakdown.bike} rower · ${breakdown.run} bieg`,
+                        e.lngLat,
+                    );
+                } else {
                     handlers.onClusterHover!(
                         `<strong>${total}</strong> w widoku`,
                         e.lngLat,
                     );
-                    return;
                 }
-                source.getClusterLeaves(Number(clusterId), 200, 0, (err, leaves) => {
-                    if (err || !leaves?.length) {
-                        handlers.onClusterHover!(
-                            `<strong>${total}</strong> w widoku`,
-                            e.lngLat,
-                        );
-                        return;
-                    }
-                    let bike = 0;
-                    let run = 0;
-                    for (const leaf of leaves) {
-                        const k = leaf.properties?.kind;
-                        if (k === 'bike') bike += 1;
-                        else run += 1;
-                    }
-                    handlers.onClusterHover!(
-                        `<strong>${total}</strong> w widoku<br/>${bike} rower · ${run} bieg`,
-                        e.lngLat,
-                    );
-                });
             };
             map.on('mousemove', LIVE_LAYERS.clusters, onClusterMove as (e: LiveMapClickEvent) => void);
             map.on('mouseleave', LIVE_LAYERS.clusters, () => handlers.onClusterHover?.(null));
@@ -596,6 +576,7 @@ export function installLiveMapLayers(
 
     try {
         if (map.getLayer('live-dots')) map.removeLayer('live-dots');
+        if (map.getLayer('live-rider-icons')) map.removeLayer('live-rider-icons');
     } catch { /* legacy */ }
 
     markLiveMapLayerInstalled();
@@ -669,12 +650,36 @@ function applyMesoPayload(
     );
 }
 
+function commitPositionsOnly(
+    map: LiveMapDataHost,
+    positions: LiveMapPosition[],
+    opts?: { onPositionsSet?: () => void },
+): void {
+    const posSource = map.getSource(LIVE_SOURCES.positions);
+    if (!posSource?.setData) return;
+    const payload = { type: 'FeatureCollection', features: positionsToFeatures(positions) };
+    afterSourcePaint(
+        map,
+        LIVE_SOURCES.positions,
+        () => posSource.setData!(payload),
+        opts?.onPositionsSet,
+    );
+}
+
 function commitMesoClusters(
     map: LiveMapDataHost,
     positions: LiveMapPosition[],
     opts?: { onPositionsSet?: () => void; mesoOnly?: boolean },
 ): void {
     const zoom = map.getZoom?.() ?? 10;
+    const tier = resolveLiveMapTier(zoom);
+
+    if (tier === 'micro') {
+        if (opts?.mesoOnly) return;
+        commitPositionsOnly(map, positions, opts);
+        return;
+    }
+
     const bbox = mapBbox(map);
     const gen = ++mesoClusterGen;
     void buildMesoClusterFeatureCollectionAsync(positions, zoom, bbox).then((mesoPayload) => {
@@ -683,19 +688,12 @@ function commitMesoClusters(
             applyMesoPayload(map, mesoPayload, opts);
             return;
         }
-        const posSource = map.getSource(LIVE_SOURCES.positions);
-        if (!posSource?.setData) return;
-        const features = positionsToFeatures(positions);
-        const payload = { type: 'FeatureCollection', features };
-        afterSourcePaint(
-            map,
-            LIVE_SOURCES.positions,
-            () => {
-                posSource.setData!(payload);
+        commitPositionsOnly(map, positions, {
+            onPositionsSet: () => {
                 mesoSourceSetData(map, mesoPayload);
+                opts?.onPositionsSet?.();
             },
-            opts?.onPositionsSet,
-        );
+        });
     });
 }
 
@@ -722,23 +720,6 @@ export function setLivePositionsData(
         if (!posSource?.setData) return;
     }
     commitMesoClusters(map, positions, opts);
-}
-
-/** Sync supercluster radius after zoom change — triggers worker rebuild. */
-export function syncClusterOptions(
-    map: {
-        getZoom: () => number;
-        getSource: (id: string) => unknown;
-    },
-    clusterRadius: number,
-): void {
-    const src = map.getSource(LIVE_SOURCES.positions) as {
-        setClusterOptions?: (o: { radius?: number; clusterMaxZoom?: number }) => void;
-    } | null;
-    src?.setClusterOptions?.({
-        radius: clusterRadius,
-        clusterMaxZoom: CLUSTER_MAX_ZOOM,
-    });
 }
 
 export function setCityHubData(

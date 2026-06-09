@@ -55,7 +55,7 @@ describe('liveMapMapQuery', () => {
         };
         const out = countRenderedWithSymbolFallback(
             map,
-            ['live-rider-icons'],
+            ['live-rider-labels'],
             'micro',
             'live-positions',
         );

@@ -14,7 +14,6 @@ export const MESO_RIDER_LAYERS = [
 
 export const MICRO_RIDER_LAYERS = [
     'live-unclustered',
-    'live-rider-icons',
     'live-rider-labels',
 ] as const;
 

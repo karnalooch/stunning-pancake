@@ -1,6 +1,7 @@
-/** Runtime sprite atlas for MapLibre symbol layers (bike / run). */
+/** Runtime sprite atlas for MapLibre symbol layers (bike / run / direction). */
 
 const SIZE = 64;
+const CHEVRON_SIZE = 32;
 
 function drawRoundIcon(
     ctx: CanvasRenderingContext2D,
@@ -58,6 +59,18 @@ function drawRoundIcon(
     }
 }
 
+/** White chevron on transparent — SDF-tinted via `icon-color` in MapLibre. */
+function drawDirectionChevron(ctx: CanvasRenderingContext2D): void {
+    ctx.clearRect(0, 0, CHEVRON_SIZE, CHEVRON_SIZE);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(7, 5);
+    ctx.lineTo(25, CHEVRON_SIZE / 2);
+    ctx.lineTo(7, CHEVRON_SIZE - 5);
+    ctx.closePath();
+    ctx.fill();
+}
+
 function iconImageData(kind: 'bike' | 'run'): ImageData {
     const canvas = document.createElement('canvas');
     canvas.width = SIZE;
@@ -68,9 +81,19 @@ function iconImageData(kind: 'bike' | 'run'): ImageData {
     return ctx.getImageData(0, 0, SIZE, SIZE);
 }
 
+function directionChevronImageData(): ImageData {
+    const canvas = document.createElement('canvas');
+    canvas.width = CHEVRON_SIZE;
+    canvas.height = CHEVRON_SIZE;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas 2d unavailable');
+    drawDirectionChevron(ctx);
+    return ctx.getImageData(0, 0, CHEVRON_SIZE, CHEVRON_SIZE);
+}
+
 export async function ensureLiveMapSprites(map: {
     hasImage: (id: string) => boolean;
-    addImage: (id: string, data: ImageData, options?: { pixelRatio?: number }) => void;
+    addImage: (id: string, data: ImageData, options?: { pixelRatio?: number; sdf?: boolean }) => void;
 }): Promise<void> {
     const specs: Array<{ id: string; kind: 'bike' | 'run' }> = [
         { id: 'live-icon-bike', kind: 'bike' },
@@ -79,5 +102,8 @@ export async function ensureLiveMapSprites(map: {
     for (const { id, kind } of specs) {
         if (map.hasImage(id)) continue;
         map.addImage(id, iconImageData(kind), { pixelRatio: 2 });
+    }
+    if (!map.hasImage('live-icon-direction')) {
+        map.addImage('live-icon-direction', directionChevronImageData(), { pixelRatio: 2, sdf: true });
     }
 }

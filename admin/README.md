@@ -13,8 +13,19 @@ Professional admin panel for the 4VELO platform — built with Vite, React 19, a
 
 ### Dev Server
 ```bash
-pnpm install   # from repo root
+pnpm install   # from repo root (required — admin uses workspace:* packages)
 pnpm --filter admin dev
+```
+
+Bez globalnego `pnpm`: `npx pnpm@9.15.0 install` z katalogu root.
+
+### Unit tests (Vitest)
+```bash
+# z root monorepo — nie używaj npm install / npm test w admin/
+pnpm --filter admin test:run
+
+# pojedynczy plik
+pnpm --filter admin exec vitest run src/__tests__/liveMapZoom.test.ts
 ```
 
 ### Electron Dev (Vite + Electron)

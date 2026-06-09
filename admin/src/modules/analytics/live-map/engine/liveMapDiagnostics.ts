@@ -84,7 +84,7 @@ export function auditWebGlLiveMap(map: {
                     LIVE_LAYERS.clusterCount,
                     LIVE_LAYERS.directionDots,
                 ]
-                : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderIcons, LIVE_LAYERS.riderLabels];
+                : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels];
 
     const classified = countRenderedWithSymbolFallback(map, layerIds, tier, sourceId);
     const renderedClusters = classified.clusters;

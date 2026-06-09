@@ -115,6 +115,48 @@ export class MesoClusterIndex {
         this.index = null;
         this.fingerprint = '';
     }
+
+    /** Supercluster expansion zoom — replaces MapLibre geojson `cluster` source API. */
+    getClusterExpansionZoom(
+        positions: LiveMapPosition[],
+        zoom: number,
+        clusterId: number,
+    ): number | null {
+        this.ensureLoaded(positions, zoom);
+        if (!this.index || !Number.isFinite(clusterId)) return null;
+        try {
+            return this.index.getClusterExpansionZoom(clusterId);
+        } catch {
+            return null;
+        }
+    }
+
+    /** Bike/run breakdown for cluster hover tooltips. */
+    getClusterLeafKinds(
+        positions: LiveMapPosition[],
+        zoom: number,
+        clusterId: number,
+        limit = 200,
+    ): { bike: number; run: number } | null {
+        this.ensureLoaded(positions, zoom);
+        if (!this.index || !Number.isFinite(clusterId)) return null;
+        try {
+            const leaves = this.index.getLeaves(clusterId, limit, 0) as Array<
+                GeoJSON.Feature<GeoJSON.Point, ClusterProps>
+            >;
+            if (!leaves.length) return null;
+            let bike = 0;
+            let run = 0;
+            for (const leaf of leaves) {
+                const k = leaf.properties?.kind;
+                if (k === 'bike') bike += 1;
+                else run += 1;
+            }
+            return { bike, run };
+        } catch {
+            return null;
+        }
+    }
 }
 
 export const sharedMesoClusterIndex = new MesoClusterIndex();
