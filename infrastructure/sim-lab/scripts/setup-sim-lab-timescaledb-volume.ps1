@@ -17,6 +17,7 @@ param(
     [string]$DbServiceId = "29863792-e89b-4467-aded-a3d52198ca7b",
     [string]$MountPath = "/var/lib/postgresql/data",
     [string]$VolumeNamePrefix = "timescaledb-volume",
+    [string]$PreferredVolumeId = "2da85672-596c-4f2b-b6e6-9ba835f3234a",
     [switch]$CreateOnly,
     [switch]$Attach,
     [switch]$SkipRedeploy,
@@ -80,9 +81,12 @@ if ($existing) {
     $volumeId = $existing.name
 } else {
     $volList = Invoke-RailwayJson @("volume", "list", "--json")
-    $orphan = @($volList.volumes | Where-Object {
-            $_.name -like "$VolumeNamePrefix*" -and -not $_.serviceName
-        } | Select-Object -First 1)
+    $preferred = @($volList.volumes | Where-Object { $_.id -eq $PreferredVolumeId } | Select-Object -First 1)
+    $orphan = if ($preferred) { $preferred } else {
+        @($volList.volumes | Where-Object {
+                $_.name -like "$VolumeNamePrefix*" -and -not $_.serviceName
+            } | Select-Object -First 1)
+    }
     if ($orphan) {
         Write-Host "Orphan volume: $($orphan.name) ($($orphan.id))"
         $volumeId = $orphan.id
@@ -105,7 +109,7 @@ $patch = @{
     services = @{
         $DbServiceId = @{
             volumeMounts = @{}
-            deploy       = @{ startCommand = $null }
+            deploy       = @{ startCommand = "/entrypoint-volume-fix.sh postgres" }
         }
     }
 }
