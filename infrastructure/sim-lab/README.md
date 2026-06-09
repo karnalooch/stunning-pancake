@@ -84,6 +84,9 @@ Po redeploy admin pokaże baner „Symulacja na sim-lab”. Bez proxy: prod blok
 .\infrastructure\sim-lab\scripts\sync-sim-lab-profile.ps1 -Profile 300k-50k -Redeploy
 .\infrastructure\sim-lab\scripts\sync-sim-lab-telemetry-shards.ps1
 .\infrastructure\sim-lab\scripts\setup-sim-lab-brouter-2.ps1
+.\infrastructure\sim-lab\scripts\setup-sim-lab-timescaledb-image.ps1
+.\infrastructure\sim-lab\scripts\setup-sim-lab-timescaledb-volume.ps1 -Attach -RedeployBackend
+# Custom image: infrastructure/sim-lab/timescaledb/ (root entrypoint for Railway volumes)
 .\infrastructure\sim-lab\scripts\preflight-sim-lab-readiness.ps1
 
 $env:SIM_LAB_API_BASE = 'https://backend-production-80cf.up.railway.app/api'

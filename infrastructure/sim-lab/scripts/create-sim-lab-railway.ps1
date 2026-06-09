@@ -133,6 +133,11 @@ function Ensure-TimescalePostgis {
     }
     Invoke-Railway @("redeploy", "-s", "TimescaleDB", "-y") | Out-Null
     Start-Sleep -Seconds 20
+    $volScript = Join-Path $PSScriptRoot "setup-sim-lab-timescaledb-volume.ps1"
+    if ((Test-Path $volScript) -and ($env:RAILWAY_API_TOKEN -or $env:RAILWAY_TOKEN)) {
+        Write-Host "  create TimescaleDB volume (attach via Dashboard - see sim-lab README)"
+        & $volScript -CreateOnly 2>&1 | Out-Null
+    }
     return "TimescaleDB"
 }
 
