@@ -43,6 +43,7 @@ def analyze_scale(
     generate_activities: bool = True,
     *,
     event_day: bool | None = None,
+    cheat_ratio: float = 0.06,
 ) -> dict:
     """Return risks and recommended settings for a planned scale test."""
     User = get_user_model()
@@ -254,6 +255,14 @@ def analyze_scale(
             f"Batch Celery: {est_label}. Tune SCALE_BATCH_MAX_PARALLEL_WORKERS on weak Postgres."
         )
 
+    from activities.sim_infra_planner import build_live_launch_plan
+
+    live_launch_plan = build_live_launch_plan(
+        target,
+        active_ratio=active_ratio,
+        cheat_ratio=cheat_ratio,
+    )
+
     return {
         "target_users": target,
         "athletes_in_db": athlete_count,
@@ -281,6 +290,8 @@ def analyze_scale(
         "recommendations": recommendations,
         "live_state": sim.get_live_state(),
         "telemetry_redis_active": _telemetry_active_count(),
+        "live_launch_plan": live_launch_plan,
+        "infra_capacity": live_launch_plan["infra"],
     }
 
 

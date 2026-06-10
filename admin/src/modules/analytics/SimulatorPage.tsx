@@ -28,7 +28,11 @@ import {
 import { formatSimulatorConflict } from '../../api/simulatorConflict';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
-import { resolveSimProfile } from './simProfileMap';
+import {
+    fallbackLivePlan,
+    formatRampSeconds,
+    type LiveLaunchPlan,
+} from './simInfraPlanner';
 
 interface LiveStatus {
     running: boolean; elapsed_seconds: number; error: string | null;
@@ -69,15 +73,15 @@ export const SimulatorPage: React.FC = () => {
 
     const [cyclists, setCyclists] = useState<number>(1000);
     const [generateActivities, setGenerateActivities] = useState(true);
-    const [poolIntensity, setPoolIntensity] = useState(50);
-    const [systemLoad, setSystemLoad] = useState(50);
+    const [activePercent, setActivePercent] = useState(29);
+    const [cheatPercent, setCheatPercent] = useState(6);
     const [liveEnabled, setLiveEnabled] = useState(true);
+    const [livePlan, setLivePlan] = useState<LiveLaunchPlan | null>(null);
+    const [infraLoading, setInfraLoading] = useState(false);
 
-    const simProfile = useMemo(
-        () => resolveSimProfile(poolIntensity, systemLoad),
-        [poolIntensity, systemLoad],
-    );
-    const { active_ratio: activeRatio, cheat_ratio: cheatRatio, tick_seconds: tickSeconds, scale_overrides: scaleOverrides } = simProfile;
+    const activeRatio = (livePlan?.active_ratio ?? activePercent / 100);
+    const cheatRatio = (livePlan?.cheat_ratio ?? cheatPercent / 100);
+    const tickSeconds = livePlan?.tick_seconds ?? 4;
 
     const [launching, setLaunching] = useState(false);
     const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
@@ -147,8 +151,7 @@ export const SimulatorPage: React.FC = () => {
         && (batchStatus?.users_created ?? 0) > 0;
     const canStartLiveOnly = liveEnabled && batchCompleteReady && !isLiveRunning && !liveStartBlocked;
 
-    const rawActive = Math.round(cyclists * activeRatio);
-    const activeRiders = rawActive;
+    const activeRiders = livePlan?.target_on_map ?? Math.round(cyclists * activeRatio);
     const cheaters = Math.round(activeRiders * cheatRatio);
     const estActivities = generateActivities ? Math.round(cyclists * 2) : 0;
     const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
@@ -164,15 +167,16 @@ export const SimulatorPage: React.FC = () => {
             .catch(() => setSimTarget(null));
     }, []);
 
-    const buildLiveStartParams = useCallback((): LiveStartParams => ({
-        pool_pct: 1.0,
-        intensity: poolIntensity,
-        load: systemLoad,
-        active_ratio: activeRatio,
-        cheat_ratio: cheatRatio,
-        tick_seconds: tickSeconds,
-        scale_overrides: scaleOverrides,
-    }), [poolIntensity, systemLoad, activeRatio, cheatRatio, tickSeconds, scaleOverrides]);
+    const buildLiveStartParams = useCallback((): LiveStartParams => {
+        const plan = livePlan ?? fallbackLivePlan(cyclists, activePercent, cheatPercent);
+        return {
+            pool_pct: plan.pool_pct,
+            active_ratio: plan.active_ratio,
+            cheat_ratio: plan.cheat_ratio,
+            tick_seconds: plan.tick_seconds,
+            scale_overrides: plan.scale_overrides,
+        };
+    }, [livePlan, cyclists, activePercent, cheatPercent]);
 
     const runLiveStart = useCallback(async (source: 'launch' | 'manual') => {
         setLastLiveError(null);
@@ -243,15 +247,46 @@ export const SimulatorPage: React.FC = () => {
         }
     }, [cyclists, generateActivities]);
 
+    const refreshLivePlan = useCallback(async () => {
+        setInfraLoading(true);
+        const ratio = activePercent / 100;
+        const cheat = cheatPercent / 100;
+        try {
+            const data = await SimulatorApi.getSimCapacity({
+                target_users: cyclists,
+                active_ratio: ratio,
+                cheat_ratio: cheat,
+            });
+            if (data?.live_launch_plan) {
+                setLivePlan(data.live_launch_plan as LiveLaunchPlan);
+            } else {
+                setLivePlan(fallbackLivePlan(cyclists, activePercent, cheatPercent));
+            }
+        } catch {
+            setLivePlan(fallbackLivePlan(cyclists, activePercent, cheatPercent));
+        }
+        setInfraLoading(false);
+    }, [cyclists, activePercent, cheatPercent]);
+
+    useEffect(() => {
+        if (activeStep >= 1 && liveEnabled) {
+            refreshLivePlan();
+        }
+    }, [activeStep, liveEnabled, refreshLivePlan]);
+
     const runPreflight = async () => {
         setPreflightLoading(true);
         try {
             const report = await SimulatorApi.getScalePreflight({
                 target_users: cyclists,
-                active_ratio: activeRatio,
+                active_ratio: activePercent / 100,
+                cheat_ratio: cheatPercent / 100,
                 skip_activities: !generateActivities,
             });
             setScaleReport(report);
+            if (report?.live_launch_plan) {
+                setLivePlan(report.live_launch_plan as LiveLaunchPlan);
+            }
         } catch (err: any) {
             notifications.show({ title: 'Preflight failed', message: err?.message || 'Error', color: 'red' });
         }
@@ -261,15 +296,8 @@ export const SimulatorPage: React.FC = () => {
     const applyScale300k = () => {
         setCyclists(300_000);
         setGenerateActivities(false);
-        setPoolIntensity(25);
-        setSystemLoad(15);
-        setScaleReport(null);
-    };
-
-    /** ~150 starts/tick + szybszy ramp ACTIVE (wymaga deploy railway.json turbo). */
-    const applyTurboMapRamp = () => {
-        setPoolIntensity(100);
-        setSystemLoad(100);
+        setActivePercent(17);
+        setCheatPercent(5);
         setScaleReport(null);
     };
 
@@ -353,11 +381,9 @@ export const SimulatorPage: React.FC = () => {
                 days: 7,
                 clear: true,
                 skip_activities: !generateActivities,
-                scale_overrides: liveEnabled ? scaleOverrides : undefined,
+                scale_overrides: liveEnabled ? liveParams.scale_overrides : undefined,
                 auto_start_live: liveEnabled,
                 pool_pct: liveParams.pool_pct,
-                intensity: liveParams.intensity,
-                load: liveParams.load,
                 active_ratio: liveParams.active_ratio,
                 cheat_ratio: liveParams.cheat_ratio,
                 tick_seconds: liveParams.tick_seconds,
@@ -645,16 +671,19 @@ export const SimulatorPage: React.FC = () => {
                         </Stack>
                     </Stepper.Step>
 
-                    {/* STEP 2: TELEMETRY TUNING */}
-                    <Stepper.Step label="Step 2" description="Live Telemetry Tuning" icon={<Zap size={16} />}>
-                        <Stack gap="lg" mt="xl" style={{ maxWidth: 600 }}>
-                            <Alert color="teal" icon={<Zap size={18} />} title="Real-Time Telemetry Settings">
-                                <Text size="sm">Configure how kolarze should behave on the active live map. You can simulate cheat ratios (impossible routes/speeds) and define tick telemetry intervals.</Text>
+                    {/* STEP 2: LIVE MAP (infra-backed) */}
+                    <Stepper.Step label="Step 2" description="Live Map" icon={<Zap size={16} />}>
+                        <Stack gap="lg" mt="xl" style={{ maxWidth: 680 }}>
+                            <Alert color="teal" icon={<Zap size={18} />} title="Mapa na żywo — pełna przepustowość infra">
+                                <Text size="sm">
+                                    Ustawiasz tylko udział puli na mapie i cheaterów. Tick, starty/tick i routing dispatch
+                                    są liczone z limitów workerów Celery (simulation + routing) — bez abstrakcyjnych profili.
+                                </Text>
                             </Alert>
 
                             <Checkbox
-                                label="Enable live ride simulation"
-                                description="Cyclists will ride in real-time, sending bulk coordinates on a periodic interval"
+                                label="Włącz symulację live na mapie"
+                                description="Po batchu automatycznie startuje live sim z poniższym planem"
                                 checked={liveEnabled}
                                 onChange={(e) => setLiveEnabled(e.currentTarget.checked)}
                                 size="md"
@@ -665,65 +694,80 @@ export const SimulatorPage: React.FC = () => {
                                     {liveStatus?.routing_backpressure_active && (
                                         <Alert color="red" icon={<AlertTriangle size={16} />} title="Backpressure routing">
                                             <Text size="xs">
-                                                Kolejka routingu jest pełna — obniż „Aktywność puli” lub „Obciążenie systemu”, albo poczekaj na opróżnienie kolejki.
-                                                Przy włączonym SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP backend może sam obniżyć active_ratio.
+                                                Kolejka routingu zbliża się do limitu infra — poczekaj na drain lub zmniejsz udział na mapie.
                                             </Text>
                                         </Alert>
                                     )}
 
+                                    <Card withBorder padding="md" bg="var(--surface-secondary)">
+                                        <Group justify="space-between" mb="xs">
+                                            <Text size="sm" fw={600}>Kapasitet infra (z workerów)</Text>
+                                            <Button variant="subtle" size="xs" loading={infraLoading} onClick={refreshLivePlan}>
+                                                Odśwież
+                                            </Button>
+                                        </Group>
+                                        {livePlan ? (
+                                            <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="xs">
+                                                <Text size="xs">Starty/tick: <b>{livePlan.infra.max_starts_per_live_tick}</b></Text>
+                                                <Text size="xs">Routing dispatch/tick: <b>{livePlan.infra.routing_dispatch_per_tick}</b></Text>
+                                                <Text size="xs">Tick: <b>{livePlan.tick_seconds}s</b></Text>
+                                                <Text size="xs">Kolejka routing cap: <b>{livePlan.infra.routing_queue_depth_cap ?? '∞'}</b></Text>
+                                                <Text size="xs">Max na mapie (system): <b>{livePlan.infra.max_concurrent_riders.toLocaleString()}</b></Text>
+                                                <Text size="xs">Async routing: <b>{livePlan.infra.async_routing ? 'tak' : 'nie'}</b></Text>
+                                            </SimpleGrid>
+                                        ) : (
+                                            <Text size="xs" c="dimmed">Ładowanie limitów…</Text>
+                                        )}
+                                    </Card>
+
                                     <Box>
-                                        <Text size="sm" fw={600} mb={4}>Aktywność puli: {poolIntensity}</Text>
+                                        <Text size="sm" fw={600} mb={4}>Udział puli na mapie: {activePercent}%</Text>
                                         <Text size="xs" c="dimmed" mb="md">
-                                            active_ratio {(activeRatio * 100).toFixed(0)}% · cheat {(cheatRatio * 100).toFixed(0)}% ·
-                                            ~{activeRiders.toLocaleString()} aktywnych (~{cheaters.toLocaleString()} cheaterów)
+                                            Cel: <b>{activeRiders.toLocaleString()}</b> riderów ACTIVE
+                                            · szac. ramp {formatRampSeconds(livePlan?.estimated_ramp_seconds ?? 0)}
                                         </Text>
                                         <Slider
-                                            value={poolIntensity}
-                                            onChange={setPoolIntensity}
-                                            min={0}
-                                            max={100}
+                                            value={activePercent}
+                                            onChange={setActivePercent}
+                                            min={8}
+                                            max={50}
                                             step={1}
                                             marks={[
-                                                { value: 0, label: '8%' },
-                                                { value: 50, label: '29%' },
-                                                { value: 100, label: '50%' },
+                                                { value: 8, label: '8%' },
+                                                { value: 29, label: '29%' },
+                                                { value: 50, label: '50%' },
                                             ]}
                                         />
                                     </Box>
 
-                                    <Box mt="md">
-                                        <Text size="sm" fw={600} mb={4}>Obciążenie systemu: {systemLoad}</Text>
+                                    <Box>
+                                        <Text size="sm" fw={600} mb={4}>Cheaterzy: {cheatPercent}%</Text>
                                         <Text size="xs" c="dimmed" mb="md">
-                                            tick {tickSeconds}s · starts {scaleOverrides.max_starts_per_live_tick}/tick ·
-                                            BRouter {scaleOverrides.brouter_max_calls_per_tick}/tick ·
-                                            próby {scaleOverrides.brouter_route_attempts}
+                                            ~{cheaters.toLocaleString()} z {activeRiders.toLocaleString()} na mapie
                                         </Text>
                                         <Slider
-                                            value={systemLoad}
-                                            onChange={setSystemLoad}
+                                            value={cheatPercent}
+                                            onChange={setCheatPercent}
                                             min={0}
-                                            max={100}
+                                            max={15}
                                             step={1}
                                             marks={[
-                                                { value: 0, label: 'Eco' },
-                                                { value: 50, label: 'Balanced' },
-                                                { value: 75, label: '100/s' },
-                                                { value: 100, label: '1000/s' },
+                                                { value: 0, label: '0%' },
+                                                { value: 6, label: '6%' },
+                                                { value: 15, label: '15%' },
                                             ]}
                                         />
                                     </Box>
 
-                                    <Group gap="xs">
-                                        <Button variant="light" size="xs" color="teal" onClick={applyTurboMapRamp}>
-                                            Preset: Turbo map (1000 warm / tick)
-                                        </Button>
-                                    </Group>
-                                    <Alert color="yellow" variant="light" icon={<AlertTriangle size={16} />}>
-                                        <Text size="xs">
-                                            Load 75≈100 starts/tick, 100≈1000. ACTIVE na mapie zależy od routingu (6× worker).
-                                            Przy dużym warming obniż load lub poczekaj na drain kolejki.
-                                        </Text>
-                                    </Alert>
+                                    {livePlan && (
+                                        <Alert color="indigo" variant="light" icon={<Route size={16} />}>
+                                            <Text size="xs">
+                                                Plan launch: {livePlan.throughput.starts_per_tick} startów + do{' '}
+                                                {livePlan.throughput.routes_dispatched_per_tick} route/tick co {livePlan.tick_seconds}s
+                                                ({livePlan.throughput.starts_per_second}/s) → mapa w {formatRampSeconds(livePlan.estimated_ramp_seconds)}.
+                                            </Text>
+                                        </Alert>
+                                    )}
                                 </Stack>
                             )}
 
@@ -748,12 +792,12 @@ export const SimulatorPage: React.FC = () => {
                                         <Text size="sm">• Total Cyclists: <b>{cyclists.toLocaleString()}</b></Text>
                                         <Text size="sm">• Historical Activities: <b>{estActivities.toLocaleString()}</b></Text>
                                         <Text size="sm">• Live Ride Simulation: <b>{liveEnabled ? 'Enabled' : 'Disabled'}</b></Text>
-                                        {liveEnabled && (
+                                        {liveEnabled && livePlan && (
                                             <>
-                                                <Text size="sm">• Profil: <b>aktywność {poolIntensity}</b> · <b>obciążenie {systemLoad}</b></Text>
-                                                <Text size="sm" c="blue">• Live pool: <b>~{activeRiders.toLocaleString()} ({(activeRatio * 100).toFixed(0)}% active_ratio)</b></Text>
-                                                <Text size="sm" c="red">• Cheaters: <b>~{cheaters.toLocaleString()} ({(cheatRatio * 100).toFixed(0)}%)</b></Text>
-                                                <Text size="sm">• Tick: <b>{tickSeconds}s</b> · starts <b>{scaleOverrides.max_starts_per_live_tick}</b> · BRouter <b>{scaleOverrides.brouter_max_calls_per_tick}</b> · próby <b>{scaleOverrides.brouter_route_attempts}</b></Text>
+                                                <Text size="sm" c="blue">• Na mapie (cel): <b>{activeRiders.toLocaleString()}</b> ({activePercent}% puli)</Text>
+                                                <Text size="sm" c="red">• Cheaterzy: <b>~{cheaters.toLocaleString()}</b> ({cheatPercent}%)</Text>
+                                                <Text size="sm">• Infra: tick <b>{livePlan.tick_seconds}s</b> · starts <b>{livePlan.scale_overrides.max_starts_per_live_tick}</b>/tick · routing <b>{livePlan.infra.routing_dispatch_per_tick}</b>/tick</Text>
+                                                <Text size="sm" c="dimmed">• Szac. ramp: <b>{formatRampSeconds(livePlan.estimated_ramp_seconds)}</b></Text>
                                             </>
                                         )}
                                     </Stack>

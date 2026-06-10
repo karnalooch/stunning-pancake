@@ -21,6 +21,7 @@ CRITICAL_PATHS = [
     "/api/users/profile/",
     "/api/users/register/",
     "/api/activities/sessions/",
+    "/api/activities/admin/sim-capacity/",
     "/api/activities/admin/scale-preflight/",
     "/api/activities/admin/disk-audit/",
     "/api/infra/health/",

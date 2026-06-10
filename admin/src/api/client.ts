@@ -419,9 +419,19 @@ export const SimulatorApi = {
   getScalePreflight: async (params: {
     target_users: number;
     active_ratio?: number;
+    cheat_ratio?: number;
     skip_activities?: boolean;
   }) => {
     const { data } = await apiClient.get('/activities/admin/scale-preflight/', { params });
+    return data;
+  },
+
+  getSimCapacity: async (params: {
+    target_users: number;
+    active_ratio: number;
+    cheat_ratio: number;
+  }) => {
+    const { data } = await apiClient.get('/activities/admin/sim-capacity/', { params });
     return data;
   },
 

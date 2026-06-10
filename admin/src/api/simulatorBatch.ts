@@ -55,8 +55,6 @@ export type LiveStartParams = {
   active_ratio: number;
   cheat_ratio: number;
   tick_seconds: number;
-  intensity?: number;
-  load?: number;
   scale_overrides?: {
     max_starts_per_live_tick: number;
     brouter_max_calls_per_tick: number;

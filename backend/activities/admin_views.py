@@ -1326,6 +1326,40 @@ class SimDataPlaneView(APIView):
         return Response(sim_data_plane_info())
 
 
+class SimCapacityView(APIView):
+    """
+    GET /api/activities/admin/sim-capacity/?target_users=1000&active_ratio=0.29&cheat_ratio=0.06
+    Infra limits + max-throughput live launch plan (no risk analysis).
+    """
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        proxied = try_forward_sim_lab(request, "sim-capacity/", timeout=20)
+        if proxied is not None:
+            return proxied
+        from activities.sim_infra_planner import build_live_launch_plan, read_infra_capacity
+
+        try:
+            target = int(request.query_params.get("target_users", 1000))
+        except (TypeError, ValueError):
+            return Response({"error": "target_users must be an integer"}, status=400)
+        try:
+            active_ratio = float(request.query_params.get("active_ratio", 0.29))
+        except (TypeError, ValueError):
+            active_ratio = 0.29
+        try:
+            cheat_ratio = float(request.query_params.get("cheat_ratio", 0.06))
+        except (TypeError, ValueError):
+            cheat_ratio = 0.06
+        plan = build_live_launch_plan(
+            target,
+            active_ratio=active_ratio,
+            cheat_ratio=cheat_ratio,
+        )
+        return Response({"infra": read_infra_capacity(), "live_launch_plan": plan})
+
+
 class ScalePreflightView(APIView):
     """
     GET /api/activities/admin/scale-preflight/?target_users=300000&active_ratio=0.3
@@ -1348,6 +1382,10 @@ class ScalePreflightView(APIView):
             active_ratio = float(request.query_params.get("active_ratio", 0.3))
         except (TypeError, ValueError):
             active_ratio = 0.3
+        try:
+            cheat_ratio = float(request.query_params.get("cheat_ratio", 0.06))
+        except (TypeError, ValueError):
+            cheat_ratio = 0.06
         skip_activities = request.query_params.get("skip_activities", "false").lower() in (
             "1",
             "true",
@@ -1358,6 +1396,7 @@ class ScalePreflightView(APIView):
             analyze_scale(
                 target_users=target,
                 active_ratio=active_ratio,
+                cheat_ratio=cheat_ratio,
                 skip_activities=skip_activities,
                 generate_activities=not skip_activities,
                 event_day=event_day if event_day else None,
