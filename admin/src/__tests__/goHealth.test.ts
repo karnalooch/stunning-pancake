@@ -22,6 +22,18 @@ describe('computeControlPlaneStatus', () => {
     expect(computeControlPlaneStatus({ synthetic: true })).toBe('warn');
   });
 
+  it('returns warn (not no-go) for slow stats when sim is off', () => {
+    expect(
+      computeControlPlaneStatus({ apiLatencyMs: 6976, simOn: false }),
+    ).toBe('warn');
+  });
+
+  it('returns no-go for very slow API with sim running', () => {
+    expect(
+      computeControlPlaneStatus({ apiLatencyMs: 3200, simOn: true }),
+    ).toBe('no-go');
+  });
+
   it('returns warn when queue exceeds cap', () => {
     expect(
       computeControlPlaneStatus({

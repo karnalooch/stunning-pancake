@@ -466,6 +466,42 @@ def try_forward_sim_lab_activities(
     )
 
 
+def fetch_sim_lab_admin_json(
+    admin_suffix: str,
+    *,
+    query: str = "",
+    timeout: float | None = None,
+) -> dict[str, Any] | None:
+    """System GET to sim-lab admin API (dashboard sim_kpi federation)."""
+    if not sim_lab_proxy_enabled():
+        return None
+    if not probe_sim_lab_health().get("reachable"):
+        return None
+
+    effective_timeout = timeout if timeout is not None else float(_proxy_stats_timeout())
+    url = _build_url(admin_suffix)
+    if query:
+        url += query if query.startswith("?") else f"?{query}"
+
+    try:
+        upstream = requests.get(
+            url,
+            headers=_proxy_headers_system(),
+            timeout=effective_timeout,
+        )
+    except requests.RequestException as exc:
+        logger.warning("sim-lab admin fetch failed %s: %s", url, exc)
+        return None
+
+    if upstream.status_code >= 500:
+        return None
+    try:
+        payload = upstream.json() if upstream.content else {}
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
 def assert_prod_heavy_sim_allowed(
     *,
     total_users: int | None = None,

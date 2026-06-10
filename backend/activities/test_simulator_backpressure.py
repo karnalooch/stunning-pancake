@@ -245,6 +245,32 @@ class SimKpiSnapshotMockedTest(SimpleTestCase):
         self.assertFalse(kpi["live_running"])
         self.assertIn("ride_warming", kpi)
         self.assertTrue(kpi["async_routing_enabled"])
+        self.assertEqual(kpi.get("sim_kpi_source"), "local")
+
+    @patch("activities.sim_lab_proxy.fetch_sim_lab_admin_json")
+    @patch("activities.sim_lab_proxy.probe_sim_lab_health")
+    @patch("activities.sim_lab_proxy.sim_lab_proxy_enabled", return_value=True)
+    def test_build_sim_kpi_from_sim_lab_when_proxy_on(
+        self, _mock_enabled, mock_health, mock_fetch
+    ):
+        from activities.admin_stats import build_sim_kpi_snapshot
+
+        mock_health.return_value = {"reachable": True}
+        mock_fetch.side_effect = [
+            {
+                "running": True,
+                "currently_riding": 42,
+                "ride_warming": 3,
+                "ride_routing": 1,
+                "async_routing_enabled": True,
+                "routing_queue_depth": 2,
+            },
+            {"running": False, "current_phase": "idle"},
+        ]
+        kpi = build_sim_kpi_snapshot()
+        self.assertTrue(kpi["live_running"])
+        self.assertEqual(kpi["currently_riding"], 42)
+        self.assertEqual(kpi["sim_kpi_source"], "sim-lab")
 
 
 class DashboardStatsSimKpiTest(SimpleTestCase):

@@ -322,6 +322,27 @@ def test_annotate_production_payload():
     assert payload["synthetic"] is False
 
 
+@patch("activities.sim_lab_proxy.requests.get")
+@patch("activities.sim_lab_proxy.probe_sim_lab_health")
+def test_fetch_sim_lab_admin_json(mock_health, mock_get, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+    mock_health.return_value = {"reachable": True}
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.content = b'{"running": true}'
+    mock_resp.json.return_value = {"running": True, "currently_riding": 12}
+    mock_get.return_value = mock_resp
+
+    from activities.sim_lab_proxy import fetch_sim_lab_admin_json
+
+    payload = fetch_sim_lab_admin_json("live-simulate/", query="?light=1")
+    assert payload["running"] is True
+    assert payload["currently_riding"] == 12
+    assert "live-simulate" in mock_get.call_args.args[0]
+
+
 def test_try_forward_read_returns_none_when_federation_disabled():
     factory = APIRequestFactory()
     request = factory.get("/api/activities/admin/stats/")

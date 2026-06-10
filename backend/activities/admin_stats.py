@@ -146,12 +146,83 @@ def _redis_bool(val) -> bool:
     return str(val).strip().lower() in ("1", "true", "yes", "on")
 
 
+def _sim_kpi_from_sim_lab_api(live: dict, batch: dict) -> dict:
+    """Map sim-lab live-simulate / simulate GET payloads to dashboard sim_kpi."""
+    live_running = bool(live.get("running"))
+    batch_running = bool(batch.get("running"))
+    return {
+        "sim_on": live_running or batch_running,
+        "live_running": live_running,
+        "batch_running": batch_running,
+        "live_error": live.get("error"),
+        "batch_phase": batch.get("current_phase") or "idle",
+        "currently_riding": int(
+            live.get("currently_riding", 0) or live.get("active_rides", 0) or 0
+        ),
+        "ride_warming": int(live.get("ride_warming", 0) or 0),
+        "ride_routing": int(live.get("ride_routing", 0) or 0),
+        "ride_routed": int(live.get("ride_routed", 0) or 0),
+        "ride_active": int(live.get("ride_active", 0) or 0),
+        "async_routing_enabled": bool(live.get("async_routing_enabled", True)),
+        "routing_queue_depth": int(live.get("routing_queue_depth", 0) or 0),
+        "routing_backpressure_active": _redis_bool(live.get("routing_backpressure_active")),
+        "dispatches_throttled": _redis_bool(live.get("dispatches_throttled")),
+        "max_routing_queue_depth": live.get("max_routing_queue_depth"),
+        "routing_unroutable_total": int(live.get("routing_unroutable_total", 0) or 0),
+        "tick_stale": bool(live.get("tick_stale")) if live_running else False,
+        "live_lock_held": bool(live.get("live_lock_held")),
+        "sim_kpi_source": "sim-lab",
+    }
+
+
+def _sim_kpi_sim_lab_unreachable(health: dict | None) -> dict:
+    return {
+        "sim_on": False,
+        "live_running": False,
+        "batch_running": False,
+        "batch_phase": "idle",
+        "currently_riding": 0,
+        "ride_warming": 0,
+        "ride_routing": 0,
+        "ride_routed": 0,
+        "ride_active": 0,
+        "async_routing_enabled": True,
+        "routing_queue_depth": 0,
+        "routing_backpressure_active": False,
+        "dispatches_throttled": False,
+        "max_routing_queue_depth": None,
+        "routing_unroutable_total": 0,
+        "tick_stale": False,
+        "live_lock_held": False,
+        "sim_kpi_source": "sim-lab-unreachable",
+        "sim_lab_unreachable": True,
+        "sim_lab_health": health,
+        "error": "sim_lab_unreachable",
+    }
+
+
 def build_sim_kpi_snapshot() -> dict:
     """
     Platform-wide live/batch simulator KPIs (not athlete DB counts).
     Always fresh — not tied to dashboard stats cache TTL.
+
+    When SIM_LAB_PROXY is enabled, reads sim-lab Redis via admin API (not prod local).
     """
     try:
+        from activities.sim_lab_proxy import (
+            fetch_sim_lab_admin_json,
+            probe_sim_lab_health,
+            sim_lab_proxy_enabled,
+        )
+
+        if sim_lab_proxy_enabled():
+            health = probe_sim_lab_health()
+            if health.get("reachable"):
+                live = fetch_sim_lab_admin_json("live-simulate/", query="?light=1") or {}
+                batch = fetch_sim_lab_admin_json("simulate/") or {}
+                return _sim_kpi_from_sim_lab_api(live, batch)
+            return _sim_kpi_sim_lab_unreachable(health)
+
         from activities import simulator_state as sim
         from activities.ride_fsm import fsm_summary
         from activities.simulator_routing_backpressure import (
@@ -192,6 +263,7 @@ def build_sim_kpi_snapshot() -> dict:
             "routing_unroutable_total": int(live.get("routing_unroutable_total", 0) or 0),
             "tick_stale": sim.live_tick_stale() if live_running else False,
             "live_lock_held": sim.is_live_lock_held(),
+            "sim_kpi_source": "local",
         }
     except Exception:
         logger.exception("admin/sim_kpi snapshot failed")

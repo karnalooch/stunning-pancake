@@ -71,6 +71,9 @@ interface SimKpi {
   dispatches_throttled: boolean;
   max_routing_queue_depth?: number | null;
   tick_stale?: boolean;
+  sim_lab_unreachable?: boolean;
+  sim_kpi_source?: string;
+  error?: string;
 }
 
 interface DashboardStats {
@@ -456,6 +459,20 @@ export const Dashboard: React.FC = () => {
           {stats.sim_kpi.tick_stale && stats.sim_kpi.live_running && (
             <Text size="xs" c="orange" mt="sm">
               Live ticks stale — check celery-worker-simulation or use simulator-reset.
+            </Text>
+          )}
+          {(stats.sim_kpi.sim_lab_unreachable || stats.federation_fallback) && (
+            <Alert color="yellow" variant="light" mt="sm" icon={<AlertTriangle size={16} />} title="Sim-lab niedostępny">
+              <Text size="sm">
+                KPI symulatora i mapa na żywo wymagają działającego sim-lab (
+                {stats.sim_lab_label || '4velo-sim-lab'}
+                ). Uruchom symulację ponownie po odzyskaniu sim-lab lub sprawdź Simulator → status.
+              </Text>
+            </Alert>
+          )}
+          {!stats.sim_kpi.sim_on && stats.sim_kpi.sim_kpi_source === 'sim-lab' && !stats.sim_kpi.sim_lab_unreachable && (
+            <Text size="xs" c="dimmed" mt="sm">
+              Symulator idle na sim-lab — użyj Quick Launch na mapie lub Simulator, aby wystartować live sim.
             </Text>
           )}
         </Card>

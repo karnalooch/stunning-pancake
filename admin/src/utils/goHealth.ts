@@ -25,8 +25,11 @@ export function computeControlPlaneStatus(input: ControlPlaneInput): ControlPlan
   } = input;
 
   if (simOn && routingBackpressure) return 'no-go';
-  if (apiLatencyMs != null && apiLatencyMs > 2500) return 'no-go';
   if (synthetic || federationFallback || dataStale) return 'warn';
+  // Slow dashboard stats (federation/cold cache) is degraded, not a full platform outage.
+  if (apiLatencyMs != null && apiLatencyMs > 10_000) return 'no-go';
+  if (simOn && apiLatencyMs != null && apiLatencyMs > 2500) return 'no-go';
+  if (apiLatencyMs != null && apiLatencyMs > 2500) return 'warn';
   if (
     simOn
     && maxRoutingQueueDepth != null
