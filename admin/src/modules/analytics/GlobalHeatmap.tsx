@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient } from '../../api/client';
 import {
     MAP_ATTRIBUTION_CONTROL_OPTIONS,
+    attachBasemapImageFallback,
     resolveMapStyleUrl,
     transformMapGlyphsStyle,
 } from '../../core/map/mapBasemap';
@@ -56,6 +57,7 @@ export const GlobalHeatmap: React.FC = () => {
       });
       map.addControl(new m.NavigationControl(), 'top-right');
       map.addControl(new m.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
+      attachBasemapImageFallback(map);
       map.on('load', () => setLoading(false));
       map.on('error', () => { setError('Failed to load map tiles.'); setLoading(false); });
       mapRef.current = map;
@@ -80,7 +82,7 @@ export const GlobalHeatmap: React.FC = () => {
         const params: Record<string, string | number> = { bbox, zoom };
         if (activityType !== 'ALL') params.type = activityType;
 
-        const { data } = await apiClient.get('/api/heatmap/', { params });
+        const { data } = await apiClient.get('/activities/heatmap/', { params });
         if (data?.error) {
           setError(data.error);
           setCellCount(0);

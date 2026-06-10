@@ -107,6 +107,7 @@ import {
 import type { LiveApiDetail } from './engine/liveMapZoom';
 import {
     MAP_ATTRIBUTION_CONTROL_OPTIONS,
+    attachBasemapImageFallback,
     resolveMapStyleUrl,
     transformMapGlyphsStyle,
 } from '../../../core/map/mapBasemap';
@@ -1407,7 +1408,7 @@ export const LiveMap: React.FC = () => {
             const bbox = bboxFromMap(map);
             try {
                 setHeatmapLoading(true);
-                const { data } = await apiClient.get('/api/heatmap/', {
+                const { data } = await apiClient.get('/activities/heatmap/', {
                     params: { bbox, zoom: Math.round(map.getZoom()) },
                 });
                 const features = data?.features ?? [];
@@ -1539,6 +1540,7 @@ export const LiveMap: React.FC = () => {
             });
             map.addControl(new m.NavigationControl(), 'top-right');
             map.addControl(new m.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
+            attachBasemapImageFallback(map);
             map.on('load', async () => {
                 if (cancelled) return;
                 await ensureMapLayers(map);

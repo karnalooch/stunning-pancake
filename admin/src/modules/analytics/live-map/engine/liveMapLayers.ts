@@ -390,7 +390,7 @@ export function installLiveMapLayers(
                     'format',
                     ['get', 'name'], { 'font-scale': 1 },
                     '\n', {},
-                    ['to-string', ['get', 'speedKmh']], { 'font-scale': 0.92 },
+                    ['to-string', ['coalesce', ['get', 'speedKmh'], 0]], { 'font-scale': 0.92 },
                     ' km/h', { 'font-scale': 0.85 },
                 ],
                 'text-font': [...MAP_TEXT_FONT_REGULAR],

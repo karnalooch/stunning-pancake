@@ -4,6 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { loadMaplibregl } from '../map/loadMaplibre';
 import {
   MAP_ATTRIBUTION_CONTROL_OPTIONS,
+  attachBasemapImageFallback,
   resolveMapStyleUrl,
   transformMapGlyphsStyle,
 } from '../map/mapBasemap';
@@ -51,6 +52,7 @@ export const ActivityRouteMap: React.FC<ActivityRouteMapProps> = ({
       });
       map.addControl(new ml.NavigationControl({ showCompass: false }), 'top-right');
       map.addControl(new ml.AttributionControl(MAP_ATTRIBUTION_CONTROL_OPTIONS), 'bottom-right');
+      attachBasemapImageFallback(map);
 
       map.on('load', () => {
         map.addSource(ROUTE_SOURCE, {

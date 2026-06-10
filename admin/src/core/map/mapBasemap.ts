@@ -78,3 +78,54 @@ export function transformMapGlyphsStyle(
         glyphs: resolveMapGlyphsUrl(),
     };
 }
+
+type MapImageFallbackHost = {
+    hasImage: (id: string) => boolean;
+    addImage: (
+        id: string,
+        image: ImageData,
+        options?: { pixelRatio?: number },
+    ) => void;
+    on: (event: 'styleimagemissing', handler: (e: { id: string }) => void) => void;
+};
+
+function placeholderImageData(fill: string, size = 16): ImageData {
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('canvas 2d unavailable');
+    if (fill === 'circle') {
+        ctx.beginPath();
+        ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#64748b';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    } else {
+        ctx.fillStyle = fill;
+        ctx.fillRect(0, 0, size, size);
+    }
+    return ctx.getImageData(0, 0, size, size);
+}
+
+/**
+ * OpenFreeMap styles reference sprite icons (e.g. circle-11, wood-pattern) that may be
+ * missing from the public CDN. Provide lightweight placeholders so the console stays clean.
+ */
+export function attachBasemapImageFallback(map: MapImageFallbackHost): void {
+    map.on('styleimagemissing', (e) => {
+        if (map.hasImage(e.id)) return;
+        const id = e.id;
+        let data: ImageData;
+        if (id.startsWith('circle-')) {
+            data = placeholderImageData('circle');
+        } else if (id.includes('pattern') || id === 'wood-pattern') {
+            data = placeholderImageData('#d4c4a8');
+        } else {
+            data = placeholderImageData('rgba(0,0,0,0)', 1);
+        }
+        map.addImage(id, data, { pixelRatio: 1 });
+    });
+}

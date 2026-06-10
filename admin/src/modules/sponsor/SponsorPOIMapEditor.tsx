@@ -2,7 +2,12 @@ import React, { useEffect, useRef } from 'react';
 import { Box } from '@mantine/core';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { loadMaplibregl } from '../../core/map/loadMaplibre';
-import { MAP_ATTRIBUTION_CONTROL_OPTIONS, resolveMapStyleUrl, transformMapGlyphsStyle } from '../../core/map/mapBasemap';
+import {
+  MAP_ATTRIBUTION_CONTROL_OPTIONS,
+  attachBasemapImageFallback,
+  resolveMapStyleUrl,
+  transformMapGlyphsStyle,
+} from '../../core/map/mapBasemap';
 
 interface PoiMarker {
   id: number;
@@ -39,13 +44,14 @@ export const SponsorPOIMapEditor: React.FC<SponsorPOIMapEditorProps> = ({
 
       const map = new ml.Map({
         container: containerRef.current,
-        style: resolveMapStyleUrl(),
+        style: resolveMapStyleUrl('light'),
         center,
         zoom: pois.length ? 12 : 10,
         transformStyle: transformMapGlyphsStyle,
         attributionControl: MAP_ATTRIBUTION_CONTROL_OPTIONS,
       });
       mapRef.current = map;
+      attachBasemapImageFallback(map);
 
       map.on('load', () => {
         map.addSource(SOURCE, {
