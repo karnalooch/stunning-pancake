@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { API_PATHS } from '@4velo/api-client';
+import { resolveApiBaseUrl } from './apiBase';
 import { formatApiError, isAbsentError } from './apiErrors';
 import { useAuth } from '../core/auth/useAuth';
 import {
@@ -58,22 +59,7 @@ export class WipeStuckError extends Error {
 
 export { formatApiError, isAbsentError };
 
-let baseURL = import.meta.env.VITE_API_URL || '';
-if (!baseURL) {
-  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-    baseURL = 'http://localhost:8000/api';
-  } else {
-    baseURL = '/api';
-  }
-}
-
-// Automatically normalize: if VITE_API_URL is set but doesn't end with /api, append it!
-if (baseURL && !baseURL.endsWith('/api') && !baseURL.endsWith('/api/')) {
-  baseURL = `${baseURL.replace(/\/$/, '')}/api`;
-}
-if (baseURL.startsWith('/') && typeof window !== 'undefined') {
-  baseURL = `${window.location.protocol}//${window.location.host}${baseURL}`;
-}
+const baseURL = resolveApiBaseUrl();
 
 export type ApiClientRequestConfig = import('axios').InternalAxiosRequestConfig & {
   skipAuth?: boolean;
