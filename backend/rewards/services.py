@@ -192,7 +192,8 @@ class RewardsService:
             valid_until=now + timedelta(days=days),
         )
         Voucher.objects.bulk_create(
-            [Voucher(pool=pool, code=secrets.token_hex(6).upper()) for _ in range(qty)]
+            [Voucher(pool=pool, code=secrets.token_hex(6).upper()) for _ in range(qty)],
+            batch_size=50,
         )
         logger.info(
             "rewards.pool_created sponsor=%s pool=%d quantity=%d",

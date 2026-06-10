@@ -8,6 +8,7 @@ import { theme } from './theme/index';
 import { Layout } from './core/Layout';
 import { RoleHomeRedirect } from './core/RoleHomeRedirect';
 import { PermissionGuard } from './core/guards/PermissionGuard';
+import { TenantAnalyticsScope } from './core/components/TenantAnalyticsScope';
 import { LoginPage } from './core/auth/LoginPage';
 import { LandingPage } from './modules/public/LandingPage';
 
@@ -17,7 +18,12 @@ const Users = lazy(() => import('./modules/users/Users').then(m => ({ default: m
 const WhiteLabelEngine = lazy(() => import('./modules/tenants/WhiteLabelEngine').then(m => ({ default: m.WhiteLabelEngine })));
 const SponsorDashboard = lazy(() => import('./modules/sponsor/SponsorDashboard').then(m => ({ default: m.SponsorDashboard })));
 const SponsorPOIMap = lazy(() => import('./modules/sponsor/SponsorPOIMap').then(m => ({ default: m.SponsorPOIMap })));
-const ModeratorInbox = lazy(() => import('./modules/dashboard/ModeratorInbox').then(m => ({ default: m.ModeratorInbox })));
+const ModeratorInbox = lazy(() => import('./modules/moderation/ModerationInbox').then(m => ({ default: m.ModerationInbox })));
+const ModerationHistory = lazy(() => import('./modules/moderation/ModerationHistory').then(m => ({ default: m.ModerationHistory })));
+const ActionInbox = lazy(() => import('./modules/control-plane/ActionInbox').then(m => ({ default: m.ActionInbox })));
+const RevenueDashboard = lazy(() => import('./modules/control-plane/RevenueDashboard').then(m => ({ default: m.RevenueDashboard })));
+const SponsorCampaigns = lazy(() => import('./modules/sponsor/SponsorCampaigns').then(m => ({ default: m.SponsorCampaigns })));
+const SponsorBrandStudio = lazy(() => import('./modules/sponsor/SponsorBrandStudio').then(m => ({ default: m.SponsorBrandStudio })));
 const AiCoachStudio = lazy(() => import('./modules/premium/AiCoachStudio').then(m => ({ default: m.AiCoachStudio })));
 const VoucherCustomizer3D = lazy(() => import('./modules/premium/VoucherCustomizer3D').then(m => ({ default: m.VoucherCustomizer3D })));
 const EsgPortal = lazy(() => import('./modules/premium/EsgPortal').then(m => ({ default: m.EsgPortal })));
@@ -28,6 +34,7 @@ const EventsManager = lazy(() => import('./modules/analytics/EventsManager').the
 const SponsorshipAnalytics = lazy(() => import('./modules/analytics/SponsorshipAnalytics').then(m => ({ default: m.SponsorshipAnalytics })));
 const RewardsVouchers = lazy(() => import('./modules/analytics/RewardsVouchers').then(m => ({ default: m.RewardsVouchers })));
 const BetaFeedback = lazy(() => import('./modules/analytics/BetaFeedback').then(m => ({ default: m.BetaFeedback })));
+const AuditLogPage = lazy(() => import('./modules/analytics/AuditLog').then(m => ({ default: m.AuditLog })));
 const ExportCenter = lazy(() => import('./modules/analytics/ExportCenter').then(m => ({ default: m.ExportCenter })));
 const LeaderboardManager = lazy(() => import('./modules/analytics/LeaderboardManager').then(m => ({ default: m.LeaderboardManager })));
 const RbacManager = lazy(() => import('./modules/analytics/RbacManager').then(m => ({ default: m.RbacManager })));
@@ -39,16 +46,21 @@ const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').the
 const ActivityDetail = lazy(() => import('./modules/dashboard/ActivityDetail').then(m => ({ default: m.ActivityDetail })));
 const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').then(m => ({ default: m.ActivitiesList })));
 
-const PageLoader = () => <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">Loading...</Text></Box>;
-import { useAuth } from './core/auth/useAuth';
+const PageLoader = () => {
+  const { t } = useI18n();
+  return <Box p="xl"><Loader size="md" /><Text size="sm" c="dimmed" mt="sm">{t.app.loading}</Text></Box>;
+};
+import { useAuth, profileToAuthUser } from './core/auth/useAuth';
 import axios from 'axios';
 import { API_PATHS } from '@4velo/api-client';
 import { apiClient } from './api/client';
 import { clearStoredSession } from './core/auth/tokens';
 import { E2EAuthBootstrap } from './core/auth/E2EAuthBootstrap';
+import { useI18n } from './i18n/useI18n';
 const LiveMapPage = lazy(() => import('./modules/analytics/live-map/LiveMap').then(m => ({ default: m.LiveMap })));
 
 const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
+  const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     // 1. Try parsing from hash query string
@@ -73,30 +85,24 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
         apiClient.get(API_PATHS.usersProfile, { headers: { Authorization: `Bearer ${finalAccess}` } })
           .then(r => {
             const d = r.data?.data || r.data;
-            onLogin(finalAccess, finalRefresh, {
-              id: d.id,
-              username: d.username,
-              role: d.role,
-              tenantId: d.tenant_id || null,
-              tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
-              isImpersonated: false
-            }).then(() => {
+            onLogin(finalAccess, finalRefresh, profileToAuthUser(d)).then(() => {
               window.history.replaceState({}, document.title, window.location.pathname);
               window.location.hash = '#/owner/dashboard';
-            }).catch(() => setError('Failed to complete login'));
+            }).catch(() => setError(t.auth.callbackFailedComplete));
           })
-          .catch(() => setError('Failed to load profile'));
+          .catch(() => setError(t.auth.callbackFailedProfile));
       });
     } else {
-      Promise.resolve().then(() => setError('No token received from login provider'));
+      Promise.resolve().then(() => setError(t.auth.callbackNoToken));
     }
-  }, [onLogin]);
+  }, [onLogin, t.auth.callbackFailedComplete, t.auth.callbackFailedProfile, t.auth.callbackNoToken]);
 
-  if (error) return <Box p={50} ta="center"><Title order={2} c="red">Login Failed</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
-  return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">Completing login process...</Text></Box>;
+  if (error) return <Box p={50} ta="center"><Title order={2} c="red">{t.auth.callbackTitleFailed}</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
+  return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">{t.auth.callbackCompleting}</Text></Box>;
 };
 
 export default function App() {
+  const { t } = useI18n();
   const { isAuthenticated, login } = useAuth();
 
   const handleLogin = async (username: string, password: string) => {
@@ -115,14 +121,7 @@ export default function App() {
       const profileRes = await apiClient.get(API_PATHS.usersProfile);
       const profileData = profileRes.data?.data || profileRes.data;
 
-      await login(access, refresh, {
-        id: profileData.id,
-        username: profileData.username,
-        role: profileData.role,
-        tenantId: profileData.tenant_id || null,
-        tenantFlags: profileData.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
-        isImpersonated: false,
-      });
+      await login(access, refresh, profileToAuthUser(profileData));
     } catch (error: any) {
       const data = error?.response?.data;
       const detail = data?.detail;
@@ -131,7 +130,7 @@ export default function App() {
         (Array.isArray(detail) && detail[0]) ||
         data?.non_field_errors?.[0] ||
         data?.error ||
-        'Nieprawidłowy login lub hasło.';
+        t.app.loginFailedDefault;
       throw new Error(msg);
     }
   };
@@ -202,10 +201,50 @@ export default function App() {
                 }
               />
               <Route
+                path="sponsor/campaigns"
+                element={
+                  <PermissionGuard permissions={['poi.view', 'vouchers.view']}>
+                    <SponsorCampaigns />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="sponsor/brand"
+                element={
+                  <PermissionGuard permissions={['poi.view', 'vouchers.view']}>
+                    <SponsorBrandStudio />
+                  </PermissionGuard>
+                }
+              />
+              <Route
                 path="moderation"
                 element={
-                  <PermissionGuard permissions={['activities.approve']}>
+                  <PermissionGuard permissions={['activities.approve', 'activities.view']}>
                     <ModeratorInbox />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="moderation/history"
+                element={
+                  <PermissionGuard permissions={['activities.approve', 'activities.view']}>
+                    <ModerationHistory />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="control-plane/inbox"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
+                    <ActionInbox />
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/revenue"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
+                    <RevenueDashboard />
                   </PermissionGuard>
                 }
               />
@@ -277,14 +316,30 @@ export default function App() {
                 path="analytics/feedback"
                 element={
                   <PermissionGuard permissions={['activities.view']}>
-                    <BetaFeedback />
+                    <TenantAnalyticsScope><BetaFeedback /></TenantAnalyticsScope>
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/audit-log"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                    <TenantAnalyticsScope><AuditLogPage /></TenantAnalyticsScope>
+                  </PermissionGuard>
+                }
+              />
+              <Route
+                path="analytics/export"
+                element={
+                  <PermissionGuard roles={['TENANT_ADMIN']}>
+                    <TenantAnalyticsScope><ExportCenter scoped /></TenantAnalyticsScope>
                   </PermissionGuard>
                 }
               />
               <Route
                 path="system/export"
                 element={
-                  <PermissionGuard permissions={['activities.view']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <ExportCenter />
                   </PermissionGuard>
                 }
@@ -292,7 +347,7 @@ export default function App() {
               <Route
                 path="system/leaderboards"
                 element={
-                  <PermissionGuard permissions={['activities.view']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <LeaderboardManager />
                   </PermissionGuard>
                 }
@@ -300,7 +355,7 @@ export default function App() {
               <Route
                 path="system/rbac"
                 element={
-                  <PermissionGuard permissions={['users.edit']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <RbacManager />
                   </PermissionGuard>
                 }
@@ -308,7 +363,7 @@ export default function App() {
               <Route
                 path="system/api-playground"
                 element={
-                  <PermissionGuard permissions={['users.view']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <ApiPlayground />
                   </PermissionGuard>
                 }
@@ -316,7 +371,7 @@ export default function App() {
               <Route
                 path="system/feature-flags"
                 element={
-                  <PermissionGuard permissions={['users.edit']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <FeatureFlags />
                   </PermissionGuard>
                 }
@@ -325,7 +380,7 @@ export default function App() {
                 path="analytics/departments"
                 element={
                   <PermissionGuard permissions={['activities.view']}>
-                    <DepartmentAnalyticsPage />
+                    <TenantAnalyticsScope><DepartmentAnalyticsPage /></TenantAnalyticsScope>
                   </PermissionGuard>
                 }
               />
@@ -333,7 +388,7 @@ export default function App() {
                 path="analytics/heatmaps"
                 element={
                   <PermissionGuard permissions={['activities.view']}>
-                    <GlobalHeatmap />
+                    <TenantAnalyticsScope><GlobalHeatmap /></TenantAnalyticsScope>
                   </PermissionGuard>
                 }
               />
@@ -341,9 +396,11 @@ export default function App() {
                 path="analytics/live-map"
                 element={
                   <PermissionGuard permissions={['activities.view']}>
-                    <Box p="md" style={{ height: 'calc(100vh - 100px)' }}>
-                      <LiveMapPage />
-                    </Box>
+                    <TenantAnalyticsScope>
+                      <Box p="md" style={{ height: 'calc(100vh - 100px)' }}>
+                        <LiveMapPage />
+                      </Box>
+                    </TenantAnalyticsScope>
                   </PermissionGuard>
                 }
               />
@@ -359,7 +416,7 @@ export default function App() {
               <Route
                 path="premium/ai-coach"
                 element={
-                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <AiCoachStudio />
                   </PermissionGuard>
                 }
@@ -375,7 +432,7 @@ export default function App() {
               <Route
                 path="premium/esg"
                 element={
-                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
                     <EsgPortal />
                   </PermissionGuard>
                 }
@@ -385,9 +442,9 @@ export default function App() {
               path="/unauthorized"
               element={
                 <Box p={50} ta="center">
-                  <Title order={1} c="red">Access Denied</Title>
-                  <Text c="dimmed" mt="md">Your role does not have access to this section.</Text>
-                  <Button mt="xl" component={Link} to="/owner/dashboard">Back to Dashboard</Button>
+                  <Title order={1} c="red">{t.app.unauthorizedTitle}</Title>
+                  <Text c="dimmed" mt="md">{t.app.unauthorizedDesc}</Text>
+                  <Button mt="xl" component={Link} to="/owner/dashboard">{t.app.backToDashboard}</Button>
                 </Box>
               }
             />

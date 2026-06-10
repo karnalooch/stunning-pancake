@@ -23,7 +23,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from rewards.models import Sponsor, Voucher, VoucherPool
+from rewards.models import Sponsor, SponsorCampaign, Voucher, VoucherPool
+from users.permissions import IsGlobalOwner
 from rewards.services import RewardsService
 from rewards.stripe_service import StripeService
 
@@ -153,12 +154,10 @@ def sponsor_stats_view(request: Request) -> Response:
         pools = sponsor.pools.all()
         total_vouchers = Voucher.objects.filter(pool__in=pools).count()
         redeemed_vouchers = Voucher.objects.filter(pool__in=pools, user__isnull=False).count()
+        poi_qs = POI.objects.filter(sponsor=sponsor)
         tenant_uuid = getattr(request.user, "tenant_id", None) or sponsor.tenant_id or None
-        poi_qs = POI.objects.all()
         if tenant_uuid:
             poi_qs = poi_qs.filter(tenant_id=tenant_uuid)
-        elif sponsor.tenant_id:
-            poi_qs = poi_qs.filter(tenant_id=sponsor.tenant_id)
 
         return Response(
             {
@@ -270,3 +269,134 @@ def stripe_webhook_view(request: Request) -> Response:
     if result.get("status") == "invalid_signature":
         return Response(result, status=status.HTTP_400_BAD_REQUEST)
     return Response(result)
+
+
+class SponsorCampaignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SponsorCampaign
+        fields = (
+            "id",
+            "title",
+            "status",
+            "start_date",
+            "end_date",
+            "budget_points",
+            "created_at",
+            "sponsor",
+        )
+        read_only_fields = ("id", "created_at", "sponsor")
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def sponsor_campaigns_view(request: Request) -> Response:
+    """CRUD list/create campaigns for authenticated sponsor."""
+    try:
+        sponsor = request.user.sponsor_profile
+    except Sponsor.DoesNotExist:
+        return Response({"detail": "Sponsor profile required"}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == "GET":
+        qs = SponsorCampaign.objects.filter(sponsor=sponsor).order_by("-created_at")
+        return Response(SponsorCampaignSerializer(qs, many=True).data)
+
+    ser = SponsorCampaignSerializer(data=request.data)
+    if not ser.is_valid():
+        return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+    campaign = ser.save(sponsor=sponsor)
+    return Response(SponsorCampaignSerializer(campaign).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET", "PATCH", "DELETE"])
+@permission_classes([IsAuthenticated])
+def sponsor_campaign_detail_view(request: Request, pk: int) -> Response:
+    try:
+        sponsor = request.user.sponsor_profile
+        campaign = SponsorCampaign.objects.get(pk=pk, sponsor=sponsor)
+    except Sponsor.DoesNotExist:
+        return Response({"detail": "Sponsor profile required"}, status=status.HTTP_403_FORBIDDEN)
+    except SponsorCampaign.DoesNotExist:
+        return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == "GET":
+        return Response(SponsorCampaignSerializer(campaign).data)
+    if request.method == "PATCH":
+        ser = SponsorCampaignSerializer(campaign, data=request.data, partial=True)
+        if not ser.is_valid():
+            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        ser.save()
+        return Response(ser.data)
+    campaign.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def sponsor_stats_timeseries_view(request: Request) -> Response:
+    """Daily redemption counts for sponsor pools (7d default)."""
+    try:
+        sponsor = request.user.sponsor_profile
+    except Sponsor.DoesNotExist:
+        return Response({"series": []})
+
+    days = int(request.query_params.get("days", 7))
+    pools = sponsor.pools.all()
+    from django.db.models import Count
+    from django.db.models.functions import TruncDate
+
+    qs = (
+        Voucher.objects.filter(pool__in=pools, user__isnull=False)
+        .annotate(day=TruncDate("redeemed_at"))
+        .values("day")
+        .annotate(count=Count("id"))
+        .order_by("day")
+    )
+    return Response({"series": [{"day": str(r["day"]), "count": r["count"]} for r in qs if r["day"]]})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def sponsor_activity_feed_view(request: Request) -> Response:
+    """Recent redemptions for sponsor pools."""
+    try:
+        sponsor = request.user.sponsor_profile
+    except Sponsor.DoesNotExist:
+        return Response({"results": []})
+
+    vouchers = (
+        Voucher.objects.filter(pool__sponsor=sponsor, user__isnull=False)
+        .select_related("pool", "user")
+        .order_by("-redeemed_at")[:25]
+    )
+    return Response(
+        {
+            "results": [
+                {
+                    "pool_title": v.pool.title,
+                    "code_masked": v.code[:4] + "****" if v.code else "",
+                    "redeemed_at": v.redeemed_at.isoformat() if v.redeemed_at else None,
+                    "user": v.user.username if v.user_id else None,
+                }
+                for v in vouchers
+            ]
+        }
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsGlobalOwner])
+def platform_revenue_summary_view(request: Request) -> Response:
+    """MVP revenue summary for GLOBAL_OWNER control plane."""
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    premium_count = User.objects.filter(is_premium=True).count()
+    sponsor_count = Sponsor.objects.filter(is_active=True).count()
+    return Response(
+        {
+            "premium_users": premium_count,
+            "active_sponsors": sponsor_count,
+            "mrr_estimate_usd": premium_count * 9.99,
+            "stripe_webhook_status": "configured",
+        }
+    )

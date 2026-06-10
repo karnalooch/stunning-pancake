@@ -8,6 +8,7 @@ import { notifications } from '@mantine/notifications';
 import { Link } from 'react-router-dom';
 import { POIsApi } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
+import { SponsorPOIMapEditor } from './SponsorPOIMapEditor';
 
 const CATEGORIES = [
   { value: 'COFFEE', label: 'Coffee Shop' },
@@ -72,6 +73,19 @@ export const SponsorPOIMap: React.FC = () => {
           Add POI
         </Button>
       </PageHeader>
+
+      {!loading && pois.length > 0 && (
+        <Box mb="md">
+          <SponsorPOIMapEditor
+            pois={pois.map((p) => ({
+              id: p.id,
+              name: p.name,
+              latitude: p.latitude ?? 52.23,
+              longitude: p.longitude ?? 21.01,
+            }))}
+          />
+        </Box>
+      )}
 
       <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
         {loading ? (

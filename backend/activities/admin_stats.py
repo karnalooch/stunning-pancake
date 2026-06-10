@@ -383,9 +383,9 @@ def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
             for row in Activity.objects.filter(tenant_id__in=tenant_ids)
             .values("tenant_id")
             .annotate(
-                activities=Count("id"),
-                distance=Sum("distance", filter=Q(is_verified=True)),
-                verified=Count("id", filter=Q(is_verified=True)),
+                activities=Count("id", distinct=True),
+                distance=Sum("distance", filter=Q(is_verified=True), distinct=True),
+                verified=Count("id", filter=Q(is_verified=True), distinct=True),
             )
         }
         User = get_user_model()
@@ -393,7 +393,7 @@ def _per_tenant_breakdown(*, tenant_id: str | None = None) -> list[dict]:
             row["tenant_id"]: row["users"]
             for row in User.objects.filter(tenant_id__in=tenant_ids)
             .values("tenant_id")
-            .annotate(users=Count("id"))
+            .annotate(users=Count("id", distinct=True))
         }
     except Exception:
         logger.exception("admin/stats per_tenant group aggregates failed")
@@ -629,15 +629,15 @@ def build_department_analytics(request_user, *, refresh: bool = False) -> list[d
             for row in Activity.objects.filter(user__departments__in=dept_ids)
             .values("user__departments")
             .annotate(
-                activities=Count("id"),
-                distance=Sum("distance"),
-                verified=Count("id", filter=Q(is_verified=True)),
+                activities=Count("id", distinct=True),
+                distance=Sum("distance", distinct=True),
+                verified=Count("id", filter=Q(is_verified=True), distinct=True),
             )
         }
         member_stats = {
             row["id"]: row["users"]
             for row in Department.objects.filter(id__in=dept_ids)
-            .annotate(users=Count("members"))
+            .annotate(users=Count("members", distinct=True))
             .values("id", "users")
         }
     except Exception:

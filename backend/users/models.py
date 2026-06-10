@@ -82,6 +82,12 @@ class User(AbstractUser):
     mfa_secret = models.CharField(max_length=64, blank=True, default="")
     mfa_secret_pending = models.CharField(max_length=64, blank=True, default="")
 
+    preferences = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="User UI preferences: notifications, language, dashboard widgets, etc.",
+    )
+
     # Department hierarchy
     departments = models.ManyToManyField(
         "users.Department",

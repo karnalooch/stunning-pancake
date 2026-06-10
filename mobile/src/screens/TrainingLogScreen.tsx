@@ -1,43 +1,115 @@
-// STITCH Phase 2 — TrainingLogScreen (refaktor ActivitiesScreen)
-import React from "react";
-import { View, Text, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from "../theme/stitch";
+import { ActivityService, type ActivityItem } from '../services/api';
+import { useMobileI18n } from '../i18n/useI18n';
 
-const stylesheet = StyleSheet.create(theme => {
-    const c = theme.colors as any;
-    const C = theme.colors as any;
-    return {
+const stylesheet = StyleSheet.create((theme) => {
+  const c = theme.colors as Record<string, string>;
+  return {
     container: { flex: 1, backgroundColor: c.background },
-    header: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground, backgroundColor: c.surface },
-    headerTitle: { fontSize: 24, fontWeight: "700", color: c.primary, textTransform: "uppercase" },
-    card: { backgroundColor: c.parchment, margin: 16, padding: 16, borderWidth: 2, borderColor: c.onBackground, borderRadius: 8, shadowColor: c.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 },
-    label: { fontSize: 10, fontWeight: "700", color: c.secondary, textTransform: "uppercase" },
-    name: { fontSize: 18, fontWeight: "700", color: c.onBackground, marginTop: 4 },
-    metric: { fontSize: 22, fontWeight: "700", color: c.primary, marginTop: 6 },
-
-    };
+    header: {
+      padding: 16,
+      borderBottomWidth: 4,
+      borderBottomColor: c.onBackground,
+      backgroundColor: c.surface,
+    },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: c.primary,
+      textTransform: 'uppercase',
+    },
+    card: {
+      backgroundColor: c.parchment,
+      margin: 16,
+      marginBottom: 0,
+      padding: 16,
+      borderWidth: 2,
+      borderColor: c.onBackground,
+      borderRadius: 8,
+    },
+    label: { fontSize: 10, fontWeight: '700', color: c.secondary, textTransform: 'uppercase' },
+    name: { fontSize: 18, fontWeight: '700', color: c.onBackground, marginTop: 4 },
+    metric: { fontSize: 16, fontWeight: '600', color: c.primary, marginTop: 6 },
+    status: { fontSize: 12, fontWeight: '700', marginTop: 8 },
+    empty: { textAlign: 'center', color: c.secondary, marginTop: 32 },
+  };
 });
 
-export const TrainingLogScreen: React.FC = () => {
-    const { theme } = useUnistyles(); const s = stylesheet;
-    const c = theme.colors as any;
-    const C = theme.colors as any;
-    return (
-        <SafeAreaView style={s.container} edges={["top"]}>
-            <View style={s.header}><Text style={s.headerTitle}>Training Log</Text></View>
-            <ScrollView>
-                {[{ d: "Oct 24", t: "Sunday Epic", dist: "62.0 km", time: "2:45 hr" },
-                { d: "Oct 22", t: "Morning Commute", dist: "12.5 km", time: "0:32 hr" },
-                { d: "Oct 20", t: "Hill Intervals", dist: "25.0 km", time: "1:10 hr" }].map((a, i) => (
-                    <View key={i} style={s.card}>
-                        <Text style={s.label}>{a.d}</Text>
-                        <Text style={s.name}>{a.t}</Text>
-                        <Text style={s.metric}>{a.dist} | {a.time}</Text>
-                    </View>
-                ))}
-            </ScrollView>
-        </SafeAreaView>
-    );
+function statusLabel(
+  item: ActivityItem & { rejection_reason?: string },
+  t: ReturnType<typeof useMobileI18n.getState>['t'],
+): string {
+  if (item.is_verified) return t.training.verified;
+  if (item.rejection_reason) return `${t.training.rejected}: ${item.rejection_reason}`;
+  return t.training.pending;
+}
+
+interface TrainingLogScreenProps {
+  onBack?: () => void;
+}
+
+export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack }) => {
+  const { theme } = useUnistyles();
+  const { t } = useMobileI18n();
+  const s = stylesheet;
+  const c = theme.colors as Record<string, string>;
+  const [items, setItems] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    ActivityService.getHistory()
+      .then((data) => setItems(Array.isArray(data) ? data : (data as any)?.results ?? []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
+        {onBack ? (
+          <Pressable onPress={onBack}>
+            <Text style={{ color: c.primary, marginBottom: 8 }}>← {t.training.back}</Text>
+          </Pressable>
+        ) : null}
+        <Text style={s.headerTitle}>{t.training.title}</Text>
+      </View>
+      {loading ? (
+        <ActivityIndicator style={{ marginTop: 32 }} />
+      ) : (
+        <ScrollView>
+          {items.length === 0 ? (
+            <Text style={s.empty}>{t.training.empty}</Text>
+          ) : (
+            items.map((a) => (
+              <View key={a.id} style={s.card}>
+                <Text style={s.label}>{new Date(a.start_time).toLocaleDateString()}</Text>
+                <Text style={s.name}>{a.type}</Text>
+                <Text style={s.metric}>
+                  {(a.distance / 1000).toFixed(1)} km
+                  {a.duration ? ` · ${a.duration}` : ''}
+                </Text>
+                <Text
+                  style={[
+                    s.status,
+                    {
+                      color: a.is_verified
+                        ? c.primary
+                        : (a as any).rejection_reason
+                          ? c.error
+                          : c.secondary,
+                    },
+                  ]}
+                >
+                  {statusLabel(a as ActivityItem & { rejection_reason?: string }, t)}
+                </Text>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
 };

@@ -33,6 +33,7 @@ Program **całego repozytorium** (nie tylko telemetry/ADR): backend, telemetry, 
 | **Mobile** | `mobile/` | Expo lint (docelowo) | Jest | `mobile` |
 | **Skrypty Python** | `scripts/*.py` | Ruff (root `pyproject.toml`) | — | `scripts-python` |
 | **Dokumentacja** | `docs/` | `check_docs_links.py` | — | `docs` (workflow) |
+| **Plany overhaul** | `docs/overhaul_plan/` | linki do [ADMIN_ROADMAP](../../admin/ADMIN_ROADMAP.md) | checklist per rola | — |
 | **Tokeny design** | `packages/tokens/` | `pnpm tokens:check` | — | `repo-assets` |
 | **Infrastruktura** | `infrastructure/`, `docker-compose*` | Review + Trivy | Manual / deploy | `trivy` |
 | **Root** | `.env.example`, workflows | Env drift (`audit:env`) | — | `audit` |

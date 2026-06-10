@@ -21,10 +21,29 @@ interface User {
   username: string;
   role: Role;
   tenantId: string | null;
+  tenantName?: string | null;
   tenantFlags: {
     has_heatmap_analytics: boolean;
   } | null;
   isImpersonated: boolean;
+}
+
+export function profileToAuthUser(d: Record<string, unknown>): User {
+  const role = d.role as Role;
+  const tenantFlags = d.tenant_flags as { has_heatmap_analytics?: boolean } | undefined;
+  return {
+    id: d.id as number,
+    username: d.username as string,
+    role,
+    tenantId: (d.tenant_id as string) || null,
+    tenantName: (d.tenant_name as string) || null,
+    tenantFlags: role === 'GLOBAL_OWNER'
+      ? { has_heatmap_analytics: true }
+      : tenantFlags
+        ? { has_heatmap_analytics: !!tenantFlags.has_heatmap_analytics }
+        : null,
+    isImpersonated: false,
+  };
 }
 
 interface AuthState {
@@ -136,14 +155,7 @@ if (storedToken && storedRefresh && !isLoginRoute() && !isE2eMode()) {
   apiClient.get(API_PATHS.usersProfile)
     .then(res => {
       const d = res.data?.data || res.data;
-      useAuth.getState().login(storedToken, storedRefresh, {
-        id: d.id,
-        username: d.username,
-        role: d.role,
-        tenantId: d.tenant_id || null,
-        tenantFlags: d.role === 'GLOBAL_OWNER' ? { has_heatmap_analytics: true } : null,
-        isImpersonated: false,
-      });
+      useAuth.getState().login(storedToken, storedRefresh, profileToAuthUser(d));
     })
     .catch(() => {
       clearStoredSession();

@@ -11,22 +11,18 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
+import { useI18n } from '../i18n/useI18n';
 
-const TABS = [
-  { name: 'Ride', icon: '🚴', label: 'RIDE' },
-  { name: 'Compete', icon: '🏆', label: 'COMPETE' },
-  { name: 'Explore', icon: '🗺️', label: 'EXPLORE' },
-  { name: 'Profile', icon: '👤', label: 'PROFILE' },
-];
-
+const TAB_ICONS = ['🚴', '🏆', '🗺️', '👤'] as const;
 export const GameTabBar: React.FC<BottomTabBarProps> = ({
   state,
   descriptors,
   navigation,
 }) => {
   const { theme } = useUnistyles();
-    const c = theme.colors as any;
-    const C = theme.colors as any;
+  const { t } = useI18n();
+  const c = theme.colors as any;
+  const tabLabels = [t.tabs.ride, t.tabs.compete, t.tabs.explore, t.tabs.profile];
   return (
     <View
       style={{
@@ -49,9 +45,9 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
     >
       {state.routes.map((route, index) => {
         const isFocused = state.index === index;
-        const tabConfig = TABS[index] || {
-          icon: '📍',
-          label: (route.name as string),
+        const tabConfig = {
+          icon: TAB_ICONS[index] ?? '📍',
+          label: tabLabels[index] ?? (route.name as string),
         };
 
         const onPress = () => {

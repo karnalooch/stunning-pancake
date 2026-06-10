@@ -103,6 +103,16 @@ class IsGlobalOwner(permissions.BasePermission):
         )
 
 
+class IsPlatformHealthViewer(permissions.BasePermission):
+    """GLOBAL_OWNER or Django staff — infra health for control plane."""
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        role = getattr(request.user, "role", None)
+        return role == "GLOBAL_OWNER" or getattr(request.user, "is_staff", False)
+
+
 class IsTenantAdmin(permissions.BasePermission):
     """Legacy: allows TENANT_ADMIN and GLOBAL_OWNER. Kept for backward compatibility."""
 

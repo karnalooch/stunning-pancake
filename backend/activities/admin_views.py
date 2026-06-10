@@ -278,35 +278,16 @@ class ActivityApproveView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def post(self, request, activity_id):
+        from activities.moderation_views import apply_moderation_approve, _get_moderatable_activity
+        from rest_framework.exceptions import PermissionDenied
+
         try:
-            activity = Activity.objects.select_related("user").get(pk=activity_id)
-            activity.is_verified = True
-            activity.verification_score = 1.0
-            activity.save(update_fields=["is_verified", "verification_score"])
-
-            from activities.leaderboard_credit import credit_verified_activity
-
-            credited = credit_verified_activity(activity)
-
-            gpx_archived = False
-            if activity.route_path_id and activity.route_path and activity.route_path.num_coords >= 2:
-                from activities.tasks import generate_gpx_task
-
-                generate_gpx_task.delay(activity.id)
-                gpx_archived = True
-
-            return Response(
-                {
-                    "status": "approved",
-                    "activity_id": activity.id,
-                    "user": activity.user.username,
-                    "verification_score": activity.verification_score,
-                    "leaderboard_credited": credited,
-                    "gpx_archive_queued": gpx_archived,
-                }
-            )
+            activity = _get_moderatable_activity(request, activity_id)
+            return Response(apply_moderation_approve(request, activity))
         except Activity.DoesNotExist:
             return Response({"error": "activity not found"}, status=status.HTTP_404_NOT_FOUND)
+        except PermissionDenied as exc:
+            return Response({"detail": str(exc.detail)}, status=status.HTTP_403_FORBIDDEN)
 
 
 class ActivityRejectView(APIView):
@@ -317,21 +298,23 @@ class ActivityRejectView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def post(self, request, activity_id):
+        from activities.moderation_views import apply_moderation_reject, _get_moderatable_activity
+        from rest_framework.exceptions import PermissionDenied
+
         try:
-            activity = Activity.objects.get(pk=activity_id)
-            activity.is_verified = False
-            activity.verification_score = 0.0
-            activity.save()
-            return Response(
-                {
-                    "status": "rejected",
-                    "activity_id": activity.id,
-                    "user": activity.user.username,
-                    "verification_score": activity.verification_score,
-                }
-            )
+            activity = _get_moderatable_activity(request, activity_id)
+            reason = (request.data.get("reason") or request.data.get("rejection_reason") or "").strip()
+            notes = (request.data.get("notes") or request.data.get("rejection_notes") or "").strip()
+            if not reason:
+                return Response(
+                    {"detail": "rejection reason is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(apply_moderation_reject(request, activity, reason=reason, notes=notes))
         except Activity.DoesNotExist:
             return Response({"error": "activity not found"}, status=status.HTTP_404_NOT_FOUND)
+        except PermissionDenied as exc:
+            return Response({"detail": str(exc.detail)}, status=status.HTTP_403_FORBIDDEN)
 
 
 class ExportDataView(APIView):
@@ -347,11 +330,11 @@ class ExportDataView(APIView):
         export_format = request.query_params.get("format", "json")
 
         if resource == "activities":
-            data = self._export_activities(export_format)
+            data = self._export_activities(request, export_format)
         elif resource == "users":
-            data = self._export_users(export_format)
+            data = self._export_users(request, export_format)
         elif resource == "statistics":
-            data = self._export_statistics(export_format)
+            data = self._export_statistics(request, export_format)
         else:
             return Response(
                 {"error": f"Unknown resource: {resource}"}, status=status.HTTP_400_BAD_REQUEST
@@ -402,8 +385,19 @@ class ExportDataView(APIView):
         response["Content-Disposition"] = f'attachment; filename="{resource}.pdf"'
         return response
 
-    def _export_activities(self, fmt):
-        qs = Activity.objects.select_related("user").all()[:10000]
+    def _tenant_scope_qs(self, request, qs, tenant_field="tenant_id"):
+        role = getattr(request.user, "role", None)
+        tenant_id = getattr(request.user, "tenant_id", None)
+        if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and tenant_id:
+            return qs.filter(**{tenant_field: tenant_id})
+        if role == "GLOBAL_OWNER":
+            return qs
+        return qs.none()
+
+    def _export_activities(self, request, fmt):
+        qs = self._tenant_scope_qs(
+            request, Activity.objects.select_related("user").all()
+        )[:10000]
         activities = []
         for a in qs:
             activities.append(
@@ -425,9 +419,9 @@ class ExportDataView(APIView):
             "data": activities,
         }
 
-    def _export_users(self, fmt):
+    def _export_users(self, request, fmt):
         User = get_user_model()
-        qs = User.objects.all()[:10000]
+        qs = self._tenant_scope_qs(request, User.objects.all())[:10000]
         users = []
         for u in qs:
             users.append(
@@ -442,10 +436,14 @@ class ExportDataView(APIView):
             )
         return {"resource": "users", "format": fmt, "count": len(users), "data": users}
 
-    def _export_statistics(self, fmt):
+    def _export_statistics(self, request, fmt):
         from activities.admin_stats import get_cached_dashboard_stats
 
+        role = getattr(request.user, "role", None)
+        tenant_id = getattr(request.user, "tenant_id", None)
         cached = get_cached_dashboard_stats()
+        if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and tenant_id:
+            cached = None
         if cached:
             total_activities = cached.get("total_activities", 0)
             total_users = cached.get("total_users", 0)
@@ -453,10 +451,12 @@ class ExportDataView(APIView):
             verified = cached.get("verified_total", 0)
             verified_pct = cached.get("verified_pct", 0.0)
         else:
-            total_activities = Activity.objects.count()
-            total_users = get_user_model().objects.count()
-            total_distance = Activity.objects.aggregate(Sum("distance"))["distance__sum"] or 0
-            verified = Activity.objects.filter(is_verified=True).count()
+            act_qs = self._tenant_scope_qs(request, Activity.objects.all())
+            user_qs = self._tenant_scope_qs(request, get_user_model().objects.all())
+            total_activities = act_qs.count()
+            total_users = user_qs.count()
+            total_distance = act_qs.aggregate(Sum("distance"))["distance__sum"] or 0
+            verified = act_qs.filter(is_verified=True).count()
             total_distance_km = round(float(total_distance) / 1000.0, 1)
             verified_pct = round(verified / max(total_activities, 1) * 100, 1)
         return {

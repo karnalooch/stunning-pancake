@@ -47,6 +47,33 @@ class Activity(models.Model):
     is_verified = models.BooleanField(default=False)
     verification_score = models.FloatField(default=0.0)
 
+    REJECTION_REASONS = (
+        ("GPS_SPOOF", "GPS spoofing suspected"),
+        ("DISTANCE_MISMATCH", "Distance mismatch"),
+        ("DUPLICATE", "Duplicate activity"),
+        ("OTHER", "Other"),
+    )
+
+    moderated_at = models.DateTimeField(null=True, blank=True)
+    moderated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="moderated_activities",
+    )
+    moderation_assignee = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_moderation_activities",
+    )
+    rejection_reason = models.CharField(
+        max_length=32, choices=REJECTION_REASONS, blank=True, default=""
+    )
+    rejection_notes = models.TextField(blank=True, default="")
+
     # PostGIS Path
     route_path = models.LineStringField(srid=4326, null=True, blank=True)
 
@@ -127,6 +154,13 @@ class POI(models.Model):
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default="OTHER")
     tenant = models.ForeignKey(
         "users.Tenant", on_delete=models.CASCADE, related_name="pois", null=True, blank=True
+    )
+    sponsor = models.ForeignKey(
+        "rewards.Sponsor",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="pois",
     )
     description = models.TextField(blank=True)
 

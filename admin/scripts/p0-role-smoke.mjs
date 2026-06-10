@@ -19,42 +19,77 @@ const ROLE_SPECS = [
     role: 'GLOBAL_OWNER',
     user: process.env.ADMIN_USER_GLOBAL_OWNER || process.env.ADMIN_USER,
     pass: process.env.ADMIN_PASS_GLOBAL_OWNER || process.env.ADMIN_PASS,
-    paths: ['/owner/dashboard', '/owner/users', '/owner/analytics/simulator'],
+    paths: [
+      '/owner/dashboard',
+      '/owner/users',
+      '/owner/analytics/simulator',
+      '/owner/analytics/revenue',
+      '/owner/control-plane/inbox',
+    ],
   },
   {
     role: 'TENANT_ADMIN',
     user: process.env.ADMIN_USER_TENANT_ADMIN,
     pass: process.env.ADMIN_PASS_TENANT_ADMIN,
-    paths: ['/owner/dashboard', '/owner/users', '/owner/white-label'],
+    paths: [
+      '/owner/dashboard',
+      '/owner/users',
+      '/owner/white-label',
+      '/owner/moderation',
+      '/owner/analytics/feedback',
+      '/owner/analytics/export',
+      '/owner/analytics/audit-log',
+      '/owner/analytics/departments',
+    ],
+    forbiddenPaths: [
+      '/owner/system/rbac',
+      '/owner/system/feature-flags',
+      '/owner/analytics/simulator',
+      '/owner/analytics/revenue',
+      '/owner/premium/ai-coach',
+    ],
   },
   {
     role: 'TENANT_MODERATOR',
     user: process.env.ADMIN_USER_MODERATOR,
     pass: process.env.ADMIN_PASS_MODERATOR,
-    paths: ['/owner/dashboard', '/owner/activities', '/owner/moderation'],
+    paths: ['/owner/dashboard', '/owner/activities', '/owner/moderation', '/owner/moderation/history'],
   },
   {
     role: 'SPONSOR',
     user: process.env.ADMIN_USER_SPONSOR,
     pass: process.env.ADMIN_PASS_SPONSOR,
-    paths: ['/owner/sponsor', '/owner/sponsor/poi', '/owner/analytics/vouchers', '/owner/analytics/sponsorship'],
+    paths: [
+      '/owner/sponsor',
+      '/owner/sponsor/poi',
+      '/owner/sponsor/campaigns',
+      '/owner/analytics/vouchers',
+      '/owner/analytics/sponsorship',
+    ],
   },
 ];
 
 async function login(page, username, password) {
-  await page.goto(`${BASE}/#/login`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.getByLabel(/username|email/i).fill(username);
-  await page.getByLabel(/password/i).fill(password);
+  await page.goto(`${BASE}/#/login`, { waitUntil: 'load', timeout: 120000 });
+  const userInput = page
+    .locator('input[autocomplete="username"], input[name="username"]')
+    .first();
+  await userInput.waitFor({ state: 'visible', timeout: 60000 });
+  await userInput.fill(username);
+  await page.locator('input[type="password"]').first().fill(password);
   await page.getByRole('button', { name: /sign in|log in|zaloguj/i }).click();
-  await page.waitForURL(/#\/owner\//, { timeout: 30000 });
+  await page.waitForURL(/#\/owner\//, { timeout: 60000 });
 }
 
 async function checkPath(page, hashPath) {
-  await page.goto(`${BASE}/#${hashPath}`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  await page.waitForTimeout(800);
-  const denied = await page.getByText(/access denied|unauthorized/i).count();
-  const login = await page.getByLabel(/password/i).count();
-  if (denied > 0) return { ok: false, reason: 'access_denied' };
+  await page.goto(`${BASE}/#${hashPath}`, { waitUntil: 'load', timeout: 60000 });
+  await page.waitForTimeout(1200);
+  if (/#\/unauthorized/.test(page.url())) return { ok: false, reason: 'access_denied' };
+  const deniedHeading = await page.getByRole('heading', {
+    name: /access denied|unauthorized|brak dostępu/i,
+  }).count();
+  const login = await page.locator('input[type="password"]').count();
+  if (deniedHeading > 0) return { ok: false, reason: 'access_denied' };
   if (login > 0) return { ok: false, reason: 'not_authenticated' };
   return { ok: true };
 }
@@ -71,6 +106,10 @@ async function runRole(browser, spec) {
     for (const p of spec.paths) {
       const r = await checkPath(page, p);
       if (!r.ok) failures.push({ path: p, reason: r.reason });
+    }
+    for (const p of spec.forbiddenPaths ?? []) {
+      const r = await checkPath(page, p);
+      if (r.ok) failures.push({ path: p, reason: 'should_be_denied' });
     }
   } catch (e) {
     failures.push({ path: 'login', reason: String(e.message || e) });

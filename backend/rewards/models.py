@@ -46,6 +46,31 @@ class Sponsor(models.Model):
         ordering = ["name"]
 
 
+class SponsorCampaign(models.Model):
+    """Time-bounded sponsor campaign linking pools and POIs (Sponsor F0/F4)."""
+
+    STATUS_CHOICES = (
+        ("DRAFT", "Draft"),
+        ("ACTIVE", "Active"),
+        ("PAUSED", "Paused"),
+        ("ENDED", "Ended"),
+    )
+
+    sponsor = models.ForeignKey(Sponsor, on_delete=models.CASCADE, related_name="campaigns")
+    title = models.CharField(max_length=200)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
+    start_date = models.DateTimeField(null=True, blank=True)
+    end_date = models.DateTimeField(null=True, blank=True)
+    budget_points = models.PositiveIntegerField(default=0, help_text="0 = unlimited")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.sponsor.name} — {self.title}"
+
+
 class VoucherPool(models.Model):
     """
     A collection of voucher codes for a specific reward offer.

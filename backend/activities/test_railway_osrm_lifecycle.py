@@ -56,6 +56,7 @@ class TestScaleOsrm:
     def test_skipped_when_brouter_only(self, monkeypatch):
         monkeypatch.setenv("DATABASE_URL", "postgres://x")
         monkeypatch.setenv("RAILWAY_API_TOKEN", "tok")
+        monkeypatch.setenv("RAILWAY_OSRM_LIFECYCLE", "1")
         out = lifecycle.scale_osrm_for_live_sim(running=True)
         assert out.action == "skipped"
         assert out.detail == "routing_backend_not_osrm"

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Text, Badge, Group } from '@mantine/core';
 import { Building2 } from 'lucide-react';
+import { useI18n } from '../../i18n/useI18n';
 
 export interface TenantScopeBannerProps {
   tenantName?: string | null;
@@ -11,12 +12,10 @@ export interface TenantScopeBannerProps {
 export const TenantScopeBanner: React.FC<TenantScopeBannerProps> = ({
   tenantName,
   tenantId,
-  roleLabel = 'Tenant Admin',
+  roleLabel,
 }) => {
-  if (!tenantId) {
-    return null;
-  }
-
+  const { t } = useI18n();
+  if (!tenantId) return null;
   const label = tenantName || tenantId;
 
   return (
@@ -28,13 +27,13 @@ export const TenantScopeBanner: React.FC<TenantScopeBannerProps> = ({
       title={
         <Group gap="xs">
           <Text span fw={600}>{label}</Text>
-          <Badge size="xs" variant="light" color="blue">{roleLabel}</Badge>
+          {roleLabel && (
+            <Badge size="xs" variant="light" color="blue">{roleLabel}</Badge>
+          )}
         </Group>
       }
     >
-      <Text size="sm">
-        All KPIs, users, and activities below are scoped to this city only — not the global platform.
-      </Text>
+      <Text size="sm">{t.tenant.scopeMessage}</Text>
     </Alert>
   );
 };

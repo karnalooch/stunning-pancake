@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-06-10 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../pl/admin/ADMIN_INDEX.md) |
@@ -35,6 +35,7 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 | Dokument | Cel (skrót) | Status | Kadencja |
 |----------|-------------|--------|----------|
 | [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md) | **SSOT** — zunifikowana oś czasu P0→P1→P2→V3 | ✅ Active | Po każdej paczce / gate |
+| [S0_OPERATIONAL_GATE.md](./S0_OPERATIONAL_GATE.md) | Bloker wejścia przed paczkami overhaul S1+ | ✅ Active | Przed każdą paczką produktową |
 | [README.md](./README.md) | Design system, moduły, dev, nawigacja RBAC | ✅ Active | Po większej zmianie UI |
 | [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) | Post-deploy GO/NO-GO per rola | ✅ Active | **Każdy** deploy admin |
 | [P1_ROADMAP.md](./P1_ROADMAP.md) | Paczki 1–6; **1a ✅**, 1b + Paczka 2 | ✅ Active | Co sprint / po paczce |
@@ -43,6 +44,22 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 | [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) | Snapshot audytu tras i luk | 📦 Snapshot | Nie nadpisywać — nowy plik `UI_AUDIT_*` |
 | [WEBGL_LIVE_MAP_AUDIT_2026-06-06.md](./WEBGL_LIVE_MAP_AUDIT_2026-06-06.md) | WebGL Live Map prod audit + JSON | 📦 Snapshot | Po ponownym audycie — nowy plik datowany |
 | [PERF_AUDIT_2026-06-07.md](./PERF_AUDIT_2026-06-07.md) | Perf audit: optimize vs loading UX, skrypty `audit-admin-perf.mjs` | ✅ Active | Po zmianach wydajności / przed release przy 300k |
+
+---
+
+## Experience visions (overhaul_plan)
+
+Product north-star per role — **what and why**. Execution timeline: [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md). Technical detail: [P1_ROADMAP](./P1_ROADMAP.md) / [P2_ROADMAP](./P2_ROADMAP.md).
+
+| Vision doc | Role / app | ADMIN_ROADMAP stage |
+|------------|------------|---------------------|
+| [SPONSOR_EXPERIENCE_OVERHAUL.md](../overhaul_plan/SPONSOR_EXPERIENCE_OVERHAUL.md) | SPONSOR (admin) | S1 |
+| [GLOBAL_OWNER_EXPERIENCE_OVERHAUL.md](../overhaul_plan/GLOBAL_OWNER_EXPERIENCE_OVERHAUL.md) | GLOBAL_OWNER (admin) | S2 |
+| [TENANT_ADMIN_EXPERIENCE_OVERHAUL.md](../overhaul_plan/TENANT_ADMIN_EXPERIENCE_OVERHAUL.md) | TENANT_ADMIN (admin) | S3 |
+| [MODERATOR_PANEL_OVERHAUL.md](../overhaul_plan/MODERATOR_PANEL_OVERHAUL.md) | TENANT_MODERATOR (admin) | S4 |
+| [USER_PANEL_VISION.md](../overhaul_plan/USER_PANEL_VISION.md) | ATHLETE (mobile) | S6 |
+
+Index: [overhaul_plan/README.md](../overhaul_plan/README.md).
 
 ---
 

@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | Active |
 | **Owner role** | Admin / Frontend Lead |
-| **Last reviewed** | 2026-06-07 |
+| **Last reviewed** | 2026-06-10 |
 | **Audience** | Deweloperzy admin, Release Manager, Platform Operator |
 | **lang** | pl |
 | **translation** | [English](../../admin/ADMIN_ROADMAP.md) |
@@ -50,23 +50,27 @@ Kryteria z [P1_ROADMAP.md](./P1_ROADMAP.md) §2 + skrypt `admin/scripts/p0-role-
 
 ### S1 — Paczka 2 Sponsor
 
-Nav (Dashboard, POI, Vouchery, Analityka), empty states z CTA, API scoped do tenanta sponsora.
+Nav, empty states, API scoped. **Wizja:** [SPONSOR_EXPERIENCE_OVERHAUL](../../overhaul_plan/SPONSOR_EXPERIENCE_OVERHAUL.md) F0–F2.
 
 ### S2 — Paczka 3 GO tooling
 
-Health strip, drill-down tenant z tabeli na Dashboard.
+Health strip, drill-down tenant. **Wizja:** [GLOBAL_OWNER_EXPERIENCE_OVERHAUL](../../overhaul_plan/GLOBAL_OWNER_EXPERIENCE_OVERHAUL.md) F1–F2.
 
 ### S3 — Paczka 4 Tenant Admin
 
-Dashboard scoped, departamenty.
+Dashboard scoped, departamenty, Unified Ops Inbox. **Wizja:** [TENANT_ADMIN_EXPERIENCE_OVERHAUL](../../overhaul_plan/TENANT_ADMIN_EXPERIENCE_OVERHAUL.md).
 
 ### S4 — Paczka 5 Moderator
 
-Unified inbox, Anti-Cheat depth, GPX w case.
+Unified inbox, Anti-Cheat depth, GPX w case. **Wizja:** [MODERATOR_PANEL_OVERHAUL](../../overhaul_plan/MODERATOR_PANEL_OVERHAUL.md).
 
 ### S5 — P2 Auth + GPX F2–F5
 
 MFA dla GLOBAL_OWNER; archiwum GPX, RODO ZIP (F1 done).
+
+### S6 — Panel zawodnika (mobile)
+
+Ride loop, MapLibre HUD, summary. **Wizja:** [USER_PANEL_VISION](../../overhaul_plan/USER_PANEL_VISION.md) P0.
 
 ### Później — ROADMAP_V3 premium §7
 

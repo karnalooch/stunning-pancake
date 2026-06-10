@@ -192,8 +192,10 @@ export const AdminApi = {
     if (data && Array.isArray(data.results)) return data.results;
     return [];
   },
-  getAuditLogs: async (limit?: number) => {
-    const params = limit ? { limit } : {};
+  getAuditLogs: async (limit?: number, tenantId?: string) => {
+    const params: Record<string, string | number> = {};
+    if (limit) params.limit = limit;
+    if (tenantId) params.tenant_id = tenantId;
     const { data } = await apiClient.get('/users/audit-log/', {
       params,
       skipGlobalError: true,

@@ -13,9 +13,12 @@ import {
   type SimTargetInfo,
   type WipeProgressStatus,
 } from '../../api/client';
+import { useI18n } from '../../i18n/useI18n';
+import { API_PATHS } from '@4velo/api-client';
 
 export const SettingsScreen: React.FC = () => {
   const { user } = useAuth();
+  const { t, locale, setLocale } = useI18n();
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
 
   const environmentLabel = useMemo(
@@ -32,7 +35,7 @@ export const SettingsScreen: React.FC = () => {
     notifications: true,
     emailDigest: false,
     darkMode: window.matchMedia('(prefers-color-scheme: dark)').matches,
-    language: 'en',
+    language: locale,
   });
 
   const [mfaEnabled, setMfaEnabled] = useState(false);
@@ -52,13 +55,33 @@ export const SettingsScreen: React.FC = () => {
       .finally(() => setMfaLoading(false));
   }, [isGlobalOwner]);
 
+  useEffect(() => {
+    setSettings((prev) => ({ ...prev, language: locale }));
+  }, [locale]);
+
+  useEffect(() => {
+    apiClient.get(API_PATHS.userPreferences)
+      .then((r) => {
+        const p = r.data || {};
+        if (p.language === 'pl' || p.language === 'en') setLocale(p.language);
+        setSettings((prev) => ({
+          ...prev,
+          notifications: p.notifications ?? prev.notifications,
+          emailDigest: p.emailDigest ?? prev.emailDigest,
+          darkMode: p.darkMode ?? prev.darkMode,
+          language: p.language ?? prev.language,
+        }));
+      })
+      .catch(() => {});
+  }, [setLocale]);
+
   const startMfaSetup = async () => {
     try {
       const { data } = await apiClient.post('/users/mfa/setup/');
       setMfaSetupUri(data.provisioning_uri || null);
-      notifications.show({ title: 'MFA', message: 'Scan URI in authenticator app, then enter code.', color: 'blue' });
+      notifications.show({ title: 'MFA', message: t.settings.mfaScanNotice, color: 'blue' });
     } catch {
-      notifications.show({ title: 'MFA', message: 'Setup failed.', color: 'red' });
+      notifications.show({ title: 'MFA', message: t.settings.mfaSetupFailed, color: 'red' });
     }
   };
 
@@ -68,37 +91,56 @@ export const SettingsScreen: React.FC = () => {
       setMfaEnabled(true);
       setMfaSetupUri(null);
       setMfaCode('');
-      notifications.show({ title: 'MFA', message: 'Two-factor authentication enabled.', color: 'green' });
+      notifications.show({ title: 'MFA', message: t.settings.mfaEnabledNotice, color: 'green' });
     } catch {
-      notifications.show({ title: 'MFA', message: 'Invalid code.', color: 'red' });
+      notifications.show({ title: 'MFA', message: t.settings.mfaInvalidCode, color: 'red' });
     }
   };
 
-  const handleSave = () => {
-    notifications.show({ title: 'Settings', message: 'Settings saved successfully.', color: 'green' });
+  const handleSave = async () => {
+    try {
+      await apiClient.patch(API_PATHS.userPreferences, {
+        notifications: settings.notifications,
+        emailDigest: settings.emailDigest,
+        darkMode: settings.darkMode,
+        language: settings.language,
+      });
+      notifications.show({ title: t.settings.title, message: t.settings.saveOk, color: 'green' });
+    } catch {
+      notifications.show({ title: t.common.error, message: t.settings.saveFailed, color: 'red' });
+    }
   };
 
   const items = [
     {
-      icon: <Bell size={22} />, color: 'indigo', title: 'Notifications', children: (
+      icon: <Bell size={22} />, color: 'indigo', title: t.settings.notificationsTitle, children: (
         <Stack gap="md">
-          <Group justify="space-between"><Box><Text fw={600} size="sm">Push Notifications</Text><Text size="xs" c="dimmed">Real-time alerts for anomalies</Text></Box><Switch checked={settings.notifications} onChange={(e) => setSettings({ ...settings, notifications: e.currentTarget.checked })} /></Group>
-          <Group justify="space-between"><Box><Text fw={600} size="sm">Weekly Email Digest</Text><Text size="xs" c="dimmed">Summary report every Monday</Text></Box><Switch checked={settings.emailDigest} onChange={(e) => setSettings({ ...settings, emailDigest: e.currentTarget.checked })} /></Group>
+          <Group justify="space-between"><Box><Text fw={600} size="sm">{t.settings.pushNotifications}</Text><Text size="xs" c="dimmed">{t.settings.pushNotificationsDesc}</Text></Box><Switch checked={settings.notifications} onChange={(e) => setSettings({ ...settings, notifications: e.currentTarget.checked })} /></Group>
+          <Group justify="space-between"><Box><Text fw={600} size="sm">{t.settings.weeklyDigest}</Text><Text size="xs" c="dimmed">{t.settings.weeklyDigestDesc}</Text></Box><Switch checked={settings.emailDigest} onChange={(e) => setSettings({ ...settings, emailDigest: e.currentTarget.checked })} /></Group>
         </Stack>
       )
     },
     {
-      icon: <PaintBucket size={22} />, color: 'violet', title: 'Appearance', children: (
+      icon: <PaintBucket size={22} />, color: 'violet', title: t.settings.appearanceTitle, children: (
         <Stack gap="md">
-          <Group justify="space-between"><Box><Text fw={600} size="sm">Dark Mode</Text><Text size="xs" c="dimmed">Toggle dark/light theme</Text></Box><Switch checked={settings.darkMode} onChange={(e) => setSettings({ ...settings, darkMode: e.currentTarget.checked })} /></Group>
-          <Select label="Language" value={settings.language} onChange={(v) => setSettings({ ...settings, language: v || 'pl' })} data={[{ value: 'pl', label: 'Polski' }, { value: 'en', label: 'English' }]} />
+          <Group justify="space-between"><Box><Text fw={600} size="sm">{t.settings.darkMode}</Text><Text size="xs" c="dimmed">{t.settings.darkModeDesc}</Text></Box><Switch checked={settings.darkMode} onChange={(e) => setSettings({ ...settings, darkMode: e.currentTarget.checked })} /></Group>
+          <Select
+            label={t.settings.languageLabel}
+            value={settings.language}
+            onChange={(v) => {
+              const next = (v || 'pl') as 'pl' | 'en';
+              setSettings({ ...settings, language: next });
+              setLocale(next);
+            }}
+            data={[{ value: 'pl', label: 'Polski' }, { value: 'en', label: 'English' }]}
+          />
         </Stack>
       )
     },
     {
-      icon: <Shield size={22} />, color: 'red', title: 'Security', children: (
+      icon: <Shield size={22} />, color: 'red', title: t.settings.securityTitle, children: (
         <Stack gap="md">
-          <Button variant="light" color="red" leftSection={<Shield size={16} />}>Change Password</Button>
+          <Button variant="light" color="red" leftSection={<Shield size={16} />}>{t.settings.changePassword}</Button>
           {!isGlobalOwner && (
             mfaLoading ? (
               <Stack gap="sm">
@@ -109,19 +151,19 @@ export const SettingsScreen: React.FC = () => {
               <>
                 <Group justify="space-between">
                   <Box>
-                    <Text fw={600} size="sm">Two-Factor Authentication (TOTP)</Text>
-                    <Text size="xs" c="dimmed">{mfaEnabled ? 'Enabled' : 'Optional'}</Text>
+                    <Text fw={600} size="sm">{t.settings.mfaTitle}</Text>
+                    <Text size="xs" c="dimmed">{mfaEnabled ? t.settings.mfaEnabled : t.settings.mfaOptional}</Text>
                   </Box>
                   <Switch checked={mfaEnabled} readOnly />
                 </Group>
                 {!mfaEnabled && (
                   <>
-                    <Button variant="light" onClick={startMfaSetup}>Set up MFA</Button>
+                    <Button variant="light" onClick={startMfaSetup}>{t.settings.mfaSetup}</Button>
                     {mfaSetupUri && <Code block style={{ fontSize: 10, wordBreak: 'break-all' }}>{mfaSetupUri}</Code>}
                     {mfaSetupUri && (
                       <Group>
-                        <TextInput placeholder="6-digit code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} maw={160} />
-                        <Button onClick={confirmMfa}>Enable</Button>
+                        <TextInput placeholder={t.settings.mfaCodePlaceholder} value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} maw={160} />
+                        <Button onClick={confirmMfa}>{t.settings.mfaEnable}</Button>
                       </Group>
                     )}
                   </>
@@ -133,8 +175,8 @@ export const SettingsScreen: React.FC = () => {
       )
     },
     {
-      icon: <Zap size={22} />, color: 'orange', title: 'Performance', children: (
-        <Stack gap="md"><Group justify="space-between"><Box><Text fw={600} size="sm">API Cache</Text><Text size="xs" c="dimmed">Redis-based caching</Text></Box><Switch defaultChecked /></Group></Stack>
+      icon: <Zap size={22} />, color: 'orange', title: t.settings.performanceTitle, children: (
+        <Stack gap="md"><Group justify="space-between"><Box><Text fw={600} size="sm">{t.settings.apiCache}</Text><Text size="xs" c="dimmed">{t.settings.apiCacheDesc}</Text></Box><Switch defaultChecked /></Group></Stack>
       )
     },
   ];
@@ -166,7 +208,7 @@ export const SettingsScreen: React.FC = () => {
 
   const handleWipe = async () => {
     setWiping(true);
-    setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: 'Starting prod wipe…' });
+    setWipeStatus({ running: true, phase: 'queued', progress_pct: 0, message: t.settings.wipeButton });
     try {
       const result = await SimulatorApi.wipeData((s) => setWipeStatus(s), {
         confirmPhrase: wipeConfirmPhrase,
@@ -175,8 +217,8 @@ export const SettingsScreen: React.FC = () => {
       });
       const warn = result?.warning;
       notifications.show({
-        title: 'Prod data wiped',
-        message: warn || 'Prod DB cleared (dashboard KPIs will refresh).',
+        title: t.settings.wipeDone,
+        message: warn || t.settings.wipeDoneMsg,
         color: warn ? 'yellow' : 'green',
       });
       setWipeModalOpen(false);
@@ -186,14 +228,14 @@ export const SettingsScreen: React.FC = () => {
       if (err instanceof WipeStuckError) {
         setWipeStatus(err.status);
         notifications.show({
-          title: 'Wipe stuck',
+          title: t.settings.wipeStuck,
           message: err.message,
           color: 'orange',
         });
       } else {
         notifications.show({
-          title: 'Wipe failed',
-          message: formatApiError(err, 'Wipe failed.'),
+          title: t.settings.wipeFailed,
+          message: formatApiError(err, t.settings.wipeFailed),
           color: 'red',
         });
       }
@@ -217,8 +259,8 @@ export const SettingsScreen: React.FC = () => {
         target: prodWipeTarget,
       });
       notifications.show({
-        title: 'Data Wiped',
-        message: result?.warning || 'All data except Global Owner has been deleted.',
+        title: t.settings.dataWiped,
+        message: result?.warning || t.settings.dataWipedMsg,
         color: result?.warning ? 'yellow' : 'green',
       });
       setWipeModalOpen(false);
@@ -229,8 +271,8 @@ export const SettingsScreen: React.FC = () => {
         setWipeStatus(err.status);
       }
       notifications.show({
-        title: 'Recovery failed',
-        message: formatApiError(err, 'Could not recover stuck wipe.'),
+        title: t.settings.wipeRecoveryFailed,
+        message: formatApiError(err, t.settings.wipeRecoveryFailedMsg),
         color: 'red',
       });
     } finally {
@@ -244,21 +286,21 @@ export const SettingsScreen: React.FC = () => {
       setWipeStatus(cleared);
       setWiping(false);
       notifications.show({
-        title: 'Wipe cleared',
-        message: 'Locks cleared. You can close this dialog or retry wipe.',
+        title: t.settings.wipeCleared,
+        message: t.settings.wipeClearedMsg,
         color: 'teal',
       });
     } catch (err: unknown) {
       notifications.show({
-        title: 'Unstick failed',
-        message: formatApiError(err, 'Could not clear wipe locks.'),
+        title: t.settings.wipeUnstickFailed,
+        message: formatApiError(err, t.settings.wipeUnstickFailedMsg),
         color: 'red',
       });
     }
   };
 
   return (
-    <Box><PageHeader title="Settings" subtitle="Platform configuration and preferences" />
+    <Box><PageHeader title={t.settings.title} subtitle={t.settings.subtitle} />
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md" mb="xl">
         {items.map((item, i) => (
           <Card key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }} h="100%">
@@ -267,7 +309,7 @@ export const SettingsScreen: React.FC = () => {
           </Card>
         ))}
       </SimpleGrid>
-      <Button onClick={handleSave} size="md" style={{ background: 'var(--brand-gradient)', borderRadius: 10 }}>Save Settings</Button>
+      <Button onClick={handleSave} size="md" style={{ background: 'var(--brand-gradient)', borderRadius: 10 }}>{t.settings.saveSettings}</Button>
 
       {/* Danger Zone */}
       {isGlobalOwner && (
@@ -280,18 +322,18 @@ export const SettingsScreen: React.FC = () => {
               <AlertTriangle size={20} />
             </ThemeIcon>
             <Text fw={700} size="lg" c="red">
-              Danger Zone
+              {t.settings.dangerZone}
             </Text>
           </Group>
           <Text size="sm" c="dimmed" mb="md">
-            Czyści <b>prod DB</b> (KPI na dashboardzie): użytkownicy, tenanty, działy i aktywności.
+            {t.settings.wipeDesc}
             {simTarget?.mode === 'sim-lab-proxy' && (
-              <> Wipe w Simulatorze idzie na {simTarget.sim_lab_label || 'sim-lab'} — nie dotyka tych danych.</>
+              <> {t.settings.wipeSimLabNotice.replace('{label}', simTarget.sim_lab_label || 'sim-lab')}</>
             )}
             {' '}CLI: <Code>node scripts/wipe-prod-local.mjs</Code>
           </Text>
           <Button color="red" variant="outline" leftSection={<Trash2 size={16} />} onClick={() => setWipeModalOpen(true)}>
-            Wipe All Data
+            {t.settings.wipeButton}
           </Button>
 
           <Modal
@@ -304,19 +346,19 @@ export const SettingsScreen: React.FC = () => {
             }}
             closeOnClickOutside={!isWipeBlocked}
             closeOnEscape={!isWipeBlocked}
-            title={<Text fw={700} c="red">⚠️ Wipe All Data</Text>}
+            title={<Text fw={700} c="red">⚠️ {t.settings.wipeModalTitle}</Text>}
             centered
           >
             <Stack gap="md">
               <Text size="sm" c="orange" fw={600}>
-                Cel: prod Postgres (force_local) — status: GET wipe-data/?local=1
+                {t.settings.wipeTargetLabel}
               </Text>
               <Text size="sm" c="dimmed">
-                Stop 1/2: Type the exact phrase (role + environment).
+                {t.settings.wipeStepOne}
               </Text>
               <Text size="sm">
-                Usuwa z prod DB: aktywności, użytkowników (oprócz <b>GLOBAL_OWNER</b>), tenanty i działy.
-                Type <b>exactly</b>: <span style={{ fontFamily: 'monospace' }}>&quot;{requiredWipePhrase}&quot;</span>
+                {t.settings.wipeStepOneDesc}{' '}
+                <span style={{ fontFamily: 'monospace' }}>&quot;{requiredWipePhrase}&quot;</span>
               </Text>
 
               <input
@@ -339,7 +381,7 @@ export const SettingsScreen: React.FC = () => {
               <Checkbox
                 checked={wipeMfaAck}
                 onChange={(e) => setWipeMfaAck(e.currentTarget.checked)}
-                label="Stop 2/2: I confirm (MFA-like checkbox) that I understand the consequences."
+                label={t.settings.wipeStepTwo}
               />
 
               {(wiping || wipeStatus) && (
@@ -363,10 +405,10 @@ export const SettingsScreen: React.FC = () => {
               {(wipeStatus?.stuck || isWipeStuck) && !isWipeBlocked && (
                 <Group grow>
                   <Button color="orange" variant="light" onClick={handleWipeRecover} loading={wiping}>
-                    Reset and retry
+                    {t.settings.wipeResetRetry}
                   </Button>
                   <Button color="gray" variant="outline" onClick={handleWipeUnstick} disabled={wiping}>
-                    Clear locks only
+                    {t.settings.wipeClearLocks}
                   </Button>
                 </Group>
               )}
@@ -380,8 +422,8 @@ export const SettingsScreen: React.FC = () => {
                 onClick={handleWipe}
               >
                 {isWipeBlocked
-                  ? `Wiping… ${(wipeStatus?.progress_pct ?? 0).toFixed(0)}%`
-                  : 'Yes, Delete Everything'}
+                  ? t.settings.wipeInProgress.replace('{pct}', (wipeStatus?.progress_pct ?? 0).toFixed(0))
+                  : t.settings.wipeConfirm}
               </Button>
             </Stack>
           </Modal>

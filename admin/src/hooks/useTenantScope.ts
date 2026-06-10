@@ -23,8 +23,8 @@ export function useTenantScope(stats?: {
     const isTenantScoped = isTenantAdmin || isTenantModerator;
     const tenantId = user?.tenantId ?? stats?.scoped_tenant_id ?? null;
 
-    let tenantName: string | null = null;
-    if (tenantId && Array.isArray(stats?.per_tenant)) {
+    let tenantName: string | null = user?.tenantName ?? null;
+    if (!tenantName && tenantId && Array.isArray(stats?.per_tenant)) {
       const row = stats.per_tenant.find((t) => String(t.tenant_id) === String(tenantId));
       tenantName = row?.tenant_name ?? null;
     }
@@ -36,5 +36,5 @@ export function useTenantScope(stats?: {
       isTenantAdmin,
       isTenantModerator,
     };
-  }, [user?.role, user?.tenantId, stats?.scoped_tenant_id, stats?.per_tenant]);
+  }, [user?.role, user?.tenantId, user?.tenantName, stats?.scoped_tenant_id, stats?.per_tenant]);
 }

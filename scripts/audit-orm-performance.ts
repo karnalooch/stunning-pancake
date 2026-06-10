@@ -54,8 +54,13 @@ function auditFile(filePath: string) {
       }
     }
 
-    // 2. Check for bulk_create without batch_size
-    if (line.includes('bulk_create(') && !line.includes('batch_size')) {
+    // 2. Check for bulk_create without batch_size (may span multiple lines)
+    if (line.includes('bulk_create(')) {
+      let bulkBlock = '';
+      for (let j = idx; j < Math.min(lines.length, idx + 6); j++) {
+        bulkBlock += lines[j];
+      }
+      if (bulkBlock.includes('batch_size')) continue;
       findings.push({
         file: relPath,
         line: lineNum,

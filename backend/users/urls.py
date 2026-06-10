@@ -20,6 +20,7 @@ from .views import (
     UserDeleteView,
     UserDetailView,
     UserListView,
+    UserPreferencesView,
     UserProfileView,
     UserUpdateView,
 )
@@ -27,6 +28,7 @@ from .views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("profile/", UserProfileView.as_view(), name="profile"),
+    path("preferences/", UserPreferencesView.as_view(), name="user-preferences"),
     path("password/change/", PasswordChangeView.as_view(), name="password-change"),
     path("password/reset/", PasswordResetRequestView.as_view(), name="password-reset"),
     path(

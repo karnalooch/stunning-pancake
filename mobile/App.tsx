@@ -33,12 +33,17 @@ import { ThemeService } from './src/services/ThemeService';
 import { SplashScreen } from './src/components/SplashScreen';
 import { ActiveRideHUDScreen } from './src/screens/ActiveRideHUDScreen';
 import { RideSummaryScreen } from './src/screens/RideSummaryScreen';
+import { TrainingLogScreen } from './src/screens/TrainingLogScreen';
 import { CityHubScreen } from './src/screens/CityHubScreen';
 import { GlobalLeaderboardScreen } from './src/screens/GlobalLeaderboardScreen';
 import { AthleteProfileScreen } from './src/screens/AthleteProfileScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
 import { RideDashboardScreen } from './src/screens/RideDashboardScreen';
-import { MarketplaceScreen } from './src/screens/MarketplaceScreen';
+import { ExploreHubScreen } from './src/screens/ExploreHubScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
+import { ClubsDirectoryScreen } from './src/screens/ClubsDirectoryScreen';
+import { SegmentsScreen } from './src/screens/SegmentsScreen';
+import { useMobileI18n } from './src/i18n/useI18n';
 import { GameTabBar } from './src/navigation/GameTabBar';
 import { PixelText } from './src/components/PixelText';
 import { ArcadeButton } from './src/components/ArcadeButton';
@@ -122,6 +127,12 @@ const AppContent = observer(function AppContent() {
   const [liveDistanceKm, setLiveDistanceKm] = useState(0);
   const [gpsRecoveryVisible, setGpsRecoveryVisible] = useState(false);
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
+  const [rideSummary, setRideSummary] = useState<{ distanceKm: number } | null>(null);
+  const [showTrainingLog, setShowTrainingLog] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showClubs, setShowClubs] = useState(false);
+  const [showSegments, setShowSegments] = useState(false);
+  const { t: mt } = useMobileI18n();
 
   const refreshGpsRecoveryFlag = useCallback(() => {
     setGpsRecoveryVisible(isTrackingRecoveryPending());
@@ -390,14 +401,19 @@ const AppContent = observer(function AppContent() {
       console.warn('[GPS] stop ride failed', e);
       Alert.alert('Błąd', 'Nie udało się poprawnie zakończyć jazdy. Sprawdź baner odzyskiwania GPS.');
     } finally {
+      const distanceKm = liveDistanceKm;
       setIsRecording(false);
       setRidePaused(false);
       setLiveSpeed(0);
       setLiveDistanceKm(0);
       refreshGpsRecoveryFlag();
-      navRef.current?.navigate('Ride' as never);
+      if (distanceKm > 0) {
+        setRideSummary({ distanceKm });
+      } else {
+        navRef.current?.navigate('Ride' as never);
+      }
     }
-  }, [auth.user, refreshGpsRecoveryFlag]);
+  }, [auth.user, liveDistanceKm, refreshGpsRecoveryFlag]);
 
   const handleLogout = () => {
     const store = getStorage();
@@ -532,14 +548,23 @@ const AppContent = observer(function AppContent() {
                 <CityHubScreen
                   user={user}
                   onStartQuest={() => handleStartRide()}
+                  onOpenClubs={() => setShowClubs(true)}
+                  onOpenSegments={() => setShowSegments(true)}
                 />
               )}
             </Tab.Screen>
             <Tab.Screen name="Explore">
-              {() => <MarketplaceScreen />}
+              {() => <ExploreHubScreen />}
             </Tab.Screen>
             <Tab.Screen name="Profile">
-              {() => <AthleteProfileScreen user={user} onLogout={handleLogout} />}
+              {() => (
+                <AthleteProfileScreen
+                  user={user}
+                  onLogout={handleLogout}
+                  onTraining={() => setShowTrainingLog(true)}
+                  onSettings={() => setShowSettings(true)}
+                />
+              )}
             </Tab.Screen>
             <Tab.Screen name="Tracking" options={{ tabBarButton: () => null }}>
               {() => (
@@ -563,6 +588,47 @@ const AppContent = observer(function AppContent() {
               void handleStopRide();
             }}
           />
+        )}
+        {rideSummary && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <RideSummaryScreen
+              distance={rideSummary.distanceKm}
+              time="—"
+              onBackToHub={() => {
+                setRideSummary(null);
+                navRef.current?.navigate('Ride' as never);
+              }}
+            />
+          </View>
+        )}
+        {showTrainingLog && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <TrainingLogScreen onBack={() => setShowTrainingLog(false)} />
+          </View>
+        )}
+        {showSettings && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <SettingsScreen />
+            <View style={{ position: 'absolute', top: 48, right: 16 }}>
+              <ArcadeButton label={mt.common.close} onPress={() => setShowSettings(false)} fullWidth={false} />
+            </View>
+          </View>
+        )}
+        {showClubs && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <ClubsDirectoryScreen />
+            <View style={{ position: 'absolute', top: 48, right: 16 }}>
+              <ArcadeButton label={mt.common.close} onPress={() => setShowClubs(false)} fullWidth={false} />
+            </View>
+          </View>
+        )}
+        {showSegments && (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+            <SegmentsScreen />
+            <View style={{ position: 'absolute', top: 48, right: 16 }}>
+              <ArcadeButton label={mt.common.close} onPress={() => setShowSegments(false)} fullWidth={false} />
+            </View>
+          </View>
         )}
       </>
     );

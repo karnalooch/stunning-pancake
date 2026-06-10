@@ -79,3 +79,7 @@ mobile/screenshot_*
 .playwright-mcp/
 *.html
 .kilo/kilo.json
+.kilo/worktrees/
+
+# Local git-pull backups (not part of repo)
+.git-pull-backup/

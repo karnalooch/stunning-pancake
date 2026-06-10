@@ -3,6 +3,7 @@
 import React from "react";
 import { View, Text, Pressable } from "react-native";
 import { GpsRecoveryBanner } from "../components/GpsRecoveryBanner";
+import { RideMapView } from "../components/RideMapView";
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from "../theme/stitch";
 import * as Haptics from "expo-haptics";
@@ -40,7 +41,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   return (
     <View style={s.ct}>
       <View style={s.map}>
-        <Text style={{ fontSize: 14, color: c.secondary }}>MapLibre Live Map</Text>
+        <RideMapView />
       </View>
       <View style={s.overlay}>
         <View style={{ paddingTop: 48 }}>

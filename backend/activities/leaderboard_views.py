@@ -44,9 +44,9 @@ def city_leaderboard(request: Request, city_id: str) -> Response:
     top = LeaderboardService.get_top_users(city_id, limit=limit, scope=scope)
 
     if not top:
-        # Redis empty — queue background recalculation and reset_leaderboard_state
         from activities.tasks import recalculate_city_leaderboard
 
+        LeaderboardService.reset(city_id, scope=scope)
         recalculate_city_leaderboard.delay(city_id)
         return Response(
             {
@@ -178,8 +178,8 @@ def admin_recalculate_leaderboards(request: Request) -> Response:
     from users.models import Tenant
 
     cities = list(Tenant.objects.filter(is_active=True).values_list("id", flat=True))
-    # Explicitly reset_leaderboard_state for each city to avoid frontend race conditions
     for city_id in cities:
+        LeaderboardService.reset(str(city_id), scope="city")
         recalculate_city_leaderboard.delay(str(city_id))
 
     logger.info(

@@ -3,7 +3,9 @@ import {
   Drawer, Modal, ScrollArea, Tabs, Select, PasswordInput,
   Switch, Textarea, Tooltip, Card, Checkbox, Progress, Skeleton
 } from '@mantine/core';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useUsersList } from '../../hooks/queries/useUsersList';
 import { useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@mantine/hooks';
 import {
@@ -16,6 +18,7 @@ import { notifications } from '@mantine/notifications';
 import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
 import { useTenantScope } from '../../hooks/useTenantScope';
 import { TenantFilterBanner } from '../../core/components/TenantFilterBanner';
+import { useI18n } from '../../i18n/useI18n';
 
 interface UserRow {
   id: number;
@@ -51,10 +54,15 @@ interface AuditLogEntry {
 }
 
 export const Users = () => {
+  const { t } = useI18n();
   const { user } = useAuth();
+  const interpolate = (template: string, vars: Record<string, string | number>) =>
+    Object.entries(vars).reduce(
+      (acc, [key, value]) => acc.replace(`{${key}}`, String(value)),
+      template,
+    );
   const [searchParams] = useSearchParams();
   const [usersList, setUsersList] = useState<UserRow[]>([]);
-  const [usersLoading, setUsersLoading] = useState(true);
   const [tenantsList, setTenantsList] = useState<TenantRow[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserRow | null>(null);
   const [inviteModalOpened, setInviteModalOpened] = useState(false);
@@ -159,9 +167,9 @@ export const Users = () => {
     displayId: `U-${u.id}`,
     name: u.username,
     email: u.email || `${u.username}@sport-platform.com`,
-    tenant: u.tenant_name || 'Global HQ',
+    tenant: u.tenant_name || t.users.globalHq,
     tenant_id: u.tenant_id != null ? String(u.tenant_id) : null,
-    status: u.is_active ? 'Active' : 'Locked',
+    status: u.is_active ? t.users.active : t.users.locked,
     flags: 0,
     role: u.role,
     avatar: u.avatar || null,
@@ -169,38 +177,38 @@ export const Users = () => {
     is_active: u.is_active ?? true,
   });
 
-  const fetchUsers = useCallback(() => {
-    setUsersLoading(true);
-    const params: Record<string, string | number | null> = {
-      cursor: currentCursor,
-      page_size: pageSize,
-      sort: sortBy,
-      order: sortOrder,
-    };
-    if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
-    if (selectedRole) params.role = selectedRole;
-    if (selectedTenant) params.tenant_id = selectedTenant;
+  const queryClient = useQueryClient();
+  const usersQueryParams = useMemo(() => ({
+    cursor: currentCursor,
+    pageSize,
+    search: debouncedSearch,
+    role: selectedRole,
+    tenantId: selectedTenant,
+    sortBy,
+    sortOrder,
+  }), [currentCursor, pageSize, debouncedSearch, selectedRole, selectedTenant, sortBy, sortOrder]);
 
-    AdminApi.getUsers(params)
-      .then(({ results, next_cursor, has_more }) => {
-        setUsersList(results.map(mapUserRow));
-        setSelectedUserIds([]);
-        setNextCursor(next_cursor ?? null);
-        setHasMore(Boolean(has_more));
-      })
-      .catch((err) => console.error('Failed to load users:', err))
-      .finally(() => setUsersLoading(false));
-  }, [currentCursor, pageSize, debouncedSearch, selectedRole, selectedTenant, sortBy, sortOrder]);
+  const usersQuery = useUsersList(usersQueryParams);
+  const usersLoading = usersQuery.isLoading || usersQuery.isFetching;
+
+  const fetchUsers = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ['users', 'list'] });
+  }, [queryClient]);
+
+  useEffect(() => {
+    if (!usersQuery.data) return;
+    const { results, next_cursor, has_more } = usersQuery.data;
+    setUsersList(results.map(mapUserRow));
+    setSelectedUserIds([]);
+    setNextCursor(next_cursor ?? null);
+    setHasMore(Boolean(has_more));
+  }, [usersQuery.data, mapUserRow]);
 
   // Reset cursor when filters/sorting change.
   useEffect(() => {
     setCursorStack([null]);
     setCursorIndex(0);
   }, [debouncedSearch, selectedRole, selectedTenant, sortBy, sortOrder]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
 
   // Poll async bulk actions (redis-backed) until completion.
   useEffect(() => {
@@ -222,8 +230,8 @@ export const Users = () => {
           clearInterval(intervalId);
           if (stopped) return;
           notifications.show({
-            title: 'Bulk action complete',
-            message: s.message || 'Done.',
+            title: t.users.bulkActionComplete,
+            message: s.message || t.common.success,
             color: 'green',
           });
           setSelectedUserIds([]);
@@ -234,7 +242,7 @@ export const Users = () => {
           clearInterval(intervalId);
           if (stopped) return;
           notifications.show({
-            title: 'Bulk action failed',
+            title: t.users.bulkActionFailed,
             message: s.error || s.message || 'Unknown error',
             color: 'red',
           });
@@ -243,7 +251,7 @@ export const Users = () => {
         }
       } catch (err: any) {
         notifications.show({
-          title: 'Bulk status polling failed',
+          title: t.users.bulkStatusFailed,
           message: err?.response?.data?.error || err.message || 'Unknown error',
           color: 'red',
         });
@@ -304,8 +312,8 @@ export const Users = () => {
       })
       .catch(() => {
         notifications.show({
-          title: 'User load failed',
-          message: 'Could not load the full user details.',
+          title: t.users.userLoadFailed,
+          message: t.users.userLoadFailedMsg,
           color: 'red',
         });
       })
@@ -333,9 +341,13 @@ export const Users = () => {
         username: result.impersonated_user,
         role: result.impersonated_role,
       }));
-      notifications.show({ title: 'Impersonation Active', message: `Now simulating ${result.impersonated_user}`, color: 'green' });
+      notifications.show({
+        title: t.users.impersonationActive,
+        message: interpolate(t.users.impersonationActiveMsg, { user: result.impersonated_user }),
+        color: 'green',
+      });
     } catch {
-      notifications.show({ title: 'Impersonation Failed', message: 'Unauthorized or invalid token.', color: 'red' });
+      notifications.show({ title: t.users.impersonationFailed, message: t.users.impersonationFailedMsg, color: 'red' });
     } finally {
       setImpersonating(false);
     }
@@ -343,7 +355,7 @@ export const Users = () => {
 
   const handleCreateUser = async () => {
     if (!createForm.username || !createForm.email || !createForm.password) {
-      notifications.show({ title: 'Missing fields', message: 'Username, email, and password are required.', color: 'red' });
+      notifications.show({ title: t.users.missingFields, message: t.users.missingFieldsMsg, color: 'red' });
       return;
     }
     setActionLoading(true);
@@ -355,12 +367,16 @@ export const Users = () => {
         role: createForm.role,
         tenant_id: createForm.tenant_id || undefined,
       });
-      notifications.show({ title: 'User Created', message: `${createForm.username} added successfully.`, color: 'green' });
+      notifications.show({
+        title: t.users.userCreated,
+        message: interpolate(t.users.userCreatedMsg, { user: createForm.username }),
+        color: 'green',
+      });
       setCreateModalOpened(false);
       setCreateForm({ username: '', email: '', password: '', role: 'ATHLETE', tenant_id: '' });
       fetchUsers();
     } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.response?.data?.details || err?.message || 'Failed to create user.', color: 'red' });
+      notifications.show({ title: t.common.error, message: err?.response?.data?.details || err?.message || t.users.createFailed, color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -387,11 +403,15 @@ export const Users = () => {
       }
 
       await AdminApi.updateUser(selectedUser.id, updatePayload);
-      notifications.show({ title: 'User Updated', message: `${editForm.username} profile saved.`, color: 'green' });
+      notifications.show({
+        title: t.users.userUpdated,
+        message: interpolate(t.users.userUpdatedMsg, { user: editForm.username }),
+        color: 'green',
+      });
       setSelectedUser(null);
       fetchUsers();
     } catch (err: any) {
-      notifications.show({ title: 'Update Failed', message: err?.response?.data?.details || err?.message || 'Failed to update user.', color: 'red' });
+      notifications.show({ title: t.users.updateFailed, message: err?.response?.data?.details || err?.message || t.users.updateFailedMsg, color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -402,13 +422,13 @@ export const Users = () => {
       const newStatus = !userRow.is_active;
       await AdminApi.updateUser(userRow.id, { is_active: newStatus });
       notifications.show({
-        title: newStatus ? 'Account Unlocked' : 'Account Locked',
-        message: `${userRow.name} status updated successfully.`,
+        title: newStatus ? t.users.accountUnlocked : t.users.accountLocked,
+        message: interpolate(t.users.accountStatusUpdated, { user: userRow.name }),
         color: newStatus ? 'green' : 'orange'
       });
       fetchUsers();
     } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to toggle status.', color: 'red' });
+      notifications.show({ title: t.common.error, message: err?.message || t.users.toggleFailed, color: 'red' });
     }
   };
 
@@ -417,13 +437,17 @@ export const Users = () => {
     setActionLoading(true);
     try {
       await AdminApi.deleteUser(deleteTarget.id);
-      notifications.show({ title: 'User Deleted', message: `${deleteTarget.name} removed permanently.`, color: 'orange' });
+      notifications.show({
+        title: t.users.userDeleted,
+        message: interpolate(t.users.userDeletedMsg, { user: deleteTarget.name }),
+        color: 'orange',
+      });
       setDeleteConfirmOpened(false);
       setDeleteTarget(null);
       setSelectedUser(null);
       fetchUsers();
     } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to delete user.', color: 'red' });
+      notifications.show({ title: t.common.error, message: err?.message || t.users.deleteFailed, color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -431,7 +455,7 @@ export const Users = () => {
 
   const handleSendInvitation = async () => {
     if (!inviteForm.email) {
-      notifications.show({ title: 'Missing email', message: 'Email address is required.', color: 'red' });
+      notifications.show({ title: t.users.missingEmail, message: t.users.missingEmailMsg, color: 'red' });
       return;
     }
     setActionLoading(true);
@@ -444,9 +468,13 @@ export const Users = () => {
         tenant_id: user?.tenantId || undefined,
       });
       setInviteResult(result);
-      notifications.show({ title: 'Invitation Sent', message: `Token for ${inviteForm.email} generated.`, color: 'cyan' });
+      notifications.show({
+        title: t.users.invitationSent,
+        message: interpolate(t.users.invitationSentMsg, { email: inviteForm.email }),
+        color: 'cyan',
+      });
     } catch (err: any) {
-      notifications.show({ title: 'Error', message: err?.message || 'Failed to send invitation.', color: 'red' });
+      notifications.show({ title: t.common.error, message: err?.message || t.users.invitationFailed, color: 'red' });
     } finally {
       setActionLoading(false);
     }
@@ -456,19 +484,19 @@ export const Users = () => {
 
   const tenantRoleOptions = isTenantAdmin
     ? [
-        { value: '', label: 'All Roles' },
-        { value: 'ATHLETE', label: 'Athlete' },
-        { value: 'TENANT_MODERATOR', label: 'Moderator' },
-        { value: 'SPONSOR', label: 'Sponsor' },
-        { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+        { value: '', label: t.users.allRoles },
+        { value: 'ATHLETE', label: t.roles.ATHLETE },
+        { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+        { value: 'SPONSOR', label: t.roles.SPONSOR },
+        { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
       ]
     : [
-        { value: '', label: 'All Roles' },
-        { value: 'ATHLETE', label: 'Athlete' },
-        { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
-        { value: 'TENANT_MODERATOR', label: 'Moderator' },
-        { value: 'SPONSOR', label: 'Sponsor' },
-        { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+        { value: '', label: t.users.allRoles },
+        { value: 'ATHLETE', label: t.roles.ATHLETE },
+        { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+        { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+        { value: 'SPONSOR', label: t.roles.SPONSOR },
+        { value: 'GLOBAL_OWNER', label: t.roles.GLOBAL_OWNER },
       ];
 
   return (
@@ -491,10 +519,10 @@ export const Users = () => {
       )}
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
-          <Tabs.Tab value="users" leftSection={<UserCog size={16} />}>Users Registry</Tabs.Tab>
+          <Tabs.Tab value="users" leftSection={<UserCog size={16} />}>{t.users.registryTab}</Tabs.Tab>
           {isGlobalOwner && (
             <Tabs.Tab value="audit" leftSection={<ClipboardList size={16} />}>
-              Audit Log {auditLogs.length > 0 && `(${auditLogs.length})`}
+              {t.users.auditTab} {auditLogs.length > 0 && `(${auditLogs.length})`}
             </Tabs.Tab>
           )}
         </Tabs.List>
@@ -504,7 +532,7 @@ export const Users = () => {
             <Group justify="space-between">
               <Group gap="sm" grow style={{ flex: 1, minWidth: '400px' }}>
                 <TextInput
-                  placeholder={isGlobalOwner ? "Search (ID, Email, Nickname)..." : "Search within city..."}
+                  placeholder={isGlobalOwner ? t.users.searchGlobal : t.users.searchTenant}
                   leftSection={<Search size={14} />}
                   value={searchQuery}
                   onChange={(e) => {
@@ -512,7 +540,7 @@ export const Users = () => {
                   }}
                 />
                 <Select
-                  placeholder="Role Filter"
+                  placeholder={t.users.roleFilter}
                   data={tenantRoleOptions}
                   value={selectedRole}
                   onChange={(v) => {
@@ -521,7 +549,7 @@ export const Users = () => {
                   clearable
                 />
                 <Select
-                  placeholder="Sort"
+                  placeholder={t.users.sort}
                   data={[
                     { value: 'id_desc', label: 'Newest (ID desc)' },
                     { value: 'id_asc', label: 'Oldest (ID asc)' },
@@ -543,9 +571,9 @@ export const Users = () => {
                 />
                 {isGlobalOwner && (
                   <Select
-                    placeholder="Tenant Filter"
+                    placeholder={t.users.tenantFilter}
                     data={[
-                      { value: '', label: 'All Cities / Tenants' },
+                      { value: '', label: t.users.allTenants },
                       ...tenantsList.map(t => ({ value: String(t.id), label: t.name }))
                     ]}
                     value={selectedTenant}
@@ -563,7 +591,7 @@ export const Users = () => {
                   color="cyan"
                   onClick={() => setCreateModalOpened(true)}
                 >
-                  Create User
+                  {t.users.createUser}
                 </Button>
                 <Button
                   leftSection={<Send size={16} />}
@@ -571,7 +599,7 @@ export const Users = () => {
                   color="violet"
                   onClick={() => setInviteModalOpened(true)}
                 >
-                  Invite Staff
+                  {t.users.inviteStaff}
                 </Button>
               </Group>
             </Group>
@@ -579,8 +607,8 @@ export const Users = () => {
             <Group justify="space-between">
               <Text size="sm" c="dimmed">
                 {usersLoading
-                  ? 'Loading users...'
-                  : `Showing ${usersList.length.toLocaleString()} users${hasMore ? ' (more available)' : ''}`}
+                  ? t.users.loadingUsers
+                  : `${interpolate(t.users.showingUsers, { count: usersList.length.toLocaleString() })}${hasMore ? ` ${t.users.moreAvailable}` : ''}`}
               </Text>
             </Group>
 
@@ -592,7 +620,7 @@ export const Users = () => {
               >
                 <Group justify="space-between" align="center">
                   <Text size="sm" c="dimmed">
-                    Selected {selectedUserIds.length.toLocaleString()} user{selectedUserIds.length !== 1 ? 's' : ''} (current page)
+                    {interpolate(t.users.selectedUsers, { count: selectedUserIds.length.toLocaleString() })}
                   </Text>
                   <Group gap="sm" wrap="nowrap">
                     <Button
@@ -605,21 +633,21 @@ export const Users = () => {
                           .then((res) => {
                             setBulkJob({ ...res, job_id: res.job_id, status: res.status });
                             notifications.show({
-                              title: 'Bulk lock started',
+                              title: t.users.bulkLockStarted,
                               message: `Job ${res.job_id} queued.`,
                               color: 'orange',
                             });
                           })
                           .catch((err) => {
                             notifications.show({
-                              title: 'Bulk lock failed',
+                              title: t.users.bulkLockFailed,
                               message: err?.response?.data?.error || err.message || 'Unknown error',
                               color: 'red',
                             });
                           });
                       }}
                     >
-                      Lock
+                      {t.users.lock}
                     </Button>
                     <Button
                       size="xs"
@@ -631,24 +659,24 @@ export const Users = () => {
                           .then((res) => {
                             setBulkJob({ ...res, job_id: res.job_id, status: res.status });
                             notifications.show({
-                              title: 'Bulk unlock started',
+                              title: t.users.bulkUnlockStarted,
                               message: `Job ${res.job_id} queued.`,
                               color: 'green',
                             });
                           })
                           .catch((err) => {
                             notifications.show({
-                              title: 'Bulk unlock failed',
+                              title: t.users.bulkUnlockFailed,
                               message: err?.response?.data?.error || err.message || 'Unknown error',
                               color: 'red',
                             });
                           });
                       }}
                     >
-                      Unlock
+                      {t.users.unlock}
                     </Button>
                     <Button size="xs" variant="light" color="cyan" leftSection={<Shield size={14} />} onClick={() => setBulkRoleModalOpened(true)}>
-                      Change Role
+                      {t.users.changeRole}
                     </Button>
                   </Group>
                 </Group>
@@ -656,7 +684,7 @@ export const Users = () => {
                 {bulkJob?.job_id && (bulkJob.status === 'queued' || bulkJob.status === 'running') && (
                   <>
                     <Text size="xs" c="dimmed" mt="sm">
-                      Bulk action: {bulkJob.action || bulkJob.status} - {bulkJob.progress_pct ?? 0}% - processed {bulkJob.processed ?? 0}/{bulkJob.total ?? selectedUserIds.length}
+                      {t.users.bulkAction}: {bulkJob.action || bulkJob.status} - {bulkJob.progress_pct ?? 0}% - processed {bulkJob.processed ?? 0}/{bulkJob.total ?? selectedUserIds.length}
                     </Text>
                     <Progress value={bulkJob.progress_pct ?? 0} size="sm" mt="xs" />
                   </>
@@ -670,7 +698,7 @@ export const Users = () => {
                   <Table.Tr>
                     <Table.Th style={{ width: '44px' }}>
                       <Checkbox
-                        aria-label="Select all visible"
+                        aria-label={t.common.selectAll}
                         checked={usersList.length > 0 && usersList.every((u) => selectedUserIds.includes(u.id))}
                         indeterminate={usersList.some((u) => selectedUserIds.includes(u.id)) && !usersList.every((u) => selectedUserIds.includes(u.id))}
                         onChange={(e) => {
@@ -684,11 +712,11 @@ export const Users = () => {
                         }}
                       />
                     </Table.Th>
-                    <Table.Th>User ID</Table.Th>
-                    <Table.Th>Identity</Table.Th>
-                    <Table.Th>City / Tenant</Table.Th>
-                    <Table.Th>System Role</Table.Th>
-                    <Table.Th>Status</Table.Th>
+                    <Table.Th>{t.users.userId}</Table.Th>
+                    <Table.Th>{t.users.identity}</Table.Th>
+                    <Table.Th>{t.users.cityTenant}</Table.Th>
+                    <Table.Th>{t.users.systemRole}</Table.Th>
+                    <Table.Th>{t.users.status}</Table.Th>
                     <Table.Th style={{ width: '100px' }}></Table.Th>
                   </Table.Tr>
                 </Table.Thead>
@@ -696,13 +724,13 @@ export const Users = () => {
                   {usersLoading ? (
                     <Table.Tr>
                       <Table.Td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                        Loading...
+                        {t.users.loading}
                       </Table.Td>
                     </Table.Tr>
                   ) : usersList.length === 0 ? (
                     <Table.Tr>
                       <Table.Td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-tertiary)' }}>
-                        No users match the active filter criteria.
+                        {t.users.noUsers}
                       </Table.Td>
                     </Table.Tr>
                   ) : (
@@ -710,7 +738,7 @@ export const Users = () => {
                       <Table.Tr key={u.id}>
                         <Table.Td>
                           <Checkbox
-                            aria-label={`Select user ${u.displayId}`}
+                            aria-label={`${t.common.selectAll} ${u.displayId}`}
                             checked={selectedUserIds.includes(u.id)}
                             onChange={(e) => {
                               const checked = e.currentTarget.checked;
@@ -742,9 +770,9 @@ export const Users = () => {
                         <Table.Td>
                           <Group gap="xs">
                             <Badge color={u.is_active ? 'green' : 'orange'} variant="light" size="xs">
-                              {u.is_active ? 'Active' : 'Locked'}
+                              {u.is_active ? t.users.active : t.users.locked}
                             </Badge>
-                            <Tooltip label={u.is_active ? 'Lock Account' : 'Unlock Account'}>
+                            <Tooltip label={u.is_active ? t.users.lockAccount : t.users.unlockAccount}>
                               <ActionIcon
                                 variant="subtle"
                                 size="sm"
@@ -758,10 +786,10 @@ export const Users = () => {
                         </Table.Td>
                         <Table.Td>
                           <Group gap={4} justify="flex-end">
-                            <Tooltip label="Edit Profile / Telemetry">
+                            <Tooltip label={t.users.editProfile}>
                               <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
                             </Tooltip>
-                            <Tooltip label="Delete User">
+                            <Tooltip label={t.users.deleteUser}>
                               <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }}>
                                 <Trash2 size={14} />
                               </ActionIcon>
@@ -781,7 +809,7 @@ export const Users = () => {
                 onClick={() => cursorIndex > 0 && setCursorIndex((i) => i - 1)}
                 disabled={cursorIndex <= 0 || usersLoading}
               >
-                Previous
+                {t.users.previous}
               </Button>
               <Button
                 variant="light"
@@ -792,7 +820,7 @@ export const Users = () => {
                 }}
                 disabled={!nextCursor || usersLoading}
               >
-                Next
+                {t.users.next}
               </Button>
             </Group>
           </Stack>
@@ -802,22 +830,22 @@ export const Users = () => {
           <Tabs.Panel value="audit" pt="md">
             <Stack gap="md">
               {auditLogLoading ? (
-                <Text c="dimmed">Loading audit logs...</Text>
+                <Text c="dimmed">{t.users.auditLoading}</Text>
               ) : auditLogs.length === 0 ? (
-                <Text c="dimmed">No audit log entries found.</Text>
+                <Text c="dimmed">{t.users.auditEmpty}</Text>
               ) : (
                 <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                   <ScrollArea style={{ height: '600px' }}>
                     <Table verticalSpacing="xs" highlightOnHover>
                       <Table.Thead>
                         <Table.Tr>
-                          <Table.Th>Timestamp</Table.Th>
-                          <Table.Th>Action</Table.Th>
-                          <Table.Th>Impersonator</Table.Th>
-                          <Table.Th>Target User</Table.Th>
-                          <Table.Th>Tenant ID</Table.Th>
-                          <Table.Th>Status</Table.Th>
-                          <Table.Th>IP</Table.Th>
+                          <Table.Th>{t.users.timestamp}</Table.Th>
+                          <Table.Th>{t.users.action}</Table.Th>
+                          <Table.Th>{t.users.impersonator}</Table.Th>
+                          <Table.Th>{t.users.targetUser}</Table.Th>
+                          <Table.Th>{t.users.tenantId}</Table.Th>
+                          <Table.Th>{t.users.status}</Table.Th>
+                          <Table.Th>{t.users.ip}</Table.Th>
                         </Table.Tr>
                       </Table.Thead>
                       <Table.Tbody>
@@ -851,7 +879,7 @@ export const Users = () => {
         }}
         position="right"
         size="lg"
-        title={<Text fw={700} size="lg">Modify Profile & Telemetry Details</Text>}
+        title={<Text fw={700} size="lg">{t.users.modifyProfile}</Text>}
         styles={{ content: { background: 'var(--surface-secondary)' }, header: { background: 'transparent' } }}
       >
         {selectedUser && (
@@ -890,24 +918,24 @@ export const Users = () => {
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                 <Stack gap="sm">
                   <Text fw={700} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Shield size={16} color="cyan" /> Identity Configuration
+                    <Shield size={16} color="cyan" /> {t.users.identityConfig}
                   </Text>
                   
                   <TextInput
-                    label="Username"
+                    label={t.users.username}
                     value={editForm.username}
                     onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
                     required
                   />
                   <TextInput
-                    label="Email Address"
+                    label={t.users.emailAddress}
                     value={editForm.email}
                     onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                     required
                     leftSection={<Mail size={14} />}
                   />
                   <Select
-                    label="System Role"
+                    label={t.users.systemRole}
                     value={editForm.role}
                     onChange={(v) => setEditForm({ ...editForm, role: v || 'ATHLETE' })}
                     data={[
@@ -921,7 +949,7 @@ export const Users = () => {
                   />
                   {isGlobalOwner && (
                     <Select
-                      label="Assigned Tenant"
+                    label={t.users.assignedTenant}
                       value={editForm.tenant_id}
                       onChange={(v) => setEditForm({ ...editForm, tenant_id: v || '' })}
                       data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))}
@@ -930,7 +958,7 @@ export const Users = () => {
                     />
                   )}
                   <Group justify="space-between" mt="xs">
-                    <Text size="sm" fw={500}>Account Status (Active / Unlocked)</Text>
+                    <Text size="sm" fw={500}>{t.users.accountStatus}</Text>
                     <Switch
                       checked={editForm.is_active}
                       onChange={(e) => setEditForm({ ...editForm, is_active: e.currentTarget.checked })}
@@ -944,17 +972,17 @@ export const Users = () => {
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                 <Stack gap="sm">
                   <Text fw={700} size="sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Custom Profile Branding
+                    {t.users.customBranding}
                   </Text>
                   <TextInput
-                    label="Custom Avatar URL"
+                    label={t.users.avatarUrl}
                     value={editForm.avatar}
-                    placeholder="https://example.com/avatar.png"
+                    placeholder={t.users.avatarPlaceholder}
                     onChange={(e) => setEditForm({ ...editForm, avatar: e.target.value })}
                   />
                   <Textarea
-                    label="Biography Description"
-                    placeholder="Enter athlete bio, training goals or company description..."
+                    label={t.users.bio}
+                    placeholder={t.users.bioPlaceholder}
                     minRows={3}
                     maxRows={6}
                     value={editForm.bio}
@@ -966,10 +994,10 @@ export const Users = () => {
               {/* Password Management */}
               <Card withBorder padding="md" style={{ background: 'var(--surface)' }}>
                 <Stack gap="sm">
-                  <Text fw={700} size="sm">Security Credentials</Text>
+                  <Text fw={700} size="sm">{t.users.securityCredentials}</Text>
                   <PasswordInput
-                    label="Force Reset Password"
-                    placeholder="Enter new password to force update"
+                    label={t.users.forceResetPassword}
+                    placeholder={t.users.forceResetPasswordPlaceholder}
                     value={editForm.password}
                     onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                   />
@@ -979,23 +1007,25 @@ export const Users = () => {
               {/* Save & Impersonation Buttons */}
               <Stack gap="sm">
                 <Button color="cyan" fullWidth onClick={handleUpdateUser} loading={actionLoading}>
-                  Save All Profile Changes
+                  {t.users.saveProfile}
                 </Button>
 
                 {user?.role === 'GLOBAL_OWNER' && (
                   <Box mt="md">
-                    <Text fw={700} size="sm" mb="xs" c="orange">Impersonation Sandbox</Text>
+                    <Text fw={700} size="sm" mb="xs" c="orange">{t.users.impersonationSandbox}</Text>
                     {impersonateResult ? (
                       <Stack gap="sm" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
-                        <Text size="sm" c="green">Impersonating {impersonateResult.impersonated_user}</Text>
+                        <Text size="sm" c="green">
+                          {interpolate(t.users.impersonatingUser, { user: impersonateResult.impersonated_user })}
+                        </Text>
                         <Text size="xs" c="dimmed">
-                          Session token cached. The frontend mimics this user&apos;s dashboards and permissions.
+                          {t.users.impersonationSessionDesc}
                         </Text>
                         <Button size="xs" variant="light" color="red" onClick={() => {
                           localStorage.removeItem('impersonation_token');
                           localStorage.removeItem('impersonated_user');
                           setImpersonateResult(null);
-                        }}>End Impersonation Session</Button>
+                        }}>{t.users.endImpersonation}</Button>
                       </Stack>
                     ) : (
                       <Button
@@ -1006,7 +1036,7 @@ export const Users = () => {
                         loading={impersonating}
                         onClick={() => handleImpersonate(selectedUser.id)}
                       >
-                        {impersonating ? 'Connecting Session...' : 'Launch Impersonated Session'}
+                        {impersonating ? t.users.connectingSession : t.users.launchImpersonation}
                       </Button>
                     )}
                   </Box>
@@ -1019,43 +1049,43 @@ export const Users = () => {
       </Drawer>
 
       {/* Create User Modal */}
-      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title={<Text fw={700}>Create New System User</Text>} centered size="md">
+      <Modal opened={createModalOpened} onClose={() => setCreateModalOpened(false)} title={<Text fw={700}>{t.users.createUserTitle}</Text>} centered size="md">
         <Stack gap="md">
-          <TextInput label="Username" value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} required />
-          <TextInput label="Email" value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
-          <PasswordInput label="Password" value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
-          <Select label="Role" value={createForm.role} onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })} data={[
-            { value: 'ATHLETE', label: 'Athlete' },
-            { value: 'TENANT_MODERATOR', label: 'Moderator' },
-            { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
-            { value: 'SPONSOR', label: 'Sponsor' },
+          <TextInput label={t.users.username} value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} required />
+          <TextInput label={t.users.emailAddress} value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
+          <PasswordInput label={t.users.password} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
+          <Select label={t.users.newRole} value={createForm.role} onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })} data={[
+            { value: 'ATHLETE', label: t.roles.ATHLETE },
+            { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+            { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+            { value: 'SPONSOR', label: t.roles.SPONSOR },
           ]} />
           {isGlobalOwner && (
-            <Select label="Tenant" value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))} clearable />
+            <Select label={t.users.tenant} value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))} clearable />
           )}
-          <Button fullWidth onClick={handleCreateUser} color="cyan" loading={actionLoading}>Create User</Button>
+          <Button fullWidth onClick={handleCreateUser} color="cyan" loading={actionLoading}>{t.users.createUser}</Button>
         </Stack>
       </Modal>
 
       {/* Invite Modal */}
-      <Modal opened={inviteModalOpened} onClose={() => { setInviteModalOpened(false); setInviteResult(null); }} title={<Text fw={700}>Invite Staff / Moderator</Text>} centered size="md">
+      <Modal opened={inviteModalOpened} onClose={() => { setInviteModalOpened(false); setInviteResult(null); }} title={<Text fw={700}>{t.users.inviteTitle}</Text>} centered size="md">
         <Stack gap="md">
-          <TextInput label="Email Address" value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="moderator@city.gov" required />
-          <TextInput label="Full Name" value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder="John Doe" />
-          <Select label="Role" value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })} data={[
-            { value: 'TENANT_MODERATOR', label: 'Moderator' },
-            { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+          <TextInput label={t.users.emailAddress} value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="moderator@city.gov" required />
+          <TextInput label={t.users.fullName} value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder={t.users.fullNamePlaceholder} />
+          <Select label={t.users.newRole} value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })} data={[
+            { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+            { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
           ]} />
           {inviteResult ? (
             <Stack gap="xs" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
-              <Text size="sm" c="green">Invitation created!</Text>
-              <Text size="xs">Username: <b>{inviteResult.username}</b></Text>
-              <Text size="xs">Password: <b>{inviteResult.temporary_password}</b></Text>
-              <Text size="xs" c="dimmed">Share these credentials securely with the user.</Text>
+              <Text size="sm" c="green">{t.users.invitationCreated}</Text>
+              <Text size="xs">{t.users.invitationUsername}: <b>{inviteResult.username}</b></Text>
+              <Text size="xs">{t.users.invitationPassword}: <b>{inviteResult.temporary_password}</b></Text>
+              <Text size="xs" c="dimmed">{t.users.invitationShare}</Text>
             </Stack>
           ) : (
             <Button fullWidth onClick={handleSendInvitation} color="violet" loading={actionLoading}>
-              Generate Invitation Token
+              {t.users.generateInvitation}
             </Button>
           )}
         </Stack>
@@ -1065,17 +1095,17 @@ export const Users = () => {
       <Modal
         opened={bulkRoleModalOpened}
         onClose={() => setBulkRoleModalOpened(false)}
-        title={<Text fw={700}>Change role for selected users</Text>}
+        title={<Text fw={700}>{t.users.changeRoleSelected}</Text>}
         centered
         size="md"
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Selected: <b>{selectedUserIds.length.toLocaleString()}</b> users (this cursor page).
+            {interpolate(t.users.selectedCount, { count: selectedUserIds.length.toLocaleString() })}
           </Text>
 
           <Select
-            label="New Role"
+            label={t.users.newRole}
             value={bulkChangeRoleForm.role}
             onChange={(v) => {
               const role = v || 'ATHLETE';
@@ -1088,11 +1118,11 @@ export const Users = () => {
               }));
             }}
             data={[
-              { value: 'ATHLETE', label: 'Athlete' },
-              { value: 'TENANT_MODERATOR', label: 'Tenant Moderator' },
-              { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
-              { value: 'SPONSOR', label: 'Sponsor' },
-              { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+              { value: 'ATHLETE', label: t.roles.ATHLETE },
+              { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+              { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+              { value: 'SPONSOR', label: t.roles.SPONSOR },
+              { value: 'GLOBAL_OWNER', label: t.roles.GLOBAL_OWNER },
             ]}
           />
 
@@ -1108,14 +1138,14 @@ export const Users = () => {
                     tenant_id: checked ? prev.tenant_id : '',
                   }));
                 }}
-                label="Also update tenant for all selected users"
-                description="When unchecked, role is changed but existing tenant assignments remain unchanged."
+                label={t.users.updateTenantForAll}
+                description={t.users.updateTenantDesc}
               />
 
               {bulkChangeRoleForm.update_tenant && (
                 <Select
-                  label="Tenant"
-                  placeholder="Pick a tenant..."
+                  label={t.users.tenant}
+                  placeholder={t.users.pickTenant}
                   value={bulkChangeRoleForm.tenant_id}
                   onChange={(v) => setBulkChangeRoleForm((prev) => ({ ...prev, tenant_id: v || '' }))}
                   data={tenantsList.map((t) => ({ value: String(t.id), label: t.name }))}
@@ -1127,7 +1157,7 @@ export const Users = () => {
 
           <Group justify="flex-end">
             <Button variant="subtle" onClick={() => setBulkRoleModalOpened(false)}>
-              Cancel
+              {t.users.cancel}
             </Button>
             <Button
               color="cyan"
@@ -1135,7 +1165,7 @@ export const Users = () => {
                 if (selectedUserIds.length === 0) return;
                 if (bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && bulkChangeRoleForm.update_tenant) {
                   if (!bulkChangeRoleForm.tenant_id) {
-                    notifications.show({ title: 'Tenant required', message: 'Select tenant or uncheck tenant update.', color: 'red' });
+                    notifications.show({ title: t.users.tenantRequired, message: t.users.tenantRequiredMsg, color: 'red' });
                     return;
                   }
                 }
@@ -1149,32 +1179,34 @@ export const Users = () => {
                   setBulkJob({ ...res, job_id: res.job_id, status: res.status });
                   setBulkRoleModalOpened(false);
                   notifications.show({
-                    title: 'Bulk role change started',
+                    title: t.users.bulkRoleStarted,
                     message: `Job ${res.job_id} queued.`,
                     color: 'cyan',
                   });
                 } catch (err: any) {
                   notifications.show({
-                    title: 'Bulk role change failed',
+                    title: t.users.bulkRoleFailed,
                     message: err?.response?.data?.error || err.message || 'Unknown error',
                     color: 'red',
                   });
                 }
               }}
             >
-              Start Job
+              {t.users.startJob}
             </Button>
           </Group>
         </Stack>
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal opened={deleteConfirmOpened} onClose={() => setDeleteConfirmOpened(false)} title={<Text fw={700} c="red">Delete User?</Text>} centered size="sm">
+      <Modal opened={deleteConfirmOpened} onClose={() => setDeleteConfirmOpened(false)} title={<Text fw={700} c="red">{t.users.deleteConfirmTitle}</Text>} centered size="sm">
         <Stack gap="md">
-          <Text size="sm">Are you sure you want to permanently delete <b>{deleteTarget?.name}</b> ({deleteTarget?.email})?</Text>
+          <Text size="sm">
+            {interpolate(t.users.deleteConfirmDesc, { name: deleteTarget?.name || '', email: deleteTarget?.email || '' })}
+          </Text>
           <Group justify="flex-end">
-            <Button variant="subtle" onClick={() => setDeleteConfirmOpened(false)}>Cancel</Button>
-            <Button color="red" onClick={handleDeleteUser} loading={actionLoading}>Delete</Button>
+            <Button variant="subtle" onClick={() => setDeleteConfirmOpened(false)}>{t.users.cancel}</Button>
+            <Button color="red" onClick={handleDeleteUser} loading={actionLoading}>{t.users.delete}</Button>
           </Group>
         </Stack>
       </Modal>

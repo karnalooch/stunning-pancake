@@ -217,6 +217,8 @@ class TenantUpdateView(generics.UpdateAPIView):
         tenant.secondary_color = request.data.get("secondary_color", tenant.secondary_color)
         if "map_theme" in request.data and isinstance(request.data.get("map_theme"), dict):
             tenant.map_theme = request.data["map_theme"]
+        if request.user.role == "GLOBAL_OWNER" and "is_active" in request.data:
+            tenant.is_active = bool(request.data.get("is_active"))
         tenant.save()
         return success(
             data={
@@ -224,6 +226,7 @@ class TenantUpdateView(generics.UpdateAPIView):
                 "primary_color": tenant.primary_color,
                 "secondary_color": tenant.secondary_color,
                 "map_theme": tenant.map_theme or {},
+                "is_active": tenant.is_active,
             }
         )
 
@@ -500,14 +503,33 @@ class TenantListView(generics.ListAPIView):
 
 
 class AuditLogListView(generics.ListAPIView):
-    """List audit log entries. GLOBAL_OWNER only."""
+    """List audit log entries — GLOBAL_OWNER (all) or TENANT_ADMIN (scoped)."""
 
     serializer_class = AuditLogSerializer
-    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+    permission_classes = (permissions.IsAuthenticated,)
     pagination_class = None
+
+    def get_permissions(self):
+        role = getattr(self.request.user, "role", None)
+        if role == "GLOBAL_OWNER":
+            return [permissions.IsAuthenticated(), IsGlobalOwner()]
+        if role == "TENANT_ADMIN":
+            return [permissions.IsAuthenticated(), IsTenantAdmin()]
+        return [permissions.IsAuthenticated(), IsGlobalOwner()]
 
     def get_queryset(self):
         qs = AuditLog.objects.select_related("impersonator", "target_user")
+        role = getattr(self.request.user, "role", None)
+        if role == "TENANT_ADMIN":
+            tenant_id = getattr(self.request.user, "tenant_id", None)
+            if not tenant_id:
+                return qs.none()
+            qs = qs.filter(tenant_id=str(tenant_id))
+        elif role != "GLOBAL_OWNER":
+            return qs.none()
+        tenant_filter = self.request.query_params.get("tenant_id")
+        if tenant_filter and role == "GLOBAL_OWNER":
+            qs = qs.filter(tenant_id=tenant_filter)
         action = self.request.query_params.get("action")
         if action:
             qs = qs.filter(action=action)
@@ -932,3 +954,22 @@ class UserBulkJobStatusView(generics.GenericAPIView):
         except Exception:
             state["log"] = []
         return Response(state)
+
+
+class UserPreferencesView(generics.GenericAPIView):
+    """GET/PATCH current user's UI preferences JSON."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        prefs = getattr(request.user, "preferences", None) or {}
+        return Response(prefs)
+
+    def patch(self, request):
+        current = dict(getattr(request.user, "preferences", None) or {})
+        if not isinstance(request.data, dict):
+            return error("Expected JSON object.", status_code=status.HTTP_400_BAD_REQUEST)
+        current.update(request.data)
+        request.user.preferences = current
+        request.user.save(update_fields=["preferences"])
+        return Response(current)

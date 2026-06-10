@@ -63,7 +63,7 @@ mustInclude('admin/src/api/client.ts', [
 
 mustInclude('admin/src/App.tsx', [
   'clearStoredSession',
-  "axios.post(`${baseURL}/auth/token/`",
+  'axios.post(`${baseURL}${API_PATHS.authToken}`',
 ], 'password login must clear stale tokens and use plain axios');
 
 mustNotInclude(

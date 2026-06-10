@@ -40,6 +40,7 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     tenant_name = serializers.CharField(source="tenant.name", read_only=True, default="")
+    tenant_flags = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -50,11 +51,18 @@ class UserSerializer(serializers.ModelSerializer):
             "role",
             "tenant_id",
             "tenant_name",
+            "tenant_flags",
             "avatar",
             "bio",
             "is_active",
         )
         read_only_fields = ("id", "role")
+
+    def get_tenant_flags(self, obj: User) -> dict:
+        tenant = getattr(obj, "tenant", None)
+        if not tenant:
+            return {"has_heatmap_analytics": False}
+        return {"has_heatmap_analytics": bool(tenant.has_heatmap_analytics)}
 
 
 class RegisterSerializer(serializers.ModelSerializer):

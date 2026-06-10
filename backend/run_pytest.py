@@ -238,7 +238,8 @@ _original_parse = dj_database_url.parse
 def _mocked_parse(url, engine=None, **kwargs):
     cfg = _original_parse(url, engine=engine, **kwargs)
     cfg["ENGINE"] = "django.db.backends.sqlite3"
-    cfg["NAME"] = ":memory:"
+    if ":memory:" in (url or ""):
+        cfg["NAME"] = ":memory:"
     return cfg
 
 

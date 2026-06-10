@@ -43,6 +43,22 @@ Jedna macierz dokumentów panelu admin: co czytać przed release, kto utrzymuje,
 
 ---
 
+## Wizje doświadczenia (overhaul_plan)
+
+North Star per rola — **co i dlaczego**. Oś czasu: [ADMIN_ROADMAP.md](./ADMIN_ROADMAP.md). Szczegóły techniczne: [P1_ROADMAP](./P1_ROADMAP.md).
+
+| Dokument wizji | Rola | Etap ADMIN_ROADMAP |
+|----------------|------|---------------------|
+| [SPONSOR_EXPERIENCE_OVERHAUL](../../overhaul_plan/SPONSOR_EXPERIENCE_OVERHAUL.md) | SPONSOR | S1 |
+| [GLOBAL_OWNER_EXPERIENCE_OVERHAUL](../../overhaul_plan/GLOBAL_OWNER_EXPERIENCE_OVERHAUL.md) | GLOBAL_OWNER | S2 |
+| [TENANT_ADMIN_EXPERIENCE_OVERHAUL](../../overhaul_plan/TENANT_ADMIN_EXPERIENCE_OVERHAUL.md) | TENANT_ADMIN | S3 |
+| [MODERATOR_PANEL_OVERHAUL](../../overhaul_plan/MODERATOR_PANEL_OVERHAUL.md) | TENANT_MODERATOR | S4 |
+| [USER_PANEL_VISION](../../overhaul_plan/USER_PANEL_VISION.md) | ATHLETE (mobile) | S6 |
+
+Indeks: [overhaul_plan/README.md](../../overhaul_plan/README.md).
+
+---
+
 ## Ścieżka release (kolejność)
 
 | Krok | Rola | Dokument / artefakt |

@@ -16,6 +16,8 @@ export interface ActivityItem {
   duration: string | null;
   is_verified: boolean;
   verification_score: number;
+  rejection_reason?: string;
+  rejection_notes?: string;
 }
 
 export interface LeaderboardEntry {

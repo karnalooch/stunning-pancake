@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { clearStoredSession } from './tokens';
 import { useAuth } from './useAuth';
-import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, ThemeIcon, Divider } from '@mantine/core';
+import { TextInput, Button, Text, Stack, Box, Group, PasswordInput, Divider } from '@mantine/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, ShieldCheck, Globe, Layers, AlertCircle } from 'lucide-react';
+import { useI18n } from '../../i18n/useI18n';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const GOOGLE_AUTH_URL = `${API_BASE}/auth/google/login/?client=admin`;
@@ -13,31 +14,30 @@ interface LoginPageProps {
   onLogin: (username: string, password: string) => Promise<void>;
 }
 
-/* ─── Feature list shown on the left panel ──────────────── */
-const FEATURES = [
-  {
-    icon: <Globe size={18} />,
-    title: 'Multi-tenant platform',
-    desc: 'Manage unlimited city instances with isolated data.',
-  },
-  {
-    icon: <ShieldCheck size={18} />,
-    title: 'Anti-cheat engine',
-    desc: '4-layer detection: Kinematic, ML, BRouter & Plugin.',
-  },
-  {
-    icon: <Layers size={18} />,
-    title: 'White-label branding',
-    desc: 'Custom look & feel for every tenant deployment.',
-  },
-];
-
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
+  const { t } = useI18n();
   const logout = useAuth((s) => s.logout);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const features = [
+    {
+      icon: <Globe size={18} />,
+      title: t.auth.featurePlatformTitle,
+      desc: t.auth.featurePlatformDesc,
+    },
+    {
+      icon: <ShieldCheck size={18} />,
+      title: t.auth.featureAntiCheatTitle,
+      desc: t.auth.featureAntiCheatDesc,
+    },
+    {
+      icon: <Layers size={18} />,
+      title: t.auth.featureWhiteLabelTitle,
+      desc: t.auth.featureWhiteLabelDesc,
+    },
+  ];
 
   useEffect(() => {
     clearStoredSession();
@@ -47,7 +47,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) {
-      setError('Please fill in all fields.');
+      setError(t.auth.fillAllFields);
       return;
     }
     setLoading(true);
@@ -55,7 +55,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     try {
       await onLogin(username, password);
     } catch (err: any) {
-      setError(err?.message || 'Invalid credentials. Please try again.');
+      setError(err?.message || t.auth.invalidCredentials);
     } finally {
       setLoading(false);
     }
@@ -166,11 +166,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               marginBottom: 12,
             }}
           >
-            Secure platform
+            {t.auth.heroTitleLine1}
             <br />
-            management at
+            {t.auth.heroTitleLine2}
             <br />
-            <span style={{ opacity: 0.75 }}>your fingertips.</span>
+            <span style={{ opacity: 0.75 }}>{t.auth.heroTitleLine3}</span>
           </Text>
           <Text
             style={{
@@ -181,13 +181,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
               maxWidth: 340,
             }}
           >
-            The all-in-one admin OS for multi-city sport challenge platforms.
-            Real-time, secure, and beautifully designed.
+            {t.auth.heroDesc}
           </Text>
 
           {/* Feature list */}
           <Stack gap="md" mt={36}>
-            {FEATURES.map((f, i) => (
+            {features.map((f, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, x: -16 }}
@@ -232,7 +231,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           transition={{ duration: 0.4, delay: 0.6 }}
         >
           <Text size="xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            © 2026 4VELO Platform. All rights reserved.
+            {t.auth.footerCopyright}
           </Text>
         </motion.div>
       </Box>
@@ -296,18 +295,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   lineHeight: 1.25,
                 }}
               >
-                Welcome back
+                {t.auth.welcomeBack}
               </Text>
               <Text size="sm" style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>
-                Sign in to your admin account to continue
+                {t.auth.loginIntro}
               </Text>
             </Stack>
 
             <form onSubmit={handleSubmit}>
               <Stack gap="md">
                 <TextInput
-                  label="Username or Email"
-                  placeholder="admin@4velo.app"
+                  label={t.auth.usernameOrEmail}
+                  placeholder={t.auth.usernamePlaceholder}
                   value={username}
                   onChange={(e) => setUsername(e.currentTarget.value)}
                   required
@@ -328,8 +327,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                 />
 
                 <PasswordInput
-                  label="Password"
-                  placeholder="Enter your password"
+                  label={t.auth.password}
+                  placeholder={t.auth.passwordPlaceholder}
                   value={password}
                   onChange={(e) => setPassword(e.currentTarget.value)}
                   required
@@ -403,14 +402,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 14px rgba(99,102,241,0.4)';
                   }}
                 >
-                  {loading ? 'Signing in…' : 'Sign in'}
+                  {loading ? t.auth.signingIn : t.auth.signIn}
                 </Button>
               </Stack>
             </form>
 
             {/* Social Logins */}
             <Box mt="md">
-              <Divider label="or continue with" labelPosition="center" mb="md" />
+              <Divider label={t.auth.orContinueWith} labelPosition="center" mb="md" />
               <Stack gap="xs">
                 <Button
                   fullWidth
@@ -428,7 +427,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   }
                   style={{ height: 44, borderRadius: 10, borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
-                  Sign in with Google
+                  {t.auth.signInWithGoogle}
                 </Button>
 
                 <Button
@@ -444,7 +443,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                   }
                   style={{ height: 44, borderRadius: 10, borderColor: 'var(--border)', color: 'var(--text-primary)' }}
                 >
-                  Sign in with Facebook
+                  {t.auth.signInWithFacebook}
                 </Button>
               </Stack>
             </Box>
@@ -456,7 +455,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
             mt="lg"
             style={{ color: 'var(--text-tertiary)' }}
           >
-            Secure admin access · All actions are audited
+            {t.auth.secureAuditNotice}
           </Text>
         </motion.div>
       </Box>

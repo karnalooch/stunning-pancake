@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card, Text, Group, Switch, Stack, Box, Divider, Slider, Badge, SimpleGrid,
-  ThemeIcon, Skeleton, Button, Table, Anchor,
+  ThemeIcon, Skeleton, Button, Table, Anchor, Alert,
 } from '@mantine/core';
 import { ShieldAlert, Activity, Gauge, Zap, AlertTriangle, CheckCircle2, MapPin, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
 import { severityColor, severityLabel } from '../../utils/anomalySeverity';
+import { useAuth } from '../../core/auth/useAuth';
+import { useI18n } from '../../i18n/useI18n';
 
 interface AnomalyRow {
   id: string;
@@ -23,6 +25,9 @@ interface AnomalyRow {
 }
 
 export const AntiCheat: React.FC = () => {
+  const { user } = useAuth();
+  const { t } = useI18n();
+  const readOnly = user?.role === 'TENANT_MODERATOR';
   const [config, setConfig] = useState({ brouterCutoff: 1.5, mlSensitivity: 0.8, autoBan: true });
   const [anomalies, setAnomalies] = useState<AnomalyRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,20 +44,21 @@ export const AntiCheat: React.FC = () => {
         setAnomalies(Array.isArray(raw) ? raw : raw?.results ?? []);
       })
       .catch(() => {
-        notifications.show({ title: 'Anti-Cheat', message: 'Failed to load data.', color: 'red' });
+        notifications.show({ title: t.antiCheat.title, message: t.antiCheat.loadFailed, color: 'red' });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [t.antiCheat.title, t.antiCheat.loadFailed]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const updateConfig = async (key: string, value: unknown) => {
+    if (readOnly) return;
     const updated = { ...config, [key]: value };
     setConfig(updated);
     try {
       await apiClient.post('/activities/telemetry/config/', updated);
     } catch {
-      notifications.show({ title: 'Config', message: 'Save failed.', color: 'red' });
+      notifications.show({ title: t.antiCheat.detectionConfig, message: t.antiCheat.configSaveFailed, color: 'red' });
     }
   };
 
@@ -72,58 +78,66 @@ export const AntiCheat: React.FC = () => {
 
   return (
     <Box>
-      <PageHeader title="Anti-Cheat Engine" subtitle="4-layer integrity monitoring & detection configuration" />
+      <PageHeader title={t.antiCheat.title} subtitle={t.antiCheat.subtitle} />
+
+      {readOnly && (
+        <Alert color="blue" mb="md" title={t.antiCheat.readOnlyTitle}>
+          {t.antiCheat.readOnly}
+        </Alert>
+      )}
 
       <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} mb="xl" spacing="md">
         <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
           <Group gap="sm">
             <ThemeIcon size={36} radius="md" color="indigo" variant="light"><Gauge size={18} /></ThemeIcon>
-            <Box><Text size="xs" c="dimmed">BRouter Cutoff</Text><Text fw={700}>{config.brouterCutoff}x</Text></Box>
+            <Box><Text size="xs" c="dimmed">{t.antiCheat.brouterCutoff}</Text><Text fw={700}>{config.brouterCutoff}x</Text></Box>
           </Group>
         </Card>
         <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
           <Group gap="sm">
             <ThemeIcon size={36} radius="md" color="violet" variant="light"><Zap size={18} /></ThemeIcon>
-            <Box><Text size="xs" c="dimmed">ML Sensitivity</Text><Text fw={700}>{config.mlSensitivity}</Text></Box>
+            <Box><Text size="xs" c="dimmed">{t.antiCheat.mlSensitivity}</Text><Text fw={700}>{config.mlSensitivity}</Text></Box>
           </Group>
         </Card>
         <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
           <Group gap="sm">
             <ThemeIcon size={36} radius="md" color={config.autoBan ? 'red' : 'green'} variant="light"><ShieldAlert size={18} /></ThemeIcon>
-            <Box><Text size="xs" c="dimmed">Auto-Ban</Text><Text fw={700} c={config.autoBan ? 'red' : 'green'}>{config.autoBan ? 'ON' : 'OFF'}</Text></Box>
+            <Box><Text size="xs" c="dimmed">{t.antiCheat.autoBan}</Text><Text fw={700} c={config.autoBan ? 'red' : 'green'}>{config.autoBan ? t.antiCheat.autoBanOn : t.antiCheat.autoBanOff}</Text></Box>
           </Group>
         </Card>
         <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18 }}>
           <Group gap="sm">
             <ThemeIcon size={36} radius="md" color={anomalies.length > 0 ? 'orange' : 'green'} variant="light"><AlertTriangle size={18} /></ThemeIcon>
-            <Box><Text size="xs" c="dimmed">Low-score queue</Text><Text fw={700}>{anomalies.length}</Text></Box>
+            <Box><Text size="xs" c="dimmed">{t.antiCheat.lowScoreQueue}</Text><Text fw={700}>{anomalies.length}</Text></Box>
           </Group>
         </Card>
       </SimpleGrid>
 
-      <Card mb="xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
-        <Group mb="md"><ShieldAlert size={20} style={{ color: 'var(--accent)' }} /><Text fw={700} size="lg">Detection Configuration</Text></Group>
-        <Divider mb="md" />
-        <Stack gap="xl">
-          <Group justify="space-between" wrap="nowrap">
-            <Stack gap={2}><Text fw={600}>BRouter Topological Validation</Text><Text size="xs" c="dimmed">Cutoff ratio for GPS vs map distance</Text></Stack>
-            <Slider value={config.brouterCutoff} onChange={(v) => updateConfig('brouterCutoff', v)} min={1.0} max={3.0} step={0.1} w={200} marks={[{ value: 1.5, label: '1.5' }, { value: 2.0, label: '2.0' }, { value: 3.0, label: '3.0' }]} color="indigo" />
-          </Group>
-          <Group justify="space-between" wrap="nowrap">
-            <Stack gap={2}><Text fw={600}>ML Sensitivity</Text><Text size="xs" c="dimmed">IsolationForest anomaly threshold</Text></Stack>
-            <Slider value={config.mlSensitivity} onChange={(v) => updateConfig('mlSensitivity', v)} min={0.5} max={1.0} step={0.05} w={200} marks={[{ value: 0.5, label: '0.5' }, { value: 0.8, label: '0.8' }, { value: 1.0, label: '1.0' }]} color="violet" />
-          </Group>
-          <Group justify="space-between">
-            <Stack gap={2}><Text fw={600}>Auto-Ban</Text><Text size="xs" c="dimmed">Automatically ban confirmed cheaters</Text></Stack>
-            <Switch checked={config.autoBan} onChange={(e) => updateConfig('autoBan', e.currentTarget.checked)} color="red" size="md" />
-          </Group>
-        </Stack>
-      </Card>
+      {!readOnly && (
+        <Card mb="xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+          <Group mb="md"><ShieldAlert size={20} style={{ color: 'var(--accent)' }} /><Text fw={700} size="lg">{t.antiCheat.detectionConfig}</Text></Group>
+          <Divider mb="md" />
+          <Stack gap="xl">
+            <Group justify="space-between" wrap="nowrap">
+              <Stack gap={2}><Text fw={600}>{t.antiCheat.brouterCutoff}</Text><Text size="xs" c="dimmed">{t.antiCheat.brouterDesc}</Text></Stack>
+              <Slider value={config.brouterCutoff} onChange={(v) => updateConfig('brouterCutoff', v)} min={1.0} max={3.0} step={0.1} w={200} marks={[{ value: 1.5, label: '1.5' }, { value: 2.0, label: '2.0' }, { value: 3.0, label: '3.0' }]} color="indigo" />
+            </Group>
+            <Group justify="space-between" wrap="nowrap">
+              <Stack gap={2}><Text fw={600}>{t.antiCheat.mlSensitivity}</Text><Text size="xs" c="dimmed">{t.antiCheat.mlDesc}</Text></Stack>
+              <Slider value={config.mlSensitivity} onChange={(v) => updateConfig('mlSensitivity', v)} min={0.5} max={1.0} step={0.05} w={200} marks={[{ value: 0.5, label: '0.5' }, { value: 0.8, label: '0.8' }, { value: 1.0, label: '1.0' }]} color="violet" />
+            </Group>
+            <Group justify="space-between">
+              <Stack gap={2}><Text fw={600}>{t.antiCheat.autoBan}</Text><Text size="xs" c="dimmed">{t.antiCheat.autoBanDesc}</Text></Stack>
+              <Switch checked={config.autoBan} onChange={(e) => updateConfig('autoBan', e.currentTarget.checked)} color="red" size="md" />
+            </Group>
+          </Stack>
+        </Card>
+      )}
 
       <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
         <Group mb="md">
           <Activity size={20} style={{ color: 'var(--accent)' }} />
-          <Text fw={700} size="lg">Recent Anomalies</Text>
+          <Text fw={700} size="lg">{t.antiCheat.recentAnomalies}</Text>
           <Badge color="orange" variant="light" size="lg">{anomalies.length}</Badge>
         </Group>
         <Divider mb="md" />
@@ -132,18 +146,18 @@ export const AntiCheat: React.FC = () => {
         ) : anomalies.length === 0 ? (
           <Text size="sm" c="dimmed" py="xl" ta="center">
             <CheckCircle2 size={24} style={{ verticalAlign: 'middle', marginRight: 8 }} />
-            No low-score anomalies — system clean
+            {t.antiCheat.systemClean}
           </Text>
         ) : (
           <Table>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Severity</Table.Th>
-                <Table.Th>Athlete</Table.Th>
-                <Table.Th>Type</Table.Th>
-                <Table.Th>Score</Table.Th>
-                <Table.Th>Issue</Table.Th>
-                <Table.Th>Actions</Table.Th>
+                <Table.Th>{t.antiCheat.severity}</Table.Th>
+                <Table.Th>{t.moderation.athlete}</Table.Th>
+                <Table.Th>{t.moderation.type}</Table.Th>
+                <Table.Th>{t.activity.score}</Table.Th>
+                <Table.Th>{t.antiCheat.issue}</Table.Th>
+                <Table.Th>{t.antiCheat.actions}</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
@@ -181,10 +195,10 @@ export const AntiCheat: React.FC = () => {
                         leftSection={<MapPin size={12} />}
                         data-testid="anti-cheat-show-on-map"
                       >
-                        Map
+                        {t.antiCheat.showOnMap}
                       </Button>
-                      <Button size="xs" color="green" variant="light" leftSection={<Check size={12} />} onClick={() => handleAction(a.activity_id, 'approve')}>Approve</Button>
-                      <Button size="xs" color="red" variant="light" leftSection={<X size={12} />} onClick={() => handleAction(a.activity_id, 'reject')}>Reject</Button>
+                      <Button size="xs" color="green" variant="light" leftSection={<Check size={12} />} onClick={() => handleAction(a.activity_id, 'approve')}>{t.moderation.approve}</Button>
+                      <Button size="xs" color="red" variant="light" leftSection={<X size={12} />} onClick={() => handleAction(a.activity_id, 'reject')}>{t.moderation.reject}</Button>
                     </Group>
                   </Table.Td>
                 </Table.Tr>

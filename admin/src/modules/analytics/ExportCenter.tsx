@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, Card, Text, Button, SimpleGrid, ThemeIcon, Badge, Stack } from '@mantine/core';
 import { FileSpreadsheet, FileJson, FileText, Download, Archive } from 'lucide-react';
 import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 import { apiClient } from '../../api/client';
+import { useI18n } from '../../i18n/useI18n';
 
 interface ExportItem {
     icon: React.FC<{ size?: number }>;
@@ -12,7 +13,6 @@ interface ExportItem {
     color: string;
     resource: string;
     format: string;
-    ext: string;
 }
 
 interface RodoJob {
@@ -24,16 +24,23 @@ interface RodoJob {
     download_url: string | null;
 }
 
-export const ExportCenter: React.FC = () => {
+interface ExportCenterProps {
+    scoped?: boolean;
+}
+
+export const ExportCenter: React.FC<ExportCenterProps> = ({ scoped = false }) => {
+    const { t } = useI18n();
     const [loading, setLoading] = useState<Record<string, boolean>>({});
     const [rodoJobs, setRodoJobs] = useState<RodoJob[]>([]);
     const [rodoLoading, setRodoLoading] = useState(false);
 
-    const items: ExportItem[] = [
-        { icon: FileSpreadsheet, label: 'Activities CSV', desc: 'Export all activities as CSV', color: 'green', resource: 'activities', format: 'csv', ext: 'csv' },
-        { icon: FileJson, label: 'Users JSON', desc: 'Export users as JSON', color: 'blue', resource: 'users', format: 'json', ext: 'json' },
-        { icon: FileText, label: 'Statistics PDF', desc: 'Weekly statistics report', color: 'violet', resource: 'statistics', format: 'pdf', ext: 'pdf' },
-    ];
+    const allItems: ExportItem[] = useMemo(() => [
+        { icon: FileSpreadsheet, label: t.analytics.exportActivities, desc: t.analytics.exportActivitiesDesc, color: 'green', resource: 'activities', format: 'csv' },
+        { icon: FileJson, label: t.analytics.exportUsers, desc: t.analytics.exportUsersDesc, color: 'blue', resource: 'users', format: 'json' },
+        { icon: FileText, label: t.analytics.exportStats, desc: t.analytics.exportStatsDesc, color: 'violet', resource: 'statistics', format: 'pdf' },
+    ], [t.analytics]);
+
+    const items = scoped ? allItems : allItems;
 
     const refreshRodoJobs = useCallback(() => {
         return apiClient.get<RodoJob[]>('/users/me/export/').then(res => {
@@ -44,8 +51,10 @@ export const ExportCenter: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        refreshRodoJobs().catch(() => {});
-    }, [refreshRodoJobs]);
+        if (!scoped) {
+            refreshRodoJobs().catch(() => {});
+        }
+    }, [refreshRodoJobs, scoped]);
 
     const handleExport = (resource: string, format: string, label: string) => {
         setLoading(prev => ({ ...prev, [label]: true }));
@@ -66,8 +75,8 @@ export const ExportCenter: React.FC = () => {
                 const message =
                     typeof detail === 'string'
                         ? detail
-                        : detail?.detail || detail?.error || `Export failed (${label}).`;
-                notifications.show({ title: 'Export failed', message, color: 'red' });
+                        : detail?.detail || detail?.error || `${t.analytics.exportFailed} (${label}).`;
+                notifications.show({ title: t.analytics.exportFailed, message, color: 'red' });
             })
             .finally(() => setLoading(prev => ({ ...prev, [label]: false })));
     };
@@ -126,8 +135,11 @@ export const ExportCenter: React.FC = () => {
 
     return (
         <Box p="md">
-            <PageHeader title="Export Center" subtitle="Download data in multiple formats" />
-            <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+            <PageHeader
+                title={t.analytics.exportTitle}
+                subtitle={scoped ? t.analytics.exportTenantSubtitle : t.analytics.exportSubtitle}
+            />
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: scoped ? 3 : 4 }} spacing="md">
                 {items.map((item, i) => (
                     <Card key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, textAlign: 'center' }}>
                         <ThemeIcon size={48} radius="md" color={item.color} variant="light" mx="auto" mb="md"><item.icon size={24} /></ThemeIcon>
@@ -140,10 +152,11 @@ export const ExportCenter: React.FC = () => {
                             loading={loading[item.label]}
                             onClick={() => handleExport(item.resource, item.format, item.label)}
                         >
-                            Export
+                            {t.analytics.exportBtn}
                         </Button>
                     </Card>
                 ))}
+                {!scoped && (
                 <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24, textAlign: 'center' }}>
                     <ThemeIcon size={48} radius="md" color="orange" variant="light" mx="auto" mb="md"><Archive size={24} /></ThemeIcon>
                     <Text fw={700} size="lg" mb="xs">RODO data export</Text>
@@ -168,6 +181,7 @@ export const ExportCenter: React.FC = () => {
                         </Stack>
                     )}
                 </Card>
+                )}
             </SimpleGrid>
         </Box>
     );

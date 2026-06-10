@@ -28,10 +28,13 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       '@tokens': path.resolve(__dirname, '../packages/tokens'),
+      react: path.resolve(__dirname, '../node_modules/react'),
+      'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
-    include: ['maplibre-gl'],
+    include: ['maplibre-gl', 'react', 'react-dom', 'react/jsx-dev-runtime', 'react/jsx-runtime'],
   },
   build: {
     sourcemap: false,

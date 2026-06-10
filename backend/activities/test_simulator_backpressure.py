@@ -50,11 +50,11 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
         self.assertIsNone(snap["max_routing_queue_depth"])
 
     @patch.dict("os.environ", {}, clear=False)
-    def test_default_depth_cap_200(self):
+    def test_default_depth_cap_3000(self):
         import os
 
         os.environ.pop("SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH", None)
-        self.assertEqual(bp.max_routing_queue_depth(), 200)
+        self.assertEqual(bp.max_routing_queue_depth(), 3000)
 
     @patch.dict("os.environ", {"SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH": "10"}, clear=False)
     def test_effective_cap_reduced_not_zero_when_active(self):

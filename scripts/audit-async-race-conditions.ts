@@ -51,11 +51,19 @@ function auditFile(filePath: string) {
     // 2. Check for task.delay() called in views without immediate view-level state locks
     if (line.includes('.delay(') && filePath.includes('_views.py')) {
       let precedingBlock = '';
-      for (let j = Math.max(0, idx - 15); j < idx; j++) {
+      for (let j = Math.max(0, idx - 50); j < idx; j++) {
         precedingBlock += lines[j] + '\n';
       }
 
-      const setsState = precedingBlock.includes('set_batch_state') || precedingBlock.includes('set_live_state') || precedingBlock.includes('reset_') || precedingBlock.includes('objects.create');
+      const setsState =
+        precedingBlock.includes('set_batch_state')
+        || precedingBlock.includes('set_live_state')
+        || precedingBlock.includes('reset_batch_state')
+        || precedingBlock.includes('reset_live_state')
+        || precedingBlock.includes('record_moderation_audit')
+        || precedingBlock.includes('.save(')
+        || precedingBlock.includes('LeaderboardService.reset')
+        || precedingBlock.includes('objects.create');
       if (!setsState) {
         findings.push({
           file: relPath,

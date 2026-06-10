@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDisclosure } from '@mantine/hooks';
 import {
-  AppShell, Text, Group, Box, Stack, ActionIcon, Avatar, Tooltip,
+  AppShell, Text, Group, Box, Stack, ActionIcon, Avatar, Tooltip, Badge,
   useMantineColorScheme, UnstyledButton,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
@@ -13,214 +13,22 @@ import {
   Inbox, Sparkles, Leaf,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
+import { useModerationBadgeCount } from '../hooks/useModerationBadgeCount';
 import { setGlobalErrorHandler } from '../api/client';
 import { DataSourceBanner } from './components/DataSourceBanner';
-
-/* ─── Navigation structure ──────────────────────────────── */
-const NAV_SECTIONS = [
-  {
-    label: 'Overview',
-    items: [
-      {
-        icon: LayoutDashboard,
-        label: 'Dashboard',
-        path: '/owner/dashboard',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
-      },
-    ],
-  },
-  {
-    label: 'Management',
-    items: [
-      {
-        icon: Building2,
-        label: 'Tenants & Branding',
-        path: '/owner/white-label',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Users,
-        label: 'Users',
-        path: '/owner/users',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Network,
-        label: 'Departments',
-        path: '/owner/departments',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-    ],
-  },
-  {
-    label: 'Operations',
-    items: [
-      {
-        icon: Zap,
-        label: 'Activities',
-        path: '/owner/activities',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
-      },
-      {
-        icon: Inbox,
-        label: 'Moderation Inbox',
-        path: '/owner/moderation',
-        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
-      },
-      {
-        icon: ShieldAlert,
-        label: 'Anti-Cheat',
-        path: '/owner/anti-cheat',
-        roles: ['GLOBAL_OWNER', 'TENANT_MODERATOR'],
-      },
-      {
-        icon: Calendar,
-        label: 'Events',
-        path: '/owner/analytics/events',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN', 'TENANT_MODERATOR'],
-      },
-    ],
-  },
-  {
-    label: 'Sponsorship & Rewards',
-    items: [
-      {
-        icon: Gift,
-        label: 'Sponsor Dashboard',
-        path: '/owner/sponsor',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
-      },
-      {
-        icon: MapPin,
-        label: 'POI Map',
-        path: '/owner/sponsor/poi',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
-      },
-      {
-        icon: TrendingUp,
-        label: 'Sponsorship Analytics',
-        path: '/owner/analytics/sponsorship',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
-      },
-      {
-        icon: Gift,
-        label: 'Vouchers',
-        path: '/owner/analytics/vouchers',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
-      },
-    ],
-  },
-  {
-    label: 'Analytics & Feedback',
-    items: [
-      {
-        icon: TrendingUp,
-        label: 'Department Analytics',
-        path: '/owner/analytics/departments',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Map,
-        label: 'Heatmaps',
-        path: '/owner/analytics/heatmaps',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-        requiresHeatmapFlag: true,
-      },
-      {
-        icon: Bike,
-        label: 'Live Map',
-        path: '/owner/analytics/live-map',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: MessageSquare,
-        label: 'Feedback',
-        path: '/owner/analytics/feedback',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Sparkles,
-        label: 'AI Coach Studio',
-        path: '/owner/premium/ai-coach',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Gift,
-        label: 'Voucher 3D Designer',
-        path: '/owner/premium/voucher-3d',
-        roles: ['GLOBAL_OWNER', 'SPONSOR'],
-      },
-      {
-        icon: Leaf,
-        label: 'ESG Portal',
-        path: '/owner/premium/esg',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: Play,
-        label: 'Simulator',
-        path: '/owner/analytics/simulator',
-        roles: ['GLOBAL_OWNER'],
-      },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      {
-        icon: Settings,
-        label: 'Settings',
-        path: '/owner/settings',
-        roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'],
-      },
-      {
-        icon: ShieldAlert,
-        label: 'RBAC Manager',
-        path: '/owner/system/rbac',
-        roles: ['GLOBAL_OWNER'],
-      },
-      {
-        icon: Zap,
-        label: 'Feature Flags',
-        path: '/owner/system/feature-flags',
-        roles: ['GLOBAL_OWNER'],
-      },
-      {
-        icon: TrendingUp,
-        label: 'Leaderboards',
-        path: '/owner/system/leaderboards',
-        roles: ['GLOBAL_OWNER'],
-      },
-      {
-        icon: Zap,
-        label: 'Export Center',
-        path: '/owner/system/export',
-        roles: ['GLOBAL_OWNER'],
-      },
-      {
-        icon: Zap,
-        label: 'API Playground',
-        path: '/owner/system/api-playground',
-        roles: ['GLOBAL_OWNER'],
-      },
-    ],
-  },
-];
-
-/* ─── Role display helpers ──────────────────────────────── */
-const ROLE_LABEL: Record<string, string> = {
-  GLOBAL_OWNER: 'Global Owner',
-  TENANT_ADMIN: 'Tenant Admin',
-  TENANT_MODERATOR: 'Moderator',
-  SPONSOR: 'Sponsor',
-  ATHLETE: 'Athlete',
-};
+import { CommandPalette } from './components/CommandPalette';
+import { OpsNotificationBell } from './components/OpsNotificationBell';
+import { useI18n } from '../i18n/useI18n';
+import { NAV_CONFIG } from '../i18n/navConfig';
+import type { I18nCatalog } from '../i18n/types';
 
 /* ─── Layout component ──────────────────────────────────── */
 export const Layout = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { locale, setLocale, initForRole, t } = useI18n();
   const userRole = user?.role ?? '';
+  const moderationBadge = useModerationBadgeCount();
 
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -242,16 +50,28 @@ export const Layout = () => {
     return () => setGlobalErrorHandler(() => { });
   }, []);
 
+  useEffect(() => {
+    initForRole(userRole);
+  }, [userRole, initForRole]);
+
   /* Filter nav sections by role and feature flags */
   const hasHeatmap = user?.tenantFlags?.has_heatmap_analytics ?? false;
-  const filteredSections = NAV_SECTIONS.map((section) => ({
-    ...section,
-    items: section.items.filter((item) => {
-      if (!item.roles.includes(userRole)) return false;
-      if ((item as any).requiresHeatmapFlag && !hasHeatmap) return false;
-      return true;
-    }),
+  const filteredSections = NAV_CONFIG.map((section) => ({
+    label: t.nav.sections[section.sectionKey],
+    items: section.items
+      .filter((item) => {
+        if (!item.roles.includes(userRole)) return false;
+        if (item.requiresHeatmapFlag && !hasHeatmap) return false;
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        label: t.nav.items[item.labelKey],
+      })),
   })).filter((section) => section.items.length > 0);
+
+  const roleLabel =
+    (t.roles as Record<string, string>)[userRole] ?? userRole.replace(/_/g, ' ');
 
   const sidebarWidth = collapsed ? 72 : 260;
   const userInitial = user?.username?.[0]?.toUpperCase() ?? 'A';
@@ -457,18 +277,25 @@ export const Layout = () => {
                       />
 
                       {!collapsed && (
-                        <Text
-                          style={{
-                            fontSize: '13.5px',
-                            fontWeight: 'inherit',
-                            color: 'inherit',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {item.label}
-                        </Text>
+                        <Group gap={6} style={{ flex: 1, minWidth: 0 }}>
+                          <Text
+                            style={{
+                              fontSize: '13.5px',
+                              fontWeight: 'inherit',
+                              color: 'inherit',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {item.label}
+                          </Text>
+                          {(item as { badgeKey?: string }).badgeKey === 'moderation' && moderationBadge > 0 && (
+                            <Badge size="xs" color="orange" variant="filled" circle>
+                              {moderationBadge > 99 ? '99+' : moderationBadge}
+                            </Badge>
+                          )}
+                        </Group>
                       )}
                     </UnstyledButton>
                   );
@@ -600,30 +427,43 @@ export const Layout = () => {
                       whiteSpace: 'nowrap',
                     }}
                   >
-                    {ROLE_LABEL[userRole] ?? userRole.replace(/_/g, ' ')}
+                    {roleLabel}
                   </Text>
                 </Stack>
               )}
             </Group>
 
             {!collapsed && (
-              <Tooltip label="Log out" position="top" withArrow>
-                <ActionIcon
-                  variant="subtle"
-                  color="gray"
-                  size="sm"
-                  onClick={logout}
-                  aria-label="Logout"
-                  style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}
-                >
-                  <LogOut size={14} />
-                </ActionIcon>
-              </Tooltip>
+              <Group gap={4}>
+                <OpsNotificationBell />
+                <Tooltip label={locale === 'pl' ? 'English' : 'Polski'} position="top" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    size="sm"
+                    onClick={() => setLocale(locale === 'pl' ? 'en' : 'pl')}
+                    aria-label="Toggle language"
+                  >
+                    <Text size="10px" fw={700}>{locale.toUpperCase()}</Text>
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label={t.common.logout} position="top" withArrow>
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    onClick={logout}
+                    aria-label="Logout"
+                    style={{ color: 'var(--text-tertiary)', flexShrink: 0 }}
+                  >
+                    <LogOut size={14} />
+                  </ActionIcon>
+                </Tooltip>
+              </Group>
             )}
           </Box>
 
           {collapsed && (
-            <Tooltip label="Log out" position="right" withArrow>
+            <Tooltip label={t.common.logout} position="right" withArrow>
               <ActionIcon
                 variant="subtle"
                 color="gray"
@@ -641,6 +481,7 @@ export const Layout = () => {
 
       {/* ── Main content ───────────────────────────────── */}
       <AppShell.Main>
+        <CommandPalette />
         <Box
           p={{ base: 'md', md: 'xl' }}
           style={{ minHeight: '100%', background: 'var(--surface-secondary)' }}

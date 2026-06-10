@@ -1,0 +1,31 @@
+{
+  "at": "2026-06-10T20:10:07.477Z",
+  "base": "http://127.0.0.1:5173",
+  "results": [
+    {
+      "role": "GLOBAL_OWNER",
+      "skipped": false,
+      "failures": [],
+      "pass": true
+    },
+    {
+      "role": "TENANT_ADMIN",
+      "skipped": false,
+      "failures": [],
+      "pass": true
+    },
+    {
+      "role": "TENANT_MODERATOR",
+      "skipped": false,
+      "failures": [],
+      "pass": true
+    },
+    {
+      "role": "SPONSOR",
+      "skipped": false,
+      "failures": [],
+      "pass": true
+    }
+  ],
+  "pass": true
+}

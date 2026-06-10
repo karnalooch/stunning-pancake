@@ -172,6 +172,12 @@ class TelemetryConfigView(views.APIView):
         return Response({"brouterCutoff": 1.5, "mlSensitivity": 0.8, "autoBan": True})
 
     def post(self, request):
+        role = getattr(request.user, "role", None)
+        if role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
+            return Response(
+                {"detail": "Only platform or tenant admins may change anti-cheat config."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
         try:
             r = get_redis()
             config = request.data
@@ -925,11 +931,19 @@ class POIViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_queryset(self):
-        # Filter by tenant/city
         requesting_user = self.request.user
+        qs = self.queryset.select_related("sponsor")
+        if requesting_user.role == "SPONSOR":
+            try:
+                from rewards.models import Sponsor
+
+                sponsor = requesting_user.sponsor_profile
+                return qs.filter(sponsor=sponsor)
+            except Sponsor.DoesNotExist:
+                return qs.none()
         if requesting_user.role != "GLOBAL_OWNER" and requesting_user.tenant_id:
-            return self.queryset.filter(tenant_id=requesting_user.tenant_id)
-        return self.queryset
+            return qs.filter(tenant_id=requesting_user.tenant_id)
+        return qs
 
     def get_permissions(self):
         # Restrict write operations to GLOBAL_OWNER, TENANT_ADMIN, and SPONSOR
@@ -948,14 +962,18 @@ class POIViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
-        # Automatically assign tenant_id if user is not GLOBAL_OWNER
         requesting_user = self.request.user
+        extra: dict = {}
+        if requesting_user.role == "SPONSOR":
+            try:
+                extra["sponsor"] = requesting_user.sponsor_profile
+            except Exception:
+                pass
         if requesting_user.role != "GLOBAL_OWNER":
-            serializer.save(tenant_id=requesting_user.tenant_id)
+            serializer.save(tenant_id=requesting_user.tenant_id, **extra)
         else:
-            # For GLOBAL_OWNER, allow setting tenant_id or default to None
             tenant_id = self.request.data.get("tenant_id")
-            serializer.save(tenant_id=tenant_id)
+            serializer.save(tenant_id=tenant_id, **extra)
 
     def perform_update(self, serializer):
         # Check tenant isolation

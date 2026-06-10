@@ -1,17 +1,8 @@
 {
   "steps": [
     "login ok",
-    "map ready",
-    "meso tier",
-    "on map > 0",
-    "screenshot saved"
+    "map ready"
   ],
-  "badges": {
-    "drawn": "289 ON MAP",
-    "rendered": "0 RENDERED",
-    "mode": "MESO"
-  },
-  "layerVis": {
-    "source": "none"
-  }
+  "badges": {},
+  "error": "TimeoutError: locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n  - waiting for getByTestId('live-map-city-ranking') to be visible\n"
 }

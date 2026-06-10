@@ -5,8 +5,10 @@
  * local leaderboard, nearby quests, City of the Week.
  */
 
-import React from 'react';
-import { View, Text, ScrollView, Image, Pressable } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Image, Pressable, ActivityIndicator } from 'react-native';
+import { ActivityService, AuthService, type LeaderboardEntry } from '../services/api';
+import { useI18n } from '../i18n/useI18n';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
@@ -76,18 +78,28 @@ const stylesheet = StyleSheet.create(theme => {
     };
 });
 
-const LEADERBOARD = [
-    { rank: 1, name: 'PixelPusher', score: '12.4k', isYou: false },
-    { rank: 2, name: 'AeroKnight', score: '11.8k', isYou: false },
-    { rank: 3, name: 'You', score: '10.2k', isYou: true },
-];
-
 export const CityHubScreen: React.FC<{
     user?: { username: string } | null;
     onStartQuest?: (id: string) => void;
-}> = ({ user, onStartQuest }) => {
-    const { theme } = useUnistyles(); const s = stylesheet;
+    onOpenClubs?: () => void;
+    onOpenSegments?: () => void;
+}> = ({ user, onStartQuest, onOpenClubs, onOpenSegments }) => {
+    const { theme } = useUnistyles();
+    const { t } = useI18n();
+    const s = stylesheet;
     const C = theme.colors as any;
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [lbLoading, setLbLoading] = useState(true);
+    useEffect(() => {
+        AuthService.getProfile()
+            .then((profile) => {
+                const cityId = profile.tenant_id ? String(profile.tenant_id) : 'default';
+                return ActivityService.getLeaderboard(cityId);
+            })
+            .then((rows) => setLeaderboard(rows.slice(0, 10)))
+            .catch(() => setLeaderboard([]))
+            .finally(() => setLbLoading(false));
+    }, [user?.username]);
 
     return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -139,19 +151,34 @@ export const CityHubScreen: React.FC<{
                 <Text style={s.vsDelta}>Leading by 2,320 Velos Points</Text>
             </View>
 
-            {/* Top Riders */}
+            {/* Top Riders — live API */}
             <View style={[s.vsCard, s.shadow]}>
                 <View style={s.vsHeader}>
                     <Text style={{ fontSize: 20 }}>🏆</Text>
-                    <Text style={s.vsTitle}>Top Riders</Text>
+                    <Text style={s.vsTitle}>{t.compete.leaderboard}</Text>
                 </View>
-                {LEADERBOARD.map((r) => (
-                    <View key={r.rank} style={[s.lbRow, r.isYou && { backgroundColor: C.primaryContainer, transform: [{ translateY: -2 }] }, s.shadowSm]}>
-                        <Text style={[s.lbRank, { color: r.rank === 1 ? C.primary : C.secondary }]}>{r.rank}</Text>
-                        <Text style={s.lbName}>{r.name}</Text>
-                        <Text style={[s.lbScore, { color: r.isYou ? C.onBackground : C.onBackground }]}>{r.score}</Text>
-                    </View>
-                ))}
+                {lbLoading ? (
+                    <ActivityIndicator color={C.primary} style={{ marginVertical: 12 }} />
+                ) : leaderboard.length === 0 ? (
+                    <Text style={s.questDist}>{t.compete.empty}</Text>
+                ) : (
+                    leaderboard.map((r) => (
+                        <View
+                            key={`${r.rank}-${r.username}`}
+                            style={[
+                                s.lbRow,
+                                r.is_me && { backgroundColor: C.primaryContainer, transform: [{ translateY: -2 }] },
+                                s.shadowSm,
+                            ]}
+                        >
+                            <Text style={[s.lbRank, { color: r.rank === 1 ? C.primary : C.secondary }]}>{r.rank}</Text>
+                            <Text style={s.lbName}>{r.is_me ? t.compete.you : r.username}</Text>
+                            <Text style={s.lbScore}>
+                                {r.score_km != null ? `${r.score_km.toFixed(1)} km` : `${r.points}`}
+                            </Text>
+                        </View>
+                    ))
+                )}
             </View>
 
             {/* Nearby Quests */}
@@ -174,6 +201,17 @@ export const CityHubScreen: React.FC<{
                         <Text style={s.questTime}>3:12</Text>
                     </Pressable>
                 </View>
+            </View>
+
+            <View style={s.questGrid}>
+                <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={onOpenClubs}>
+                    <Text style={s.questTitle}>🏁 Clubs</Text>
+                    <Text style={s.questDist}>Squad discovery</Text>
+                </Pressable>
+                <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={onOpenSegments}>
+                    <Text style={s.questTitle}>⛰ Segments</Text>
+                    <Text style={s.questDist}>KOM trophies</Text>
+                </Pressable>
             </View>
 
             <View style={{ height: 80 }} />

@@ -17,6 +17,8 @@ import time
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
+
+from users.permissions import IsPlatformHealthViewer
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -95,7 +97,7 @@ class SystemHealthView(APIView):
     GET /api/infra/health/
     """
 
-    permission_classes = (IsAdminUser,)
+    permission_classes = (IsPlatformHealthViewer,)
 
     def get(self, request):
         # -- Redis (existing) --

@@ -82,7 +82,12 @@ class BetaFeedbackListView(generics.ListAPIView):
         if role not in ("GLOBAL_OWNER", "TENANT_ADMIN", "TENANT_MODERATOR"):
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
-        qs = BetaFeedback.objects.select_related("user").order_by("-created_at")[:50]
+        qs = BetaFeedback.objects.select_related("user").order_by("-created_at")
+        role = getattr(request.user, "role", None)
+        tenant_id = getattr(request.user, "tenant_id", None)
+        if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and tenant_id:
+            qs = qs.filter(user__tenant_id=tenant_id)
+        qs = qs[:50]
         data = []
         for f in qs:
             data.append(
@@ -112,7 +117,12 @@ class BetaFeedbackResolveView(APIView):
             return Response({"error": "Unauthorized"}, status=status.HTTP_403_FORBIDDEN)
 
         try:
-            feedback = BetaFeedback.objects.get(pk=feedback_id)
+            feedback = BetaFeedback.objects.select_related("user").get(pk=feedback_id)
+            role = getattr(request.user, "role", None)
+            tenant_id = getattr(request.user, "tenant_id", None)
+            if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and tenant_id:
+                if feedback.user.tenant_id != tenant_id:
+                    return Response({"error": "Forbidden"}, status=status.HTTP_403_FORBIDDEN)
             feedback.resolved = True
             feedback.admin_notes = request.data.get("admin_notes", feedback.admin_notes)
             feedback.save()

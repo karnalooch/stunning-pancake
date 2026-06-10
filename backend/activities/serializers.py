@@ -34,7 +34,16 @@ class POISerializer(serializers.ModelSerializer):
 
     class Meta:
         model = POI
-        fields = ("id", "name", "latitude", "longitude", "category", "description", "tenant_id")
+        fields = (
+            "id",
+            "name",
+            "latitude",
+            "longitude",
+            "category",
+            "description",
+            "tenant_id",
+            "sponsor_id",
+        )
         read_only_fields = ("id",)
 
     def to_representation(self, instance):

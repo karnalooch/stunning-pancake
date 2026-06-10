@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | Active |
 | **Owner role** | Admin / Frontend Lead |
-| **Last reviewed** | 2026-06-07 |
+| **Last reviewed** | 2026-06-10 |
 | **Audience** | Admin developers, Release Manager, Platform Operator |
 | **lang** | en |
 | **translation** | [Polski](../pl/admin/ADMIN_ROADMAP.md) |
@@ -49,8 +49,9 @@ flowchart LR
 | P0 closure (code) | Done — verify prod via [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) |
 | Paczka 1a | Done |
 | Paczka 1b core | Done |
-| Operational gate | In progress — role smoke + routing queue stability |
-| Paczka 2 Sponsor | Next product (after gate) |
+| Overhaul program (S1–S6 code) | **Done** — [overhaul_plan/README.md](../overhaul_plan/README.md) |
+| Operational gate | In progress — prod `p0-role-smoke` + Railway verify |
+| Paczka 2–6 (product) | Code delivered; gate before prod promotion |
 
 ---
 
@@ -68,37 +69,38 @@ flowchart LR
 
 ### S1 — Paczka 2 Sponsor
 
-| Deliverable | Detail doc |
-|-------------|------------|
-| Nav: Dashboard, POI, Vouchers, Analytics | P1 §3 |
-| Empty states + CTA | UI_AUDIT P3 |
-| Sponsor-scoped pools API | `backend/rewards/views.py` |
-| POI map editor UI | `admin/src/modules/sponsor/SponsorPOIMap.tsx` |
+| Deliverable | Detail doc | Vision doc |
+|-------------|------------|------------|
+| Nav: Dashboard, POI, Vouchers, Analytics | P1 §3 | [SPONSOR_EXPERIENCE_OVERHAUL](../overhaul_plan/SPONSOR_EXPERIENCE_OVERHAUL.md) F0–F2 |
+| Empty states + CTA | UI_AUDIT P3 | Sponsor F8 |
+| Sponsor-scoped pools API | `backend/rewards/views.py` | Sponsor F0 |
+| POI map editor UI | `admin/src/modules/sponsor/SponsorPOIMap.tsx` | Sponsor F2 |
 
 **Gate:** P0 smoke GO for SPONSOR section.
 
 ### S2 — Paczka 3 GO tooling
 
-| Deliverable | Detail doc |
-|-------------|------------|
-| Control-plane health strip | UI_AUDIT §P1 Global Owner |
-| Tenant row drill-down | P1 §4 Paczka 3 |
-| Simulator excluded from prod KPI badge | UI_AUDIT P2 Simulator |
+| Deliverable | Detail doc | Vision doc |
+|-------------|------------|------------|
+| Control-plane health strip | UI_AUDIT §P1 Global Owner | [GLOBAL_OWNER_EXPERIENCE_OVERHAUL](../overhaul_plan/GLOBAL_OWNER_EXPERIENCE_OVERHAUL.md) F1 |
+| Tenant row drill-down | P1 §4 Paczka 3 | GO F1 |
+| Simulator excluded from prod KPI badge | UI_AUDIT P2 Simulator | GO F2 |
 
 ### S3 — Paczka 4 Tenant Admin
 
-| Deliverable | Detail doc |
-|-------------|------------|
-| Scoped dashboard (`tenant_id`) | UI_AUDIT §P1 Tenant Admin |
-| Departments moderator assign | UI_AUDIT P2 Departments |
+| Deliverable | Detail doc | Vision doc |
+|-------------|------------|------------|
+| Scoped dashboard (`tenant_id`) | UI_AUDIT §P1 Tenant Admin | [TENANT_ADMIN_EXPERIENCE_OVERHAUL](../overhaul_plan/TENANT_ADMIN_EXPERIENCE_OVERHAUL.md) Faza B |
+| Departments moderator assign | UI_AUDIT P2 Departments | Tenant Faza E |
+| Unified Ops Inbox | P1 §4 | Tenant Faza C |
 
 ### S4 — Paczka 5 Moderator
 
-| Deliverable | Detail doc |
-|-------------|------------|
-| Unified inbox route | P1 §4 Paczka 5 |
-| Anti-Cheat depth | ROADMAP_V3 §6 |
-| GPX attachment in cases | P2 §2 overlap F1 |
+| Deliverable | Detail doc | Vision doc |
+|-------------|------------|------------|
+| Unified inbox route | P1 §4 Paczka 5 | [MODERATOR_PANEL_OVERHAUL](../overhaul_plan/MODERATOR_PANEL_OVERHAUL.md) P0 |
+| Anti-Cheat depth | ROADMAP_V3 §6 | Moderator P0 §3 |
+| GPX attachment in cases | P2 §2 overlap F1 | Moderator ActivityDetail |
 
 ### S5 — P2 Auth + GPX F2–F5
 
@@ -106,6 +108,16 @@ flowchart LR
 |-------|------------|
 | MFA / 2FA for GLOBAL_OWNER | [P2_ROADMAP.md](./P2_ROADMAP.md) §4 |
 | GPX archive, anti-cheat, RODO ZIP | [P2_ROADMAP.md](./P2_ROADMAP.md) §2 (F1 done) |
+
+### S6 — Mobile athlete panel
+
+| Deliverable | Detail doc | Vision doc |
+|-------------|------------|------------|
+| Ride loop (nav, MapLibre HUD, summary) | `mobile/App.tsx`, screen-architecture plan | [USER_PANEL_VISION](../overhaul_plan/USER_PANEL_VISION.md) P0 |
+| Training log + moderation status | `mobile/src/services/ActivityService` | User P0 §4–5 |
+| Profile, marketplace, i18n | mobile screens | User P1 |
+
+**Gate:** Mobile Jest green + manual ride smoke. Depends on S4 BE for `rejection_reason`.
 
 ### Later — ROADMAP_V3 premium §7
 
@@ -143,3 +155,4 @@ AI Coach studio · Voucher 3D customizer · ESG portal — [ROADMAP_V3.md](./ROA
 | Live Map | [operations/LIVE_MAP.md](../operations/LIVE_MAP.md) |
 | Reliability | [reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md) |
 | Department sponsors | [DEPARTMENT_ARCHITECTURE.md](../DEPARTMENT_ARCHITECTURE.md) |
+| Experience visions (per role) | [overhaul_plan/README.md](../overhaul_plan/README.md) |

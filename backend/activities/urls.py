@@ -1,6 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
+from .moderation_views import ModerationAssignView, ModerationHistoryView, ModerationQueueView
 from .admin_views import (
     ActivityApproveView,
     ActivityRejectView,
@@ -72,6 +73,21 @@ urlpatterns = [
     path("admin/all/", GlobalActivityListView.as_view(), name="global-activities"),
     path("admin/tenant/", TenantActivityListView.as_view(), name="tenant-activities"),
     path("admin/stats/", AdminDashboardStatsView.as_view(), name="admin-stats"),
+    path(
+        "admin/moderation/queue/",
+        ModerationQueueView.as_view(),
+        name="admin-moderation-queue",
+    ),
+    path(
+        "admin/moderation/history/",
+        ModerationHistoryView.as_view(),
+        name="admin-moderation-history",
+    ),
+    path(
+        "admin/moderation/assign/<int:activity_id>/",
+        ModerationAssignView.as_view(),
+        name="admin-moderation-assign",
+    ),
     path("admin/approve/<int:activity_id>/", ActivityApproveView.as_view(), name="admin-approve"),
     path("admin/reject/<int:activity_id>/", ActivityRejectView.as_view(), name="admin-reject"),
     path("vouchers/redeem/<str:code>/", VoucherRedeemView.as_view(), name="voucher-redeem"),
