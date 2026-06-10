@@ -168,4 +168,6 @@ class AuditLog(models.Model):
 
 
 # Import other models in this app at the bottom to ensure they are registered with Django's app registry.
-from .rbac_models import Role, UserRole
+from .departments import Department, UserDepartment  # noqa: E402, F401
+from .export_models import UserDataExport  # noqa: E402, F401
+from .rbac_models import Role, UserRole  # noqa: E402, F401
