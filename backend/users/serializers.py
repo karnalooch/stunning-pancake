@@ -10,16 +10,32 @@ class TenantSerializer(serializers.ModelSerializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    impersonator_username = serializers.CharField(
-        source="impersonator.username", read_only=True, default=None
-    )
-    target_user_username = serializers.CharField(
-        source="target_user.username", read_only=True, default=None
-    )
+    """List/detail serializer — null-safe usernames for deleted or absent FK users."""
+
+    impersonator_username = serializers.SerializerMethodField()
+    target_user_username = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditLog
-        fields = "__all__"
+        fields = (
+            "id",
+            "timestamp",
+            "action",
+            "status_code",
+            "ip_address",
+            "tenant_id",
+            "details",
+            "impersonator",
+            "target_user",
+            "impersonator_username",
+            "target_user_username",
+        )
+
+    def get_impersonator_username(self, obj: AuditLog) -> str | None:
+        return obj.impersonator.username if obj.impersonator_id and obj.impersonator else None
+
+    def get_target_user_username(self, obj: AuditLog) -> str | None:
+        return obj.target_user.username if obj.target_user_id and obj.target_user else None
 
 
 class UserSerializer(serializers.ModelSerializer):

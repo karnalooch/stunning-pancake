@@ -194,7 +194,10 @@ export const AdminApi = {
   },
   getAuditLogs: async (limit?: number) => {
     const params = limit ? { limit } : {};
-    const { data } = await apiClient.get('/users/audit-log/', { params });
+    const { data } = await apiClient.get('/users/audit-log/', {
+      params,
+      skipGlobalError: true,
+    } as ApiClientRequestConfig);
     if (Array.isArray(data)) return data;
     if (data && Array.isArray(data.results)) return data.results;
     return [];

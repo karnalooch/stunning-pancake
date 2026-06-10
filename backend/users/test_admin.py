@@ -403,6 +403,35 @@ class TestRolePermissions:
 
 
 @pytest.mark.django_db
+class TestAuditLogList:
+    def test_owner_lists_null_fk_entries(self, api_client, owner_user):
+        AuditLog.objects.create(
+            impersonator=None,
+            target_user=None,
+            action="Admin Action: POST /api/users/create/",
+            status_code=201,
+        )
+        AuditLog.objects.create(
+            impersonator=owner_user,
+            target_user=None,
+            action="Admin Action: GET /api/test/",
+            status_code=200,
+        )
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(reverse("audit-log-list"), {"limit": 200})
+        assert response.status_code == 200
+        assert len(response.data) == 2
+        by_action = {row["action"]: row for row in response.data}
+        assert by_action["Admin Action: POST /api/users/create/"]["impersonator_username"] is None
+        assert by_action["Admin Action: GET /api/test/"]["impersonator_username"] == "owner"
+
+    def test_tenant_admin_denied(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(reverse("audit-log-list"))
+        assert response.status_code == 403
+
+
+@pytest.mark.django_db
 class TestBulkUserEndpoints:
     def test_tenant_admin_bulk_set_status_scoped(
         self, api_client, admin_user, tenant, other_tenant

@@ -502,19 +502,20 @@ class TenantListView(generics.ListAPIView):
 class AuditLogListView(generics.ListAPIView):
     """List audit log entries. GLOBAL_OWNER only."""
 
-    queryset = AuditLog.objects.all()
     serializer_class = AuditLogSerializer
     permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
+    pagination_class = None
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = AuditLog.objects.select_related("impersonator", "target_user")
         action = self.request.query_params.get("action")
         if action:
             qs = qs.filter(action=action)
         limit = self.request.query_params.get("limit")
         if limit:
             try:
-                qs = qs[: int(limit)]
+                limit_n = max(1, min(int(limit), 500))
+                qs = qs[:limit_n]
             except (ValueError, TypeError):
                 pass
         return qs
