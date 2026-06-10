@@ -97,7 +97,8 @@ $requiredSim = @{
     'SCALE_SIM_ASYNC_ROUTING'                   = '1'
     'SCALE_MAX_STARTS_PER_LIVE_TICK'              = '400'
     'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'         = '3000'
-    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK'   = '800'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK'   = '600'
+    'SCALE_SIM_OPTIMAL_TICK_SECONDS'            = '2'
     'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP'         = '0'
     'SIM_BP_MIN_DISPATCH_PER_TICK'                = '120'
     'SIM_BP_DRAIN_DISPATCH_PER_TICK'              = '300'
@@ -147,7 +148,7 @@ $backendService = 'Backend'
 $backendVars = railway variable list -s $backendService 2>&1 | Out-String
 $requiredBackend = @{
     'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH'       = '3000'
-    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK' = '800'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK' = '600'
 }
 foreach ($kv in $requiredBackend.GetEnumerator()) {
     $ok = Test-RailwayVarLine -Output $backendVars -Key $kv.Key -Value $kv.Value

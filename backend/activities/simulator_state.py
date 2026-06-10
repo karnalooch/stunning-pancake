@@ -517,6 +517,13 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     threshold += min(cap_extra, max(0.0, load * per_hundred / 100.0))
     now = time.time()
     if last_tick > 0:
+        # Large warming pipeline: ticks do more work per cycle — avoid false stall/heal storms.
+        try:
+            warming_in_flight = get_live_rides_in_flight_count()
+        except Exception:
+            warming_in_flight = 0
+        if warming_in_flight >= 100:
+            threshold = max(threshold, tick_seconds * 8.0, 45.0)
         return (now - last_tick) > threshold
     # Startup grace before the first successful tick body completes (cold ramp).
     grace_anchor = started_at if started_at > 0 else 0.0

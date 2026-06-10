@@ -39,7 +39,7 @@ def max_routing_queue_depth() -> int | None:
 def max_routing_dispatch_per_tick(scale_limits: dict) -> int:
     """Per-tick cap on new PENDING_ROUTE + route_live_ride_task.delay calls."""
     try:
-        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "400"))
+        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "600"))
     except (TypeError, ValueError):
         cap = 0
     if cap <= 0:

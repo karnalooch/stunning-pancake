@@ -56,8 +56,8 @@ def read_infra_capacity() -> dict[str, Any]:
 
 def optimal_tick_seconds() -> int:
     """Fastest stable tick interval for async routing on current infra."""
-    raw = _int_env("SCALE_SIM_OPTIMAL_TICK_SECONDS", 4)
-    return max(3, min(12, raw))
+    raw = _int_env("SCALE_SIM_OPTIMAL_TICK_SECONDS", 2)
+    return max(2, min(12, raw))
 
 
 def build_live_launch_plan(
