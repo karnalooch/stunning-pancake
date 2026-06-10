@@ -5,7 +5,9 @@
     "dockerfilePath": "celery-worker-simulation/Dockerfile"
   },
   "deploy": {
-    "numReplicas": 8,
+    "multiRegionConfig": {
+      "europe-west4-drams3a": { "numReplicas": 8 }
+    },
     "sleepApplication": false,
     "restartPolicy": "ALWAYS",
     "limitOverride": {
