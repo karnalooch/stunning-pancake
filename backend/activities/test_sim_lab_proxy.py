@@ -433,6 +433,41 @@ def test_try_forward_activities_aggregate_fallback_on_timeout(mock_request, monk
     assert proxied is None
 
 
+@pytest.mark.django_db
+@patch("activities.live_map_api.build_live_map_payload")
+@patch("activities.simulator_state.maybe_advance_live_simulation_from_poll")
+@patch("activities.sim_integration_mode.sim_prod_local_writes", return_value=True)
+def test_telemetry_live_serves_local_when_prod_local_writes(
+    _prod_local,
+    _advance,
+    mock_build,
+    monkeypatch,
+):
+    """SIM_LAB_PROXY on but sim on prod Redis — map must not return empty proxy fallback."""
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_build.return_value = {
+        "positions": [{"deviceId": "d1", "lat": 52.2, "lng": 21.0, "speed": 1, "type": "bike"}],
+        "meta": {"ride_on_map": 1000, "positions_returned": 1},
+    }
+
+    from rest_framework.test import APIClient
+
+    client = APIClient()
+    user = MagicMock(username="global_owner", role="GLOBAL_OWNER", is_authenticated=True)
+    client.force_authenticate(user=user)
+
+    response = client.get(
+        "/api/activities/telemetry/live/?zoom=10&limit=50&bbox=19,51,22,53"
+    )
+    assert response.status_code == 200
+    assert mock_build.called
+    assert len(response.data["positions"]) == 1
+    assert response.data["meta"].get("sim_lab_proxy_fallback") is not True
+
+
 @patch("activities.sim_lab_proxy.requests.request")
 def test_try_forward_activities_passthrough_304(mock_request, monkeypatch):
     monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")

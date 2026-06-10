@@ -94,7 +94,6 @@ def run_live_simulation(
             pool_limit = pool_plan["live_pool_redis_cap"]
             pool_size = sim.set_live_pool_from_db(pool_limit)
             mode_note = f"redis pool (cap {pool_limit})"
-        sim.set_live_state(total_users=pool_size)
         if pool_size < pool_target:
             sim.live_log(
                 f"WARNING: only {pool_size} athletes available (wanted {pool_target}). "

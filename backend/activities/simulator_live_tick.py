@@ -209,6 +209,7 @@ def _run_live_tick_body():
         pipeline_count=pipeline_count,
         global_start_cap=global_start_cap,
         event_stagger_cap=event_stagger_cap,
+        warming_count=int(fsm_for_budget["ride_warming"]),
     )
     target_riding = int(start_budget["target_on_map"])
     needed = int(start_budget["starts_budget"])
@@ -590,23 +591,44 @@ def _run_live_tick_body():
         city_bike_counts=city_bike_counts,
         city_run_counts=city_run_counts,
     )
+    tick_seq = int(state.get("tick_seq", 0)) + 1
+    last_log_riding = int(state.get("last_log_riding", -1))
+    new_riding = fsm["ride_on_map"]
     sim.set_live_state(
-        currently_riding=fsm["ride_on_map"],
+        currently_riding=new_riding,
         total_completed=int(state.get("total_completed", 0)) + completed,
         cheaters_caught=int(state.get("cheaters_caught", 0)) + cheaters,
+        tick_seq=tick_seq,
     )
-    new_riding = fsm["ride_on_map"]
 
-    if started > 0 or completed > 0 or promoted > 0:
-        ctx = []
+    warm_n = int(fsm.get("ride_warming", 0))
+    target_map = int(state.get("target_on_map", 0) or 0)
+    log_activity = started > 0 or completed > 0 or promoted > 0
+    log_riding_change = new_riding != last_log_riding
+    log_heartbeat = bool(state.get("running")) and tick_seq % 15 == 0 and new_riding > 0
+
+    if log_activity or log_riding_change or log_heartbeat:
+        ctx: list[str] = []
         if promoted > 0:
             ctx.append(f"{promoted} → ACTIVE")
         if started > 0:
-            ctx.append(f"{started} started")
+            hint = " (routing…)" if new_riding == 0 and async_routing else ""
+            ctx.append(f"{started} started{hint}")
         if completed > 0:
             ctx.append(f"{completed} completed")
             if cheaters > 0:
                 ctx.append(f"{cheaters} cheater{'s' if cheaters > 1 else ''}")
+        if not ctx:
+            if log_riding_change and new_riding > 0:
+                ctx.append("riders on map")
+            elif log_heartbeat:
+                ctx.append("steady")
+        extra = ""
+        if warm_n > 0 and new_riding < target_map:
+            extra = f", warming={warm_n}"
         sim.live_log(
-            f"Tick: {', '.join(ctx)} — {new_riding} on map, 📡 {len(telemetry_entries)} positions"
+            f"Tick #{tick_seq}: {', '.join(ctx)} — {new_riding} on map, "
+            f"📡 {len(telemetry_entries)} positions{extra}"
         )
+        if log_riding_change:
+            sim.set_live_state(last_log_riding=new_riding)

@@ -234,9 +234,20 @@ def resolve_routing_dispatch_cap(
 
 
 def start_budget_mode() -> str:
-    """active_on_map (default): fast ramp — warming does not block new starts. all_in_flight: legacy."""
-    raw = os.getenv("SCALE_SIM_START_BUDGET_MODE", "active_on_map").strip().lower()
-    return raw if raw in ("active_on_map", "all_in_flight") else "active_on_map"
+    """
+    stable_active (default): cap ACTIVE+warming at target — fast routing without overshoot.
+    active_on_map: fast ramp — warming does not block new starts.
+    all_in_flight: legacy — full pipeline counts toward target.
+    """
+    raw = os.getenv("SCALE_SIM_START_BUDGET_MODE", "stable_active").strip().lower()
+    if raw in ("active_on_map", "all_in_flight", "stable_active"):
+        return raw
+    return "stable_active"
+
+
+def stable_pipeline_headroom() -> int:
+    """Extra in-flight rides above target_on_map when start_budget_mode=stable_active."""
+    return max(10, _int_env("SCALE_SIM_STABLE_PIPELINE_HEADROOM", 50))
 
 
 def max_pipeline_rides(target_on_map: int) -> int:
@@ -266,22 +277,34 @@ def compute_live_start_budget(
     pipeline_count: int,
     global_start_cap: int,
     event_stagger_cap: int | None = None,
+    warming_count: int = 0,
 ) -> dict[str, Any]:
     """
     How many new rides to start this tick (before city balancing).
 
-    Fast path (active_on_map): fill toward target ACTIVE count; pipeline capped separately.
-    Legacy (all_in_flight): target minus full hash length (warming blocks starts).
+    stable_active: ACTIVE + warming count toward target (stable map size, high routing dispatch).
+    active_on_map: fill toward target ACTIVE only; pipeline capped separately (fast ramp).
+    all_in_flight: target minus full hash length (legacy).
     """
     target_on_map = min(max_riders, max(1, int(total_users * active_ratio)))
     mode = start_budget_mode()
+    active = int(active_on_map)
+    warming = int(warming_count)
+    pipe = int(pipeline_count)
     if mode == "all_in_flight":
-        demand_gap = max(0, target_on_map - int(pipeline_count))
+        committed = pipe
+    elif mode == "stable_active":
+        committed = active + warming
     else:
-        demand_gap = max(0, target_on_map - int(active_on_map))
+        committed = active
+
+    demand_gap = max(0, target_on_map - committed)
 
     max_pipe = max_pipeline_rides(target_on_map)
-    pipeline_room = max(0, max_pipe - int(pipeline_count))
+    if mode == "stable_active":
+        max_pipe = min(max_pipe, target_on_map + stable_pipeline_headroom())
+
+    pipeline_room = max(0, max_pipe - pipe)
     needed = min(demand_gap, pipeline_room)
 
     if event_stagger_cap is not None:
@@ -292,8 +315,9 @@ def compute_live_start_budget(
     return {
         "target_on_map": target_on_map,
         "starts_budget": max(0, needed),
-        "slots_free_on_map": max(0, target_on_map - int(active_on_map)),
-        "pipeline_count": int(pipeline_count),
+        "slots_free_on_map": max(0, target_on_map - committed),
+        "committed_riders": committed,
+        "pipeline_count": pipe,
         "max_pipeline_rides": max_pipe,
         "pipeline_room": pipeline_room,
         "start_budget_mode": mode,

@@ -24,7 +24,6 @@ def setup_live_athlete_pool(total_users: int) -> int:
         pool_size = sim.init_live_pool_db_mode(total_users)
     else:
         pool_size = sim.set_live_pool_from_db(pool_plan["live_pool_redis_cap"])
-    sim.set_live_state(total_users=pool_size)
     return pool_size
 
 
@@ -247,6 +246,9 @@ def start_live_simulation_internal(
             live_kw["sim_load"] = sim_load
         sim.set_live_state(**live_kw)
         pool_size = setup_live_athlete_pool(total_users)
+        if pool_size < total_users:
+            total_users = pool_size
+            sim.set_live_state(total_users=total_users)
         sim.live_log(f"LIVE SIM ({source}): pool={pool_size} users (SQLite).")
         live_tick_task.delay()
         sim.start_live_tick_loop()
@@ -279,7 +281,15 @@ def start_live_simulation_internal(
             live_kw["sim_intensity"] = sim_intensity
             live_kw["sim_load"] = sim_load
         sim.set_live_state(**live_kw)
-        pool_size = setup_live_athlete_pool(total_users)
+        pool_target = total_users
+        pool_size = setup_live_athlete_pool(pool_target)
+        if pool_size < pool_target:
+            total_users = pool_size
+            sim.set_live_state(total_users=total_users)
+            sim.live_log(
+                f"WARNING: pool has {pool_size} athletes (wanted {pool_target}). "
+                "Target on map scaled to pool size."
+            )
         sim.live_log(f"LIVE SIM ({source}): pool={pool_size} athletes ready.")
         run_live_simulation.delay()
 

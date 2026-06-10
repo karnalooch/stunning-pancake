@@ -204,6 +204,35 @@ class LiveStartBudgetTest(SimpleTestCase):
         )
         self.assertEqual(budget["starts_budget"], 6)
 
+    @patch.dict("os.environ", {"SCALE_SIM_START_BUDGET_MODE": "stable_active"}, clear=False)
+    def test_stable_active_counts_warming_toward_target(self):
+        budget = bp.compute_live_start_budget(
+            total_users=1000,
+            active_ratio=0.5,
+            max_riders=50_000,
+            active_on_map=120,
+            pipeline_count=400,
+            warming_count=380,
+            global_start_cap=500,
+        )
+        self.assertEqual(budget["target_on_map"], 500)
+        self.assertEqual(budget["committed_riders"], 500)
+        self.assertEqual(budget["starts_budget"], 0)
+        self.assertEqual(budget["slots_free_on_map"], 0)
+
+    @patch.dict("os.environ", {"SCALE_SIM_START_BUDGET_MODE": "stable_active"}, clear=False)
+    def test_stable_active_allows_starts_when_room(self):
+        budget = bp.compute_live_start_budget(
+            total_users=1000,
+            active_ratio=0.5,
+            max_riders=50_000,
+            active_on_map=200,
+            pipeline_count=250,
+            warming_count=50,
+            global_start_cap=500,
+        )
+        self.assertEqual(budget["starts_budget"], 250)
+
     @patch.dict(
         "os.environ",
         {

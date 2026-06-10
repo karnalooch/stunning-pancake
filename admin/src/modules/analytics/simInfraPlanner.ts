@@ -42,7 +42,7 @@ export const DEFAULT_INFRA: InfraCapacity = {
     max_starts_per_live_tick: 400,
     brouter_max_calls_per_tick: 350,
     brouter_route_attempts: 4,
-    routing_dispatch_per_tick: 600,
+    routing_dispatch_per_tick: 500,
     routing_queue_depth_cap: 3000,
     routing_backlog_boost_cap: 1500,
     async_routing: true,

@@ -487,6 +487,7 @@ class TelemetryLiveView(generics.GenericAPIView):
     def get(self, request):
         import logging
 
+        from activities.sim_integration_mode import sim_prod_local_writes
         from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
         log = logging.getLogger(__name__)
@@ -501,7 +502,8 @@ class TelemetryLiveView(generics.GenericAPIView):
             if proxied is not None:
                 return proxied
 
-            if proxy_enabled:
+            # Proxy on + prod-local sim: data lives on this Redis — do not return empty fallback.
+            if proxy_enabled and not sim_prod_local_writes():
                 qp = request.query_params
                 agg_hint = "/api/activities/telemetry/live/aggregate/"
                 if qp:
@@ -620,6 +622,7 @@ class TelemetryLiveAggregateView(generics.GenericAPIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        from activities.sim_integration_mode import sim_prod_local_writes
         from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
         proxy_enabled = sim_lab_proxy_enabled()
@@ -632,7 +635,7 @@ class TelemetryLiveAggregateView(generics.GenericAPIView):
         if proxied is not None:
             return proxied
 
-        if proxy_enabled:
+        if proxy_enabled and not sim_prod_local_writes():
             from activities.live_map_aggregate import build_aggregate_degraded_fallback
 
             return Response(build_aggregate_degraded_fallback())
