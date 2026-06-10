@@ -74,6 +74,17 @@ def test_try_forward_skipped_with_force_local_body(monkeypatch):
     assert try_forward_sim_lab(request, "wipe-data/") is None
 
 
+def test_try_forward_skipped_when_prod_local_writes(monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/simulate/")
+    with patch("activities.sim_integration_mode.sim_prod_local_writes", return_value=True):
+        assert try_forward_sim_lab(request, "simulate/") is None
+
+
 @patch("activities.sim_lab_proxy.requests.request")
 def test_try_forward_returns_response(mock_request, monkeypatch):
     monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")

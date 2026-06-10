@@ -85,15 +85,18 @@ export const SimulatorPage: React.FC = () => {
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
     const [simTarget, setSimTarget] = useState<SimTargetInfo | null>(null);
-    const [integrationTestMode, setIntegrationTestMode] = useState(false);
-    const [integrationTestLoading, setIntegrationTestLoading] = useState(false);
+    const [prodLocalSim, setProdLocalSim] = useState(false);
+    const [dataPlaneLoading, setDataPlaneLoading] = useState(false);
 
     const environmentLabel = useMemo(
         () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
         [],
     );
 
-    const wipeTarget: WipeTarget = simTarget?.mode === 'sim-lab-proxy' ? 'sim-lab' : 'prod-local';
+    const wipeTarget: WipeTarget =
+        simTarget?.prod_local_writes || simTarget?.mode === 'prod-local-sim' || simTarget?.mode === 'local'
+            ? 'prod-local'
+            : 'sim-lab';
 
     const requiredWipePhrase = useMemo(
         () => `DELETE ALL DATA — ${environmentLabel} — GLOBAL_OWNER`,
@@ -106,7 +109,9 @@ export const SimulatorPage: React.FC = () => {
     const livePollFailuresRef = useRef(0);
     const logEndRef = useRef<HTMLDivElement>(null);
 
-    const simLabReachable = simTarget?.mode !== 'sim-lab-proxy'
+    const simLabReachable = Boolean(simTarget?.prod_local_writes)
+        || simTarget?.mode === 'prod-local-sim'
+        || simTarget?.mode !== 'sim-lab-proxy'
         || simTarget?.sim_lab_health?.reachable !== false;
     const liveStartBlocked = liveEnabled && !simLabReachable;
 
@@ -137,37 +142,36 @@ export const SimulatorPage: React.FC = () => {
         SimulatorApi.getSimTarget()
             .then((info) => {
                 setSimTarget(info);
-                if (typeof info.integration_test_mode === 'boolean') {
-                    setIntegrationTestMode(info.integration_test_mode);
+                if (typeof info.prod_local_writes === 'boolean') {
+                    setProdLocalSim(info.prod_local_writes);
                 }
             })
             .catch(() => setSimTarget(null));
     }, []);
 
-    const canToggleIntegrationMode =
-        isGlobalOwner && Boolean(simTarget?.integration_test_editable);
+    const canToggleDataPlane = isGlobalOwner && Boolean(simTarget?.prod_local_editable);
 
-    const onIntegrationTestModeChange = async (checked: boolean) => {
-        setIntegrationTestLoading(true);
+    const onProdLocalSimChange = async (checked: boolean) => {
+        setDataPlaneLoading(true);
         try {
-            const result = await SimulatorApi.setIntegrationTestMode(checked);
-            setIntegrationTestMode(result.enabled);
+            const result = await SimulatorApi.setSimDataPlane(checked ? 'production' : 'sim-lab');
+            setProdLocalSim(Boolean(result.prod_local_writes));
             refreshSimTarget();
             notifications.show({
-                title: checked ? 'Tryb integracyjny włączony' : 'Tryb integracyjny wyłączony',
+                title: checked ? 'Symulacja na produkcji' : 'Symulacja na sim-lab',
                 message: checked
-                    ? 'Symulowani użytkownicy przechodzą przez ścieżki jak prawdziwi (GPX, anti-cheat, KPI bez flagi synthetic).'
-                    : 'Przywrócono standardowe oznaczanie danych syntetycznych.',
-                color: checked ? 'teal' : 'gray',
+                    ? 'Batch, live sim, mapa i KPI używają prod Postgres/Redis/Celery — jak prawdziwi użytkownicy.'
+                    : 'Symulator znów działa na izolowanym 4velo-sim-lab (bez obciążania prod DB).',
+                color: checked ? 'orange' : 'teal',
             });
         } catch (err: unknown) {
             notifications.show({
-                title: 'Nie udało się zmienić trybu',
-                message: formatApiError(err, 'Sprawdź połączenie z sim-lab.'),
+                title: 'Nie udało się zmienić data plane',
+                message: formatApiError(err, 'Wymagany GLOBAL_OWNER.'),
                 color: 'red',
             });
         } finally {
-            setIntegrationTestLoading(false);
+            setDataPlaneLoading(false);
         }
     };
 
@@ -476,11 +480,16 @@ export const SimulatorPage: React.FC = () => {
         <Box p="md">
             <PageHeader title="🚴 Cycling Simulator" subtitle="Interactive step-by-step wizard to configure, generate, and monitor live cyclists" />
 
+            {simTarget?.mode === 'prod-local-sim' && (
+                <Alert variant="light" color="orange" icon={<AlertTriangle size={18} />} title="Symulacja na produkcji">
+                    Batch, live sim, mapa i telemetry trafiają do <b>prod Postgres / Redis / Celery</b>.
+                    Symulowani użytkownicy są traktowani jak prawdziwi. Wipe w Simulatorze czyści prod DB symulacji.
+                </Alert>
+            )}
             {simTarget?.mode === 'sim-lab-proxy' && (
                 <Alert variant="light" color="teal" icon={<ShieldCheck size={18} />} title="Symulacja na sim-lab">
                     Batch, live sim i wipe z tej strony działają na izolowanej infrastrukturze ({simTarget.sim_lab_label || 'sim-lab'}).
-                    KPI na dashboardzie czytają prod DB — aby je wyczyścić, użyj <b>Settings → Danger Zone</b> lub{' '}
-                    <code>node scripts/wipe-prod-local.mjs</code>.
+                    KPI na dashboardzie są federowane z sim-lab. Prod DB nietknięty.
                 </Alert>
             )}
             {simTarget?.prod_heavy_sim_guard && simTarget.mode !== 'sim-lab-proxy' && (
@@ -498,21 +507,21 @@ export const SimulatorPage: React.FC = () => {
                 </Alert>
             )}
 
-            {canToggleIntegrationMode && simTarget?.sim_lab_health?.reachable !== false && (
+            {canToggleDataPlane && (
                 <Card withBorder radius="md" p="md" mb="md">
                     <Group justify="space-between" align="flex-start" wrap="nowrap">
                         <Stack gap={4} style={{ flex: 1 }}>
-                            <Text fw={600}>Tryb integracyjny (jak prawdziwi użytkownicy)</Text>
+                            <Text fw={600}>Prawdziwe bazy produkcyjne</Text>
                             <Text size="sm" c="dimmed">
-                                Na izolowanym sim-lab: bez flagi synthetic w KPI, bez auto-czyszczenia aktywności
-                                symulacji, GPX/forensics traktują dane jak produkcyjne. Prod DB pozostaje nietknięta.
+                                Włączone: symulator zapisuje do prod DB i endpointów (jak realni użytkownicy).
+                                Wyłączone: izolowany {simTarget?.sim_lab_label || 'sim-lab'} — bez obciążania 4VELO OS.
                             </Text>
                         </Stack>
                         <Switch
-                            checked={integrationTestMode}
-                            onChange={(e) => onIntegrationTestModeChange(e.currentTarget.checked)}
-                            disabled={integrationTestLoading || !simLabReachable}
-                            label={integrationTestMode ? 'Włączony' : 'Wyłączony'}
+                            checked={prodLocalSim}
+                            onChange={(e) => onProdLocalSimChange(e.currentTarget.checked)}
+                            disabled={dataPlaneLoading || (!prodLocalSim && !simLabReachable)}
+                            label={prodLocalSim ? 'Prod DB' : 'Sim-lab'}
                             size="md"
                         />
                     </Group>

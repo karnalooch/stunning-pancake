@@ -215,7 +215,9 @@ def build_sim_kpi_snapshot() -> dict:
             sim_lab_proxy_enabled,
         )
 
-        if sim_lab_proxy_enabled():
+        from activities.sim_integration_mode import sim_prod_local_writes
+
+        if sim_lab_proxy_enabled() and not sim_prod_local_writes():
             health = probe_sim_lab_health()
             if health.get("reachable"):
                 live = fetch_sim_lab_admin_json("live-simulate/", query="?light=1") or {}

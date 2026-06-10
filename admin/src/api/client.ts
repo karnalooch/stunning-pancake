@@ -353,8 +353,17 @@ export type IntegrationTestModeInfo = {
   editable?: boolean;
 };
 
+export type SimDataPlaneInfo = {
+  prod_local_writes?: boolean;
+  sim_data_plane?: 'production' | 'sim-lab';
+  prod_local_env_default?: boolean;
+  prod_local_redis_override?: boolean;
+  prod_local_editable?: boolean;
+  integration_test_mode?: boolean;
+};
+
 export type SimTargetInfo = {
-  mode: 'local' | 'sim-lab-proxy';
+  mode: 'local' | 'sim-lab-proxy' | 'prod-local-sim';
   sim_lab_label?: string | null;
   sim_lab_base_url?: string | null;
   prod_heavy_sim_guard?: boolean;
@@ -365,6 +374,9 @@ export type SimTargetInfo = {
   integration_test_env_default?: boolean;
   integration_test_redis_override?: boolean;
   integration_test_editable?: boolean;
+  prod_local_writes?: boolean;
+  sim_data_plane?: 'production' | 'sim-lab';
+  prod_local_editable?: boolean;
 };
 
 export type DashboardStatsPayload = {
@@ -391,6 +403,16 @@ export const SimulatorApi = {
 
   setIntegrationTestMode: async (enabled: boolean): Promise<IntegrationTestModeInfo> => {
     const { data } = await apiClient.post('/activities/admin/integration-test-mode/', { enabled });
+    return data;
+  },
+
+  getSimDataPlane: async (): Promise<SimDataPlaneInfo> => {
+    const { data } = await apiClient.get('/activities/admin/sim-data-plane/');
+    return data;
+  },
+
+  setSimDataPlane: async (target: 'production' | 'sim-lab'): Promise<SimDataPlaneInfo> => {
+    const { data } = await apiClient.post('/activities/admin/sim-data-plane/', { target });
     return data;
   },
 

@@ -632,9 +632,10 @@ class LiveSimulationView(APIView):
         return Response(body)
 
     def post(self, request):
+        from activities.sim_integration_mode import sim_prod_local_writes
         from activities.sim_lab_proxy import probe_sim_lab_health, sim_lab_proxy_enabled
 
-        if sim_lab_proxy_enabled():
+        if sim_lab_proxy_enabled() and not sim_prod_local_writes():
             health = probe_sim_lab_health()
             if not health.get("reachable"):
                 return Response(
@@ -1226,7 +1227,7 @@ class SimTargetView(APIView):
 class IntegrationTestModeView(APIView):
     """
     GET/POST /api/activities/admin/integration-test-mode/
-    Toggle sim-lab treating synthetic users like production (GPX, retention, KPI labels).
+    Sim-lab: prod-like heuristics on isolated DB. Deprecated for prod routing — use sim-data-plane/.
     """
 
     permission_classes = [IsAdminRole]
@@ -1285,6 +1286,46 @@ class IntegrationTestModeView(APIView):
                 "editable": True,
             }
         )
+
+
+class SimDataPlaneView(APIView):
+    """
+    GET/POST /api/activities/admin/sim-data-plane/
+    Prod admin: route simulator to production DB or isolated sim-lab.
+    """
+
+    permission_classes = [IsGlobalOwner]
+
+    def get(self, request):
+        from activities.sim_integration_mode import sim_data_plane_info
+
+        return Response(sim_data_plane_info())
+
+    def post(self, request):
+        from activities.sim_integration_mode import (
+            set_prod_local_writes,
+            sim_data_plane_info,
+        )
+        from activities.sim_lab_proxy import clear_integration_target_cache, sim_lab_proxy_enabled
+
+        if not sim_lab_proxy_enabled():
+            return Response(
+                {"error": "SIM_LAB_PROXY is not enabled; simulator already uses local DB"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        raw = request.data.get("target")
+        if raw is None and "prod_local_writes" in request.data:
+            raw = "production" if request.data.get("prod_local_writes") else "sim-lab"
+        if raw not in ("production", "sim-lab"):
+            return Response(
+                {"error": 'target must be "production" or "sim-lab"'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        set_prod_local_writes(raw == "production")
+        clear_integration_target_cache()
+        return Response(sim_data_plane_info())
 
 
 class ScalePreflightView(APIView):

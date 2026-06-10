@@ -79,15 +79,19 @@ SIM_LAB_PROXY_SECRET=<ten sam secret>
 
 Po redeploy admin pokaże baner „Symulacja na sim-lab”. Bez proxy: prod blokuje batch &gt; `PROD_MAX_BATCH_USERS` (domyślnie 10k) i live &gt; `PROD_MAX_LIVE_ACTIVE` (5k).
 
-### Tryb integracyjny (symulowani = jak prawdziwi)
+### Data plane: sim-lab vs prod DB
 
-W **Simulator** (prod admin → sim-lab): przełącznik *Tryb integracyjny* lub na sim-lab:
+Domyślnie (proxy ON): symulator na **izolowanym sim-lab**.
+
+W **Simulator** (prod admin): przełącznik **Prawdziwe bazy produkcyjne** (`POST /activities/admin/sim-data-plane/` → `target: production`) albo:
 
 ```text
-SIM_INTEGRATION_TEST_MODE=1
+SIM_PROD_LOCAL_WRITES=1   # tylko prod backend
 ```
 
-Efekt na **sim-lab** (nie dotyka prod Postgres): brak flagi `synthetic` w federowanych KPI, GPX/forensics nie oznaczają `simulated_activity`, wyłączone auto-czyszczenie `@aktywnemiasta.pl`. Do testów leaderboardów, anti-cheat, eksportu itd.
+Efekt: batch/live/map/KPI trafiają do **prod Postgres/Redis/Celery** — symulowani użytkownicy jak prawdziwi. Tylko `GLOBAL_OWNER`.
+
+Na samym sim-lab (bez proxy): `SIM_INTEGRATION_TEST_MODE=1` — prod-like heuristics na izolowanej DB.
 
 ### Read federation (prod dashboard → sim-lab KPI)
 

@@ -48,10 +48,18 @@ def sim_lab_read_federation_enabled() -> bool:
     """When true, prod BFF federates read-only admin KPIs (e.g. admin/stats) to sim-lab."""
     if not sim_lab_proxy_enabled():
         return False
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if sim_prod_local_writes():
+        return False
     return os.getenv("SIM_LAB_READ_FEDERATION_ENABLED", "0").lower() in ("1", "true", "yes")
 
 
 def dashboard_data_source() -> str:
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if sim_prod_local_writes():
+        return "production"
     if sim_lab_read_federation_enabled():
         return "sim-lab"
     return "production"
@@ -199,15 +207,24 @@ def _integration_mode_target_fields(*, health: dict[str, Any] | None = None) -> 
 
 
 def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
+    from activities.sim_integration_mode import prod_local_writes_info, sim_prod_local_writes
+
     enabled = sim_lab_proxy_enabled()
+    prod_local = sim_prod_local_writes()
     federation = sim_lab_read_federation_enabled()
-    health = probe_sim_lab_health() if include_health and enabled else None
+    health = probe_sim_lab_health() if include_health and enabled and not prod_local else None
     integration = _integration_mode_target_fields(health=health)
     data_source = dashboard_data_source()
     if integration.get("integration_test_mode") and federation:
         data_source = "production"
+    if enabled and prod_local:
+        proxy_mode = "prod-local-sim"
+    elif enabled:
+        proxy_mode = "sim-lab-proxy"
+    else:
+        proxy_mode = "local"
     info: dict[str, Any] = {
-        "mode": "sim-lab-proxy" if enabled else "local",
+        "mode": proxy_mode,
         "sim_lab_label": sim_lab_proxy_public_label() if enabled else None,
         "sim_lab_base_url": (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
         if enabled
@@ -217,6 +234,7 @@ def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
         "read_federation_enabled": federation,
         "dashboard_data_source": data_source,
         **integration,
+        **prod_local_writes_info(),
     }
     if health is not None:
         info["sim_lab_health"] = health
@@ -434,7 +452,9 @@ def try_forward_sim_lab(
     allow_local_fallback: bool = False,
 ) -> Response | None:
     """Return DRF Response when proxied; None to handle locally."""
-    if not sim_lab_proxy_enabled() or _skip_sim_lab_proxy(request):
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if not sim_lab_proxy_enabled() or _skip_sim_lab_proxy(request) or sim_prod_local_writes():
         return None
 
     if allow_local_fallback and request.method in ("GET", "HEAD"):
@@ -471,7 +491,9 @@ def sim_lab_unreachable_response(*, action: str = "simulator") -> Response:
 
 def require_sim_lab_reachable() -> Response | None:
     """Return error Response when proxy enabled but sim-lab is down; else None."""
-    if not sim_lab_proxy_enabled():
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if not sim_lab_proxy_enabled() or sim_prod_local_writes():
         return None
     if probe_sim_lab_health().get("reachable"):
         return None
@@ -531,7 +553,9 @@ def try_forward_sim_lab_activities(
     allow_local_fallback: bool = False,
 ) -> Response | None:
     """Forward telemetry/live and related activity endpoints to sim-lab."""
-    if not sim_lab_proxy_enabled():
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if not sim_lab_proxy_enabled() or sim_prod_local_writes():
         return None
 
     effective_timeout = timeout if timeout is not None else _proxy_map_timeout()
@@ -589,7 +613,9 @@ def assert_prod_heavy_sim_allowed(
     target_active: int | None = None,
 ) -> Response | None:
     """Block heavy sim on prod when proxy is off. Return error Response or None."""
-    if sim_lab_proxy_enabled() or sim_lab_tenant():
+    from activities.sim_integration_mode import sim_prod_local_writes
+
+    if sim_lab_tenant() or sim_prod_local_writes() or sim_lab_proxy_enabled():
         return None
     if os.getenv("ALLOW_PROD_HEAVY_SIM", "0").lower() in ("1", "true", "yes"):
         return None
