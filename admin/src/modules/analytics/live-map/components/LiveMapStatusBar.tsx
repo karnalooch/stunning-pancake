@@ -93,7 +93,7 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
                 </Badge>
                 {showCachedBadge && (
                     <Badge size="xs" color="cyan" variant="light" data-testid="live-map-cached-badge">
-                        cached
+                        z cache
                     </Badge>
                 )}
                 <Text size="xs" c="gray.4" style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -148,7 +148,7 @@ export const LiveMapStatusBar: React.FC<LiveMapStatusBarProps> = (props) => {
                 )}
                 {showCachedBadge && (
                     <Badge size="xs" color="cyan" variant="light" data-testid="live-map-cached-badge">
-                        cached
+                        z cache
                     </Badge>
                 )}
                 {showCachedBadge && onForceRefresh && (

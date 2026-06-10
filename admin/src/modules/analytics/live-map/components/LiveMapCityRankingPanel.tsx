@@ -45,12 +45,13 @@ function Row({
     onClick: () => void;
     onHover?: () => void;
 }) {
+    const inactive = row.total === 0;
+
     return (
         <Box
             component="button"
             type="button"
             onClick={onClick}
-            onMouseEnter={onHover}
             style={{
                 display: 'block',
                 width: '100%',
@@ -60,12 +61,18 @@ function Row({
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
+                opacity: inactive ? 0.72 : 1,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                onHover?.();
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+            }}
         >
             <Group justify="space-between" gap={4} wrap="nowrap">
-                <Text size="xs" c="white" fw={600} truncate>
+                <Text size="xs" c={inactive ? 'gray.5' : 'white'} fw={600} truncate>
                     {row.city.name}
                 </Text>
                 <Group gap={4} wrap="nowrap">
@@ -73,10 +80,12 @@ function Row({
                     {compareDelta != null && compareDelta !== 0 && (
                         <CompareDeltaBadge n={compareDelta} />
                     )}
-                    <Badge size="xs" color="violet" variant="filled">{row.total}</Badge>
+                    <Badge size="xs" color={inactive ? 'gray' : 'violet'} variant={inactive ? 'light' : 'filled'}>
+                        {row.total}
+                    </Badge>
                 </Group>
             </Group>
-            <Text size="2xs" c="gray.5">
+            <Text size="2xs" c="gray.6">
                 {row.bike} rower · {row.run} bieg
             </Text>
         </Box>
@@ -94,8 +103,8 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
     visible,
 }) => {
     if (!visible) return null;
-    const rows = buildCityRanking(counts, bikeCounts, runCounts, trend);
-    if (rows.length === 0) return null;
+    const rows = buildCityRanking(counts, bikeCounts, runCounts, trend, { includeInactive: true });
+    const hasActive = rows.some((r) => r.total > 0);
 
     return (
         <Box
@@ -114,8 +123,11 @@ export const LiveMapCityRankingPanel: React.FC<LiveMapCityRankingPanelProps> = (
                 padding: '8px 6px',
             }}
         >
-            <Text size="xs" c="gray.4" mb={6} px={4} fw={600}>
-                Aktywne miasta
+            <Text size="xs" c="gray.4" mb={2} px={4} fw={600}>
+                {hasActive ? 'Aktywne miasta' : 'Miasta symulacji'}
+            </Text>
+            <Text size="2xs" c="gray.6" mb={6} px={4}>
+                Kliknij, aby zbliżyć widok
             </Text>
             <ScrollArea.Autosize mah={240} type="scroll">
                 {rows.map((row) => (

@@ -5,6 +5,7 @@ import { LiveMapStatusBar } from './components/LiveMapStatusBar';
 import { LiveMapFiltersBar } from './components/LiveMapFiltersBar';
 import { LiveMapCapBanner } from './components/LiveMapCapBanner';
 import { LiveMapCityRankingPanel } from './components/LiveMapCityRankingPanel';
+import { LiveMapEmptyState } from './components/LiveMapEmptyState';
 import { LiveMapDiagnosticsDrawer } from './components/LiveMapDiagnosticsDrawer';
 import { LiveMapReplayScrubber, type LiveMapReplaySource } from './components/LiveMapReplayScrubber';
 import {
@@ -57,6 +58,7 @@ import { isExpectedSimulatorConflict } from '../../../api/simulatorConflict';
 import { formatQuickLaunchError, quickLaunchLiveMap, QuickLaunchBlockedError } from '../../../api/simulatorBatch';
 import { hasStoredSession } from '../../../core/auth/tokens';
 import { useAuth } from '../../../core/auth/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import {
     resolveActivityKind,
@@ -150,6 +152,7 @@ function parseInitialFilters(): LiveMapFilters {
 }
 
 export const LiveMap: React.FC = () => {
+    const navigate = useNavigate();
     const { token, isAuthenticated, user } = useAuth();
     const canFetch = isAuthenticated && Boolean(token || hasStoredSession());
     const mapContainer = useRef<HTMLDivElement>(null);
@@ -1383,7 +1386,7 @@ export const LiveMap: React.FC = () => {
             } else {
                 setLaunchHint(null);
                 notifications.show({
-                    title: 'Launch failed',
+                    title: 'Nie udało się uruchomić',
                     message: formatQuickLaunchError(err),
                     color: 'red',
                 });
@@ -1796,11 +1799,11 @@ export const LiveMap: React.FC = () => {
                     />
                     <Tooltip label="Aktywni jeźdźcy na mapie (FSM, cała symulacja)">
                         <Badge variant="filled" color={onlineCount > 0 ? 'green' : 'gray'} radius="sm" size="md" leftSection={<Activity size={12} />}>
-                            {(onlineCount ?? 0).toLocaleString()} active
+                            {(onlineCount ?? 0).toLocaleString()} aktywni
                         </Badge>
                     </Tooltip>
                     {mapReady && (
-                        <Tooltip label="Pozycje z ostatniego payloadu API (bbox). „On map” = features GeoJSON po filtrze współrzędnych. „Rendered” = widoczne piksele MapLibre.">
+                        <Tooltip label="Pozycje z ostatniego payloadu API (bbox). „Na mapie” = features GeoJSON. „Wyrenderowane” = widoczne piksele MapLibre.">
                             <Badge
                                 variant="light"
                                 color={viewportRiders > 0 ? 'blue' : 'gray'}
@@ -1808,7 +1811,7 @@ export const LiveMap: React.FC = () => {
                                 size="md"
                                 data-testid="live-map-viewport-count"
                             >
-                                {viewportRiders.toLocaleString()} in view
+                                {viewportRiders.toLocaleString()} w widoku
                             </Badge>
                         </Tooltip>
                     )}
@@ -1820,7 +1823,7 @@ export const LiveMap: React.FC = () => {
                             size="md"
                             data-testid="live-map-drawn-count"
                         >
-                            {drawnOnMap.toLocaleString()} on map
+                            {drawnOnMap.toLocaleString()} na mapie
                         </Badge>
                     )}
                     {!filters.presentationMode && mapReady && drawnOnMap > 0 && (
@@ -1838,40 +1841,27 @@ export const LiveMap: React.FC = () => {
                                 size="md"
                                 data-testid="live-map-rendered-count"
                             >
-                                {renderedOnMap.toLocaleString()} rendered
+                                {renderedOnMap.toLocaleString()} wyrenderowane
                             </Badge>
                         </Tooltip>
                     )}
                     {flaggedCount > 0 && (
                         <Tooltip label="Podejrzane aktywności w viewport">
                             <Badge variant="light" color="red" radius="sm" size="md" leftSection={<AlertTriangle size={12} />}>
-                                {flaggedCount} flagged
+                                {flaggedCount} oznaczone
                             </Badge>
                         </Tooltip>
                     )}
                     {rideWarming > 0 && (
-                        <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (not on map yet)">
-                            +{rideWarming.toLocaleString()} warming
+                        <Badge variant="light" color="yellow" radius="sm" size="md" title="PENDING_ROUTE + ROUTING (jeszcze nie na mapie)">
+                            +{rideWarming.toLocaleString()} rozgrzewanie
                         </Badge>
                     )}
                     {cyclists > 0 && (
-                        <Badge variant="light" color="violet" radius="sm" size="md">{cyclists} cyclists</Badge>
+                        <Badge variant="light" color="violet" radius="sm" size="md">{cyclists} rowerzyści</Badge>
                     )}
                     {runners > 0 && (
-                        <Badge variant="light" color="teal" radius="sm" size="md">{runners} runners</Badge>
-                    )}
-                    {!filters.presentationMode && mapReady && mapZoom != null && (
-                        <Tooltip label="Aktualny poziom zoomu MapLibre (ułatwia debug warstw)">
-                            <Badge
-                                variant="outline"
-                                color="indigo"
-                                radius="sm"
-                                size="sm"
-                                style={{ fontVariantNumeric: 'tabular-nums' }}
-                            >
-                                z {mapZoom.toFixed(1)}
-                            </Badge>
-                        </Tooltip>
+                        <Badge variant="light" color="teal" radius="sm" size="md">{runners} biegacze</Badge>
                     )}
                     {zoomMode && mapReady && (
                         <Badge variant="outline" color="grape" radius="sm" size="sm" data-testid="live-map-zoom-mode">{zoomMode}</Badge>
@@ -1887,16 +1877,16 @@ export const LiveMap: React.FC = () => {
                         </Tooltip>
                     )}
                     {sseActive && !filters.presentationMode && (
-                        <Tooltip label="SSE stream 200–500 ms (HTTP poll w tle co ~15 s)">
+                        <Tooltip label="Strumień SSE 200–500 ms (HTTP poll w tle co ~15 s)">
                             <Badge variant="light" color="cyan" radius="sm" size="sm" data-testid="live-map-sse-badge">
-                                Stream
+                                Strumień
                             </Badge>
                         </Tooltip>
                     )}
                     {ingestEngaged && (
                         <Tooltip label="Ochrona ingest aktywna — mapa odświeża się rzadziej (ADR 011)">
                             <Badge variant="light" color="orange" radius="sm" size="sm">
-                                Ingest load
+                                Obciążenie ingest
                             </Badge>
                         </Tooltip>
                     )}
@@ -1910,9 +1900,9 @@ export const LiveMap: React.FC = () => {
                             </Badge>
                         </Tooltip>
                     )}
-                    {onlineCount === 0 && !loading && mapReady && (
+                    {onlineCount === 0 && !loading && mapReady && filters.presentationMode && (
                         <Button size="xs" color="teal" leftSection={<Zap size={14} />} loading={launching} onClick={handleQuickLaunch}>
-                            Quick Launch
+                            Szybki start
                         </Button>
                     )}
                     {cellCount > 0 && showHeatmap && (
@@ -1989,6 +1979,19 @@ export const LiveMap: React.FC = () => {
                 onCityClick={flyToCity}
                 onCityHover={schedulePrefetchOnHover}
                 visible={mapReady && resolveLiveMapTier(mapZoom ?? DEFAULT_ZOOM) === 'macro'}
+            />
+            <LiveMapEmptyState
+                visible={
+                    onlineCount === 0
+                    && !loading
+                    && mapReady
+                    && !filters.presentationMode
+                    && !replayPlaying
+                    && replayIndex < 0
+                }
+                launching={launching}
+                onQuickLaunch={handleQuickLaunch}
+                onOpenSimulator={() => navigate('/owner/analytics/simulator')}
             />
             {loading && <Skeleton height="100%" radius="md" style={{ position: 'absolute', inset: 0, zIndex: 5 }} />}
             {viewportRefreshing && mapReady && !loading && (
@@ -2081,7 +2084,7 @@ export const LiveMap: React.FC = () => {
                 <Box style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: '#f8f9fa', borderRadius: 14, zIndex: 10 }}>
                     <MapIcon size={48} style={{ color: 'var(--accent)', opacity: 0.4 }} />
                     <Skeleton width={200} height={8} radius="xl" />
-                    <Text size="sm" c="dimmed">Loading map tiles...</Text>
+                    <Text size="sm" c="dimmed">Ładowanie kafelków mapy…</Text>
                 </Box>
             )}
             {showHeatmap && cellCount > 0 && (

@@ -8,19 +8,26 @@ export type CityRankingRow = {
     trend: number;
 };
 
+export type BuildCityRankingOptions = {
+    /** Include cities with zero riders (navigation in macro tier). */
+    includeInactive?: boolean;
+};
+
 export function buildCityRanking(
     counts: Record<string, number>,
     bikeCounts: Record<string, number>,
     runCounts: Record<string, number>,
     trend: Record<string, number>,
+    options?: BuildCityRankingOptions,
 ): CityRankingRow[] {
-    return POLAND_SIM_CITIES.map((city) => ({
+    const rows = POLAND_SIM_CITIES.map((city) => ({
         city,
         total: counts[city.slug] ?? 0,
         bike: bikeCounts[city.slug] ?? 0,
         run: runCounts[city.slug] ?? 0,
         trend: trend[city.slug] ?? 0,
-    }))
-        .filter((r) => r.total > 0)
-        .sort((a, b) => b.total - a.total);
+    })).sort((a, b) => b.total - a.total || a.city.name.localeCompare(b.city.name, 'pl'));
+
+    if (options?.includeInactive) return rows;
+    return rows.filter((r) => r.total > 0);
 }

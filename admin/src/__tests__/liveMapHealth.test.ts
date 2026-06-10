@@ -104,7 +104,7 @@ describe('liveMapHealth', () => {
     it('formatLastSyncAgo', () => {
         expect(formatLastSyncAgo(null)).toBe('—');
         expect(formatLastSyncAgo(Date.now() - 500)).toBe('teraz');
-        expect(statusLabel('live')).toBe('Live');
+        expect(statusLabel('live')).toBe('Na żywo');
     });
 
     it('reports stale not error when polls fail but map has cached riders', () => {

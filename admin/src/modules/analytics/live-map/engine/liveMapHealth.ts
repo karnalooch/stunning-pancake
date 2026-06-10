@@ -307,18 +307,18 @@ export function statusColor(status: LiveMapSyncStatus): string {
 export function statusLabel(status: LiveMapSyncStatus): string {
     switch (status) {
         case 'live':
-            return 'Live';
+            return 'Na żywo';
         case 'stale':
-            return 'Stale';
+            return 'Nieaktualne';
         case 'degraded':
-            return 'Degraded';
+            return 'Obniżona jakość';
         case 'error':
-            return 'Error';
+            return 'Błąd';
         case 'paused':
-            return 'Paused';
+            return 'Wstrzymane';
         case 'offline':
-            return 'Background';
+            return 'W tle';
         default:
-            return 'Connecting';
+            return 'Łączenie';
     }
 }
