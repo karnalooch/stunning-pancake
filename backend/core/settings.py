@@ -255,9 +255,16 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_PATCH": True,
     "COMPONENT_SPLIT_REQUEST": True,
-    # users.models.Role (TextChoices) vs rbac_models.Role (Model) — avoid OpenAPI name clash
+    # users.models defines TextChoices Role, then re-exports rbac_models.Role (same name).
+    # Import string "users.models.Role" resolves to the Model, not TextChoices — use values.
     "ENUM_NAME_OVERRIDES": {
-        "LegacyUserRoleEnum": "users.models.Role",
+        "LegacyUserRoleEnum": [
+            "GLOBAL_OWNER",
+            "TENANT_ADMIN",
+            "TENANT_MODERATOR",
+            "ATHLETE",
+            "SPONSOR",
+        ],
     },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
@@ -394,3 +401,6 @@ CELERY_BEAT_SCHEDULE = {
         "options": {"queue": "default"},
     },
 }
+
+# Register drf-spectacular extensions (SafeGeoFeatureModelSerializerExtension).
+import core.openapi_extensions  # noqa: E402, F401
