@@ -99,13 +99,15 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
 export default function App() {
   const { isAuthenticated, login } = useAuth();
 
-  const handleLogin = async (username: string, password: string) => {
+  const handleLogin = async (username: string, password: string, mfaCode?: string) => {
     try {
       clearStoredSession();
       useAuth.getState().logout();
 
       const baseURL = apiClient.defaults.baseURL || '/api';
-      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, { username, password });
+      const payload: Record<string, string> = { username, password };
+      if (mfaCode) payload.mfa_code = mfaCode;
+      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, payload);
       const { access, refresh } = res.data;
 
       localStorage.setItem('access_token', access);
@@ -125,6 +127,11 @@ export default function App() {
       });
     } catch (error: any) {
       const data = error?.response?.data;
+      if (data?.mfa_required) {
+        const err = new Error('MFA code required') as Error & { mfaRequired?: boolean };
+        err.mfaRequired = true;
+        throw err;
+      }
       const detail = data?.detail;
       const msg =
         (typeof detail === 'string' && detail) ||

@@ -160,7 +160,7 @@ jobs:
           SECRET_KEY: ci-insecure-key
         run: |
           cd backend
-          python run_pytest.py activities/test_anomaly_queue.py rewards/test_pools.py -q
+          python run_pytest.py activities/test_anomaly_queue.py rewards/test_pools.py users/test_jwt_mfa.py -q
 
       - name: Backend coverage gate (phased P2, 40% on guarded modules)
         env:

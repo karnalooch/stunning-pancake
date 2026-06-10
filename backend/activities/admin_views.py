@@ -288,6 +288,13 @@ class ActivityApproveView(APIView):
 
             credited = credit_verified_activity(activity)
 
+            gpx_archived = False
+            if activity.route_path_id and activity.route_path and activity.route_path.num_coords >= 2:
+                from activities.tasks import generate_gpx_task
+
+                generate_gpx_task.delay(activity.id)
+                gpx_archived = True
+
             return Response(
                 {
                     "status": "approved",
@@ -295,6 +302,7 @@ class ActivityApproveView(APIView):
                     "user": activity.user.username,
                     "verification_score": activity.verification_score,
                     "leaderboard_credited": credited,
+                    "gpx_archive_queued": gpx_archived,
                 }
             )
         except Activity.DoesNotExist:

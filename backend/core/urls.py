@@ -2,7 +2,9 @@ from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView, TokenVerifyView
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+
+from users.jwt_views import MfaTokenObtainPairView
 
 from core import facebook_auth, google_auth
 from core.infra_views import (
@@ -51,7 +53,7 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     # Phase 2: JWT Auth
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/token/", MfaTokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     # Google OAuth2 — custom (bypasses allauth)

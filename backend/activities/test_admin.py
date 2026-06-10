@@ -196,6 +196,22 @@ class TestAdminDashboardStats:
 
 @pytest.mark.django_db
 class TestActivityModeration:
+    def test_approve_queues_gpx_archive(self, api_client, owner_user, unverified_activity):
+        from unittest.mock import patch
+
+        from django.contrib.gis.geos import LineString
+
+        unverified_activity.route_path = LineString((21.0, 52.0), (21.01, 52.01), srid=4326)
+        unverified_activity.save(update_fields=["route_path"])
+
+        url = reverse("admin-approve", kwargs={"activity_id": unverified_activity.id})
+        with patch("activities.tasks.generate_gpx_task.delay") as mock_delay:
+            api_client.force_authenticate(user=owner_user)
+            response = api_client.post(url)
+            mock_delay.assert_called_once_with(unverified_activity.id)
+        assert response.status_code == 200
+        assert response.data.get("gpx_archive_queued") is True
+
     def test_owner_can_approve(self, api_client, owner_user, unverified_activity):
         api_client.force_authenticate(user=owner_user)
         url = reverse("admin-approve", kwargs={"activity_id": unverified_activity.id})

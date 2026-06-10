@@ -15,9 +15,9 @@
 
 | | |
 |--|--|
-| **Status** | ✅ Active — planowanie; implementacja **po** domknięciu P1 Paczki 1b operacyjnie |
+| **Status** | 🚧 **W toku** — Paczka P2-A wdrożona w kodzie (2026-06-10) |
 | **Owner role** | Admin / Backend Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-06-10 |
 | **Audience** | Admin developers, Platform Operator, Release Manager, DPO |
 | **Standard** | [DOCUMENTATION_STANDARDS.md](../DOCUMENTATION_STANDARDS.md) |
 | **Poprzednik** | [P1_ROADMAP.md](./P1_ROADMAP.md) (Paczki 1–6) |
@@ -62,25 +62,25 @@ Pełna lista use-case’ów GPX (żeby nic nie umknęło): **§2.3**.
 | **F5** | Bulk export RODO | `GET /api/users/me/export/` → ZIP | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 |
 | **F6** | Import upload | GPX → nowa aktywność (Strava/Garmin-style) | **Opcjonalny P2+** — osobny produkt |
 
-#### Faza 1 — on-demand download (MVP)
+#### Faza 1 — on-demand download (MVP) ✅
 
-| Element | Spec |
-|---------|------|
-| Endpoint | `GET /api/activities/{id}/gpx/` |
-| Źródło | Generacja z `route_path` (`gpxpy` / GeoDjango → GPX 1.1) |
-| RBAC | Właściciel aktywności + admin GO / tenant scope |
-| Admin UI | Opcjonalnie „Pobierz GPX” przy debugu jazdy (sim + real) |
-| Test | Jedna jazda bike z LineString → plik z `<trkpt lat lon>` |
+| Element | Spec | Status |
+|---------|------|--------|
+| Endpoint | `GET /api/activities/{id}/gpx/` | ✅ |
+| Źródło | Generacja z `route_path` (`gpxpy` / GeoDjango → GPX 1.1) | ✅ |
+| RBAC | Właściciel aktywności + admin GO / tenant scope | ✅ |
+| Admin UI | Activity Detail — MapLibre route inspector + GPX download | ✅ P2-A |
+| Test | `test_gpx_export.py` | ✅ |
 
-#### Faza 2 — async archiwum (verified complete)
+#### Faza 2 — async archiwum (verified complete) 🟡
 
-| Element | Spec |
-|---------|------|
-| Trigger | Po `is_verified=True` (lub równoważny stan COMPLETED + verified path) |
-| Task | `generate_gpx_task` (Celery, queue `default`) |
-| Storage | S3/R2: `activities/{id}.gpx` + `metadata.json` |
-| Pola DB | `Activity.gpx_storage_key`, `gpx_sha256`, opcjonalnie `gpx_generated_at` |
-| Idempotencja | Ten sam `route_path` hash → skip rewrite |
+| Element | Spec | Status |
+|---------|------|--------|
+| Trigger | Po approve (`ActivityApproveView`) + export queue | ✅ partial |
+| Task | `generate_gpx_task` (Celery, queue `default`) | ✅ |
+| Storage | S3/R2: `activities/{id}.gpx` + `metadata.json` | 🟡 pola DB + sha256; S3 TBD |
+| Pola DB | `Activity.gpx_storage_key`, `gpx_sha256`, `gpx_generated_at` | ✅ migration |
+| Idempotencja | Ten sam `route_path` hash → skip rewrite | ✅ w task |
 
 #### Faza 3 — anty-cheat (batch & fingerprint)
 
@@ -231,13 +231,13 @@ P2 Auth/MFA: po Paczka 4 lub równolegle (ryzyko security — priorytet dla GO)
 
 Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.md#4-paczki-36-skrót) — realizacja w torze P2 **po** paczkach produktowych P1 (5–6 w kolejności P1, lub równolegle gdy zespół auth oddzielny).
 
-| Kryterium | Opis |
-|-----------|------|
-| MFA / 2FA | TOTP (lub WebAuthn — decyzja przy kickoff); wymuszenie dla `GLOBAL_OWNER` |
-| Wipe safety | Typed env phrase + MFA ack — zgodnie z [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) § Wipe |
-| Impersonation audit | `POST /users/impersonate/<id>/` — tylko `GLOBAL_OWNER`; middleware audit; UI sandbox |
-| Settings | Sekcja MFA w admin Settings — persist do API |
-| Testy | `test_impersonation_requires_global_owner` + smoke MFA flow |
+| Kryterium | Opis | Status |
+|-----------|------|--------|
+| MFA / 2FA | TOTP; wymuszenie przy **loginie** dla `GLOBAL_OWNER` z `mfa_enabled` | ✅ P2-A |
+| Wipe safety | Typed env phrase + MFA ack | ✅ (checkbox) |
+| Impersonation audit | `POST /users/impersonate/<id>/` — tylko `GLOBAL_OWNER` | 🟡 istnieje; audit depth TBD |
+| Settings | Sekcja MFA w admin Settings | ✅ |
+| Testy | `users/test_jwt_mfa.py` + `test_mfa.py` | ✅ CI |
 
 **Powiązane:** [UI_AUDIT_2026-06-02.md](./UI_AUDIT_2026-06-02.md) § Wipe / Impersonation · [RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md).
 
@@ -259,5 +259,6 @@ Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.m
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-10 | **P2-A kickoff:** Activity Route Inspector (MapLibre), speed profile, GPX archive on approve, MFA login gate GO |
 | 2026-06-03 | Pełna checklista GPX (§2.3): anty-cheat, forensics, RODO, retencja; fazy F1–F6; non-goals |
 | 2026-06-03 | Utworzenie P2; GPX forensics (F1–F5) + Auth/MFA ex-Paczka 6; decyzja: GPX nie blokuje finish |
