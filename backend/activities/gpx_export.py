@@ -14,6 +14,7 @@ def linestring_to_gpx(
     *,
     track_name: str = "4VELO Activity",
     activity_type: str = "other",
+    simulated: bool = False,
 ) -> str:
     """Build GPX 1.1 XML from a WGS84 LineString (x=lon, y=lat)."""
     if route_path is None or route_path.num_coords < 2:
@@ -26,6 +27,9 @@ def linestring_to_gpx(
     meta = ET.SubElement(root, "metadata")
     ET.SubElement(meta, "name").text = track_name
     ET.SubElement(meta, "time").text = timezone.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+    if simulated:
+        ext = ET.SubElement(meta, "extensions")
+        ET.SubElement(ext, "simulated").text = "true"
 
     trk = ET.SubElement(root, "trk")
     ET.SubElement(trk, "name").text = track_name

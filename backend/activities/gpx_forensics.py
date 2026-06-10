@@ -39,6 +39,39 @@ def gpx_track_distance_m(route_path) -> float:
     return total
 
 
+_SPEED_LIMIT_MPS = {
+    "RUN": 12.0,
+    "BIKE": 25.0,
+    "WALK": 3.5,
+    "WHEELCHAIR": 8.0,
+}
+
+
+def _max_segment_speed_mps(route_path, interval_s: float = 1.0) -> float:
+    if route_path is None or route_path.num_coords < 2 or interval_s <= 0:
+        return 0.0
+    coords = list(route_path.coords)
+    peak = 0.0
+    for i in range(1, len(coords)):
+        dist = _haversine_m(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0])
+        peak = max(peak, dist / interval_s)
+    return peak
+
+
+def is_simulated_activity(activity: Activity) -> bool:
+    """Heuristic: simulator batch users / sim-lab tenants."""
+    user = getattr(activity, "user", None)
+    if user and str(getattr(user, "username", "")).lower().startswith("sim_"):
+        return True
+    tenant = getattr(activity, "tenant", None)
+    if tenant:
+        tid = str(getattr(tenant, "id", "") or "").lower()
+        if "sim" in tid or tid.endswith("-lab"):
+            return True
+    ext = str(getattr(activity, "external_id", "") or "")
+    return ext.startswith("sim:") or ext.startswith("simulator:")
+
+
 def scan_activity_forensics(activity: Activity) -> list[str]:
     """Return human-readable flags for moderator / logging."""
     flags: list[str] = []
@@ -63,5 +96,17 @@ def scan_activity_forensics(activity: Activity) -> list[str]:
         ratio = abs(track_m - float(activity.distance)) / float(activity.distance)
         if ratio > 0.15:
             flags.append(f"metadata_distance_mismatch:{ratio:.2f}")
+
+    act_type = str(getattr(activity, "type", "RUN") or "RUN").upper()
+    peak = _max_segment_speed_mps(activity.route_path)
+    limit = _SPEED_LIMIT_MPS.get(act_type, 15.0)
+    if peak > limit * 1.25:
+        flags.append(f"kinematic_speed_anomaly:{peak:.1f}mps")
+
+    if getattr(activity, "external_id", None) and getattr(activity, "external_source", None):
+        flags.append("wearable_imported")
+
+    if is_simulated_activity(activity):
+        flags.append("simulated_activity")
 
     return flags

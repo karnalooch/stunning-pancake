@@ -15,7 +15,7 @@
 
 | | |
 |--|--|
-| **Status** | 🚧 **W toku** — P2-A ✅ · P2-B/C/F5 🟡 w kodzie (2026-06-10) |
+| **Status** | ✅ **Kod P2 zamknięty** (2026-06-10) — F4 ops / F6 import poza core |
 | **Owner role** | Admin / Backend Lead |
 | **Last reviewed** | 2026-06-10 |
 | **Audience** | Admin developers, Platform Operator, Release Manager, DPO |
@@ -81,19 +81,20 @@ Pełna lista use-case’ów GPX (żeby nic nie umknęło): **§2.3**.
 | Storage | `gpx_storage.py` — local `MEDIA_ROOT/gpx` lub S3 (`GPX_S3_*`) | ✅ |
 | Pola DB | `gpx_storage_key` (URI), `gpx_sha256`, `route_fingerprint` | ✅ |
 | Idempotencja | Ten sam `route_fingerprint` → skip rewrite | ✅ |
+| Retencja | `purge_gpx_archives_task` — surowy GPX po `GPX_RETENTION_DAYS` | ✅ |
 
-#### Faza 3 — anty-cheat (batch & fingerprint)
+#### Faza 3 — anty-cheat (batch & fingerprint) ✅ code
 
 GPX **nie zastępuje** live anty-cheatu (BRouter + pluginy) — to **archiwum do dochodzenia** i **batch re-check**.
 
-| Job / use case | Cel |
-|----------------|-----|
-| `reverify_gpx_batch` | Po update BRouter / nowych progach — ponowny `process_activity` na archiwum |
-| Duplicate route fingerprint | Hash polyline / fingerprint — bot farm, copy-paste GPX |
-| Kinematic anomalies | Prędkość między `<trkpt>`, teleporty, nierealistyczne przyspieszenia — uzupełnienie `ml_anomaly` |
-| Metadata mismatch | Dystans GPX vs `Activity.distance` vs BRouter vs czas → flaga moderatora |
-| Wearables cross-check | `external_id` Strava/Garmin vs wygenerowany GPX |
-| Sim vs real | `simulated=true` — sim GPX **nigdy** w rankingu athlete bez jawnej etykiety |
+| Job / use case | Cel | Status |
+|----------------|-----|--------|
+| `reverify_activities_batch` | Po update BRouter — ponowny `process_activity` | ✅ |
+| Duplicate route fingerprint | Hash polyline — bot farm, copy-paste GPX | ✅ |
+| Kinematic anomalies | Prędkość między punktami — uzupełnienie `ml_anomaly` | ✅ |
+| Metadata mismatch | Dystans GPX vs `Activity.distance` | ✅ |
+| Wearables cross-check | `external_id` + `external_source` → flaga | ✅ |
+| Sim vs real | `<simulated>true</simulated>` w GPX + flaga `simulated_activity` | ✅ |
 
 **Powiązane:** moduł Anti-Cheat SOC w admin · [RBAC.md](../RBAC.md).
 
@@ -110,13 +111,14 @@ GPX **nie zastępuje** live anty-cheatu (BRouter + pluginy) — to **archiwum do
 
 Runbooki: [operations/SIMULATOR.md](../operations/SIMULATOR.md) · [reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md).
 
-#### Faza 5 — RODO bulk export (CONSTITUTION) 🟡
+#### Faza 5 — RODO bulk export (CONSTITUTION) ✅
 
 | Element | Spec | Status |
 |---------|------|--------|
-| Endpoint | `GET /api/users/me/export/` (async) | ✅ |
+| Endpoint | `POST/GET /api/users/me/export/` (async job) | ✅ |
 | Format | ZIP: `profile.json` + `activities/{id}.gpx` | ✅ `export_user_data_task` |
-| Delivery | Presigned URL 24h | 🟡 storage URI only; download API TBD |
+| Delivery | `GET …/me/export/<job_id>/download/` + S3 presign | ✅ |
+| Admin UI | Export Center — karta RODO + poll status | ✅ |
 | SSOT | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 | — |
 
 #### Faza 6 — import upload (opcjonalny P2+)
@@ -139,12 +141,12 @@ Checklist z rozmowy produktowej (2026-06-03). Kolumna **Faza** wskazuje domyśln
 
 | ☐ | Use case | Opis | Faza |
 |---|----------|------|------|
-| ☐ | Offline re-weryfikacja | Po zmianie BRouter / reguł — batch Celery `reverify_gpx_batch` na archiwum GPX | F3 |
-| ☐ | Anomalie kinematyczne | Prędkość między trackpointami, teleport, nierealistyczne przyspieszenie — **uzupełnienie** `ml_anomaly`, nie duplikat | F3 |
-| ☐ | Duplikat trasy (fingerprint) | Hash polyline / fingerprint — bot farmy, copy-paste GPX między kontami | F3 |
-| ☐ | Niespójność metadanych | Dystans GPX vs `Activity.distance` vs BRouter vs duration → flaga do kolejki moderatora | F3 · [Paczka 5](./P1_ROADMAP.md#4-paczki-36-skrót) |
-| ☐ | Cross-check wearables | `external_id` Strava/Garmin vs GPX wygenerowany z `route_path` | F3 |
-| ☐ | Simulator vs real | `simulated=true` w metadanych GPX / `Activity`; **nigdy** ranking athlete bez jawnej etykiety | F2–F3 |
+| ✅ | Offline re-weryfikacja | `reverify_activities_batch` — batch Celery na verified activities | F3 |
+| ✅ | Anomalie kinematyczne | `kinematic_speed_anomaly` w `gpx_forensics` | F3 |
+| ✅ | Duplikat trasy (fingerprint) | `duplicate_route_fingerprint` | F3 |
+| ✅ | Niespójność metadanych | `metadata_distance_mismatch` | F3 |
+| ✅ | Cross-check wearables | `wearable_imported` flag | F3 |
+| ✅ | Simulator vs real | `<simulated>true</simulated>` + `simulated_activity` | F2–F3 |
 
 #### 2.3.2 Awarie systemu / debug
 
@@ -153,21 +155,21 @@ Checklist z rozmowy produktowej (2026-06-03). Kolumna **Faza** wskazuje domyśln
 | ☐ | Post-mortem OOM/SIGKILL | Porównanie częściowej jazdy vs finalny GPX po utracie workerów / Redis | F4 |
 | ☐ | Replay `live_tick` / FSM | GPX końcowy vs ostatnia telemetria w Redis — wykrycie bugów tick/FSM | F4 |
 | ☐ | Forensics routingu | `FAILED_UNROUTABLE` + logi BRouter + GPX — OSM vs bug dispatch | F4 |
-| ☐ | Golden set w CI | Regresja po release — zestaw referencyjnych GPX, % verified nie spada | F4 |
+| 🟡 | Golden set w CI | `test_golden_gpx_fingerprint_stable` — baseline; pełny % verified gate w ops | F4 |
 | ☐ | Support GO — sporne km | Pobranie GPX przy sporze o dystans / weryfikację | F1 · F4 |
 
 #### 2.3.3 Produkt, compliance, dane (inne)
 
 | ☐ | Use case | Opis | Faza |
 |---|----------|------|------|
-| ☐ | RODO — przenoszenie danych | ZIP profil + GPX: `GET /api/users/me/export/` — [CONSTITUTION.md](../CONSTITUTION.md) §8.3 | F5 |
+| ✅ | RODO — przenoszenie danych | ZIP profil + GPX + download API — [CONSTITUTION.md](../CONSTITUTION.md) §8.3 | F5 |
 | ☐ | Kolejka moderatora | Załącznik mapa + GPX w case — integracja [Paczka 5](./P1_ROADMAP.md#4-paczki-36-skrót) | F1 · overlap 5 |
 | ☐ | Retraining ML | Historyczne GPX do modeli anomalii (`ml_anomaly`) | F3 · — |
 | ☐ | Jakość mapy / BRouter | Agregacja problematycznych segmentów (bez PII) z failed/unroutable + GPX | F4 · — |
 | ☐ | Walidacja heatmapy | Unia GPX vs heatmapa w DB — wykrycie driftu | — |
 | ☐ | Udostępnianie społecznościowe | Uproszczony GPX ze stref prywatności wyciętych | F1 · — |
 | ☐ | Integralność czasu eventu | Timestampy GPX vs okno czasowe eventu | F3 · — |
-| ☐ | Retencja warstwowa | Surowy GPX ~90 dni (forensics); potem tylko hash + statystyki | F2 · [CONSTITUTION.md](../CONSTITUTION.md) §8.2 |
+| ✅ | Retencja warstwowa | `purge_gpx_archives_task` — `GPX_RETENTION_DAYS` (default 90) | F2 |
 
 #### 2.3.4 Mapowanie checklista → fazy (macierz)
 
@@ -230,9 +232,10 @@ Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.m
 
 | Kryterium | Opis | Status |
 |-----------|------|--------|
-| MFA / 2FA | TOTP; wymuszenie przy **loginie** dla `GLOBAL_OWNER` z `mfa_enabled` | ✅ P2-A |
+| MFA / 2FA | TOTP; login gate dla GO z `mfa_enabled` | ✅ P2-A |
+| MFA mandate | `MFA_ENFORCE_GLOBAL_OWNER=1` — GO bez MFA nie loguje się | ✅ |
 | Wipe safety | Typed env phrase + MFA ack | ✅ (checkbox) |
-| Impersonation audit | `POST /users/impersonate/<id>/` — tylko `GLOBAL_OWNER` | 🟡 istnieje; audit depth TBD |
+| Impersonation audit | `AuditLog` przy `impersonation_started` | ✅ |
 | Settings | Sekcja MFA w admin Settings | ✅ |
 | Testy | `users/test_jwt_mfa.py` + `test_mfa.py` | ✅ CI |
 
@@ -256,6 +259,7 @@ Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.m
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-10 | **P2 closure:** RODO job+download, Export Center, GO MFA mandate, impersonation audit, kinematics/wearables/sim forensics, `purge_gpx_archives_task`, golden GPX CI |
 | 2026-06-10 | **P2-B/C/F5:** `gpx_storage` local+S3, forensics fingerprint, archive on auto-verify, RODO ZIP task, `reverify_activities_batch` |
 | 2026-06-10 | **P2-A kickoff:** Activity Route Inspector (MapLibre), speed profile, GPX archive on approve, MFA login gate GO |
 | 2026-06-03 | Pełna checklista GPX (§2.3): anty-cheat, forensics, RODO, retencja; fazy F1–F6; non-goals |

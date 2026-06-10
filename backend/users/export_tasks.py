@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 import zipfile
 from io import BytesIO
 
@@ -14,16 +13,27 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task(queue="default", name="users.export_user_data_task")
-def export_user_data_task(user_id: int) -> dict:
+def export_user_data_task(user_id: int, job_id: str) -> dict:
     from django.contrib.auth import get_user_model
+    from django.utils import timezone
 
     from activities.gpx_export import linestring_to_gpx
-    from activities.gpx_storage import store_export
+    from activities.gpx_forensics import is_simulated_activity
+    from activities.gpx_storage import presigned_download_url, store_export
+    from users.export_models import UserDataExport
 
     User = get_user_model()
     try:
+        job = UserDataExport.objects.get(job_id=job_id, user_id=user_id)
+    except UserDataExport.DoesNotExist:
+        return {"status": "missing_job", "job_id": job_id}
+
+    try:
         user = User.objects.get(pk=user_id)
     except User.DoesNotExist:
+        job.status = UserDataExport.STATUS_FAILED
+        job.error = "user_missing"
+        job.save(update_fields=["status", "error"])
         return {"status": "missing", "user_id": user_id}
 
     profile = {
@@ -32,6 +42,7 @@ def export_user_data_task(user_id: int) -> dict:
         "email": user.email,
         "role": getattr(user, "role", None),
         "tenant_id": str(user.tenant_id) if getattr(user, "tenant_id", None) else None,
+        "exported_at": timezone.now().isoformat(),
     }
 
     buf = BytesIO()
@@ -44,21 +55,30 @@ def export_user_data_task(user_id: int) -> dict:
                     activity.route_path,
                     track_name=f"Activity {activity.id}",
                     activity_type=activity.type.lower(),
+                    simulated=is_simulated_activity(activity),
                 )
                 zf.writestr(f"activities/{activity.id}.gpx", gpx)
                 activity_count += 1
             except Exception as exc:
                 logger.warning("export.skip_gpx activity=%s err=%s", activity.id, exc)
 
-    job_id = uuid.uuid4().hex[:12]
     key = f"exports/{user_id}/{job_id}.zip"
     uri = store_export(key, buf.getvalue())
+    presigned = presigned_download_url(uri)
+
+    job.status = UserDataExport.STATUS_READY
+    job.storage_uri = uri
+    job.download_key = key
+    job.activity_count = activity_count
+    job.error = ""
+    job.save(update_fields=["status", "storage_uri", "download_key", "activity_count", "error"])
 
     return {
         "status": "ok",
+        "job_id": job_id,
         "user_id": user_id,
         "activity_count": activity_count,
         "storage_uri": uri,
-        "download_key": key,
+        "presigned_url": presigned,
         "ttl_hours": 24,
     }

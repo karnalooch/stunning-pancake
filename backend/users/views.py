@@ -243,6 +243,18 @@ class ImpersonateUserView(generics.GenericAPIView):
             refresh = RefreshToken.for_user(target_user)
             refresh["impersonated"] = True
             refresh["impersonator_id"] = request.user.id
+            AuditLog.objects.create(
+                impersonator=request.user,
+                target_user=target_user,
+                tenant_id=str(target_user.tenant_id) if target_user.tenant_id else None,
+                action="impersonation_started",
+                details={
+                    "impersonated_role": target_user.role,
+                    "impersonated_username": target_user.username,
+                },
+                ip_address=request.META.get("REMOTE_ADDR"),
+                status_code=200,
+            )
             # Test suite expects `access` and friends at top-level (no `ok/data` wrapper).
             return Response(
                 {

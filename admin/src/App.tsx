@@ -132,6 +132,11 @@ export default function App() {
         err.mfaRequired = true;
         throw err;
       }
+      if (data?.mfa_setup_required) {
+        throw new Error(
+          'GLOBAL_OWNER must enable MFA before signing in. Set up TOTP in Settings or contact platform operator.',
+        );
+      }
       const detail = data?.detail;
       const msg =
         (typeof detail === 'string' && detail) ||

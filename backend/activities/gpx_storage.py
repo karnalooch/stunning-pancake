@@ -89,3 +89,40 @@ def _read_s3(uri: str) -> bytes:
 
 def store_export(key: str, body: bytes) -> str:
     return store_gpx(key, body)
+
+
+def presigned_download_url(storage_uri: str, expires_seconds: int = 86400) -> str | None:
+    """S3-compatible presigned GET URL; None for local storage."""
+    if not storage_uri.startswith("s3://"):
+        return None
+    _, _, rest = storage_uri.partition("s3://")
+    bucket, _, key = rest.partition("/")
+    try:
+        return _s3_client().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expires_seconds,
+        )
+    except Exception as exc:
+        logger.warning("gpx.presign_failed uri=%s err=%s", storage_uri, exc)
+        return None
+
+
+def delete_storage_uri(storage_uri: str) -> bool:
+    """Remove archived object (local file or S3 key)."""
+    if not storage_uri:
+        return False
+    try:
+        if storage_uri.startswith("s3://"):
+            _, _, rest = storage_uri.partition("s3://")
+            bucket, _, key = rest.partition("/")
+            _s3_client().delete_object(Bucket=bucket, Key=key)
+            return True
+        key = storage_uri.removeprefix("local:")
+        path = _local_root() / key.replace("/", os.sep)
+        if path.is_file():
+            path.unlink()
+            return True
+    except Exception as exc:
+        logger.warning("gpx.delete_failed uri=%s err=%s", storage_uri, exc)
+    return False

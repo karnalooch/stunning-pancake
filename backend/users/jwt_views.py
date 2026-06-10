@@ -1,10 +1,18 @@
 """JWT login with MFA gate for GLOBAL_OWNER (P2 Auth)."""
 
+import os
+
+from django.conf import settings
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from users.mfa import verify_totp
+
+
+def _enforce_go_mfa_setup() -> bool:
+    default = "0" if settings.DEBUG else "1"
+    return os.getenv("MFA_ENFORCE_GLOBAL_OWNER", default) == "1"
 
 
 class MfaTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -13,6 +21,14 @@ class MfaTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user
+        if getattr(user, "role", None) == "GLOBAL_OWNER":
+            if _enforce_go_mfa_setup() and not getattr(user, "mfa_enabled", False):
+                raise serializers.ValidationError(
+                    {
+                        "mfa_setup_required": True,
+                        "detail": "GLOBAL_OWNER must enable MFA before signing in.",
+                    }
+                )
         if getattr(user, "mfa_enabled", False) and getattr(user, "role", None) == "GLOBAL_OWNER":
             code = (attrs.get("mfa_code") or "").strip()
             if not code:

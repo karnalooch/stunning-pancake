@@ -397,7 +397,7 @@ def generate_gpx_task(activity_id: int) -> dict:
     from django.utils import timezone
 
     from activities.gpx_export import linestring_to_gpx
-    from activities.gpx_forensics import route_fingerprint, scan_activity_forensics
+    from activities.gpx_forensics import is_simulated_activity, route_fingerprint, scan_activity_forensics
     from activities.gpx_storage import store_gpx
     from activities.models import Activity
 
@@ -417,6 +417,7 @@ def generate_gpx_task(activity_id: int) -> dict:
         activity.route_path,
         track_name=f"Activity {activity_id}",
         activity_type=activity.type.lower(),
+        simulated=is_simulated_activity(activity),
     )
     digest = hashlib.sha256(gpx_xml.encode("utf-8")).hexdigest()
     storage_key = f"activities/{activity_id}.gpx"
@@ -449,6 +450,36 @@ def generate_gpx_task(activity_id: int) -> dict:
         "storage_uri": storage_uri,
         "forensics_flags": flags,
     }
+
+
+@shared_task(queue="default", name="activities.tasks.purge_gpx_archives_task")
+def purge_gpx_archives_task(retention_days: int | None = None) -> dict:
+    """P2 F2: Drop raw GPX archives older than retention (default 90d); keep hash + fingerprint."""
+    import os
+
+    from django.utils import timezone
+
+    from activities.gpx_storage import delete_storage_uri
+    from activities.models import Activity
+
+    days = retention_days
+    if days is None:
+        try:
+            days = int(os.getenv("GPX_RETENTION_DAYS", "90"))
+        except ValueError:
+            days = 90
+    cutoff = timezone.now() - timezone.timedelta(days=days)
+    qs = Activity.objects.filter(
+        gpx_generated_at__lt=cutoff,
+        gpx_storage_key__isnull=False,
+    ).exclude(gpx_storage_key="")
+    purged = 0
+    for activity in qs.iterator(chunk_size=200):
+        if delete_storage_uri(activity.gpx_storage_key):
+            purged += 1
+        activity.gpx_storage_key = ""
+        activity.save(update_fields=["gpx_storage_key"])
+    return {"status": "ok", "purged": purged, "retention_days": days}
 
 
 @shared_task(queue="default", name="activities.tasks.reverify_activities_batch")

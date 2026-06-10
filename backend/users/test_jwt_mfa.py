@@ -42,6 +42,21 @@ def test_global_owner_with_mfa_requires_code(api_client):
     assert "access" in res2.data
 
 
+def test_global_owner_without_mfa_blocked_when_enforced(api_client, settings, monkeypatch):
+    monkeypatch.setenv("MFA_ENFORCE_GLOBAL_OWNER", "1")
+    User.objects.create_user(
+        username="go_plain",
+        email="go2@test.com",
+        password="pass123",
+        role="GLOBAL_OWNER",
+        mfa_enabled=False,
+    )
+    url = reverse("token_obtain_pair")
+    res = api_client.post(url, {"username": "go_plain", "password": "pass123"}, format="json")
+    assert res.status_code == 400
+    assert res.data.get("mfa_setup_required") is True
+
+
 def test_tenant_admin_mfa_not_enforced_at_login(api_client):
     User.objects.create_user(
         username="ta",

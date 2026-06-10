@@ -43,3 +43,41 @@ def test_metadata_mismatch_flag(tenant):
 def test_gpx_track_distance_positive():
     route = LineString([(21.0, 52.0), (21.01, 52.01)], srid=4326)
     assert gpx_track_distance_m(route) > 1000
+
+
+def test_kinematic_speed_flag(tenant):
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    User = get_user_model()
+    u1 = User.objects.create_user(username="fast", email="f@t.com", password="x", tenant=tenant)
+    route = LineString([(21.0, 52.0), (21.5, 52.5)], srid=4326)
+    act = Activity.objects.create(
+        user=u1,
+        tenant=tenant,
+        type="WALK",
+        start_time=timezone.now(),
+        distance=50_000.0,
+        route_path=route,
+    )
+    flags = scan_activity_forensics(act)
+    assert any("kinematic_speed_anomaly" in f for f in flags)
+
+
+def test_simulated_activity_flag(tenant):
+    from django.contrib.auth import get_user_model
+    from django.utils import timezone
+
+    User = get_user_model()
+    u1 = User.objects.create_user(username="sim_athlete", email="s@t.com", password="x", tenant=tenant)
+    route = LineString([(21.0, 52.0), (21.01, 52.01)], srid=4326)
+    act = Activity.objects.create(
+        user=u1,
+        tenant=tenant,
+        type="RUN",
+        start_time=timezone.now(),
+        distance=1200.0,
+        route_path=route,
+    )
+    flags = scan_activity_forensics(act)
+    assert "simulated_activity" in flags

@@ -389,12 +389,17 @@ class TestRolePermissions:
         assert response.status_code == 403
 
     def test_impersonation_succeeds_for_owner(self, api_client, owner_user, athlete_user):
+        from users.models import AuditLog
+
         api_client.force_authenticate(user=owner_user)
         url = reverse("impersonate", kwargs={"target_user_id": athlete_user.id})
         response = api_client.post(url)
         assert response.status_code == 200
         assert "access" in response.data
         assert response.data["impersonated_user"] == "athlete"
+        assert AuditLog.objects.filter(
+            action="impersonation_started", impersonator=owner_user, target_user=athlete_user
+        ).exists()
 
 
 @pytest.mark.django_db
