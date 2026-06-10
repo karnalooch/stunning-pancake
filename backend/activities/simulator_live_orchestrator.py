@@ -20,6 +20,28 @@ from .simulator_route_waypoints import (
 logger = logging.getLogger("activities.simulator")
 
 
+def execute_live_tick_once() -> bool:
+    """
+    Run one live sim tick (lock + body). Returns True when tick work executed.
+
+    Used inline from run_live_simulation so solo Celery workers do not queue a
+    separate live_tick_task behind the next orchestrator countdown (lock races).
+    """
+    from activities.simulator_live_tick import _run_live_tick_body
+
+    if not sim.acquire_live_tick_lock():
+        sim.maybe_log_live_tick_lock_skip()
+        return False
+    _reset_brouter_tick_budget()
+    try:
+        with sim.live_rides_tick_cache():
+            _run_live_tick_body()
+    finally:
+        sim.set_live_state(last_tick_at=time.time())
+        sim.release_live_tick_lock()
+    return True
+
+
 @shared_task(
     bind=True,
     queue="simulation",
@@ -101,12 +123,9 @@ def run_live_simulation(
         sim.release_live_lock()
         return {"status": "blocked", "reason": block_reason}
 
-    try:
-        live_tick_task.delay()
-        sim.refresh_live_lock()
-    except Exception as e:
-        sim.live_log(f"Tick error: {e}")
-
+    if not execute_live_tick_once():
+        sim.live_log("Orchestrator: live tick skipped (lock busy).")
+    sim.refresh_live_lock()
     sim.set_live_state(last_runner_at=time.time())
 
     if not sim.get_live_state().get("running", False):
@@ -128,16 +147,4 @@ def run_live_simulation(
 )
 def live_tick_task(self):
     """One tick: finish rides, start new ones, push telemetry to Redis."""
-    from activities.simulator_live_tick import _run_live_tick_body
-
-    if not sim.acquire_live_tick_lock():
-        sim.maybe_log_live_tick_lock_skip()
-        return
-
-    _reset_brouter_tick_budget()
-    try:
-        with sim.live_rides_tick_cache():
-            _run_live_tick_body()
-    finally:
-        sim.set_live_state(last_tick_at=time.time())
-        sim.release_live_tick_lock()
+    execute_live_tick_once()

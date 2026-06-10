@@ -496,7 +496,7 @@ class LiveSimulationView(APIView):
         if proxied is not None:
             return proxied
         try:
-            sim.maybe_advance_live_simulation()
+            sim.maybe_advance_live_simulation_from_poll()
             state = sim.get_live_state()
             log = sim.get_live_log_tail(30) if light else sim.get_live_log()
             elapsed = 0.0

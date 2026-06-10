@@ -116,12 +116,33 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
 
     @patch.dict(
         "os.environ",
+        {"SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP": "500"},
+        clear=False,
+    )
+    def test_cold_start_boost_when_map_empty(self):
+        snap = bp.routing_backpressure_snapshot(fsm_pending=280, fsm_routing=0)
+        cap, _throttled, boosted = bp.resolve_routing_dispatch_cap(
+            50,
+            snap,
+            pending_route_count=280,
+            starters_remaining=0,
+            active_on_map=0,
+        )
+        self.assertTrue(boosted)
+        self.assertGreaterEqual(cap, 200)
+
+    @patch.dict(
+        "os.environ",
         {"SCALE_SIM_PAUSE_STARTS_WARMING_ABOVE": "400"},
         clear=False,
     )
     def test_pause_new_starts_when_warming_high(self):
         self.assertTrue(bp.should_pause_new_starts(warming_count=1800))
         self.assertFalse(bp.should_pause_new_starts(warming_count=10))
+        # Scale pause threshold with target_on_map so medium sims ramp faster.
+        self.assertFalse(
+            bp.should_pause_new_starts(warming_count=350, target_on_map=300)
+        )
 
     @patch.dict(
         "os.environ",

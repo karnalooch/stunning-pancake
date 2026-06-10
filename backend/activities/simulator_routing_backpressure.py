@@ -177,10 +177,18 @@ def routing_backlog_boost_cap() -> int:
     return max(50, _int_env("SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP", 500))
 
 
-def should_pause_new_starts(*, warming_count: int, pending_count: int = 0) -> bool:
+def should_pause_new_starts(
+    *,
+    warming_count: int,
+    pending_count: int = 0,
+    target_on_map: int | None = None,
+) -> bool:
     """Stop adding PENDING_ROUTE until routing drains (prevents 2k warming / 0 ACTIVE)."""
     warm_thr = _int_env("SCALE_SIM_PAUSE_STARTS_WARMING_ABOVE", 350)
     pend_thr = _int_env("SCALE_SIM_PAUSE_STARTS_PENDING_ABOVE", 300)
+    if target_on_map and int(target_on_map) > 0:
+        warm_thr = max(warm_thr, int(target_on_map) * 3)
+        pend_thr = max(pend_thr, int(target_on_map) * 2)
     return int(warming_count) >= warm_thr or int(pending_count) >= pend_thr
 
 
@@ -190,6 +198,7 @@ def resolve_routing_dispatch_cap(
     *,
     pending_route_count: int,
     starters_remaining: int,
+    active_on_map: int = 0,
 ) -> tuple[int, bool, bool]:
     """
     Returns (effective_cap, queue_throttled, backlog_boosted).
@@ -203,6 +212,14 @@ def resolve_routing_dispatch_cap(
         starters_remaining=starters_remaining,
     )
     pending = max(0, int(pending_route_count))
+    on_map = max(0, int(active_on_map))
+
+    # Cold ramp: map empty but Redis has a routing backlog — prioritize draining routes.
+    if on_map <= 0 and pending >= 30:
+        cold_cap = min(routing_backlog_boost_cap(), pending, max(base_cap, 200))
+        if cold_cap > cap:
+            return cold_cap, queue_throttled, True
+
     if pending <= cap:
         return cap, queue_throttled, False
 

@@ -284,6 +284,9 @@ LIVE_HEAL_COOLDOWN_KEY = "{sim}:live:heal_cooldown"
 LIVE_LOCK_TTL = 300  # 5 min (refreshed by runner)
 HEAL_COOLDOWN_SECONDS = 25
 
+# Status / map polls must not enqueue ticks when Celery orchestrator owns the chain.
+LIVE_POLL_ADVANCE_GATE_SEC = 5
+
 _tick_loop_stop = threading.Event()
 _tick_loop_thread: threading.Thread | None = None
 
@@ -515,11 +518,17 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     now = time.time()
     if last_tick > 0:
         return (now - last_tick) > threshold
-    # Startup grace before the first successful tick body completes.
+    # Startup grace before the first successful tick body completes (cold ramp).
     grace_anchor = started_at if started_at > 0 else 0.0
     if grace_anchor <= 0:
         return True
-    return (now - grace_anchor) > threshold
+    startup_grace = max(threshold * 2.0, tick_seconds * multiplier * 2.0)
+    return (now - grace_anchor) > startup_grace
+
+
+def celery_live_orchestrator_mode() -> bool:
+    """True when production Celery worker runs run_live_simulation (not SQLite dev loop)."""
+    return "sqlite" not in os.getenv("DATABASE_URL", "")
 
 
 def _heal_cooldown_ok() -> bool:
@@ -567,16 +576,12 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
         actions.append("marked_stale_ticks")
         if reschedule and _heal_cooldown_ok():
             try:
-                from activities.simulator_tasks import live_tick_task, run_live_simulation
+                from activities.simulator_tasks import run_live_simulation
 
-                # Always restart the orchestrator chain (run_live_simulation self-reschedules).
-                # When the live lock is still held, only live_tick_task.delay() leaves a gap
-                # if the countdown chain was lost (observed ~2min stall in prod logs).
+                # Restart orchestrator (ticks run inline). Avoid duplicate live_tick_task.delay()
+                # on Celery — that caused lock storms with admin/map polls.
                 run_live_simulation.delay()
                 actions.append("rescheduled_live_runner")
-                if not r.exists(LIVE_TICK_LOCK_KEY):
-                    live_tick_task.delay()
-                    actions.append("enqueued_live_tick")
             except Exception as exc:
                 actions.append(f"reschedule_failed:{exc!s:.120}")
             live_log(
@@ -1121,7 +1126,6 @@ def release_live_tick_lock():
 
 
 LIVE_POLL_ADVANCE_GATE_KEY = "{sim}:live:poll_advance_gate"
-LIVE_POLL_ADVANCE_GATE_SEC = 2
 
 
 def maybe_advance_live_simulation_from_poll() -> bool:
@@ -1147,6 +1151,10 @@ def maybe_advance_live_simulation() -> bool:
     if live_tick_stale():
         heal_stale_live_simulation(reschedule=True)
         state = get_live_state()
+
+    # Celery orchestrator runs ticks inline — poll/status must not flood the simulation queue.
+    if celery_live_orchestrator_mode():
+        return False
 
     now = time.time()
     try:

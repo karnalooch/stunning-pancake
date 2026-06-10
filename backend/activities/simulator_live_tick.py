@@ -215,6 +215,7 @@ def _run_live_tick_body():
     if async_routing and routing_bp.should_pause_new_starts(
         warming_count=int(fsm_for_budget["ride_warming"]),
         pending_count=int(fsm_for_budget.get("ride_pending_route", 0)),
+        target_on_map=target_riding,
     ):
         needed = 0
 
@@ -307,6 +308,7 @@ def _run_live_tick_body():
                 bp_snapshot,
                 pending_route_count=int(fsm_pre.get("ride_pending_route", 0)),
                 starters_remaining=len(starters),
+                active_on_map=active_on_map,
             )
         )
         bp_snapshot["effective_dispatch_cap"] = routing_dispatch_cap
@@ -466,6 +468,7 @@ def _run_live_tick_body():
                 bp_snapshot,
                 pending_route_count=int(fsm_pre.get("ride_pending_route", 0)),
                 starters_remaining=0,
+                active_on_map=active_on_map,
             )
         )
         if backlog_boosted and routing_dispatch_cap > 0:
