@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box, Text, Card, Group, Stack, Slider, NumberInput, Button,
-    Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox,
+    Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox, Switch,
     Modal, Divider, Stepper,
 } from '@mantine/core';
 import { BatchProgressBar, WipeProgressBar } from './SimulationProgressBar';
@@ -85,6 +85,8 @@ export const SimulatorPage: React.FC = () => {
     const [scaleReport, setScaleReport] = useState<any | null>(null);
     const [preflightLoading, setPreflightLoading] = useState(false);
     const [simTarget, setSimTarget] = useState<SimTargetInfo | null>(null);
+    const [integrationTestMode, setIntegrationTestMode] = useState(false);
+    const [integrationTestLoading, setIntegrationTestLoading] = useState(false);
 
     const environmentLabel = useMemo(
         () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
@@ -132,8 +134,42 @@ export const SimulatorPage: React.FC = () => {
     const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
 
     const refreshSimTarget = useCallback(() => {
-        SimulatorApi.getSimTarget().then(setSimTarget).catch(() => setSimTarget(null));
+        SimulatorApi.getSimTarget()
+            .then((info) => {
+                setSimTarget(info);
+                if (typeof info.integration_test_mode === 'boolean') {
+                    setIntegrationTestMode(info.integration_test_mode);
+                }
+            })
+            .catch(() => setSimTarget(null));
     }, []);
+
+    const canToggleIntegrationMode =
+        isGlobalOwner && Boolean(simTarget?.integration_test_editable);
+
+    const onIntegrationTestModeChange = async (checked: boolean) => {
+        setIntegrationTestLoading(true);
+        try {
+            const result = await SimulatorApi.setIntegrationTestMode(checked);
+            setIntegrationTestMode(result.enabled);
+            refreshSimTarget();
+            notifications.show({
+                title: checked ? 'Tryb integracyjny włączony' : 'Tryb integracyjny wyłączony',
+                message: checked
+                    ? 'Symulowani użytkownicy przechodzą przez ścieżki jak prawdziwi (GPX, anti-cheat, KPI bez flagi synthetic).'
+                    : 'Przywrócono standardowe oznaczanie danych syntetycznych.',
+                color: checked ? 'teal' : 'gray',
+            });
+        } catch (err: unknown) {
+            notifications.show({
+                title: 'Nie udało się zmienić trybu',
+                message: formatApiError(err, 'Sprawdź połączenie z sim-lab.'),
+                color: 'red',
+            });
+        } finally {
+            setIntegrationTestLoading(false);
+        }
+    };
 
     useEffect(() => {
         refreshSimTarget();
@@ -458,6 +494,27 @@ export const SimulatorPage: React.FC = () => {
                     {simTarget.sim_lab_health.error ? ` (${simTarget.sim_lab_health.error})` : ''}.
                     Live sim jest zablokowany do czasu recovery; mapa może ładować się wolno lub być pusta.
                 </Alert>
+            )}
+
+            {canToggleIntegrationMode && simTarget?.sim_lab_health?.reachable !== false && (
+                <Card withBorder radius="md" p="md" mb="md">
+                    <Group justify="space-between" align="flex-start" wrap="nowrap">
+                        <Stack gap={4} style={{ flex: 1 }}>
+                            <Text fw={600}>Tryb integracyjny (jak prawdziwi użytkownicy)</Text>
+                            <Text size="sm" c="dimmed">
+                                Na izolowanym sim-lab: bez flagi synthetic w KPI, bez auto-czyszczenia aktywności
+                                symulacji, GPX/forensics traktują dane jak produkcyjne. Prod DB pozostaje nietknięta.
+                            </Text>
+                        </Stack>
+                        <Switch
+                            checked={integrationTestMode}
+                            onChange={(e) => onIntegrationTestModeChange(e.currentTarget.checked)}
+                            disabled={integrationTestLoading || !simLabReachable}
+                            label={integrationTestMode ? 'Włączony' : 'Wyłączony'}
+                            size="md"
+                        />
+                    </Group>
+                </Card>
             )}
 
             <Card withBorder radius="md" p="xl" mb="md">

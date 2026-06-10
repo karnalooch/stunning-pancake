@@ -223,6 +223,8 @@ def test_probe_sim_lab_health_reachable(mock_get, monkeypatch):
     assert result["reachable"] is True
     assert result["status_code"] == 200
     assert result["latency_ms"] is not None
+    mock_get.assert_called_once()
+    assert mock_get.call_args.args[0] == "https://sim.example.com/health/"
 
 
 @patch("activities.sim_lab_proxy.requests.get")

@@ -59,6 +59,8 @@ def dashboard_data_source() -> str:
 
 def annotate_federated_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Mark response as synthetic sim-lab data (read federation contract)."""
+    if payload.get("integration_test_mode"):
+        return annotate_production_payload(payload)
     label = sim_lab_proxy_public_label() or "sim-lab"
     payload["data_source"] = "sim-lab"
     payload["synthetic"] = True
@@ -106,14 +108,14 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
     effective_timeout = timeout
     if effective_timeout is None:
         try:
-            effective_timeout = float(os.getenv("SIM_LAB_PROXY_HEALTH_TIMEOUT", "3"))
+            effective_timeout = float(os.getenv("SIM_LAB_PROXY_HEALTH_TIMEOUT", "8"))
         except (TypeError, ValueError):
-            effective_timeout = 3.0
+            effective_timeout = 8.0
 
-    url = _build_url("sim-target/")
+    url = _health_url()
     started = time.time()
     try:
-        upstream = requests.get(url, headers=_proxy_headers_system(), timeout=effective_timeout)
+        upstream = requests.get(url, timeout=effective_timeout)
         latency_ms = round((time.time() - started) * 1000)
         reachable = upstream.status_code < 500
         result: dict[str, Any] = {
@@ -134,9 +136,43 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
     return result
 
 
+def _integration_mode_target_fields() -> dict[str, Any]:
+    from activities.sim_integration_mode import integration_test_mode_info
+
+    if sim_lab_tenant():
+        out = integration_test_mode_info()
+        out["integration_test_editable"] = True
+        return out
+    if not sim_lab_proxy_enabled():
+        return {
+            "integration_test_mode": False,
+            "integration_test_env_default": False,
+            "integration_test_redis_override": False,
+            "integration_test_editable": False,
+        }
+    remote = fetch_sim_lab_admin_json("integration-test-mode/") or {}
+    if not remote:
+        return {
+            "integration_test_mode": False,
+            "integration_test_env_default": False,
+            "integration_test_redis_override": False,
+            "integration_test_editable": False,
+        }
+    return {
+        "integration_test_mode": bool(remote.get("enabled")),
+        "integration_test_env_default": bool(remote.get("env_default")),
+        "integration_test_redis_override": bool(remote.get("redis_override")),
+        "integration_test_editable": bool(remote.get("editable")),
+    }
+
+
 def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
     enabled = sim_lab_proxy_enabled()
     federation = sim_lab_read_federation_enabled()
+    integration = _integration_mode_target_fields()
+    data_source = dashboard_data_source()
+    if integration.get("integration_test_mode") and federation:
+        data_source = "production"
     info: dict[str, Any] = {
         "mode": "sim-lab-proxy" if enabled else "local",
         "sim_lab_label": sim_lab_proxy_public_label() if enabled else None,
@@ -146,7 +182,8 @@ def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
         "prod_heavy_sim_guard": not enabled
         and os.getenv("ALLOW_PROD_HEAVY_SIM", "0") not in ("1", "true", "yes"),
         "read_federation_enabled": federation,
-        "dashboard_data_source": dashboard_data_source(),
+        "dashboard_data_source": data_source,
+        **integration,
     }
     if include_health and enabled:
         info["sim_lab_health"] = probe_sim_lab_health()
@@ -194,8 +231,17 @@ def _stats_federation_cache_key(request) -> str:
     return f"{role}:{scoped}:{_query_string(request)}"
 
 
+def _proxy_base_url() -> str:
+    return (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
+
+
+def _health_url() -> str:
+    """Lightweight liveness URL (avoids queuing behind heavy admin/telemetry on sim-lab)."""
+    return f"{_proxy_base_url()}/health/"
+
+
 def _build_url(admin_suffix: str) -> str:
-    base = (os.getenv("SIM_LAB_PROXY_BASE_URL") or "").strip().rstrip("/")
+    base = _proxy_base_url()
     suffix = admin_suffix.lstrip("/")
     if not base.endswith("/api"):
         base = f"{base}/api"

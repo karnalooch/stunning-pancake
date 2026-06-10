@@ -301,6 +301,11 @@ def check_sim_writes_allowed(source: str) -> tuple[bool, str | None]:
 
 def cleanup_simulated_activities(*, source: str = "cron") -> dict[str, Any]:
     """Delete old activities for @aktywnemiasta.pl simulator users (optional retention)."""
+    from activities.sim_integration_mode import sim_integration_test_mode
+
+    if sim_integration_test_mode():
+        return {"skipped": True, "reason": "integration_test_mode"}
+
     days = int(SIM_ACTIVITY_RETENTION_DAYS or 0)
     if days < 1:
         return {"skipped": True, "reason": "retention disabled"}

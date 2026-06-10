@@ -9,6 +9,7 @@ from .admin_views import (
     DiskAuditListView,
     ExportDataView,
     GlobalActivityListView,
+    IntegrationTestModeView,
     LiveSimulationView,
     RunSimulationView,
     ScalePreflightView,
@@ -147,6 +148,11 @@ urlpatterns = [
     path("export/<str:resource>/", ExportDataView.as_view(), name="export-data"),
     # Simulation Endpoint — Aktywne Miasta
     path("admin/sim-target/", SimTargetView.as_view(), name="admin-sim-target"),
+    path(
+        "admin/integration-test-mode/",
+        IntegrationTestModeView.as_view(),
+        name="admin-integration-test-mode",
+    ),
     path("admin/scale-preflight/", ScalePreflightView.as_view(), name="admin-scale-preflight"),
     path("admin/disk-audit/", DiskAuditListView.as_view(), name="admin-disk-audit"),
     path("admin/simulate/", RunSimulationView.as_view(), name="admin-simulate"),

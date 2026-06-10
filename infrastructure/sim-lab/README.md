@@ -79,6 +79,16 @@ SIM_LAB_PROXY_SECRET=<ten sam secret>
 
 Po redeploy admin pokaże baner „Symulacja na sim-lab”. Bez proxy: prod blokuje batch &gt; `PROD_MAX_BATCH_USERS` (domyślnie 10k) i live &gt; `PROD_MAX_LIVE_ACTIVE` (5k).
 
+### Tryb integracyjny (symulowani = jak prawdziwi)
+
+W **Simulator** (prod admin → sim-lab): przełącznik *Tryb integracyjny* lub na sim-lab:
+
+```text
+SIM_INTEGRATION_TEST_MODE=1
+```
+
+Efekt na **sim-lab** (nie dotyka prod Postgres): brak flagi `synthetic` w federowanych KPI, GPX/forensics nie oznaczają `simulated_activity`, wyłączone auto-czyszczenie `@aktywnemiasta.pl`. Do testów leaderboardów, anti-cheat, eksportu itd.
+
 ### Read federation (prod dashboard → sim-lab KPI)
 
 Żeby **karty KPI dashboardu prod** (użytkownicy, aktywności, `sim_kpi`) pokazywały dane z sim-lab bez replikacji do prod Postgres:

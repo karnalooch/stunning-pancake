@@ -60,6 +60,11 @@ def _max_segment_speed_mps(route_path, interval_s: float = 1.0) -> float:
 
 def is_simulated_activity(activity: Activity) -> bool:
     """Heuristic: simulator batch users / sim-lab tenants."""
+    from activities.sim_integration_mode import sim_users_are_synthetic
+
+    if not sim_users_are_synthetic():
+        return False
+
     user = getattr(activity, "user", None)
     if user and str(getattr(user, "username", "")).lower().startswith("sim_"):
         return True

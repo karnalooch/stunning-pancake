@@ -228,11 +228,11 @@ class AdminDashboardStatsView(APIView):
                 refresh=refresh,
                 tenant_override=tenant_override,
             )
-            if sim_lab_tenant():
+            if sim_lab_tenant() and not payload.get("integration_test_mode"):
                 annotate_federated_payload(payload)
             else:
                 annotate_production_payload(payload)
-                if sim_lab_read_federation_enabled():
+                if sim_lab_read_federation_enabled() and not payload.get("integration_test_mode"):
                     payload["federation_fallback"] = True
             return Response(payload)
         except Exception as exc:
@@ -242,13 +242,13 @@ class AdminDashboardStatsView(APIView):
                 out = dict(cached)
                 out["stale"] = True
                 out["stats_note"] = "served_from_cache_after_error"
-                if sim_lab_tenant():
+                if sim_lab_tenant() and not out.get("integration_test_mode"):
                     annotate_federated_payload(out)
                 else:
                     annotate_production_payload(out)
                 return Response(out)
             empty = _empty_stats(stale=True, note=str(exc)[:120])
-            if sim_lab_tenant():
+            if sim_lab_tenant() and not empty.get("integration_test_mode"):
                 annotate_federated_payload(empty)
             else:
                 annotate_production_payload(empty)
@@ -1221,6 +1221,65 @@ class SimTargetView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
+
+
+class IntegrationTestModeView(APIView):
+    """
+    GET/POST /api/activities/admin/integration-test-mode/
+    Toggle sim-lab treating synthetic users like production (GPX, retention, KPI labels).
+    """
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        proxied = try_forward_sim_lab(request, "integration-test-mode/", timeout=15)
+        if proxied is not None:
+            return proxied
+
+        from activities.sim_integration_mode import integration_test_mode_info
+        from activities.sim_lab_proxy import sim_lab_tenant
+
+        info = integration_test_mode_info()
+        return Response(
+            {
+                "enabled": bool(info.get("integration_test_mode")),
+                "env_default": bool(info.get("integration_test_env_default")),
+                "redis_override": bool(info.get("integration_test_redis_override")),
+                "editable": sim_lab_tenant(),
+            }
+        )
+
+    def post(self, request):
+        proxied = try_forward_sim_lab(request, "integration-test-mode/", timeout=15)
+        if proxied is not None:
+            return proxied
+
+        from activities.sim_integration_mode import (
+            integration_test_mode_info,
+            set_integration_test_mode,
+        )
+        from activities.sim_lab_proxy import sim_lab_tenant
+
+        if not sim_lab_tenant():
+            return Response(
+                {"error": "Integration test mode is only configurable on sim-lab"},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        raw = request.data.get("enabled")
+        if raw is None:
+            return Response({"error": "enabled is required"}, status=status.HTTP_400_BAD_REQUEST)
+        enabled = raw in (True, "true", "1", 1, "yes")
+        set_integration_test_mode(enabled)
+        info = integration_test_mode_info()
+        return Response(
+            {
+                "enabled": bool(info.get("integration_test_mode")),
+                "env_default": bool(info.get("integration_test_env_default")),
+                "redis_override": bool(info.get("integration_test_redis_override")),
+                "editable": True,
+            }
+        )
 
 
 class ScalePreflightView(APIView):

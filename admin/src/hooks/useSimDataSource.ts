@@ -33,7 +33,9 @@ export function useSimDataSource(enabled = true) {
     simTarget?.dashboard_data_source === 'sim-lab' ? 'sim-lab' : 'production';
 
   const showSyntheticBanner =
-    Boolean(simTarget?.read_federation_enabled) && dashboardDataSource === 'sim-lab';
+    Boolean(simTarget?.read_federation_enabled)
+    && dashboardDataSource === 'sim-lab'
+    && !simTarget?.integration_test_mode;
 
   return {
     simTarget,

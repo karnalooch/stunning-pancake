@@ -557,6 +557,14 @@ def build_dashboard_stats(
     }
     if getattr(request_user, "role", None) == "GLOBAL_OWNER":
         payload["sim_kpi"] = build_sim_kpi_snapshot()
+    try:
+        from activities.sim_integration_mode import sim_integration_test_mode
+        from activities.sim_lab_proxy import sim_lab_tenant
+
+        if sim_lab_tenant():
+            payload["integration_test_mode"] = sim_integration_test_mode()
+    except Exception:
+        pass
     set_cached_dashboard_stats(payload, request_user, tenant_override=tenant_override)
     return payload
 

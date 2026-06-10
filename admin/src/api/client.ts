@@ -346,6 +346,13 @@ export type SimLabHealth = {
 
 export type DataSource = 'production' | 'sim-lab';
 
+export type IntegrationTestModeInfo = {
+  enabled: boolean;
+  env_default?: boolean;
+  redis_override?: boolean;
+  editable?: boolean;
+};
+
 export type SimTargetInfo = {
   mode: 'local' | 'sim-lab-proxy';
   sim_lab_label?: string | null;
@@ -354,6 +361,10 @@ export type SimTargetInfo = {
   sim_lab_health?: SimLabHealth | null;
   read_federation_enabled?: boolean;
   dashboard_data_source?: DataSource;
+  integration_test_mode?: boolean;
+  integration_test_env_default?: boolean;
+  integration_test_redis_override?: boolean;
+  integration_test_editable?: boolean;
 };
 
 export type DashboardStatsPayload = {
@@ -370,6 +381,16 @@ export type DashboardStatsPayload = {
 export const SimulatorApi = {
   getSimTarget: async (): Promise<SimTargetInfo> => {
     const { data } = await apiClient.get('/activities/admin/sim-target/');
+    return data;
+  },
+
+  getIntegrationTestMode: async (): Promise<IntegrationTestModeInfo> => {
+    const { data } = await apiClient.get('/activities/admin/integration-test-mode/');
+    return data;
+  },
+
+  setIntegrationTestMode: async (enabled: boolean): Promise<IntegrationTestModeInfo> => {
+    const { data } = await apiClient.post('/activities/admin/integration-test-mode/', { enabled });
     return data;
   },
 
