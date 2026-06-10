@@ -492,7 +492,9 @@ export const SimulatorPage: React.FC = () => {
                 <Alert variant="light" color="red" icon={<AlertCircle size={18} />} title="Sim-lab niedostępny">
                     Proxy nie dociera do {simTarget.sim_lab_label || 'sim-lab'}
                     {simTarget.sim_lab_health.error ? ` (${simTarget.sim_lab_health.error})` : ''}.
-                    Live sim jest zablokowany do czasu recovery; mapa może ładować się wolno lub być pusta.
+                    {simTarget.sim_lab_health.status_code === 502
+                        ? ' Często to krótki restart po deployu Railway — odśwież za ~30 s.'
+                        : ' Live sim jest zablokowany do czasu recovery; mapa może ładować się wolno lub być pusta.'}
                 </Alert>
             )}
 

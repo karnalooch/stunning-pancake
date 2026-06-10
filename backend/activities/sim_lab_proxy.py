@@ -76,9 +76,22 @@ def annotate_production_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 _HEALTH_CACHE: dict[str, Any] = {}
-_HEALTH_CACHE_TTL_SECONDS = 5.0
+_HEALTH_CACHE_TTL_OK_SECONDS = 5.0
+_HEALTH_CACHE_TTL_FAIL_SECONDS = 15.0
+
+_INTEGRATION_TARGET_CACHE: dict[str, Any] = {}
+_INTEGRATION_TARGET_CACHE_TTL_SECONDS = 30.0
 
 _STATS_FEDERATION_CACHE: dict[str, Any] = {}
+
+
+def _health_cache_ttl(*, reachable: bool) -> float:
+    if reachable:
+        return _HEALTH_CACHE_TTL_OK_SECONDS
+    try:
+        return float(os.getenv("SIM_LAB_PROXY_HEALTH_FAIL_CACHE_TTL", str(_HEALTH_CACHE_TTL_FAIL_SECONDS)))
+    except (TypeError, ValueError):
+        return _HEALTH_CACHE_TTL_FAIL_SECONDS
 
 
 def _proxy_headers_system() -> dict[str, str]:
@@ -98,12 +111,10 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
 
     now = time.time()
     cached = _HEALTH_CACHE.get("probe")
-    if (
-        not force
-        and isinstance(cached, dict)
-        and now - float(cached.get("_ts") or 0) < _HEALTH_CACHE_TTL_SECONDS
-    ):
-        return {k: v for k, v in cached.items() if k != "_ts"}
+    if not force and isinstance(cached, dict):
+        ttl = float(cached.get("_ttl") or _HEALTH_CACHE_TTL_OK_SECONDS)
+        if now - float(cached.get("_ts") or 0) < ttl:
+            return {k: v for k, v in cached.items() if k not in ("_ts", "_ttl")}
 
     effective_timeout = timeout
     if effective_timeout is None:
@@ -118,11 +129,14 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
         upstream = requests.get(url, timeout=effective_timeout)
         latency_ms = round((time.time() - started) * 1000)
         reachable = upstream.status_code < 500
+        err_text = (upstream.text or "")[:160] or None
+        if not reachable and upstream.status_code in (502, 503, 504):
+            err_text = err_text or f"HTTP {upstream.status_code} (sim-lab restarting or overloaded)"
         result: dict[str, Any] = {
             "reachable": reachable,
             "latency_ms": latency_ms,
             "status_code": upstream.status_code,
-            "error": None if reachable else (upstream.text or "")[:160] or None,
+            "error": None if reachable else err_text,
         }
     except requests.RequestException as exc:
         result = {
@@ -132,11 +146,28 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
             "error": str(exc)[:160],
         }
 
-    _HEALTH_CACHE["probe"] = {**result, "_ts": now}
+    _HEALTH_CACHE["probe"] = {
+        **result,
+        "_ts": now,
+        "_ttl": _health_cache_ttl(reachable=bool(result.get("reachable"))),
+    }
     return result
 
 
-def _integration_mode_target_fields() -> dict[str, Any]:
+def clear_integration_target_cache() -> None:
+    _INTEGRATION_TARGET_CACHE.clear()
+
+
+def _integration_mode_defaults(*, editable: bool = False) -> dict[str, Any]:
+    return {
+        "integration_test_mode": False,
+        "integration_test_env_default": False,
+        "integration_test_redis_override": False,
+        "integration_test_editable": editable,
+    }
+
+
+def _integration_mode_target_fields(*, health: dict[str, Any] | None = None) -> dict[str, Any]:
     from activities.sim_integration_mode import integration_test_mode_info
 
     if sim_lab_tenant():
@@ -144,32 +175,34 @@ def _integration_mode_target_fields() -> dict[str, Any]:
         out["integration_test_editable"] = True
         return out
     if not sim_lab_proxy_enabled():
-        return {
-            "integration_test_mode": False,
-            "integration_test_env_default": False,
-            "integration_test_redis_override": False,
-            "integration_test_editable": False,
-        }
-    remote = fetch_sim_lab_admin_json("integration-test-mode/") or {}
+        return _integration_mode_defaults()
+
+    now = time.time()
+    cached = _INTEGRATION_TARGET_CACHE.get("fields")
+    if isinstance(cached, dict) and now - float(cached.get("_ts") or 0) < _INTEGRATION_TARGET_CACHE_TTL_SECONDS:
+        return {k: v for k, v in cached.items() if k != "_ts"}
+
+    if health is not None and not health.get("reachable"):
+        return _integration_mode_defaults()
+
+    remote = fetch_sim_lab_admin_json("integration-test-mode/", health=health) or {}
     if not remote:
-        return {
-            "integration_test_mode": False,
-            "integration_test_env_default": False,
-            "integration_test_redis_override": False,
-            "integration_test_editable": False,
-        }
-    return {
+        return _integration_mode_defaults()
+    fields = {
         "integration_test_mode": bool(remote.get("enabled")),
         "integration_test_env_default": bool(remote.get("env_default")),
         "integration_test_redis_override": bool(remote.get("redis_override")),
         "integration_test_editable": bool(remote.get("editable")),
     }
+    _INTEGRATION_TARGET_CACHE["fields"] = {**fields, "_ts": now}
+    return fields
 
 
 def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
     enabled = sim_lab_proxy_enabled()
     federation = sim_lab_read_federation_enabled()
-    integration = _integration_mode_target_fields()
+    health = probe_sim_lab_health() if include_health and enabled else None
+    integration = _integration_mode_target_fields(health=health)
     data_source = dashboard_data_source()
     if integration.get("integration_test_mode") and federation:
         data_source = "production"
@@ -185,8 +218,8 @@ def sim_lab_proxy_target_info(*, include_health: bool = True) -> dict[str, Any]:
         "dashboard_data_source": data_source,
         **integration,
     }
-    if include_health and enabled:
-        info["sim_lab_health"] = probe_sim_lab_health()
+    if health is not None:
+        info["sim_lab_health"] = health
     return info
 
 
@@ -517,11 +550,13 @@ def fetch_sim_lab_admin_json(
     *,
     query: str = "",
     timeout: float | None = None,
+    health: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     """System GET to sim-lab admin API (dashboard sim_kpi federation)."""
     if not sim_lab_proxy_enabled():
         return None
-    if not probe_sim_lab_health().get("reachable"):
+    probe = health if health is not None else probe_sim_lab_health()
+    if not probe.get("reachable"):
         return None
 
     effective_timeout = timeout if timeout is not None else float(_proxy_stats_timeout())

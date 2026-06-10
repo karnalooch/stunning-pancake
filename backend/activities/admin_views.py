@@ -1250,8 +1250,12 @@ class IntegrationTestModeView(APIView):
         )
 
     def post(self, request):
+        from activities.sim_lab_proxy import clear_integration_target_cache
+
         proxied = try_forward_sim_lab(request, "integration-test-mode/", timeout=15)
         if proxied is not None:
+            if proxied.status_code < 400:
+                clear_integration_target_cache()
             return proxied
 
         from activities.sim_integration_mode import (
@@ -1271,6 +1275,7 @@ class IntegrationTestModeView(APIView):
             return Response({"error": "enabled is required"}, status=status.HTTP_400_BAD_REQUEST)
         enabled = raw in (True, "true", "1", 1, "yes")
         set_integration_test_mode(enabled)
+        clear_integration_target_cache()
         info = integration_test_mode_info()
         return Response(
             {
