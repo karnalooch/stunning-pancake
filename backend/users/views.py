@@ -4,6 +4,7 @@ import json
 from django.contrib.auth import update_session_auth_hash
 from django.db.models import Q, Value
 from django.db.models.functions import Coalesce
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
@@ -156,7 +157,7 @@ class PasswordChangeView(generics.GenericAPIView):
     serializer_class = PasswordChangeSerializer
 
     @extend_schema(
-        responses={200: dict},
+        responses={200: OpenApiTypes.OBJECT},
         description="Change password for the currently logged-in user.",
     )
     def post(self, request):
@@ -234,7 +235,7 @@ class ImpersonateUserView(generics.GenericAPIView):
     queryset = User.objects.all()
 
     @extend_schema(
-        responses={200: dict},
+        responses={200: OpenApiTypes.OBJECT},
         description="Returns an access and refresh token for the specified user.",
     )
     def post(self, request, target_user_id):

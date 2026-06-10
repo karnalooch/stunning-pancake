@@ -31,6 +31,7 @@ Step "Backend P2 pytest" {
             activities/test_gpx_storage.py `
             users/test_export.py `
             users/test_jwt_mfa.py `
+            test_openapi_schema.py `
             -q
     } finally {
         Pop-Location

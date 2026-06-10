@@ -39,6 +39,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Role
+        ref_name = "RbacRole"
         fields = [
             "id",
             "slug",

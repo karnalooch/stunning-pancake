@@ -255,6 +255,10 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_PATCH": True,
     "COMPONENT_SPLIT_REQUEST": True,
+    # users.models.Role (TextChoices) vs rbac_models.Role (Model) — avoid OpenAPI name clash
+    "ENUM_NAME_OVERRIDES": {
+        "LegacyUserRoleEnum": "users.models.Role",
+    },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "persistAuthorization": True,
