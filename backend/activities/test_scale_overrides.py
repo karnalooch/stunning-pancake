@@ -86,6 +86,6 @@ class ResolveLiveScaleLimitsTest(SimpleTestCase):
     @patch.dict("os.environ", {}, clear=True)
     def test_defaults_without_env_or_session(self):
         limits = resolve_live_scale_limits(None)
-        self.assertEqual(limits["max_starts_per_live_tick"], 30)
-        self.assertEqual(limits["brouter_max_calls_per_tick"], 25)
+        self.assertEqual(limits["max_starts_per_live_tick"], 100)
+        self.assertEqual(limits["brouter_max_calls_per_tick"], 80)
         self.assertEqual(limits["brouter_route_attempts"], 4)

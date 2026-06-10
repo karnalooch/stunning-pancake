@@ -24,7 +24,7 @@ def max_routing_queue_depth() -> int | None:
     Unset in Dashboard still uses code default 200 (avoids stale prod cap=80).
     Set to 0 to disable depth-based backpressure.
     """
-    raw = os.getenv("SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH", "200")
+    raw = os.getenv("SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH", "3000")
     if not str(raw).strip():
         return 200
     try:
@@ -39,7 +39,7 @@ def max_routing_queue_depth() -> int | None:
 def max_routing_dispatch_per_tick(scale_limits: dict) -> int:
     """Per-tick cap on new PENDING_ROUTE + route_live_ride_task.delay calls."""
     try:
-        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "150"))
+        cap = int(os.getenv("SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK", "400"))
     except (TypeError, ValueError):
         cap = 0
     if cap <= 0:
@@ -174,7 +174,7 @@ def effective_routing_dispatch_cap(
 
 def routing_backlog_boost_cap() -> int:
     """Max dispatches/tick when broker is shallow but Redis has a large PENDING backlog."""
-    return max(50, _int_env("SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP", 500))
+    return max(100, _int_env("SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP", 1500))
 
 
 def should_pause_new_starts(
@@ -216,7 +216,7 @@ def resolve_routing_dispatch_cap(
 
     # Cold ramp: map empty but Redis has a routing backlog — prioritize draining routes.
     if on_map <= 0 and pending >= 30:
-        cold_cap = min(routing_backlog_boost_cap(), pending, max(base_cap, 200))
+        cold_cap = min(routing_backlog_boost_cap(), pending, max(base_cap, 500))
         if cold_cap > cap:
             return cold_cap, queue_throttled, True
 

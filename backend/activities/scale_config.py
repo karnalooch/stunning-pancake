@@ -67,10 +67,10 @@ MAX_CONCURRENT_RIDERS = _int("SCALE_MAX_CONCURRENT_RIDERS", 50_000)
 MAX_TELEMETRY_PUBLISH_PER_TICK = _int("SCALE_MAX_TELEMETRY_PUBLISH", 50_000)
 # Global cap for new live starts per tick (all modes, 0=unbounded). Default 30 avoids
 # fork-OOM on Railway when strict road routing fans out BRouter HTTP per start.
-MAX_STARTS_PER_LIVE_TICK = _int("SCALE_MAX_STARTS_PER_LIVE_TICK", 30)
+MAX_STARTS_PER_LIVE_TICK = _int("SCALE_MAX_STARTS_PER_LIVE_TICK", 100)
 
 # Hard cap on BRouter HTTP calls inside one live_tick_task (0=unlimited).
-BROUTER_MAX_CALLS_PER_TICK = _int("SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK", 25)
+BROUTER_MAX_CALLS_PER_TICK = _int("SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK", 80)
 
 # BRouter snap-to-road retries per new ride start (live sim).
 BROUTER_ROUTE_ATTEMPTS = _int("SCALE_SIM_BROUTER_ROUTE_ATTEMPTS", 4)
@@ -159,13 +159,13 @@ def resolve_live_scale_limits(state: dict | None = None) -> dict[str, int]:
         "max_starts_per_live_tick": _resolve_int(
             "max_starts_per_live_tick",
             env_name="SCALE_MAX_STARTS_PER_LIVE_TICK",
-            env_default=30,
+            env_default=100,
             overrides=overrides,
         ),
         "brouter_max_calls_per_tick": _resolve_int(
             "brouter_max_calls_per_tick",
             env_name="SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK",
-            env_default=25,
+            env_default=80,
             overrides=overrides,
         ),
         "brouter_route_attempts": _resolve_int(

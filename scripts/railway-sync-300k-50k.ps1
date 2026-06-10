@@ -60,17 +60,18 @@ $liveCaps = @(
 
 # Routing throughput (50k ramp needs deep queue + high dispatch)
 $routing = @(
-    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH=500'
-    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK=200'
-    'SCALE_SIM_MAX_ROUTING_BACKLOG=2000'
+    'SCALE_SIM_MAX_ROUTING_QUEUE_DEPTH=3000'
+    'SCALE_SIM_MAX_ROUTING_DISPATCH_PER_TICK=800'
+    'SCALE_SIM_MAX_ROUTING_BACKLOG=10000'
+    'SCALE_SIM_ROUTING_BACKLOG_BOOST_CAP=1500'
     'SCALE_SIM_ASYNC_ROUTING=1'
     'SCALE_SIM_INSTANT_ACTIVE_ON_ROUTE=1'
     'SCALE_SIM_ROUTE_TEMPLATE_CACHE=1'
     'SCALE_SIM_ROUTING_BACKEND=auto'
     'SIM_AUTO_LOWER_ACTIVE_RATIO_ON_BP=0'
-    'SIM_BP_MIN_DISPATCH_PER_TICK=40'
-    'SIM_BP_DRAIN_DISPATCH_PER_TICK=80'
-    'SIM_BP_QUEUE_HEADROOM=50'
+    'SIM_BP_MIN_DISPATCH_PER_TICK=120'
+    'SIM_BP_DRAIN_DISPATCH_PER_TICK=300'
+    'SIM_BP_QUEUE_HEADROOM=150'
     'BROUTER_RETRIES=3'
     'BROUTER_URLS=http://brouter.railway.internal:17777/brouter,http://brouter-2.railway.internal:17777/brouter'
     'OSRM_URL=http://osrm.railway.internal:5000'
@@ -83,7 +84,7 @@ $slo = @(
     'SIM_SLO_AUTO_THROTTLE=1'
     'SIM_SLO_WARMING_ABOVE=8000'
     'SIM_SLO_AFTER_TICKS=12'
-    'SIM_SLO_STARTS_CAP=120'
+    'SIM_SLO_STARTS_CAP=800'
 )
 
 # Batch / disk (300k)
@@ -107,11 +108,11 @@ $largePool = @(
 Write-Host 'celery-worker-simulation...'
 Set-Vars 'celery-worker-simulation' (
     $liveCaps + $routing + $slo + $batch + $largePool + @(
-        'SCALE_MAX_STARTS_PER_LIVE_TICK=200'
-        'SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK=100'
+        'SCALE_MAX_STARTS_PER_LIVE_TICK=400'
+        'SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK=350'
         'SCALE_SIM_BROUTER_ROUTE_ATTEMPTS=4'
-        'SCALE_SIM_RAMP_START_DELAY_MAX=10'
-        'SCALE_SIM_RAMP_TICKS=25'
+        'SCALE_SIM_RAMP_START_DELAY_MAX=6'
+        'SCALE_SIM_RAMP_TICKS=12'
         'CELERY_WORKER_CONCURRENCY=2'
         'RAILWAY_OSRM_READY_MAX_WAIT_S=90'
     )
@@ -120,7 +121,7 @@ Set-Vars 'celery-worker-simulation' (
 Write-Host 'celery-worker-routing...'
 Set-Vars 'celery-worker-routing' (
     $routing + $batch + @(
-        'CELERY_WORKER_CONCURRENCY=3'
+        'CELERY_WORKER_CONCURRENCY=6'
     )
 )
 

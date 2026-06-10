@@ -18,7 +18,7 @@ from activities.simulator_tasks import _ramp_start_delay_max, _sample_athlete_mo
 
 class SimProfileMappingTest(SimpleTestCase):
     def test_piecewise_midpoint(self):
-        self.assertEqual(piecewise_lerp([(0, 25), (50, 50), (75, 100), (100, 1000)], 50), 50.0)
+        self.assertEqual(piecewise_lerp([(0, 50), (50, 200), (75, 400), (100, 1000)], 50), 200.0)
 
     def test_intensity_defaults(self):
         m = map_intensity(50)
@@ -34,23 +34,23 @@ class SimProfileMappingTest(SimpleTestCase):
 
     def test_load_mid_and_high(self):
         mid = map_load(50)
-        self.assertEqual(mid["max_starts_per_live_tick"], 50)
-        self.assertEqual(mid["brouter_max_calls_per_tick"], 42)
+        self.assertEqual(mid["max_starts_per_live_tick"], 200)
+        self.assertEqual(mid["brouter_max_calls_per_tick"], 166)
         self.assertEqual(mid["brouter_route_attempts"], 4)
-        self.assertEqual(mid["tick_seconds"], 8)
+        self.assertEqual(mid["tick_seconds"], 6)
         turbo = map_load(75)
-        self.assertEqual(turbo["max_starts_per_live_tick"], 100)
+        self.assertEqual(turbo["max_starts_per_live_tick"], 400)
         high = map_load(100)
         self.assertEqual(high["max_starts_per_live_tick"], 1000)
         self.assertEqual(high["brouter_route_attempts"], 5)
-        self.assertEqual(high["tick_seconds"], 6)
+        self.assertEqual(high["tick_seconds"], 4)
 
     def test_resolve_sim_profile_50_50(self):
         p = resolve_sim_profile(50, 50)
         self.assertEqual(p["intensity"], 50)
         self.assertEqual(p["load"], 50)
         self.assertIn("scale_overrides", p)
-        self.assertEqual(p["scale_overrides"]["max_starts_per_live_tick"], 50)
+        self.assertEqual(p["scale_overrides"]["max_starts_per_live_tick"], 200)
 
     def test_parse_request_requires_both(self):
         profile, err = parse_intensity_load_from_request({"intensity": 50})
