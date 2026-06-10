@@ -50,8 +50,8 @@
 
 | # | Ekran | Co jest | Czego brakuje | Priorytet |
 |---|-------|---------|---------------|-----------|
-| 23 | **ActivityDetail** | Activity model exists, endpoint `/activities/sessions/<id>/detail/` exists | Frontend uses mock data | 🟡 Średni |
-| 24 | **SystemIntelligence** | `/api/ai/insights/` endpoint exists | Frontend uses simulated insights | 🟢 Niski |
+| 23 | **ActivityDetail** | `GET /activities/sessions/<id>/detail/` + GPX export | ✅ Wired in `ActivityDetail.tsx` | ✅ |
+| 24 | **SystemIntelligence** | `GET /activities/ai/insights/` | ✅ Live API; empty state when LLM offline | 🟢 Niski |
 | 25 | **RbacManager** | Role/Permission models | Brak endpointów CRUD dla ról i uprawnień | 🟡 Średni |
 | 26 | **LeaderboardManager** | LeaderboardService + `recalculate_city_leaderboard` task | Brak endpointów do tworzenia/edycji rankingów | 🟢 Niski |
 | 27 | **DepartmentAnalyticsPage** | Frontend component exists | Needs `/activities/analytics/department/` endpoint | 🟡 Średni |

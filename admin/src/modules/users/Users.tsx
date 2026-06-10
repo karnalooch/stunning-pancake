@@ -13,6 +13,9 @@ import {
 import { useAuth } from '../../core/auth/useAuth';
 import { AdminApi } from '../../api/client';
 import { notifications } from '@mantine/notifications';
+import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
+import { useTenantScope } from '../../hooks/useTenantScope';
+import { TenantFilterBanner } from '../../core/components/TenantFilterBanner';
 
 interface UserRow {
   id: number;
@@ -71,10 +74,16 @@ export const Users = () => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedTenant, setSelectedTenant] = useState<string>('');
 
+  const urlTenantName = searchParams.get('tenant_name');
+
   useEffect(() => {
     const tid = searchParams.get('tenant_id');
-    if (tid) setSelectedTenant(tid);
-  }, [searchParams]);
+    if (tid) {
+      setSelectedTenant(tid);
+    } else if (user?.role === 'TENANT_ADMIN' && user.tenantId) {
+      setSelectedTenant(user.tenantId);
+    }
+  }, [searchParams, user?.role, user?.tenantId]);
 
   // Cursor pagination (scales to 300k+ without offset scans).
   const pageSize = 25;
@@ -310,6 +319,8 @@ export const Users = () => {
   }, [selectedUser?.id]);
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
+  const isTenantAdmin = user?.role === 'TENANT_ADMIN';
+  const tenantScope = useTenantScope();
 
   const handleImpersonate = async (targetUserId: number) => {
     setImpersonating(true);
@@ -443,8 +454,41 @@ export const Users = () => {
 
   const [activeTab, setActiveTab] = useState<string | null>('users');
 
+  const tenantRoleOptions = isTenantAdmin
+    ? [
+        { value: '', label: 'All Roles' },
+        { value: 'ATHLETE', label: 'Athlete' },
+        { value: 'TENANT_MODERATOR', label: 'Moderator' },
+        { value: 'SPONSOR', label: 'Sponsor' },
+        { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+      ]
+    : [
+        { value: '', label: 'All Roles' },
+        { value: 'ATHLETE', label: 'Athlete' },
+        { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
+        { value: 'TENANT_MODERATOR', label: 'Moderator' },
+        { value: 'SPONSOR', label: 'Sponsor' },
+        { value: 'GLOBAL_OWNER', label: 'Global Owner' },
+      ];
+
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
+      {isGlobalOwner && selectedTenant && (
+        <TenantFilterBanner
+          tenantId={selectedTenant}
+          tenantName={
+            urlTenantName
+            ?? tenantsList.find((t) => String(t.id) === selectedTenant)?.name
+          }
+          onClearPath="/owner/users"
+        />
+      )}
+      {isTenantAdmin && (
+        <TenantScopeBanner
+          tenantId={tenantScope.tenantId ?? user?.tenantId}
+          tenantName={tenantScope.tenantName}
+        />
+      )}
       <Tabs value={activeTab} onChange={setActiveTab}>
         <Tabs.List>
           <Tabs.Tab value="users" leftSection={<UserCog size={16} />}>Users Registry</Tabs.Tab>
@@ -469,14 +513,7 @@ export const Users = () => {
                 />
                 <Select
                   placeholder="Role Filter"
-                  data={[
-                    { value: '', label: 'All Roles' },
-                    { value: 'ATHLETE', label: 'Athlete' },
-                    { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
-                    { value: 'TENANT_MODERATOR', label: 'Moderator' },
-                    { value: 'SPONSOR', label: 'Sponsor' },
-                    { value: 'GLOBAL_OWNER', label: 'Global Owner' },
-                  ]}
+                  data={tenantRoleOptions}
                   value={selectedRole}
                   onChange={(v) => {
                     setSelectedRole(v || '');

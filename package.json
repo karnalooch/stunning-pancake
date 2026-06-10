@@ -1,6 +1,6 @@
 {
   "name": "4velo",
-  "version": "0.1.0-beta.1",
+  "version": "0.3.3-dev",
   "private": true,
   "packageManager": "pnpm@9.15.0",
   "scripts": {
@@ -9,6 +9,10 @@
     "api:export": "python scripts/export_openapi.py",
     "api:codegen:check": "pnpm --filter @4velo/api-client codegen:check",
     "quality:baseline": "pwsh -File scripts/run-quality-baseline.ps1",
+    "gate:simulator": "python scripts/simulator_operational_gate.py",
+    "gate:simulator:smoke": "python scripts/simulator_operational_gate.py --once",
+    "gate:p0-smoke": "pwsh -File scripts/run-p0-smoke.ps1",
+    "gate:p1-closure": "pwsh -File scripts/run-p1-closure.ps1",
     "audit:routes": "tsx scripts/audit-routes.ts",
     "audit:screens": "tsx scripts/audit-screens.ts",
     "audit:mobile": "tsx scripts/audit-mobile-routes.ts",

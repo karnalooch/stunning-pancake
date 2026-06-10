@@ -32,6 +32,12 @@ const SystemHealthLazy = lazy(() =>
   import('../analytics/SystemHealth').then(m => ({ default: m.SystemHealth })),
 );
 import { GoHealthStrip } from '../../core/components/GoHealthStrip';
+import { DataSourceBanner } from '../../core/components/DataSourceBanner';
+import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
+import { TenantAdminQuickActions } from '../../core/components/TenantAdminQuickActions';
+import { useTenantScope } from '../../hooks/useTenantScope';
+import { TenantDrillDownMenu } from '../../core/components/TenantDrillDownMenu';
+import { tenantUsersUrl } from '../../utils/tenantDrillDown';
 import {
   DashboardBootOverlay,
   type DashboardBootStep,
@@ -84,6 +90,16 @@ interface DashboardStats {
   data_source?: 'production' | 'sim-lab';
   synthetic?: boolean;
   federation_fallback?: boolean;
+  sim_lab_label?: string;
+  scoped_tenant_id?: string | null;
+  per_department?: Array<{
+    department_id: number;
+    department_name: string;
+    users: number;
+    activities: number;
+    distance_km: number;
+    verified_pct: number;
+  }>;
 }
 
 /* ─── Animation variants ────────────────────────────────── */
@@ -140,6 +156,7 @@ export const Dashboard: React.FC = () => {
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
   const isTenantAdmin = user?.role === 'TENANT_ADMIN';
   const isModerator = user?.role === 'TENANT_MODERATOR';
+  const tenantScope = useTenantScope(stats);
 
   useEffect(() => {
     if (!user) {
@@ -198,8 +215,8 @@ export const Dashboard: React.FC = () => {
   const showGlobalBoot = isGlobalOwner && (loading || bootOverlayVisible);
   const kpiLoading = loading && !showGlobalBoot;
 
-  const drillDownTenant = (tenantId: string) => {
-    navigate(`/owner/users?tenant_id=${encodeURIComponent(tenantId)}`);
+  const drillDownTenant = (tenantId: string, tenantName?: string) => {
+    navigate(tenantUsersUrl(tenantId, tenantName));
   };
 
   /* ── Greeting ────────────────────────────────────────── */
@@ -207,12 +224,17 @@ export const Dashboard: React.FC = () => {
   const greeting =
     hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
 
-  /* ── Simulator signal ─────────────────────────────────── */
-  const simulatorBadge = stats?.batch_running
-    ? { text: 'Simulator running (KPIs may be stale)', color: 'orange' as const }
-    : stats?.stale
-      ? { text: 'Stale KPIs (served from cache)', color: 'yellow' as const }
-      : null;
+  /* ── Simulator / data-source signals ──────────────────── */
+  const isSyntheticKpi = stats?.data_source === 'sim-lab' || Boolean(stats?.synthetic);
+  const simulatorBadge = isSyntheticKpi
+    ? { text: `Synthetic KPIs (${stats?.sim_lab_label ?? 'sim-lab'})`, color: 'orange' as const }
+    : stats?.batch_running
+      ? { text: 'Simulator running (prod KPIs may be stale)', color: 'orange' as const }
+      : stats?.federation_fallback
+        ? { text: 'Sim-lab federation fallback', color: 'yellow' as const }
+        : stats?.stale
+          ? { text: 'Stale KPIs (served from cache)', color: 'yellow' as const }
+          : null;
 
   return (
     <Box>
@@ -226,7 +248,9 @@ export const Dashboard: React.FC = () => {
         subtitle={
           isGlobalOwner
             ? 'Global platform overview — all tenants combined'
-            : `Local analytics — ${user?.tenantId ?? 'your instance'}`
+            : tenantScope.tenantName
+              ? `City dashboard — ${tenantScope.tenantName}`
+              : `City dashboard — ${tenantScope.tenantId ?? 'your instance'}`
         }
       >
         {simulatorBadge && (
@@ -236,16 +260,50 @@ export const Dashboard: React.FC = () => {
         )}
       </PageHeader>
 
-      {isGlobalOwner && (
-        <GoHealthStrip
-          loading={loading}
-          unverifiedTotal={stats?.unverified_total}
-          simOn={Boolean(stats?.sim_kpi?.sim_on)}
-          routingQueueDepth={stats?.sim_kpi?.routing_queue_depth}
-          routingBackpressure={Boolean(stats?.sim_kpi?.routing_backpressure_active)}
-          apiLatencyMs={apiLatencyMs}
-          dataSource={stats?.data_source}
+      {isModerator && (
+        <TenantScopeBanner
+          tenantId={tenantScope.tenantId}
+          tenantName={tenantScope.tenantName}
+          roleLabel="Moderator"
         />
+      )}
+
+      {isTenantAdmin && (
+        <>
+          <TenantScopeBanner
+            tenantId={tenantScope.tenantId}
+            tenantName={tenantScope.tenantName}
+            roleLabel="Tenant Admin"
+          />
+          <TenantAdminQuickActions
+            tenantId={tenantScope.tenantId}
+            pendingReview={stats?.unverified_total}
+          />
+        </>
+      )}
+
+      {isGlobalOwner && (
+        <>
+          <DataSourceBanner
+            dataSource={stats?.data_source}
+            synthetic={stats?.synthetic}
+            federationFallback={stats?.federation_fallback}
+            simLabLabel={stats?.sim_lab_label}
+          />
+          <GoHealthStrip
+            loading={loading}
+            unverifiedTotal={stats?.unverified_total}
+            simOn={Boolean(stats?.sim_kpi?.sim_on)}
+            routingQueueDepth={stats?.sim_kpi?.routing_queue_depth}
+            routingBackpressure={Boolean(stats?.sim_kpi?.routing_backpressure_active)}
+            maxRoutingQueueDepth={stats?.sim_kpi?.max_routing_queue_depth}
+            apiLatencyMs={apiLatencyMs}
+            dataSource={stats?.data_source}
+            synthetic={stats?.synthetic}
+            federationFallback={stats?.federation_fallback}
+            dataStale={Boolean(stats?.stale)}
+          />
+        </>
       )}
 
       <Box style={{ position: 'relative', minHeight: showGlobalBoot ? 420 : undefined }}>
@@ -444,6 +502,7 @@ export const Dashboard: React.FC = () => {
                       <Table.Th>Distance</Table.Th>
                       <Table.Th>Verified</Table.Th>
                       <Table.Th>Health</Table.Th>
+                      <Table.Th style={{ width: 48 }} />
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -452,8 +511,8 @@ export const Dashboard: React.FC = () => {
                         key={t.tenant_id}
                         variants={rowVariants}
                         style={{ cursor: 'pointer' }}
-                        onClick={() => drillDownTenant(t.tenant_id)}
-                        title="Drill down — filter Users by tenant"
+                        onClick={() => drillDownTenant(t.tenant_id, t.tenant_name)}
+                        title="Drill down — open Users for this tenant"
                       >
                         <Table.Td>
                           <Group gap="xs">
@@ -500,6 +559,12 @@ export const Dashboard: React.FC = () => {
                         </Table.Td>
                         <Table.Td>
                           <HealthBadge pct={t.verified_pct} />
+                        </Table.Td>
+                        <Table.Td onClick={(e) => e.stopPropagation()}>
+                          <TenantDrillDownMenu
+                            tenantId={t.tenant_id}
+                            tenantName={t.tenant_name}
+                          />
                         </Table.Td>
                       </motion.tr>
                     ))}
@@ -674,14 +739,55 @@ export const Dashboard: React.FC = () => {
         </motion.div>
       )}
 
-      {/* ── Tenant admin / city analytics ─────────────── */}
+      {/* ── Tenant admin: departments + city analytics ── */}
+      {isTenantAdmin && Array.isArray(stats?.per_department) && stats.per_department.length > 0 && (
+        <Card
+          mb="xl"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
+            borderRadius: 14,
+            padding: '22px 24px',
+          }}
+        >
+          <SectionHeader icon={<TrendingUp size={16} />} title="Departments" badge={`${stats.per_department.length}`} />
+          <Divider mb="md" style={{ borderColor: 'var(--border)' }} />
+          <Table>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Department</Table.Th>
+                <Table.Th>Users</Table.Th>
+                <Table.Th>Activities</Table.Th>
+                <Table.Th>Distance</Table.Th>
+                <Table.Th>Verified</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {stats.per_department.map((d) => (
+                <Table.Tr key={d.department_id}>
+                  <Table.Td><Text fw={600} size="sm">{d.department_name}</Text></Table.Td>
+                  <Table.Td>{d.users}</Table.Td>
+                  <Table.Td>{d.activities}</Table.Td>
+                  <Table.Td>{d.distance_km.toFixed(1)} km</Table.Td>
+                  <Table.Td><HealthBadge pct={d.verified_pct} /></Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </Card>
+      )}
+
       {!isGlobalOwner && !isModerator && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.35 }}
         >
-          <CityAnalytics cityId={user?.tenantId || undefined} />
+          <CityAnalytics
+            cityId={tenantScope.tenantId || undefined}
+            cityName={tenantScope.tenantName || undefined}
+            stats={stats}
+          />
         </motion.div>
       )}
 

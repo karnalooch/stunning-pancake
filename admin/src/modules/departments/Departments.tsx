@@ -3,6 +3,8 @@ import { Box, Title, Table, Button, Modal, TextInput, Select, Text, Badge, Actio
 import { useAuth } from '../../core/auth/useAuth';
 import { apiClient } from '../../api/client';
 import { IconPlus, IconEdit, IconTrash, IconUsers } from '@tabler/icons-react';
+import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
+import { useTenantScope } from '../../hooks/useTenantScope';
 
 interface Department {
     id: number;
@@ -30,6 +32,8 @@ interface DepartmentTreeNode {
 
 export const Departments: React.FC = () => {
     const { hasPermission } = useAuth();
+    const [stats, setStats] = useState<{ scoped_tenant_id?: string; per_tenant?: Array<{ tenant_id: string; tenant_name: string }> } | null>(null);
+    const tenantScope = useTenantScope(stats);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [tree, setTree] = useState<DepartmentTreeNode[]>([]);
     const [loading, setLoading] = useState(true);
@@ -64,7 +68,11 @@ export const Departments: React.FC = () => {
 
     useEffect(() => {
         setLoading(true);
-        Promise.all([fetchDepartments(), fetchTree()]).finally(() => setLoading(false));
+        Promise.all([
+            fetchDepartments(),
+            fetchTree(),
+            apiClient.get('/activities/admin/stats/').then((r) => setStats(r.data)).catch(() => setStats(null)),
+        ]).finally(() => setLoading(false));
     }, []);
 
     const handleDelete = async (id: number) => {
@@ -97,6 +105,13 @@ export const Departments: React.FC = () => {
 
     return (
         <Box p="md">
+            {tenantScope.isTenantScoped && (
+                <TenantScopeBanner
+                    tenantId={tenantScope.tenantId}
+                    tenantName={tenantScope.tenantName}
+                    roleLabel={tenantScope.isTenantAdmin ? 'Tenant Admin' : 'Moderator'}
+                />
+            )}
             <Group justify="space-between" mb="md">
                 <Title order={2}>Departments / Classes</Title>
                 <Group>
@@ -203,8 +218,26 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
     const [name, setName] = useState(department?.name || '');
     const [departmentType, setDepartmentType] = useState(department?.department_type || 'department');
     const [parentId, setParentId] = useState<string>(department?.parent?.toString() || '');
+    const [moderatorId, setModeratorId] = useState<string>(department?.moderator?.toString() || '');
     const [description, setDescription] = useState(department?.description || '');
+    const [moderatorOptions, setModeratorOptions] = useState<{ value: string; label: string }[]>([]);
     const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        const modRoles = new Set(['TENANT_MODERATOR', 'DEPARTMENT_MODERATOR', 'tenant_moderator', 'department_moderator']);
+        apiClient.get('/users/')
+            .then(({ data }) => {
+                const rows = Array.isArray(data) ? data : data?.results ?? [];
+                const mods = rows
+                    .filter((u: { id: number; username?: string; role?: string }) => modRoles.has(String(u.role || '')))
+                    .map((u: { id: number; username?: string }) => ({
+                        value: String(u.id),
+                        label: u.username || `User #${u.id}`,
+                    }));
+                setModeratorOptions([{ value: '', label: 'None' }, ...mods]);
+            })
+            .catch(() => setModeratorOptions([{ value: '', label: 'None' }]));
+    }, []);
 
     const typeOptions = [
         { value: 'department', label: 'Department' },
@@ -230,6 +263,7 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
                 name,
                 department_type: departmentType,
                 parent: parentId ? parseInt(parentId) : null,
+                moderator: moderatorId ? parseInt(moderatorId) : null,
                 description,
             };
 
@@ -252,6 +286,7 @@ const DepartmentForm: React.FC<DepartmentFormProps> = ({ department, departments
                 <TextInput label="Name" value={name} onChange={(e) => setName(e.target.value)} required />
                 <Select label="Type" data={typeOptions} value={departmentType} onChange={(v) => setDepartmentType(v || 'department')} required />
                 <Select label="Parent Department" data={parentOptions} value={parentId} onChange={(v) => setParentId(v != null ? String(v) : '')} />
+                <Select label="Department Moderator" data={moderatorOptions} value={moderatorId} onChange={(v) => setModeratorId(v != null ? String(v) : '')} clearable searchable />
                 <TextInput label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
                 <Button type="submit" loading={saving}>{department ? 'Save' : 'Create'}</Button>
             </Stack>

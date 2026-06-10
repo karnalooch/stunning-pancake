@@ -14,7 +14,7 @@ If you discover a security issue, **do not** open a public GitHub issue with exp
 
 | Channel | Use |
 |---------|-----|
-| **Email** | `security@your-domain.example` — replace with your organisation’s security contact before production |
+| **Email** | Set `SECURITY_CONTACT_EMAIL` in Railway / env and publish it here before any public release |
 | **Scope** | Backend (Django), admin panel, mobile client, infrastructure configs, CI secrets handling |
 
 Include: affected component, steps to reproduce, impact assessment, and optional proof-of-concept. We aim to acknowledge reports within **5 business days** and provide a remediation timeline when confirmed.

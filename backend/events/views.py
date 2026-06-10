@@ -49,6 +49,9 @@ class EventViewSet(viewsets.ModelViewSet):
                 Q(tenant_id=user.tenant_id) | Q(status__in=["PUBLISHED", "ACTIVE", "COMPLETED"])
             ).order_by("-start_date")
 
+        if user.role == "TENANT_MODERATOR" and user.tenant_id:
+            return Event.objects.filter(tenant_id=user.tenant_id).order_by("-start_date")
+
         # Standard user
         if user.tenant_id:
             from django.db.models import Q
@@ -64,7 +67,11 @@ class EventViewSet(viewsets.ModelViewSet):
         )
 
     def get_permissions(self):
-        if self.action in ["create", "update", "partial_update", "destroy"]:
+        if self.action == "partial_update":
+            from users.permissions import IsAdminOrModerator
+
+            return [IsAdminOrModerator()]
+        if self.action in ["create", "update", "destroy"]:
             from users.permissions import IsTenantAdmin
 
             return [IsTenantAdmin()]
@@ -91,6 +98,10 @@ class EventViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import PermissionDenied
 
                 raise PermissionDenied("You cannot update events outside of your tenant.")
+            if user.role == "TENANT_MODERATOR" and instance.status != "DRAFT":
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("Moderators may only publish draft events.")
             serializer.save(tenant_id=user.tenant_id)
         else:
             serializer.save()

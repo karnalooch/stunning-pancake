@@ -77,6 +77,19 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             SKIP_BROADCAST,
             SKIP_DB,
         )
+    from ingest_auth import jwt_enforced
+
+    if not jwt_enforced():
+        import os
+
+        env = (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "").strip().lower()
+        on_paas = bool(os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER"))
+        if env in ("production", "prod") or on_paas:
+            logger.warning(
+                "TELEMETRY_INGEST_JWT_REQUIRED is off — ingest POSTs are unauthenticated. "
+                "Set TELEMETRY_INGEST_JWT_REQUIRED=1 in production."
+            )
+
     logger.info("telemetry engine fully operational")
 
     yield

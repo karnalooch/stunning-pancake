@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Table, Text, Badge, Skeleton, Alert, Group, Pagination, Checkbox, Button, TextInput, Select, ActionIcon, Tooltip } from '@mantine/core';
 import { AlertCircle, Bike, Footprints, PersonStanding, ArrowUpRight, Check, X, Search, Filter } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
+import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
+import { useAuth } from '../../core/auth/useAuth';
+import { useTenantScope } from '../../hooks/useTenantScope';
+import { TenantFilterBanner } from '../../core/components/TenantFilterBanner';
 
 interface ActivityItem {
     id: number;
@@ -28,6 +32,12 @@ const typeIcons: Record<string, React.ComponentType<{ size?: number }>> = {
 const PAGE_SIZE = 50;
 
 export const ActivitiesList: React.FC = () => {
+    const { user } = useAuth();
+    const tenantScope = useTenantScope();
+    const [searchParams] = useSearchParams();
+    const filterTenantId = searchParams.get('tenant_id') || '';
+    const filterTenantName = searchParams.get('tenant_name');
+    const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [total, setTotal] = useState(0);
     const [page, setPage] = useState(1);
@@ -41,7 +51,10 @@ export const ActivitiesList: React.FC = () => {
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterType, setFilterType] = useState<string>('');
-    const [filterStatus, setFilterStatus] = useState<string>('');
+    const [filterStatus, setFilterStatus] = useState<string>(() => {
+        const status = searchParams.get('status');
+        return status === 'pending' ? 'pending' : '';
+    });
     const [filterDateFrom, setFilterDateFrom] = useState('');
     const [filterDateTo, setFilterDateTo] = useState('');
 
@@ -67,6 +80,7 @@ export const ActivitiesList: React.FC = () => {
         if (filterDateFrom) params.start_after = filterDateFrom;
         if (filterDateTo) params.start_before = filterDateTo;
         if (searchQuery) params.search = searchQuery;
+        if (isGlobalOwner && filterTenantId) params.tenant_id = filterTenantId;
 
         apiClient.get('/activities/admin/all/', { params })
             .then(r => {
@@ -76,7 +90,7 @@ export const ActivitiesList: React.FC = () => {
             })
             .catch(() => setError('Failed to load activities.'))
             .finally(() => setLoading(false));
-    }, [page, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery]);
+    }, [page, filterType, filterStatus, filterDateFrom, filterDateTo, searchQuery, isGlobalOwner, filterTenantId]);
 
     const allSelected = activities.length > 0 && selected.size === activities.length;
     const someSelected = selected.size > 0;
@@ -162,9 +176,28 @@ export const ActivitiesList: React.FC = () => {
         );
     }
 
+    const listTitle = tenantScope.isTenantScoped ? 'City Activities' : 'All Activities';
+    const listSubtitle = tenantScope.isTenantScoped
+        ? `${total.toLocaleString()} activities in your city`
+        : `${total.toLocaleString()} activities recorded`;
+
     return (
         <Box p="md">
-            <PageHeader title="All Activities" subtitle={`${total.toLocaleString()} activities recorded`} />
+            {isGlobalOwner && filterTenantId && (
+                <TenantFilterBanner
+                    tenantId={filterTenantId}
+                    tenantName={filterTenantName ?? filterTenantId}
+                    onClearPath="/owner/activities"
+                />
+            )}
+            {tenantScope.isTenantScoped && (
+                <TenantScopeBanner
+                    tenantId={tenantScope.tenantId}
+                    tenantName={tenantScope.tenantName}
+                    roleLabel={user?.role === 'TENANT_MODERATOR' ? 'Moderator' : 'Tenant Admin'}
+                />
+            )}
+            <PageHeader title={listTitle} subtitle={listSubtitle} />
 
             {/* Search & Filter Bar */}
             <Group mb="md" justify="space-between" wrap="wrap">

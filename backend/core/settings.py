@@ -36,7 +36,10 @@ if not DEBUG and SECRET_KEY == _DEFAULT_UNSAFE:
         raise RuntimeError(
             "SECRET_KEY must be set in production. Set the SECRET_KEY environment variable."
         )
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
+from core.production_guards import parse_allowed_hosts, warn_insecure_allowed_hosts
+
+ALLOWED_HOSTS = parse_allowed_hosts(os.getenv("ALLOWED_HOSTS"))
+warn_insecure_allowed_hosts(ALLOWED_HOSTS, debug=DEBUG)
 
 # Feature Flags — gradual rollout control
 DEPARTMENTS_ENABLED = os.getenv("DEPARTMENTS_ENABLED", "1") == "1"

@@ -35,6 +35,14 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+class VoucherPoolCreateSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    description = serializers.CharField(required=False, allow_blank=True, default="")
+    points_required = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(min_value=1, max_value=500, default=10)
+    valid_days = serializers.IntegerField(min_value=1, max_value=365, default=90)
+
+
 class VoucherPoolSerializer(serializers.ModelSerializer):
     sponsor_name = serializers.CharField(source="sponsor.name", read_only=True)
     available = serializers.IntegerField(source="available_count", read_only=True)
@@ -75,10 +83,33 @@ def balance_view(request: Request) -> Response:
     return Response({"points": balance})
 
 
-@api_view(["GET"])
+def _get_or_create_sponsor(user) -> Sponsor:
+    try:
+        return user.sponsor_profile
+    except Sponsor.DoesNotExist:
+        tenant_id = getattr(user, "tenant_id", None)
+        return Sponsor.objects.create(
+            user=user,
+            name=(user.get_full_name() or user.username or "Sponsor").strip(),
+            tenant_id=str(tenant_id) if tenant_id else "",
+        )
+
+
+@api_view(["GET", "POST"])
 @permission_classes([IsAuthenticated])
 def pool_list_view(request: Request) -> Response:
-    """Lists active voucher pools. SPONSOR role sees only own sponsor pools."""
+    """Lists active voucher pools. SPONSOR sees own pools. POST creates a pool (SPONSOR / GLOBAL_OWNER)."""
+    if request.method == "POST":
+        role = getattr(request.user, "role", None)
+        if role not in ("SPONSOR", "GLOBAL_OWNER"):
+            return Response({"detail": "Only sponsors can create voucher pools."}, status=status.HTTP_403_FORBIDDEN)
+
+        ser = VoucherPoolCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        sponsor = _get_or_create_sponsor(request.user)
+        pool = RewardsService.create_voucher_pool(sponsor, **ser.validated_data)
+        return Response(VoucherPoolSerializer(pool).data, status=status.HTTP_201_CREATED)
+
     now = timezone.now()
     pools = (
         VoucherPool.objects.filter(

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, SimpleGrid, ThemeIcon, Box, Button, Stack, Skeleton } from '@mantine/core';
-import { Gift, TrendingUp, Activity, MapPin, Plus } from 'lucide-react';
+import { Card, Text, Group, SimpleGrid, ThemeIcon, Box, Stack, Skeleton } from '@mantine/core';
+import { Gift, TrendingUp, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { apiClient } from '../../api/client';
 import { PageHeader } from '../../core/components/PageHeader';
+import { SponsorEmptyCta } from '../../core/components/SponsorEmptyCta';
 
 export const SponsorDashboard: React.FC = () => {
   const [stats, setStats] = useState<Record<string, number | undefined> | null>(null);
@@ -46,21 +47,7 @@ export const SponsorDashboard: React.FC = () => {
         {loading ? (
           <Skeleton height={120} radius="md" />
         ) : !hasData ? (
-          <Stack align="center" py="xl" gap="md">
-            <Gift size={48} style={{ color: 'var(--text-tertiary)', opacity: 0.5 }} />
-            <Text fw={600}>Welcome to your sponsor portal</Text>
-            <Text c="dimmed" size="sm" maw={420} ta="center">
-              Create your first voucher pool and add a POI on the map so athletes can discover and redeem your rewards.
-            </Text>
-            <Group>
-              <Button component={Link} to="/owner/analytics/vouchers" leftSection={<Plus size={16} />}>
-                Create first voucher
-              </Button>
-              <Button component={Link} to="/owner/sponsor/poi" variant="light" leftSection={<MapPin size={16} />}>
-                Add POI location
-              </Button>
-            </Group>
-          </Stack>
+          <SponsorEmptyCta />
         ) : (
           <>
             <Text fw={600} mb="md">Recent Activity</Text>

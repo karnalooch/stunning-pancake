@@ -123,9 +123,45 @@ class ActivityPagination(PageNumberPagination):
     max_page_size = 500
 
 
+def _scoped_admin_activity_queryset(user):
+    """GLOBAL_OWNER: all tenants; TENANT_ADMIN/MODERATOR: own tenant only."""
+    role = getattr(user, "role", None)
+    qs = Activity.objects.select_related("user", "tenant").all()
+    if role == "GLOBAL_OWNER":
+        return qs
+    if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and getattr(user, "tenant_id", None):
+        return qs.filter(tenant_id=user.tenant_id)
+    return Activity.objects.none()
+
+
+def _apply_admin_activity_filters(qs, request):
+    params = request.query_params
+    activity_type = (params.get("type") or "").strip()
+    if activity_type:
+        qs = qs.filter(type=activity_type)
+    verified = (params.get("verified") or "").strip().lower()
+    if verified == "true":
+        qs = qs.filter(is_verified=True)
+    elif verified == "false":
+        qs = qs.filter(is_verified=False)
+    start_after = params.get("start_after")
+    if start_after:
+        qs = qs.filter(start_time__gte=start_after)
+    start_before = params.get("start_before")
+    if start_before:
+        qs = qs.filter(start_time__lte=start_before)
+    search = (params.get("search") or "").strip()
+    if search:
+        qs = qs.filter(user__username__icontains=search)
+    tenant_id = (params.get("tenant_id") or "").strip()
+    if tenant_id and getattr(request.user, "role", None) == "GLOBAL_OWNER":
+        qs = qs.filter(tenant_id=tenant_id)
+    return qs.order_by("-start_time")
+
+
 class GlobalActivityListView(generics.ListAPIView):
     """
-    List all activities for Global Owners.
+    List activities for admin roles — scoped by tenant for TENANT_ADMIN/MODERATOR.
     """
 
     queryset = Activity.objects.all()
@@ -134,14 +170,13 @@ class GlobalActivityListView(generics.ListAPIView):
     pagination_class = ActivityPagination
 
     def get_queryset(self):
-        if self.request.user.role == "GLOBAL_OWNER":
-            return Activity.objects.select_related("user", "tenant").all()
-        return Activity.objects.none()
+        qs = _scoped_admin_activity_queryset(self.request.user)
+        return _apply_admin_activity_filters(qs, self.request)
 
 
 class TenantActivityListView(generics.ListAPIView):
     """
-    List activities for Tenant Admins and Moderators (limited to their tenant).
+    Legacy alias — same scoping as admin/all/ for tenant roles.
     """
 
     serializer_class = ActivitySerializer
@@ -149,14 +184,8 @@ class TenantActivityListView(generics.ListAPIView):
     pagination_class = ActivityPagination
 
     def get_queryset(self):
-        if (
-            self.request.user.role in ("TENANT_ADMIN", "TENANT_MODERATOR")
-            and self.request.user.tenant_id
-        ):
-            return Activity.objects.filter(tenant_id=self.request.user.tenant_id).select_related(
-                "user"
-            )
-        return Activity.objects.none()
+        qs = _scoped_admin_activity_queryset(self.request.user)
+        return _apply_admin_activity_filters(qs, self.request)
 
 
 class AdminDashboardStatsView(APIView):
@@ -189,8 +218,16 @@ class AdminDashboardStatsView(APIView):
                 return proxied
 
         refresh = request.query_params.get("refresh") == "1"
+        tenant_q = (request.query_params.get("tenant_id") or "").strip() or None
+        tenant_override = (
+            tenant_q if getattr(request.user, "role", None) == "GLOBAL_OWNER" else None
+        )
         try:
-            payload = build_dashboard_stats(request.user, refresh=refresh)
+            payload = build_dashboard_stats(
+                request.user,
+                refresh=refresh,
+                tenant_override=tenant_override,
+            )
             if sim_lab_tenant():
                 annotate_federated_payload(payload)
             else:

@@ -138,6 +138,17 @@ class TestAdminDashboardStats:
         assert 70 <= data["verified_pct"] <= 90  # 8/10 = 80%
         assert len(data["per_tenant"]) >= 2
 
+    def test_global_owner_gets_recent_unverified_queue(
+        self, api_client, owner_user, tenant, create_activities
+    ):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(reverse("admin-stats"))
+        assert response.status_code == 200
+        queue = response.data.get("recent_unverified") or []
+        assert len(queue) == 2
+        assert len({row["user"] for row in queue}) == 1
+        assert queue[0]["user"] == "athlete"
+
     def test_per_tenant_breakdown(self, api_client, owner_user, tenant, create_activities):
         api_client.force_authenticate(user=owner_user)
         response = api_client.get(reverse("admin-stats"))
@@ -216,6 +227,27 @@ class TestActivityModeration:
         url = reverse("admin-approve", kwargs={"activity_id": unverified_activity.id})
         response = api_client.post(url)
         assert response.status_code == 403
+
+    def test_global_owner_filters_activities_by_tenant(
+        self, api_client, owner_user, tenant, tenant2, create_activities
+    ):
+        api_client.force_authenticate(user=owner_user)
+        response = api_client.get(
+            reverse("global-activities"), {"tenant_id": str(tenant.id)}
+        )
+        assert response.status_code == 200
+        results = response.data.get("results", response.data)
+        assert len(results) == 7
+
+    def test_tenant_admin_lists_scoped_activities(
+        self, api_client, admin_user, tenant, tenant2, create_activities
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.get(reverse("global-activities"))
+        assert response.status_code == 200
+        results = response.data.get("results", response.data)
+        assert len(results) == 7
+        assert response.data.get("count", len(results)) == 7
 
     def test_moderator_can_approve_in_tenant(self, api_client, tenant, unverified_activity):
         moderator = User.objects.create_user(

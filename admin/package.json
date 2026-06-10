@@ -15,6 +15,7 @@
     "test:e2e:live-map": "cross-env E2E_FORCE_WEB_SERVER=1 playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom",
     "test:e2e:live-map:update": "cross-env E2E_FORCE_WEB_SERVER=1 playwright test e2e/live-map-zoom.spec.ts --project=live-map-zoom --update-snapshots",
     "test:e2e:ui": "playwright test --ui",
+    "smoke:p0": "node scripts/p0-role-smoke.mjs",
     "preview": "vite preview",
     "licenses:report": "node ../scripts/compliance/generate-third-party-notices.mjs",
     "electron:dev": "concurrently \"vite\" \"cross-env NODE_ENV=development wait-on http://localhost:5173 && electron .\"",

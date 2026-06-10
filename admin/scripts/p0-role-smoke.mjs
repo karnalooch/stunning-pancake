@@ -96,6 +96,17 @@ async function main() {
   }
   await browser.close();
 
+  const report = {
+    at: new Date().toISOString(),
+    base: BASE,
+    results,
+    pass: results.filter((r) => !r.skipped).every((r) => r.pass),
+  };
+  const fs = await import('node:fs');
+  const reportPath = process.env.P0_SMOKE_REPORT || 'p0-smoke-report.json';
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
+  console.log(`Report: ${reportPath}`);
+
   const tested = results.filter((r) => !r.skipped);
   const failed = tested.filter((r) => !r.pass);
   if (tested.length === 0) {

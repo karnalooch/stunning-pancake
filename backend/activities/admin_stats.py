@@ -7,10 +7,11 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count, Q, Sum
+from django.db.models.functions import TruncDay
 from django.utils import timezone
 
 from activities.models import Activity
@@ -23,16 +24,65 @@ STATS_CACHE_TTL = 300  # seconds — warm path for 300k dashboards
 DEPT_ANALYTICS_CACHE_TTL = 120
 
 
-def _scoped_tenant_id(request_user) -> str | None:
+def _scoped_tenant_id(request_user, tenant_override: str | None = None) -> str | None:
     """Tenant admins/moderators see only their tenant KPIs."""
     role = getattr(request_user, "role", None)
     if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and getattr(request_user, "tenant_id", None):
         return str(request_user.tenant_id)
+    if tenant_override and role == "GLOBAL_OWNER":
+        return str(tenant_override)
     return None
 
 
-def _stats_cache_key(request_user) -> str:
-    tid = _scoped_tenant_id(request_user)
+def _weekly_activity_breakdown(tenant_id: str | None) -> list[dict]:
+    """Last 7 calendar days — verified activity counts by type (RUN / BIKE / WALK)."""
+    if not tenant_id:
+        return []
+
+    today = date.today()
+    start = today - timedelta(days=6)
+    day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+    rows = (
+        Activity.objects.filter(
+            tenant_id=tenant_id,
+            is_verified=True,
+            start_time__date__gte=start,
+        )
+        .annotate(day=TruncDay("start_time"))
+        .values("day", "type")
+        .annotate(cnt=Count("id"))
+    )
+
+    by_day: dict[date, dict[str, int]] = {}
+    for row in rows:
+        day = row["day"].date() if hasattr(row["day"], "date") else row["day"]
+        bucket = by_day.setdefault(day, {"run": 0, "bike": 0, "walk": 0})
+        kind = (row["type"] or "").upper()
+        if kind == "RUN":
+            bucket["run"] += row["cnt"]
+        elif kind in ("BIKE", "CYCLING"):
+            bucket["bike"] += row["cnt"]
+        else:
+            bucket["walk"] += row["cnt"]
+
+    chart: list[dict] = []
+    for offset in range(7):
+        day = start + timedelta(days=offset)
+        counts = by_day.get(day, {"run": 0, "bike": 0, "walk": 0})
+        chart.append(
+            {
+                "name": day_names[day.weekday()],
+                "run": counts["run"],
+                "bike": counts["bike"],
+                "walk": counts["walk"],
+            }
+        )
+    return chart
+
+
+def _stats_cache_key(request_user, tenant_override: str | None = None) -> str:
+    tid = _scoped_tenant_id(request_user, tenant_override=tenant_override)
     if tid:
         return f"{{admin}}:dashboard:stats:tenant:{tid}"
     return STATS_CACHE_KEY
@@ -44,8 +94,15 @@ def _redis():
     return get_redis()
 
 
-def get_cached_dashboard_stats(request_user=None) -> dict | None:
-    cache_key = _stats_cache_key(request_user) if request_user is not None else STATS_CACHE_KEY
+def get_cached_dashboard_stats(
+    request_user=None,
+    tenant_override: str | None = None,
+) -> dict | None:
+    cache_key = (
+        _stats_cache_key(request_user, tenant_override=tenant_override)
+        if request_user is not None
+        else STATS_CACHE_KEY
+    )
     try:
         raw = _redis().get(cache_key)
         if raw:
@@ -55,8 +112,16 @@ def get_cached_dashboard_stats(request_user=None) -> dict | None:
     return None
 
 
-def set_cached_dashboard_stats(payload: dict, request_user=None) -> None:
-    cache_key = _stats_cache_key(request_user) if request_user is not None else STATS_CACHE_KEY
+def set_cached_dashboard_stats(
+    payload: dict,
+    request_user=None,
+    tenant_override: str | None = None,
+) -> None:
+    cache_key = (
+        _stats_cache_key(request_user, tenant_override=tenant_override)
+        if request_user is not None
+        else STATS_CACHE_KEY
+    )
     try:
         _redis().setex(cache_key, STATS_CACHE_TTL, json.dumps(payload))
     except Exception:
@@ -193,6 +258,16 @@ def _recent_unverified_for_tenant(tenant_id: str, *, limit: int = 25) -> list[di
     return [_activity_to_unverified_row(a) for a in qs]
 
 
+def _recent_unverified_platform(*, limit: int = 50) -> list[dict]:
+    """Platform-wide moderation queue for GLOBAL_OWNER (newest first)."""
+    qs = (
+        Activity.objects.filter(is_verified=False)
+        .select_related("user")
+        .order_by("-created_at")[:limit]
+    )
+    return [_activity_to_unverified_row(a) for a in qs]
+
+
 def _recent_unverified_by_tenant(
     tenant_ids: list[str], *, limit_per_tenant: int = 25
 ) -> dict[str, list[dict]]:
@@ -312,26 +387,32 @@ def _per_department_breakdown(request_user) -> list[dict]:
     return rows
 
 
-def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bool = False) -> dict:
+def build_dashboard_stats(
+    request_user,
+    *,
+    allow_stale: bool = True,
+    refresh: bool = False,
+    tenant_override: str | None = None,
+) -> dict:
     """
     Aggregate queries + Redis cache.
     During batch/live sim, serves cache if available (marked stale).
     TENANT_ADMIN / TENANT_MODERATOR receive tenant-scoped totals (not platform-wide).
     """
-    scoped_tid = _scoped_tenant_id(request_user)
+    scoped_tid = _scoped_tenant_id(request_user, tenant_override=tenant_override)
 
     if allow_stale and _batch_or_live_running():
-        cached = get_cached_dashboard_stats(request_user)
+        cached = get_cached_dashboard_stats(request_user, tenant_override=tenant_override)
         if cached:
             cached = dict(cached)
             cached["stale"] = True
             cached["batch_running"] = True
-            if getattr(request_user, "role", None) == "GLOBAL_OWNER":
+            if getattr(request_user, "role", None) == "GLOBAL_OWNER" and not tenant_override:
                 cached["sim_kpi"] = build_sim_kpi_snapshot()
             return cached
 
     if not refresh:
-        cached = get_cached_dashboard_stats(request_user)
+        cached = get_cached_dashboard_stats(request_user, tenant_override=tenant_override)
         if cached:
             return cached
 
@@ -361,7 +442,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         )
     except Exception:
         logger.exception("admin/stats global aggregates failed")
-        cached = get_cached_dashboard_stats(request_user)
+        cached = get_cached_dashboard_stats(request_user, tenant_override=tenant_override)
         if cached:
             out = dict(cached)
             out["stale"] = True
@@ -375,7 +456,11 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     verified_pct = round((total_verified / total_activities * 100), 1) if total_activities else 0.0
 
     per_tenant = _per_tenant_breakdown(tenant_id=scoped_tid)
-    recent_unverified = _recent_unverified_for_tenant(scoped_tid) if scoped_tid else []
+    recent_unverified = (
+        _recent_unverified_for_tenant(scoped_tid)
+        if scoped_tid
+        else _recent_unverified_platform(limit=50)
+    )
 
     payload: dict = {
         "total_users": user_totals["total_users"] or 0,
@@ -392,6 +477,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
         "per_tenant": per_tenant,
         "per_department": _per_department_breakdown(request_user),
         "recent_unverified": recent_unverified,
+        "weekly_activity_breakdown": _weekly_activity_breakdown(scoped_tid),
         "scoped_tenant_id": scoped_tid,
         "stale": False,
         "batch_running": False,
@@ -399,7 +485,7 @@ def build_dashboard_stats(request_user, *, allow_stale: bool = True, refresh: bo
     }
     if getattr(request_user, "role", None) == "GLOBAL_OWNER":
         payload["sim_kpi"] = build_sim_kpi_snapshot()
-    set_cached_dashboard_stats(payload, request_user)
+    set_cached_dashboard_stats(payload, request_user, tenant_override=tenant_override)
     return payload
 
 

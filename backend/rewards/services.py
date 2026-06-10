@@ -12,6 +12,8 @@ Handles:
 from __future__ import annotations
 
 import logging
+import secrets
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from django.db import transaction
@@ -161,3 +163,41 @@ class RewardsService:
             pool.points_required,
         )
         return voucher
+
+    @classmethod
+    def create_voucher_pool(
+        cls,
+        sponsor,
+        *,
+        title: str,
+        points_required: int,
+        description: str = "",
+        quantity: int = 10,
+        valid_days: int = 90,
+    ):
+        """
+        Create a voucher pool and generate unassigned voucher codes for sponsors.
+        """
+        from rewards.models import Voucher, VoucherPool
+
+        qty = max(1, min(int(quantity), 500))
+        days = max(1, min(int(valid_days), 365))
+        now = timezone.now()
+        pool = VoucherPool.objects.create(
+            sponsor=sponsor,
+            title=title.strip(),
+            description=(description or "").strip(),
+            points_required=max(1, int(points_required)),
+            valid_from=now,
+            valid_until=now + timedelta(days=days),
+        )
+        Voucher.objects.bulk_create(
+            [Voucher(pool=pool, code=secrets.token_hex(6).upper()) for _ in range(qty)]
+        )
+        logger.info(
+            "rewards.pool_created sponsor=%s pool=%d quantity=%d",
+            sponsor.pk,
+            pool.pk,
+            qty,
+        )
+        return pool

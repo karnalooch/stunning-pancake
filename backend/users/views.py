@@ -476,6 +476,15 @@ class TenantListView(generics.ListAPIView):
     serializer_class = TenantSerializer
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if getattr(self.request.user, "role", None) == "TENANT_ADMIN":
+            tenant_id = getattr(self.request.user, "tenant_id", None)
+            if not tenant_id:
+                return qs.none()
+            return qs.filter(id=tenant_id)
+        return qs
+
 
 class AuditLogListView(generics.ListAPIView):
     """List audit log entries. GLOBAL_OWNER only."""

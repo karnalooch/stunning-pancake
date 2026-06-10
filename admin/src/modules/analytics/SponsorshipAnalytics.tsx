@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Card, Text, SimpleGrid, ThemeIcon, Skeleton, Alert } from '@mantine/core';
+import { SponsorEmptyCta } from '../../core/components/SponsorEmptyCta';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { Gift, TrendingUp, Users, Award, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
@@ -51,6 +52,26 @@ export const SponsorshipAnalytics: React.FC = () => {
             <Box p="md">
                 <Text fw={700} size="xl" mb="md">Sponsorship Analytics</Text>
                 <Text c="dimmed" ta="center">No sponsorship data available.</Text>
+            </Box>
+        );
+    }
+
+    const isEmpty =
+        stats.active_vouchers === 0
+        && stats.vouchers_distributed === 0
+        && stats.redeemed_count === 0
+        && stats.poi_count === 0;
+
+    if (isEmpty) {
+        return (
+            <Box p="md">
+                <Text fw={700} size="xl" mb="md">Sponsorship Analytics</Text>
+                <Card style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 24 }}>
+                    <SponsorEmptyCta
+                        title="No sponsorship data yet"
+                        description="Analytics will appear after you create voucher pools and athletes start redeeming. Set up your first offer to track ROI."
+                    />
+                </Card>
             </Box>
         );
     }

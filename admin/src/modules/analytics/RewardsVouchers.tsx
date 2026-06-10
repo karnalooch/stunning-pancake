@@ -1,29 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Card, Text, Table, Badge, SimpleGrid, ThemeIcon, Skeleton, Stack, Button, Group } from '@mantine/core';
-import { Gift, Users, TrendingUp, CheckCircle2, Plus, MapPin } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    Box, Card, Text, Table, Badge, SimpleGrid, ThemeIcon, Skeleton, Stack, Button, Group,
+    Modal, TextInput, NumberInput,
+} from '@mantine/core';
+import { Gift, Users, TrendingUp, CheckCircle2, Plus } from 'lucide-react';
+import { notifications } from '@mantine/notifications';
 import { apiClient } from '../../api/client';
 import { useAuth } from '../../core/auth/useAuth';
+import { SponsorEmptyCta } from '../../core/components/SponsorEmptyCta';
+import { PageHeader } from '../../core/components/PageHeader';
 
 export const RewardsVouchers: React.FC = () => {
     const { user } = useAuth();
-    const isSponsor = user?.role === 'SPONSOR';
+    const isSponsor = user?.role === 'SPONSOR' || user?.role === 'GLOBAL_OWNER';
     const [pools, setPools] = useState<any[]>([]);
     const [balance, setBalance] = useState<{ points: number } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [creating, setCreating] = useState(false);
+    const [form, setForm] = useState({
+        title: '',
+        description: '',
+        points_required: 100,
+        quantity: 10,
+        valid_days: 90,
+    });
 
-    useEffect(() => {
+    const load = useCallback(async () => {
+        setLoading(true);
+        setError(null);
         const reqs = [apiClient.get('/rewards/pools/')];
-        if (!isSponsor) reqs.push(apiClient.get('/rewards/balance/'));
-        Promise.all(reqs)
-            .then(([poolsRes, balanceRes]) => {
-                setPools(Array.isArray(poolsRes.data) ? poolsRes.data : []);
-                setBalance(balanceRes?.data ?? { points: 0 });
-            })
-            .catch(() => setError('Failed to load rewards data.'))
-            .finally(() => setLoading(false));
-    }, [isSponsor]);
+        if (user?.role !== 'SPONSOR') {
+            reqs.push(apiClient.get('/rewards/balance/'));
+        }
+        try {
+            const [poolsRes, balanceRes] = await Promise.all(reqs);
+            setPools(Array.isArray(poolsRes.data) ? poolsRes.data : []);
+            setBalance(balanceRes?.data ?? { points: 0 });
+        } catch {
+            setError('Failed to load rewards data.');
+        } finally {
+            setLoading(false);
+        }
+    }, [user?.role]);
+
+    useEffect(() => { load(); }, [load]);
+
+    const handleCreate = async () => {
+        if (!form.title.trim()) {
+            notifications.show({ title: 'Validation', message: 'Title is required.', color: 'orange' });
+            return;
+        }
+        setCreating(true);
+        try {
+            await apiClient.post('/rewards/pools/', form);
+            notifications.show({ title: 'Voucher pool created', message: form.title, color: 'green' });
+            setModalOpen(false);
+            setForm({ title: '', description: '', points_required: 100, quantity: 10, valid_days: 90 });
+            load();
+        } catch (err: any) {
+            const detail = err.response?.data?.detail || 'Failed to create voucher pool.';
+            notifications.show({ title: 'Error', message: String(detail), color: 'red' });
+        } finally {
+            setCreating(false);
+        }
+    };
 
     const activeCount = pools.length;
     const totalAvailable = pools.reduce((sum, p) => sum + (p.available || 0), 0);
@@ -36,7 +78,17 @@ export const RewardsVouchers: React.FC = () => {
     ];
 
     return (
-        <Box p="md"><Text fw={700} size="xl" mb="md">Rewards & Vouchers</Text>
+        <Box p="md">
+            <PageHeader
+                title="Rewards & Vouchers"
+                subtitle="Manage voucher pools and redemptions"
+            >
+                {isSponsor && (
+                    <Button leftSection={<Plus size={16} />} onClick={() => setModalOpen(true)}>
+                        New voucher pool
+                    </Button>
+                )}
+            </PageHeader>
             <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md" mb="xl">
                 {stats.map((s, i) => (
                     <Card key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 18, textAlign: 'center' }}>
@@ -53,23 +105,14 @@ export const RewardsVouchers: React.FC = () => {
                 ) : error ? (
                     <Text c="red" size="sm" ta="center">{error}</Text>
                 ) : pools.length === 0 ? (
-                    <Stack align="center" py="xl" gap="md">
-                        <Gift size={40} style={{ opacity: 0.4 }} />
-                        <Text c="dimmed">No active voucher pools.</Text>
-                        {isSponsor && (
-                            <Group>
-                                <Button component={Link} to="/owner/sponsor" leftSection={<Plus size={16} />}>
-                                    Create first voucher
-                                </Button>
-                                <Button component={Link} to="/owner/sponsor/poi" variant="light" leftSection={<MapPin size={16} />}>
-                                    Add POI
-                                </Button>
-                            </Group>
-                        )}
-                    </Stack>
+                    isSponsor ? (
+                        <SponsorEmptyCta />
+                    ) : (
+                        <Text c="dimmed" ta="center" py="xl">No active voucher pools.</Text>
+                    )
                 ) : (
                     <Table>
-                        <thead><tr><th>Code</th><th>Value</th><th>POI</th><th>Available</th><th>Expires</th></tr></thead>
+                        <thead><tr><th>Title</th><th>Points</th><th>Sponsor</th><th>Available</th><th>Expires</th></tr></thead>
                         <tbody>
                             {pools.map((v: any) => (
                                 <tr key={v.id}>
@@ -84,6 +127,48 @@ export const RewardsVouchers: React.FC = () => {
                     </Table>
                 )}
             </Card>
+
+            <Modal opened={modalOpen} onClose={() => setModalOpen(false)} title="Create voucher pool" centered>
+                <Stack gap="md">
+                    <TextInput
+                        label="Offer title"
+                        placeholder="e.g. Free coffee after 50 km"
+                        value={form.title}
+                        onChange={(e) => setForm({ ...form, title: e.target.value })}
+                        required
+                    />
+                    <TextInput
+                        label="Description"
+                        placeholder="Short description for athletes"
+                        value={form.description}
+                        onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    />
+                    <NumberInput
+                        label="Points required"
+                        min={1}
+                        value={form.points_required}
+                        onChange={(v) => setForm({ ...form, points_required: Number(v) || 1 })}
+                    />
+                    <NumberInput
+                        label="Number of vouchers"
+                        min={1}
+                        max={500}
+                        value={form.quantity}
+                        onChange={(v) => setForm({ ...form, quantity: Number(v) || 1 })}
+                    />
+                    <NumberInput
+                        label="Valid for (days)"
+                        min={1}
+                        max={365}
+                        value={form.valid_days}
+                        onChange={(v) => setForm({ ...form, valid_days: Number(v) || 90 })}
+                    />
+                    <Group justify="flex-end">
+                        <Button variant="default" onClick={() => setModalOpen(false)}>Cancel</Button>
+                        <Button loading={creating} onClick={handleCreate}>Create pool</Button>
+                    </Group>
+                </Stack>
+            </Modal>
         </Box>
     );
 };

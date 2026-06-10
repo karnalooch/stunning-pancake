@@ -1124,28 +1124,60 @@ class AntiCheatEngine:
     Core engine for verifying telemetry tracks using Kinematics and BRouter topological mapping.
     """
 
+    ANOMALY_SCORE_THRESHOLD = 0.3
+
+    @staticmethod
+    def anomaly_severity(score: float | None) -> str:
+        s = float(score or 0)
+        if s < 0.15:
+            return "critical"
+        if s < 0.25:
+            return "high"
+        return "medium"
+
+    @staticmethod
+    def anomaly_description(score: float | None, activity_type: str) -> str:
+        s = float(score or 0)
+        kind = activity_type or "activity"
+        if s < 0.15:
+            return f"Critical integrity failure on {kind} (score {s:.2f})"
+        if s < 0.25:
+            return f"High-risk kinematics / route mismatch on {kind} (score {s:.2f})"
+        return f"Low verification score on {kind} (score {s:.2f})"
+
     @staticmethod
     def get_recent_anomalies(tenant_id=None, limit=20):
         from .models import Activity
 
-        qs = Activity.objects.filter(is_verified=False).select_related("user")
+        qs = (
+            Activity.objects.filter(
+                is_verified=False,
+                verification_score__lt=AntiCheatEngine.ANOMALY_SCORE_THRESHOLD,
+            )
+            .select_related("user")
+            .order_by("verification_score", "-created_at")
+        )
         if tenant_id:
             qs = qs.filter(tenant_id=tenant_id)
 
-        anomalies = qs.order_by("-created_at")[:limit]
+        anomalies = qs[:limit]
 
         result = []
         for a in anomalies:
+            score = round(float(a.verification_score or 0), 2)
             result.append(
                 {
                     "id": f"AN-{a.id}",
                     "activity_id": a.id,
-                    "user": a.user.username,
+                    "user": a.user.username if a.user_id else "Unknown",
                     "type": a.type,
-                    "score": round(a.verification_score, 2),
-                    "time": a.start_time.isoformat(),
+                    "score": score,
+                    "severity": AntiCheatEngine.anomaly_severity(score),
+                    "description": AntiCheatEngine.anomaly_description(score, a.type),
+                    "time": a.start_time.isoformat() if a.start_time else None,
                     "distance": a.distance,
                     "duration": str(a.duration) if a.duration else None,
+                    "tenant_id": str(a.tenant_id) if a.tenant_id else None,
                 }
             )
         return result

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Card, Text, Button, SimpleGrid, ThemeIcon } from '@mantine/core';
 import { FileSpreadsheet, FileJson, FileText, Download } from 'lucide-react';
+import { notifications } from '@mantine/notifications';
 import { PageHeader } from '../../core/components/PageHeader';
 import { apiClient } from '../../api/client';
 
@@ -37,7 +38,14 @@ export const ExportCenter: React.FC = () => {
                 link.remove();
                 window.URL.revokeObjectURL(url);
             })
-            .catch(() => { })
+            .catch((err) => {
+                const detail = err.response?.data;
+                const message =
+                    typeof detail === 'string'
+                        ? detail
+                        : detail?.detail || detail?.error || `Export failed (${label}).`;
+                notifications.show({ title: 'Export failed', message, color: 'red' });
+            })
             .finally(() => setLoading(prev => ({ ...prev, [label]: false })));
     };
 
