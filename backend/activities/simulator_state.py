@@ -474,7 +474,10 @@ def live_simulation_stuck() -> bool:
 
 def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bool:
     """
-    True when running=1 but no recent orchestrator/tick progress (worker died or solo queue blocked).
+    True when running=1 but no recent live_tick_task work (worker died, tick lock stuck, solo queue blocked).
+
+    Uses last_tick_at only — run_live_simulation updates last_runner_at even when tick enqueue/lock fails,
+    which previously masked stalled ticks behind a healthy-looking orchestrator heartbeat.
 
     Large on-map counts get a higher threshold so long live_tick_task runs do not spam self-heal.
     """
@@ -486,16 +489,13 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     except (ValueError, TypeError):
         tick_seconds = 8.0
     try:
-        last_runner = float(state.get("last_runner_at") or 0)
-    except (ValueError, TypeError):
-        last_runner = 0.0
-    try:
         last_tick = float(state.get("last_tick_at") or 0)
     except (ValueError, TypeError):
         last_tick = 0.0
-    last_progress = max(last_runner, last_tick)
-    if last_progress <= 0:
-        return True
+    try:
+        started_at = float(state.get("started_at") or 0)
+    except (ValueError, TypeError):
+        started_at = 0.0
     threshold = max(min_seconds, tick_seconds * multiplier)
     try:
         on_map = int(state.get("currently_riding") or 0)
@@ -512,7 +512,14 @@ def live_tick_stale(*, multiplier: float = 4.0, min_seconds: float = 30.0) -> bo
     except (TypeError, ValueError):
         per_hundred, cap_extra = 8.0, 120.0
     threshold += min(cap_extra, max(0.0, load * per_hundred / 100.0))
-    return (time.time() - last_progress) > threshold
+    now = time.time()
+    if last_tick > 0:
+        return (now - last_tick) > threshold
+    # Startup grace before the first successful tick body completes.
+    grace_anchor = started_at if started_at > 0 else 0.0
+    if grace_anchor <= 0:
+        return True
+    return (now - grace_anchor) > threshold
 
 
 def _heal_cooldown_ok() -> bool:
@@ -560,13 +567,16 @@ def heal_stale_live_simulation(*, reschedule: bool = True, from_tick_task: bool 
         actions.append("marked_stale_ticks")
         if reschedule and _heal_cooldown_ok():
             try:
-                from activities.simulator_tasks import run_live_simulation
+                from activities.simulator_tasks import live_tick_task, run_live_simulation
 
                 # Always restart the orchestrator chain (run_live_simulation self-reschedules).
                 # When the live lock is still held, only live_tick_task.delay() leaves a gap
                 # if the countdown chain was lost (observed ~2min stall in prod logs).
                 run_live_simulation.delay()
                 actions.append("rescheduled_live_runner")
+                if not r.exists(LIVE_TICK_LOCK_KEY):
+                    live_tick_task.delay()
+                    actions.append("enqueued_live_tick")
             except Exception as exc:
                 actions.append(f"reschedule_failed:{exc!s:.120}")
             live_log(
@@ -1062,10 +1072,47 @@ def increment_live_routing_counter(field: str, delta: int = 1) -> int:
 # ─── Validation ──────────────────────────────────────────────────
 
 
+def live_tick_lock_ttl_seconds() -> int:
+    """Scale lock TTL with pipeline depth so long ticks are not interrupted mid-flight."""
+    try:
+        in_flight = get_live_rides_in_flight_count()
+    except Exception:
+        in_flight = 0
+    try:
+        base = int(os.getenv("SCALE_SIM_LIVE_TICK_LOCK_TTL", "120"))
+    except (TypeError, ValueError):
+        base = 120
+    return min(600, max(30, base + in_flight // 15))
+
+
+_TICK_LOCK_SKIP_LOG_KEY = "{sim}:live:tick_lock_skip_log"
+_TICK_LOCK_SKIP_LOG_INTERVAL_S = 30.0
+
+
+def maybe_log_live_tick_lock_skip() -> None:
+    """Rate-limited visibility when ticks are skipped due to lock contention."""
+    try:
+        r = get_redis()
+        if not r.set(_TICK_LOCK_SKIP_LOG_KEY, "1", nx=True, ex=int(_TICK_LOCK_SKIP_LOG_INTERVAL_S)):
+            return
+    except Exception:
+        pass
+    live_log("Live tick skipped: tick lock held (another tick running or stale lock).")
+
+
 def acquire_live_tick_lock() -> bool:
     """Prevent overlapping ticks when poll endpoints and background loop fire together."""
     r = get_redis()
-    return bool(r.set(LIVE_TICK_LOCK_KEY, "1", nx=True, ex=30))
+    return bool(r.set(LIVE_TICK_LOCK_KEY, "1", nx=True, ex=live_tick_lock_ttl_seconds()))
+
+
+def refresh_live_tick_lock() -> None:
+    try:
+        r = get_redis()
+        if r.exists(LIVE_TICK_LOCK_KEY):
+            r.expire(LIVE_TICK_LOCK_KEY, live_tick_lock_ttl_seconds())
+    except Exception:
+        pass
 
 
 def release_live_tick_lock():

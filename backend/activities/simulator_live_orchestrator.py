@@ -49,8 +49,6 @@ def run_live_simulation(
         sim.release_live_lock()
         return {"status": "stopped"}
 
-    sim.set_live_state(last_runner_at=time.time())
-
     blocked, block_reason = sim.batch_blocks_live_simulation()
     if blocked:
         sim.live_log(f"Live sim stopped: {block_reason} (finish batch first)")
@@ -133,6 +131,7 @@ def live_tick_task(self):
     from activities.simulator_live_tick import _run_live_tick_body
 
     if not sim.acquire_live_tick_lock():
+        sim.maybe_log_live_tick_lock_skip()
         return
 
     _reset_brouter_tick_budget()

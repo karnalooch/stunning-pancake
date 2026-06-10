@@ -77,6 +77,7 @@ def _run_live_tick_body():
     if requeued_routing > 0:
         sim.live_log(f"Requeued {requeued_routing} stale ROUTING rides → PENDING_ROUTE.")
         active_rides = sim.get_live_rides()
+    sim.refresh_live_tick_lock()
 
     # Promote pre-routed rides to ACTIVE when start_time reached
     promoted = 0
@@ -502,6 +503,8 @@ def _run_live_tick_body():
         max_pipeline_rides=start_budget["max_pipeline_rides"],
         pipeline_capped_last_tick=start_budget["pipeline_capped"],
     )
+
+    sim.refresh_live_tick_lock()
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
     # Re-read ride hash so sync starts / promotions from phase 2 are visible this tick.

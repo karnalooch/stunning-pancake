@@ -35,6 +35,17 @@ class LiveTickStaleTest(SimpleTestCase):
         self.assertTrue(sim.live_tick_stale())
 
     @patch("activities.simulator_state.get_live_state")
+    def test_stale_when_runner_recent_but_tick_old(self, mock_state):
+        """Orchestrator heartbeat must not mask stalled tick bodies."""
+        mock_state.return_value = {
+            "running": True,
+            "tick_seconds": 8,
+            "last_tick_at": time.time() - 120,
+            "last_runner_at": time.time() - 2,
+        }
+        self.assertTrue(sim.live_tick_stale())
+
+    @patch("activities.simulator_state.get_live_state")
     def test_not_stale_when_recent_tick(self, mock_state):
         mock_state.return_value = {
             "running": True,
@@ -63,6 +74,7 @@ class MaybeAdvanceLiveTest(SimpleTestCase):
 
 class HealStaleLiveTest(SimpleTestCase):
     @patch("activities.simulator_state.live_log")
+    @patch("activities.simulator_tasks.live_tick_task")
     @patch("activities.simulator_tasks.run_live_simulation")
     @patch("activities.simulator_state.set_live_state")
     @patch("activities.simulator_state.get_redis")
@@ -77,6 +89,7 @@ class HealStaleLiveTest(SimpleTestCase):
         mock_redis,
         _set,
         mock_runner,
+        mock_tick,
         _log,
     ):
         mock_redis.return_value.exists.return_value = False
@@ -84,8 +97,11 @@ class HealStaleLiveTest(SimpleTestCase):
         out = sim.heal_stale_live_simulation(reschedule=True)
         self.assertTrue(out["healed"])
         mock_runner.delay.assert_called_once()
+        mock_tick.delay.assert_called_once()
+        self.assertIn("enqueued_live_tick", out["actions"])
 
     @patch("activities.simulator_state.live_log")
+    @patch("activities.simulator_tasks.live_tick_task")
     @patch("activities.simulator_tasks.run_live_simulation")
     @patch("activities.simulator_state.set_live_state")
     @patch("activities.simulator_state._heal_cooldown_ok", return_value=True)
@@ -102,6 +118,7 @@ class HealStaleLiveTest(SimpleTestCase):
         _cooldown,
         _set,
         mock_runner,
+        _mock_tick,
         _log,
     ):
         mock_redis.return_value.exists.return_value = False

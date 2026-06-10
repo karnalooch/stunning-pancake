@@ -35,6 +35,7 @@ interface LiveStatus {
     stuck?: boolean; live_lock_held?: boolean; pool_size?: number; active_rides?: number;
     async_routing_enabled?: boolean;
     ride_warming?: number; ride_routing?: number; ride_routed?: number; ride_active?: number;
+    tick_stale?: boolean; worker_recovered_at?: number | null;
     routing_unroutable_total?: number;
     routing_queue_depth?: number;
     routing_backpressure_active?: boolean;
@@ -136,6 +137,9 @@ export const SimulatorPage: React.FC = () => {
         (liveStatus?.pool_size ?? 0) > 0 || (liveStatus?.currently_riding ?? 0) > 0
         || (liveStatus?.active_rides ?? 0) > 0
     );
+    const warmingStuckOnMap = isLiveRunning
+        && (liveStatus?.currently_riding ?? 0) === 0
+        && (liveStatus?.ride_warming ?? 0) > 0;
     const showSimControls = anyRunning || isStuck || hasOrphanedLive;
     const showBatchProgress = launching || isBatchRunning || (batchStatus && batchStatus.progress_pct > 0 && batchStatus.progress_pct < 100);
     const batchCompleteReady = !isBatchRunning && !launching
@@ -837,6 +841,11 @@ export const SimulatorPage: React.FC = () => {
                                                 Warming {(liveStatus?.ride_warming ?? 0).toLocaleString()}
                                             </Badge>
                                         )}
+                                        {isLiveRunning && liveStatus?.tick_stale && (
+                                            <Badge variant="filled" color="red" title="live_tick_task not progressing">
+                                                Tick stalled
+                                            </Badge>
+                                        )}
                                         {isLiveRunning && (liveStatus?.ride_routing ?? 0) > 0 && (
                                             <Badge variant="light" color="cyan" title="BRouter on routing queue">
                                                 Routing {(liveStatus?.ride_routing ?? 0).toLocaleString()}
@@ -861,6 +870,18 @@ export const SimulatorPage: React.FC = () => {
                                         elapsedSeconds={batchStatus?.elapsed_seconds}
                                         error={batchStatus?.error}
                                     />
+                                )}
+
+                                {warmingStuckOnMap && (
+                                    <Alert color="orange" variant="light" icon={<AlertTriangle size={16} />} mb="md" title="Warming bez riderów na mapie">
+                                        <Text size="xs">
+                                            {(liveStatus?.ride_warming ?? 0).toLocaleString()} przejazdów czeka na routing
+                                            {(liveStatus?.ride_routing ?? 0) > 0 ? ` (${(liveStatus?.ride_routing ?? 0).toLocaleString()} w ROUTING)` : ''}.
+                                            {liveStatus?.tick_stale
+                                                ? ' Ticki się zatrzymały — self-heal restartuje worker; sprawdź celery-worker-simulation i celery-worker-routing na Railway.'
+                                                : ' Jeśli liczba nie spada, sprawdź worker routing i BRouter.'}
+                                        </Text>
+                                    </Alert>
                                 )}
 
                                 {(anyRunning || hasOrphanedLive) ? (
