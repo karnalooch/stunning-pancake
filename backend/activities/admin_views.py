@@ -117,6 +117,19 @@ def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     return {"created": max(0, total - current), "total": total}
 
 
+def _setup_live_athlete_pool(total_users: int) -> int:
+    """Populate Redis live pool (or DB sampling mode) before the first live tick."""
+    from activities.scale_config import compute_batch_scaling
+
+    pool_plan = compute_batch_scaling(max(int(total_users), 1))
+    if pool_plan["live_pool_mode"] == "db":
+        pool_size = sim.init_live_pool_db_mode(total_users)
+    else:
+        pool_size = sim.set_live_pool_from_db(pool_plan["live_pool_redis_cap"])
+    sim.set_live_state(total_users=pool_size)
+    return pool_size
+
+
 class ActivityPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = "page_size"
@@ -824,15 +837,7 @@ class LiveSimulationView(APIView):
                 live_kw["sim_intensity"] = sim_intensity
                 live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
-            # Setup athlete pool
-            from activities.scale_config import compute_batch_scaling
-
-            pool_plan = compute_batch_scaling(max(total_users, 1))
-            if pool_plan["live_pool_mode"] == "db":
-                pool_size = sim.init_live_pool_db_mode(total_users)
-            else:
-                pool_size = sim.set_live_pool_from_db(pool_plan["live_pool_redis_cap"])
-            sim.set_live_state(total_users=pool_size)
+            pool_size = _setup_live_athlete_pool(total_users)
             sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): pool={pool_size} users.")
 
             # Run first tick immediately, then keep ticking in background (no Celery countdown in eager mode)
@@ -885,6 +890,8 @@ class LiveSimulationView(APIView):
                 live_kw["sim_intensity"] = sim_intensity
                 live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
+            pool_size = _setup_live_athlete_pool(total_users)
+            sim.live_log(f"LIVE SIM: pool={pool_size} athletes ready (Celery runner).")
             run_live_simulation.delay()
 
         from activities.scale_config import resolve_live_scale_limits
@@ -1465,6 +1472,14 @@ class RunSimulationView(APIView):
         days = int(request.data.get("days", 30))
         clear = bool(request.data.get("clear", False))
         skip_activities = bool(request.data.get("skip_activities", False))
+
+        # Wiping DB while live sim ticks still run leaves orphaned Redis rides on deleted users.
+        if clear and (
+            sim.get_live_state().get("running")
+            or sim.is_live_lock_held()
+            or sim.get_live_rides_in_flight_count() > 0
+        ):
+            sim.force_stop_live_simulation()
         total_users = request.data.get("total_users")
         if total_users is not None:
             try:

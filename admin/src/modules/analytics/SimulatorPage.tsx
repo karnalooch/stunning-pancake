@@ -287,6 +287,9 @@ export const SimulatorPage: React.FC = () => {
         setLaunching(true);
         setActiveStep(2);
         try {
+            if (isLiveRunning || hasOrphanedLive) {
+                await SimulatorApi.abortLive().catch(() => null);
+            }
             await SimulatorApi.startBatch({
                 total_users: cyclists,
                 days: 7,
@@ -358,7 +361,7 @@ export const SimulatorPage: React.FC = () => {
 
     const handleForceReset = async () => {
         try {
-            await SimulatorApi.resetSimulator();
+            await SimulatorApi.resetSimulator(wipeTarget);
             await refreshStatus();
             notifications.show({ title: 'Simulator reset', message: 'Locks and running flags cleared.', color: 'teal' });
         } catch (err: any) {

@@ -73,6 +73,19 @@ class RouteLiveRideTaskTest(SimpleTestCase):
         self.assertTrue(_async_routing_enabled())
 
 
+class LiveTickTelemetryRefreshTest(SimpleTestCase):
+    """Regression: phase 3 must re-read live rides after phase 2 starts."""
+
+    def test_phase3_refreshes_active_rides(self):
+        import inspect
+
+        from activities import simulator_live_tick as tick_mod
+
+        body = inspect.getsource(tick_mod._run_live_tick_body)
+        phase3 = body.split("Phase 3: Interpolate", 1)[1][:500]
+        self.assertIn("active_rides = sim.get_live_rides()", phase3)
+
+
 class LiveTickStateShadowRegressionTest(SimpleTestCase):
     """Regression: city-balance loop must not shadow live `state` dict (AttributeError on .get)."""
 

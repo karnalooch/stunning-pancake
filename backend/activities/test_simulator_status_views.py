@@ -120,3 +120,45 @@ def test_live_status_exposes_backpressure_fields(owner_client):
     assert response.data["routing_backpressure_active"] is True
     assert response.data["dispatches_throttled"] is True
     assert response.data["routing_broker_queue_depth"] == 42
+
+
+@pytest.mark.django_db
+@patch("activities.admin_views.run_batch_simulation.delay")
+def test_batch_clear_stops_running_live(mock_delay, owner_client):
+    sim.reset_live_state()
+    sim.set_live_state(running=True, currently_riding=12)
+    sim.acquire_live_lock()
+
+    response = owner_client.post(
+        reverse("admin-simulate"),
+        {"clear": True, "total_users": 100, "skip_activities": True},
+        format="json",
+    )
+
+    assert response.status_code == 200
+    assert sim.get_live_state()["running"] is False
+    assert sim.is_live_lock_held() is False
+    mock_delay.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_setup_live_athlete_pool_populates_redis(db):
+    from django.contrib.auth import get_user_model
+
+    from activities.admin_views import _setup_live_athlete_pool
+
+    User = get_user_model()
+    for i in range(20):
+        User.objects.create_user(
+            username=f"pool_athlete_{i:03d}",
+            email=f"p{i}@test.com",
+            password="x",
+            role="ATHLETE",
+        )
+
+    sim.reset_live_state()
+    pool_size = _setup_live_athlete_pool(20)
+
+    assert pool_size >= 10
+    assert sim.get_live_pool_count() > 0 or sim.is_live_pool_db_mode()
+    assert int(sim.get_live_state().get("total_users", 0)) == pool_size

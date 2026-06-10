@@ -504,6 +504,8 @@ def _run_live_tick_body():
     )
 
     # ── Phase 3: Interpolate + push telemetry for ALL active riders ──
+    # Re-read ride hash so sync starts / promotions from phase 2 are visible this tick.
+    active_rides = sim.get_live_rides()
     telemetry_entries = []
 
     for user_id, ride in active_rides.items():
