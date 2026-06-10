@@ -934,13 +934,13 @@ class POIViewSet(viewsets.ModelViewSet):
         requesting_user = self.request.user
         qs = self.queryset.select_related("sponsor")
         if requesting_user.role == "SPONSOR":
-            try:
-                from rewards.models import Sponsor
+            from django.core.exceptions import ObjectDoesNotExist
 
+            try:
                 sponsor = requesting_user.sponsor_profile
-                return qs.filter(sponsor=sponsor)
-            except Sponsor.DoesNotExist:
+            except ObjectDoesNotExist:
                 return qs.none()
+            return qs.filter(sponsor=sponsor)
         if requesting_user.role != "GLOBAL_OWNER" and requesting_user.tenant_id:
             return qs.filter(tenant_id=requesting_user.tenant_id)
         return qs

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import serializers, status
@@ -87,7 +88,7 @@ def balance_view(request: Request) -> Response:
 def _get_or_create_sponsor(user) -> Sponsor:
     try:
         return user.sponsor_profile
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         tenant_id = getattr(user, "tenant_id", None)
         return Sponsor.objects.create(
             user=user,
@@ -125,7 +126,7 @@ def pool_list_view(request: Request) -> Response:
         try:
             sponsor = request.user.sponsor_profile
             pools = pools.filter(sponsor=sponsor)
-        except Sponsor.DoesNotExist:
+        except ObjectDoesNotExist:
             pools = pools.none()
     return Response(VoucherPoolSerializer(pools, many=True).data)
 
@@ -136,7 +137,7 @@ def sponsor_stats_view(request: Request) -> Response:
     """Returns analytics for the authenticated sponsor. Falls back to empty stats for non-sponsor roles."""
     try:
         sponsor = request.user.sponsor_profile
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         return Response(
             {
                 "poi_count": 0,
@@ -293,7 +294,7 @@ def sponsor_campaigns_view(request: Request) -> Response:
     """CRUD list/create campaigns for authenticated sponsor."""
     try:
         sponsor = request.user.sponsor_profile
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         return Response({"detail": "Sponsor profile required"}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == "GET":
@@ -312,9 +313,10 @@ def sponsor_campaigns_view(request: Request) -> Response:
 def sponsor_campaign_detail_view(request: Request, pk: int) -> Response:
     try:
         sponsor = request.user.sponsor_profile
-        campaign = SponsorCampaign.objects.get(pk=pk, sponsor=sponsor)
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         return Response({"detail": "Sponsor profile required"}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        campaign = SponsorCampaign.objects.get(pk=pk, sponsor=sponsor)
     except SponsorCampaign.DoesNotExist:
         return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -336,7 +338,7 @@ def sponsor_stats_timeseries_view(request: Request) -> Response:
     """Daily redemption counts for sponsor pools (7d default)."""
     try:
         sponsor = request.user.sponsor_profile
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         return Response({"series": []})
 
     days = int(request.query_params.get("days", 7))
@@ -360,7 +362,7 @@ def sponsor_activity_feed_view(request: Request) -> Response:
     """Recent redemptions for sponsor pools."""
     try:
         sponsor = request.user.sponsor_profile
-    except Sponsor.DoesNotExist:
+    except ObjectDoesNotExist:
         return Response({"results": []})
 
     vouchers = (
