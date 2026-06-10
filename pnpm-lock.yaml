@@ -142,9 +142,6 @@ importers:
       globals:
         specifier: ^17.5.0
         version: 17.6.0
-      happy-dom:
-        specifier: ^20.10.2
-        version: 20.10.2
       jsdom:
         specifier: ^29.0.2
         version: 29.1.1(@noble/hashes@2.2.0)
@@ -11909,11 +11906,13 @@ snapshots:
 
   '@types/use-sync-external-store@0.0.6': {}
 
-  '@types/whatwg-mimetype@3.0.2': {}
+  '@types/whatwg-mimetype@3.0.2':
+    optional: true
 
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 25.9.2
+    optional: true
 
   '@types/yargs-parser@21.0.3': {}
 
@@ -12768,6 +12767,7 @@ snapshots:
   buffer-image-size@0.6.4:
     dependencies:
       '@types/node': 25.9.2
+    optional: true
 
   builder-util-runtime@9.7.0:
     dependencies:
@@ -13441,7 +13441,8 @@ snapshots:
 
   entities@6.0.1: {}
 
-  entities@7.0.1: {}
+  entities@7.0.1:
+    optional: true
 
   entities@8.0.0: {}
 
@@ -14519,6 +14520,7 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+    optional: true
 
   has-bigints@1.1.0: {}
 
