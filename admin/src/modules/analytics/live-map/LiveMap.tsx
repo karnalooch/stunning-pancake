@@ -876,16 +876,17 @@ export const LiveMap: React.FC = () => {
     }) => {
         try {
             const tier = resolveLiveMapTier(map.getZoom?.() ?? DEFAULT_ZOOM);
-            const layers = tier === 'macro'
-                ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
-                : tier === 'meso'
-                    ? [
-                        LIVE_LAYERS.clusters,
-                        LIVE_LAYERS.clusterCount,
-                        LIVE_LAYERS.directionDots,
-                    ]
-                    : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels];
-            const sourceId = tier === 'meso' ? LIVE_SOURCES.mesoClusters : LIVE_SOURCES.positions;
+            const layers = tier === 'micro'
+                ? [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels]
+                : [
+                    LIVE_LAYERS.clusters,
+                    LIVE_LAYERS.clusterCount,
+                    LIVE_LAYERS.directionDots,
+                    ...(tier === 'macro'
+                        ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
+                        : []),
+                ];
+            const sourceId = tier === 'micro' ? LIVE_SOURCES.positions : LIVE_SOURCES.mesoClusters;
             return countRenderedWithSymbolFallback(
                 map as Parameters<typeof countRenderedWithSymbolFallback>[0],
                 layers,
@@ -923,7 +924,7 @@ export const LiveMap: React.FC = () => {
         if (!map || !layersReadyRef.current) return;
         const list = positionsRef.current;
         const z = map.getZoom?.() ?? DEFAULT_ZOOM;
-        const mesoOnly = resolveLiveMapTier(z) === 'meso';
+        const mesoOnly = resolveLiveMapTier(z) !== 'micro';
         setLivePositionsData(map, list, {
             mesoOnly,
             onPositionsSet: () => scheduleRenderedCountRef.current(),
@@ -1001,7 +1002,6 @@ export const LiveMap: React.FC = () => {
         if (!layersReadyRef.current || list.length === 0) return;
         const map = mapRef.current;
         if (!map) return;
-        if (resolveLiveMapTier(map.getZoom()) === 'macro') return;
         const cityMatch = filtersRef.current.citySlug === slug || pendingCityFlyRef.current === slug;
         if (!cityMatch) return;
         applyPositionPayload(list, meta, detail, true, false, false);
@@ -1604,11 +1604,8 @@ export const LiveMap: React.FC = () => {
             });
             map.on('zoom', () => {
                 const z = map.getZoom();
-                if (apiDetailForZoom(z) === 'summary') {
-                    ingestPositionsRef.current([], { snap: true });
-                    lastMesoReclusterZoomRef.current = null;
-                } else if (
-                    resolveLiveMapTier(z) === 'meso'
+                if (
+                    resolveLiveMapTier(z) !== 'micro'
                     && positionsRef.current.length > 0
                     && layersReadyRef.current
                 ) {

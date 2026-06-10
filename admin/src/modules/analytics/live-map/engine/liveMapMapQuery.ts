@@ -54,17 +54,15 @@ export function classifyRenderedFeatures(
     for (const f of features) {
         const p = f.properties;
         if (!p) continue;
-        if (tier === 'macro') {
-            if (p.slug != null || p.count != null) {
-                hubs += 1;
-            }
-            continue;
-        }
         if (p.cluster_id != null || p.point_count != null) {
             clusters += 1;
             continue;
         }
-        if (p.deviceId != null) {
+        if (tier === 'macro' && (p.slug != null || p.count != null)) {
+            hubs += 1;
+            continue;
+        }
+        if (p.deviceId != null && tier !== 'macro') {
             points += 1;
         }
     }

@@ -70,21 +70,21 @@ export function auditWebGlLiveMap(map: {
         }
     }
 
-    const sourceId = tier === 'meso' ? LIVE_SOURCES.mesoClusters : LIVE_SOURCES.positions;
+    const sourceId = tier === 'micro' ? LIVE_SOURCES.positions : LIVE_SOURCES.mesoClusters;
     const sourceFeatures = map.querySourceFeatures?.(sourceId) ?? [];
     const sourceClusters = sourceFeatures.filter((f) => f.properties?.point_count != null).length;
     const sourcePoints = sourceFeatures.filter((f) => f.properties?.point_count == null).length;
 
-    const layerIds =
-        tier === 'macro'
-            ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
-            : tier === 'meso'
-                ? [
-                    LIVE_LAYERS.clusters,
-                    LIVE_LAYERS.clusterCount,
-                    LIVE_LAYERS.directionDots,
-                ]
-                : [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels];
+    const layerIds = tier === 'micro'
+        ? [LIVE_LAYERS.unclustered, LIVE_LAYERS.riderLabels]
+        : [
+            LIVE_LAYERS.clusters,
+            LIVE_LAYERS.clusterCount,
+            LIVE_LAYERS.directionDots,
+            ...(tier === 'macro'
+                ? [LIVE_LAYERS.cityHubRing, LIVE_LAYERS.cityHubCount]
+                : []),
+        ];
 
     const classified = countRenderedWithSymbolFallback(map, layerIds, tier, sourceId);
     const renderedClusters = classified.clusters;

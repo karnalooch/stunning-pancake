@@ -18,14 +18,14 @@ describe('liveMapEnterprise', () => {
     });
 
     it('maps API detail to tier', () => {
-        expect(apiDetailForTier(7)).toBe('summary');
+        expect(apiDetailForTier(7)).toBe('standard');
         expect(apiDetailForTier(10)).toBe('standard');
         expect(apiDetailForTier(13)).toBe('full');
     });
 
     it('exposes one visualization family per tier', () => {
         expect(tierShowsCityHubs(7)).toBe(true);
-        expect(tierShowsRiderClusters(7)).toBe(false);
+        expect(tierShowsRiderClusters(7)).toBe(true);
         expect(tierShowsRiderClusters(10)).toBe(true);
         expect(tierShowsRiderDetail(10)).toBe(false);
         expect(tierShowsRiderDetail(13)).toBe(true);

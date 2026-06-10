@@ -28,10 +28,10 @@ export const LIVE_MAP_LOD = {
     cityHubFadeInEnd: 5.8,
     /** Hold full hub opacity until just before meso handoff (z=9). */
     cityHubFadeOutStart: 8.95,
-    /** Huby tylko w tierze macro (z < 9) — bez nakładania na klastry. */
+    /** Huby w makro — wygaszane gdy klastry meso nabierają siły (z ≈ 7.5+). */
     cityHubFadeOutEnd: LIVE_MAP_TIER.mesoMinZoom,
-    /** Klastry od tieru meso (z ≥ 9). */
-    clusterVisibleStart: LIVE_MAP_TIER.mesoMinZoom,
+    /** Klastry (te same bąbelki co w meso) od widoku kraju w makro. */
+    clusterVisibleStart: 5,
     clusterPeakEnd: 11.6,
     clusterFadeOutEnd: 13.6,
     /** Individual GL dots only at z≥12 (matches apiDetailForZoom `full`). */
@@ -128,7 +128,8 @@ export function pollIntervalForZoom(
 }
 
 export function clusterRadiusForZoom(zoom: number): number {
-    if (zoom < 7) return 68;
+    if (zoom < 6) return 84;
+    if (zoom < 7) return 72;
     if (zoom < 8.5) return 56;
     if (zoom < 9.5) return 50;
     if (zoom < 10.5) return 46;
@@ -175,9 +176,10 @@ export type LiveMapLodAuditIssue = {
 /** MapLibre holds the first stop below min zoom — explicit zeros avoid stray rider dots. */
 export function riderUnclusteredOpacityAtZoom(zoom: number): number {
     const L = LIVE_MAP_LOD;
+    const mesoStart = LIVE_MAP_TIER.mesoMinZoom;
     return maplibreInterp(zoom, [
-        [L.clusterVisibleStart - 0.001, 0],
-        [L.clusterVisibleStart, 0.38],
+        [mesoStart - 0.001, 0],
+        [mesoStart, 0.38],
         [L.dotFadeInStart - 0.15, 0.42],
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 0.35],
@@ -190,9 +192,10 @@ export function riderUnclusteredOpacityAtZoom(zoom: number): number {
 
 export function riderUnclusteredRadiusAtZoom(zoom: number): number {
     const L = LIVE_MAP_LOD;
+    const mesoStart = LIVE_MAP_TIER.mesoMinZoom;
     return maplibreInterp(zoom, [
-        [L.clusterVisibleStart - 0.001, 0],
-        [L.clusterVisibleStart, 5],
+        [mesoStart - 0.001, 0],
+        [mesoStart, 5],
         [L.dotFadeInStart - 0.15, 6],
         [L.dotFadeInStart, 0],
         [L.dotFadeInStart + 0.25, 5],
@@ -248,7 +251,9 @@ export function cityHubOpacityAtZoom(zoom: number): number {
 
 /** SSOT paint stops — must stay sorted by zoom ascending. */
 export const CLUSTER_CIRCLE_OPACITY_STOPS: readonly ZoomStopPair[] = [
-    [LIVE_MAP_LOD.clusterVisibleStart, 0.32],
+    [LIVE_MAP_LOD.clusterVisibleStart, 0.28],
+    [7.5, 0.42],
+    [LIVE_MAP_TIER.mesoMinZoom, 0.55],
     [10.5, 0.88],
     [LIVE_MAP_LOD.clusterPeakEnd, 0.94],
     [LIVE_MAP_LOD.clusterFadeOutEnd - 1.2, 0.62],
@@ -256,7 +261,9 @@ export const CLUSTER_CIRCLE_OPACITY_STOPS: readonly ZoomStopPair[] = [
 ] as const;
 
 export const CLUSTER_COUNT_OPACITY_STOPS: readonly ZoomStopPair[] = [
-    [LIVE_MAP_LOD.clusterVisibleStart, 0.4],
+    [LIVE_MAP_LOD.clusterVisibleStart, 0.35],
+    [7.5, 0.5],
+    [LIVE_MAP_TIER.mesoMinZoom, 0.65],
     [10, 0.92],
     [LIVE_MAP_LOD.clusterPeakEnd, 1],
     [LIVE_MAP_LOD.clusterFadeOutEnd - 0.8, 0.55],
@@ -293,7 +300,7 @@ export function riderLayerVisibilityAtZoom(zoom: number): number {
  * True when riders should be visible on canvas — clusters (meso) or dots/icons/labels (micro).
  */
 export function ridersVisibleAtZoom(zoom: number): boolean {
-    if (zoom < LIVE_MAP_TIER.mesoMinZoom) {
+    if (zoom < LIVE_MAP_LOD.clusterVisibleStart) {
         return false;
     }
     if (zoom <= CLUSTER_MAX_ZOOM) {

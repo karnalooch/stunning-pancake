@@ -48,8 +48,11 @@ describe('layerVisibilityForRenderMode', () => {
         }
     });
 
-    it('hides rider layers at macro zoom', () => {
-        for (const id of [...MESO_RIDER_LAYERS, ...MICRO_RIDER_LAYERS]) {
+    it('shows meso cluster layers at macro zoom', () => {
+        for (const id of MESO_RIDER_LAYERS) {
+            expect(layerVisibilityForRenderMode(id, 'clusters', 7)).toBe(true);
+        }
+        for (const id of MICRO_RIDER_LAYERS) {
             expect(layerVisibilityForRenderMode(id, 'clusters', 7)).toBe(false);
         }
     });

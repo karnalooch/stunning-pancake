@@ -28,14 +28,11 @@ export function layerVisibilityForRenderMode(
         return false;
     }
     const tier = zoom != null ? resolveLiveMapTier(zoom) : null;
-    if (tier === 'macro') {
-        return false;
-    }
     const isMicroLayer = (MICRO_RIDER_LAYERS as readonly string[]).includes(layerId);
     const isMesoLayer = (MESO_RIDER_LAYERS as readonly string[]).includes(layerId);
 
     if (isMesoLayer) {
-        return tier === null || tier === 'meso';
+        return tier === null || tier === 'macro' || tier === 'meso';
     }
     if (isMicroLayer) {
         return tier === 'micro';

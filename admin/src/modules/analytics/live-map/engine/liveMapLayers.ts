@@ -25,7 +25,7 @@ import { resolveLiveMapTier } from './liveMapEnterprise';
 import { buildMesoClusterFeatureCollectionAsync } from './liveMapMesoClusters';
 
 /** Bump when layer/source spec changes — triggers reinstall for stale browser sessions. */
-export const LIVE_MAP_LAYER_VERSION = 9;
+export const LIVE_MAP_LAYER_VERSION = 10;
 export const LIVE_MAP_LAYER_VERSION_KEY = 'live-map-layer-v';
 
 export const LIVE_SOURCES = {
@@ -333,8 +333,8 @@ export function installLiveMapLayers(
             paint: {
                 'circle-radius': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart - 0.001, 0,
-                    LOD.clusterVisibleStart, 5,
+                    LIVE_MAP_TIER.mesoMinZoom - 0.001, 0,
+                    LIVE_MAP_TIER.mesoMinZoom, 5,
                     LOD.dotFadeInStart - 0.15, 6,
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 5,
@@ -352,8 +352,8 @@ export function installLiveMapLayers(
                 ],
                 'circle-opacity': [
                     'interpolate', ['linear'], ['zoom'],
-                    LOD.clusterVisibleStart - 0.001, 0,
-                    LOD.clusterVisibleStart, 0.38,
+                    LIVE_MAP_TIER.mesoMinZoom - 0.001, 0,
+                    LIVE_MAP_TIER.mesoMinZoom, 0.38,
                     LOD.dotFadeInStart - 0.15, 0.42,
                     LOD.dotFadeInStart, 0,
                     LOD.dotFadeInStart + 0.25, 0.35,

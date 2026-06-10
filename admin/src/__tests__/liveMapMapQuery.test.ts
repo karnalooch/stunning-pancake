@@ -36,8 +36,8 @@ describe('liveMapMapQuery', () => {
             hubs: 0,
         });
         expect(classifyRenderedFeatures(features, 'macro')).toEqual({
-            total: 1,
-            clusters: 0,
+            total: 2,
+            clusters: 1,
             points: 0,
             hubs: 1,
         });
