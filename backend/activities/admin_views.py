@@ -117,19 +117,6 @@ def _bootstrap_live_athletes(min_users: int = 500) -> dict:
     return {"created": max(0, total - current), "total": total}
 
 
-def _setup_live_athlete_pool(total_users: int) -> int:
-    """Populate Redis live pool (or DB sampling mode) before the first live tick."""
-    from activities.scale_config import compute_batch_scaling
-
-    pool_plan = compute_batch_scaling(max(int(total_users), 1))
-    if pool_plan["live_pool_mode"] == "db":
-        pool_size = sim.init_live_pool_db_mode(total_users)
-    else:
-        pool_size = sim.set_live_pool_from_db(pool_plan["live_pool_redis_cap"])
-    sim.set_live_state(total_users=pool_size)
-    return pool_size
-
-
 class ActivityPagination(PageNumberPagination):
     page_size = 100
     page_size_query_param = "page_size"
@@ -837,7 +824,9 @@ class LiveSimulationView(APIView):
                 live_kw["sim_intensity"] = sim_intensity
                 live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
-            pool_size = _setup_live_athlete_pool(total_users)
+            from activities.simulator_live_start import setup_live_athlete_pool
+
+            pool_size = setup_live_athlete_pool(total_users)
             sim.live_log(f"LIVE SIM (SQLite De-blocked Mode): pool={pool_size} users.")
 
             # Run first tick immediately, then keep ticking in background (no Celery countdown in eager mode)
@@ -890,7 +879,9 @@ class LiveSimulationView(APIView):
                 live_kw["sim_intensity"] = sim_intensity
                 live_kw["sim_load"] = sim_load
             sim.set_live_state(**live_kw)
-            pool_size = _setup_live_athlete_pool(total_users)
+            from activities.simulator_live_start import setup_live_athlete_pool
+
+            pool_size = setup_live_athlete_pool(total_users)
             sim.live_log(f"LIVE SIM: pool={pool_size} athletes ready (Celery runner).")
             run_live_simulation.delay()
 
@@ -1544,6 +1535,26 @@ class RunSimulationView(APIView):
         }
         if scale_json:
             batch_kw["scale_overrides"] = scale_json
+        if bool(request.data.get("auto_start_live", False)):
+            import json as _json
+
+            live_params = {
+                "pool_pct": float(request.data.get("pool_pct", 1.0)),
+            }
+            if "intensity" in request.data and "load" in request.data:
+                live_params["intensity"] = int(request.data["intensity"])
+                live_params["load"] = int(request.data["load"])
+            else:
+                live_params["active_ratio"] = float(request.data.get("active_ratio", 0.3))
+                live_params["cheat_ratio"] = float(request.data.get("cheat_ratio", 0.05))
+                live_params["tick_seconds"] = int(request.data.get("tick_seconds", 10))
+            if request.data.get("scale_overrides") is not None:
+                live_params["scale_overrides"] = request.data.get("scale_overrides")
+            batch_kw["auto_start_live"] = "true"
+            batch_kw["auto_start_live_params"] = _json.dumps(live_params, separators=(",", ":"))
+        else:
+            batch_kw["auto_start_live"] = "false"
+            batch_kw["auto_start_live_params"] = ""
         sim.set_batch_state(**batch_kw)
 
         batch_plan = None

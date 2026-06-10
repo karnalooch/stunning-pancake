@@ -90,6 +90,9 @@ def run_batch_finalize(self, city_results, skip_activities=False):
         return {"status": "error", "error": str(e)}
     finally:
         sim.release_batch_lock()
+        from activities.simulator_live_start import maybe_auto_start_live_after_batch
+
+        maybe_auto_start_live_after_batch()
 
 
 @shared_task(
@@ -259,3 +262,6 @@ def run_batch_simulation(
     finally:
         if not parallel_started:
             sim.release_batch_lock()
+            from activities.simulator_live_start import maybe_auto_start_live_after_batch
+
+            maybe_auto_start_live_after_batch()

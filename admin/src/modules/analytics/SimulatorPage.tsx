@@ -19,7 +19,12 @@ import {
     type WipeProgressStatus,
     type WipeTarget,
 } from '../../api/client';
-import { waitForBatchComplete } from '../../api/simulatorBatch';
+import {
+    startLiveWithRetry,
+    waitForBatchComplete,
+    waitForLiveRunning,
+    type LiveStartParams,
+} from '../../api/simulatorBatch';
 import { formatSimulatorConflict } from '../../api/simulatorConflict';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
@@ -87,6 +92,8 @@ export const SimulatorPage: React.FC = () => {
     const [simTarget, setSimTarget] = useState<SimTargetInfo | null>(null);
     const [prodLocalSim, setProdLocalSim] = useState(false);
     const [dataPlaneLoading, setDataPlaneLoading] = useState(false);
+    const [lastLiveError, setLastLiveError] = useState<string | null>(null);
+    const [startingLiveOnly, setStartingLiveOnly] = useState(false);
 
     const environmentLabel = useMemo(
         () => (import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'),
@@ -131,6 +138,10 @@ export const SimulatorPage: React.FC = () => {
     );
     const showSimControls = anyRunning || isStuck || hasOrphanedLive;
     const showBatchProgress = launching || isBatchRunning || (batchStatus && batchStatus.progress_pct > 0 && batchStatus.progress_pct < 100);
+    const batchCompleteReady = !isBatchRunning && !launching
+        && (batchStatus?.current_phase || '').toLowerCase() === 'complete'
+        && (batchStatus?.users_created ?? 0) > 0;
+    const canStartLiveOnly = liveEnabled && batchCompleteReady && !isLiveRunning && !liveStartBlocked;
 
     const rawActive = Math.round(cyclists * activeRatio);
     const activeRiders = rawActive;
@@ -148,6 +159,47 @@ export const SimulatorPage: React.FC = () => {
             })
             .catch(() => setSimTarget(null));
     }, []);
+
+    const buildLiveStartParams = useCallback((): LiveStartParams => ({
+        pool_pct: 1.0,
+        intensity: poolIntensity,
+        load: systemLoad,
+        active_ratio: activeRatio,
+        cheat_ratio: cheatRatio,
+        tick_seconds: tickSeconds,
+        scale_overrides: scaleOverrides,
+    }), [poolIntensity, systemLoad, activeRatio, cheatRatio, tickSeconds, scaleOverrides]);
+
+    const runLiveStart = useCallback(async (source: 'launch' | 'manual') => {
+        setLastLiveError(null);
+        if (!simLabReachable) {
+            const msg = 'Sim-lab is unreachable. Enable Prod DB or wait for sim-lab recovery.';
+            setLastLiveError(msg);
+            notifications.show({ title: 'Live sim blocked', message: msg, color: 'orange' });
+            return false;
+        }
+        try {
+            await startLiveWithRetry(buildLiveStartParams());
+            notifications.show({
+                title: 'Live Simulation Started',
+                message: `${activeRiders.toLocaleString()} riders target on map`,
+                color: 'teal',
+            });
+            return true;
+        } catch (err: unknown) {
+            if ((err as { response?: { status?: number } })?.response?.status === 503) {
+                refreshSimTarget();
+            }
+            const msg = extractStartConflictMessage(err);
+            setLastLiveError(msg);
+            notifications.show({
+                title: source === 'manual' ? 'Start Live Failed' : 'Live Sim Error',
+                message: msg,
+                color: 'orange',
+            });
+            return false;
+        }
+    }, [simLabReachable, buildLiveStartParams, activeRiders, refreshSimTarget]);
 
     const canToggleDataPlane = isGlobalOwner && Boolean(simTarget?.prod_local_editable);
 
@@ -286,6 +338,8 @@ export const SimulatorPage: React.FC = () => {
     const handleLaunch = async () => {
         setLaunching(true);
         setActiveStep(2);
+        setLastLiveError(null);
+        const liveParams = buildLiveStartParams();
         try {
             if (isLiveRunning || hasOrphanedLive) {
                 await SimulatorApi.abortLive().catch(() => null);
@@ -296,6 +350,13 @@ export const SimulatorPage: React.FC = () => {
                 clear: true,
                 skip_activities: !generateActivities,
                 scale_overrides: liveEnabled ? scaleOverrides : undefined,
+                auto_start_live: liveEnabled,
+                pool_pct: liveParams.pool_pct,
+                intensity: liveParams.intensity,
+                load: liveParams.load,
+                active_ratio: liveParams.active_ratio,
+                cheat_ratio: liveParams.cheat_ratio,
+                tick_seconds: liveParams.tick_seconds,
             });
             notifications.show({ title: 'Generowanie…', message: `Tworzenie ${cyclists.toLocaleString()} użytkowników — postęp poniżej.`, color: 'yellow' });
 
@@ -309,33 +370,18 @@ export const SimulatorPage: React.FC = () => {
         setLaunching(false);
 
         if (liveEnabled) {
-            if (!simLabReachable) {
-                notifications.show({
-                    title: 'Live sim blocked',
-                    message: 'Sim-lab is unreachable. Batch finished — start live sim after recovery.',
-                    color: 'orange',
-                });
-                startPolling();
-                return;
-            }
-            try {
-                await SimulatorApi.startLive({
-                    pool_pct: 1.0,
-                    intensity: poolIntensity,
-                    load: systemLoad,
-                    active_ratio: activeRatio,
-                    cheat_ratio: cheatRatio,
-                    tick_seconds: tickSeconds,
-                    scale_overrides: scaleOverrides,
-                });
-                notifications.show({ title: 'Live Simulation Started', message: `${activeRiders.toLocaleString()} visible on map`, color: 'teal' });
-            } catch (err: any) {
-                if (err?.response?.status === 503) {
-                    refreshSimTarget();
-                }
-                notifications.show({ title: 'Live Sim Error', message: extractStartConflictMessage(err), color: 'orange' });
+            const autoStarted = await waitForLiveRunning({ timeoutMs: 20_000, pollMs: 1000 });
+            if (!autoStarted) {
+                await runLiveStart('launch');
             }
         }
+        startPolling();
+    };
+
+    const handleStartLiveOnly = async () => {
+        setStartingLiveOnly(true);
+        await runLiveStart('manual');
+        setStartingLiveOnly(false);
         startPolling();
     };
 
@@ -728,6 +774,19 @@ export const SimulatorPage: React.FC = () => {
                                             Live sim wyłączony do czasu powrotu sim-lab. Batch nadal możesz uruchomić z odznaczonym live.
                                         </Alert>
                                     )}
+                                    {lastLiveError && !isLiveRunning && (
+                                        <Alert color="red" variant="light" icon={<AlertCircle size={16} />} title="Live sim nie wystartował">
+                                            <Text size="sm">{lastLiveError}</Text>
+                                        </Alert>
+                                    )}
+                                    {canStartLiveOnly && (
+                                        <Button size="md" color="teal" variant="light" fullWidth
+                                            leftSection={<Play size={16} />}
+                                            loading={startingLiveOnly}
+                                            onClick={handleStartLiveOnly}>
+                                            Start Live Sim ({activeRiders.toLocaleString()} on map)
+                                        </Button>
+                                    )}
                                     <Button size="lg" color="violet" fullWidth
                                         leftSection={anyRunning ? <Loader className="animate-spin" size={18} /> : <Play size={18} />}
                                         loading={launching} disabled={anyRunning}
@@ -872,6 +931,13 @@ export const SimulatorPage: React.FC = () => {
                                         <Text size="xs">
                                             Simulator lock or pool still active while status is idle.
                                             Use Stop or Reset simulator locks, then Wipe if needed.
+                                        </Text>
+                                    </Alert>
+                                ) : batchCompleteReady && liveEnabled && !isLiveRunning ? (
+                                    <Alert color="orange" icon={<AlertTriangle size={16} />} mb="md">
+                                        <Text size="xs">
+                                            Batch zakończony ({batchStatus?.users_created?.toLocaleString()} użytkowników), ale live sim nie działa.
+                                            Kliknij „Start Live Sim” po lewej lub uruchom ponownie Launch.
                                         </Text>
                                     </Alert>
                                 ) : (

@@ -440,6 +440,13 @@ export const SimulatorApi = {
       skip_activities?: boolean;
       total_users?: number;
       scale_overrides?: ScaleOverrides;
+      auto_start_live?: boolean;
+      pool_pct?: number;
+      active_ratio?: number;
+      cheat_ratio?: number;
+      tick_seconds?: number;
+      intensity?: number;
+      load?: number;
     },
     options?: { silent?: boolean },
   ) => {

@@ -145,7 +145,7 @@ def test_batch_clear_stops_running_live(mock_delay, owner_client):
 def test_setup_live_athlete_pool_populates_redis(db):
     from django.contrib.auth import get_user_model
 
-    from activities.admin_views import _setup_live_athlete_pool
+    from activities.simulator_live_start import setup_live_athlete_pool
 
     User = get_user_model()
     for i in range(20):
@@ -157,8 +157,46 @@ def test_setup_live_athlete_pool_populates_redis(db):
         )
 
     sim.reset_live_state()
-    pool_size = _setup_live_athlete_pool(20)
+    pool_size = setup_live_athlete_pool(20)
 
     assert pool_size >= 10
     assert sim.get_live_pool_count() > 0 or sim.is_live_pool_db_mode()
     assert int(sim.get_live_state().get("total_users", 0)) == pool_size
+
+
+@pytest.mark.django_db
+@patch("activities.railway_osrm_lifecycle.scale_osrm_for_live_sim")
+@patch("activities.sim_lab_proxy.assert_prod_heavy_sim_allowed", return_value=None)
+@patch("activities.simulator_tasks.live_tick_task")
+def test_maybe_auto_start_live_after_batch(mock_live_tick, _mock_prod, _mock_osrm, db):
+    from django.contrib.auth import get_user_model
+
+    from activities.simulator_live_start import maybe_auto_start_live_after_batch
+
+    User = get_user_model()
+    for i in range(15):
+        User.objects.create_user(
+            username=f"auto_live_{i:03d}",
+            email=f"a{i}@test.com",
+            password="x",
+            role="ATHLETE",
+        )
+
+    sim.reset_batch_state()
+    sim.reset_live_state()
+    sim.set_batch_state(
+        auto_start_live="true",
+        auto_start_live_params=json.dumps(
+            {"pool_pct": 1.0, "intensity": 50, "load": 50},
+            separators=(",", ":"),
+        ),
+        current_phase="complete",
+        running=False,
+    )
+
+    result = maybe_auto_start_live_after_batch()
+
+    assert result.get("started") is True
+    assert result.get("ok") is True
+    assert sim.get_live_state()["running"] is True
+    mock_live_tick.delay.assert_called_once()

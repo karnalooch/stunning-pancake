@@ -50,6 +50,65 @@ export async function waitForBatchComplete(options?: {
   throw new Error('Batch did not finish within the timeout.');
 }
 
+export type LiveStartParams = {
+  pool_pct: number;
+  active_ratio: number;
+  cheat_ratio: number;
+  tick_seconds: number;
+  intensity?: number;
+  load?: number;
+  scale_overrides?: {
+    max_starts_per_live_tick: number;
+    brouter_max_calls_per_tick: number;
+    brouter_route_attempts: number;
+  };
+};
+
+/** Retry live start when batch lock races with the finalize worker. */
+export async function startLiveWithRetry(
+  params: LiveStartParams,
+  options?: { attempts?: number; delayMs?: number },
+): Promise<void> {
+  const attempts = options?.attempts ?? 6;
+  const delayMs = options?.delayMs ?? 1200;
+  let lastErr: unknown;
+
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      await SimulatorApi.startLive(params);
+      return;
+    } catch (err: unknown) {
+      lastErr = err;
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409 && i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, delayMs));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr;
+}
+
+/** Poll until worker auto-start or API start flips live running=true. */
+export async function waitForLiveRunning(options?: {
+  timeoutMs?: number;
+  pollMs?: number;
+}): Promise<boolean> {
+  const timeoutMs = options?.timeoutMs ?? 45_000;
+  const pollMs = options?.pollMs ?? 1500;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const live = await SimulatorApi.getLiveStatus({ silent: true, light: true }).catch(() => null);
+    if (live?.running) {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
+  return false;
+}
+
 export class QuickLaunchBlockedError extends Error {
   constructor(message: string) {
     super(message);
