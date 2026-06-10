@@ -53,6 +53,7 @@ import { connectLiveMapSse, parseStreamIntervalMs } from './engine/liveMapStream
 import { connectLiveMapWs } from './engine/liveMapWs';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { apiClient, TelemetryApi } from '../../../api/client';
+import { isExpectedSimulatorConflict } from '../../../api/simulatorConflict';
 import { formatQuickLaunchError, quickLaunchLiveMap, QuickLaunchBlockedError } from '../../../api/simulatorBatch';
 import { hasStoredSession } from '../../../core/auth/tokens';
 import { useAuth } from '../../../core/auth/useAuth';
@@ -219,6 +220,8 @@ export const LiveMap: React.FC = () => {
     const [heatmapLoading, setHeatmapLoading] = useState(false);
     const [cellCount, setCellCount] = useState(0);
     const [launching, setLaunching] = useState(false);
+    const [launchHint, setLaunchHint] = useState<string | null>(null);
+    const launchHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [lastRefreshMs, setLastRefreshMs] = useState<number | null>(null);
     const [zoomMode, setZoomMode] = useState('');
     const [mapZoom, setMapZoom] = useState<number | null>(null);
@@ -1351,36 +1354,34 @@ export const LiveMap: React.FC = () => {
         void fetchPositionsRef.current({ priority: true, snap: true, phase: 'fast' });
     }, []);
 
+    const showLaunchHint = useCallback((message: string, ttlMs = 12_000) => {
+        setLaunchHint(message);
+        if (launchHintTimerRef.current) clearTimeout(launchHintTimerRef.current);
+        launchHintTimerRef.current = setTimeout(() => setLaunchHint(null), ttlMs);
+    }, []);
+
+    useEffect(() => () => {
+        if (launchHintTimerRef.current) clearTimeout(launchHintTimerRef.current);
+    }, []);
+
     const handleQuickLaunch = useCallback(async () => {
         if (!canFetch) {
-            notifications.show({
-                title: 'Sign in required',
-                message: 'Log in as an admin to start the live simulation.',
-                color: 'orange',
-            });
+            showLaunchHint('Zaloguj się jako admin, aby uruchomić symulację live.', 8000);
             return;
         }
         setLaunching(true);
         try {
             await quickLaunchLiveMap();
-            notifications.show({
-                title: 'Live Simulation Started',
-                message: 'Cyclists are now riding on the map',
-                color: 'teal',
-            });
+            showLaunchHint('Symulacja live wystartowała — odświeżam mapę…', 6000);
             if (liveFetchPausedRef.current) {
                 liveFetchPausedRef.current = false;
                 setLiveFetchPaused(false);
             }
         } catch (err: unknown) {
-            const status = (err as { response?: { status?: number } })?.response?.status;
-            if (err instanceof QuickLaunchBlockedError || status === 409) {
-                notifications.show({
-                    title: 'Batch w toku',
-                    message: formatQuickLaunchError(err),
-                    color: 'orange',
-                });
+            if (err instanceof QuickLaunchBlockedError || isExpectedSimulatorConflict(err)) {
+                showLaunchHint(formatQuickLaunchError(err));
             } else {
+                setLaunchHint(null);
                 notifications.show({
                     title: 'Launch failed',
                     message: formatQuickLaunchError(err),
@@ -1393,7 +1394,7 @@ export const LiveMap: React.FC = () => {
                 fetchPositions({ priority: true, snap: true });
             }
         }
-    }, [canFetch, fetchPositions]);
+    }, [canFetch, fetchPositions, showLaunchHint]);
 
     const loadHeatmap = useCallback(() => {
         const map = mapRef.current;
@@ -1901,6 +1902,13 @@ export const LiveMap: React.FC = () => {
                     )}
                     {!filters.presentationMode && lastRefreshMs != null && onlineCount > 0 && (
                         <Badge variant="outline" color="gray" radius="sm" size="sm">{lastRefreshMs}ms</Badge>
+                    )}
+                    {launchHint && (
+                        <Tooltip label={launchHint}>
+                            <Badge variant="light" color="orange" radius="sm" size="sm" maw={220} style={{ cursor: 'default' }}>
+                                {launchHint.length > 48 ? `${launchHint.slice(0, 45)}…` : launchHint}
+                            </Badge>
+                        </Tooltip>
                     )}
                     {onlineCount === 0 && !loading && mapReady && (
                         <Button size="xs" color="teal" leftSection={<Zap size={14} />} loading={launching} onClick={handleQuickLaunch}>

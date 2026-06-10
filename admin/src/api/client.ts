@@ -389,15 +389,20 @@ export const SimulatorApi = {
     } as ApiClientRequestConfig);
     return data;
   },
-  startBatch: async (params: {
-    scale?: number;
-    days?: number;
-    clear?: boolean;
-    skip_activities?: boolean;
-    total_users?: number;
-    scale_overrides?: ScaleOverrides;
-  }) => {
-    const { data } = await apiClient.post('/activities/admin/simulate/', params);
+  startBatch: async (
+    params: {
+      scale?: number;
+      days?: number;
+      clear?: boolean;
+      skip_activities?: boolean;
+      total_users?: number;
+      scale_overrides?: ScaleOverrides;
+    },
+    options?: { silent?: boolean },
+  ) => {
+    const { data } = await apiClient.post('/activities/admin/simulate/', params, {
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
     return data;
   },
   abortBatch: async () => {
@@ -414,16 +419,21 @@ export const SimulatorApi = {
     } as ApiClientRequestConfig);
     return data;
   },
-  startLive: async (params: {
-    pool_pct: number;
-    active_ratio: number;
-    cheat_ratio: number;
-    tick_seconds: number;
-    intensity?: number;
-    load?: number;
-    scale_overrides?: ScaleOverrides;
-  }) => {
-    const { data } = await apiClient.post('/activities/admin/live-simulate/', params);
+  startLive: async (
+    params: {
+      pool_pct: number;
+      active_ratio: number;
+      cheat_ratio: number;
+      tick_seconds: number;
+      intensity?: number;
+      load?: number;
+      scale_overrides?: ScaleOverrides;
+    },
+    options?: { silent?: boolean },
+  ) => {
+    const { data } = await apiClient.post('/activities/admin/live-simulate/', params, {
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
     return data;
   },
   abortLive: async () => {

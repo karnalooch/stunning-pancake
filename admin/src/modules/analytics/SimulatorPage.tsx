@@ -20,6 +20,7 @@ import {
     type WipeTarget,
 } from '../../api/client';
 import { waitForBatchComplete } from '../../api/simulatorBatch';
+import { formatSimulatorConflict } from '../../api/simulatorConflict';
 import { PageHeader } from '../../core/components/PageHeader';
 import { useAuth } from '../../core/auth/useAuth';
 import { resolveSimProfile } from './simProfileMap';
@@ -52,20 +53,8 @@ interface BatchStatus {
 const LIVE_POLL_BASE_MS = 1500;
 const LIVE_POLL_MAX_MS = 15000;
 
-const extractStartConflictMessage = (err: any): string => {
-    const statusCode = err?.response?.status;
-    const code = err?.response?.data?.code;
-    if (statusCode === 409 && code === 'WIPE_IN_PROGRESS') {
-        return 'Data wipe is running. Wait for wipe completion before starting simulation.';
-    }
-    if (statusCode === 503 && code === 'SIM_LAB_UNREACHABLE') {
-        return 'Sim-lab is unreachable. Wait for recovery before starting live simulation.';
-    }
-    if (statusCode === 503) {
-        return err?.response?.data?.error || 'Sim-lab busy or unavailable (503). Retry in a minute.';
-    }
-    return err?.response?.data?.error || err?.message || 'Start request failed';
-};
+const extractStartConflictMessage = (err: unknown): string =>
+    formatSimulatorConflict(err, 'Start request failed');
 
 export const SimulatorPage: React.FC = () => {
     const { user } = useAuth();

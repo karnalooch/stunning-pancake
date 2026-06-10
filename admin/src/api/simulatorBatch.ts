@@ -1,4 +1,5 @@
 import { formatApiError, SimulatorApi } from './client';
+import { formatSimulatorConflict, parseSimulatorConflict } from './simulatorConflict';
 
 export type BatchSimStatus = {
   running?: boolean;
@@ -70,20 +71,43 @@ export async function quickLaunchLiveMap(options?: {
   const tick_seconds = options?.tick_seconds ?? 8;
   const bootstrapUsers = options?.bootstrapUsers ?? 500;
 
-  const batch = await SimulatorApi.getBatchStatus().catch(() => null);
+  const live = await SimulatorApi.getLiveStatus({ silent: true, light: true }).catch(() => null);
+  if (live?.running) {
+    return;
+  }
+
+  const batch = await SimulatorApi.getBatchStatus({ silent: true }).catch(() => null);
   if (isBatchInProgress(batch)) {
     throw new QuickLaunchBlockedError(
       'Batch generation is still running. Wait for it to finish, then try Quick Launch again.',
     );
   }
 
+  const wipe = await SimulatorApi.getWipeStatus().catch(() => null);
+  if (SimulatorApi.isWipeBlocked(wipe)) {
+    throw new QuickLaunchBlockedError(
+      'Data wipe is in progress. Wait for wipe completion before Quick Launch.',
+    );
+  }
+
   const startLive = () =>
-    SimulatorApi.startLive({ pool_pct, active_ratio, cheat_ratio, tick_seconds });
+    SimulatorApi.startLive(
+      { pool_pct, active_ratio, cheat_ratio, tick_seconds },
+      { silent: true },
+    );
+
+  const throwIfConflict = (err: unknown): void => {
+    const conflict = parseSimulatorConflict(err);
+    if (conflict) {
+      throw new QuickLaunchBlockedError(conflict.message);
+    }
+  };
 
   try {
     await startLive();
     return;
   } catch (err: unknown) {
+    throwIfConflict(err);
     const status = (err as { response?: { status?: number } })?.response?.status;
     if (status !== 400) {
       throw err;
@@ -101,12 +125,17 @@ export async function quickLaunchLiveMap(options?: {
     startTimeoutMs: 120_000,
     totalTimeoutMs: 600_000,
   });
-  await startLive();
+  try {
+    await startLive();
+  } catch (err: unknown) {
+    throwIfConflict(err);
+    throw err;
+  }
 }
 
 export function formatQuickLaunchError(err: unknown): string {
   if (err instanceof QuickLaunchBlockedError) {
     return err.message;
   }
-  return formatApiError(err, 'Quick launch failed');
+  return formatSimulatorConflict(err, formatApiError(err, 'Quick launch failed'));
 }
