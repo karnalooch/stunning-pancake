@@ -347,13 +347,56 @@ def _skip_sim_lab_proxy(request) -> bool:
     return False
 
 
-def try_forward_sim_lab(request, admin_suffix: str, *, timeout: int = 90) -> Response | None:
+def try_forward_sim_lab(
+    request,
+    admin_suffix: str,
+    *,
+    timeout: int = 90,
+    allow_local_fallback: bool = False,
+) -> Response | None:
     """Return DRF Response when proxied; None to handle locally."""
     if not sim_lab_proxy_enabled() or _skip_sim_lab_proxy(request):
         return None
 
+    if allow_local_fallback and request.method in ("GET", "HEAD"):
+        health = probe_sim_lab_health()
+        if not health.get("reachable"):
+            logger.info("sim-lab proxy skip %s — health unreachable", admin_suffix)
+            return None
+
     url = _build_url(admin_suffix) + _query_string(request)
-    return _forward_upstream(request, url, timeout=timeout)
+    return _forward_upstream(
+        request,
+        url,
+        timeout=timeout,
+        allow_local_fallback=allow_local_fallback,
+    )
+
+
+def sim_lab_unreachable_response(*, action: str = "simulator") -> Response:
+    """503 when sim-lab proxy is on but upstream is down (mutating ops)."""
+    health = probe_sim_lab_health(force=True)
+    return Response(
+        {
+            "error": (
+                f"Sim-lab unreachable. Cannot {action} until sim-lab recovers "
+                "or SIM_LAB_PROXY is disabled."
+            ),
+            "code": "SIM_LAB_UNREACHABLE",
+            "sim_lab_health": health,
+            "sim_lab_proxy": True,
+        },
+        status=503,
+    )
+
+
+def require_sim_lab_reachable() -> Response | None:
+    """Return error Response when proxy enabled but sim-lab is down; else None."""
+    if not sim_lab_proxy_enabled():
+        return None
+    if probe_sim_lab_health().get("reachable"):
+        return None
+    return sim_lab_unreachable_response()
 
 
 def try_forward_sim_lab_read(

@@ -489,46 +489,79 @@ class TelemetryLiveView(generics.GenericAPIView):
 
         from activities.sim_lab_proxy import sim_lab_proxy_enabled, try_forward_sim_lab_activities
 
-        proxy_enabled = sim_lab_proxy_enabled()
-        proxied = try_forward_sim_lab_activities(
-            request,
-            "telemetry/live/",
-            allow_local_fallback=True,
-            timeout=4,
-        )
-        if proxied is not None:
-            return proxied
+        log = logging.getLogger(__name__)
+        try:
+            proxy_enabled = sim_lab_proxy_enabled()
+            proxied = try_forward_sim_lab_activities(
+                request,
+                "telemetry/live/",
+                allow_local_fallback=True,
+                timeout=4,
+            )
+            if proxied is not None:
+                return proxied
 
-        if proxy_enabled:
-            qp = request.query_params
-            agg_hint = "/api/activities/telemetry/live/aggregate/"
-            if qp:
-                agg_hint += "?" + qp.urlencode()
-            body = {
-                "positions": [],
-                "meta": {
-                    "positions_returned": 0,
-                    "viewport_returned": 0,
-                    "degraded": True,
-                    "sim_lab_proxy_fallback": True,
-                    "render_mode": "aggregate",
-                    "aggregate_url": agg_hint,
-                    "hint": "sim_lab_unreachable_use_aggregate",
-                },
-            }
-        else:
-            from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
-
-            from . import simulator_state as sim
-
-            log = logging.getLogger(__name__)
-            try:
-                sim.maybe_advance_live_simulation_from_poll()
-                req = parse_live_map_query_params(request.query_params, user=request.user)
-                body = build_live_map_payload(req)
-            except Exception as exc:
-                log.exception("telemetry/live local build failed")
+            if proxy_enabled:
+                qp = request.query_params
+                agg_hint = "/api/activities/telemetry/live/aggregate/"
+                if qp:
+                    agg_hint += "?" + qp.urlencode()
                 body = {
+                    "positions": [],
+                    "meta": {
+                        "positions_returned": 0,
+                        "viewport_returned": 0,
+                        "degraded": True,
+                        "sim_lab_proxy_fallback": True,
+                        "render_mode": "aggregate",
+                        "aggregate_url": agg_hint,
+                        "hint": "sim_lab_unreachable_use_aggregate",
+                    },
+                }
+            else:
+                from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
+
+                from . import simulator_state as sim
+
+                try:
+                    sim.maybe_advance_live_simulation_from_poll()
+                    req = parse_live_map_query_params(request.query_params, user=request.user)
+                    body = build_live_map_payload(req)
+                except Exception as exc:
+                    log.exception("telemetry/live local build failed")
+                    body = {
+                        "positions": [],
+                        "meta": {
+                            "positions_returned": 0,
+                            "viewport_returned": 0,
+                            "degraded": True,
+                            "error": str(exc)[:160],
+                        },
+                    }
+
+            from activities.telemetry_shard import live_map_read_policy
+
+            read_policy = live_map_read_policy()
+            from activities.live_map_api import live_map_etag
+
+            etag = live_map_etag(body)
+            inm = (request.META.get("HTTP_IF_NONE_MATCH") or "").strip()
+            if inm and inm == etag:
+                resp = Response(status=304)
+                resp["ETag"] = etag
+                resp["Cache-Control"] = "private, max-age=1"
+                return resp
+            resp = Response(body)
+            resp["ETag"] = etag
+            max_age = 1
+            if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
+                max_age = read_policy.cache_ttl_seconds
+            resp["Cache-Control"] = f"private, max-age={max_age}"
+            return resp
+        except Exception as exc:
+            log.exception("telemetry/live failed")
+            return Response(
+                {
                     "positions": [],
                     "meta": {
                         "positions_returned": 0,
@@ -536,27 +569,9 @@ class TelemetryLiveView(generics.GenericAPIView):
                         "degraded": True,
                         "error": str(exc)[:160],
                     },
-                }
-
-        from activities.telemetry_shard import live_map_read_policy
-
-        read_policy = live_map_read_policy()
-        from activities.live_map_api import live_map_etag
-
-        etag = live_map_etag(body)
-        inm = (request.META.get("HTTP_IF_NONE_MATCH") or "").strip()
-        if inm and inm == etag:
-            resp = Response(status=304)
-            resp["ETag"] = etag
-            resp["Cache-Control"] = "private, max-age=1"
-            return resp
-        resp = Response(body)
-        resp["ETag"] = etag
-        max_age = 1
-        if read_policy.ingest_engaged and read_policy.cache_ttl_seconds > 0:
-            max_age = read_policy.cache_ttl_seconds
-        resp["Cache-Control"] = f"private, max-age={max_age}"
-        return resp
+                },
+                status=status.HTTP_200_OK,
+            )
 
 
 class TelemetryLiveReplayView(generics.GenericAPIView):
@@ -644,7 +659,12 @@ class TelemetryLiveAuditView(generics.GenericAPIView):
     def post(self, request):
         from activities.sim_lab_proxy import try_forward_sim_lab_activities
 
-        proxied = try_forward_sim_lab_activities(request, "telemetry/live/audit/", timeout=30)
+        proxied = try_forward_sim_lab_activities(
+            request,
+            "telemetry/live/audit/",
+            timeout=30,
+            allow_local_fallback=True,
+        )
         if proxied is not None:
             return proxied
 

@@ -6,6 +6,7 @@ import pytest
 from rest_framework.test import APIRequestFactory
 
 from activities.sim_lab_proxy import (
+    require_sim_lab_reachable,
     annotate_federated_payload,
     annotate_production_payload,
     assert_prod_heavy_sim_allowed,
@@ -236,6 +237,53 @@ def test_probe_sim_lab_health_unreachable(mock_get, monkeypatch):
     result = probe_sim_lab_health(force=True)
     assert result["reachable"] is False
     assert result["error"]
+
+
+@patch("activities.sim_lab_proxy.requests.request")
+def test_try_forward_simulate_get_falls_back_on_upstream_500(mock_request, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 500
+    mock_resp.content = b"Internal Server Error"
+    mock_resp.text = "Internal Server Error"
+    mock_resp.json.side_effect = ValueError("not json")
+    mock_request.return_value = mock_resp
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/simulate/")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab(request, "simulate/", allow_local_fallback=True)
+    assert proxied is None
+
+
+@patch("activities.sim_lab_proxy.probe_sim_lab_health", return_value={"reachable": False})
+def test_try_forward_simulate_get_skips_proxy_when_health_down(_health, monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    factory = APIRequestFactory()
+    request = factory.get("/api/activities/admin/simulate/")
+    request.user = MagicMock(username="global_owner")
+
+    proxied = try_forward_sim_lab(request, "simulate/", allow_local_fallback=True)
+    assert proxied is None
+
+
+def test_require_sim_lab_reachable_blocks_when_down(monkeypatch):
+    monkeypatch.setenv("SIM_LAB_PROXY_ENABLED", "1")
+    monkeypatch.setenv("SIM_LAB_PROXY_BASE_URL", "https://sim.example.com")
+    monkeypatch.setenv("SIM_LAB_PROXY_SECRET", "secret")
+
+    with patch("activities.sim_lab_proxy.probe_sim_lab_health", return_value={"reachable": False}):
+        resp = require_sim_lab_reachable()
+    assert resp is not None
+    assert resp.status_code == 503
+    assert resp.data["code"] == "SIM_LAB_UNREACHABLE"
 
 
 def test_sim_lab_proxy_target_info_includes_health(monkeypatch):

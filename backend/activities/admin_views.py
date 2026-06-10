@@ -487,7 +487,12 @@ class LiveSimulationView(APIView):
 
     def get(self, request):
         light = _live_sim_status_light(request)
-        proxied = try_forward_sim_lab(request, "live-simulate/", timeout=45 if not light else 20)
+        proxied = try_forward_sim_lab(
+            request,
+            "live-simulate/",
+            timeout=45 if not light else 20,
+            allow_local_fallback=True,
+        )
         if proxied is not None:
             return proxied
         try:
@@ -1205,7 +1210,17 @@ class SimTargetView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        return Response(sim_lab_proxy_target_info())
+        try:
+            return Response(sim_lab_proxy_target_info())
+        except Exception as exc:
+            return Response(
+                {
+                    "mode": "error",
+                    "error": str(exc)[:200],
+                    "sim_lab_proxy": True,
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
 
 class ScalePreflightView(APIView):
@@ -1257,7 +1272,9 @@ class RunSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        proxied = try_forward_sim_lab(request, "simulate/", timeout=45)
+        proxied = try_forward_sim_lab(
+            request, "simulate/", timeout=45, allow_local_fallback=True
+        )
         if proxied is not None:
             return proxied
         try:
@@ -1309,6 +1326,11 @@ class RunSimulationView(APIView):
         )
 
     def post(self, request):
+        from activities.sim_lab_proxy import require_sim_lab_reachable
+
+        blocked = require_sim_lab_reachable()
+        if blocked is not None:
+            return blocked
         proxied = try_forward_sim_lab(request, "simulate/", timeout=120)
         if proxied is not None:
             return proxied
