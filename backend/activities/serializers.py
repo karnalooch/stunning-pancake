@@ -28,8 +28,13 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
 
 
 class POISerializer(serializers.ModelSerializer):
-    latitude = serializers.FloatField(required=True)
-    longitude = serializers.FloatField(required=True)
+    # write_only: the model stores coordinates in `location` (PointField), so these
+    # input fields have no matching attribute on the instance. Without write_only,
+    # DRF's to_representation would call getattr(instance, "latitude") and raise
+    # AttributeError (HTTP 500) for any saved POI. Read values are injected in
+    # to_representation() below.
+    latitude = serializers.FloatField(required=True, write_only=True)
+    longitude = serializers.FloatField(required=True, write_only=True)
     tenant_id = serializers.UUIDField(required=False, allow_null=True)
 
     class Meta:
@@ -48,9 +53,9 @@ class POISerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
-        if instance.location:
-            ret["latitude"] = instance.location.y
-            ret["longitude"] = instance.location.x
+        loc = getattr(instance, "location", None)
+        ret["latitude"] = getattr(loc, "y", None) if loc is not None else None
+        ret["longitude"] = getattr(loc, "x", None) if loc is not None else None
         return ret
 
     def create(self, validated_data):
