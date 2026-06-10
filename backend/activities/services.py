@@ -1165,6 +1165,11 @@ class AntiCheatEngine:
         result = []
         for a in anomalies:
             score = round(float(a.verification_score or 0), 2)
+            desc = AntiCheatEngine.anomaly_description(score, a.type)
+            flags = getattr(a, "gpx_forensics_flags", None) or []
+            if flags:
+                desc = f"{desc}; flags: {', '.join(flags)}"
+
             result.append(
                 {
                     "id": f"AN-{a.id}",
@@ -1173,7 +1178,8 @@ class AntiCheatEngine:
                     "type": a.type,
                     "score": score,
                     "severity": AntiCheatEngine.anomaly_severity(score),
-                    "description": AntiCheatEngine.anomaly_description(score, a.type),
+                    "description": desc,
+                    "forensics_flags": flags,
                     "time": a.start_time.isoformat() if a.start_time else None,
                     "distance": a.distance,
                     "duration": str(a.duration) if a.duration else None,

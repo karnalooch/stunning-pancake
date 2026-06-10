@@ -28,6 +28,7 @@ interface ActivityDetailData {
   verification_score: number;
   route_coords: Array<[number, number]> | null;
   gpx_sha256?: string | null;
+  gpx_forensics_flags?: string[];
   user_info: { id: number; username: string; role: string };
   created_at: string;
 }
@@ -187,6 +188,11 @@ export const ActivityDetail: React.FC = () => {
           {data.verification_score < 0.3 && !data.is_verified && (
             <Alert color="red" variant="light" title="Low Confidence">
               Very low verification score — review route on map and GPX before approve.
+            </Alert>
+          )}
+          {Array.isArray(data.gpx_forensics_flags) && data.gpx_forensics_flags.length > 0 && (
+            <Alert color="orange" variant="light" title="GPX forensics">
+              {data.gpx_forensics_flags.join(', ')}
             </Alert>
           )}
         </Stack>

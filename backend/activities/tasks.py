@@ -205,6 +205,7 @@ def process_activity_async(self, activity_id: int) -> dict:
         from activities.leaderboard_credit import credit_verified_activity
 
         credit_verified_activity(activity)
+        generate_gpx_task.delay(activity_id)
 
     return {"status": "done", "verified": is_verified}
 
@@ -390,12 +391,14 @@ def monitor_postgres_disk() -> dict:
 
 @shared_task(queue="default", name="activities.tasks.generate_gpx_task")
 def generate_gpx_task(activity_id: int) -> dict:
-    """P2 F2: Archive GPX after verified activity (local key + sha256; S3 when configured)."""
+    """P2 F2: Archive GPX after verified activity (local disk or S3-compatible)."""
     import hashlib
 
     from django.utils import timezone
 
     from activities.gpx_export import linestring_to_gpx
+    from activities.gpx_forensics import route_fingerprint, scan_activity_forensics
+    from activities.gpx_storage import store_gpx
     from activities.models import Activity
 
     try:
@@ -406,7 +409,8 @@ def generate_gpx_task(activity_id: int) -> dict:
     if not activity.route_path or activity.route_path.num_coords < 2:
         return {"status": "no_route", "activity_id": activity_id}
 
-    if activity.gpx_sha256 and activity.gpx_storage_key:
+    fp = route_fingerprint(activity.route_path)
+    if activity.gpx_sha256 and activity.gpx_storage_key and activity.route_fingerprint == fp:
         return {"status": "skipped", "activity_id": activity_id, "sha256": activity.gpx_sha256}
 
     gpx_xml = linestring_to_gpx(
@@ -416,16 +420,50 @@ def generate_gpx_task(activity_id: int) -> dict:
     )
     digest = hashlib.sha256(gpx_xml.encode("utf-8")).hexdigest()
     storage_key = f"activities/{activity_id}.gpx"
-    activity.gpx_storage_key = storage_key
+    storage_uri = store_gpx(storage_key, gpx_xml.encode("utf-8"))
+    flags = scan_activity_forensics(activity)
+
+    update_fields = [
+        "gpx_storage_key",
+        "gpx_sha256",
+        "gpx_generated_at",
+        "route_fingerprint",
+        "gpx_forensics_flags",
+    ]
+    activity.gpx_storage_key = storage_uri
     activity.gpx_sha256 = digest
     activity.gpx_generated_at = timezone.now()
-    activity.save(update_fields=["gpx_storage_key", "gpx_sha256", "gpx_generated_at"])
+    activity.route_fingerprint = fp
+    activity.gpx_forensics_flags = flags
+
+    if flags and activity.is_verified:
+        activity.verification_score = min(float(activity.verification_score or 1.0), 0.28)
+        activity.is_verified = False
+        update_fields.extend(["verification_score", "is_verified"])
+
+    activity.save(update_fields=update_fields)
     return {
         "status": "ok",
         "activity_id": activity_id,
         "sha256": digest,
-        "storage_key": storage_key,
+        "storage_uri": storage_uri,
+        "forensics_flags": flags,
     }
+
+
+@shared_task(queue="default", name="activities.tasks.reverify_activities_batch")
+def reverify_activities_batch(limit: int = 50) -> dict:
+    """P2 F3: Re-run verification pipeline on recent verified activities."""
+    from activities.models import Activity
+
+    ids = list(
+        Activity.objects.filter(is_verified=True, route_path__isnull=False)
+        .order_by("-id")
+        .values_list("id", flat=True)[:limit]
+    )
+    for aid in ids:
+        process_activity_async.delay(aid)
+    return {"status": "queued", "count": len(ids)}
 
 
 @shared_task(name="activities.tasks.warm_dashboard_stats_cache", ignore_result=True)

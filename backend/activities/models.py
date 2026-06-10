@@ -65,6 +65,8 @@ class Activity(models.Model):
     gpx_storage_key = models.CharField(max_length=512, blank=True, default="")
     gpx_sha256 = models.CharField(max_length=64, blank=True, default="")
     gpx_generated_at = models.DateTimeField(null=True, blank=True)
+    route_fingerprint = models.CharField(max_length=64, blank=True, default="", db_index=True)
+    gpx_forensics_flags = models.JSONField(default=list, blank=True)
 
     class Meta:
         verbose_name_plural = "Activities"

@@ -15,7 +15,7 @@
 
 | | |
 |--|--|
-| **Status** | 🚧 **W toku** — Paczka P2-A wdrożona w kodzie (2026-06-10) |
+| **Status** | 🚧 **W toku** — P2-A ✅ · P2-B/C/F5 🟡 w kodzie (2026-06-10) |
 | **Owner role** | Admin / Backend Lead |
 | **Last reviewed** | 2026-06-10 |
 | **Audience** | Admin developers, Platform Operator, Release Manager, DPO |
@@ -72,15 +72,15 @@ Pełna lista use-case’ów GPX (żeby nic nie umknęło): **§2.3**.
 | Admin UI | Activity Detail — MapLibre route inspector + GPX download | ✅ P2-A |
 | Test | `test_gpx_export.py` | ✅ |
 
-#### Faza 2 — async archiwum (verified complete) 🟡
+#### Faza 2 — async archiwum (verified complete) ✅ code · S3 env 🟡
 
 | Element | Spec | Status |
 |---------|------|--------|
-| Trigger | Po approve (`ActivityApproveView`) + export queue | ✅ partial |
+| Trigger | Po approve + auto-verify (`process_activity_async`) | ✅ |
 | Task | `generate_gpx_task` (Celery, queue `default`) | ✅ |
-| Storage | S3/R2: `activities/{id}.gpx` + `metadata.json` | 🟡 pola DB + sha256; S3 TBD |
-| Pola DB | `Activity.gpx_storage_key`, `gpx_sha256`, `gpx_generated_at` | ✅ migration |
-| Idempotencja | Ten sam `route_path` hash → skip rewrite | ✅ w task |
+| Storage | `gpx_storage.py` — local `MEDIA_ROOT/gpx` lub S3 (`GPX_S3_*`) | ✅ |
+| Pola DB | `gpx_storage_key` (URI), `gpx_sha256`, `route_fingerprint` | ✅ |
+| Idempotencja | Ten sam `route_fingerprint` → skip rewrite | ✅ |
 
 #### Faza 3 — anty-cheat (batch & fingerprint)
 
@@ -110,17 +110,14 @@ GPX **nie zastępuje** live anty-cheatu (BRouter + pluginy) — to **archiwum do
 
 Runbooki: [operations/SIMULATOR.md](../operations/SIMULATOR.md) · [reports/RELIABILITY_AUDIT_PLAYBOOK.md](../reports/RELIABILITY_AUDIT_PLAYBOOK.md).
 
-#### Faza 5 — RODO bulk export (CONSTITUTION)
+#### Faza 5 — RODO bulk export (CONSTITUTION) 🟡
 
-| Element | Spec |
-|---------|------|
-| Endpoint | `GET /api/users/me/export/` (async) |
-| Format | ZIP: JSON profilu + **GPX per aktywność** |
-| Task | `export_user_data_task` — link ważny 24 h |
-| SSOT | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 — prawo do przenoszenia |
-| Compliance | [compliance/RCP.md](../compliance/RCP.md) |
-
-**Uwaga:** Faza 5 może startować równolegle z Fazą 1 (ten sam generator GPX), ale pełny ZIP wymaga stabilnego kontraktu eksportu.
+| Element | Spec | Status |
+|---------|------|--------|
+| Endpoint | `GET /api/users/me/export/` (async) | ✅ |
+| Format | ZIP: `profile.json` + `activities/{id}.gpx` | ✅ `export_user_data_task` |
+| Delivery | Presigned URL 24h | 🟡 storage URI only; download API TBD |
+| SSOT | [CONSTITUTION.md](../CONSTITUTION.md) §8.3 | — |
 
 #### Faza 6 — import upload (opcjonalny P2+)
 
@@ -259,6 +256,7 @@ Szczegóły implementacji Auth przeniesione z [P1_ROADMAP.md §4](./P1_ROADMAP.m
 
 | Data | Zmiana |
 |------|--------|
+| 2026-06-10 | **P2-B/C/F5:** `gpx_storage` local+S3, forensics fingerprint, archive on auto-verify, RODO ZIP task, `reverify_activities_batch` |
 | 2026-06-10 | **P2-A kickoff:** Activity Route Inspector (MapLibre), speed profile, GPX archive on approve, MFA login gate GO |
 | 2026-06-03 | Pełna checklista GPX (§2.3): anty-cheat, forensics, RODO, retencja; fazy F1–F6; non-goals |
 | 2026-06-03 | Utworzenie P2; GPX forensics (F1–F5) + Auth/MFA ex-Paczka 6; decyzja: GPX nie blokuje finish |
