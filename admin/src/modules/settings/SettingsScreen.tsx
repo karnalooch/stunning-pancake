@@ -41,12 +41,16 @@ export const SettingsScreen: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
 
   useEffect(() => {
+    if (isGlobalOwner) {
+      setMfaLoading(false);
+      return;
+    }
     setMfaLoading(true);
     apiClient.get('/users/mfa/status/')
       .then((r) => setMfaEnabled(Boolean(r.data?.mfa_enabled)))
       .catch(() => {})
       .finally(() => setMfaLoading(false));
-  }, []);
+  }, [isGlobalOwner]);
 
   const startMfaSetup = async () => {
     try {
@@ -95,33 +99,35 @@ export const SettingsScreen: React.FC = () => {
       icon: <Shield size={22} />, color: 'red', title: 'Security', children: (
         <Stack gap="md">
           <Button variant="light" color="red" leftSection={<Shield size={16} />}>Change Password</Button>
-          {mfaLoading ? (
-            <Stack gap="sm">
-              <Skeleton height={20} width="60%" radius="md" />
-              <Skeleton height={36} radius="md" />
-            </Stack>
-          ) : (
-            <>
-              <Group justify="space-between">
-                <Box>
-                  <Text fw={600} size="sm">Two-Factor Authentication (TOTP)</Text>
-                  <Text size="xs" c="dimmed">{mfaEnabled ? 'Enabled' : 'Recommended for Global Owner'}</Text>
-                </Box>
-                <Switch checked={mfaEnabled} readOnly />
-              </Group>
-              {!mfaEnabled && (
-                <>
-                  <Button variant="light" onClick={startMfaSetup}>Set up MFA</Button>
-                  {mfaSetupUri && <Code block style={{ fontSize: 10, wordBreak: 'break-all' }}>{mfaSetupUri}</Code>}
-                  {mfaSetupUri && (
-                    <Group>
-                      <TextInput placeholder="6-digit code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} maw={160} />
-                      <Button onClick={confirmMfa}>Enable</Button>
-                    </Group>
-                  )}
-                </>
-              )}
-            </>
+          {!isGlobalOwner && (
+            mfaLoading ? (
+              <Stack gap="sm">
+                <Skeleton height={20} width="60%" radius="md" />
+                <Skeleton height={36} radius="md" />
+              </Stack>
+            ) : (
+              <>
+                <Group justify="space-between">
+                  <Box>
+                    <Text fw={600} size="sm">Two-Factor Authentication (TOTP)</Text>
+                    <Text size="xs" c="dimmed">{mfaEnabled ? 'Enabled' : 'Optional'}</Text>
+                  </Box>
+                  <Switch checked={mfaEnabled} readOnly />
+                </Group>
+                {!mfaEnabled && (
+                  <>
+                    <Button variant="light" onClick={startMfaSetup}>Set up MFA</Button>
+                    {mfaSetupUri && <Code block style={{ fontSize: 10, wordBreak: 'break-all' }}>{mfaSetupUri}</Code>}
+                    {mfaSetupUri && (
+                      <Group>
+                        <TextInput placeholder="6-digit code" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} maw={160} />
+                        <Button onClick={confirmMfa}>Enable</Button>
+                      </Group>
+                    )}
+                  </>
+                )}
+              </>
+            )
           )}
         </Stack>
       )

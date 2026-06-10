@@ -99,15 +99,13 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
 export default function App() {
   const { isAuthenticated, login } = useAuth();
 
-  const handleLogin = async (username: string, password: string, mfaCode?: string) => {
+  const handleLogin = async (username: string, password: string) => {
     try {
       clearStoredSession();
       useAuth.getState().logout();
 
       const baseURL = apiClient.defaults.baseURL || '/api';
-      const payload: Record<string, string> = { username, password };
-      if (mfaCode) payload.mfa_code = mfaCode;
-      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, payload);
+      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, { username, password });
       const { access, refresh } = res.data;
 
       localStorage.setItem('access_token', access);
@@ -127,16 +125,6 @@ export default function App() {
       });
     } catch (error: any) {
       const data = error?.response?.data;
-      if (data?.mfa_required) {
-        const err = new Error('MFA code required') as Error & { mfaRequired?: boolean };
-        err.mfaRequired = true;
-        throw err;
-      }
-      if (data?.mfa_setup_required) {
-        throw new Error(
-          'GLOBAL_OWNER must enable MFA before signing in. Set up TOTP in Settings or contact platform operator.',
-        );
-      }
       const detail = data?.detail;
       const msg =
         (typeof detail === 'string' && detail) ||

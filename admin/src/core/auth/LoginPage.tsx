@@ -10,7 +10,7 @@ const GOOGLE_AUTH_URL = `${API_BASE}/auth/google/login/?client=admin`;
 const FACEBOOK_AUTH_URL = `${API_BASE}/auth/facebook/login/?client=admin`;
 
 interface LoginPageProps {
-  onLogin: (username: string, password: string, mfaCode?: string) => Promise<void>;
+  onLogin: (username: string, password: string) => Promise<void>;
 }
 
 /* ─── Feature list shown on the left panel ──────────────── */
@@ -36,8 +36,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const logout = useAuth((s) => s.logout);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [mfaCode, setMfaCode] = useState('');
-  const [mfaStep, setMfaStep] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,13 +53,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
     try {
-      await onLogin(username, password, mfaStep ? mfaCode : undefined);
+      await onLogin(username, password);
     } catch (err: any) {
-      if (err?.mfaRequired) {
-        setMfaStep(true);
-        setError('Enter the 6-digit code from your authenticator app.');
-        return;
-      }
       setError(err?.message || 'Invalid credentials. Please try again.');
     } finally {
       setLoading(false);
@@ -355,19 +348,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     },
                   }}
                 />
-
-                {mfaStep && (
-                  <TextInput
-                    label="Authenticator code"
-                    placeholder="6-digit MFA code"
-                    value={mfaCode}
-                    onChange={(e) => setMfaCode(e.currentTarget.value)}
-                    required
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    data-testid="login-mfa-code"
-                  />
-                )}
 
                 {/* Error message */}
                 <AnimatePresence mode="wait">

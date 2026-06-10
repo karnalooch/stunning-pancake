@@ -1,10 +1,10 @@
-"""JWT login MFA gate (P2 Auth)."""
+"""JWT login — MFA gate deferred for GLOBAL_OWNER (P2 Auth, end of roadmap)."""
 
 import pytest
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from users.mfa import generate_totp_secret, _totp_at
+from users.mfa import generate_totp_secret
 from users.models import User
 
 pytestmark = pytest.mark.django_db
@@ -15,57 +15,17 @@ def api_client():
     return APIClient()
 
 
-def test_global_owner_with_mfa_requires_code(api_client):
-    secret = generate_totp_secret()
+def test_global_owner_logs_in_without_mfa_gate(api_client):
+    """GO with mfa_enabled still logs in with password only until MFA is re-enabled."""
     User.objects.create_user(
         username="go_mfa",
         email="go@test.com",
         password="pass123",
         role="GLOBAL_OWNER",
         mfa_enabled=True,
-        mfa_secret=secret,
-    )
-    url = reverse("token_obtain_pair")
-    res = api_client.post(url, {"username": "go_mfa", "password": "pass123"}, format="json")
-    assert res.status_code == 400
-    assert res.data.get("mfa_required") is True
-
-    import time
-
-    code = _totp_at(secret, int(time.time()) // 30)
-    res2 = api_client.post(
-        url,
-        {"username": "go_mfa", "password": "pass123", "mfa_code": code},
-        format="json",
-    )
-    assert res2.status_code == 200
-    assert "access" in res2.data
-
-
-def test_global_owner_without_mfa_blocked_when_enforced(api_client, settings, monkeypatch):
-    monkeypatch.setenv("MFA_ENFORCE_GLOBAL_OWNER", "1")
-    User.objects.create_user(
-        username="go_plain",
-        email="go2@test.com",
-        password="pass123",
-        role="GLOBAL_OWNER",
-        mfa_enabled=False,
-    )
-    url = reverse("token_obtain_pair")
-    res = api_client.post(url, {"username": "go_plain", "password": "pass123"}, format="json")
-    assert res.status_code == 400
-    assert res.data.get("mfa_setup_required") is True
-
-
-def test_tenant_admin_mfa_not_enforced_at_login(api_client):
-    User.objects.create_user(
-        username="ta",
-        email="ta@test.com",
-        password="pass123",
-        role="TENANT_ADMIN",
-        mfa_enabled=True,
         mfa_secret=generate_totp_secret(),
     )
     url = reverse("token_obtain_pair")
-    res = api_client.post(url, {"username": "ta", "password": "pass123"}, format="json")
+    res = api_client.post(url, {"username": "go_mfa", "password": "pass123"}, format="json")
     assert res.status_code == 200
+    assert "access" in res.data
