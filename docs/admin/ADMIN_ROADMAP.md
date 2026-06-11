@@ -30,7 +30,7 @@ Single timeline linking all admin planning docs. Detail lives in linked files �
 
 ---
 
-## Current position (2026-06-07)
+## Current position (2026-06-11)
 
 ```mermaid
 flowchart LR
@@ -50,8 +50,9 @@ flowchart LR
 | Paczka 1a | Done |
 | Paczka 1b core | Done |
 | Overhaul program (S1–S6 code) | **Done** — [overhaul_plan/README.md](../overhaul_plan/README.md) |
-| Operational gate | In progress — prod `p0-role-smoke` + Railway verify |
-| Paczka 2–6 (product) | Code delivered; gate before prod promotion |
+| Operational gate (S0) | **Done** — [P0_SMOKE_CHECKLIST.md](./P0_SMOKE_CHECKLIST.md) GO 2026-06-11 |
+| Paczka 2–5 prod verify (S1–S4) | **Done** — smoke + API scope 2026-06-11 |
+| Paczka 6 / S5–S6 | Next — mobile + P2 Auth/GPX |
 
 ---
 

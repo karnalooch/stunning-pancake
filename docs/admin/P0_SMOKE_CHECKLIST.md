@@ -51,6 +51,22 @@ S0 execution summary (2026-06-11):
 
 ---
 
+## S1–S4 production rollout sign-off (2026-06-11)
+
+| Paczka | Gate | Result | Artefakt / uwagi |
+|--------|------|--------|------------------|
+| **Baseline** | Railway verify + auth pre-check + smoke 4 role | **GO** | `railway-verify-production.ps1` PASS; `p0-smoke-report.json` `pass: true` |
+| **S1 Sponsor** | SPONSOR smoke + sponsor API | **GO** | UI: dashboard, POI, campaigns, vouchers, analytics — PASS. API: `sponsor-stats` 200, `pools` 200. `campaigns` 403 bez `sponsor_profile` (UI ładuje się; follow-up: link profilu dla `sponsor_user`) |
+| **S2 GO tooling** | GLOBAL_OWNER smoke + infra/stats | **GO** | `/infra/health/` 200, `/activities/admin/stats/` 200, tenants list 5, control-plane routes PASS |
+| **S3 Tenant Admin** | TENANT_ADMIN smoke + scope | **GO** | Forbidden paths PASS; users list tenant-scoped; `impersonate` 403 |
+| **S4 Moderator** | TENANT_MODERATOR smoke + queue | **GO** | `/moderation/queue/` 200, count=236, wyniki w jednym tenant_id |
+
+**Smoke users (prod):** `global_owner`, `smoke_tenant_admin`, `smoke_tenant_moderator`, `sponsor_user` (hasło: `admin123`).
+
+**Overall S1–S4:** ☑ **GO** — można przejść do S5/S6 lub public release path.
+
+---
+
 ## GLOBAL_OWNER
 
 Login as `GLOBAL_OWNER`. Use a **non-production** environment for destructive checks unless explicitly approved.
