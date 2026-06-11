@@ -2,6 +2,7 @@
  * Durable activity session create — isolated from GpsSyncManager to avoid api circular imports.
  */
 
+import { API_PATHS_FULL } from '@4velo/api-client';
 import { api } from './apiClient';
 import {
   clearPendingSession,
@@ -35,7 +36,7 @@ export async function createSessionWithDurability(
   if (payload.event_id != null) body.event_id = payload.event_id;
 
   try {
-    const res = await api.post<{ id: number }>('/api/activities/sessions/', body);
+    const res = await api.post<{ id: number }>(API_PATHS_FULL.activitiesSessions, body);
     const id = res.data?.id;
     if (!id) throw new Error('Session create returned no id');
     if (storage) clearPendingSession(storage);

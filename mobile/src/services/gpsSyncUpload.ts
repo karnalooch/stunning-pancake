@@ -25,6 +25,7 @@ import {
 } from './gpsSyncStorage';
 
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
+import { measureAsync } from './performanceBudget';
 
 export { TELEMETRY_URL };
 
@@ -147,16 +148,18 @@ async function postTelemetryBatch(
     const wsAck = await postTelemetryBatchViaWs(points, maxSeq >= 0 ? maxSeq : null);
     if (wsAck?.acked) return wsAck;
   }
-  const res = await axios.post(
-    `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
-    {
-      packets: points,
-      client_batch_id: clientBatchId,
-      point_count: points.length,
-      max_seq: maxSeq || undefined,
-      activity_id: activityId,
-    },
-    { timeout: 15_000, validateStatus: (s) => s === 202 || s === 201 },
+  const res = await measureAsync('gpsIngestLatencyMs', () =>
+    axios.post(
+      `${TELEMETRY_URL}/api/telemetry/ingest/batch`,
+      {
+        packets: points,
+        client_batch_id: clientBatchId,
+        point_count: points.length,
+        max_seq: maxSeq || undefined,
+        activity_id: activityId,
+      },
+      { timeout: 15_000, validateStatus: (s) => s === 202 || s === 201 },
+    ),
   );
   return parseIngestAck(res.data, points.length);
 }
@@ -248,15 +251,17 @@ async function flushOutboxEntry(entry: OutboxEntry): Promise<boolean> {
 }
 
 export async function processGpsOutbox(): Promise<void> {
-  const storage = getGpsStorage();
-  if (!storage) return;
-  ensureBufferSchema(storage);
-  const pending = loadOutbox(storage).filter(
-    (e) => e.state === 'pending' || e.state === 'syncing',
-  );
-  for (const entry of pending) {
-    await flushOutboxEntry(entry);
-  }
+  await measureAsync('outboxFlushMs', async () => {
+    const storage = getGpsStorage();
+    if (!storage) return;
+    ensureBufferSchema(storage);
+    const pending = loadOutbox(storage).filter(
+      (e) => e.state === 'pending' || e.state === 'syncing',
+    );
+    for (const entry of pending) {
+      await flushOutboxEntry(entry);
+    }
+  });
 }
 
 export async function uploadBufferSnapshot(): Promise<void> {

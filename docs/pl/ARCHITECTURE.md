@@ -188,10 +188,10 @@ interface AuthState {
 | Komponent | Technologia |
 |-----------|-------------|
 | Framework | React Native (Expo) |
-| UI | Tamagui + Skia |
+| UI | react-native-unistyles + Skia HUD |
 | State | Legend-State |
 | Storage | MMKV |
-| Maps | react-native-maps |
+| Maps | MapLibre |
 | GPS | expo-location |
 
 ### Kluczowe funkcje

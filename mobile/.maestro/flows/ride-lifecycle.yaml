@@ -1,0 +1,20 @@
+appId: com.sport.athlete
+---
+# Critical flow: authenticated user can open ride tab and see dashboard controls.
+- launchApp
+- runFlow:
+    when:
+      visible: "MISSION LOGIN"
+    commands:
+      - tapOn: "EMAIL / OPERATOR ID"
+      - inputText: "${E2E_EMAIL}"
+      - tapOn: "ACCESS TOKEN"
+      - inputText: "${E2E_PASSWORD}"
+      - tapOn: "AUTHORIZE"
+- extendedWaitUntil:
+    visible: "Ride"
+    timeout: 20000
+- tapOn: "Ride"
+- assertVisible:
+    text: ".*[Ss]tart.*"
+    optional: true

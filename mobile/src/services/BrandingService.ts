@@ -1,3 +1,4 @@
+import { mobileActivityPaths } from '@4velo/api-client';
 import { api } from './api';
 import { stitchTheme } from '../theme/stitch';
 import type { StitchTheme } from '../theme/unistyles';
@@ -45,7 +46,7 @@ export const BrandingService = {
   fetch: async (tenantId: string): Promise<TenantBranding | null> => {
     try {
       const data = await api
-        .get(`/api/users/branding/${tenantId}/`)
+        .get(mobileActivityPaths.tenantBranding(tenantId))
         .then((r) => r.data);
       currentBranding = data;
       // Wire into Unistyles theme objects so useStyles() picks up overrides

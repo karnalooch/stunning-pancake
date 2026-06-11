@@ -7,6 +7,7 @@ import { AppState, type AppStateStatus } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { API_PATHS_FULL, mobileActivityPaths } from '@4velo/api-client';
 import { api } from './apiClient';
 import { firebaseCapture } from './FirebaseService';
 import {
@@ -138,7 +139,7 @@ async function syncRoutePath(
   const pathHash = routePathHash(merged);
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      await api.patch(`/api/activities/sessions/${activityId}/sync_path/`, {
+      await api.patch(mobileActivityPaths.sessionSyncPath(activityId), {
         route_path: merged,
         path_hash: pathHash,
       });
@@ -159,7 +160,7 @@ async function finalizeActivity(
 ): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      await api.post(`/api/activities/sessions/${activityId}/finalize/`, {
+      await api.post(mobileActivityPaths.sessionFinalize(activityId), {
         end_time: new Date().toISOString(),
         distance: distanceM,
       });
@@ -186,7 +187,7 @@ export async function retryPendingSessionCreate(): Promise<number | null> {
       start_time: pending.start_time,
     };
     if (pending.event_id != null) body.event_id = pending.event_id;
-    const res = await api.post<{ id: number }>('/api/activities/sessions/', body);
+    const res = await api.post<{ id: number }>(API_PATHS_FULL.activitiesSessions, body);
     const activityId = res.data?.id;
     if (activityId) {
       clearPendingSession(storage);

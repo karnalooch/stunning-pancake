@@ -25,6 +25,16 @@ export const API_PATHS = {
   sponsorActivity: '/rewards/sponsor-activity/',
   sponsorCampaigns: '/rewards/campaigns/',
   revenueSummary: '/rewards/admin/revenue-summary/',
+  activitiesPrivacyZones: '/activities/privacy-zones/',
+  activitiesPois: '/activities/pois/',
+  rewardsBalance: '/rewards/balance/',
+  rewardsPools: '/rewards/pools/',
+  wearablesSync: '/activities/wearables/sync/',
+  wearablesStravaAuth: '/activities/wearables/strava/auth/',
+  wearablesGarminAuth: '/activities/wearables/garmin/auth/',
+  authGoogleLogin: '/auth/google/login/',
+  authFacebookLogin: '/auth/facebook/login/',
+  llmProxy: '/llm/proxy/',
 } as const;
 
 /** Full paths for mobile (host-root baseURL). */
@@ -51,6 +61,29 @@ export const API_PATHS_FULL = {
   sponsorActivity: '/api/rewards/sponsor-activity/',
   sponsorCampaigns: '/api/rewards/campaigns/',
   revenueSummary: '/api/rewards/admin/revenue-summary/',
+  activitiesPrivacyZones: '/api/activities/privacy-zones/',
+  activitiesPois: '/api/activities/pois/',
+  rewardsBalance: '/api/rewards/balance/',
+  rewardsPools: '/api/rewards/pools/',
+  wearablesSync: '/api/activities/wearables/sync/',
+  wearablesStravaAuth: '/api/activities/wearables/strava/auth/',
+  wearablesGarminAuth: '/api/activities/wearables/garmin/auth/',
+  authGoogleLogin: '/api/auth/google/login/',
+  authFacebookLogin: '/api/auth/facebook/login/',
+  llmProxy: '/api/llm/proxy/',
 } as const;
+
+/** Dynamic mobile paths — keep IDs in call sites, paths in SSOT. */
+export const mobileActivityPaths = {
+  sessionSyncPath: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/sync_path/` as const,
+  sessionFinalize: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/finalize/` as const,
+  leaderboard: (cityId: string) => `/api/activities/leaderboard/${cityId}/` as const,
+  leaderboardMe: (cityId: string) => `/api/activities/leaderboard/${cityId}/me/` as const,
+  privacyZone: (zoneId: string) => `/api/activities/privacy-zones/${zoneId}/` as const,
+  rewardsRedeem: (poolId: number) => `/api/rewards/redeem/${poolId}/` as const,
+  tenantBranding: (tenantId: string) => `/api/users/branding/${tenantId}/` as const,
+};
 
 export const CRITICAL_PATHS = Object.values(API_PATHS_FULL);

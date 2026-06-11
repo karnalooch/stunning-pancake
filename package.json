@@ -36,6 +36,8 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "test:admin": "pnpm --filter admin test:run",
+    "mobile:install-maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-maestro.ps1",
+    "mobile:test:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-mobile-e2e.ps1",
     "build": "turbo run build"
   },
   "devDependencies": {

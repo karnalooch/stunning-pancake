@@ -21,12 +21,13 @@
  */
 
 import axios, { AxiosInstance } from 'axios';
+import { API_PATHS_FULL } from '@4velo/api-client';
 import { firebaseCapture } from './FirebaseService';
 
 // ─── Configuration ────────────────────────────────────────────────
 
 const BACKEND_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
-const PROXY_URL = BACKEND_URL ? `${BACKEND_URL}/api/llm/proxy` : '';
+const PROXY_URL = BACKEND_URL ? `${BACKEND_URL}${API_PATHS_FULL.llmProxy}` : '';
 
 const DEFAULT_CONFIG = {
   apiKey: process.env.EXPO_PUBLIC_LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
@@ -324,7 +325,7 @@ export class LlmCoachService {
 
         if (this._useProxy) {
           // Route through backend proxy — API key stays server-side
-          response = await this._client.post('/api/llm/proxy/', {
+          response = await this._client.post(API_PATHS_FULL.llmProxy, {
             model: this._config.model,
             messages: [
               { role: 'system', content: systemPrompt },

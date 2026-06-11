@@ -1,4 +1,10 @@
-import { API_PATHS_FULL, type UserProfile, type TokenPair, type RegisterPayload } from '@4velo/api-client';
+import {
+  API_PATHS_FULL,
+  mobileActivityPaths,
+  type UserProfile,
+  type TokenPair,
+  type RegisterPayload,
+} from '@4velo/api-client';
 import { api, setAuthToken } from './apiClient';
 import { createSessionWithDurability } from './sessionDurability';
 
@@ -52,25 +58,25 @@ export const ActivityService = {
     createSessionWithDurability(body),
   syncPath: (activityId: number, route_path: [number, number][], path_hash?: string) =>
     api
-      .patch(`/api/activities/sessions/${activityId}/sync_path/`, {
+      .patch(mobileActivityPaths.sessionSyncPath(activityId), {
         route_path,
         path_hash,
       })
       .then((r) => r.data),
   finalizeSession: (activityId: number, body: { end_time?: string; distance?: number }) =>
     api
-      .post(`/api/activities/sessions/${activityId}/finalize/`, body)
+      .post(mobileActivityPaths.sessionFinalize(activityId), body)
       .then((r) => r.data),
   getHistory: () => api.get<ActivityItem[]>(API_PATHS_FULL.activitiesSessions).then((r) => r.data),
   getLeaderboard: (cityId: string) =>
-    api.get<any>(`/api/activities/leaderboard/${cityId}/`).then((r) => {
+    api.get<any>(mobileActivityPaths.leaderboard(cityId)).then((r) => {
       const data = r.data;
       if (Array.isArray(data)) return data as LeaderboardEntry[];
       if (data && Array.isArray(data.leaderboard)) return data.leaderboard as LeaderboardEntry[];
       return [];
     }),
   getMyRank: (cityId: string) =>
-    api.get<any>(`/api/activities/leaderboard/${cityId}/me/`).then((r) => r.data),
+    api.get<any>(mobileActivityPaths.leaderboardMe(cityId)).then((r) => r.data),
 };
 
 export const AuthService = {
@@ -82,31 +88,36 @@ export const AuthService = {
 };
 
 export const PrivacyService = {
-  getZones: () => api.get('/api/activities/privacy-zones/').then((r) => r.data),
+  getZones: () => api.get(API_PATHS_FULL.activitiesPrivacyZones).then((r) => r.data),
   createZone: (zone: { label: string; center: [number, number]; radius: number }) =>
-    api.post('/api/activities/privacy-zones/', zone).then((r) => r.data),
-  deleteZone: (id: string) => api.delete(`/api/activities/privacy-zones/${id}/`),
+    api.post(API_PATHS_FULL.activitiesPrivacyZones, zone).then((r) => r.data),
+  deleteZone: (id: string) => api.delete(mobileActivityPaths.privacyZone(id)),
 };
 
 export const RewardsService = {
-  getBalance: () => api.get<{ points: number }>('/api/rewards/balance/').then((r) => r.data),
-  getPools: () => api.get<RewardPool[]>('/api/rewards/pools/').then((r) => r.data),
+  getBalance: () => api.get<{ points: number }>(API_PATHS_FULL.rewardsBalance).then((r) => r.data),
+  getPools: () => api.get<RewardPool[]>(API_PATHS_FULL.rewardsPools).then((r) => r.data),
   redeemVoucher: (poolId: number) =>
-    api.post(`/api/rewards/redeem/${poolId}/`).then((r) => r.data),
+    api.post(mobileActivityPaths.rewardsRedeem(poolId)).then((r) => r.data),
 };
 
 export const POIService = {
-  getPOIs: () => api.get('/api/activities/pois/').then((r) => r.data),
+  getPOIs: () => api.get(API_PATHS_FULL.activitiesPois).then((r) => r.data),
 };
 
 export const WearableService = {
-  getStravaAuthUrl: () => api.get<{ auth_url: string }>('/api/activities/wearables/strava/auth/').then((r) => r.data),
-  getGarminAuthUrl: () => api.get<{ auth_url: string }>('/api/activities/wearables/garmin/auth/').then((r) => r.data),
+  getStravaAuthUrl: () =>
+    api.get<{ auth_url: string }>(API_PATHS_FULL.wearablesStravaAuth).then((r) => r.data),
+  getGarminAuthUrl: () =>
+    api.get<{ auth_url: string }>(API_PATHS_FULL.wearablesGarminAuth).then((r) => r.data),
   getStatus: () =>
-    api.get<{ strava: { connected: boolean; last_sync?: string }; garmin: { connected: boolean; last_sync?: string } }>(
-      '/api/activities/wearables/sync/',
-    ).then((r) => r.data),
-  sync: () => api.post('/api/activities/wearables/sync/').then((r) => r.data),
+    api
+      .get<{
+        strava: { connected: boolean; last_sync?: string };
+        garmin: { connected: boolean; last_sync?: string };
+      }>(API_PATHS_FULL.wearablesSync)
+      .then((r) => r.data),
+  sync: () => api.post(API_PATHS_FULL.wearablesSync).then((r) => r.data),
 };
 
 export default api;

@@ -28,7 +28,8 @@ Wybieramy **React Native 0.83+** w trybie Bridgeless.
 
 ## Konsekwencje
 - Konieczność rygorystycznego pilnowania wątku UI (maks. 16ms).
-- Używanie `Tamagui` dla zero-runtime stylizacji.
+- Używanie `react-native-unistyles` v3 + tokenów `@4velo/tokens` dla stylizacji.
+- Tokeny sesji w `expo-secure-store` (Keychain/Keystore).
 - Wykorzystanie `MMKV` dla ultra-szybkiego zapisu bufora GPS.
 
 

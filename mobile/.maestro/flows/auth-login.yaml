@@ -1,0 +1,7 @@
+appId: com.sport.athlete
+---
+# Critical flow: launch app and reach login screen
+- launchApp
+- assertVisible: "4VELO"
+- assertVisible: "MISSION LOGIN"
+- assertVisible: "AUTHORIZE"

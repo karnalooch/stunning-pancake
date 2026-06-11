@@ -19,6 +19,9 @@
     "test": "jest --config jest.config.js",
     "test:watch": "jest --config jest.config.js --watch",
     "test:coverage": "jest --config jest.config.js --coverage",
+    "test:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1",
+    "test:e2e:auth": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1 -Flow auth-login.yaml",
+    "install:maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/install-maestro.ps1",
     "eas-build-pre-install": "bash eas-build-pre-install.sh"
   },
   "dependencies": {
@@ -28,7 +31,6 @@
     "@expo/config-plugins": "~55.0.0",
     "@legendapp/state": "3.0.0-beta.46",
     "@maplibre/maplibre-react-native": "^11.0.2",
-    "@powersync/react-native": "^1.0.0",
     "@react-native-community/netinfo": "^11.5.2",
     "@react-native-firebase/app": "^21.10.0",
     "@react-native-firebase/crashlytics": "^21.10.0",
@@ -45,6 +47,7 @@
     "expo-linking": "~55.0.15",
     "expo-location": "~55.1.8",
     "expo-notifications": "~55.0.20",
+    "expo-secure-store": "~55.0.8",
     "expo-status-bar": "~55.0.5",
     "expo-task-manager": "~55.0.15",
     "expo-updates": "~55.0.21",

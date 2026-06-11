@@ -1,4 +1,4 @@
-export { API_PATHS, API_PATHS_FULL, CRITICAL_PATHS } from './paths';
+export { API_PATHS, API_PATHS_FULL, CRITICAL_PATHS, mobileActivityPaths } from './paths';
 export type {
   TokenPair,
   TokenRefreshResponse,

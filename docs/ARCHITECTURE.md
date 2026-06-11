@@ -201,17 +201,21 @@ interface AuthState {
 
 | Komponent | Technologia |
 |-----------|-------------|
-| Framework | React Native (Expo) |
-| UI | Tamagui + Skia |
-| State | Legend-State |
-| Storage | MMKV |
-| Maps | react-native-maps |
-| GPS | expo-location |
+| Framework | React Native 0.83 + Expo SDK 55 (New Architecture) |
+| UI | react-native-unistyles + Skia HUD |
+| State | Legend-State (+ Zustand dla i18n) |
+| Storage | MMKV (GPS buffer/outbox) + SecureStore (tokeny) |
+| Maps | MapLibre (`@maplibre/maplibre-react-native`) |
+| GPS | expo-location + expo-task-manager |
+| API | Axios + `@4velo/api-client` (typed paths) |
+| Testy E2E | Maestro (`.maestro/flows/`) |
 
 ### Kluczowe funkcje
 
 - Map-first tracking z auto-hide HUD
-- Offline-first z SQLite
+- Offline-first GPS buffer (MMKV outbox + recovery)
+- Bezpieczna sesja JWT (SecureStore + refresh przy 401)
+- Budżety wydajności HUD/GPS (`mobile/src/services/performanceBudget.ts`)
 - 4-warstwowy anti-cheat po stronie serwera
 - Integracje z Strava i Garmin
 

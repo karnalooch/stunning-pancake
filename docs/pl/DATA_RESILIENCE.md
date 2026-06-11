@@ -84,7 +84,7 @@ Bez zmian w tym PR: dedupe `external_id`, idempotentny kredyt leaderboard — wa
 | Stop jazdy → `stopTracking` + finalize | ✅ |
 | Wznowienie GPS po kill app (`resumeTrackingAfterRelaunch`) | ✅ |
 | UNIQUE w DB na `(activity_id, client_batch_id)` | ✅ Redis wystarcza bez migracji Timescale |
-| PowerSync / offline-first DB | 📋 Osobna inicjatywa (`@powersync/react-native` w deps, nieaktywne) |
+| PowerSync / offline-first DB | 📋 Osobna inicjatywa (zależność usunięta; MMKV outbox pozostaje SSOT offline GPS) |
 
 ## Pozostałe ryzyka (uczciwie)
 
