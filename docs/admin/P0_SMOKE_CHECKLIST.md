@@ -67,6 +67,17 @@ S0 execution summary (2026-06-11):
 
 ---
 
+## S5–S6 production rollout sign-off (2026-06-11)
+
+| Paczka | Gate | Result | Artefakt / uwagi |
+|--------|------|--------|------------------|
+| **S5 — P2 Auth + GPX** | MFA status + GPX export + RODO export API | **GO (partial)** | `/users/mfa/status/` 200 (`required_for_role=true`), `/activities/sessions/{id}/gpx/` 200 dla aktywności z `route_path`; `POST /users/me/export/` 202 queued (job pozostaje `pending` >30s — follow-up operacyjny Celery/export worker) |
+| **S6 — Mobile athlete panel** | Mobile Jest gate | **GO** | `mobile npm test -- --runInBand` → 9/9 suites PASS, 77 tests PASS |
+
+**Overall S5–S6:** ☑ **GO** z jednym follow-up operacyjnym (RODO export job latency / worker drain).
+
+---
+
 ## GLOBAL_OWNER
 
 Login as `GLOBAL_OWNER`. Use a **non-production** environment for destructive checks unless explicitly approved.

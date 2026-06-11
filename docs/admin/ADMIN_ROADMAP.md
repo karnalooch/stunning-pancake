@@ -110,6 +110,8 @@ flowchart LR
 | MFA / 2FA for GLOBAL_OWNER | [P2_ROADMAP.md](./P2_ROADMAP.md) §4 |
 | GPX archive, anti-cheat, RODO ZIP | [P2_ROADMAP.md](./P2_ROADMAP.md) §2 (F1 done) |
 
+**Status (2026-06-11):** GO — API checks passed for MFA status and GPX export; RODO export queue accepted (`202`, async job pending observed).
+
 ### S6 — Mobile athlete panel
 
 | Deliverable | Detail doc | Vision doc |
@@ -119,6 +121,7 @@ flowchart LR
 | Profile, marketplace, i18n | mobile screens | User P1 |
 
 **Gate:** Mobile Jest green + manual ride smoke. Depends on S4 BE for `rejection_reason`.
+**Status (2026-06-11):** GO — mobile Jest green (`9/9` suites, `77/77` tests).
 
 ### Later — ROADMAP_V3 premium §7
 
