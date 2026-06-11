@@ -46,6 +46,8 @@ backend/.coverage
 .coverage
 admin/test-results/
 admin/e2e-results.xml
+admin/audit-screenshots/
+admin/p0-smoke-report.json
 
 # Load test artifacts (local reports, Railway ramp logs)
 scripts/load/reports/
