@@ -161,8 +161,21 @@ railway logs -s celery-worker-simulation --lines 30
 
 ---
 
+## Prod sim capacity (off-peak)
+
+Po load teście na **sim-lab** (proxy ON) obniż zasoby symulacyjne na prod:
+
+```powershell
+.\scripts\railway-set-prod-sim-capacity.ps1 -Profile off-peak
+```
+
+Szczegóły: [RAILWAY_PROD_SIM_CAPACITY.md](./RAILWAY_PROD_SIM_CAPACITY.md).
+
+---
+
 ## Powiązane
 
+- [RAILWAY_PROD_SIM_CAPACITY.md](./RAILWAY_PROD_SIM_CAPACITY.md)
 - [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md)
 - [../RAILWAY_CELERY_SIMULATION.md](../../RAILWAY_CELERY_SIMULATION.md)
 - [SIMULATOR.md](./SIMULATOR.md)

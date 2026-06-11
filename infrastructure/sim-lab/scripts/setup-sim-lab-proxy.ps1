@@ -87,4 +87,29 @@ $simVars = @(
 Set-BackendVars $ProdProjectId $prodVars "Prod marvelous backend" $ProdBackendService
 Set-BackendVars $SimLabProjectId $simVars "Sim-lab backend" $SimLabBackendService
 
+function Set-ProdDataPlaneSimLab {
+    param(
+        [string]$ProdApiBase = "https://backend-production-55c7.up.railway.app/api",
+        [string]$Username = "global_owner",
+        [string]$Password = ""
+    )
+    if (-not $Password) { $Password = $env:ADMIN_PASS }
+    if (-not $Password) {
+        Write-Host "  skip sim-data-plane POST (set ADMIN_PASS to force sim-lab target in Redis)" -ForegroundColor Yellow
+        return
+    }
+    try {
+        $authBody = @{ username = $Username; password = $Password } | ConvertTo-Json
+        $token = (Invoke-RestMethod -Uri "$ProdApiBase/auth/token/" -Method POST -ContentType "application/json" -Body $authBody -TimeoutSec 60).access
+        $hdr = @{ Authorization = "Bearer $token"; "Content-Type" = "application/json" }
+        $plane = Invoke-RestMethod -Uri "$ProdApiBase/activities/admin/sim-data-plane/" -Method POST -Headers $hdr -Body '{"target":"sim-lab"}' -TimeoutSec 30
+        Write-Host "  prod sim-data-plane -> $($plane.data_plane)" -ForegroundColor Green
+    } catch {
+        Write-Host "  sim-data-plane POST failed: $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
+if ($Redeploy) { Start-Sleep -Seconds 45 }
+Set-ProdDataPlaneSimLab
+
 Write-Host "Proxy configured. Verify: GET prod /api/activities/admin/sim-target/ -> mode=sim-lab-proxy" -ForegroundColor Green

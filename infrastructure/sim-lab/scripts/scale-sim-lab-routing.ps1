@@ -19,17 +19,24 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $env:RAILWAY_API_TOKEN) {
+    $env:RAILWAY_API_TOKEN = [Environment]::GetEnvironmentVariable('RAILWAY_API_TOKEN', 'User')
+}
 if (-not $env:RAILWAY_API_TOKEN) { throw "Set RAILWAY_API_TOKEN" }
 if ($env:RAILWAY_TOKEN) { Remove-Item Env:RAILWAY_TOKEN -ErrorAction SilentlyContinue }
 $env:CI = "true"
+$WorkspaceId = "8aa1f35e-a716-4526-8209-5aadcaae2246"
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..\..\..")
 Push-Location $RepoRoot
 try {
-    railway link -p $ProjectId -e $Environment --json 2>&1 | Out-Null
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    railway link -p $ProjectId -e $Environment -w $WorkspaceId --json 2>$null | Out-Null
+    $ErrorActionPreference = $prev
 
     Write-Host "=== Scale $ServiceName -> ${Replicas}x ($Region) ===" -ForegroundColor Cyan
-    railway scale -s $ServiceName -e $Environment -p $ProjectId "${Region}=${Replicas}"
+    railway scale -s $ServiceName -e $Environment -p $ProjectId "${Region}=${Replicas}" 2>&1 | Out-Host
 
     if (-not $SkipConfigure) {
         Write-Host "=== Apply railway.json build config (limitOverride 2 vCPU / 2 GB) ===" -ForegroundColor Cyan
@@ -49,8 +56,8 @@ try {
 
     Write-Host ""
     Write-Host "Dashboard: Replica Limits should show 2 vCPU / 2 GB (not 24/24)." -ForegroundColor Yellow
-    Write-Host "If still maxed, set manually then Save — limitOverride applies on git deploy." -ForegroundColor Yellow
-    Write-Host "Verify: worker-status shows >= 6 routing@* workers after deploy." -ForegroundColor Green
+    Write-Host "If still maxed, set manually then Save - limitOverride applies on git deploy." -ForegroundColor Yellow
+    Write-Host "Verify: worker-status shows at least 6 routing workers after deploy." -ForegroundColor Green
 } finally {
     Pop-Location
 }

@@ -27,6 +27,7 @@
 | Dokument | Cel (skrót) | Rola właściciela | Kadencja aktualizacji |
 |----------|-------------|------------------|------------------------|
 | [RAILWAY_PRODUCTION_CHECKLIST.md](./RAILWAY_PRODUCTION_CHECKLIST.md) | Gate prod Railway: repo, env, logi Celery | Platform Operator | Po każdej zmianie workerów / przed load testem |
+| [RAILWAY_PROD_SIM_CAPACITY.md](./RAILWAY_PROD_SIM_CAPACITY.md) | Peak/off-peak prod sim infra + separacja sim-lab | Platform Operator | Po load teście / codziennie off-peak |
 | [RAILWAY_CELERY_MEMORY.md](./RAILWAY_CELERY_MEMORY.md) | SSOT: OOM, `solo`, routing queue, `SCALE_*` | Platform Operator | Po incydencie SIGKILL lub zmianie caps |
 | [../RAILWAY_CELERY_SIMULATION.md](../../RAILWAY_CELERY_SIMULATION.md) | Serwis `celery-worker-simulation` | Platform Operator | Przy nowym `railway.json` simulation |
 | [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) | Decyzja Railway vs K8s, mapowanie | Tech Lead / DevOps | Kwartalnie lub przed migracją |
@@ -54,6 +55,8 @@
 | [infrastructure/sim-lab/README.md](../../../infrastructure/sim-lab/README.md) | Izolowany sim-lab: Docker / Railway load test | Platform Operator | Przed ramp 300k (nie prod) |
 | [`scripts/load/run-suite.ps1`](../../../scripts/load/run-suite.ps1) | Suite smoke/baseline/stress-50k (lokalny Docker) | Platform Operator | Po zmianie ingest / live-map |
 | [`scripts/railway-verify-production.ps1`](../../../scripts/railway-verify-production.ps1) | Weryfikacja routing + simulation (CLI + opcjonalnie GraphQL build config) | Platform Operator | Po deploy workerów Celery |
+| [`scripts/railway-set-prod-sim-capacity.ps1`](../../../scripts/railway-set-prod-sim-capacity.ps1) | Prod peak/off-peak: routing, osrm, brouter-2 | Platform Operator | Po symulacji / przed oszczędzaniem RAM |
+| [`scripts/railway-audit-prod-simlab.ps1`](../../../scripts/railway-audit-prod-simlab.ps1) | Audyt prod vs sim-lab repliki i proxy | Platform Operator | Przed/po zmianie profilu |
 | [`.env.railway.local.example`](../../../.env.railway.local.example) | Szablon lokalny (bez sekretów w Git) | Deweloper | Przy onboardingu Railway CLI |
 
 **Wymagane env (nazwy tylko):** `RAILWAY_API_TOKEN` (Windows User env); **nie** używać legacy `RAILWAY_TOKEN`.

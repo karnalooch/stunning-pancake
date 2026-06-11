@@ -132,6 +132,18 @@ $env:ADMIN_PASS = '<prod password>'
 ```
 
 
+## Prod vs sim-lab (koszty)
+
+Po włączeniu proxy obniż zasoby symulacyjne na **marvelous-gratitude**:
+
+```powershell
+.\scripts\railway-set-prod-sim-capacity.ps1 -Profile off-peak
+```
+
+Runbook: [docs/pl/operations/RAILWAY_PROD_SIM_CAPACITY.md](../../docs/pl/operations/RAILWAY_PROD_SIM_CAPACITY.md).
+
+---
+
 ## Railway (osobny projekt)
 
 1. Utwórz projekt Railway (np. `4velo-sim-lab`) — **nowy** Postgres + Redis.
