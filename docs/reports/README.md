@@ -30,6 +30,8 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md](./COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md) | Kompleksowy |
 | [FULL_INDUSTRY_AUDIT_2026-05-27.md](./FULL_INDUSTRY_AUDIT_2026-05-27.md) | Branżowy |
 | [FRONTEND_BACKEND_GAP_REPORT.md](./FRONTEND_BACKEND_GAP_REPORT.md) | Luki FE/BE |
+| [SPORT_FULL_CONVERSATION_REPORT_2026-06-11.pl.md](./SPORT_FULL_CONVERSATION_REPORT_2026-06-11.pl.md) | Raport rynkowy GTM (PL) |
+| [SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.pl.md](./SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.pl.md) | Oszustwa zawodników — metody i obrona |
 | [RELIABILITY_AUDIT_PLAYBOOK.md](./RELIABILITY_AUDIT_PLAYBOOK.md) | Playbook niezawodnosci (release gate + incident runbook) |
 | [../admin/UI_AUDIT_2026-06-02.md](../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02); §8 P0 done |
 | [../admin/WEBGL_LIVE_MAP_AUDIT_2026-06-06.md](../admin/WEBGL_LIVE_MAP_AUDIT_2026-06-06.md) | Live Map WebGL prod audit; JSON w `admin/reports/` |

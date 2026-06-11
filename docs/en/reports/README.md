@@ -28,6 +28,8 @@ Snapshots from specific dates - **do not** replace runbooks in [../operations/](
 | [COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md](../../reports/COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md) | Comprehensive |
 | [FULL_INDUSTRY_AUDIT_2026-05-27.md](../../reports/FULL_INDUSTRY_AUDIT_2026-05-27.md) | Industry |
 | [FRONTEND_BACKEND_GAP_REPORT.md](../../reports/FRONTEND_BACKEND_GAP_REPORT.md) | FE/BE gaps |
+| [SPORT_FULL_CONVERSATION_REPORT_2026-06-11.en.md](./SPORT_FULL_CONVERSATION_REPORT_2026-06-11.en.md) | Market GTM report (EN) |
+| [SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.en.md](./SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.en.md) | Athlete cheating — methods and defence |
 | [RELIABILITY_AUDIT_PLAYBOOK.md](../../reports/RELIABILITY_AUDIT_PLAYBOOK.md) | Reliability playbook (release gate + incident runbook) |
 | [../admin/UI_AUDIT_2026-06-02.md](../../admin/UI_AUDIT_2026-06-02.md) | Admin UI crawl + roadmap (2026-06-02); §8 P0 done |
 | [../admin/P0_SMOKE_CHECKLIST.md](../../admin/P0_SMOKE_CHECKLIST.md) | Post-deploy P0 smoke per role (printable) |
