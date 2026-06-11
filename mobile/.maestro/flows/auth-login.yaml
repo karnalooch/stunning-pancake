@@ -1,7 +1,7 @@
 appId: com.sport.athlete
 ---
-# Critical flow: launch app and reach login screen
+# Smoke: app launches (login screen or post auto-login shell).
 - launchApp
-- assertVisible: "4VELO"
-- assertVisible: "MISSION LOGIN"
-- assertVisible: "AUTHORIZE"
+- extendedWaitUntil:
+    visible: ".*4VELO.*"
+    timeout: 45000

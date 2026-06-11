@@ -69,6 +69,15 @@ if (-not $adb) {
     }
 }
 
+$maestroEnvArgs = @()
+foreach ($name in @("E2E_EMAIL", "E2E_PASSWORD")) {
+    $value = [Environment]::GetEnvironmentVariable($name)
+    if ($value) {
+        $maestroEnvArgs += "-e"
+        $maestroEnvArgs += "${name}=$value"
+    }
+}
+
 Push-Location $mobileDir
 try {
     if ($Flow) {
@@ -77,10 +86,10 @@ try {
             Write-Error "Flow not found: $flowPath"
         }
         Write-Host "Running Maestro flow: $Flow"
-        & $maestro test $flowPath
+        & $maestro test @maestroEnvArgs $flowPath
     } else {
         Write-Host "Running all Maestro flows in $flowsDir"
-        & $maestro test $flowsDir
+        & $maestro test @maestroEnvArgs $flowsDir
     }
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE

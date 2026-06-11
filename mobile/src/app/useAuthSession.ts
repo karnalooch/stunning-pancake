@@ -15,6 +15,7 @@ import {
 import { AuthService } from '../services/api';
 import { setOnSessionExpired } from '../services/apiClient';
 import { getAppStorage, ONBOARDING_KEY } from './storage';
+import { e2eConfig, isE2eAutoLoginEnabled } from './e2eConfig';
 
 const BYPASS_AUTH = false;
 
@@ -61,18 +62,37 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
 
     void (async () => {
       const token = await restoreSessionFromStorage();
-      if (!token) {
-        auth.isLoading.set(false);
+      if (token) {
+        try {
+          const user = await AuthService.getProfile();
+          await applyUserSession(user);
+        } catch {
+          await clearSession();
+        } finally {
+          auth.isLoading.set(false);
+        }
         return;
       }
-      try {
-        const user = await AuthService.getProfile();
-        await applyUserSession(user);
-      } catch {
-        await clearSession();
-      } finally {
-        auth.isLoading.set(false);
+
+      if (isE2eAutoLoginEnabled()) {
+        auth.isSubmitting.set(true);
+        try {
+          // E2E APK: skip onboarding wizard — Maestro targets main tabs.
+          getAppStorage().set(ONBOARDING_KEY, 'true');
+          auth.isOnboarded.set(true);
+          const user = await loginAndLoadProfile(e2eConfig.email, e2eConfig.password);
+          await applyUserSession(user);
+        } catch {
+          getAppStorage().delete(ONBOARDING_KEY);
+          auth.isOnboarded.set(false);
+        } finally {
+          auth.isSubmitting.set(false);
+          auth.isLoading.set(false);
+        }
+        return;
       }
+
+      auth.isLoading.set(false);
     })();
 
     return () => setOnSessionExpired(null);

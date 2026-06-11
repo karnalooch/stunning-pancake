@@ -46,12 +46,14 @@ export function AuthScreen({ auth, colors, onSubmit, onToggleMode, onSocialLogin
           />
         )}
         <RetroInput
+          testID="auth-email"
           placeholder="EMAIL / OPERATOR ID"
           value={auth.email.get()}
           onChangeText={(v: string) => auth.email.set(v)}
           autoCapitalize="none"
         />
         <RetroInput
+          testID="auth-password"
           placeholder="ACCESS TOKEN"
           value={auth.password.get()}
           onChangeText={(v: string) => auth.password.set(v)}

@@ -1,16 +1,10 @@
 appId: com.sport.athlete
 ---
-# Critical flow: GPS recovery banner visibility after simulated pending upload state.
-# Requires dev build with EXPO_PUBLIC_E2E_GPS_RECOVERY=true seeding pending outbox.
+# GPS recovery banner (optional) after authenticated launch.
 - launchApp
-- runFlow:
-    when:
-      visible: "MISSION LOGIN"
-    commands:
-      - tapOn: "AUTHORIZE"
 - extendedWaitUntil:
     visible: "Ride"
-    timeout: 15000
+    timeout: 60000
 - assertVisible:
     text: ".*GPS.*"
     optional: true

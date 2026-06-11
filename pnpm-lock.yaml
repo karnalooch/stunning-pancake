@@ -233,7 +233,7 @@ importers:
         specifier: ~55.0.20
         version: 55.0.23(expo@55.0.26)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.85.2(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.7))(react@19.2.7)(typescript@5.9.3)
       expo-secure-store:
-        specifier: ~55.0.8
+        specifier: ~55.0.14
         version: 55.0.14(expo@55.0.26)
       expo-status-bar:
         specifier: ~55.0.5
