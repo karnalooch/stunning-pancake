@@ -139,6 +139,7 @@ Diagram i klucze MMKV: [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md).
 
 ## Powiązane
 
+- [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) — migracja trackingu tła (Android/iOS, KPI, eskalacja)
 - [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md)
 - [ADR-005](../../adr/005-telemetry-tracking.md)
 - [TROUBLESHOOTING.md](../../TROUBLESHOOTING.md)

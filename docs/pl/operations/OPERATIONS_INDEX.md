@@ -37,6 +37,7 @@
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | Po zmianie presetów / volume |
 | [OSRM.md](./OSRM.md) | OSRM sim routing, volume, `SCALE_SIM_ROUTING_BACKEND` | Platform Operator | Po deploy serwisu `osrm` |
 | [MOBILE.md](./MOBILE.md) | Build EAS, env, GPS recovery | Mobile Lead | Przed release app store |
+| [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Migracja trackingu tła Android/iOS, KPI, eskalacja | Mobile Lead | Przy zmianie providera GPS / przed releasem |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Jednolite gate CI + checklist | Release Manager | Każdy release tag |
 | [../DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Przed testem 300k |
 | [../SCALE_TEST_300K.md](../../SCALE_TEST_300K.md) | Test 300k | Platform Operator | Planowany test (rzadko) |

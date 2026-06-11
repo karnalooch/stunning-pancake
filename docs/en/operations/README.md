@@ -55,6 +55,7 @@ Polish canonical runbooks: [../../pl/operations/](../../pl/operations/). Legacy 
 | [KUBERNETES.md](./KUBERNETES.md) | k8s manifests |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Pre-release gate |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery |
+| [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Background tracking migration (native provider, KPI, escalation) |
 | [infrastructure/brouter/README.md](../../../infrastructure/brouter/README.md) | BRouter Dockerfile |
 
 ---

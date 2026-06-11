@@ -37,6 +37,7 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | After preset / volume changes |
 | [OSRM.md](./OSRM.md) | OSRM sim routing, volume, `SCALE_SIM_ROUTING_BACKEND` | Platform Operator | After `osrm` deploy |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery | Mobile Lead | Before app store release |
+| [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Background tracking migration Android/iOS, KPI, escalation | Mobile Lead | On GPS provider change / before release |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Unified CI gate + checklist | Release Manager | Each release tag |
 | [DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Before 300k test |
 | [SCALE_TEST_300K.md](../../SCALE_TEST_300K.md) | 300k test | Platform Operator | Scheduled test (rare) |

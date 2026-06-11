@@ -154,6 +154,7 @@ For `ride-lifecycle.yaml`, set env vars `E2E_EMAIL` and `E2E_PASSWORD` before ru
 
 ## Related
 
+- [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) — background tracking migration (Android/iOS, KPI, escalation)
 - [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md)
 - [ADR-005](../../adr/005-telemetry-tracking.md)
 - [TROUBLESHOOTING.md](../TROUBLESHOOTING.md)

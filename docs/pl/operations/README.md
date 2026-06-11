@@ -54,6 +54,7 @@
 | [KUBERNETES.md](./KUBERNETES.md) | Manifesty k8s |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Gate przed release |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery |
+| [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Migracja trackingu tła (native provider, KPI, eskalacja) |
 | [../../infrastructure/brouter/README.md](../../../infrastructure/brouter/README.md) | Dockerfile BRouter |
 
 ---
