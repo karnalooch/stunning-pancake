@@ -63,7 +63,7 @@ const baseURL = resolveApiBaseUrl();
 
 export type ApiClientRequestConfig = import('axios').InternalAxiosRequestConfig & {
   skipAuth?: boolean;
-  /** Suppress global 500 toast (polling / background status). */
+  /** Suppress global error toast (expected 403 / background polling). */
   skipGlobalError?: boolean;
 };
 
@@ -140,13 +140,15 @@ apiClient.interceptors.response.use(
       }
       return Promise.reject(error);
     }
+    const skipGlobalError = (error.config as ApiClientRequestConfig | undefined)?.skipGlobalError;
     if (error.response?.status === 403) {
-      if (_notifyError) _notifyError('Access Denied', 'You do not have permission to perform this action.');
+      if (!skipGlobalError && _notifyError) {
+        _notifyError('Access Denied', 'You do not have permission to perform this action.');
+      }
       return Promise.reject(error);
     }
     if (error.response?.status && error.response.status >= 500) {
-      const skip = (error.config as ApiClientRequestConfig | undefined)?.skipGlobalError;
-      if (!skip && _notifyError) {
+      if (!skipGlobalError && _notifyError) {
         _notifyError('Server Error', `The server encountered an error (${error.response.status}). Please try again.`);
       }
     }

@@ -56,6 +56,11 @@ def athlete(db, tenant):
 
 
 @pytest.fixture
+def sponsor(db, tenant):
+    return User.objects.create_user(username="sp", password="pass", role="SPONSOR", tenant=tenant)
+
+
+@pytest.fixture
 def rbac_roles(db):
     """Ensure RBAC roles exist (from migration or manual creation)."""
     for slug, name in Role.SLUG_CHOICES:
@@ -254,3 +259,15 @@ class TestRoleApi:
         )
         assert response.status_code == 200
         assert RolePermission.objects.filter(role=role).count() == 2
+
+    def test_sponsor_can_fetch_my_roles(self, sponsor, rbac_roles):
+        from rest_framework.test import APIClient
+
+        role = Role.objects.get(slug="sponsor")
+        UserRole.objects.create(user=sponsor, role=role, tenant=sponsor.tenant)
+        client = APIClient()
+        client.force_authenticate(user=sponsor)
+        response = client.get("/api/users/rbac/user-roles/my_roles/")
+        assert response.status_code == 200
+        assert len(response.data) == 1
+        assert response.data[0]["role"]["slug"] == "sponsor"

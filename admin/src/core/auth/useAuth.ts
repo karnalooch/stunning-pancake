@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { API_PATHS } from '@4velo/api-client';
-import { apiClient } from '../../api/client';
+import { apiClient, type ApiClientRequestConfig } from '../../api/client';
 import { clearStoredSession } from './tokens';
 import { isE2eMode } from './e2eEnv';
 
@@ -73,7 +73,8 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const { data } = await apiClient.get('/users/rbac/user-roles/my_roles/', {
         headers: { Authorization: `Bearer ${token}` },
-      });
+        skipGlobalError: true,
+      } as ApiClientRequestConfig);
       // Extract permissions from role assignments
       permissions = data.flatMap((ur: any) =>
         ur.role.permissions?.map((rp: any) => rp.permission.codename) || []

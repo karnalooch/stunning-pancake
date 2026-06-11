@@ -12,7 +12,7 @@ export interface OpsNotificationItem {
 
 export function useOpsNotifications() {
   const { user, hasAnyPermission } = useAuth();
-  const canModerate = hasAnyPermission(['activities.approve', 'activities.view']);
+  const canModerate = hasAnyPermission(['activities.approve', '*']);
   const isTenantOps =
     user?.role === 'TENANT_ADMIN' ||
     user?.role === 'TENANT_MODERATOR' ||

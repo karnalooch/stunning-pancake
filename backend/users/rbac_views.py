@@ -72,9 +72,9 @@ class UserRoleViewSet(viewsets.ModelViewSet):
         assignment.delete()
         return Response({"status": "revoked"})
 
-    @action(detail=False, methods=["get"])
+    @action(detail=False, methods=["get"], permission_classes=[permissions.IsAuthenticated])
     def my_roles(self, request):
-        """Get current user's role assignments."""
+        """Get current user's role assignments (any authenticated user)."""
         qs = UserRole.objects.filter(user=request.user)
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
