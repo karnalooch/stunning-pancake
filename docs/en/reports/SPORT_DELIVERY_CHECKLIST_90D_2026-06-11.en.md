@@ -25,6 +25,8 @@ A delivery list ready to be transcribed directly into sprints. The order reflect
 
 ## Tier 0 — GTM / trust (mostly documentation, week 1–3)
 
+- [ ] Limit the product to **cycling / running / nordic walking** (UI, API, rules, sales materials).
+  - Outcome: only these 3 disciplines visible in the app and documentation.
 - [ ] Tenant "campaign start" package (posters, rules, GPS/battery FAQ, schedule).
   - Outcome: one folder of materials the tenant receives at onboarding.
 - [ ] Public Anti-Cheat / Scoring Policy page.
@@ -117,7 +119,7 @@ Trust:
 - [ ] Full play-off bracket (only at 10+ leagues with play-offs).
 - [ ] In-app entry-fee payments (contest/gambling regulation).
 - [ ] Move-to-earn / crypto.
-- [ ] All 18 disciplines like AM (start: 5–6 with good anti-cheat).
+- [ ] Disciplines outside cycling / running / nordic walking (e.g. AM's 18 disciplines, step-only wellness).
 
 ---
 
@@ -125,7 +127,7 @@ Trust:
 
 - [ ] **Pilot A — internal company:** 4 departments, 6 weeks, one tenant.
   - Outcome: a closed season + HR report + zero manual developer intervention.
-- [ ] **Pilot B — club 1v1:** two running clubs, 30 days.
+- [ ] **Pilot B — club 1v1:** two clubs (running or cycling), 30 days.
   - Outcome: a finished duel with fair scoring + a case study.
 - [ ] **Next step:** multi-company league (organizer tenant) based on pilot learnings.
 

@@ -25,6 +25,8 @@ Lista wdrożeniowa do bezpośredniego przepisania na sprinty. Kolejność oddaje
 
 ## Tier 0 — GTM / trust (głównie dokumentacja, tydzień 1–3)
 
+- [ ] Ograniczenie produktu do **rower / bieg / nordic walking** (UI, API, regulamin, materiały sprzedażowe).
+  - Outcome: w aplikacji i dokumentacji widoczne wyłącznie te 3 dyscypliny.
 - [ ] Pakiet "start kampanii" dla tenanta (plakaty, regulamin, FAQ GPS/bateria, harmonogram).
   - Outcome: jeden folder materiałów, które tenant dostaje przy onboardingu.
 - [ ] Publiczna strona Anti-Cheat / Scoring Policy.
@@ -117,7 +119,7 @@ Trust:
 - [ ] Pełny bracket play-off (dopiero przy 10+ ligach z play-offami).
 - [ ] Płatności entry fee w app (regulacja konkursów/hazardu).
 - [ ] Move-to-earn / crypto.
-- [ ] Wszystkie 18 dyscyplin jak AM (start: 5–6 z dobrym anti-cheat).
+- [ ] Dyscypliny poza rower / bieg / nordic walking (np. 18 dyscyplin AM, wellness tylko na krokach).
 
 ---
 
@@ -125,7 +127,7 @@ Trust:
 
 - [ ] **Pilot A — firma wewnętrzna:** 4 działy, 6 tygodni, jeden tenant.
   - Outcome: zamknięty sezon + raport HR + zero ręcznej interwencji developera.
-- [ ] **Pilot B — klub 1v1:** dwa kluby biegowe, 30 dni.
+- [ ] **Pilot B — klub 1v1:** dwa kluby (bieg lub rower), 30 dni.
   - Outcome: zakończony pojedynek z fair scoring + case study.
 - [ ] **Następny krok:** liga wielofirmowa (organizer tenant) na bazie wniosków z pilotów.
 

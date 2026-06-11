@@ -31,6 +31,16 @@ The scope is a reference point for further product and sales decisions. Most mar
 
 A **multi-tenant B2B/B2C** platform: GPS tracking, anti-cheat, white-label, city and corporate competitions, operator console.
 
+### Product specialization (strategic decision)
+
+4VELO focuses **exclusively** on three outdoor disciplines with GPS verification:
+
+- **cycling**,
+- **running**,
+- **nordic walking**.
+
+We do not expand the catalog to 18 disciplines (like Aktywne Miasta) or step-only wellness (like Activy). Deep anti-cheat, routing and scoring for these three activities matter more than catalog breadth.
+
 Confirmed traits in the repository and documentation:
 
 - multi-tenant + white-label (`Tenant`, per-tenant branding and config, `config_json`, heatmap toggle),
@@ -192,7 +202,7 @@ AM confirms demand and segment scale, but reveals gaps: **peak resilience, a vis
 | Feature | AM | STADTRADELN | Love to Ride | Naviki | Geovelo | Da's zo gefietst | Liikkuen | 4VELO |
 |---------|:--:|:-----------:|:------------:|:------:|:-------:|:----------------:|:--------:|:-----:|
 | City vs city | ✓ | ✓ | ○ | ○ | ✓ | ○ | ✓ | ✓ |
-| Multi-sport | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Cycling + run + NW | ✗ | ✗ (cycling) | ✗ (cycling) | ✗ | ✗ | ✗ | ✗ | ✓ |
 | Own GPS tracking | ✓ | ✓ | ○ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Strava sync | ✗ | ✗ | ✓ | ✗ | ? | ✗ | ✗ | ✓ |
 | Garmin | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | ✓ | ✓ |
@@ -231,7 +241,7 @@ Legend: ✓ strong · ○ partial · △ basic · ✗ none
 No player combines all of:
 
 1. white-label multi-tenant SaaS,
-2. multi-sport + gamification,
+2. cycling + running + nordic walking (3 GPS disciplines) + gamification,
 3. technical anti-cheat (4 layers),
 4. mobile resilience and scale-tested backend,
 5. multi-tenant operator console (impersonation, health, audit).
@@ -264,7 +274,7 @@ Closest: STADTRADELN (B2G scale, but DE-centric, single brand, cycling), Love to
 | Buyer | HR, wellbeing, CSR | Club president/secretary, captain |
 | Competition unit | Department, branch, whole company | Club, team, age category |
 | Format | Internal league or company vs company | Club vs club, seasonal league |
-| Metric | Normalized km / activity / steps+GPS | km, segments, checkpoints, matches |
+| Metric | Normalized km (cycling / running / NW) | km, segments, checkpoints, matches |
 | Competition | Activy, YuMuuv, MoveSpring, Step Up | Stravit, Clupik, amateur leagues (Excel) |
 | 4VELO edge | Anti-cheat + white-label + departments in admin | Anti-cheat + game vibe + 1v1 in API |
 | Risk | "We already have Activy for steps" | "We have WhatsApp + Strava" |
@@ -326,7 +336,7 @@ Backend gap: no explicit "League season" model (round, fixture, promotion). Toda
 | Clupik / HUDDLE | Clubs, leagues, communication | Not a focus | Yes | Gamification + telemetry |
 | Movva / Stride | 1v1 with stakes | Weak | No | B2B without gambling, with moderation |
 
-4VELO niche: **verified running/cycling leagues for companies and clubs, where the result matters** (prize, trophy, promotion).
+4VELO niche: **verified cycling / running / nordic walking leagues for companies and clubs, where the result matters** (prize, trophy, promotion).
 
 ### 9.6 Club/company segment problems
 
@@ -343,12 +353,12 @@ Backend gap: no explicit "League season" model (round, fixture, promotion). Toda
 1. **Company — internal league**: 1 tenant, up to 500 employees, N departments, 1 season (~6 weeks), department ranking + normalization, HR report. Flat/season price (Activy ~750 EUR / 45 days as a reference point; higher for 4VELO thanks to GPS+anti-cheat).
 2. **Company vs company**: 2 tenants (or 1 organizer + 2 participants), `INTER_TENANT`, shared rules, separate brandings. Ideal: sister companies, client-partners, trade fairs.
 3. **Club — 1v1 season**: clubs as `Club` (tenant optional, e.g. sponsor city), up to 5 parallel duels or a 6–10 club league. Lower price, higher volume; upsell: a federation pays for a regional league.
-4. **League organizer** (HR agency, federation): multi-tenant under one GO, white-label "Małopolska Runners League". Long-term sweet spot — like STADTRADELN, but paid B2B and multi-sport.
+4. **League organizer** (HR agency, federation): multi-tenant under one GO, white-label "Małopolska Runners League". Long-term sweet spot — like STADTRADELN, but paid B2B and **cycling + running + nordic walking** (not generic multi-sport).
 
 ### 9.8 One-sentence pitch
 
-- **For a company:** "A department or company running/cycling league with results HR can trust — because we cut out cheating, and a small team still has a chance thanks to fair scoring."
-- **For a club:** "Club vs club like Rowerowa Stolica, but for your running/MTB club — your own league, medals in the app, no manually collecting Strava screenshots."
+- **For a company:** "A department or company cycling / running / nordic walking league with results HR can trust — because we cut out cheating, and a small team still has a chance thanks to fair scoring."
+- **For a club:** "Club vs club like Rowerowa Stolica, but for your running, cycling or NW club — your own league, medals in the app, no manually collecting Strava screenshots."
 
 ### 9.9 Difference vs selling to cities
 
@@ -429,7 +439,7 @@ One platform — a tenant can be a city, company or league organizer; packaging 
 
 ### What deliberately NOT to implement at the start
 
-- All 18 disciplines like AM (better 5–6 with good anti-cheat).
+- Disciplines outside **cycling / running / nordic walking** (e.g. AM's 18 disciplines, step-only wellness).
 - Move-to-earn / crypto (skepticism, regulatory risk).
 - Own social network (export/leaderboard is enough).
 - Competing with Strava as a tracker (position "hub + fair league + white-label").
@@ -465,4 +475,4 @@ This makes the product easy to buy for HR and club boards — without building t
 
 ## 14. Source and scope
 
-This document is a consolidation of the full strategic session (competitor research, community signals, Aktywne Miasta benchmark, 4VELO code analysis, club/company sales strategy). Market material is based on public sources; product analysis is based on the SPORT repository. Companion documents: [exec one-pager](./SPORT_EXEC_ONE_PAGER_2026-06-11.en.md) and [delivery checklist 90 days](./SPORT_DELIVERY_CHECKLIST_90D_2026-06-11.en.md).
+This document is a consolidation of the full strategic session (competitor research, community signals, Aktywne Miasta benchmark, 4VELO code analysis, club/company sales strategy). Market material is based on public sources; product analysis is based on the SPORT repository. **Update 2026-06-11:** product specialization limited to cycling, running and nordic walking. Companion documents: [exec one-pager](./SPORT_EXEC_ONE_PAGER_2026-06-11.en.md) and [delivery checklist 90 days](./SPORT_DELIVERY_CHECKLIST_90D_2026-06-11.en.md).

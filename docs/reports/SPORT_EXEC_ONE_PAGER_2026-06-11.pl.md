@@ -17,15 +17,19 @@
 
 Aplikacje sportowo-rywalizacyjne (miejskie, korporacyjne, klubowe) cierpią na te same bolączki: **oszustwa w rankingach bez egzekucji zasad**, **niestabilny tracking GPS w tle**, **awarie przy szczytach** (Aktywne Miasta padły przy ~150k sesjach), **słabe integracje** i **sezonowość → churn**. Kupujący (samorząd, HR, zarząd klubu) nie ufa wynikom.
 
+## Specjalizacja
+
+**Tylko trzy dyscypliny:** rower, bieganie, nordic walking — weryfikacja GPS, anti-cheat i scoring pod te aktywności. Bez katalogu 18 dyscyplin (AM) i bez wellness wyłącznie na krokach (Activy).
+
 ## Pozycja 4VELO
 
-Jedyna platforma łącząca jednocześnie: **white-label multi-tenant + multi-sport + techniczny anti-cheat (4 warstwy) + odporność mobilną (outbox) + scale-tested backend (10k–300k) + konsola operatora**. Konkurenci mają najwyżej 2–3 z tych elementów.
+Jedyna platforma łącząca jednocześnie: **white-label multi-tenant + rower/bieg/NW + techniczny anti-cheat (4 warstwy) + odporność mobilną (outbox) + scale-tested backend (10k–300k) + konsola operatora**. Konkurenci mają najwyżej 2–3 z tych elementów.
 
 | | 4VELO | STADTRADELN | Love to Ride | Activy | Aktywne Miasta |
 |--|:-----:|:-----------:|:------------:|:------:|:--------------:|
 | White-label | ✓ | ✗ | ✗ | ○ | ✗ |
 | Anti-cheat tech | ✓ | ✗ | ✗ | ○ | ✗ |
-| Multi-sport | ✓ | ✗ | ✗ | ○ | ✓ |
+| Rower + bieg + NW | ✓ | ✗ (rower) | ✗ (rower) | ✗ (kroki) | ✗ (18 dyscyplin) |
 | Scale tested | ✓ | ? | ? | ? | ✗ |
 | 1v1 / ligi w API | ✓ | ✗ | ○ | ✓ | ○ |
 
@@ -53,7 +57,7 @@ Jedna platforma, różny packaging — tenant = miasto / firma / organizator lig
 ## Plan dowodu (piloty)
 
 - **Pilot A — firma wewnętrzna:** 4 działy, 6 tygodni, jeden tenant (najszybszy dowód).
-- **Pilot B — klub 1v1:** dwa kluby biegowe, 30 dni.
+- **Pilot B — klub 1v1:** dwa kluby (bieg lub rower), 30 dni.
 - Następnie: liga wielofirmowa (organizer tenant) → case study do sprzedaży kolejnych tenantów.
 
 ## Jedno zdanie
