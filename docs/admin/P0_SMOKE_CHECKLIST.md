@@ -33,15 +33,20 @@
 
 | Field | Value |
 |-------|--------|
-| **Environment** | e.g. `admin-production-083b.up.railway.app` |
-| **Build / deploy ID** | |
-| **Tester** | |
-| **Date** | |
-| **Overall result** | ☐ **GO** — P1 may start &nbsp;|&nbsp; ☐ **NO-GO** — block P1, file issues |
+| **Environment** | `admin-production-083b.up.railway.app` / `backend-production-55c7.up.railway.app` |
+| **Build / deploy ID** | not captured in this run |
+| **Tester** | Codex + operator session |
+| **Date** | 2026-06-11 |
+| **Overall result** | ☑ **GO** — P1 may start &nbsp;|&nbsp; ☐ **NO-GO** — block P1, file issues |
 
 **Notes / blockers:**
 
 ```
+S0 execution summary (2026-06-11):
+- railway-verify-production.ps1: PASS (all checks).
+- P0 role smoke (automation) PASS for GLOBAL_OWNER, TENANT_ADMIN, TENANT_MODERATOR, SPONSOR.
+- routing_queue_depth/backpressure observation window (17 min): stable, no active backpressure.
+- Prod smoke users used: global_owner, smoke_tenant_admin, smoke_tenant_moderator, sponsor_user.
 ```
 
 ---

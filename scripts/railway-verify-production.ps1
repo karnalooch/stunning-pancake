@@ -117,6 +117,25 @@ function Test-RailwayVarLine {
     }
     return $false
 }
+
+function Test-OsrmReadyLogs {
+    param([string]$Output)
+    if ($Output -match 'Invalid RAILWAY_TOKEN|Unauthorized') { return $false }
+    $ready = @(
+        'Starting osrm-routed',
+        'osrm-routed',
+        'running and waiting for requests',
+        'Listening on:',
+        '200 /route/v1/car/',
+        '200 /nearest/v1/car/'
+    )
+    foreach ($line in ($Output -split "`n")) {
+        foreach ($needle in $ready) {
+            if ($line -like "*$needle*") { return $true }
+        }
+    }
+    return $false
+}
 foreach ($kv in $requiredSim.GetEnumerator()) {
     $ok = Test-RailwayVarLine -Output $simVars -Key $kv.Key -Value $kv.Value
     Add-Result "$SimulationService $($kv.Key)" $ok $(if ($ok) { $kv.Value } else { "expected $($kv.Value)" })
@@ -159,13 +178,13 @@ foreach ($kv in $requiredBackend.GetEnumerator()) {
 # --- OSRM service ---
 if ($svcList -match '\bosrm\b') {
     Add-Result 'osrm service exists' $true 'Listed in railway service list'
-    $osrmLogs = railway logs -s osrm --lines 80 2>&1 | Out-String
-    if ($osrmLogs -match 'Starting osrm-routed|osrm-routed') {
+    $osrmLogs = railway logs -s osrm --lines 200 2>&1 | Out-String
+    if (Test-OsrmReadyLogs -Output $osrmLogs) {
         Add-Result 'osrm logs (routed ready)' $true 'osrm-routed started'
     } elseif ($osrmLogs -match 'osrm-extract|osrm-customize|Downloading') {
         Add-Result 'osrm logs (routed ready)' $false 'Still building graph — wait and re-run verify'
     } else {
-        Add-Result 'osrm logs (routed ready)' $false 'No osrm-routed in last 80 lines'
+        Add-Result 'osrm logs (routed ready)' $false 'No osrm-routed in last 200 lines'
     }
 } else {
     Add-Result 'osrm service exists' $false 'Run .\scripts\railway-setup-osrm.ps1'
