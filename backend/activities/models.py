@@ -22,8 +22,7 @@ class Activity(models.Model):
     ACTIVITY_TYPES = (
         ("RUN", "Running"),
         ("BIKE", "Cycling"),
-        ("WALK", "Walking"),
-        ("WHEELCHAIR", "Wheelchair"),
+        ("WALK", "Nordic Walking"),
     )
 
     EXTERNAL_SOURCES = (

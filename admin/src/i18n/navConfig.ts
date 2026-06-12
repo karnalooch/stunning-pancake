@@ -9,7 +9,7 @@ export type NavItemKey =
   | 'moderationInbox' | 'moderationHistory' | 'actionInbox' | 'antiCheat' | 'events'
   | 'sponsorDashboard' | 'poiMap' | 'sponsorshipAnalytics' | 'vouchers' | 'campaigns' | 'brandStudio'
   | 'departmentAnalytics' | 'heatmaps' | 'liveMap' | 'feedback' | 'aiCoach' | 'voucher3d' | 'esg'
-  | 'simulator' | 'revenue' | 'auditLog' | 'settings' | 'rbac' | 'featureFlags' | 'leaderboards' | 'exportCenter' | 'apiPlayground';
+  | 'simulator' | 'revenue' | 'auditLog' | 'settings' | 'rbac' | 'featureFlags' | 'platformNotices' | 'leaderboards' | 'exportCenter' | 'apiPlayground';
 
 export type NavSectionKey =
   | 'overview' | 'management' | 'operations' | 'sponsorship' | 'analytics' | 'system';
@@ -87,6 +87,7 @@ export const NAV_CONFIG: NavSectionConfig[] = [
       { icon: Settings, labelKey: 'settings', path: '/owner/settings', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
       { icon: ShieldAlert, labelKey: 'rbac', path: '/owner/system/rbac', roles: ['GLOBAL_OWNER'] },
       { icon: Zap, labelKey: 'featureFlags', path: '/owner/system/feature-flags', roles: ['GLOBAL_OWNER'] },
+      { icon: MessageSquare, labelKey: 'platformNotices', path: '/owner/system/platform-notices', roles: ['GLOBAL_OWNER', 'TENANT_ADMIN'] },
       { icon: TrendingUp, labelKey: 'leaderboards', path: '/owner/system/leaderboards', roles: ['GLOBAL_OWNER'] },
       { icon: Zap, labelKey: 'exportCenter', path: '/owner/system/export', roles: ['GLOBAL_OWNER'] },
       { icon: Zap, labelKey: 'apiPlayground', path: '/owner/system/api-playground', roles: ['GLOBAL_OWNER'] },

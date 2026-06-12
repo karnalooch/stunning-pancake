@@ -14,7 +14,7 @@ import { buildSpeedProfile } from '../../utils/routeSpeedProfile';
 import { useI18n } from '../../i18n/useI18n';
 
 const typeIcons: Record<string, React.ComponentType<{ size?: number; style?: React.CSSProperties }>> = {
-  RUN: Footprints, BIKE: Bike, WALK: PersonStanding, WHEELCHAIR: PersonStanding,
+  RUN: Footprints, BIKE: Bike, WALK: PersonStanding,
 };
 interface ActivityDetailData {
   id: number;
@@ -121,8 +121,7 @@ export const ActivityDetail: React.FC = () => {
   const typeLabels: Record<string, string> = {
     RUN: t.activity.running,
     BIKE: t.activity.cycling,
-    WALK: t.activity.walking,
-    WHEELCHAIR: t.activity.wheelchair,
+    WALK: t.activity.nordicWalking,
   };
 
   return (

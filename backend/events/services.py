@@ -3,6 +3,7 @@ import logging
 from django.db import transaction
 
 from activities.leaderboards import LeaderboardService
+from core.sport_scope import activity_matches_sport_filter
 
 from .models import Achievement, Event, Participation
 
@@ -27,6 +28,7 @@ class EventProgressService:
         tenant_id: str | None = None,
         club_id: int | None = None,
         activity_id: int | None = None,
+        activity_type: str | None = None,
     ) -> None:
         """
         Updates all active events the user qualifies for.
@@ -51,6 +53,10 @@ class EventProgressService:
 
         for event in active_events:
             if not cls._user_qualifies(event, tenant_id, club_id):
+                continue
+            if activity_type and not activity_matches_sport_filter(
+                activity_type, event.sport_filter
+            ):
                 continue
 
             participation, _ = Participation.objects.get_or_create(
@@ -121,7 +127,10 @@ class EventNormalizationService:
     COMPLEXITY_FACTORS = {
         "RUN": 1.2,
         "BIKE": 1.0,
+        "WALK": 1.1,
         "ALL": 1.0,
+        "RUN_BIKE": 1.0,
+        "RUN_BIKE_WALK": 1.0,
     }
 
     @classmethod

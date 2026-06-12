@@ -71,6 +71,7 @@ def credit_verified_activity(activity: Activity) -> bool:
             km=km,
             tenant_id=tenant_id,
             activity_id=activity.id,
+            activity_type=activity.type,
         )
     except Exception as exc:
         logger.warning(

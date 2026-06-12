@@ -25,20 +25,29 @@ Lista wdrożeniowa do bezpośredniego przepisania na sprinty. Kolejność oddaje
 
 ## Tier 0 — GTM / trust (głównie dokumentacja, tydzień 1–3)
 
-- [ ] Ograniczenie produktu do **rower / bieg / nordic walking** (UI, API, regulamin, materiały sprzedażowe).
+> **Iteracja 1 (sales kit) — 2026-06-12** · **Iteracja 2 (domknięcie) — 2026-06-12:** [docs/gtm/README.md](../gtm/README.md)
+
+- [x] Ograniczenie produktu do **rower / bieg / nordic walking** (UI, API, regulamin, materiały sprzedażowe).
   - Outcome: w aplikacji i dokumentacji widoczne wyłącznie te 3 dyscypliny.
-- [ ] Pakiet "start kampanii" dla tenanta (plakaty, regulamin, FAQ GPS/bateria, harmonogram).
+  - **Done:** enforcement API (`core/sport_scope.py`, serializer), mobile picker (`RideDashboardScreen`), GTM — [gtm/pl/campaign-start/](../gtm/pl/campaign-start/)
+- [x] Pakiet "start kampanii" dla tenanta (plakaty, regulamin, FAQ GPS/bateria, harmonogram).
   - Outcome: jeden folder materiałów, które tenant dostaje przy onboardingu.
-- [ ] Publiczna strona Anti-Cheat / Scoring Policy.
+  - **Done:** [gtm/pl/campaign-start/](../gtm/pl/campaign-start/) · [gtm/en/campaign-start/](../gtm/en/campaign-start/)
+- [x] Publiczna strona Anti-Cheat / Scoring Policy.
   - Outcome: URL z jawnym opisem normalizacji i przesłanek dyskwalifikacji.
-- [ ] Runbook peak event + jednostronicowy raport z symulacji (10k–300k).
+  - **Done:** `{admin-domain}/#/trust/anti-cheat` · [gtm/pl/trust/ANTI_CHEAT_SCORING_POLICY.md](../gtm/pl/trust/ANTI_CHEAT_SCORING_POLICY.md)
+- [x] Runbook peak event + jednostronicowy raport z symulacji (10k–300k).
   - Outcome: dokument odpowiadający na pytanie "co przy RSP-weekend".
-- [ ] Szablon DPIA + lista podprocesorów per tenant.
+  - **Done:** [RSP_WEEKEND_RUNBOOK.md](../gtm/pl/operations/RSP_WEEKEND_RUNBOOK.md) · [SCALE_PROOF_ONE_PAGER.md](../gtm/pl/operations/SCALE_PROOF_ONE_PAGER.md)
+- [x] Szablon DPIA + lista podprocesorów per tenant.
   - Outcome: gotowy template do podpisania z miastem/firmą.
-- [ ] Mechanizm komunikacji incydentów in-app (nie tylko mail).
+  - **Done:** [DPIA_TEMPLATE.md](../gtm/pl/compliance/DPIA_TEMPLATE.md) · [SUBPROCESSORS_TEMPLATE.md](../gtm/pl/compliance/SUBPROCESSORS_TEMPLATE.md)
+- [x] Mechanizm komunikacji incydentów in-app (nie tylko mail).
   - Outcome: baner/komunikat sterowany z backendu.
-- [ ] Pitch deck / one-pager PL i EN.
+  - **Done:** `PlatformNotice` + `GET /api/core/notices/active/` + admin CRUD + `PlatformNoticeBanner` (mobile)
+- [x] Pitch deck / one-pager PL i EN.
   - Outcome: gotowe do wysłania do decydenta (bazuje na exec one-pager).
+  - **Done:** [ONE_PAGER.md](../gtm/pl/ONE_PAGER.md) · [PITCH_DECK.pptx](../gtm/pl/PITCH_DECK.pptx) · [EN](../gtm/en/PITCH_DECK.pptx)
 
 ## Tier 1 — produkt mobilny civic (tydzień 2–7)
 

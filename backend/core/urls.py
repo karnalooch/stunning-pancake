@@ -62,5 +62,7 @@ urlpatterns = [
     path("api/auth/facebook/callback/", facebook_auth.facebook_callback, name="facebook-callback"),
     # Feature Flags (Hyperscale — admin CRUD)
     path("api/settings/flags/", include("core.feature_urls")),
+    # Platform notices (incident / campaign banners)
+    path("api/core/", include("core.notice_urls")),
     path("health/", lambda r: HttpResponse("OK"), name="health"),
 ]

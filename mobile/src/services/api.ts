@@ -53,8 +53,10 @@ export interface POI {
   description: string;
 }
 
+export type ActivitySportType = 'RUN' | 'BIKE' | 'WALK';
+
 export const ActivityService = {
-  createSession: (body: { type: string; start_time: string; event_id?: number }) =>
+  createSession: (body: { type: ActivitySportType | string; start_time: string; event_id?: number }) =>
     createSessionWithDurability(body),
   syncPath: (activityId: number, route_path: [number, number][], path_hash?: string) =>
     api
@@ -77,6 +79,27 @@ export const ActivityService = {
     }),
   getMyRank: (cityId: string) =>
     api.get<any>(mobileActivityPaths.leaderboardMe(cityId)).then((r) => r.data),
+};
+
+export interface PlatformNoticeDto {
+  id: number;
+  severity: 'info' | 'warning' | 'critical';
+  title_pl: string;
+  title_en: string;
+  body_pl: string;
+  body_en: string;
+  dismissible: boolean;
+  starts_at: string;
+  ends_at: string | null;
+}
+
+export const NoticeService = {
+  getActive: (tenantId?: string) =>
+    api
+      .get<{ notices: PlatformNoticeDto[] }>('/core/notices/active/', {
+        params: tenantId ? { tenant_id: tenantId } : undefined,
+      })
+      .then((r) => r.data.notices ?? []),
 };
 
 export const AuthService = {

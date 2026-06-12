@@ -42,12 +42,12 @@ describe('rideSessionService', () => {
   });
 
   test('startRideSession creates session then starts GPS tracking', async () => {
-    const activityId = await startRideSession({ userId: 7, type: 'run', event_id: 3 });
+    const activityId = await startRideSession({ userId: 7, type: 'RUN', event_id: 3 });
 
     expect(activityId).toBe(99);
     expect(mockCreateSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: 'run',
+        type: 'RUN',
         event_id: 3,
         start_time: expect.any(String),
       }),

@@ -36,6 +36,8 @@ Jedna tabela gate’ów zgodności przed release publicznym i mapowanie na runbo
 | [RCP.md](./RCP.md) | PL | DPO / Legal | Rejestr czynności (RODO) — referencja stała |
 | [RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](./RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | EN | Release Manager | **Gate** przed release publicznym (OSS, GDPR, ToS) |
 | [MAP_BASEMAP_LICENSING.md](./MAP_BASEMAP_LICENSING.md) | EN | Product / Legal | Mapy bazowe (OSM, komercyjne warstwy) |
+| [gtm/pl/compliance/DPIA_TEMPLATE.md](../gtm/pl/compliance/DPIA_TEMPLATE.md) | PL | DPO / Sales | Szablon DPIA per tenant (kampania JST/firma) |
+| [gtm/pl/compliance/SUBPROCESSORS_TEMPLATE.md](../gtm/pl/compliance/SUBPROCESSORS_TEMPLATE.md) | PL | DPO / Legal | Lista podprocesorów per tenant |
 
 ---
 

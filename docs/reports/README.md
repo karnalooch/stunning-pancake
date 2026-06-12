@@ -38,6 +38,9 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [../admin/P0_SMOKE_CHECKLIST.md](../admin/P0_SMOKE_CHECKLIST.md) | Post-deploy P0 smoke per role (printable) |
 | [../admin/P1_ROADMAP.md](../admin/P1_ROADMAP.md) | P1 paczki 1–6, decyzje Q&A, deploy bez staging |
 
+Pakiet sprzedażowy GTM (Tier 0):
+- [../gtm/README.md](../gtm/README.md) — one-pager, DPIA, anti-cheat policy, campaign kit, runbook peak.
+
 Powiązane dokumenty operacyjne:
 - [../operations/PRE_RELEASE_VERIFICATION.md](../operations/PRE_RELEASE_VERIFICATION.md) — praktyczny gate przed release.
 - [../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) — legal/compliance go-to-market checklist.

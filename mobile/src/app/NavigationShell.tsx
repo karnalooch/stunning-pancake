@@ -19,6 +19,7 @@ import { SegmentsScreen } from '../screens/SegmentsScreen';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useMobileI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
+import type { ActivitySportType } from '../services/api';
 
 const Tab = createBottomTabNavigator();
 
@@ -42,7 +43,7 @@ export type NavigationShellProps = {
   showSegments: boolean;
   setShowSegments: (v: boolean) => void;
   onGpsRecoveryPress: () => void;
-  onStartRide: (eventId?: number) => Promise<boolean>;
+  onStartRide: (activityType?: ActivitySportType, eventId?: number) => Promise<boolean>;
   onStopRide: () => Promise<{ navigated: boolean; target?: 'Ride' } | void>;
   onLogout: () => void;
 };
@@ -81,8 +82,11 @@ export function NavigationShell({
     onGpsRecoveryPress,
   };
 
-  const handleStartRide = async (eventId?: number) => {
-    const ok = await onStartRide(eventId);
+  const handleStartRide = async (
+    activityType: ActivitySportType = 'BIKE',
+    eventId?: number,
+  ) => {
+    const ok = await onStartRide(activityType, eventId);
     if (ok) navRef.current?.navigate('Tracking' as never);
   };
 
@@ -104,7 +108,7 @@ export function NavigationShell({
                 isRecording={isRecording}
                 liveSpeed={liveSpeed * 3.6}
                 liveDistance={liveDistanceKm}
-                onStartRide={() => void handleStartRide()}
+                onStartRide={(sport) => void handleStartRide(sport)}
                 onGoToRide={() => navRef.current?.navigate('Tracking' as never)}
                 {...gpsRecoveryProps}
               />

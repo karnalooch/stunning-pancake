@@ -25,20 +25,29 @@ A delivery list ready to be transcribed directly into sprints. The order reflect
 
 ## Tier 0 — GTM / trust (mostly documentation, week 1–3)
 
-- [ ] Limit the product to **cycling / running / nordic walking** (UI, API, rules, sales materials).
+> **Iteration 1 (sales kit) — 2026-06-12** · **Iteration 2 (closure) — 2026-06-12:** [docs/gtm/README.md](../../gtm/README.md)
+
+- [x] Limit the product to **cycling / running / nordic walking** (UI, API, rules, sales materials).
   - Outcome: only these 3 disciplines visible in the app and documentation.
-- [ ] Tenant "campaign start" package (posters, rules, GPS/battery FAQ, schedule).
+  - **Done:** API enforcement (`core/sport_scope.py`), mobile picker, GTM materials
+- [x] Tenant "campaign start" package (posters, rules, GPS/battery FAQ, schedule).
   - Outcome: one folder of materials the tenant receives at onboarding.
-- [ ] Public Anti-Cheat / Scoring Policy page.
+  - **Done:** [gtm/en/campaign-start/](../../gtm/en/campaign-start/)
+- [x] Public Anti-Cheat / Scoring Policy page.
   - Outcome: a URL with an explicit description of normalization and disqualification criteria.
-- [ ] Peak-event runbook + a one-page simulation report (10k–300k).
+  - **Done:** `{admin-domain}/#/trust/anti-cheat`
+- [x] Peak-event runbook + a one-page simulation report (10k–300k).
   - Outcome: a document answering "what during an RSP weekend".
-- [ ] DPIA template + subprocessor list per tenant.
+  - **Done:** [RSP_WEEKEND_RUNBOOK.md](../../gtm/en/operations/RSP_WEEKEND_RUNBOOK.md) · [SCALE_PROOF_ONE_PAGER.md](../../gtm/en/operations/SCALE_PROOF_ONE_PAGER.md)
+- [x] DPIA template + subprocessor list per tenant.
   - Outcome: a ready template to sign with a city/company.
-- [ ] In-app incident communication mechanism (not just email).
+  - **Done:** [DPIA_TEMPLATE.md](../../gtm/en/compliance/DPIA_TEMPLATE.md)
+- [x] In-app incident communication mechanism (not just email).
   - Outcome: a banner/message controlled from the backend.
-- [ ] Pitch deck / one-pager PL and EN.
+  - **Done:** `PlatformNotice` + mobile `PlatformNoticeBanner`
+- [x] Pitch deck / one-pager PL and EN.
   - Outcome: ready to send to a decision-maker (based on the exec one-pager).
+  - **Done:** [ONE_PAGER.md](../../gtm/en/ONE_PAGER.md) · [PITCH_DECK.pptx](../../gtm/en/PITCH_DECK.pptx)
 
 ## Tier 1 — civic mobile product (week 2–7)
 

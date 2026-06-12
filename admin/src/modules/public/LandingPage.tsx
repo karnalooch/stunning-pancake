@@ -1,7 +1,9 @@
 import React from 'react';
 import { Box, Text, Title, Container, SimpleGrid, ThemeIcon, Button } from '@mantine/core';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Zap, Shield, Globe, Activity, ArrowRight } from 'lucide-react';
+import { PublicFooter } from './PublicFooter';
 
 const features = [
   { icon: Globe, title: 'Multi-tenant', desc: 'Isolated data per city/company. White-label branding.' },
@@ -20,7 +22,7 @@ export const LandingPage: React.FC = () => (
           </Box>
           <Title order={1} style={{ fontSize: 42, fontWeight: 900, letterSpacing: '-0.03em' }}>4VELO Platform</Title>
           <Text size="lg" c="dimmed" maw={500} mx="auto" mt="sm">High-performance sport gamification for cities, companies, and communities.</Text>
-          <Button size="lg" mt="xl" radius="md" rightSection={<ArrowRight size={18} />} style={{ background: 'var(--brand-gradient)' }} onClick={() => window.location.href = '#/login'}>Go to Admin Panel</Button>
+          <Button size="lg" mt="xl" radius="md" rightSection={<ArrowRight size={18} />} component={Link} to="/login" style={{ background: 'var(--brand-gradient)' }}>Go to Admin Panel</Button>
         </Box>
       </motion.div>
 
@@ -35,6 +37,7 @@ export const LandingPage: React.FC = () => (
           </motion.div>
         ))}
       </SimpleGrid>
+      <PublicFooter />
     </Container>
   </Box>
 );

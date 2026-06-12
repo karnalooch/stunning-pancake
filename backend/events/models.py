@@ -21,10 +21,12 @@ class Event(models.Model):
     ]
 
     SPORT_FILTERS = [
-        ("ALL", "All Sports"),
+        ("ALL", "All Sports (Run / Bike / Nordic Walking)"),
         ("RUN", "Running Only"),
         ("BIKE", "Cycling Only"),
+        ("WALK", "Nordic Walking Only"),
         ("RUN_BIKE", "Running & Cycling"),
+        ("RUN_BIKE_WALK", "Running, Cycling & Nordic Walking"),
     ]
 
     STATUS_CHOICES = [
@@ -43,7 +45,7 @@ class Event(models.Model):
 
     # Type and rules
     event_type = models.CharField(max_length=20, choices=EVENT_TYPES, default="ACCUMULATIVE")
-    sport_filter = models.CharField(max_length=10, choices=SPORT_FILTERS, default="ALL")
+    sport_filter = models.CharField(max_length=16, choices=SPORT_FILTERS, default="ALL")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="DRAFT")
 
     # Timing

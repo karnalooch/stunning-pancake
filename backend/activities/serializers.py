@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
+from core.sport_scope import ALLOWED_ACTIVITY_TYPES, is_allowed_activity_type, normalize_activity_type
+
 from .models import POI, Activity, PrivacyZone
 
 
@@ -121,6 +123,14 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Activity
         fields = ("type", "start_time", "event_id")
+
+    def validate_type(self, value: str) -> str:
+        normalized = normalize_activity_type(value)
+        if not is_allowed_activity_type(normalized):
+            raise serializers.ValidationError(
+                f"Unsupported activity type. Allowed: {', '.join(ALLOWED_ACTIVITY_TYPES)}"
+            )
+        return normalized
 
     def create(self, validated_data):
         validated_data.pop("event_id", None)

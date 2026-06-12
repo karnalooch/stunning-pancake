@@ -24,6 +24,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
+import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
+import { usePlatformNotices } from '../hooks/usePlatformNotices';
+import type { ActivitySportType } from '../services/api';
+import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -78,6 +82,29 @@ const stylesheet = StyleSheet.create(theme => {
         fontSize: 20,
         fontWeight: '700',
         color: C.primary,
+    },
+    sportRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+        flexWrap: 'wrap',
+    },
+    sportChip: {
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderWidth: 3,
+        borderColor: C.onBackground,
+        borderRadius: 6,
+        backgroundColor: C.surface,
+    },
+    sportChipActive: {
+        backgroundColor: C.primaryContainer,
+    },
+    sportChipText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: C.onBackground,
+        textTransform: 'uppercase',
     },
     scroll: {
         flex: 1,
@@ -254,8 +281,8 @@ const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 // ─── Component ─────────────────────────────────────────────────────
 
 interface RideDashboardScreenProps {
-    user: { username: string; tenant_name?: string } | null;
-    onStartRide?: () => void;
+    user: { username: string; tenant_name?: string; tenant_id?: string } | null;
+    onStartRide?: (sport: ActivitySportType) => void;
     onGoToRide?: () => void;
     isRecording?: boolean;
     liveSpeed?: number;
@@ -279,11 +306,15 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
     const [pressed, setPressed] = useState(false);
+    const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
+    const { notice, dismiss } = usePlatformNotices(
+        (user as { tenant_id?: string } | null)?.tenant_id ?? null,
+    );
 
     const handleStartRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
-        onStartRide?.();
-    }, [onStartRide]);
+        onStartRide?.(selectedSport);
+    }, [onStartRide, selectedSport]);
 
     const handleGoToRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
@@ -326,6 +357,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
 
             {/* Content */}
             <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+                <PlatformNoticeBanner notice={notice} onDismiss={dismiss} />
                 <GpsRecoveryBanner
                     visible={gpsRecoveryVisible}
                     busy={gpsRecoveryBusy}
@@ -366,6 +398,20 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                                 <View style={s.lvlBadge}>
                                     <Text style={s.lvlText}>LVL 42</Text>
                                 </View>
+                            </View>
+                            <View style={s.sportRow}>
+                                {ACTIVITY_SPORT_OPTIONS.map((opt) => (
+                                    <Pressable
+                                        key={opt.type}
+                                        style={[
+                                            s.sportChip,
+                                            selectedSport === opt.type && s.sportChipActive,
+                                        ]}
+                                        onPress={() => setSelectedSport(opt.type)}
+                                    >
+                                        <Text style={s.sportChipText}>{opt.labelPl}</Text>
+                                    </Pressable>
+                                ))}
                             </View>
                             <View style={{ marginTop: 8 }}>
                                 <ArcadeButton

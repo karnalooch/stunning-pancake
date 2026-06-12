@@ -3,7 +3,7 @@
  */
 
 import { MMKV } from 'react-native-mmkv';
-import { ActivityService } from './api';
+import { ActivityService, type ActivitySportType } from './api';
 import {
   GpsSyncManager,
   isRideTrackingActive,
@@ -42,12 +42,12 @@ export function getRideGpsManager(userId: number | null): GpsSyncManager {
 }
 
 export async function startRideSession(options: {
-  type?: string;
+  type?: ActivitySportType;
   event_id?: number;
   userId: number | null;
 }): Promise<number> {
   const activityId = await ActivityService.createSession({
-    type: options.type ?? 'ride',
+    type: options.type ?? 'BIKE',
     start_time: new Date().toISOString(),
     event_id: options.event_id,
   });

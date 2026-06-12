@@ -6,6 +6,7 @@ import {
   startRideSession,
   stopRideSession,
 } from '../services/rideSessionService';
+import type { ActivitySportType } from '../services/api';
 import {
   isTrackingRecoveryPending,
   recoverGpsDataOnLaunch,
@@ -86,12 +87,12 @@ export function useRideLifecycle() {
   }, [refreshGpsRecoveryFlag]);
 
   const handleStartRide = useCallback(
-    async (eventId?: number) => {
+    async (activityType: ActivitySportType = 'BIKE', eventId?: number) => {
       const userId = userIdRef.current;
       try {
         wireGpsStatsCallback(userId);
         await startRideSession({
-          type: eventId != null ? 'event' : 'ride',
+          type: activityType,
           event_id: eventId,
           userId,
         });

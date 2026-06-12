@@ -11,6 +11,7 @@ import { PermissionGuard } from './core/guards/PermissionGuard';
 import { TenantAnalyticsScope } from './core/components/TenantAnalyticsScope';
 import { LoginPage } from './core/auth/LoginPage';
 import { LandingPage } from './modules/public/LandingPage';
+import { AntiCheatPolicyPage } from './modules/public/AntiCheatPolicyPage';
 
 const Dashboard = lazy(() => import('./modules/dashboard/Dashboard').then(m => ({ default: m.Dashboard })));
 const AntiCheat = lazy(() => import('./modules/anti-cheat/AntiCheat').then(m => ({ default: m.AntiCheat })));
@@ -40,6 +41,7 @@ const LeaderboardManager = lazy(() => import('./modules/analytics/LeaderboardMan
 const RbacManager = lazy(() => import('./modules/analytics/RbacManager').then(m => ({ default: m.RbacManager })));
 const ApiPlayground = lazy(() => import('./modules/settings/ApiPlayground').then(m => ({ default: m.ApiPlayground })));
 const FeatureFlags = lazy(() => import('./modules/settings/FeatureFlags').then(m => ({ default: m.FeatureFlags })));
+const PlatformNotices = lazy(() => import('./modules/settings/PlatformNotices').then(m => ({ default: m.PlatformNotices })));
 const DepartmentAnalyticsPage = lazy(() => import('./modules/analytics/DepartmentAnalyticsPage').then(m => ({ default: m.DepartmentAnalyticsPage })));
 const GlobalHeatmap = lazy(() => import('./modules/analytics/GlobalHeatmap').then(m => ({ default: m.GlobalHeatmap })));
 const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
@@ -140,16 +142,17 @@ export default function App() {
       <E2EAuthBootstrap />
       <Notifications position="top-right" zIndex={9999} />
       <HashRouter>
-        {!isAuthenticated ? (
+        <Suspense fallback={<PageLoader />}>
           <Routes>
-            <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
-            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        ) : (
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/trust/anti-cheat" element={<AntiCheatPolicyPage />} />
+            <Route path="/trust/scoring" element={<Navigate to="/trust/anti-cheat#scoring" replace />} />
+            <Route
+              path="/login"
+              element={isAuthenticated ? <Navigate to="/owner" replace /> : <LoginPage onLogin={handleLogin} />}
+            />
+            <Route path="/auth/callback" element={<AuthCallback onLogin={login} />} />
+            {isAuthenticated ? (
             <Route path="/owner" element={<Layout />}>
               <Route index element={<RoleHomeRedirect />} />
               <Route
@@ -377,6 +380,14 @@ export default function App() {
                 }
               />
               <Route
+                path="system/platform-notices"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER', 'TENANT_ADMIN']}>
+                    <PlatformNotices />
+                  </PermissionGuard>
+                }
+              />
+              <Route
                 path="analytics/departments"
                 element={
                   <PermissionGuard permissions={['activities.view']}>
@@ -438,6 +449,8 @@ export default function App() {
                 }
               />
             </Route>
+            ) : null}
+            {isAuthenticated ? (
             <Route
               path="/unauthorized"
               element={
@@ -448,10 +461,10 @@ export default function App() {
                 </Box>
               }
             />
-            <Route path="*" element={<Navigate to="/owner" replace />} />
+            ) : null}
+            <Route path="*" element={<Navigate to={isAuthenticated ? '/owner' : '/'} replace />} />
           </Routes>
-          </Suspense>
-        )}
+        </Suspense>
       </HashRouter>
     </MantineProvider>
   );
