@@ -1,4 +1,4 @@
-# Generated manually — converts AuditLog integer fields to ForeignKey constraints
+# Generated manually - converts AuditLog integer fields to ForeignKey constraints
 # while preserving existing data.
 #
 # Strategy:

@@ -1,4 +1,4 @@
-# Generated migration — encrypts plaintext OAuth tokens at rest
+# Generated migration - encrypts plaintext OAuth tokens at rest
 import base64
 import hashlib
 import os
@@ -58,7 +58,7 @@ def encrypt_existing_tokens(apps, schema_editor):
 
 
 def reverse_encrypt_existing_tokens(apps, schema_editor):
-    """No-op reverse — decryption requires the Fernet key; not safe to automate."""
+    """No-op reverse - decryption requires the Fernet key; not safe to automate."""
     pass
 
 

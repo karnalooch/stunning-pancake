@@ -1,4 +1,4 @@
-# Generated manually — adds POI.category field and WearableIntegration model (Milestone 4)
+# Generated manually - adds POI.category field and WearableIntegration model (Milestone 4)
 
 from django.conf import settings
 from django.db import migrations, models

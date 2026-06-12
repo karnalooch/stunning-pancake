@@ -1,4 +1,4 @@
-# Generated manually — adds Stripe fields to User and Tenant models (Milestone 4)
+# Generated manually - adds Stripe fields to User and Tenant models (Milestone 4)
 
 from django.db import migrations, models
 

@@ -1,4 +1,4 @@
-# Generated manually — rewards migrations were missing
+# Generated manually - rewards migrations were missing
 
 import django.db.models.deletion
 from django.conf import settings
