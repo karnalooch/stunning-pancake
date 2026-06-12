@@ -51,17 +51,17 @@ A delivery list ready to be transcribed directly into sprints. The order reflect
 
 ## Tier 1 — civic mobile product (week 2–7)
 
-- [ ] CityHub on live API (instead of mocks), season sync.
+- [x] CityHub on live API (instead of mocks), season sync.
   - Outcome: `CityHubScreen` shows real event data.
-- [ ] "Pick city / department / team" onboarding (3 steps).
+- [x] "Pick city / department / team" onboarding (3 steps).
   - Outcome: a new user joins the competition without support.
-- [ ] In-app "GPS problems" wizard (green/red checks).
+- [x] In-app "GPS problems" wizard (green/red checks).
   - Outcome: a battery/permissions/background diagnostic screen.
-- [ ] Social sharing with ready-made graphics.
+- [x] Social sharing with ready-made graphics.
   - Outcome: one tap → an image with the result.
-- [ ] Push: city ranking / quest / end of season.
+- [x] Push: city ranking / quest / end of season.
   - Outcome: at least 3 types of retention notifications.
-- [ ] Offline / poor coverage (outbox confirmation in production).
+- [x] Offline / poor coverage (outbox confirmation in production).
   - Outcome: an activity saved offline reaches the server after the network returns.
 
 ## Tier 1b — minimum for the first paid league (club/company, week 4–9)

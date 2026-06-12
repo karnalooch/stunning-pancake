@@ -13,6 +13,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from core.redis_cluster import get_redis
+from users.push_tasks import send_season_end_push
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +41,11 @@ def close_expired_events() -> None:
         event.status = "COMPLETED"
         event.save(update_fields=["status"])
         LeaderboardService.reset(event.id, scope="event")
+        participant_user_ids = list(
+            Participation.objects.filter(event=event).values_list("user_id", flat=True).distinct()
+        )
+        if participant_user_ids:
+            send_season_end_push.delay(participant_user_ids, event.title)
         logger.info("event.completed event_id=%d title=%s", event.id, event.title)
 
     logger.info("close_expired_events: closed %d events", count)

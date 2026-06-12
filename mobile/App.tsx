@@ -22,6 +22,7 @@ const AppContent = observer(function AppContent() {
 
   const [showTrainingLog, setShowTrainingLog] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showGpsDiagnostics, setShowGpsDiagnostics] = useState(false);
   const [showClubs, setShowClubs] = useState(false);
   const [showSegments, setShowSegments] = useState(false);
 
@@ -86,6 +87,8 @@ const AppContent = observer(function AppContent() {
       setShowTrainingLog={setShowTrainingLog}
       showSettings={showSettings}
       setShowSettings={setShowSettings}
+      showGpsDiagnostics={showGpsDiagnostics}
+      setShowGpsDiagnostics={setShowGpsDiagnostics}
       showClubs={showClubs}
       setShowClubs={setShowClubs}
       showSegments={showSegments}

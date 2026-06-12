@@ -102,6 +102,19 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         UserDepartment.objects.get_or_create(user=user, department=department)
         return Response({"status": "assigned"})
 
+    @action(detail=True, methods=["post"], url_path="self-join")
+    def self_join(self, request, pk=None):
+        """Assign authenticated user to selected department (tenant-scoped)."""
+        department = self.get_object()
+        user = request.user
+        if user.role not in ("ATHLETE", "TENANT_MODERATOR", "TENANT_ADMIN", "GLOBAL_OWNER"):
+            return Response({"error": "role_not_allowed"}, status=status.HTTP_403_FORBIDDEN)
+        if user.tenant_id and str(user.tenant_id) != str(department.tenant_id):
+            return Response({"error": "cross_tenant_join_denied"}, status=status.HTTP_403_FORBIDDEN)
+
+        UserDepartment.objects.get_or_create(user=user, department=department)
+        return Response({"status": "joined", "department_id": department.id})
+
     @action(detail=True, methods=["post"])
     def remove(self, request, pk=None):
         """Remove a user from this department."""

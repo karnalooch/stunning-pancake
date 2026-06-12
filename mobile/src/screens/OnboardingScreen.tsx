@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dimensions, Alert, View, Pressable } from 'react-native';
+import { Alert, View, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,24 +8,27 @@ import Animated, {
   FadeOut,
   SlideInRight
 } from 'react-native-reanimated';
-import { Shield, Zap, MapPin, ArrowRight, Check, Wifi } from 'lucide-react-native';
-import QRCode from 'react-native-qrcode-svg';
+import { MapPin } from 'lucide-react-native';
 import * as Location from 'expo-location';
 
 import { Column } from '../components/Column';
 import { Row } from '../components/Row';
 import { PixelText } from '../components/PixelText';
-import { RetroInput } from '../components/RetroInput';
 import { ScrollContainer } from '../components/ScrollContainer';
 import { GameCard } from '../components/GameCard';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useUnistyles } from 'react-native-unistyles';
-
-const { width, height } = Dimensions.get('window');
+import {
+  AuthService,
+  DepartmentService,
+  EventService,
+  type DepartmentTreeNode,
+  type PublicTenantOption,
+} from '../services/api';
 
 interface OnboardingProps {
   user: any;
-  onFinish: (data: any) => void;
+  onFinish: (data: any) => void | Promise<void>;
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
@@ -33,32 +36,106 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   const C = theme.colors as any;
 
   const [step, setStep] = useState(0);
-  const [formData, setFormData] = useState({
-    weight: '75',
-    height: '180',
-    age: '28',
-    stravaConnected: false,
-    garminConnected: false,
-  });
+  const [tenants, setTenants] = useState<PublicTenantOption[]>([]);
+  const [departments, setDepartments] = useState<DepartmentTreeNode[]>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string>('');
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    progress.value = withTiming((step + 1) / 5, { duration: 500 });
+    progress.value = withTiming((step + 1) / 3, { duration: 500 });
   }, [step]);
 
-  const nextStep = () => {
-    if (step < 4) setStep(step + 1);
-    else onFinish(formData);
+  useEffect(() => {
+    AuthService.getPublicTenants()
+      .then((rows) => {
+        setTenants(rows);
+        if (rows[0]?.id) setSelectedTenantId(rows[0].id);
+      })
+      .catch(() => setTenants([]));
+    DepartmentService.getTree()
+      .then((rows) => setDepartments(rows))
+      .catch(() => setDepartments([]));
+  }, []);
+
+  const flattenDepartments = (nodes: DepartmentTreeNode[]): DepartmentTreeNode[] => {
+    const out: DepartmentTreeNode[] = [];
+    for (const n of nodes) {
+      out.push(n);
+      if (n.children?.length) out.push(...flattenDepartments(n.children));
+    }
+    return out;
+  };
+
+  const nextStep = async () => {
+    if (step < 2) {
+      setStep(step + 1);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      if (selectedTenantId) {
+        await AuthService.updateProfile({ tenant_id: selectedTenantId });
+      }
+      if (selectedDepartmentId != null) {
+        await DepartmentService.selfJoin(selectedDepartmentId);
+      }
+      try {
+        const events = await EventService.list();
+        const active = events.find((e) => e.status === 'ACTIVE');
+        if (active) {
+          await EventService.join(active.id);
+        }
+      } catch {
+        // optional auto-join
+      }
+      await onFinish({
+        tenant_id: selectedTenantId || null,
+        department_id: selectedDepartmentId,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStep = () => {
     switch (step) {
-      case 0: return <PermissionsStep onNext={nextStep} C={C} />;
-      case 1: return <IntegrationsStep formData={formData} setFormData={setFormData} onNext={nextStep} C={C} />;
-      case 2: return <DataValidationStep formData={formData} setFormData={setFormData} onNext={nextStep} C={C} />;
-      case 3: return <AntiCheatStep onNext={nextStep} C={C} />;
-      case 4: return <IdentityStep user={user} onNext={nextStep} C={C} />;
+      case 0:
+        return (
+          <CityStep
+            tenants={tenants}
+            selectedTenantId={selectedTenantId}
+            setSelectedTenantId={setSelectedTenantId}
+            onNext={() => void nextStep()}
+            C={C}
+          />
+        );
+      case 1:
+        return (
+          <DepartmentStep
+            departments={flattenDepartments(departments)}
+            selectedDepartmentId={selectedDepartmentId}
+            setSelectedDepartmentId={setSelectedDepartmentId}
+            onNext={() => void nextStep()}
+            C={C}
+          />
+        );
+      case 2:
+        return (
+          <FinishStep
+            user={user}
+            tenantName={tenants.find((t) => t.id === selectedTenantId)?.name ?? '—'}
+            departmentName={
+              flattenDepartments(departments).find((d) => d.id === selectedDepartmentId)?.name ?? '—'
+            }
+            onNext={() => void nextStep()}
+            C={C}
+            busy={isSubmitting}
+          />
+        );
       default: return null;
     }
   };
@@ -84,7 +161,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
 
       <Row justifyContent="space-between" alignItems="center" style={{ marginTop: 16, paddingBottom: 16 }}>
         <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>
-          STG_01 // LVL_0{step + 1}
+          STG_CITY // STEP_0{step + 1}
         </PixelText>
         <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>4VELO_OS v1.0</PixelText>
       </Row>
@@ -92,32 +169,47 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   );
 };
 
-const PermissionsStep = ({ onNext, C }: any) => {
-  const requestPerms = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      await Location.requestBackgroundPermissionsAsync();
-      onNext();
-    } else {
-      Alert.alert("Permission Required", "4VELO requires GPS to track your performance.");
-    }
-  };
+const CityStep = ({
+  tenants,
+  selectedTenantId,
+  setSelectedTenantId,
+  onNext,
+  C,
+}: any) => {
 
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
-      <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
+      <GameCard variant="parchment" style={{ gap: 16 }}>
         <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
           <MapPin size={48} color={C.primary} />
         </View>
-        <Column gap={16} alignItems="center">
-          <PixelText size="lg" color={C.onBackground} style={{ textAlign: 'center', color: C.onBackground }}>NEURAL_LINK</PixelText>
-          <PixelText size="sm" color={C.onBackground} style={{ textAlign: 'center', opacity: 0.8, color: C.onBackground }}>
-            Enable GPS for real-time telemetry and character localization.
+        <Column gap={8}>
+          <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>SELECT CITY</PixelText>
+          <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
+            Choose the city tenant you will compete in.
           </PixelText>
         </Column>
+        <Column gap={8}>
+          {(tenants as PublicTenantOption[]).map((tenant) => (
+            <Pressable
+              key={tenant.id}
+              onPress={() => setSelectedTenantId(tenant.id)}
+              style={{
+                borderWidth: 2,
+                borderColor: C.onBackground,
+                backgroundColor: selectedTenantId === tenant.id ? C.primaryContainer : C.parchment,
+                padding: 12,
+              }}
+            >
+              <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+                {tenant.name}
+              </PixelText>
+            </Pressable>
+          ))}
+        </Column>
         <ArcadeButton
-          label="AUTHORIZE ACCESS"
-          onPress={requestPerms}
+          label="NEXT"
+          onPress={onNext}
           variant="primary"
         />
       </GameCard>
@@ -125,131 +217,83 @@ const PermissionsStep = ({ onNext, C }: any) => {
   );
 };
 
-const IntegrationsStep = ({ formData, setFormData, onNext, C }: any) => {
-  const connect = (service: string) => {
-    setFormData({ ...formData, [`${service}Connected`]: true });
-    Alert.alert(`${service} Connected`, "Biometric data synchronized successfully.");
+const DepartmentStep = ({
+  departments,
+  selectedDepartmentId,
+  setSelectedDepartmentId,
+  onNext,
+  C,
+}: any) => {
+
+  return (
+    <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
+      <GameCard variant="parchment" style={{ gap: 24 }}>
+        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>SELECT DEPARTMENT</PixelText>
+        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
+          Pick your department/team to join ranking cohorts.
+        </PixelText>
+
+        <Column gap={12}>
+          {(departments as DepartmentTreeNode[]).map((department) => (
+            <Pressable
+              key={department.id}
+              onPress={() => setSelectedDepartmentId(department.id)}
+              style={{
+                borderWidth: 2,
+                borderColor: C.onBackground,
+                backgroundColor: selectedDepartmentId === department.id ? C.primaryContainer : C.parchment,
+                padding: 12,
+              }}
+            >
+              <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+                {department.name}
+              </PixelText>
+            </Pressable>
+          ))}
+        </Column>
+
+        <ArcadeButton label="NEXT" onPress={onNext} variant="primary" />
+      </GameCard>
+    </Animated.View>
+  );
+};
+
+const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy }: any) => {
+  const requestPerms = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', '4VELO requires GPS to track your performance.');
+      return;
+    }
+    await Location.requestBackgroundPermissionsAsync();
+    onNext();
   };
 
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
       <GameCard variant="parchment" style={{ gap: 24 }}>
-        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>EXTERNAL_CORE</PixelText>
-        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>Connect your wearable for One-Tap attribute sync.</PixelText>
-
-        <Column gap={12}>
-          <IntegrationCard
-            label="STRAVA"
-            icon={<Zap color="white" />}
-            connected={formData.stravaConnected}
-            onPress={() => connect('strava')}
-            color={C.error}
-            C={C}
-          />
-          <IntegrationCard
-            label="GARMIN"
-            icon={<Wifi color="white" />}
-            connected={formData.garminConnected}
-            onPress={() => connect('garmin')}
-            color={C.secondary}
-            C={C}
-          />
+        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>READY TO JOIN</PixelText>
+        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
+          Confirm city and department, then enable GPS and enter competition.
+        </PixelText>
+        <Column gap={8}>
+          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+            User: {user?.username ?? 'unknown'}
+          </PixelText>
+          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+            City: {tenantName}
+          </PixelText>
+          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+            Department: {departmentName}
+          </PixelText>
         </Column>
 
         <ArcadeButton
-          label="SKIP FOR NOW"
-          onPress={onNext}
-          variant="ghost"
+          label={busy ? 'JOINING...' : 'JOIN COMPETITION'}
+          onPress={() => void requestPerms()}
+          variant="success"
         />
       </GameCard>
     </Animated.View>
   );
 };
-
-const IntegrationCard = ({ label, icon, connected, onPress, color, C }: any) => (
-  <Pressable onPress={onPress}>
-    <Row
-      style={{ backgroundColor: C.parchment, padding: 16, borderWidth: 1, borderColor: connected ? color : C.onBackground } as any}
-      alignItems="center"
-      justifyContent="space-between"
-    >
-      <Row gap={16} alignItems="center">
-        <View style={{ backgroundColor: color, padding: 8 }}>{icon}</View>
-        <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>{label}</PixelText>
-      </Row>
-      {connected ? <Check color={C.primary} /> : <ArrowRight color={C.onBackground} opacity={0.3} />}
-    </Row>
-  </Pressable>
-);
-
-const DataValidationStep = ({ formData, setFormData, onNext, C }: any) => {
-  return (
-    <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-      <GameCard variant="parchment" style={{ gap: 24 }}>
-        <PixelText size="lg" color="text">BIOMETRIC_SYNC</PixelText>
-        <PixelText size="sm" color="text" style={{ opacity: 0.8 }}>Verify physical parameters for power calculation.</PixelText>
-
-        <Column gap={16}>
-          <Column gap={8}>
-            <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>WEIGHT (KG)</PixelText>
-            <RetroInput
-              value={formData.weight}
-              onChangeText={(t: string) => setFormData({ ...formData, weight: t })}
-            />
-          </Column>
-          <Column gap={8}>
-            <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>HEIGHT (CM)</PixelText>
-            <RetroInput
-              value={formData.height}
-              onChangeText={(t: string) => setFormData({ ...formData, height: t })}
-            />
-          </Column>
-        </Column>
-
-        <ArcadeButton label="VALIDATE DATA" onPress={onNext} variant="success" />
-      </GameCard>
-    </Animated.View>
-  );
-};
-
-const AntiCheatStep = ({ onNext, C }: any) => (
-  <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-    <GameCard variant="parchment" style={{ alignItems: 'center', gap: 24 }}>
-      <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
-        <Shield size={48} color={C.primary} />
-      </View>
-      <Column gap={16} alignItems="center">
-        <PixelText size="lg" color={C.primary} style={{ textAlign: 'center', color: C.primary }}>INTEGRITY</PixelText>
-        <PixelText size="sm" color={C.onBackground} style={{ textAlign: 'center', opacity: 0.8, color: C.onBackground }}>
-          Our Viterbi Anti-Cheat engine is rigorous. Calibrate GPS before every mission.
-        </PixelText>
-      </Column>
-      <ArcadeButton label="I ACKNOWLEDGE" onPress={onNext} variant="primary" />
-    </GameCard>
-  </Animated.View>
-);
-
-const IdentityStep = ({ user, onNext, C }: any) => (
-  <Animated.View entering={FadeIn} style={{ flex: 1 }}>
-    <GameCard variant="parchment" style={{ alignItems: 'center', gap: 32 }}>
-      <Column gap={8} alignItems="center">
-        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>PILOT_ID</PixelText>
-        <PixelText size="xs" color={C.secondary} style={{ textAlign: 'center', color: C.secondary }}>Scan at checkpoints for verification.</PixelText>
-      </Column>
-
-      <View style={{ backgroundColor: 'white', padding: 16, borderRadius: 0, borderWidth: 4, borderColor: C.primary }}>
-        <QRCode
-          value={`4velo_v1:pilot:${user?.id || 'unknown'}`}
-          size={160}
-          color={C.onBackground} backgroundColor="#FFFFFF" />
-      </View>
-
-      <Column alignItems="center" gap={8}>
-        <PixelText size="md" color={C.primary} style={{ color: C.primary }}>{user?.username?.toUpperCase() || 'UNIDENTIFIED'}</PixelText>
-        <PixelText size="xs" color={C.secondary} style={{ fontSize: 8, color: C.secondary }}>UID: {String(user?.id || '').slice(0, 8) || '####'}</PixelText>
-      </Column>
-
-      <ArcadeButton label="INITIALIZE MISSION" onPress={onNext} variant="success" />
-    </GameCard>
-  </Animated.View>
-);

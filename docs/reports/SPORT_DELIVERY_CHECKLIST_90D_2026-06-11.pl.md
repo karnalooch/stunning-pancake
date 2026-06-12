@@ -51,17 +51,17 @@ Lista wdrożeniowa do bezpośredniego przepisania na sprinty. Kolejność oddaje
 
 ## Tier 1 — produkt mobilny civic (tydzień 2–7)
 
-- [ ] CityHub na live API (zamiast mocków), sync z sezonem.
+- [x] CityHub na live API (zamiast mocków), sync z sezonem.
   - Outcome: `CityHubScreen` pokazuje realne dane eventu.
-- [ ] Onboarding "wybierz miasto / dział / zespół" (3 kroki).
+- [x] Onboarding "wybierz miasto / dział / zespół" (3 kroki).
   - Outcome: nowy user dołącza do rywalizacji bez supportu.
-- [ ] Wizard "problemy z GPS" w appce (zielone/czerwone checki).
+- [x] Wizard "problemy z GPS" w appce (zielone/czerwone checki).
   - Outcome: ekran diagnostyczny baterii/uprawnień/tła.
-- [ ] Share do social z gotową grafiką.
+- [x] Share do social z gotową grafiką.
   - Outcome: jeden tap → obraz z wynikiem.
-- [ ] Push: ranking miasta / quest / koniec sezonu.
+- [x] Push: ranking miasta / quest / koniec sezonu.
   - Outcome: minimum 3 typy powiadomień retencyjnych.
-- [ ] Offline / słaby zasięg (potwierdzenie outbox w produkcji).
+- [x] Offline / słaby zasięg (potwierdzenie outbox w produkcji).
   - Outcome: aktywność zapisana offline trafia do serwera po powrocie sieci.
 
 ## Tier 1b — minimum do pierwszej płatnej ligi (klub/firma, tydzień 4–9)

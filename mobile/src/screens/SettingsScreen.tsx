@@ -55,6 +55,7 @@ export const SettingsScreen: React.FC = () => {
     { l: t.settings.riderWeight, v: '72 KG' },
     { l: t.settings.maxHr, v: '192 BPM' },
     { l: t.settings.haptics, v: 'ON' },
+    { l: 'GPS Diagnostics Wizard', v: 'Use Ride tab > GPS CHECK WIZARD' },
   ];
 
   return (

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View } from 'react-native';
+import { Alert, Share, View } from 'react-native';
 import type { NavigationContainerRef } from '@react-navigation/native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,17 +14,21 @@ import { RidePausedScreen } from '../screens/RidePausedScreen';
 import { RideSummaryScreen } from '../screens/RideSummaryScreen';
 import { TrainingLogScreen } from '../screens/TrainingLogScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { GpsDiagnosticsScreen } from '../screens/GpsDiagnosticsScreen';
 import { ClubsDirectoryScreen } from '../screens/ClubsDirectoryScreen';
 import { SegmentsScreen } from '../screens/SegmentsScreen';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useMobileI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import type { ActivitySportType } from '../services/api';
+import { ActivityService } from '../services/api';
+import { captureRef } from 'react-native-view-shot';
+import * as Sharing from 'expo-sharing';
 
 const Tab = createBottomTabNavigator();
 
 export type NavigationShellProps = {
-  user: UserProfile | Record<string, unknown>;
+  user: (UserProfile & { username?: string; tenant_id?: string | null }) | Record<string, unknown>;
   isRecording: boolean;
   ridePaused: boolean;
   setRidePaused: (v: boolean) => void;
@@ -38,6 +42,8 @@ export type NavigationShellProps = {
   setShowTrainingLog: (v: boolean) => void;
   showSettings: boolean;
   setShowSettings: (v: boolean) => void;
+  showGpsDiagnostics: boolean;
+  setShowGpsDiagnostics: (v: boolean) => void;
   showClubs: boolean;
   setShowClubs: (v: boolean) => void;
   showSegments: boolean;
@@ -63,6 +69,8 @@ export function NavigationShell({
   setShowTrainingLog,
   showSettings,
   setShowSettings,
+  showGpsDiagnostics,
+  setShowGpsDiagnostics,
   showClubs,
   setShowClubs,
   showSegments,
@@ -72,7 +80,9 @@ export function NavigationShell({
   onStopRide,
   onLogout,
 }: NavigationShellProps) {
+  const shellUser = user as { username?: string; tenant_id?: string | null } | null;
   const navRef = useRef<NavigationContainerRef<Record<string, object | undefined>>>(null);
+  const shareCardRef = useRef<View>(null);
   const { t: mt } = useMobileI18n();
   useFrameBudgetMonitor(isRecording && !ridePaused);
 
@@ -97,6 +107,41 @@ export function NavigationShell({
     }
   };
 
+  const handleShareSummary = async () => {
+    try {
+      const history = await ActivityService.getHistory();
+      const latest = history[0];
+      if (!latest?.id) {
+        Alert.alert('Share', 'No finished activity found.');
+        return;
+      }
+      const shareData = await ActivityService.getShareData(latest.id);
+      const message = [
+        `Ride: ${shareData.type}`,
+        `Distance: ${shareData.distance_km} km`,
+        `Avg speed: ${shareData.avg_speed} km/h`,
+        `Date: ${shareData.date}`,
+      ].join('\n');
+      const targetView = shareCardRef.current;
+      if (targetView) {
+        const uri = await captureRef(targetView, {
+          format: 'png',
+          quality: 1,
+          result: 'tmpfile',
+        });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'image/png',
+            dialogTitle: 'Share ride result',
+          });
+          return;
+        }
+      }
+      await Share.share({ title: '4VELO Ride Result', message });
+    } catch (e) {
+      Alert.alert('Share', 'Could not prepare share card.');
+    }
+  };
   return (
     <>
       <NavigationContainer ref={navRef}>
@@ -104,12 +149,13 @@ export function NavigationShell({
           <Tab.Screen name="Ride">
             {() => (
               <RideDashboardScreen
-                user={user}
+                user={shellUser ? { username: shellUser.username ?? 'RIDER', tenant_id: shellUser.tenant_id ?? undefined } : null}
                 isRecording={isRecording}
                 liveSpeed={liveSpeed * 3.6}
                 liveDistance={liveDistanceKm}
                 onStartRide={(sport) => void handleStartRide(sport)}
                 onGoToRide={() => navRef.current?.navigate('Tracking' as never)}
+                onOpenGpsWizard={() => setShowGpsDiagnostics(true)}
                 {...gpsRecoveryProps}
               />
             )}
@@ -117,7 +163,7 @@ export function NavigationShell({
           <Tab.Screen name="Compete">
             {() => (
               <CityHubScreen
-                user={user}
+                user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
                 onStartQuest={() => void handleStartRide()}
                 onOpenClubs={() => setShowClubs(true)}
                 onOpenSegments={() => setShowSegments(true)}
@@ -128,7 +174,7 @@ export function NavigationShell({
           <Tab.Screen name="Profile">
             {() => (
               <AthleteProfileScreen
-                user={user}
+                user={shellUser ? { username: shellUser.username } : undefined}
                 onLogout={onLogout}
                 onTraining={() => setShowTrainingLog(true)}
                 onSettings={() => setShowSettings(true)}
@@ -138,7 +184,7 @@ export function NavigationShell({
           <Tab.Screen name="Tracking" options={{ tabBarButton: () => null }}>
             {() => (
               <ActiveRideHUDScreen
-                user={user}
+                user={shellUser ?? undefined}
                 liveSpeed={liveSpeed}
                 liveDistanceKm={liveDistanceKm}
                 onPause={() => setRidePaused(true)}
@@ -161,10 +207,14 @@ export function NavigationShell({
       )}
 
       {rideSummary && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}>
+        <View
+          ref={shareCardRef}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 }}
+        >
           <RideSummaryScreen
             distance={rideSummary.distanceKm}
             time="—"
+            onShare={() => void handleShareSummary()}
             onBackToHub={() => {
               setRideSummary(null);
               navRef.current?.navigate('Ride' as never);
@@ -185,6 +235,12 @@ export function NavigationShell({
           <View style={{ position: 'absolute', top: 48, right: 16 }}>
             <ArcadeButton label={mt.common.close} onPress={() => setShowSettings(false)} fullWidth={false} />
           </View>
+        </View>
+      )}
+
+      {showGpsDiagnostics && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 101 }}>
+          <GpsDiagnosticsScreen onClose={() => setShowGpsDiagnostics(false)} />
         </View>
       )}
 

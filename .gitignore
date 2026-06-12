@@ -73,6 +73,8 @@ Thumbs.db
 infrastructure/brouter/segments4/
 infrastructure/brouter/brouter-src
 mobile/expo-env.d.ts
+.gradle-home/
+mobile/build-log*.txt
 
 # 📄 Project Specific
 QR_KOD.png

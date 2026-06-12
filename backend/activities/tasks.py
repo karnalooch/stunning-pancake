@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 
 from celery import shared_task
+from users.push_tasks import send_city_ranking_push, send_quest_push
 
 logger = logging.getLogger(__name__)
 
@@ -234,6 +235,9 @@ def send_leaderboard_digest(city_id: str, top_n: int = 10) -> None:
             [f"{i + 1}. {e['user_id']}: {e['score']:.1f}km" for i, e in enumerate(top)]
         )
         MatrixProvisioner.send_notification(f"!city_{city_id}:matrix.org", msg)
+        user_ids = [int(e["user_id"]) for e in top if str(e.get("user_id", "")).isdigit()]
+        if user_ids:
+            send_city_ranking_push.delay(user_ids, city_id)
 
 
 @shared_task(queue="default", name="activities.tasks.recalculate_city_leaderboard")
@@ -376,7 +380,16 @@ def evaluate_live_map_alerts() -> dict:
     """Scheduled every 60s — detect alert conditions per tenant."""
     from activities.live_map_alerts import evaluate_all_tenant_alerts
 
-    return evaluate_all_tenant_alerts()
+    result = evaluate_all_tenant_alerts()
+    try:
+        from users.models import User
+
+        sample_users = list(User.objects.filter(is_active=True, role="ATHLETE").values_list("id", flat=True)[:100])
+        if sample_users:
+            send_quest_push.delay(sample_users, "Nearby challenge")
+    except Exception:
+        pass
+    return result
 
 
 @shared_task(queue="default", name="activities.tasks.monitor_postgres_disk")

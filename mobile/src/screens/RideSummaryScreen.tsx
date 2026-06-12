@@ -71,6 +71,7 @@ interface RideSummaryScreenProps {
     time?: string;
     elevation?: number;
     rank?: string;
+    onShare?: () => void;
     onBackToHub?: () => void;
 }
 
@@ -79,6 +80,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
     time = '2h 15m',
     elevation = 850,
     rank = 'S',
+    onShare,
     onBackToHub,
 }) => {
     const { theme } = useUnistyles(); const s = stylesheet;
@@ -128,6 +130,15 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
                     </View>
                 </View>
             </View>
+            <Pressable
+                style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], shadowOpacity: 0.3 }]}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
+                    onShare?.();
+                }}
+            >
+                <Text style={s.ctaText}>SHARE RESULT</Text>
+            </Pressable>
             <Pressable
                 style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], shadowOpacity: 0.3 }]}
                 onPress={() => {

@@ -13,6 +13,7 @@ import {
   restoreSessionFromStorage,
 } from '../services/authSession';
 import { AuthService } from '../services/api';
+import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
 import { getAppStorage, ONBOARDING_KEY } from './storage';
 import { e2eConfig, isE2eAutoLoginEnabled } from './e2eConfig';
@@ -42,6 +43,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       if (user.tenant_id) {
         BrandingService.fetch(user.tenant_id);
       }
+      registerDevicePushToken().catch(() => null);
     },
     [auth, onUserReady],
   );
@@ -139,7 +141,15 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     }
   };
 
-  const handleOnboardingFinish = () => {
+  const handleOnboardingFinish = async (options?: { refreshProfile?: boolean }) => {
+    if (options?.refreshProfile) {
+      try {
+        const profile = await AuthService.getProfile();
+        auth.user.set(profile);
+      } catch {
+        // Ignore refresh errors and still complete onboarding locally.
+      }
+    }
     getAppStorage().set(ONBOARDING_KEY, 'true');
     auth.isOnboarded.set(true);
   };

@@ -126,3 +126,18 @@ cd mobile && npm test -- __tests__/services/gpsSyncStorage.test.ts
 cd backend && python manage.py test activities.test_route_sync
 cd telemetry && pip install pytest pytest-asyncio && pytest test_ingest_dedupe.py -q
 ```
+
+## Tier 1 production confirmation (offline/outbox)
+
+Confirmed on production build workflow (manual QA script + in-app recovery):
+
+1. Start ride online, switch device to airplane mode.
+2. Continue ride while offline, then force-kill app.
+3. Relaunch app offline, verify recovery banner and pending points.
+4. Disable airplane mode, wait for auto flush (`flushGpsUploadQueues`) or tap manual recovery.
+5. Verify finalized activity appears in backend history and leaderboard updates.
+
+Acceptance evidence:
+- Recovery banner visible when outbox pending.
+- `pendingPoints` reaches 0 after reconnect.
+- Session remains idempotent (`finalize` returns stable result).

@@ -8,7 +8,7 @@
  * pixel-border pixel-shadow retro aesthetic.
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import {
     View,
     Text,
@@ -290,6 +290,7 @@ interface RideDashboardScreenProps {
     gpsRecoveryVisible?: boolean;
     gpsRecoveryBusy?: boolean;
     onGpsRecoveryPress?: () => void;
+    onOpenGpsWizard?: () => void;
 }
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
@@ -302,10 +303,10 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     gpsRecoveryVisible = false,
     gpsRecoveryBusy = false,
     onGpsRecoveryPress,
+    onOpenGpsWizard,
 }) => {
     const { theme } = useUnistyles(); const s = stylesheet;
     const C = theme.colors as any;
-    const [pressed, setPressed] = useState(false);
     const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
     const { notice, dismiss } = usePlatformNotices(
         (user as { tenant_id?: string } | null)?.tenant_id ?? null,
@@ -363,6 +364,14 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                     busy={gpsRecoveryBusy}
                     onPress={() => onGpsRecoveryPress?.()}
                 />
+                <View style={{ marginTop: -4 }}>
+                    <ArcadeButton
+                        variant="ghost"
+                        label="GPS CHECK WIZARD"
+                        onPress={() => onOpenGpsWizard?.()}
+                        size="md"
+                    />
+                </View>
                 {/* Hero Card — Active Ride or Idle */}
                 <View style={[s.heroCard, s.pixelShadow]}>
                     {isRecording ? (

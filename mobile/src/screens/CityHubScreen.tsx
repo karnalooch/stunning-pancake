@@ -6,13 +6,15 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Image, Pressable, ActivityIndicator } from 'react-native';
-import { ActivityService, AuthService, type LeaderboardEntry } from '../services/api';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import {
+    ActivityService,
+    type CityHubSummary,
+    type LeaderboardEntry,
+} from '../services/api';
 import { useI18n } from '../i18n/useI18n';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from '../theme/stitch';
-import * as Haptics from 'expo-haptics';
 
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as any;
@@ -90,16 +92,30 @@ export const CityHubScreen: React.FC<{
     const C = theme.colors as any;
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [lbLoading, setLbLoading] = useState(true);
+    const [cityHub, setCityHub] = useState<CityHubSummary | null>(null);
     useEffect(() => {
-        AuthService.getProfile()
-            .then((profile) => {
-                const cityId = profile.tenant_id ? String(profile.tenant_id) : 'default';
-                return ActivityService.getLeaderboard(cityId);
+        setLbLoading(true);
+        ActivityService.getCityHubSummary()
+            .then((summary) => {
+                setCityHub(summary);
+                setLeaderboard((summary.leaderboard ?? []).slice(0, 10));
             })
-            .then((rows) => setLeaderboard(rows.slice(0, 10)))
-            .catch(() => setLeaderboard([]))
+            .catch(() => {
+                setCityHub(null);
+                setLeaderboard([]);
+            })
             .finally(() => setLbLoading(false));
     }, [user?.username]);
+
+    const cityOfWeekName = cityHub?.city_of_week?.name ?? '—';
+    const cityOfWeekKm = cityHub?.city_of_week?.score_km ?? 0;
+    const wars = cityHub?.city_wars;
+    const leftScore = wars?.tenant_a?.score ?? 0;
+    const rightScore = wars?.tenant_b?.score ?? 0;
+    const totalScore = leftScore + rightScore;
+    const leftPct = totalScore > 0 ? Math.max(1, Math.round((leftScore / totalScore) * 100)) : 50;
+    const rightPct = Math.max(1, 100 - leftPct);
+    const quests = cityHub?.quests ?? [];
 
     return (
     <SafeAreaView style={s.container} edges={['top']}>
@@ -116,14 +132,12 @@ export const CityHubScreen: React.FC<{
             {/* City of the Week */}
             <View style={[s.banner, s.shadow]}>
                 <View style={s.bannerImg}>
-                    <Image
-                        source={{ uri: 'https://lh3.googleusercontent.com/aida/ADBb0uiczyRDBQ4c5mPx4rIVMa6HfRg2mYd1VMp-K5oYsFRboHNqhxn2GOln_t5Boubvn28vcEOm_z4QAY_k_psM7QD3CyUtctHYM6XOQzy8MP4uzFlZbA1WPK1NUAHgon9DQ1-q3X-lvSjpn_Qu6t7RvublIJB7QrHPzV4c4aXnzUbc73M0ZeS50sqOcQgK8xCPrYPOeEmneM9R39cDg2jTCpB7skzw2Cn30_TnPs_fWv5I4fqeMGvcGzAO3nM' }}
-                        style={{ width: '100%', height: '100%' }}
-                    />
+                    <View style={{ width: '100%', height: '100%', backgroundColor: C.primaryContainer }} />
                 </View>
                 <View style={s.bannerOverlay}>
                     <Text style={s.bannerBadge}>⭐ CITY OF THE WEEK</Text>
-                    <Text style={s.bannerCity}>Siedlce</Text>
+                    <Text style={s.bannerCity}>{cityOfWeekName}</Text>
+                    <Text style={{ color: '#ffffff', fontWeight: '700' }}>{cityOfWeekKm.toFixed(1)} km</Text>
                 </View>
             </View>
 
@@ -135,20 +149,22 @@ export const CityHubScreen: React.FC<{
                 </View>
                 <View style={s.vsRow}>
                     <View>
-                        <Text style={s.vsCity}>Siedlce (You)</Text>
-                        <Text style={s.vsScore}>45,210 VP</Text>
+                        <Text style={s.vsCity}>{wars?.tenant_a?.name ?? '—'}</Text>
+                        <Text style={s.vsScore}>{leftScore.toFixed(2)} VP</Text>
                     </View>
                     <Text style={s.vsDivider}>VS</Text>
                     <View>
-                        <Text style={s.vsCityRight}>Warsaw</Text>
-                        <Text style={s.vsScoreRight}>42,890 VP</Text>
+                        <Text style={s.vsCityRight}>{wars?.tenant_b?.name ?? '—'}</Text>
+                        <Text style={s.vsScoreRight}>{rightScore.toFixed(2)} VP</Text>
                     </View>
                 </View>
                 <View style={s.vsBar}>
-                    <View style={[s.vsBarLeft, { width: '51%', height: '100%' }]} />
-                    <View style={{ backgroundColor: C.tertiary, width: '49%', height: '100%' }} />
+                    <View style={[s.vsBarLeft, { width: `${leftPct}%`, height: '100%' }]} />
+                    <View style={{ backgroundColor: C.tertiary, width: `${rightPct}%`, height: '100%' }} />
                 </View>
-                <Text style={s.vsDelta}>Leading by 2,320 Velos Points</Text>
+                <Text style={s.vsDelta}>
+                    {wars ? `Lead: ${wars.delta.toFixed(2)} VP` : 'Waiting for active city battle'}
+                </Text>
             </View>
 
             {/* Top Riders — live API */}
@@ -187,20 +203,42 @@ export const CityHubScreen: React.FC<{
                     <Text style={{ fontSize: 20 }}>🗺️</Text>
                     <Text style={s.vsTitle}>Nearby Quests</Text>
                 </View>
-                <View style={s.questGrid}>
-                    <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={() => onStartQuest?.('park-sprint')}>
-                        <Text style={[s.questBadge, { backgroundColor: C.tertiary, color: C.onPrimary }]}>KOM LOST</Text>
-                        <Text style={[s.questTitle, { color: C.onBackground }]}>Park Sprint</Text>
-                        <Text style={s.questDist}>1.2 km</Text>
-                        <Text style={s.questTime}>1:45</Text>
-                    </Pressable>
-                    <Pressable style={({ pressed }) => [s.questCard, { backgroundColor: C.primaryContainer }, pressed && { opacity: 0.8 }]} onPress={() => onStartQuest?.('city-hall')}>
-                        <Text style={[s.questBadge, { backgroundColor: C.onBackground, color: C.onPrimary }]}>KING</Text>
-                        <Text style={[s.questTitle, { color: C.onBackground }]}>City Hall Climb</Text>
-                        <Text style={s.questDist}>0.8 km</Text>
-                        <Text style={s.questTime}>3:12</Text>
-                    </Pressable>
-                </View>
+                {quests.length === 0 ? (
+                    <Text style={s.questDist}>No live quests available.</Text>
+                ) : (
+                    <View style={s.questGrid}>
+                        {quests.slice(0, 2).map((quest, idx) => (
+                            <Pressable
+                                key={quest.id}
+                                style={({ pressed }) => [
+                                    s.questCard,
+                                    idx % 2 === 1 && { backgroundColor: C.primaryContainer },
+                                    pressed && { opacity: 0.8 },
+                                ]}
+                                onPress={() => onStartQuest?.(quest.id)}
+                            >
+                                <Text
+                                    style={[
+                                        s.questBadge,
+                                        {
+                                            backgroundColor: idx % 2 === 0 ? C.tertiary : C.onBackground,
+                                            color: C.onPrimary,
+                                        },
+                                    ]}
+                                >
+                                    {quest.category}
+                                </Text>
+                                <Text style={[s.questTitle, { color: C.onBackground }]}>{quest.name}</Text>
+                                <Text style={s.questDist}>
+                                    {quest.latitude != null && quest.longitude != null
+                                        ? `${quest.latitude.toFixed(3)}, ${quest.longitude.toFixed(3)}`
+                                        : 'No geo data'}
+                                </Text>
+                                <Text style={s.questTime}>{quest.description || 'Tap to start'}</Text>
+                            </Pressable>
+                        ))}
+                    </View>
+                )}
             </View>
 
             <View style={s.questGrid}>

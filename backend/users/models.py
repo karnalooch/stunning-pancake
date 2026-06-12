@@ -125,6 +125,34 @@ class User(AbstractUser):
         return f"{self.username} ({self.get_role_display()})"
 
 
+class UserPushToken(models.Model):
+    """Device push token registry for Expo delivery."""
+
+    PLATFORM_CHOICES = (
+        ("android", "Android"),
+        ("ios", "iOS"),
+    )
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="push_tokens",
+    )
+    token = models.CharField(max_length=255, unique=True, db_index=True)
+    platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES)
+    is_active = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username}:{self.platform}:{self.token[:16]}"
+
+
 class AuditLog(models.Model):
     """
     Logs sensitive actions, specifically those taken during impersonation sessions

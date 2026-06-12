@@ -35,6 +35,10 @@ export const API_PATHS = {
   authGoogleLogin: '/auth/google/login/',
   authFacebookLogin: '/auth/facebook/login/',
   llmProxy: '/llm/proxy/',
+  events: '/events/',
+  cityHubSummary: '/events/city-hub/',
+  usersTenantsPublic: '/users/tenants/public/',
+  usersPushRegister: '/users/push/register/',
 } as const;
 
 /** Full paths for mobile (host-root baseURL). */
@@ -71,6 +75,10 @@ export const API_PATHS_FULL = {
   authGoogleLogin: '/api/auth/google/login/',
   authFacebookLogin: '/api/auth/facebook/login/',
   llmProxy: '/api/llm/proxy/',
+  events: '/api/events/',
+  cityHubSummary: '/api/events/city-hub/',
+  usersTenantsPublic: '/api/users/tenants/public/',
+  usersPushRegister: '/api/users/push/register/',
 } as const;
 
 /** Dynamic mobile paths — keep IDs in call sites, paths in SSOT. */
@@ -84,6 +92,11 @@ export const mobileActivityPaths = {
   privacyZone: (zoneId: string) => `/api/activities/privacy-zones/${zoneId}/` as const,
   rewardsRedeem: (poolId: number) => `/api/rewards/redeem/${poolId}/` as const,
   tenantBranding: (tenantId: string) => `/api/users/branding/${tenantId}/` as const,
+  eventJoin: (eventId: number) => `/api/events/${eventId}/join/` as const,
+  sessionShareData: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/share_data/` as const,
+  departmentSelfJoin: (departmentId: number) =>
+    `/api/users/departments/${departmentId}/self-join/` as const,
 };
 
 export const CRITICAL_PATHS = Object.values(API_PATHS_FULL);

@@ -64,11 +64,11 @@ describe('rideSessionService', () => {
     expect(mockStopTracking).toHaveBeenCalledTimes(1);
   });
 
-  test('startRideSession defaults type to ride', async () => {
+  test('startRideSession defaults type to BIKE', async () => {
     await startRideSession({ userId: null });
 
     expect(mockCreateSession).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'ride' }),
+      expect.objectContaining({ type: 'BIKE' }),
     );
   });
 });

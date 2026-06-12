@@ -13,7 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.api_response import error, success
 from core.email_service import EmailService
 
-from .models import AuditLog, Role, Tenant, User
+from .models import AuditLog, Role, Tenant, User, UserPushToken
 from .permissions import IsGlobalOwner, IsTenantAdmin
 from .serializers import (
     AuditLogSerializer,
@@ -502,6 +502,14 @@ class TenantListView(generics.ListAPIView):
         return qs
 
 
+class PublicTenantListView(generics.ListAPIView):
+    """Public lightweight tenant list for mobile onboarding city selection."""
+
+    queryset = Tenant.objects.filter(is_active=True).order_by("name")
+    serializer_class = TenantSerializer
+    permission_classes = (permissions.AllowAny,)
+
+
 class AuditLogListView(generics.ListAPIView):
     """List audit log entries — GLOBAL_OWNER (all) or TENANT_ADMIN (scoped)."""
 
@@ -973,3 +981,40 @@ class UserPreferencesView(generics.GenericAPIView):
         request.user.preferences = current
         request.user.save(update_fields=["preferences"])
         return Response(current)
+
+
+class PushTokenRegisterView(generics.GenericAPIView):
+    """Register/update Expo push token for authenticated user."""
+
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        token = (request.data.get("token") or "").strip()
+        platform = (request.data.get("platform") or "").strip().lower()
+        enabled = bool(request.data.get("enabled", True))
+
+        if not token:
+            return error("token is required.", status_code=status.HTTP_400_BAD_REQUEST)
+        if platform not in ("android", "ios"):
+            return error("platform must be android or ios.", status_code=status.HTTP_400_BAD_REQUEST)
+
+        push_token, _created = UserPushToken.objects.update_or_create(
+            token=token,
+            defaults={
+                "user": request.user,
+                "platform": platform,
+                "is_active": enabled,
+            },
+        )
+        if enabled:
+            UserPushToken.objects.filter(user=request.user).exclude(id=push_token.id).update(
+                is_active=False
+            )
+        return success(
+            data={
+                "token": push_token.token,
+                "platform": push_token.platform,
+                "is_active": push_token.is_active,
+            },
+            message="Push token saved.",
+        )

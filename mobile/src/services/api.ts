@@ -35,6 +35,87 @@ export interface LeaderboardEntry {
   score_km?: number;
 }
 
+export interface EventSummary {
+  id: number;
+  title: string;
+  event_type: string;
+  sport_filter: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  tenant_id?: string | null;
+  opponent_tenant_id?: string | null;
+}
+
+export interface CityWarsSummary {
+  event_id: number;
+  tenant_a: { id: string; name: string; score: number };
+  tenant_b: { id: string; name: string; score: number };
+  leader: string;
+  delta: number;
+}
+
+export interface CityOfWeekSummary {
+  tenant_id: string;
+  name: string;
+  score_km: number;
+}
+
+export interface CityQuestSummary {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface CityHubSummary {
+  active_event: EventSummary | null;
+  city_of_week: CityOfWeekSummary | null;
+  city_wars: CityWarsSummary | null;
+  leaderboard: LeaderboardEntry[];
+  my_rank: {
+    rank: number | null;
+    score_km: number;
+    scope: string;
+    entity_id: string;
+  } | null;
+  quests: CityQuestSummary[];
+}
+
+export interface PublicTenantOption {
+  id: string;
+  name: string;
+  primary_color?: string;
+  secondary_color?: string;
+}
+
+export interface UserPushTokenResponse {
+  token: string;
+  platform: 'android' | 'ios';
+  is_active: boolean;
+}
+
+export interface DepartmentTreeNode {
+  id: number;
+  name: string;
+  department_type: string;
+  member_count: number;
+  children?: DepartmentTreeNode[];
+}
+
+export interface ShareDataPayload {
+  user: string;
+  type: string;
+  distance_km: number;
+  duration: string;
+  avg_speed: number;
+  date: string;
+  is_verified: boolean;
+  tenant_name: string;
+}
+
 export interface RewardPool {
   id: number;
   title: string;
@@ -79,6 +160,10 @@ export const ActivityService = {
     }),
   getMyRank: (cityId: string) =>
     api.get<any>(mobileActivityPaths.leaderboardMe(cityId)).then((r) => r.data),
+  getCityHubSummary: () =>
+    api.get<CityHubSummary>(API_PATHS_FULL.cityHubSummary).then((r) => r.data),
+  getShareData: (activityId: number) =>
+    api.get<ShareDataPayload>(mobileActivityPaths.sessionShareData(activityId)).then((r) => r.data),
 };
 
 export interface PlatformNoticeDto {
@@ -108,6 +193,10 @@ export const AuthService = {
   register: (data: RegisterPayload) =>
     api.post(API_PATHS_FULL.usersRegister, data).then((r) => r.data),
   getProfile: () => api.get<UserProfile>(API_PATHS_FULL.usersProfile).then((r) => r.data),
+  updateProfile: (patch: Partial<UserProfile> & { tenant_id?: string | null }) =>
+    api.patch<UserProfile>(API_PATHS_FULL.usersProfile, patch).then((r) => r.data),
+  getPublicTenants: () =>
+    api.get<PublicTenantOption[]>(API_PATHS_FULL.usersTenantsPublic).then((r) => r.data),
 };
 
 export const PrivacyService = {
@@ -141,6 +230,28 @@ export const WearableService = {
       }>(API_PATHS_FULL.wearablesSync)
       .then((r) => r.data),
   sync: () => api.post(API_PATHS_FULL.wearablesSync).then((r) => r.data),
+};
+
+export const DepartmentService = {
+  getTree: () => api.get<DepartmentTreeNode[]>('/api/users/departments/tree/').then((r) => r.data),
+  selfJoin: (departmentId: number) =>
+    api.post<{ status: string; department_id: number }>(mobileActivityPaths.departmentSelfJoin(departmentId)).then((r) => r.data),
+};
+
+export const EventService = {
+  list: () => api.get<EventSummary[]>(API_PATHS_FULL.events).then((r) => r.data),
+  join: (eventId: number) => api.post(mobileActivityPaths.eventJoin(eventId)).then((r) => r.data),
+};
+
+export const PushService = {
+  registerToken: (token: string, platform: 'android' | 'ios', enabled = true) =>
+    api
+      .post<UserPushTokenResponse>(API_PATHS_FULL.usersPushRegister, {
+        token,
+        platform,
+        enabled,
+      })
+      .then((r) => r.data),
 };
 
 export default api;
