@@ -15,7 +15,7 @@ import {
 import { AuthService } from '../services/api';
 import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
-import { getAppStorage, ONBOARDING_KEY } from './storage';
+import { isOnboardingCompleteForUser, setOnboardingCompleteForUser } from './storage';
 import { e2eConfig, isE2eAutoLoginEnabled } from './e2eConfig';
 
 const BYPASS_AUTH = false;
@@ -38,6 +38,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     async (user: UserProfile) => {
       auth.user.set(user);
       auth.isAuthenticated.set(true);
+      auth.isOnboarded.set(isOnboardingCompleteForUser(user.id));
       const userId = user?.id != null ? Number(user.id) : null;
       await onUserReady(userId);
       if (user.tenant_id) {
@@ -59,9 +60,6 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     initFirebase();
     setOnSessionExpired(handleSessionExpired);
 
-    const store = getAppStorage();
-    auth.isOnboarded.set(store.getString(ONBOARDING_KEY) === 'true');
-
     void (async () => {
       const token = await restoreSessionFromStorage();
       if (token) {
@@ -79,13 +77,12 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       if (isE2eAutoLoginEnabled()) {
         auth.isSubmitting.set(true);
         try {
-          // E2E APK: skip onboarding wizard — Maestro targets main tabs.
-          getAppStorage().set(ONBOARDING_KEY, 'true');
-          auth.isOnboarded.set(true);
           const user = await loginAndLoadProfile(e2eConfig.email, e2eConfig.password);
+          if (e2eConfig.skipOnboarding) {
+            setOnboardingCompleteForUser(user.id);
+          }
           await applyUserSession(user);
         } catch {
-          getAppStorage().delete(ONBOARDING_KEY);
           auth.isOnboarded.set(false);
         } finally {
           auth.isSubmitting.set(false);
@@ -142,7 +139,11 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
   };
 
   const handleOnboardingFinish = async (options?: { refreshProfile?: boolean }) => {
-    if (options?.refreshProfile) {
+    const userId = auth.user.get()?.id;
+    if (userId != null) {
+      setOnboardingCompleteForUser(userId);
+    }
+    if (options?.refreshProfile !== false) {
       try {
         const profile = await AuthService.getProfile();
         auth.user.set(profile);
@@ -150,7 +151,6 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
         // Ignore refresh errors and still complete onboarding locally.
       }
     }
-    getAppStorage().set(ONBOARDING_KEY, 'true');
     auth.isOnboarded.set(true);
   };
 

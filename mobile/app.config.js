@@ -26,7 +26,7 @@ export default ({ config }) => {
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f8faf0"
     },
     "ios": {
       "supportsTablet": true,
@@ -44,7 +44,7 @@ export default ({ config }) => {
       "googleServicesFile": hasAndroidGoogleServices ? "./google-services.json" : undefined,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#f8faf0"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [

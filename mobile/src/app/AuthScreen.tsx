@@ -1,9 +1,13 @@
 import React from 'react';
 import type { Observable } from '@legendapp/state';
+import { View } from 'react-native';
 import { Column } from '../components/Column';
 import { PixelText } from '../components/PixelText';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { RetroInput } from '../components/RetroInput';
+import { SceneBackground } from '../components/scene/SceneBackground';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 
 type AuthState = {
   mode: 'login' | 'register';
@@ -25,11 +29,15 @@ type Props = {
 export function AuthScreen({ auth, colors, onSubmit, onToggleMode, onSocialLogin }: Props) {
   const C = colors;
   const mode = auth.mode.get();
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
 
   return (
-    <Column flex={1} style={{ backgroundColor: C.background, justifyContent: 'center' }} padding={24} gap={24}>
+    <View style={{ flex: 1, backgroundColor: C.background }}>
+      {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
+      <Column flex={1} style={{ justifyContent: 'center' }} padding={24} gap={24}>
       <Column alignItems="center" style={{ marginBottom: 16 }}>
-        <PixelText size="2xl" color={C.primary} style={{ fontSize: 36, color: C.primary }}>
+        {immersiveEnabled && <CyclistSprite size={72} state="idle" />}
+        <PixelText size="2xl" color={C.primary} style={{ fontSize: 36, color: C.primary, marginTop: 12 }}>
           4VELO
         </PixelText>
         <PixelText size="xs" color={C.secondary} style={{ marginTop: 8, color: C.secondary }}>
@@ -106,6 +114,7 @@ export function AuthScreen({ auth, colors, onSubmit, onToggleMode, onSocialLogin
           size="sm"
         />
       </Column>
-    </Column>
+      </Column>
+    </View>
   );
 }

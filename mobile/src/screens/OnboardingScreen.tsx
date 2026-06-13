@@ -103,10 +103,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       } catch {
         // optional auto-join
       }
-      await onFinish({
-        tenant_id: selectedTenantId || null,
-        department_id: selectedDepartmentId,
-      });
+      await onFinish({ refreshProfile: true });
     } finally {
       setIsSubmitting(false);
     }
