@@ -81,6 +81,7 @@ interface Props {
   liveDistanceKm?: number;
   liveElevationGainM?: number;
   liveElapsedS?: number;
+  liveCoord?: [number, number] | null;
   gpsRecoveryVisible?: boolean;
   gpsRecoveryBusy?: boolean;
   onGpsRecoveryPress?: () => void;
@@ -95,6 +96,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   liveDistanceKm = 0,
   liveElevationGainM = 0,
   liveElapsedS = 0,
+  liveCoord = null,
   gpsRecoveryVisible = false,
   gpsRecoveryBusy = false,
   onGpsRecoveryPress,
@@ -125,7 +127,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   return (
     <View style={s.container}>
       <View style={s.mapLayer}>
-        <RideMapView />
+        <RideMapView userCoordinate={liveCoord} />
       </View>
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <View style={s.top}>

@@ -23,6 +23,7 @@ export function useRideLifecycle() {
   const [liveDistanceKm, setLiveDistanceKm] = useState(0);
   const [liveElevationGainM, setLiveElevationGainM] = useState(0);
   const [liveElapsedS, setLiveElapsedS] = useState(0);
+  const [liveCoord, setLiveCoord] = useState<[number, number] | null>(null);
   const [gpsRecoveryVisible, setGpsRecoveryVisible] = useState(false);
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
   const [rideSummary, setRideSummary] = useState<{ distanceKm: number } | null>(null);
@@ -38,6 +39,7 @@ export function useRideLifecycle() {
       setLiveDistanceKm((stats.distanceM ?? 0) / 1000);
       setLiveElevationGainM(stats.elevationGainM ?? 0);
       setLiveElapsedS(stats.rideWallClockS ?? stats.gpsActiveTimeS ?? 0);
+      setLiveCoord(stats.lastCoord ?? null);
       if (stats.pendingPoints > 0) {
         setGpsRecoveryVisible(true);
       }
@@ -139,6 +141,7 @@ export function useRideLifecycle() {
       setLiveDistanceKm(0);
       setLiveElevationGainM(0);
       setLiveElapsedS(0);
+      setLiveCoord(null);
       refreshGpsRecoveryFlag();
       if (distanceKm > 0) {
         setRideSummary({ distanceKm });
@@ -156,6 +159,7 @@ export function useRideLifecycle() {
     liveDistanceKm,
     liveElevationGainM,
     liveElapsedS,
+    liveCoord,
     gpsRecoveryVisible,
     gpsRecoveryBusy,
     rideSummary,

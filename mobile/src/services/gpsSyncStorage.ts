@@ -81,6 +81,9 @@ export interface TrackingStats {
   gpsActiveTimeS?: number;
   ingestPaused?: boolean;
   lastAckAt?: number | null;
+  /** Latest GPS fix [lon, lat] while tracking. */
+  lastCoord?: [number, number] | null;
+  headingDeg?: number | null;
 }
 
 export interface GpsStorageAdapter {

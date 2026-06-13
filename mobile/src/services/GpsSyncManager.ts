@@ -536,6 +536,8 @@ export class GpsSyncManager {
       lastAckAt: getLastAckAt(),
       rideWallClockS,
       gpsActiveTimeS: currentStats.gpsActiveTimeS,
+      lastCoord: tracking?.lastCoord ?? null,
+      headingDeg: null,
     });
   }
 

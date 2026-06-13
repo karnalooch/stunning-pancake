@@ -81,6 +81,7 @@ const AppContent = observer(function AppContent() {
       liveDistanceKm={ride.liveDistanceKm}
       liveElevationGainM={ride.liveElevationGainM}
       liveElapsedS={ride.liveElapsedS}
+      liveCoord={ride.liveCoord}
       gpsRecoveryVisible={ride.gpsRecoveryVisible}
       gpsRecoveryBusy={ride.gpsRecoveryBusy}
       rideSummary={ride.rideSummary}

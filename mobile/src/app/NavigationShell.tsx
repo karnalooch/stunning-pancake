@@ -36,6 +36,7 @@ export type NavigationShellProps = {
   liveDistanceKm: number;
   liveElevationGainM: number;
   liveElapsedS: number;
+  liveCoord: [number, number] | null;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
   rideSummary: { distanceKm: number } | null;
@@ -65,6 +66,7 @@ export function NavigationShell({
   liveDistanceKm,
   liveElevationGainM,
   liveElapsedS,
+  liveCoord,
   gpsRecoveryVisible,
   gpsRecoveryBusy,
   rideSummary,
@@ -194,6 +196,7 @@ export function NavigationShell({
                 liveDistanceKm={liveDistanceKm}
                 liveElevationGainM={liveElevationGainM}
                 liveElapsedS={liveElapsedS}
+                liveCoord={liveCoord}
                 onPause={() => setRidePaused(true)}
                 onResume={() => setRidePaused(false)}
                 onStop={() => void handleStopRide()}
