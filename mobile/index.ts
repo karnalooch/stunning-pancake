@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 // ─── CRITICAL: Unistyles must be configured before ANY other import ──────────
 // ES module `import` statements are hoisted. If configure() lives inline here,
 // App's dependency tree (RetroInput, PixelText, etc.) resolves first and their

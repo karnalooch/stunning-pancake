@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import { observer } from '@legendapp/state/react';
@@ -14,6 +15,7 @@ import { useAuthSession } from './src/app/useAuthSession';
 import { useRideLifecycle } from './src/app/useRideLifecycle';
 import { AuthScreen } from './src/app/AuthScreen';
 import { NavigationShell } from './src/app/NavigationShell';
+import { SoundService } from './src/services/SoundService';
 
 const AppContent = observer(function AppContent() {
   const [fontsLoaded] = useFonts({ 'Press Start 2P': PressStart2P_400Regular });
@@ -38,14 +40,25 @@ const AppContent = observer(function AppContent() {
     }
   }, [isUpdateAvailable]);
 
+  React.useEffect(() => {
+    void SoundService.init();
+    return () => {
+      void SoundService.cleanup();
+    };
+  }, []);
+
   if (isDownloading || !fontsLoaded) {
     return (
-      <SplashScreen message="DOWNLOADING SECURE UPDATE..." subMessage="CONNECTING TO ANTIGRAVITY EDGE" />
+      <SplashScreen
+        mode={isDownloading ? 'deploy' : 'boot'}
+        message={isDownloading ? 'POBIERANIE AKTUALIZACJI…' : undefined}
+        subMessage={isDownloading ? 'EAS Update · bezpieczny deploy OTA' : undefined}
+      />
     );
   }
 
   if (auth.isLoading.get()) {
-    return <SplashScreen />;
+    return <SplashScreen mode="boot" />;
   }
 
   const isAuth = auth.isAuthenticated.get() || BYPASS_AUTH;
@@ -106,12 +119,14 @@ const AppContent = observer(function AppContent() {
 
 export default observer(function App() {
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'stitch'}>
-          <AppContent />
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'stitch'}>
+            <AppContent />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    </GestureHandlerRootView>
   );
 });

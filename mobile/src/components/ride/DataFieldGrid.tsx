@@ -6,6 +6,7 @@ import { DATA_FIELD_IDS, DATA_FIELD_REGISTRY, type DataFieldId } from '../../rid
 import { splitLayoutRows } from '../../ride/layouts';
 import type { DataFieldLayout, RideMetricsSnapshot, RideProfileId } from '../../ride/types';
 import { DataFieldCell } from './DataFieldCell';
+import { DraggableFieldCell } from './DraggableFieldCell';
 
 interface DataFieldGridProps {
   metrics: RideMetricsSnapshot;
@@ -82,6 +83,7 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
     activeProfile,
     setActiveProfile,
     updateSlotField,
+    swapSlots,
     resetProfileLayout,
   } = useDataFieldLayout();
   const layout = layoutProp ?? storedLayout;
@@ -114,16 +116,37 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
 
   const renderRow = (slots: typeof row1) => (
     <View style={s.row}>
-      {slots.map((slot) => (
-        <DataFieldCell
-          key={slot.slotKey}
-          fieldId={slot.fieldId}
-          metrics={metrics}
-          emphasis={slot.emphasis}
-          editMode={editMode}
-          onPressEdit={() => pickFieldForSlot(slot.slotKey, slot.fieldId)}
-        />
-      ))}
+      {slots.map((slot, index) => {
+        const swapNeighbor = (direction: 'left' | 'right') => {
+          const targetIndex = direction === 'left' ? index - 1 : index + 1;
+          if (targetIndex < 0 || targetIndex >= slots.length) return;
+          swapSlots(slot.slotKey, slots[targetIndex].slotKey);
+        };
+        if (editMode) {
+          return (
+            <DraggableFieldCell
+              key={slot.slotKey}
+              slotKey={slot.slotKey}
+              fieldId={slot.fieldId}
+              metrics={metrics}
+              emphasis={slot.emphasis}
+              editMode={editMode}
+              onPressEdit={() => pickFieldForSlot(slot.slotKey, slot.fieldId)}
+              onSwapNeighbor={swapNeighbor}
+            />
+          );
+        }
+        return (
+          <DataFieldCell
+            key={slot.slotKey}
+            fieldId={slot.fieldId}
+            metrics={metrics}
+            emphasis={slot.emphasis}
+            editMode={false}
+            onPressEdit={() => pickFieldForSlot(slot.slotKey, slot.fieldId)}
+          />
+        );
+      })}
     </View>
   );
 
@@ -136,7 +159,7 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
     >
       {editMode && (
         <View style={s.editBanner}>
-          <Text style={s.editBannerText}>Edit layout — tap a field to swap metric</Text>
+          <Text style={s.editBannerText}>Edit — drag ↔ reorder, tap to swap metric</Text>
           <View style={s.profileRow}>
             {(Object.keys(PROFILE_LABELS) as RideProfileId[]).map((profileId) => {
               const active = activeProfile === profileId;

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Text, View, StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -7,16 +7,21 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useEffect } from 'react';
 import { useMotionPolicy } from '../../hooks/useMotionPolicy';
+import { SpriteAnimator } from './SpriteAnimator';
 
 interface CyclistSpriteProps {
   size?: number;
   state?: 'idle' | 'cruise' | 'attack' | 'victory';
+  /** Use pixel-art sprite sheet when true (default). */
+  useSheet?: boolean;
 }
 
 export const CyclistSprite: React.FC<CyclistSpriteProps> = ({
   size = 44,
   state = 'cruise',
+  useSheet = true,
 }) => {
   const bounce = useSharedValue(0);
   const { allowSpriteAnim } = useMotionPolicy();
@@ -40,7 +45,22 @@ export const CyclistSprite: React.FC<CyclistSpriteProps> = ({
     transform: [{ translateY: bounce.value }],
   }));
 
+  const playing = state === 'cruise' || state === 'attack';
+  const fps = state === 'attack' ? 14 : 8;
   const emoji = state === 'victory' ? '🏆' : state === 'idle' ? '🧍' : '🚴';
+
+  if (useSheet) {
+    return (
+      <Animated.View style={anim}>
+        <SpriteAnimator
+          size={size}
+          playing={playing}
+          fps={fps}
+          frame={state === 'victory' ? 7 : state === 'idle' ? 0 : 0}
+        />
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View

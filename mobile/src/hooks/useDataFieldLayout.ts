@@ -51,12 +51,41 @@ export function useDataFieldLayout() {
     });
   }, []);
 
+  const swapSlots = useCallback((slotKeyA: string, slotKeyB: string) => {
+    if (slotKeyA === slotKeyB) return;
+    setStored((prev) => {
+      const profileId = prev.activeProfile;
+      const current = prev.profiles[profileId];
+      if (!current) return prev;
+      const a = current.slots.find((s) => s.slotKey === slotKeyA);
+      const b = current.slots.find((s) => s.slotKey === slotKeyB);
+      if (!a || !b) return prev;
+      const slots = current.slots.map((slot) => {
+        if (slot.slotKey === slotKeyA) {
+          return { ...slot, fieldId: b.fieldId, emphasis: b.emphasis };
+        }
+        if (slot.slotKey === slotKeyB) {
+          return { ...slot, fieldId: a.fieldId, emphasis: a.emphasis };
+        }
+        return slot;
+      });
+      const nextLayout: DataFieldLayout = { ...current, slots };
+      const next: StoredDataFieldLayouts = {
+        ...prev,
+        profiles: { ...prev.profiles, [profileId]: nextLayout },
+      };
+      saveStoredLayouts(next);
+      return next;
+    });
+  }, []);
+
   return {
     stored,
     layout,
     activeProfile: stored.activeProfile,
     setActiveProfile,
     updateSlotField,
+    swapSlots,
     resetProfileLayout,
   };
 }
