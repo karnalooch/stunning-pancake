@@ -1,9 +1,13 @@
 {
-  "bundled_at": "2026-06-13T08:41:14.739063+00:00",
+  "bundled_at": "2026-06-13T09:03:32.603365+00:00",
   "source": "G:\\gem\\stunning-pancake\\assets\\generated",
   "mobile_target": "G:\\gem\\stunning-pancake\\mobile\\assets\\generated",
   "files": [
     "ASSET_MANIFEST.json",
+    "environment/hills_far.png",
+    "environment/road_near.png",
+    "environment/sky_day.png",
+    "environment/town_mid.png",
     "expressions/cyclist_happy.png",
     "expressions/cyclist_idle.png",
     "expressions/cyclist_tired.png",
@@ -25,6 +29,8 @@
     "icons/tab_profile.svg",
     "icons/tab_ranking.svg",
     "icons/tab_rewards.svg",
+    "map/marker_cyclist.png",
+    "particles/particle_atlas.png",
     "sounds/sfx_params.json",
     "sprites/cyclist_sheet.png",
     "sprites/ghost_sheet.png",
