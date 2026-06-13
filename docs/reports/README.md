@@ -30,6 +30,7 @@ Snapshoty z konkretnych dat — **nie** zastępują runbooków w [../operations/
 | [COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md](./COMPREHENSIVE_AUDIT_REPORT_2026-05-27.md) | Kompleksowy |
 | [FULL_INDUSTRY_AUDIT_2026-05-27.md](./FULL_INDUSTRY_AUDIT_2026-05-27.md) | Branżowy |
 | [FRONTEND_BACKEND_GAP_REPORT.md](./FRONTEND_BACKEND_GAP_REPORT.md) | Luki FE/BE |
+| [../design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md](../design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) | Mobile Grand Prix — audyt spójności UI po generacji assetów (2026-06-13) |
 | [SPORT_FULL_CONVERSATION_REPORT_2026-06-11.pl.md](./SPORT_FULL_CONVERSATION_REPORT_2026-06-11.pl.md) | Raport rynkowy GTM (PL) |
 | [SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.pl.md](./SPORT_CHEATING_ATHLETES_REPORT_2026-06-11.pl.md) | Oszustwa zawodników — metody i obrona |
 | [RELIABILITY_AUDIT_PLAYBOOK.md](./RELIABILITY_AUDIT_PLAYBOOK.md) | Playbook niezawodnosci (release gate + incident runbook) |

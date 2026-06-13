@@ -453,8 +453,8 @@ After this doc is accepted:
 
 - Update [`scripts/asset_definitions.py`](../../scripts/asset_definitions.py): icons become `format: png`, `model: gemini`; descriptions point at these prompts.
 - [`scripts/generators/gemini_client.py`](../../scripts/generators/gemini_client.py): attach the reference image on every call and source prompt text from this SSOT.
-- Deprecate the procedural [`scripts/generate_grand_prix_assets.py`](../../scripts/generate_grand_prix_assets.py) and [`scripts/grand_prix/`](../../scripts/grand_prix/).
 - [`mobile/src/assets/tabIcons.ts`](../../mobile/src/assets/tabIcons.ts): import PNG icons instead of SVG.
+- **UI integration roadmap:** [GRAND_PRIX_UI_CONSISTENCY_AUDIT.md](./GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) — full audit of wired vs unwired assets, tokens, fonts, HUD, scenes (2026-06-13).
 
 ## 20. Sun-readability spec (HUD chrome — normative)
 

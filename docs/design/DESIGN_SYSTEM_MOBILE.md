@@ -135,6 +135,7 @@ New categories: `environment/` (parallax layers), `sprites/` (cyclist sheets), `
 
 ## 10. Backlog (P2/P3) and edge states
 
+- **UI integration roadmap (post-asset generation):** [GRAND_PRIX_UI_CONSISTENCY_AUDIT.md](./GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) — wired vs unwired assets, token/font gaps, HUD/scene/particle follow-up, PR sequence (~10–14 days).
 - **Edge states in pixel-art** (not system defaults): GPS-lost banner, no-data, offline — styled to match the skin.
 - **Share card** in dedicated social formats (1080×1920 portrait / 1200×630 OG), deterministic render, brand mark.
 - Seasons / Battle Pass (civic), Ghost-race (self vs ghost, `ghost_sheet.png`), animated result card (GIF/mp4), Climb mode (auto climb profile), post-ride bike-service ritual.
