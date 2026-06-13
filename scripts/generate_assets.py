@@ -101,7 +101,7 @@ Examples:
         "--category",
         type=str,
         default=None,
-        choices=["icon", "sprite", "expression", "texture", "sound"],
+        choices=["icon", "sprite", "expression", "texture", "sound", "environment", "particle"],
         help="Generate only assets of a specific category.",
     )
     parser.add_argument(

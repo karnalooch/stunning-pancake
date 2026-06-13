@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-05-04T23:56:49.019889+00:00",
+  "project": "SPORT Mobile",
+  "description": "Auto-generated pixel-art assets for the SPORT cycling app. Generated via DeepSeek v4 Pro (SVG icons) and Gemini 3 (sprites, textures, expressions).",
+  "total_assets": 1,
+  "assets": [
+    {
+      "id": "cyclist_happy",
+      "category": "expression",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 5948,
+      "path": "expressions/cyclist_happy.png",
+      "description": "Happy cyclist face with sparkle eyes. Same cyclist character but with a big smile and sparkle/star shapes in the eyes. Celebration mood — just got a personal best or achievement."
+    }
+  ]
+}

@@ -429,6 +429,97 @@ def get_all_assets() -> list[AssetDef]:
         },
 
         # ═══════════════════════════════════════════════════════════
+        # ENVIRONMENT PARALLAX (ADR 014) — Gemini PNG
+        # ═══════════════════════════════════════════════════════════
+        {
+            "id": "env_sky_day",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 128],
+            "description": (
+                "Pixel-art sky band for parallax background — day. Warm cream-to-blue "
+                "gradient sky with a few fluffy pixel clouds. Palette: cream #F5E6CC, "
+                "forestGreen #7BA05B horizon hint, deepSea #0B1D33 top. No anti-aliasing."
+            ),
+            "style_constraints": "Horizontal strip, tileable left-right. 1px pixel steps.",
+            "output_path": "environment/sky_day.png",
+        },
+        {
+            "id": "env_hills_far",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 96],
+            "description": (
+                "Distant rolling hills silhouette for parallax layer. Muted forestGreen "
+                "#7BA05B and sepia #C8B098. Side-view Cyklo-Siedlce countryside vibe."
+            ),
+            "style_constraints": "Silhouette hills only. Transparent bottom edge for layering.",
+            "output_path": "environment/hills_far.png",
+        },
+        {
+            "id": "env_town_mid",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 128],
+            "description": (
+                "Mid-ground pixel town: small houses, church spire, cheering crowd dots. "
+                "Grand Prix finish-line town aesthetic. goldAmber accents on banners."
+            ),
+            "style_constraints": "Readable at mobile width. Transparent sky area above rooftops.",
+            "output_path": "environment/town_mid.png",
+        },
+        {
+            "id": "env_road_near",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 64],
+            "description": (
+                "Foreground road strip — asphalt pixel texture with center dashed line. "
+                "For parallax bottom layer under cyclist. industrial #4A4A4A road, "
+                "goldAmber #D4A373 center dashes."
+            ),
+            "style_constraints": "Tileable horizontally. Flat perspective road.",
+            "output_path": "environment/road_near.png",
+        },
+
+        # ═══════════════════════════════════════════════════════════
+        # PARTICLES (ADR 014) — Gemini PNG atlas tiles
+        # ═══════════════════════════════════════════════════════════
+        {
+            "id": "particle_atlas",
+            "category": "particle",
+            "model": "gemini",
+            "format": "png",
+            "size": [128, 32],
+            "frames": 4,
+            "frame_width": 32,
+            "frame_height": 32,
+            "description": (
+                "4-tile particle atlas: flame puff, sweat drop, dust puff, heart. "
+                "Each 32×32, pixel-art, black 1px outline. For Skia drawAtlas effects."
+            ),
+            "style_constraints": "4 distinct tiles in a row. No gradients — flat pixels.",
+            "output_path": "particles/particle_atlas.png",
+        },
+        {
+            "id": "map_marker_cyclist",
+            "category": "particle",
+            "model": "gemini",
+            "format": "png",
+            "size": [32, 32],
+            "description": (
+                "Map marker icon — top-down pixel cyclist on bike. goldAmber helmet dot, "
+                "deepSea jersey. For MapLibre symbol layer / marker fallback."
+            ),
+            "style_constraints": "32×32 top-down bike+rider silhouette.",
+            "output_path": "map/marker_cyclist.png",
+        },
+
+        # ═══════════════════════════════════════════════════════════
         # TEXTURES (P2) — Gemini PNG, 128×128 tileable
         # ═══════════════════════════════════════════════════════════
         {
@@ -509,7 +600,7 @@ def get_assets_by_category(category: str) -> list[AssetDef]:
     """Filter assets by category.
 
     Args:
-        category: 'icon', 'sprite', 'expression', 'texture', 'sound'
+        category: 'icon', 'sprite', 'expression', 'texture', 'sound', 'environment', 'particle'
 
     Returns:
         Filtered list of AssetDef dictionaries
@@ -552,6 +643,8 @@ def print_summary():
     icons = get_assets_by_category("icon")
     sprites = get_assets_by_category("sprite")
     expressions = get_assets_by_category("expression")
+    environments = get_assets_by_category("environment")
+    particles = get_assets_by_category("particle")
     textures = get_assets_by_category("texture")
     sounds = get_assets_by_category("sound")
 
@@ -563,11 +656,13 @@ def print_summary():
     print(f"  -> Gemini 3:        {len(gemini_assets)} (sprites, textures, expressions)")
     print()
     print("By category:")
-    print(f"  Icons:       {len(icons)}")
-    print(f"  Sprites:     {len(sprites)}")
-    print(f"  Expressions: {len(expressions)}")
-    print(f"  Textures:    {len(textures)}")
-    print(f"  Sounds:      {len(sounds)}")
+    print(f"  Icons:         {len(icons)}")
+    print(f"  Sprites:       {len(sprites)}")
+    print(f"  Expressions:   {len(expressions)}")
+    print(f"  Environment:   {len(environments)}")
+    print(f"  Particles/Map: {len(particles)}")
+    print(f"  Textures:      {len(textures)}")
+    print(f"  Sounds:        {len(sounds)}")
     print()
 
     # Calculate output sizes
