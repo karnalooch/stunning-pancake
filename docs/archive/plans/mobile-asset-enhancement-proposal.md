@@ -1,9 +1,11 @@
 # Mobile Asset Enhancement Proposal
 
+> **Status:** ⛔ Superseded (2026-06-13) by [ADR 014](../../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) and the active design SSOT [docs/design/DESIGN_SYSTEM_MOBILE.md](../../design/DESIGN_SYSTEM_MOBILE.md). The improved asset pipeline (palette-quant, nearest-neighbor scaling, sprite packing, lossless compression, reproducible manifest, reference-locked frames) and the current palette/theme direction replace this proposal. Note: this doc references the legacy octopath/solar palette and Tamagui, both removed — kept only for historical context.
+>
 > **Project:** SPORT Mobile (Expo/React Native · Unistyles · Octopath HD-2D + Metal Slug Pixel-Arcade)
 > **Date:** 2026-05-04
 > **Author:** Kilo Code (Architect Mode)
-> **Status:** Proposal — awaiting review
+> **Status (original):** Proposal — awaiting review
 
 ---
 

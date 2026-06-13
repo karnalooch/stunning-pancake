@@ -2,9 +2,13 @@
 
 | | |
 |--|--|
-| **Status** | 📦 Snapshot (historyczny mockup SSOT) |
-| **Last reviewed** | 2026-06-03 |
+| **Status** | 📚 Detailed reference appendix (no longer the SSOT) |
+| **Active SSOT** | [docs/design/DESIGN_SYSTEM_MOBILE.md](../design/DESIGN_SYSTEM_MOBILE.md) |
+| **Decision record** | [ADR 014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) · [ADR 006](../adr/006-design-system-stitch.md) |
+| **Last reviewed** | 2026-06-13 |
 | **Redirect** | Implementacja: `mobile/src/theme/stitch.ts` · [adr/006-design-system-stitch.md](../adr/006-design-system-stitch.md) |
+
+> **Uwaga:** Ten dokument nie jest już źródłem prawdy dla kierunku i systemów. Aktualny SSOT to **[docs/design/DESIGN_SYSTEM_MOBILE.md](../design/DESIGN_SYSTEM_MOBILE.md)** (rdzeń komputera rowerowego / nawigacji + skóra pixel-art, edytowalne pola danych, warstwy scen, audio, strefy zaangażowania), a decyzja kierunkowa jest w **[ADR 014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md)**. Poniższa treść zostaje jako szczegółowy referencyjny dodatek (tokeny, komponenty, mockupy). Framing „flat Solar White cards" odnosi się do **chrome UI** komponowanego nad wymienną warstwą sceny/mapy (patrz nowy SSOT §5).
 
 > **App**: Velo Quest — Cycling Performance Platform with HD-2D Retro Pixel-Art Aesthetics
 > **Design Language**: Solar White + Forest Green, retro-gaming UI (Space Grotesk / VT323)
