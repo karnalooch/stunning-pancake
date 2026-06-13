@@ -1,5 +1,5 @@
 // Active Ride HUD — bike-computer grid over map (ADR 014 / DESIGN_SYSTEM_MOBILE §3)
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
@@ -9,6 +9,8 @@ import { EnergyBar } from '../components/effects/EnergyBar';
 import { SpeechBubble } from '../components/narration/SpeechBubble';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { VoiceCueService } from '../services/VoiceCueService';
+import { SoundService } from '../services/SoundService';
 import type { RideMetricsSnapshot } from '../ride/types';
 import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
@@ -133,6 +135,18 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
     liveElevationGainM,
     gpsRecoveryVisible,
   ]);
+
+  const ludicrousSpoken = useRef(false);
+  useEffect(() => {
+    if (showLudicrous && !ludicrousSpoken.current) {
+      ludicrousSpoken.current = true;
+      void SoundService.play('achievement');
+      void VoiceCueService.speak('Szalona prędkość!');
+    }
+    if (!showLudicrous) {
+      ludicrousSpoken.current = false;
+    }
+  }, [showLudicrous]);
 
   return (
     <View style={s.container}>
