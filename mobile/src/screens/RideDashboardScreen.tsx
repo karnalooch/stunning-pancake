@@ -29,7 +29,12 @@ import { usePlatformNotices } from '../hooks/usePlatformNotices';
 import type { ActivitySportType } from '../services/api';
 import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { useGameProgress } from '../hooks/useGameProgress';
 import { SceneBackground } from '../components/scene/SceneBackground';
+import { LevelXpBar } from '../components/game/LevelXpBar';
+import { StreakBadge } from '../components/game/StreakBadge';
+import { DailyQuestCard } from '../components/game/DailyQuestCard';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -315,11 +320,13 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
         (user as { tenant_id?: string } | null)?.tenant_id ?? null,
     );
     const { enabled: immersiveEnabled } = useImmersiveTheme();
+    const { level, xpBar, progression, quests, onStartRide: trackQuestStart } = useGameProgress();
 
     const handleStartRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
+        trackQuestStart();
         onStartRide?.(selectedSport);
-    }, [onStartRide, selectedSport]);
+    }, [onStartRide, selectedSport, trackQuestStart]);
 
     const handleGoToRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
@@ -349,18 +356,21 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                     </View>
                     <Text style={s.headerTitle}>VELO QUEST</Text>
                 </View>
-                <Pressable
-                    style={({ pressed: p }) => [
-                        s.settingsBtn,
-                        p && { transform: [{ translateY: 2 }], opacity: 0.8 },
-                    ]}
-                    onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
-                    }}
-                    accessibilityLabel="Settings"
-                >
-                    <Text style={s.settingsText}>⚙️</Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Pressable
+                        style={({ pressed: p }) => [
+                            s.settingsBtn,
+                            p && { transform: [{ translateY: 2 }], opacity: 0.8 },
+                        ]}
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
+                        }}
+                        accessibilityLabel="Settings"
+                    >
+                        <Text style={s.settingsText}>⚙️</Text>
+                    </Pressable>
+                    <StreakBadge days={progression.streakDays} />
+                </View>
             </View>
 
             {/* Content */}
@@ -407,13 +417,19 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                     ) : (
                         <>
                             <View style={s.heroTop}>
-                                <View>
+                                <View style={{ flex: 1 }}>
                                     <Text style={s.heroGreeting}>Ready to ride?</Text>
                                     <Text style={s.heroName}>{user?.username ?? 'RIDER_01'}</Text>
                                 </View>
-                                <View style={s.lvlBadge}>
-                                    <Text style={s.lvlText}>LVL 42</Text>
-                                </View>
+                                {immersiveEnabled && (
+                                    <CyclistSprite size={48} state="idle" />
+                                )}
+                                <LevelXpBar
+                                    level={level}
+                                    xpCurrent={xpBar.current}
+                                    xpMax={xpBar.max}
+                                    pct={xpBar.pct}
+                                />
                             </View>
                             <View style={s.sportRow}>
                                 {ACTIVITY_SPORT_OPTIONS.map((opt) => (
@@ -440,6 +456,12 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                         </>
                     )}
                 </View>
+
+                {!isRecording && (
+                    <View style={s.section}>
+                        <DailyQuestCard quests={quests.quests} />
+                    </View>
+                )}
 
                 {/* Metric Tiles Grid */}
                 <View style={s.section}>
