@@ -1,0 +1,33 @@
+{
+  "version": 8,
+  "name": "4velo-retro-ride",
+  "metadata": {
+    "description": "Placeholder retro ride map — desaturated OSM raster (ADR 014 §4)"
+  },
+  "sources": {
+    "osm-raster": {
+      "type": "raster",
+      "tiles": ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors"
+    }
+  },
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": { "background-color": "#e8e4d0" }
+    },
+    {
+      "id": "osm-raster",
+      "type": "raster",
+      "source": "osm-raster",
+      "paint": {
+        "raster-saturation": -0.45,
+        "raster-contrast": 0.15,
+        "raster-brightness-min": 0.05,
+        "raster-brightness-max": 0.85
+      }
+    }
+  ]
+}
