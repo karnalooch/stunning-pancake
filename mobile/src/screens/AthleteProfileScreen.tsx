@@ -5,6 +5,11 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { ActivityService, AuthService } from '../services/api';
 import { useMobileI18n } from '../i18n/useI18n';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { useGameProgress } from '../hooks/useGameProgress';
+import { SceneBackground } from '../components/scene/SceneBackground';
+import { LevelXpBar } from '../components/game/LevelXpBar';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -103,6 +108,8 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   const { t } = useMobileI18n();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const { level, xpBar, progression } = useGameProgress();
   const [username, setUsername] = useState(user?.username ?? 'RIDER');
   const [rides, setRides] = useState(0);
   const [distanceKm, setDistanceKm] = useState(0);
@@ -128,6 +135,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
 
   return (
     <SafeAreaView style={s.ct} edges={['top']}>
+      {immersiveEnabled && <SceneBackground sceneId="profile" scrim="soft" />}
       <View style={[s.h, s.sh]}>
         <View style={s.hl}>
           <View style={s.av} />
@@ -139,10 +147,23 @@ export const AthleteProfileScreen: React.FC<Props> = ({
       </View>
       <ScrollView>
         <View style={s.hero}>
-          <View style={s.hi} />
-          <View style={{ flex: 1 }}>
+          {immersiveEnabled ? <CyclistSprite size={64} state="victory" /> : <View style={s.hi} />}
+          <View style={{ flex: 1, gap: 8 }}>
             <Text style={s.hn}>{username}</Text>
             <Text style={s.hs}>{t.profile.warrior.toUpperCase()}</Text>
+            {immersiveEnabled && (
+              <LevelXpBar
+                level={level}
+                xpCurrent={xpBar.current}
+                xpMax={xpBar.max}
+                pct={xpBar.pct}
+              />
+            )}
+            {immersiveEnabled && (
+              <Text style={[s.hs, { color: c.primary }]}>
+                🔥 {progression.streakDays} day streak · {progression.totalRides} rides
+              </Text>
+            )}
           </View>
         </View>
         <View style={s.grid}>

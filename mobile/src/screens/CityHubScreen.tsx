@@ -15,6 +15,12 @@ import {
 import { useI18n } from '../i18n/useI18n';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { useGameProgress } from '../hooks/useGameProgress';
+import { SceneBackground } from '../components/scene/SceneBackground';
+import { SpeechBubble } from '../components/narration/SpeechBubble';
+import { LevelXpBar } from '../components/game/LevelXpBar';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
 
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as any;
@@ -90,6 +96,9 @@ export const CityHubScreen: React.FC<{
     const { t } = useI18n();
     const s = stylesheet;
     const C = theme.colors as any;
+    const { enabled: immersiveEnabled } = useImmersiveTheme();
+    const { level, xpBar } = useGameProgress();
+    const [showMoo, setShowMoo] = useState(false);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [lbLoading, setLbLoading] = useState(true);
     const [cityHub, setCityHub] = useState<CityHubSummary | null>(null);
@@ -119,16 +128,21 @@ export const CityHubScreen: React.FC<{
 
     return (
     <SafeAreaView style={s.container} edges={['top']}>
+        {immersiveEnabled && <SceneBackground sceneId="city_hub" scrim="soft" />}
         <View style={[s.header, s.shadow]}>
             <View style={s.hdrLeft}>
                 <View style={s.avatar} />
                 <Text style={s.hdrTitle}>QUEST VELOS</Text>
             </View>
-            <View style={s.lvlBadge}>
-                <Text style={s.lvlText}>LVL 42</Text>
-            </View>
+            <LevelXpBar level={level} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
         </View>
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+            {immersiveEnabled && (
+                <>
+                    <SpeechBubble text={showMoo ? 'MOO!' : ''} />
+                    {showMoo && <CyclistSprite size={40} state="idle" />}
+                </>
+            )}
             {/* City of the Week */}
             <View style={[s.banner, s.shadow]}>
                 <View style={s.bannerImg}>
@@ -143,10 +157,10 @@ export const CityHubScreen: React.FC<{
 
             {/* City Wars */}
             <View style={[s.vsCard, s.shadow]}>
-                <View style={s.vsHeader}>
+                <Pressable style={s.vsHeader} onPress={() => setShowMoo((v) => !v)}>
                     <Text style={{ fontSize: 20 }}>⚔️</Text>
                     <Text style={s.vsTitle}>City Wars</Text>
-                </View>
+                </Pressable>
                 <View style={s.vsRow}>
                     <View>
                         <Text style={s.vsCity}>{wars?.tenant_a?.name ?? '—'}</Text>

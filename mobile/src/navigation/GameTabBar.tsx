@@ -12,6 +12,8 @@ import { useUnistyles } from 'react-native-unistyles';
 import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
 import { useI18n } from '../i18n/useI18n';
+import { PixelTabIcon } from '../components/navigation/PixelTabIcon';
+import { SoundService } from '../services/SoundService';
 
 const TAB_ICONS = ['🚴', '🏆', '🗺️', '👤'] as const;
 export const GameTabBar: React.FC<BottomTabBarProps> = ({
@@ -58,6 +60,7 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
           });
           if (!isFocused && !event.defaultPrevented) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
+            SoundService.play('ui_click').catch(() => {});
             navigation.navigate(route.name);
           }
         };
@@ -89,9 +92,12 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
               },
             ]}
           >
-            <Text style={{ fontSize: 20, marginBottom: 2, opacity: isFocused ? 1 : 0.5 }}>
-              {tabConfig.icon}
-            </Text>
+            <PixelTabIcon
+              routeName={route.name}
+              focused={isFocused}
+              activeColor={c.primary}
+              inactiveColor={c.secondary}
+            />
             <Text
               style={{
                 fontSize: 10,

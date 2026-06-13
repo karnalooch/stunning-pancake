@@ -5,6 +5,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
 import { MarketplaceScreen } from './MarketplaceScreen';
 import { ExploreMapScreen } from './ExploreMapScreen';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { SceneBackground } from '../components/scene/SceneBackground';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -30,10 +32,12 @@ const stylesheet = StyleSheet.create((theme) => {
 export const ExploreHubScreen: React.FC = () => {
   const { t } = useI18n();
   const s = stylesheet;
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
   const [tab, setTab] = useState<'shop' | 'map'>('shop');
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
+      {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
       <View style={s.tabs}>
         <Pressable
           style={[s.tab, tab === 'shop' && s.tabOn]}
