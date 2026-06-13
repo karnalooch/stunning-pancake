@@ -1,0 +1,13 @@
+appId: ${MAESTRO_APP_ID}
+---
+- launchApp
+- assertVisible: "VELO QUEST"
+- tapOn:
+    text: "Settings"
+    optional: true
+- tapOn:
+    text: "⚙️"
+    optional: true
+- assertVisible:
+    text: "Immersive pixel theme"
+    optional: true

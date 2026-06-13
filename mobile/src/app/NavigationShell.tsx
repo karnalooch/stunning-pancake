@@ -20,6 +20,7 @@ import { SegmentsScreen } from '../screens/SegmentsScreen';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useMobileI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
+import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
 import type { ActivitySportType } from '../services/api';
 import { ActivityService } from '../services/api';
 import { captureRef } from 'react-native-view-shot';
@@ -91,6 +92,7 @@ export function NavigationShell({
   const shareCardRef = useRef<View>(null);
   const { t: mt } = useMobileI18n();
   useFrameBudgetMonitor(isRecording && !ridePaused);
+  useMotionDegradeMonitor(isRecording && !ridePaused);
 
   const gpsRecoveryProps = {
     gpsRecoveryVisible,

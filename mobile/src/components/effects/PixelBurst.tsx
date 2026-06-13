@@ -6,6 +6,8 @@ import Animated, {
   withDelay,
   withSpring,
 } from 'react-native-reanimated';
+import { useMotionPolicy } from '../../hooks/useMotionPolicy';
+import { useMotionDegradeMonitor } from '../../hooks/useMotionDegrade';
 
 interface PixelBurstProps {
   trigger: boolean;
@@ -18,7 +20,9 @@ export const PixelBurst: React.FC<PixelBurstProps> = ({
   color = '#D4A373',
   count = 8,
 }) => {
-  if (!trigger) return null;
+  const { allowParticles } = useMotionPolicy();
+  const degraded = useMotionDegradeMonitor(false);
+  if (!trigger || !allowParticles || degraded) return null;
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>

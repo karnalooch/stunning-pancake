@@ -7,6 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { useMotionPolicy } from '../../hooks/useMotionPolicy';
 
 interface CyclistSpriteProps {
   size?: number;
@@ -18,8 +19,13 @@ export const CyclistSprite: React.FC<CyclistSpriteProps> = ({
   state = 'cruise',
 }) => {
   const bounce = useSharedValue(0);
+  const { allowSpriteAnim } = useMotionPolicy();
 
   useEffect(() => {
+    if (!allowSpriteAnim) {
+      bounce.value = 0;
+      return;
+    }
     bounce.value = withRepeat(
       withSequence(
         withTiming(-3, { duration: state === 'attack' ? 120 : 220 }),
@@ -28,7 +34,7 @@ export const CyclistSprite: React.FC<CyclistSpriteProps> = ({
       -1,
       true,
     );
-  }, [bounce, state]);
+  }, [bounce, state, allowSpriteAnim]);
 
   const anim = useAnimatedStyle(() => ({
     transform: [{ translateY: bounce.value }],
