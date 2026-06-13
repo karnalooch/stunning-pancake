@@ -64,6 +64,7 @@ from asset_definitions import (
     print_summary as print_asset_summary,
 )
 from generators import SFX_PARAMS, DeepSeekClient, GeminiClient
+from nano_banana_prompts import build_prompt, sort_assets_for_generation, validate_ssot_coverage
 
 # ─── Logging ─────────────────────────────────────────────────────
 logging.basicConfig(
@@ -75,6 +76,7 @@ logger = logging.getLogger("generate_assets")
 
 # ─── Constants ───────────────────────────────────────────────────
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parent.parent / "assets" / "generated"
+REPO_ROOT = Path(__file__).resolve().parent.parent
 BATCH_DELAY_SECONDS = 1.0  # Delay between API calls to respect rate limits
 
 
@@ -87,13 +89,13 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python scripts/generate_assets.py                        # All assets
+  python scripts/generate_assets.py                        # All assets (overwrites existing)
   python scripts/generate_assets.py --dry-run              # Preview only
   python scripts/generate_assets.py --category icons       # Icons only
   python scripts/generate_assets.py --category sprites     # Sprites only
   python scripts/generate_assets.py --asset tab_home       # Single asset
   python scripts/generate_assets.py --asset tab_home,grade_s,cyclist_sheet
-  python scripts/generate_assets.py --skip-existing        # Skip already-generated
+  python scripts/generate_assets.py --skip-existing        # Keep files already on disk
   python scripts/generate_assets.py --no-deepseek          # Skip DeepSeek calls
   python scripts/generate_assets.py --no-gemini            # Skip Gemini calls
         """,
@@ -125,7 +127,7 @@ Examples:
     parser.add_argument(
         "--skip-existing",
         action="store_true",
-        help="Skip assets that already exist in the output directory.",
+        help="Skip assets that already exist (default: overwrite existing files).",
     )
     parser.add_argument(
         "--no-deepseek",
@@ -152,6 +154,23 @@ Examples:
         "--summary",
         action="store_true",
         help="Print asset definition summary and exit.",
+    )
+    parser.add_argument(
+        "--validate-only",
+        action="store_true",
+        help="Verify every Gemini asset has a SSOT prompt in MOBILE_ASSET_NANO_BANANA_PROMPTS.md, then exit.",
+    )
+    parser.add_argument(
+        "--dump-prompt",
+        type=str,
+        default=None,
+        metavar="ASSET_ID",
+        help="Print the full Nano Banana prompt for one asset and exit.",
+    )
+    parser.add_argument(
+        "--save-prompts",
+        action="store_true",
+        help="Write full prompts to assets/generated/prompts/<id>.txt during generation.",
     )
     return parser
 
@@ -238,6 +257,15 @@ class AssetGenerator:
             logger.info("Gemini client initialized (%s)", backend)
         return self._gemini
 
+    def _resolve_output_path(self, asset: dict[str, Any]) -> Path:
+        """Resolve output path; optional output_base is relative to repo root."""
+        base_key = asset.get("output_base")
+        if base_key:
+            base = REPO_ROOT / base_key.replace("/", os.sep)
+        else:
+            base = self.output_dir
+        return base / asset["output_path"]
+
     # ── Main Generation Loop ─────────────────────────────────────
 
     def generate_all(self, assets: list[dict[str, Any]]) -> dict[str, Any]:
@@ -257,17 +285,19 @@ class AssetGenerator:
             model = asset["model"]
 
             # Check if this model is enabled
-            if model == "deepseek" and not self.enable_deepseek:
+            if asset_id == "sfx_params":
+                pass  # local jsfxr JSON — always allowed
+            elif model == "deepseek" and not self.enable_deepseek:
                 logger.info("[%d/%d] Skipping %s (--no-deepseek)", i, total, asset_id)
                 self.skipped.append(asset_id)
                 continue
-            if model == "gemini" and not self.enable_gemini:
+            elif model == "gemini" and not self.enable_gemini:
                 logger.info("[%d/%d] Skipping %s (--no-gemini)", i, total, asset_id)
                 self.skipped.append(asset_id)
                 continue
 
             # Check skip-existing
-            output_path = self.output_dir / asset["output_path"]
+            output_path = self._resolve_output_path(asset)
             if self.skip_existing and output_path.exists():
                 logger.info("[%d/%d] Skipping %s (already exists)", i, total, asset_id)
                 self.skipped.append(asset_id)
@@ -307,7 +337,7 @@ class AssetGenerator:
         asset_id = asset["id"]
         model = asset["model"]
         fmt = asset["format"]
-        output_path = self.output_dir / asset["output_path"]
+        output_path = self._resolve_output_path(asset)
 
         if self.dry_run:
             self._dry_run_preview(asset)
@@ -316,12 +346,12 @@ class AssetGenerator:
         # Ensure subdirectory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if model == "deepseek" and fmt == "svg":
+        if asset_id == "sfx_params":
+            self._generate_sfx_params(output_path)
+        elif model == "deepseek" and fmt == "svg":
             self._generate_svg(asset, output_path)
         elif model == "gemini" and fmt == "png":
             self._generate_png(asset, output_path)
-        elif asset_id == "sfx_params":
-            self._generate_sfx_params(output_path)
         else:
             raise ValueError(
                 f"Unknown asset type: model={model}, format={fmt}"
@@ -339,13 +369,13 @@ class AssetGenerator:
         logger.debug("  Wrote SVG to %s (%d bytes)", output_path, len(svg_content))
 
     def _generate_png(self, asset: dict[str, Any], output_path: Path) -> None:
-        """Generate PNG via Gemini."""
-        category = asset["category"]
+        """Generate PNG via Gemini (prompts from MOBILE_ASSET_NANO_BANANA_PROMPTS.md SSOT)."""
+        png_bytes = self.gemini.generate_image(asset)
 
-        if category == "sprite":
-            png_bytes = self.gemini.generate_sprite_sheet(asset)
-        else:
-            png_bytes = self.gemini.generate_image(asset)
+        if getattr(self, "_save_prompts", False):
+            prompt_path = self.output_dir / "prompts" / f"{asset['id']}.txt"
+            prompt_path.parent.mkdir(parents=True, exist_ok=True)
+            prompt_path.write_text(build_prompt(asset, strict=True), encoding="utf-8")
 
         output_path.write_bytes(png_bytes)
         logger.debug("  Wrote PNG to %s (%d bytes)", output_path, len(png_bytes))
@@ -385,9 +415,9 @@ class AssetGenerator:
             "generated_at": datetime.now(UTC).isoformat(),
             "project": "SPORT Mobile",
             "description": (
-                "Auto-generated pixel-art assets for the SPORT cycling app. "
-                "Generated via DeepSeek v4 Pro (SVG icons) and "
-                "Gemini 3 (sprites, textures, expressions)."
+                "Cyklo-Siedlce Grand Prix pixel-art assets. "
+                "Generated via Nano Banana Pro (gemini-3-pro-image) "
+                "with MOBILE_ASSET_NANO_BANANA_PROMPTS.md SSOT."
             ),
             "total_assets": len(self.generated),
             "assets": [],
@@ -398,7 +428,7 @@ class AssetGenerator:
             if asset_id not in self.generated:
                 continue
 
-            output_path = self.output_dir / asset["output_path"]
+            output_path = self._resolve_output_path(asset)
             file_size = output_path.stat().st_size if output_path.exists() else 0
 
             manifest["assets"].append({
@@ -489,6 +519,11 @@ def main() -> int:
         print_asset_summary()
         return 0
 
+    if args.dump_prompt:
+        asset = get_asset_by_id(args.dump_prompt.strip())
+        print(build_prompt(asset, strict=True))
+        return 0
+
     # Determine which assets to generate
     if args.asset:
         asset_ids = [a.strip() for a in args.asset.split(",")]
@@ -496,10 +531,25 @@ def main() -> int:
     elif args.category:
         assets = get_assets_by_category(args.category)
     else:
-        assets = get_all_assets()
+        assets = sort_assets_for_generation(get_all_assets())
+        # sfx_params last (local JSON)
+        assets = [a for a in assets if a["id"] != "sfx_params"] + [
+            a for a in get_all_assets() if a["id"] == "sfx_params"
+        ]
 
     if not assets:
         print("No assets to generate. Check --category or --asset filters.")
+        return 0
+
+    gemini_ids = [a["id"] for a in assets if a.get("model") == "gemini"]
+    missing = validate_ssot_coverage(gemini_ids)
+    if missing:
+        print("Missing SSOT prompts in docs/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md:")
+        for aid in missing:
+            print(f"  - {aid}")
+        return 2
+    if args.validate_only:
+        print(f"OK All {len(gemini_ids)} Gemini assets have SSOT prompts.")
         return 0
 
     # Print what we're about to do
@@ -514,6 +564,7 @@ def main() -> int:
     print(f"  DeepSeek v4 Pro:  {model_counts.get('deepseek', 0)}")
     print(f"  Gemini 3:         {model_counts.get('gemini', 0)}")
     print(f"Mode: {'DRY RUN' if args.dry_run else 'LIVE'}")
+    print(f"Overwrite: {'no (--skip-existing)' if args.skip_existing else 'yes (default)'}")
     print(f"Output: {args.output}")
     print(f"{'-' * 40}\n")
 
@@ -526,6 +577,7 @@ def main() -> int:
         enable_gemini=not args.no_gemini,
         batch_delay=args.delay,
     )
+    generator._save_prompts = args.save_prompts
 
     # Run generation
     try:

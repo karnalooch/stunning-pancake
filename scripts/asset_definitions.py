@@ -57,8 +57,8 @@ def get_all_assets() -> list[AssetDef]:
         {
             "id": "tab_home",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Bicycle wheel hub with spokes. Pixel-art home icon for cycling app "
@@ -68,13 +68,13 @@ def get_all_assets() -> list[AssetDef]:
                 "background (#0B1D33)."
             ),
             "style_constraints": "Symmetrical wheel design. Use goldAmber for active state.",
-            "output_path": "icons/tab_home.svg",
+            "output_path": "icons/tab_home.png",
         },
         {
             "id": "tab_history",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Route trail with waypoint dots. Pixel-art history icon for cycling "
@@ -83,13 +83,13 @@ def get_all_assets() -> list[AssetDef]:
                 "Sepia (#C8B098) trail line, cream (#F5E6CC) waypoints."
             ),
             "style_constraints": "Winding path, 3-4 waypoint dots. Clean pixel stepping for the trail.",
-            "output_path": "icons/tab_history.svg",
+            "output_path": "icons/tab_history.png",
         },
         {
             "id": "tab_ranking",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Podium with small bicycle silhouette. Pixel-art leaderboard icon. "
@@ -98,13 +98,13 @@ def get_all_assets() -> list[AssetDef]:
                 "sepia (#C8B098) 3rd."
             ),
             "style_constraints": "Three distinct podium heights. Small bike icon on top.",
-            "output_path": "icons/tab_ranking.svg",
+            "output_path": "icons/tab_ranking.png",
         },
         {
             "id": "tab_rewards",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Trophy cup with bike chain detail. Pixel-art rewards icon. "
@@ -113,13 +113,13 @@ def get_all_assets() -> list[AssetDef]:
                 "highlights."
             ),
             "style_constraints": "Trophy silhouette. Chain link pattern on cup body.",
-            "output_path": "icons/tab_rewards.svg",
+            "output_path": "icons/tab_rewards.png",
         },
         {
             "id": "tab_profile",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Cycling helmet/visor. Pixel-art profile icon. A stylized cycling "
@@ -128,7 +128,7 @@ def get_all_assets() -> list[AssetDef]:
                 "dark (#0B1D33) vents."
             ),
             "style_constraints": "Aerodynamic helmet shape. Visor and vent details.",
-            "output_path": "icons/tab_profile.svg",
+            "output_path": "icons/tab_profile.png",
         },
 
         # ═══════════════════════════════════════════════════════════
@@ -137,8 +137,8 @@ def get_all_assets() -> list[AssetDef]:
         {
             "id": "grade_s",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [32, 32],
             "description": (
                 "S-rank gold badge with ornate border. Top-tier achievement badge "
@@ -148,13 +148,13 @@ def get_all_assets() -> list[AssetDef]:
                 "pixelBlack (#000000) outline."
             ),
             "style_constraints": "Ornate border. Large bold 'S'. Chain link border pattern.",
-            "output_path": "icons/grade_s.svg",
+            "output_path": "icons/grade_s.png",
         },
         {
             "id": "grade_a",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [32, 32],
             "description": (
                 "A-rank silver badge. Second-tier achievement badge. "
@@ -162,46 +162,46 @@ def get_all_assets() -> list[AssetDef]:
                 "Silver (#A0A0A0) main color, cream (#F5E6CC) highlight."
             ),
             "style_constraints": "Clean silver badge. Bold 'A' letter.",
-            "output_path": "icons/grade_a.svg",
+            "output_path": "icons/grade_a.png",
         },
         {
             "id": "grade_b",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [32, 32],
             "description": (
                 "B-rank bronze badge. Third-tier achievement badge. "
                 "Bold 'B' letter, warm bronze color using warning (#E8A840)."
             ),
             "style_constraints": "Warm bronze badge. Bold 'B' letter.",
-            "output_path": "icons/grade_b.svg",
+            "output_path": "icons/grade_b.png",
         },
         {
             "id": "grade_c",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [32, 32],
             "description": (
                 "C-rank grey badge. Lower-tier achievement badge. "
                 "Bold 'C' letter, industrial grey color (#4A4A4A)."
             ),
             "style_constraints": "Grey badge. Bold 'C' letter. Simple border.",
-            "output_path": "icons/grade_c.svg",
+            "output_path": "icons/grade_c.png",
         },
         {
             "id": "grade_d",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [32, 32],
             "description": (
                 "D-rank red badge. Lowest achievement tier. "
                 "Bold 'D' letter, error red (#CC4444). Simple border."
             ),
             "style_constraints": "Red badge. Bold 'D' letter. Simple border.",
-            "output_path": "icons/grade_d.svg",
+            "output_path": "icons/grade_d.png",
         },
 
         # ═══════════════════════════════════════════════════════════
@@ -210,8 +210,8 @@ def get_all_assets() -> list[AssetDef]:
         {
             "id": "power_speed",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Winged bicycle wheel — speed boost power-up. "
@@ -219,13 +219,13 @@ def get_all_assets() -> list[AssetDef]:
                 "Gold (#D4A373) wheel, goldLight (#EDD9B0) wings."
             ),
             "style_constraints": "Wheel + wings combo. Dynamic speed feel.",
-            "output_path": "icons/power_speed.svg",
+            "output_path": "icons/power_speed.png",
         },
         {
             "id": "power_shield",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Cycling helmet as shield — protection power-up. "
@@ -233,13 +233,13 @@ def get_all_assets() -> list[AssetDef]:
                 "Forest green (#7BA05B) with gold (#D4A373) trim."
             ),
             "style_constraints": "Helmet-as-shield concept. Protective feel.",
-            "output_path": "icons/power_shield.svg",
+            "output_path": "icons/power_shield.png",
         },
         {
             "id": "power_double_xp",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Two crossed bicycles — double XP power-up. "
@@ -247,13 +247,13 @@ def get_all_assets() -> list[AssetDef]:
                 "Gold (#D4A373) and goldLight (#EDD9B0)."
             ),
             "style_constraints": "Two bikes crossing. Clean recognizable bike silhouette.",
-            "output_path": "icons/power_double_xp.svg",
+            "output_path": "icons/power_double_xp.png",
         },
         {
             "id": "power_gps",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [24, 24],
             "description": (
                 "Compass rose — GPS lock power-up. "
@@ -262,7 +262,7 @@ def get_all_assets() -> list[AssetDef]:
                 "deep sea (#0B1D33) background."
             ),
             "style_constraints": "Compass rose with 4 or 8 points. Navigation feel.",
-            "output_path": "icons/power_gps.svg",
+            "output_path": "icons/power_gps.png",
         },
 
         # ═══════════════════════════════════════════════════════════
@@ -271,8 +271,8 @@ def get_all_assets() -> list[AssetDef]:
         {
             "id": "currency_xp",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [16, 16],
             "description": (
                 "XP orb — gold cube with 'XP' text. Small pixel-art experience "
@@ -281,13 +281,13 @@ def get_all_assets() -> list[AssetDef]:
                 "Gold (#D4A373) cube, goldLight (#EDD9B0) top face."
             ),
             "style_constraints": "Tiny cube, readable at 16px. Gold colors.",
-            "output_path": "icons/currency_xp.svg",
+            "output_path": "icons/currency_xp.png",
         },
         {
             "id": "currency_coin",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [16, 16],
             "description": (
                 "Gold coin — pixel circle with star center. "
@@ -296,13 +296,13 @@ def get_all_assets() -> list[AssetDef]:
                 "pixelBlack (#000000) outline."
             ),
             "style_constraints": "Round pixel circle. Star in center. Gold colors.",
-            "output_path": "icons/currency_coin.svg",
+            "output_path": "icons/currency_coin.png",
         },
         {
             "id": "currency_energy",
             "category": "icon",
-            "model": "deepseek",
-            "format": "svg",
+            "model": "gemini",
+            "format": "png",
             "size": [16, 16],
             "description": (
                 "Energy bolt — jagged lightning shape. "
@@ -310,7 +310,7 @@ def get_all_assets() -> list[AssetDef]:
                 "Warning amber (#E8A840) body, goldLight (#EDD9B0) highlight."
             ),
             "style_constraints": "Jagged/z字形 lightning. Sharp angles only.",
-            "output_path": "icons/currency_energy.svg",
+            "output_path": "icons/currency_energy.png",
         },
 
         # ═══════════════════════════════════════════════════════════
@@ -568,13 +568,68 @@ def get_all_assets() -> list[AssetDef]:
             "output_path": "textures/wood_grain.png",
         },
 
+
+        {
+            "id": "active_ride_hud_mockup",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [1080, 1920],
+            "description": "Active Ride HUD mockup — marketing/onboarding 9:16 layout reference.",
+            "style_constraints": "Full-screen HUD mockup per MOBILE_ASSET_NANO_BANANA_PROMPTS §16b.",
+            "output_path": "marketing/active_ride_hud_mockup.png",
+        },
+        {
+            "id": "app_icon",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [1024, 1024],
+            "description": "App Store icon — caricatured hero on cobblestone street.",
+            "style_constraints": "Phase 14 native icon.",
+            "output_path": "icon.png",
+            "output_base": "mobile/assets",
+        },
+        {
+            "id": "splash_icon",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [1280, 1280],
+            "description": "Launch splash — hero mid-race through Siedlce street scene.",
+            "style_constraints": "Phase 14 splash.",
+            "output_path": "splash-icon.png",
+            "output_base": "mobile/assets",
+        },
+        {
+            "id": "adaptive_icon",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [432, 432],
+            "description": "Android adaptive icon foreground — hero bust in safe zone.",
+            "style_constraints": "Phase 14 adaptive foreground.",
+            "output_path": "adaptive-icon.png",
+            "output_base": "mobile/assets",
+        },
+        {
+            "id": "favicon",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [48, 48],
+            "description": "Web favicon — simplified red helmet on deep sea.",
+            "style_constraints": "Phase 14 favicon.",
+            "output_path": "favicon.png",
+            "output_base": "mobile/assets",
+        },
         # ═══════════════════════════════════════════════════════════
         # SOUND PARAMETERS (P0) — Pre-defined jsfxr params
         # ═══════════════════════════════════════════════════════════
         {
             "id": "sfx_params",
             "category": "sound",
-            "model": "deepseek",  # For manifest generation
+            "model": "local",  # jsfxr presets, no API
             "format": "json",
             "size": None,
             "description": "jsfxr parameter presets for 9 8-bit arcade sound effects.",

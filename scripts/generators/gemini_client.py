@@ -16,27 +16,27 @@ Env:
 
 from __future__ import annotations
 
-import base64
 import io
 import logging
+import sys
 import time
+from pathlib import Path
 from typing import Any
 
 from PIL import Image
 
+_SCRIPT_DIR = Path(__file__).resolve().parent.parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from nano_banana_prompts import (  # noqa: E402
+    REFERENCE_PNG,
+    build_prompt,
+    character_lock_path,
+)
+
 logger = logging.getLogger(__name__)
 
-PIXEL_ART = """
-CRITICAL: Pixel art for retro cycling game "Cyklo-Siedlce Grand Prix".
-Flat colors ONLY — NO gradients, NO blur, NO anti-aliasing, NO text labels, NO watermarks.
-All shapes: 1px BLACK (#000000) outlines.
-Colors ONLY: #D4A373 #EDD9B0 #7BA05B #F5E6CC #C8B098 #0B1D33 #2D2418 #CC4444 #E8A840 #A0A0A0 #4A4A4A #2B303A
-ZERO rounded corners. Blocky shapes. Octopath HD-2D + Metal Slug cycling aesthetic.
-Polish town Grand Prix vibe: gold banners, church spire, cheering crowd, road bike, gold helmet.
-Transparent background unless the asset is a full-bleed sky/texture strip.
-"""
-
-# Nano Banana model ids (Gemini native image generation)
 NANO_BANANA_PRO = "gemini-3-pro-image"
 NANO_BANANA_2 = "gemini-3.1-flash-image"
 NANO_BANANA = "gemini-2.5-flash-image"
@@ -44,8 +44,8 @@ IMAGEN_MODEL = "imagen-4.0-fast-generate-001"
 
 
 class GeminiClient:
-    MAX_RETRIES = 2
-    RETRY_DELAYS = (3.0, 8.0)
+    MAX_RETRIES = 3
+    RETRY_DELAYS = (3.0, 8.0, 15.0)
 
     def __init__(
         self,
@@ -62,73 +62,88 @@ class GeminiClient:
         self.image_model = model or NANO_BANANA_PRO
         if not self.use_imagen and "image" not in self.image_model and "imagen" not in self.image_model:
             self.image_model = NANO_BANANA_PRO
+        self._ref_part: Any | None = None
         backend = f"Imagen 4 ({IMAGEN_MODEL})" if self.use_imagen else f"Nano Banana ({self.image_model})"
         logger.info("Image backend ready: %s", backend)
 
     def generate_image(self, d: dict[str, Any]) -> bytes:
-        return self._gen(d)
+        w, h = d.get("size", [64, 64])
+        if d.get("category") == "sprite" and d.get("frames"):
+            frames = int(d["frames"])
+            fw = int(d.get("frame_width", 64))
+            fh = int(d.get("frame_height", 64))
+            w, h = frames * fw, fh
+        return self._gen(d, w, h)
 
     def generate_sprite_sheet(self, d: dict[str, Any]) -> bytes:
-        frames = d.get("frames", 4)
-        fw = d.get("frame_width", 64)
-        fh = d.get("frame_height", 64)
-        d2 = dict(d)
-        d2["description"] = (
-            f"{d.get('description', '')} "
-            f"SPRITE SHEET: exactly {frames} animation frames in ONE horizontal row, "
-            f"each frame {fw}x{fh}px, total canvas {frames * fw}x{fh}px. "
-            f"Frames are evenly spaced side-by-side with NO gaps, NO text, NO labels. "
-            f"Same character size and palette in every frame."
-        )
-        d2["size"] = [frames * fw, fh]
-        return self._gen(d2)
+        """Alias — SSOT prompts already describe sheet layout; no legacy description injection."""
+        return self.generate_image(d)
 
-    def _gen(self, d: dict[str, Any]) -> bytes:
-        w, h = d.get("size", [64, 64])
-        prompt = self._prompt(d)
+    def _gen(self, d: dict[str, Any], target_w: int, target_h: int) -> bytes:
+        prompt = build_prompt(d, strict=True)
+        asset_id = d.get("id", "?")
+        logger.debug("Prompt for %s (%d chars):\n%s", asset_id, len(prompt), prompt[:500])
+
+        last_error: Exception | None = None
         for attempt in range(self.MAX_RETRIES):
             try:
-                png = self._gen_imagen(prompt) if self.use_imagen else self._gen_nano_banana(prompt)
+                png = (
+                    self._gen_imagen(prompt)
+                    if self.use_imagen
+                    else self._gen_nano_banana(prompt, asset_id=asset_id)
+                )
                 if png:
-                    logger.info("Generated %dx%d (%d bytes)", w, h, len(png))
-                    return self._resize(png, w, h)
+                    fitted = self._fit_pixel_art(png, target_w, target_h)
+                    logger.info(
+                        "Generated %s -> %dx%d (%d bytes raw, %d bytes fitted)",
+                        asset_id,
+                        target_w,
+                        target_h,
+                        len(png),
+                        len(fitted),
+                    )
+                    return fitted
+                last_error = RuntimeError("API returned no image bytes")
             except Exception as exc:
-                logger.warning("Attempt %d/%d failed: %s", attempt + 1, self.MAX_RETRIES, exc)
+                last_error = exc
+                logger.warning("Attempt %d/%d failed for %s: %s", attempt + 1, self.MAX_RETRIES, asset_id, exc)
                 if attempt < self.MAX_RETRIES - 1:
-                    time.sleep(self.RETRY_DELAYS[attempt])
-        logger.error("All attempts failed — writing placeholder")
-        return self._placeholder(w, h)
+                    time.sleep(self.RETRY_DELAYS[min(attempt, len(self.RETRY_DELAYS) - 1)])
 
-    def _prompt(self, d: dict[str, Any]) -> str:
-        w, h = d.get("size", [64, 64])
-        return (
-            f"Pixel art asset for CYCLING mobile game Cyklo-Siedlce Grand Prix. "
-            f"Output exactly {w}x{h} pixels. "
-            f"{d.get('description', '')} "
-            f"{d.get('style_constraints', '')} "
-            f"{PIXEL_ART}"
-        )
+        raise RuntimeError(f"Nano Banana failed for {asset_id} after {self.MAX_RETRIES} attempts: {last_error}")
 
-    def _gen_nano_banana(self, prompt: str) -> bytes | None:
-        """Gemini native image generation (Nano Banana family)."""
-        # Preferred: Interactions API (documented for Nano Banana models)
-        try:
-            interaction = self._c.interactions.create(
-                model=self.image_model,
-                input=prompt,
-            )
-            out = getattr(interaction, "output_image", None)
-            if out is not None and getattr(out, "data", None):
-                return base64.b64decode(out.data)
-        except Exception as exc:
-            logger.debug("interactions.create failed (%s), trying generate_content", exc)
-
-        # Fallback: generate_content with IMAGE modality
+    def _reference_part(self) -> Any | None:
+        if self.use_imagen or not REFERENCE_PNG.exists():
+            return None
+        if self._ref_part is not None:
+            return self._ref_part
         from google.genai import types
+
+        ref_bytes = REFERENCE_PNG.read_bytes()
+        self._ref_part = types.Part.from_bytes(data=ref_bytes, mime_type="image/png")
+        logger.info("Attached reference: %s", REFERENCE_PNG.name)
+        return self._ref_part
+
+    def _gen_nano_banana(self, prompt: str, asset_id: str = "") -> bytes | None:
+        """Gemini native image generation — reference sheet + optional character lock."""
+        from google.genai import types
+
+        ref = self._reference_part()
+        if ref is None:
+            raise RuntimeError(f"Reference PNG missing: {REFERENCE_PNG}")
+
+        contents: list[Any] = [ref]
+        lock = character_lock_path(asset_id) if asset_id else None
+        if lock is not None:
+            lock_bytes = lock.read_bytes()
+            contents.append(types.Part.from_bytes(data=lock_bytes, mime_type="image/png"))
+            logger.info("Attached character lock: %s -> %s", asset_id, lock.name)
+
+        contents.append(prompt)
 
         response = self._c.models.generate_content(
             model=self.image_model,
-            contents=prompt,
+            contents=contents,
             config=types.GenerateContentConfig(
                 response_modalities=["IMAGE"],
             ),
@@ -157,6 +172,8 @@ class GeminiClient:
                 if inline is not None and getattr(inline, "data", None):
                     data = inline.data
                     if isinstance(data, str):
+                        import base64
+
                         return base64.b64decode(data)
                     return bytes(data)
                 if hasattr(part, "as_image"):
@@ -170,22 +187,35 @@ class GeminiClient:
         return None
 
     @staticmethod
-    def _resize(data: bytes, w: int, h: int) -> bytes:
-        try:
-            img = Image.open(io.BytesIO(data)).convert("RGBA")
-            if img.size != (w, h):
-                img = img.resize((w, h), Image.NEAREST)
-            buf = io.BytesIO()
-            img.save(buf, format="PNG", optimize=True)
-            return buf.getvalue()
-        except Exception:
-            return data
+    def _fit_pixel_art(data: bytes, target_w: int, target_h: int) -> bytes:
+        """Center-crop to target aspect ratio, then nearest-neighbor resize to exact px."""
+        img = Image.open(io.BytesIO(data)).convert("RGBA")
+        src_w, src_h = img.size
+        if (src_w, src_h) == (target_w, target_h):
+            return GeminiClient._save_png(img)
+
+        logger.info("Fitting API output %dx%d -> %dx%d", src_w, src_h, target_w, target_h)
+        target_ar = target_w / target_h
+        src_ar = src_w / src_h
+
+        if abs(src_ar - target_ar) > 0.05:
+            if src_ar > target_ar:
+                new_w = max(1, int(src_h * target_ar))
+                left = (src_w - new_w) // 2
+                img = img.crop((left, 0, left + new_w, src_h))
+            else:
+                new_h = max(1, int(src_w / target_ar))
+                top = (src_h - new_h) // 2
+                img = img.crop((0, top, src_w, top + new_h))
+
+        if img.size != (target_w, target_h):
+            img = img.resize((target_w, target_h), Image.NEAREST)
+        return GeminiClient._save_png(img)
 
     @staticmethod
-    def _placeholder(w: int, h: int) -> bytes:
-        img = Image.new("RGBA", (w, h), (11, 29, 51, 255))
+    def _save_png(img: Image.Image) -> bytes:
         buf = io.BytesIO()
-        img.save(buf, format="PNG")
+        img.save(buf, format="PNG", optimize=True)
         return buf.getvalue()
 
     def health_check(self) -> bool:
@@ -197,9 +227,13 @@ class GeminiClient:
                     config={"number_of_images": 1},
                 )
                 return bool(r.generated_images)
-            self._c.interactions.create(
+            ref = self._reference_part()
+            from google.genai import types
+
+            self._c.models.generate_content(
                 model=self.image_model,
-                input="1x1 red pixel art square",
+                contents=[ref, "1x1 red pixel art square"],
+                config=types.GenerateContentConfig(response_modalities=["IMAGE"]),
             )
             return True
         except Exception:

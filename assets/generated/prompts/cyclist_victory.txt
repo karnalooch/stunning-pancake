@@ -1,0 +1,64 @@
+[Reference — §1]
+The visual target is the user-authored concept frame:
+
+
+
+docs/design/reference/cyklo-siedlce-grand-prix.png — attach this image as an input on **every** Nano Banana request. It locks art direction, palette, hero design and crowd/town energy. Without it, the model drifts to generic pixel art.
+
+[Hero character bible — §2]
+The hero is **configurable per player**. What is **locked canon** (never changes) is the silhouette, proportions and perspective; what is **theming** (driven by the onboarding city / customization) is the helmet color and the city text on the jersey.
+
+**Locked canon (every cyclist asset):**
+
+- **Proportions:** caricatured / chibi — **large head, small body**. This is the signature look; do not draw realistic proportions.
+- **Perspective (in-world cyclist — sprite, marker):** **isometric, behind-the-back (rear three-quarter)** view, as in the reference scene. Portraits stay front-facing bust.
+- **Bike:** dark charcoal road bike, drop bars, thin frame.
+- **Rendering:** clean sharp pixels, vibrant saturated colors, 16-bit feel.
+- **Mood:** energetic, humorous arcade-sports exaggeration (Sensible Soccer-style readability).
+- **Jersey template:** **blue-dominant** with a clear flat area reserved for a city name.
+
+**Configurable (theming layer, NOT baked per sprite):**
+
+- **Helmet color:** default **bright red** aero helmet with white visor highlight; recolorable via palette-swap.
+- **Jersey city text:** default **"SIEDLCE"**; the city comes from onboarding (e.g. "MIŃSK MAZ."). Render the text as an **i18n decal/overlay on top of the sprite**, not as pixels baked into the PNG — so one base sprite serves every city.
+
+> The reference scene shows the **default** configuration (red helmet, blue/yellow "SIEDLCE"). A green helmet + "MIŃSK MAZ." jersey is simply another valid configuration of the same hero, NOT a different character.
+
+**v1 scope:** ship **one** base sprite (default red + "SIEDLCE"); per-city variation = helmet palette-swap + jersey text decal at runtime. Do **not** generate N full per-city sprite sheets. Do **not** use the legacy gold-helmet / deep-sea-jersey description, and do **not** draw a lean realistic racer.
+
+[Proven example prompt — §2 character lock]
+A single caricatured pixel art cyclist in 16-bit style, viewed from an isometric
+behind-the-back perspective. Large head, small body, wearing a blue and yellow jersey
+with 'SIEDLCE' text. Clean sharp pixels, vibrant colors, on a plain white background
+for a clean preview. Character only, no background elements.
+
+[Global style block — §3]
+Match the attached reference image "Cyklo-Siedlce Grand Prix" exactly in art direction:
+16-bit SNES/GBA-quality pixel art, isometric Polish small-town bike-race energy,
+vibrant saturated palette, clean sharp pixels, crisp 1px black outlines (no blur, no anti-aliasing).
+Hero cyclist: caricatured large-head/small-body build, blue-and-yellow jersey with white "SIEDLCE" text,
+bright red aero helmet, dark charcoal road bike, isometric behind-the-back (rear three-quarter) view.
+World cues: cobblestone street, cafe/shop awnings, cheering pixel crowd, playful arcade HUD vibe.
+Output exactly 64x64px PNG, plain white background for clean preview (trim to transparent in post), no watermark, no extra logo or caption text unless specified.
+
+[Palette reference — §4]
+Palette reference (token anchors):
+  deepSea #0B1D33 — icon backgrounds, jersey shadow, sky top
+  goldAmber #D4A373 — UI accents, banners, spokes
+  goldLight #EDD9B0 — highlights
+  forestGreen #7BA05B — energy bar, foliage, hills
+  cream #F5E6CC — parchment, skin highlight, clouds
+  sepia #C8B098 — ghost, dust, far hills
+  error #CC4444 — red helmet, danger, hearts
+  warning #E8A840 — energy bolt, bronze
+  silver #A0A0A0 — bike frame, A-rank
+  industrial #4A4A4A — road asphalt, C-rank
+  metalGray #2B303A — metal plate texture
+
+[Section context]
+Big-head caricatured bust of the **hero** (blue-and-yellow SIEDLCE jersey, red aero helmet). Front-facing for the portrait (the only non-rear view). Keep identical face/helmet/jersey across all four; only the expression changes.
+
+[Asset: cyclist_victory]
+Same caricatured hero, both arms raised in a triumphant victory pose, wide smile, a few confetti pixels around the head. Identical helmet/jersey/face as `cyclist_idle`. 64×64.
+
+Shared negatives: flat procedural blocky shapes, Imagen-style smear, gradient blur, anti-aliased soft edges, wrong hero (gold helmet / deep-sea jersey / realistic lean proportions), random English words baked into sprite sheets, photorealism, vector/SVG flat-icon look, drop shadows.

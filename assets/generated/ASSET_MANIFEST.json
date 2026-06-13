@@ -1,20 +1,125 @@
 {
-  "generated_at": "2026-05-04T23:56:49.019889+00:00",
+  "generated_at": "2026-06-13T11:00:34.653714+00:00",
   "project": "SPORT Mobile",
-  "description": "Auto-generated pixel-art assets for the SPORT cycling app. Generated via DeepSeek v4 Pro (SVG icons) and Gemini 3 (sprites, textures, expressions).",
-  "total_assets": 1,
+  "description": "Cyklo-Siedlce Grand Prix pixel-art assets. Generated via Nano Banana Pro (gemini-3-pro-image) with MOBILE_ASSET_NANO_BANANA_PROMPTS.md SSOT.",
+  "total_assets": 10,
   "assets": [
     {
-      "id": "cyclist_happy",
-      "category": "expression",
+      "id": "power_gps",
+      "category": "icon",
       "format": "png",
       "size_px": [
-        64,
-        64
+        24,
+        24
       ],
-      "file_size_bytes": 5948,
-      "path": "expressions/cyclist_happy.png",
-      "description": "Happy cyclist face with sparkle eyes. Same cyclist character but with a big smile and sparkle/star shapes in the eyes. Celebration mood — just got a personal best or achievement."
+      "file_size_bytes": 1260,
+      "path": "icons/power_gps.png",
+      "description": "Compass rose — GPS lock power-up. An 8-point compass star/rose design. Gold (#D4A373) main points, cream (#F5E6CC) secondary points, deep sea (#0B1D33) background."
+    },
+    {
+      "id": "currency_xp",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        16,
+        16
+      ],
+      "file_size_bytes": 759,
+      "path": "icons/currency_xp.png",
+      "description": "XP orb — gold cube with 'XP' text. Small pixel-art experience point icon. A cube shape (isometric 3D pixel look) with tiny XP lettering or just a star on top. Gold (#D4A373) cube, goldLight (#EDD9B0) top face."
+    },
+    {
+      "id": "currency_coin",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        16,
+        16
+      ],
+      "file_size_bytes": 770,
+      "path": "icons/currency_coin.png",
+      "description": "Gold coin — pixel circle with star center. A round coin with a small 4-point star in the center. Gold (#D4A373) rim, goldLight (#EDD9B0) face, pixelBlack (#000000) outline."
+    },
+    {
+      "id": "currency_energy",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        16,
+        16
+      ],
+      "file_size_bytes": 756,
+      "path": "icons/currency_energy.png",
+      "description": "Energy bolt — jagged lightning shape. A sharp, jagged lightning bolt. Warning amber (#E8A840) body, goldLight (#EDD9B0) highlight."
+    },
+    {
+      "id": "active_ride_hud_mockup",
+      "category": "environment",
+      "format": "png",
+      "size_px": [
+        1080,
+        1920
+      ],
+      "file_size_bytes": 1317458,
+      "path": "marketing/active_ride_hud_mockup.png",
+      "description": "Active Ride HUD mockup — marketing/onboarding 9:16 layout reference."
+    },
+    {
+      "id": "app_icon",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        1024,
+        1024
+      ],
+      "file_size_bytes": 1369980,
+      "path": "icon.png",
+      "description": "App Store icon — caricatured hero on cobblestone street."
+    },
+    {
+      "id": "splash_icon",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        1280,
+        1280
+      ],
+      "file_size_bytes": 1474043,
+      "path": "splash-icon.png",
+      "description": "Launch splash — hero mid-race through Siedlce street scene."
+    },
+    {
+      "id": "adaptive_icon",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        432,
+        432
+      ],
+      "file_size_bytes": 181252,
+      "path": "adaptive-icon.png",
+      "description": "Android adaptive icon foreground — hero bust in safe zone."
+    },
+    {
+      "id": "favicon",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        48,
+        48
+      ],
+      "file_size_bytes": 3040,
+      "path": "favicon.png",
+      "description": "Web favicon — simplified red helmet on deep sea."
+    },
+    {
+      "id": "sfx_params",
+      "category": "sound",
+      "format": "json",
+      "size_px": null,
+      "file_size_bytes": 5212,
+      "path": "sounds/sfx_params.json",
+      "description": "jsfxr parameter presets for 9 8-bit arcade sound effects."
     }
   ]
 }

@@ -1,0 +1,37 @@
+[Reference — §1]
+The visual target is the user-authored concept frame:
+
+
+
+docs/design/reference/cyklo-siedlce-grand-prix.png — attach this image as an input on **every** Nano Banana request. It locks art direction, palette, hero design and crowd/town energy. Without it, the model drifts to generic pixel art.
+
+[Global style block — §3]
+Match the attached reference image "Cyklo-Siedlce Grand Prix" exactly in art direction:
+16-bit SNES/GBA-quality pixel art, isometric Polish small-town bike-race energy,
+vibrant saturated palette, clean sharp pixels, crisp 1px black outlines (no blur, no anti-aliasing).
+Hero cyclist: caricatured large-head/small-body build, blue-and-yellow jersey with white "SIEDLCE" text,
+bright red aero helmet, dark charcoal road bike, isometric behind-the-back (rear three-quarter) view.
+World cues: cobblestone street, cafe/shop awnings, cheering pixel crowd, playful arcade HUD vibe.
+Output exactly 24x24px PNG, solid #0B1D33 background, no watermark, no extra logo or caption text unless specified.
+
+[Palette reference — §4]
+Palette reference (token anchors):
+  deepSea #0B1D33 — icon backgrounds, jersey shadow, sky top
+  goldAmber #D4A373 — UI accents, banners, spokes
+  goldLight #EDD9B0 — highlights
+  forestGreen #7BA05B — energy bar, foliage, hills
+  cream #F5E6CC — parchment, skin highlight, clouds
+  sepia #C8B098 — ghost, dust, far hills
+  error #CC4444 — red helmet, danger, hearts
+  warning #E8A840 — energy bolt, bronze
+  silver #A0A0A0 — bike frame, A-rank
+  industrial #4A4A4A — road asphalt, C-rank
+  metalGray #2B303A — metal plate texture
+
+[Section context]
+Pixel-perfect, readable at 24px, gold (`#D4A373`) primary on deep-sea background, matching the HUD chrome seen on the reference. Single centered subject, no caption text.
+
+[Asset: tab_home]
+A side-on detailed bicycle wheel as a tab-bar icon: circular hub centered, 6 straight gold spokes, thin tire ring, gold `#D4A373` on solid `#0B1D33` background. Crisp, symmetrical, legible at 24px. Same warm gold accent tone as the HUD in the reference.
+
+Shared negatives: flat procedural blocky shapes, Imagen-style smear, gradient blur, anti-aliased soft edges, wrong hero (gold helmet / deep-sea jersey / realistic lean proportions), random English words baked into sprite sheets, photorealism, vector/SVG flat-icon look, drop shadows.

@@ -1,0 +1,32 @@
+A detailed full-screen (9:16) dynamic first-person perspective of a bicycle tracker
+application screen, presented in an advanced HD pixel art style, optimized for clear
+readability in bright sunlight. The screen is a detailed 2.5D top-down isometric view of
+a cycling workout in progress. Central to the lower-middle is the pixel art cyclist seen
+from behind (the caricatured hero: large head/small body, red helmet, blue-and-yellow
+"SIEDLCE" jersey, sweat drops, hearts at the wheel, and a humorous 'ALE PĘD POTU!' speech
+bubble above the head), actively pedaling. A dynamic pixel art map of Siedlce scrolls
+continuously around and beneath the cyclist. Key map features such as 'UL. STAROWIEJSKA'
+(vertical and scrolling), 'PARK SIKORSKI' (to the left with trees and icons), and a
+library building to the right with icons, are clearly labelled and visible but scaled
+for the scrolling view. The interface is designed for high contrast and sun-readability.
+
+At the very top, a high-visibility StatusBar: GPS icon (solid green), battery level (95%),
+and the time (10:15 AM), all with clear black outlines. Below it, a large prominent central
+data field on a light-colored framed panel: PRĘDKOŚĆ: 32.8 km/h (large, bold numbers).
+
+Left high-contrast data panels: DYSTANS: 18.5 km / CZAS: 35:22 min / PRZEWYŻSZ.: +15 m.
+Right high-contrast data panels: ŚR. PRĘDK.: 29.1 km/h / TĘTNO: 155 bpm (pixel heart icon)
+/ KIERUNEK: N (pixel compass rose). All data fields have clear titles, large bold numbers,
+black outlines, light framed backgrounds for maximum sun readability.
+
+At the bottom, a prominent button bar with large, brightly colored, tactile buttons, each
+with clear text and icon and a black outline:
+[ STOP (square icon, red) ] [ PAUSE / RESUME (two bars, yellow) ] [ RESUME (triangle, green) ].
+Buttons are large, colorful, pixel-font labelled.
+
+The scene is brightly lit by an intense simulated sun, but all UI and text stay non-fading
+and non-glaring via high contrast, bold fonts, clear outlines and an optimized palette. The
+map scroll speed conveys rapid movement. A small pixel heart floats where two scrolling road
+names cross.
+
+Shared negatives: flat procedural blocky shapes, Imagen-style smear, gradient blur, anti-aliased soft edges, wrong hero (gold helmet / deep-sea jersey / realistic lean proportions), random English words baked into sprite sheets, photorealism, vector/SVG flat-icon look, drop shadows.
