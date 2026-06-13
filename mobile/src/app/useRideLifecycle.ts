@@ -14,6 +14,14 @@ import {
   startGpsBackgroundSync,
   type TrackingStats,
 } from '../services/GpsSyncManager';
+import { recordRideComplete } from '../game/progression';
+import { syncRideQuestProgress } from '../game/quests';
+
+export type RideSummaryPayload = {
+  distanceKm: number;
+  elapsedS: number;
+  elevationGainM: number;
+};
 
 export function useRideLifecycle() {
   const userIdRef = useRef<number | null>(null);
@@ -26,7 +34,7 @@ export function useRideLifecycle() {
   const [liveCoord, setLiveCoord] = useState<[number, number] | null>(null);
   const [gpsRecoveryVisible, setGpsRecoveryVisible] = useState(false);
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
-  const [rideSummary, setRideSummary] = useState<{ distanceKm: number } | null>(null);
+  const [rideSummary, setRideSummary] = useState<RideSummaryPayload | null>(null);
 
   const refreshGpsRecoveryFlag = useCallback(() => {
     setGpsRecoveryVisible(isTrackingRecoveryPending());
@@ -119,6 +127,8 @@ export function useRideLifecycle() {
   const handleStopRide = useCallback(async () => {
     const userId = userIdRef.current;
     const distanceKm = liveDistanceKm;
+    const elapsedS = liveElapsedS;
+    const elevationGainM = liveElevationGainM;
     try {
       const { finalized, pendingUpload } = await stopRideSession(userId);
       if (pendingUpload > 0) {
@@ -144,12 +154,14 @@ export function useRideLifecycle() {
       setLiveCoord(null);
       refreshGpsRecoveryFlag();
       if (distanceKm > 0) {
-        setRideSummary({ distanceKm });
+        recordRideComplete(distanceKm, elapsedS / 60);
+        syncRideQuestProgress(distanceKm, elapsedS / 60);
+        setRideSummary({ distanceKm, elapsedS, elevationGainM });
         return { navigated: false };
       }
       return { navigated: true, target: 'Ride' as const };
     }
-  }, [liveDistanceKm, refreshGpsRecoveryFlag]);
+  }, [liveDistanceKm, liveElapsedS, liveElevationGainM, refreshGpsRecoveryFlag]);
 
   return {
     isRecording,

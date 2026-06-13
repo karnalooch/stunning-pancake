@@ -39,8 +39,8 @@ export type NavigationShellProps = {
   liveCoord: [number, number] | null;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
-  rideSummary: { distanceKm: number } | null;
-  setRideSummary: (v: { distanceKm: number } | null) => void;
+  rideSummary: { distanceKm: number; elapsedS: number; elevationGainM: number } | null;
+  setRideSummary: (v: { distanceKm: number; elapsedS: number; elevationGainM: number } | null) => void;
   showTrainingLog: boolean;
   setShowTrainingLog: (v: boolean) => void;
   showSettings: boolean;
@@ -224,7 +224,9 @@ export function NavigationShell({
         >
           <RideSummaryScreen
             distance={rideSummary.distanceKm}
-            time="—"
+            elapsedSeconds={rideSummary.elapsedS}
+            elevation={rideSummary.elevationGainM}
+            username={shellUser?.username ?? 'RIDER'}
             onShare={() => void handleShareSummary()}
             onBackToHub={() => {
               setRideSummary(null);

@@ -1,155 +1,165 @@
 /**
- * RideSummaryScreen — STITCH Phase 1 (P0)
- * 
- * Post-ride celebration screen. Shows achievement badge, rank,
- * ride stats, and "BACK TO HUB" CTA.
+ * RideSummaryScreen — post-ride celebration (ADR 014 engagement zone).
  */
 
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
+import { PixelBurst } from '../components/effects/PixelBurst';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { ShareResultCard } from '../components/game/ShareResultCard';
+import { SceneBackground } from '../components/scene/SceneBackground';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import {
+  computeRideRank,
+  formatElapsed,
+  rankDisplayName,
+  estimateXpGain,
+} from '../game/ranks';
 
-const stylesheet = StyleSheet.create(theme => {
-    const C = theme.colors as any;
-    return {
-    container: { flex: 1, backgroundColor: C.background },
+const stylesheet = StyleSheet.create((theme) => {
+  const C = theme.colors as Record<string, string>;
+  return {
+    container: { flex: 1, backgroundColor: C.background, position: 'relative' as const },
     header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.background,
-        borderBottomWidth: 4, borderBottomColor: C.onBackground,
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      backgroundColor: C.background,
+      borderBottomWidth: 4,
+      borderBottomColor: C.onBackground,
     },
-    headerTitle: { fontSize: 24, fontWeight: '700', color: C.primary, textTransform: 'uppercase' },
+    headerTitle: {
+      fontSize: 24,
+      fontWeight: '700',
+      color: C.primary,
+      textTransform: 'uppercase' as const,
+    },
     scroll: { flex: 1 },
-    content: { padding: 16, gap: 16, alignItems: 'center' },
-    titleSection: { alignItems: 'center', paddingTop: 32, paddingBottom: 16 },
-    title: { fontSize: 48, fontWeight: '700', color: C.onBackground, textTransform: 'uppercase', letterSpacing: 2 },
-    subtitle: { fontSize: 18, fontWeight: '500', color: C.outline, marginTop: 4 },
-    badge: {
-        width: 200, height: 200, justifyContent: 'center', alignItems: 'center',
-        marginVertical: 16, position: 'relative',
+    content: { padding: 16, gap: 16, alignItems: 'center' as const },
+    titleSection: { alignItems: 'center' as const, paddingTop: 16, paddingBottom: 8 },
+    title: {
+      fontSize: 40,
+      fontWeight: '700',
+      color: C.onBackground,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 2,
+      textAlign: 'center' as const,
     },
-    badgeRing: {
-        position: 'absolute', width: 160, height: 160, borderRadius: 80,
-        backgroundColor: C.primaryContainer, opacity: 0.2,
+    subtitle: { fontSize: 16, fontWeight: '500', color: C.outline, marginTop: 4 },
+    xpBanner: {
+      backgroundColor: C.primaryContainer,
+      borderWidth: 3,
+      borderColor: C.onBackground,
+      borderRadius: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
     },
-    badgeEmoji: { fontSize: 96 },
-    rankContainer: {
-        alignItems: 'center', backgroundColor: C.parchment,
-        borderWidth: 4, borderColor: C.onBackground, borderRadius: 8,
-        padding: 16, width: 120,
-    },
-    rankLabel: { fontSize: 12, fontWeight: '700', color: C.secondary, textTransform: 'uppercase' },
-    rankLetter: { fontSize: 72, fontWeight: '700', color: C.goldAmber },
-    rankName: { fontSize: 18, fontWeight: '700', color: C.onBackground, marginTop: 4 },
-    statsGrid: {
-        flexDirection: 'row', flexWrap: 'wrap', gap: 4, width: '100%',
-    },
-    statTile: {
-        backgroundColor: C.parchment, borderWidth: 4, borderColor: C.onBackground,
-        borderRadius: 8, padding: 12, flex: 1, minWidth: '45%',
-    },
-    statLabel: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase' },
-    statValue: { fontSize: 24, fontWeight: '700', color: C.onBackground, marginTop: 8 },
-    statUnit: { fontSize: 14, fontWeight: '500', color: C.outline },
-    elevationBar: { flexDirection: 'row', gap: 2, marginTop: 12 },
-    elevBlockFilled: { width: 16, height: 24, backgroundColor: C.tertiary, borderWidth: 2, borderColor: C.onBackground },
-    elevBlockEmpty: { width: 16, height: 24, backgroundColor: C.surfaceContainerHighest, borderWidth: 2, borderColor: C.onBackground },
+    xpText: { fontSize: 14, fontWeight: '800', color: C.onPrimaryContainer, textTransform: 'uppercase' as const },
     ctaBtn: {
-        backgroundColor: C.goldAmber, borderRadius: 8, borderWidth: 4, borderColor: C.onBackground,
-        paddingVertical: 16, paddingHorizontal: 24, alignItems: 'center', marginTop: 16, width: '100%',
+      backgroundColor: C.goldAmber,
+      borderRadius: 8,
+      borderWidth: 4,
+      borderColor: C.onBackground,
+      paddingVertical: 16,
+      paddingHorizontal: 24,
+      alignItems: 'center' as const,
+      marginTop: 8,
+      width: '100%',
     },
-    ctaText: { fontSize: 24, fontWeight: '700', color: C.onBackground, textTransform: 'uppercase' },
-    shadow: { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 },
-    };
+    ctaText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: C.onBackground,
+      textTransform: 'uppercase' as const,
+    },
+    shadow: {
+      shadowColor: C.onBackground,
+      shadowOffset: { width: 4, height: 4 },
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      elevation: 8,
+    },
+  };
 });
 
 interface RideSummaryScreenProps {
-    distance?: number;
-    time?: string;
-    elevation?: number;
-    rank?: string;
-    onShare?: () => void;
-    onBackToHub?: () => void;
+  distance?: number;
+  elapsedSeconds?: number;
+  elevation?: number;
+  username?: string;
+  onShare?: () => void;
+  onBackToHub?: () => void;
 }
 
 export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
-    distance = 54.2,
-    time = '2h 15m',
-    elevation = 850,
-    rank = 'S',
-    onShare,
-    onBackToHub,
+  distance = 0,
+  elapsedSeconds = 0,
+  elevation = 0,
+  username = 'RIDER',
+  onShare,
+  onBackToHub,
 }) => {
-    const { theme } = useUnistyles(); const s = stylesheet;
-    const C = theme.colors as any;
+  const s = stylesheet;
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const rank = useMemo(() => computeRideRank(distance, elevation), [distance, elevation]);
+  const timeLabel = formatElapsed(elapsedSeconds);
+  const xpGained = estimateXpGain(distance, elapsedSeconds / 60);
 
-    return (
+  useEffect(() => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  }, []);
+
+  return (
     <SafeAreaView style={s.container} edges={['top']}>
-        <View style={[s.header, s.shadow]}>
-            <View style={{ width: 40 }} />
-            <Text style={s.headerTitle}>CYCLO-QUEST</Text>
-            <View style={{ width: 40 }} />
+      {immersiveEnabled && <SceneBackground sceneId="ride_summary" scrim="soft" />}
+      <PixelBurst trigger={immersiveEnabled} />
+      <View style={[s.header, s.shadow]}>
+        <View style={{ width: 40 }} />
+        <Text style={s.headerTitle}>QUEST COMPLETE</Text>
+        <View style={{ width: 40 }} />
+      </View>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+        <View style={s.titleSection}>
+          <Text style={s.title}>RIDE COMPLETE</Text>
+          <Text style={s.subtitle}>{rankDisplayName(rank)} finish · {distance.toFixed(1)} km</Text>
         </View>
-        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-            <View style={s.titleSection}>
-                <Text style={s.title}>RIDE COMPLETE</Text>
-                <Text style={s.subtitle}>Quest objectives achieved.</Text>
-            </View>
-            <View style={s.badge}>
-                <View style={s.badgeRing} />
-                <Text style={s.badgeEmoji}>🏆</Text>
-            </View>
-            <View style={[s.rankContainer, s.shadow]}>
-                <Text style={s.rankLabel}>Rank</Text>
-                <Text style={s.rankLetter}>{rank}</Text>
-                <Text style={s.rankName}>Legendary</Text>
-            </View>
-            <View style={s.statsGrid}>
-                <View style={[s.statTile, s.shadow]}>
-                    <Text style={s.statLabel}>Distance</Text>
-                    <Text style={s.statValue}>{distance}<Text style={s.statUnit}> km</Text></Text>
-                </View>
-                <View style={[s.statTile, s.shadow]}>
-                    <Text style={s.statLabel}>Time</Text>
-                    <Text style={s.statValue}>{time}</Text>
-                </View>
-                <View style={[s.statTile, { flexBasis: '100%' }, s.shadow]}>
-                    <Text style={s.statLabel}>Elevation Gain</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 }}>
-                        <Text style={[s.statValue, { marginTop: 0 }]}>{elevation}m</Text>
-                        <View style={s.elevationBar}>
-                            <View style={s.elevBlockFilled} />
-                            <View style={s.elevBlockFilled} />
-                            <View style={s.elevBlockFilled} />
-                            <View style={s.elevBlockEmpty} />
-                            <View style={s.elevBlockEmpty} />
-                        </View>
-                    </View>
-                </View>
-            </View>
-            <Pressable
-                style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], shadowOpacity: 0.3 }]}
-                onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
-                    onShare?.();
-                }}
-            >
-                <Text style={s.ctaText}>SHARE RESULT</Text>
-            </Pressable>
-            <Pressable
-                style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], shadowOpacity: 0.3 }]}
-                onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
-                    onBackToHub?.();
-                }}
-            >
-                <Text style={s.ctaText}>BACK TO HUB</Text>
-            </Pressable>
-            <View style={{ height: 80 }} />
-        </ScrollView>
+        {immersiveEnabled && <CyclistSprite size={72} state="victory" />}
+        <View style={s.xpBanner}>
+          <Text style={s.xpText}>+{xpGained} XP earned</Text>
+        </View>
+        <ShareResultCard
+          distanceKm={distance}
+          timeLabel={timeLabel}
+          elevationM={elevation}
+          rank={rank}
+          xpGained={xpGained}
+          username={username}
+        />
+        <Pressable
+          style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            onShare?.();
+          }}
+        >
+          <Text style={s.ctaText}>SHARE RESULT</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+            onBackToHub?.();
+          }}
+        >
+          <Text style={s.ctaText}>BACK TO HUB</Text>
+        </Pressable>
+        <View style={{ height: 80 }} />
+      </ScrollView>
     </SafeAreaView>
-    );
+  );
 };
