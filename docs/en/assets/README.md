@@ -25,6 +25,7 @@
 | Path | Content |
 |---------|-----------|
 | [live/](./live/) | Live Map dumps (`global.png`, `tenant.png`, `moderator.png`) - optional, no PII |
+| [../../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md](../../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md) | Nano Banana prompts for mobile assets (Cyklo-Siedlce Grand Prix) + reference in `docs/design/reference/` |
 
 Historical PNG mockups and architecture diagram are **not** kept in the repo on this branch; the archive manifest describes them in [archive/ASSET_MANIFEST.json](../../archive/ASSET_MANIFEST.json) with the annotation `archivedPaths`.
 

@@ -31,8 +31,8 @@ The existing design SSOT ([`docs/archive/designmobile.md`](../archive/designmobi
 **1. Core vs skin.** The product core is a **bike computer / navigation experience with editable data fields** (inspired by Garmin Edge, Wahoo ELEMNT, Hammerhead Karoo). On top of that we apply an **immersive pixel-art skin** (scenes, animated cyclist, particles, narration, audio). The skin must never reduce legibility or safety of ride data: pixel-art decorates frames/backgrounds/markers, while values stay large and high-contrast.
 
 **2. Focus zones vs engagement zones.** Screens are split into two zones so gaming vibe drives retention without harming the utility core:
-- **Focus zone (Active Ride / Navigation):** minimal motion — cyclist as map marker, occasional speech bubble, energy bar. Data > skin.
-- **Engagement zone (max gaming vibe):** Home/Dashboard ("main menu of the game"), Ride Summary (+ shareable result card), City Hub/Compete, Profile/Bike Garage, Onboarding, Marketplace.
+- **Focus zone (Active Ride / Navigation):** minimal motion — cyclist as map marker, occasional speech bubble, energy bar. Data > skin. The live ride is map + marker + minimal motion; the full-screen scrolling 2.5D ride scene is **not** the live-riding default (battery / safety / motion-sickness).
+- **Engagement zone (max gaming vibe):** Home/Dashboard ("main menu of the game"), Ride Summary (+ shareable result card), City Hub/Compete, Profile/Bike Garage, Onboarding, Marketplace. The scrolling 2.5D ride scene (`active_ride_hud_mockup`, see [design SSOT](../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md) §16b) lives here / in marketing; its data-field layout + sun-readability are adopted by the live HUD chrome.
 
 **3. Editable data fields.** A `DataFieldRegistry` + configurable `DataFieldGrid` (1–10 fields, presets, drag reorder/resize via gesture-handler, per-profile/sport layouts persisted in MMKV with a versioned schema).
 
@@ -42,7 +42,7 @@ The existing design SSOT ([`docs/archive/designmobile.md`](../archive/designmobi
 
 **6. Single token source.** Color tokens must resolve to one source of truth (consolidate `mobile/src/theme/stitch.ts` vs legacy octopath/solar in `unistyles.ts` vs `@4velo/tokens`); the rest is generated from it.
 
-**7. Asset pipeline (improved).** Keep Gemini for raw PNG generation, but add a deterministic post-process chain: palette-quant, nearest-neighbor scaling, sprite packing to atlases (+ frame JSON), lossless compression (`pngquant`/`oxipng`), a manifest with prompt-hash + seed for reproducibility, and reference-locked character frame generation for animation coherence. DeepSeek limited to/replaced by hand-authored SVG icons.
+**7. Asset pipeline (improved).** Keep Gemini for raw PNG generation, but add a deterministic post-process chain: palette-quant, nearest-neighbor scaling, sprite packing to atlases (+ frame JSON), lossless compression (`pngquant`/`oxipng`), a manifest with prompt-hash + seed for reproducibility, and reference-locked character frame generation for animation coherence. Canonical per-asset prompts for **Nano Banana Pro** (`gemini-3-pro-image`), with the Cyklo-Siedlce Grand Prix reference sheet attached to every call, are in [docs/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md](../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md); UI icons are produced as PNG there rather than hand-authored SVG. The hero is **configurable** (one base sprite; helmet color via palette-swap, jersey city text via i18n decal — not baked per sprite), and a full-screen `active_ride_hud_mockup` defines the sun-readable bike-computer layout.
 
 **8. Engine choices.** Reanimated 4 + Skia stay as the core. Additions: MapLibre (already a dependency) with a custom retro/pixel-art style for the ride/navigation screen; Skia `drawAtlas` for batched particles/sprites; `react-native-gesture-handler` for data-field editing. Lottie/Rive are deliberately rejected for pixel-art (vector ≠ pixel sheet, unnecessary bundle).
 

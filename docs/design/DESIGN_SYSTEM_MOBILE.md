@@ -29,8 +29,10 @@ Screens split into two zones so gaming vibe drives retention without harming the
 
 | Zone | Screens | Motion / gaming intensity |
 |------|---------|---------------------------|
-| **Focus** | Active Ride / Navigation | Minimal — cyclist as map marker, occasional speech bubble, energy bar. Data > skin. |
+| **Focus** | Active Ride / Navigation | Minimal — cyclist as map marker, occasional speech bubble, energy bar. Data > skin. **No scrolling 2.5D scene under live data.** |
 | **Engagement** | Home/Dashboard, Ride Summary, City Hub/Compete, Profile/Bike Garage, Onboarding, Marketplace | Maximum — full scenes, animated cyclist, particles, narration, rewards. |
+
+> The full-screen scrolling 2.5D ride scene (illustrated map + hero seen from behind, speech bubble, hearts) belongs to the **engagement** zone (Dashboard / onboarding / marketing — see [MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md) §16b `active_ride_hud_mockup`). The **live** Active Ride screen stays focus-mode: MapLibre map + cyclist marker + minimal motion, for battery, safety and motion-sickness reasons. The mockup's data-field layout and sun-readability ARE adopted by the live HUD chrome (see §3).
 
 Cross-screen engagement mechanics: **Level/XP**, **daily streak**, **daily quests** (wired to `TriggerEngine`), and a **shareable pixel-art result card** (Skia snapshot → social). Components: `mobile/src/components/game/` (`LevelXpBar`, `StreakBadge`, `DailyQuestCard`, `ShareResultCard`); logic: `mobile/src/game/` (`progression.ts`, `quests.ts`).
 
@@ -43,6 +45,19 @@ Garmin/Wahoo/Karoo pattern: the ride screen is a **configurable grid of data fie
 - **`DataFieldCell`** — pixel-art frame (parchment + pixel-border), large value (VT323/monospace), small UPPERCASE label, configurable alert color (e.g. HR zone).
 - **Ride profiles** (Road / Training / Race) with separate layouts.
 - **Persistence schema** — saved layouts carry a `schemaVersion`; migrations live in `mobile/src/ride/layouts.ts` (avoid crash after field changes).
+
+### Sun-readability spec (normative)
+
+The canonical HUD layout/legibility reference is the `active_ride_hud_mockup` ([MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md) §16b, §20). Required for outdoor legibility:
+
+- **Framed high-contrast panels:** each field on a light, slightly framed panel with hard 1–2px black outline + hard pixel shadow — legible over any map tile.
+- **Number-first hierarchy:** large bold value, smaller unit, small UPPERCASE label. **Numbers in VT323; labels/headers in Press Start 2P.**
+- **Status bar:** GPS state (solid green when locked), battery %, clock — black outlines, top of screen.
+- **Action bar:** large tactile buttons (icon + label + black outline) — STOP (square, red), PAUSE/RESUME (two bars, yellow), RESUME (triangle, green). **STOP requires confirm (long-press / slide)** to prevent accidental stop while riding.
+- **Auto day/night HUD palette** (light panels in sun, dark at night), targeting WCAG-AA contrast in both; **colorblind-safe** (zone/state by icon shape, not color alone).
+- **PL data labels** map 1:1 to `DataFieldRegistry`: `PRĘDKOŚĆ`, `DYSTANS`, `CZAS`, `PRZEWYŻSZ.`, `ŚR. PRĘDK.`, `TĘTNO`, `KIERUNEK` (all via i18n).
+
+> **Font fix (follow-up):** the app loads `'Press Start 2P'` in `mobile/App.tsx` but components reference `'PressStart2P'`, so the pixel font currently falls back to system. Register both VT323 and Press Start 2P and align the family names before relying on this spec.
 
 ## 4. Navigation Mode
 
@@ -67,7 +82,9 @@ base (SceneBackground parallax  OR  MapLibre retro)
 
 - **Palette rule:** scenes/parallax may use a richer, more saturated palette than "Solar White"; **UI chrome keeps Stitch tokens** for legibility. The boundary is mediated by `scrim` tokens.
 - **New theme tokens** (`mobile/src/theme/stitch.ts`): `scrimStrong`, `scrimSoft`, `sceneOverlay` + contrast rules (cards on scenes get stronger shadow/border).
-- **Single token source:** color tokens must resolve to one SSOT (consolidate `stitch.ts` vs legacy octopath/solar in `unistyles.ts` vs `@4velo/tokens`); rest generated from it. (Decision tracked in ADR 014.)
+- **Single token source:** color tokens must resolve to one SSOT (consolidate `stitch.ts` vs legacy octopath/solar in `unistyles.ts` vs `@4velo/tokens`); rest generated from it. (Decision tracked in ADR 014.) Add dedicated `hud*` tokens for sun-readable chrome (AA contrast in day/night). Express hard pixel shadow / outline as tokens, not hardcoded values.
+- **Configurable hero:** the cyclist is one base sprite; **helmet color (palette-swap)** and **jersey city text (i18n decal)** are theming layers driven by the onboarding city — not baked per sprite (see [MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md) §2). The `CyclistSprite` and map marker render the configured hero.
+- **Map cohesion:** the retro MapLibre style uses the same palette tokens as scenes. Optional regional landmark per onboarding city in the scene (e.g. Park Sikorski for Siedlce).
 - Scene registry: `mobile/src/theme/scenes.ts` maps `screenId → { layers, palette, ambient, particles }`.
 
 Component folders: `components/scene/`, `components/sprites/`, `components/effects/`, `components/narration/`, `components/ride/`.
@@ -98,10 +115,13 @@ Audio is ~50% of game feel and is **safety-critical while riding** (eyes-free cu
 - **Battery / background**: auto-pause animations when backgrounded (`AppState`), battery-saver, or low battery; tie to GPS/battery wizard. During riding: data > skin.
 - **Reduced motion**: respect system setting — disables parallax/particles, static backgrounds remain.
 - **Memory/bundle**: lazy-load scenes per screen, `expo-image` caching, sheet size limits; target < ~1 MB extra bundle.
+- **Pixel-icon scaling**: render icons with `resizeMode: 'contain'` at integer multiples to keep pixels crisp (no blur on high-DPR screens).
 - **Analytics**: instrument quest-complete, share, streak, level-up, layout-edit into telemetry/Datadog.
 - **Tests**: extend Maestro (`mobile/.maestro/`) with transition/scene smoke; optional visual snapshots.
 
 ## 9. Asset pipeline (improved)
+
+Canonical per-asset prompts (Cyklo-Siedlce Grand Prix art direction) for **Nano Banana Pro** (`gemini-3-pro-image`) live in [MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md), each with the reference sheet attached. UI tab icons are generated as **PNG** there, not hand-authored SVG.
 
 Keep Gemini for raw PNG; add a deterministic post-process chain (see [ADR 014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) §7 and [scripts/asset_definitions.py](../../scripts/asset_definitions.py)):
 
@@ -111,8 +131,11 @@ Keep Gemini for raw PNG; add a deterministic post-process chain (see [ADR 014](.
 4. manifest with prompt-hash + seed for reproducibility ([assets/generated/ASSET_MANIFEST.json](../../assets/generated/ASSET_MANIFEST.json)).
 5. reference-locked character frame generation (seed/img2img) for animation coherence; optional Aseprite touch-up.
 
-New categories: `environment/` (parallax layers), `sprites/` (cyclist sheets), `particles/`, `map/` (retro tiles/markers). Bundle to `mobile/assets/generated/` + typed manifest `mobile/src/assets/manifest.ts` (static `require()` for Metro).
+New categories: `environment/` (parallax layers), `sprites/` (cyclist sheets), `particles/`, `map/` (retro tiles/markers), `marketing/` (`active_ride_hud_mockup` — store/onboarding hero + HUD layout reference, [§16b](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md)). Bundle to `mobile/assets/generated/` + typed manifest `mobile/src/assets/manifest.ts` (static `require()` for Metro). The manifest stores prompt + seed + reference hash so any asset is deterministically regenerable.
 
-## 10. Backlog (P2/P3)
+## 10. Backlog (P2/P3) and edge states
 
-Seasons / Battle Pass (civic), Ghost-race (self vs ghost, `ghost_sheet.png`), animated result card (GIF/mp4), Climb mode (auto climb profile), post-ride bike-service ritual. Deliberately rejected (out of 90-day scope / regulation): move-to-earn / crypto, in-app entry fees, minigames detached from riding.
+- **Edge states in pixel-art** (not system defaults): GPS-lost banner, no-data, offline — styled to match the skin.
+- **Share card** in dedicated social formats (1080×1920 portrait / 1200×630 OG), deterministic render, brand mark.
+- Seasons / Battle Pass (civic), Ghost-race (self vs ghost, `ghost_sheet.png`), animated result card (GIF/mp4), Climb mode (auto climb profile), post-ride bike-service ritual.
+- Deliberately rejected (out of 90-day scope / regulation): move-to-earn / crypto, in-app entry fees, minigames detached from riding.

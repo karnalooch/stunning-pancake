@@ -27,6 +27,7 @@
 | Ścieżka | Zawartość |
 |---------|-----------|
 | [live/](./live/) | Zrzuty Live Map (`global.png`, `tenant.png`, `moderator.png`) — opcjonalne, bez PII |
+| [../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md](../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md) | Prompty Nano Banana dla assetów mobilnych (Cyklo-Siedlce Grand Prix) + referencja w `docs/design/reference/` |
 
 Historyczne mockupy PNG i diagram architektury **nie są** trzymane w repo na tej gałęzi; manifest archiwalny opisuje je w [archive/ASSET_MANIFEST.json](../archive/ASSET_MANIFEST.json) z adnotacją `archivedPaths`.
 

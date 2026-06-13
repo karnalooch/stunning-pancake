@@ -20,12 +20,13 @@ Usage:
 
 Environment:
   DEEPSEEK_API_KEY  — DeepSeek v4 Pro API key
-  GOOGLE_API_KEY     — Google Gemini API key
-  DEEPSEEK_MODEL     — (optional) Override DeepSeek model name
-  GEMINI_MODEL       — (optional) Override Gemini model name
+  GOOGLE_API_KEY       — Google Gemini API key
+  GEMINI_IMAGE_MODEL   — Nano Banana model (default gemini-3-pro-image)
+  GEMINI_USE_IMAGEN    — true = Imagen 4; false = Nano Banana (default)
+  DEEPSEEK_MODEL       — (optional) Override DeepSeek model name
 
 Dependencies:
-  pip install python-dotenv requests google-generativeai Pillow
+  pip install python-dotenv requests google-genai Pillow
 """
 
 import argparse
@@ -219,7 +220,9 @@ class AssetGenerator:
     def gemini(self) -> GeminiClient:
         if self._gemini is None:
             api_key = os.environ.get("GOOGLE_API_KEY", "")
-            model = os.environ.get("GEMINI_MODEL", "gemini-2.5-pro")
+            model = os.environ.get("GEMINI_IMAGE_MODEL") or os.environ.get(
+                "GEMINI_MODEL", "gemini-3-pro-image"
+            )
             use_imagen = os.environ.get("GEMINI_USE_IMAGEN", "").lower() in (
                 "true", "1", "yes", "on"
             )
@@ -231,7 +234,8 @@ class AssetGenerator:
             self._gemini = GeminiClient(
                 api_key=api_key, model=model, use_imagen=use_imagen
             )
-            logger.info("Gemini client initialized (model: %s)", model)
+            backend = "Imagen 4" if use_imagen else f"Nano Banana ({model})"
+            logger.info("Gemini client initialized (%s)", backend)
         return self._gemini
 
     # ── Main Generation Loop ─────────────────────────────────────
