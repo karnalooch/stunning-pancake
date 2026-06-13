@@ -34,6 +34,8 @@ export type NavigationShellProps = {
   setRidePaused: (v: boolean) => void;
   liveSpeed: number;
   liveDistanceKm: number;
+  liveElevationGainM: number;
+  liveElapsedS: number;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
   rideSummary: { distanceKm: number } | null;
@@ -61,6 +63,8 @@ export function NavigationShell({
   setRidePaused,
   liveSpeed,
   liveDistanceKm,
+  liveElevationGainM,
+  liveElapsedS,
   gpsRecoveryVisible,
   gpsRecoveryBusy,
   rideSummary,
@@ -185,9 +189,13 @@ export function NavigationShell({
             {() => (
               <ActiveRideHUDScreen
                 user={shellUser ?? undefined}
+                isPaused={ridePaused}
                 liveSpeed={liveSpeed}
                 liveDistanceKm={liveDistanceKm}
+                liveElevationGainM={liveElevationGainM}
+                liveElapsedS={liveElapsedS}
                 onPause={() => setRidePaused(true)}
+                onResume={() => setRidePaused(false)}
                 onStop={() => void handleStopRide()}
                 {...gpsRecoveryProps}
               />
