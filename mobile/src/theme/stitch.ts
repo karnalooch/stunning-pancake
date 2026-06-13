@@ -67,5 +67,13 @@ export const stitchTheme: StitchTheme = {
         hudAccent: '#76a95b',
         hudWarning: '#ee7876',
         hudError: '#ba1a1a',
+
+        // ── Scene / scrim (ADR 014) ───────────────────────────────
+        scrimStrong: 'rgba(25, 29, 23, 0.55)',
+        scrimSoft: 'rgba(25, 29, 23, 0.28)',
+        sceneOverlay: 'rgba(248, 250, 240, 0.72)',
+        sceneSky: '#87CEEB',
+        sceneHill: '#76a95b',
+        sceneRoad: '#8B7355',
     },
 };

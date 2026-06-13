@@ -100,6 +100,12 @@ export interface StitchTheme {
         hudAccent: string;
         hudWarning: string;
         hudError: string;
+        scrimStrong: string;
+        scrimSoft: string;
+        sceneOverlay: string;
+        sceneSky: string;
+        sceneHill: string;
+        sceneRoad: string;
     };
     branding?: {
         primary: string;

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
 import { WearableService } from '../services/api';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -32,6 +33,7 @@ export const SettingsScreen: React.FC = () => {
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const { t, locale, toggleLocale } = useI18n();
+  const { enabled: immersiveEnabled, toggle: toggleImmersive } = useImmersiveTheme();
   const [wearables, setWearables] = useState<{
     strava: { connected: boolean; last_sync?: string };
     garmin: { connected: boolean; last_sync?: string };
@@ -67,6 +69,10 @@ export const SettingsScreen: React.FC = () => {
         <Pressable style={s.cd} onPress={toggleLocale}>
           <Text style={s.l}>{t.common.language}</Text>
           <Text style={[s.v, { color: c.primary }]}>{locale === 'pl' ? t.common.polish : t.common.english}</Text>
+        </Pressable>
+        <Pressable style={s.cd} onPress={toggleImmersive}>
+          <Text style={s.l}>Immersive pixel theme</Text>
+          <Text style={[s.v, { color: c.primary }]}>{immersiveEnabled ? 'ON' : 'OFF'}</Text>
         </Pressable>
         {rows.map((r, i) => (
           <View key={i} style={s.cd}>

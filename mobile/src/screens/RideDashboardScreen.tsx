@@ -8,7 +8,7 @@
  * pixel-border pixel-shadow retro aesthetic.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     View,
     Text,
@@ -28,6 +28,8 @@ import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
 import { usePlatformNotices } from '../hooks/usePlatformNotices';
 import type { ActivitySportType } from '../services/api';
 import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { SceneBackground } from '../components/scene/SceneBackground';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -37,6 +39,7 @@ const stylesheet = StyleSheet.create(theme => {
     container: {
         flex: 1,
         backgroundColor: C.background,
+        position: 'relative',
     },
     header: {
         flexDirection: 'row',
@@ -311,6 +314,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     const { notice, dismiss } = usePlatformNotices(
         (user as { tenant_id?: string } | null)?.tenant_id ?? null,
     );
+    const { enabled: immersiveEnabled } = useImmersiveTheme();
 
     const handleStartRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
@@ -330,6 +334,9 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     // ── Render ──
     return (
         <SafeAreaView style={s.container} edges={['top']}>
+            {immersiveEnabled && (
+                <SceneBackground sceneId="ride_dashboard" scrim="soft" />
+            )}
             {/* TopAppBar */}
             <View style={[s.header, s.pixelShadow]}>
                 <View style={s.headerLeft}>
