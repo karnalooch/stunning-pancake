@@ -5,6 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { RideMapView } from '../components/RideMapView';
 import { DataFieldGrid } from '../components/ride/DataFieldGrid';
+import { EnergyBar } from '../components/effects/EnergyBar';
+import { SpeechBubble } from '../components/narration/SpeechBubble';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import type { RideMetricsSnapshot } from '../ride/types';
 import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
@@ -102,6 +106,12 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   onGpsRecoveryPress,
 }) => {
   const s = stylesheet;
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const speedKmh = liveSpeed * 3.6;
+  const cyclistState =
+    speedKmh >= 35 ? 'attack' : speedKmh >= 15 ? 'cruise' : 'idle';
+  const energy = Math.max(15, 100 - Math.min(85, liveElapsedS / 60));
+  const showLudicrous = immersiveEnabled && speedKmh >= 32;
 
   const metrics: RideMetricsSnapshot = useMemo(() => {
     const avgSpeedKmh =
@@ -127,7 +137,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   return (
     <View style={s.container}>
       <View style={s.mapLayer}>
-        <RideMapView userCoordinate={liveCoord} />
+        <RideMapView userCoordinate={liveCoord} cyclistState={cyclistState} />
       </View>
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <View style={s.top}>
@@ -136,6 +146,12 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
             busy={gpsRecoveryBusy}
             onPress={() => onGpsRecoveryPress?.()}
           />
+          {immersiveEnabled && (
+            <>
+              <SpeechBubble text={showLudicrous ? 'LUDICROUS SPEED!' : ''} />
+              <EnergyBar value={energy} />
+            </>
+          )}
           <DataFieldGrid metrics={metrics} />
         </View>
         <View style={s.actions}>
