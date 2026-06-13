@@ -1,6 +1,7 @@
 import { getAppStorage } from '../app/storage';
 import { awardQuestXp } from './progression';
 import { triggerEngine, TriggerPriority } from '../services/TriggerEngine';
+import { trackEngagement } from '../services/EngagementAnalytics';
 
 export type QuestMetric = 'distance_km' | 'duration_min' | 'ride_started';
 
@@ -87,6 +88,7 @@ function completeQuest(quest: DailyQuest): void {
   quest.completed = true;
   quest.progress = quest.target;
   awardQuestXp(quest.xpReward);
+  trackEngagement('quest_complete', { quest_id: quest.id, xp: quest.xpReward });
   triggerEngine.push({
     id: `quest_${quest.id}_${todayIso()}`,
     title: 'QUEST COMPLETE',

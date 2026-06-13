@@ -3,6 +3,7 @@ import {
   isImmersiveThemeEnabled,
   setImmersiveThemeEnabled,
 } from '../services/ImmersiveThemeService';
+import { trackEngagement } from '../services/EngagementAnalytics';
 
 export function useImmersiveTheme() {
   const [enabled, setEnabled] = useState(() => isImmersiveThemeEnabled());
@@ -11,6 +12,7 @@ export function useImmersiveTheme() {
     setEnabled((prev) => {
       const next = !prev;
       setImmersiveThemeEnabled(next);
+      trackEngagement('immersive_toggle', { enabled: next });
       return next;
     });
   }, []);

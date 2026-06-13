@@ -1,4 +1,5 @@
 import { getAppStorage } from '../app/storage';
+import { trackEngagement } from '../services/EngagementAnalytics';
 
 export const PROGRESSION_SCHEMA_VERSION = 1;
 const STORAGE_KEY = 'game_progression_v1';
@@ -63,7 +64,12 @@ function saveProgression(state: ProgressionState): void {
 
 export function addXp(amount: number): ProgressionState {
   const state = loadProgression();
+  const prevLevel = levelFromXp(state.xp);
   state.xp = Math.max(0, state.xp + amount);
+  const nextLevel = levelFromXp(state.xp);
+  if (nextLevel > prevLevel) {
+    trackEngagement('level_up', { level: nextLevel });
+  }
   saveProgression(state);
   return state;
 }
@@ -89,19 +95,27 @@ export function recordDailyActivity(): ProgressionState {
 export function recordRideComplete(distanceKm: number, durationMinutes: number): ProgressionState {
   const state = loadProgression();
   state.totalRides += 1;
+  const prevLevel = levelFromXp(state.xp);
   state.xp += Math.round(distanceKm * 10 + durationMinutes * 2);
+  const nextLevel = levelFromXp(state.xp);
+  if (nextLevel > prevLevel) {
+    trackEngagement('level_up', { level: nextLevel });
+  }
   const today = todayIso();
-  if (state.lastActiveDate === today) {
-    saveProgression(state);
-    return state;
+  if (state.lastActiveDate !== today) {
+    if (state.lastActiveDate === yesterdayIso()) {
+      state.streakDays += 1;
+    } else {
+      state.streakDays = 1;
+    }
+    state.lastActiveDate = today;
+    trackEngagement('streak_day', { days: state.streakDays });
   }
-  if (state.lastActiveDate === yesterdayIso()) {
-    state.streakDays += 1;
-  } else {
-    state.streakDays = 1;
-  }
-  state.lastActiveDate = today;
   saveProgression(state);
+  trackEngagement('ride_complete', {
+    distance_km: Math.round(distanceKm * 10) / 10,
+    duration_min: Math.round(durationMinutes),
+  });
   return state;
 }
 

@@ -25,6 +25,7 @@ import type { ActivitySportType } from '../services/api';
 import { ActivityService } from '../services/api';
 import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
+import { trackEngagement } from '../services/EngagementAnalytics';
 
 const Tab = createBottomTabNavigator();
 
@@ -138,6 +139,7 @@ export function NavigationShell({
           result: 'tmpfile',
         });
         if (await Sharing.isAvailableAsync()) {
+          trackEngagement('ride_summary_share', { activity_id: latest.id });
           await Sharing.shareAsync(uri, {
             mimeType: 'image/png',
             dialogTitle: 'Share ride result',
@@ -146,6 +148,7 @@ export function NavigationShell({
         }
       }
       await Share.share({ title: '4VELO Ride Result', message });
+      trackEngagement('ride_summary_share', { activity_id: latest.id, fallback: true });
     } catch (e) {
       Alert.alert('Share', 'Could not prepare share card.');
     }

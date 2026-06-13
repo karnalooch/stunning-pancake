@@ -7,6 +7,7 @@ import { splitLayoutRows } from '../../ride/layouts';
 import type { DataFieldLayout, RideMetricsSnapshot, RideProfileId } from '../../ride/types';
 import { DataFieldCell } from './DataFieldCell';
 import { DraggableFieldCell } from './DraggableFieldCell';
+import { trackEngagement } from '../../services/EngagementAnalytics';
 
 interface DataFieldGridProps {
   metrics: RideMetricsSnapshot;
@@ -111,8 +112,11 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
   );
 
   const toggleEdit = useCallback(() => {
-    setEditMode((v) => !v);
-  }, []);
+    setEditMode((v) => {
+      if (!v) trackEngagement('layout_edit', { profile: activeProfile });
+      return !v;
+    });
+  }, [activeProfile]);
 
   const renderRow = (slots: typeof row1) => (
     <View style={s.row}>
