@@ -18,6 +18,10 @@ import { ScrollContainer } from '../components/ScrollContainer';
 import { GameCard } from '../components/GameCard';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useUnistyles } from 'react-native-unistyles';
+import { SceneBackground } from '../components/scene/SceneBackground';
+import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { SpeechBubble } from '../components/narration/SpeechBubble';
+import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import {
   AuthService,
   DepartmentService,
@@ -34,6 +38,13 @@ interface OnboardingProps {
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
   const { theme } = useUnistyles();
   const C = theme.colors as any;
+  const { enabled: immersiveEnabled } = useImmersiveTheme();
+
+  const STEP_COPY = [
+    { bubble: 'Wybierz swoje miasto!', sprite: 'idle' as const },
+    { bubble: 'Dołącz do drużyny!', sprite: 'cruise' as const },
+    { bubble: 'Gotowy na wyścig?', sprite: 'attack' as const },
+  ];
 
   const [step, setStep] = useState(0);
   const [tenants, setTenants] = useState<PublicTenantOption[]>([]);
@@ -141,7 +152,14 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   };
 
   return (
-    <Column flex={1} style={{ backgroundColor: C.background, paddingTop: 48 }} padding={16}>
+    <Column flex={1} style={{ backgroundColor: C.background, paddingTop: 48, position: 'relative' }} padding={16}>
+      {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
+      {immersiveEnabled && (
+        <Column gap={8} style={{ alignItems: 'center', marginBottom: 8 }}>
+          <CyclistSprite size={64} state={STEP_COPY[step]?.sprite ?? 'idle'} />
+          <SpeechBubble text={STEP_COPY[step]?.bubble ?? ''} />
+        </Column>
+      )}
       {/* RPG-Style HUD Progress */}
       <Column gap={8} style={{ marginBottom: 24 }}>
         <Row justifyContent="space-between" alignItems="center">
