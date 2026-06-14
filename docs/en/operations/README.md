@@ -55,6 +55,15 @@ Polish canonical runbooks: [../../pl/operations/](../../pl/operations/). Legacy 
 | [KUBERNETES.md](./KUBERNETES.md) | k8s manifests |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Pre-release gate |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery |
+| [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) | Full-vision mobile verification gate |
+| [MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | Preventive startup hardening playbook |
+| [MOBILE_FIX_FORWARD_PLAYBOOK.md](./MOBILE_FIX_FORWARD_PLAYBOOK.md) | Fix-forward and hotfix response playbook |
+| [MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | Role-by-role cross-functional mobile review |
+| [MOBILE_SPRINT1_REVIEW_PACKET.md](./MOBILE_SPRINT1_REVIEW_PACKET.md) | Ready Sprint 1 checklist and template packet |
+| [MOBILE_SPRINT1_BOARD_SEED.md](./MOBILE_SPRINT1_BOARD_SEED.md) | Ready Sprint 1 ticket seed (priority, owner, AC) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | Day 1 kickoff checklist (agenda, blocker SLA, 17:00 gate) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | Ready Day 1 kickoff notes template (decisions, owners, ETA, blockers) |
+| [MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | Operational D1-D3 plan: who/what/when for Sprint 1 start |
 | [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Background tracking migration (native provider, KPI, escalation) |
 | [infrastructure/brouter/README.md](../../../infrastructure/brouter/README.md) | BRouter Dockerfile |
 

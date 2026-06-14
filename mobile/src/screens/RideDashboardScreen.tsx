@@ -14,14 +14,12 @@ import {
     Text,
     ScrollView,
     Pressable,
-    Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from '../theme/stitch';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
@@ -35,11 +33,23 @@ import { LevelXpBar } from '../components/game/LevelXpBar';
 import { StreakBadge } from '../components/game/StreakBadge';
 import { DailyQuestCard } from '../components/game/DailyQuestCard';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { DevEnvironmentBanner } from '../components/DevEnvironmentBanner';
+import { formatRiderDisplayName } from '../utils/displayName';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { AppHeader } from '../components/ui/AppHeader';
+import { GameCard } from '../components/ui/GameCard';
+import { EmptyState } from '../components/ui/EmptyState';
+import { RiderAvatar } from '../components/ui/RiderAvatar';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { useI18n } from '../i18n/useI18n';
+import { useRiderStats } from '../hooks/useRiderStats';
+import type { RideEdgeMessage } from '../services/apiRetry';
+import { LAYOUT } from '../theme/layout';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
 const stylesheet = StyleSheet.create(theme => {
-    const C = theme.colors as any;
+    const C = theme.colors as Record<string, string>;
     return {
     container: {
         flex: 1,
@@ -118,8 +128,8 @@ const stylesheet = StyleSheet.create(theme => {
         flex: 1,
     },
     content: {
-        padding: 16,
-        gap: 16,
+        padding: LAYOUT.gutter,
+        gap: LAYOUT.sectionGap,
     },
     // ── Hero Card ──
     heroCard: {
@@ -299,6 +309,11 @@ interface RideDashboardScreenProps {
     gpsRecoveryBusy?: boolean;
     onGpsRecoveryPress?: () => void;
     onOpenGpsWizard?: () => void;
+    onOpenSettings?: () => void;
+    startRideError?: string | null;
+    onDismissStartRideError?: () => void;
+    rideEdgeMessage?: RideEdgeMessage | null;
+    onDismissRideEdgeMessage?: () => void;
 }
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
@@ -312,15 +327,33 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     gpsRecoveryBusy = false,
     onGpsRecoveryPress,
     onOpenGpsWizard,
+    onOpenSettings,
+    startRideError,
+    onDismissStartRideError,
+    rideEdgeMessage,
+    onDismissRideEdgeMessage,
 }) => {
     const { theme } = useUnistyles(); const s = stylesheet;
-    const C = theme.colors as any;
+    const { t, locale } = useI18n();
+    const C = theme.colors as Record<string, string>;
     const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
     const { notice, dismiss } = usePlatformNotices(
         (user as { tenant_id?: string } | null)?.tenant_id ?? null,
     );
     const { enabled: immersiveEnabled } = useImmersiveTheme();
-    const { level, xpBar, progression, quests, onStartRide: trackQuestStart } = useGameProgress();
+    const { level, xpBar, quests, onStartRide: trackQuestStart } = useGameProgress();
+    const {
+        latest: latestRide,
+        weeklyBars,
+        loading: statsLoading,
+        offline: statsOffline,
+        streakDays,
+    } = useRiderStats();
+
+    const lastRideDistanceKm = latestRide ? (latestRide.distance ?? 0) / 1000 : null;
+    const lastRideDuration = latestRide?.duration ?? null;
+
+    const displayName = formatRiderDisplayName(user?.username);
 
     const handleStartRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
@@ -333,48 +366,55 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
         onGoToRide?.();
     }, [onGoToRide]);
 
-    // ── Generate random weekly data for demo ──
-    const weeklyBars = React.useMemo(() => {
-        return WEEK_DAYS.map(() => Math.random() * 0.8 + 0.1);
-    }, []);
-
     // ── Render ──
     return (
-        <SafeAreaView style={s.container} edges={['top']}>
+        <SafeAreaView style={s.container} edges={[]}>
             {immersiveEnabled && (
                 <SceneBackground sceneId="ride_dashboard" scrim="soft" />
             )}
-            {/* TopAppBar */}
-            <View style={[s.header, s.pixelShadow]}>
-                <View style={s.headerLeft}>
-                    <View style={s.avatar}>
-                        <Image
-                            source={{ uri: 'https://lh3.googleusercontent.com/aida/ADBb0ujmdfGNwYeO4AQIm-niVeNKJgNFdyNxgN1CvOCgS0e7FogSfaY3bz5lokN38hc2XkJbYMtNB4hr4myidBg7bvfLvAy5Uy0sVhprjb9mCxYLLFBz8qCLSpjYFyO4PUqJSbAruccML_A_mvRnKT48RhKsQqvpUgG1kS2eP_0G1YLjPD2fEWZ-vrrhnVeTIwN18yjG4Hq2vW4dWX60x-Tey3XdzpD71eCI8SXG1YVfWWb1V5KRIYra3gYl2RuX0NFd8jgOCf9sfURndw' }}
-                            style={{ width: '100%', height: '100%' }}
-                            resizeMode="cover"
-                        />
+            <AppHeader
+                rightSlot={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <StreakBadge days={streakDays} />
                     </View>
-                    <Text style={s.headerTitle}>VELO QUEST</Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Pressable
-                        style={({ pressed: p }) => [
-                            s.settingsBtn,
-                            p && { transform: [{ translateY: 2 }], opacity: 0.8 },
-                        ]}
-                        onPress={() => {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
-                        }}
-                        accessibilityLabel="Settings"
-                    >
-                        <Text style={s.settingsText}>⚙️</Text>
-                    </Pressable>
-                    <StreakBadge days={progression.streakDays} />
-                </View>
-            </View>
+                }
+                rightAction={{
+                    icon: 'settings',
+                    onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
+                        onOpenSettings?.();
+                    },
+                    accessibilityLabel: t.settings.title,
+                }}
+            >
+                <RiderAvatar size={40} />
+            </AppHeader>
 
             {/* Content */}
             <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+                <DevEnvironmentBanner />
+                {statsOffline ? (
+                    <EdgeStateBanner
+                        title={t.errors.network}
+                        message={t.errors.offlineCache}
+                        variant="offline"
+                    />
+                ) : null}
+                {rideEdgeMessage ? (
+                    <EdgeStateBanner
+                        title={rideEdgeMessage.title}
+                        message={rideEdgeMessage.message}
+                        variant={rideEdgeMessage.variant}
+                        onDismiss={onDismissRideEdgeMessage}
+                    />
+                ) : null}
+                {startRideError ? (
+                    <EdgeStateBanner
+                        title={t.errors.startRide}
+                        message={startRideError}
+                        onDismiss={onDismissStartRideError}
+                    />
+                ) : null}
                 <PlatformNoticeBanner notice={notice} onDismiss={dismiss} />
                 <GpsRecoveryBanner
                     visible={gpsRecoveryVisible}
@@ -384,31 +424,31 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 <View style={{ marginTop: -4 }}>
                     <ArcadeButton
                         variant="ghost"
-                        label="GPS CHECK WIZARD"
+                        label={t.dashboard.gpsWizard.toUpperCase()}
                         onPress={() => onOpenGpsWizard?.()}
                         size="md"
                     />
                 </View>
                 {/* Hero Card — Active Ride or Idle */}
-                <View style={[s.heroCard, s.pixelShadow]}>
+                <GameCard texture="parchment_grain">
                     {isRecording ? (
                         <>
-                            <Text style={s.heroGreeting}>CURRENT RIDE</Text>
-                            <Text style={[s.heroName, { fontSize: 28 }]}>In Progress</Text>
+                            <Text style={s.heroGreeting}>{t.dashboard.currentRide.toUpperCase()}</Text>
+                            <Text style={[s.heroName, { fontSize: 28 }]}>{t.dashboard.inProgress}</Text>
                             <View style={s.heroStats}>
                                 <View style={s.heroStatTile}>
-                                    <Text style={s.heroStatLabel}>Speed</Text>
+                                    <Text style={s.heroStatLabel}>{t.ride.fields.speed}</Text>
                                     <Text style={s.heroStatValue}>{liveSpeed.toFixed(1)}<Text style={s.metricUnit}> km/h</Text></Text>
                                 </View>
                                 <View style={s.heroStatTile}>
-                                    <Text style={s.heroStatLabel}>Distance</Text>
+                                    <Text style={s.heroStatLabel}>{t.ride.fields.distance}</Text>
                                     <Text style={s.heroStatValue}>{liveDistance.toFixed(1)}<Text style={s.metricUnit}> km</Text></Text>
                                 </View>
                             </View>
-                            <View style={{ marginTop: 16 }}>
+                            <View style={{ marginTop: LAYOUT.gutter }}>
                                 <ArcadeButton
                                     variant="primary"
-                                    label="GO TO RIDE"
+                                    label={t.dashboard.goToRide}
                                     onPress={handleGoToRide}
                                     size="lg"
                                 />
@@ -418,8 +458,8 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                         <>
                             <View style={s.heroTop}>
                                 <View style={{ flex: 1 }}>
-                                    <Text style={s.heroGreeting}>Ready to ride?</Text>
-                                    <Text style={s.heroName}>{user?.username ?? 'RIDER_01'}</Text>
+                                    <Text style={s.heroGreeting}>{t.dashboard.ready}</Text>
+                                    <Text style={s.heroName} numberOfLines={1}>{displayName}</Text>
                                 </View>
                                 {immersiveEnabled && (
                                     <CyclistSprite size={48} state="idle" />
@@ -441,21 +481,23 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                                         ]}
                                         onPress={() => setSelectedSport(opt.type)}
                                     >
-                                        <Text style={s.sportChipText}>{opt.labelPl}</Text>
+                                        <Text style={s.sportChipText}>
+                                            {locale === 'pl' ? opt.labelPl : opt.labelEn}
+                                        </Text>
                                     </Pressable>
                                 ))}
                             </View>
                             <View style={{ marginTop: 8 }}>
                                 <ArcadeButton
                                     variant="primary"
-                                    label="START RIDE"
+                                    label={t.dashboard.startRide}
                                     onPress={handleStartRide}
                                     size="lg"
                                 />
                             </View>
                         </>
                     )}
-                </View>
+                </GameCard>
 
                 {!isRecording && (
                     <View style={s.section}>
@@ -463,32 +505,35 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                     </View>
                 )}
 
-                {/* Metric Tiles Grid */}
+                {/* Last ride from API */}
                 <View style={s.section}>
-                    <Text style={s.sectionHeader}>Last Ride Stats</Text>
-                    <View style={s.metricGrid}>
-                        <View style={[s.metricTile, s.pixelShadow]}>
-                            <Text style={s.metricLabel}>Power</Text>
-                            <Text style={s.metricValue}>285<Text style={s.metricUnit}> W</Text></Text>
+                    <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
+                    {statsLoading ? (
+                        <SkeletonBlock height={88} />
+                    ) : lastRideDistanceKm == null ? (
+                        <EmptyState message={t.dashboard.noRides} icon="training" />
+                    ) : (
+                        <View style={s.metricGrid}>
+                            <View style={[s.metricTile, s.pixelShadow]}>
+                                <Text style={s.metricLabel}>{t.ride.fields.distance}</Text>
+                                <Text style={s.metricValue}>
+                                    {lastRideDistanceKm.toFixed(1)}
+                                    <Text style={s.metricUnit}> km</Text>
+                                </Text>
+                            </View>
+                            <View style={[s.metricTile, s.pixelShadow]}>
+                                <Text style={s.metricLabel}>{t.ride.fields.time}</Text>
+                                <Text style={s.metricValue}>
+                                    {lastRideDuration ?? '—'}
+                                </Text>
+                            </View>
                         </View>
-                        <View style={[s.metricTile, s.pixelShadow]}>
-                            <Text style={s.metricLabel}>Heart Rate</Text>
-                            <Text style={s.metricValue}>155<Text style={s.metricUnit}> bpm</Text></Text>
-                        </View>
-                        <View style={[s.metricTile, s.pixelShadow]}>
-                            <Text style={s.metricLabel}>Cadence</Text>
-                            <Text style={s.metricValue}>82<Text style={s.metricUnit}> rpm</Text></Text>
-                        </View>
-                        <View style={[s.metricTile, s.pixelShadow]}>
-                            <Text style={s.metricLabel}>Distance</Text>
-                            <Text style={s.metricValue}>42.5<Text style={s.metricUnit}> km</Text></Text>
-                        </View>
-                    </View>
+                    )}
                 </View>
 
                 {/* Weekly Load */}
                 <View style={[s.weeklyCard, s.pixelShadow]}>
-                    <Text style={s.sectionHeader}>Weekly Load</Text>
+                    <Text style={s.sectionHeader}>{t.dashboard.weeklyLoad}</Text>
                     <View style={s.chartContainer}>
                         {weeklyBars.map((h, i) => (
                             <View
@@ -511,7 +556,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 </View>
 
                 {/* Bottom Spacing for Tab Bar */}
-                <View style={{ height: 80 }} />
+                <View style={{ height: LAYOUT.tabBarBottomInset }} />
             </ScrollView>
         </SafeAreaView>
     );

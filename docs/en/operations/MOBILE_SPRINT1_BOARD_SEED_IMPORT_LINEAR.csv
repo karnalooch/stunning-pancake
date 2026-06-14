@@ -1,0 +1,40 @@
+Title,Description,Priority,Labels,State
+"[S1-PT-01] Approve Sprint 1 scope (IN/OUT)","Owner role: PM | AC: Scope published; exclusions approved",1,"sprint1,product,ops,p0",Backlog
+"[S1-PT-02] Confirm ride-core acceptance criteria","Owner role: Tech Lead | AC: AC for RideDashboard/HUD/Summary added to board",1,"sprint1,product,docs,p0",Backlog
+"[S1-PT-03] Lock P0/P1 ordering across domains","Owner role: PM | AC: Ordering approved by mobile+backend+QA",2,"sprint1,product,ops,p1",Backlog
+"[S1-PT-04] Update implementation spec after kickoff","Owner role: UX Lead | AC: `4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` updated",2,"sprint1,product,docs,p1",Backlog
+"[S1-MOB-01] Fix lint blocker import in `StreakBadge`","Owner role: Mobile Dev | AC: `expo lint` has no import/no-unresolved error",1,"sprint1,mobile,bug,p0",Backlog
+"[S1-MOB-02] Align `RideSummary` contract and deep-link path","Owner role: Mobile Dev | AC: `types` + `routeContract` + `linking` consistent",1,"sprint1,mobile,tech-debt,p0",Backlog
+"[S1-MOB-03] Finalize HUD status bar (GPS/battery/clock) on device","Owner role: Mobile Dev | AC: Android/iOS manual pass; no null crash",1,"sprint1,mobile,feature,p0",Backlog
+"[S1-MOB-04] Add stop-confirm hold guard with regression test","Owner role: Mobile Dev | AC: Stop confirmation works; test/manual pass",1,"sprint1,mobile,feature,p0",Backlog
+"[S1-MOB-05] Reduce hook dependency warnings in critical files","Owner role: Mobile Dev | AC: No new warnings in touched critical files",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-06] Refactor `ActivityDetail` to i18n and remove emoji placeholders","Owner role: Mobile Dev | AC: Labels via i18n; no placeholder text/emoji",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-07] Improve onboarding types and i18n copy","Owner role: Mobile Dev | AC: Reduced `any`; PL/EN copy through i18n",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-08] Add edge states (offline/error/empty) in detail/trends","Owner role: Mobile Dev | AC: Clear consistent fallbacks",2,"sprint1,mobile,feature,p1",Backlog
+"[S1-MOB-09] Consolidate legacy UI wrappers","Owner role: Mobile Dev | AC: Legacy components delegate to `components/ui`",3,"sprint1,mobile,tech-debt,p2",Backlog
+"[S1-MOB-10] Standardize spacing/layout templates on top 3 screens","Owner role: Mobile Dev | AC: Ride/Explore/Profile follow same layout pattern",3,"sprint1,mobile,tech-debt,p2",Backlog
+"[S1-BE-01] Validate auth refresh contract and 401 behavior","Owner role: Backend Dev | AC: Contract documented; mobile flow passes",1,"sprint1,backend,ops,p0",Backlog
+"[S1-BE-02] Validate `sync_path/finalize` offline edge cases","Owner role: Backend Dev | AC: kill/relaunch scenario documented and approved",1,"sprint1,backend,ops,p0",Backlog
+"[S1-BE-03] Review retry policy and status codes (429/503)","Owner role: Backend Dev | AC: mobile retry/backoff guidance aligned",2,"sprint1,backend,ops,p1",Backlog
+"[S1-BE-04] Align payload expectations for leaderboard/trends","Owner role: Backend Dev | AC: No ambiguous fields in UI integrations",2,"sprint1,backend,tech-debt,p1",Backlog
+"[S1-BE-05] Update API docs for wearable auth status flow","Owner role: Backend Dev | AC: API docs match real flow",3,"sprint1,backend,docs,p2",Backlog
+"[S1-QA-01] Smoke auth + ride lifecycle + GPS recovery","Owner role: QA Lead | AC: 3 critical flows pass with report",1,"sprint1,qa,ops,p0",Backlog
+"[S1-QA-02] Manual deep-link matrix (Android+iOS)","Owner role: QA Engineer | AC: all critical deep links verified",1,"sprint1,qa,ops,p0",Backlog
+"[S1-QA-03] Add smoke coverage for settings sections","Owner role: QA Engineer | AC: section switch and persistence pass",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-04] Add smoke coverage explore map -> marketplace","Owner role: QA Engineer | AC: navigation and network fallback pass",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-05] Regression pass for `ActivityDetail` refactor","Owner role: QA Engineer | AC: no crash/placeholder regressions",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-06] Expand device matrix notes","Owner role: QA Lead | AC: minimum 2 Android + 1 iOS documented",3,"sprint1,qa,ops,p2",Backlog
+"[S1-REL-01] Enforce env policy: no production fallback in release","Owner role: Release Eng | AC: no prod fallback risk for release builds",1,"sprint1,release,ops,p0",Backlog
+"[S1-REL-02] Validate preview build and rollback path","Owner role: Release Eng | AC: preview build ready; rollback documented",1,"sprint1,release,ops,p0",Backlog
+"[S1-REL-03] Verify telemetry/crash ingestion in preview","Owner role: DevOps | AC: crash/perf events visible",2,"sprint1,release,ops,p1",Backlog
+"[S1-REL-04] Align release checklist EN/PL","Owner role: Release Eng | AC: `MOBILE.md` EN/PL synchronized",2,"sprint1,release,docs,p1",Backlog
+"[S1-DATA-01] Audit Ride/Auth/Share event coverage","Owner role: Data Analyst | AC: missing events documented and assigned",2,"sprint1,data,ops,p1",Backlog
+"[S1-DATA-02] Validate performance budget telemetry visibility","Owner role: Data Analyst | AC: violation events mapped and queryable",2,"sprint1,data,ops,p1",Backlog
+"[S1-DATA-03] Propose retention event improvements","Owner role: Data Analyst | AC: prioritized event backlog for Sprint 2",3,"sprint1,data,tech-debt,p2",Backlog
+"[S1-DES-01] Audit PressStart2P/VT323 usage on critical screens","Owner role: UI Designer | AC: no font-family mismatch on Ride/Summary",1,"sprint1,design,ops,p0",Backlog
+"[S1-DES-02] Remove emoji/placeholders from detail/profile","Owner role: UI Designer | AC: consistent chrome icon language",2,"sprint1,design,tech-debt,p1",Backlog
+"[S1-DES-03] Normalize card styling (padding/border/shadow)","Owner role: UI Designer | AC: approved pattern on 3 key screens",2,"sprint1,design,tech-debt,p1",Backlog
+"[S1-DES-04] Update Grand Prix audit EN/PL after sprint changes","Owner role: Technical Artist | AC: drift/status updated",3,"sprint1,design,docs,p2",Backlog
+"[S1-SEC-01] Audit token storage and error logging hygiene","Owner role: Security Eng | AC: no sensitive logging exposure",1,"sprint1,security,ops,p0",Backlog
+"[S1-SEC-02] Audit privacy-zones UX fallback behavior","Owner role: Security Eng | AC: UI does not imply false success",2,"sprint1,security,ops,p1",Backlog
+"[S1-SEC-03] Review env configuration for secret hygiene","Owner role: Security Eng | AC: no client secret leakage risk",2,"sprint1,security,ops,p1",Backlog

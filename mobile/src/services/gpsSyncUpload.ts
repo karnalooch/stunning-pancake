@@ -26,6 +26,7 @@ import {
 
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
 import { measureAsync } from './performanceBudget';
+import { warnMmkvUnavailable } from './mmkvSupport';
 
 export { TELEMETRY_URL };
 
@@ -50,7 +51,7 @@ export function getGpsStorage(): GpsStorageAdapter | null {
     try {
       _storage = new MMKV({ id: 'gps-buffer' });
     } catch (e) {
-      console.error('MMKV init failed in GpsSyncManager. Falling back to mock.', e);
+      warnMmkvUnavailable('GpsSyncManager', e);
       _storage = {
         getString: () => null,
         set: () => {},
@@ -139,6 +140,12 @@ async function postTelemetryBatch(
   points: GpsPoint[],
   clientBatchId: string,
 ): Promise<IngestAckResult> {
+  if (!TELEMETRY_URL) {
+    if (__DEV__) {
+      console.warn('[GPS] Missing EXPO_PUBLIC_TELEMETRY_URL, skipping telemetry ingest.');
+    }
+    return { acked: false, inserted: 0 };
+  }
   const activityId = points[0]?.activity_id ?? null;
   const maxSeq = points.reduce(
     (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),

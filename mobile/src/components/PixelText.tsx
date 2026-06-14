@@ -62,7 +62,7 @@ export const PixelText: React.FC<PixelTextProps> = ({
     useUnistyles(); // Subscribe to theme changes for reactivity
 
     // Resolve the current theme name for color resolution
-    const themeName = UnistylesRuntime.themeName ?? 'octopath';
+    const themeName = (UnistylesRuntime.themeName ?? 'octopath') as ThemeKey;
 
     return (
         <Text

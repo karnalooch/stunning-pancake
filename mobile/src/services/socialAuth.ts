@@ -1,12 +1,20 @@
 import * as Linking from 'expo-linking';
 import { API_PATHS_FULL } from '@4velo/api-client';
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://backend-production-55c7.up.railway.app';
+const DEV_FALLBACK_API_URL = 'https://backend-production-55c7.up.railway.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? DEV_FALLBACK_API_URL : '');
+
+if (!BASE_URL) {
+  console.warn(
+    '[OAuth] Missing EXPO_PUBLIC_API_URL. Configure runtime env before release builds.',
+  );
+}
 
 export const SocialAuthService = {
-  googleLoginUrl: () => `${BASE_URL}${API_PATHS_FULL.authGoogleLogin}?client=mobile`,
-  facebookLoginUrl: () => `${BASE_URL}${API_PATHS_FULL.authFacebookLogin}?client=mobile`,
+  googleLoginUrl: (): string | null =>
+    BASE_URL ? `${BASE_URL}${API_PATHS_FULL.authGoogleLogin}?client=mobile` : null,
+  facebookLoginUrl: (): string | null =>
+    BASE_URL ? `${BASE_URL}${API_PATHS_FULL.authFacebookLogin}?client=mobile` : null,
 
   parseCallbackUrl(url: string): { access: string; refresh: string } | null {
     const parsed = Linking.parse(url);

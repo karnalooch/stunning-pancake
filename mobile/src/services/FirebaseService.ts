@@ -38,9 +38,9 @@ export function firebaseCapture(err: unknown, context: string): void {
     // Record to Firebase Crashlytics with context as breadcrumb
     _crashlytics().log(`[${context}] ${message}`);
     _crashlytics().recordError(err instanceof Error ? err : new Error(message));
-  } else {
-    // Development fallback — structured console logging
-    console.error(`[Firebase Dev] ${context}:`, message);
+  } else if (__DEV__) {
+    // console.warn avoids LogBox red overlay for non-fatal background failures
+    console.warn(`[Telemetry Dev] ${context}:`, message);
   }
 }
 

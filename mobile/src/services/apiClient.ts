@@ -1,4 +1,4 @@
-import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import {
   API_PATHS_FULL,
   type TokenRefreshResponse,
@@ -6,9 +6,46 @@ import {
 import { authTokenStorage } from './authTokenStorage';
 import { AuthAppError, NetworkAppError, telemetryContext, toAppError } from './appError';
 import { firebaseCapture } from './FirebaseService';
+import { isMmkvFallbackActive } from './mmkvSupport';
 
-const BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || 'https://backend-production-55c7.up.railway.app';
+const DEV_FALLBACK_API_URL = 'https://backend-production-55c7.up.railway.app';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? DEV_FALLBACK_API_URL : '');
+
+if (!BASE_URL) {
+  console.warn(
+    '[API] Missing EXPO_PUBLIC_API_URL. Configure runtime env before release builds.',
+  );
+}
+
+/** Background endpoints — failures must not spam LogBox or Crashlytics. */
+const SILENT_ERROR_URL_FRAGMENTS = [
+  API_PATHS_FULL.usersPushRegister,
+  '/users/push/register',
+];
+
+function isSilentApiError(url: string | undefined): boolean {
+  if (!url) return false;
+  return SILENT_ERROR_URL_FRAGMENTS.some((fragment) => url.includes(fragment));
+}
+
+function formatClientErrorMessage(
+  error: AxiosError<{ error?: string; detail?: string }>,
+): string {
+  const axiosMsg = error.message || '';
+  const bodyMsg = error.response?.data?.error || error.response?.data?.detail;
+
+  if (!error.response) {
+    if (axiosMsg === 'Network Error' || /network/i.test(axiosMsg)) {
+      if (__DEV__ && isMmkvFallbackActive()) {
+        return 'Wyłącz Remote JS Debugging (menu deweloperskie), aby API działało na urządzeniu.';
+      }
+      return 'Brak połączenia z serwerem. Sprawdź internet i spróbuj ponownie.';
+    }
+    return bodyMsg || axiosMsg || 'Błąd sieci';
+  }
+
+  return bodyMsg || axiosMsg || 'Błąd sieci';
+}
 
 export const api = axios.create({
   baseURL: BASE_URL,
@@ -63,10 +100,10 @@ async function refreshAccessToken(): Promise<string | null> {
   }
 }
 
-function unwrapEnvelope<T>(res: { data: T }) {
-  const body = res.data;
+function unwrapEnvelope<T>(res: AxiosResponse<T>): AxiosResponse<T> {
+  const body = res.data as unknown;
   if (body && typeof body === 'object' && 'ok' in body && 'data' in body) {
-    return { ...res, data: (body as { data: T }).data };
+    (res as AxiosResponse<unknown>).data = (body as { data: T }).data;
   }
   return res;
 }
@@ -104,11 +141,7 @@ api.interceptors.response.use(
       }
     }
 
-    const msg =
-      error.response?.data?.error ||
-      error.response?.data?.detail ||
-      error.message ||
-      'Network error';
+    const msg = formatClientErrorMessage(error);
     const appErr =
       error.response?.status === 401
         ? new AuthAppError(msg, telemetryContext(toAppError(error, msg)))
@@ -119,7 +152,10 @@ api.interceptors.response.use(
         `[API] ${error.config?.method?.toUpperCase()} ${error.config?.url} → ${msg}`,
       );
     }
-    firebaseCapture(appErr, 'API_ERROR');
+    const silent = isSilentApiError(error.config?.url);
+    if (!silent) {
+      firebaseCapture(appErr, 'API_ERROR');
+    }
     return Promise.reject(appErr);
   },
 );

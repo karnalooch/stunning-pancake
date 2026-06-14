@@ -33,6 +33,15 @@ Hub: [operations/README.md](./operations/README.md) · Matrix: [operations/OPERA
 | [operations/RAILWAY_KUBERNETES.md](./operations/RAILWAY_KUBERNETES.md) | Railway vs Kubernetes |
 | [operations/KUBERNETES.md](./operations/KUBERNETES.md) | `infrastructure/k8s/` manifests |
 | [operations/MOBILE.md](./operations/MOBILE.md) | EAS build/release, GPS recovery |
+| [operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | Preventive startup hardening for full-vision mobile |
+| [operations/MOBILE_FIX_FORWARD_PLAYBOOK.md](./operations/MOBILE_FIX_FORWARD_PLAYBOOK.md) | Mobile incident fix-forward procedure |
+| [operations/MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./operations/MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | Role-by-role mobile review and doc updates |
+| [operations/MOBILE_SPRINT1_REVIEW_PACKET.md](./operations/MOBILE_SPRINT1_REVIEW_PACKET.md) | Ready Sprint 1 checklist/template packet |
+| [operations/MOBILE_SPRINT1_BOARD_SEED.md](./operations/MOBILE_SPRINT1_BOARD_SEED.md) | Ready Sprint 1 ticket seed (30+ tasks with AC) |
+| [operations/MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./operations/MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | Day 1 kickoff checklist (agenda, P0 assignment, checkpoints) |
+| [operations/MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./operations/MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | Day 1 kickoff notes template (decisions, owners, ETA, blockers) |
+| [operations/MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./operations/MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | Concrete D1-D3 execution plan (owners, order, dependencies) |
+| [operations/MOBILE_FULL_VISION_VERIFICATION.md](./operations/MOBILE_FULL_VISION_VERIFICATION.md) | Full-vision acceptance and verification gate |
 | [operations/PRE_RELEASE_VERIFICATION.md](./operations/PRE_RELEASE_VERIFICATION.md) | Pre-release gate |
 | [operations/OSRM.md](./operations/OSRM.md) | OSRM service |
 | [operations/DATADOG_SIMULATOR.md](./operations/DATADOG_SIMULATOR.md) | Datadog + simulator metrics |

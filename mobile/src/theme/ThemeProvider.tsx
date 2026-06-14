@@ -21,6 +21,7 @@ import { MMKV } from 'react-native-mmkv';
 import { StyleSheet, UnistylesRuntime } from './unistyles';
 import { stitchTheme } from './stitch';
 import { BrandingService } from '../services/BrandingService';
+import { warnMmkvUnavailable } from '../services/mmkvSupport';
 import type { StitchTheme } from './unistyles';
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ function getStorage(): MMKV | null {
         _storage = new MMKV();
         return _storage;
     } catch (e) {
-        console.error('[ThemeProvider] MMKV init failed.', e);
+        warnMmkvUnavailable('ThemeProvider', e);
         return null;
     }
 }

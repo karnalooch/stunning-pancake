@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
+import { PixelIcon } from '../ui/PixelIcon';
+import { CURRENCY_ICONS } from '../../assets/tabIcons';
 
 interface EnergyBarProps {
   /** 0–100 */
@@ -16,11 +18,14 @@ export const EnergyBar: React.FC<EnergyBarProps> = ({ value, label = 'Energy' })
     clamped > 50 ? c.primaryFixed : clamped > 25 ? c.goldAmber : c.tertiaryContainer;
 
   return (
-    <View style={[styles.wrap, { borderColor: c.onBackground, backgroundColor: c.surfaceContainer }]}>
-      <Text style={[styles.label, { color: c.secondary }]}>
-        {label}: {Math.round(clamped)}%
-      </Text>
-      <View style={[styles.track, { borderColor: c.onBackground, backgroundColor: c.surfaceContainerHigh }]}>
+    <View style={[styles.wrap, { borderColor: c.hudOutline, backgroundColor: c.surfaceContainer }]}>
+      <View style={styles.labelRow}>
+        <PixelIcon source={CURRENCY_ICONS.energy} size={14} baseSize={16} />
+        <Text style={[styles.label, { color: c.secondary, fontFamily: 'PressStart2P' }]}>
+          {label}: {Math.round(clamped)}%
+        </Text>
+      </View>
+      <View style={[styles.track, { borderColor: c.hudOutline, backgroundColor: c.surfaceContainerHigh }]}>
         <View style={[styles.fill, { width: `${clamped}%`, backgroundColor: fillColor }]} />
       </View>
     </View>
@@ -34,9 +39,13 @@ const styles = StyleSheet.create({
     padding: 8,
     gap: 4,
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   label: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 8,
     textTransform: 'uppercase',
   },
   track: {

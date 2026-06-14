@@ -22,14 +22,20 @@ describe('performanceBudget', () => {
     expect(setAnalyticsEvent).not.toHaveBeenCalled();
   });
 
+  test('minimum budget metric is valid when value is higher', () => {
+    const result = recordPerformanceMetric('hudMinFps', 58);
+    expect(result.withinBudget).toBe(true);
+    expect(setAnalyticsEvent).not.toHaveBeenCalled();
+  });
+
   test('exceeding budget emits perf_budget_violation', () => {
-    const over = PERFORMANCE_BUDGETS.gpsIngestLatencyMs + 100;
+    const over = PERFORMANCE_BUDGETS.gpsIngestLatencyMs.value + 100;
     const result = recordPerformanceMetric('gpsIngestLatencyMs', over);
     expect(result.withinBudget).toBe(false);
     expect(setAnalyticsEvent).toHaveBeenCalledWith('perf_budget_violation', {
       metric: 'gpsIngestLatencyMs',
       value: over,
-      budget: PERFORMANCE_BUDGETS.gpsIngestLatencyMs,
+      budget: PERFORMANCE_BUDGETS.gpsIngestLatencyMs.value,
     });
   });
 });

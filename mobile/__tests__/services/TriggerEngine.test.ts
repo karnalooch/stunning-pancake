@@ -41,9 +41,9 @@ describe('TriggerEngine', () => {
     engine.push(makeTrigger({ id: 'medium', priority: TriggerPriority.MEDIUM }));
 
     const queue = engine.state.queue.get();
-    expect(queue[0].id).toBe('critical');
-    expect(queue[1].id).toBe('medium');
-    expect(queue[2].id).toBe('low');
+    expect(queue[0]?.id).toBe('critical');
+    expect(queue[1]?.id).toBe('medium');
+    expect(queue[2]?.id).toBe('low');
   });
 
   test('HIGH > MEDIUM > LOW ordering', () => {
@@ -52,9 +52,9 @@ describe('TriggerEngine', () => {
     engine.push(makeTrigger({ id: 'h1', priority: TriggerPriority.HIGH }));
 
     const queue = engine.state.queue.get();
-    expect(queue[0].id).toBe('h1');
-    expect(queue[1].id).toBe('m1');
-    expect(queue[2].id).toBe('l1');
+    expect(queue[0]?.id).toBe('h1');
+    expect(queue[1]?.id).toBe('m1');
+    expect(queue[2]?.id).toBe('l1');
   });
 
   test('FIFO within same priority', () => {
@@ -63,9 +63,9 @@ describe('TriggerEngine', () => {
     engine.push(makeTrigger({ id: 'c', priority: TriggerPriority.LOW }));
 
     const queue = engine.state.queue.get();
-    expect(queue[0].id).toBe('a');
-    expect(queue[1].id).toBe('b');
-    expect(queue[2].id).toBe('c');
+    expect(queue[0]?.id).toBe('a');
+    expect(queue[1]?.id).toBe('b');
+    expect(queue[2]?.id).toBe('c');
   });
 
   test('CRITICAL should interrupt/show before current LOW', () => {
@@ -74,8 +74,8 @@ describe('TriggerEngine', () => {
     engine.push(makeTrigger({ id: 'critical-later', priority: TriggerPriority.CRITICAL }));
 
     const queue = engine.state.queue.get();
-    expect(queue[0].id).toBe('critical-later');
-    expect(queue[1].id).toBe('low-first');
+    expect(queue[0]?.id).toBe('critical-later');
+    expect(queue[1]?.id).toBe('low-first');
   });
 
   // ── 2. Deduplication ──────────────────────────────
@@ -216,7 +216,7 @@ describe('TriggerEngine', () => {
           TriggerPriority.MEDIUM,
           TriggerPriority.HIGH,
           TriggerPriority.CRITICAL,
-        ][i % 4] as TriggerPriority,
+        ][i % 4] ?? TriggerPriority.LOW,
       }));
     }
 

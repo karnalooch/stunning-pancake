@@ -9,6 +9,7 @@
 | **lang** | en |
 | **canonical_path** | docs/design/DESIGN_SYSTEM_MOBILE.md |
 | **Decision record** | [ADR 014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) · [ADR 006 (Stitch)](../adr/006-design-system-stitch.md) |
+| **Traceability** | [MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md](./MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md) |
 | **Detailed reference** | [docs/archive/designmobile.md](../archive/designmobile.md) (component/token/mockup appendix) |
 
 ---

@@ -1,6 +1,8 @@
 import React from 'react';
-import { Pressable, Text, ActivityIndicator } from 'react-native';
+import { Pressable, Text, ActivityIndicator, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { useI18n } from '../i18n/useI18n';
+import { HapticService } from '../services/HapticService';
 
 interface GpsRecoveryBannerProps {
   visible: boolean;
@@ -12,19 +14,25 @@ const stylesheet = StyleSheet.create((theme) => {
   const C = theme.colors as Record<string, string>;
   return {
     banner: {
-      backgroundColor: C.tertiaryContainer ?? C.primaryContainer,
-      borderWidth: 3,
-      borderColor: C.onBackground,
+      borderWidth: 2,
+      borderColor: C.hudOutline,
       borderRadius: 6,
       paddingVertical: 12,
       paddingHorizontal: 14,
-      marginBottom: 12,
+      marginBottom: 8,
+      shadowColor: C.hudOutline,
+      shadowOffset: { width: 3, height: 3 },
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      elevation: 4,
+      backgroundColor: C.goldAmber,
     },
     text: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: C.onBackground,
+      fontSize: 9,
+      fontFamily: 'PressStart2P',
+      color: C.hudOutline,
       textAlign: 'center',
+      lineHeight: 14,
     },
   };
 });
@@ -35,6 +43,7 @@ export const GpsRecoveryBanner: React.FC<GpsRecoveryBannerProps> = ({
   onPress,
 }) => {
   const { theme } = useUnistyles();
+  const { t } = useI18n();
   const s = stylesheet;
   const C = theme.colors as Record<string, string>;
 
@@ -42,19 +51,22 @@ export const GpsRecoveryBanner: React.FC<GpsRecoveryBannerProps> = ({
 
   return (
     <Pressable
-      style={({ pressed }) => [s.banner, pressed && { opacity: 0.85 }]}
-      onPress={onPress}
+      style={({ pressed }) => [s.banner, pressed && { opacity: 0.88 }]}
+      onPress={() => {
+        HapticService.trigger('button_press');
+        onPress();
+      }}
       disabled={busy}
       accessibilityRole="button"
-      accessibilityLabel="Wyślij niewysłane punkty GPS"
+      accessibilityLabel={t.gps.recoveryA11y}
     >
-      {busy ? (
-        <ActivityIndicator color={C.primary} />
-      ) : (
-        <Text style={s.text}>
-          Masz niewysłane punkty GPS — dotknij aby wysłać
-        </Text>
-      )}
+      <View style={{ overflow: 'hidden', borderRadius: 4 }}>
+        {busy ? (
+          <ActivityIndicator color={C.hudOutline} />
+        ) : (
+          <Text style={s.text}>{t.gps.recovery}</Text>
+        )}
+      </View>
     </Pressable>
   );
 };

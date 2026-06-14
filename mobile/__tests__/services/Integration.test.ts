@@ -8,8 +8,7 @@
  */
 
 import { AvatarTrainerService } from '../../src/services/AvatarTrainerService';
-import { triggerEngine, TriggerPriority, TriggerEngine } from '../../src/services/TriggerEngine';
-import { LlmCoachService } from '../../src/services/LlmCoachService';
+import { triggerEngine, TriggerPriority } from '../../src/services/TriggerEngine';
 
 jest.mock('../../src/services/LlmCoachService', () => ({
   LlmCoachService: jest.fn().mockImplementation(() => ({
@@ -124,7 +123,9 @@ describe('Integration: AvatarTrainerService + TriggerEngine', () => {
 
     // Queue should be sorted: CRITICAL(4) > HIGH(3) > MEDIUM(2) > LOW(1)
     for (let i = 1; i < priorities.length; i++) {
-      expect(priorities[i - 1]).toBeGreaterThanOrEqual(priorities[i]);
+      const prev = priorities[i - 1] ?? TriggerPriority.LOW;
+      const current = priorities[i] ?? TriggerPriority.LOW;
+      expect(prev).toBeGreaterThanOrEqual(current);
     }
   });
 

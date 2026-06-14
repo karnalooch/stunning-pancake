@@ -109,7 +109,7 @@ export class MilestoneTracker {
     // Find previous milestone
     const prevMilestones = MILESTONES.filter(m => m.distanceM <= currentDistanceM);
     const prevDistance = prevMilestones.length > 0 
-      ? prevMilestones[prevMilestones.length - 1].distanceM 
+      ? (prevMilestones[prevMilestones.length - 1]?.distanceM ?? 0)
       : 0;
 
     return (currentDistanceM - prevDistance) / (next - prevDistance);

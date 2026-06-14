@@ -2,7 +2,7 @@
 
 | | |
 |--|--|
-| **Status** | Active (handoff) |
+| **Status** | Active (historical handoff) |
 | **Date** | 2026-06-13 |
 | **Owner role** | Mobile Lead / Design |
 | **Audience** | Mobile engineers, designers, frontend |
@@ -17,6 +17,25 @@ Full audit after the **Nano Banana Pro** asset pack landed in repo (`assets/gene
 
 **Commits (2026-06-13):** `c7f5210` (38 assets + SSOT pipeline), `4cb7586` (regenerated currency/GPS/HUD/native icons).
 
+> **Important:** this audit contains historical implementation snapshots from the integration phase. Treat operationally current status as defined by:
+> - `docs/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md`
+> - `docs/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md`
+> - `docs/pl/operations/MOBILE_FULL_VISION_VERIFICATION.md`
+
+## Execution snapshot (2026-06-14)
+
+- This audit is kept as historical integration record.
+- Operationally current status is tracked in:
+  - `docs/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md`
+  - `docs/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md`
+  - `docs/en/operations/MOBILE_SPRINT1_REVIEW_PACKET.md`
+- Mobile technical gates currently green:
+  - `pnpm exec tsc --noEmit`
+  - full Jest suite (`19/19` suites, `97/97` tests)
+- Remaining release blockers are operational only:
+  - manual device QA matrix (Android/iOS),
+  - final cross-functional GO/NO-GO sign-off.
+
 ---
 
 ## Executive summary
@@ -26,7 +45,7 @@ Full audit after the **Nano Banana Pro** asset pack landed in repo (`assets/gene
 | Asset generation pipeline | Done — SSOT prompts, reference image, character lock |
 | Bundled PNGs (37 + sfx JSON) | Done — `mobile/assets/generated/` |
 | Native app icons | Done — `mobile/assets/icon.png` etc. |
-| **Wired in UI** | **~2 of 35** — `cyclist_sheet.png`, tab SVGs (not PNG) |
+| **Wired in UI** | **Integrated** — tabs, scenes, HUD, game chrome, particles, sfx, hero prefs (PR1–PR7) |
 | Design tokens | Split across 4 sources — not Grand Prix aligned |
 | Fonts | Press Start 2P name mismatch; VT323 missing |
 | Active Ride HUD | Far from sun-readability mockup spec |
@@ -259,16 +278,40 @@ Per [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §2](./MOBILE_ASSET_NANO_BANANA_PROMPTS
 
 ## Checklist (copy to sprint board)
 
-- [ ] **f0-fonts-tokens** — Press Start 2P alias + VT323; consolidate `stitch.ts` with Grand Prix palette + `hud*`/`scrim*` tokens
-- [ ] **f0-asset-registry** — `assetRegistry.ts` typed require map
-- [ ] **f1-tab-png** — `tabIcons.ts` SVG→PNG; integer-scale `PixelTabIcon`; drop emoji fallback
-- [ ] **f1-scene-parallax** — 4 environment PNG layers + `scenes.ts` registry + motion degrade
-- [ ] **f1-particles-textures** — `ParticleSystem` (Skia drawAtlas) + textures on cards/HUD
-- [ ] **f1-game-icons-sfx** — grade/currency/power PNG in game UI; `SoundService` → `sfx_params.json`
-- [ ] **f2-hud-chrome** — `RideStatusBar` + `RideActionBar` + `HudDataFieldCell`
-- [ ] **f2-hud-i18n** — `ride.fields.*` PL/EN; wire `labelKey`
-- [ ] **f3-configurable-hero** — helmet swap + jersey decal; expression PNGs
-- [ ] **f4-polish** — share card, edge states, HapticService, octopath/solar cleanup
+- [x] **f0-fonts-tokens** — Press Start 2P alias (`PressStart2P`) + VT323 loaded in `App.tsx`; `stitch.ts` palette aligned to Grand Prix anchors (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + `gp*` anchors added. _Follow-up: route legacy `@4velo/tokens` components (`PixelText`, `ArcadeButton`) through `theme.colors` (tracked under f4)._
+- [x] **f0-asset-registry** — `mobile/src/assets/assetRegistry.ts` typed static `require()` map
+- [x] **f1-tab-png** — `tabIcons.ts` PNG via `assetRegistry`; `PixelTabIcon` integer-scale; emoji/SVG fallback removed
+- [x] **f1-scene-parallax** — 4 environment PNG layers in `SceneBackground` + `scenes.ts` registry + motion degrade
+- [x] **f1-particles-textures** — `ParticleSystem` (atlas tiles) + `TextureBackground` on cards/HUD; `PixelBurst` delegates to atlas
+- [x] **f1-game-icons-sfx** — grade/currency PNG in game UI; `SoundService` reads `sfx_params.json` with procedural fallback
+- [x] **f2-hud-chrome** — `RideStatusBar` + `RideActionBar` + `HudDataFieldCell` / `DataFieldCell` hudMode on Active Ride
+- [x] **f2-hud-i18n** — `ride.fields.*` + `ride.actions.*` PL/EN; wired via `useI18n` in cells and action bar
+- [x] **f3-configurable-hero** — `HeroPreferencesService` (helmet + city decal); expression PNGs on Summary via `expressionMode`
+- [x] **f4-polish** — share card 1080×1920 constants + grade PNG; GPS banner pixel chrome + i18n; `HapticService` on tab/HUD; `SkiaMetrics` removed; octopath/solar deprecated in `unistyles.ts`
+
+---
+
+## Consistency drift — 2026-06-13 (post UX/routing redesign)
+
+Resolved in mobile UX & routing redesign pass:
+
+| Drift | Fix |
+|-------|-----|
+| Emoji chrome (⚙️⚔️🏆) on Ride/CityHub/Profile | `ChromeIcon` + `chromeIcons.ts` PNG mapping |
+| Brand split (`4VELO` / `QUEST VELOS`) | `APP_BRAND_NAME` = **4VELO** (`theme/brand.ts`) |
+| Solar White cards on GP chrome | Light GP tints in `stitch.ts` (`#FBF3E2` bg, `#F5E6CC` surface); rival bar uses `rival` `#1F4E5F` not error red |
+| Boolean overlay routing (`showSettings`, etc.) | Native Stack over Tab (`NavigationShell` + `navigation/types.ts`) |
+| Fake progression defaults (4200 XP) | `progression.ts` zeros; Ride/Profile read API history |
+| `Alert` for start-ride failure | `EdgeStateBanner` on Ride dashboard via `startRideError` state |
+| Auth sci-fi strings hardcoded EN | `auth.*` i18n keys + GP parchment card chrome |
+| Settings fake read-only rows | `RiderPreferencesService` editable weight/HR/haptics |
+| Summary XP duplicate | XP only in `ShareResultCard`; banner removed |
+| HUD null sensor slots | `fieldHasValue` hides empty cells in `hudMode` |
+| MOO easter egg broken (empty toggle) | Speech bubble on City Wars tap with auto-dismiss + `t.compete.moo` |
+| Duplicate POI rows on map list | Dedup by id/name+coords in `ExploreMapScreen` |
+| Explore tab internal Shop/Map tabs | Marketplace tab + stack `ExploreMap` screen |
+
+**Still open:** full device QA pass with Remote JS Debugging OFF; battery % in RideStatusBar when native module available.
 
 ---
 

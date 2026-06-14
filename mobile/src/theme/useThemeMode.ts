@@ -16,16 +16,10 @@ import { useThemeContext, type ThemeMode } from './ThemeProvider';
 export type { ThemeMode } from './ThemeProvider';
 
 export interface UseThemeModeReturn {
-    /** Current theme mode ('octopath' | 'solar') */
+    /** Current theme mode */
     themeMode: ThemeMode;
     /** Set a specific theme mode */
     setThemeMode: (mode: ThemeMode) => void;
-    /** Toggle between octopath ↔ solar */
-    toggleThemeMode: () => void;
-    /** True when dark theme (octopath) is active */
-    isOctopath: boolean;
-    /** True when light theme (solar) is active */
-    isSolar: boolean;
 }
 
 /**
@@ -36,5 +30,6 @@ export interface UseThemeModeReturn {
  * when the theme changes and properly integrates with UnistylesRuntime.
  */
 export function useThemeMode(): UseThemeModeReturn {
-    return useThemeContext();
+    const { themeMode, setThemeMode } = useThemeContext();
+    return { themeMode, setThemeMode };
 }

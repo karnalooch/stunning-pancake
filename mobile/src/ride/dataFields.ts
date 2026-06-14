@@ -146,8 +146,6 @@ export const DATA_FIELD_REGISTRY: Record<DataFieldId, DataFieldDefinition> = {
   },
 };
 
-export const DATA_FIELD_IDS = Object.keys(DATA_FIELD_REGISTRY) as DataFieldId[];
-
 export function resolveFieldValue(
   fieldId: DataFieldId,
   metrics: import('./types').RideMetricsSnapshot,
@@ -172,4 +170,15 @@ export function resolveFieldValue(
     default:
       return null;
   }
+}
+
+export const DATA_FIELD_IDS = Object.keys(DATA_FIELD_REGISTRY) as DataFieldId[];
+
+/** True when the field has a live sensor/value (HUD hides empty slots). */
+export function fieldHasValue(
+  fieldId: DataFieldId,
+  metrics: import('./types').RideMetricsSnapshot,
+): boolean {
+  const raw = resolveFieldValue(fieldId, metrics);
+  return DATA_FIELD_REGISTRY[fieldId].format(raw) !== '—';
 }

@@ -15,10 +15,10 @@ export interface ProgressionState {
 
 const DEFAULT_STATE: ProgressionState = {
   schemaVersion: PROGRESSION_SCHEMA_VERSION,
-  xp: 4200,
-  streakDays: 3,
+  xp: 0,
+  streakDays: 0,
   lastActiveDate: null,
-  totalRides: 12,
+  totalRides: 0,
 };
 
 export const XP_PER_LEVEL = 500;

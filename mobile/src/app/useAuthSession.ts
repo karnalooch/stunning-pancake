@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { Alert, Linking } from 'react-native';
+import { Linking } from 'react-native';
 import { useObservable } from '@legendapp/state/react';
 import type { UserProfile } from '@4velo/api-client';
 import { BrandingService } from '../services/BrandingService';
@@ -17,10 +17,13 @@ import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
 import { isOnboardingCompleteForUser, setOnboardingCompleteForUser } from './storage';
 import { e2eConfig, isE2eAutoLoginEnabled } from './e2eConfig';
+import type { RideEdgeMessage } from '../services/apiRetry';
+import { useI18n } from '../i18n/useI18n';
 
 const BYPASS_AUTH = false;
 
 export function useAuthSession(onUserReady: (userId: number | null) => Promise<void>) {
+  const { t } = useI18n();
   const auth = useObservable({
     isAuthenticated: false,
     isOnboarded: false,
@@ -32,7 +35,13 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     password: '',
     confirmPassword: '',
     user: null as UserProfile | null,
+    banner: null as RideEdgeMessage | null,
   });
+
+  const setBanner = useCallback(
+    (banner: RideEdgeMessage | null) => auth.banner.set(banner),
+    [auth],
+  );
 
   const applyUserSession = useCallback(
     async (user: UserProfile) => {
@@ -114,8 +123,8 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       try {
         await completeOAuthLogin(tokens.access, tokens.refresh);
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : 'Could not complete social login.';
-        Alert.alert('OAuth Failed', msg);
+        const msg = e instanceof Error ? e.message : t.authErrors.oauthFailed;
+        setBanner({ title: t.authErrors.oauthFailed, message: msg, variant: 'error' });
       } finally {
         auth.isSubmitting.set(false);
       }
@@ -124,17 +133,29 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     void Linking.getInitialURL().then(handleOAuthUrl);
     const sub = Linking.addEventListener('url', ({ url }) => void handleOAuthUrl(url));
     return () => sub.remove();
-  }, [auth, completeOAuthLogin]);
+  }, [auth, completeOAuthLogin, setBanner, t]);
 
   const openSocialLogin = async (provider: 'google' | 'facebook') => {
     const url =
       provider === 'google'
         ? SocialAuthService.googleLoginUrl()
         : SocialAuthService.facebookLoginUrl();
+    if (!url) {
+      setBanner({
+        title: t.authErrors.linkFailed,
+        message: t.authErrors.linkFailed,
+        variant: 'error',
+      });
+      return;
+    }
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Unavailable', 'Could not open the login page.');
+      setBanner({
+        title: t.authErrors.linkFailed,
+        message: t.authErrors.linkFailed,
+        variant: 'error',
+      });
     }
   };
 
@@ -155,17 +176,30 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
   };
 
   const handleAuth = async () => {
+    setBanner(null);
     if (!auth.email.get() || !auth.password.get()) {
-      Alert.alert('Missing Info', 'Please fill in all required fields.');
+      setBanner({
+        title: t.authErrors.missingFields,
+        message: t.authErrors.missingFields,
+        variant: 'warning',
+      });
       return;
     }
     if (auth.mode.get() === 'register') {
       if (!auth.username.get()) {
-        Alert.alert('Missing Info', 'Choose a pilot name (username).');
+        setBanner({
+          title: t.authErrors.missingUsername,
+          message: t.authErrors.missingUsername,
+          variant: 'warning',
+        });
         return;
       }
       if (auth.password.get() !== auth.confirmPassword.get()) {
-        Alert.alert('Mismatch', 'Passwords do not match.');
+        setBanner({
+          title: t.authErrors.passwordMismatch,
+          message: t.authErrors.passwordMismatch,
+          variant: 'warning',
+        });
         return;
       }
     }
@@ -187,11 +221,15 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
           auth.password.get(),
         );
         await applyUserSession(user);
-        Alert.alert('Welcome!', 'Your account is ready. Welcome to Grupetto Siedlce.');
+        setBanner({
+          title: t.authErrors.welcome,
+          message: t.authErrors.welcome,
+          variant: 'success',
+        });
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Auth service unavailable.';
-      Alert.alert('Operation Failed', msg);
+      const msg = e instanceof Error ? e.message : t.authErrors.operationFailed;
+      setBanner({ title: t.authErrors.operationFailed, message: msg, variant: 'error' });
     } finally {
       auth.isSubmitting.set(false);
     }
@@ -203,6 +241,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     auth.isAuthenticated.set(false);
     auth.email.set('');
     auth.password.set('');
+    setBanner(null);
   };
 
   return {
@@ -212,5 +251,6 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     handleLogout,
     handleOnboardingFinish,
     openSocialLogin,
+    clearAuthBanner: () => setBanner(null),
   };
-}
+};

@@ -1,79 +1,33 @@
 // Active Ride HUD — bike-computer grid over map (ADR 014 / DESIGN_SYSTEM_MOBILE §3)
-import React, { useMemo, useEffect, useRef } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native-unistyles';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { RideMapView } from '../components/RideMapView';
 import { DataFieldGrid } from '../components/ride/DataFieldGrid';
-import { EnergyBar } from '../components/effects/EnergyBar';
-import { SpeechBubble } from '../components/narration/SpeechBubble';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
-import { VoiceCueService } from '../services/VoiceCueService';
-import { SoundService } from '../services/SoundService';
+import { RideStatusBar } from '../components/ride/RideStatusBar';
+import { RideActionBar } from '../components/ride/RideActionBar';
+import { RideNavigationHint } from '../components/ride/RideNavigationHint';
 import type { RideMetricsSnapshot } from '../ride/types';
-import { StyleSheet } from 'react-native-unistyles';
-import * as Haptics from 'expo-haptics';
+import { useBatteryPct } from '../hooks/useBatteryPct';
+import { useI18n } from '../i18n/useI18n';
+import { VoiceCueService } from '../services/VoiceCueService';
+import { RiderPreferencesService } from '../services/RiderPreferencesService';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
-  const sh = {
-    shadowColor: c.onBackground,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
-  };
   return {
     container: { flex: 1, backgroundColor: c.hudBackground },
     mapLayer: { ...StyleSheet.absoluteFillObject },
     overlay: {
       flex: 1,
-      paddingHorizontal: 16,
-      paddingBottom: 16,
+      paddingHorizontal: 12,
+      paddingBottom: 12,
       justifyContent: 'space-between',
     },
-    top: { paddingTop: 8, gap: 8 },
-    actions: { gap: 8 },
-    pauseBtn: {
-      backgroundColor: c.goldAmber,
-      borderRadius: 8,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      paddingVertical: 14,
-      alignItems: 'center',
-      ...sh,
-    },
-    resumeBtn: {
-      backgroundColor: c.primaryContainer,
-      borderRadius: 8,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      paddingVertical: 12,
-      alignItems: 'center',
-      ...sh,
-    },
-    stopBtn: {
-      backgroundColor: c.errorContainer ?? c.tertiaryContainer,
-      borderRadius: 8,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      paddingVertical: 12,
-      alignItems: 'center',
-      ...sh,
-    },
-    actionText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: c.onBackground,
-      textTransform: 'uppercase',
-    },
-    stopText: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: c.onError ?? c.onBackground,
-      textTransform: 'uppercase',
-    },
+    top: { paddingTop: 4, gap: 8 },
+    bottom: { gap: 10 },
   };
 });
 
@@ -88,6 +42,9 @@ interface Props {
   liveElevationGainM?: number;
   liveElapsedS?: number;
   liveCoord?: [number, number] | null;
+  routeCoordinates?: [number, number][];
+  navigationCueText?: string | null;
+  navigationCueDistanceM?: number | null;
   gpsRecoveryVisible?: boolean;
   gpsRecoveryBusy?: boolean;
   onGpsRecoveryPress?: () => void;
@@ -103,17 +60,42 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   liveElevationGainM = 0,
   liveElapsedS = 0,
   liveCoord = null,
+  routeCoordinates = [],
+  navigationCueText = null,
+  navigationCueDistanceM = null,
   gpsRecoveryVisible = false,
   gpsRecoveryBusy = false,
   onGpsRecoveryPress,
 }) => {
   const s = stylesheet;
-  const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const { t, locale } = useI18n();
+  const batteryPct = useBatteryPct(true);
   const speedKmh = liveSpeed * 3.6;
   const cyclistState =
     speedKmh >= 35 ? 'attack' : speedKmh >= 15 ? 'cruise' : 'idle';
-  const energy = Math.max(15, 100 - Math.min(85, liveElapsedS / 60));
-  const showLudicrous = immersiveEnabled && speedKmh >= 32;
+  const gpsLocked = liveCoord != null && !gpsRecoveryVisible;
+  const didMountRef = useRef(false);
+
+  useEffect(() => {
+    VoiceCueService.setLanguage(locale === 'pl' ? 'pl-PL' : 'en-US');
+    VoiceCueService.setEnabled(RiderPreferencesService.isVoiceCuesEnabled());
+  }, [locale]);
+
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    if (gpsRecoveryVisible) {
+      void VoiceCueService.speak(t.gps.recovery);
+    }
+  }, [gpsRecoveryVisible, t.gps.recovery]);
+
+  useEffect(() => {
+    if (isPaused) {
+      void VoiceCueService.speak(t.ride.paused.title);
+    }
+  }, [isPaused, t.ride.paused.title]);
 
   const metrics: RideMetricsSnapshot = useMemo(() => {
     const avgSpeedKmh =
@@ -136,69 +118,36 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
     gpsRecoveryVisible,
   ]);
 
-  const ludicrousSpoken = useRef(false);
-  useEffect(() => {
-    if (showLudicrous && !ludicrousSpoken.current) {
-      ludicrousSpoken.current = true;
-      void SoundService.play('achievement');
-      void VoiceCueService.speak('Szalona prędkość!');
-    }
-    if (!showLudicrous) {
-      ludicrousSpoken.current = false;
-    }
-  }, [showLudicrous]);
-
   return (
     <View style={s.container}>
       <View style={s.mapLayer}>
-        <RideMapView userCoordinate={liveCoord} cyclistState={cyclistState} />
+        <RideMapView
+          userCoordinate={liveCoord}
+          cyclistState={cyclistState}
+          routeCoordinates={routeCoordinates}
+        />
       </View>
       <SafeAreaView style={s.overlay} edges={['top', 'bottom']}>
         <View style={s.top}>
+          <RideStatusBar gpsLocked={gpsLocked} batteryPct={batteryPct} />
+          <RideNavigationHint
+            text={navigationCueText}
+            distanceM={navigationCueDistanceM}
+          />
           <GpsRecoveryBanner
             visible={gpsRecoveryVisible}
             busy={gpsRecoveryBusy}
             onPress={() => onGpsRecoveryPress?.()}
           />
-          {immersiveEnabled && (
-            <>
-              <SpeechBubble text={showLudicrous ? 'LUDICROUS SPEED!' : ''} />
-              <EnergyBar value={energy} />
-            </>
-          )}
-          <DataFieldGrid metrics={metrics} />
+          <DataFieldGrid metrics={metrics} hudMode />
         </View>
-        <View style={s.actions}>
-          {isPaused ? (
-            <Pressable
-              style={({ pressed }) => [s.resumeBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                onResume?.();
-              }}
-            >
-              <Text style={s.actionText}>▶ Resume</Text>
-            </Pressable>
-          ) : (
-            <Pressable
-              style={({ pressed }) => [s.pauseBtn, pressed && { opacity: 0.85 }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-                onPause?.();
-              }}
-            >
-              <Text style={s.actionText}>⏸ Pause</Text>
-            </Pressable>
-          )}
-          <Pressable
-            style={({ pressed }) => [s.stopBtn, pressed && { opacity: 0.85 }]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-              onStop?.();
-            }}
-          >
-            <Text style={s.stopText}>■ Stop</Text>
-          </Pressable>
+        <View style={s.bottom}>
+          <RideActionBar
+            isPaused={isPaused}
+            onPause={() => onPause?.()}
+            onResume={() => onResume?.()}
+            onStop={() => onStop?.()}
+          />
         </View>
       </SafeAreaView>
     </View>

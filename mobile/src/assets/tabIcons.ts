@@ -1,23 +1,31 @@
-import TabHome from '../../assets/generated/icons/tab_home.svg';
-import TabRanking from '../../assets/generated/icons/tab_ranking.svg';
-import TabRewards from '../../assets/generated/icons/tab_rewards.svg';
-import TabProfile from '../../assets/generated/icons/tab_profile.svg';
-
-import type { FC } from 'react';
-import type { SvgProps } from 'react-native-svg';
+import { ASSETS } from './assetRegistry';
+import type { RideRank } from '../game/ranks';
 
 export type TabRouteName = 'Ride' | 'Compete' | 'Explore' | 'Profile';
 
-export const PIXEL_TAB_ICONS: Record<TabRouteName, FC<SvgProps>> = {
-  Ride: TabHome,
-  Compete: TabRanking,
-  Explore: TabRewards,
-  Profile: TabProfile,
+export const PIXEL_TAB_ICONS = {
+  Ride: ASSETS.icons.tab_home,
+  Compete: ASSETS.icons.tab_ranking,
+  Explore: ASSETS.icons.tab_rewards,
+  Profile: ASSETS.icons.tab_profile,
+} as const satisfies Record<TabRouteName, number>;
+
+export const GRADE_ICONS: Record<RideRank, number> = {
+  S: ASSETS.icons.grade_s,
+  A: ASSETS.icons.grade_a,
+  B: ASSETS.icons.grade_b,
+  C: ASSETS.icons.grade_c,
 };
 
-export const TAB_EMOJI_FALLBACK: Record<TabRouteName, string> = {
-  Ride: '🚴',
-  Compete: '🏆',
-  Explore: '🗺️',
-  Profile: '👤',
-};
+export const CURRENCY_ICONS = {
+  xp: ASSETS.icons.currency_xp,
+  coin: ASSETS.icons.currency_coin,
+  energy: ASSETS.icons.currency_energy,
+} as const;
+
+export const POWER_ICONS = {
+  speed: ASSETS.icons.power_speed,
+  shield: ASSETS.icons.power_shield,
+  double_xp: ASSETS.icons.power_double_xp,
+  gps: ASSETS.icons.power_gps,
+} as const;

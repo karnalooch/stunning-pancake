@@ -1,15 +1,111 @@
-// STITCH Phase 2 — PerformanceTrendsScreen
-import React from "react";
-import { View, Text, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from "../theme/stitch";
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, ScrollView } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useI18n } from '../i18n/useI18n';
+import { ActivityService, type ActivityItem } from '../services/api';
+import { OfflineCacheService } from '../services/OfflineCacheService';
+import { EmptyState } from '../components/ui/EmptyState';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+
 const stylesheet = StyleSheet.create(theme => {
-    const c = theme.colors as any;
-    const C = theme.colors as any;
-    return { container: { flex: 1, backgroundColor: c.background }, header: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground }, title: { fontSize: 24, fontWeight: "700", color: c.primary, textTransform: "uppercase" }, card: { backgroundColor: c.parchment, margin: 16, padding: 16, borderWidth: 4, borderColor: c.onBackground, borderRadius: 8, shadowColor: c.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 }, label: { fontSize: 10, fontWeight: "700", color: c.secondary, textTransform: "uppercase" }, val: { fontSize: 36, fontWeight: "700", color: c.onBackground, marginTop: 4 }, sub: { fontSize: 14, color: c.secondary, marginTop: 2 } 
-    };
+  const c = theme.colors as Record<string, string>;
+  return {
+    container: { flex: 1, backgroundColor: c.background },
+    content: { padding: 16, gap: 10 },
+    card: {
+      backgroundColor: c.parchment,
+      padding: 16,
+      borderWidth: 2,
+      borderColor: c.hudOutline,
+      borderRadius: 8,
+    },
+    label: { fontSize: 10, fontWeight: '700', color: c.secondary, textTransform: 'uppercase' },
+    val: { fontSize: 30, fontFamily: 'VT323', color: c.onBackground, marginTop: 6 },
+    sub: { fontSize: 13, color: c.secondary, marginTop: 2 },
+  };
 });
-export const PerformanceTrendsScreen: React.FC = () => { const { theme } = useUnistyles(); const s = stylesheet;
-    const c = theme.colors as any;
-    const C = theme.colors as any; return (<SafeAreaView style={s.container} edges={["top"]}><View style={s.header}><Text style={s.title}>Performance Trends</Text></View><ScrollView>{[{ l: "Fitness (CTL)", v: "82", sub: "+3 this week" }, { l: "Fatigue (ATL)", v: "95", sub: "High Load", mc: c.tertiary }, { l: "Form (TSB)", v: "-13", sub: "Optimal Training" }].map((m, i) => (<View key={i} style={s.card}><Text style={s.label}>{m.l}</Text><Text style={[s.val, m.mc && { color: m.mc }]}>{m.v}</Text><Text style={s.sub}>{m.sub}</Text></View>))}</ScrollView></SafeAreaView>); };
+
+function parseDurationSeconds(duration: string | null): number {
+  if (!duration) return 0;
+  const parts = duration.split(':').map((p) => Number(p));
+  if (parts.some((n) => !Number.isFinite(n))) return 0;
+  const [h = 0, m = 0, s = 0] = parts;
+  return h * 3600 + m * 60 + s;
+}
+
+export const PerformanceTrendsScreen: React.FC = () => {
+  const { t } = useI18n();
+  const s = stylesheet;
+  const [history, setHistory] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    const cached = OfflineCacheService.getHistory();
+    if (cached?.length) {
+      setHistory(cached);
+      setOffline(true);
+    }
+    setLoading(true);
+    ActivityService.getHistory()
+      .then((rows) => {
+        const list = Array.isArray(rows) ? rows : [];
+        OfflineCacheService.setHistory(list);
+        setHistory(list);
+        setOffline(false);
+      })
+      .catch(() => setOffline(true))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const stats = useMemo(() => {
+    const recent = history.slice(0, 8);
+    const totalDistanceKm = recent.reduce((acc, item) => acc + (item.distance ?? 0) / 1000, 0);
+    const totalSeconds = recent.reduce((acc, item) => acc + parseDurationSeconds(item.duration), 0);
+    const avgSpeedKmh =
+      totalSeconds > 0 ? (totalDistanceKm / totalSeconds) * 3600 : 0;
+    return {
+      rides: recent.length,
+      distanceKm: totalDistanceKm,
+      avgSpeedKmh,
+    };
+  }, [history]);
+
+  return (
+    <View style={s.container}>
+      <ScrollView contentContainerStyle={s.content}>
+        {offline ? (
+          <EdgeStateBanner
+            title={t.errors.network}
+            message={t.errors.offlineCache}
+            variant="offline"
+          />
+        ) : null}
+        {loading ? (
+          <SkeletonBlock height={220} />
+        ) : stats.rides === 0 ? (
+          <EmptyState message={t.demo.trendsEmpty} icon="training" hint={t.settings.trends} />
+        ) : (
+          <>
+            <View style={s.card}>
+              <Text style={s.label}>{t.profile.rides}</Text>
+              <Text style={s.val}>{stats.rides}</Text>
+              <Text style={s.sub}>{t.trends.lastActivities}</Text>
+            </View>
+            <View style={s.card}>
+              <Text style={s.label}>{t.profile.distance}</Text>
+              <Text style={s.val}>{stats.distanceKm.toFixed(1)} km</Text>
+              <Text style={s.sub}>{t.trends.rollingLoad}</Text>
+            </View>
+            <View style={s.card}>
+              <Text style={s.label}>{t.trends.avgSpeed}</Text>
+              <Text style={s.val}>{stats.avgSpeedKmh.toFixed(1)} km/h</Text>
+              <Text style={s.sub}>{t.trends.computedFromRideTime}</Text>
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+};

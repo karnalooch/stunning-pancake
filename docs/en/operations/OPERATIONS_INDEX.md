@@ -37,6 +37,15 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | After preset / volume changes |
 | [OSRM.md](./OSRM.md) | OSRM sim routing, volume, `SCALE_SIM_ROUTING_BACKEND` | Platform Operator | After `osrm` deploy |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery | Mobile Lead | Before app store release |
+| [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) | Full-vision verification gate and release readiness criteria | Mobile Lead + QA Lead | Every mobile release / large merge |
+| [MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | Preventive startup hardening for mobile rebuild | Mobile Lead + Release Manager | Project kickoff and after P0/P1 incident |
+| [MOBILE_FIX_FORWARD_PLAYBOOK.md](./MOBILE_FIX_FORWARD_PLAYBOOK.md) | Triage/hotfix/rollback response for mobile regressions | Mobile Lead / On-call | Every mobile incident |
+| [MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | Role-by-role mobile review and required docs updates | Product Manager + Mobile Lead | Every sprint and before release candidate |
+| [MOBILE_SPRINT1_REVIEW_PACKET.md](./MOBILE_SPRINT1_REVIEW_PACKET.md) | Ready checklist/template/sign-off packet for Sprint 1 execution | Product Manager + Mobile Lead | Sprint start + midpoint + sprint review |
+| [MOBILE_SPRINT1_BOARD_SEED.md](./MOBILE_SPRINT1_BOARD_SEED.md) | Sprint 1 board seed: ready ticket list with AC and priorities | Product Manager + Mobile Lead | Sprint planning and backlog grooming |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | Day 1 kickoff checklist: agenda, `P0` assignment, day gate | Product Manager + Mobile Lead | D1 start (09:00) and D1 close (17:00) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | Day 1 kickoff notes template with decisions, ETA, and blockers | Product Manager + Mobile Lead | Filled after kickoff and D1 checkpoints |
+| [MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | Operational execution plan for Sprint 1 days 1-3 | Product Manager + Mobile Lead | First 3 sprint days and daily review |
 | [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Background tracking migration Android/iOS, KPI, escalation | Mobile Lead | On GPS provider change / before release |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Unified CI gate + checklist | Release Manager | Each release tag |
 | [DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Before 300k test |

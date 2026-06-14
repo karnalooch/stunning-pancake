@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { Image, View, StyleSheet, type ImageSourcePropType } from 'react-native';
+import { useUnistyles } from 'react-native-unistyles';
 import { useMotionPolicy } from '../../hooks/useMotionPolicy';
-
-const CYCLIST_SHEET = require('../../../assets/generated/sprites/cyclist_sheet.png') as ImageSourcePropType;
+import { ASSETS } from '../../assets/assetRegistry';
 
 export interface SpriteSheetConfig {
   source: ImageSourcePropType;
@@ -12,7 +12,7 @@ export interface SpriteSheetConfig {
 }
 
 export const CYCLIST_SHEET_CONFIG: SpriteSheetConfig = {
-  source: CYCLIST_SHEET,
+  source: ASSETS.sprites.cyclist_sheet,
   frameWidth: 64,
   frameHeight: 64,
   frameCount: 8,
@@ -21,10 +21,8 @@ export const CYCLIST_SHEET_CONFIG: SpriteSheetConfig = {
 interface SpriteAnimatorProps {
   config?: SpriteSheetConfig;
   size?: number;
-  /** Frames per second when animating */
   fps?: number;
   playing?: boolean;
-  /** Static frame when not playing */
   frame?: number;
 }
 
@@ -35,6 +33,8 @@ export const SpriteAnimator: React.FC<SpriteAnimatorProps> = ({
   playing = true,
   frame = 0,
 }) => {
+  const { theme } = useUnistyles();
+  const c = theme.colors as Record<string, string>;
   const { allowSpriteAnim } = useMotionPolicy();
   const [frameIndex, setFrameIndex] = React.useState(frame);
 
@@ -59,6 +59,8 @@ export const SpriteAnimator: React.FC<SpriteAnimatorProps> = ({
           width: size,
           height: size,
           borderRadius: size / 2,
+          borderColor: c.hudOutline,
+          backgroundColor: c.parchment,
         },
       ]}
     >
@@ -78,9 +80,7 @@ export const SpriteAnimator: React.FC<SpriteAnimatorProps> = ({
 const styles = StyleSheet.create({
   clip: {
     overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: '#191d17',
-    backgroundColor: '#F5F5DC',
+    borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'flex-start',
   },

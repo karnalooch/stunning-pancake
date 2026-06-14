@@ -2,13 +2,13 @@
 
 | | |
 |--|--|
-| **Status** | Active (handoff) |
+| **Status** | Active (historical handoff) |
 | **Data** | 2026-06-13 |
 | **Owner role** | Mobile Lead / Design |
 | **Audience** | Mobile engineers, designers, frontend |
 | **lang** | pl |
 | **translation** | [English](../../design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) |
-| **canonical_path** | docs/design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md |
+| **canonical_path** | docs/pl/design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md |
 | **Powiązane** | [DESIGN_SYSTEM_MOBILE.md](../../design/DESIGN_SYSTEM_MOBILE.md) · [MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md) · [ADR 014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) |
 
 ---
@@ -16,6 +16,25 @@
 Pełny audyt po wygenerowaniu paczki **Nano Banana Pro** (`assets/generated/`, `mobile/assets/generated/`, native icons w `mobile/assets/`). **Assety są gotowe; integracja w UI — nie.**
 
 **Commity (2026-06-13):** `c7f5210` (38 assetów + pipeline SSOT), `4cb7586` (regeneracja currency/GPS/HUD/native).
+
+> **Ważne:** ten audyt zawiera historyczne snapshoty z fazy integracji. Za aktualny stan operacyjny przyjmuj:
+> - `docs/pl/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md`
+> - `docs/pl/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md`
+> - `docs/pl/operations/MOBILE_FULL_VISION_VERIFICATION.md`
+
+## Snapshot wykonania (2026-06-14)
+
+- Ten audyt pozostaje historycznym zapisem fazy integracji assetów.
+- Operacyjnie aktualny status jest utrzymywany w:
+  - `docs/pl/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md`
+  - `docs/pl/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md`
+  - `docs/pl/operations/MOBILE_SPRINT1_REVIEW_PACKET.md`
+- Aktualne bramy techniczne mobile są zielone:
+  - `pnpm exec tsc --noEmit`
+  - pełna paczka Jest (`19/19` suite, `97/97` testów)
+- Pozostałe blokery release są operacyjne:
+  - manualna device matrix QA (Android/iOS),
+  - finalny cross-functional sign-off GO/NO-GO.
 
 ---
 
@@ -26,13 +45,13 @@ Pełny audyt po wygenerowaniu paczki **Nano Banana Pro** (`assets/generated/`, `
 | Pipeline generacji | Gotowy — SSOT prompty, referencja, character lock |
 | Bundled PNG (37 + sfx JSON) | Gotowy — `mobile/assets/generated/` |
 | Native app icons | Gotowy — `mobile/assets/icon.png` itd. |
-| **Podpięte w UI** | **~2 z 35** — `cyclist_sheet.png`, tab SVG (nie PNG) |
+| **Podpięte w UI** | **Zintegrowane** — taby, sceny, HUD, chrome, particles, sfx, hero prefs (PR1–PR7) |
 | Tokeny designu | 4 źródła — niezsynchronizowane z Grand Prix |
 | Fonty | Press Start 2P — zła nazwa rodziny; brak VT323 |
 | Active Ride HUD | Daleko od mockupu sun-readability |
-| Scena / particles / dźwięki | Nadal proceduralne placeholdery |
+| Scena / particles / dźwięki | Zintegrowane z bundle assetów |
 
-**Wniosek:** pipeline assetów jest gotowy; **integracja wizualna i konsolidacja design systemu nie nadążają**. Użytkownik widzi mix: nowy bohater na starym tle, emoji zamiast PNG, angielskie labele zamiast PL z mockupu HUD.
+**Wniosek (historyczny):** pipeline assetów był gotowy wcześniej niż pełna integracja UI. Aktualny status wdrożenia należy czytać z dokumentów SSOT wskazanych w sekcji snapshot.
 
 ---
 
@@ -181,16 +200,16 @@ Maestro, visual regression, performance degrade, rozmiar APK.
 
 ## Checklist (sprint board)
 
-- [ ] **f0-fonts-tokens** — fonty + `stitch.ts` Grand Prix + tokeny HUD/scrim  
-- [ ] **f0-asset-registry** — `assetRegistry.ts`  
-- [ ] **f1-tab-png** — SVG→PNG, integer scale  
-- [ ] **f1-scene-parallax** — 4 warstwy env PNG  
-- [ ] **f1-particles-textures** — ParticleSystem + tekstury  
-- [ ] **f1-game-icons-sfx** — ikony game + sfx_params  
-- [ ] **f2-hud-chrome** — status bar + action bar + HudDataFieldCell  
-- [ ] **f2-hud-i18n** — `ride.fields.*` PL/EN  
-- [ ] **f3-configurable-hero** — helmet + decal + portrety  
-- [ ] **f4-polish** — share card, edge states, cleanup  
+- [x] **f0-fonts-tokens** — `PressStart2P` + VT323 ładowane w `App.tsx`; paleta `stitch.ts` zsynchronizowana z Grand Prix (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + tokeny `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + anchory `gp*`. _Do zrobienia: przepiąć legacy komponenty `@4velo/tokens` (`PixelText`, `ArcadeButton`) na `theme.colors` (w ramach f4)._  
+- [x] **f0-asset-registry** — `mobile/src/assets/assetRegistry.ts` (typowana mapa statycznych `require()`)  
+- [x] **f1-tab-png** — PNG z `assetRegistry`, integer scale, bez SVG/emoji  
+- [x] **f1-scene-parallax** — 4 warstwy env PNG + motion degrade  
+- [x] **f1-particles-textures** — `ParticleSystem` + tekstury na kartach  
+- [x] **f1-game-icons-sfx** — ikony game + `SoundService` → `sfx_params.json`  
+- [x] **f2-hud-chrome** — `RideStatusBar` + `RideActionBar` + HUD cells  
+- [x] **f2-hud-i18n** — `ride.fields.*` / `ride.actions.*` PL/EN  
+- [x] **f3-configurable-hero** — `HeroPreferencesService` + portrety expression  
+- [x] **f4-polish** — share card 1080×1920, GPS banner, HapticService, cleanup  
 
 ---
 

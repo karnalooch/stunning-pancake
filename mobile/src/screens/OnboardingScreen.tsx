@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Alert, View, Pressable } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -15,13 +15,14 @@ import { Column } from '../components/Column';
 import { Row } from '../components/Row';
 import { PixelText } from '../components/PixelText';
 import { ScrollContainer } from '../components/ScrollContainer';
-import { GameCard } from '../components/GameCard';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useUnistyles } from 'react-native-unistyles';
 import { SceneBackground } from '../components/scene/SceneBackground';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { SpeechBubble } from '../components/narration/SpeechBubble';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { useI18n, type MobileCatalog } from '../i18n/useI18n';
+import { GameCard } from '../components/ui/GameCard';
 import {
   AuthService,
   DepartmentService,
@@ -30,34 +31,69 @@ import {
   type PublicTenantOption,
 } from '../services/api';
 
+type OnboardingStep = 0 | 1 | 2;
+type ThemeColorMap = Record<string, string>;
+
+interface OnboardingUser {
+  username?: string | null;
+}
+
+interface OnboardingFinishPayload {
+  refreshProfile: true;
+}
+
 interface OnboardingProps {
-  user: any;
-  onFinish: (data: any) => void | Promise<void>;
+  user: OnboardingUser | null;
+  onFinish: (data: OnboardingFinishPayload) => void | Promise<void>;
+}
+
+interface StepCopy {
+  bubble: string;
+  sprite: 'idle' | 'cruise' | 'attack';
+}
+
+function flattenDepartments(nodes: DepartmentTreeNode[]): DepartmentTreeNode[] {
+  const out: DepartmentTreeNode[] = [];
+  for (const n of nodes) {
+    out.push(n);
+    if (n.children?.length) out.push(...flattenDepartments(n.children));
+  }
+  return out;
 }
 
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
+  const { t } = useI18n();
   const { theme } = useUnistyles();
-  const C = theme.colors as any;
+  const C = theme.colors as ThemeColorMap;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const TOTAL_STEPS = 3;
 
-  const STEP_COPY = [
-    { bubble: 'Wybierz swoje miasto!', sprite: 'idle' as const },
-    { bubble: 'Dołącz do drużyny!', sprite: 'cruise' as const },
-    { bubble: 'Gotowy na wyścig?', sprite: 'attack' as const },
-  ];
+  const STEP_COPY = useMemo<StepCopy[]>(
+    () => [
+      { bubble: t.onboarding.city.bubble, sprite: 'idle' },
+      { bubble: t.onboarding.department.bubble, sprite: 'cruise' },
+      { bubble: t.onboarding.finish.bubble, sprite: 'attack' },
+    ],
+    [t],
+  );
 
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState<OnboardingStep>(0);
   const [tenants, setTenants] = useState<PublicTenantOption[]>([]);
   const [departments, setDepartments] = useState<DepartmentTreeNode[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string>('');
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const flatDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
   const progress = useSharedValue(0);
+  const progressBarStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
+  const progressLabelPct = Math.round(((step + 1) / TOTAL_STEPS) * 100);
 
   useEffect(() => {
-    progress.value = withTiming((step + 1) / 3, { duration: 500 });
-  }, [step]);
+    progress.value = withTiming((step + 1) / TOTAL_STEPS, { duration: 500 });
+  }, [progress, step]);
 
   useEffect(() => {
     AuthService.getPublicTenants()
@@ -71,18 +107,9 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       .catch(() => setDepartments([]));
   }, []);
 
-  const flattenDepartments = (nodes: DepartmentTreeNode[]): DepartmentTreeNode[] => {
-    const out: DepartmentTreeNode[] = [];
-    for (const n of nodes) {
-      out.push(n);
-      if (n.children?.length) out.push(...flattenDepartments(n.children));
-    }
-    return out;
-  };
-
   const nextStep = async () => {
-    if (step < 2) {
-      setStep(step + 1);
+    if (step < TOTAL_STEPS - 1) {
+      setStep((prev) => (Math.min(TOTAL_STEPS - 1, prev + 1) as OnboardingStep));
       return;
     }
 
@@ -119,16 +146,18 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
             setSelectedTenantId={setSelectedTenantId}
             onNext={() => void nextStep()}
             C={C}
+            t={t}
           />
         );
       case 1:
         return (
           <DepartmentStep
-            departments={flattenDepartments(departments)}
+            departments={flatDepartments}
             selectedDepartmentId={selectedDepartmentId}
             setSelectedDepartmentId={setSelectedDepartmentId}
             onNext={() => void nextStep()}
             C={C}
+            t={t}
           />
         );
       case 2:
@@ -137,11 +166,12 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
             user={user}
             tenantName={tenants.find((t) => t.id === selectedTenantId)?.name ?? '—'}
             departmentName={
-              flattenDepartments(departments).find((d) => d.id === selectedDepartmentId)?.name ?? '—'
+              flatDepartments.find((d) => d.id === selectedDepartmentId)?.name ?? '—'
             }
             onNext={() => void nextStep()}
             C={C}
             busy={isSubmitting}
+            t={t}
           />
         );
       default: return null;
@@ -160,11 +190,15 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       {/* RPG-Style HUD Progress */}
       <Column gap={8} style={{ marginBottom: 24 }}>
         <Row justifyContent="space-between" alignItems="center">
-          <PixelText size="xs" color={C.primary} style={{ fontSize: 8, color: C.primary }}>CHARACTER_INIT</PixelText>
-          <PixelText size="xs" color={C.primary} style={{ fontSize: 8, color: C.primary }}>{Math.round(progress.value * 100)}%</PixelText>
+          <PixelText size="xs" style={{ fontSize: 8, color: C.primary }}>
+            {t.onboarding.characterInit}
+          </PixelText>
+          <PixelText size="xs" style={{ fontSize: 8, color: C.primary }}>
+            {progressLabelPct}%
+          </PixelText>
         </Row>
-        <Row style={{ height: 8, backgroundColor: C.onBackground, width: '100%', borderWidth: 1, borderColor: C.onBackground } as any}>
-          <Animated.View style={[{ height: '100%', backgroundColor: C.primary }, useAnimatedStyle(() => ({ width: `${progress.value * 100}%` }))]}>
+        <Row style={{ height: 8, backgroundColor: C.onBackground, width: '100%', borderWidth: 1, borderColor: C.onBackground }}>
+          <Animated.View style={[{ height: '100%', backgroundColor: C.primary }, progressBarStyle]}>
             <View style={{ position: 'absolute', right: 0, width: 2, height: 12, backgroundColor: C.primary, top: -2 }} />
           </Animated.View>
         </Row>
@@ -176,13 +210,22 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
 
       <Row justifyContent="space-between" alignItems="center" style={{ marginTop: 16, paddingBottom: 16 }}>
         <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>
-          STG_CITY // STEP_0{step + 1}
+          {t.onboarding.stagePrefix} // STEP_0{step + 1}
         </PixelText>
-        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>4VELO_OS v1.0</PixelText>
+        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>{t.onboarding.osVersion}</PixelText>
       </Row>
     </Column>
   );
 };
+
+interface CityStepProps {
+  tenants: PublicTenantOption[];
+  selectedTenantId: string;
+  setSelectedTenantId: (tenantId: string) => void;
+  onNext: () => void;
+  C: ThemeColorMap;
+  t: MobileCatalog;
+}
 
 const CityStep = ({
   tenants,
@@ -190,22 +233,25 @@ const CityStep = ({
   setSelectedTenantId,
   onNext,
   C,
-}: any) => {
+  t,
+}: CityStepProps) => {
 
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
-      <GameCard variant="parchment" style={{ gap: 16 }}>
+      <GameCard style={{ gap: 16 }}>
         <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
           <MapPin size={48} color={C.primary} />
         </View>
         <Column gap={8}>
-          <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>SELECT CITY</PixelText>
-          <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
-            Choose the city tenant you will compete in.
+          <PixelText size="lg" style={{ color: C.onBackground }}>
+            {t.onboarding.city.title}
+          </PixelText>
+          <PixelText size="sm" style={{ opacity: 0.8, color: C.onBackground }}>
+            {t.onboarding.city.description}
           </PixelText>
         </Column>
         <Column gap={8}>
-          {(tenants as PublicTenantOption[]).map((tenant) => (
+          {tenants.map((tenant) => (
             <Pressable
               key={tenant.id}
               onPress={() => setSelectedTenantId(tenant.id)}
@@ -216,14 +262,14 @@ const CityStep = ({
                 padding: 12,
               }}
             >
-              <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+              <PixelText size="sm" style={{ color: C.onBackground }}>
                 {tenant.name}
               </PixelText>
             </Pressable>
           ))}
         </Column>
         <ArcadeButton
-          label="NEXT"
+          label={t.onboarding.city.next}
           onPress={onNext}
           variant="primary"
         />
@@ -232,24 +278,36 @@ const CityStep = ({
   );
 };
 
+interface DepartmentStepProps {
+  departments: DepartmentTreeNode[];
+  selectedDepartmentId: number | null;
+  setSelectedDepartmentId: (departmentId: number) => void;
+  onNext: () => void;
+  C: ThemeColorMap;
+  t: MobileCatalog;
+}
+
 const DepartmentStep = ({
   departments,
   selectedDepartmentId,
   setSelectedDepartmentId,
   onNext,
   C,
-}: any) => {
+  t,
+}: DepartmentStepProps) => {
 
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-      <GameCard variant="parchment" style={{ gap: 24 }}>
-        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>SELECT DEPARTMENT</PixelText>
-        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
-          Pick your department/team to join ranking cohorts.
+      <GameCard style={{ gap: 24 }}>
+        <PixelText size="lg" style={{ color: C.onBackground }}>
+          {t.onboarding.department.title}
+        </PixelText>
+        <PixelText size="sm" style={{ opacity: 0.8, color: C.onBackground }}>
+          {t.onboarding.department.description}
         </PixelText>
 
         <Column gap={12}>
-          {(departments as DepartmentTreeNode[]).map((department) => (
+          {departments.map((department) => (
             <Pressable
               key={department.id}
               onPress={() => setSelectedDepartmentId(department.id)}
@@ -260,24 +318,34 @@ const DepartmentStep = ({
                 padding: 12,
               }}
             >
-              <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
+              <PixelText size="sm" style={{ color: C.onBackground }}>
                 {department.name}
               </PixelText>
             </Pressable>
           ))}
         </Column>
 
-        <ArcadeButton label="NEXT" onPress={onNext} variant="primary" />
+        <ArcadeButton label={t.onboarding.department.next} onPress={onNext} variant="primary" />
       </GameCard>
     </Animated.View>
   );
 };
 
-const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy }: any) => {
+interface FinishStepProps {
+  user: OnboardingUser | null;
+  tenantName: string;
+  departmentName: string;
+  onNext: () => void;
+  C: ThemeColorMap;
+  busy: boolean;
+  t: MobileCatalog;
+}
+
+const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy, t }: FinishStepProps) => {
   const requestPerms = async () => {
     const { status } = await Location.requestForegroundPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', '4VELO requires GPS to track your performance.');
+      Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody);
       return;
     }
     await Location.requestBackgroundPermissionsAsync();
@@ -286,25 +354,27 @@ const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy }: any) 
 
   return (
     <Animated.View entering={SlideInRight} style={{ flex: 1 }}>
-      <GameCard variant="parchment" style={{ gap: 24 }}>
-        <PixelText size="lg" color={C.onBackground} style={{ color: C.onBackground }}>READY TO JOIN</PixelText>
-        <PixelText size="sm" color={C.onBackground} style={{ opacity: 0.8, color: C.onBackground }}>
-          Confirm city and department, then enable GPS and enter competition.
+      <GameCard style={{ gap: 24 }}>
+        <PixelText size="lg" style={{ color: C.onBackground }}>
+          {t.onboarding.finish.title}
+        </PixelText>
+        <PixelText size="sm" style={{ opacity: 0.8, color: C.onBackground }}>
+          {t.onboarding.finish.description}
         </PixelText>
         <Column gap={8}>
-          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
-            User: {user?.username ?? 'unknown'}
+          <PixelText size="sm" style={{ color: C.onBackground }}>
+            {t.onboarding.finish.user}: {user?.username ?? 'unknown'}
           </PixelText>
-          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
-            City: {tenantName}
+          <PixelText size="sm" style={{ color: C.onBackground }}>
+            {t.onboarding.finish.city}: {tenantName}
           </PixelText>
-          <PixelText size="sm" color={C.onBackground} style={{ color: C.onBackground }}>
-            Department: {departmentName}
+          <PixelText size="sm" style={{ color: C.onBackground }}>
+            {t.onboarding.finish.department}: {departmentName}
           </PixelText>
         </Column>
 
         <ArcadeButton
-          label={busy ? 'JOINING...' : 'JOIN COMPETITION'}
+          label={busy ? t.onboarding.finish.joining : t.onboarding.finish.joinCompetition}
           onPress={() => void requestPerms()}
           variant="success"
         />

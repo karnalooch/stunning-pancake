@@ -1,13 +1,9 @@
 /**
  * Unistyles Theme Definitions
  *
- * This module defines the AppTheme interface for type-safe theming
- * using react-native-unistyles. All color tokens are sourced from
- * @tokens/generated/restyle-colors, which is auto-generated from
- * packages/tokens/colors.json.
- *
- * Theme names (octopath, solar) are registered via TypeScript
- * declaration merging with UnistylesThemes.
+ * Primary theme: `stitch` (Grand Prix palette — see stitch.ts).
+ * Legacy `octopath` / `solar` token groups below are deprecated; migrate
+ * consumers to `theme.colors` on the stitch theme (ADR 014 §6).
  */
 
 import type { colors as tokenColors } from '@tokens/generated/restyle-colors';
@@ -100,12 +96,31 @@ export interface StitchTheme {
         hudAccent: string;
         hudWarning: string;
         hudError: string;
+        // ── HUD chrome (sun-readable bike computer, ADR 014 §3) ──
+        hudPanel: string;
+        hudPanelNight: string;
+        hudOutline: string;
+        hudShadow: string;
         scrimStrong: string;
         scrimSoft: string;
         sceneOverlay: string;
         sceneSky: string;
         sceneHill: string;
         sceneRoad: string;
+        // ── Grand Prix palette anchors (NANO_BANANA_PROMPTS §4) ──
+        gpDeepSea: string;
+        gpGoldLight: string;
+        gpForestGreen: string;
+        gpSepia: string;
+        chromeNightBg: string;
+        chromeNightSurface: string;
+        chromeNightInk: string;
+        zone1: string;
+        zone2: string;
+        zone3: string;
+        zone4: string;
+        zone5: string;
+        rival: string;
     };
     branding?: {
         primary: string;
@@ -120,6 +135,7 @@ declare module 'react-native-unistyles' {
         octopath: AppTheme;
         solar: AppTheme;
         stitch: StitchTheme;
+        stitchNight: StitchTheme;
     }
 }
 

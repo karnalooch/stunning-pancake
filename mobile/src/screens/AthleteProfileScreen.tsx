@@ -1,15 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
-import { ActivityService, AuthService } from '../services/api';
+import { AuthService } from '../services/api';
 import { useMobileI18n } from '../i18n/useI18n';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { useGameProgress } from '../hooks/useGameProgress';
+import { useRiderStats } from '../hooks/useRiderStats';
 import { SceneBackground } from '../components/scene/SceneBackground';
 import { LevelXpBar } from '../components/game/LevelXpBar';
+import { formatRiderDisplayName } from '../utils/displayName';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { AppHeader } from '../components/ui/AppHeader';
+import { GameCard } from '../components/ui/GameCard';
+import { RiderAvatar } from '../components/ui/RiderAvatar';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { LAYOUT } from '../theme/layout';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -27,7 +34,7 @@ const stylesheet = StyleSheet.create((theme) => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      padding: 16,
+      padding: LAYOUT.gutter,
       borderBottomWidth: 4,
       borderBottomColor: c.onBackground,
       backgroundColor: c.surface,
@@ -44,14 +51,14 @@ const stylesheet = StyleSheet.create((theme) => {
     ht: { fontSize: 20, fontWeight: '700', color: c.primary, textTransform: 'uppercase' },
     hero: {
       backgroundColor: c.parchment,
-      margin: 16,
-      padding: 16,
+      margin: LAYOUT.gutter,
+      padding: LAYOUT.gutter,
       borderWidth: 4,
       borderColor: c.onBackground,
       borderRadius: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 16,
+      gap: LAYOUT.sectionGap,
       ...sh,
     },
     hi: {
@@ -64,7 +71,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     hn: { fontSize: 24, fontWeight: '700', color: c.onBackground },
     hs: { fontSize: 14, color: c.secondary },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', padding: 16, gap: 8 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', padding: LAYOUT.gutter, gap: LAYOUT.compactGap },
     tile: {
       width: '47%',
       backgroundColor: c.parchment,
@@ -78,12 +85,12 @@ const stylesheet = StyleSheet.create((theme) => {
     tv: { fontSize: 22, fontWeight: '700', color: c.onBackground, marginTop: 4 },
     btn: {
       backgroundColor: c.primaryContainer,
-      padding: 16,
+      padding: LAYOUT.gutter,
       borderRadius: 8,
       borderWidth: 4,
       borderColor: c.onBackground,
-      marginHorizontal: 16,
-      marginBottom: 8,
+      marginHorizontal: LAYOUT.gutter,
+      marginBottom: LAYOUT.compactGap,
       alignItems: 'center',
       ...sh,
     },
@@ -96,6 +103,8 @@ interface Props {
   onLogout?: () => void;
   onTraining?: () => void;
   onSettings?: () => void;
+  onTrends?: () => void;
+  onLeaderboard?: () => void;
 }
 
 export const AthleteProfileScreen: React.FC<Props> = ({
@@ -103,53 +112,53 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   onLogout,
   onTraining,
   onSettings,
+  onTrends,
+  onLeaderboard,
 }) => {
   const { theme } = useUnistyles();
   const { t } = useMobileI18n();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
-  const { level, xpBar, progression } = useGameProgress();
+  const { level, xpBar } = useGameProgress();
+  const { rides, distanceKm, verified, streakDays, loading: statsLoading, offline } = useRiderStats();
   const [username, setUsername] = useState(user?.username ?? 'RIDER');
-  const [rides, setRides] = useState(0);
-  const [distanceKm, setDistanceKm] = useState(0);
-  const [verified, setVerified] = useState(0);
 
   useEffect(() => {
     AuthService.getProfile()
-      .then((p: any) => {
-        const d = p?.data ?? p;
-        if (d?.username) setUsername(d.username);
-      })
-      .catch(() => {});
-    ActivityService.getHistory()
-      .then((items) => {
-        const list = Array.isArray(items) ? items : [];
-        setRides(list.length);
-        const dist = list.reduce((sum, a) => sum + (a.distance ?? 0), 0) / 1000;
-        setDistanceKm(Math.round(dist));
-        setVerified(list.filter((a) => a.is_verified).length);
+      .then((profile) => {
+        if (profile?.username) setUsername(profile.username);
       })
       .catch(() => {});
   }, []);
 
   return (
-    <SafeAreaView style={s.ct} edges={['top']}>
+    <View style={s.ct}>
       {immersiveEnabled && <SceneBackground sceneId="profile" scrim="soft" />}
-      <View style={[s.h, s.sh]}>
-        <View style={s.hl}>
-          <View style={s.av} />
-          <Text style={s.ht}>{t.profile.title}</Text>
-        </View>
-        <Pressable onPress={onSettings} hitSlop={12}>
-          <Text style={{ fontSize: 20 }}>⚙️</Text>
-        </Pressable>
-      </View>
+      <AppHeader
+        rightAction={{
+          icon: 'settings',
+          onPress: () => onSettings?.(),
+          accessibilityLabel: t.settings.title,
+        }}
+      >
+        <RiderAvatar size={40} />
+      </AppHeader>
       <ScrollView>
-        <View style={s.hero}>
+        {offline ? (
+          <EdgeStateBanner
+            title={t.errors.network}
+            message={t.errors.offlineCache}
+            variant="offline"
+          />
+        ) : null}
+        <GameCard
+          style={{ margin: LAYOUT.gutter, flexDirection: 'row', alignItems: 'center', gap: LAYOUT.sectionGap }}
+          texture="wood_grain"
+        >
           {immersiveEnabled ? <CyclistSprite size={64} state="victory" /> : <View style={s.hi} />}
           <View style={{ flex: 1, gap: 8 }}>
-            <Text style={s.hn}>{username}</Text>
+            <Text style={s.hn} numberOfLines={1}>{formatRiderDisplayName(username)}</Text>
             <Text style={s.hs}>{t.profile.warrior.toUpperCase()}</Text>
             {immersiveEnabled && (
               <LevelXpBar
@@ -161,11 +170,14 @@ export const AthleteProfileScreen: React.FC<Props> = ({
             )}
             {immersiveEnabled && (
               <Text style={[s.hs, { color: c.primary }]}>
-                🔥 {progression.streakDays} day streak · {progression.totalRides} rides
+                {streakDays} {t.profile.streakLabel} · {rides} {t.profile.rides.toLowerCase()}
               </Text>
             )}
           </View>
-        </View>
+        </GameCard>
+        {statsLoading ? (
+          <SkeletonBlock height={120} style={{ marginHorizontal: LAYOUT.gutter }} />
+        ) : (
         <View style={s.grid}>
           {[
             { l: t.profile.distance, v: `${distanceKm.toLocaleString()} km` },
@@ -179,6 +191,25 @@ export const AthleteProfileScreen: React.FC<Props> = ({
             </View>
           ))}
         </View>
+        )}
+        <Pressable
+          style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            onTrends?.();
+          }}
+        >
+          <Text style={s.btnT}>{t.settings.trends.toUpperCase()}</Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+            onLeaderboard?.();
+          }}
+        >
+          <Text style={s.btnT}>{t.settings.globalLb.toUpperCase()}</Text>
+        </Pressable>
         <Pressable
           style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
           onPress={() => {
@@ -195,6 +226,6 @@ export const AthleteProfileScreen: React.FC<Props> = ({
           <Text style={[s.btnT, { color: c.onError }]}>{t.common.logout.toUpperCase()}</Text>
         </Pressable>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };

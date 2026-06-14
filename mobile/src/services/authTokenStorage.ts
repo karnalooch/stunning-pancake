@@ -56,7 +56,12 @@ async function migrateFromLegacyMmkv(): Promise<void> {
 
   if (!existing) {
     const legacyRefresh = legacy.getString(LEGACY_REFRESH);
-    await setTokens(legacyAccess, legacyRefresh ?? null);
+    await secureSet(ACCESS_KEY, legacyAccess);
+    if (legacyRefresh) {
+      await secureSet(REFRESH_KEY, legacyRefresh);
+    } else {
+      await secureDelete(REFRESH_KEY);
+    }
   }
 
   legacy.delete(LEGACY_ACCESS);

@@ -4,7 +4,7 @@ import { stringsPl } from './strings.pl';
 import { stringsEn } from './strings.en';
 
 export type MobileLocale = 'pl' | 'en';
-export type MobileCatalog = typeof stringsPl;
+export type MobileCatalog = typeof stringsPl | typeof stringsEn;
 
 const STORAGE_KEY = 'mobile-locale';
 let storage: MMKV | null = null;

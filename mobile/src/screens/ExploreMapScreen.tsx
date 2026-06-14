@@ -39,7 +39,14 @@ export const ExploreMapScreen: React.FC = () => {
     POIService.getPOIs()
       .then((data) => {
         const rows = Array.isArray(data) ? data : data?.results ?? [];
-        setPois(rows);
+        const seen = new Set<string>();
+        const unique = rows.filter((p: POI) => {
+          const key = `${p.id ?? p.name}-${p.latitude?.toFixed(5)}-${p.longitude?.toFixed(5)}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setPois(unique);
       })
       .catch(() => setPois([]))
       .finally(() => setLoading(false));

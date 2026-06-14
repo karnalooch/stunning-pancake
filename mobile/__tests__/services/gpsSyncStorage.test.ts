@@ -56,6 +56,7 @@ describe('gpsSyncStorage', () => {
       points: [samplePoint(1)],
       created_at: Date.now(),
       attempts: 1,
+      state: 'pending',
     });
     expect(loadOutbox(storage)).toHaveLength(1);
     removeOutboxEntry(storage, 'batch-a');

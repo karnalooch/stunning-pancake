@@ -1,0 +1,40 @@
+ID,Title,Priority,Owner,Type,Area,Status,AcceptanceCriteria
+S1-PT-01,Zatwierdzić scope Sprint 1 (IN/OUT),P0,PM,ops,product,Backlog,Zakres opublikowany; lista wykluczeń zaakceptowana
+S1-PT-02,Potwierdzić kryteria akceptacji Ride core,P0,Tech Lead,docs,product,Backlog,AC dla RideDashboard/HUD/Summary wpisane do boardu
+S1-PT-03,Uzgodnić kolejność P0/P1 dla domen,P1,PM,ops,product,Backlog,Kolejność zatwierdzona przez mobile+backend+QA
+S1-PT-04,Zaktualizować implementation spec po kickoff,P1,UX Lead,docs,product,Backlog,`4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` zaktualizowany
+S1-MOB-01,Naprawić lint blocker importu `StreakBadge`,P0,Mobile Dev,bug,mobile,Backlog,`expo lint` bez errora import/no-unresolved
+S1-MOB-02,Ujednolicić kontrakt `RideSummary` i deep-link path,P0,Mobile Dev,tech-debt,mobile,Backlog,`types` + `routeContract` + `linking` spójne
+S1-MOB-03,Domknąć status bar HUD (GPS/battery/clock) na device,P0,Mobile Dev,feature,mobile,Backlog,Manual QA na Android/iOS; brak null-crash
+S1-MOB-04,Ride stop confirm guard (hold) z testem regresji,P0,Mobile Dev,feature,mobile,Backlog,Potwierdzenie stop działa; test/manual pass
+S1-MOB-05,Uporządkować hook deps warnings w krytycznych plikach,P1,Mobile Dev,tech-debt,mobile,Backlog,Brak nowych warnings w dotkniętych plikach
+S1-MOB-06,Refaktor `ActivityDetail` z i18n i bez emoji placeholderów,P1,Mobile Dev,tech-debt,mobile,Backlog,Labels przez i18n; brak placeholder text/emoji
+S1-MOB-07,Uporządkować onboarding typy i copy i18n,P1,Mobile Dev,tech-debt,mobile,Backlog,Mniej `any`; copy PL/EN przez i18n
+S1-MOB-08,Dodać edge states (offline/error/empty) w detail/trends,P1,Mobile Dev,feature,mobile,Backlog,Widoczne i spójne fallbacki
+S1-MOB-09,Konsolidacja legacy wrapperów komponentów UI,P2,Mobile Dev,tech-debt,mobile,Backlog,Legacy deleguje do `components/ui`
+S1-MOB-10,Ustandaryzować spacing/layout templates na 3 głównych ekranach,P2,Mobile Dev,tech-debt,mobile,Backlog,Ride/Explore/Profile zgodne z patternem
+S1-BE-01,Zweryfikować auth refresh contract i błędy 401,P0,Backend Dev,ops,backend,Backlog,Kontrakt udokumentowany; mobile flow pass
+S1-BE-02,Zweryfikować `sync_path/finalize` pod edge-case offline,P0,Backend Dev,ops,backend,Backlog,Scenariusz kill/relaunch opisany i zatwierdzony
+S1-BE-03,Przegląd retry policy i status codes (429/503),P1,Backend Dev,ops,backend,Backlog,Jasne wytyczne dla mobile retry/backoff
+S1-BE-04,Uzgodnić payload dla leaderboard/trends,P1,Backend Dev,tech-debt,backend,Backlog,Brak niejednoznaczności pól w UI
+S1-BE-05,Uzupełnić API docs dla wearables auth status,P2,Backend Dev,docs,backend,Backlog,Dokument API odzwierciedla realny flow
+S1-QA-01,Smoke auth + ride lifecycle + gps recovery,P0,QA Lead,ops,qa,Backlog,3 flowy pass i raport w ticketach
+S1-QA-02,Manual matrix deep-links (Android+iOS),P0,QA Engineer,ops,qa,Backlog,Wszystkie krytyczne deeplinki zweryfikowane
+S1-QA-03,Dodać smoke dla settings sections,P1,QA Engineer,ops,qa,Backlog,Flow sekcji i persistence pass
+S1-QA-04,Dodać smoke dla explore map -> marketplace,P1,QA Engineer,ops,qa,Backlog,Nawigacja i fallback network pass
+S1-QA-05,Test regresji `ActivityDetail` po refaktorze,P1,QA Engineer,ops,qa,Backlog,Brak crash/placeholder regression
+S1-QA-06,Uzupełnić test notes dla device matrix,P2,QA Lead,ops,qa,Backlog,Minimum 2 Android + 1 iOS opisane
+S1-REL-01,Ustawić policy env bez fallback do prod w release,P0,Release Eng,ops,release,Backlog,Brak ryzyka prod fallback dla release
+S1-REL-02,Zweryfikować preview build i rollback path,P0,Release Eng,ops,release,Backlog,Preview build gotowy, rollback opisany
+S1-REL-03,Potwierdzić telemetry/crash ingestion w preview,P1,DevOps,ops,release,Backlog,Eventy crash/perf widoczne
+S1-REL-04,Ujednolicić release checklist EN/PL,P1,Release Eng,docs,release,Backlog,`MOBILE.md` PL/EN zsynchronizowane
+S1-DATA-01,Audyt eventów Ride/Auth/Share,P1,Data Analyst,ops,data,Backlog,Braki eventów udokumentowane i przypisane
+S1-DATA-02,Potwierdzić metryki perf budget telemetry,P1,Data Analyst,ops,data,Backlog,violation eventy mapowane i czytelne
+S1-DATA-03,Dodać rekomendacje retention eventów,P2,Data Analyst,tech-debt,data,Backlog,Lista eventów P2 do kolejnego sprintu
+S1-DES-01,Audyt typografii PressStart2P/VT323 na kluczowych ekranach,P0,UI Designer,ops,design,Backlog,Brak mismatch font family na Ride/Summary
+S1-DES-02,Usunąć emoji/placeholdery z ekranów detail/profile,P1,UI Designer,tech-debt,design,Backlog,Spójny chrome icon language
+S1-DES-03,Spójność kart (padding border shadow),P1,UI Designer,tech-debt,design,Backlog,Pattern zatwierdzony na 3 ekranach
+S1-DES-04,Aktualizacja audytu Grand Prix EN/PL po zmianach,P2,Technical Artist,docs,design,Backlog,Drift wpisany i status zaktualizowany
+S1-SEC-01,Audyt token storage i error logging,P0,Security Eng,ops,security,Backlog,Brak wrażliwych danych w logach
+S1-SEC-02,Audyt privacy zones flow i fallbacków UI,P1,Security Eng,ops,security,Backlog,UX nie sugeruje fałszywego success
+S1-SEC-03,Review konfiguracji env pod secret hygiene,P1,Security Eng,ops,security,Backlog,Potwierdzony brak sekretów w kliencie

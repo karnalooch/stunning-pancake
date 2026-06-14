@@ -54,6 +54,15 @@
 | [KUBERNETES.md](./KUBERNETES.md) | Manifesty k8s |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Gate przed release |
 | [MOBILE.md](./MOBILE.md) | EAS build, env, GPS recovery |
+| [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) | Brama testów i release dla mobile full vision |
+| [MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | Prewencyjny playbook startu przebudowy mobile |
+| [MOBILE_FIX_FORWARD_PLAYBOOK.md](./MOBILE_FIX_FORWARD_PLAYBOOK.md) | Procedura napraw fix-forward i hotfix PR |
+| [MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | Cross-funkcyjny przegląd mobile rola-po-roli |
+| [MOBILE_SPRINT1_REVIEW_PACKET.md](./MOBILE_SPRINT1_REVIEW_PACKET.md) | Gotowy pakiet checklist i template'ów na Sprint 1 |
+| [MOBILE_SPRINT1_BOARD_SEED.md](./MOBILE_SPRINT1_BOARD_SEED.md) | Gotowa lista ticketów Sprint 1 (priorytety, ownerzy, AC) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | Checklista kickoffu D1 (agenda, SLA blockerów, gate 17:00) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | Gotowy template notatki kickoff D1 (decyzje, ownerzy, ETA, blockery) |
+| [MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | Operacyjny plan D1-D3: kto/co/kiedy na start Sprint 1 |
 | [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Migracja trackingu tła (native provider, KPI, eskalacja) |
 | [../../infrastructure/brouter/README.md](../../../infrastructure/brouter/README.md) | Dockerfile BRouter |
 

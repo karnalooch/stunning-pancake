@@ -1,3 +1,4 @@
+/* eslint-env jest */
 module.exports = {
   isAvailableAsync: jest.fn().mockResolvedValue(false),
   getItemAsync: jest.fn().mockResolvedValue(null),

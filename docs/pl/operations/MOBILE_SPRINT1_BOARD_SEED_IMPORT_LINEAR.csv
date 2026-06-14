@@ -1,0 +1,40 @@
+Title,Description,Priority,Labels,State
+"[S1-PT-01] Zatwierdzić scope Sprint 1 (IN/OUT)","Owner role: PM | AC: Zakres opublikowany; lista wykluczeń zaakceptowana",1,"sprint1,product,ops,p0",Backlog
+"[S1-PT-02] Potwierdzić kryteria akceptacji Ride core","Owner role: Tech Lead | AC: AC dla RideDashboard/HUD/Summary wpisane do boardu",1,"sprint1,product,docs,p0",Backlog
+"[S1-PT-03] Uzgodnić kolejność P0/P1 dla domen","Owner role: PM | AC: Kolejność zatwierdzona przez mobile+backend+QA",2,"sprint1,product,ops,p1",Backlog
+"[S1-PT-04] Zaktualizować implementation spec po kickoff","Owner role: UX Lead | AC: `4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` zaktualizowany",2,"sprint1,product,docs,p1",Backlog
+"[S1-MOB-01] Naprawić lint blocker importu `StreakBadge`","Owner role: Mobile Dev | AC: `expo lint` bez errora import/no-unresolved",1,"sprint1,mobile,bug,p0",Backlog
+"[S1-MOB-02] Ujednolicić kontrakt `RideSummary` i deep-link path","Owner role: Mobile Dev | AC: `types` + `routeContract` + `linking` spójne",1,"sprint1,mobile,tech-debt,p0",Backlog
+"[S1-MOB-03] Domknąć status bar HUD (GPS/battery/clock) na device","Owner role: Mobile Dev | AC: Manual QA na Android/iOS; brak null-crash",1,"sprint1,mobile,feature,p0",Backlog
+"[S1-MOB-04] Ride stop confirm guard (hold) z testem regresji","Owner role: Mobile Dev | AC: Potwierdzenie stop działa; test/manual pass",1,"sprint1,mobile,feature,p0",Backlog
+"[S1-MOB-05] Uporządkować hook deps warnings w krytycznych plikach","Owner role: Mobile Dev | AC: Brak nowych warnings w dotkniętych plikach",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-06] Refaktor `ActivityDetail` z i18n i bez emoji placeholderów","Owner role: Mobile Dev | AC: Labels przez i18n; brak placeholder text/emoji",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-07] Uporządkować onboarding typy i copy i18n","Owner role: Mobile Dev | AC: Mniej `any`; copy PL/EN przez i18n",2,"sprint1,mobile,tech-debt,p1",Backlog
+"[S1-MOB-08] Dodać edge states (offline/error/empty) w detail/trends","Owner role: Mobile Dev | AC: Widoczne i spójne fallbacki",2,"sprint1,mobile,feature,p1",Backlog
+"[S1-MOB-09] Konsolidacja legacy wrapperów komponentów UI","Owner role: Mobile Dev | AC: Legacy deleguje do `components/ui`",3,"sprint1,mobile,tech-debt,p2",Backlog
+"[S1-MOB-10] Ustandaryzować spacing/layout templates na 3 głównych ekranach","Owner role: Mobile Dev | AC: Ride/Explore/Profile zgodne z patternem",3,"sprint1,mobile,tech-debt,p2",Backlog
+"[S1-BE-01] Zweryfikować auth refresh contract i błędy 401","Owner role: Backend Dev | AC: Kontrakt udokumentowany; mobile flow pass",1,"sprint1,backend,ops,p0",Backlog
+"[S1-BE-02] Zweryfikować `sync_path/finalize` pod edge-case offline","Owner role: Backend Dev | AC: Scenariusz kill/relaunch opisany i zatwierdzony",1,"sprint1,backend,ops,p0",Backlog
+"[S1-BE-03] Przegląd retry policy i status codes (429/503)","Owner role: Backend Dev | AC: Jasne wytyczne dla mobile retry/backoff",2,"sprint1,backend,ops,p1",Backlog
+"[S1-BE-04] Uzgodnić payload dla leaderboard/trends","Owner role: Backend Dev | AC: Brak niejednoznaczności pól w UI",2,"sprint1,backend,tech-debt,p1",Backlog
+"[S1-BE-05] Uzupełnić API docs dla wearables auth status","Owner role: Backend Dev | AC: Dokument API odzwierciedla realny flow",3,"sprint1,backend,docs,p2",Backlog
+"[S1-QA-01] Smoke auth + ride lifecycle + gps recovery","Owner role: QA Lead | AC: 3 flowy pass i raport w ticketach",1,"sprint1,qa,ops,p0",Backlog
+"[S1-QA-02] Manual matrix deep-links (Android+iOS)","Owner role: QA Engineer | AC: Wszystkie krytyczne deeplinki zweryfikowane",1,"sprint1,qa,ops,p0",Backlog
+"[S1-QA-03] Dodać smoke dla settings sections","Owner role: QA Engineer | AC: Flow sekcji i persistence pass",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-04] Dodać smoke dla explore map -> marketplace","Owner role: QA Engineer | AC: Nawigacja i fallback network pass",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-05] Test regresji `ActivityDetail` po refaktorze","Owner role: QA Engineer | AC: Brak crash/placeholder regression",2,"sprint1,qa,ops,p1",Backlog
+"[S1-QA-06] Uzupełnić test notes dla device matrix","Owner role: QA Lead | AC: Minimum 2 Android + 1 iOS opisane",3,"sprint1,qa,ops,p2",Backlog
+"[S1-REL-01] Ustawić policy env bez fallback do prod w release","Owner role: Release Eng | AC: Brak ryzyka prod fallback dla release",1,"sprint1,release,ops,p0",Backlog
+"[S1-REL-02] Zweryfikować preview build i rollback path","Owner role: Release Eng | AC: Preview build gotowy, rollback opisany",1,"sprint1,release,ops,p0",Backlog
+"[S1-REL-03] Potwierdzić telemetry/crash ingestion w preview","Owner role: DevOps | AC: Eventy crash/perf widoczne",2,"sprint1,release,ops,p1",Backlog
+"[S1-REL-04] Ujednolicić release checklist EN/PL","Owner role: Release Eng | AC: `MOBILE.md` PL/EN zsynchronizowane",2,"sprint1,release,docs,p1",Backlog
+"[S1-DATA-01] Audyt eventów Ride/Auth/Share","Owner role: Data Analyst | AC: Braki eventów udokumentowane i przypisane",2,"sprint1,data,ops,p1",Backlog
+"[S1-DATA-02] Potwierdzić metryki perf budget telemetry","Owner role: Data Analyst | AC: violation eventy mapowane i czytelne",2,"sprint1,data,ops,p1",Backlog
+"[S1-DATA-03] Dodać rekomendacje retention eventów","Owner role: Data Analyst | AC: Lista eventów P2 do kolejnego sprintu",3,"sprint1,data,tech-debt,p2",Backlog
+"[S1-DES-01] Audyt typografii PressStart2P/VT323 na kluczowych ekranach","Owner role: UI Designer | AC: Brak mismatch font family na Ride/Summary",1,"sprint1,design,ops,p0",Backlog
+"[S1-DES-02] Usunąć emoji/placeholdery z ekranów detail/profile","Owner role: UI Designer | AC: Spójny chrome icon language",2,"sprint1,design,tech-debt,p1",Backlog
+"[S1-DES-03] Spójność kart (padding border shadow)","Owner role: UI Designer | AC: Pattern zatwierdzony na 3 ekranach",2,"sprint1,design,tech-debt,p1",Backlog
+"[S1-DES-04] Aktualizacja audytu Grand Prix EN/PL po zmianach","Owner role: Technical Artist | AC: Drift wpisany i status zaktualizowany",3,"sprint1,design,docs,p2",Backlog
+"[S1-SEC-01] Audyt token storage i error logging","Owner role: Security Eng | AC: Brak wrażliwych danych w logach",1,"sprint1,security,ops,p0",Backlog
+"[S1-SEC-02] Audyt privacy zones flow i fallbacków UI","Owner role: Security Eng | AC: UX nie sugeruje fałszywego success",2,"sprint1,security,ops,p1",Backlog
+"[S1-SEC-03] Review konfiguracji env pod secret hygiene","Owner role: Security Eng | AC: Potwierdzony brak sekretów w kliencie",2,"sprint1,security,ops,p1",Backlog

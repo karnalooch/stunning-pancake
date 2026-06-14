@@ -1,0 +1,40 @@
+Summary,Issue Type,Priority,Labels,Description,Owner Role,Initial Status
+"[S1-PT-01] Approve Sprint 1 scope (IN/OUT)",Task,Highest,"sprint1,product,ops,p0","AC: Scope published; exclusions approved",PM,To Do
+"[S1-PT-02] Confirm ride-core acceptance criteria",Task,Highest,"sprint1,product,docs,p0","AC: AC for RideDashboard/HUD/Summary added to board",Tech Lead,To Do
+"[S1-PT-03] Lock P0/P1 ordering across domains",Task,High,"sprint1,product,ops,p1","AC: Ordering approved by mobile+backend+QA",PM,To Do
+"[S1-PT-04] Update implementation spec after kickoff",Task,High,"sprint1,product,docs,p1","AC: `4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` updated",UX Lead,To Do
+"[S1-MOB-01] Fix lint blocker import in `StreakBadge`",Bug,Highest,"sprint1,mobile,bug,p0","AC: `expo lint` has no import/no-unresolved error",Mobile Dev,To Do
+"[S1-MOB-02] Align `RideSummary` contract and deep-link path",Task,Highest,"sprint1,mobile,tech-debt,p0","AC: `types` + `routeContract` + `linking` consistent",Mobile Dev,To Do
+"[S1-MOB-03] Finalize HUD status bar (GPS/battery/clock) on device",Story,Highest,"sprint1,mobile,feature,p0","AC: Android/iOS manual pass; no null crash",Mobile Dev,To Do
+"[S1-MOB-04] Add stop-confirm hold guard with regression test",Story,Highest,"sprint1,mobile,feature,p0","AC: Stop confirmation works; test/manual pass",Mobile Dev,To Do
+"[S1-MOB-05] Reduce hook dependency warnings in critical files",Task,High,"sprint1,mobile,tech-debt,p1","AC: No new warnings in touched critical files",Mobile Dev,To Do
+"[S1-MOB-06] Refactor `ActivityDetail` to i18n and remove emoji placeholders",Task,High,"sprint1,mobile,tech-debt,p1","AC: Labels via i18n; no placeholder text/emoji",Mobile Dev,To Do
+"[S1-MOB-07] Improve onboarding types and i18n copy",Task,High,"sprint1,mobile,tech-debt,p1","AC: Reduced `any`; PL/EN copy through i18n",Mobile Dev,To Do
+"[S1-MOB-08] Add edge states (offline/error/empty) in detail/trends",Story,High,"sprint1,mobile,feature,p1","AC: Clear consistent fallbacks",Mobile Dev,To Do
+"[S1-MOB-09] Consolidate legacy UI wrappers",Task,Medium,"sprint1,mobile,tech-debt,p2","AC: Legacy components delegate to `components/ui`",Mobile Dev,To Do
+"[S1-MOB-10] Standardize spacing/layout templates on top 3 screens",Task,Medium,"sprint1,mobile,tech-debt,p2","AC: Ride/Explore/Profile follow same layout pattern",Mobile Dev,To Do
+"[S1-BE-01] Validate auth refresh contract and 401 behavior",Task,Highest,"sprint1,backend,ops,p0","AC: Contract documented; mobile flow passes",Backend Dev,To Do
+"[S1-BE-02] Validate `sync_path/finalize` offline edge cases",Task,Highest,"sprint1,backend,ops,p0","AC: kill/relaunch scenario documented and approved",Backend Dev,To Do
+"[S1-BE-03] Review retry policy and status codes (429/503)",Task,High,"sprint1,backend,ops,p1","AC: mobile retry/backoff guidance aligned",Backend Dev,To Do
+"[S1-BE-04] Align payload expectations for leaderboard/trends",Task,High,"sprint1,backend,tech-debt,p1","AC: No ambiguous fields in UI integrations",Backend Dev,To Do
+"[S1-BE-05] Update API docs for wearable auth status flow",Task,Medium,"sprint1,backend,docs,p2","AC: API docs match real flow",Backend Dev,To Do
+"[S1-QA-01] Smoke auth + ride lifecycle + GPS recovery",Task,Highest,"sprint1,qa,ops,p0","AC: 3 critical flows pass with report",QA Lead,To Do
+"[S1-QA-02] Manual deep-link matrix (Android+iOS)",Task,Highest,"sprint1,qa,ops,p0","AC: all critical deep links verified",QA Engineer,To Do
+"[S1-QA-03] Add smoke coverage for settings sections",Task,High,"sprint1,qa,ops,p1","AC: section switch and persistence pass",QA Engineer,To Do
+"[S1-QA-04] Add smoke coverage explore map -> marketplace",Task,High,"sprint1,qa,ops,p1","AC: navigation and network fallback pass",QA Engineer,To Do
+"[S1-QA-05] Regression pass for `ActivityDetail` refactor",Task,High,"sprint1,qa,ops,p1","AC: no crash/placeholder regressions",QA Engineer,To Do
+"[S1-QA-06] Expand device matrix notes",Task,Medium,"sprint1,qa,ops,p2","AC: minimum 2 Android + 1 iOS documented",QA Lead,To Do
+"[S1-REL-01] Enforce env policy: no production fallback in release",Task,Highest,"sprint1,release,ops,p0","AC: no prod fallback risk for release builds",Release Eng,To Do
+"[S1-REL-02] Validate preview build and rollback path",Task,Highest,"sprint1,release,ops,p0","AC: preview build ready; rollback documented",Release Eng,To Do
+"[S1-REL-03] Verify telemetry/crash ingestion in preview",Task,High,"sprint1,release,ops,p1","AC: crash/perf events visible",DevOps,To Do
+"[S1-REL-04] Align release checklist EN/PL",Task,High,"sprint1,release,docs,p1","AC: `MOBILE.md` EN/PL synchronized",Release Eng,To Do
+"[S1-DATA-01] Audit Ride/Auth/Share event coverage",Task,High,"sprint1,data,ops,p1","AC: missing events documented and assigned",Data Analyst,To Do
+"[S1-DATA-02] Validate performance budget telemetry visibility",Task,High,"sprint1,data,ops,p1","AC: violation events mapped and queryable",Data Analyst,To Do
+"[S1-DATA-03] Propose retention event improvements",Task,Medium,"sprint1,data,tech-debt,p2","AC: prioritized event backlog for Sprint 2",Data Analyst,To Do
+"[S1-DES-01] Audit PressStart2P/VT323 usage on critical screens",Task,Highest,"sprint1,design,ops,p0","AC: no font-family mismatch on Ride/Summary",UI Designer,To Do
+"[S1-DES-02] Remove emoji/placeholders from detail/profile",Task,High,"sprint1,design,tech-debt,p1","AC: consistent chrome icon language",UI Designer,To Do
+"[S1-DES-03] Normalize card styling (padding/border/shadow)",Task,High,"sprint1,design,tech-debt,p1","AC: approved pattern on 3 key screens",UI Designer,To Do
+"[S1-DES-04] Update Grand Prix audit EN/PL after sprint changes",Task,Medium,"sprint1,design,docs,p2","AC: drift/status updated",Technical Artist,To Do
+"[S1-SEC-01] Audit token storage and error logging hygiene",Task,Highest,"sprint1,security,ops,p0","AC: no sensitive logging exposure",Security Eng,To Do
+"[S1-SEC-02] Audit privacy-zones UX fallback behavior",Task,High,"sprint1,security,ops,p1","AC: UI does not imply false success",Security Eng,To Do
+"[S1-SEC-03] Review env configuration for secret hygiene",Task,High,"sprint1,security,ops,p1","AC: no client secret leakage risk",Security Eng,To Do

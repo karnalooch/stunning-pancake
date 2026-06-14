@@ -37,6 +37,15 @@
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | Po zmianie presetów / volume |
 | [OSRM.md](./OSRM.md) | OSRM sim routing, volume, `SCALE_SIM_ROUTING_BACKEND` | Platform Operator | Po deploy serwisu `osrm` |
 | [MOBILE.md](./MOBILE.md) | Build EAS, env, GPS recovery | Mobile Lead | Przed release app store |
+| [MOBILE_FULL_VISION_VERIFICATION.md](./MOBILE_FULL_VISION_VERIFICATION.md) | Brama testów i warunki gotowości full vision mobile | Mobile Lead + QA Lead | Każdy release mobile / duży merge |
+| [MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | Prewencyjny hardening startu przebudowy mobile | Mobile Lead + Release Manager | Na starcie projektu i po incydencie P0/P1 |
+| [MOBILE_FIX_FORWARD_PLAYBOOK.md](./MOBILE_FIX_FORWARD_PLAYBOOK.md) | Procedura triage/hotfix/rollback dla regresji mobile | Mobile Lead / On-call | Każdy incydent mobile |
+| [MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | Przegląd mobile rola-po-roli i obowiązkowe aktualizacje docs | Product Manager + Mobile Lead | Co sprint i przed release candidate |
+| [MOBILE_SPRINT1_REVIEW_PACKET.md](./MOBILE_SPRINT1_REVIEW_PACKET.md) | Gotowy pakiet checklist, template'ów i sign-off na Sprint 1 | Product Manager + Mobile Lead | Start sprintu + midpoint + sprint review |
+| [MOBILE_SPRINT1_BOARD_SEED.md](./MOBILE_SPRINT1_BOARD_SEED.md) | Seed boardu Sprint 1: gotowa lista ticketów z AC i priorytetami | Product Manager + Mobile Lead | Planowanie sprintu i grooming |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | Checklista kickoffu D1: agenda, przydział `P0`, gate dnia | Product Manager + Mobile Lead | Start D1 (09:00) i zamknięcie D1 (17:00) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | Template notatki kickoff D1 z decyzjami, ETA i blockerami | Product Manager + Mobile Lead | Uzupełniany po kickoffie i checkpointach D1 |
+| [MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | Operacyjny plan wykonania D1-D3 dla Sprint 1 | Product Manager + Mobile Lead | Pierwsze 3 dni sprintu i dzienny review |
 | [MOBILE_BACKGROUND_TRACKING_MIGRATION.md](./MOBILE_BACKGROUND_TRACKING_MIGRATION.md) | Migracja trackingu tła Android/iOS, KPI, eskalacja | Mobile Lead | Przy zmianie providera GPS / przed releasem |
 | [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) | Jednolite gate CI + checklist | Release Manager | Każdy release tag |
 | [../DISK_GUARD.md](../../DISK_GUARD.md) | Postgres disk budget | Platform Operator | Przed testem 300k |

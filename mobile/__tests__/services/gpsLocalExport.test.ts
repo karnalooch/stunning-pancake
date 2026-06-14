@@ -44,7 +44,10 @@ describe('gpsLocalExport', () => {
   });
 
   test('buildGpx11 rejects fewer than two points', () => {
-    expect(() => buildGpx11([samplePoints()[0]])).toThrow(/at least two/);
+    const first = samplePoints()[0];
+    expect(first).toBeDefined();
+    if (!first) return;
+    expect(() => buildGpx11([first])).toThrow(/at least two/);
   });
 
   test('buildGeoJsonLineString sorts by timestamp', () => {
@@ -55,7 +58,7 @@ describe('gpsLocalExport', () => {
       properties: { point_count: number };
     };
     expect(geo.properties.point_count).toBe(2);
-    expect(geo.geometry.coordinates[0][0]).toBeCloseTo(21.0122, 4);
-    expect(geo.geometry.coordinates[1][0]).toBeCloseTo(21.0128, 4);
+    expect(geo.geometry.coordinates[0]?.[0]).toBeCloseTo(21.0122, 4);
+    expect(geo.geometry.coordinates[1]?.[0]).toBeCloseTo(21.0128, 4);
   });
 });

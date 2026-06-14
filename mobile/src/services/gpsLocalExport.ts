@@ -4,6 +4,7 @@
  */
 
 import type { GpsPoint } from './gpsSyncStorage';
+import { Directory, File, Paths } from 'expo-file-system';
 
 export function buildGpx11(
   points: GpsPoint[],
@@ -13,9 +14,13 @@ export function buildGpx11(
     throw new Error('GPX requires at least two track points');
   }
   const sorted = [...points].sort((a, b) => a.timestamp - b.timestamp);
+  const firstPoint = sorted[0];
+  if (!firstPoint) {
+    throw new Error('GPX requires at least one point');
+  }
   const trackName = options?.trackName ?? '4VELO Activity';
   const activityType = options?.activityType ?? 'other';
-  const startIso = new Date(sorted[0].timestamp).toISOString().replace(/\.\d{3}Z$/, 'Z');
+  const startIso = new Date(firstPoint.timestamp).toISOString().replace(/\.\d{3}Z$/, 'Z');
 
   const trkpts = sorted
     .map((p) => {
@@ -84,20 +89,18 @@ export async function saveLocalRideSnapshot(
 ): Promise<LocalRideSnapshotResult | null> {
   if (points.length < 2) return null;
   try {
-    const FileSystem = await import('expo-file-system');
-    const dir = `${FileSystem.documentDirectory}gps-snapshots`;
-    await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    const dir = new Directory(Paths.document, 'gps-snapshots');
+    dir.create({ idempotent: true, intermediates: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const base = `${dir}/activity-${activityId}-${stamp}`;
-    const gpxPath = `${base}.gpx`;
-    const geoJsonPath = `${base}.geojson`;
-    await FileSystem.writeAsStringAsync(gpxPath, buildGpx11(points), {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
-    await FileSystem.writeAsStringAsync(geoJsonPath, buildGeoJsonLineString(points), {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
-    return { gpxPath, geoJsonPath };
+    const gpxFile = new File(dir, `activity-${activityId}-${stamp}.gpx`);
+    gpxFile.create({ intermediates: true, overwrite: true });
+    gpxFile.write(buildGpx11(points), { encoding: 'utf8' });
+
+    const geoJsonFile = new File(dir, `activity-${activityId}-${stamp}.geojson`);
+    geoJsonFile.create({ intermediates: true, overwrite: true });
+    geoJsonFile.write(buildGeoJsonLineString(points), { encoding: 'utf8' });
+
+    return { gpxPath: gpxFile.uri, geoJsonPath: geoJsonFile.uri };
   } catch (err) {
     console.warn('[gpsLocalExport] snapshot skipped:', err);
     return null;

@@ -6,15 +6,23 @@
  * Share + Download FIT actions.
  */
 
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from '../theme/stitch';
 import * as Haptics from 'expo-haptics';
+import { ActivityService } from '../services/api';
+import { OfflineCacheService } from '../services/OfflineCacheService';
+import type { ActivityItem } from '../services/api';
+import { APP_BRAND_NAME } from '../theme/brand';
+import { ChromeIcon } from '../components/ui/ChromeIcon';
+import { EmptyState } from '../components/ui/EmptyState';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { useI18n } from '../i18n/useI18n';
 
 const stylesheet = StyleSheet.create(theme => {
-    const C = theme.colors as any;
+    const C = theme.colors as Record<string, string>;
     const sh = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
     const shSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
     return {
@@ -52,7 +60,6 @@ const stylesheet = StyleSheet.create(theme => {
     mapHeader: { backgroundColor: C.surfaceContainer, padding: 10, borderBottomWidth: 2, borderBottomColor: C.onBackground },
     mapHeaderText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', color: C.onBackground },
     mapArea: { height: 250, backgroundColor: C.primaryContainer, justifyContent: 'center', alignItems: 'center' },
-    mapPlaceholder: { fontSize: 40 },
     // Achievements
     achSection: { flexDirection: 'row', gap: 8 },
     achCard: {
@@ -90,50 +97,146 @@ interface ActivityDetailScreenProps {
     onBack?: () => void;
     onShare?: () => void;
     onDownload?: () => void;
+    activityId?: number;
+}
+
+function formatActivityDate(value: string | undefined, localeTag: string): string {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString(localeTag);
 }
 
 export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
-    title = 'MOUNTAIN PASS RIDE',
-    date = 'Oct 24, 2023 • 08:30 AM',
-    distance = 42.5,
-    time = '1:45:22',
-    elevation = 850,
-    avgSpeed = 24.2,
+    activityId,
     onBack, onShare, onDownload,
 }) => {
     const { theme } = useUnistyles(); const s = stylesheet;
-    const C = theme.colors as any;
+    const { t, locale } = useI18n();
+    const C = theme.colors as Record<string, string>;
+    const localeTag = locale === 'pl' ? 'pl-PL' : 'en-US';
+    const [loading, setLoading] = useState(true);
+    const [title, setTitle] = useState<string>(() => t.tabs.ride);
+    const [date, setDate] = useState('—');
+    const [distance, setDistance] = useState(0);
+    const [time, setTime] = useState('—');
+    const [elevation, setElevation] = useState(0);
+    const [avgSpeed, setAvgSpeed] = useState(0);
+    const [hasData, setHasData] = useState(false);
+    const [offline, setOffline] = useState(false);
+
+    const apply = useCallback((item: Pick<ActivityItem, 'type' | 'start_time' | 'distance' | 'duration'> & { elevation_gain?: number }) => {
+        setTitle(item.type ?? t.tabs.ride);
+        setDate(formatActivityDate(item.start_time, localeTag));
+        setDistance((item.distance ?? 0) / 1000);
+        setTime(item.duration ?? '—');
+        setElevation(item.elevation_gain ?? 0);
+        setAvgSpeed(0);
+        setHasData(true);
+    }, [localeTag, t.tabs.ride]);
+
+    useEffect(() => {
+        if (!activityId) {
+            setLoading(false);
+            setHasData(false);
+            return;
+        }
+        setHasData(false);
+        setOffline(false);
+        const cached = OfflineCacheService.getHistory();
+        const fromCache = cached?.find((a) => a.id === activityId);
+        if (fromCache) {
+            apply(fromCache);
+            setOffline(true);
+        }
+        ActivityService.getHistory()
+            .then((rows) => {
+                const list = Array.isArray(rows) ? rows : [];
+                OfflineCacheService.setHistory(list);
+                const item = list.find((a) => a.id === activityId) ?? fromCache;
+                if (item) {
+                    apply(item);
+                    setOffline(false);
+                }
+            })
+            .catch(() => {
+                setOffline(true);
+            })
+            .finally(() => setLoading(false));
+    }, [activityId, apply]);
+
+    if (!activityId) {
+        return (
+            <SafeAreaView style={s.container} edges={['top']}>
+                <EmptyState message={t.training.empty} icon="training" />
+            </SafeAreaView>
+        );
+    }
+
+    if (loading) {
+        return (
+            <SafeAreaView style={s.container} edges={['top']}>
+                <SkeletonBlock height={200} style={{ margin: 16 }} />
+            </SafeAreaView>
+        );
+    }
+
+    if (!hasData) {
+        return (
+            <SafeAreaView style={s.container} edges={['top']}>
+                {offline ? (
+                    <EdgeStateBanner
+                        title={t.errors.network}
+                        message={t.errors.offlineCache}
+                        variant="offline"
+                    />
+                ) : null}
+                <EmptyState
+                    message={t.activityDetail.unavailable}
+                    hint={t.activityDetail.loadingHint}
+                    icon="training"
+                />
+            </SafeAreaView>
+        );
+    }
 
     return (
     <SafeAreaView style={s.container} edges={['top']}>
+        {offline ? (
+            <EdgeStateBanner
+                title={t.errors.network}
+                message={t.errors.offlineCache}
+                variant="offline"
+            />
+        ) : null}
         <View style={[s.header, s.sh]}>
             <Pressable onPress={onBack}>
                 <Text style={s.hdrBack}>←</Text>
             </Pressable>
-            <Text style={s.hdrTitle}>VELO QUEST</Text>
+            <Text style={s.hdrTitle}>{APP_BRAND_NAME}</Text>
             <View style={{ width: 40 }} />
         </View>
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
             {/* Info Card */}
             <View style={[s.infoCard, s.sh]}>
                 <View style={s.infoDate}>
-                    <Text style={{ fontSize: 16 }}>📅</Text>
+                    <ChromeIcon id="calendar" size={14} />
                     <Text style={s.infoDateText}>{date}</Text>
                 </View>
                 <Text style={s.infoTitle}>{title}</Text>
                 <View style={s.infoStatus}>
                     <View style={s.statusDot} />
-                    <Text style={[s.statusText, { color: C.primary }]}>Completed</Text>
+                    <Text style={[s.statusText, { color: C.primary }]}>{t.activityDetail.completed}</Text>
                 </View>
             </View>
 
             {/* Stats Bento */}
             <View style={s.statsGrid}>
                 {[
-                    { label: 'Distance', value: `${distance}`, unit: 'km' },
-                    { label: 'Time', value: time, unit: '' },
-                    { label: 'Elevation', value: `+${elevation}`, unit: 'm' },
-                    { label: 'Avg Speed', value: `${avgSpeed}`, unit: 'km/h' },
+                    { label: t.activityDetail.stats.distance, value: `${distance.toFixed(2)}`, unit: t.activityDetail.stats.distanceUnit },
+                    { label: t.activityDetail.stats.time, value: time, unit: '' },
+                    { label: t.activityDetail.stats.elevation, value: `+${elevation}`, unit: t.activityDetail.stats.elevationUnit },
+                    { label: t.activityDetail.stats.avgSpeed, value: `${avgSpeed}`, unit: t.activityDetail.stats.speedUnit },
                 ].map((st, i) => (
                     <View key={i} style={[s.statTile, s.shSm]}>
                         <Text style={s.statLabel}>{st.label}</Text>
@@ -145,33 +248,38 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             {/* Route Map */}
             <View style={[s.mapSection, s.sh]}>
                 <View style={s.mapHeader}>
-                    <Text style={s.mapHeaderText}>🗺️  Route</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <ChromeIcon id="map" size={14} />
+                        <Text style={s.mapHeaderText}>{t.activityDetail.route}</Text>
+                    </View>
                 </View>
                 <View style={s.mapArea}>
-                    <Text style={s.mapPlaceholder}>🗺️</Text>
+                    <ChromeIcon id="map" size={36} />
                     <Text style={{ fontSize: 12, color: C.onBackground, opacity: 0.5, marginTop: 8 }}>
-                        MapLibre Route View
+                        {t.activityDetail.routePreview}
                     </Text>
                 </View>
             </View>
 
             {/* Achievements Carousel */}
             <View>
-                <Text style={[s.statLabel, { marginBottom: 8, paddingLeft: 4, borderLeftWidth: 4, borderLeftColor: C.primary }]}>Achievements</Text>
+                <Text style={[s.statLabel, { marginBottom: 8, paddingLeft: 4, borderLeftWidth: 4, borderLeftColor: C.primary }]}>
+                    {t.activityDetail.achievements}
+                </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.achSection}>
                     <View style={[s.achCard, s.shSm]}>
                         <View style={[s.achIcon, { backgroundColor: C.goldAmber }]}>
-                            <Text style={{ fontSize: 20 }}>🏆</Text>
+                            <ChromeIcon id="segments" size={20} />
                         </View>
-                        <Text style={[s.achTitle, { color: C.secondary }]}>Segment KOM</Text>
-                        <Text style={[s.achName, { color: C.onBackground }]}>Pine Climb</Text>
+                        <Text style={[s.achTitle, { color: C.secondary }]}>{t.activityDetail.achievementKomTitle}</Text>
+                        <Text style={[s.achName, { color: C.onBackground }]}>{t.activityDetail.achievementKomName}</Text>
                     </View>
                     <View style={[s.achCard, s.shSm]}>
                         <View style={[s.achIcon, { backgroundColor: C.primaryFixed }]}>
-                            <Text style={{ fontSize: 20 }}>⭐</Text>
+                            <ChromeIcon id="cityStar" size={20} />
                         </View>
-                        <Text style={[s.achTitle, { color: C.secondary }]}>New PR</Text>
-                        <Text style={[s.achName, { color: C.onBackground }]}>Valley Sprint</Text>
+                        <Text style={[s.achTitle, { color: C.secondary }]}>{t.activityDetail.achievementPrTitle}</Text>
+                        <Text style={[s.achName, { color: C.onBackground }]}>{t.activityDetail.achievementPrName}</Text>
                     </View>
                 </ScrollView>
             </View>
@@ -179,21 +287,24 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             {/* Performance Chart */}
             <View style={[s.chartCard, s.sh]}>
                 <View style={s.chartHeader}>
-                    <Text style={[s.statLabel, { color: C.onBackground }]}>Performance</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <ChromeIcon id="performance" size={14} />
+                        <Text style={[s.statLabel, { color: C.onBackground }]}>{t.activityDetail.performance}</Text>
+                    </View>
                     <View style={s.chartLegend}>
                         <View style={s.legendItem}>
                             <View style={[s.legendDot, { backgroundColor: C.secondary }]} />
-                            <Text style={s.legendText}>Elev</Text>
+                            <Text style={s.legendText}>{t.activityDetail.elevLegend}</Text>
                         </View>
                         <View style={s.legendItem}>
                             <View style={[s.legendDot, { backgroundColor: C.tertiary }]} />
-                            <Text style={s.legendText}>HR</Text>
+                            <Text style={s.legendText}>{t.activityDetail.hrLegend}</Text>
                         </View>
                     </View>
                 </View>
                 <View style={s.chartArea}>
                     <Text style={{ fontSize: 12, color: C.outline }}>
-                        Elevation / HR Chart Placeholder
+                        {t.activityDetail.chartPending}
                     </Text>
                 </View>
             </View>
@@ -204,13 +315,15 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                     style={({ pressed }) => [s.actionBtn, { backgroundColor: C.primary }, s.sh, pressed && { transform: [{ translateY: 2 }] }]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { }); onShare?.(); }}
                 >
-                    <Text style={[s.actionText, { color: C.onPrimary }]}>📤  SHARE RIDE</Text>
+                    <ChromeIcon id="share" size={16} />
+                    <Text style={[s.actionText, { color: C.onPrimary }]}>{t.activityDetail.shareRide}</Text>
                 </Pressable>
                 <Pressable
                     style={({ pressed }) => [s.actionBtn, { backgroundColor: C.surfaceContainerHighest }, s.sh, pressed && { transform: [{ translateY: 2 }] }]}
                     onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { }); onDownload?.(); }}
                 >
-                    <Text style={[s.actionText, { color: C.onBackground }]}>⬇️  DOWNLOAD FIT</Text>
+                    <ChromeIcon id="download" size={16} />
+                    <Text style={[s.actionText, { color: C.onBackground }]}>{t.activityDetail.downloadFit}</Text>
                 </Pressable>
             </View>
 

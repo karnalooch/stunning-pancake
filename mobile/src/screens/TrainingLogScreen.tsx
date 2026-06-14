@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ActivityService, type ActivityItem } from '../services/api';
 import { useMobileI18n } from '../i18n/useI18n';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -39,7 +40,7 @@ const stylesheet = StyleSheet.create((theme) => {
 });
 
 function statusLabel(
-  item: ActivityItem & { rejection_reason?: string },
+  item: ActivityItem,
   t: ReturnType<typeof useMobileI18n.getState>['t'],
 ): string {
   if (item.is_verified) return t.training.verified;
@@ -49,9 +50,10 @@ function statusLabel(
 
 interface TrainingLogScreenProps {
   onBack?: () => void;
+  onOpenActivity?: (activityId: number) => void;
 }
 
-export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack }) => {
+export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack, onOpenActivity }) => {
   const { theme } = useUnistyles();
   const { t } = useMobileI18n();
   const s = stylesheet;
@@ -61,7 +63,7 @@ export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack }) 
 
   useEffect(() => {
     ActivityService.getHistory()
-      .then((data) => setItems(Array.isArray(data) ? data : (data as any)?.results ?? []))
+      .then((data) => setItems(Array.isArray(data) ? data : []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
@@ -77,14 +79,19 @@ export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack }) 
         <Text style={s.headerTitle}>{t.training.title}</Text>
       </View>
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 32 }} />
+        <SkeletonBlock height={120} style={{ margin: 16 }} />
       ) : (
         <ScrollView>
           {items.length === 0 ? (
             <Text style={s.empty}>{t.training.empty}</Text>
           ) : (
             items.map((a) => (
-              <View key={a.id} style={s.card}>
+              <Pressable
+                key={a.id}
+                style={({ pressed }) => [s.card, pressed && { opacity: 0.85 }]}
+                onPress={() => onOpenActivity?.(a.id)}
+                disabled={!onOpenActivity}
+              >
                 <Text style={s.label}>{new Date(a.start_time).toLocaleDateString()}</Text>
                 <Text style={s.name}>{a.type}</Text>
                 <Text style={s.metric}>
@@ -97,15 +104,15 @@ export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack }) 
                     {
                       color: a.is_verified
                         ? c.primary
-                        : (a as any).rejection_reason
+                        : a.rejection_reason
                           ? c.error
                           : c.secondary,
                     },
                   ]}
                 >
-                  {statusLabel(a as ActivityItem & { rejection_reason?: string }, t)}
+                  {statusLabel(a, t)}
                 </Text>
-              </View>
+              </Pressable>
             ))
           )}
         </ScrollView>

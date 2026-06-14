@@ -169,8 +169,9 @@ const MESSAGES: Record<AvatarPersonality, Record<string, string[]>> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────
 
-function pickRandom(arr: string[]): string {
-  return arr[Math.floor(Math.random() * arr.length)];
+function pickRandom(arr: string[] | undefined): string {
+  if (!arr || arr.length === 0) return '';
+  return arr[Math.floor(Math.random() * arr.length)] ?? arr[0] ?? '';
 }
 
 function interpolateVars(text: string, vars: Record<string, string>): string {

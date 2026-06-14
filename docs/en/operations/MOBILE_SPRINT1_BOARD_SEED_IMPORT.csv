@@ -1,0 +1,40 @@
+ID,Title,Priority,Owner,Type,Area,Status,AcceptanceCriteria
+S1-PT-01,Approve Sprint 1 scope (IN/OUT),P0,PM,ops,product,Backlog,Scope published; exclusions approved
+S1-PT-02,Confirm ride-core acceptance criteria,P0,Tech Lead,docs,product,Backlog,AC for RideDashboard/HUD/Summary added to board
+S1-PT-03,Lock P0/P1 ordering across domains,P1,PM,ops,product,Backlog,Ordering approved by mobile+backend+QA
+S1-PT-04,Update implementation spec after kickoff,P1,UX Lead,docs,product,Backlog,`4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` updated
+S1-MOB-01,Fix lint blocker import in `StreakBadge`,P0,Mobile Dev,bug,mobile,Backlog,`expo lint` has no import/no-unresolved error
+S1-MOB-02,Align `RideSummary` contract and deep-link path,P0,Mobile Dev,tech-debt,mobile,Backlog,`types` + `routeContract` + `linking` consistent
+S1-MOB-03,Finalize HUD status bar (GPS/battery/clock) on device,P0,Mobile Dev,feature,mobile,Backlog,Android/iOS manual pass; no null crash
+S1-MOB-04,Add stop-confirm hold guard with regression test,P0,Mobile Dev,feature,mobile,Backlog,Stop confirmation works; test/manual pass
+S1-MOB-05,Reduce hook dependency warnings in critical files,P1,Mobile Dev,tech-debt,mobile,Backlog,No new warnings in touched critical files
+S1-MOB-06,Refactor `ActivityDetail` to i18n and remove emoji placeholders,P1,Mobile Dev,tech-debt,mobile,Backlog,Labels via i18n; no placeholder text/emoji
+S1-MOB-07,Improve onboarding types and i18n copy,P1,Mobile Dev,tech-debt,mobile,Backlog,Reduced `any`; PL/EN copy through i18n
+S1-MOB-08,Add edge states (offline/error/empty) in detail/trends,P1,Mobile Dev,feature,mobile,Backlog,Clear consistent fallbacks
+S1-MOB-09,Consolidate legacy UI wrappers,P2,Mobile Dev,tech-debt,mobile,Backlog,Legacy components delegate to `components/ui`
+S1-MOB-10,Standardize spacing/layout templates on top 3 screens,P2,Mobile Dev,tech-debt,mobile,Backlog,Ride/Explore/Profile follow same layout pattern
+S1-BE-01,Validate auth refresh contract and 401 behavior,P0,Backend Dev,ops,backend,Backlog,Contract documented; mobile flow passes
+S1-BE-02,Validate `sync_path/finalize` offline edge cases,P0,Backend Dev,ops,backend,Backlog,kill/relaunch scenario documented and approved
+S1-BE-03,Review retry policy and status codes (429/503),P1,Backend Dev,ops,backend,Backlog,mobile retry/backoff guidance aligned
+S1-BE-04,Align payload expectations for leaderboard/trends,P1,Backend Dev,tech-debt,backend,Backlog,No ambiguous fields in UI integrations
+S1-BE-05,Update API docs for wearable auth status flow,P2,Backend Dev,docs,backend,Backlog,API docs match real flow
+S1-QA-01,Smoke auth + ride lifecycle + GPS recovery,P0,QA Lead,ops,qa,Backlog,3 critical flows pass with report
+S1-QA-02,Manual deep-link matrix (Android+iOS),P0,QA Engineer,ops,qa,Backlog,all critical deep links verified
+S1-QA-03,Add smoke coverage for settings sections,P1,QA Engineer,ops,qa,Backlog,section switch and persistence pass
+S1-QA-04,Add smoke coverage explore map -> marketplace,P1,QA Engineer,ops,qa,Backlog,navigation and network fallback pass
+S1-QA-05,Regression pass for `ActivityDetail` refactor,P1,QA Engineer,ops,qa,Backlog,no crash/placeholder regressions
+S1-QA-06,Expand device matrix notes,P2,QA Lead,ops,qa,Backlog,minimum 2 Android + 1 iOS documented
+S1-REL-01,Enforce env policy: no production fallback in release,P0,Release Eng,ops,release,Backlog,no prod fallback risk for release builds
+S1-REL-02,Validate preview build and rollback path,P0,Release Eng,ops,release,Backlog,preview build ready; rollback documented
+S1-REL-03,Verify telemetry/crash ingestion in preview,P1,DevOps,ops,release,Backlog,crash/perf events visible
+S1-REL-04,Align release checklist EN/PL,P1,Release Eng,docs,release,Backlog,`MOBILE.md` EN/PL synchronized
+S1-DATA-01,Audit Ride/Auth/Share event coverage,P1,Data Analyst,ops,data,Backlog,missing events documented and assigned
+S1-DATA-02,Validate performance budget telemetry visibility,P1,Data Analyst,ops,data,Backlog,violation events mapped and queryable
+S1-DATA-03,Propose retention event improvements,P2,Data Analyst,tech-debt,data,Backlog,prioritized event backlog for Sprint 2
+S1-DES-01,Audit PressStart2P/VT323 usage on critical screens,P0,UI Designer,ops,design,Backlog,no font-family mismatch on Ride/Summary
+S1-DES-02,Remove emoji/placeholders from detail/profile,P1,UI Designer,tech-debt,design,Backlog,consistent chrome icon language
+S1-DES-03,Normalize card styling (padding/border/shadow),P1,UI Designer,tech-debt,design,Backlog,approved pattern on 3 key screens
+S1-DES-04,Update Grand Prix audit EN/PL after sprint changes,P2,Technical Artist,docs,design,Backlog,drift/status updated
+S1-SEC-01,Audit token storage and error logging hygiene,P0,Security Eng,ops,security,Backlog,no sensitive logging exposure
+S1-SEC-02,Audit privacy-zones UX fallback behavior,P1,Security Eng,ops,security,Backlog,UI does not imply false success
+S1-SEC-03,Review env configuration for secret hygiene,P1,Security Eng,ops,security,Backlog,no client secret leakage risk

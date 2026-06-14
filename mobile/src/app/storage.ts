@@ -4,6 +4,7 @@
  */
 
 import { MMKV } from 'react-native-mmkv';
+import { warnMmkvUnavailable } from '../services/mmkvSupport';
 
 let storage: MMKV | null | undefined;
 
@@ -24,7 +25,7 @@ export function getAppStorage(): AppStorage {
     storage = new MMKV();
     return storage;
   } catch (e) {
-    console.error('[Storage] MMKV init failed', e);
+    warnMmkvUnavailable('Storage', e);
     storage = null;
     return fallbackStorage;
   }

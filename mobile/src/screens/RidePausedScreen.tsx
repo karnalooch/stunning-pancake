@@ -1,15 +1,109 @@
-// STITCH Phase 2 — RidePausedScreen (modal overlay)
-import React from "react";
-import { View, Text, Pressable } from "react-native";
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from "../theme/stitch";
-const stylesheet = StyleSheet.create(theme => {
-    const c = theme.colors as any;
-    const C = theme.colors as any;
-    return { overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", alignItems: "center", padding: 16 }, modal: { backgroundColor: c.surface, borderWidth: 4, borderColor: c.onBackground, borderRadius: 12, padding: 24, width: "100%", maxWidth: 320, alignItems: "center" }, t: { fontSize: 24, fontWeight: "700", color: c.onBackground, textTransform: "uppercase", marginTop: 12, marginBottom: 24 }, btn: { width: "100%", paddingVertical: 16, borderRadius: 8, borderWidth: 4, borderColor: c.onBackground, alignItems: "center", marginTop: 8 }, btnR: { backgroundColor: c.primaryContainer }, btnS: { backgroundColor: c.error }, btnT: { fontSize: 18, fontWeight: "700", textTransform: "uppercase" } 
-    };
+// STITCH Phase 2 — RidePausedScreen (stack modal)
+import React from 'react';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useUnistyles } from 'react-native-unistyles';
+import { useI18n } from '../i18n/useI18n';
+import { ChromeIcon } from '../components/ui/ChromeIcon';
+import { pixelShadow } from '../theme/pixelShadow';
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 29, 51, 0.72)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modal: {
+    borderWidth: 4,
+    borderRadius: 12,
+    padding: 24,
+    width: '100%',
+    maxWidth: 320,
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginTop: 12,
+    marginBottom: 24,
+    fontFamily: 'PressStart2P',
+  },
+  btn: {
+    width: '100%',
+    minHeight: 48,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  btnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    fontFamily: 'PressStart2P',
+  },
 });
-interface Props { onResume: () => void; onStop: () => void }
-export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => { const { theme } = useUnistyles(); const s = stylesheet;
-    const c = theme.colors as any;
-    const C = theme.colors as any; return (<View style={s.overlay}><View style={s.modal}><Text style={{ fontSize: 40 }}>⏸️</Text><Text style={s.t}>Session Paused</Text><Pressable style={[s.btn, s.btnR]} onPress={onResume}><Text style={[s.btnT, { color: c.onPrimaryContainer }]}>▶ RESUME</Text></Pressable><Pressable style={[s.btn, s.btnS]} onPress={onStop}><Text style={[s.btnT, { color: c.onError }]}>■ STOP RIDE</Text></Pressable></View></View>); };
+
+interface Props {
+  onResume: () => void;
+  onStop: () => void;
+}
+
+export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
+  const { theme } = useUnistyles();
+  const { t } = useI18n();
+  const c = theme.colors as Record<string, string>;
+  const outline = c.hudOutline ?? '#111111';
+  return (
+    <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
+      <View
+        style={[
+          styles.modal,
+          {
+            backgroundColor: c.surface,
+            borderColor: outline,
+            ...pixelShadow(outline, 'md'),
+          },
+        ]}
+      >
+        <ChromeIcon id="quests" size={32} />
+        <Text style={[styles.title, { color: c.onBackground }]} allowFontScaling>
+          {t.ride.paused.title}
+        </Text>
+        <Pressable
+          style={({ pressed }) => [
+            styles.btn,
+            { borderColor: outline, backgroundColor: c.primaryContainer },
+            pressed && { opacity: 0.85 },
+          ]}
+          onPress={onResume}
+          accessibilityRole="button"
+          accessibilityLabel={t.ride.paused.resume}
+        >
+          <Text style={[styles.btnText, { color: c.onPrimaryContainer }]} allowFontScaling>
+            ▶ {t.ride.paused.resume}
+          </Text>
+        </Pressable>
+        <Pressable
+          style={({ pressed }) => [
+            styles.btn,
+            { borderColor: outline, backgroundColor: c.error },
+            pressed && { opacity: 0.85 },
+          ]}
+          onPress={onStop}
+          accessibilityRole="button"
+          accessibilityLabel={t.ride.paused.stop}
+        >
+          <Text style={[styles.btnText, { color: c.onError }]} allowFontScaling>
+            ■ {t.ride.paused.stop}
+          </Text>
+        </Pressable>
+      </View>
+    </SafeAreaView>
+  );
+};

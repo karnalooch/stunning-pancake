@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import { VT323_400Regular } from '@expo-google-fonts/vt323';
 import { observer } from '@legendapp/state/react';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -16,25 +17,34 @@ import { useRideLifecycle } from './src/app/useRideLifecycle';
 import { AuthScreen } from './src/app/AuthScreen';
 import { NavigationShell } from './src/app/NavigationShell';
 import { SoundService } from './src/services/SoundService';
+import { useChromeNight } from './src/hooks/useChromeNight';
+import type { RideEdgeMessage } from './src/services/apiRetry';
 
 const AppContent = observer(function AppContent() {
-  const [fontsLoaded] = useFonts({ 'Press Start 2P': PressStart2P_400Regular });
+  const [fontsLoaded] = useFonts({
+    PressStart2P: PressStart2P_400Regular,
+    VT323: VT323_400Regular,
+  });
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
   const { theme } = useUnistyles();
 
-  const [showTrainingLog, setShowTrainingLog] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showGpsDiagnostics, setShowGpsDiagnostics] = useState(false);
-  const [showClubs, setShowClubs] = useState(false);
-  const [showSegments, setShowSegments] = useState(false);
+  const [startRideError, setStartRideError] = useState<string | null>(null);
+  const [rideEdgeMessage, setRideEdgeMessage] = useState<RideEdgeMessage | null>(null);
 
-  const ride = useRideLifecycle();
-  const { auth, BYPASS_AUTH, handleAuth, handleLogout, handleOnboardingFinish, openSocialLogin } =
+  useChromeNight();
+
+  const ride = useRideLifecycle({
+    onStartRideError: setStartRideError,
+    onStartRideSuccess: () => setStartRideError(null),
+    onEdgeMessage: setRideEdgeMessage,
+  });
+  const { auth, BYPASS_AUTH, handleAuth, handleLogout, handleOnboardingFinish, openSocialLogin, clearAuthBanner } =
     useAuthSession(ride.onUserSessionReady);
 
   const authUser = auth.user.get();
 
   React.useEffect(() => {
+    if (__DEV__) return;
     if (isUpdateAvailable) {
       void Updates.reloadAsync();
     }
@@ -67,10 +77,13 @@ const AppContent = observer(function AppContent() {
   const colors = theme.colors as Record<string, string>;
 
   if (!isAuth || !user) {
+    const banner = auth.banner.get();
     return (
       <AuthScreen
         auth={auth}
         colors={colors}
+        banner={banner}
+        onDismissBanner={clearAuthBanner}
         onSubmit={() => void handleAuth()}
         onToggleMode={() =>
           auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login')
@@ -99,16 +112,11 @@ const AppContent = observer(function AppContent() {
       gpsRecoveryBusy={ride.gpsRecoveryBusy}
       rideSummary={ride.rideSummary}
       setRideSummary={ride.setRideSummary}
-      showTrainingLog={showTrainingLog}
-      setShowTrainingLog={setShowTrainingLog}
-      showSettings={showSettings}
-      setShowSettings={setShowSettings}
-      showGpsDiagnostics={showGpsDiagnostics}
-      setShowGpsDiagnostics={setShowGpsDiagnostics}
-      showClubs={showClubs}
-      setShowClubs={setShowClubs}
-      showSegments={showSegments}
-      setShowSegments={setShowSegments}
+      startRideError={startRideError}
+      clearStartRideError={() => setStartRideError(null)}
+      rideEdgeMessage={rideEdgeMessage}
+      clearRideEdgeMessage={() => setRideEdgeMessage(null)}
+      setRideEdgeMessage={setRideEdgeMessage}
       onGpsRecoveryPress={() => void ride.handleGpsRecoveryPress()}
       onStartRide={ride.handleStartRide}
       onStopRide={ride.handleStopRide}

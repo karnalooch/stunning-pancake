@@ -10,7 +10,7 @@
 
 import { AvatarTrainerService, SessionContext } from '../../src/services/AvatarTrainerService';
 import { triggerEngine, TriggerMessage } from '../../src/services/TriggerEngine';
-import { LlmCoachService } from '../../src/services/LlmCoachService';
+import { llmCoach } from '../../src/services/LlmCoachService';
 
 // Mock LlmCoachService to return null (forcing fallback to static templates)
 jest.mock('../../src/services/LlmCoachService', () => ({
@@ -49,7 +49,6 @@ describe('AvatarTrainerService', () => {
     jest.clearAllMocks();
     triggerEngine.clear();
     pushSpy = jest.spyOn(triggerEngine, 'push');
-    const { llmCoach } = require('../../src/services/LlmCoachService');
     (llmCoach.generateMessage as jest.Mock).mockResolvedValue(null);
     service = new AvatarTrainerService();
   });
@@ -155,7 +154,7 @@ describe('AvatarTrainerService', () => {
       expect(batteryTriggers.length).toBe(1);
       expect(service.state.lowBatteryAlerted.get()).toBe(true);
 
-      const message = batteryTriggers[0].message.toLowerCase();
+      const message = batteryTriggers[0]!.message.toLowerCase();
       expect(message).toMatch(/15|battery|power|critical|depleted/);
     });
 
@@ -219,7 +218,7 @@ describe('AvatarTrainerService', () => {
         .map(call => call[0] as Omit<TriggerMessage, 'timestamp'>)
         .filter(t => t.id.startsWith('hr-zone-'));
       expect(hrTriggers.length).toBeGreaterThanOrEqual(1);
-      expect(hrTriggers[0].title).toBe('HR_ESCALATION');
+      expect(hrTriggers[0]!.title).toBe('HR_ESCALATION');
     });
 
     test('HR_ZONE_DOWN trigger fires when HR zone decreases', async () => {
@@ -288,7 +287,7 @@ describe('AvatarTrainerService', () => {
 
       const batMsgs = pushedById(pushSpy, 'low-battery');
       expect(batMsgs.length).toBe(1);
-      expect(batMsgs[0].message).toMatch(/18/);
+      expect(batMsgs[0]!.message).toMatch(/18/);
       svc.destroy();
     });
 
@@ -329,7 +328,7 @@ describe('AvatarTrainerService', () => {
 
       const pbMsgs = pushedById(pushSpy, 'personal-best');
       expect(pbMsgs.length).toBe(1);
-      expect(pbMsgs[0].message).toMatch(/5\.23/);
+      expect(pbMsgs[0]!.message).toMatch(/5\.23/);
       svc.destroy();
     });
   });
@@ -345,11 +344,10 @@ describe('AvatarTrainerService', () => {
 
       const startMsgs = pushedById(pushSpy, 'session-start');
       expect(startMsgs.length).toBe(1);
-      expect(startMsgs[0].message.length).toBeGreaterThan(0);
+      expect(startMsgs[0]!.message.length).toBeGreaterThan(0);
     });
 
     test('should still produce a message when LLM throws', async () => {
-      const { llmCoach } = require('../../src/services/LlmCoachService');
       (llmCoach.generateMessage as jest.Mock).mockRejectedValue(new Error('API down'));
 
       service.setPersonality('MOTIVATOR');
@@ -367,7 +365,6 @@ describe('AvatarTrainerService', () => {
 
   describe('Polish Language', () => {
     test('LLM-generated coaching messages can be delivered in Polish', async () => {
-      const { llmCoach } = require('../../src/services/LlmCoachService');
       (llmCoach.generateMessage as jest.Mock).mockResolvedValue(
         'Świetna robota — utrzymaj tempo!'
       );
@@ -378,7 +375,7 @@ describe('AvatarTrainerService', () => {
 
       const startMsgs = pushedById(pushSpy, 'session-start');
       expect(startMsgs.length).toBe(1);
-      expect(startMsgs[0].message).toMatch(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/);
+      expect(startMsgs[0]!.message).toMatch(/[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/);
     });
   });
 
@@ -387,7 +384,6 @@ describe('AvatarTrainerService', () => {
   describe('Async Deduplication', () => {
     test('should not push duplicate triggers during LLM generation', async () => {
       // Make LLM slow
-      const { llmCoach } = require('../../src/services/LlmCoachService');
       let resolveLlm: ((val: any) => void) = () => {};
       (llmCoach.generateMessage as jest.Mock).mockImplementation(
         () => new Promise(resolve => { resolveLlm = resolve; })

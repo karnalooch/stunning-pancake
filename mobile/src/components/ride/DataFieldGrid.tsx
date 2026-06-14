@@ -2,7 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useDataFieldLayout } from '../../hooks/useDataFieldLayout';
-import { DATA_FIELD_IDS, DATA_FIELD_REGISTRY, type DataFieldId } from '../../ride/dataFields';
+import { DATA_FIELD_IDS, DATA_FIELD_REGISTRY, fieldHasValue, type DataFieldId } from '../../ride/dataFields';
 import { splitLayoutRows } from '../../ride/layouts';
 import type { DataFieldLayout, RideMetricsSnapshot, RideProfileId } from '../../ride/types';
 import { DataFieldCell } from './DataFieldCell';
@@ -12,6 +12,7 @@ import { trackEngagement } from '../../services/EngagementAnalytics';
 interface DataFieldGridProps {
   metrics: RideMetricsSnapshot;
   layout?: DataFieldLayout;
+  hudMode?: boolean;
 }
 
 const PROFILE_LABELS: Record<RideProfileId, string> = {
@@ -75,7 +76,7 @@ const stylesheet = StyleSheet.create((theme) => {
   };
 });
 
-export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: layoutProp }) => {
+export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: layoutProp, hudMode = false }) => {
   const { theme } = useUnistyles();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
@@ -118,13 +119,18 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
     });
   }, [activeProfile]);
 
-  const renderRow = (slots: typeof row1) => (
+  const renderRow = (slots: typeof row1) => {
+    const visible = hudMode ? slots.filter((slot) => fieldHasValue(slot.fieldId, metrics)) : slots;
+    if (visible.length === 0) return null;
+    return (
     <View style={s.row}>
-      {slots.map((slot, index) => {
+      {visible.map((slot, index) => {
         const swapNeighbor = (direction: 'left' | 'right') => {
           const targetIndex = direction === 'left' ? index - 1 : index + 1;
-          if (targetIndex < 0 || targetIndex >= slots.length) return;
-          swapSlots(slot.slotKey, slots[targetIndex].slotKey);
+          if (targetIndex < 0 || targetIndex >= visible.length) return;
+          const neighbor = visible[targetIndex];
+          if (!neighbor) return;
+          swapSlots(slot.slotKey, neighbor.slotKey);
         };
         if (editMode) {
           return (
@@ -147,12 +153,14 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
             metrics={metrics}
             emphasis={slot.emphasis}
             editMode={false}
+            hudMode={hudMode}
             onPressEdit={() => pickFieldForSlot(slot.slotKey, slot.fieldId)}
           />
         );
       })}
     </View>
-  );
+    );
+  };
 
   return (
     <Pressable
@@ -196,7 +204,7 @@ export const DataFieldGrid: React.FC<DataFieldGridProps> = ({ metrics, layout: l
       )}
       {renderRow(row1)}
       {renderRow(row2)}
-      {!editMode && (
+      {!editMode && !hudMode && (
         <Text style={s.hint}>Long-press grid to customize fields</Text>
       )}
     </Pressable>

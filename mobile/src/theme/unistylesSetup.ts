@@ -18,8 +18,9 @@
 
 import { StyleSheet } from 'react-native-unistyles';
 import { stitchTheme } from './stitch';
+import { stitchNightTheme } from './stitchNight';
 
 StyleSheet.configure({
     settings: { initialTheme: 'stitch' },
-    themes: { stitch: stitchTheme } as any,
+    themes: { stitch: stitchTheme, stitchNight: stitchNightTheme } as any,
 });

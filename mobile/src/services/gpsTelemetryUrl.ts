@@ -2,4 +2,4 @@
 
 export const TELEMETRY_URL =
   process.env.EXPO_PUBLIC_TELEMETRY_URL ??
-  'https://docker-telemetry-production-123c.up.railway.app';
+  (__DEV__ ? 'https://docker-telemetry-production-123c.up.railway.app' : '');

@@ -17,11 +17,7 @@ export function useFrameBudgetMonitor(enabled: boolean): void {
       const elapsed = Date.now() - windowStart;
       if (elapsed >= 1_000) {
         const fps = Math.round((frameCount * 1_000) / elapsed);
-        const budgetFps = 60;
-        const frameDebtMs = Math.max(0, budgetFps - fps) * (1_000 / budgetFps);
-        if (frameDebtMs > 0) {
-          recordPerformanceMetric('hudMinFps', frameDebtMs);
-        }
+        recordPerformanceMetric('hudMinFps', fps);
         frameCount = 0;
         windowStart = Date.now();
       }

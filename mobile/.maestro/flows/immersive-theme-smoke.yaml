@@ -1,7 +1,7 @@
 appId: ${MAESTRO_APP_ID}
 ---
 - launchApp
-- assertVisible: "VELO QUEST"
+- assertVisible: "4VELO"
 - tapOn:
     text: "Settings"
     optional: true

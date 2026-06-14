@@ -1,15 +1,106 @@
-// STITCH Phase 2 — GlobalLeaderboardScreen (refaktor LeaderboardScreen)
-import React from "react";
-import { View, Text, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from "../theme/stitch";
+import React, { useEffect, useState } from 'react';
+import { View, ScrollView, Text } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { useI18n } from '../i18n/useI18n';
+import { ActivityService, type LeaderboardEntry } from '../services/api';
+import { OfflineCacheService } from '../services/OfflineCacheService';
+import { EmptyState } from '../components/ui/EmptyState';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+
 const stylesheet = StyleSheet.create(theme => {
-    const c = theme.colors as any;
-    const C = theme.colors as any;
-    return { ct: { flex: 1, backgroundColor: c.background }, h: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground, backgroundColor: c.surface }, t: { fontSize: 24, fontWeight: "700", color: c.primary, textTransform: "uppercase" }, row: { flexDirection: "row", alignItems: "center", backgroundColor: c.parchment, marginHorizontal: 16, marginTop: 8, padding: 12, borderWidth: 2, borderColor: c.onBackground, borderRadius: 8 }, rank: { fontSize: 20, fontWeight: "700", width: 32, color: c.primary }, name: { flex: 1, fontSize: 16, fontWeight: "700", color: c.onBackground, marginLeft: 8 }, pts: { fontSize: 18, fontWeight: "700", color: c.primary }, footer: { backgroundColor: c.surfaceContainerHigh, padding: 16, borderTopWidth: 4, borderTopColor: c.onBackground, marginTop: 16, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }, fl: { fontSize: 10, fontWeight: "700", color: c.secondary, textTransform: "uppercase" }, fv: { fontSize: 20, fontWeight: "700", color: c.onBackground } 
-    };
+  const c = theme.colors as Record<string, string>;
+  return {
+    ct: { flex: 1, backgroundColor: c.background },
+    content: { padding: 16, gap: 10 },
+    row: {
+      borderWidth: 2,
+      borderColor: c.hudOutline,
+      borderRadius: 8,
+      backgroundColor: c.parchment,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    rank: {
+      width: 32,
+      fontSize: 18,
+      fontFamily: 'VT323',
+      color: c.secondary,
+    },
+    name: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '700',
+      color: c.onBackground,
+    },
+    score: {
+      fontSize: 16,
+      fontFamily: 'VT323',
+      color: c.primary,
+    },
+  };
 });
-export const GlobalLeaderboardScreen: React.FC = () => { const { theme } = useUnistyles(); const s = stylesheet;
-    const c = theme.colors as any;
-    const C = theme.colors as any; const data = [{ r: 1, n: "London", p: "1,245k", c: "United Kingdom" }, { r: 2, n: "Paris", p: "982k", c: "France" }, { r: 3, n: "New York", p: "875k", c: "USA" }, { r: 42, n: "Berlin", p: "412k", c: "Germany" }, { r: 128, n: "Siedlce", p: "142k", c: "Poland", you: true }]; return (<SafeAreaView style={s.ct} edges={["top"]}><View style={s.h}><Text style={s.t}>Global Leaderboard</Text></View><ScrollView>{data.map((d, i) => (<View key={i} style={[s.row, d.you && { backgroundColor: c.primaryContainer }]}><Text style={s.rank}>{d.r}</Text><View style={{ flex: 1 }}><Text style={s.name}>{d.n}</Text><Text style={{ fontSize: 10, color: c.secondary }}>{d.c}</Text></View><Text style={s.pts}>{d.p}</Text></View>))}</ScrollView><View style={s.footer}><Text style={s.fl}>Your City</Text><Text style={s.fv}>Siedlce — 128th</Text></View></SafeAreaView>); };
+
+export const GlobalLeaderboardScreen: React.FC = () => {
+  const { t } = useI18n();
+  const s = stylesheet;
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [offline, setOffline] = useState(false);
+
+  useEffect(() => {
+    const cached = OfflineCacheService.getCityHub();
+    if (cached?.leaderboard?.length) {
+      setEntries(cached.leaderboard);
+      setOffline(true);
+    }
+    setLoading(true);
+    ActivityService.getCityHubSummary()
+      .then((summary) => {
+        OfflineCacheService.setCityHub(summary);
+        setEntries(summary.leaderboard ?? []);
+        setOffline(false);
+      })
+      .catch(() => {
+        setOffline(true);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <View style={s.ct}>
+      <ScrollView contentContainerStyle={s.content}>
+        {offline ? (
+          <EdgeStateBanner
+            title={t.errors.network}
+            message={t.errors.offlineCache}
+            variant="offline"
+          />
+        ) : null}
+        {loading ? (
+          <SkeletonBlock height={220} />
+        ) : entries.length === 0 ? (
+          <EmptyState message={t.demo.leaderboardEmpty} icon="leaderboard" hint={t.settings.globalLb} />
+        ) : (
+          entries.slice(0, 20).map((entry) => (
+            <View
+              key={`${entry.rank}-${entry.username}`}
+              style={[s.row, entry.is_me && { transform: [{ translateY: -1 }] }]}
+            >
+              <Text style={s.rank}>{entry.rank}</Text>
+              <Text style={s.name}>{entry.is_me ? t.compete.you : entry.username}</Text>
+              <Text style={s.score}>
+                {entry.score_km != null
+                  ? `${entry.score_km.toFixed(1)} km`
+                  : `${entry.points}`}
+              </Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
+    </View>
+  );
+};

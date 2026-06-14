@@ -108,6 +108,15 @@ Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`
 | [SIMULATOR.md](./operations/SIMULATOR.md) | ✅ Active | Batch → live, FSM, admin map |
 | [BROUTER.md](./operations/BROUTER.md) | ✅ Active | BRouter, kafelki, routing |
 | [MOBILE.md](./operations/MOBILE.md) | ✅ Active | EAS build/release, GPS recovery |
+| [MOBILE_FULL_VISION_VERIFICATION.md](./operations/MOBILE_FULL_VISION_VERIFICATION.md) | ✅ Active | Brama testów i release dla full vision mobile |
+| [MOBILE_STARTUP_HARDENING_PLAYBOOK.md](./operations/MOBILE_STARTUP_HARDENING_PLAYBOOK.md) | ✅ Active | Prewencyjny hardening startu mobile |
+| [MOBILE_FIX_FORWARD_PLAYBOOK.md](./operations/MOBILE_FIX_FORWARD_PLAYBOOK.md) | ✅ Active | Procedura fix-forward/hotfix mobile |
+| [MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md](./operations/MOBILE_CROSS_FUNCTIONAL_REVIEW_PLAYBOOK.md) | ✅ Active | Przegląd mobile rola-po-roli i aktualizacja dokumentacji |
+| [MOBILE_SPRINT1_REVIEW_PACKET.md](./operations/MOBILE_SPRINT1_REVIEW_PACKET.md) | ✅ Active | Gotowy pakiet checklist i template'ów dla Sprint 1 |
+| [MOBILE_SPRINT1_BOARD_SEED.md](./operations/MOBILE_SPRINT1_BOARD_SEED.md) | ✅ Active | Gotowa lista 30+ ticketów Sprint 1 (owner, priorytet, AC) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md](./operations/MOBILE_SPRINT1_DAY1_KICKOFF_CHECKLIST.md) | ✅ Active | Checklista kickoffu D1 (agenda, P0, checkpointy) |
+| [MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md](./operations/MOBILE_SPRINT1_DAY1_KICKOFF_NOTES_TEMPLATE.md) | ✅ Active | Template notatki kickoff D1 (decyzje, ownerzy, ETA, blockery) |
+| [MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md](./operations/MOBILE_SPRINT1_DAY1_DAY3_EXECUTION_PLAN.md) | ✅ Active | Konkretny plan D1-D3 (ownerzy, kolejność, dependencies) |
 | [PRE_RELEASE_VERIFICATION.md](./operations/PRE_RELEASE_VERIFICATION.md) | ✅ Active | Gate przed release |
 
 ### `docs/admin/` — [README](../admin/README.md) · [ADMIN_INDEX](../admin/ADMIN_INDEX.md)
@@ -128,7 +137,7 @@ Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`
 | [RELEASE_LEGAL_COMPLIANCE_PACKAGE.md](../compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md) | Gate release OSS/GDPR/ToS |
 | [MAP_BASEMAP_LICENSING.md](../compliance/MAP_BASEMAP_LICENSING.md) | Licencje map bazowych |
 
-### `docs/adr/` (001–011)
+### `docs/adr/` (001–014)
 
 | ADR | Temat |
 |-----|--------|
@@ -143,6 +152,9 @@ Stare URL `docs/operations/*.md` przekierowują tutaj i do `docs/en/operations/`
 | [009](../adr/009-admin-user-management-and-event-matchmaking.md) | Admin users / events |
 | [010](../adr/010-simulator-redis-celery.md) | Simulator Redis/Celery |
 | [011](../adr/011-telemetry-ingest-durability-under-load.md) | Telemetry ingest durability (burst); mobile-side guarantees (P0/P1) |
+| [012](../adr/012-mobile-performance-budgets.md) | Budżety wydajności mobile (HUD/GPS) |
+| [013](../adr/013-sim-lab-read-federation.md) | Sim-lab read federation (BFF prod → izolowany data plane) |
+| [014](../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) | Immersive pixel-art jako skóra nawigacyjnego bike-computera |
 
 ### `docs/reports/` — [README](../reports/README.md)
 
@@ -162,7 +174,7 @@ Snapshoty audytów (datowane) — nie edytować na żywo; nowy plik przy kolejny
 | [onboarding/GUIDE.md](./onboarding/GUIDE.md) | Onboarding dev + tenant + wizard mobile |
 | [product/FAQ.md](./product/FAQ.md) | FAQ użytkownika końcowego |
 
-**Design mobile (STITCH HTML):** katalog `mockups/` — np. `02-active-ride-hud.html` (referencja UI; pliki `*.html` mogą być gitignored lokalnie). Spec kolorów: [archive/designmobile.md](../archive/designmobile.md) · ADR [006](../adr/006-design-system-stitch.md).
+**Design mobile (STITCH HTML):** katalog `mockups/` — np. `02-active-ride-hud.html` (referencja UI; pliki `*.html` mogą być gitignored lokalnie). Spec kolorów: [archive/designmobile.md](../archive/designmobile.md) · ADR [006](../adr/006-design-system-stitch.md). Kontrakt wykonawczy full vision: [design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md](./design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md). Macierz traceability: [design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md](./design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md).
 
 ### `docs/archive/` — historyczne
 

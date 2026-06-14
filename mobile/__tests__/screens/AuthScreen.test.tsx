@@ -26,6 +26,64 @@ jest.mock('../../src/components/RetroInput', () => {
     RetroInput: ({ placeholder }: { placeholder: string }) => <Text>{placeholder}</Text>,
   };
 });
+jest.mock('react-native-unistyles', () => ({
+  StyleSheet: {
+    create: (styles: unknown) =>
+      typeof styles === 'function'
+        ? styles({
+            colors: {
+              background: '#fff',
+              primary: '#0a0',
+              secondary: '#666',
+              onBackground: '#111',
+              primaryContainer: '#ddd',
+              onPrimaryContainer: '#111',
+              error: '#b00',
+              onError: '#fff',
+            },
+          })
+        : styles,
+  },
+  useUnistyles: () => ({
+    theme: {
+      colors: {
+        background: '#fff',
+        primary: '#0a0',
+        secondary: '#666',
+        onBackground: '#111',
+        primaryContainer: '#ddd',
+        onPrimaryContainer: '#111',
+        error: '#b00',
+        onError: '#fff',
+      },
+    },
+  }),
+}));
+jest.mock('../../src/components/scene/SceneBackground', () => {
+  const { View } = require('react-native');
+  return { SceneBackground: () => <View /> };
+});
+jest.mock('../../src/components/sprites/CyclistSprite', () => {
+  const { View } = require('react-native');
+  return { CyclistSprite: () => <View /> };
+});
+jest.mock('react-native-reanimated', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const AnimatedView = ({ children }: { children: React.ReactNode }) => <View>{children}</View>;
+  return {
+    __esModule: true,
+    default: { View: AnimatedView },
+    useSharedValue: (v: number) => ({ value: v }),
+    useAnimatedStyle: (updater: () => object) => updater(),
+    withTiming: (v: number) => v,
+    Easing: {
+      linear: jest.fn(),
+      inOut: jest.fn(),
+      ease: jest.fn(),
+    },
+  };
+});
 
 import { AuthScreen } from '../../src/app/AuthScreen';
 
@@ -55,7 +113,7 @@ describe('AuthScreen', () => {
 
     const json = JSON.stringify(tree.toJSON());
     expect(json).toContain('4VELO');
-    expect(json).toContain('MISSION LOGIN');
-    expect(json).toContain('AUTHORIZE');
+    expect(json).toContain('ZALOGUJ SIĘ');
+    expect(json).toContain('ZALOGUJ');
   });
 });

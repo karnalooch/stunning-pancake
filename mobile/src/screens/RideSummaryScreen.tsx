@@ -18,6 +18,7 @@ import {
   rankDisplayName,
   estimateXpGain,
 } from '../game/ranks';
+import { useI18n } from '../i18n/useI18n';
 
 const stylesheet = StyleSheet.create((theme) => {
   const C = theme.colors as Record<string, string>;
@@ -105,6 +106,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   onBackToHub,
 }) => {
   const s = stylesheet;
+  const { t } = useI18n();
   const { enabled: immersiveEnabled } = useImmersiveTheme();
   const rank = useMemo(() => computeRideRank(distance, elevation), [distance, elevation]);
   const timeLabel = formatElapsed(elapsedSeconds);
@@ -120,18 +122,14 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
       <PixelBurst trigger={immersiveEnabled} />
       <View style={[s.header, s.shadow]}>
         <View style={{ width: 40 }} />
-        <Text style={s.headerTitle}>QUEST COMPLETE</Text>
+        <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>
         <View style={{ width: 40 }} />
       </View>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
         <View style={s.titleSection}>
-          <Text style={s.title}>RIDE COMPLETE</Text>
-          <Text style={s.subtitle}>{rankDisplayName(rank)} finish · {distance.toFixed(1)} km</Text>
+          <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
         </View>
-        {immersiveEnabled && <CyclistSprite size={72} state="victory" />}
-        <View style={s.xpBanner}>
-          <Text style={s.xpText}>+{xpGained} XP earned</Text>
-        </View>
+        {immersiveEnabled && <CyclistSprite size={72} state="victory" expressionMode />}
         <ShareResultCard
           distanceKm={distance}
           timeLabel={timeLabel}
@@ -147,7 +145,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
             onShare?.();
           }}
         >
-          <Text style={s.ctaText}>SHARE RESULT</Text>
+          <Text style={s.ctaText}>{t.summary.share}</Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
@@ -156,7 +154,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
             onBackToHub?.();
           }}
         >
-          <Text style={s.ctaText}>BACK TO HUB</Text>
+          <Text style={s.ctaText}>{t.summary.backToHub}</Text>
         </Pressable>
         <View style={{ height: 80 }} />
       </ScrollView>

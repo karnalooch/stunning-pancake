@@ -1,59 +1,93 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
-import { MarketplaceScreen } from './MarketplaceScreen';
-import { ExploreMapScreen } from './ExploreMapScreen';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { SceneBackground } from '../components/scene/SceneBackground';
+import { ChromeIcon } from '../components/ui/ChromeIcon';
+import { GameCard } from '../components/ui/GameCard';
+import { LAYOUT } from '../theme/layout';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
   return {
     root: { flex: 1, backgroundColor: c.background },
-    tabs: {
+    ctaRow: {
       flexDirection: 'row',
-      margin: 16,
-      marginBottom: 0,
+      gap: 10,
+      margin: LAYOUT.gutter,
+      marginBottom: LAYOUT.compactGap,
+    },
+    cta: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
       borderWidth: 2,
       borderColor: c.onBackground,
       borderRadius: 8,
-      overflow: 'hidden',
+      backgroundColor: c.primaryContainer,
     },
-    tab: { flex: 1, paddingVertical: 10, alignItems: 'center', backgroundColor: c.surface },
-    tabOn: { backgroundColor: c.primaryContainer },
-    tabText: { fontSize: 12, fontWeight: '700', color: c.secondary, textTransform: 'uppercase' },
-    tabTextOn: { color: c.onPrimaryContainer },
-    body: { flex: 1 },
+    ctaText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: c.onPrimaryContainer,
+      textTransform: 'uppercase',
+    },
+    body: { flex: 1, paddingHorizontal: LAYOUT.gutter, paddingBottom: LAYOUT.gutter },
+    hint: {
+      marginTop: LAYOUT.compactGap,
+      fontSize: 12,
+      color: c.secondary,
+      lineHeight: 18,
+    },
   };
 });
 
-export const ExploreHubScreen: React.FC = () => {
+interface ExploreHubScreenProps {
+  onOpenMap?: () => void;
+  onOpenMarketplace?: () => void;
+}
+
+export const ExploreHubScreen: React.FC<ExploreHubScreenProps> = ({
+  onOpenMap,
+  onOpenMarketplace,
+}) => {
   const { t } = useI18n();
   const s = stylesheet;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
-  const [tab, setTab] = useState<'shop' | 'map'>('shop');
 
   return (
     <SafeAreaView style={s.root} edges={['top']}>
       {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
-      <View style={s.tabs}>
+      <View style={s.ctaRow}>
         <Pressable
-          style={[s.tab, tab === 'shop' && s.tabOn]}
-          onPress={() => setTab('shop')}
+          style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+          onPress={() => onOpenMap?.()}
+          accessibilityRole="button"
+          accessibilityLabel={t.explore.openMap}
         >
-          <Text style={[s.tabText, tab === 'shop' && s.tabTextOn]}>{t.explore.shop}</Text>
+          <ChromeIcon id="map" size={18} />
+          <Text style={s.ctaText}>{t.explore.openMap}</Text>
         </Pressable>
         <Pressable
-          style={[s.tab, tab === 'map' && s.tabOn]}
-          onPress={() => setTab('map')}
+          style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+          onPress={() => onOpenMarketplace?.()}
+          accessibilityRole="button"
+          accessibilityLabel={t.explore.openMarketplace}
         >
-          <Text style={[s.tabText, tab === 'map' && s.tabTextOn]}>{t.explore.map}</Text>
+          <ChromeIcon id="shop" size={18} />
+          <Text style={s.ctaText}>{t.explore.openMarketplace}</Text>
         </Pressable>
       </View>
       <View style={s.body}>
-        {tab === 'shop' ? <MarketplaceScreen embedded /> : <ExploreMapScreen />}
+        <GameCard texture="parchment_grain">
+          <Text style={s.hint}>{t.explore.mapHint}</Text>
+          <Text style={s.hint}>{t.explore.marketHint}</Text>
+        </GameCard>
       </View>
     </SafeAreaView>
   );

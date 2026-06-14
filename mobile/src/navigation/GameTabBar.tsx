@@ -1,30 +1,33 @@
 /**
  * GameTabBar — STITCH BottomNavBar (Unistyles-integrated)
- * 
+ *
  * 4-tab navigation: RIDE, COMPETE, EXPLORE, PROFILE.
- * Fully reactive to stitch theme via Unistyles useUnistyles().
+ * PNG tab icons via assetRegistry (Grand Prix pack).
  */
 
 import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useUnistyles } from 'react-native-unistyles';
-import { stitchTheme } from '../theme/stitch';
-import * as Haptics from 'expo-haptics';
 import { useI18n } from '../i18n/useI18n';
 import { PixelTabIcon } from '../components/navigation/PixelTabIcon';
 import { SoundService } from '../services/SoundService';
+import { HapticService } from '../services/HapticService';
 
-const TAB_ICONS = ['🚴', '🏆', '🗺️', '👤'] as const;
+const VISIBLE_TAB_NAMES = ['Ride', 'Compete', 'Explore', 'Profile'] as const;
+
 export const GameTabBar: React.FC<BottomTabBarProps> = ({
   state,
-  descriptors,
   navigation,
 }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
-  const c = theme.colors as any;
+  const c = theme.colors as Record<string, string>;
   const tabLabels = [t.tabs.ride, t.tabs.compete, t.tabs.explore, t.tabs.profile];
+  const visibleRoutes = state.routes.filter((route) =>
+    VISIBLE_TAB_NAMES.includes(route.name as (typeof VISIBLE_TAB_NAMES)[number]),
+  );
+
   return (
     <View
       style={{
@@ -35,22 +38,23 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
         paddingBottom: 20,
         paddingTop: 8,
         height: 80,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        borderTopWidth: 4,
-        borderTopColor: c.onBackground,
-        shadowColor: c.onBackground,
-        shadowOffset: { width: 0, height: -4 },
+        backgroundColor: c.parchment,
+        borderTopWidth: 2,
+        borderTopColor: c.hudOutline,
+        shadowColor: c.hudOutline,
+        shadowOffset: { width: 0, height: -3 },
         shadowOpacity: 1,
         shadowRadius: 0,
         elevation: 20,
       }}
     >
-      {state.routes.map((route, index) => {
-        const isFocused = state.index === index;
-        const tabConfig = {
-          icon: TAB_ICONS[index] ?? '📍',
-          label: tabLabels[index] ?? (route.name as string),
-        };
+      {visibleRoutes.map((route) => {
+        const routeIndex = state.routes.findIndex((r) => r.key === route.key);
+        const isFocused = state.index === routeIndex;
+        const labelIndex = VISIBLE_TAB_NAMES.indexOf(
+          route.name as (typeof VISIBLE_TAB_NAMES)[number],
+        );
+        const label = labelIndex >= 0 ? tabLabels[labelIndex] : route.name;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -59,8 +63,8 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
             canPreventDefault: true,
           });
           if (!isFocused && !event.defaultPrevented) {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
-            SoundService.play('ui_click').catch(() => {});
+            HapticService.trigger('tab_switch');
+            void SoundService.play('ui_click');
             navigation.navigate(route.name);
           }
         };
@@ -82,9 +86,9 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
               isFocused && {
                 backgroundColor: c.primaryContainer,
                 borderWidth: 2,
-                borderColor: c.onBackground,
+                borderColor: c.hudOutline,
                 transform: [{ translateY: -2 }],
-                shadowColor: c.onBackground,
+                shadowColor: c.hudOutline,
                 shadowOffset: { width: 2, height: 2 },
                 shadowOpacity: 1,
                 shadowRadius: 0,
@@ -100,14 +104,15 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
             />
             <Text
               style={{
-                fontSize: 10,
-                fontWeight: '700',
+                fontSize: 8,
+                fontFamily: 'PressStart2P',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 color: isFocused ? c.onPrimaryContainer : c.secondary,
+                marginTop: 4,
               }}
             >
-              {tabConfig.label}
+              {label}
             </Text>
           </Pressable>
         );

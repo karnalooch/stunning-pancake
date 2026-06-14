@@ -1,0 +1,40 @@
+Summary,Issue Type,Priority,Labels,Description,Owner Role,Initial Status
+"[S1-PT-01] Zatwierdzić scope Sprint 1 (IN/OUT)",Task,Highest,"sprint1,product,ops,p0","AC: Zakres opublikowany; lista wykluczeń zaakceptowana",PM,To Do
+"[S1-PT-02] Potwierdzić kryteria akceptacji Ride core",Task,Highest,"sprint1,product,docs,p0","AC: AC dla RideDashboard/HUD/Summary wpisane do boardu",Tech Lead,To Do
+"[S1-PT-03] Uzgodnić kolejność P0/P1 dla domen",Task,High,"sprint1,product,ops,p1","AC: Kolejność zatwierdzona przez mobile+backend+QA",PM,To Do
+"[S1-PT-04] Zaktualizować implementation spec po kickoff",Task,High,"sprint1,product,docs,p1","AC: `4VELO_MOBILE_FULL_VISION_IMPLEMENTATION` zaktualizowany",UX Lead,To Do
+"[S1-MOB-01] Naprawić lint blocker importu `StreakBadge`",Bug,Highest,"sprint1,mobile,bug,p0","AC: `expo lint` bez errora import/no-unresolved",Mobile Dev,To Do
+"[S1-MOB-02] Ujednolicić kontrakt `RideSummary` i deep-link path",Task,Highest,"sprint1,mobile,tech-debt,p0","AC: `types` + `routeContract` + `linking` spójne",Mobile Dev,To Do
+"[S1-MOB-03] Domknąć status bar HUD (GPS/battery/clock) na device",Story,Highest,"sprint1,mobile,feature,p0","AC: Manual QA na Android/iOS; brak null-crash",Mobile Dev,To Do
+"[S1-MOB-04] Ride stop confirm guard (hold) z testem regresji",Story,Highest,"sprint1,mobile,feature,p0","AC: Potwierdzenie stop działa; test/manual pass",Mobile Dev,To Do
+"[S1-MOB-05] Uporządkować hook deps warnings w krytycznych plikach",Task,High,"sprint1,mobile,tech-debt,p1","AC: Brak nowych warnings w dotkniętych plikach",Mobile Dev,To Do
+"[S1-MOB-06] Refaktor `ActivityDetail` z i18n i bez emoji placeholderów",Task,High,"sprint1,mobile,tech-debt,p1","AC: Labels przez i18n; brak placeholder text/emoji",Mobile Dev,To Do
+"[S1-MOB-07] Uporządkować onboarding typy i copy i18n",Task,High,"sprint1,mobile,tech-debt,p1","AC: Mniej `any`; copy PL/EN przez i18n",Mobile Dev,To Do
+"[S1-MOB-08] Dodać edge states (offline/error/empty) w detail/trends",Story,High,"sprint1,mobile,feature,p1","AC: Widoczne i spójne fallbacki",Mobile Dev,To Do
+"[S1-MOB-09] Konsolidacja legacy wrapperów komponentów UI",Task,Medium,"sprint1,mobile,tech-debt,p2","AC: Legacy deleguje do `components/ui`",Mobile Dev,To Do
+"[S1-MOB-10] Ustandaryzować spacing/layout templates na 3 głównych ekranach",Task,Medium,"sprint1,mobile,tech-debt,p2","AC: Ride/Explore/Profile zgodne z patternem",Mobile Dev,To Do
+"[S1-BE-01] Zweryfikować auth refresh contract i błędy 401",Task,Highest,"sprint1,backend,ops,p0","AC: Kontrakt udokumentowany; mobile flow pass",Backend Dev,To Do
+"[S1-BE-02] Zweryfikować `sync_path/finalize` pod edge-case offline",Task,Highest,"sprint1,backend,ops,p0","AC: Scenariusz kill/relaunch opisany i zatwierdzony",Backend Dev,To Do
+"[S1-BE-03] Przegląd retry policy i status codes (429/503)",Task,High,"sprint1,backend,ops,p1","AC: Jasne wytyczne dla mobile retry/backoff",Backend Dev,To Do
+"[S1-BE-04] Uzgodnić payload dla leaderboard/trends",Task,High,"sprint1,backend,tech-debt,p1","AC: Brak niejednoznaczności pól w UI",Backend Dev,To Do
+"[S1-BE-05] Uzupełnić API docs dla wearables auth status",Task,Medium,"sprint1,backend,docs,p2","AC: Dokument API odzwierciedla realny flow",Backend Dev,To Do
+"[S1-QA-01] Smoke auth + ride lifecycle + gps recovery",Task,Highest,"sprint1,qa,ops,p0","AC: 3 flowy pass i raport w ticketach",QA Lead,To Do
+"[S1-QA-02] Manual matrix deep-links (Android+iOS)",Task,Highest,"sprint1,qa,ops,p0","AC: Wszystkie krytyczne deeplinki zweryfikowane",QA Engineer,To Do
+"[S1-QA-03] Dodać smoke dla settings sections",Task,High,"sprint1,qa,ops,p1","AC: Flow sekcji i persistence pass",QA Engineer,To Do
+"[S1-QA-04] Dodać smoke dla explore map -> marketplace",Task,High,"sprint1,qa,ops,p1","AC: Nawigacja i fallback network pass",QA Engineer,To Do
+"[S1-QA-05] Test regresji `ActivityDetail` po refaktorze",Task,High,"sprint1,qa,ops,p1","AC: Brak crash/placeholder regression",QA Engineer,To Do
+"[S1-QA-06] Uzupełnić test notes dla device matrix",Task,Medium,"sprint1,qa,ops,p2","AC: Minimum 2 Android + 1 iOS opisane",QA Lead,To Do
+"[S1-REL-01] Ustawić policy env bez fallback do prod w release",Task,Highest,"sprint1,release,ops,p0","AC: Brak ryzyka prod fallback dla release",Release Eng,To Do
+"[S1-REL-02] Zweryfikować preview build i rollback path",Task,Highest,"sprint1,release,ops,p0","AC: Preview build gotowy, rollback opisany",Release Eng,To Do
+"[S1-REL-03] Potwierdzić telemetry/crash ingestion w preview",Task,High,"sprint1,release,ops,p1","AC: Eventy crash/perf widoczne",DevOps,To Do
+"[S1-REL-04] Ujednolicić release checklist EN/PL",Task,High,"sprint1,release,docs,p1","AC: `MOBILE.md` PL/EN zsynchronizowane",Release Eng,To Do
+"[S1-DATA-01] Audyt eventów Ride/Auth/Share",Task,High,"sprint1,data,ops,p1","AC: Braki eventów udokumentowane i przypisane",Data Analyst,To Do
+"[S1-DATA-02] Potwierdzić metryki perf budget telemetry",Task,High,"sprint1,data,ops,p1","AC: violation eventy mapowane i czytelne",Data Analyst,To Do
+"[S1-DATA-03] Dodać rekomendacje retention eventów",Task,Medium,"sprint1,data,tech-debt,p2","AC: Lista eventów P2 do kolejnego sprintu",Data Analyst,To Do
+"[S1-DES-01] Audyt typografii PressStart2P/VT323 na kluczowych ekranach",Task,Highest,"sprint1,design,ops,p0","AC: Brak mismatch font family na Ride/Summary",UI Designer,To Do
+"[S1-DES-02] Usunąć emoji/placeholdery z ekranów detail/profile",Task,High,"sprint1,design,tech-debt,p1","AC: Spójny chrome icon language",UI Designer,To Do
+"[S1-DES-03] Spójność kart (padding border shadow)",Task,High,"sprint1,design,tech-debt,p1","AC: Pattern zatwierdzony na 3 ekranach",UI Designer,To Do
+"[S1-DES-04] Aktualizacja audytu Grand Prix EN/PL po zmianach",Task,Medium,"sprint1,design,docs,p2","AC: Drift wpisany i status zaktualizowany",Technical Artist,To Do
+"[S1-SEC-01] Audyt token storage i error logging",Task,Highest,"sprint1,security,ops,p0","AC: Brak wrażliwych danych w logach",Security Eng,To Do
+"[S1-SEC-02] Audyt privacy zones flow i fallbacków UI",Task,High,"sprint1,security,ops,p1","AC: UX nie sugeruje fałszywego success",Security Eng,To Do
+"[S1-SEC-03] Review konfiguracji env pod secret hygiene",Task,High,"sprint1,security,ops,p1","AC: Potwierdzony brak sekretów w kliencie",Security Eng,To Do

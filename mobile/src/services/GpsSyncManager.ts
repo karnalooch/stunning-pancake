@@ -394,7 +394,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     const safeStorage = getGpsStorage()!;
     const state = loadTrackingState(safeStorage);
 
-    if (!state?.isTracking || !state.activityId) return;
+    if (!state?.isTracking) return;
+    const activityId = state.activityId;
+    if (activityId == null) return;
 
     ensureBufferSchema(safeStorage);
 
@@ -421,14 +423,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         elevationIncrement = loc.coords.altitude - state.lastAltitude;
       }
 
-      const filterState = loadFilterState(safeStorage, state.activityId);
+      const filterState = loadFilterState(safeStorage, activityId);
       const prevAcceptedTs = filterState.lastAccepted?.timestamp ?? 0;
-      const seq = nextPointSeq(safeStorage, state.activityId);
+      const seq = nextPointSeq(safeStorage, activityId);
       const candidate = buildGpsPoint(
         {
           device_id: state.deviceId,
           user_id: state.userId,
-          activity_id: state.activityId,
+          activity_id: activityId,
           lat: loc.coords.latitude,
           lon: loc.coords.longitude,
           altitude_m: loc.coords.altitude ?? 0,

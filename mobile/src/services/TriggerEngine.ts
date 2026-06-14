@@ -75,6 +75,7 @@ export class TriggerEngine {
 
   private _dismissTimer: ReturnType<typeof setTimeout> | null = null;
   private _processTimer: ReturnType<typeof setTimeout> | null = null;
+  private _dedupTimers = new Set<ReturnType<typeof setTimeout>>();
 
   /**
    * Push a new trigger into the priority queue.
@@ -107,11 +108,13 @@ export class TriggerEngine {
 
     // Track for dedup
     this.state.recentTriggerIds.set([...recentIds, trigger.id]);
-    setTimeout(() => {
+    const dedupTimer = setTimeout(() => {
       this.state.recentTriggerIds.set(
         this.state.recentTriggerIds.get().filter(id => id !== trigger.id)
       );
+      this._dedupTimers.delete(dedupTimer);
     }, DEDUP_WINDOW_MS);
+    this._dedupTimers.add(dedupTimer);
 
     // Start processing if idle
     if (!this.state.isProcessing.get() && !this.state.currentDialog.visible.get()) {
@@ -127,7 +130,9 @@ export class TriggerEngine {
     this.state.currentDialog.visible.set(false);
     this.state.lastDismissTime.set(Date.now());
 
+    if (this._processTimer) clearTimeout(this._processTimer);
     this._processTimer = setTimeout(() => {
+      this._processTimer = null;
       this._processNext();
     }, EXIT_ANIMATION_DELAY_MS);
   }
@@ -139,6 +144,12 @@ export class TriggerEngine {
   clear(): void {
     if (this._dismissTimer) clearTimeout(this._dismissTimer);
     if (this._processTimer) clearTimeout(this._processTimer);
+    this._dismissTimer = null;
+    this._processTimer = null;
+    for (const timer of this._dedupTimers) {
+      clearTimeout(timer);
+    }
+    this._dedupTimers.clear();
     this.state.queue.set([]);
     this.state.currentDialog.visible.set(false);
     this.state.isProcessing.set(false);
@@ -154,6 +165,7 @@ export class TriggerEngine {
   }
 
   private _scheduleNext(): void {
+    if (this._processTimer) return;
     const now = Date.now();
     const lastDismiss = this.state.lastDismissTime.get();
     const elapsed = now - lastDismiss;
@@ -161,10 +173,16 @@ export class TriggerEngine {
     if (elapsed < COOLDOWN_MS && lastDismiss > 0) {
       // Respect cooldown
       const wait = COOLDOWN_MS - elapsed;
-      this._processTimer = setTimeout(() => this._processNext(), wait);
+      this._processTimer = setTimeout(() => {
+        this._processTimer = null;
+        this._processNext();
+      }, wait);
     } else {
       // Defer to next tick so push() doesn't synchronously consume queue items
-      this._processTimer = setTimeout(() => this._processNext(), 0);
+      this._processTimer = setTimeout(() => {
+        this._processTimer = null;
+        this._processNext();
+      }, 0);
     }
   }
 
@@ -179,6 +197,10 @@ export class TriggerEngine {
 
     // Take highest priority item (first in sorted queue)
     const next = queue[0];
+    if (!next) {
+      this.state.isProcessing.set(false);
+      return;
+    }
     this.state.queue.set(queue.slice(1));
 
     // Show dialog

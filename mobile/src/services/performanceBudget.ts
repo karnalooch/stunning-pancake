@@ -6,13 +6,13 @@ import { setAnalyticsEvent } from './FirebaseService';
 
 export const PERFORMANCE_BUDGETS = {
   /** Minimum acceptable HUD frame rate during active ride. */
-  hudMinFps: 55,
+  hudMinFps: { value: 55, kind: 'min' as const },
   /** Max acceptable GPS batch ingest round-trip (ms). */
-  gpsIngestLatencyMs: 2_000,
+  gpsIngestLatencyMs: { value: 2_000, kind: 'max' as const },
   /** Max acceptable outbox flush duration (ms). */
-  outboxFlushMs: 5_000,
+  outboxFlushMs: { value: 5_000, kind: 'max' as const },
   /** Max acceptable MMKV write for GPS buffer (ms). */
-  mmkvWriteMs: 16,
+  mmkvWriteMs: { value: 16, kind: 'max' as const },
 } as const;
 
 export type PerformanceMetricName = keyof typeof PERFORMANCE_BUDGETS;
@@ -24,8 +24,9 @@ export function recordPerformanceMetric(
   name: PerformanceMetricName,
   value: number,
 ): { withinBudget: boolean; budget: number } {
-  const budget = PERFORMANCE_BUDGETS[name];
-  const withinBudget = value <= budget;
+  const rule = PERFORMANCE_BUDGETS[name];
+  const budget = rule.value;
+  const withinBudget = rule.kind === 'max' ? value <= budget : value >= budget;
 
   if (!withinBudget) {
     const now = Date.now();

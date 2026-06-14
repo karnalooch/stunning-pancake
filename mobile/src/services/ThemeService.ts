@@ -20,6 +20,7 @@
 import { observable } from '@legendapp/state';
 import { MMKV } from 'react-native-mmkv';
 import { UnistylesRuntime } from 'react-native-unistyles';
+import { warnMmkvUnavailable } from './mmkvSupport';
 
 const THEME_STORAGE_KEY = 'theme_mode';
 
@@ -31,7 +32,7 @@ function getStorage(): MMKV | null {
     _storage = new MMKV();
     return _storage;
   } catch (e) {
-    console.error('[ThemeService] MMKV init failed, falling back to defaults.', e);
+    warnMmkvUnavailable('ThemeService', e);
     return null;
   }
 }
