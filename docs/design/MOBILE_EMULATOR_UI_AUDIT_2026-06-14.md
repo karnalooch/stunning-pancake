@@ -7,6 +7,7 @@
 | **Pakiet** | `com.sport.athlete` |
 | **Build** | `assembleRelease` (lokalny APK) |
 | **Zrzuty** | [`screenshots/2026-06-14-emulator-audit/`](screenshots/2026-06-14-emulator-audit/) |
+| **Wizje UI (referencja)** | [`screenshots/2026-06-14-emulator-audit/vision/`](screenshots/2026-06-14-emulator-audit/vision/) |
 | **Skrypt** | `python scripts/emulator-ui-audit.py` |
 | **Onboarding helper** | `python scripts/emulator-onboarding.py` |
 
@@ -20,6 +21,38 @@ Przeprowadzono automatyczny przegląd UI na emulatorze Android. **Główna aplik
 4. **Utrata focusu** — podczas audytu adb część zrzutów to **systemowe ustawienia lokalizacji Android**, nie aplikacja.
 
 **Wynik automatycznego audytu zakładek:** 1 OK · 0 ostrzeżeń · **16 błędów** · 2 pominięte (z 19 kroków).
+
+## Wizje UI — docelowy kierunek wizualny
+
+Dla każdego zrzutu z audytu (56 plików PNG) przygotowano **referencyjną wizję** w katalogu [`vision/`](screenshots/2026-06-14-emulator-audit/vision/) — ten sam plik, ta sama nazwa, spójny styl:
+
+- ciepła paleta (zachód słońca / parchment zamiast ciemnego granatu),
+- jeden jasny krok na ekranie (bez duplikacji nagłówków),
+- spójne przyciski (zielony wybór + pomarańczowy CTA),
+- pixel-art scena u dołu w harmonii z UI,
+- polskie nazwy miast i naturalny copy.
+
+> Zrzuty audytu pokazują **stan faktyczny** (często zablokowany onboarding). Pliki w `vision/` pokazują **stan docelowy** dla danego ekranu / kroku.
+
+### Onboarding — porównanie
+
+| Krok | Stan audytu | Wizja docelowa |
+|------|-------------|----------------|
+| Miasto | ![audyt](screenshots/2026-06-14-emulator-audit/00_onboarding_city.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/00_onboarding_city.png) |
+| Dział | ![audyt](screenshots/2026-06-14-emulator-audit/00_onboarding_department.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/00_onboarding_department.png) |
+| Finish | ![audyt](screenshots/2026-06-14-emulator-audit/00_onboarding_finish.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/00_onboarding_finish.png) |
+
+### Zakładki — porównanie (po odblokowaniu P0)
+
+| Ekran | Stan audytu | Wizja docelowa |
+|-------|-------------|----------------|
+| Jazda | ![audyt](screenshots/2026-06-14-emulator-audit/01_ride_dashboard.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/01_ride_dashboard.png) |
+| HUD jazdy | ![audyt](screenshots/2026-06-14-emulator-audit/02_active_ride_hud.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/02_active_ride_hud.png) |
+| Rywalizacja | ![audyt](screenshots/2026-06-14-emulator-audit/05_compete_hub.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/05_compete_hub.png) |
+| Odkrywaj | ![audyt](screenshots/2026-06-14-emulator-audit/09_explore_hub.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/09_explore_hub.png) |
+| Profil | ![audyt](screenshots/2026-06-14-emulator-audit/12_profile.png) | ![wizja](screenshots/2026-06-14-emulator-audit/vision/12_profile.png) |
+
+Pełna lista 1:1: każdy `screenshots/.../NN_name.png` → `screenshots/.../vision/NN_name.png`.
 
 ## Ustalenia do poprawy (priorytet)
 
