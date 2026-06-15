@@ -16,27 +16,48 @@ export type CrestKey = 'gdansk' | 'katowice' | 'lublin' | 'siedlce' | 'warszawa'
 export type DeptKey = 'it' | 'marketing' | 'hr' | 'sales';
 
 const CREST: Record<CrestKey, ImageSourcePropType | undefined> = {
+  // AUTO-WIRE:CREST:START
   gdansk: undefined,
   katowice: undefined,
   lublin: undefined,
   siedlce: undefined,
   warszawa: undefined,
+  // AUTO-WIRE:CREST:END
 };
 
 const DEPT: Record<DeptKey, ImageSourcePropType | undefined> = {
+  // AUTO-WIRE:DEPT:START
   it: undefined,
   marketing: undefined,
   hr: undefined,
   sales: undefined,
+  // AUTO-WIRE:DEPT:END
 };
 
-const ACHIEVEMENT: Record<string, ImageSourcePropType | undefined> = {};
+const ACHIEVEMENT: Record<string, ImageSourcePropType | undefined> = {
+  // AUTO-WIRE:ACHIEVEMENT:START
+  ach_100km: undefined,
+  ach_10rides: undefined,
+  ach_500m: undefined,
+  ach_kom: undefined,
+  ach_5h: undefined,
+  ach_endurance: undefined,
+  ach_1000kcal: undefined,
+  ach_7days: undefined,
+  ach_explorer: undefined,
+  ach_passion: undefined,
+  // AUTO-WIRE:ACHIEVEMENT:END
+};
 
 export const VISION_BANNERS: Record<string, ImageSourcePropType | undefined> = {
+  // AUTO-WIRE:BANNERS:START
   city_lublin: undefined,
   finish_meta: undefined,
   avatar_frame: undefined,
   frame_ornate: undefined,
+  sky_sunset: undefined,
+  sky_night: undefined,
+  // AUTO-WIRE:BANNERS:END
 };
 
 function normalize(value: string): string {

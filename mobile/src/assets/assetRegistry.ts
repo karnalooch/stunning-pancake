@@ -59,6 +59,55 @@ export const ASSETS = {
   },
 } as const;
 
+/**
+ * Optional vision-parity assets (phase D). Entries are auto-wired by
+ * `scripts/wire_vision_assets.py` and stay undefined until the PNG exists in
+ * both `assets/generated` and `mobile/assets/generated`.
+ */
+export const OPTIONAL_VISION_ASSETS = {
+  crests: {
+    // AUTO-WIRE:REG_CREST:START
+    gdansk: undefined,
+    katowice: undefined,
+    lublin: undefined,
+    siedlce: undefined,
+    warszawa: undefined,
+    // AUTO-WIRE:REG_CREST:END
+  },
+  departments: {
+    // AUTO-WIRE:REG_DEPT:START
+    it: undefined,
+    marketing: undefined,
+    hr: undefined,
+    sales: undefined,
+    // AUTO-WIRE:REG_DEPT:END
+  },
+  achievements: {
+    // AUTO-WIRE:REG_ACHIEVEMENT:START
+    ach_100km: undefined,
+    ach_10rides: undefined,
+    ach_500m: undefined,
+    ach_kom: undefined,
+    ach_5h: undefined,
+    ach_endurance: undefined,
+    ach_1000kcal: undefined,
+    ach_7days: undefined,
+    ach_explorer: undefined,
+    ach_passion: undefined,
+    // AUTO-WIRE:REG_ACHIEVEMENT:END
+  },
+  banners: {
+    // AUTO-WIRE:REG_BANNERS:START
+    city_lublin: undefined,
+    finish_meta: undefined,
+    avatar_frame: undefined,
+    frame_ornate: undefined,
+    sky_sunset: undefined,
+    sky_night: undefined,
+    // AUTO-WIRE:REG_BANNERS:END
+  },
+} as const;
+
 export type AssetGroup = keyof typeof ASSETS;
 export type AssetId<G extends AssetGroup> = keyof (typeof ASSETS)[G];
 
