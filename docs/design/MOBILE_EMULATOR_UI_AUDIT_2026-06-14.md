@@ -58,13 +58,15 @@ Pełna lista 1:1: każdy `screenshots/.../NN_name.png` → `screenshots/.../visi
 
 ### P0 — blokery produktu / QA
 
-| # | Problem | Dowód |
-|---|---------|-------|
-| 1 | **E2E skip onboarding nie działa** po `pm clear` | Zrzut `00_onboarding_city.png` po świeżej instalacji |
-| 2 | **Onboarding nie kończy się** — `DOŁĄCZ` nie zapisuje stanu | `00_onboarding_finish.png`, restart → znowu krok miasto |
-| 3 | **Puste działy** w kroku 2 (`Dział: —`) | `00_onboarding_department.png`, `00_onboarding_finish.png` |
-| 4 | **Biały ekran** po próbie wejścia do aplikacji | `_after_clear.png` / sesja z błędnym `onFinish` |
-| 5 | **Audyt adb trafia w launcher / ustawienia systemu** | Wiele kroków `system_settings` w logu skryptu |
+> Aktualizacja 2026-06-15: poprawki kodu wdrożone (Faza 0). Status weryfikacji na urządzeniu w [`VISION_PARITY_GATE_2026-06-15.md`](VISION_PARITY_GATE_2026-06-15.md).
+
+| # | Problem | Dowód | Naprawa w kodzie |
+|---|---------|-------|------------------|
+| 1 | **E2E skip onboarding nie działa** po `pm clear` | Zrzut `00_onboarding_city.png` po świeżej instalacji | `app.config.js` + `e2eConfig.ts` (wymaga rebuildu APK do potwierdzenia) |
+| 2 | **Onboarding nie kończy się** — `DOŁĄCZ` nie zapisuje stanu | `00_onboarding_finish.png`, restart → znowu krok miasto | Globalna flaga onboardingu gdy brak `user.id` (`useAuthSession.ts`, `storage.ts`) ✅ |
+| 3 | **Puste działy** w kroku 2 (`Dział: —`) | `00_onboarding_department.png`, `00_onboarding_finish.png` | Fallback drużyn w `OnboardingScreen.tsx` ✅ |
+| 4 | **Biały ekran** po próbie wejścia do aplikacji | `_after_clear.png` / sesja z błędnym `onFinish` | `requestPerms` w `try/catch` → zawsze `onNext` ✅ |
+| 5 | **Audyt adb trafia w launcher / ustawienia systemu** | Wiele kroków `system_settings` w logu skryptu | Wymaga przebudowy APK + rerun audytu |
 
 ### P1 — UI / UX (do weryfikacji po odblokowaniu P0)
 
@@ -139,12 +141,14 @@ Podczas finish onboarding emulator pokazuje ekran Android **Location permission*
 
 ## Checklist wizualny (do wykonania po naprawie P0)
 
-- [ ] Tokeny stitch (parchment / gpDeepSea / primary) — spójność między zakładkami
-- [ ] Kontrast WCAG na parchment i night chrome
-- [ ] Tab bar + safe area (80px)
-- [ ] Modale: Settings, GPS Diagnostics, Ride Paused
-- [ ] Empty states: Compete leaderboard, Marketplace, Training log
-- [ ] Bannery: offline, GPS recovery, start ride error
+Status kodu (Faza 1–3). Pełna weryfikacja na urządzeniu: [`VISION_PARITY_GATE_2026-06-15.md`](VISION_PARITY_GATE_2026-06-15.md).
+
+- [x] Tokeny (parchment / gpDeepSea / primary + nowe cta/selection/disabled) — jeden runtime SSOT (`grandPrix.ts`)
+- [ ] Kontrast WCAG na parchment i night chrome — weryfikacja na urządzeniu
+- [ ] Tab bar + safe area (80px) — weryfikacja na urządzeniu
+- [ ] Modale: Settings, GPS Diagnostics, Ride Paused — weryfikacja na urządzeniu
+- [ ] Empty states: Compete leaderboard, Marketplace, Training log — weryfikacja na urządzeniu
+- [ ] Bannery: offline, GPS recovery, start ride error — weryfikacja na urządzeniu
 
 ## Jak powtórzyć audyt
 

@@ -1,7 +1,13 @@
 /**
  * Grand Prix Theme — single runtime visual contract for mobile.
  *
- * This file is the authoritative theme object used by Unistyles.
+ * AUTHORITATIVE RUNTIME SSOT. Every screen/component must read colors from
+ * `theme.colors.*` (via Unistyles), never inline hex. The design-time mirror
+ * in `packages/tokens/colors.json` documents intent only and is not imported
+ * at runtime; when they diverge, this file wins.
+ *
+ * Palette is anchored to the `vision/` mocks: warm parchment surfaces, forest
+ * green selection, and an orange CTA (DALEJ / DOŁĄCZ / DO JAZDY).
  */
 
 import type { GrandPrixTheme } from './unistyles';
@@ -56,6 +62,18 @@ export const grandPrixTheme: GrandPrixTheme = {
         // ── Special (aligned to Grand Prix anchors §4) ─────────────
         parchment: '#F5E6CC',
         goldAmber: '#D4A373',
+
+        // ── Vision CTA / selection / disabled (warm palette) ───────
+        cta: '#DD6B33',
+        ctaDark: '#9E4318',
+        onCta: '#FFFFFF',
+        selection: '#CFE3B5',
+        selectionBorder: '#4E7A3A',
+        onSelection: '#0B1D33',
+        disabledSurface: '#C7BBA6',
+        disabledDark: '#8A7E68',
+        onDisabled: '#7A6F5A',
+
         hudBackground: '#0d1b0f',
         hudSurface: '#162818',
         hudText: '#e0f0d8',

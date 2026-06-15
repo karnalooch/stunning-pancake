@@ -33,7 +33,6 @@ export const ASSETS = {
   },
   sprites: {
     cyclist_sheet: require('../../assets/generated/sprites/cyclist_sheet.png'),
-    ghost_sheet: require('../../assets/generated/sprites/ghost_sheet.png'),
   },
   expressions: {
     cyclist_idle: require('../../assets/generated/expressions/cyclist_idle.png'),
@@ -50,16 +49,10 @@ export const ASSETS = {
   particles: {
     particle_atlas: require('../../assets/generated/particles/particle_atlas.png'),
   },
-  map: {
-    marker_cyclist: require('../../assets/generated/map/marker_cyclist.png'),
-  },
   textures: {
     parchment_grain: require('../../assets/generated/textures/parchment_grain.png'),
     metal_plate: require('../../assets/generated/textures/metal_plate.png'),
     wood_grain: require('../../assets/generated/textures/wood_grain.png'),
-  },
-  marketing: {
-    active_ride_hud_mockup: require('../../assets/generated/marketing/active_ride_hud_mockup.png'),
   },
   sounds: {
     sfx_params: require('../../assets/generated/sounds/sfx_params.json'),

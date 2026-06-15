@@ -11,6 +11,7 @@ import React from 'react';
 import { Text, type TextProps } from 'react-native';
 import { StyleSheet, useUnistyles } from '../theme/unistyles';
 import type { GrandPrixTheme } from '../theme/unistyles';
+import { FONTS } from '../theme/fonts';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ function resolveColor(
 
 const styles = StyleSheet.create({
     base: {
-        fontFamily: 'PressStart2P',
+        fontFamily: FONTS.display,
         letterSpacing: 0.5,
     },
     shadow: {

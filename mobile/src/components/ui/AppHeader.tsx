@@ -3,6 +3,7 @@ import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { APP_BRAND_NAME } from '../../theme/brand';
+import { FONTS } from '../../theme/fonts';
 import { pixelShadow } from '../../theme/pixelShadow';
 import { ChromeIcon } from './ChromeIcon';
 import type { ChromeIconId } from '../../assets/chromeIcons';
@@ -52,11 +53,11 @@ const stylesheet = StyleSheet.create((theme) => {
       overflow: 'hidden',
     },
     title: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 16,
+      fontFamily: FONTS.display,
       color: c.primary,
       textTransform: 'uppercase',
-      letterSpacing: -0.5,
+      letterSpacing: 0.5,
     },
     actionBtn: {
       minWidth: 48,
@@ -71,7 +72,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     actionLabel: {
       fontSize: 9,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       color: c.primary,
       textTransform: 'uppercase',
     },

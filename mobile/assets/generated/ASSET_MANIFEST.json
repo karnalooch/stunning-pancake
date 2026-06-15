@@ -53,18 +53,6 @@
       "description": "Energy bolt — jagged lightning shape. A sharp, jagged lightning bolt. Warning amber (#E8A840) body, goldLight (#EDD9B0) highlight."
     },
     {
-      "id": "active_ride_hud_mockup",
-      "category": "environment",
-      "format": "png",
-      "size_px": [
-        1080,
-        1920
-      ],
-      "file_size_bytes": 1320707,
-      "path": "marketing/active_ride_hud_mockup.png",
-      "description": "Active Ride HUD mockup — marketing/onboarding 9:16 layout reference."
-    },
-    {
       "id": "app_icon",
       "category": "icon",
       "format": "png",

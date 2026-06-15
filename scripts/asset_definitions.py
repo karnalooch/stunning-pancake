@@ -405,28 +405,6 @@ def get_all_assets() -> list[AssetDef]:
             ),
             "output_path": "sprites/cyclist_sheet.png",
         },
-        {
-            "id": "ghost_sheet",
-            "category": "sprite",
-            "model": "gemini",
-            "format": "png",
-            "size": [256, 64],
-            "frames": 4,
-            "frame_width": 64,
-            "frame_height": 64,
-            "description": (
-                "4-frame ghost cyclist floating animation. A translucent/ghostly "
-                "version of the cyclist for pace comparison. Same cyclist shape "
-                "but rendered in semi-transparent sepia (#C8B098) with a subtle "
-                "glow effect (not anti-aliased — use dithering for transparency). "
-                "Floating/gliding motion across 4 frames. No pedaling — smooth float."
-            ),
-            "style_constraints": (
-                "Ghost/translucent cyclist. 4 float frames. Sepia tone. "
-                "Use dithering, not alpha gradient, for ghost effect."
-            ),
-            "output_path": "sprites/ghost_sheet.png",
-        },
 
         # ═══════════════════════════════════════════════════════════
         # ENVIRONMENT PARALLAX (ADR 014) — Gemini PNG
@@ -505,19 +483,6 @@ def get_all_assets() -> list[AssetDef]:
             "style_constraints": "4 distinct tiles in a row. No gradients — flat pixels.",
             "output_path": "particles/particle_atlas.png",
         },
-        {
-            "id": "map_marker_cyclist",
-            "category": "particle",
-            "model": "gemini",
-            "format": "png",
-            "size": [32, 32],
-            "description": (
-                "Map marker icon — top-down pixel cyclist on bike. goldAmber helmet dot, "
-                "deepSea jersey. For MapLibre symbol layer / marker fallback."
-            ),
-            "style_constraints": "32×32 top-down bike+rider silhouette.",
-            "output_path": "map/marker_cyclist.png",
-        },
 
         # ═══════════════════════════════════════════════════════════
         # TEXTURES (P2) — Gemini PNG, 128×128 tileable
@@ -568,17 +533,6 @@ def get_all_assets() -> list[AssetDef]:
             "output_path": "textures/wood_grain.png",
         },
 
-
-        {
-            "id": "active_ride_hud_mockup",
-            "category": "environment",
-            "model": "gemini",
-            "format": "png",
-            "size": [1080, 1920],
-            "description": "Active Ride HUD mockup — marketing/onboarding 9:16 layout reference.",
-            "style_constraints": "Full-screen HUD mockup per MOBILE_ASSET_NANO_BANANA_PROMPTS §16b.",
-            "output_path": "marketing/active_ride_hud_mockup.png",
-        },
         {
             "id": "app_icon",
             "category": "icon",
@@ -623,6 +577,148 @@ def get_all_assets() -> list[AssetDef]:
             "output_path": "favicon.png",
             "output_base": "mobile/assets",
         },
+        # ═══════════════════════════════════════════════════════════
+        # VISION PARITY (Faza D) — crests, dept icons, achievements,
+        # avatar frame, banners, 9-slice frame, sunset/night parallax.
+        # Warm Grand Prix palette; pixel-art; hard 1-2px black outline.
+        # ═══════════════════════════════════════════════════════════
+        *[
+            {
+                "id": f"crest_{slug}",
+                "category": "icon",
+                "model": "gemini",
+                "format": "png",
+                "size": [48, 48],
+                "description": (
+                    f"Heraldic city crest (herb) of {city}, Poland — pixel-art shield "
+                    "emblem for the city list and City Wars. Faithful tinctures, readable "
+                    "at 24px. 1-2px black outline, no anti-aliasing."
+                ),
+                "style_constraints": "48x48 shield. Transparent background. Crisp pixels.",
+                "output_path": f"icons/crest_{slug}.png",
+            }
+            for slug, city in (
+                ("gdansk", "Gdańsk"),
+                ("katowice", "Katowice"),
+                ("lublin", "Lublin"),
+                ("siedlce", "Siedlce"),
+                ("warszawa", "Warszawa"),
+            )
+        ],
+        *[
+            {
+                "id": f"dept_{slug}",
+                "category": "icon",
+                "model": "gemini",
+                "format": "png",
+                "size": [40, 40],
+                "description": f"Department/team pixel icon: {desc}. Forest green + gold accents.",
+                "style_constraints": "40x40. Transparent background. 1-2px outline.",
+                "output_path": f"icons/dept_{slug}.png",
+            }
+            for slug, desc in (
+                ("it", "laptop with code brackets (IT)"),
+                ("marketing", "megaphone (Marketing)"),
+                ("hr", "gear with a person silhouette (HR)"),
+                ("sales", "trophy cup (Sprzedaż/Sales)"),
+            )
+        ],
+        *[
+            {
+                "id": f"ach_{slug}",
+                "category": "icon",
+                "model": "gemini",
+                "format": "png",
+                "size": [64, 64],
+                "description": (
+                    f"Hexagonal achievement badge: {desc}. Beveled hex medal, colored "
+                    "core, gold rim, pixel-art. Provide a desaturated 'locked' look via "
+                    "tint in code."
+                ),
+                "style_constraints": "64x64 hexagon. Transparent background. Bold readable glyph.",
+                "output_path": f"icons/ach_{slug}.png",
+            }
+            for slug, desc in (
+                ("100km", "mountain + '100 KM'"),
+                ("10rides", "bicycle + '10 JAZD'"),
+                ("500m", "mountain peak + '500 M'"),
+                ("kom", "crown + 'KOM'"),
+                ("5h", "clock + '5H'"),
+                ("endurance", "heart + 'WYTRWAŁOŚĆ'"),
+                ("1000kcal", "flame + '1000 KCAL'"),
+                ("7days", "sprout + '7 DNI'"),
+                ("explorer", "compass + 'ODKRYWCA'"),
+                ("passion", "medal + 'PASJA'"),
+            )
+        ],
+        {
+            "id": "avatar_frame",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [128, 128],
+            "description": (
+                "Circular gold laurel avatar frame ring (transparent center) for the "
+                "profile portrait, matching vision/12_profile.png."
+            ),
+            "style_constraints": "128x128. Transparent center + outside. Gold rim + laurel.",
+            "output_path": "icons/avatar_frame.png",
+        },
+        {
+            "id": "frame_ornate",
+            "category": "texture",
+            "model": "gemini",
+            "format": "png",
+            "size": [96, 96],
+            "description": (
+                "Ornate parchment scroll frame for 9-slice borders — corner rivets, "
+                "wood/gold trim. Used as the standard card/panel border in the vision mocks."
+            ),
+            "style_constraints": "96x96 with 32px corners for 9-slice. Transparent interior.",
+            "output_path": "textures/frame_ornate.png",
+        },
+        {
+            "id": "banner_city_lublin",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 256],
+            "description": (
+                "City-of-the-week banner — pixel panorama of Lublin old town at day, "
+                "with a ribbon area for the city name. Matches vision/05_compete_hub.png."
+            ),
+            "style_constraints": "512x256 landscape. Leave headroom for overlaid ribbon text.",
+            "output_path": "environment/banner_city_lublin.png",
+        },
+        {
+            "id": "finish_meta",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [512, 320],
+            "description": (
+                "Race finish 'META' scene — checkered banner gantry, cheering crowd with "
+                "4VELO flags, cyclist from behind. Matches vision/00_onboarding_finish.png."
+            ),
+            "style_constraints": "512x320. Warm sunset palette. Crowd as pixel dots.",
+            "output_path": "environment/finish_meta.png",
+        },
+        *[
+            {
+                "id": f"sky_{slug}",
+                "category": "environment",
+                "model": "gemini",
+                "format": "png",
+                "size": [512, 512],
+                "description": f"Parallax sky layer — {desc}. Tileable horizontally.",
+                "style_constraints": "512x512. Horizontal tile. Matches existing sky_day style.",
+                "output_path": f"environment/sky_{slug}.png",
+            }
+            for slug, desc in (
+                ("sunset", "warm orange/pink sunset clouds"),
+                ("night", "deep blue night sky with stars"),
+            )
+        ],
         # ═══════════════════════════════════════════════════════════
         # SOUND PARAMETERS (P0) — Pre-defined jsfxr params
         # ═══════════════════════════════════════════════════════════

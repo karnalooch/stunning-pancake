@@ -54,3 +54,8 @@ export function isOnboardingCompleteForUser(userId: string | number | null | und
 export function setOnboardingCompleteForUser(userId: string | number): void {
   getAppStorage().set(onboardingKeyForUser(userId), 'true');
 }
+
+/** Device-global onboarding flag — fallback when no stable user id is known. */
+export function setOnboardingCompleteGlobal(): void {
+  getAppStorage().set(ONBOARDING_KEY, 'true');
+}

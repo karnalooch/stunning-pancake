@@ -50,8 +50,8 @@ const stylesheet = StyleSheet.create(theme => {
     banner: { borderRadius: 8, borderWidth: 4, borderColor: C.onBackground, overflow: 'hidden', aspectRatio: 1.83 },
     bannerImg: { width: '100%', height: '100%', backgroundColor: C.primaryContainer },
     bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
-    bannerBadge: { fontSize: 10, fontWeight: '700', color: '#bbf29b', textTransform: 'uppercase', letterSpacing: 2 },
-    bannerCity: { fontSize: 32, fontWeight: '700', color: '#ffffff' },
+    bannerBadge: { fontSize: 10, fontWeight: '700', color: C.primaryFixed, textTransform: 'uppercase', letterSpacing: 2 },
+    bannerCity: { fontSize: 32, fontWeight: '700', color: C.onPrimary },
     // City Wars
     vsCard: { backgroundColor: C.parchment, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, padding: 16, gap: 12 },
     vsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -62,7 +62,7 @@ const stylesheet = StyleSheet.create(theme => {
     vsScore: { fontSize: 20, fontWeight: '700', color: C.primary },
     vsScoreRight: { fontSize: 20, fontWeight: '700', color: C.onBackground, textAlign: 'right' },
     vsDivider: { fontSize: 14, fontWeight: '700', color: C.tertiary, textAlign: 'center' },
-    vsBar: { height: 16, flexDirection: 'row', backgroundColor: '#e1e3da', borderWidth: 2, borderColor: C.onBackground, borderRadius: 2, overflow: 'hidden' },
+    vsBar: { height: 16, flexDirection: 'row', backgroundColor: C.outlineVariant, borderWidth: 2, borderColor: C.onBackground, borderRadius: 2, overflow: 'hidden' },
     vsBarLeft: { backgroundColor: C.primary },
     vsDelta: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase', textAlign: 'center', marginTop: 4 },
     // Leaderboard
@@ -133,7 +133,7 @@ export const CityHubScreen: React.FC<{
         if (mooTimer.current) clearTimeout(mooTimer.current);
     }, []);
 
-    const rivalColor = (C.rival as string | undefined) ?? '#1F4E5F';
+    const rivalColor = C.rival;
 
     const handleCityWarsPress = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -172,7 +172,7 @@ export const CityHubScreen: React.FC<{
                         <Text style={s.bannerBadge}>{t.compete.cityOfWeek.toUpperCase()}</Text>
                     </View>
                     <Text style={s.bannerCity}>{cityOfWeekName}</Text>
-                    <Text style={{ color: '#ffffff', fontWeight: '700' }}>{cityOfWeekKm.toFixed(1)} km</Text>
+                    <Text style={{ color: C.onPrimary, fontWeight: '700' }}>{cityOfWeekKm.toFixed(1)} km</Text>
                 </View>
             </View>
 

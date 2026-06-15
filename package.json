@@ -21,6 +21,7 @@
     "audit:redirects": "tsx scripts/audit-redirects.ts",
     "audit:env": "tsx scripts/audit-env.ts",
     "audit:imports": "tsx scripts/audit-dead-imports.ts",
+    "audit:screen-tokens": "tsx scripts/audit-screen-tokens.ts",
     "audit:orm": "tsx scripts/audit-orm-performance.ts",
     "audit:async": "tsx scripts/audit-async-race-conditions.ts",
     "audit:compat": "tsx scripts/audit-env-compatibility.ts",

@@ -111,21 +111,26 @@ jest.mock('../../src/i18n/useI18n', () => ({
         characterInit: 'CHARACTER_INIT',
         stagePrefix: 'STG_CITY',
         osVersion: '4VELO_OS v1.0',
+        stepWord: 'Step',
+        ofWord: 'of',
         city: {
           bubble: 'Choose your city!',
           title: 'Select city',
+          step: 'Choose city',
           description: 'Choose the city tenant you will compete in.',
           next: 'NEXT',
         },
         department: {
           bubble: 'Join your squad!',
           title: 'Select department',
+          step: 'Choose team',
           description: 'Pick your department/team to join ranking cohorts.',
           next: 'NEXT',
         },
         finish: {
           bubble: 'Ready to race?',
           title: 'Ready to join',
+          step: 'Ready!',
           description: 'Confirm city and department, then enable GPS and enter competition.',
           user: 'User',
           city: 'City',
@@ -151,7 +156,8 @@ describe('OnboardingScreen', () => {
     });
 
     const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('CHARACTER_INIT');
+    expect(json).toContain('Step 1 of 3');
+    expect(json).toContain('Choose city');
     expect(json).toContain('Select city');
     expect(json).toContain('Choose the city tenant you will compete in.');
     expect(json).toContain('NEXT');
@@ -173,7 +179,8 @@ describe('OnboardingScreen', () => {
 
     const press = (label: string) => {
       const node = tree.root.findAll(
-        (n) => typeof n.props?.children === 'string' && n.props.children === label,
+        (n: TestRenderer.ReactTestInstance) =>
+          typeof n.props?.children === 'string' && n.props.children === label,
       )[0];
       act(() => {
         node.props.onPress();

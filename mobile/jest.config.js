@@ -25,4 +25,14 @@ module.exports = {
     'src/screens/**/*.{ts,tsx}',
     '!src/services/**/*.d.ts',
   ],
+  // Ratchet baseline (current ~24% lines). Raise these as coverage grows;
+  // floors are set below current to gate against regression, not to block.
+  coverageThreshold: {
+    global: {
+      statements: 20,
+      branches: 15,
+      functions: 15,
+      lines: 20,
+    },
+  },
 };

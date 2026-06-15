@@ -14,6 +14,7 @@ import { Pressable, Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from '../theme/unistyles';
 import * as Haptics from 'expo-haptics';
 import type { GrandPrixTheme } from '../theme/unistyles';
+import { FONTS } from '../theme/fonts';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ export type ArcadeButtonVariant =
     | 'secondary'
     | 'danger'
     | 'success'
+    | 'cta'
     | 'ghost';
 
 export type ArcadeButtonSize = 'sm' | 'md' | 'lg';
@@ -89,6 +91,12 @@ function resolveColors(
                 dark: colors.gpDeepSea,
                 text: colors.onPrimary,
             };
+        case 'cta':
+            return {
+                main: colors.cta,
+                dark: colors.ctaDark,
+                text: colors.onCta,
+            };
         case 'ghost':
             return {
                 main: 'transparent',
@@ -98,11 +106,13 @@ function resolveColors(
     }
 }
 
-const DISABLED_COLORS: ColorSet = {
-    main: '#6B7280',
-    dark: '#374151',
-    text: '#9CA3AF',
-};
+function resolveDisabledColors(colors: GrandPrixTheme['colors']): ColorSet {
+    return {
+        main: colors.disabledSurface,
+        dark: colors.disabledDark,
+        text: colors.onDisabled,
+    };
+}
 
 // ─── Component ──────────────────────────────────────────────────────
 
@@ -120,7 +130,7 @@ export const ArcadeButton: React.FC<ArcadeButtonProps> = ({
     const { theme } = useUnistyles();
     const themeColors = theme.colors as GrandPrixTheme['colors'];
 
-    const c = disabled ? DISABLED_COLORS : resolveColors(variant, themeColors);
+    const c = disabled ? resolveDisabledColors(themeColors) : resolveColors(variant, themeColors);
     const s = SIZE_CONFIGS[size];
     const isGhost = variant === 'ghost';
 
@@ -215,7 +225,7 @@ const styles = StyleSheet.create({
         borderRadius: 0,
     },
     label: {
-        fontFamily: 'PressStart2P',
+        fontFamily: FONTS.display,
         textAlign: 'center',
         letterSpacing: 0.5,
     },

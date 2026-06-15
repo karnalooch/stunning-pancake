@@ -243,6 +243,12 @@ jobs:
       - name: Lint with Expo ESLint
         run: pnpm --filter mobile lint
 
+      - name: TypeScript type check
+        run: pnpm --filter mobile typecheck
+
+      - name: Design token guard (no inline hex in screens)
+        run: pnpm audit:screen-tokens
+
       - name: Run unit tests
         run: pnpm --filter mobile test -- --ci --forceExit --passWithNoTests
 

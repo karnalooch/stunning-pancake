@@ -19,16 +19,11 @@ config.resolver = {
     /.*\/ios\/.*/,
     /.*\.native-test.*/,
   ],
-  extraNodeModules: {
-    ...resolver.extraNodeModules,
-    '@tokens': path.resolve(__dirname, '../packages/tokens'),
-  },
 };
 
 config.watchFolders = [
   ...(config.watchFolders || []),
   path.resolve(__dirname, '..'),
-  path.resolve(__dirname, '../packages/tokens'),
   path.resolve(__dirname, '../packages/api-client'),
 ];
 

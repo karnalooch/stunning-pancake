@@ -1,13 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Alert, View, Pressable } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  FadeIn,
-  FadeOut,
-  SlideInRight
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, SlideInRight } from 'react-native-reanimated';
 import * as Location from 'expo-location';
 
 import { Column } from '../components/Column';
@@ -17,13 +10,15 @@ import { ScrollContainer } from '../components/ScrollContainer';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { useUnistyles } from 'react-native-unistyles';
 import { SceneBackground } from '../components/scene/SceneBackground';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
-import { SpeechBubble } from '../components/narration/SpeechBubble';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { APP_BRAND_NAME } from '../theme/brand';
 import { useI18n, type MobileCatalog } from '../i18n/useI18n';
 import { GameCard } from '../components/ui/GameCard';
 import { PixelIcon } from '../components/ui/PixelIcon';
 import { CHROME_ICONS } from '../assets/chromeIcons';
+import { CrestIcon } from '../components/ui/CrestIcon';
+import { DepartmentIcon } from '../components/ui/DepartmentIcon';
+import { FinishCelebration } from '../components/game/FinishCelebration';
 import {
   AuthService,
   DepartmentService,
@@ -48,11 +43,6 @@ interface OnboardingProps {
   onFinish: (data: OnboardingFinishPayload) => void | Promise<void>;
 }
 
-interface StepCopy {
-  bubble: string;
-  sprite: 'idle' | 'cruise' | 'attack';
-}
-
 function flattenDepartments(nodes: DepartmentTreeNode[]): DepartmentTreeNode[] {
   const out: DepartmentTreeNode[] = [];
   for (const n of nodes) {
@@ -62,21 +52,24 @@ function flattenDepartments(nodes: DepartmentTreeNode[]): DepartmentTreeNode[] {
   return out;
 }
 
+/**
+ * Local fallback teams so the department step never renders empty when the
+ * tenant tree is missing or the API call fails (emulator audit P0 #3).
+ * Negative ids signal "local only" — self-join is skipped for them.
+ */
+const FALLBACK_DEPARTMENTS: DepartmentTreeNode[] = [
+  { id: -1, name: 'IT', department_type: 'TEAM', member_count: 0 },
+  { id: -2, name: 'Marketing', department_type: 'TEAM', member_count: 0 },
+  { id: -3, name: 'HR', department_type: 'TEAM', member_count: 0 },
+  { id: -4, name: 'Sprzedaż', department_type: 'TEAM', member_count: 0 },
+];
+
 export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) => {
   const { t } = useI18n();
   const { theme } = useUnistyles();
   const C = theme.colors as ThemeColorMap;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
   const TOTAL_STEPS = 3;
-
-  const STEP_COPY = useMemo<StepCopy[]>(
-    () => [
-      { bubble: t.onboarding.city.bubble, sprite: 'idle' },
-      { bubble: t.onboarding.department.bubble, sprite: 'cruise' },
-      { bubble: t.onboarding.finish.bubble, sprite: 'attack' },
-    ],
-    [t],
-  );
 
   const [step, setStep] = useState<OnboardingStep>(0);
   const [tenants, setTenants] = useState<PublicTenantOption[]>([]);
@@ -86,15 +79,10 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const flatDepartments = useMemo(() => flattenDepartments(departments), [departments]);
 
-  const progress = useSharedValue(0);
-  const progressBarStyle = useAnimatedStyle(() => ({
-    width: `${progress.value * 100}%`,
-  }));
-  const progressLabelPct = Math.round(((step + 1) / TOTAL_STEPS) * 100);
-
-  useEffect(() => {
-    progress.value = withTiming((step + 1) / TOTAL_STEPS, { duration: 500 });
-  }, [progress, step]);
+  const STEP_NAMES = useMemo(
+    () => [t.onboarding.city.step, t.onboarding.department.step, t.onboarding.finish.step],
+    [t],
+  );
 
   useEffect(() => {
     AuthService.getPublicTenants()
@@ -115,14 +103,15 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
     }
     try {
       const rows = await DepartmentService.getTree();
-      setDepartments(rows);
-      const flat = flattenDepartments(rows);
+      const effective = rows.length > 0 ? rows : FALLBACK_DEPARTMENTS;
+      setDepartments(effective);
+      const flat = flattenDepartments(effective);
       if (flat[0]?.id != null) {
         setSelectedDepartmentId(flat[0].id);
       }
     } catch {
-      setDepartments([]);
-      setSelectedDepartmentId(null);
+      setDepartments(FALLBACK_DEPARTMENTS);
+      setSelectedDepartmentId(FALLBACK_DEPARTMENTS[0]?.id ?? null);
     }
   };
 
@@ -147,7 +136,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
           // Local onboarding completion must not depend on profile sync.
         }
       }
-      if (selectedDepartmentId != null) {
+      if (selectedDepartmentId != null && selectedDepartmentId > 0) {
         try {
           await DepartmentService.selfJoin(selectedDepartmentId);
         } catch {
@@ -214,42 +203,76 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   return (
     <Column flex={1} style={{ backgroundColor: C.parchment, paddingTop: 48, position: 'relative' }} padding={16}>
       {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
-      {immersiveEnabled && (
-        <Column gap={8} style={{ alignItems: 'center', marginBottom: 8 }}>
-          <CyclistSprite size={64} state={STEP_COPY[step]?.sprite ?? 'idle'} />
-          <SpeechBubble text={STEP_COPY[step]?.bubble ?? ''} />
-        </Column>
-      )}
-      {/* RPG-Style HUD Progress */}
-      <Column gap={8} style={{ marginBottom: 24 }}>
-        <Row justifyContent="space-between" alignItems="center">
-          <PixelText size="xs" style={{ fontSize: 8, color: C.primary }}>
-            {t.onboarding.characterInit}
-          </PixelText>
-          <PixelText size="xs" style={{ fontSize: 8, color: C.primary }}>
-            {progressLabelPct}%
-          </PixelText>
-        </Row>
-        <Row style={{ height: 8, backgroundColor: C.onBackground, width: '100%', borderWidth: 1, borderColor: C.onBackground }}>
-          <Animated.View style={[{ height: '100%', backgroundColor: C.primary }, progressBarStyle]}>
-            <View style={{ position: 'absolute', right: 0, width: 2, height: 12, backgroundColor: C.primary, top: -2 }} />
-          </Animated.View>
+
+      <Column gap={6} style={{ alignItems: 'center', marginBottom: 16 }}>
+        <PixelText size="lg" style={{ color: C.cta }}>
+          {APP_BRAND_NAME}
+        </PixelText>
+        <PixelText size="xs" style={{ color: C.onBackground, opacity: 0.85, textAlign: 'center' }}>
+          {`${t.onboarding.stepWord} ${step + 1} ${t.onboarding.ofWord} ${TOTAL_STEPS} — ${STEP_NAMES[step]}`}
+        </PixelText>
+        <Row gap={8} style={{ marginTop: 4 }}>
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                borderWidth: 2,
+                borderColor: i <= step ? C.cta : C.selectionBorder,
+                backgroundColor: i <= step ? C.cta : 'transparent',
+              }}
+            />
+          ))}
         </Row>
       </Column>
 
       <ScrollContainer style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
         {renderStep()}
       </ScrollContainer>
-
-      <Row justifyContent="space-between" alignItems="center" style={{ marginTop: 16, paddingBottom: 16 }}>
-        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>
-          {t.onboarding.stagePrefix} // STEP_0{step + 1}
-        </PixelText>
-        <PixelText size="xs" color="muted" style={{ fontSize: 8 }}>{t.onboarding.osVersion}</PixelText>
-      </Row>
     </Column>
   );
 };
+
+interface SelectRowProps {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  C: ThemeColorMap;
+  leading?: React.ReactNode;
+}
+
+/** Vision selection row: white card → green fill + check when selected. */
+const SelectRow = ({ label, selected, onPress, C, leading }: SelectRowProps) => (
+  <Pressable
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityState={{ selected }}
+    style={{
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderWidth: 2,
+      borderColor: selected ? C.selectionBorder : C.outlineVariant,
+      backgroundColor: selected ? C.selection : C.surfaceContainerLowest,
+      padding: 12,
+      gap: 10,
+    }}
+  >
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+      {leading}
+      <PixelText size="sm" style={{ color: selected ? C.onSelection : C.onBackground }}>
+        {label}
+      </PixelText>
+    </View>
+    {selected ? (
+      <PixelText size="sm" style={{ color: C.selectionBorder }}>
+        {'\u2713'}
+      </PixelText>
+    ) : null}
+  </Pressable>
+);
 
 interface CityStepProps {
   tenants: PublicTenantOption[];
@@ -285,26 +308,20 @@ const CityStep = ({
         </Column>
         <Column gap={8}>
           {tenants.map((tenant) => (
-            <Pressable
+            <SelectRow
               key={tenant.id}
+              label={tenant.name}
+              selected={selectedTenantId === tenant.id}
               onPress={() => setSelectedTenantId(tenant.id)}
-              style={{
-                borderWidth: 2,
-                borderColor: C.onBackground,
-                backgroundColor: selectedTenantId === tenant.id ? C.primaryContainer : C.parchment,
-                padding: 12,
-              }}
-            >
-              <PixelText size="sm" style={{ color: C.onBackground }}>
-                {tenant.name}
-              </PixelText>
-            </Pressable>
+              C={C}
+              leading={<CrestIcon tenant={tenant.name} size={26} />}
+            />
           ))}
         </Column>
         <ArcadeButton
           label={t.onboarding.city.next}
           onPress={onNext}
-          variant="primary"
+          variant="cta"
           testID="onboarding-city-next"
           accessibilityLabel={t.onboarding.city.next}
         />
@@ -343,27 +360,21 @@ const DepartmentStep = ({
 
         <Column gap={12}>
           {departments.map((department) => (
-            <Pressable
+            <SelectRow
               key={department.id}
+              label={department.name}
+              selected={selectedDepartmentId === department.id}
               onPress={() => setSelectedDepartmentId(department.id)}
-              style={{
-                borderWidth: 2,
-                borderColor: C.onBackground,
-                backgroundColor: selectedDepartmentId === department.id ? C.primaryContainer : C.parchment,
-                padding: 12,
-              }}
-            >
-              <PixelText size="sm" style={{ color: C.onBackground }}>
-                {department.name}
-              </PixelText>
-            </Pressable>
+              C={C}
+              leading={<DepartmentIcon name={department.name} size={28} />}
+            />
           ))}
         </Column>
 
         <ArcadeButton
           label={t.onboarding.department.next}
           onPress={onNext}
-          variant="primary"
+          variant="cta"
           testID="onboarding-department-next"
           accessibilityLabel={t.onboarding.department.next}
         />
@@ -384,24 +395,30 @@ interface FinishStepProps {
 
 const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy, t }: FinishStepProps) => {
   const requestPerms = async () => {
-    const existing = await Location.getForegroundPermissionsAsync();
-    if (existing.status === 'granted') {
-      await Location.requestBackgroundPermissionsAsync().catch(() => null);
-      onNext();
-      return;
-    }
+    try {
+      const existing = await Location.getForegroundPermissionsAsync();
+      if (existing.status === 'granted') {
+        await Location.requestBackgroundPermissionsAsync().catch(() => null);
+        onNext();
+        return;
+      }
 
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      await Location.requestBackgroundPermissionsAsync().catch(() => null);
-      onNext();
-      return;
-    }
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        await Location.requestBackgroundPermissionsAsync().catch(() => null);
+        onNext();
+        return;
+      }
 
-    Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody, [
-      { text: t.onboarding.finish.continueWithoutGps, onPress: onNext },
-      { text: t.common.close, style: 'cancel' },
-    ]);
+      Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody, [
+        { text: t.onboarding.finish.continueWithoutGps, onPress: onNext },
+        { text: t.common.close, style: 'cancel' },
+      ]);
+    } catch {
+      // Permission APIs can throw on some devices/emulators — never strand the
+      // user on onboarding; complete locally and let them enter the app.
+      onNext();
+    }
   };
 
   return (
@@ -428,10 +445,13 @@ const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy, t }: Fi
         <ArcadeButton
           label={busy ? t.onboarding.finish.joining : t.onboarding.finish.joinCompetition}
           onPress={() => void requestPerms()}
-          variant="success"
+          variant="cta"
           testID="onboarding-finish-join"
           accessibilityLabel={t.onboarding.finish.joinCompetition}
         />
+        <View style={{ marginTop: 8, marginHorizontal: -16, marginBottom: -16 }}>
+          <FinishCelebration height={120} />
+        </View>
       </GameCard>
     </Animated.View>
   );

@@ -29,12 +29,9 @@
     "icons/tab_profile.png",
     "icons/tab_ranking.png",
     "icons/tab_rewards.png",
-    "map/marker_cyclist.png",
-    "marketing/active_ride_hud_mockup.png",
     "particles/particle_atlas.png",
     "sounds/sfx_params.json",
     "sprites/cyclist_sheet.png",
-    "sprites/ghost_sheet.png",
     "textures/metal_plate.png",
     "textures/parchment_grain.png",
     "textures/wood_grain.png"

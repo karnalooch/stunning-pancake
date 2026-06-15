@@ -15,7 +15,11 @@ import {
 import { AuthService } from '../services/api';
 import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
-import { isOnboardingCompleteForUser, setOnboardingCompleteForUser } from './storage';
+import {
+  isOnboardingCompleteForUser,
+  setOnboardingCompleteForUser,
+  setOnboardingCompleteGlobal,
+} from './storage';
 import { e2eConfig, isE2eAutoLoginEnabled, shouldSkipOnboardingForE2e } from './e2eConfig';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
@@ -172,6 +176,10 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     const userId = auth.user.get()?.id;
     if (userId != null) {
       setOnboardingCompleteForUser(userId);
+    } else {
+      // No stable user id yet — persist a device-global flag so a restart does
+      // not loop the user back to the city step (emulator audit P0 #2).
+      setOnboardingCompleteGlobal();
     }
     if (options?.refreshProfile !== false) {
       try {

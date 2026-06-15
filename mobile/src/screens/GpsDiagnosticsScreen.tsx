@@ -44,7 +44,7 @@ const stylesheet = StyleSheet.create((theme) => {
     label: { fontSize: 14, fontWeight: '700', color: C.onBackground },
     details: { fontSize: 12, color: C.secondary, marginTop: 6 },
     badgeOk: {
-      backgroundColor: '#34D399',
+      backgroundColor: C.primaryContainer,
       borderWidth: 2,
       borderColor: C.onBackground,
       paddingHorizontal: 8,
@@ -52,7 +52,7 @@ const stylesheet = StyleSheet.create((theme) => {
       fontWeight: '700',
     },
     badgeFail: {
-      backgroundColor: '#FCA5A5',
+      backgroundColor: C.errorContainer,
       borderWidth: 2,
       borderColor: C.onBackground,
       paddingHorizontal: 8,

@@ -19,6 +19,13 @@ export const grandPrixNightTheme: GrandPrixTheme = {
     outline: '#7BA8B8',
     primaryContainer: '#2A4A32',
     onPrimaryContainer: grandPrixTheme.colors.chromeNightInk,
+    // Vision CTA stays warm; selection/disabled tuned for dark chrome.
+    selection: '#2F5A35',
+    selectionBorder: '#7BA05B',
+    onSelection: grandPrixTheme.colors.chromeNightInk,
+    disabledSurface: '#22384C',
+    disabledDark: '#16283A',
+    onDisabled: '#6E839A',
   },
 };
 

@@ -447,7 +447,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                             </View>
                             <View style={{ marginTop: LAYOUT.gutter }}>
                                 <ArcadeButton
-                                    variant="primary"
+                                    variant="success"
                                     label={t.dashboard.goToRide}
                                     onPress={handleGoToRide}
                                     size="lg"
@@ -489,7 +489,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                             </View>
                             <View style={{ marginTop: 8 }}>
                                 <ArcadeButton
-                                    variant="primary"
+                                    variant="success"
                                     label={t.dashboard.startRide}
                                     onPress={handleStartRide}
                                     size="lg"

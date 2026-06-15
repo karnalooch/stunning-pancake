@@ -41,6 +41,16 @@ export interface GrandPrixTheme {
         outlineVariant: string;
         parchment: string;
         goldAmber: string;
+        // ── Vision CTA / selection / disabled (runtime SSOT) ──────────
+        cta: string;
+        ctaDark: string;
+        onCta: string;
+        selection: string;
+        selectionBorder: string;
+        onSelection: string;
+        disabledSurface: string;
+        disabledDark: string;
+        onDisabled: string;
         hudBackground: string;
         hudSurface: string;
         hudText: string;

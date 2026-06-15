@@ -3,6 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { pixelShadow } from '../../theme/pixelShadow';
+import { FONTS } from '../../theme/fonts';
 
 interface StackScreenHeaderProps {
   title: string;
@@ -32,10 +33,11 @@ const stylesheet = StyleSheet.create((theme) => {
     backText: { fontSize: 24, color: c.primary, fontWeight: '700' },
     title: {
       flex: 1,
-      fontSize: 18,
-      fontWeight: '700',
+      fontSize: 14,
+      fontFamily: FONTS.display,
       color: c.primary,
       textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
   };
 });
