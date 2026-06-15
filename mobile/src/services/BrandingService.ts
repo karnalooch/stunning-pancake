@@ -1,7 +1,8 @@
 import { mobileActivityPaths } from '@4velo/api-client';
 import { api } from './api';
-import { stitchTheme } from '../theme/stitch';
-import type { StitchTheme } from '../theme/unistyles';
+import { grandPrixTheme } from '../theme/grandPrix';
+import { grandPrixNightTheme } from '../theme/grandPrixNight';
+import type { GrandPrixTheme } from '../theme/unistyles';
 
 export interface TenantBranding {
   name: string;
@@ -24,7 +25,7 @@ function applyOverrides(branding: TenantBranding): void {
     primary: branding.primary_color,
     secondary: branding.secondary_color,
   };
-  const themes: StitchTheme[] = [stitchTheme];
+  const themes: GrandPrixTheme[] = [grandPrixTheme, grandPrixNightTheme];
   for (const theme of themes) {
     theme.branding = override;
   }
@@ -32,7 +33,7 @@ function applyOverrides(branding: TenantBranding): void {
 
 /** Remove branding overrides from both themes */
 function clearOverrides(): void {
-  const themes: StitchTheme[] = [stitchTheme];
+  const themes: GrandPrixTheme[] = [grandPrixTheme, grandPrixNightTheme];
   for (const theme of themes) {
     delete theme.branding;
   }
@@ -59,21 +60,6 @@ export const BrandingService = {
   },
 
   getCurrent: (): TenantBranding | null => currentBranding,
-
-  /**
-   * Return branding colors for theme consumption.
-   *
-   * @deprecated Prefer reading `theme.colors.branding?.primary` from
-   * Unistyles `useStyles()` or `useUnistyles()` instead of calling this directly.
-   * Kept for Phase 1–2 backward compatibility with Tamagui.
-   */
-  colors: (): { primary: string; secondary: string } | null => {
-    if (!currentBranding) return null;
-    return {
-      primary: currentBranding.primary_color,
-      secondary: currentBranding.secondary_color,
-    };
-  },
 
   /** Clear branding (e.g. on tenant logout) */
   clear: (): void => {

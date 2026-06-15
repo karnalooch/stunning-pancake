@@ -1,4 +1,4 @@
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 import { awardQuestXp } from './progression';
 import { triggerEngine, TriggerPriority } from '../services/TriggerEngine';
 import { trackEngagement } from '../services/EngagementAnalytics';

@@ -131,11 +131,11 @@ flowchart TB
 
 ### 0.2 Jeden SSOT tokenów
 
-Cztery źródła kolorów: `stitch.ts`, `@4velo/tokens`, paleta generatora (hardcode), inline hex.
+Cztery źródła kolorów (stan historyczny): `stitch.ts`, `@4velo/tokens`, paleta generatora (hardcode), inline hex.
 
 **Konflikt:** `parchment` `#F5F5DC` vs `#2D2418`; `goldAmber` `#FFB800` vs `#D4A373`.
 
-**Akcja:** zsynchronizować `stitch.ts` z [MOBILE_ASSET_NANO_BANANA_PROMPTS §4](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md); dodać `hudPanel`, `hudOutline`, `hudShadow`, `scrimStrong/Soft`.
+**Akcja:** zsynchronizować `grandPrix.ts` z [MOBILE_ASSET_NANO_BANANA_PROMPTS §4](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md); dodać `hudPanel`, `hudOutline`, `hudShadow`, `scrimStrong/Soft`.
 
 ### 0.3 Runtime asset registry
 
@@ -200,7 +200,7 @@ Maestro, visual regression, performance degrade, rozmiar APK.
 
 ## Checklist (sprint board)
 
-- [x] **f0-fonts-tokens** — `PressStart2P` + VT323 ładowane w `App.tsx`; paleta `stitch.ts` zsynchronizowana z Grand Prix (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + tokeny `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + anchory `gp*`. _Do zrobienia: przepiąć legacy komponenty `@4velo/tokens` (`PixelText`, `ArcadeButton`) na `theme.colors` (w ramach f4)._  
+- [x] **f0-fonts-tokens** — `PressStart2P` + VT323 ładowane w `App.tsx`; paleta `grandPrix.ts` zsynchronizowana z Grand Prix (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + tokeny `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + anchory `gp*`.  
 - [x] **f0-asset-registry** — `mobile/src/assets/assetRegistry.ts` (typowana mapa statycznych `require()`)  
 - [x] **f1-tab-png** — PNG z `assetRegistry`, integer scale, bez SVG/emoji  
 - [x] **f1-scene-parallax** — 4 warstwy env PNG + motion degrade  

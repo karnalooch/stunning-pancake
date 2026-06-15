@@ -8,7 +8,6 @@ import Animated, {
   FadeOut,
   SlideInRight
 } from 'react-native-reanimated';
-import { MapPin } from 'lucide-react-native';
 import * as Location from 'expo-location';
 
 import { Column } from '../components/Column';
@@ -23,6 +22,8 @@ import { SpeechBubble } from '../components/narration/SpeechBubble';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { useI18n, type MobileCatalog } from '../i18n/useI18n';
 import { GameCard } from '../components/ui/GameCard';
+import { PixelIcon } from '../components/ui/PixelIcon';
+import { CHROME_ICONS } from '../assets/chromeIcons';
 import {
   AuthService,
   DepartmentService,
@@ -102,24 +103,56 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
         if (rows[0]?.id) setSelectedTenantId(rows[0].id);
       })
       .catch(() => setTenants([]));
-    DepartmentService.getTree()
-      .then((rows) => setDepartments(rows))
-      .catch(() => setDepartments([]));
   }, []);
 
+  const loadDepartmentsForTenant = async (tenantId: string) => {
+    if (tenantId) {
+      try {
+        await AuthService.updateProfile({ tenant_id: tenantId });
+      } catch {
+        // Continue — tree may still load for authenticated user.
+      }
+    }
+    try {
+      const rows = await DepartmentService.getTree();
+      setDepartments(rows);
+      const flat = flattenDepartments(rows);
+      if (flat[0]?.id != null) {
+        setSelectedDepartmentId(flat[0].id);
+      }
+    } catch {
+      setDepartments([]);
+      setSelectedDepartmentId(null);
+    }
+  };
+
   const nextStep = async () => {
-    if (step < TOTAL_STEPS - 1) {
-      setStep((prev) => (Math.min(TOTAL_STEPS - 1, prev + 1) as OnboardingStep));
+    if (step === 0) {
+      await loadDepartmentsForTenant(selectedTenantId);
+      setStep(1);
+      return;
+    }
+
+    if (step === 1) {
+      setStep(2);
       return;
     }
 
     setIsSubmitting(true);
     try {
       if (selectedTenantId) {
-        await AuthService.updateProfile({ tenant_id: selectedTenantId });
+        try {
+          await AuthService.updateProfile({ tenant_id: selectedTenantId });
+        } catch {
+          // Local onboarding completion must not depend on profile sync.
+        }
       }
       if (selectedDepartmentId != null) {
-        await DepartmentService.selfJoin(selectedDepartmentId);
+        try {
+          await DepartmentService.selfJoin(selectedDepartmentId);
+        } catch {
+          // Optional cohort join — user can still enter the app.
+        }
       }
       try {
         const events = await EventService.list();
@@ -130,8 +163,8 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       } catch {
         // optional auto-join
       }
-      await onFinish({ refreshProfile: true });
     } finally {
+      await onFinish({ refreshProfile: true });
       setIsSubmitting(false);
     }
   };
@@ -179,7 +212,7 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
   };
 
   return (
-    <Column flex={1} style={{ backgroundColor: C.background, paddingTop: 48, position: 'relative' }} padding={16}>
+    <Column flex={1} style={{ backgroundColor: C.parchment, paddingTop: 48, position: 'relative' }} padding={16}>
       {immersiveEnabled && <SceneBackground sceneId="onboarding" scrim="soft" />}
       {immersiveEnabled && (
         <Column gap={8} style={{ alignItems: 'center', marginBottom: 8 }}>
@@ -239,8 +272,8 @@ const CityStep = ({
   return (
     <Animated.View entering={FadeIn} exiting={FadeOut} style={{ flex: 1 }}>
       <GameCard style={{ gap: 16 }}>
-        <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment }}>
-          <MapPin size={48} color={C.primary} />
+        <View style={{ borderWidth: 2, borderColor: C.primary, padding: 24, backgroundColor: C.parchment, alignItems: 'center' }}>
+          <PixelIcon source={CHROME_ICONS.map} size={48} baseSize={32} />
         </View>
         <Column gap={8}>
           <PixelText size="lg" style={{ color: C.onBackground }}>
@@ -272,6 +305,8 @@ const CityStep = ({
           label={t.onboarding.city.next}
           onPress={onNext}
           variant="primary"
+          testID="onboarding-city-next"
+          accessibilityLabel={t.onboarding.city.next}
         />
       </GameCard>
     </Animated.View>
@@ -325,7 +360,13 @@ const DepartmentStep = ({
           ))}
         </Column>
 
-        <ArcadeButton label={t.onboarding.department.next} onPress={onNext} variant="primary" />
+        <ArcadeButton
+          label={t.onboarding.department.next}
+          onPress={onNext}
+          variant="primary"
+          testID="onboarding-department-next"
+          accessibilityLabel={t.onboarding.department.next}
+        />
       </GameCard>
     </Animated.View>
   );
@@ -343,13 +384,24 @@ interface FinishStepProps {
 
 const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy, t }: FinishStepProps) => {
   const requestPerms = async () => {
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody);
+    const existing = await Location.getForegroundPermissionsAsync();
+    if (existing.status === 'granted') {
+      await Location.requestBackgroundPermissionsAsync().catch(() => null);
+      onNext();
       return;
     }
-    await Location.requestBackgroundPermissionsAsync();
-    onNext();
+
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status === 'granted') {
+      await Location.requestBackgroundPermissionsAsync().catch(() => null);
+      onNext();
+      return;
+    }
+
+    Alert.alert(t.onboarding.finish.gpsPermissionTitle, t.onboarding.finish.gpsPermissionBody, [
+      { text: t.onboarding.finish.continueWithoutGps, onPress: onNext },
+      { text: t.common.close, style: 'cancel' },
+    ]);
   };
 
   return (
@@ -377,6 +429,8 @@ const FinishStep = ({ user, tenantName, departmentName, onNext, C, busy, t }: Fi
           label={busy ? t.onboarding.finish.joining : t.onboarding.finish.joinCompetition}
           onPress={() => void requestPerms()}
           variant="success"
+          testID="onboarding-finish-join"
+          accessibilityLabel={t.onboarding.finish.joinCompetition}
         />
       </GameCard>
     </Animated.View>

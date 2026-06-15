@@ -9,13 +9,12 @@ import { useUnistyles } from 'react-native-unistyles';
 
 import { SplashScreen } from './src/components/SplashScreen';
 import { OnboardingScreen } from './src/screens/OnboardingScreen';
-import { ThemeService } from './src/services/ThemeService';
 import { ThemeProvider } from './src/theme/ThemeProvider';
-import { ErrorBoundary } from './src/app/ErrorBoundary';
-import { useAuthSession } from './src/app/useAuthSession';
-import { useRideLifecycle } from './src/app/useRideLifecycle';
-import { AuthScreen } from './src/app/AuthScreen';
-import { NavigationShell } from './src/app/NavigationShell';
+import { ErrorBoundary } from './src/bootstrap/ErrorBoundary';
+import { useAuthSession } from './src/bootstrap/useAuthSession';
+import { useRideLifecycle } from './src/bootstrap/useRideLifecycle';
+import { AuthScreen } from './src/bootstrap/AuthScreen';
+import { NavigationShell } from './src/bootstrap/NavigationShell';
 import { SoundService } from './src/services/SoundService';
 import { useChromeNight } from './src/hooks/useChromeNight';
 import type { RideEdgeMessage } from './src/services/apiRetry';
@@ -130,7 +129,7 @@ export default observer(function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ErrorBoundary>
         <SafeAreaProvider>
-          <ThemeProvider initialTheme={ThemeService.themeMode.get() as 'stitch'}>
+          <ThemeProvider>
             <AppContent />
           </ThemeProvider>
         </SafeAreaProvider>

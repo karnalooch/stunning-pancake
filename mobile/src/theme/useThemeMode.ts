@@ -1,14 +1,14 @@
 /**
  * useThemeMode — Reactive Theme Mode Hook
  *
- * Drop-in replacement for direct `ThemeService.themeMode.get()` calls.
+ * React hook for reading and switching the active theme mode.
  * Returns the current theme mode + toggle/set functions.
  *
  * Replaces the broken @legendapp/state one-shot reads that were previously
  * scattered across components (e.g. AdaptiveAsset.tsx line 12).
  *
  * Usage:
- *   const { themeMode, setThemeMode, toggleThemeMode, isOctopath, isSolar } = useThemeMode();
+ *   const { themeMode, setThemeMode } = useThemeMode();
  */
 
 import { useThemeContext, type ThemeMode } from './ThemeProvider';
@@ -24,10 +24,7 @@ export interface UseThemeModeReturn {
 
 /**
  * Reactive hook for reading/writing the current theme mode.
- *
- * Unlike the old `ThemeService.themeMode.get()` (which was a one-shot,
- * non-reactive read from @legendapp/state), this hook causes re-renders
- * when the theme changes and properly integrates with UnistylesRuntime.
+ * Causes re-renders when the theme changes and syncs with UnistylesRuntime.
  */
 export function useThemeMode(): UseThemeModeReturn {
     const { themeMode, setThemeMode } = useThemeContext();

@@ -73,6 +73,9 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
           <Pressable
             key={route.key}
             onPress={onPress}
+            testID={`tab-${route.name.toLowerCase()}`}
+            accessibilityRole="button"
+            accessibilityLabel={label}
             style={({ pressed }) => [
               {
                 flex: 1,
@@ -104,13 +107,16 @@ export const GameTabBar: React.FC<BottomTabBarProps> = ({
             />
             <Text
               style={{
-                fontSize: 8,
-                fontFamily: 'PressStart2P',
+                fontSize: 9,
+                fontFamily: 'VT323',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 color: isFocused ? c.onPrimaryContainer : c.secondary,
                 marginTop: 4,
               }}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
             >
               {label}
             </Text>

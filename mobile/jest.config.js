@@ -16,13 +16,12 @@ module.exports = {
   moduleNameMapper: {
     '^expo-secure-store$': '<rootDir>/__tests__/__mocks__/expo-secure-store.js',
     '^@4velo/api-client$': '<rootDir>/../packages/api-client/src/index.ts',
-    '^@4velo/tokens$': '<rootDir>/../packages/tokens/src/index.ts',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       '<rootDir>/__tests__/__mocks__/fileMock.js',
   },
   collectCoverageFrom: [
     'src/services/**/*.{ts,tsx}',
-    'src/app/**/*.{ts,tsx}',
+    'src/bootstrap/**/*.{ts,tsx}',
     'src/screens/**/*.{ts,tsx}',
     '!src/services/**/*.d.ts',
   ],

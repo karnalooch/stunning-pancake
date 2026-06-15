@@ -81,9 +81,9 @@ base (SceneBackground parallax  OR  MapLibre retro)
   → SpeechBubble / narration overlay
 ```
 
-- **Palette rule:** scenes/parallax may use a richer, more saturated palette than "Solar White"; **UI chrome keeps Stitch tokens** for legibility. The boundary is mediated by `scrim` tokens.
-- **New theme tokens** (`mobile/src/theme/stitch.ts`): `scrimStrong`, `scrimSoft`, `sceneOverlay` + contrast rules (cards on scenes get stronger shadow/border).
-- **Single token source:** color tokens must resolve to one SSOT (consolidate `stitch.ts` vs legacy octopath/solar in `unistyles.ts` vs `@4velo/tokens`); rest generated from it. (Decision tracked in ADR 014.) Add dedicated `hud*` tokens for sun-readable chrome (AA contrast in day/night). Express hard pixel shadow / outline as tokens, not hardcoded values.
+- **Palette rule:** scenes/parallax may use a richer, more saturated palette than "Solar White"; **UI chrome keeps Grand Prix runtime tokens** for legibility. The boundary is mediated by `scrim` tokens.
+- **New theme tokens** (`mobile/src/theme/grandPrix.ts`): `scrimStrong`, `scrimSoft`, `sceneOverlay` + contrast rules (cards on scenes get stronger shadow/border).
+- **Single token source:** color tokens must resolve to one SSOT: `mobile/src/theme/grandPrix.ts` (+ `grandPrixNight` overrides only where needed). Legacy octopath/solar and legacy stitch runtime names are retired from app runtime. Add dedicated `hud*` tokens for sun-readable chrome (AA contrast in day/night). Express hard pixel shadow / outline as tokens, not hardcoded values.
 - **Configurable hero:** the cyclist is one base sprite; **helmet color (palette-swap)** and **jersey city text (i18n decal)** are theming layers driven by the onboarding city — not baked per sprite (see [MOBILE_ASSET_NANO_BANANA_PROMPTS.md](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md) §2). The `CyclistSprite` and map marker render the configured hero.
 - **Map cohesion:** the retro MapLibre style uses the same palette tokens as scenes. Optional regional landmark per onboarding city in the scene (e.g. Park Sikorski for Siedlce).
 - Scene registry: `mobile/src/theme/scenes.ts` maps `screenId → { layers, palette, ambient, particles }`.

@@ -1,5 +1,5 @@
 import type { ActivityItem, CityHubSummary } from './api';
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 
 const HISTORY_KEY = 'cache_activity_history';
 const CITY_HUB_KEY = 'cache_city_hub';

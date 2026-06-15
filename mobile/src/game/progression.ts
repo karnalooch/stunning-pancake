@@ -1,4 +1,4 @@
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 import { trackEngagement } from '../services/EngagementAnalytics';
 
 export const PROGRESSION_SCHEMA_VERSION = 1;

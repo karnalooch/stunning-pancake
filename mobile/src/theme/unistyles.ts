@@ -1,60 +1,12 @@
 /**
  * Unistyles Theme Definitions
  *
- * Primary theme: `stitch` (Grand Prix palette — see stitch.ts).
- * Legacy `octopath` / `solar` token groups below are deprecated; migrate
- * consumers to `theme.colors` on the stitch theme (ADR 014 §6).
+ * Primary theme: `grandPrix` (Grand Prix palette runtime contract).
  */
 
-import type { colors as tokenColors } from '@tokens/generated/restyle-colors';
+// ─── Grand Prix Theme (flat, standalone palette) ───────────────────
 
-// ─── Color Token Types ────────────────────────────────────────────
-
-/** Primitive color palette (20 raw values) */
-export type PrimitiveColors = typeof tokenColors.primitive;
-
-/** Semantic color aliases (6 functional colors) */
-export type SemanticColors = typeof tokenColors.semantic;
-
-/** Octopath (dark) theme-specific colors (27 tokens) */
-export type OctopathColors = typeof tokenColors.octopath;
-
-/** Solar (light) theme-specific colors (27 tokens) */
-export type SolarColors = typeof tokenColors.solar;
-
-// ─── AppTheme Interface ───────────────────────────────────────────
-
-/**
- * The complete theme shape consumed by Unistyles.
- *
- * Each theme (octopath / solar) must satisfy this interface.
- * The `colors` object carries all token groups for full
- * type safety when using `useStyles()` or `useUnistyles()`.
- */
-export interface AppTheme {
-    colors: {
-        /** 20 primitive color values */
-        primitive: PrimitiveColors;
-        /** 6 semantic (functional) colors */
-        semantic: SemanticColors;
-        /** 27 octopath (dark) theme colors */
-        octopath: OctopathColors;
-        /** 27 solar (light) theme colors */
-        solar: SolarColors;
-    };
-    branding?: {
-        primary: string;
-        secondary: string;
-        background?: string;
-        surface?: string;
-        text?: string;
-        border?: string;
-    };
-}
-
-// ─── Stitch Theme (flat, standalone palette) ──────────────────────
-
-export interface StitchTheme {
+export interface GrandPrixTheme {
     colors: {
         background: string;
         surface: string;
@@ -96,7 +48,6 @@ export interface StitchTheme {
         hudAccent: string;
         hudWarning: string;
         hudError: string;
-        // ── HUD chrome (sun-readable bike computer, ADR 014 §3) ──
         hudPanel: string;
         hudPanelNight: string;
         hudOutline: string;
@@ -107,7 +58,6 @@ export interface StitchTheme {
         sceneSky: string;
         sceneHill: string;
         sceneRoad: string;
-        // ── Grand Prix palette anchors (NANO_BANANA_PROMPTS §4) ──
         gpDeepSea: string;
         gpGoldLight: string;
         gpForestGreen: string;
@@ -132,10 +82,8 @@ export interface StitchTheme {
 
 declare module 'react-native-unistyles' {
     interface UnistylesThemes {
-        octopath: AppTheme;
-        solar: AppTheme;
-        stitch: StitchTheme;
-        stitchNight: StitchTheme;
+        grandPrix: GrandPrixTheme;
+        grandPrixNight: GrandPrixTheme;
     }
 }
 

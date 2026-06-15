@@ -1,9 +1,7 @@
 /**
  * PixelText — Unistyles-powered retro pixel typography component.
  *
- * Replaces the Tamagui-based arcade/PixelText with plain RN Text +
- * Unistyles StyleSheet.create(). All colors flow through theme.colors.* tokens
- * and reactively switch between octopath (dark) and solar (light) palettes.
+ * Colors flow through the Grand Prix theme (`theme.colors.*`).
  *
  * Size variants: xs (10), sm (12), md (14), lg (18), xl (24), 2xl (32)
  * Color variants: text, muted, inverse, primary, secondary, success, warning, error, cream, sepia
@@ -11,8 +9,8 @@
 
 import React from 'react';
 import { Text, type TextProps } from 'react-native';
-import { StyleSheet, useUnistyles, UnistylesRuntime } from '../theme/unistyles';
-import { colors as tokens } from '@tokens/generated/restyle-colors';
+import { StyleSheet, useUnistyles } from '../theme/unistyles';
+import type { GrandPrixTheme } from '../theme/unistyles';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -43,14 +41,6 @@ export interface PixelTextProps extends Omit<TextProps, 'style'> {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-/**
- * PixelText — Base typography component for the entire app.
- * Enforces the "Press Start 2P" font and handles arcade-style drop shadows.
- *
- * Colors auto-switch based on the active Unistyles theme:
- * - octopath (dark): cream text on deep sea backgrounds
- * - solar (light): dark brown text on cream backgrounds
- */
 export const PixelText: React.FC<PixelTextProps> = ({
     size = 'md',
     color = 'text',
@@ -59,17 +49,15 @@ export const PixelText: React.FC<PixelTextProps> = ({
     children,
     ...rest
 }) => {
-    useUnistyles(); // Subscribe to theme changes for reactivity
-
-    // Resolve the current theme name for color resolution
-    const themeName = (UnistylesRuntime.themeName ?? 'octopath') as ThemeKey;
+    const { theme } = useUnistyles();
+    const themeColors = theme.colors as GrandPrixTheme['colors'];
 
     return (
         <Text
             style={[
                 styles.base,
                 SIZE_STYLES[size],
-                resolveColor(color, themeName),
+                resolveColor(color, themeColors),
                 shadow && styles.shadow,
                 style,
             ]}
@@ -93,48 +81,20 @@ const SIZE_STYLES: Record<PixelTextSize, TextProps['style']> = {
 
 // ─── Color Resolver ─────────────────────────────────────────────────
 
-type ThemeKey = 'octopath' | 'solar' | 'stitch';
-
-/** Resolve a color variant to the correct theme group and return a style object. */
 function resolveColor(
     variant: PixelTextColor,
-    themeName: ThemeKey,
+    colors: GrandPrixTheme['colors'],
 ): TextProps['style'] {
-    // Semantic colors are theme-independent
-    if (variant === 'primary') return { color: tokens.semantic.primary };
-    if (variant === 'secondary') return { color: tokens.semantic.secondary };
-    if (variant === 'success') return { color: tokens.semantic.success };
-    if (variant === 'warning') return { color: tokens.semantic.warning };
-    if (variant === 'error') return { color: tokens.semantic.error };
-
-    // Primitive colors are theme-independent
-    if (variant === 'cream') return { color: tokens.primitive.cream };
-    if (variant === 'sepia') return { color: tokens.primitive.sepia };
-
-    // Text colors depend on the active theme (octopath vs solar palette)
-    if (variant === 'text') {
-        return {
-            color:
-                themeName === 'octopath'
-                    ? tokens.octopath.text
-                    : tokens.solar.text,
-        };
-    }
-    if (variant === 'muted') {
-        return {
-            color:
-                themeName === 'octopath'
-                    ? tokens.octopath.textMuted
-                    : tokens.solar.textMuted,
-        };
-    }
-    // inverse
-    return {
-        color:
-            themeName === 'octopath'
-                ? tokens.octopath.textInverse
-                : tokens.solar.textInverse,
-    };
+    if (variant === 'primary') return { color: colors.primary };
+    if (variant === 'secondary') return { color: colors.secondary };
+    if (variant === 'success') return { color: colors.primary };
+    if (variant === 'warning') return { color: colors.hudWarning };
+    if (variant === 'error') return { color: colors.error };
+    if (variant === 'cream') return { color: colors.gpGoldLight };
+    if (variant === 'sepia') return { color: colors.gpSepia };
+    if (variant === 'text') return { color: colors.onBackground };
+    if (variant === 'muted') return { color: colors.outline };
+    return { color: colors.onPrimary };
 }
 
 // ─── Unistyles Stylesheet ────────────────────────────────────────────
@@ -147,6 +107,6 @@ const styles = StyleSheet.create({
     shadow: {
         textShadowColor: 'rgba(0, 0, 0, 0.8)',
         textShadowOffset: { width: 2, height: 2 },
-        textShadowRadius: 0, // hard shadow — no blur for pixel art
+        textShadowRadius: 0,
     },
 });

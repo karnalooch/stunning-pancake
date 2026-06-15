@@ -1,4 +1,4 @@
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 
 const IMMERSIVE_THEME_KEY = 'immersive_theme_enabled';
 

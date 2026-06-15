@@ -1,7 +1,7 @@
 /**
  * ThemeProvider — Unistyles Initialization Wrapper
  *
- * Initializes react-native-unistyles with octopath/solar themes,
+ * Initializes react-native-unistyles with Grand Prix themes,
  * reads persisted theme mode from MMKV, applies tenant branding
  * overrides from BrandingService, and syncs changes back to storage.
  *
@@ -19,15 +19,16 @@ import React, {
 } from 'react';
 import { MMKV } from 'react-native-mmkv';
 import { StyleSheet, UnistylesRuntime } from './unistyles';
-import { stitchTheme } from './stitch';
+import { grandPrixTheme } from './grandPrix';
+import { grandPrixNightTheme } from './grandPrixNight';
 import { BrandingService } from '../services/BrandingService';
 import { warnMmkvUnavailable } from '../services/mmkvSupport';
-import type { StitchTheme } from './unistyles';
+import type { GrandPrixTheme } from './unistyles';
 
 // ─── Constants ────────────────────────────────────────────────────
 
 const THEME_STORAGE_KEY = 'theme_mode';
-export type ThemeMode = 'stitch';
+export type ThemeMode = 'grandPrix' | 'grandPrixNight';
 
 // ─── MMKV (lazy, crash-safe) ──────────────────────────────────────
 
@@ -45,8 +46,10 @@ function getStorage(): MMKV | null {
 
 function getPersistedTheme(): ThemeMode {
     const storage = getStorage();
-    if (!storage) return 'stitch';
-    return (storage.getString(THEME_STORAGE_KEY) as ThemeMode) || 'stitch';
+    if (!storage) return 'grandPrix';
+    const raw = storage.getString(THEME_STORAGE_KEY) ?? 'grandPrix';
+    if (raw === 'grandPrix' || raw === 'grandPrixNight') return raw;
+    return 'grandPrix';
 }
 
 function persistTheme(mode: ThemeMode): void {
@@ -90,9 +93,12 @@ export const ThemeProvider: React.FC<PropsWithChildren<ThemeProviderProps>> = ({
     // ── Bootstrap Unistyles (configure called in index.ts at module level) ──
     useEffect(() => {
         // Sync branding overrides if available
-        const branding = BrandingService.colors();
+        const branding = BrandingService.getCurrent();
         if (branding) {
-            applyBrandingOverrides(branding);
+            applyBrandingOverrides({
+                primary: branding.primary_color,
+                secondary: branding.secondary_color,
+            });
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -150,7 +156,7 @@ function applyBrandingOverrides(branding: {
     primary: string;
     secondary: string;
 }): void {
-    const themes = [stitchTheme] as any[];
+    const themes = [grandPrixTheme, grandPrixNightTheme] as any[];
     for (const theme of themes) {
         theme.branding = {
             primary: branding.primary,
@@ -164,11 +170,14 @@ function applyBrandingOverrides(branding: {
  * or any component that triggers a tenant switch.
  */
 export function refreshBranding(): void {
-    const branding = BrandingService.colors();
+    const branding = BrandingService.getCurrent();
     if (branding) {
-        applyBrandingOverrides(branding);
+        applyBrandingOverrides({
+            primary: branding.primary_color,
+            secondary: branding.secondary_color,
+        });
     } else {
-        const themes = [stitchTheme] as any[];
+        const themes = [grandPrixTheme, grandPrixNightTheme] as any[];
         for (const theme of themes) {
             delete theme.branding;
         }

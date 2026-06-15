@@ -68,6 +68,7 @@ export const stringsPl = {
   clubs: {
     title: 'Kluby',
     subtitle: 'Odkrywaj drużyny w mieście',
+    empty: 'Brak klubów w Twoim mieście. Sprawdź ponownie po sync z API.',
   },
   segments: {
     title: 'Segmenty',
@@ -138,6 +139,7 @@ export const stringsPl = {
       joinCompetition: 'DOŁĄCZ DO RYWALIZACJI',
       gpsPermissionTitle: 'Wymagane uprawnienie',
       gpsPermissionBody: '4VELO potrzebuje GPS, aby śledzić Twoje wyniki.',
+      continueWithoutGps: 'Kontynuuj bez GPS',
     },
   },
   summary: {

@@ -133,14 +133,14 @@ flowchart TB
 
 Four parallel color systems:
 
-- `mobile/src/theme/stitch.ts` — active Unistyles theme
-- `@4velo/tokens` / octopath-solar — used by `PixelText`, `ArcadeButton`, `GameCard` while theme = `stitch`
+- `mobile/src/theme/grandPrix.ts` — active Unistyles theme
+- Historical `@4velo/tokens` / octopath-solar path (now removed from app runtime)
 - Generator palette — hardcoded in `PixelTabIcon`, `PixelBurst`
 - Inline hex in screens (`CityHubScreen`, `ArcadeButton`)
 
 **Critical conflicts:** `parchment` `#F5F5DC` (stitch) vs `#2D2418` (tokens); `goldAmber` `#FFB800` vs `#D4A373` (Grand Prix).
 
-**Action:** align `stitch.ts` with [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §4](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md); add `hudPanel`, `hudOutline`, `hudShadow`, `scrimStrong/Soft`; route legacy components through `theme.colors`.
+**Action:** align `grandPrix.ts` with [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §4](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md); add `hudPanel`, `hudOutline`, `hudShadow`, `scrimStrong/Soft`; route legacy components through `theme.colors`.
 
 ### 0.3 Runtime asset registry
 
@@ -245,7 +245,7 @@ Per [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §2](./MOBILE_ASSET_NANO_BANANA_PROMPTS
 | Haptics | HUD → `HapticService` (not raw `expo-haptics`) |
 | Voice cues | `VoiceCueService` turn-by-turn TTS |
 | `SkiaMetrics.tsx` | Remove or wire (dead code) |
-| octopath/solar legacy | Deprecate in `unistyles.ts` |
+| legacy octopath/solar references | Removed from runtime and package deps |
 | Post-process | Quant UI chrome only — not scenes ([prompts §18](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md)) |
 
 ---
@@ -278,7 +278,7 @@ Per [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §2](./MOBILE_ASSET_NANO_BANANA_PROMPTS
 
 ## Checklist (copy to sprint board)
 
-- [x] **f0-fonts-tokens** — Press Start 2P alias (`PressStart2P`) + VT323 loaded in `App.tsx`; `stitch.ts` palette aligned to Grand Prix anchors (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + `gp*` anchors added. _Follow-up: route legacy `@4velo/tokens` components (`PixelText`, `ArcadeButton`) through `theme.colors` (tracked under f4)._
+- [x] **f0-fonts-tokens** — Press Start 2P alias (`PressStart2P`) + VT323 loaded in `App.tsx`; `grandPrix.ts` palette aligned to Grand Prix anchors (`goldAmber` `#D4A373`, `parchment` `#F5E6CC`) + `hudPanel`/`hudPanelNight`/`hudOutline`/`hudShadow` + `gp*` anchors added.
 - [x] **f0-asset-registry** — `mobile/src/assets/assetRegistry.ts` typed static `require()` map
 - [x] **f1-tab-png** — `tabIcons.ts` PNG via `assetRegistry`; `PixelTabIcon` integer-scale; emoji/SVG fallback removed
 - [x] **f1-scene-parallax** — 4 environment PNG layers in `SceneBackground` + `scenes.ts` registry + motion degrade
@@ -287,7 +287,7 @@ Per [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §2](./MOBILE_ASSET_NANO_BANANA_PROMPTS
 - [x] **f2-hud-chrome** — `RideStatusBar` + `RideActionBar` + `HudDataFieldCell` / `DataFieldCell` hudMode on Active Ride
 - [x] **f2-hud-i18n** — `ride.fields.*` + `ride.actions.*` PL/EN; wired via `useI18n` in cells and action bar
 - [x] **f3-configurable-hero** — `HeroPreferencesService` (helmet + city decal); expression PNGs on Summary via `expressionMode`
-- [x] **f4-polish** — share card 1080×1920 constants + grade PNG; GPS banner pixel chrome + i18n; `HapticService` on tab/HUD; `SkiaMetrics` removed; octopath/solar deprecated in `unistyles.ts`
+- [x] **f4-polish** — share card 1080×1920 constants + grade PNG; GPS banner pixel chrome + i18n; `HapticService` on tab/HUD; `SkiaMetrics` removed; legacy octopath/solar path removed from runtime
 
 ---
 
@@ -299,7 +299,7 @@ Resolved in mobile UX & routing redesign pass:
 |-------|-----|
 | Emoji chrome (⚙️⚔️🏆) on Ride/CityHub/Profile | `ChromeIcon` + `chromeIcons.ts` PNG mapping |
 | Brand split (`4VELO` / `QUEST VELOS`) | `APP_BRAND_NAME` = **4VELO** (`theme/brand.ts`) |
-| Solar White cards on GP chrome | Light GP tints in `stitch.ts` (`#FBF3E2` bg, `#F5E6CC` surface); rival bar uses `rival` `#1F4E5F` not error red |
+| Solar White cards on GP chrome | Light GP tints in `grandPrix.ts` (`#FBF3E2` bg, `#F5E6CC` surface); rival bar uses `rival` `#1F4E5F` not error red |
 | Boolean overlay routing (`showSettings`, etc.) | Native Stack over Tab (`NavigationShell` + `navigation/types.ts`) |
 | Fake progression defaults (4200 XP) | `progression.ts` zeros; Ride/Profile read API history |
 | `Alert` for start-ride failure | `EdgeStateBanner` on Ride dashboard via `startRideError` state |

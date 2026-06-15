@@ -26,7 +26,7 @@ import { PerformanceTrendsScreen } from '../screens/PerformanceTrendsScreen';
 import { GlobalLeaderboardScreen } from '../screens/GlobalLeaderboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
 import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
-import { useMobileI18n } from '../i18n/useI18n';
+import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
 import type { ActivitySportType } from '../services/api';
@@ -231,7 +231,7 @@ export function NavigationShell(props: NavigationShellProps) {
   const shellUser = user as { username?: string; tenant_id?: string | null } | null;
   const navRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const shareCardRef = useRef<View>(null);
-  const { t: mt } = useMobileI18n();
+  const { t: mt } = useI18n();
   useFrameBudgetMonitor(isRecording && !ridePaused);
   useMotionDegradeMonitor(isRecording && !ridePaused);
 

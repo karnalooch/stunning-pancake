@@ -53,7 +53,7 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | NFR-02 | Trwałość telemetry | brak cichej utraty GPS w normalnych scenariuszach offline/reconnect | `mobile/src/services/gpsSyncUpload.ts`, `mobile/src/services/GpsSyncManager.ts`, `mobile/src/services/gpsSyncStorage.ts` | smoke GPS recovery + airplane mode test | bardzo długie sesje offline |
 | NFR-03 | Bezpieczeństwo auth | tokeny w SecureStore + bezpieczny refresh | `mobile/src/services/authTokenStorage.ts`, `mobile/src/services/apiClient.ts` | testy auth + smoke | zmienność callback OAuth |
 | NFR-04 | Accessibility motion safety | respektowanie reduced motion | `mobile/src/hooks/useMotionPolicy.ts`, komponenty motion-aware | manual test ustawień systemowych | niepełne pokrycie legacy animacji |
-| NFR-05 | Czytelność w słońcu | kontrastowy HUD chrome | `mobile/src/components/ride/*`, tokeny `mobile/src/theme/stitch.ts` | QA na urządzeniu | zmienność jasności/ekranu |
+| NFR-05 | Czytelność w słońcu | kontrastowy HUD chrome | `mobile/src/components/ride/*`, tokeny `mobile/src/theme/grandPrix.ts` | QA na urządzeniu | zmienność jasności/ekranu |
 | NFR-06 | Parzystość i18n | brak brakujących kluczy PL/EN | `mobile/src/i18n/strings.pl.ts`, `mobile/src/i18n/strings.en.ts` | lint/test/manual pass | szybkie feature'y mogą ominąć parity |
 | NFR-07 | Odporność na błędy | recoverable edge states dla API/network | `mobile/src/components/ui/EdgeStateBanner.tsx`, fallbacki ekranowe | manual network-failure matrix | niespójny copy edge-state |
 | NFR-08 | Diagnostyka operacyjna | crash + perf violations raportowane | `mobile/src/services/FirebaseService.ts`, `mobile/src/services/performanceBudget.ts` | smoke + dashboard checks | telemetry wyłączone w części buildów |

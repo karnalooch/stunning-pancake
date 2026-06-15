@@ -18,8 +18,8 @@ interface ColorsJSON {
     colors: {
         primitive: TokenMap;
         semantic: TokenMap;
-        octopath: TokenMap;
-        solar: TokenMap;
+        grandPrix: TokenMap;
+        grandPrixNight: TokenMap;
     };
     [key: string]: unknown;
 }
@@ -83,7 +83,7 @@ function flattenTheme(
 const isCheck = process.argv.includes('--check');
 
 // ── Build output ───────────────────────────────────────
-const { primitive, semantic, octopath, solar } = tokens.colors;
+const { primitive, semantic, grandPrix, grandPrixNight } = tokens.colors;
 
 // Resolve semantics (they reference primitives)
 const resolvedSemantic: Record<string, string> = {};
@@ -96,8 +96,8 @@ const output = {
         Object.entries(primitive).map(([k, v]) => [k, v.value])
     ) as Record<string, string | number>,
     semantic: resolvedSemantic,
-    octopath: flattenTheme(octopath, primitive),
-    solar: flattenTheme(solar, primitive),
+    grandPrix: flattenTheme(grandPrix, primitive),
+    grandPrixNight: flattenTheme(grandPrixNight, primitive),
 };
 
 // ── Ensure output directory ────────────────────────────
@@ -161,10 +161,10 @@ console.log(`  ✓  generated/colors-flat.json`);
 const themeCounts = {
     primitive: Object.keys(output.primitive).length,
     semantic: Object.keys(output.semantic).length,
-    octopath: Object.keys(output.octopath).length,
-    solar: Object.keys(output.solar).length,
+    grandPrix: Object.keys(output.grandPrix).length,
+    grandPrixNight: Object.keys(output.grandPrixNight).length,
 };
 
 console.log(
-    `\n✅ Token resolution complete — ${themeCounts.primitive} primitives, ${themeCounts.semantic} semantic, ${themeCounts.octopath} octopath, ${themeCounts.solar} solar tokens resolved`
+    `\n✅ Token resolution complete — ${themeCounts.primitive} primitives, ${themeCounts.semantic} semantic, ${themeCounts.grandPrix} grandPrix, ${themeCounts.grandPrixNight} grandPrixNight tokens resolved`
 );

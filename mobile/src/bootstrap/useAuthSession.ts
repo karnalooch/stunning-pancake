@@ -16,7 +16,7 @@ import { AuthService } from '../services/api';
 import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
 import { isOnboardingCompleteForUser, setOnboardingCompleteForUser } from './storage';
-import { e2eConfig, isE2eAutoLoginEnabled } from './e2eConfig';
+import { e2eConfig, isE2eAutoLoginEnabled, shouldSkipOnboardingForE2e } from './e2eConfig';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 
@@ -47,7 +47,13 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     async (user: UserProfile) => {
       auth.user.set(user);
       auth.isAuthenticated.set(true);
-      auth.isOnboarded.set(isOnboardingCompleteForUser(user.id));
+      const onboarded =
+        isOnboardingCompleteForUser(user.id) ||
+        (isE2eAutoLoginEnabled() && shouldSkipOnboardingForE2e());
+      if (onboarded && user.id != null && !isOnboardingCompleteForUser(user.id)) {
+        setOnboardingCompleteForUser(user.id);
+      }
+      auth.isOnboarded.set(onboarded);
       const userId = user?.id != null ? Number(user.id) : null;
       await onUserReady(userId);
       if (user.tenant_id) {
@@ -74,6 +80,9 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       if (token) {
         try {
           const user = await AuthService.getProfile();
+          if (shouldSkipOnboardingForE2e()) {
+            setOnboardingCompleteForUser(user.id);
+          }
           await applyUserSession(user);
         } catch {
           await clearSession();
@@ -87,7 +96,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
         auth.isSubmitting.set(true);
         try {
           const user = await loginAndLoadProfile(e2eConfig.email, e2eConfig.password);
-          if (e2eConfig.skipOnboarding) {
+          if (shouldSkipOnboardingForE2e()) {
             setOnboardingCompleteForUser(user.id);
           }
           await applyUserSession(user);

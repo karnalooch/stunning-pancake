@@ -39,6 +39,7 @@ jest.mock('react-native-reanimated', () => {
 });
 
 jest.mock('expo-location', () => ({
+  getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
   requestBackgroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
 }));
@@ -154,5 +155,44 @@ describe('OnboardingScreen', () => {
     expect(json).toContain('Select city');
     expect(json).toContain('Choose the city tenant you will compete in.');
     expect(json).toContain('NEXT');
+  });
+
+  test('calls onFinish even when profile update fails on final step', async () => {
+    const { AuthService } = jest.requireMock('../../src/services/api') as {
+      AuthService: { updateProfile: jest.Mock };
+    };
+    AuthService.updateProfile.mockRejectedValueOnce(new Error('network'));
+
+    const onFinish = jest.fn();
+    let tree!: TestRenderer.ReactTestRenderer;
+
+    await act(async () => {
+      tree = TestRenderer.create(<OnboardingScreen user={{ username: 'rider' }} onFinish={onFinish} />);
+      await Promise.resolve();
+    });
+
+    const press = (label: string) => {
+      const node = tree.root.findAll(
+        (n) => typeof n.props?.children === 'string' && n.props.children === label,
+      )[0];
+      act(() => {
+        node.props.onPress();
+      });
+    };
+
+    await act(async () => {
+      press('NEXT');
+      await Promise.resolve();
+    });
+    await act(async () => {
+      press('NEXT');
+      await Promise.resolve();
+    });
+    await act(async () => {
+      press('JOIN COMPETITION');
+      await Promise.resolve();
+    });
+
+    expect(onFinish).toHaveBeenCalledWith({ refreshProfile: true });
   });
 });

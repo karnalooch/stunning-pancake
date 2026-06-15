@@ -1,0 +1,29 @@
+appId: com.sport.athlete
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*(DALEJ|Wybierz miasto|JAZDA|TRWA JAZD).*"
+    timeout: 45000
+
+- tapOn:
+    text: "DALEJ"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Wybierz dział|DALEJ).*"
+    timeout: 15000
+    optional: true
+
+- tapOn:
+    text: "DALEJ"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(DOŁĄCZ|Gotowy do startu).*"
+    timeout: 15000
+    optional: true
+
+- tapOn:
+    text: "DOŁĄCZ"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(JAZDA|TRWA JAZD|KREATOR|DO JAZDY).*"
+    timeout: 30000

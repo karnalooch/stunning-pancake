@@ -1,4 +1,4 @@
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 import type { DataFieldLayout, RideProfileId, StoredDataFieldLayouts } from './types';
 
 export const LAYOUT_SCHEMA_VERSION = 1;

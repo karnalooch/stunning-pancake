@@ -1,6 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 
+try {
+  require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+} catch {
+  // dotenv optional — E2E vars may come from the shell environment
+}
+
+const e2eExtra = {
+  EXPO_PUBLIC_E2E_AUTO_LOGIN: process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN,
+  EXPO_PUBLIC_E2E_SKIP_ONBOARDING: process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING,
+  EXPO_PUBLIC_E2E_EMAIL: process.env.EXPO_PUBLIC_E2E_EMAIL,
+  EXPO_PUBLIC_E2E_PASSWORD: process.env.EXPO_PUBLIC_E2E_PASSWORD,
+  EXPO_PUBLIC_E2E_GPS_RECOVERY: process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY,
+};
+
 export default ({ config }) => {
   const hasAndroidGoogleServices = fs.existsSync(path.resolve(__dirname, './google-services.json'));
   const hasIosGoogleServices = fs.existsSync(path.resolve(__dirname, './GoogleService-Info.plist'));
@@ -63,7 +77,10 @@ export default ({ config }) => {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
       },
       "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-      "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app"
+      "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
+      ...Object.fromEntries(
+        Object.entries(e2eExtra).filter(([, value]) => value != null && value !== ''),
+      ),
     },
     "plugins": [
       ...(enableFirebase ? [
@@ -77,6 +94,7 @@ export default ({ config }) => {
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
+      "expo-font",
       "@maplibre/maplibre-react-native"
     ]
   };

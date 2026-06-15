@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@4velo/api-client": "workspace:*",
-    "@4velo/tokens": "workspace:*",
     "@mantine/core": "^9.1.0",
     "@mantine/form": "^9.1.0",
     "@mantine/hooks": "^9.1.0",

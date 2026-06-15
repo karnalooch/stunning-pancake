@@ -85,7 +85,7 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 
-import { AuthScreen } from '../../src/app/AuthScreen';
+import { AuthScreen } from '../../src/bootstrap/AuthScreen';
 
 describe('AuthScreen', () => {
   test('renders login affordances', () => {

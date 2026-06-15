@@ -40,6 +40,3 @@ export const useI18n = create<MobileI18nState>((set, get) => ({
     get().setLocale(next);
   },
 }));
-
-/** @deprecated use useI18n */
-export const useMobileI18n = useI18n;

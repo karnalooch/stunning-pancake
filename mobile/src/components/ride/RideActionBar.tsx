@@ -119,6 +119,9 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
             void SoundService.play('ui_click');
             onPause();
           }}
+          testID="ride-pause-button"
+          accessibilityRole="button"
+          accessibilityLabel={t.ride.actions.pause}
         >
           <Text style={[styles.icon, { color: c.hudOutline }]}>❚❚</Text>
           <Text style={[styles.label, { color: c.hudOutline, fontFamily: 'PressStart2P' }]}>

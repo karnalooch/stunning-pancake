@@ -3,9 +3,9 @@ import {
   onboardingKeyForUser,
   ONBOARDING_KEY,
   setOnboardingCompleteForUser,
-} from '../../src/app/storage';
+} from '../../src/bootstrap/storage';
 
-jest.mock('../../src/app/storage', () => {
+jest.mock('../../src/bootstrap/storage', () => {
   const mem = new Map<string, string>();
   const store = {
     getString: (k: string) => mem.get(k),

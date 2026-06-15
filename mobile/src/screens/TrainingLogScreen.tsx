@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ActivityService, type ActivityItem } from '../services/api';
-import { useMobileI18n } from '../i18n/useI18n';
+import { useI18n } from '../i18n/useI18n';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 
 const stylesheet = StyleSheet.create((theme) => {
@@ -41,7 +41,7 @@ const stylesheet = StyleSheet.create((theme) => {
 
 function statusLabel(
   item: ActivityItem,
-  t: ReturnType<typeof useMobileI18n.getState>['t'],
+  t: ReturnType<typeof useI18n.getState>['t'],
 ): string {
   if (item.is_verified) return t.training.verified;
   if (item.rejection_reason) return `${t.training.rejected}: ${item.rejection_reason}`;
@@ -55,7 +55,7 @@ interface TrainingLogScreenProps {
 
 export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack, onOpenActivity }) => {
   const { theme } = useUnistyles();
-  const { t } = useMobileI18n();
+  const { t } = useI18n();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const [items, setItems] = useState<ActivityItem[]>([]);

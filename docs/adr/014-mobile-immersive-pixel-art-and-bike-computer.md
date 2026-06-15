@@ -38,9 +38,9 @@ The existing design SSOT ([`docs/archive/designmobile.md`](../archive/designmobi
 
 **4. Layered render architecture.** A swappable base layer (`SceneBackground` parallax OR MapLibre retro style) under a shared stack: AmbientLayer → ParticleSystem (Skia `drawAtlas`) → CyclistSprite → Scrim → UI → SpeechBubble.
 
-**5. Palette: scene vs chrome.** Scenes/parallax may use a richer, more saturated palette than "Solar White"; UI chrome (data fields, cards, metrics) keeps Stitch tokens for legibility. The boundary is mediated by `scrim` tokens added to the theme.
+**5. Palette: scene vs chrome.** Scenes/parallax may use a richer, more saturated palette than "Solar White"; UI chrome (data fields, cards, metrics) keeps Grand Prix runtime tokens for legibility. The boundary is mediated by `scrim` tokens added to the theme.
 
-**6. Single token source.** Color tokens must resolve to one source of truth (consolidate `mobile/src/theme/stitch.ts` vs legacy octopath/solar in `unistyles.ts` vs `@4velo/tokens`); the rest is generated from it.
+**6. Single token source.** Color tokens must resolve to one source of truth: `mobile/src/theme/grandPrix.ts` (+ scoped `grandPrixNight` overrides). Legacy octopath/solar and legacy stitch runtime usage are retired.
 
 **7. Asset pipeline (improved).** Keep Gemini for raw PNG generation, but add a deterministic post-process chain: palette-quant, nearest-neighbor scaling, sprite packing to atlases (+ frame JSON), lossless compression (`pngquant`/`oxipng`), a manifest with prompt-hash + seed for reproducibility, and reference-locked character frame generation for animation coherence. Canonical per-asset prompts for **Nano Banana Pro** (`gemini-3-pro-image`), with the Cyklo-Siedlce Grand Prix reference sheet attached to every call, are in [docs/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md](../design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md); UI icons are produced as PNG there rather than hand-authored SVG. The hero is **configurable** (one base sprite; helmet color via palette-swap, jersey city text via i18n decal — not baked per sprite), and a full-screen `active_ride_hud_mockup` defines the sun-readable bike-computer layout.
 

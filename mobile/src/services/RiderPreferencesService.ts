@@ -1,4 +1,4 @@
-import { getAppStorage } from '../app/storage';
+import { getAppStorage } from '../bootstrap/storage';
 
 const WEIGHT_KEY = 'rider_weight_kg';
 const MAX_HR_KEY = 'rider_max_hr';

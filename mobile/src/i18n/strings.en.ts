@@ -68,6 +68,7 @@ export const stringsEn = {
   clubs: {
     title: 'Clubs',
     subtitle: 'Discover city squads',
+    empty: 'No clubs in your city yet. Check again after API sync.',
   },
   segments: {
     title: 'Segments',
@@ -138,6 +139,7 @@ export const stringsEn = {
       joinCompetition: 'JOIN COMPETITION',
       gpsPermissionTitle: 'Permission required',
       gpsPermissionBody: '4VELO requires GPS to track your performance.',
+      continueWithoutGps: 'Continue without GPS',
     },
   },
   summary: {

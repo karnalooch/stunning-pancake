@@ -1,16 +1,12 @@
 /**
- * Stitch Theme — STITCH Solar White + Forest Green palette
+ * Grand Prix Theme — single runtime visual contract for mobile.
  *
- * This is the PRIMARY visual theme for the SPORT mobile app.
- * Supersedes octopath (dark) and solar (light) themes.
- * 
- * All color tokens are sourced from docs/archive/designmobile.md §2 Color Palette.
- * Typography: Space Grotesk (primary) + VT323 (HUD metrics only).
+ * This file is the authoritative theme object used by Unistyles.
  */
 
-import type { StitchTheme } from './unistyles';
+import type { GrandPrixTheme } from './unistyles';
 
-export const stitchTheme: StitchTheme = {
+export const grandPrixTheme: GrandPrixTheme = {
     colors: {
         // ── Core Palette (chrome tints from Grand Prix anchors) ───
         background: '#FBF3E2',
@@ -102,3 +98,4 @@ export const stitchTheme: StitchTheme = {
         rival: '#1F4E5F',
     },
 };
+

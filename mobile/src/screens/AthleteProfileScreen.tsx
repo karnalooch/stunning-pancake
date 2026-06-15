@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { AuthService } from '../services/api';
-import { useMobileI18n } from '../i18n/useI18n';
+import { useI18n } from '../i18n/useI18n';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { useGameProgress } from '../hooks/useGameProgress';
 import { useRiderStats } from '../hooks/useRiderStats';
@@ -116,7 +116,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   onLeaderboard,
 }) => {
   const { theme } = useUnistyles();
-  const { t } = useMobileI18n();
+  const { t } = useI18n();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
@@ -140,6 +140,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
           icon: 'settings',
           onPress: () => onSettings?.(),
           accessibilityLabel: t.settings.title,
+          testID: 'profile-settings-button',
         }}
       >
         <RiderAvatar size={40} />

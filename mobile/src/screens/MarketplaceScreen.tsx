@@ -3,7 +3,8 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { RewardsService, type RewardPool } from '../services/api';
-import { useMobileI18n } from '../i18n/useI18n';
+import { useI18n } from '../i18n/useI18n';
+import { EmptyState } from '../components/ui/EmptyState';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -49,7 +50,7 @@ const stylesheet = StyleSheet.create((theme) => {
 
 export const MarketplaceScreen: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { theme } = useUnistyles();
-  const { t } = useMobileI18n();
+  const { t } = useI18n();
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const [points, setPoints] = useState(0);
@@ -106,7 +107,7 @@ export const MarketplaceScreen: React.FC<{ embedded?: boolean }> = ({ embedded =
           </View>
           <View style={s.grid}>
             {pools.length === 0 ? (
-              <Text style={s.empty}>{t.marketplace.empty}</Text>
+              <EmptyState message={t.marketplace.empty} hint={t.explore.marketHint} icon="shop" />
             ) : (
               pools.map((p) => (
                 <View key={p.id} style={s.item}>

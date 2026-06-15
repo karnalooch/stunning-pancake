@@ -1,0 +1,154 @@
+appId: com.sport.athlete
+---
+- launchApp
+- extendedWaitUntil:
+    visible: ".*(JAZDA|4VELO|TRWA JAZD|START|KREATOR|STOP).*"
+    timeout: 45000
+- takeScreenshot: 01_ride_dashboard
+
+- tapOn:
+    text: "DO JAZDY"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(STOP|PAUZA|SZUKAM GPS).*"
+    timeout: 8000
+    optional: true
+- takeScreenshot: 02_active_ride_hud
+
+- tapOn:
+    text: "PAUZA"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(wstrzymana|ZATRZYMAJ).*"
+    timeout: 8000
+    optional: true
+- takeScreenshot: 03_ride_paused
+- tapOn:
+    text: "ZATRZYMAJ"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(TRWA JAZD|START JAZD|KREATOR).*"
+    timeout: 15000
+    optional: true
+
+- tapOn:
+    text: "KREATOR GPS"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(GPS|Kreator|Diagnostyka).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 04_gps_diagnostics
+- pressKey: back
+
+- tapOn: "RYWALIZACJA"
+- extendedWaitUntil:
+    visible: ".*(RYWALIZACJA|Ranking|Wojny|Kluby).*"
+    timeout: 15000
+- takeScreenshot: 05_compete_hub
+- scroll
+- takeScreenshot: 06_compete_scrolled
+- tapOn:
+    text: "Kluby"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Kluby|drużyn).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 07_clubs
+- pressKey: back
+
+- tapOn: "RYWALIZACJA"
+- scroll
+- tapOn:
+    text: "Segmenty"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Segmenty|KOM).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 08_segments
+- pressKey: back
+
+- tapOn: "ODKRYWAJ"
+- extendedWaitUntil:
+    visible: ".*(ODKRYWAJ|Mapa|Marketplace).*"
+    timeout: 15000
+- takeScreenshot: 09_explore_hub
+- tapOn:
+    text: "Mapa"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Mapa|POI|Punkty).*"
+    timeout: 15000
+    optional: true
+- takeScreenshot: 10_explore_map
+- pressKey: back
+
+- tapOn: "ODKRYWAJ"
+- tapOn:
+    text: "Marketplace"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Marketplace|Oferty).*"
+    timeout: 15000
+    optional: true
+- takeScreenshot: 11_marketplace
+- pressKey: back
+
+- tapOn: "PROFIL"
+- extendedWaitUntil:
+    visible: ".*(PROFIL|WOJOWNIK|Dystans).*"
+    timeout: 15000
+- takeScreenshot: 12_profile
+- scroll
+- takeScreenshot: 13_profile_scrolled
+- tapOn:
+    text: "TRENDY"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Trendy|Wydolno).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 14_trends
+- pressKey: back
+
+- tapOn: "PROFIL"
+- scroll
+- tapOn:
+    text: "RANKING"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Ranking|global).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 15_leaderboard
+- pressKey: back
+
+- tapOn: "PROFIL"
+- scroll
+- tapOn:
+    text: "DZIENNIK"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Dziennik|trening).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 16_training_log
+- pressKey: back
+
+- tapOn: "PROFIL"
+- tapOn:
+    point: "92%,8%"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*(Ustawienia|Ogólne|Sensory).*"
+    timeout: 10000
+    optional: true
+- takeScreenshot: 17_settings
+- scroll
+- takeScreenshot: 18_settings_scrolled
+- pressKey: back
+
+- tapOn: "JAZDA"
+- takeScreenshot: 19_final_ride

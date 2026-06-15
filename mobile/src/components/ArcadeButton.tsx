@@ -1,24 +1,19 @@
 /**
  * ArcadeButton — Unistyles-powered retro arcade button component.
  *
- * Replaces the Tamagui-based arcade/ArcadeButton with plain RN Pressable +
- * StyleSheet.create(). All colors flow through @tokens theme tokens,
- * reactively switching between octopath (dark) and solar (light) palettes.
+ * Colors flow through the Grand Prix theme (`theme.colors.*`).
  *
  * Variants:
  * - 5 colors: primary (gold), secondary (blue), danger (red), success (green), ghost
  * - 3 sizes: sm, md, lg
  * - disabled state with muted gray styling
- *
- * Preserves the signature 3D arcade shadow effect, haptic feedback (expo-haptics),
- * and accessibility labels from the original component.
  */
 
 import React, { useState, useCallback } from 'react';
 import { Pressable, Text, View, type ViewStyle } from 'react-native';
-import { StyleSheet, useUnistyles, UnistylesRuntime } from '../theme/unistyles';
-import { colors as tokens } from '@tokens/generated/restyle-colors';
+import { StyleSheet, useUnistyles } from '../theme/unistyles';
 import * as Haptics from 'expo-haptics';
+import type { GrandPrixTheme } from '../theme/unistyles';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -32,20 +27,14 @@ export type ArcadeButtonVariant =
 export type ArcadeButtonSize = 'sm' | 'md' | 'lg';
 
 export interface ArcadeButtonProps {
-    /** Button label text */
     label: string;
-    /** Press handler */
     onPress: () => void;
-    /** Color variant (default: 'primary') */
     variant?: ArcadeButtonVariant;
-    /** Size preset (default: 'md') */
     size?: ArcadeButtonSize;
-    /** When true, button stretches to full container width (default: true) */
     fullWidth?: boolean;
-    /** Disabled state (default: false) */
     disabled?: boolean;
-    /** Accessibility label override (defaults to `label`) */
     accessibilityLabel?: string;
+    testID?: string;
 }
 
 // ─── Size Presets ───────────────────────────────────────────────────
@@ -54,7 +43,7 @@ interface SizeConfig {
     height: number;
     px: number;
     fontSize: number;
-    shadow: number; // thickness of 3D shadow block below the button
+    shadow: number;
 }
 
 const SIZE_CONFIGS: Record<ArcadeButtonSize, SizeConfig> = {
@@ -67,53 +56,48 @@ const SIZE_CONFIGS: Record<ArcadeButtonSize, SizeConfig> = {
 
 interface ColorSet {
     main: string;
-    dark: string; // shadow / 3D block color
-    text: string; // label text color
+    dark: string;
+    text: string;
 }
-
-type ThemeKey = 'octopath' | 'solar' | 'stitch';
 
 function resolveColors(
     variant: ArcadeButtonVariant,
-    themeName: ThemeKey,
+    colors: GrandPrixTheme['colors'],
 ): ColorSet {
-    const t = themeName === 'octopath' ? tokens.octopath : tokens.solar;
-
     switch (variant) {
         case 'primary':
             return {
-                main: t.buttonGoldBg,
-                dark: tokens.primitive.woodBorder,
-                text: t.buttonGoldText,
+                main: colors.goldAmber,
+                dark: colors.hudOutline,
+                text: colors.onBackground,
             };
         case 'secondary':
             return {
-                main: t.buttonBlueBg,
-                dark: tokens.primitive.deepSea,
-                text: t.buttonBlueText,
+                main: colors.primary,
+                dark: colors.gpDeepSea,
+                text: colors.onPrimary,
             };
         case 'danger':
             return {
-                main: t.buttonRedBg,
-                dark: tokens.primitive.pixelBlack,
-                text: t.buttonRedText,
+                main: colors.error,
+                dark: colors.gpDeepSea,
+                text: colors.onError,
             };
         case 'success':
             return {
-                main: t.buttonGreenBg,
-                dark: tokens.primitive.deepBrown,
-                text: t.buttonGreenText,
+                main: colors.gpForestGreen,
+                dark: colors.gpDeepSea,
+                text: colors.onPrimary,
             };
         case 'ghost':
             return {
                 main: 'transparent',
                 dark: 'transparent',
-                text: t.buttonGhostText,
+                text: colors.onBackground,
             };
     }
 }
 
-/** Disabled state overrides — muted gray regardless of variant */
 const DISABLED_COLORS: ColorSet = {
     main: '#6B7280',
     dark: '#374151',
@@ -122,10 +106,6 @@ const DISABLED_COLORS: ColorSet = {
 
 // ─── Component ──────────────────────────────────────────────────────
 
-/**
- * ArcadeButton — True arcade machine feel: presses "down" visually,
- * triggers haptics, features chunky pixel borders, and a 3D drop-shadow block.
- */
 export const ArcadeButton: React.FC<ArcadeButtonProps> = ({
     label,
     onPress,
@@ -134,18 +114,16 @@ export const ArcadeButton: React.FC<ArcadeButtonProps> = ({
     fullWidth = true,
     disabled = false,
     accessibilityLabel,
+    testID,
 }) => {
     const [isPressed, setIsPressed] = useState(false);
+    const { theme } = useUnistyles();
+    const themeColors = theme.colors as GrandPrixTheme['colors'];
 
-    // Subscribe to theme changes for reactivity
-    useUnistyles();
-    const themeName = (UnistylesRuntime.themeName as ThemeKey) ?? 'octopath';
-
-    const c = disabled ? DISABLED_COLORS : resolveColors(variant, themeName);
+    const c = disabled ? DISABLED_COLORS : resolveColors(variant, themeColors);
     const s = SIZE_CONFIGS[size];
     const isGhost = variant === 'ghost';
 
-    // ── Haptic handlers ────────────────────────────────────────────
     const handlePressIn = useCallback(() => {
         if (disabled) return;
         setIsPressed(true);
@@ -163,80 +141,50 @@ export const ArcadeButton: React.FC<ArcadeButtonProps> = ({
         onPress();
     }, [disabled, onPress]);
 
-    // ── Dynamic styles (recomputed each render for press animation) ──
-    const containerStyle: ViewStyle = {
-        width: fullWidth ? '100%' : 'auto',
-        opacity: disabled ? 0.6 : 1,
-    };
+    const pressOffset = isPressed && !disabled ? s.shadow : 0;
 
-    const buttonStyle: ViewStyle = {
-        height: s.height,
+    const faceStyle: ViewStyle = {
         backgroundColor: c.main,
+        height: s.height - s.shadow,
         paddingHorizontal: s.px,
-        justifyContent: 'center',
-        alignItems: 'center',
         borderWidth: isGhost ? 2 : 3,
-        borderColor: isGhost ? c.text : tokens.primitive.pixelBlack,
-        // "Press down": translate Y by shadow thickness when pressed
-        transform: [{ translateY: isPressed ? s.shadow : 0 }],
-    };
-
-    const shadowBlockStyle: ViewStyle = {
-        position: 'absolute',
-        bottom: -s.shadow - 3,
-        left: -3,
-        right: -3,
-        height: s.shadow,
-        backgroundColor: c.dark,
-        borderLeftWidth: 3,
-        borderRightWidth: 3,
-        borderBottomWidth: 3,
-        borderColor: tokens.primitive.pixelBlack,
-        zIndex: -1,
-    };
-
-    const highlightStyle: ViewStyle = {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: 2,
-        backgroundColor: 'rgba(255,255,255,0.3)',
+        borderColor: isGhost ? c.text : c.dark,
+        transform: [{ translateY: pressOffset }],
     };
 
     return (
         <Pressable
+            onPress={handlePress}
             onPressIn={handlePressIn}
             onPressOut={handlePressOut}
-            onPress={handlePress}
             disabled={disabled}
+            testID={testID}
             accessibilityRole="button"
             accessibilityLabel={accessibilityLabel ?? label}
             accessibilityState={{ disabled }}
-            style={containerStyle}
+            style={[styles.wrapper, fullWidth && styles.fullWidth]}
         >
-            <View style={buttonStyle}>
-                {/* 3D drop-shadow block (hidden when pressed or ghost variant) */}
-                {!isGhost && !isPressed && <View style={shadowBlockStyle} />}
-
-                {/* Inner highlight line — simulates a bevel/inset */}
-                {!isGhost && <View style={highlightStyle} />}
-
-                {/* Label rendered with pixel font + optional hard shadow */}
-                <Text
+            {!isGhost && (
+                <View
                     style={[
-                        labelStyles.text,
+                        styles.shadowBlock,
                         {
-                            color: c.text,
-                            fontSize: s.fontSize,
-                            textShadowColor: !isGhost && !disabled ? 'rgba(0,0,0,0.8)' : 'transparent',
-                            textShadowOffset:
-                                !isGhost && !disabled
-                                    ? { width: 2, height: 2 }
-                                    : { width: 0, height: 0 },
-                            textShadowRadius: 0,
+                            height: s.height,
+                            backgroundColor: c.dark,
                         },
                     ]}
+                />
+            )}
+            <View style={[styles.face, faceStyle]}>
+                <Text
+                    style={[
+                        styles.label,
+                        {
+                            fontSize: s.fontSize,
+                            color: c.text,
+                        },
+                    ]}
+                    numberOfLines={1}
                 >
                     {label}
                 </Text>
@@ -245,12 +193,30 @@ export const ArcadeButton: React.FC<ArcadeButtonProps> = ({
     );
 };
 
-// ─── Unistyles Stylesheet (shared static styles) ────────────────────
-
-const labelStyles = StyleSheet.create({
-    text: {
+const styles = StyleSheet.create({
+    wrapper: {
+        position: 'relative',
+        alignSelf: 'flex-start',
+    },
+    fullWidth: {
+        alignSelf: 'stretch',
+        width: '100%',
+    },
+    shadowBlock: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        borderRadius: 0,
+    },
+    face: {
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 0,
+    },
+    label: {
         fontFamily: 'PressStart2P',
-        letterSpacing: 0.5,
         textAlign: 'center',
+        letterSpacing: 0.5,
     },
 });

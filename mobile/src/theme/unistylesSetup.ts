@@ -17,10 +17,10 @@
  */
 
 import { StyleSheet } from 'react-native-unistyles';
-import { stitchTheme } from './stitch';
-import { stitchNightTheme } from './stitchNight';
+import { grandPrixTheme } from './grandPrix';
+import { grandPrixNightTheme } from './grandPrixNight';
 
 StyleSheet.configure({
-    settings: { initialTheme: 'stitch' },
-    themes: { stitch: stitchTheme, stitchNight: stitchNightTheme } as any,
+    settings: { initialTheme: 'grandPrix' },
+    themes: { grandPrix: grandPrixTheme, grandPrixNight: grandPrixNightTheme } as any,
 });

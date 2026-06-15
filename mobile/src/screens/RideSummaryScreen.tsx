@@ -7,7 +7,7 @@ import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
-import { PixelBurst } from '../components/effects/PixelBurst';
+import { ParticleSystem } from '../components/effects/ParticleSystem';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { ShareResultCard } from '../components/game/ShareResultCard';
 import { SceneBackground } from '../components/scene/SceneBackground';
@@ -119,7 +119,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {immersiveEnabled && <SceneBackground sceneId="ride_summary" scrim="soft" />}
-      <PixelBurst trigger={immersiveEnabled} />
+      <ParticleSystem trigger={immersiveEnabled} />
       <View style={[s.header, s.shadow]}>
         <View style={{ width: 40 }} />
         <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>

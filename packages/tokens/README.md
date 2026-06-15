@@ -1,6 +1,6 @@
 # @4velo/tokens
 
-Design tokens (colors) shared by `admin` and `mobile`.
+Design tokens (colors) for the Grand Prix visual system.
 
 ## Consumption
 

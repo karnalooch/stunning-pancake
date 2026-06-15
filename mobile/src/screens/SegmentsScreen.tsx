@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useMobileI18n } from '../i18n/useI18n';
+import { useI18n } from '../i18n/useI18n';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -26,7 +26,7 @@ const stylesheet = StyleSheet.create((theme) => {
 
 export const SegmentsScreen: React.FC = () => {
   const { theme } = useUnistyles();
-  const { t } = useMobileI18n();
+  const { t } = useI18n();
   const s = stylesheet;
   const rows = [
     { l: 'Sprint', n: 'Riverside Dash', d: '1.2 km', g: '0%', kom: 'ShadowRider', time: '01:42' },

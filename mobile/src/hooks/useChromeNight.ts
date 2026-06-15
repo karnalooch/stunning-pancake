@@ -8,7 +8,7 @@ export function useChromeNight() {
       const hour = new Date().getHours();
       const night = hour >= 20 || hour < 6;
       try {
-        UnistylesRuntime.setTheme(night ? 'stitchNight' : 'stitch');
+        UnistylesRuntime.setTheme(night ? 'grandPrixNight' : 'grandPrix');
       } catch {
         /* Unistyles not ready */
       }

@@ -13,6 +13,7 @@ export type AppHeaderAction = {
   label?: string;
   onPress: () => void;
   accessibilityLabel?: string;
+  testID?: string;
 };
 
 export type AppHeaderProps = {
@@ -105,6 +106,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           <Pressable
             style={({ pressed }) => [s.actionBtn, pressed && { opacity: 0.85 }]}
             onPress={rightAction.onPress}
+            testID={rightAction.testID}
             accessibilityRole="button"
             accessibilityLabel={rightAction.accessibilityLabel ?? rightAction.label}
             hitSlop={8}
