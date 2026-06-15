@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
+import { FONTS } from '../../theme/fonts';
 
 interface RideStatusBarProps {
   gpsLocked: boolean;
@@ -53,14 +54,14 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
       <View style={styles.segment}>
         <View style={[styles.gpsDot, { backgroundColor: gpsColor, borderColor: c.hudOutline }]} />
         <Text
-          style={[styles.text, styles.gpsText, { color: c.hudOutline, fontFamily: 'PressStart2P' }]}
+          style={[styles.text, styles.gpsText, { color: c.hudOutline, fontFamily: FONTS.display }]}
           allowFontScaling
           numberOfLines={1}
         >
           {gpsLabel}
         </Text>
       </View>
-      <Text style={[styles.text, styles.batteryText, { color: c.hudOutline, fontFamily: 'PressStart2P' }]} numberOfLines={1}>
+      <Text style={[styles.text, styles.batteryText, { color: c.hudOutline, fontFamily: FONTS.display }]} numberOfLines={1}>
         {t.ride.status.battery} {batteryLabel}
       </Text>
       <Text style={[styles.text, { color: c.hudOutline, fontFamily: 'VT323', fontSize: 18 }]}>

@@ -5,6 +5,7 @@ import type { DailyQuest } from '../../game/quests';
 import { PixelIcon } from '../ui/PixelIcon';
 import { CURRENCY_ICONS } from '../../assets/tabIcons';
 import { TextureBackground } from '../ui/TextureBackground';
+import { FONTS } from '../../theme/fonts';
 
 interface DailyQuestCardProps {
   quests: DailyQuest[];
@@ -20,13 +21,13 @@ export const DailyQuestCard: React.FC<DailyQuestCardProps> = ({ quests }) => {
       opacity={0.07}
       style={[styles.card, { borderColor: c.hudOutline, backgroundColor: c.parchment }]}
     >
-      <Text style={[styles.header, { color: c.primary, fontFamily: 'PressStart2P' }]}>Daily Quests</Text>
+      <Text style={[styles.header, { color: c.primary, fontFamily: FONTS.display }]}>Daily Quests</Text>
       {quests.map((q) => {
         const pct = q.completed ? 100 : Math.min(100, (q.progress / q.target) * 100);
         return (
           <View key={q.id} style={styles.row}>
             <View style={styles.rowTop}>
-              <Text style={[styles.title, { color: c.onBackground, fontFamily: 'PressStart2P' }]}>
+              <Text style={[styles.title, { color: c.onBackground, fontFamily: FONTS.display }]}>
                 {q.completed ? '✓ ' : ''}{q.title}
               </Text>
               <View style={styles.rewardRow}>

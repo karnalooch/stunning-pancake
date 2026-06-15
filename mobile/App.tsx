@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
+import { Silkscreen_700Bold } from '@expo-google-fonts/silkscreen';
 import { VT323_400Regular } from '@expo-google-fonts/vt323';
 import { observer } from '@legendapp/state/react';
 import { useUnistyles } from 'react-native-unistyles';
@@ -22,6 +23,7 @@ import type { RideEdgeMessage } from './src/services/apiRetry';
 const AppContent = observer(function AppContent() {
   const [fontsLoaded] = useFonts({
     PressStart2P: PressStart2P_400Regular,
+    Silkscreen: Silkscreen_700Bold,
     VT323: VT323_400Regular,
   });
   const { isDownloading, isUpdateAvailable } = Updates.useUpdates();

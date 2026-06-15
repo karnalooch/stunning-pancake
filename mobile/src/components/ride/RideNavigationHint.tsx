@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FONTS } from '../../theme/fonts';
 
 interface RideNavigationHintProps {
   text?: string | null;
@@ -27,7 +28,7 @@ const stylesheet = StyleSheet.create((theme) => {
     title: {
       color: c.secondary,
       fontSize: 9,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       textTransform: 'uppercase',
     },
     body: {

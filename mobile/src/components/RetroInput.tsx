@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { StyleSheet, useUnistyles } from '../theme/unistyles';
 import type { GrandPrixTheme } from '../theme/unistyles';
+import { FONTS } from '../theme/fonts';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -128,12 +129,12 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     label: {
-        fontFamily: 'PressStart2P',
+        fontFamily: FONTS.display,
         fontSize: 10,
         letterSpacing: 0.5,
     },
     input: {
-        fontFamily: 'PressStart2P',
+        fontFamily: FONTS.display,
         fontSize: 12,
         paddingHorizontal: 12,
         paddingVertical: 10,
@@ -142,7 +143,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     error: {
-        fontFamily: 'PressStart2P',
+        fontFamily: FONTS.display,
         fontSize: 10,
         letterSpacing: 0.5,
     },

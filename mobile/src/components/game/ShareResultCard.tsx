@@ -8,6 +8,7 @@ import { TextureBackground } from '../ui/TextureBackground';
 import type { RideRank } from '../../game/ranks';
 import { rankDisplayName } from '../../game/ranks';
 import { useI18n } from '../../i18n/useI18n';
+import { FONTS } from '../../theme/fonts';
 
 /** Portrait share card target (1080×1920 capture via view-shot). */
 export const SHARE_CARD_WIDTH = 1080;
@@ -64,7 +65,7 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
           styles.brand,
           {
             color: c.primary,
-            fontFamily: 'PressStart2P',
+            fontFamily: FONTS.display,
             fontSize: 11 * scale,
           },
         ]}
@@ -74,11 +75,11 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
       <View style={[styles.heroRow, { gap: 24 * scale }]}>
         <CyclistSprite size={56 * scale} state="victory" expressionMode />
         <View style={styles.rankBox}>
-          <Text style={[styles.rankLabel, { color: c.secondary, fontFamily: 'PressStart2P', fontSize: 10 * scale }]}>
+          <Text style={[styles.rankLabel, { color: c.secondary, fontFamily: FONTS.display, fontSize: 10 * scale }]}>
             {t.share.rank}
           </Text>
           <PixelIcon source={GRADE_ICONS[rank]} size={48 * scale} baseSize={32} />
-          <Text style={[styles.rankName, { color: c.onBackground, fontFamily: 'PressStart2P', fontSize: 12 * scale }]}>
+          <Text style={[styles.rankName, { color: c.onBackground, fontFamily: FONTS.display, fontSize: 12 * scale }]}>
             {rankDisplayName(rank)}
           </Text>
         </View>
@@ -88,7 +89,7 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
           styles.rider,
           {
             color: c.onBackground,
-            fontFamily: 'PressStart2P',
+            fontFamily: FONTS.display,
             fontSize: 16 * scale,
           },
         ]}
@@ -97,7 +98,7 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
       </Text>
       <View style={styles.statsRow}>
         <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: 'PressStart2P', fontSize: 9 * scale }]}>
+          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: FONTS.display, fontSize: 9 * scale }]}>
             {t.share.distance}
           </Text>
           <Text style={[styles.statValue, { color: c.onBackground, fontFamily: 'VT323', fontSize: 22 * scale }]}>
@@ -105,7 +106,7 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
           </Text>
         </View>
         <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: 'PressStart2P', fontSize: 9 * scale }]}>
+          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: FONTS.display, fontSize: 9 * scale }]}>
             {t.share.time}
           </Text>
           <Text style={[styles.statValue, { color: c.onBackground, fontFamily: 'VT323', fontSize: 22 * scale }]}>
@@ -113,7 +114,7 @@ export const ShareResultCard: React.FC<ShareResultCardProps> = ({
           </Text>
         </View>
         <View style={styles.stat}>
-          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: 'PressStart2P', fontSize: 9 * scale }]}>
+          <Text style={[styles.statLabel, { color: c.secondary, fontFamily: FONTS.display, fontSize: 9 * scale }]}>
             {t.share.elev}
           </Text>
           <Text style={[styles.statValue, { color: c.onBackground, fontFamily: 'VT323', fontSize: 22 * scale }]}>

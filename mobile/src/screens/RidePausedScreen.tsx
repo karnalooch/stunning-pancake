@@ -6,6 +6,7 @@ import { useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
 import { ChromeIcon } from '../components/ui/ChromeIcon';
 import { pixelShadow } from '../theme/pixelShadow';
+import { FONTS } from '../theme/fonts';
 
 const styles = StyleSheet.create({
   overlay: {
@@ -29,7 +30,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginTop: 12,
     marginBottom: 24,
-    fontFamily: 'PressStart2P',
+    fontFamily: FONTS.display,
   },
   btn: {
     width: '100%',
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     textTransform: 'uppercase',
-    fontFamily: 'PressStart2P',
+    fontFamily: FONTS.display,
   },
 });
 

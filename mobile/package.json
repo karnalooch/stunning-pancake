@@ -28,6 +28,7 @@
   "dependencies": {
     "@4velo/api-client": "workspace:*",
     "@expo-google-fonts/press-start-2p": "^0.4.1",
+    "@expo-google-fonts/silkscreen": "^0.4.2",
     "@expo-google-fonts/vt323": "^0.4.1",
     "@legendapp/state": "3.0.0-beta.46",
     "@maplibre/maplibre-react-native": "^11.3.4",

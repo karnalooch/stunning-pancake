@@ -3,6 +3,7 @@ import { Pressable, Text, ActivityIndicator, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
 import { HapticService } from '../services/HapticService';
+import { FONTS } from '../theme/fonts';
 
 interface GpsRecoveryBannerProps {
   visible: boolean;
@@ -29,7 +30,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     text: {
       fontSize: 9,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       color: C.hudOutline,
       textAlign: 'center',
       lineHeight: 14,

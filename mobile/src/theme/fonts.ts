@@ -8,7 +8,7 @@
  */
 export const FONTS = {
   /** Chrome titles, labels, buttons. */
-  display: 'PressStart2P',
+  display: 'Silkscreen',
   /** Numeric/metric readouts (HUD, stats). */
   mono: 'VT323',
 } as const;

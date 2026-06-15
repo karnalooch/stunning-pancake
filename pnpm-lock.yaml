@@ -169,6 +169,9 @@ importers:
       '@expo-google-fonts/press-start-2p':
         specifier: ^0.4.1
         version: 0.4.1
+      '@expo-google-fonts/silkscreen':
+        specifier: ^0.4.2
+        version: 0.4.2
       '@expo-google-fonts/vt323':
         specifier: ^0.4.1
         version: 0.4.1
@@ -1433,6 +1436,9 @@ packages:
 
   '@expo-google-fonts/press-start-2p@0.4.1':
     resolution: {integrity: sha512-L6SjPh8qwQ9i34VRNa8XPHH0gYACE1AGcq2MDLGfmBpxDnJnbECuChv6pWO81F2XqPx+V7gUlvSL0rbgh/F6/w==}
+
+  '@expo-google-fonts/silkscreen@0.4.2':
+    resolution: {integrity: sha512-3btwlD7Yreei/7IbXmUWW9h9fH7q/GJTNqF2g52fAYbyGqq/nNqnIegD6Wi5ewTnWrD8ZBF1sRim8UHaZFZhNQ==}
 
   '@expo-google-fonts/vt323@0.4.1':
     resolution: {integrity: sha512-Mk1GmaJa3lAVJ4H7byGkuvAoB7snfYknMqMstMwTTmg3mofYiSZNmP/QrNPYsVeTh9HpA2cvXmZ+zuQD0UGPRQ==}
@@ -9486,6 +9492,8 @@ snapshots:
   '@exodus/schemasafe@1.3.0': {}
 
   '@expo-google-fonts/press-start-2p@0.4.1': {}
+
+  '@expo-google-fonts/silkscreen@0.4.2': {}
 
   '@expo-google-fonts/vt323@0.4.1': {}
 

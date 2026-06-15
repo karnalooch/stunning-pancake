@@ -4,6 +4,7 @@ import { useUnistyles } from 'react-native-unistyles';
 import { PixelIcon } from '../ui/PixelIcon';
 import { CURRENCY_ICONS } from '../../assets/tabIcons';
 import { TextureBackground } from '../ui/TextureBackground';
+import { FONTS } from '../../theme/fonts';
 
 interface LevelXpBarProps {
   level: number;
@@ -29,7 +30,7 @@ export const LevelXpBar: React.FC<LevelXpBarProps> = ({
     >
       <View style={styles.header}>
         <PixelIcon source={CURRENCY_ICONS.xp} size={16} baseSize={16} />
-        <Text style={[styles.level, { color: c.primary, fontFamily: 'PressStart2P' }]}>LVL {level}</Text>
+        <Text style={[styles.level, { color: c.primary, fontFamily: FONTS.display }]}>LVL {level}</Text>
       </View>
       <View style={[styles.track, { borderColor: c.hudOutline, backgroundColor: c.surfaceContainerHigh }]}>
         <View style={[styles.fill, { width: `${pct}%`, backgroundColor: c.primaryFixed }]} />

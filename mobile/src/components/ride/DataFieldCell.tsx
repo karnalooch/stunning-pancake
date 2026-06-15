@@ -8,6 +8,7 @@ import {
 } from '../../ride/dataFields';
 import type { FieldEmphasis, RideMetricsSnapshot } from '../../ride/types';
 import { useI18n } from '../../i18n/useI18n';
+import { FONTS } from '../../theme/fonts';
 
 interface DataFieldCellProps {
   fieldId: DataFieldId;
@@ -51,7 +52,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     label: {
       fontSize: 8,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       color: c.secondary,
       textTransform: 'uppercase',
       letterSpacing: 0.5,

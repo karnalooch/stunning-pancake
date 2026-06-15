@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FONTS } from '../../theme/fonts';
 
 interface EdgeStateBannerProps {
   title: string;
@@ -30,7 +31,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     title: {
       fontSize: 12,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       color: c.onBackground,
       textTransform: 'uppercase',
       marginBottom: 6,
@@ -44,7 +45,7 @@ const stylesheet = StyleSheet.create((theme) => {
     dismiss: { marginTop: 8, alignSelf: 'flex-end' },
     dismissText: {
       fontSize: 10,
-      fontFamily: 'PressStart2P',
+      fontFamily: FONTS.display,
       color: c.primary,
       textTransform: 'uppercase',
     },

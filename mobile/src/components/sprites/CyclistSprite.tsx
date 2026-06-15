@@ -11,6 +11,7 @@ import { useMotionPolicy } from '../../hooks/useMotionPolicy';
 import { ASSETS } from '../../assets/assetRegistry';
 import { HeroPreferencesService } from '../../services/HeroPreferencesService';
 import { SpriteAnimator } from './SpriteAnimator';
+import { FONTS } from '../../theme/fonts';
 
 interface CyclistSpriteProps {
   size?: number;
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-    fontFamily: 'PressStart2P',
+    fontFamily: FONTS.display,
     color: '#191d17',
     opacity: 0.85,
   },
