@@ -5,7 +5,7 @@
  * local leaderboard, nearby quests, City of the Week.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import {
@@ -29,6 +29,7 @@ import { CityBanner } from '../components/game/CityBanner';
 import { VersusBar } from '../components/game/VersusBar';
 import { LaurelHeader } from '../components/ui/LaurelHeader';
 import { OrnateFrame } from '../components/ui/OrnateFrame';
+import { getVisionCityHubFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as Record<string, string>;
@@ -92,13 +93,56 @@ export const CityHubScreen: React.FC<{
     const s = stylesheet;
     const C = theme.colors as Record<string, string>;
     const { enabled: immersiveEnabled } = useImmersiveTheme();
+    const fixturesEnabled = isVisionFixtures();
+    const cityHubFixture = getVisionCityHubFixture(fixturesEnabled);
     const { level, xpBar } = useGameProgress();
+    const displayLevel = cityHubFixture?.level ?? level;
     const [showMoo, setShowMoo] = useState(false);
     const mooTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
     const [lbLoading, setLbLoading] = useState(true);
     const [cityHub, setCityHub] = useState<CityHubSummary | null>(null);
+    const fixtureSummary = useMemo<CityHubSummary>(() => ({
+        active_event: null,
+        city_of_week: {
+            tenant_id: 'fixture_lublin',
+            name: cityHubFixture?.cityOfWeek.name ?? 'Lublin',
+            score_km: (cityHubFixture?.cityWars.left.score ?? 1240) / 10,
+        },
+        city_wars: {
+            event_id: 1,
+            tenant_a: { id: 'fixture_lublin', name: cityHubFixture?.cityWars.left.name ?? 'Lublin', score: cityHubFixture?.cityWars.left.score ?? 1240 },
+            tenant_b: { id: 'fixture_warszawa', name: cityHubFixture?.cityWars.right.name ?? 'Warszawa', score: cityHubFixture?.cityWars.right.score ?? 1180 },
+            leader:
+                (cityHubFixture?.cityWars.left.score ?? 1240) >= (cityHubFixture?.cityWars.right.score ?? 1180)
+                    ? (cityHubFixture?.cityWars.left.name ?? 'Lublin')
+                    : (cityHubFixture?.cityWars.right.name ?? 'Warszawa'),
+            delta: Math.abs((cityHubFixture?.cityWars.left.score ?? 1240) - (cityHubFixture?.cityWars.right.score ?? 1180)),
+        },
+        leaderboard: (cityHubFixture?.leaderboard ?? []).map((entry) => ({
+            rank: entry.rank,
+            username: entry.name,
+            points: entry.score,
+            score_km: entry.score,
+            is_me: false,
+        })),
+        my_rank: null,
+        quests: (cityHubFixture?.quests ?? []).map((quest) => ({
+            id: quest.id,
+            name: quest.title,
+            category: 'QUEST',
+            description: `${quest.distanceKm.toFixed(2)} km · ${quest.star}★ · ${quest.coin}`,
+            latitude: null,
+            longitude: null,
+        })),
+    }), [cityHubFixture]);
     useEffect(() => {
+        if (fixturesEnabled) {
+            setCityHub(fixtureSummary);
+            setLeaderboard(fixtureSummary.leaderboard);
+            setLbLoading(false);
+            return;
+        }
         const cached = OfflineCacheService.getCityHub();
         if (cached) {
             setCityHub(cached);
@@ -118,7 +162,7 @@ export const CityHubScreen: React.FC<{
                 }
             })
             .finally(() => setLbLoading(false));
-    }, [user?.username]);
+    }, [fixtureSummary, fixturesEnabled, user?.username]);
 
     useEffect(() => () => {
         if (mooTimer.current) clearTimeout(mooTimer.current);
@@ -145,7 +189,7 @@ export const CityHubScreen: React.FC<{
         {immersiveEnabled && <SceneBackground sceneId="city_hub" scrim="soft" />}
         <AppHeader
             rightSlot={
-                <LevelXpBar level={level} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
+                <LevelXpBar level={displayLevel} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
             }
         />
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>

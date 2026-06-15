@@ -20,6 +20,7 @@ import { LaurelHeader } from '../components/ui/LaurelHeader';
 import { OrnateFrame } from '../components/ui/OrnateFrame';
 import { AchievementGrid } from '../components/game/AchievementGrid';
 import { PixelText } from '../components/PixelText';
+import { getVisionProfileFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -118,32 +119,52 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   const s = stylesheet;
   const c = theme.colors as Record<string, string>;
   const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const fixturesEnabled = isVisionFixtures();
+  const profileFixture = getVisionProfileFixture(fixturesEnabled);
   const { level, xpBar } = useGameProgress();
   const { rides, distanceKm, verified, streakDays, loading: statsLoading, offline } = useRiderStats();
   const [username, setUsername] = useState(user?.username ?? 'RIDER');
 
   useEffect(() => {
+    if (fixturesEnabled) {
+      setUsername(profileFixture?.username ?? 'RIDER');
+      return;
+    }
     AuthService.getProfile()
       .then((profile) => {
         if (profile?.username) setUsername(profile.username);
       })
       .catch(() => {});
-  }, []);
+  }, [fixturesEnabled, profileFixture]);
+
+  const displayLevel = profileFixture?.level ?? level;
+  const displayXpCurrent = profileFixture?.xpCurrent ?? xpBar.current;
+  const displayXpMax = profileFixture?.xpMax ?? xpBar.max;
+  const displayDistanceKm = profileFixture?.stats.km ?? distanceKm;
+  const displayRides = profileFixture?.stats.rides ?? rides;
+  const displayVerified = profileFixture?.stats.kom ?? verified;
+  const displayName = formatRiderDisplayName(profileFixture?.username ?? username);
+  const displayStatsLoading = fixturesEnabled ? false : statsLoading;
+  const displayOffline = fixturesEnabled ? false : offline;
+  const displayXpPct = Math.max(0, Math.min(1, displayXpCurrent / Math.max(1, displayXpMax)));
 
   const achievements = useMemo(
-    () => [
-      { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
-      { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
-      { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
-      { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
-      { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
-      { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
-      { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
-      { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
-      { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
-      { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
-    ],
-    [distanceKm, rides, streakDays, verified],
+    () =>
+      fixturesEnabled
+        ? [...(profileFixture?.achievements ?? [])]
+        : [
+            { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
+            { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
+            { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
+            { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
+            { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
+            { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
+            { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
+            { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
+            { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
+            { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
+          ],
+    [distanceKm, fixturesEnabled, profileFixture, rides, streakDays, verified],
   );
 
   return (
@@ -160,7 +181,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
         <RiderAvatar size={40} />
       </AppHeader>
       <ScrollView>
-        {offline ? (
+        {displayOffline ? (
           <EdgeStateBanner
             title={t.errors.network}
             message={t.errors.offlineCache}
@@ -172,31 +193,36 @@ export const AthleteProfileScreen: React.FC<Props> = ({
             <AvatarFramed size={88} />
             <View style={{ flex: 1, gap: 8 }}>
               <PixelText size="xl" style={s.hn} numberOfLines={1}>
-                {formatRiderDisplayName(username)}
+                {displayName}
               </PixelText>
               <PixelText size="sm" style={s.hs}>
                 {t.profile.warrior.toUpperCase()}
               </PixelText>
               {immersiveEnabled && (
-                <LevelXpBar level={level} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
+                <LevelXpBar
+                  level={displayLevel}
+                  xpCurrent={displayXpCurrent}
+                  xpMax={displayXpMax}
+                  pct={displayXpPct}
+                />
               )}
               {immersiveEnabled && (
                 <PixelText size="sm" style={[s.hs, { color: c.primary }]}>
-                  {streakDays} {t.profile.streakLabel} · {rides} {t.profile.rides.toLowerCase()}
+                  {streakDays} {t.profile.streakLabel} · {displayRides} {t.profile.rides.toLowerCase()}
                 </PixelText>
               )}
             </View>
           </View>
         </OrnateFrame>
-        {statsLoading ? (
+        {displayStatsLoading ? (
           <SkeletonBlock height={120} style={{ marginHorizontal: LAYOUT.gutter }} />
         ) : (
         <View style={s.grid}>
           {[
-            { l: t.profile.distance, v: `${distanceKm.toLocaleString()} km` },
-            { l: t.profile.rides, v: String(rides) },
-            { l: t.profile.verified, v: String(verified) },
-            { l: t.profile.pending, v: String(Math.max(0, rides - verified)) },
+            { l: t.profile.distance, v: `${displayDistanceKm.toLocaleString()} km` },
+            { l: t.profile.rides, v: String(displayRides) },
+            { l: t.profile.verified, v: String(displayVerified) },
+            { l: t.profile.pending, v: String(Math.max(0, displayRides - displayVerified)) },
           ].map((m, i) => (
             <OrnateFrame key={i} style={s.tile} padding={12}>
               <PixelText size="xs" style={s.tl}>{m.l}</PixelText>

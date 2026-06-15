@@ -8,7 +8,7 @@
  * pixel-border pixel-shadow retro aesthetic.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
     View,
     Text,
@@ -45,6 +45,12 @@ import { useI18n } from '../i18n/useI18n';
 import { useRiderStats } from '../hooks/useRiderStats';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { LAYOUT } from '../theme/layout';
+import type { DailyQuest } from '../game/quests';
+import {
+    getVisionProfileFixture,
+    getVisionRideDashboardFixture,
+    isVisionFixtures,
+} from '../bootstrap/visionFixtures';
 
 // ─── Styles ────────────────────────────────────────────────────────
 
@@ -336,6 +342,9 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     const { theme } = useUnistyles(); const s = stylesheet;
     const { t, locale } = useI18n();
     const C = theme.colors as Record<string, string>;
+    const fixturesEnabled = isVisionFixtures();
+    const rideFixture = getVisionRideDashboardFixture(fixturesEnabled);
+    const profileFixture = getVisionProfileFixture(fixturesEnabled);
     const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
     const { notice, dismiss } = usePlatformNotices(
         (user as { tenant_id?: string } | null)?.tenant_id ?? null,
@@ -350,10 +359,34 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
         streakDays,
     } = useRiderStats();
 
-    const lastRideDistanceKm = latestRide ? (latestRide.distance ?? 0) / 1000 : null;
-    const lastRideDuration = latestRide?.duration ?? null;
+    const fixtureDailyQuests = useMemo<DailyQuest[]>(
+        () => [
+            {
+                id: 'vision_daily_quest',
+                title: rideFixture?.dailyQuest.title ?? 'Przejedź 5 km',
+                description: `${rideFixture?.dailyQuest.current ?? 3.2}/${rideFixture?.dailyQuest.target ?? 5} km`,
+                metric: 'distance_km',
+                target: rideFixture?.dailyQuest.target ?? 5,
+                progress: rideFixture?.dailyQuest.current ?? 3.2,
+                xpReward: rideFixture?.dailyQuest.reward ?? 50,
+                completed: (rideFixture?.dailyQuest.current ?? 3.2) >= (rideFixture?.dailyQuest.target ?? 5),
+            },
+        ],
+        [rideFixture],
+    );
 
-    const displayName = formatRiderDisplayName(user?.username);
+    const displayLevel = rideFixture?.level ?? level;
+    const displayXpCurrent = rideFixture?.xpCurrent ?? xpBar.current;
+    const displayXpMax = rideFixture?.xpMax ?? xpBar.max;
+    const displayXpPct = Math.max(0, Math.min(1, displayXpCurrent / Math.max(1, displayXpMax)));
+    const displayStreakDays = rideFixture?.streakDays ?? streakDays;
+    const displayQuests = fixturesEnabled ? fixtureDailyQuests : quests.quests;
+    const displayWeeklyBars = fixturesEnabled ? [0.52, 0.64, 0.47, 0.88, 0.72, 0.58, 0.41] : weeklyBars;
+    const displayStatsLoading = fixturesEnabled ? false : statsLoading;
+    const displayStatsOffline = fixturesEnabled ? false : statsOffline;
+    const lastRideDistanceKm = fixturesEnabled ? (rideFixture?.weekDistanceKm ?? 128.7) : (latestRide ? (latestRide.distance ?? 0) / 1000 : null);
+    const lastRideDuration = fixturesEnabled ? '1h 42m' : (latestRide?.duration ?? null);
+    const displayName = formatRiderDisplayName(profileFixture?.username ?? user?.username);
 
     const handleStartRide = useCallback(() => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
@@ -375,7 +408,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
             <AppHeader
                 rightSlot={
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <StreakBadge days={streakDays} />
+                        <StreakBadge days={displayStreakDays} />
                     </View>
                 }
                 rightAction={{
@@ -393,7 +426,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
             {/* Content */}
             <ScrollView style={s.scroll} contentContainerStyle={s.content}>
                 <DevEnvironmentBanner />
-                {statsOffline ? (
+                {displayStatsOffline ? (
                     <EdgeStateBanner
                         title={t.errors.network}
                         message={t.errors.offlineCache}
@@ -465,10 +498,10 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                                     <CyclistSprite size={48} state="idle" />
                                 )}
                                 <LevelXpBar
-                                    level={level}
-                                    xpCurrent={xpBar.current}
-                                    xpMax={xpBar.max}
-                                    pct={xpBar.pct}
+                                    level={displayLevel}
+                                    xpCurrent={displayXpCurrent}
+                                    xpMax={displayXpMax}
+                                    pct={displayXpPct}
                                 />
                             </View>
                             <View style={s.sportRow}>
@@ -501,14 +534,14 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
 
                 {!isRecording && (
                     <View style={s.section}>
-                        <DailyQuestCard quests={quests.quests} />
+                        <DailyQuestCard quests={displayQuests} />
                     </View>
                 )}
 
                 {/* Last ride from API */}
                 <View style={s.section}>
                     <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
-                    {statsLoading ? (
+                    {displayStatsLoading ? (
                         <SkeletonBlock height={88} />
                     ) : lastRideDistanceKm == null ? (
                         <EmptyState message={t.dashboard.noRides} icon="training" />
@@ -535,7 +568,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 <View style={[s.weeklyCard, s.pixelShadow]}>
                     <Text style={s.sectionHeader}>{t.dashboard.weeklyLoad}</Text>
                     <View style={s.chartContainer}>
-                        {weeklyBars.map((h, i) => (
+                        {displayWeeklyBars.map((h, i) => (
                             <View
                                 key={i}
                                 style={[

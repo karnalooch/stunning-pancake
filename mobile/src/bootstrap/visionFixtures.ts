@@ -74,3 +74,20 @@ export const VISION_RIDE_DASHBOARD = {
   dailyQuest: { title: 'Przejedź 5 km', current: 3.2, target: 5.0, reward: 50 },
   weekDistanceKm: 128.7,
 } as const;
+
+/** Return profile fixture when vision mode is enabled. */
+export function getVisionProfileFixture(enabled: boolean): typeof VISION_PROFILE | null {
+  return enabled ? VISION_PROFILE : null;
+}
+
+/** Return city-hub fixture when vision mode is enabled. */
+export function getVisionCityHubFixture(enabled: boolean): typeof VISION_CITY_HUB | null {
+  return enabled ? VISION_CITY_HUB : null;
+}
+
+/** Return ride dashboard fixture when vision mode is enabled. */
+export function getVisionRideDashboardFixture(
+  enabled: boolean,
+): typeof VISION_RIDE_DASHBOARD | null {
+  return enabled ? VISION_RIDE_DASHBOARD : null;
+}

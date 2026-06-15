@@ -1,5 +1,8 @@
 import {
   isVisionFixtures,
+  getVisionCityHubFixture,
+  getVisionProfileFixture,
+  getVisionRideDashboardFixture,
   VISION_PROFILE,
   VISION_CITY_HUB,
   VISION_RIDE_DASHBOARD,
@@ -32,5 +35,15 @@ describe('visionFixtures', () => {
     expect(VISION_RIDE_DASHBOARD.streakDays).toBe(12);
     expect(VISION_RIDE_DASHBOARD.weekDistanceKm).toBe(128.7);
     expect(VISION_RIDE_DASHBOARD.dailyQuest.target).toBe(5.0);
+  });
+
+  test('screen adapters expose fixtures only when flag is enabled', () => {
+    expect(getVisionProfileFixture(true)?.username).toBe('Anna K.');
+    expect(getVisionCityHubFixture(true)?.cityOfWeek.name).toBe('Lublin');
+    expect(getVisionRideDashboardFixture(true)?.streakDays).toBe(12);
+
+    expect(getVisionProfileFixture(false)).toBeNull();
+    expect(getVisionCityHubFixture(false)).toBeNull();
+    expect(getVisionRideDashboardFixture(false)).toBeNull();
   });
 });
