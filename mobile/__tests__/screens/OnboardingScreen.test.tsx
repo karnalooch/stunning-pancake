@@ -182,6 +182,9 @@ describe('OnboardingScreen', () => {
         (n: TestRenderer.ReactTestInstance) =>
           typeof n.props?.children === 'string' && n.props.children === label,
       )[0];
+      if (!node) {
+        throw new Error(`Button with label "${label}" not found`);
+      }
       act(() => {
         node.props.onPress();
       });

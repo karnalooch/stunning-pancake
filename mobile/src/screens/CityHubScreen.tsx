@@ -25,6 +25,10 @@ import { OfflineCacheService } from '../services/OfflineCacheService';
 import { withRetry } from '../services/apiRetry';
 import { AppHeader } from '../components/ui/AppHeader';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { CityBanner } from '../components/game/CityBanner';
+import { VersusBar } from '../components/game/VersusBar';
+import { LaurelHeader } from '../components/ui/LaurelHeader';
+import { OrnateFrame } from '../components/ui/OrnateFrame';
 
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as Record<string, string>;
@@ -46,24 +50,11 @@ const stylesheet = StyleSheet.create(theme => {
     lvlText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
     scroll: { flex: 1 },
     content: { padding: 16, gap: 16 },
-    // City of the Week banner
-    banner: { borderRadius: 8, borderWidth: 4, borderColor: C.onBackground, overflow: 'hidden', aspectRatio: 1.83 },
-    bannerImg: { width: '100%', height: '100%', backgroundColor: C.primaryContainer },
-    bannerOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
-    bannerBadge: { fontSize: 10, fontWeight: '700', color: C.primaryFixed, textTransform: 'uppercase', letterSpacing: 2 },
-    bannerCity: { fontSize: 32, fontWeight: '700', color: C.onPrimary },
-    // City Wars
-    vsCard: { backgroundColor: C.parchment, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, padding: 16, gap: 12 },
+    // Section wrappers
+    sectionFrame: { gap: 10 },
+    // Legacy City Wars typography (kept for labels around the new VS component)
     vsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     vsTitle: { fontSize: 18, fontWeight: '700', color: C.onBackground, textTransform: 'uppercase' },
-    vsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-    vsCity: { fontSize: 14, fontWeight: '700', color: C.primary },
-    vsCityRight: { fontSize: 14, fontWeight: '700', color: C.onBackground, textAlign: 'right' },
-    vsScore: { fontSize: 20, fontWeight: '700', color: C.primary },
-    vsScoreRight: { fontSize: 20, fontWeight: '700', color: C.onBackground, textAlign: 'right' },
-    vsDivider: { fontSize: 14, fontWeight: '700', color: C.tertiary, textAlign: 'center' },
-    vsBar: { height: 16, flexDirection: 'row', backgroundColor: C.outlineVariant, borderWidth: 2, borderColor: C.onBackground, borderRadius: 2, overflow: 'hidden' },
-    vsBarLeft: { backgroundColor: C.primary },
     vsDelta: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase', textAlign: 'center', marginTop: 4 },
     // Leaderboard
     lbRow: {
@@ -147,9 +138,6 @@ export const CityHubScreen: React.FC<{
     const wars = cityHub?.city_wars;
     const leftScore = wars?.tenant_a?.score ?? 0;
     const rightScore = wars?.tenant_b?.score ?? 0;
-    const totalScore = leftScore + rightScore;
-    const leftPct = totalScore > 0 ? Math.max(1, Math.round((leftScore / totalScore) * 100)) : 50;
-    const rightPct = Math.max(1, 100 - leftPct);
     const quests = cityHub?.quests ?? [];
 
     return (
@@ -162,53 +150,30 @@ export const CityHubScreen: React.FC<{
         />
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
             {/* City of the Week */}
-            <View style={[s.banner, s.shadow]}>
-                <View style={s.bannerImg}>
-                    <View style={{ width: '100%', height: '100%', backgroundColor: C.primaryContainer }} />
-                </View>
-                <View style={s.bannerOverlay}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <ChromeIcon id="cityStar" size={14} />
-                        <Text style={s.bannerBadge}>{t.compete.cityOfWeek.toUpperCase()}</Text>
-                    </View>
-                    <Text style={s.bannerCity}>{cityOfWeekName}</Text>
-                    <Text style={{ color: C.onPrimary, fontWeight: '700' }}>{cityOfWeekKm.toFixed(1)} km</Text>
-                </View>
-            </View>
+            <OrnateFrame style={s.sectionFrame}>
+                <CityBanner cityName={cityOfWeekName} label={t.compete.cityOfWeek} />
+                <Text style={{ color: C.secondary, textAlign: 'center' }}>{cityOfWeekKm.toFixed(1)} km</Text>
+            </OrnateFrame>
 
             {/* City Wars */}
-            <View style={[s.vsCard, s.shadow]}>
+            <OrnateFrame style={s.sectionFrame}>
                 <Pressable style={s.vsHeader} onPress={handleCityWarsPress}>
                     <ChromeIcon id="cityWars" size={20} />
                     <Text style={s.vsTitle}>{t.compete.cityWars}</Text>
                 </Pressable>
                 {showMoo ? <SpeechBubble text={t.compete.moo} /> : null}
-                <View style={s.vsRow}>
-                    <View>
-                        <Text style={s.vsCity}>{wars?.tenant_a?.name ?? '—'}</Text>
-                        <Text style={s.vsScore}>{leftScore.toFixed(2)} {t.compete.vpUnit}</Text>
-                    </View>
-                    <Text style={[s.vsDivider, { color: rivalColor }]}>{t.compete.vs}</Text>
-                    <View>
-                        <Text style={s.vsCityRight}>{wars?.tenant_b?.name ?? '—'}</Text>
-                        <Text style={s.vsScoreRight}>{rightScore.toFixed(2)} {t.compete.vpUnit}</Text>
-                    </View>
-                </View>
-                <View style={s.vsBar}>
-                    <View style={[s.vsBarLeft, { width: `${leftPct}%`, height: '100%' }]} />
-                    <View style={{ backgroundColor: rivalColor, width: `${rightPct}%`, height: '100%' }} />
-                </View>
+                <VersusBar
+                    left={{ name: wars?.tenant_a?.name ?? '—', score: Math.round(leftScore) }}
+                    right={{ name: wars?.tenant_b?.name ?? '—', score: Math.round(rightScore) }}
+                />
                 <Text style={s.vsDelta}>
                     {wars ? `${t.compete.lead}: ${wars.delta.toFixed(2)} ${t.compete.vpUnit}` : t.compete.waitingBattle}
                 </Text>
-            </View>
+            </OrnateFrame>
 
             {/* Top Riders — live API */}
-            <View style={[s.vsCard, s.shadow]}>
-                <View style={s.vsHeader}>
-                    <ChromeIcon id="leaderboard" size={20} />
-                    <Text style={s.vsTitle}>{t.compete.leaderboard}</Text>
-                </View>
+            <OrnateFrame style={s.sectionFrame}>
+                <LaurelHeader title={t.compete.leaderboard} />
                 {lbLoading ? (
                     <SkeletonBlock height={160} />
                 ) : leaderboard.length === 0 ? (
@@ -231,10 +196,10 @@ export const CityHubScreen: React.FC<{
                         </View>
                     ))
                 )}
-            </View>
+            </OrnateFrame>
 
             {/* Nearby Quests */}
-            <View style={[s.vsCard, s.shadow]}>
+            <OrnateFrame style={s.sectionFrame}>
                 <View style={s.vsHeader}>
                     <ChromeIcon id="quests" size={20} />
                     <Text style={s.vsTitle}>{t.compete.nearbyQuests}</Text>
@@ -275,7 +240,7 @@ export const CityHubScreen: React.FC<{
                         ))}
                     </View>
                 )}
-            </View>
+            </OrnateFrame>
 
             <View style={s.questGrid}>
                 <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={onOpenClubs}>

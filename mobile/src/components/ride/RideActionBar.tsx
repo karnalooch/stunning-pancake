@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
+import { FONTS } from '../../theme/fonts';
 
 interface RideActionBarProps {
   isPaused: boolean;
@@ -14,6 +15,30 @@ interface RideActionBarProps {
 
 const STOP_HOLD_MS = 900;
 
+type ActionIcon = 'stop' | 'play' | 'pause';
+
+const RideActionIcon: React.FC<{ type: ActionIcon; color: string }> = ({ type, color }) => {
+  if (type === 'stop') {
+    return <View style={{ width: 12, height: 12, backgroundColor: color, borderWidth: 1, borderColor: color }} />;
+  }
+  if (type === 'pause') {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <View style={{ width: 4, height: 12, backgroundColor: color }} />
+        <View style={{ width: 4, height: 12, backgroundColor: color }} />
+      </View>
+    );
+  }
+  return (
+    <View style={{ justifyContent: 'center', gap: 1 }}>
+      <View style={{ width: 4, height: 2, backgroundColor: color }} />
+      <View style={{ width: 6, height: 2, backgroundColor: color }} />
+      <View style={{ width: 8, height: 2, backgroundColor: color }} />
+      <View style={{ width: 10, height: 2, backgroundColor: color }} />
+    </View>
+  );
+};
+
 export const RideActionBar: React.FC<RideActionBarProps> = ({
   isPaused,
   onPause,
@@ -23,6 +48,9 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
   const { theme } = useUnistyles();
   const { t } = useI18n();
   const c = theme.colors as Record<string, string>;
+  const onError = c.onError ?? '#FFFFFF';
+  const onBackground = c.onBackground ?? '#0B1D33';
+  const hudOutline = c.hudOutline ?? '#0B1D33';
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stopArmed, setStopArmed] = useState(false);
 
@@ -73,8 +101,8 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
         accessibilityRole="button"
         accessibilityLabel={t.ride.actions.stopConfirm}
       >
-        <Text style={[styles.icon, { color: c.onError }]}>■</Text>
-        <Text style={[styles.label, { color: c.onError, fontFamily: 'PressStart2P' }]} allowFontScaling>
+        <RideActionIcon type="stop" color={onError} />
+        <Text style={[styles.label, { color: onError, fontFamily: FONTS.display }]} allowFontScaling>
           {stopArmed ? '…' : t.ride.actions.stop}
         </Text>
       </Pressable>
@@ -97,8 +125,8 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
             onResume();
           }}
         >
-          <Text style={[styles.icon, { color: c.onBackground }]}>▶</Text>
-          <Text style={[styles.label, { color: c.onBackground, fontFamily: 'PressStart2P' }]}>
+          <RideActionIcon type="play" color={onBackground} />
+          <Text style={[styles.label, { color: onBackground, fontFamily: FONTS.display }]}>
             {t.ride.actions.resume}
           </Text>
         </Pressable>
@@ -123,8 +151,8 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           accessibilityRole="button"
           accessibilityLabel={t.ride.actions.pause}
         >
-          <Text style={[styles.icon, { color: c.hudOutline }]}>❚❚</Text>
-          <Text style={[styles.label, { color: c.hudOutline, fontFamily: 'PressStart2P' }]}>
+          <RideActionIcon type="pause" color={hudOutline} />
+          <Text style={[styles.label, { color: hudOutline, fontFamily: FONTS.display }]}>
             {t.ride.actions.pause}
           </Text>
         </Pressable>
@@ -146,10 +174,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-  },
-  icon: {
-    fontSize: 14,
-    fontWeight: '800',
   },
   label: {
     fontSize: 9,

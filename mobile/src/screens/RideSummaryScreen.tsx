@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { ParticleSystem } from '../components/effects/ParticleSystem';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { ShareResultCard } from '../components/game/ShareResultCard';
+import { FinishCelebration } from '../components/game/FinishCelebration';
 import { SceneBackground } from '../components/scene/SceneBackground';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import {
@@ -52,6 +53,21 @@ const stylesheet = StyleSheet.create((theme) => {
       textAlign: 'center' as const,
     },
     subtitle: { fontSize: 16, fontWeight: '500', color: C.outline, marginTop: 4 },
+    gradeBadge: {
+      minWidth: 88,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderWidth: 3,
+      borderColor: C.hudOutline,
+      backgroundColor: C.goldAmber,
+      alignItems: 'center' as const,
+    },
+    gradeText: {
+      fontSize: 32,
+      fontWeight: '900',
+      color: C.hudOutline,
+      textTransform: 'uppercase' as const,
+    },
     xpBanner: {
       backgroundColor: C.primaryContainer,
       borderWidth: 3,
@@ -125,9 +141,13 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
         <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>
         <View style={{ width: 40 }} />
       </View>
+      <FinishCelebration />
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
         <View style={s.titleSection}>
           <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
+          <View style={[s.gradeBadge, s.shadow]}>
+            <Text style={s.gradeText}>{rank}</Text>
+          </View>
         </View>
         {immersiveEnabled && <CyclistSprite size={72} state="victory" expressionMode />}
         <ShareResultCard

@@ -36,7 +36,6 @@ export const AvatarFramed: React.FC<AvatarFramedProps> = ({ size = 96 }) => {
           source={frame}
           style={{ position: 'absolute', width: size, height: size }}
           resizeMode="contain"
-          pointerEvents="none"
         />
       ) : null}
     </View>

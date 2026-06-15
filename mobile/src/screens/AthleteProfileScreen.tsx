@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
@@ -10,13 +10,16 @@ import { useRiderStats } from '../hooks/useRiderStats';
 import { SceneBackground } from '../components/scene/SceneBackground';
 import { LevelXpBar } from '../components/game/LevelXpBar';
 import { formatRiderDisplayName } from '../utils/displayName';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { AppHeader } from '../components/ui/AppHeader';
-import { GameCard } from '../components/ui/GameCard';
 import { RiderAvatar } from '../components/ui/RiderAvatar';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import { LAYOUT } from '../theme/layout';
+import { AvatarFramed } from '../components/ui/AvatarFramed';
+import { LaurelHeader } from '../components/ui/LaurelHeader';
+import { OrnateFrame } from '../components/ui/OrnateFrame';
+import { AchievementGrid } from '../components/game/AchievementGrid';
+import { PixelText } from '../components/PixelText';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
@@ -69,20 +72,15 @@ const stylesheet = StyleSheet.create((theme) => {
       borderColor: c.onBackground,
       backgroundColor: c.primaryContainer,
     },
-    hn: { fontSize: 24, fontWeight: '700', color: c.onBackground },
-    hs: { fontSize: 14, color: c.secondary },
+    hn: { color: c.onBackground },
+    hs: { fontSize: 12, color: c.secondary },
     grid: { flexDirection: 'row', flexWrap: 'wrap', padding: LAYOUT.gutter, gap: LAYOUT.compactGap },
     tile: {
       width: '47%',
-      backgroundColor: c.parchment,
-      padding: 12,
-      borderWidth: 2,
-      borderColor: c.onBackground,
-      borderRadius: 8,
-      ...sh,
+      padding: 0,
     },
-    tl: { fontSize: 10, fontWeight: '700', color: c.secondary, textTransform: 'uppercase' },
-    tv: { fontSize: 22, fontWeight: '700', color: c.onBackground, marginTop: 4 },
+    tl: { fontSize: 10, color: c.secondary, textTransform: 'uppercase' },
+    tv: { fontSize: 20, color: c.onBackground, marginTop: 4 },
     btn: {
       backgroundColor: c.primaryContainer,
       padding: LAYOUT.gutter,
@@ -132,6 +130,22 @@ export const AthleteProfileScreen: React.FC<Props> = ({
       .catch(() => {});
   }, []);
 
+  const achievements = useMemo(
+    () => [
+      { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
+      { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
+      { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
+      { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
+      { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
+      { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
+      { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
+      { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
+      { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
+      { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
+    ],
+    [distanceKm, rides, streakDays, verified],
+  );
+
   return (
     <View style={s.ct}>
       {immersiveEnabled && <SceneBackground sceneId="profile" scrim="soft" />}
@@ -153,29 +167,27 @@ export const AthleteProfileScreen: React.FC<Props> = ({
             variant="offline"
           />
         ) : null}
-        <GameCard
-          style={{ margin: LAYOUT.gutter, flexDirection: 'row', alignItems: 'center', gap: LAYOUT.sectionGap }}
-          texture="wood_grain"
-        >
-          {immersiveEnabled ? <CyclistSprite size={64} state="victory" /> : <View style={s.hi} />}
-          <View style={{ flex: 1, gap: 8 }}>
-            <Text style={s.hn} numberOfLines={1}>{formatRiderDisplayName(username)}</Text>
-            <Text style={s.hs}>{t.profile.warrior.toUpperCase()}</Text>
-            {immersiveEnabled && (
-              <LevelXpBar
-                level={level}
-                xpCurrent={xpBar.current}
-                xpMax={xpBar.max}
-                pct={xpBar.pct}
-              />
-            )}
-            {immersiveEnabled && (
-              <Text style={[s.hs, { color: c.primary }]}>
-                {streakDays} {t.profile.streakLabel} · {rides} {t.profile.rides.toLowerCase()}
-              </Text>
-            )}
+        <OrnateFrame style={{ margin: LAYOUT.gutter }} tone="parchment">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: LAYOUT.sectionGap }}>
+            <AvatarFramed size={88} />
+            <View style={{ flex: 1, gap: 8 }}>
+              <PixelText size="xl" style={s.hn} numberOfLines={1}>
+                {formatRiderDisplayName(username)}
+              </PixelText>
+              <PixelText size="sm" style={s.hs}>
+                {t.profile.warrior.toUpperCase()}
+              </PixelText>
+              {immersiveEnabled && (
+                <LevelXpBar level={level} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
+              )}
+              {immersiveEnabled && (
+                <PixelText size="sm" style={[s.hs, { color: c.primary }]}>
+                  {streakDays} {t.profile.streakLabel} · {rides} {t.profile.rides.toLowerCase()}
+                </PixelText>
+              )}
+            </View>
           </View>
-        </GameCard>
+        </OrnateFrame>
         {statsLoading ? (
           <SkeletonBlock height={120} style={{ marginHorizontal: LAYOUT.gutter }} />
         ) : (
@@ -186,13 +198,17 @@ export const AthleteProfileScreen: React.FC<Props> = ({
             { l: t.profile.verified, v: String(verified) },
             { l: t.profile.pending, v: String(Math.max(0, rides - verified)) },
           ].map((m, i) => (
-            <View key={i} style={s.tile}>
-              <Text style={s.tl}>{m.l}</Text>
-              <Text style={s.tv}>{m.v}</Text>
-            </View>
+            <OrnateFrame key={i} style={s.tile} padding={12}>
+              <PixelText size="xs" style={s.tl}>{m.l}</PixelText>
+              <PixelText size="xl" style={s.tv}>{m.v}</PixelText>
+            </OrnateFrame>
           ))}
         </View>
         )}
+        <OrnateFrame style={{ marginHorizontal: LAYOUT.gutter, marginBottom: LAYOUT.gutter }} tone="surface">
+          <LaurelHeader title={t.settings.achievements} />
+          <AchievementGrid items={achievements} />
+        </OrnateFrame>
         <Pressable
           style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
           onPress={() => {
