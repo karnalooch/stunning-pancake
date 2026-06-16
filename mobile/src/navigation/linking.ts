@@ -51,6 +51,7 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
           },
         },
       },
+      VisionGallery: ROUTE_PATHS.visionGallery,
     },
   },
 };

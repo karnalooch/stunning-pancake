@@ -1,10 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { FONTS } from '../../theme/fonts';
+import { HUD_ACTION_ICONS } from '../../assets/visionAssets';
 
 interface RideActionBarProps {
   isPaused: boolean;
@@ -18,6 +19,11 @@ const STOP_HOLD_MS = 900;
 type ActionIcon = 'stop' | 'play' | 'pause';
 
 const RideActionIcon: React.FC<{ type: ActionIcon; color: string }> = ({ type, color }) => {
+  const source = HUD_ACTION_ICONS[type];
+  if (source) {
+    return <Image source={source} style={{ width: 18, height: 18 }} resizeMode="contain" />;
+  }
+  // Pixel glif fallback — replaced by PNG asset once generated
   if (type === 'stop') {
     return <View style={{ width: 12, height: 12, backgroundColor: color, borderWidth: 1, borderColor: color }} />;
   }
@@ -168,7 +174,7 @@ const styles = StyleSheet.create({
   },
   btn: {
     borderWidth: 2,
-    borderRadius: 8,
+    borderRadius: 0,
     minHeight: 48,
     paddingVertical: 14,
     alignItems: 'center',

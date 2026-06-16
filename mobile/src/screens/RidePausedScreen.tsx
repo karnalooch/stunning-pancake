@@ -26,7 +26,6 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
     textTransform: 'uppercase',
     marginTop: 12,
     marginBottom: 24,
@@ -44,7 +43,6 @@ const styles = StyleSheet.create({
   },
   btnText: {
     fontSize: 12,
-    fontWeight: '700',
     textTransform: 'uppercase',
     fontFamily: FONTS.display,
   },

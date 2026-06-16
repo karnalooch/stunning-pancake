@@ -21,6 +21,7 @@ export const ROUTE_PATHS = {
   globalLeaderboard: 'compete/global-leaderboard',
   ridePaused: 'ride/paused',
   rideSummary: 'ride/summary/:activityId?',
+  visionGallery: 'vision-gallery',
 } as const;
 
 export function buildActivityDetailRoute(

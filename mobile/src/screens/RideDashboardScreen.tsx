@@ -20,6 +20,7 @@ import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
 
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FONTS } from '../theme/fonts';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
@@ -86,8 +87,8 @@ const stylesheet = StyleSheet.create(theme => {
         backgroundColor: C.primaryContainer,
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: '700',
+        fontSize: 20,
+        fontFamily: FONTS.display,
         color: C.primary,
         textTransform: 'uppercase',
         letterSpacing: -0.5,
@@ -103,8 +104,8 @@ const stylesheet = StyleSheet.create(theme => {
         backgroundColor: C.surface,
     },
     settingsText: {
-        fontSize: 20,
-        fontWeight: '700',
+        fontSize: 16,
+        fontFamily: FONTS.display,
         color: C.primary,
     },
     sportRow: {
@@ -125,8 +126,8 @@ const stylesheet = StyleSheet.create(theme => {
         backgroundColor: C.primaryContainer,
     },
     sportChipText: {
-        fontSize: 11,
-        fontWeight: '700',
+        fontSize: 10,
+        fontFamily: FONTS.display,
         color: C.onBackground,
         textTransform: 'uppercase',
     },
@@ -152,15 +153,15 @@ const stylesheet = StyleSheet.create(theme => {
         marginBottom: 12,
     },
     heroGreeting: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: 12,
+        fontFamily: FONTS.display,
         color: C.secondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     heroName: {
-        fontSize: 32,
-        fontWeight: '700',
+        fontSize: 28,
+        fontFamily: FONTS.display,
         color: C.onBackground,
     },
     lvlBadge: {
@@ -172,8 +173,8 @@ const stylesheet = StyleSheet.create(theme => {
         borderRadius: 4,
     },
     lvlText: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: 12,
+        fontFamily: FONTS.display,
         color: C.onBackground,
     },
     heroStats: {
@@ -191,15 +192,15 @@ const stylesheet = StyleSheet.create(theme => {
         alignItems: 'center',
     },
     heroStatLabel: {
-        fontSize: 10,
-        fontWeight: '700',
+        fontSize: 8,
+        fontFamily: FONTS.display,
         color: C.secondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     heroStatValue: {
-        fontSize: 20,
-        fontWeight: '700',
+        fontSize: 18,
+        fontFamily: FONTS.display,
         color: C.primary,
         marginTop: 4,
     },
@@ -208,8 +209,8 @@ const stylesheet = StyleSheet.create(theme => {
         gap: 8,
     },
     sectionHeader: {
-        fontSize: 18,
-        fontWeight: '700',
+        fontSize: 16,
+        fontFamily: FONTS.display,
         color: C.onBackground,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -231,21 +232,21 @@ const stylesheet = StyleSheet.create(theme => {
         padding: 12,
     },
     metricLabel: {
-        fontSize: 10,
-        fontWeight: '700',
+        fontSize: 8,
+        fontFamily: FONTS.display,
         color: C.secondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
     metricValue: {
-        fontSize: 24,
-        fontWeight: '700',
+        fontSize: 22,
+        fontFamily: FONTS.display,
         color: C.onBackground,
         marginTop: 8,
     },
     metricUnit: {
-        fontSize: 14,
-        fontWeight: '500',
+        fontSize: 12,
+        fontFamily: FONTS.display,
         color: C.outline,
     },
     // ── Weekly Load ──
@@ -277,7 +278,7 @@ const stylesheet = StyleSheet.create(theme => {
     },
     chartLabel: {
         fontSize: 8,
-        fontWeight: '700',
+        fontFamily: FONTS.display,
         color: C.secondary,
         textTransform: 'uppercase',
     },

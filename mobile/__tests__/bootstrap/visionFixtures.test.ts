@@ -8,9 +8,13 @@ import {
   getVisionCityHubFixture,
   getVisionProfileFixture,
   getVisionRideDashboardFixture,
+  getVisionLeaderboardFixture,
+  getVisionActivityHistoryFixture,
   VISION_PROFILE,
   VISION_CITY_HUB,
   VISION_RIDE_DASHBOARD,
+  VISION_LEADERBOARD,
+  VISION_ACTIVITY_HISTORY,
 } from '../../src/bootstrap/visionFixtures';
 
 describe('visionFixtures', () => {
@@ -45,13 +49,25 @@ describe('visionFixtures', () => {
     expect(VISION_RIDE_DASHBOARD.dailyQuest.target).toBe(5.0);
   });
 
+  test('leaderboard + activity history fixtures match mocks', () => {
+    expect(VISION_LEADERBOARD[0]).toMatchObject({ rank: 1, username: 'Kamil_4V', points: 2450 });
+    expect(VISION_LEADERBOARD).toHaveLength(5);
+    expect(VISION_LEADERBOARD.some((e) => e.is_me)).toBe(true);
+    expect(VISION_ACTIVITY_HISTORY).toHaveLength(3);
+    expect(VISION_ACTIVITY_HISTORY[0]).toMatchObject({ type: 'BIKE', distance: 42300 });
+  });
+
   test('screen adapters expose fixtures only when flag is enabled', () => {
     expect(getVisionProfileFixture(true)?.username).toBe('Anna K.');
     expect(getVisionCityHubFixture(true)?.cityOfWeek.name).toBe('Lublin');
     expect(getVisionRideDashboardFixture(true)?.streakDays).toBe(12);
+    expect(getVisionLeaderboardFixture(true)?.length).toBe(5);
+    expect(getVisionActivityHistoryFixture(true)?.length).toBe(3);
 
     expect(getVisionProfileFixture(false)).toBeNull();
     expect(getVisionCityHubFixture(false)).toBeNull();
     expect(getVisionRideDashboardFixture(false)).toBeNull();
+    expect(getVisionLeaderboardFixture(false)).toBeNull();
+    expect(getVisionActivityHistoryFixture(false)).toBeNull();
   });
 });

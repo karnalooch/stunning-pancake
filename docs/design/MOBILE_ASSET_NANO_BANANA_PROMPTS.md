@@ -615,3 +615,19 @@ Parallax sky layers matching the existing `sky_day` style; horizontally tileable
 ### `sky_night`
 
 **Prompt:** A horizontally tileable parallax sky layer at night: a deep blue `#0B1D33` gradient darkening upward, scattered cream `#F5E6CC` pixel stars, a small gold `#D4A373` crescent moon, faint sepia `#C8B098` cloud wisps, arcade pixel-art style. Full-bleed 512×512, left and right edges seamlessly tileable, no text.
+
+## 28. HUD action icons (24×24 PNG, transparent) — Vision parity (active-ride HUD)
+
+Pixel-art action buttons for the bike-computer HUD overlay. Single centered pixel-art subjects, transparent background, hard 1–2px black outline, no anti-aliasing. DO NOT attach the reference sheet — these are minimal UI icons, not characters.
+
+### `hud_stop`
+
+**Prompt:** A 24×24 pixel-art STOP icon: a solid red `#CC4444` filled square with 2px black `#000000` outline. Single centered subject, transparent background, crisp pixels, no anti-aliasing. No scene, no cyclist, no buildings — just the icon.
+
+### `hud_pause`
+
+**Prompt:** A 24×24 pixel-art PAUSE icon: two vertical 4×12 bars in deep blue `#0B1D33` with a 3px gap between them, 2px black `#000000` outline on each bar. Single centered subject, transparent background, crisp pixels, no anti-aliasing. No scene, no cyclist, no buildings — just the icon.
+
+### `hud_play`
+
+**Prompt:** A 24×24 pixel-art PLAY icon: a right-pointing triangle in forest green `#7BA05B` with 2px black `#000000` outline, filled solid. Single centered subject, transparent background, crisp pixels, no anti-aliasing. No scene, no cyclist, no buildings — just the icon.

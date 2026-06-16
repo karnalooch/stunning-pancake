@@ -5,6 +5,7 @@ import * as Location from 'expo-location';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ArcadeButton } from '../components/ArcadeButton';
+import { FONTS } from '../theme/fonts';
 import {
   getGpsSyncStatus,
   isRideTrackingActive,
@@ -30,8 +31,8 @@ const stylesheet = StyleSheet.create((theme) => {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    title: { fontSize: 22, fontWeight: '700', color: C.primary, textTransform: 'uppercase' },
-    subtitle: { color: C.secondary, marginTop: 4, fontWeight: '700' },
+    title: { fontSize: 16, fontFamily: FONTS.display, color: C.primary, textTransform: 'uppercase' },
+    subtitle: { color: C.secondary, marginTop: 4, fontFamily: FONTS.display },
     card: {
       borderWidth: 3,
       borderColor: C.onBackground,
@@ -41,7 +42,7 @@ const stylesheet = StyleSheet.create((theme) => {
       marginBottom: 10,
     },
     row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    label: { fontSize: 14, fontWeight: '700', color: C.onBackground },
+    label: { fontSize: 14, fontFamily: FONTS.display, color: C.onBackground },
     details: { fontSize: 12, color: C.secondary, marginTop: 6 },
     badgeOk: {
       backgroundColor: C.primaryContainer,
@@ -49,7 +50,6 @@ const stylesheet = StyleSheet.create((theme) => {
       borderColor: C.onBackground,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      fontWeight: '700',
     },
     badgeFail: {
       backgroundColor: C.errorContainer,
@@ -57,10 +57,9 @@ const stylesheet = StyleSheet.create((theme) => {
       borderColor: C.onBackground,
       paddingHorizontal: 8,
       paddingVertical: 4,
-      fontWeight: '700',
     },
     content: { padding: 16, paddingBottom: 48 },
-    faqHint: { marginTop: 8, color: C.secondary, fontSize: 12, fontWeight: '700' },
+    faqHint: { marginTop: 8, color: C.secondary, fontSize: 12, fontFamily: FONTS.display },
   };
 });
 
@@ -187,7 +186,7 @@ export const GpsDiagnosticsScreen: React.FC<{
               alignItems: 'center',
             }}
           >
-            <Text style={{ fontWeight: '700', color: C.onBackground }}>CLOSE</Text>
+            <Text style={{ fontFamily: FONTS.display, color: C.onBackground }}>CLOSE</Text>
           </Pressable>
         </View>
       </ScrollView>

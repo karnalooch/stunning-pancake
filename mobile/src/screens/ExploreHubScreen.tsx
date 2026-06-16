@@ -3,6 +3,7 @@ import { View, Pressable, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { SceneBackground } from '../components/scene/SceneBackground';
 import { ChromeIcon } from '../components/ui/ChromeIcon';
@@ -33,7 +34,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     ctaText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.display,
       color: c.onPrimaryContainer,
       textTransform: 'uppercase',
     },

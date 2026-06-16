@@ -32,26 +32,26 @@ export const SCENE_REGISTRY: Record<SceneId, SceneDefinition> = {
   },
   city_hub: {
     id: 'city_hub',
-    layers: ['sky_day', 'town_mid'],
+    layers: ['sky_sunset', 'town_mid'],
     ambient: 'sunset',
     particles: ['dust'],
   },
   ride_summary: {
     id: 'ride_summary',
-    layers: ['sky_day', 'hills_far'],
+    layers: ['sky_sunset', 'hills_far'],
     ambient: 'sunset',
     particles: ['none'],
   },
   onboarding: {
     id: 'onboarding',
-    layers: ['sky_day', 'town_mid'],
-    ambient: 'day',
+    layers: ['sky_sunset', 'town_mid'],
+    ambient: 'sunset',
     particles: ['none'],
   },
   profile: {
     id: 'profile',
-    layers: ['sky_day'],
-    ambient: 'day',
+    layers: ['sky_night'],
+    ambient: 'night',
     particles: ['none'],
   },
   default: {
@@ -67,6 +67,8 @@ export const LAYER_LAYOUT: Record<
   { heightPercent: number; bottom: number; parallaxSpeed: number }
 > = {
   sky_day: { heightPercent: 100, bottom: 0, parallaxSpeed: 0 },
+  sky_sunset: { heightPercent: 100, bottom: 0, parallaxSpeed: 0 },
+  sky_night: { heightPercent: 100, bottom: 0, parallaxSpeed: 0 },
   hills_far: { heightPercent: 32, bottom: 14, parallaxSpeed: 0.25 },
   town_mid: { heightPercent: 42, bottom: 6, parallaxSpeed: 0.55 },
   road_near: { heightPercent: 14, bottom: 0, parallaxSpeed: 1 },

@@ -1,0 +1,190 @@
+{
+  "_description": "Per-screen parity manifest: ROI regions + expected elements for automated checklist scoring.",
+  "_roi_note": "ROI is [top%, right%, bottom%, left%] of image. 0=top/left edge, 100=bottom/right edge. Only the ROI region is compared for SSIM; everything outside (parallax scene backgrounds) is masked out.",
+  "screens": {
+    "00_onboarding_city": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 1, "list_items": 5, "has_header": true, "has_tab_bar": false },
+      "typography": { "header_font": "Silkscreen", "body_font": "Silkscreen" },
+      "assets": { "crests": true, "frame": true, "scene": null },
+      "data": { "fixtures": "ONBOARDING", "dynamic": false },
+      "empty_state": false
+    },
+    "00_onboarding_department": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 0, "list_items": 4, "has_header": true, "has_tab_bar": false },
+      "typography": { "header_font": "Silkscreen", "body_font": "Silkscreen" },
+      "assets": { "department_icons": true, "frame": true, "scene": "sky_sunset" },
+      "data": { "fixtures": "ONBOARDING", "dynamic": false },
+      "empty_state": false
+    },
+    "00_onboarding_finish": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 1, "list_items": 0, "has_header": true, "has_tab_bar": false },
+      "typography": { "header_font": "Silkscreen", "body_font": "Silkscreen" },
+      "assets": { "finish_meta": true, "frame": true, "scene": "sky_sunset" },
+      "data": { "fixtures": "ONBOARDING", "dynamic": false },
+      "empty_state": false
+    },
+    "00_onboarding_complete": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 0, "list_items": 0, "has_header": false, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "body_font": "Silkscreen" },
+      "assets": { "scene": null },
+      "data": { "fixtures": "SHELL", "dynamic": false },
+      "empty_state": false
+    },
+    "00_main_after_onboarding": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 1, "list_items": 0, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "body_font": "Silkscreen" },
+      "assets": { "scene": "sky_day" },
+      "data": { "fixtures": "RIDE_DASHBOARD", "dynamic": false },
+      "empty_state": false
+    },
+    "01_ride_dashboard": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 4, "sections": ["hero", "quest", "last_ride", "weekly"], "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "metrics_font": "Silkscreen", "label_count": 8 },
+      "assets": { "avatar": true, "level_bar": true, "streak_badge": true, "scene": "sky_day" },
+      "data": { "fixtures": "RIDE_DASHBOARD", "dynamic": true },
+      "empty_state": false
+    },
+    "02_active_ride_hud": {
+      "roi": [10, 100, 90, 0],
+      "layout": { "cards": 0, "sections": ["status_bar", "nav_hint", "data_grid", "action_bar"], "has_header": false, "has_tab_bar": false },
+      "typography": { "hud_font": "VT323", "label_font": "Silkscreen" },
+      "assets": { "map": true, "scene": "sky_day" },
+      "data": { "fixtures": "RIDE_METRICS", "dynamic": true },
+      "empty_state": false
+    },
+    "03_ride_paused": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 0, "has_header": false, "overlay": true },
+      "typography": { "title_font": "Silkscreen" },
+      "assets": { "icon": true },
+      "data": { "fixtures": "PAUSED", "dynamic": false },
+      "empty_state": false
+    },
+    "03b_ride_stopped": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 2, "sections": ["celebration", "stats", "share"], "has_header": true, "has_tab_bar": false },
+      "typography": { "header_font": "Silkscreen", "grade_font": "Silkscreen" },
+      "assets": { "finish_meta": true, "grade_badge": true, "scene": "sky_sunset" },
+      "data": { "fixtures": "RIDE_SUMMARY", "dynamic": true },
+      "empty_state": false
+    },
+    "04_gps_diagnostics": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 5, "has_header": true, "has_tab_bar": false },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "frame": true },
+      "data": { "fixtures": "GPS_DIAG", "dynamic": true },
+      "empty_state": false
+    },
+    "05_compete_hub": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 4, "sections": ["city_banner", "city_wars", "leaderboard", "quests"], "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "laurel_headers": 2 },
+      "assets": { "city_banner": true, "versus_bar": true, "crests": true, "scene": "sky_sunset" },
+      "data": { "fixtures": "CITY_HUB", "dynamic": true },
+      "empty_state": false
+    },
+    "06_compete_scrolled": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 4, "sections": ["city_banner", "city_wars", "leaderboard", "quests"], "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "scene": "sky_sunset" },
+      "data": { "fixtures": "CITY_HUB", "dynamic": true },
+      "empty_state": false
+    },
+    "07_clubs": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 0, "has_header": false, "has_tab_bar": true },
+      "typography": { "empty_font": "Silkscreen" },
+      "assets": { "frame": false },
+      "data": { "fixtures": "NONE", "dynamic": false },
+      "empty_state": true
+    },
+    "08_segments": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 3, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "card_count": 3 },
+      "assets": { "frame": true },
+      "data": { "fixtures": "SEGMENTS", "dynamic": false },
+      "empty_state": false
+    },
+    "09_explore_hub": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 2, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "scene": "sky_day" },
+      "data": { "fixtures": "EXPLORE", "dynamic": true },
+      "empty_state": false
+    },
+    "10_explore_map": {
+      "roi": [10, 100, 90, 0],
+      "layout": { "cards": 0, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "map": true },
+      "data": { "fixtures": "MAP_POI", "dynamic": true },
+      "empty_state": false
+    },
+    "11_marketplace": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 5, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "card_count": 5 },
+      "assets": { "frame": true },
+      "data": { "fixtures": "MARKETPLACE", "dynamic": true },
+      "empty_state": false
+    },
+    "12_profile": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 5, "sections": ["hero", "stats_grid", "achievements", "actions"], "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "laurel_headers": 1 },
+      "assets": { "avatar_framed": true, "achievement_grid": true, "laurel_header": true, "scene": "sky_night" },
+      "data": { "fixtures": "PROFILE", "dynamic": true },
+      "empty_state": false
+    },
+    "13_profile_scrolled": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 5, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "scene": "sky_night" },
+      "data": { "fixtures": "PROFILE", "dynamic": true },
+      "empty_state": false
+    },
+    "14_trends": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 3, "has_header": false, "has_tab_bar": true },
+      "typography": { "label_font": "Silkscreen", "metric_font": "Silkscreen", "card_count": 3 },
+      "assets": { "frame": true },
+      "data": { "fixtures": "ACTIVITY_HISTORY", "dynamic": true },
+      "empty_state": false
+    },
+    "15_leaderboard": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 5, "has_header": false, "has_tab_bar": true },
+      "typography": { "name_font": "Silkscreen", "rank_font": "VT323", "card_count": 5 },
+      "assets": { "frame": true },
+      "data": { "fixtures": "LEADERBOARD", "dynamic": true },
+      "empty_state": false
+    },
+    "16_training_log": {
+      "roi": [0, 100, 100, 0],
+      "layout": { "cards": 3, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen", "card_count": 3 },
+      "assets": { "frame": true },
+      "data": { "fixtures": "ACTIVITY_HISTORY", "dynamic": true },
+      "empty_state": false
+    },
+    "19_final": {
+      "roi": [5, 100, 100, 0],
+      "layout": { "cards": 4, "has_header": true, "has_tab_bar": true },
+      "typography": { "header_font": "Silkscreen" },
+      "assets": { "scene": "sky_day" },
+      "data": { "fixtures": "RIDE_DASHBOARD", "dynamic": true },
+      "empty_state": false
+    }
+  }
+}

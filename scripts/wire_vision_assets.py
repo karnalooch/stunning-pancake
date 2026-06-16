@@ -93,7 +93,7 @@ def _write_file(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def _build_items() -> tuple[list[Item], list[Item], list[Item], list[Item]]:
+def _build_items() -> tuple[list[Item], list[Item], list[Item], list[Item], list[Item]]:
     by_id = _asset_path_map()
     crests = [
         Item("gdansk", by_id["crest_gdansk"]),
@@ -128,14 +128,19 @@ def _build_items() -> tuple[list[Item], list[Item], list[Item], list[Item]]:
         Item("sky_sunset", by_id["sky_sunset"]),
         Item("sky_night", by_id["sky_night"]),
     ]
-    return crests, depts, achievements, banners
+    hud_actions = [
+        Item("stop", by_id.get("hud_stop", "icons/hud_stop.png")),
+        Item("pause", by_id.get("hud_pause", "icons/hud_pause.png")),
+        Item("play", by_id.get("hud_play", "icons/hud_play.png")),
+    ]
+    return crests, depts, achievements, banners, hud_actions
 
 
 def _map_to_lines(items: list[Item]) -> list[str]:
     return [f"{item.key}: {_entry_value(item.output_path)}," for item in items]
 
 
-def _apply_to_vision_assets(crests: list[Item], depts: list[Item], achievements: list[Item], banners: list[Item]) -> None:
+def _apply_to_vision_assets(crests: list[Item], depts: list[Item], achievements: list[Item], banners: list[Item], hud_actions: list[Item]) -> None:
     content = VISION_ASSETS_FILE.read_text(encoding="utf-8")
     content = _replace_between_markers(content, "AUTO-WIRE:CREST:START", "AUTO-WIRE:CREST:END", _map_to_lines(crests))
     content = _replace_between_markers(content, "AUTO-WIRE:DEPT:START", "AUTO-WIRE:DEPT:END", _map_to_lines(depts))
@@ -146,6 +151,7 @@ def _apply_to_vision_assets(crests: list[Item], depts: list[Item], achievements:
         _map_to_lines(achievements),
     )
     content = _replace_between_markers(content, "AUTO-WIRE:BANNERS:START", "AUTO-WIRE:BANNERS:END", _map_to_lines(banners))
+    content = _replace_between_markers(content, "AUTO-WIRE:HUD_ACTIONS:START", "AUTO-WIRE:HUD_ACTIONS:END", _map_to_lines(hud_actions))
     _write_file(VISION_ASSETS_FILE, content)
 
 
@@ -179,11 +185,11 @@ def _apply_to_asset_registry(crests: list[Item], depts: list[Item], achievements
 
 
 def main() -> int:
-    crests, depts, achievements, banners = _build_items()
-    _apply_to_vision_assets(crests, depts, achievements, banners)
+    crests, depts, achievements, banners, hud_actions = _build_items()
+    _apply_to_vision_assets(crests, depts, achievements, banners, hud_actions)
     _apply_to_asset_registry(crests, depts, achievements, banners)
-    wired = sum(1 for item in [*crests, *depts, *achievements, *banners] if _exists_in_both_bundles(item.output_path))
-    total = len(crests) + len(depts) + len(achievements) + len(banners)
+    wired = sum(1 for item in [*crests, *depts, *achievements, *banners, *hud_actions] if _exists_in_both_bundles(item.output_path))
+    total = len(crests) + len(depts) + len(achievements) + len(banners) + len(hud_actions)
     print(f"[wire:vision] updated registries ({wired}/{total} assets wired, missing => undefined)")
     return 0
 

@@ -18,6 +18,7 @@ import { AuthScreen } from './src/bootstrap/AuthScreen';
 import { NavigationShell } from './src/bootstrap/NavigationShell';
 import { SoundService } from './src/services/SoundService';
 import { useChromeNight } from './src/hooks/useChromeNight';
+import { isVisionFixtures } from './src/bootstrap/visionFixtures';
 import type { RideEdgeMessage } from './src/services/apiRetry';
 
 const AppContent = observer(function AppContent() {
@@ -94,7 +95,9 @@ const AppContent = observer(function AppContent() {
     );
   }
 
-  if (!auth.isOnboarded.get()) {
+  // Vision capture builds land directly in the app so the parity harness can
+  // screenshot real screens instead of looping on onboarding.
+  if (!auth.isOnboarded.get() && !isVisionFixtures()) {
     return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
   }
 

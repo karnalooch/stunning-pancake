@@ -4,13 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { POIService, type POI } from '../services/api';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
   return {
     container: { flex: 1, backgroundColor: c.background },
     header: { padding: 16, borderBottomWidth: 2, borderBottomColor: c.onBackground },
-    title: { fontSize: 20, fontWeight: '700', color: c.primary, textTransform: 'uppercase' },
+    title: { fontSize: 16, fontFamily: FONTS.display, color: c.primary, textTransform: 'uppercase' },
     hint: { fontSize: 12, color: c.secondary, marginTop: 4 },
     card: {
       marginHorizontal: 16,
@@ -21,7 +22,7 @@ const stylesheet = StyleSheet.create((theme) => {
       borderColor: c.onBackground,
       borderRadius: 8,
     },
-    name: { fontSize: 16, fontWeight: '700', color: c.onBackground },
+    name: { fontSize: 14, fontFamily: FONTS.display, color: c.onBackground },
     meta: { fontSize: 12, color: c.secondary, marginTop: 4 },
     empty: { textAlign: 'center', color: c.secondary, marginTop: 32, padding: 16 },
   };

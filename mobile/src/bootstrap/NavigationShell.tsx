@@ -26,6 +26,8 @@ import { PerformanceTrendsScreen } from '../screens/PerformanceTrendsScreen';
 import { GlobalLeaderboardScreen } from '../screens/GlobalLeaderboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
 import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
+import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
+import { isVisionFixtures } from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
@@ -456,6 +458,42 @@ export function NavigationShell(props: NavigationShellProps) {
               </View>
             )}
           </Stack.Screen>
+          {(isVisionFixtures() || __DEV__) && (
+            <Stack.Screen name="VisionGallery">
+              {({ navigation }: RootScreenProps<'VisionGallery'>) => (
+                <View style={{ flex: 1 }}>
+                  <StackScreenHeader title="Vision Gallery" onBack={() => navigation.goBack()} />
+                  <VisionGalleryScreen
+                    entries={[
+                      { label: 'Ride', onPress: () => navigation.navigate('MainTabs', { screen: 'Ride' }) },
+                      { label: 'Compete', onPress: () => navigation.navigate('MainTabs', { screen: 'Compete' }) },
+                      { label: 'Explore', onPress: () => navigation.navigate('MainTabs', { screen: 'Explore' }) },
+                      { label: 'Profile', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
+                      { label: 'Trends', onPress: () => navigation.navigate('PerformanceTrends') },
+                      { label: 'Leaderboard', onPress: () => navigation.navigate('GlobalLeaderboard') },
+                      { label: 'Training Log', onPress: () => navigation.navigate('TrainingLog') },
+                      { label: 'Marketplace', onPress: () => navigation.navigate('Marketplace') },
+                      { label: 'Segments', onPress: () => navigation.navigate('Segments') },
+                      { label: 'Clubs', onPress: () => navigation.navigate('Clubs') },
+                      { label: 'Explore Map', onPress: () => navigation.navigate('ExploreMap') },
+                      { label: 'GPS Diagnostics', onPress: () => navigation.navigate('GpsDiagnostics') },
+                      { label: 'Settings', onPress: () => navigation.navigate('Settings') },
+                      {
+                        label: 'Ride Summary',
+                        onPress: () =>
+                          navigation.navigate('RideSummary', {
+                            distanceKm: 12.4,
+                            elapsedS: 2730,
+                            elevationGainM: 145,
+                          }),
+                      },
+                      { label: 'Ride Paused', onPress: () => navigation.navigate('RidePaused') },
+                    ]}
+                  />
+                </View>
+              )}
+            </Stack.Screen>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
     </>

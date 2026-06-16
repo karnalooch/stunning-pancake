@@ -38,6 +38,9 @@ const stylesheet = StyleSheet.create((theme) => {
     cellHud: {
       backgroundColor: c.hudPanel,
       borderColor: c.hudOutline,
+      // Sun-readable bike-computer panel: sharp pixel corners + heavier frame.
+      borderWidth: 3,
+      borderRadius: 0,
     },
     cellHero: {
       paddingVertical: 14,

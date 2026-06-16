@@ -20,6 +20,7 @@ import {
   estimateXpGain,
 } from '../game/ranks';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 
 const stylesheet = StyleSheet.create((theme) => {
   const C = theme.colors as Record<string, string>;
@@ -36,8 +37,8 @@ const stylesheet = StyleSheet.create((theme) => {
       borderBottomColor: C.onBackground,
     },
     headerTitle: {
-      fontSize: 24,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.display,
       color: C.primary,
       textTransform: 'uppercase' as const,
     },
@@ -45,14 +46,14 @@ const stylesheet = StyleSheet.create((theme) => {
     content: { padding: 16, gap: 16, alignItems: 'center' as const },
     titleSection: { alignItems: 'center' as const, paddingTop: 16, paddingBottom: 8 },
     title: {
-      fontSize: 40,
-      fontWeight: '700',
+      fontSize: 36,
+      fontFamily: FONTS.display,
       color: C.onBackground,
       textTransform: 'uppercase' as const,
       letterSpacing: 2,
       textAlign: 'center' as const,
     },
-    subtitle: { fontSize: 16, fontWeight: '500', color: C.outline, marginTop: 4 },
+    subtitle: { fontSize: 14, fontFamily: FONTS.display, color: C.outline, marginTop: 4 },
     gradeBadge: {
       minWidth: 88,
       paddingHorizontal: 14,
@@ -63,8 +64,8 @@ const stylesheet = StyleSheet.create((theme) => {
       alignItems: 'center' as const,
     },
     gradeText: {
-      fontSize: 32,
-      fontWeight: '900',
+      fontSize: 28,
+      fontFamily: FONTS.display,
       color: C.hudOutline,
       textTransform: 'uppercase' as const,
     },
@@ -76,7 +77,7 @@ const stylesheet = StyleSheet.create((theme) => {
       paddingHorizontal: 16,
       paddingVertical: 8,
     },
-    xpText: { fontSize: 14, fontWeight: '800', color: C.onPrimaryContainer, textTransform: 'uppercase' as const },
+    xpText: { fontSize: 14, fontFamily: FONTS.display, color: C.onPrimaryContainer, textTransform: 'uppercase' as const },
     ctaBtn: {
       backgroundColor: C.goldAmber,
       borderRadius: 8,
@@ -89,8 +90,8 @@ const stylesheet = StyleSheet.create((theme) => {
       width: '100%',
     },
     ctaText: {
-      fontSize: 20,
-      fontWeight: '700',
+      fontSize: 18,
+      fontFamily: FONTS.display,
       color: C.onBackground,
       textTransform: 'uppercase' as const,
     },

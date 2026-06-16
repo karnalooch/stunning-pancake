@@ -42,6 +42,8 @@ export const ASSETS = {
   },
   environment: {
     sky_day: require('../../assets/generated/environment/sky_day.png'),
+    sky_sunset: require('../../assets/generated/environment/sky_sunset.png'),
+    sky_night: require('../../assets/generated/environment/sky_night.png'),
     hills_far: require('../../assets/generated/environment/hills_far.png'),
     town_mid: require('../../assets/generated/environment/town_mid.png'),
     road_near: require('../../assets/generated/environment/road_near.png'),

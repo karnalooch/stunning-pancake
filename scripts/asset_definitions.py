@@ -720,6 +720,62 @@ def get_all_assets() -> list[AssetDef]:
             )
         ],
         # ═══════════════════════════════════════════════════════════
+        # HUD ACTION ICONS (P2) — stop / pause / play pixel-art
+        # ═══════════════════════════════════════════════════════════
+        {
+            "id": "hud_stop",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [24, 24],
+            "description": "HUD stop action icon — solid red square pixel-art, 2px black outline.",
+            "style_constraints": "24x24. Solid red fill, 2px black border. Single centered subject on transparent background. NO scene/buildings/cyclist.",
+            "output_path": "icons/hud_stop.png",
+        },
+        {
+            "id": "hud_pause",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [24, 24],
+            "description": "HUD pause action icon — two vertical bars pixel-art, 2px black outline.",
+            "style_constraints": "24x24. Two vertical 4x12 bars with 3px gap. Single centered subject on transparent background. NO scene/buildings/cyclist.",
+            "output_path": "icons/hud_pause.png",
+        },
+        {
+            "id": "hud_play",
+            "category": "icon",
+            "model": "gemini",
+            "format": "png",
+            "size": [24, 24],
+            "description": "HUD play/resume action icon — right-pointing triangle pixel-art.",
+            "style_constraints": "24x24. Right-pointing triangle play symbol, 2px black outline. Single centered subject on transparent background. NO scene/buildings/cyclist.",
+            "output_path": "icons/hud_play.png",
+        },
+        # ═══════════════════════════════════════════════════════════
+        # GHOST SPRITE + MAP MARKER (P2)
+        # ═══════════════════════════════════════════════════════════
+        {
+            "id": "ghost_sheet",
+            "category": "sprite",
+            "model": "gemini",
+            "format": "png",
+            "size": [256, 64],
+            "description": "4-frame ghost cyclist sprite sheet — translucent animated ghost rider for PB/segment replays.",
+            "style_constraints": "256x64 4-frame horizontal strip. Semi-transparent pixel cyclist. No scene background.",
+            "output_path": "sprites/ghost_sheet.png",
+        },
+        {
+            "id": "map_marker_cyclist",
+            "category": "environment",
+            "model": "gemini",
+            "format": "png",
+            "size": [32, 32],
+            "description": "Top-down cyclist map marker — pixel-art rider seen from above for map POI.",
+            "style_constraints": "32x32. Top-down view of cyclist on bike. Transparent background. No scene.",
+            "output_path": "map/marker_cyclist.png",
+        },
+        # ═══════════════════════════════════════════════════════════
         # SOUND PARAMETERS (P0) — Pre-defined jsfxr params
         # ═══════════════════════════════════════════════════════════
         {

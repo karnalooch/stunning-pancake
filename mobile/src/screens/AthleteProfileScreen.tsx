@@ -4,6 +4,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { AuthService } from '../services/api';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { useGameProgress } from '../hooks/useGameProgress';
 import { useRiderStats } from '../hooks/useRiderStats';
@@ -52,7 +53,7 @@ const stylesheet = StyleSheet.create((theme) => {
       borderColor: c.onBackground,
       backgroundColor: c.primaryContainer,
     },
-    ht: { fontSize: 20, fontWeight: '700', color: c.primary, textTransform: 'uppercase' },
+    ht: { fontSize: 16, fontFamily: FONTS.display, color: c.primary, textTransform: 'uppercase' },
     hero: {
       backgroundColor: c.parchment,
       margin: LAYOUT.gutter,
@@ -93,7 +94,7 @@ const stylesheet = StyleSheet.create((theme) => {
       alignItems: 'center',
       ...sh,
     },
-    btnT: { fontSize: 16, fontWeight: '700', color: c.onPrimaryContainer },
+    btnT: { fontSize: 16, fontFamily: FONTS.display, color: c.onPrimaryContainer },
   };
 });
 

@@ -100,6 +100,22 @@ Wizualizacje per krok w [`screenshots/2026-06-15-parity-progress/`](screenshots/
 
 Stan jakości po etapie: 109 testów / 23 suites PASS; 0 inline-hex w `screens`; audyty zielone.
 
+## Postęp 2026-06-16 — pętla przechwytywania (Faza E)
+
+| Krok | Co zrobiono | PNG |
+|------|-------------|-----|
+| E1.1 skip onboarding | `App.tsx`: gdy `isVisionFixtures()` build pomija onboarding i wpada w `MainTabs` (capture realnych ekranów) | `faza-E-krok1-skip-onboarding.png` |
+| E1.2 vision gallery | `VisionGalleryScreen` (dev/fixtures-only) + deep-link `fourvelo://vision-gallery`; 15 deterministycznych celów nawigacji | `faza-E-krok2-gallery.png` |
+| E1.3 fixtures w ekranach | Leaderboard/Trends/TrainingLog czytają fixtures (RideDashboard już wcześniej); 111 testów PASS | `faza-E-krok3-fixtures-screens.png` |
+| E2.1 metryka | Harness: SSIM kierunkowo (próg 0.6) + `--report-only` + generowanie `checklist.md` (layout/typografia/assety/dane/empty) | `faza-E-krok4-metryka.png` |
+| E2.2 CI + gate | `vision-parity.yml`: próg 0.6 + `--report-only` (nie failuje), artefakt z checklistą; definicja metryki w tym dokumencie | (ten wpis) |
+
+### Definicja metryki 1:1 (ważne)
+- `vision/` to **ręcznie rysowane ilustracje** (pełne sceny, cykliści, tłumy). Działająca apka RN **nie osiągnie** SSIM ~0.92 wobec nich.
+- **SSIM = sygnał trendu** (próg kierunkowy 0.6), nie bramka. CI używa `--report-only` (nie blokuje).
+- **Bramką jest checklist per-ekran**: `layout / typografia / assety / dane / empty-state` (artefakt `checklist.md` z harnessu) — ocena human-review.
+- Diagnoza audytu 2026-06-15: zrzuty „nie-onboarding" faktycznie pokazują onboarding → po E1 (skip + gallery + fixtures) kolejny capture build złapie realne ekrany.
+
 ## Pozostało do sign-off na urządzeniu (Faza weryfikacji)
 1. Rebuild APK (`build:local:preview:android`) + rerun `python scripts/emulator-ui-audit.py` → zebrać realne zrzuty 19 kroków.
 2. Pixel-diff każdego `screenshots/.../NN_name.png` vs `vision/NN_name.png`; PARTIAL → DONE po potwierdzeniu.

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 import { PrivacyService, WearableService } from '../services/api';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { RiderPreferencesService } from '../services/RiderPreferencesService';
@@ -15,7 +16,7 @@ const stylesheet = StyleSheet.create((theme) => {
   return {
     ct: { flex: 1, backgroundColor: c.background },
     h: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground },
-    t: { fontSize: 24, fontWeight: '700', color: c.primary, textTransform: 'uppercase' },
+    t: { fontSize: 16, fontFamily: FONTS.display, color: c.primary, textTransform: 'uppercase' },
     nav: {
       paddingHorizontal: 12,
       paddingVertical: 10,
@@ -38,7 +39,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     navBtnText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: FONTS.display,
       textTransform: 'uppercase',
       color: c.onBackground,
     },
@@ -53,13 +54,13 @@ const stylesheet = StyleSheet.create((theme) => {
       justifyContent: 'space-between',
       alignItems: 'center',
     },
-    l: { fontSize: 14, fontWeight: '700', color: c.onBackground },
+    l: { fontSize: 14, fontFamily: FONTS.display, color: c.onBackground },
     v: { fontSize: 14, color: c.secondary },
     sectionTitle: {
       marginHorizontal: 12,
       marginTop: 12,
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.display,
       color: c.secondary,
       textTransform: 'uppercase',
     },
@@ -74,7 +75,7 @@ const stylesheet = StyleSheet.create((theme) => {
       justifyContent: 'center',
       backgroundColor: c.surface,
     },
-    stepBtnText: { fontSize: 18, fontWeight: '700', color: c.onBackground },
+    stepBtnText: { fontSize: 18, fontFamily: FONTS.display, color: c.onBackground },
     input: {
       minWidth: 72,
       borderWidth: 2,
@@ -83,7 +84,7 @@ const stylesheet = StyleSheet.create((theme) => {
       paddingHorizontal: 10,
       paddingVertical: 8,
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.display,
       color: c.onBackground,
       textAlign: 'center',
       backgroundColor: c.surface,
@@ -101,7 +102,7 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     actionBtnText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.display,
       color: c.onPrimaryContainer,
       textTransform: 'uppercase',
     },

@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 2,
-    borderRadius: 6,
+    borderRadius: 0,
     paddingHorizontal: 10,
     paddingVertical: 6,
     shadowOffset: { width: 2, height: 2 },

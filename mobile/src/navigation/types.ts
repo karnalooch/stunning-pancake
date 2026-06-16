@@ -27,6 +27,7 @@ export type RootStackParamList = {
     elevationGainM: number;
     activityId?: number;
   };
+  VisionGallery: undefined;
 };
 
 declare global {

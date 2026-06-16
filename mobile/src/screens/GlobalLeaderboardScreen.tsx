@@ -7,6 +7,9 @@ import { OfflineCacheService } from '../services/OfflineCacheService';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { OrnateFrame } from '../components/ui/OrnateFrame';
+import { PixelText } from '../components/PixelText';
+import { getVisionLeaderboardFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 
 const stylesheet = StyleSheet.create(theme => {
   const c = theme.colors as Record<string, string>;
@@ -14,12 +17,6 @@ const stylesheet = StyleSheet.create(theme => {
     ct: { flex: 1, backgroundColor: c.background },
     content: { padding: 16, gap: 10 },
     row: {
-      borderWidth: 2,
-      borderColor: c.hudOutline,
-      borderRadius: 8,
-      backgroundColor: c.parchment,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
@@ -32,8 +29,7 @@ const stylesheet = StyleSheet.create(theme => {
     },
     name: {
       flex: 1,
-      fontSize: 14,
-      fontWeight: '700',
+      fontSize: 12,
       color: c.onBackground,
     },
     score: {
@@ -52,6 +48,13 @@ export const GlobalLeaderboardScreen: React.FC = () => {
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
+    const fixture = getVisionLeaderboardFixture(isVisionFixtures());
+    if (fixture) {
+      setEntries(fixture as unknown as LeaderboardEntry[]);
+      setOffline(false);
+      setLoading(false);
+      return;
+    }
     const cached = OfflineCacheService.getCityHub();
     if (cached?.leaderboard?.length) {
       setEntries(cached.leaderboard);
@@ -86,18 +89,21 @@ export const GlobalLeaderboardScreen: React.FC = () => {
           <EmptyState message={t.demo.leaderboardEmpty} icon="leaderboard" hint={t.settings.globalLb} />
         ) : (
           entries.slice(0, 20).map((entry) => (
-            <View
+            <OrnateFrame
               key={`${entry.rank}-${entry.username}`}
-              style={[s.row, entry.is_me && { transform: [{ translateY: -1 }] }]}
+              padding={12}
+              tone={entry.is_me ? 'surface' : 'parchment'}
             >
-              <Text style={s.rank}>{entry.rank}</Text>
-              <Text style={s.name}>{entry.is_me ? t.compete.you : entry.username}</Text>
-              <Text style={s.score}>
-                {entry.score_km != null
-                  ? `${entry.score_km.toFixed(1)} km`
-                  : `${entry.points}`}
-              </Text>
-            </View>
+              <View style={s.row}>
+                <Text style={s.rank}>{entry.rank}</Text>
+                <PixelText style={s.name}>{entry.is_me ? t.compete.you : entry.username}</PixelText>
+                <Text style={s.score}>
+                  {entry.score_km != null
+                    ? `${entry.score_km.toFixed(1)} km`
+                    : `${entry.points}`}
+                </Text>
+              </View>
+            </OrnateFrame>
           ))
         )}
       </ScrollView>

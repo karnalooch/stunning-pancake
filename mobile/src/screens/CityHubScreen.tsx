@@ -15,6 +15,7 @@ import {
 } from '../services/api';
 import { useI18n } from '../i18n/useI18n';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FONTS } from '../theme/fonts';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import { useGameProgress } from '../hooks/useGameProgress';
 import { SceneBackground } from '../components/scene/SceneBackground';
@@ -46,39 +47,39 @@ const stylesheet = StyleSheet.create(theme => {
     },
     hdrLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: C.onBackground, backgroundColor: C.primaryContainer },
-    hdrTitle: { fontSize: 24, fontWeight: '700', color: C.primary, textTransform: 'uppercase' },
+    hdrTitle: { fontSize: 18, fontFamily: FONTS.display, color: C.primary, textTransform: 'uppercase' },
     lvlBadge: { backgroundColor: C.primaryContainer, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 2, borderColor: C.onBackground, borderRadius: 4 },
-    lvlText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
+    lvlText: { fontSize: 12, fontFamily: FONTS.display, textTransform: 'uppercase' },
     scroll: { flex: 1 },
     content: { padding: 16, gap: 16 },
     // Section wrappers
     sectionFrame: { gap: 10 },
     // Legacy City Wars typography (kept for labels around the new VS component)
     vsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    vsTitle: { fontSize: 18, fontWeight: '700', color: C.onBackground, textTransform: 'uppercase' },
-    vsDelta: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase', textAlign: 'center', marginTop: 4 },
+    vsTitle: { fontSize: 16, fontFamily: FONTS.display, color: C.onBackground, textTransform: 'uppercase' },
+    vsDelta: { fontSize: 10, fontFamily: FONTS.display, color: C.secondary, textTransform: 'uppercase', textAlign: 'center', marginTop: 4 },
     // Leaderboard
     lbRow: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
         backgroundColor: C.parchment, borderWidth: 2, borderColor: C.onBackground,
         borderRadius: 4, paddingHorizontal: 12, paddingVertical: 10,
     },
-    lbRank: { fontSize: 20, fontWeight: '700', width: 24 },
-    lbName: { fontSize: 16, fontWeight: '700', flex: 1, marginLeft: 8 },
-    lbScore: { fontSize: 20, fontWeight: '700' },
+    lbRank: { fontSize: 18, fontFamily: FONTS.display, width: 24 },
+    lbName: { fontSize: 14, fontFamily: FONTS.display, flex: 1, marginLeft: 8 },
+    lbScore: { fontSize: 18, fontFamily: FONTS.display },
     // Nearby quests
     questGrid: { flexDirection: 'row', gap: 8 },
     questCard: {
         flex: 1, backgroundColor: C.parchment, borderWidth: 2, borderColor: C.onBackground,
         borderRadius: 8, padding: 12, gap: 4,
     },
-    questTitle: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase' },
+    questTitle: { fontSize: 14, fontFamily: FONTS.display, textTransform: 'uppercase' },
     questBadge: {
-        fontSize: 10, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 2,
+        fontSize: 10, fontFamily: FONTS.display, paddingHorizontal: 6, paddingVertical: 2,
         borderWidth: 2, borderColor: C.onBackground, borderRadius: 2, alignSelf: 'flex-start',
     },
     questDist: { fontSize: 10, color: C.secondary },
-    questTime: { fontSize: 18, fontWeight: '700', color: C.onBackground, marginTop: 4 },
+    questTime: { fontSize: 16, fontFamily: FONTS.display, color: C.onBackground, marginTop: 4 },
     };
 });
 

@@ -81,9 +81,66 @@ export const VISION_RIDE_DASHBOARD = {
   weekDistanceKm: 128.7,
 } as const;
 
+/** Leaderboard rows — mirrors `vision/15_leaderboard.png` (LeaderboardEntry shape). */
+export const VISION_LEADERBOARD = [
+  { rank: 1, username: 'Kamil_4V', points: 2450, is_me: false, score_km: 245.0 },
+  { rank: 2, username: 'Ev3line', points: 2110, is_me: false, score_km: 211.0 },
+  { rank: 3, username: 'RowerowyJanek', points: 1980, is_me: false, score_km: 198.0 },
+  { rank: 4, username: 'RoadHunter', points: 1750, is_me: false, score_km: 175.0 },
+  { rank: 5, username: 'Magda_4V', points: 1620, is_me: true, score_km: 162.0 },
+] as const;
+
+/** Activity history — feeds `vision/14_trends.png` and `vision/16_training_log.png`. */
+export const VISION_ACTIVITY_HISTORY = [
+  {
+    id: 9001,
+    type: 'BIKE',
+    start_time: '2026-06-14T07:30:00Z',
+    end_time: '2026-06-14T09:12:00Z',
+    distance: 42300,
+    duration: '01:42:00',
+    is_verified: true,
+    verification_score: 0.98,
+  },
+  {
+    id: 9002,
+    type: 'BIKE',
+    start_time: '2026-06-12T17:05:00Z',
+    end_time: '2026-06-12T17:58:00Z',
+    distance: 21800,
+    duration: '00:53:00',
+    is_verified: true,
+    verification_score: 0.95,
+  },
+  {
+    id: 9003,
+    type: 'RUN',
+    start_time: '2026-06-10T06:40:00Z',
+    end_time: '2026-06-10T07:21:00Z',
+    distance: 8200,
+    duration: '00:41:00',
+    is_verified: false,
+    verification_score: 0.4,
+  },
+] as const;
+
 /** Return profile fixture when vision mode is enabled. */
 export function getVisionProfileFixture(enabled: boolean): typeof VISION_PROFILE | null {
   return enabled ? VISION_PROFILE : null;
+}
+
+/** Return leaderboard fixture when vision mode is enabled. */
+export function getVisionLeaderboardFixture(
+  enabled: boolean,
+): typeof VISION_LEADERBOARD | null {
+  return enabled ? VISION_LEADERBOARD : null;
+}
+
+/** Return activity-history fixture (trends + training log) when vision mode is enabled. */
+export function getVisionActivityHistoryFixture(
+  enabled: boolean,
+): typeof VISION_ACTIVITY_HISTORY | null {
+  return enabled ? VISION_ACTIVITY_HISTORY : null;
 }
 
 /** Return city-hub fixture when vision mode is enabled. */

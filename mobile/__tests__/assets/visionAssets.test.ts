@@ -5,20 +5,19 @@ import {
 } from '../../src/assets/visionAssets';
 
 describe('visionAssets resolvers', () => {
-  test('crestForTenant normalizes ids and names', () => {
-    // No PNGs generated yet -> undefined, but resolver must not throw and must
-    // match the right key regardless of diacritics / "-city" suffixes.
-    expect(crestForTenant('lublin')).toBeUndefined();
-    expect(crestForTenant('Gdańsk')).toBeUndefined();
-    expect(crestForTenant('siedlce-city')).toBeUndefined();
+  test('crestForTenant matches by id/name regardless of diacritics or suffix', () => {
+    // Assets are wired -> known cities resolve to a source; unknown/empty stay undefined.
+    expect(crestForTenant('lublin')).toBeDefined();
+    expect(crestForTenant('Gdańsk')).toBeDefined();
+    expect(crestForTenant('siedlce-city')).toBeDefined();
     expect(crestForTenant(null)).toBeUndefined();
     expect(crestForTenant('Atlantis')).toBeUndefined();
   });
 
   test('deptIconFor matches Polish and English team names', () => {
-    expect(deptIconFor('IT Rowery')).toBeUndefined();
-    expect(deptIconFor('Marketing')).toBeUndefined();
-    expect(deptIconFor('Sprzedaż')).toBeUndefined();
+    expect(deptIconFor('IT Rowery')).toBeDefined();
+    expect(deptIconFor('Marketing')).toBeDefined();
+    expect(deptIconFor('Sprzedaż')).toBeDefined();
     expect(deptIconFor('')).toBeUndefined();
   });
 

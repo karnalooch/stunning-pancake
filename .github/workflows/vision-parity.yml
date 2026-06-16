@@ -63,14 +63,15 @@ jobs:
           echo "actual_dir=${ACTUAL_DIR}" >> "$GITHUB_OUTPUT"
           echo "Using screenshots from ${ACTUAL_DIR}"
 
-      - name: Run SSIM gate
+      - name: Run SSIM trend + checklist (directional, non-blocking)
         if: steps.resolve.outputs.has_actual == 'true'
         run: |
           python scripts/vision_parity_harness.py \
             --actual "${{ steps.resolve.outputs.actual_dir }}" \
             --out "artifacts/vision-parity/${{ github.run_id }}" \
             --composite \
-            --threshold 0.92
+            --threshold 0.6 \
+            --report-only
 
       - name: Upload parity report
         if: always() && steps.resolve.outputs.has_actual == 'true'

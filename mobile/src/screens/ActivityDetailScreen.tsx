@@ -20,6 +20,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import { useI18n } from '../i18n/useI18n';
+import { FONTS } from '../theme/fonts';
 
 const stylesheet = StyleSheet.create(theme => {
     const C = theme.colors as Record<string, string>;
@@ -35,30 +36,30 @@ const stylesheet = StyleSheet.create(theme => {
         borderBottomWidth: 4, borderBottomColor: C.onBackground,
     },
     hdrBack: { fontSize: 28, color: C.primary },
-    hdrTitle: { fontSize: 18, fontWeight: '700', color: C.primary, textTransform: 'uppercase' },
+    hdrTitle: { fontSize: 14, fontFamily: FONTS.display, color: C.primary, textTransform: 'uppercase' },
     scroll: { flex: 1 },
     content: { padding: 16, gap: 16 },
     // Info card
     infoCard: { backgroundColor: C.surfaceContainer, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, padding: 16 },
     infoDate: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-    infoDateText: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase', letterSpacing: 1 },
-    infoTitle: { fontSize: 28, fontWeight: '700', color: C.onBackground },
+    infoDateText: { fontSize: 10, fontFamily: FONTS.display, color: C.secondary, textTransform: 'uppercase', letterSpacing: 1 },
+    infoTitle: { fontSize: 24, fontFamily: FONTS.display, color: C.onBackground },
     infoStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 },
     statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.primary },
-    statusText: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
+    statusText: { fontSize: 10, fontFamily: FONTS.display, textTransform: 'uppercase' },
     // Stats bento
     statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
     statTile: {
         backgroundColor: C.parchment, borderWidth: 2, borderColor: C.onBackground,
         borderRadius: 4, padding: 12, flex: 1, minWidth: '45%',
     },
-    statLabel: { fontSize: 10, fontWeight: '700', color: C.secondary, textTransform: 'uppercase' },
-    statValue: { fontSize: 24, fontWeight: '700', color: C.onBackground, marginTop: 8, textAlign: 'right' },
+    statLabel: { fontSize: 10, fontFamily: FONTS.display, color: C.secondary, textTransform: 'uppercase' },
+    statValue: { fontSize: 20, fontFamily: FONTS.display, color: C.onBackground, marginTop: 8, textAlign: 'right' },
     statUnit: { fontSize: 14, color: C.outline },
     // Map
     mapSection: { backgroundColor: C.surfaceContainerHighest, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, overflow: 'hidden' },
     mapHeader: { backgroundColor: C.surfaceContainer, padding: 10, borderBottomWidth: 2, borderBottomColor: C.onBackground },
-    mapHeaderText: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', color: C.onBackground },
+    mapHeaderText: { fontSize: 12, fontFamily: FONTS.display, textTransform: 'uppercase', color: C.onBackground },
     mapArea: { height: 250, backgroundColor: C.primaryContainer, justifyContent: 'center', alignItems: 'center' },
     // Achievements
     achSection: { flexDirection: 'row', gap: 8 },
@@ -67,8 +68,8 @@ const stylesheet = StyleSheet.create(theme => {
         borderRadius: 8, padding: 12, minWidth: 180,
     },
     achIcon: { width: 40, height: 40, borderRadius: 8, borderWidth: 2, borderColor: C.onBackground, justifyContent: 'center', alignItems: 'center' },
-    achTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', marginTop: 4 },
-    achName: { fontSize: 16, fontWeight: '700', marginTop: 2 },
+    achTitle: { fontSize: 12, fontFamily: FONTS.display, textTransform: 'uppercase', marginTop: 4 },
+    achName: { fontSize: 14, fontFamily: FONTS.display, marginTop: 2 },
     // Chart
     chartCard: { backgroundColor: C.parchment, borderWidth: 4, borderColor: C.onBackground, borderRadius: 8, padding: 16 },
     chartHeader: { flexDirection: 'row', justifyContent: 'space-between', borderBottomWidth: 2, paddingBottom: 8, marginBottom: 12 },
@@ -83,7 +84,7 @@ const stylesheet = StyleSheet.create(theme => {
         flex: 1, paddingVertical: 16, borderRadius: 8, borderWidth: 4, borderColor: C.onBackground,
         alignItems: 'center', justifyContent: 'center', gap: 4,
     },
-    actionText: { fontSize: 14, fontWeight: '700', textTransform: 'uppercase' },
+    actionText: { fontSize: 14, fontFamily: FONTS.display, textTransform: 'uppercase' },
     };
 });
 

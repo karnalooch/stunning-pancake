@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
 import { ActivityService, type ActivityItem } from '../services/api';
@@ -7,22 +7,16 @@ import { OfflineCacheService } from '../services/OfflineCacheService';
 import { EmptyState } from '../components/ui/EmptyState';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { OrnateFrame } from '../components/ui/OrnateFrame';
+import { PixelText } from '../components/PixelText';
+import { getVisionActivityHistoryFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 
 const stylesheet = StyleSheet.create(theme => {
   const c = theme.colors as Record<string, string>;
   return {
     container: { flex: 1, backgroundColor: c.background },
     content: { padding: 16, gap: 10 },
-    card: {
-      backgroundColor: c.parchment,
-      padding: 16,
-      borderWidth: 2,
-      borderColor: c.hudOutline,
-      borderRadius: 8,
-    },
-    label: { fontSize: 10, fontWeight: '700', color: c.secondary, textTransform: 'uppercase' },
-    val: { fontSize: 30, fontFamily: 'VT323', color: c.onBackground, marginTop: 6 },
-    sub: { fontSize: 13, color: c.secondary, marginTop: 2 },
+    label: { fontSize: 10, color: c.secondary, textTransform: 'uppercase' },
   };
 });
 
@@ -42,6 +36,13 @@ export const PerformanceTrendsScreen: React.FC = () => {
   const [offline, setOffline] = useState(false);
 
   useEffect(() => {
+    const fixture = getVisionActivityHistoryFixture(isVisionFixtures());
+    if (fixture) {
+      setHistory(fixture as unknown as ActivityItem[]);
+      setOffline(false);
+      setLoading(false);
+      return;
+    }
     const cached = OfflineCacheService.getHistory();
     if (cached?.length) {
       setHistory(cached);
@@ -88,21 +89,21 @@ export const PerformanceTrendsScreen: React.FC = () => {
           <EmptyState message={t.demo.trendsEmpty} icon="training" hint={t.settings.trends} />
         ) : (
           <>
-            <View style={s.card}>
-              <Text style={s.label}>{t.profile.rides}</Text>
-              <Text style={s.val}>{stats.rides}</Text>
-              <Text style={s.sub}>{t.trends.lastActivities}</Text>
-            </View>
-            <View style={s.card}>
-              <Text style={s.label}>{t.profile.distance}</Text>
-              <Text style={s.val}>{stats.distanceKm.toFixed(1)} km</Text>
-              <Text style={s.sub}>{t.trends.rollingLoad}</Text>
-            </View>
-            <View style={s.card}>
-              <Text style={s.label}>{t.trends.avgSpeed}</Text>
-              <Text style={s.val}>{stats.avgSpeedKmh.toFixed(1)} km/h</Text>
-              <Text style={s.sub}>{t.trends.computedFromRideTime}</Text>
-            </View>
+             <OrnateFrame>
+              <PixelText style={s.label}>{t.profile.rides}</PixelText>
+              <PixelText size="2xl" color="text">{stats.rides}</PixelText>
+              <PixelText size="sm" color="secondary">{t.trends.lastActivities}</PixelText>
+            </OrnateFrame>
+            <OrnateFrame>
+              <PixelText style={s.label}>{t.profile.distance}</PixelText>
+              <PixelText size="2xl" color="text">{stats.distanceKm.toFixed(1)} km</PixelText>
+              <PixelText size="sm" color="secondary">{t.trends.rollingLoad}</PixelText>
+            </OrnateFrame>
+            <OrnateFrame>
+              <PixelText style={s.label}>{t.profile.avgSpeed}</PixelText>
+              <PixelText size="2xl" color="text">{stats.avgSpeedKmh.toFixed(1)} km/h</PixelText>
+              <PixelText size="sm" color="secondary">{t.trends.computedFromRideTime}</PixelText>
+            </OrnateFrame>
           </>
         )}
       </ScrollView>
