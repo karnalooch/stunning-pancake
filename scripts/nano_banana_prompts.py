@@ -205,9 +205,11 @@ def _asset_notes(after_prompt: str) -> str:
 
 def _parse_asset_sections(text: str) -> dict[str, AssetEntry]:
     assets: dict[str, AssetEntry] = {}
-    # Asset sections ## 7. through ## 16. (not 16b)
+    # Asset sections ## 7. onward (any number >= 7; not 1-6 which are prose, not
+    # 16b which is handled separately). Prose sections (e.g. 17-21) simply carry
+    # no `### `id`` blocks and contribute nothing.
     for sec in re.finditer(
-        r"## (1[0-6]|[7-9])\.[^\n]*\n(.*?)(?=\n## |\Z)",
+        r"## ([7-9]|\d{2,})\.[^\n]*\n(.*?)(?=\n## |\Z)",
         text,
         re.DOTALL,
     ):
@@ -325,9 +327,92 @@ def _needs_hero_context(asset_id: str, category: str) -> bool:
     return asset_id in CHARACTER_ASSET_IDS or category in ("expression", "sprite")
 
 
+def _isolate_subject(asset_id: str, category: str) -> bool:
+    """True for standalone UI chrome that must NOT inherit the hero/town scene.
+
+    Icons (crests, dept glyphs, achievement medals), textures (frames) and
+    parallax skies are isolated subjects. Scene environments that legitimately
+    contain a cyclist/crowd/buildings (e.g. finish_meta, city banners) are not.
+    """
+    if category in ("icon", "texture"):
+        return True
+    if asset_id.startswith("sky_"):
+        return True
+    return False
+
+
 def _fill_global_style(template: str, w: int, h: int, bg: str) -> str:
     out = template.replace("{WIDTH}x{HEIGHT}", f"{w}x{h}")
     return out.replace("{BACKGROUND}", bg)
+
+
+# Scene environments (not character-locked) — per-asset composition guard that
+# replaces the §3 hero-on-street template so the real subject is rendered.
+_SCENE_CONSTRAINTS: dict[str, str] = {
+    "banner_city_lublin": (
+        "Wide {w}x{h} pixel-art city panorama ONLY (skyline / old-town rooftops). "
+        "Do NOT place any large cyclist or bicycle in the foreground; any people "
+        "appear only as tiny distant pixel figures. Keep the lower third visually "
+        "calm for an overlaid ribbon. No baked text."
+    ),
+    "finish_meta": (
+        "A {w}x{h} race-finish scene: a checkered black-and-white finish-line "
+        "gantry banner spanning the top, a cheering crowd rendered as small pixel "
+        "dots waving flags along the sides, and the hero cyclist seen strictly "
+        "from BEHIND (rear view, back of helmet and jersey) crossing the line into "
+        "a warm sunset. Single hero only. No baked text."
+    ),
+}
+
+
+def _compact_palette(palette: str) -> str:
+    """Reduce the §4 palette block to bare `name #hex` anchors.
+
+    The full block describes usages ("road asphalt", "red helmet", "foliage,
+    hills") that prime the model toward a street scene. For isolated UI chrome we
+    keep only the color anchors.
+    """
+    pairs = re.findall(r"(\w+)\s+(#[0-9A-Fa-f]{6})", palette)
+    if not pairs:
+        return ""
+    return "Palette: " + ", ".join(f"{name} {hexv}" for name, hexv in pairs)
+
+
+def _build_isolated_prompt(
+    asset_id: str, category: str, entry: AssetEntry, w: int, h: int, ssot: SsotDocument
+) -> str:
+    """Minimal, scene-free prompt for standalone UI chrome and skies.
+
+    The elaborate director brief (reference, hero bible, §3 scene template,
+    palette usages, sprite-sheet negatives) makes Nano Banana render the cycling
+    scene / multi-item sheets even for flat icons. A short, explicit prompt is far
+    more reliable for these assets.
+    """
+    parts: list[str] = [entry.prompt]
+
+    if asset_id.startswith("sky_"):
+        parts.append(
+            f"Full-bleed {w}x{h} pixel-art SKY ONLY. The left and right edges must "
+            "tile seamlessly when repeated horizontally. Render sky, gradient, "
+            "clouds and celestial elements only — absolutely NO buildings, NO "
+            "street, NO ground, NO horizon city, NO people, NO cyclist, NO "
+            "bicycle, NO text. Crisp pixels, gentle banding, no anti-aliasing."
+        )
+    else:
+        parts.append(
+            f"Render EXACTLY ONE single centered pixel-art subject filling most of "
+            f"the {w}x{h} frame. Fully transparent background — NO white or colored "
+            "box, NO panel, NO scene, NO street, NO buildings, NO people, NO "
+            "cyclist, NO bicycle. NEVER a grid, sheet, row, or set of multiple "
+            "items — one subject only. Crisp pixels, 1-2px solid black outline, no "
+            "anti-aliasing, no drop shadow."
+        )
+
+    palette = _compact_palette(ssot.palette)
+    if palette:
+        parts.append(palette)
+
+    return "\n\n".join(parts)
 
 
 def build_prompt(asset: dict, *, strict: bool = True) -> str:
@@ -353,9 +438,33 @@ def build_prompt(asset: dict, *, strict: bool = True) -> str:
             parts.append(f"Shared negatives: {ssot.shared_negatives}")
         return "\n\n".join(parts)
 
+    # Isolated UI chrome / skies — minimal scene-free prompt (short-circuit).
+    if _isolate_subject(asset_id, category):
+        return _build_isolated_prompt(asset_id, category, entry, w, h, ssot)
+
+    # Scene assets without the hero lock — the §3 template (cyclist on a
+    # cobblestone street) overrides their real subject, so build a lean scene
+    # prompt instead. The constraint carries the per-scene composition.
+    if asset_id in _SCENE_CONSTRAINTS:
+        scene_parts = [
+            entry.prompt,
+            _SCENE_CONSTRAINTS[asset_id].format(w=w, h=h),
+            "16-bit SNES/GBA-quality pixel art, vibrant Grand Prix palette, crisp "
+            "pixels, 1-2px black outlines, no anti-aliasing, no baked text.",
+        ]
+        palette = _compact_palette(ssot.palette)
+        if palette:
+            scene_parts.append(palette)
+        return "\n\n".join(scene_parts)
+
     parts: list[str] = []
 
-    if ssot.reference_instruction:
+    needs_hero = _needs_hero_context(asset_id, category)
+
+    # The reference sheet (and its §1 instruction) is a *character* lock. For
+    # UI-chrome assets it makes the model reproduce the cyclist, so only include
+    # the reference instruction for assets that actually depict the hero.
+    if needs_hero and ssot.reference_instruction:
         parts.append(f"[Reference — §1]\n{ssot.reference_instruction}")
 
     if _needs_hero_context(asset_id, category) and ssot.hero_bible:

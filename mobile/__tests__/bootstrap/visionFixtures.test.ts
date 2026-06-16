@@ -1,3 +1,8 @@
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: { extra: {} }, manifest: { extra: {} } },
+}));
+
 import {
   isVisionFixtures,
   getVisionCityHubFixture,
@@ -10,6 +15,9 @@ import {
 
 describe('visionFixtures', () => {
   test('is disabled by default (no env / no extra)', () => {
+    // A local mobile/.env (loaded by jest-expo) may leak the flag into
+    // process.env; clear it so the default-off path is exercised hermetically.
+    delete process.env.EXPO_PUBLIC_VISION_FIXTURES;
     expect(isVisionFixtures()).toBe(false);
   });
 

@@ -127,8 +127,12 @@ def main() -> int:
         lines.append(f"| {r['screen']} | {r['status']} | {r['score'] if r['score'] is not None else '—'} |")
     (args.out / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    failed = [r for r in results if r["status"] == "FAIL"]
-    print(f"[harness] {len(results)} screens, {len(failed)} below threshold {args.threshold}")
+    failed = [r for r in results if r["status"] in {"FAIL", "MISSING"}]
+    print(
+        f"[harness] {len(results)} screens, "
+        f"{len([r for r in results if r['status'] == 'FAIL'])} below threshold {args.threshold}, "
+        f"{len([r for r in results if r['status'] == 'MISSING'])} missing"
+    )
     return 1 if failed else 0
 
 

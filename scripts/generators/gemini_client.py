@@ -30,6 +30,7 @@ if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
 from nano_banana_prompts import (  # noqa: E402
+    CHARACTER_ASSET_IDS,
     REFERENCE_PNG,
     build_prompt,
     character_lock_path,
@@ -125,19 +126,29 @@ class GeminiClient:
         return self._ref_part
 
     def _gen_nano_banana(self, prompt: str, asset_id: str = "") -> bytes | None:
-        """Gemini native image generation — reference sheet + optional character lock."""
+        """Gemini native image generation.
+
+        The reference sheet is a *character* lock (the Cyklo-Siedlce hero + town).
+        Attaching it to UI-chrome assets (crests, dept icons, achievement medals,
+        frames, parallax skies, banners) makes Nano Banana reproduce the cyclist
+        instead of the requested subject. So the reference (and the img2img
+        character lock) is attached only for true character assets; everything
+        else is generated text-only, relying on the global style block + palette
+        text already baked into the prompt.
+        """
         from google.genai import types
 
-        ref = self._reference_part()
-        if ref is None:
-            raise RuntimeError(f"Reference PNG missing: {REFERENCE_PNG}")
-
-        contents: list[Any] = [ref]
-        lock = character_lock_path(asset_id) if asset_id else None
-        if lock is not None:
-            lock_bytes = lock.read_bytes()
-            contents.append(types.Part.from_bytes(data=lock_bytes, mime_type="image/png"))
-            logger.info("Attached character lock: %s -> %s", asset_id, lock.name)
+        contents: list[Any] = []
+        if asset_id in CHARACTER_ASSET_IDS:
+            ref = self._reference_part()
+            if ref is None:
+                raise RuntimeError(f"Reference PNG missing: {REFERENCE_PNG}")
+            contents.append(ref)
+            lock = character_lock_path(asset_id) if asset_id else None
+            if lock is not None:
+                lock_bytes = lock.read_bytes()
+                contents.append(types.Part.from_bytes(data=lock_bytes, mime_type="image/png"))
+                logger.info("Attached character lock: %s -> %s", asset_id, lock.name)
 
         contents.append(prompt)
 

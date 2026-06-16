@@ -491,3 +491,127 @@ Derived from the §16b mockup. Applies to the real Active Ride HUD chrome (the `
 **Edge states & growth**
 - Style empty/error states in pixel art too (GPS lost banner, no-data, offline) — not system defaults.
 - Share card in dedicated social formats (1080×1920 / 1200×630), deterministic render, brand mark.
+
+## 22. City crests (48×48 PNG, transparent) — Vision parity (City Wars)
+
+Heraldic city shields (herby) for the city list and City Wars versus bar. Faithful Polish municipal tinctures, readable at 24px, hard 1–2px black outline, no anti-aliasing, no caption text. Single centered shield on transparent background.
+
+### `crest_lublin`
+
+**Prompt:** A heraldic city crest of Lublin as a pixel-art shield: a white `#F5E6CC` goat (capricorn) rearing on its hind legs nibbling a green `#7BA05B` grapevine, on a red `#CC4444` field, thin gold `#D4A373` shield border. Centered, symmetrical, 1–2px black outline, transparent background, 48×48, legible at 24px.
+
+### `crest_warszawa`
+
+**Prompt:** A heraldic city crest of Warsaw as a pixel-art shield: the Warsaw mermaid (Syrenka) — a silver `#A0A0A0` figure raising a gold `#D4A373` sword and round shield — on a red `#CC4444` field with a gold shield border. Centered, bold silhouette, 1–2px black outline, transparent background, 48×48, legible at 24px.
+
+### `crest_siedlce`
+
+**Prompt:** A heraldic city crest of Siedlce as a pixel-art shield: a gold `#D4A373` crowned emblem over a split field of deep-sea blue `#0B1D33` and red `#CC4444`, cream `#F5E6CC` highlights, gold shield border. Centered, simple readable charge, 1–2px black outline, transparent background, 48×48, legible at 24px.
+
+### `crest_gdansk`
+
+**Prompt:** A heraldic city crest of Gdańsk as a pixel-art shield: two cream `#F5E6CC` crosses stacked vertically beneath a gold `#D4A373` crown, on a red `#CC4444` field with a gold shield border. Centered, symmetrical, 1–2px black outline, transparent background, 48×48, legible at 24px.
+
+### `crest_katowice`
+
+**Prompt:** A heraldic city crest of Katowice as a pixel-art shield: in the upper half a half gold `#D4A373` eagle on deep-sea blue `#0B1D33`, in the lower half crossed industrial mining hammers in sepia `#C8B098` on a cream `#F5E6CC` field, gold shield border. Centered, 1–2px black outline, transparent background, 48×48, legible at 24px.
+
+## 23. Department icons (40×40 PNG, transparent) — Vision parity (teams)
+
+Department/team pixel glyphs for the onboarding department picker. Forest green `#7BA05B` base with gold `#D4A373` accents, single centered subject, 1–2px black outline, no text, transparent background.
+
+### `dept_it`
+
+**Prompt:** A department icon for IT: a front-view laptop showing code brackets `</>` on its screen, forest green `#7BA05B` body, gold `#D4A373` screen glow, cream `#F5E6CC` brackets, 1–2px black outline, transparent background, 40×40, legible at small size.
+
+### `dept_marketing`
+
+**Prompt:** A department icon for Marketing: a megaphone tilted up with three gold `#D4A373` sound arcs, forest green `#7BA05B` body, cream `#F5E6CC` highlight, 1–2px black outline, transparent background, 40×40, legible at small size.
+
+### `dept_hr`
+
+**Prompt:** A department icon for HR: a cogwheel with a person silhouette centered inside it, forest green `#7BA05B` gear, gold `#D4A373` person, cream `#F5E6CC` highlight, 1–2px black outline, transparent background, 40×40, legible at small size.
+
+### `dept_sales`
+
+**Prompt:** A department icon for Sales: a trophy cup with a small upward arrow, gold `#D4A373` cup with `#EDD9B0` highlight on a forest green `#7BA05B` base, 1–2px black outline, transparent background, 40×40, legible at small size.
+
+## 24. Achievement badges (64×64 PNG, transparent) — Vision parity (profile grid)
+
+Hexagonal medal badges for the profile achievement grid (matches `vision/12_profile.png`). Each: beveled hexagon, colored core, gold `#D4A373` rim with `#EDD9B0` highlight, bold central pixel glyph, 1–2px black outline, transparent background. No baked caption text — the glyph carries the meaning (labels are rendered in-app). Locked state is a desaturated tint applied in code.
+
+### `ach_100km`
+
+**Prompt:** A hexagonal achievement medal with a mountain range glyph (distance milestone), forest green `#7BA05B` core, gold `#D4A373` rim, `#EDD9B0` highlight, bold beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_10rides`
+
+**Prompt:** A hexagonal achievement medal with a side-on bicycle glyph (rides milestone), deep-sea blue `#0B1D33` core, gold `#D4A373` rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_500m`
+
+**Prompt:** A hexagonal achievement medal with a sharp mountain peak glyph (elevation milestone), sepia `#C8B098` core, gold `#D4A373` rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_kom`
+
+**Prompt:** A hexagonal achievement medal with a crown glyph (King of the Mountain), red `#CC4444` core, gold `#D4A373` crown and rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_5h`
+
+**Prompt:** A hexagonal achievement medal with an analog clock glyph (time milestone), deep-sea blue `#0B1D33` core, gold `#D4A373` rim and clock hands, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_endurance`
+
+**Prompt:** A hexagonal achievement medal with a heart glyph (endurance), red `#CC4444` heart core, gold `#D4A373` rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_1000kcal`
+
+**Prompt:** A hexagonal achievement medal with a flame glyph (calories burned), amber `#E8A840` flame core, gold `#D4A373` rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_7days`
+
+**Prompt:** A hexagonal achievement medal with a sprouting seedling glyph (7-day streak), forest green `#7BA05B` sprout core, gold `#D4A373` rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_explorer`
+
+**Prompt:** A hexagonal achievement medal with an 8-point compass rose glyph (explorer), deep-sea blue `#0B1D33` core, gold `#D4A373` compass and rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+### `ach_passion`
+
+**Prompt:** A hexagonal achievement medal with a ribboned medal glyph (passion), gold `#D4A373` medal core with a red `#CC4444` ribbon, gold rim, `#EDD9B0` highlight, beveled hexagon, 1–2px black outline, transparent background, 64×64.
+
+## 25. Profile frames (PNG, transparent) — Vision parity (profile)
+
+Ornamental frames for the profile and cards (matches `vision/12_profile.png`). Warm gold Grand Prix trim, transparent interior so content shows through.
+
+### `avatar_frame`
+
+**Prompt:** A circular gold laurel ring avatar frame: two gold `#D4A373` laurel branches with `#EDD9B0` highlights curving around a fully transparent circular center, a thin inner ring, hard 1–2px black outline, fully transparent outside and inside the ring, 128×128, centered and symmetrical for a 96px circular portrait.
+
+### `frame_ornate`
+
+**Prompt:** An ornate parchment scroll card frame designed for 9-slice tiling: gold `#D4A373` and wood-sepia `#C8B098` trim with small corner rivets, `#EDD9B0` highlights, four detailed 32px corners and thin straight edges, a fully transparent interior, hard 1–2px black outline, 96×96, perfectly symmetrical so edges and corners tile cleanly as a 9-slice border.
+
+## 26. Banners & scenes (PNG) — Vision parity (compete / finish)
+
+Pixel scenes for the City-of-the-week banner and the race-finish celebration. Warm Grand Prix palette, no baked caption text (ribbon/labels are overlaid in-app).
+
+### `banner_city_lublin`
+
+**Prompt:** A pixel-art panorama banner of Lublin old town by day: the castle and pastel `#F5E6CC` / `#C8B098` townhouses with terracotta roofs along a ridge, a clear blue `#0B1D33`-to-cream sky, soft gold `#D4A373` morning light, an empty lower ribbon band left clear for an overlaid city name. 512×256 landscape, crisp pixels, no text.
+
+### `finish_meta`
+
+**Prompt:** A pixel-art race-finish "META" scene: a checkered black-and-cream finish-line gantry banner spanning the top, a cheering crowd rendered as warm pixel dots waving gold `#D4A373` and red `#CC4444` 4VELO flags, the caricatured hero cyclist seen from behind crossing the line, a warm orange `#E8A840`/pink sunset sky. 512×320 landscape, crisp pixels, no baked text.
+
+## 27. Parallax skies (512×512 PNG, horizontally tileable) — Vision parity
+
+Parallax sky layers matching the existing `sky_day` style; horizontally tileable (left and right edges align seamlessly), full-bleed (no transparency).
+
+### `sky_sunset`
+
+**Prompt:** A horizontally tileable parallax sky layer at sunset: a warm gradient from amber `#E8A840` and pink near the horizon up to a deeper `#0B1D33` blue, soft pixel-art clouds tinted gold `#D4A373` and cream `#EDD9B0`, gentle banding in the arcade Grand Prix style. Full-bleed 512×512, left and right edges seamlessly tileable, no text.
+
+### `sky_night`
+
+**Prompt:** A horizontally tileable parallax sky layer at night: a deep blue `#0B1D33` gradient darkening upward, scattered cream `#F5E6CC` pixel stars, a small gold `#D4A373` crescent moon, faint sepia `#C8B098` cloud wisps, arcade pixel-art style. Full-bleed 512×512, left and right edges seamlessly tileable, no text.

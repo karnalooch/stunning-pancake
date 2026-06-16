@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
@@ -123,19 +123,16 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   const profileFixture = getVisionProfileFixture(fixturesEnabled);
   const { level, xpBar } = useGameProgress();
   const { rides, distanceKm, verified, streakDays, loading: statsLoading, offline } = useRiderStats();
-  const [username, setUsername] = useState(user?.username ?? 'RIDER');
+  const [username, setUsername] = useState(profileFixture?.username ?? user?.username ?? 'RIDER');
 
   useEffect(() => {
-    if (fixturesEnabled) {
-      setUsername(profileFixture?.username ?? 'RIDER');
-      return;
-    }
+    if (fixturesEnabled) return;
     AuthService.getProfile()
       .then((profile) => {
         if (profile?.username) setUsername(profile.username);
       })
       .catch(() => {});
-  }, [fixturesEnabled, profileFixture]);
+  }, [fixturesEnabled]);
 
   const displayLevel = profileFixture?.level ?? level;
   const displayXpCurrent = profileFixture?.xpCurrent ?? xpBar.current;
@@ -148,24 +145,20 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   const displayOffline = fixturesEnabled ? false : offline;
   const displayXpPct = Math.max(0, Math.min(1, displayXpCurrent / Math.max(1, displayXpMax)));
 
-  const achievements = useMemo(
-    () =>
-      fixturesEnabled
-        ? [...(profileFixture?.achievements ?? [])]
-        : [
-            { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
-            { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
-            { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
-            { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
-            { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
-            { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
-            { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
-            { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
-            { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
-            { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
-          ],
-    [distanceKm, fixturesEnabled, profileFixture, rides, streakDays, verified],
-  );
+  const achievements = fixturesEnabled
+    ? [...(profileFixture?.achievements ?? [])]
+    : [
+        { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
+        { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
+        { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
+        { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
+        { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
+        { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
+        { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
+        { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
+        { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
+        { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
+      ];
 
   return (
     <View style={s.ct}>

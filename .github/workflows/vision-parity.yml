@@ -1,0 +1,81 @@
+name: Vision Parity (Optional)
+
+on:
+  workflow_dispatch:
+    inputs:
+      actual_dir:
+        description: "Optional path to NN_name.png screenshots directory"
+        required: false
+        default: ""
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "docs/design/screenshots/**"
+      - "scripts/vision_parity_harness.py"
+      - ".github/workflows/vision-parity.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/design/screenshots/**"
+      - "scripts/vision_parity_harness.py"
+      - ".github/workflows/vision-parity.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  vision-parity:
+    name: Vision parity gate (SSIM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install harness dependencies
+        run: pip install pillow numpy scikit-image
+
+      - name: Resolve screenshot input
+        id: resolve
+        shell: bash
+        env:
+          INPUT_ACTUAL_DIR: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.actual_dir || '' }}
+        run: |
+          set -euo pipefail
+          ACTUAL_DIR="${INPUT_ACTUAL_DIR}"
+          if [[ -z "${ACTUAL_DIR}" ]]; then
+            ACTUAL_DIR="$(ls -1d docs/design/screenshots/*-emulator-audit 2>/dev/null | sort | tail -n1 || true)"
+          fi
+          if [[ -z "${ACTUAL_DIR}" ]]; then
+            echo "has_actual=false" >> "$GITHUB_OUTPUT"
+            echo "No screenshots directory found; skipping vision parity gate."
+            exit 0
+          fi
+          if ! compgen -G "${ACTUAL_DIR}/*.png" > /dev/null; then
+            echo "has_actual=false" >> "$GITHUB_OUTPUT"
+            echo "Directory '${ACTUAL_DIR}' has no PNG files; skipping vision parity gate."
+            exit 0
+          fi
+          echo "has_actual=true" >> "$GITHUB_OUTPUT"
+          echo "actual_dir=${ACTUAL_DIR}" >> "$GITHUB_OUTPUT"
+          echo "Using screenshots from ${ACTUAL_DIR}"
+
+      - name: Run SSIM gate
+        if: steps.resolve.outputs.has_actual == 'true'
+        run: |
+          python scripts/vision_parity_harness.py \
+            --actual "${{ steps.resolve.outputs.actual_dir }}" \
+            --out "artifacts/vision-parity/${{ github.run_id }}" \
+            --composite \
+            --threshold 0.92
+
+      - name: Upload parity report
+        if: always() && steps.resolve.outputs.has_actual == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vision-parity-report-${{ github.run_id }}
+          path: artifacts/vision-parity/${{ github.run_id }}
+          retention-days: 7

@@ -1,113 +1,308 @@
 {
-  "generated_at": "2026-06-13T11:11:01.506122+00:00",
+  "generated_at": "2026-06-15T22:32:19.231898+00:00",
   "project": "SPORT Mobile",
   "description": "Cyklo-Siedlce Grand Prix pixel-art assets. Generated via Nano Banana Pro (gemini-3-pro-image) with MOBILE_ASSET_NANO_BANANA_PROMPTS.md SSOT.",
-  "total_assets": 10,
+  "total_assets": 25,
   "assets": [
     {
-      "id": "power_gps",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        24,
-        24
-      ],
-      "file_size_bytes": 1566,
-      "path": "icons/power_gps.png",
-      "description": "Compass rose — GPS lock power-up. An 8-point compass star/rose design. Gold (#D4A373) main points, cream (#F5E6CC) secondary points, deep sea (#0B1D33) background."
-    },
-    {
-      "id": "currency_xp",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        16,
-        16
-      ],
-      "file_size_bytes": 624,
-      "path": "icons/currency_xp.png",
-      "description": "XP orb — gold cube with 'XP' text. Small pixel-art experience point icon. A cube shape (isometric 3D pixel look) with tiny XP lettering or just a star on top. Gold (#D4A373) cube, goldLight (#EDD9B0) top face."
-    },
-    {
-      "id": "currency_coin",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        16,
-        16
-      ],
-      "file_size_bytes": 745,
-      "path": "icons/currency_coin.png",
-      "description": "Gold coin — pixel circle with star center. A round coin with a small 4-point star in the center. Gold (#D4A373) rim, goldLight (#EDD9B0) face, pixelBlack (#000000) outline."
-    },
-    {
-      "id": "currency_energy",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        16,
-        16
-      ],
-      "file_size_bytes": 686,
-      "path": "icons/currency_energy.png",
-      "description": "Energy bolt — jagged lightning shape. A sharp, jagged lightning bolt. Warning amber (#E8A840) body, goldLight (#EDD9B0) highlight."
-    },
-    {
-      "id": "app_icon",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        1024,
-        1024
-      ],
-      "file_size_bytes": 1181845,
-      "path": "icon.png",
-      "description": "App Store icon — caricatured hero on cobblestone street."
-    },
-    {
-      "id": "splash_icon",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        1280,
-        1280
-      ],
-      "file_size_bytes": 1435725,
-      "path": "splash-icon.png",
-      "description": "Launch splash — hero mid-race through Siedlce street scene."
-    },
-    {
-      "id": "adaptive_icon",
-      "category": "icon",
-      "format": "png",
-      "size_px": [
-        432,
-        432
-      ],
-      "file_size_bytes": 192444,
-      "path": "adaptive-icon.png",
-      "description": "Android adaptive icon foreground — hero bust in safe zone."
-    },
-    {
-      "id": "favicon",
+      "id": "crest_gdansk",
       "category": "icon",
       "format": "png",
       "size_px": [
         48,
         48
       ],
-      "file_size_bytes": 3713,
-      "path": "favicon.png",
-      "description": "Web favicon — simplified red helmet on deep sea."
+      "file_size_bytes": 4504,
+      "path": "icons/crest_gdansk.png",
+      "description": "Heraldic city crest (herb) of Gdańsk, Poland — pixel-art shield emblem for the city list and City Wars. Faithful tinctures, readable at 24px. 1-2px black outline, no anti-aliasing."
     },
     {
-      "id": "sfx_params",
-      "category": "sound",
-      "format": "json",
-      "size_px": null,
-      "file_size_bytes": 5212,
-      "path": "sounds/sfx_params.json",
-      "description": "jsfxr parameter presets for 9 8-bit arcade sound effects."
+      "id": "crest_katowice",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        48,
+        48
+      ],
+      "file_size_bytes": 4513,
+      "path": "icons/crest_katowice.png",
+      "description": "Heraldic city crest (herb) of Katowice, Poland — pixel-art shield emblem for the city list and City Wars. Faithful tinctures, readable at 24px. 1-2px black outline, no anti-aliasing."
+    },
+    {
+      "id": "crest_lublin",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        48,
+        48
+      ],
+      "file_size_bytes": 4382,
+      "path": "icons/crest_lublin.png",
+      "description": "Heraldic city crest (herb) of Lublin, Poland — pixel-art shield emblem for the city list and City Wars. Faithful tinctures, readable at 24px. 1-2px black outline, no anti-aliasing."
+    },
+    {
+      "id": "crest_siedlce",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        48,
+        48
+      ],
+      "file_size_bytes": 5228,
+      "path": "icons/crest_siedlce.png",
+      "description": "Heraldic city crest (herb) of Siedlce, Poland — pixel-art shield emblem for the city list and City Wars. Faithful tinctures, readable at 24px. 1-2px black outline, no anti-aliasing."
+    },
+    {
+      "id": "crest_warszawa",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        48,
+        48
+      ],
+      "file_size_bytes": 4602,
+      "path": "icons/crest_warszawa.png",
+      "description": "Heraldic city crest (herb) of Warszawa, Poland — pixel-art shield emblem for the city list and City Wars. Faithful tinctures, readable at 24px. 1-2px black outline, no anti-aliasing."
+    },
+    {
+      "id": "dept_it",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        40,
+        40
+      ],
+      "file_size_bytes": 2599,
+      "path": "icons/dept_it.png",
+      "description": "Department/team pixel icon: laptop with code brackets (IT). Forest green + gold accents."
+    },
+    {
+      "id": "dept_marketing",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        40,
+        40
+      ],
+      "file_size_bytes": 3362,
+      "path": "icons/dept_marketing.png",
+      "description": "Department/team pixel icon: megaphone (Marketing). Forest green + gold accents."
+    },
+    {
+      "id": "dept_hr",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        40,
+        40
+      ],
+      "file_size_bytes": 3182,
+      "path": "icons/dept_hr.png",
+      "description": "Department/team pixel icon: gear with a person silhouette (HR). Forest green + gold accents."
+    },
+    {
+      "id": "dept_sales",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        40,
+        40
+      ],
+      "file_size_bytes": 2158,
+      "path": "icons/dept_sales.png",
+      "description": "Department/team pixel icon: trophy cup (Sprzedaż/Sales). Forest green + gold accents."
+    },
+    {
+      "id": "ach_100km",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 7543,
+      "path": "icons/ach_100km.png",
+      "description": "Hexagonal achievement badge: mountain + '100 KM'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_10rides",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 7082,
+      "path": "icons/ach_10rides.png",
+      "description": "Hexagonal achievement badge: bicycle + '10 JAZD'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_500m",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 8045,
+      "path": "icons/ach_500m.png",
+      "description": "Hexagonal achievement badge: mountain peak + '500 M'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_kom",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 6808,
+      "path": "icons/ach_kom.png",
+      "description": "Hexagonal achievement badge: crown + 'KOM'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_5h",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 6791,
+      "path": "icons/ach_5h.png",
+      "description": "Hexagonal achievement badge: clock + '5H'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_endurance",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 3885,
+      "path": "icons/ach_endurance.png",
+      "description": "Hexagonal achievement badge: heart + 'WYTRWAŁOŚĆ'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_1000kcal",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 7857,
+      "path": "icons/ach_1000kcal.png",
+      "description": "Hexagonal achievement badge: flame + '1000 KCAL'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_7days",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 7072,
+      "path": "icons/ach_7days.png",
+      "description": "Hexagonal achievement badge: sprout + '7 DNI'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_explorer",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 7301,
+      "path": "icons/ach_explorer.png",
+      "description": "Hexagonal achievement badge: compass + 'ODKRYWCA'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "ach_passion",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        64,
+        64
+      ],
+      "file_size_bytes": 8246,
+      "path": "icons/ach_passion.png",
+      "description": "Hexagonal achievement badge: medal + 'PASJA'. Beveled hex medal, colored core, gold rim, pixel-art. Provide a desaturated 'locked' look via tint in code."
+    },
+    {
+      "id": "avatar_frame",
+      "category": "icon",
+      "format": "png",
+      "size_px": [
+        128,
+        128
+      ],
+      "file_size_bytes": 23626,
+      "path": "icons/avatar_frame.png",
+      "description": "Circular gold laurel avatar frame ring (transparent center) for the profile portrait, matching vision/12_profile.png."
+    },
+    {
+      "id": "frame_ornate",
+      "category": "texture",
+      "format": "png",
+      "size_px": [
+        96,
+        96
+      ],
+      "file_size_bytes": 15981,
+      "path": "textures/frame_ornate.png",
+      "description": "Ornate parchment scroll frame for 9-slice borders — corner rivets, wood/gold trim. Used as the standard card/panel border in the vision mocks."
+    },
+    {
+      "id": "banner_city_lublin",
+      "category": "environment",
+      "format": "png",
+      "size_px": [
+        512,
+        256
+      ],
+      "file_size_bytes": 191554,
+      "path": "environment/banner_city_lublin.png",
+      "description": "City-of-the-week banner — pixel panorama of Lublin old town at day, with a ribbon area for the city name. Matches vision/05_compete_hub.png."
+    },
+    {
+      "id": "finish_meta",
+      "category": "environment",
+      "format": "png",
+      "size_px": [
+        512,
+        320
+      ],
+      "file_size_bytes": 251108,
+      "path": "environment/finish_meta.png",
+      "description": "Race finish 'META' scene — checkered banner gantry, cheering crowd with 4VELO flags, cyclist from behind. Matches vision/00_onboarding_finish.png."
+    },
+    {
+      "id": "sky_sunset",
+      "category": "environment",
+      "format": "png",
+      "size_px": [
+        512,
+        512
+      ],
+      "file_size_bytes": 306232,
+      "path": "environment/sky_sunset.png",
+      "description": "Parallax sky layer — warm orange/pink sunset clouds. Tileable horizontally."
+    },
+    {
+      "id": "sky_night",
+      "category": "environment",
+      "format": "png",
+      "size_px": [
+        512,
+        512
+      ],
+      "file_size_bytes": 260873,
+      "path": "environment/sky_night.png",
+      "description": "Parallax sky layer — deep blue night sky with stars. Tileable horizontally."
     }
   ]
 }

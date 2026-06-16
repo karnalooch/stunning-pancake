@@ -8,16 +8,22 @@
  */
 import Constants from 'expo-constants';
 
-function readFlag(key: string): boolean {
-  const fromProcess = process.env[key];
-  if (fromProcess != null && fromProcess !== '') return fromProcess === 'true';
-  const extra = (Constants.expoConfig?.extra ?? {}) as Record<string, string | undefined>;
-  return extra[key] === 'true';
-}
-
 /** True when the build should render vision fixture data instead of live data. */
 export function isVisionFixtures(): boolean {
-  return readFlag('EXPO_PUBLIC_VISION_FIXTURES');
+  const fromProcess = process.env.EXPO_PUBLIC_VISION_FIXTURES;
+  if (fromProcess != null && fromProcess !== '') {
+    return fromProcess === 'true';
+  }
+
+  const fromExpo = Constants.expoConfig?.extra as Record<string, string | undefined> | undefined;
+  const fromManifest2 = (
+    Constants as { manifest2?: { extra?: Record<string, string | undefined> } }
+  ).manifest2?.extra;
+  const fromManifest = (
+    Constants as { manifest?: { extra?: Record<string, string | undefined> } }
+  ).manifest?.extra;
+  const extra = { ...fromManifest, ...fromManifest2, ...fromExpo };
+  return extra.EXPO_PUBLIC_VISION_FIXTURES === 'true';
 }
 
 /** Profile screen — mirrors `vision/12_profile.png` (Anna K.). */

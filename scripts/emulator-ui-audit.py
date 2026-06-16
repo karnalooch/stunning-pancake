@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import os
 import subprocess
 import sys
 import time
@@ -48,7 +49,7 @@ def run(cmd: list[str], timeout: int = 45) -> subprocess.CompletedProcess:
 
 
 def adb(*args: str) -> None:
-    run(ADB + list(args), timeout=60)
+    return run(ADB + list(args), timeout=60)
 
 
 def sleep(sec: float = 2.0) -> None:
@@ -73,6 +74,8 @@ def screencap(step_id: str) -> Path:
 def dump_ui() -> ET.Element | None:
     adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
     tmp = OUT_DIR / "_ui.xml"
+    if tmp.exists():
+        tmp.unlink()
     r = run(ADB + ["pull", "/sdcard/ui.xml", str(tmp)], timeout=20)
     if r.returncode != 0 or not tmp.exists():
         return None
@@ -129,6 +132,27 @@ def tap_tab(name: str) -> None:
     foreground_app()
     tap(x, y)
     sleep()
+
+
+def capture_raw(step_id: str, title: str, notes: list[str] | None = None, status: str = "ok") -> None:
+    foreground_app()
+    texts = visible_texts(dump_ui())
+    shot = screencap(step_id)
+    extra = notes or []
+    if not shot.exists() or shot.stat().st_size < 50_000:
+        status = "fail" if status == "ok" else status
+        extra.append("Plik PNG zbyt mały")
+    steps.append(
+        Step(
+            id=step_id,
+            title=title,
+            screenshot=shot.name,
+            visible=texts,
+            notes=extra,
+            status=status,
+        )
+    )
+    print(f"[{status}] {step_id}: {title} (raw)")
 
 
 def capture(step_id: str, title: str, notes: list[str] | None = None, status: str = "ok") -> None:
@@ -271,19 +295,47 @@ def wait_for_main_shell(timeout_s: float = 30) -> bool:
     return classify_capture(screencap_image()) == "main"
 
 
-def complete_onboarding_flow() -> list[str]:
+def complete_onboarding_flow() -> tuple[list[str], bool]:
     notes: list[str] = []
     if wait_for_main_shell(20):
         notes.append("E2E skip — główna aplikacja bez ręcznego onboardingu")
-        return notes
-    script = REPO / "scripts" / "emulator-onboarding.py"
-    r = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=180)
-    if "onboarding_complete" in (r.stdout or ""):
-        notes.append("Onboarding ukończony (tap współrzędne + pm grant GPS)")
-    else:
-        notes.append(f"Onboarding nieudany: {(r.stdout or r.stderr or '').strip()}")
+        capture_raw("00_main_after_onboarding", "Po onboardingu — shell główny", notes=notes)
+        capture_raw("00_onboarding_complete", "Po ukończeniu onboardingu", notes=notes)
+        return notes, True
+
+    capture_raw("00_onboarding_city", "Onboarding — wybór miasta")
+    if not tap_pattern(r"onboarding-city-next|DALEJ|NEXT", (540, 1860)):
+        notes.append("Onboarding city: brak przycisku DALEJ/NEXT")
+        return notes, False
+
+    sleep(1.0)
+    capture_raw("00_onboarding_department", "Onboarding — wybór działu")
+    if not tap_pattern(r"onboarding-department-next|DALEJ|NEXT", (540, 900)):
+        notes.append("Onboarding department: brak przycisku DALEJ/NEXT")
+        return notes, False
+
+    sleep(1.0)
+    capture_raw("00_onboarding_finish", "Onboarding — ekran końcowy")
+    if not tap_pattern(
+        r"onboarding-finish-join|DOŁĄCZ DO RYWALIZACJI|JOIN COMPETITION|DOŁĄCZANIE|JOINING",
+        (540, 1110),
+    ):
+        notes.append("Onboarding finish: brak przycisku DOŁĄCZ/JOIN")
+        return notes, False
+
+    # Fallback for devices where permission prompt still appears despite pm grant.
+    tap_pattern(r"Kontynuuj bez GPS|Continue without GPS", None)
+    sleep(3.0)
     ensure_app_foreground()
-    return notes
+
+    if not wait_for_main_shell(25):
+        notes.append("Onboarding nie zakończył przejścia do shella głównego")
+        return notes, False
+
+    notes.append("Onboarding ukończony (sekwencja testID + fallback tekstowy)")
+    capture_raw("00_onboarding_complete", "Po ukończeniu onboardingu", notes=notes)
+    capture_raw("00_main_after_onboarding", "Po onboardingu — shell główny", notes=notes)
+    return notes, True
 
 
 def screen_signature(img: Image.Image | None) -> str:
@@ -302,8 +354,39 @@ def main() -> int:
     foreground_app()
 
     foreground_app()
-    onboard_notes = complete_onboarding_flow()
-    capture("00_onboarding_complete", "Po ukończeniu onboardingu", notes=onboard_notes)
+    onboard_notes, onboarding_ok = complete_onboarding_flow()
+
+    # Vision parity runs require onboarding screens to be reachable.
+    # If E2E auto-login skipped onboarding, the capture set is not comparable
+    # to vision references and should fail fast.
+    if os.getenv("EXPO_PUBLIC_VISION_FIXTURES") == "true" and any("E2E skip" in n for n in onboard_notes):
+        steps.append(
+            Step(
+                id="00_invalid_run",
+                title="Nieważny run parity (onboarding pominięty)",
+                status="fail",
+                notes=[
+                    "EXPO_PUBLIC_E2E_SKIP_ONBOARDING jest aktywne dla buildu uruchomionego na emulatorze.",
+                    "Przebuduj APK z EXPO_PUBLIC_E2E_SKIP_ONBOARDING=false i uruchom audit ponownie.",
+                ],
+            )
+        )
+        write_report()
+        print(f"Report: {REPORT}")
+        return 2
+
+    if not onboarding_ok:
+        steps.append(
+            Step(
+                id="00_blocker",
+                title="Onboarding blokuje główną aplikację",
+                status="fail",
+                notes=onboard_notes + ["Audyt zakładek wykonany mimo blokady — zrzuty mogą być nieprawidłowe"],
+            )
+        )
+        write_report()
+        print(f"Report: {REPORT}")
+        return 2
 
     img = screencap_image()
     if classify_capture(img) != "main":

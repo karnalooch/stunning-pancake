@@ -29,9 +29,13 @@ describe('e2eConfig', () => {
     process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN = 'true';
     process.env.EXPO_PUBLIC_E2E_EMAIL = 'e2e@test.sport.ai';
     process.env.EXPO_PUBLIC_E2E_PASSWORD = 'secret';
-    delete process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING;
 
+    // loadE2eConfig() resets modules, which makes jest-expo (@expo/env) reload a
+    // local mobile/.env back into process.env. Blank the flag AFTER that reload
+    // (readEnv treats '' as unset) so the "default" path is exercised
+    // hermetically regardless of any local .env.
     const { shouldSkipOnboardingForE2e, isE2eAutoLoginEnabled } = loadE2eConfig();
+    process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING = '';
     expect(isE2eAutoLoginEnabled()).toBe(true);
     expect(shouldSkipOnboardingForE2e()).toBe(true);
   });

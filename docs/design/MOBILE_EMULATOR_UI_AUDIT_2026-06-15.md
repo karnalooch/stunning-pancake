@@ -12,8 +12,8 @@
 
 ## Podsumowanie
 
-- **16** OK · **0** ostrzeżeń · **1** błędów · **2** pominiętych
-- Łącznie kroków: **19**
+- **3** OK · **0** ostrzeżeń · **1** błędów · **0** pominiętych
+- Łącznie kroków: **4**
 
 ## Ustalenia do poprawy
 
@@ -30,106 +30,35 @@
 
 | ID | Ekran | Status |
 |----|-------|--------|
-| 00_onboarding_complete | Po ukończeniu onboardingu | ✅ ok |
+| 00_onboarding_city | Onboarding — wybór miasta | ✅ ok |
+| 00_onboarding_department | Onboarding — wybór działu | ✅ ok |
+| 00_onboarding_finish | Onboarding — ekran końcowy | ✅ ok |
 | 00_blocker | Onboarding blokuje główną aplikację | ❌ fail |
-| 01_ride_dashboard | Jazda — dashboard (stan startowy) | ✅ ok |
-| 02_active_ride_hud | HUD jazdy | ⏭️ skip |
-| 04_gps_diagnostics | Kreator GPS (modal) | ✅ ok |
-| 05_compete_hub | Rywalizacja — City Hub | ✅ ok |
-| 06_compete_scrolled | Rywalizacja — dolna sekcja (questy) | ✅ ok |
-| 07_clubs | Kluby | ✅ ok |
-| 08_segments | Segmenty | ✅ ok |
-| 09_explore_hub | Odkrywaj — hub | ✅ ok |
-| 10_explore_map | Mapa POI | ✅ ok |
-| 11_marketplace | Marketplace | ✅ ok |
-| 12_profile | Profil — góra | ✅ ok |
-| 13_profile_scrolled | Profil — akcje (trendy, ranking, dziennik) | ✅ ok |
-| 14_trends | Trendy wydolności | ✅ ok |
-| 15_leaderboard | Ranking globalny | ✅ ok |
-| 16_training_log | Dziennik treningów | ✅ ok |
-| 17_settings | Ustawienia | ⏭️ skip |
-| 19_final | Stan końcowy — zakładka Jazda | ✅ ok |
 
 ## Zrzuty ekranu
 
-### ✅ 00_onboarding_complete — Po ukończeniu onboardingu
+### ✅ 00_onboarding_city — Onboarding — wybór miasta
 
-![Po ukończeniu onboardingu](screenshots/2026-06-15-emulator-audit/00_onboarding_complete.png)
+![Onboarding — wybór miasta](screenshots/2026-06-15-emulator-audit/00_onboarding_city.png)
 
-- Onboarding nieudany: onboarding_failed
+**Widoczny tekst:** `←`, `USTAWIENIA`, `OGÓLNE`, `SENSORY`, `PRYWATNOŚĆ`, `GARAŻ`, `Język, Polski`, `Język`, `Polski`, `Motyw pixel Grand Prix, Wł.`, `Motyw pixel Grand Prix`, `Wł.`
+
+### ✅ 00_onboarding_department — Onboarding — wybór działu
+
+![Onboarding — wybór działu](screenshots/2026-06-15-emulator-audit/00_onboarding_department.png)
+
+**Widoczny tekst:** `←`, `USTAWIENIA`, `OGÓLNE`, `SENSORY`, `PRYWATNOŚĆ`, `GARAŻ`, `Język, Polski`, `Język`, `Polski`, `Motyw pixel Grand Prix, Wł.`, `Motyw pixel Grand Prix`, `Wł.`
+
+### ✅ 00_onboarding_finish — Onboarding — ekran końcowy
+
+![Onboarding — ekran końcowy](screenshots/2026-06-15-emulator-audit/00_onboarding_finish.png)
+
+**Widoczny tekst:** `←`, `USTAWIENIA`, `OGÓLNE`, `SENSORY`, `PRYWATNOŚĆ`, `GARAŻ`, `Język, Polski`, `Język`, `Polski`, `Motyw pixel Grand Prix, Wł.`, `Motyw pixel Grand Prix`, `Wł.`
 
 ### ❌ 00_blocker — Onboarding blokuje główną aplikację
 
-- Onboarding nieudany: onboarding_failed
+- Onboarding nie zakończył przejścia do shella głównego
 - Audyt zakładek wykonany mimo blokady — zrzuty mogą być nieprawidłowe
-
-### ✅ 01_ride_dashboard — Jazda — dashboard (stan startowy)
-
-![Jazda — dashboard (stan startowy)](screenshots/2026-06-15-emulator-audit/01_ride_dashboard.png)
-
-### ⏭️ 02_active_ride_hud — HUD jazdy
-
-- Brak DO JAZDY — może już na HUD lub brak aktywnej sesji
-
-### ✅ 04_gps_diagnostics — Kreator GPS (modal)
-
-![Kreator GPS (modal)](screenshots/2026-06-15-emulator-audit/04_gps_diagnostics.png)
-
-### ✅ 05_compete_hub — Rywalizacja — City Hub
-
-![Rywalizacja — City Hub](screenshots/2026-06-15-emulator-audit/05_compete_hub.png)
-
-### ✅ 06_compete_scrolled — Rywalizacja — dolna sekcja (questy)
-
-![Rywalizacja — dolna sekcja (questy)](screenshots/2026-06-15-emulator-audit/06_compete_scrolled.png)
-
-### ✅ 07_clubs — Kluby
-
-![Kluby](screenshots/2026-06-15-emulator-audit/07_clubs.png)
-
-### ✅ 08_segments — Segmenty
-
-![Segmenty](screenshots/2026-06-15-emulator-audit/08_segments.png)
-
-### ✅ 09_explore_hub — Odkrywaj — hub
-
-![Odkrywaj — hub](screenshots/2026-06-15-emulator-audit/09_explore_hub.png)
-
-### ✅ 10_explore_map — Mapa POI
-
-![Mapa POI](screenshots/2026-06-15-emulator-audit/10_explore_map.png)
-
-### ✅ 11_marketplace — Marketplace
-
-![Marketplace](screenshots/2026-06-15-emulator-audit/11_marketplace.png)
-
-### ✅ 12_profile — Profil — góra
-
-![Profil — góra](screenshots/2026-06-15-emulator-audit/12_profile.png)
-
-### ✅ 13_profile_scrolled — Profil — akcje (trendy, ranking, dziennik)
-
-![Profil — akcje (trendy, ranking, dziennik)](screenshots/2026-06-15-emulator-audit/13_profile_scrolled.png)
-
-### ✅ 14_trends — Trendy wydolności
-
-![Trendy wydolności](screenshots/2026-06-15-emulator-audit/14_trends.png)
-
-### ✅ 15_leaderboard — Ranking globalny
-
-![Ranking globalny](screenshots/2026-06-15-emulator-audit/15_leaderboard.png)
-
-### ✅ 16_training_log — Dziennik treningów
-
-![Dziennik treningów](screenshots/2026-06-15-emulator-audit/16_training_log.png)
-
-### ⏭️ 17_settings — Ustawienia
-
-- Ikona ustawień w headerze nie otworzyła modala
-
-### ✅ 19_final — Stan końcowy — zakładka Jazda
-
-![Stan końcowy — zakładka Jazda](screenshots/2026-06-15-emulator-audit/19_final.png)
 
 ## Checklist wizualny
 

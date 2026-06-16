@@ -1,0 +1,117 @@
+[
+  {
+    "screen": "00_main_after_onboarding.png",
+    "status": "MISSING",
+    "score": null
+  },
+  {
+    "screen": "00_onboarding_city.png",
+    "status": "FAIL",
+    "score": 0.1458
+  },
+  {
+    "screen": "00_onboarding_complete.png",
+    "status": "FAIL",
+    "score": 0.1361
+  },
+  {
+    "screen": "00_onboarding_department.png",
+    "status": "FAIL",
+    "score": 0.1543
+  },
+  {
+    "screen": "00_onboarding_finish.png",
+    "status": "FAIL",
+    "score": 0.151
+  },
+  {
+    "screen": "01_ride_dashboard.png",
+    "status": "FAIL",
+    "score": 0.1209
+  },
+  {
+    "screen": "02_active_ride_hud.png",
+    "status": "FAIL",
+    "score": 0.0273
+  },
+  {
+    "screen": "03_ride_paused.png",
+    "status": "FAIL",
+    "score": 0.1048
+  },
+  {
+    "screen": "03b_ride_stopped.png",
+    "status": "FAIL",
+    "score": 0.2901
+  },
+  {
+    "screen": "04_gps_diagnostics.png",
+    "status": "FAIL",
+    "score": 0.1491
+  },
+  {
+    "screen": "05_compete_hub.png",
+    "status": "FAIL",
+    "score": 0.1747
+  },
+  {
+    "screen": "06_compete_scrolled.png",
+    "status": "FAIL",
+    "score": 0.1791
+  },
+  {
+    "screen": "07_clubs.png",
+    "status": "FAIL",
+    "score": 0.0571
+  },
+  {
+    "screen": "08_segments.png",
+    "status": "FAIL",
+    "score": 0.0377
+  },
+  {
+    "screen": "09_explore_hub.png",
+    "status": "FAIL",
+    "score": 0.0492
+  },
+  {
+    "screen": "10_explore_map.png",
+    "status": "FAIL",
+    "score": 0.0573
+  },
+  {
+    "screen": "11_marketplace.png",
+    "status": "FAIL",
+    "score": 0.2005
+  },
+  {
+    "screen": "12_profile.png",
+    "status": "FAIL",
+    "score": 0.194
+  },
+  {
+    "screen": "13_profile_scrolled.png",
+    "status": "FAIL",
+    "score": 0.1467
+  },
+  {
+    "screen": "14_trends.png",
+    "status": "FAIL",
+    "score": 0.0576
+  },
+  {
+    "screen": "15_leaderboard.png",
+    "status": "FAIL",
+    "score": 0.1804
+  },
+  {
+    "screen": "16_training_log.png",
+    "status": "FAIL",
+    "score": 0.0702
+  },
+  {
+    "screen": "19_final.png",
+    "status": "FAIL",
+    "score": 0.1874
+  }
+]

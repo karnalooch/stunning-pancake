@@ -99,9 +99,9 @@ export const CityHubScreen: React.FC<{
     const displayLevel = cityHubFixture?.level ?? level;
     const [showMoo, setShowMoo] = useState(false);
     const mooTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-    const [lbLoading, setLbLoading] = useState(true);
-    const [cityHub, setCityHub] = useState<CityHubSummary | null>(null);
+    const [leaderboardLive, setLeaderboardLive] = useState<LeaderboardEntry[]>([]);
+    const [lbLoadingLive, setLbLoadingLive] = useState(true);
+    const [cityHubLive, setCityHubLive] = useState<CityHubSummary | null>(null);
     const fixtureSummary = useMemo<CityHubSummary>(() => ({
         active_event: null,
         city_of_week: {
@@ -137,31 +137,26 @@ export const CityHubScreen: React.FC<{
         })),
     }), [cityHubFixture]);
     useEffect(() => {
-        if (fixturesEnabled) {
-            setCityHub(fixtureSummary);
-            setLeaderboard(fixtureSummary.leaderboard);
-            setLbLoading(false);
-            return;
-        }
+        if (fixturesEnabled) return;
         const cached = OfflineCacheService.getCityHub();
         if (cached) {
-            setCityHub(cached);
-            setLeaderboard((cached.leaderboard ?? []).slice(0, 10));
+            setCityHubLive(cached);
+            setLeaderboardLive((cached.leaderboard ?? []).slice(0, 10));
         }
-        setLbLoading(true);
+        setLbLoadingLive(true);
         withRetry(() => ActivityService.getCityHubSummary())
             .then((summary) => {
                 OfflineCacheService.setCityHub(summary);
-                setCityHub(summary);
-                setLeaderboard((summary.leaderboard ?? []).slice(0, 10));
+                setCityHubLive(summary);
+                setLeaderboardLive((summary.leaderboard ?? []).slice(0, 10));
             })
             .catch(() => {
                 if (!cached) {
-                    setCityHub(null);
-                    setLeaderboard([]);
+                    setCityHubLive(null);
+                    setLeaderboardLive([]);
                 }
             })
-            .finally(() => setLbLoading(false));
+            .finally(() => setLbLoadingLive(false));
     }, [fixtureSummary, fixturesEnabled, user?.username]);
 
     useEffect(() => () => {
@@ -177,12 +172,16 @@ export const CityHubScreen: React.FC<{
         mooTimer.current = setTimeout(() => setShowMoo(false), 2500);
     };
 
-    const cityOfWeekName = cityHub?.city_of_week?.name ?? '—';
-    const cityOfWeekKm = cityHub?.city_of_week?.score_km ?? 0;
-    const wars = cityHub?.city_wars;
+    const effectiveCityHub = fixturesEnabled ? fixtureSummary : cityHubLive;
+    const effectiveLeaderboard = fixturesEnabled ? fixtureSummary.leaderboard : leaderboardLive;
+    const lbLoading = fixturesEnabled ? false : lbLoadingLive;
+
+    const cityOfWeekName = effectiveCityHub?.city_of_week?.name ?? '—';
+    const cityOfWeekKm = effectiveCityHub?.city_of_week?.score_km ?? 0;
+    const wars = effectiveCityHub?.city_wars;
     const leftScore = wars?.tenant_a?.score ?? 0;
     const rightScore = wars?.tenant_b?.score ?? 0;
-    const quests = cityHub?.quests ?? [];
+    const quests = effectiveCityHub?.quests ?? [];
 
     return (
     <View style={s.container}>
@@ -220,10 +219,10 @@ export const CityHubScreen: React.FC<{
                 <LaurelHeader title={t.compete.leaderboard} />
                 {lbLoading ? (
                     <SkeletonBlock height={160} />
-                ) : leaderboard.length === 0 ? (
+                ) : effectiveLeaderboard.length === 0 ? (
                     <Text style={s.questDist}>{t.compete.empty}</Text>
                 ) : (
-                    leaderboard.map((r) => (
+                    effectiveLeaderboard.map((r) => (
                         <View
                             key={`${r.rank}-${r.username}`}
                             style={[

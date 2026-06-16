@@ -21,10 +21,14 @@ import {
   setOnboardingCompleteGlobal,
 } from './storage';
 import { e2eConfig, isE2eAutoLoginEnabled, shouldSkipOnboardingForE2e } from './e2eConfig';
+import { isVisionFixtures } from './visionFixtures';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 
-const BYPASS_AUTH = false;
+// Resolve via the robust path (process.env -> Constants.expoConfig.extra) so the
+// flag survives release bundles where Metro does not inline `process.env`.
+// `e2eConfig.autoLogin` and `isVisionFixtures()` both read the baked `extra`.
+const BYPASS_AUTH = isVisionFixtures() || e2eConfig.autoLogin;
 
 export function useAuthSession(onUserReady: (userId: number | null) => Promise<void>) {
   const { t } = useI18n();
@@ -80,6 +84,10 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     setOnSessionExpired(handleSessionExpired);
 
     void (async () => {
+      if (BYPASS_AUTH) {
+        auth.isLoading.set(false);
+        return;
+      }
       const token = await restoreSessionFromStorage();
       if (token) {
         try {

@@ -17,46 +17,46 @@ export type DeptKey = 'it' | 'marketing' | 'hr' | 'sales';
 
 const CREST: Record<CrestKey, ImageSourcePropType | undefined> = {
   // AUTO-WIRE:CREST:START
-  gdansk: undefined,
-  katowice: undefined,
-  lublin: undefined,
-  siedlce: undefined,
-  warszawa: undefined,
+  gdansk: require('../../assets/generated/icons/crest_gdansk.png'),
+  katowice: require('../../assets/generated/icons/crest_katowice.png'),
+  lublin: require('../../assets/generated/icons/crest_lublin.png'),
+  siedlce: require('../../assets/generated/icons/crest_siedlce.png'),
+  warszawa: require('../../assets/generated/icons/crest_warszawa.png'),
   // AUTO-WIRE:CREST:END
 };
 
 const DEPT: Record<DeptKey, ImageSourcePropType | undefined> = {
   // AUTO-WIRE:DEPT:START
-  it: undefined,
-  marketing: undefined,
-  hr: undefined,
-  sales: undefined,
+  it: require('../../assets/generated/icons/dept_it.png'),
+  marketing: require('../../assets/generated/icons/dept_marketing.png'),
+  hr: require('../../assets/generated/icons/dept_hr.png'),
+  sales: require('../../assets/generated/icons/dept_sales.png'),
   // AUTO-WIRE:DEPT:END
 };
 
 const ACHIEVEMENT: Record<string, ImageSourcePropType | undefined> = {
   // AUTO-WIRE:ACHIEVEMENT:START
-  ach_100km: undefined,
-  ach_10rides: undefined,
-  ach_500m: undefined,
-  ach_kom: undefined,
-  ach_5h: undefined,
-  ach_endurance: undefined,
-  ach_1000kcal: undefined,
-  ach_7days: undefined,
-  ach_explorer: undefined,
-  ach_passion: undefined,
+  ach_100km: require('../../assets/generated/icons/ach_100km.png'),
+  ach_10rides: require('../../assets/generated/icons/ach_10rides.png'),
+  ach_500m: require('../../assets/generated/icons/ach_500m.png'),
+  ach_kom: require('../../assets/generated/icons/ach_kom.png'),
+  ach_5h: require('../../assets/generated/icons/ach_5h.png'),
+  ach_endurance: require('../../assets/generated/icons/ach_endurance.png'),
+  ach_1000kcal: require('../../assets/generated/icons/ach_1000kcal.png'),
+  ach_7days: require('../../assets/generated/icons/ach_7days.png'),
+  ach_explorer: require('../../assets/generated/icons/ach_explorer.png'),
+  ach_passion: require('../../assets/generated/icons/ach_passion.png'),
   // AUTO-WIRE:ACHIEVEMENT:END
 };
 
 export const VISION_BANNERS: Record<string, ImageSourcePropType | undefined> = {
   // AUTO-WIRE:BANNERS:START
-  city_lublin: undefined,
-  finish_meta: undefined,
-  avatar_frame: undefined,
-  frame_ornate: undefined,
-  sky_sunset: undefined,
-  sky_night: undefined,
+  city_lublin: require('../../assets/generated/environment/banner_city_lublin.png'),
+  finish_meta: require('../../assets/generated/environment/finish_meta.png'),
+  avatar_frame: require('../../assets/generated/icons/avatar_frame.png'),
+  frame_ornate: require('../../assets/generated/textures/frame_ornate.png'),
+  sky_sunset: require('../../assets/generated/environment/sky_sunset.png'),
+  sky_night: require('../../assets/generated/environment/sky_night.png'),
   // AUTO-WIRE:BANNERS:END
 };
 
