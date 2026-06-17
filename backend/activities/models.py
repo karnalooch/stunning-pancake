@@ -256,6 +256,63 @@ class WearableIntegration(models.Model):
             return None
 
 
+class GarminSimulatorCredential(models.Model):
+    """Stores Garmin Connect login+password for simulated users (Fernet-encrypted)."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="garmin_sim_credential",
+    )
+    garmin_email = models.TextField()
+    garmin_password = models.TextField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["is_active", "created_at"])]
+
+    def __str__(self):
+        return f"GarminSimCred for {self.user.username}"
+
+    def save(self, *args, **kwargs):
+        if self.garmin_email:
+            try:
+                _fernet.decrypt(self.garmin_email.encode())
+            except (InvalidToken, UnicodeDecodeError):
+                self.garmin_email = _fernet.encrypt(self.garmin_email.encode()).decode()
+        if self.garmin_password:
+            try:
+                _fernet.decrypt(self.garmin_password.encode())
+            except (InvalidToken, UnicodeDecodeError):
+                self.garmin_password = _fernet.encrypt(self.garmin_password.encode()).decode()
+        super().save(*args, **kwargs)
+
+    @property
+    def decrypted_email(self) -> str | None:
+        if not self.garmin_email:
+            return None
+        try:
+            return _fernet.decrypt(self.garmin_email.encode()).decode()
+        except (InvalidToken, UnicodeDecodeError):
+            logger.error(
+                "Failed to decrypt garmin_email for GarminSimulatorCredential id=%s", self.pk
+            )
+            return None
+
+    @property
+    def decrypted_password(self) -> str | None:
+        if not self.garmin_password:
+            return None
+        try:
+            return _fernet.decrypt(self.garmin_password.encode()).decode()
+        except (InvalidToken, UnicodeDecodeError):
+            logger.error(
+                "Failed to decrypt garmin_password for GarminSimulatorCredential id=%s", self.pk
+            )
+            return None
+
+
 class DiskAuditEvent(models.Model):
     """Append-only audit log for Postgres disk guard actions."""
 

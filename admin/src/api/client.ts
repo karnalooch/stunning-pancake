@@ -505,6 +505,26 @@ export const SimulatorApi = {
     return data;
   },
 
+  // Garmin Simulation (Siedlce 10-user wizard)
+  startGarminSimulation: async (params: {
+    user_count: number;
+    credentials: Array<{ email: string; password: string }>;
+    schedule: Record<string, unknown>;
+  }) => {
+    const { data } = await apiClient.post('/activities/admin/garmin-simulate/', params);
+    return data;
+  },
+  getGarminSimulationStatus: async (options?: { silent?: boolean }) => {
+    const { data } = await apiClient.get('/activities/admin/garmin-simulate/', {
+      skipGlobalError: options?.silent,
+    } as ApiClientRequestConfig);
+    return data;
+  },
+  abortGarminSimulation: async () => {
+    const { data } = await apiClient.delete('/activities/admin/garmin-simulate/');
+    return data;
+  },
+
   resetSimulator: async (target: WipeTarget = 'sim-lab') => {
     const { data } = await apiClient.post(simulatorResetPath(target));
     return data;

@@ -9,6 +9,7 @@ from .admin_views import (
     DepartmentAnalyticsView,
     DiskAuditListView,
     ExportDataView,
+    GarminSimulateView,
     GlobalActivityListView,
     IntegrationTestModeView,
     SimDataPlaneView,
@@ -183,6 +184,7 @@ urlpatterns = [
     # Live Simulation — Real-time ride simulator
     path("admin/live-simulate/", LiveSimulationView.as_view(), name="admin-live-simulate"),
     path("admin/simulator-reset/", SimulatorResetView.as_view(), name="admin-simulator-reset"),
+    path("admin/garmin-simulate/", GarminSimulateView.as_view(), name="admin-garmin-simulate"),
     # Data Wipe — delete all except GLOBAL_OWNER
     path("admin/wipe-data/", WipeDataView.as_view(), name="admin-wipe-data"),
     # Worker Status — Celery worker monitoring

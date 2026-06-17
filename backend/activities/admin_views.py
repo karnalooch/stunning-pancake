@@ -26,6 +26,7 @@ from .sim_lab_proxy import (
     try_forward_sim_lab,
 )
 from .simulator_tasks import run_batch_simulation, run_live_simulation
+from .garmin_simulator_tasks import schedule_garmin_rides
 
 # Keep IsAdminRole as an alias for backward compatibility
 IsAdminRole = IsAdminOrModerator
@@ -1655,3 +1656,98 @@ class RunSimulationView(APIView):
         if batch_warnings:
             payload["warnings"] = batch_warnings
         return Response(payload)
+
+
+class GarminSimulateView(APIView):
+    """
+    POST   /api/activities/admin/garmin-simulate/   — start Garmin batch
+    GET    /api/activities/admin/garmin-simulate/   — status + logs
+    DELETE /api/activities/admin/garmin-simulate/   — abort
+    """
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        try:
+            from .garmin_simulator import get_garmin_batch_logs, get_garmin_batch_state
+
+            state = get_garmin_batch_state()
+            log = get_garmin_batch_logs()
+            return Response({
+                "running": state.get("running", False),
+                "progress_pct": state.get("progress_pct", 0.0),
+                "phase": state.get("phase", "idle"),
+                "total_rides": state.get("total_rides", 0),
+                "rides_scheduled": state.get("rides_scheduled", 0),
+                "rides_active": state.get("rides_active", 0),
+                "rides_done": state.get("rides_done", 0),
+                "error": state.get("error"),
+                "log": log,
+            })
+        except Exception as exc:
+            return Response(
+                {"error": f"Garmin simulator state unavailable: {exc}", "running": False, "log": []},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+    def delete(self, request):
+        from .garmin_simulator import (
+            clear_garmin_batch_state,
+            is_garmin_batch_lock_held,
+            set_garmin_batch_state,
+        )
+
+        set_garmin_batch_state(running=False, phase="aborted")
+        clear_garmin_batch_state()
+        return Response({
+            "status": "abort_requested",
+            "garmin_batch_lock_held": is_garmin_batch_lock_held(),
+            "message": "Garmin batch simulation stopped.",
+        })
+
+    def post(self, request):
+        from .garmin_simulator import get_garmin_batch_state, is_garmin_batch_lock_held
+
+        state = get_garmin_batch_state()
+        if state.get("running") or is_garmin_batch_lock_held():
+            return Response(
+                {"error": "Garmin simulation already running. Wait for it to finish or abort it.", "running": True},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        credentials = request.data.get("credentials") or []
+        user_count = int(request.data.get("user_count", 10))
+        schedule_config = request.data.get("schedule", {})
+
+        if not isinstance(credentials, list) or len(credentials) < 1:
+            return Response(
+                {"error": "credentials must be a non-empty list of {email, password}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(credentials) < user_count:
+            return Response(
+                {"error": f"Not enough credentials: got {len(credentials)}, need {user_count}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credentials = credentials[:user_count]
+        for i, c in enumerate(credentials):
+            if not c.get("email") or not c.get("password"):
+                return Response(
+                    {"error": f"Row {i + 1}: missing email or password"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        total_rides = user_count * (
+            schedule_config.get("weekday_rides", 3) + 1
+        )
+
+        schedule_garmin_rides.delay(credentials, schedule_config)
+
+        return Response({
+            "status": "started",
+            "user_count": user_count,
+            "total_rides": total_rides,
+            "message": f"Garmin simulation scheduled: {user_count} users, ~{total_rides} rides.",
+        })

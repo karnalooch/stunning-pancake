@@ -35,3 +35,5 @@ cryptography>=41.0.0
 # Optional: Live Map H3 aggregate (hexbin fallback when missing)
 h3>=3.7.0
 django-stubs==5.1.1
+# Garmin Connect activity upload (unofficial library)
+garminconnect>=0.2.20

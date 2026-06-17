@@ -2,14 +2,15 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box, Text, Card, Group, Stack, Slider, NumberInput, Button,
     Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox, Switch,
-    Modal, Divider, Stepper,
+    Modal, Divider, Stepper, TextInput, PasswordInput, Table,
 } from '@mantine/core';
 import { BatchProgressBar, WipeProgressBar } from './SimulationProgressBar';
 import { notifications } from '@mantine/notifications';
 import {
     Play, StopCircle, Bike, Trash2, AlertTriangle,
     RefreshCw, Users, Map, Activity, Zap, Loader, CheckCircle2,
-    AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route
+    AlertCircle, ArrowRight, ArrowLeft, ShieldCheck, Database, Route,
+    Upload, Gauge, Clock, Key,
 } from 'lucide-react';
 import {
     SimulatorApi,
@@ -65,6 +66,414 @@ const LIVE_POLL_MAX_MS = 15000;
 
 const extractStartConflictMessage = (err: unknown): string =>
     formatSimulatorConflict(err, 'Start request failed');
+
+interface GarminSimScheduleConfig {
+    weekday_rides: number;
+    weekday_distance_min: number;
+    weekday_distance_max: number;
+    weekend_distance_min: number;
+    weekend_distance_max: number;
+    speed_min: number;
+    speed_max: number;
+    weekday_start_h_min: number;
+    weekday_start_h_max: number;
+    weekend_start_h_min: number;
+    weekend_start_h_max: number;
+    start_radius_km: number;
+}
+
+interface GarminSimStatus {
+    running: boolean;
+    progress_pct: number;
+    phase: string;
+    total_rides: number;
+    rides_scheduled: number;
+    rides_active: number;
+    rides_done: number;
+    error: string | null;
+    log: [string, string][];
+}
+
+const DEFAULT_SCHEDULE: GarminSimScheduleConfig = {
+    weekday_rides: 3,
+    weekday_distance_min: 60,
+    weekday_distance_max: 80,
+    weekend_distance_min: 90,
+    weekend_distance_max: 120,
+    speed_min: 20,
+    speed_max: 31,
+    weekday_start_h_min: 14,
+    weekday_start_h_max: 18,
+    weekend_start_h_min: 8,
+    weekend_start_h_max: 14,
+    start_radius_km: 5,
+};
+
+const GarminSimStepper: React.FC = () => {
+    const [garminStep, setGarminStep] = useState(0);
+    const [userCount, setUserCount] = useState(10);
+    const [credentials, setCredentials] = useState<Array<{ email: string; password: string }>>(
+        Array.from({ length: 10 }, (_, i) => ({ email: '', password: '' }))
+    );
+    const [schedule, setSchedule] = useState<GarminSimScheduleConfig>({ ...DEFAULT_SCHEDULE });
+    const [launching, setLaunching] = useState(false);
+    const [status, setStatus] = useState<GarminSimStatus | null>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const logEndRef = useRef<HTMLDivElement>(null);
+
+    const isRunning = status?.running ?? false;
+    const totalRides = userCount * (schedule.weekday_rides + 1);
+
+    useEffect(() => {
+        setCredentials(prev => {
+            const updated = [...prev];
+            while (updated.length < userCount) {
+                updated.push({ email: '', password: '' });
+            }
+            return updated.slice(0, userCount);
+        });
+    }, [userCount]);
+
+    useEffect(() => {
+        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [status?.log]);
+
+    const startPolling = useCallback(() => {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = setInterval(async () => {
+            try {
+                const s = await SimulatorApi.getGarminSimulationStatus({ silent: true });
+                setStatus(s);
+                if (!s.running) {
+                    if (pollRef.current) clearInterval(pollRef.current);
+                }
+            } catch { /* silent */ }
+        }, 2000);
+    }, []);
+
+    useEffect(() => {
+        SimulatorApi.getGarminSimulationStatus({ silent: true }).then(setStatus).catch(() => null);
+        return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    }, []);
+
+    const updateCredential = (idx: number, field: 'email' | 'password', value: string) => {
+        setCredentials(prev => {
+            const next = [...prev];
+            next[idx] = { ...next[idx], [field]: value };
+            return next;
+        });
+    };
+
+    const fillTestCredentials = () => {
+        setCredentials(
+            Array.from({ length: userCount }, (_, i) => ({
+                email: `testsim${i + 1}@gmail.com`,
+                password: `testpass${i + 1}`,
+            }))
+        );
+    };
+
+    const allCredentialsValid = credentials
+        .slice(0, userCount)
+        .every(c => c.email.trim() && c.password.trim());
+
+    const handleLaunch = async () => {
+        setLaunching(true);
+        setGarminStep(2);
+        try {
+            await SimulatorApi.startGarminSimulation({
+                user_count: userCount,
+                credentials: credentials.slice(0, userCount),
+                schedule,
+            });
+            notifications.show({
+                title: 'Garmin Simulation Started',
+                message: `${userCount} users, ~${totalRides} rides`,
+                color: 'teal',
+            });
+            startPolling();
+        } catch (err: any) {
+            notifications.show({
+                title: 'Start Failed',
+                message: formatApiError(err, 'Could not start Garmin simulation'),
+                color: 'red',
+            });
+        }
+        setLaunching(false);
+    };
+
+    const handleAbort = async () => {
+        try {
+            await SimulatorApi.abortGarminSimulation();
+            if (pollRef.current) clearInterval(pollRef.current);
+            setStatus(null);
+            notifications.show({ title: 'Aborted', message: 'Garmin simulation stopped', color: 'orange' });
+        } catch (err: any) {
+            notifications.show({
+                title: 'Abort Failed',
+                message: formatApiError(err, 'Could not abort'),
+                color: 'red',
+            });
+        }
+    };
+
+    const phaseLabel = (phase: string) => {
+        const map: Record<string, string> = {
+            creating_users: 'Creating users...',
+            scheduling: 'Generating schedules...',
+            dispatching: 'Dispatching rides...',
+            scheduled: 'Scheduled — waiting for start times',
+            riding: 'Rides in progress on live map',
+            complete: 'Complete',
+            error: 'Error',
+            aborted: 'Aborted',
+        };
+        return map[phase] || phase;
+    };
+
+    return (
+        <Stepper active={garminStep} onStepClick={isRunning ? undefined : setGarminStep} breakpoint="sm" allowNextStepsSelect={false}>
+            {/* STEP 1: CREDENTIALS */}
+            <Stepper.Step label="Step 1" description="Garmin Accounts" icon={<Key size={16} />}>
+                <Stack gap="lg" mt="xl" style={{ maxWidth: 700 }}>
+                    <Alert color="indigo" icon={<Key size={18} />} title="Garmin Connect Credentials">
+                        <Text size="sm">
+                            Enter login and password for each Garmin Connect account.
+                            Credentials are encrypted at rest (Fernet) and used only for uploading activities.
+                        </Text>
+                    </Alert>
+
+                    <NumberInput
+                        label="Number of Users"
+                        description="1–20 athletes"
+                        value={userCount}
+                        onChange={(v) => setUserCount(Math.max(1, Math.min(20, Number(v) || 1)))}
+                        min={1} max={20}
+                        leftSection={<Users size={16} />}
+                        size="md"
+                    />
+
+                    <Button variant="light" size="xs" onClick={fillTestCredentials}>
+                        Fill test credentials
+                    </Button>
+
+                    <ScrollArea h={320}>
+                        <Table striped highlightOnHover fontSize="xs">
+                            <Table.Thead>
+                                <Table.Tr>
+                                    <Table.Th>#</Table.Th>
+                                    <Table.Th>Garmin Email</Table.Th>
+                                    <Table.Th>Password</Table.Th>
+                                </Table.Tr>
+                            </Table.Thead>
+                            <Table.Tbody>
+                                {Array.from({ length: userCount }, (_, i) => (
+                                    <Table.Tr key={i}>
+                                        <Table.Td>{i + 1}</Table.Td>
+                                        <Table.Td>
+                                            <TextInput
+                                                size="xs"
+                                                placeholder={`sim${i + 1}@gmail.com`}
+                                                value={credentials[i]?.email || ''}
+                                                onChange={(e) => updateCredential(i, 'email', e.target.value)}
+                                            />
+                                        </Table.Td>
+                                        <Table.Td>
+                                            <PasswordInput
+                                                size="xs"
+                                                placeholder="password"
+                                                value={credentials[i]?.password || ''}
+                                                onChange={(e) => updateCredential(i, 'password', e.target.value)}
+                                            />
+                                        </Table.Td>
+                                    </Table.Tr>
+                                ))}
+                            </Table.Tbody>
+                        </Table>
+                    </ScrollArea>
+
+                    <Group justify="flex-end" mt="xl">
+                        <Button
+                            size="md" color="violet" rightSection={<ArrowRight size={16} />}
+                            disabled={!allCredentialsValid}
+                            onClick={() => setGarminStep(1)}
+                        >
+                            Next: Schedule
+                        </Button>
+                    </Group>
+                </Stack>
+            </Stepper.Step>
+
+            {/* STEP 2: SCHEDULE */}
+            <Stepper.Step label="Step 2" description="Ride Schedule" icon={<Clock size={16} />}>
+                <Stack gap="lg" mt="xl" style={{ maxWidth: 700 }}>
+                    <Alert color="teal" icon={<Clock size={18} />} title="Ride Schedule Configuration">
+                        <Text size="sm">
+                            Define riding patterns. Defaults match typical amateur cyclist behavior around Siedlce.
+                        </Text>
+                    </Alert>
+
+                    <SimpleGrid cols={2} spacing="md">
+                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                            <Text size="sm" fw={600} mb={4}>Weekday Rides (Mon–Fri)</Text>
+                            <Text size="xs" c="dimmed" mb="xs">Randomly picks {schedule.weekday_rides} days</Text>
+                            <Text size="xs">Rides per week:</Text>
+                            <Slider
+                                value={schedule.weekday_rides}
+                                onChange={(v) => setSchedule(s => ({ ...s, weekday_rides: v }))}
+                                min={1} max={5} step={1} mb="xs"
+                                marks={[{ value: 1, label: '1' }, { value: 3, label: '3' }, { value: 5, label: '5' }]}
+                            />
+                            <Text size="xs">Distance: {schedule.weekday_distance_min}–{schedule.weekday_distance_max} km</Text>
+                        </Card>
+
+                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                            <Text size="sm" fw={600} mb={4}>Weekend Ride</Text>
+                            <Text size="xs" c="dimmed" mb="xs">1 ride on Sat or Sun</Text>
+                            <Text size="xs">Distance: {schedule.weekend_distance_min}–{schedule.weekend_distance_max} km</Text>
+                            <Group gap="xs" mt="xs" wrap="nowrap">
+                                <NumberInput size="xs" label="Min" value={schedule.weekend_distance_min}
+                                    onChange={(v) => setSchedule(s => ({ ...s, weekend_distance_min: Number(v) || 90 }))}
+                                    min={50} max={200} w={80} />
+                                <NumberInput size="xs" label="Max" value={schedule.weekend_distance_max}
+                                    onChange={(v) => setSchedule(s => ({ ...s, weekend_distance_max: Number(v) || 120 }))}
+                                    min={50} max={200} w={80} />
+                            </Group>
+                        </Card>
+                    </SimpleGrid>
+
+                    <Card withBorder padding="md" bg="var(--surface-secondary)">
+                        <Text size="sm" fw={600} mb="xs">Speed Range</Text>
+                        <Slider
+                            value={schedule.speed_min}
+                            onChange={(v) => setSchedule(s => ({ ...s, speed_min: v }))}
+                            min={10} max={40} step={1}
+                            marks={[{ value: 20, label: '20' }, { value: 31, label: '31' }]}
+                            mb={4}
+                        />
+                        <Text size="xs" c="dimmed">{schedule.speed_min}–{schedule.speed_max} km/h</Text>
+                        <Slider
+                            value={schedule.speed_max}
+                            onChange={(v) => setSchedule(s => ({ ...s, speed_max: v }))}
+                            min={10} max={40} step={1}
+                            mb="xs"
+                        />
+                    </Card>
+
+                    <SimpleGrid cols={2} spacing="md">
+                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                            <Text size="sm" fw={600} mb={4}>Weekday Start</Text>
+                            <Text size="xs" c="dimmed">{schedule.weekday_start_h_min}:00 – {schedule.weekday_start_h_max}:00</Text>
+                        </Card>
+                        <Card withBorder padding="xs" bg="var(--surface-secondary)">
+                            <Text size="sm" fw={600} mb={4}>Weekend Start</Text>
+                            <Text size="xs" c="dimmed">{schedule.weekend_start_h_min}:00 – {schedule.weekend_start_h_max}:00</Text>
+                        </Card>
+                    </SimpleGrid>
+
+                    <Card withBorder padding="xs" bg="var(--surface-surface)">
+                        <Text size="sm" fw={600} mb={4}>Start Radius from Siedlce Center</Text>
+                        <Text size="xs" c="dimmed">{schedule.start_radius_km} km</Text>
+                        <Slider
+                            value={schedule.start_radius_km}
+                            onChange={(v) => setSchedule(s => ({ ...s, start_radius_km: v }))}
+                            min={1} max={15} step={1}
+                            marks={[{ value: 1, label: '1' }, { value: 5, label: '5' }, { value: 10, label: '10' }]}
+                        />
+                    </Card>
+
+                    <Alert color="indigo" icon={<Bike size={16} />} title="Summary">
+                        <Text size="sm">
+                            {userCount} athletes × {(schedule.weekday_rides + 1)} rides = <b>{totalRides} rides</b> total
+                        </Text>
+                    </Alert>
+
+                    <Group justify="space-between" mt="xl">
+                        <Button variant="default" leftSection={<ArrowLeft size={16} />} onClick={() => setGarminStep(0)}>
+                            Back
+                        </Button>
+                        <Button size="md" color="teal" rightSection={<Upload size={16} />} onClick={handleLaunch} loading={launching}>
+                            Launch Garmin Simulation
+                        </Button>
+                    </Group>
+                </Stack>
+            </Stepper.Step>
+
+            {/* STEP 3: MONITORING */}
+            <Stepper.Step label="Step 3" description="Progress" icon={<Gauge size={16} />}>
+                <Stack gap="lg" mt="xl" style={{ maxWidth: 700 }}>
+                    <Alert
+                        color={isRunning ? 'teal' : status?.phase === 'complete' ? 'green' : status?.error ? 'red' : 'gray'}
+                        icon={isRunning ? <Loader size={16} /> : status?.phase === 'complete' ? <CheckCircle2 size={16} /> : <Activity size={16} />}
+                        title={phaseLabel(status?.phase || 'idle')}
+                    >
+                        <Stack gap={4}>
+                            <Text size="sm">
+                                {status ? `${status.rides_done} / ${status.total_rides} rides done (${status.progress_pct.toFixed(0)}%)` : 'Not started'}
+                            </Text>
+                            {status ? (
+                                <SimpleGrid cols={3} spacing="xs" mt={4}>
+                                    <Text size="xs" c="dimmed">Scheduled: <b>{status.rides_scheduled ?? 0}</b></Text>
+                                    <Text size="xs" c="teal.7">Active now: <b>{status.rides_active ?? 0}</b></Text>
+                                    <Text size="xs" c="green.7">Done: <b>{status.rides_done ?? 0}</b></Text>
+                                </SimpleGrid>
+                            ) : null}
+                        </Stack>
+                    </Alert>
+
+                    {isRunning && (
+                        <Box style={{ background: 'var(--surface-secondary)', borderRadius: 8, overflow: 'hidden', height: 12 }}>
+                            <Box style={{
+                                width: `${Math.min(100, status?.progress_pct ?? 0)}%`,
+                                height: '100%',
+                                background: 'var(--mantine-color-teal-6)',
+                                transition: 'width 0.5s ease',
+                                borderRadius: 8,
+                            }} />
+                        </Box>
+                    )}
+
+                    {(status?.log?.length ?? 0) > 0 && (
+                        <ScrollArea h={200} style={{
+                            background: '#0d1117', borderRadius: 8, padding: 12,
+                            fontFamily: 'monospace',
+                        }}>
+                            {status?.log?.map(([ts, msg], i) => {
+                                const isErr = msg.toLowerCase().includes('error');
+                                return (
+                                    <Text key={i} size="2xs"
+                                        style={{ color: isErr ? '#f85149' : '#8b949e', lineHeight: 1.5 }}>
+                                        <Text span c="dimmed" size="2xs">[{ts}]</Text> {msg}
+                                    </Text>
+                                );
+                            })}
+                            <div ref={logEndRef} />
+                        </ScrollArea>
+                    )}
+
+                    <Group justify="space-between" mt="xl">
+                        <Button variant="default" leftSection={<ArrowLeft size={16} />}
+                            disabled={isRunning}
+                            onClick={() => setGarminStep(1)}>
+                            Back to Config
+                        </Button>
+                        {isRunning ? (
+                            <Button color="red" leftSection={<StopCircle size={16} />} onClick={handleAbort}>
+                                Stop Simulation
+                            </Button>
+                        ) : (
+                            <Button size="md" color="teal" rightSection={<Upload size={16} />}
+                                onClick={handleLaunch} loading={launching}
+                                disabled={status?.phase === 'complete'}>
+                                {status?.phase === 'complete' ? 'Done' : 'Run Again'}
+                            </Button>
+                        )}
+                    </Group>
+                </Stack>
+            </Stepper.Step>
+        </Stepper>
+    );
+};
 
 export const SimulatorPage: React.FC = () => {
     const { user } = useAuth();
@@ -1063,6 +1472,16 @@ export const SimulatorPage: React.FC = () => {
                         </SimpleGrid>
                     </Stepper.Step>
                 </Stepper>
+            </Card>
+
+            {/* ─── Garmin Siedlce Simulator ─── */}
+            <Card withBorder radius="md" p="xl" mb="md" mt="md">
+                <Text fw={700} size="lg" mb="xs">Garmin Edge 530 Simulation — Siedlce</Text>
+                <Text size="sm" c="dimmed" mb="lg">
+                    Generate realistic rides around Siedlce, export GPX files in Garmin Edge 530 format,
+                    and upload them to real Garmin Connect accounts.
+                </Text>
+                <GarminSimStepper />
             </Card>
 
             <Modal
