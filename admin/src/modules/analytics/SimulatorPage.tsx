@@ -159,6 +159,8 @@ function generatePolishNames(count: number) {
     }
     return result;
 }
+
+const GarminSimStepper: React.FC = () => {
     const [garminStep, setGarminStep] = useState(0);
     const [userCount, setUserCount] = useState(10);
     const [credentials, setCredentials] = useState<Array<{ email: string; password: string }>>(
@@ -511,18 +513,17 @@ function generatePolishNames(count: number) {
                                         </Table.Tr>
                                     </Table.Thead>
                                     <Table.Tbody>
-                                        {status.summary.map((u) => (
-                                            <Table.Tr key={u.index}>
-                                                <Table.Td>{u.index}</Table.Td>
-                                                <Table.Td><Text fw={500}>{u.display_name}</Text></Table.Td>
-                                                <Table.Td><Text ff="monospace">{u.email}</Text></Table.Td>
-                                                <Table.Td>
-                                                    {credentials[u.index - 1]?.password
-                                                        ? '•'.repeat(Math.min(8, credentials[u.index - 1].password.length))
-                                                        : '—'}
-                                                </Table.Td>
-                                            </Table.Tr>
-                                        ))}
+                                        {status.summary.map((u) => {
+                                            const pwd = credentials[u.index - 1]?.password || '';
+                                            return (
+                                                <Table.Tr key={u.index}>
+                                                    <Table.Td>{u.index}</Table.Td>
+                                                    <Table.Td><Text fw={500}>{u.display_name}</Text></Table.Td>
+                                                    <Table.Td><Text ff="monospace">{u.email}</Text></Table.Td>
+                                                    <Table.Td>{pwd ? '•'.repeat(Math.min(8, pwd.length)) : '—'}</Table.Td>
+                                                </Table.Tr>
+                                            );
+                                        })}
                                     </Table.Tbody>
                                 </Table>
                             </ScrollArea>
