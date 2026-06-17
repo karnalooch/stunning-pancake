@@ -529,8 +529,8 @@ export const SimulatorApi = {
     const { data } = await apiClient.post('/activities/admin/garmin-summary-clear/');
     return data;
   },
-  generateGarminEmails: async (count: number): Promise<{ emails: Array<{ email: string; password: string; name: string }> }> => {
-    const { data } = await apiClient.post('/activities/admin/garmin-generate-emails/', { count });
+  generateGarminEmails: async (params: { count: number; names: Array<{ first: string; last: string; display: string }> }): Promise<{ emails: Array<{ email: string; password: string; name: string }> }> => {
+    const { data } = await apiClient.post('/activities/admin/garmin-generate-emails/', params);
     return data;
   },
 

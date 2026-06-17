@@ -319,7 +319,10 @@ const GarminSimStepper: React.FC = () => {
                         <Button variant="light" size="xs" color="teal"
                             onClick={async () => {
                                 try {
-                                    const res = await SimulatorApi.generateGarminEmails(userCount);
+                                    const res = await SimulatorApi.generateGarminEmails({
+                                        count: userCount,
+                                        names: names.slice(0, userCount),
+                                    });
                                     setCredentials(res.emails.map(e => ({ email: e.email, password: e.password })));
                                     notifications.show({
                                         title: 'Emails generated',

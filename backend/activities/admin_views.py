@@ -1770,6 +1770,7 @@ class GarminGenerateEmailView(APIView):
 
     def post(self, request):
         count = min(int(request.data.get("count", 10)), 20)
+        user_names = request.data.get("names") or []
 
         from .garmin_mailtm import MAILTM_BASE_URL, _fetch_domain, create_account
 
@@ -1785,8 +1786,28 @@ class GarminGenerateEmailView(APIView):
 
         emails = []
         real_count = 0
+        import random
+        import string
+        import unicodedata
+
+        def clean_word(w: str) -> str:
+            normalized = unicodedata.normalize('NFD', w)
+            ascii_only = "".join(c for c in normalized if unicodedata.category(c) != 'Mn')
+            return "".join(c for c in ascii_only if c.isalnum()).lower()
+
         for i in range(count):
-            prefix = f"garmin-{i + 1:02d}"
+            first_name = "garmin"
+            last_name = f"{i + 1:02d}"
+            if i < len(user_names):
+                nm = user_names[i]
+                first_name = nm.get("first", first_name)
+                last_name = nm.get("last", last_name)
+
+            cf = clean_word(first_name)
+            cl = clean_word(last_name)
+            salt = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+            prefix = f"{cf}.{cl}.{salt}"
+
             account = None
             error_msg = ""
             try:
@@ -1804,11 +1825,9 @@ class GarminGenerateEmailView(APIView):
                     "source": "mailtm",
                 })
             else:
-                import random
-                import string
                 suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
                 emails.append({
-                    "email": f"garmin.sim.{i + 1:02d}.{suffix}@inbox.testmail.app",
+                    "email": f"{cf}.{cl}.{suffix}@inbox.testmail.app",
                     "password": ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16)),
                     "source": "mock",
                     "mailtm_error": error_msg if not account else "",
