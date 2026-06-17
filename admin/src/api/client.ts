@@ -525,6 +525,14 @@ export const SimulatorApi = {
     const { data } = await apiClient.delete('/activities/admin/garmin-simulate/');
     return data;
   },
+  clearGarminSummary: async () => {
+    const { data } = await apiClient.post('/activities/admin/garmin-summary-clear/');
+    return data;
+  },
+  generateGarminEmails: async (count: number): Promise<{ emails: Array<{ email: string; password: string; name: string }> }> => {
+    const { data } = await apiClient.post('/activities/admin/garmin-generate-emails/', { count });
+    return data;
+  },
 
   resetSimulator: async (target: WipeTarget = 'sim-lab') => {
     const { data } = await apiClient.post(simulatorResetPath(target));

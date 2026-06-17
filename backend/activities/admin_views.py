@@ -1754,3 +1754,45 @@ class GarminSimulateView(APIView):
             "total_rides": total_rides,
             "message": f"Garmin simulation scheduled: {user_count} users, ~{total_rides} rides.",
         })
+
+
+class GarminSummaryClearView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        from .garmin_simulator import clear_garmin_summary
+        clear_garmin_summary()
+        return Response({"status": "cleared"})
+
+
+class GarminGenerateEmailView(APIView):
+    permission_classes = [IsAdminRole]
+
+    def post(self, request):
+        import os
+        import random
+        import string
+
+        count = min(int(request.data.get("count", 10)), 20)
+        # Use MAILTM_API env or fall back to deterministic mock emails
+        mailtm_api = os.getenv("MAILTM_BASE_URL", "").strip()
+
+        emails = []
+        for i in range(count):
+            if mailtm_api:
+                # Real Mail.tm integration would go here
+                pass
+
+            # Deterministic mock: use a readable prefix + random hex
+            suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+            domain = "inbox.testmail.app"  # placeholder
+            email_addr = f"garmin.sim.{i + 1:02d}.{suffix}@{domain}"
+            password = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16))
+
+            emails.append({
+                "email": email_addr,
+                "password": password,
+                "name": f"SimUser{i + 1:02d}",
+            })
+
+        return Response({"emails": emails})

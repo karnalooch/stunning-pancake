@@ -254,7 +254,11 @@ def clear_garmin_batch_state() -> None:
 def store_garmin_summary(users_data: list[dict]) -> None:
     r = get_redis()
     r.set(GARMIN_BATCH_SUMMARY_KEY, json.dumps(users_data))
-    r.expire(GARMIN_BATCH_SUMMARY_KEY, 86400 * 7)
+
+
+def clear_garmin_summary() -> None:
+    r = get_redis()
+    r.delete(GARMIN_BATCH_SUMMARY_KEY)
 
 
 def get_garmin_summary() -> list[dict]:

@@ -316,6 +316,26 @@ const GarminSimStepper: React.FC = () => {
                         <Button variant="light" size="xs" onClick={() => setNames(generatePolishNames(userCount))}>
                             Regenerate names
                         </Button>
+                        <Button variant="light" size="xs" color="teal"
+                            onClick={async () => {
+                                try {
+                                    const res = await SimulatorApi.generateGarminEmails(userCount);
+                                    setCredentials(res.emails.map(e => ({ email: e.email, password: e.password })));
+                                    notifications.show({
+                                        title: 'Emails generated',
+                                        message: `${userCount} email accounts created`,
+                                        color: 'teal',
+                                    });
+                                } catch (err: any) {
+                                    notifications.show({
+                                        title: 'Generation failed',
+                                        message: formatApiError(err, 'Could not generate emails'),
+                                        color: 'red',
+                                    });
+                                }
+                            }}>
+                            Generate emails
+                        </Button>
                     </Group>
 
                     <ScrollArea h={320}>
@@ -500,34 +520,45 @@ const GarminSimStepper: React.FC = () => {
 
                     {/* User Summary — persists after completion */}
                     {(status?.summary?.length ?? 0) > 0 && (
-                        <Card withBorder padding="md" bg="var(--surface-secondary)">
-                            <Text size="sm" fw={600} mb="xs">Registered Users</Text>
-                            <ScrollArea h={180}>
-                                <Table fontSize="xs" striped highlightOnHover>
-                                    <Table.Thead>
-                                        <Table.Tr>
-                                            <Table.Th>#</Table.Th>
-                                            <Table.Th>Name</Table.Th>
-                                            <Table.Th>Email</Table.Th>
-                                            <Table.Th>Password</Table.Th>
-                                        </Table.Tr>
-                                    </Table.Thead>
-                                    <Table.Tbody>
-                                        {status.summary.map((u) => {
-                                            const pwd = credentials[u.index - 1]?.password || '';
-                                            return (
-                                                <Table.Tr key={u.index}>
-                                                    <Table.Td>{u.index}</Table.Td>
-                                                    <Table.Td><Text fw={500}>{u.display_name}</Text></Table.Td>
-                                                    <Table.Td><Text ff="monospace">{u.email}</Text></Table.Td>
-                                                    <Table.Td>{pwd ? '•'.repeat(Math.min(8, pwd.length)) : '—'}</Table.Td>
-                                                </Table.Tr>
-                                            );
-                                        })}
-                                    </Table.Tbody>
-                                </Table>
-                            </ScrollArea>
-                        </Card>
+                        <>
+                            <Card withBorder padding="md" bg="var(--surface-secondary)">
+                                <Group justify="space-between" mb="xs">
+                                    <Text size="sm" fw={600}>Registered Users</Text>
+                                    <Button variant="subtle" size="xs" color="red"
+                                        onClick={async () => {
+                                            await SimulatorApi.clearGarminSummary();
+                                            setStatus(prev => prev ? { ...prev, summary: [] } : null);
+                                        }}>
+                                        Clear Summary
+                                    </Button>
+                                </Group>
+                                <ScrollArea h={180}>
+                                    <Table fontSize="xs" striped highlightOnHover>
+                                        <Table.Thead>
+                                            <Table.Tr>
+                                                <Table.Th>#</Table.Th>
+                                                <Table.Th>Name</Table.Th>
+                                                <Table.Th>Email</Table.Th>
+                                                <Table.Th>Password</Table.Th>
+                                            </Table.Tr>
+                                        </Table.Thead>
+                                        <Table.Tbody>
+                                            {status.summary.map((u) => {
+                                                const pwd = credentials[u.index - 1]?.password || '';
+                                                return (
+                                                    <Table.Tr key={u.index}>
+                                                        <Table.Td>{u.index}</Table.Td>
+                                                        <Table.Td><Text fw={500}>{u.display_name}</Text></Table.Td>
+                                                        <Table.Td><Text ff="monospace">{u.email}</Text></Table.Td>
+                                                        <Table.Td>{pwd ? '•'.repeat(Math.min(8, pwd.length)) : '—'}</Table.Td>
+                                                    </Table.Tr>
+                                                );
+                                            })}
+                                        </Table.Tbody>
+                                    </Table>
+                                </ScrollArea>
+                            </Card>
+                        </>
                     )}
 
                     {(status?.log?.length ?? 0) > 0 && (
