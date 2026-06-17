@@ -1769,30 +1769,35 @@ class GarminGenerateEmailView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request):
-        import os
-        import random
-        import string
-
         count = min(int(request.data.get("count", 10)), 20)
-        # Use MAILTM_API env or fall back to deterministic mock emails
-        mailtm_api = os.getenv("MAILTM_BASE_URL", "").strip()
+
+        from .garmin_mailtm import MailTmAccount, create_account
 
         emails = []
         for i in range(count):
-            if mailtm_api:
-                # Real Mail.tm integration would go here
-                pass
+            prefix = f"garmin-{i + 1:02d}"
+            try:
+                account = create_account(email_prefix=prefix)
+            except Exception:
+                account = None
 
-            # Deterministic mock: use a readable prefix + random hex
-            suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-            domain = "inbox.testmail.app"  # placeholder
-            email_addr = f"garmin.sim.{i + 1:02d}.{suffix}@{domain}"
-            password = ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16))
-
-            emails.append({
-                "email": email_addr,
-                "password": password,
-                "name": f"SimUser{i + 1:02d}",
-            })
+            if account and account.email:
+                emails.append({
+                    "email": account.email,
+                    "password": account.password,
+                    "mailtm_token": account.token,
+                    "mailtm_id": account.account_id,
+                    "source": "mailtm",
+                })
+            else:
+                # Fallback: deterministic mock email
+                import random
+                import string
+                suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+                emails.append({
+                    "email": f"garmin.sim.{i + 1:02d}.{suffix}@inbox.testmail.app",
+                    "password": ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16)),
+                    "source": "mock",
+                })
 
         return Response({"emails": emails})
