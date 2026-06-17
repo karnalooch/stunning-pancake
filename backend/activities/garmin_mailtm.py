@@ -22,12 +22,51 @@ import string
 import time
 
 import requests
+import urllib3
 
 logger = logging.getLogger(__name__)
 
 MAILTM_BASE_URL = os.getenv("MAILTM_BASE_URL", "https://api.mail.tm").rstrip("/")
-MAILTM_TIMEOUT = int(os.getenv("MAILTM_TIMEOUT", "15"))
+MAILTM_TIMEOUT = int(os.getenv("MAILTM_TIMEOUT", "10"))
 MAILTM_DOMAIN_OVERRIDE = os.getenv("MAILTM_DOMAIN", "").strip() or None
+
+# Disable insecure request warnings when SSL verification is disabled
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+_MAILTM_SESSION: requests.Session | None = None
+
+
+def _get_session() -> requests.Session:
+    global _MAILTM_SESSION
+    if _MAILTM_SESSION is None:
+        _MAILTM_SESSION = requests.Session()
+        _MAILTM_SESSION.headers.update({
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        })
+    return _MAILTM_SESSION
+
+
+def _mailtm_request(method: str, path: str, **kwargs) -> requests.Response | None:
+    """Make a Mail.tm API request with SSL fallback."""
+    session = _get_session()
+    url = f"{MAILTM_BASE_URL}{path}"
+    kwargs.setdefault("timeout", MAILTM_TIMEOUT)
+
+    # Try with SSL verification first
+    try:
+        return session.request(method, url, verify=True, **kwargs)
+    except (requests.exceptions.SSLError, requests.exceptions.ConnectionError,
+            OSError, urllib3.exceptions.SSLError) as exc:
+        logger.debug("Mail.tm SSL error on first attempt, retrying without verification: %s", exc)
+        try:
+            return session.request(method, url, verify=False, **kwargs)
+        except Exception as exc2:
+            logger.warning("Mail.tm request failed (no verify): %s", exc2)
+            return None
+    except Exception as exc:
+        logger.warning("Mail.tm request failed: %s", exc)
+        return None
 
 
 class MailTmAccount:
@@ -52,7 +91,9 @@ def _fetch_domain() -> str | None:
     if MAILTM_DOMAIN_OVERRIDE:
         return MAILTM_DOMAIN_OVERRIDE
     try:
-        resp = requests.get(f"{MAILTM_BASE_URL}/domains", timeout=MAILTM_TIMEOUT)
+        resp = _mailtm_request("GET", "/domains")
+        if resp is None:
+            return None
         if resp.status_code == 200:
             data = resp.json()
             domains = data if isinstance(data, list) else data.get("hydra:member", [])
@@ -80,11 +121,9 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
 
     for attempt in range(3):
         try:
-            resp = requests.post(
-                f"{MAILTM_BASE_URL}/accounts",
-                json={"address": address, "password": password},
-                timeout=MAILTM_TIMEOUT,
-            )
+            resp = _mailtm_request("POST", "/accounts", json={"address": address, "password": password})
+            if resp is None:
+                break  # network-level failure, don't retry
             if resp.status_code in (200, 201):
                 data = resp.json()
                 account_id = str(data.get("id", ""))
@@ -118,11 +157,9 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
 
 def _get_token(address: str, password: str) -> str:
     try:
-        resp = requests.post(
-            f"{MAILTM_BASE_URL}/token",
-            json={"address": address, "password": password},
-            timeout=MAILTM_TIMEOUT,
-        )
+        resp = _mailtm_request("POST", "/token", json={"address": address, "password": password})
+        if resp is None:
+            return ""
         if resp.status_code == 200:
             data = resp.json()
             return str(data.get("token", ""))
@@ -136,11 +173,9 @@ def read_messages(token: str) -> list[dict]:
     if not token:
         return []
     try:
-        resp = requests.get(
-            f"{MAILTM_BASE_URL}/messages",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=MAILTM_TIMEOUT,
-        )
+        resp = _mailtm_request("GET", "/messages", headers={"Authorization": f"Bearer {token}"})
+        if resp is None:
+            return []
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, list):
