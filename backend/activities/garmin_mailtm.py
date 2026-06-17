@@ -123,7 +123,6 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
         try:
             resp = _mailtm_request("POST", "/accounts", json={"address": address, "password": password})
             if resp is None:
-                # network-level failure — reset session and continue to next account
                 global _MAILTM_SESSION
                 _MAILTM_SESSION = None
                 return None
@@ -143,17 +142,20 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
                     email=address, password=password, token="", account_id=account_id
                 )
 
+            if resp.status_code == 429:
+                logger.warning("Mail.tm rate limited (429), skipping account %s", address)
+                return None
+
             if resp.status_code == 422:
                 local_part = f"{email_prefix or 'sim'}_{_random_short()}"
                 address = f"{local_part}@{domain}"
-                time.sleep(0.5)
                 continue
 
             logger.warning("Mail.tm account creation HTTP %s: %s", resp.status_code, resp.text[:200])
-            time.sleep(1)
+            time.sleep(0.3)
         except Exception as exc:
             logger.warning("Mail.tm account creation error: %s", exc)
-            time.sleep(1)
+            time.sleep(0.3)
 
     return None
 

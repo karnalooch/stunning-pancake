@@ -1815,10 +1815,6 @@ class GarminGenerateEmailView(APIView):
             except Exception as exc:
                 error_msg = str(exc)[:120]
 
-            # Small delay between accounts to avoid Mail.tm rate limiting
-            if i < count - 1 and account and account.email:
-                time.sleep(0.8)
-
             if account and account.email:
                 real_count += 1
                 emails.append({
