@@ -1771,17 +1771,31 @@ class GarminGenerateEmailView(APIView):
     def post(self, request):
         count = min(int(request.data.get("count", 10)), 20)
 
-        from .garmin_mailtm import MailTmAccount, create_account
+        from .garmin_mailtm import MAILTM_BASE_URL, _fetch_domain, create_account
+
+        diagnostics: list[str] = []
+        diagnostics.append(f"mailtm_url={MAILTM_BASE_URL}")
+
+        # Pre-flight: check if Mail.tm is reachable
+        domain = _fetch_domain()
+        if domain:
+            diagnostics.append(f"domain_ok={domain}")
+        else:
+            diagnostics.append("domain_fail=Mail.tm /domains unreachable")
 
         emails = []
+        real_count = 0
         for i in range(count):
             prefix = f"garmin-{i + 1:02d}"
+            account = None
+            error_msg = ""
             try:
                 account = create_account(email_prefix=prefix)
-            except Exception:
-                account = None
+            except Exception as exc:
+                error_msg = str(exc)[:120]
 
             if account and account.email:
+                real_count += 1
                 emails.append({
                     "email": account.email,
                     "password": account.password,
@@ -1790,7 +1804,6 @@ class GarminGenerateEmailView(APIView):
                     "source": "mailtm",
                 })
             else:
-                # Fallback: deterministic mock email
                 import random
                 import string
                 suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
@@ -1798,6 +1811,12 @@ class GarminGenerateEmailView(APIView):
                     "email": f"garmin.sim.{i + 1:02d}.{suffix}@inbox.testmail.app",
                     "password": ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16)),
                     "source": "mock",
+                    "mailtm_error": error_msg if not account else "",
                 })
 
-        return Response({"emails": emails})
+        diagnostics.append(f"real={real_count}/{count}")
+
+        return Response({
+            "emails": emails,
+            "diagnostics": diagnostics,
+        })
