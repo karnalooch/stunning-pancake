@@ -54,7 +54,8 @@ def _fetch_domain() -> str | None:
     try:
         resp = requests.get(f"{MAILTM_BASE_URL}/domains", timeout=MAILTM_TIMEOUT)
         if resp.status_code == 200:
-            domains = resp.json()
+            data = resp.json()
+            domains = data if isinstance(data, list) else data.get("hydra:member", [])
             if isinstance(domains, list) and domains:
                 first = domains[0]
                 if isinstance(first, dict) and first.get("domain"):
