@@ -123,7 +123,10 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
         try:
             resp = _mailtm_request("POST", "/accounts", json={"address": address, "password": password})
             if resp is None:
-                break  # network-level failure, don't retry
+                # network-level failure — reset session and continue to next account
+                global _MAILTM_SESSION
+                _MAILTM_SESSION = None
+                return None
             if resp.status_code in (200, 201):
                 data = resp.json()
                 account_id = str(data.get("id", ""))

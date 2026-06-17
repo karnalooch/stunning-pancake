@@ -1769,7 +1769,7 @@ class GarminGenerateEmailView(APIView):
     permission_classes = [IsAdminRole]
 
     def post(self, request):
-        count = min(int(request.data.get("count", 10)), 20)
+        count = min(int(request.data.get("count", 10)), 50)
         user_names = request.data.get("names") or []
 
         from .garmin_mailtm import MAILTM_BASE_URL, _fetch_domain, create_account
@@ -1814,6 +1814,10 @@ class GarminGenerateEmailView(APIView):
                 account = create_account(email_prefix=prefix)
             except Exception as exc:
                 error_msg = str(exc)[:120]
+
+            # Small delay between accounts to avoid Mail.tm rate limiting
+            if i < count - 1 and account and account.email:
+                time.sleep(0.8)
 
             if account and account.email:
                 real_count += 1

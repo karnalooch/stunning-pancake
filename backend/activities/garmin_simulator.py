@@ -1033,7 +1033,7 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names:
 
     tenant, _ = Tenant.objects.get_or_create(
         name="Garmin Sim",
-        defaults={"slug": "garmin-sim", "city": "Siedlce"},
+        defaults={"name": "Garmin Sim", "is_active": True, "max_users": 500},
     )
 
     users = []

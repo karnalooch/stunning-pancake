@@ -303,8 +303,8 @@ const GarminSimStepper: React.FC = () => {
                         label="Number of Users"
                         description="1–20 athletes"
                         value={userCount}
-                        onChange={(v) => setUserCount(Math.max(1, Math.min(20, Number(v) || 1)))}
-                        min={1} max={20}
+                        onChange={(v) => setUserCount(Math.max(1, Math.min(50, Number(v) || 1)))}
+                        min={1} max={50}
                         leftSection={<Users size={16} />}
                         size="md"
                     />
