@@ -94,6 +94,7 @@
     "PRIVACY_DENSITY_BOOST_FACTOR": "1.5",
     "RLS_APP_ROLE": "4velo_app",
     "REDIS_CLUSTER_NODES": "",
-    "CITUS_SHARD_COUNT": "32"
+    "CITUS_SHARD_COUNT": "32",
+    "MAILTM_BASE_URL": "https://api.mail.tm"
   }
 }
