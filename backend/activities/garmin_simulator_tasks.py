@@ -19,6 +19,7 @@ def schedule_garmin_rides(
     self,
     credentials: list[dict[str, str]],
     config_dict: dict | None = None,
+    user_names: list[dict[str, str]] | None = None,
 ) -> dict:
     from activities.garmin_simulator import (
         release_garmin_batch_lock,
@@ -31,7 +32,7 @@ def schedule_garmin_rides(
     config = schedule_config_from_dict(config_dict)
 
     try:
-        result = schedule_rides(credentials, config, task_id=task_id)
+        result = schedule_rides(credentials, config, task_id=task_id, user_names=user_names)
         return result
     except Exception as exc:
         logger.exception("Garmin schedule task %s failed", task_id)

@@ -92,6 +92,17 @@ interface GarminSimStatus {
     rides_done: number;
     error: string | null;
     log: [string, string][];
+    summary: GarminSummaryUser[];
+}
+
+interface GarminSummaryUser {
+    index: number;
+    username: string;
+    display_name: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    user_id: number;
 }
 
 const DEFAULT_SCHEDULE: GarminSimScheduleConfig = {
@@ -109,11 +120,52 @@ const DEFAULT_SCHEDULE: GarminSimScheduleConfig = {
     start_radius_km: 5,
 };
 
-const GarminSimStepper: React.FC = () => {
+const PL_FIRST_NAMES = [
+    'Piotr', 'Krzysztof', 'Andrzej', 'Tomasz', 'Marcin', 'Michał', 'Jakub',
+    'Mateusz', 'Łukasz', 'Rafał', 'Grzegorz', 'Maciej', 'Dawid', 'Adam',
+    'Bartosz', 'Damian', 'Karol', 'Szymon', 'Paweł', 'Jan', 'Artur',
+    'Kamil', 'Daniel', 'Sebastian', 'Mariusz', 'Robert', 'Wojciech',
+    'Radosław', 'Przemysław', 'Jarosław', 'Kacper', 'Kuba',
+    'Anna', 'Katarzyna', 'Magdalena', 'Agnieszka', 'Małgorzata', 'Joanna',
+    'Marta', 'Natalia', 'Aleksandra', 'Monika', 'Dorota', 'Ewa', 'Karolina',
+    'Paulina', 'Justyna', 'Patrycja', 'Barbara', 'Kinga', 'Izabela',
+    'Weronika', 'Kamila', 'Martyna', 'Sylwia', 'Agata', 'Klaudia',
+];
+const PL_LAST_NAMES = [
+    'Nowak', 'Kowalski', 'Wiśniewski', 'Wójcik', 'Kowalczyk', 'Kamiński',
+    'Lewandowski', 'Zieliński', 'Szymański', 'Woźniak', 'Dąbrowski',
+    'Kozłowski', 'Jankowski', 'Mazur', 'Kwiatkowski', 'Krawczyk',
+    'Piotrowski', 'Grabowski', 'Nowakowski', 'Pawłowski', 'Michalski',
+    'Nowicki', 'Adamczyk', 'Dudek', 'Zając', 'Wieczorek', 'Jabłoński',
+    'Król', 'Majewski', 'Olszewski', 'Stępień', 'Jaworski', 'Malinowski',
+    'Sadowski', 'Walczak', 'Baran', 'Czarnecki', 'Adamski', 'Sikora',
+    'Górski', 'Borkowski', 'Rutkowski', 'Ostrowski', 'Szewczyk',
+    'Tomaszewski', 'Pietrzak', 'Marciniak', 'Wróblewski', 'Zalewski',
+    'Jakubowski', 'Jasiński', 'Bąk', 'Wilk', 'Duda', 'Sikorski',
+    'Chmielewski', 'Przybylski', 'Kaźmierczak', 'Włodarczyk',
+];
+
+function generatePolishNames(count: number) {
+    const result: Array<{ first: string; last: string; display: string }> = [];
+    const used = new Set<string>();
+    for (let i = 0; i < count; i++) {
+        let first: string, last: string;
+        do {
+            first = PL_FIRST_NAMES[Math.floor(Math.random() * PL_FIRST_NAMES.length)];
+            last = PL_LAST_NAMES[Math.floor(Math.random() * PL_LAST_NAMES.length)];
+        } while (used.has(`${first} ${last}`));
+        used.add(`${first} ${last}`);
+        result.push({ first, last, display: `${first} ${last}` });
+    }
+    return result;
+}
     const [garminStep, setGarminStep] = useState(0);
     const [userCount, setUserCount] = useState(10);
     const [credentials, setCredentials] = useState<Array<{ email: string; password: string }>>(
         Array.from({ length: 10 }, (_, i) => ({ email: '', password: '' }))
+    );
+    const [names, setNames] = useState<Array<{ first: string; last: string; display: string }>>(
+        generatePolishNames(10)
     );
     const [schedule, setSchedule] = useState<GarminSimScheduleConfig>({ ...DEFAULT_SCHEDULE });
     const [launching, setLaunching] = useState(false);
@@ -132,6 +184,7 @@ const GarminSimStepper: React.FC = () => {
             }
             return updated.slice(0, userCount);
         });
+        setNames(generatePolishNames(userCount));
     }, [userCount]);
 
     useEffect(() => {
@@ -185,6 +238,7 @@ const GarminSimStepper: React.FC = () => {
                 user_count: userCount,
                 credentials: credentials.slice(0, userCount),
                 schedule,
+                names: names.slice(0, userCount),
             });
             notifications.show({
                 title: 'Garmin Simulation Started',
@@ -253,15 +307,21 @@ const GarminSimStepper: React.FC = () => {
                         size="md"
                     />
 
-                    <Button variant="light" size="xs" onClick={fillTestCredentials}>
-                        Fill test credentials
-                    </Button>
+                    <Group gap="xs">
+                        <Button variant="light" size="xs" onClick={fillTestCredentials}>
+                            Fill test credentials
+                        </Button>
+                        <Button variant="light" size="xs" onClick={() => setNames(generatePolishNames(userCount))}>
+                            Regenerate names
+                        </Button>
+                    </Group>
 
                     <ScrollArea h={320}>
                         <Table striped highlightOnHover fontSize="xs">
                             <Table.Thead>
                                 <Table.Tr>
                                     <Table.Th>#</Table.Th>
+                                    <Table.Th>Name</Table.Th>
                                     <Table.Th>Garmin Email</Table.Th>
                                     <Table.Th>Password</Table.Th>
                                 </Table.Tr>
@@ -270,6 +330,9 @@ const GarminSimStepper: React.FC = () => {
                                 {Array.from({ length: userCount }, (_, i) => (
                                     <Table.Tr key={i}>
                                         <Table.Td>{i + 1}</Table.Td>
+                                        <Table.Td>
+                                            <Text size="xs" fw={500}>{names[i]?.display || `User ${i + 1}`}</Text>
+                                        </Table.Td>
                                         <Table.Td>
                                             <TextInput
                                                 size="xs"
@@ -431,6 +494,39 @@ const GarminSimStepper: React.FC = () => {
                                 borderRadius: 8,
                             }} />
                         </Box>
+                    )}
+
+                    {/* User Summary — persists after completion */}
+                    {(status?.summary?.length ?? 0) > 0 && (
+                        <Card withBorder padding="md" bg="var(--surface-secondary)">
+                            <Text size="sm" fw={600} mb="xs">Registered Users</Text>
+                            <ScrollArea h={180}>
+                                <Table fontSize="xs" striped highlightOnHover>
+                                    <Table.Thead>
+                                        <Table.Tr>
+                                            <Table.Th>#</Table.Th>
+                                            <Table.Th>Name</Table.Th>
+                                            <Table.Th>Email</Table.Th>
+                                            <Table.Th>Password</Table.Th>
+                                        </Table.Tr>
+                                    </Table.Thead>
+                                    <Table.Tbody>
+                                        {status.summary.map((u) => (
+                                            <Table.Tr key={u.index}>
+                                                <Table.Td>{u.index}</Table.Td>
+                                                <Table.Td><Text fw={500}>{u.display_name}</Text></Table.Td>
+                                                <Table.Td><Text ff="monospace">{u.email}</Text></Table.Td>
+                                                <Table.Td>
+                                                    {credentials[u.index - 1]?.password
+                                                        ? '•'.repeat(Math.min(8, credentials[u.index - 1].password.length))
+                                                        : '—'}
+                                                </Table.Td>
+                                            </Table.Tr>
+                                        ))}
+                                    </Table.Tbody>
+                                </Table>
+                            </ScrollArea>
+                        </Card>
                     )}
 
                     {(status?.log?.length ?? 0) > 0 && (

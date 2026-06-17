@@ -1669,10 +1669,11 @@ class GarminSimulateView(APIView):
 
     def get(self, request):
         try:
-            from .garmin_simulator import get_garmin_batch_logs, get_garmin_batch_state
+            from .garmin_simulator import get_garmin_batch_logs, get_garmin_batch_state, get_garmin_summary
 
             state = get_garmin_batch_state()
             log = get_garmin_batch_logs()
+            summary = get_garmin_summary()
             return Response({
                 "running": state.get("running", False),
                 "progress_pct": state.get("progress_pct", 0.0),
@@ -1683,6 +1684,7 @@ class GarminSimulateView(APIView):
                 "rides_done": state.get("rides_done", 0),
                 "error": state.get("error"),
                 "log": log,
+                "summary": summary,
             })
         except Exception as exc:
             return Response(
@@ -1718,6 +1720,7 @@ class GarminSimulateView(APIView):
         credentials = request.data.get("credentials") or []
         user_count = int(request.data.get("user_count", 10))
         schedule_config = request.data.get("schedule", {})
+        user_names = request.data.get("names") or []
 
         if not isinstance(credentials, list) or len(credentials) < 1:
             return Response(
@@ -1743,7 +1746,7 @@ class GarminSimulateView(APIView):
             schedule_config.get("weekday_rides", 3) + 1
         )
 
-        schedule_garmin_rides.delay(credentials, schedule_config)
+        schedule_garmin_rides.delay(credentials, schedule_config, user_names)
 
         return Response({
             "status": "started",

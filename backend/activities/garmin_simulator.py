@@ -31,6 +31,7 @@ SIEDLCE_CENTER = (52.1659, 22.2757)
 GARMIN_BATCH_STATE_KEY = "{sim}:garmin_batch:state"
 GARMIN_BATCH_LOG_KEY = "{sim}:garmin_batch:log"
 GARMIN_BATCH_LOCK_KEY = "{sim}:garmin_batch:lock"
+GARMIN_BATCH_SUMMARY_KEY = "{sim}:garmin_batch:summary"
 GARMIN_BATCH_LOCK_TTL = 7200  # 2 hours — spans scheduling window
 
 GARMIN_LIVE_PREFIX = "{sim}:garmin_live"  # :{ride_id}:state, :{ride_id}:points, :{ride_id}:lock
@@ -248,6 +249,60 @@ def clear_garmin_batch_state() -> None:
     r = get_redis()
     keys_to_delete = [GARMIN_BATCH_STATE_KEY, GARMIN_BATCH_LOG_KEY, GARMIN_BATCH_LOCK_KEY]
     r.delete(*keys_to_delete)
+
+
+def store_garmin_summary(users_data: list[dict]) -> None:
+    r = get_redis()
+    r.set(GARMIN_BATCH_SUMMARY_KEY, json.dumps(users_data))
+    r.expire(GARMIN_BATCH_SUMMARY_KEY, 86400 * 7)
+
+
+def get_garmin_summary() -> list[dict]:
+    r = get_redis()
+    raw = r.get(GARMIN_BATCH_SUMMARY_KEY)
+    if not raw:
+        return []
+    try:
+        return json.loads(raw.decode() if isinstance(raw, bytes) else raw)
+    except Exception:
+        return []
+
+
+# ── Polish name generator ────────────────────────────────────────
+_PL_FIRST_NAMES_MALE = [
+    "Piotr", "Krzysztof", "Andrzej", "Tomasz", "Marcin", "Michał", "Jakub",
+    "Mateusz", "Łukasz", "Rafał", "Grzegorz", "Maciej", "Dawid", "Adam",
+    "Bartosz", "Damian", "Karol", "Szymon", "Paweł", "Jan", "Artur",
+    "Kamil", "Daniel", "Sebastian", "Mariusz", "Robert", "Wojciech",
+    "Radosław", "Przemysław", "Jarosław", "Kacper", "Kuba",
+]
+_PL_FIRST_NAMES_FEMALE = [
+    "Anna", "Katarzyna", "Magdalena", "Agnieszka", "Małgorzata", "Joanna",
+    "Marta", "Natalia", "Aleksandra", "Monika", "Dorota", "Ewa", "Karolina",
+    "Paulina", "Justyna", "Patrycja", "Barbara", "Kinga", "Izabela",
+    "Weronika", "Kamila", "Martyna", "Sylwia", "Agata", "Klaudia",
+]
+_PL_LAST_NAMES = [
+    "Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński",
+    "Lewandowski", "Zieliński", "Szymański", "Woźniak", "Dąbrowski",
+    "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk",
+    "Piotrowski", "Grabowski", "Nowakowski", "Pawłowski", "Michalski",
+    "Nowicki", "Adamczyk", "Dudek", "Zając", "Wieczorek", "Jabłoński",
+    "Król", "Majewski", "Olszewski", "Stępień", "Jaworski", "Malinowski",
+    "Sadowski", "Walczak", "Baran", "Czarnecki", "Adamski", "Sikora",
+    "Górski", "Borkowski", "Rutkowski", "Ostrowski", "Szewczyk",
+    "Tomaszewski", "Pietrzak", "Marciniak", "Wróblewski", "Zalewski",
+    "Jakubowski", "Jasiński", "Bąk", "Wilk", "Duda", "Sikorski",
+    "Chmielewski", "Przybylski", "Kaźmierczak", "Włodarczyk",
+]
+
+
+def generate_polish_name(index: int = 0) -> tuple[str, str, str]:
+    first = random.choice(_PL_FIRST_NAMES_MALE + _PL_FIRST_NAMES_FEMALE)
+    last = random.choice(_PL_LAST_NAMES)
+    display_name = f"{first} {last}"
+    username_slug = f"{first.lower()}_{last.lower()}"
+    return first, last, display_name
 
 
 # ── Per-ride Redis helpers ───────────────────────────────────────
@@ -681,6 +736,7 @@ def schedule_rides(
     credentials: list[dict[str, str]],
     config: ScheduleConfig,
     task_id: str = "",
+    user_names: list[dict[str, str]] | None = None,
 ) -> dict:
     if not acquire_garmin_batch_lock(task_id or "manual"):
         return {"status": "error", "message": "Another Garmin batch is already running"}
@@ -693,7 +749,7 @@ def schedule_rides(
         garmin_batch_log("Starting Garmin live simulation schedule")
 
         garmin_batch_log(f"Creating {config.user_count} users...")
-        users = _create_sim_users(credentials, config.user_count)
+        users = _create_sim_users(credentials, config.user_count, user_names)
         garmin_batch_log(f"Created {len(users)} users")
 
         garmin_batch_log("Generating ride schedules...")
@@ -963,7 +1019,7 @@ def finish_garmin_ride(ride_id: str) -> dict:
 
 
 # ── User utilities ───────────────────────────────────────────────
-def _create_sim_users(credentials: list[dict[str, str]], count: int) -> list[Any]:
+def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names: list[dict[str, str]] | None = None) -> list[Any]:
     from django.contrib.auth import get_user_model
     from users.models import Tenant
 
@@ -977,21 +1033,33 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int) -> list[Any
     )
 
     users = []
+    users_summary = []
     for i in range(count):
         username = f"garmin_sim_{i + 1:02d}"
+        first_name, last_name, display_name = generate_polish_name(i)
+        if user_names and i < len(user_names):
+            nm = user_names[i]
+            first_name = nm.get("first", first_name)
+            last_name = nm.get("last", last_name)
+            display_name = nm.get("display", f"{first_name} {last_name}")
         cred = credentials[i] if i < len(credentials) else {"email": f"sim{i + 1:02d}@test.local", "password": ""}
         user, created = User.objects.get_or_create(
             username=username,
             defaults={
                 "email": cred.get("email", f"sim{i + 1:02d}@test.local"),
+                "first_name": first_name,
+                "last_name": last_name,
                 "tenant": tenant,
                 "is_active": True,
             },
         )
         if not created:
+            user.first_name = first_name
+            user.last_name = last_name
             user.tenant = tenant
             user.is_active = True
-            user.save(update_fields=["tenant", "is_active"])
+            user.email = cred.get("email", user.email)
+            user.save(update_fields=["first_name", "last_name", "tenant", "is_active", "email"])
 
         GarminSimulatorCredential.objects.update_or_create(
             user=user,
@@ -1002,7 +1070,17 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int) -> list[Any
             },
         )
         users.append(user)
+        users_summary.append({
+            "index": i + 1,
+            "username": username,
+            "display_name": display_name,
+            "first_name": first_name,
+            "last_name": last_name,
+            "email": cred.get("email", ""),
+            "user_id": user.id,
+        })
 
+    store_garmin_summary(users_summary)
     return users
 
 

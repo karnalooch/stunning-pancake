@@ -510,6 +510,7 @@ export const SimulatorApi = {
     user_count: number;
     credentials: Array<{ email: string; password: string }>;
     schedule: Record<string, unknown>;
+    names?: Array<{ first: string; last: string; display: string }>;
   }) => {
     const { data } = await apiClient.post('/activities/admin/garmin-simulate/', params);
     return data;
