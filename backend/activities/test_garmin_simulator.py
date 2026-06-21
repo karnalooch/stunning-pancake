@@ -238,7 +238,96 @@ class RouteGenerationTests(SimpleTestCase):
         self.assertIn(source, ("road", "grid", "synthetic"))
 
 
+class _FakeRedis:
+    def __init__(self):
+        self.hashes = {}
+        self.strings = {}
+        self.lists = {}
+
+    def hset(self, key, key_or_mapping=None, value=None, mapping=None):
+        if mapping:
+            self.hashes.setdefault(key, {}).update(mapping)
+            return len(mapping)
+        elif isinstance(key_or_mapping, dict):
+            self.hashes.setdefault(key, {}).update(key_or_mapping)
+            return len(key_or_mapping)
+        elif key_or_mapping is not None and value is not None:
+            self.hashes.setdefault(key, {})[key_or_mapping] = value
+            return 1
+        return 0
+
+    def hget(self, key, field):
+        val = self.hashes.get(key, {}).get(field)
+        if val is None:
+            return None
+        return val.encode() if isinstance(val, str) else val
+
+    def hgetall(self, key):
+        return {
+            (k.encode() if isinstance(k, str) else k): (v.encode() if isinstance(v, str) else v)
+            for k, v in self.hashes.get(key, {}).items()
+        }
+
+    def rpush(self, key, *values):
+        self.lists.setdefault(key, []).extend(values)
+        return len(self.lists[key])
+
+    def ltrim(self, key, start, stop):
+        if key in self.lists:
+            self.lists[key] = self.lists[key][start:stop+1] if stop != -1 else self.lists[key][start:]
+
+    def lrange(self, key, start, end):
+        lst = self.lists.get(key, [])
+        if end == -1:
+            res = lst[start:]
+        else:
+            res = lst[start:end+1]
+        return [item.encode() if isinstance(item, str) else item for item in res]
+
+    def set(self, key, value, nx=False, ex=None):
+        if nx and key in self.strings:
+            return False
+        self.strings[key] = value
+        return True
+
+    def get(self, key):
+        val = self.strings.get(key)
+        if val is None:
+            return None
+        return val.encode() if isinstance(val, str) else val
+
+    def delete(self, *keys):
+        deleted = 0
+        for key in keys:
+            if key in self.hashes:
+                self.hashes.pop(key)
+                deleted += 1
+            if key in self.strings:
+                self.strings.pop(key)
+                deleted += 1
+            if key in self.lists:
+                self.lists.pop(key)
+                deleted += 1
+        return deleted
+
+    def exists(self, key):
+        return key in self.hashes or key in self.strings or key in self.lists
+
+    def expire(self, key, ttl):
+        pass
+
+
 class RedisStateTests(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.fake_redis = _FakeRedis()
+        self.get_redis_patcher = patch("activities.garmin_simulator.get_redis", return_value=self.fake_redis)
+        self.get_redis_patcher.start()
+
+    def tearDown(self):
+        self.get_redis_patcher.stop()
+        super().tearDown()
+
     @override_settings(REDIS_URL="redis://127.0.0.1:6379/15")
     def test_batch_state_defaults(self):
         clear_garmin_batch_state()
@@ -276,3 +365,130 @@ class RedisStateTests(TestCase):
         self.assertEqual(len(pts), 2)
         self.assertEqual(pts[0]["tick"], 0)
         remove_ride_keys(ride_id)
+
+
+class GarminLiveSimulatorTests(TestCase):
+    def setUp(self):
+        super().setUp()
+        self.fake_redis = _FakeRedis()
+        self.get_redis_patcher = patch("activities.garmin_simulator.get_redis", return_value=self.fake_redis)
+        self.get_redis_patcher.start()
+
+    def tearDown(self):
+        self.get_redis_patcher.stop()
+        super().tearDown()
+
+    @patch("activities.garmin_simulator_tasks.run_garmin_live_tick.apply_async")
+    def test_schedule_rides_success(self, mock_apply_async):
+        from activities.garmin_simulator import schedule_rides, ScheduleConfig
+        credentials = [{"email": "test1@garmin.local", "password": "pwd"}]
+        config = ScheduleConfig(user_count=1, weekday_rides=1)
+        
+        res = schedule_rides(credentials, config, task_id="test_task_123")
+        self.assertEqual(res["status"], "scheduled")
+        self.assertEqual(res["total_rides"], 2)  # 1 weekday + 1 weekend
+        self.assertTrue(mock_apply_async.called)
+        self.assertEqual(mock_apply_async.call_count, 2)
+
+    @patch("activities.services.TelemetryService.push_simulator_position")
+    @patch("activities.garmin_simulator_tasks.run_garmin_live_tick.apply_async")
+    def test_run_live_tick_0(self, mock_apply_async, mock_push):
+        from activities.garmin_simulator import run_live_tick, set_ride_state, RidePlan
+        from datetime import date, datetime
+        import json
+        
+        ride_id = "test_ride_0"
+        plan = RidePlan(
+            user_index=0, date=date(2026, 6, 17),
+            start_time=datetime(2026, 6, 17, 15, 30),
+            distance_km=10, speed_kmh=25,
+            start_lat=52.1659, start_lon=22.2757,
+        )
+        set_ride_state(
+            ride_id,
+            user_id=1,
+            status="PENDING",
+            duration_s=1440,
+            tick=0,
+            plan_json=json.dumps(plan.to_dict()),
+        )
+        
+        res = run_live_tick(ride_id, 0, 1440)
+        self.assertEqual(res["status"], "tick")
+        self.assertEqual(res["tick"], 0)
+        
+        mock_apply_async.assert_called_once_with(
+            args=[ride_id, 1, 1440],
+            countdown=1,
+        )
+
+    @patch("activities.services.TelemetryService.push_simulator_position")
+    @patch("activities.garmin_simulator_tasks.finish_garmin_ride.delay")
+    def test_run_live_tick_final(self, mock_finish_delay, mock_push):
+        from activities.garmin_simulator import run_live_tick, set_ride_state, RidePlan
+        from datetime import date, datetime
+        import json
+        
+        ride_id = "test_ride_final"
+        plan = RidePlan(
+            user_index=0, date=date(2026, 6, 17),
+            start_time=datetime(2026, 6, 17, 15, 30),
+            distance_km=10, speed_kmh=25,
+            start_lat=52.1659, start_lon=22.2757,
+        )
+        set_ride_state(
+            ride_id,
+            user_id=1,
+            status="ACTIVE",
+            duration_s=1440,
+            tick=1439,
+            plan_json=json.dumps(plan.to_dict()),
+        )
+        
+        res = run_live_tick(ride_id, 1440, 1440)
+        self.assertEqual(res["status"], "final_tick")
+        self.assertEqual(res["tick"], 1440)
+        
+        mock_finish_delay.assert_called_once_with(ride_id)
+
+    @patch("activities.models.Activity.objects.create")
+    @patch("activities.garmin_upload.GarminUploadService.upload_for_user")
+    @patch("activities.gpx_storage.store_gpx")
+    def test_finish_garmin_ride_success(self, mock_store_gpx, mock_upload, mock_activity_create):
+        from activities.garmin_simulator import finish_garmin_ride, set_ride_state, push_ride_point, RidePlan
+        from datetime import date, datetime
+        from django.contrib.auth import get_user_model
+        from users.models import Tenant
+        import json
+        
+        User = get_user_model()
+        tenant, _ = Tenant.objects.get_or_create(name="Garmin Sim")
+        user = User.objects.create(username="garmin_sim_01", tenant=tenant)
+        
+        ride_id = f"{user.id}_2026-06-17_1530"
+        plan = RidePlan(
+            user_index=0, date=date(2026, 6, 17),
+            start_time=datetime(2026, 6, 17, 15, 30),
+            distance_km=10, speed_kmh=25,
+            start_lat=52.1659, start_lon=22.2757,
+        )
+        set_ride_state(
+            ride_id,
+            user_id=user.id,
+            status="FINISHING",
+            duration_s=1440,
+            plan_json=json.dumps(plan.to_dict()),
+        )
+        
+        push_ride_point(ride_id, {"lat": 52.16, "lon": 22.27, "ele": 152.0, "hr": 130, "cad": 80, "atemp": 22, "time": "2026-06-17T15:30:00Z"})
+        push_ride_point(ride_id, {"lat": 52.17, "lon": 22.28, "ele": 153.0, "hr": 135, "cad": 82, "atemp": 22, "time": "2026-06-17T15:30:01Z"})
+        
+        mock_upload.return_value = 99999
+        mock_activity_create.return_value = MagicMock()
+        
+        res = finish_garmin_ride(ride_id)
+            
+        self.assertEqual(res["status"], "complete")
+        self.assertEqual(res["garmin_id"], 99999)
+        self.assertTrue(mock_activity_create.called)
+
