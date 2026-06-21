@@ -183,6 +183,38 @@ def run_wipe_sync():
             raw_delete=True,
         )
 
+        try:
+            from django.apps import apps
+            OutstandingToken = apps.get_model("token_blacklist", "OutstandingToken")
+            BlacklistedToken = apps.get_model("token_blacklist", "BlacklistedToken")
+            
+            blacklisted_qs = BlacklistedToken.objects.exclude(token__user__role="GLOBAL_OWNER")
+            blacklisted_estimate = blacklisted_qs.count()
+            ws.set_wipe_state(phase="token_blacklist", progress_pct=59)
+            deleted["blacklisted_tokens"] = _chunk_delete(
+                blacklisted_qs,
+                "blacklisted_tokens",
+                deleted,
+                59,
+                0.5,
+                total_estimate=blacklisted_estimate,
+                raw_delete=True,
+            )
+            
+            outstanding_qs = OutstandingToken.objects.exclude(user__role="GLOBAL_OWNER")
+            outstanding_estimate = outstanding_qs.count()
+            deleted["outstanding_tokens"] = _chunk_delete(
+                outstanding_qs,
+                "outstanding_tokens",
+                deleted,
+                59.5,
+                0.5,
+                total_estimate=outstanding_estimate,
+                raw_delete=True,
+            )
+        except LookupError:
+            pass
+
         User = get_user_model()
         user_estimate = User.objects.exclude(role="GLOBAL_OWNER").count()
         ws.set_wipe_state(phase="users", progress_pct=60)

@@ -126,7 +126,9 @@ class WipeStatusLabelTests(SimpleTestCase):
         self.assertEqual(state["deleted"]["activities"], 5000)
         self.assertIsNotNone(state["last_progress_at"])
 
-    def test_serialize_wipe_response_shape(self):
+    @patch("activities.wipe_state.get_redis")
+    def test_serialize_wipe_response_shape(self, mock_get_redis):
+        mock_get_redis.return_value = _FakeRedis()
         state = ws.get_wipe_state()
         payload = ws.serialize_wipe_response(state, log=[])
         self.assertIn("status", payload)
