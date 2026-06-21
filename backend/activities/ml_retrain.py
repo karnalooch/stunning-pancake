@@ -174,3 +174,140 @@ def retrain_ml_model() -> dict:
         pass
 
     return result
+
+
+@shared_task(
+    queue="default",
+    name="activities.tasks.calibrate_ml_from_sim",
+)
+def calibrate_ml_from_sim() -> dict:
+    """
+    Calibrates the IsolationForest model using Garmin Edge simulator activities
+    as clean positive samples (Golden Dataset) and mass simulator cheater activities
+    as negative anomalous samples.
+    """
+    try:
+        import numpy as np
+        from sklearn.ensemble import IsolationForest
+    except ImportError:
+        logger.error("ml_retrain: scikit-learn not installed — skipping calibration")
+        return {"status": "skipped", "reason": "scikit-learn not installed"}
+
+    from activities.ml_anomaly import extract_features
+    from activities.models import Activity
+    from activities.signal_processing import GpsPoint
+
+    # 1. Fetch Golden Dataset (Clean Garmin rides)
+    garmin_qs = Activity.objects.filter(
+        external_source="GARMIN",
+        route_path__isnull=False,
+    ).only("route_path")[:2000]
+
+    clean_features: list[list[float]] = []
+    for act in garmin_qs:
+        coords = list(act.route_path.coords)
+        if len(coords) < 20:
+            continue
+        points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
+        feats = extract_features(points)
+        if feats:
+            clean_features.append(feats)
+
+    # Fallback to standard verified activities if not enough Garmin samples yet (e.g. at start)
+    if len(clean_features) < 10:
+        logger.info("ml_retrain: insufficient Garmin-only samples (%d), falling back to all verified", len(clean_features))
+        fallback_qs = Activity.objects.filter(
+            is_verified=True,
+            route_path__isnull=False,
+        ).only("route_path")[:1000]
+        for act in fallback_qs:
+            coords = list(act.route_path.coords)
+            if len(coords) < 20:
+                continue
+            points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
+            feats = extract_features(points)
+            if feats and feats not in clean_features:
+                clean_features.append(feats)
+
+    if len(clean_features) < 10:
+        return {"status": "skipped", "reason": "insufficient clean samples", "count": len(clean_features)}
+
+    # 2. Fetch Anomaly Validation Dataset (Simulator cheaters)
+    cheater_qs = Activity.objects.filter(
+        is_verified=False,
+        route_path__isnull=False,
+    ).only("route_path")[:1000]
+
+    anomalous_features: list[list[float]] = []
+    for act in cheater_qs:
+        coords = list(act.route_path.coords)
+        if len(coords) < 20:
+            continue
+        points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
+        feats = extract_features(points)
+        if feats:
+            anomalous_features.append(feats)
+
+    X_clean = np.array(clean_features)
+    clf = IsolationForest(
+        n_estimators=300,
+        contamination=0.03,
+        random_state=42,
+        n_jobs=-1,
+    )
+    clf.fit(X_clean)
+
+    # Self-validation
+    clean_scores = clf.score_samples(X_clean)
+    mean_score = float(np.mean(clean_scores))
+    std_score = float(np.std(clean_scores))
+    dynamic_threshold = mean_score + (-3.0 * std_score)
+
+    false_positive_rate = float((clean_scores < dynamic_threshold).mean())
+
+    # Validate against anomalous cheater samples if available
+    true_positive_rate = None
+    if anomalous_features:
+        X_anomaly = np.array(anomalous_features)
+        anomaly_scores = clf.score_samples(X_anomaly)
+        true_positive_rate = float((anomaly_scores < dynamic_threshold).mean())
+
+    # Pack model and swap atomically
+    model_payload = {
+        "model": clf,
+        "mean_score": mean_score,
+        "std_score": std_score,
+        "dynamic_threshold": dynamic_threshold,
+    }
+
+    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        dir=MODEL_PATH.parent,
+        suffix=".pkl",
+        delete=False,
+    ) as tmp:
+        tmp_path = Path(tmp.name)
+        pickle.dump(model_payload, tmp)
+
+    if MODEL_PATH.exists():
+        backup = MODEL_PATH.with_suffix(f".backup_sim_calib_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pkl")
+        shutil.copy2(MODEL_PATH, backup)
+
+    tmp_path.replace(MODEL_PATH)
+
+    # Invalidate in-memory singleton
+    import activities.ml_anomaly as ml_mod
+    ml_mod._model_payload = None
+    ml_mod._model_loaded = False
+
+    result = {
+        "status": "ok",
+        "clean_samples_used": len(clean_features),
+        "anomalous_samples_validated": len(anomalous_features),
+        "false_positive_rate": round(false_positive_rate, 4),
+        "true_positive_rate": round(true_positive_rate, 4) if true_positive_rate is not None else None,
+        "dynamic_threshold": round(dynamic_threshold, 4),
+        "model_path": str(MODEL_PATH),
+    }
+    logger.info("ml_retrain.calibrate_from_sim: complete %s", result)
+    return result

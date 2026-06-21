@@ -174,6 +174,20 @@ class BRouterService:
         # Format coordinates for BRouter (lon,lat|lon,lat...)
         coord_str = "|".join([f"{c[0]},{c[1]}" for c in coordinates])
 
+        # Redis Cache check
+        import json
+        import hashlib
+        from core.redis_cluster import get_redis
+        
+        cache_key = f"{{sim}}:routes:cache:{hashlib.sha256(f'{activity_type}:{profile}:{coord_str}'.encode()).hexdigest()}"
+        try:
+            r = get_redis()
+            cached_data = r.get(cache_key)
+            if cached_data:
+                return json.loads(cached_data.decode() if isinstance(cached_data, bytes) else cached_data)
+        except Exception as exc:
+            logger.warning("Failed to fetch from routing cache: %s", exc)
+
         params = {
             "lonlats": coord_str,
             "profile": profile,
@@ -209,12 +223,18 @@ class BRouterService:
                             "raw_data": data,
                         }
                     props = (data.get("features") or [{}])[0].get("properties") or {}
-                    return {
+                    result = {
                         "success": True,
                         "brouter_distance": props.get("track-length"),
                         "raw_data": data,
                         "coordinates": points,
                     }
+                    try:
+                        r = get_redis()
+                        r.setex(cache_key, 604800, json.dumps(result))  # 7 days cache
+                    except Exception as exc:
+                        logger.warning("Failed to save to routing cache: %s", exc)
+                    return result
                 err = (response.text or "").strip()
                 if len(err) > 300:
                     err = err[:300] + "…"

@@ -110,9 +110,10 @@ class GenerateRouteWaypointsCacheTest(SimpleTestCase):
 
 
 class BrouterIslandEarlyExitTest(SimpleTestCase):
+    @patch("activities.simulator_state.get_redis")
     @patch("activities.simulator_route_waypoints._consume_brouter_tick_budget", return_value=True)
     @patch("activities.services.BRouterService.validate_track")
-    def test_skips_trekking_fallback_on_unroutable_island(self, mock_validate, _budget):
+    def test_skips_trekking_fallback_on_unroutable_island(self, mock_validate, _budget, _mock_redis):
         from activities.simulator_route_waypoints import _brouter_route_waypoints
 
         mock_validate.return_value = {
@@ -260,3 +261,60 @@ class PerCityRideCapTest(SimpleTestCase):
         caps = [base + (1 if i < extra else 0) for i in range(n)]
         self.assertEqual(sum(caps), target)
         self.assertGreaterEqual(min(caps), base)
+
+
+from unittest.mock import MagicMock
+
+class BRouterServiceCacheTest(SimpleTestCase):
+    @patch("core.redis_cluster.get_redis")
+    @patch("requests.Session.get")
+    def test_validate_track_hits_redis_cache(self, mock_get, mock_get_redis):
+        import json
+        mock_redis = MagicMock()
+        mock_get_redis.return_value = mock_redis
+        
+        cached_result = {
+            "success": True,
+            "brouter_distance": 1234,
+            "coordinates": [(52.0, 21.0), (52.01, 21.01)],
+            "raw_data": {}
+        }
+        mock_redis.get.return_value = json.dumps(cached_result).encode()
+        
+        res = BRouterService.validate_track("BIKE", [(21.0, 52.0), (21.01, 52.01)])
+        self.assertTrue(res["success"])
+        self.assertEqual(res["brouter_distance"], 1234)
+        mock_redis.get.assert_called_once()
+        mock_get.assert_not_called()  # Did not call requests get
+
+    @patch("core.redis_cluster.get_redis")
+    @patch("requests.Session.get")
+    def test_validate_track_saves_to_redis_cache(self, mock_get, mock_get_redis):
+        import json
+        mock_redis = MagicMock()
+        mock_get_redis.return_value = mock_redis
+        mock_redis.get.return_value = None  # Cache miss
+        
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[21.0, 52.0], [21.01, 52.01]]
+                },
+                "properties": {
+                    "track-length": 5678
+                }
+            }]
+        }
+        mock_get.return_value = mock_response
+        
+        res = BRouterService.validate_track("BIKE", [(21.0, 52.0), (21.01, 52.01)])
+        self.assertTrue(res["success"])
+        self.assertEqual(res["brouter_distance"], 5678)
+        mock_redis.get.assert_called_once()
+        mock_get.assert_called_once()
+        mock_redis.setex.assert_called_once()

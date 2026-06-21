@@ -1099,6 +1099,14 @@ sim:live:riding     Hash    {user_id: json_ride_object}
 sim:live:log        List    [json_array_of_timestamp_and_message]
 sim:live:lock       String  "1" (with TTL 300)
 sim:live:abort      String  "1" (set to request abort)
+
+# Garmin Edge 530 Simulation (Siedlce)
+{sim}:garmin_batch:state    Hash    {running, progress_pct, phase, total_rides, rides_done, rides_scheduled, rides_active, error}
+{sim}:garmin_batch:log      List    [timestamp|message]
+{sim}:garmin_batch:lock     String  task_id (TTL 7200)
+{sim}:garmin_live:{ride_id}:state  Hash {status (PENDING/ACTIVE/FINISHING/COMPLETE), user_id, start_time, duration_s, progress_pct, tick, plan_json}
+{sim}:garmin_live:{ride_id}:points List [json_array_of_tick_point_data]
+{sim}:routes:cache:{hash}   String  [json_brouter_geojson_coordinates] (TTL 7 days)
 ```
 
 ## Appendix B: Comparison — Before vs After

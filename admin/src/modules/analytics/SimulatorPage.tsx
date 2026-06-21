@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react'
 import {
     Box, Text, Card, Group, Stack, Slider, NumberInput, Button,
     Badge, ThemeIcon, SimpleGrid, Alert, ScrollArea, Checkbox, Switch,
-    Modal, Divider, Stepper, TextInput, PasswordInput, Table,
+    Modal, Divider, Stepper, TextInput, PasswordInput, Table, Tabs,
 } from '@mantine/core';
 import { BatchProgressBar, WipeProgressBar } from './SimulationProgressBar';
 import { notifications } from '@mantine/notifications';
@@ -1147,8 +1147,19 @@ export const SimulatorPage: React.FC = () => {
                 </Card>
             )}
 
-            <Card withBorder radius="md" p="xl" mb="md">
-                <Stepper active={activeStep} onStepClick={anyRunning ? undefined : setActiveStep} breakpoint="sm" allowNextStepsSelect={false}>
+            <Tabs defaultValue="mass" variant="outline" mb="md">
+                <Tabs.List>
+                    <Tabs.Tab value="mass" leftSection={<Users size={16} />}>
+                        Masowy Symulator (Active Cities)
+                    </Tabs.Tab>
+                    <Tabs.Tab value="garmin" leftSection={<Bike size={16} />}>
+                        Precyzyjny Kolarz Garmin (Edge 530)
+                    </Tabs.Tab>
+                </Tabs.List>
+
+                <Tabs.Panel value="mass" pt="md">
+                    <Card withBorder radius="md" p="xl">
+                        <Stepper active={activeStep} onStepClick={anyRunning ? undefined : setActiveStep} breakpoint="sm" allowNextStepsSelect={false}>
                     {/* STEP 1: POPULATION CONFIG */}
                     <Stepper.Step label="Step 1" description="Configure Cyclists" icon={<Users size={16} />}>
                         <Stack gap="lg" mt="xl" style={{ maxWidth: 600 }}>
@@ -1604,16 +1615,19 @@ export const SimulatorPage: React.FC = () => {
                     </Stepper.Step>
                 </Stepper>
             </Card>
+                </Tabs.Panel>
 
-            {/* ─── Garmin Siedlce Simulator ─── */}
-            <Card withBorder radius="md" p="xl" mb="md" mt="md">
-                <Text fw={700} size="lg" mb="xs">Garmin Edge 530 Simulation — Siedlce</Text>
-                <Text size="sm" c="dimmed" mb="lg">
-                    Generate realistic rides around Siedlce, export GPX files in Garmin Edge 530 format,
-                    and upload them to real Garmin Connect accounts.
-                </Text>
-                <GarminSimStepper />
-            </Card>
+                <Tabs.Panel value="garmin" pt="md">
+                    <Card withBorder radius="md" p="xl">
+                        <Text fw={700} size="lg" mb="xs">Garmin Edge 530 Simulation — Siedlce</Text>
+                        <Text size="sm" c="dimmed" mb="lg">
+                            Generate realistic rides around Siedlce, export GPX files in Garmin Edge 530 format,
+                            and upload them to real Garmin Connect accounts.
+                        </Text>
+                        <GarminSimStepper />
+                    </Card>
+                </Tabs.Panel>
+            </Tabs>
 
             <Modal
                 opened={wipeModalOpen}

@@ -191,7 +191,11 @@ def _run_live_tick_body():
     tick_seconds = int(state.get("tick_seconds", 8))
     pipeline_count = sim.get_live_rides_in_flight_count()
     fsm_for_budget = ride_fsm.fsm_summary(active_rides)
-    active_on_map = int(fsm_for_budget["ride_on_map"])
+
+    from activities.garmin_simulator import get_garmin_batch_state
+    garmin_state = get_garmin_batch_state()
+    garmin_active = int(garmin_state.get("rides_active", 0) or 0)
+    active_on_map = int(fsm_for_budget["ride_on_map"]) + garmin_active
     event_stagger_cap = None
     if state.get("event_id") or state.get("event_load_test"):
         event_stagger_cap = max_starts_per_live_tick(total_users, active_ratio, tick_seconds)

@@ -742,6 +742,11 @@ def schedule_rides(
     task_id: str = "",
     user_names: list[dict[str, str]] | None = None,
 ) -> dict:
+    from activities.simulator_state import batch_blocks_live_simulation
+    blocked, reason = batch_blocks_live_simulation()
+    if blocked:
+        return {"status": "error", "message": f"Cannot start Garmin simulation: mass batch simulation is active ({reason})"}
+
     if not acquire_garmin_batch_lock(task_id or "manual"):
         return {"status": "error", "message": "Another Garmin batch is already running"}
 
@@ -875,7 +880,7 @@ def run_live_tick(ride_id: str, tick: int, duration_s: int) -> dict:
             speed=plan.speed_kmh if progress < 0.99 else 0.0,
             course=0,
             name=f"SimUser{user_id}",
-            device_type="bike",
+            device_type="garmin_bike",
         )
     except Exception as exc:
         if tick == 0 or tick % 60 == 0:
