@@ -215,6 +215,22 @@ def run_wipe_sync():
         except LookupError:
             pass
 
+        try:
+            from activities.models import GarminSimulatorCredential
+            garmin_cred_qs = GarminSimulatorCredential.objects.exclude(user__role="GLOBAL_OWNER")
+            garmin_cred_estimate = garmin_cred_qs.count()
+            deleted["garmin_simulator_credentials"] = _chunk_delete(
+                garmin_cred_qs,
+                "garmin_simulator_credentials",
+                deleted,
+                59.8,
+                0.2,
+                total_estimate=garmin_cred_estimate,
+                raw_delete=True,
+            )
+        except ImportError:
+            pass
+
         User = get_user_model()
         user_estimate = User.objects.exclude(role="GLOBAL_OWNER").count()
         ws.set_wipe_state(phase="users", progress_pct=60)
