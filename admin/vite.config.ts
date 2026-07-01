@@ -3,6 +3,10 @@ import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
+const repoReact = path.resolve(__dirname, '../node_modules/react')
+const repoReactDom = path.resolve(__dirname, '../node_modules/react-dom')
+const adminNodeModules = path.resolve(__dirname, 'node_modules')
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const fileEnv = loadEnv(mode, process.cwd(), '')
@@ -23,13 +27,21 @@ export default defineConfig(({ mode }) => {
         },
   },
   plugins: [
-    react()
+    react({
+      exclude: /node_modules/,
+    }),
   ],
   resolve: {
     alias: {
       '@tokens': path.resolve(__dirname, '../packages/tokens'),
-      react: path.resolve(__dirname, '../node_modules/react'),
-      'react-dom': path.resolve(__dirname, '../node_modules/react-dom'),
+      react: repoReact,
+      'react-dom': repoReactDom,
+      'react-dom/client': path.resolve(repoReactDom, 'client'),
+      'react/jsx-runtime': path.resolve(repoReact, 'jsx-runtime.js'),
+      'react/jsx-dev-runtime': path.resolve(repoReact, 'jsx-dev-runtime.js'),
+      // Force Mantine ESM builds — Vitest otherwise resolves to src/ with a separate React copy.
+      '@mantine/core': path.resolve(adminNodeModules, '@mantine/core/esm/index.mjs'),
+      '@mantine/hooks': path.resolve(adminNodeModules, '@mantine/hooks/esm/index.mjs'),
     },
     dedupe: ['react', 'react-dom'],
   },
@@ -53,13 +65,30 @@ export default defineConfig(({ mode }) => {
     globals: true,
     setupFiles: ['./src/test-setup.ts'],
     exclude: ['e2e/**', 'node_modules/**'],
-    // threads: jsdom + Mantine startuje w fork workerze >60s w sandboxie Cursora
-    pool: 'threads',
-    isolate: false,
+    pool: 'forks',
+    isolate: true,
     maxWorkers: 1,
     fileParallelism: false,
     testTimeout: 30_000,
     hookTimeout: 180_000,
+    server: {
+      deps: {
+        inline: [
+          'react',
+          'react-dom',
+          'react/jsx-runtime',
+          'react/jsx-dev-runtime',
+          '@mantine/core',
+          '@mantine/hooks',
+          'lucide-react',
+        ],
+        optimizer: {
+          client: {
+            enabled: false,
+          },
+        },
+      },
+    },
   },
   define: {
     'import.meta.env.VITE_E2E': JSON.stringify(viteE2e),

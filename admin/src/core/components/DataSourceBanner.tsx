@@ -1,6 +1,7 @@
 import React from 'react';
 import { Alert, Text } from '@mantine/core';
 import { AlertTriangle, FlaskConical } from 'lucide-react';
+import { resolveDataSourceBannerView } from './dataSourceBannerLogic';
 
 export interface DataSourceBannerProps {
   dataSource?: 'production' | 'sim-lab';
@@ -9,19 +10,14 @@ export interface DataSourceBannerProps {
   simLabLabel?: string;
 }
 
-export const DataSourceBanner: React.FC<DataSourceBannerProps> = ({
-  dataSource,
-  synthetic,
-  federationFallback,
-  simLabLabel = 'sim-lab',
-}) => {
-  const isSimLab = dataSource === 'sim-lab' || synthetic;
+export const DataSourceBanner: React.FC<DataSourceBannerProps> = (props) => {
+  const view = resolveDataSourceBannerView(props);
 
-  if (!isSimLab && !federationFallback) {
+  if (view.kind === 'hidden') {
     return null;
   }
 
-  if (federationFallback && !isSimLab) {
+  if (view.kind === 'fallback') {
     return (
       <Alert
         mb="md"
@@ -44,7 +40,7 @@ export const DataSourceBanner: React.FC<DataSourceBannerProps> = ({
       color="orange"
       variant="filled"
       icon={<FlaskConical size={18} />}
-      title={`Synthetic KPIs — ${simLabLabel}`}
+      title={`Synthetic KPIs — ${view.simLabLabel}`}
     >
       <Text size="sm">
         Athlete and activity totals are federated from the isolated sim-lab environment, not production.

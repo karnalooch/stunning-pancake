@@ -44,7 +44,8 @@ const FeatureFlags = lazy(() => import('./modules/settings/FeatureFlags').then(m
 const PlatformNotices = lazy(() => import('./modules/settings/PlatformNotices').then(m => ({ default: m.PlatformNotices })));
 const DepartmentAnalyticsPage = lazy(() => import('./modules/analytics/DepartmentAnalyticsPage').then(m => ({ default: m.DepartmentAnalyticsPage })));
 const GlobalHeatmap = lazy(() => import('./modules/analytics/GlobalHeatmap').then(m => ({ default: m.GlobalHeatmap })));
-const SimulatorPage = lazy(() => import('./modules/analytics/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
+const SimulatorPage = lazy(() => import('./modules/simulator/SimulatorPage').then(m => ({ default: m.SimulatorPage })));
+const SimulatorMonitor = lazy(() => import('./modules/simulator/monitor/SimulatorMonitor').then(m => ({ default: m.SimulatorMonitor })));
 const ActivityDetail = lazy(() => import('./modules/dashboard/ActivityDetail').then(m => ({ default: m.ActivityDetail })));
 const ActivitiesList = lazy(() => import('./modules/analytics/ActivitiesList').then(m => ({ default: m.ActivitiesList })));
 
@@ -416,6 +417,14 @@ export default function App() {
                 }
               />
               {/* Simulator: GLOBAL_OWNER only — nav in Layout.tsx matches this guard */}
+              <Route
+                path="analytics/simulator/monitor"
+                element={
+                  <PermissionGuard roles={['GLOBAL_OWNER']}>
+                    <SimulatorMonitor />
+                  </PermissionGuard>
+                }
+              />
               <Route
                 path="analytics/simulator"
                 element={

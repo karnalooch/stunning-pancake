@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, Stack, Skeleton, Badge, Group, ThemeIcon } from '@mantine/core';
 import { Brain, TrendingUp, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { normalizeInsightsPayload } from './systemIntelligenceLogic';
 
 const iconMap: Record<string, React.FC<{ size?: number }>> = {
   positive: CheckCircle2,
@@ -20,11 +21,7 @@ export const SystemIntelligence: React.FC = () => {
     const fetchInsights = async () => {
       try {
         const { data } = await apiClient.get('/activities/ai/insights/');
-        // Handle both plain array and { insights: [...] } wrapped responses
-        const items = Array.isArray(data)
-          ? data
-          : (data?.insights && Array.isArray(data.insights) ? data.insights : []);
-        setInsights(items);
+        setInsights(normalizeInsightsPayload(data));
       } catch (err) {
         setError('Unable to load AI insights. Please try again later.');
       } finally {
