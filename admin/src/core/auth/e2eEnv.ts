@@ -5,10 +5,12 @@ export function isE2eMode(): boolean {
 
 export function isPlaywrightE2eSession(): boolean {
     if (typeof window === 'undefined') return isE2eMode();
-    if (isE2eMode()) return true;
     try {
-        return sessionStorage.getItem('playwright-e2e') === '1';
+        const sessionFlag = sessionStorage.getItem('playwright-e2e');
+        if (sessionFlag === '0') return false;
+        if (sessionFlag === '1') return true;
     } catch {
-        return false;
+        // Fall back to the build-time flag when session storage is unavailable.
     }
+    return isE2eMode();
 }
