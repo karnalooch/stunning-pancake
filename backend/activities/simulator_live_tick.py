@@ -193,6 +193,7 @@ def _run_live_tick_body():
     fsm_for_budget = ride_fsm.fsm_summary(active_rides)
 
     from activities.garmin_simulator import get_garmin_batch_state
+
     garmin_state = get_garmin_batch_state()
     garmin_active = int(garmin_state.get("rides_active", 0) or 0)
     active_on_map = int(fsm_for_budget["ride_on_map"]) + garmin_active

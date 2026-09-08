@@ -13,7 +13,6 @@ from ingest_queue import (  # noqa: E402
     _parse_row,
     _sort_rows,
     drain_once,
-    queue_enabled,
     reclaim_pending,
 )
 
@@ -36,13 +35,9 @@ def test_sort_rows_by_activity_time_seq():
 
 @pytest.mark.asyncio
 async def test_drain_once_acks_after_flush():
-    payload = {
-        "data": '{"rows": [[1.0, "dev", 1, 52.0, 21.0, 1.0, 5.0, 42, 1]]}'
-    }
+    payload = {"data": '{"rows": [[1.0, "dev", 1, 52.0, 21.0, 1.0, 5.0, 42, 1]]}'}
     redis = AsyncMock()
-    redis.xreadgroup = AsyncMock(
-        return_value=[(b"telemetry:ingest:queue", [(b"1-0", payload)])]
-    )
+    redis.xreadgroup = AsyncMock(return_value=[(b"telemetry:ingest:queue", [(b"1-0", payload)])])
     redis.xack = AsyncMock()
     redis.xgroup_create = AsyncMock()
     flush = AsyncMock()
@@ -59,15 +54,11 @@ async def test_reclaim_moves_to_dlq_after_max_delivery(monkeypatch):
 
     redis = AsyncMock()
     redis.xautoclaim = AsyncMock(return_value=("0-0", [(b"9-0", {"data": "not-json"})], []))
-    redis.xpending_range = AsyncMock(
-        return_value=[{"message_id": b"9-0", "times_delivered": 3}]
-    )
+    redis.xpending_range = AsyncMock(return_value=[{"message_id": b"9-0", "times_delivered": 3}])
     redis.xack = AsyncMock()
     redis.xadd = AsyncMock()
     redis.xgroup_create = AsyncMock()
     redis.xpending = AsyncMock(return_value={"pending": 0, "min": 0, "max": 0})
-
-    from ingest_queue import reclaim_pending
 
     stats = await reclaim_pending(redis, AsyncMock())
     assert stats["claimed"] == 1

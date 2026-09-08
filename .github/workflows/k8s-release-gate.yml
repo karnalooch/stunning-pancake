@@ -45,7 +45,13 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Backend smoke checks
+        env:
+          SECRET_KEY: ci-only-smoke-check-key-not-for-production
+          ALLOWED_HOSTS: localhost,127.0.0.1
+          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
         run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev
           cd backend
           pip install -r requirements.txt
           python manage.py check

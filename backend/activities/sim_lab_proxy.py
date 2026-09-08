@@ -97,7 +97,9 @@ def _health_cache_ttl(*, reachable: bool) -> float:
     if reachable:
         return _HEALTH_CACHE_TTL_OK_SECONDS
     try:
-        return float(os.getenv("SIM_LAB_PROXY_HEALTH_FAIL_CACHE_TTL", str(_HEALTH_CACHE_TTL_FAIL_SECONDS)))
+        return float(
+            os.getenv("SIM_LAB_PROXY_HEALTH_FAIL_CACHE_TTL", str(_HEALTH_CACHE_TTL_FAIL_SECONDS))
+        )
     except (TypeError, ValueError):
         return _HEALTH_CACHE_TTL_FAIL_SECONDS
 
@@ -187,7 +189,10 @@ def _integration_mode_target_fields(*, health: dict[str, Any] | None = None) -> 
 
     now = time.time()
     cached = _INTEGRATION_TARGET_CACHE.get("fields")
-    if isinstance(cached, dict) and now - float(cached.get("_ts") or 0) < _INTEGRATION_TARGET_CACHE_TTL_SECONDS:
+    if (
+        isinstance(cached, dict)
+        and now - float(cached.get("_ts") or 0) < _INTEGRATION_TARGET_CACHE_TTL_SECONDS
+    ):
         return {k: v for k, v in cached.items() if k != "_ts"}
 
     if health is not None and not health.get("reachable"):

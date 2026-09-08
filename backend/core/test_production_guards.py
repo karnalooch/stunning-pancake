@@ -28,4 +28,3 @@ class WarnInsecureAllowedHostsTests(SimpleTestCase):
         with patch("warnings.warn") as mock_warn:
             warn_insecure_allowed_hosts(["*"], debug=True)
             mock_warn.assert_not_called()
-

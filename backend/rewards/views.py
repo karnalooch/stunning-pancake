@@ -25,9 +25,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from rewards.models import Sponsor, SponsorCampaign, Voucher, VoucherPool
-from users.permissions import IsGlobalOwner
 from rewards.services import RewardsService
 from rewards.stripe_service import StripeService
+from users.permissions import IsGlobalOwner
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +104,10 @@ def pool_list_view(request: Request) -> Response:
     if request.method == "POST":
         role = getattr(request.user, "role", None)
         if role not in ("SPONSOR", "GLOBAL_OWNER"):
-            return Response({"detail": "Only sponsors can create voucher pools."}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {"detail": "Only sponsors can create voucher pools."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         ser = VoucherPoolCreateSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
@@ -353,7 +356,9 @@ def sponsor_stats_timeseries_view(request: Request) -> Response:
         .annotate(count=Count("id"))
         .order_by("day")
     )
-    return Response({"series": [{"day": str(r["day"]), "count": r["count"]} for r in qs if r["day"]]})
+    return Response(
+        {"series": [{"day": str(r["day"]), "count": r["count"]} for r in qs if r["day"]]}
+    )
 
 
 @api_view(["GET"])

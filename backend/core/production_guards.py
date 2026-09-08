@@ -20,7 +20,9 @@ def is_paas_runtime() -> bool:
 def is_production_runtime(*, debug: bool) -> bool:
     if debug:
         return False
-    env = (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "").strip().lower()
+    env = (
+        (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "").strip().lower()
+    )
     if env in ("production", "prod"):
         return True
     return is_paas_runtime()
@@ -35,4 +37,3 @@ def warn_insecure_allowed_hosts(hosts: list[str], *, debug: bool) -> None:
             "(e.g. your-app.up.railway.app).",
             stacklevel=2,
         )
-

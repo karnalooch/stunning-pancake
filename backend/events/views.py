@@ -287,7 +287,7 @@ class CityHubSummaryView(APIView):
         from django.utils import timezone
 
         from activities.leaderboards import LeaderboardService
-        from activities.models import Activity, POI
+        from activities.models import POI, Activity
         from users.models import Tenant
 
         user = request.user
@@ -316,17 +316,23 @@ class CityHubSummaryView(APIView):
             .first()
         )
         active_event_payload = (
-            EventSerializer(active_event, context={"request": request}).data if active_event else None
+            EventSerializer(active_event, context={"request": request}).data
+            if active_event
+            else None
         )
 
         city_wars_payload = None
         if active_event and active_event.event_type == "INTER_TENANT":
-            score_a = EventNormalizationService.get_tenant_score(active_event, active_event.tenant_id)
+            score_a = EventNormalizationService.get_tenant_score(
+                active_event, active_event.tenant_id
+            )
             score_b = EventNormalizationService.get_tenant_score(
                 active_event, active_event.opponent_tenant_id
             )
             tenant_a_name = (
-                Tenant.objects.filter(id=active_event.tenant_id).values_list("name", flat=True).first()
+                Tenant.objects.filter(id=active_event.tenant_id)
+                .values_list("name", flat=True)
+                .first()
                 or active_event.tenant_id
             )
             tenant_b_name = (
@@ -347,16 +353,21 @@ class CityHubSummaryView(APIView):
                     "name": tenant_b_name,
                     "score": round(score_b, 2),
                 },
-                "leader": active_event.tenant_id if score_a >= score_b else active_event.opponent_tenant_id,
+                "leader": active_event.tenant_id
+                if score_a >= score_b
+                else active_event.opponent_tenant_id,
                 "delta": round(abs(score_a - score_b), 2),
             }
 
         leaderboard_scope = "event" if active_event else "city"
         leaderboard_entity = str(active_event.id) if active_event else tenant_id
-        top = LeaderboardService.get_top_users(leaderboard_entity, limit=10, scope=leaderboard_scope)
+        top = LeaderboardService.get_top_users(
+            leaderboard_entity, limit=10, scope=leaderboard_scope
+        )
         user_ids = [entry["user_id"] for entry in top]
         users_map = {
-            str(u.id): u.username for u in get_user_model().objects.filter(id__in=user_ids).only("id", "username")
+            str(u.id): u.username
+            for u in get_user_model().objects.filter(id__in=user_ids).only("id", "username")
         }
 
         leaderboard_payload = []
@@ -373,8 +384,12 @@ class CityHubSummaryView(APIView):
                 }
             )
 
-        my_rank = LeaderboardService.get_user_rank(leaderboard_entity, user.id, scope=leaderboard_scope)
-        my_score = LeaderboardService.get_user_score(leaderboard_entity, user.id, scope=leaderboard_scope)
+        my_rank = LeaderboardService.get_user_rank(
+            leaderboard_entity, user.id, scope=leaderboard_scope
+        )
+        my_score = LeaderboardService.get_user_score(
+            leaderboard_entity, user.id, scope=leaderboard_scope
+        )
 
         city_of_week = None
         tenant_scores = (

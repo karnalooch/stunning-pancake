@@ -40,10 +40,12 @@ def _get_session() -> requests.Session:
     global _MAILTM_SESSION
     if _MAILTM_SESSION is None:
         _MAILTM_SESSION = requests.Session()
-        _MAILTM_SESSION.headers.update({
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-        })
+        _MAILTM_SESSION.headers.update(
+            {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+            }
+        )
     return _MAILTM_SESSION
 
 
@@ -56,8 +58,12 @@ def _mailtm_request(method: str, path: str, **kwargs) -> requests.Response | Non
     # Try with SSL verification first
     try:
         return session.request(method, url, verify=True, **kwargs)
-    except (requests.exceptions.SSLError, requests.exceptions.ConnectionError,
-            OSError, urllib3.exceptions.SSLError) as exc:
+    except (
+        requests.exceptions.SSLError,
+        requests.exceptions.ConnectionError,
+        OSError,
+        urllib3.exceptions.SSLError,
+    ) as exc:
         logger.debug("Mail.tm SSL error on first attempt, retrying without verification: %s", exc)
         try:
             return session.request(method, url, verify=False, **kwargs)
@@ -121,7 +127,9 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
 
     for attempt in range(3):
         try:
-            resp = _mailtm_request("POST", "/accounts", json={"address": address, "password": password})
+            resp = _mailtm_request(
+                "POST", "/accounts", json={"address": address, "password": password}
+            )
             if resp is None:
                 global _MAILTM_SESSION
                 _MAILTM_SESSION = None
@@ -151,7 +159,9 @@ def create_account(email_prefix: str | None = None) -> MailTmAccount | None:
                 address = f"{local_part}@{domain}"
                 continue
 
-            logger.warning("Mail.tm account creation HTTP %s: %s", resp.status_code, resp.text[:200])
+            logger.warning(
+                "Mail.tm account creation HTTP %s: %s", resp.status_code, resp.text[:200]
+            )
             time.sleep(0.3)
         except Exception as exc:
             logger.warning("Mail.tm account creation error: %s", exc)

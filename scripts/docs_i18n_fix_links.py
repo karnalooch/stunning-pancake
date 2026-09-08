@@ -2,7 +2,6 @@
 """Fix broken relative links in docs/en and docs/pl mirror trees."""
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 

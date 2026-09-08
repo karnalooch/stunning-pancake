@@ -104,7 +104,7 @@ def legacy_stub(title: str, pl_canonical: str, en_path: str) -> str:
 | **canonical_path** | {pl_canonical} |
 | **locale_redirect** | phase-2 |
 
-> **Przekierowanie (faza 2):** Kanoniczna treść PL — [{pl_name}]({pl_link}).  
+> **Przekierowanie (faza 2):** Kanoniczna treść PL — [{pl_name}]({pl_link}).
 > English — [{en_name}]({en_link}).
 
 ---

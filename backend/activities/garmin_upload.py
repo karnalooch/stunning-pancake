@@ -19,7 +19,12 @@ GARMINCONNECT_AVAILABLE = False
 
 try:
     if not MOCK_MODE:
-        from garminconnect import Garmin, GarminConnectConnectionError, GarminConnectAuthenticationError  # noqa: F401
+        from garminconnect import (  # noqa: F401
+            Garmin,
+            GarminConnectAuthenticationError,
+            GarminConnectConnectionError,
+        )
+
         GARMINCONNECT_AVAILABLE = True
 except ImportError:
     logger.info("garminconnect library not installed — Garmin upload in mock mode")
@@ -30,7 +35,6 @@ def _garmin_client_cache_key(email: str) -> str:
 
 
 class GarminUploadService:
-
     @staticmethod
     def authenticate(email: str, password: str) -> object | None:
         if MOCK_MODE or not GARMINCONNECT_AVAILABLE:
@@ -43,6 +47,7 @@ class GarminUploadService:
 
         try:
             from garminconnect import Garmin  # noqa: F811
+
             client = Garmin(email, password)
             client.login()
             cache.set(_garmin_client_cache_key(email), client, 1800)
@@ -96,5 +101,6 @@ class GarminUploadService:
 def _mock_activity_id(activity_name: str) -> str:
     import hashlib
     import time
+
     raw = f"{activity_name}-{time.time()}"
     return f"mock-garmin-{hashlib.sha256(raw.encode()).hexdigest()[:12]}"

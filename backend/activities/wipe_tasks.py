@@ -185,9 +185,10 @@ def run_wipe_sync():
 
         try:
             from django.apps import apps
+
             OutstandingToken = apps.get_model("token_blacklist", "OutstandingToken")
             BlacklistedToken = apps.get_model("token_blacklist", "BlacklistedToken")
-            
+
             blacklisted_qs = BlacklistedToken.objects.exclude(token__user__role="GLOBAL_OWNER")
             blacklisted_estimate = blacklisted_qs.count()
             ws.set_wipe_state(phase="token_blacklist", progress_pct=59)
@@ -200,7 +201,7 @@ def run_wipe_sync():
                 total_estimate=blacklisted_estimate,
                 raw_delete=True,
             )
-            
+
             outstanding_qs = OutstandingToken.objects.exclude(user__role="GLOBAL_OWNER")
             outstanding_estimate = outstanding_qs.count()
             deleted["outstanding_tokens"] = _chunk_delete(
@@ -217,6 +218,7 @@ def run_wipe_sync():
 
         try:
             from activities.models import GarminSimulatorCredential
+
             garmin_cred_qs = GarminSimulatorCredential.objects.exclude(user__role="GLOBAL_OWNER")
             garmin_cred_estimate = garmin_cred_qs.count()
             deleted["garmin_simulator_credentials"] = _chunk_delete(

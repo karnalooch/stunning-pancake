@@ -7,7 +7,7 @@ from pathlib import Path
 
 try:
     from pptx import Presentation
-    from pptx.util import Inches, Pt
+    from pptx.util import Pt
 except ImportError as exc:
     raise SystemExit("Install python-pptx: pip install python-pptx") from exc
 

@@ -8,7 +8,6 @@ from fastapi import HTTPException
 
 from config import DEDUPE_TTL_S, REDIS_URL, SKIP_BROADCAST, SKIP_DB
 from db import enqueue_gps_rows, get_pool
-from ingest_guard import check_ingest_allowed
 from ingest_queue import (
     enqueue_rows as enqueue_stream_rows,
     is_queue_saturated,

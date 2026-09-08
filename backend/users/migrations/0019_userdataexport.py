@@ -12,7 +12,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="UserDataExport",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
                 ("job_id", models.CharField(db_index=True, max_length=32, unique=True)),
                 ("status", models.CharField(default="pending", max_length=20)),
                 ("storage_uri", models.CharField(blank=True, default="", max_length=512)),

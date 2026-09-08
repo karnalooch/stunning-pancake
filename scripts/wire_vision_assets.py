@@ -16,10 +16,10 @@ Otherwise it writes `undefined` (CI-safe: no broken require paths).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import re
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent

@@ -12,9 +12,7 @@ import hashlib
 import json
 import logging
 import math
-import os
 import random
-import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -274,30 +272,126 @@ def get_garmin_summary() -> list[dict]:
 
 # ── Polish name generator ────────────────────────────────────────
 _PL_FIRST_NAMES_MALE = [
-    "Piotr", "Krzysztof", "Andrzej", "Tomasz", "Marcin", "Michał", "Jakub",
-    "Mateusz", "Łukasz", "Rafał", "Grzegorz", "Maciej", "Dawid", "Adam",
-    "Bartosz", "Damian", "Karol", "Szymon", "Paweł", "Jan", "Artur",
-    "Kamil", "Daniel", "Sebastian", "Mariusz", "Robert", "Wojciech",
-    "Radosław", "Przemysław", "Jarosław", "Kacper", "Kuba",
+    "Piotr",
+    "Krzysztof",
+    "Andrzej",
+    "Tomasz",
+    "Marcin",
+    "Michał",
+    "Jakub",
+    "Mateusz",
+    "Łukasz",
+    "Rafał",
+    "Grzegorz",
+    "Maciej",
+    "Dawid",
+    "Adam",
+    "Bartosz",
+    "Damian",
+    "Karol",
+    "Szymon",
+    "Paweł",
+    "Jan",
+    "Artur",
+    "Kamil",
+    "Daniel",
+    "Sebastian",
+    "Mariusz",
+    "Robert",
+    "Wojciech",
+    "Radosław",
+    "Przemysław",
+    "Jarosław",
+    "Kacper",
+    "Kuba",
 ]
 _PL_FIRST_NAMES_FEMALE = [
-    "Anna", "Katarzyna", "Magdalena", "Agnieszka", "Małgorzata", "Joanna",
-    "Marta", "Natalia", "Aleksandra", "Monika", "Dorota", "Ewa", "Karolina",
-    "Paulina", "Justyna", "Patrycja", "Barbara", "Kinga", "Izabela",
-    "Weronika", "Kamila", "Martyna", "Sylwia", "Agata", "Klaudia",
+    "Anna",
+    "Katarzyna",
+    "Magdalena",
+    "Agnieszka",
+    "Małgorzata",
+    "Joanna",
+    "Marta",
+    "Natalia",
+    "Aleksandra",
+    "Monika",
+    "Dorota",
+    "Ewa",
+    "Karolina",
+    "Paulina",
+    "Justyna",
+    "Patrycja",
+    "Barbara",
+    "Kinga",
+    "Izabela",
+    "Weronika",
+    "Kamila",
+    "Martyna",
+    "Sylwia",
+    "Agata",
+    "Klaudia",
 ]
 _PL_LAST_NAMES = [
-    "Nowak", "Kowalski", "Wiśniewski", "Wójcik", "Kowalczyk", "Kamiński",
-    "Lewandowski", "Zieliński", "Szymański", "Woźniak", "Dąbrowski",
-    "Kozłowski", "Jankowski", "Mazur", "Kwiatkowski", "Krawczyk",
-    "Piotrowski", "Grabowski", "Nowakowski", "Pawłowski", "Michalski",
-    "Nowicki", "Adamczyk", "Dudek", "Zając", "Wieczorek", "Jabłoński",
-    "Król", "Majewski", "Olszewski", "Stępień", "Jaworski", "Malinowski",
-    "Sadowski", "Walczak", "Baran", "Czarnecki", "Adamski", "Sikora",
-    "Górski", "Borkowski", "Rutkowski", "Ostrowski", "Szewczyk",
-    "Tomaszewski", "Pietrzak", "Marciniak", "Wróblewski", "Zalewski",
-    "Jakubowski", "Jasiński", "Bąk", "Wilk", "Duda", "Sikorski",
-    "Chmielewski", "Przybylski", "Kaźmierczak", "Włodarczyk",
+    "Nowak",
+    "Kowalski",
+    "Wiśniewski",
+    "Wójcik",
+    "Kowalczyk",
+    "Kamiński",
+    "Lewandowski",
+    "Zieliński",
+    "Szymański",
+    "Woźniak",
+    "Dąbrowski",
+    "Kozłowski",
+    "Jankowski",
+    "Mazur",
+    "Kwiatkowski",
+    "Krawczyk",
+    "Piotrowski",
+    "Grabowski",
+    "Nowakowski",
+    "Pawłowski",
+    "Michalski",
+    "Nowicki",
+    "Adamczyk",
+    "Dudek",
+    "Zając",
+    "Wieczorek",
+    "Jabłoński",
+    "Król",
+    "Majewski",
+    "Olszewski",
+    "Stępień",
+    "Jaworski",
+    "Malinowski",
+    "Sadowski",
+    "Walczak",
+    "Baran",
+    "Czarnecki",
+    "Adamski",
+    "Sikora",
+    "Górski",
+    "Borkowski",
+    "Rutkowski",
+    "Ostrowski",
+    "Szewczyk",
+    "Tomaszewski",
+    "Pietrzak",
+    "Marciniak",
+    "Wróblewski",
+    "Zalewski",
+    "Jakubowski",
+    "Jasiński",
+    "Bąk",
+    "Wilk",
+    "Duda",
+    "Sikorski",
+    "Chmielewski",
+    "Przybylski",
+    "Kaźmierczak",
+    "Włodarczyk",
 ]
 
 
@@ -426,9 +520,33 @@ def generate_schedules(config: ScheduleConfig, start_date: date | None = None) -
             hour = random.randint(config.weekday_start_h_min, config.weekday_start_h_max - 1)
             minute = random.randint(0, 59)
             start_dt = datetime(ride_date.year, ride_date.month, ride_date.day, hour, minute)
-            distance = round(random.uniform(config.weekday_distance_min, config.weekday_distance_max), 1)
+            distance = round(
+                random.uniform(config.weekday_distance_min, config.weekday_distance_max), 1
+            )
             speed = round(random.uniform(config.speed_min, config.speed_max), 1)
-            plans.append(RidePlan(
+            plans.append(
+                RidePlan(
+                    user_index=user_idx,
+                    date=ride_date,
+                    start_time=start_dt,
+                    distance_km=distance,
+                    speed_kmh=speed,
+                    start_lat=start_lat,
+                    start_lon=start_lon,
+                )
+            )
+
+        weekend_day = random.choice([5, 6])
+        ride_date = monday + timedelta(days=weekend_day)
+        hour = random.randint(config.weekend_start_h_min, config.weekend_start_h_max - 1)
+        minute = random.randint(0, 59)
+        start_dt = datetime(ride_date.year, ride_date.month, ride_date.day, hour, minute)
+        distance = round(
+            random.uniform(config.weekend_distance_min, config.weekend_distance_max), 1
+        )
+        speed = round(random.uniform(config.speed_min, config.speed_max), 1)
+        plans.append(
+            RidePlan(
                 user_index=user_idx,
                 date=ride_date,
                 start_time=start_dt,
@@ -436,24 +554,8 @@ def generate_schedules(config: ScheduleConfig, start_date: date | None = None) -
                 speed_kmh=speed,
                 start_lat=start_lat,
                 start_lon=start_lon,
-            ))
-
-        weekend_day = random.choice([5, 6])
-        ride_date = monday + timedelta(days=weekend_day)
-        hour = random.randint(config.weekend_start_h_min, config.weekend_start_h_max - 1)
-        minute = random.randint(0, 59)
-        start_dt = datetime(ride_date.year, ride_date.month, ride_date.day, hour, minute)
-        distance = round(random.uniform(config.weekend_distance_min, config.weekend_distance_max), 1)
-        speed = round(random.uniform(config.speed_min, config.speed_max), 1)
-        plans.append(RidePlan(
-            user_index=user_idx,
-            date=ride_date,
-            start_time=start_dt,
-            distance_km=distance,
-            speed_kmh=speed,
-            start_lat=start_lat,
-            start_lon=start_lon,
-        ))
+            )
+        )
 
     plans.sort(key=lambda p: (p.start_time, p.user_index))
     return plans
@@ -485,7 +587,9 @@ def generate_route(
         leg_km = min(6.0, max(0.5, distance_km * 0.08))
         bearing = random.uniform(0, 2 * math.pi)
         end_lat = start_lat + (leg_km / 111.0) * math.cos(bearing)
-        end_lon = start_lon + (leg_km / (111.0 * math.cos(math.radians(start_lat)) + 1e-6)) * math.sin(bearing)
+        end_lon = start_lon + (
+            leg_km / (111.0 * math.cos(math.radians(start_lat)) + 1e-6)
+        ) * math.sin(bearing)
 
         coords = [[start_lon, start_lat], [end_lon, end_lat]]
         result = BRouterService.validate_track(activity_type, coords)
@@ -501,6 +605,7 @@ def generate_route(
         logger.warning("Route generation failed: %s", exc)
         try:
             from activities.simulator_route_waypoints import _generate_grid_waypoints
+
             grid = _generate_grid_waypoints(start_lat, start_lon)
             return grid, "grid"
         except Exception:
@@ -532,10 +637,14 @@ def _interpolate_position_on_waypoints(
 
     seg_lengths = []
     for i in range(len(waypoints) - 1):
-        seg_lengths.append(_haversine_m(
-            waypoints[i][0], waypoints[i][1],
-            waypoints[i + 1][0], waypoints[i + 1][1],
-        ))
+        seg_lengths.append(
+            _haversine_m(
+                waypoints[i][0],
+                waypoints[i][1],
+                waypoints[i + 1][0],
+                waypoints[i + 1][1],
+            )
+        )
     total = sum(seg_lengths)
     if total <= 0:
         return waypoints[0][0], waypoints[0][1], 0.0
@@ -619,15 +728,20 @@ def generate_gpx_edge530(
     ET.register_namespace("gpxtpx", gpxtpx_ns)
     ET.register_namespace("gpxx", gpxx_ns)
 
-    root = ET.Element(f"{{{gpx_ns}}}gpx", attrib={
-        "version": "1.1",
-        "creator": "Garmin Edge 530",
-    })
+    root = ET.Element(
+        f"{{{gpx_ns}}}gpx",
+        attrib={
+            "version": "1.1",
+            "creator": "Garmin Edge 530",
+        },
+    )
 
     ride_name = _ride_name(ride_plan)
     meta = ET.SubElement(root, f"{{{gpx_ns}}}metadata")
     ET.SubElement(meta, f"{{{gpx_ns}}}name").text = ride_name
-    ET.SubElement(meta, f"{{{gpx_ns}}}time").text = ride_plan.start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ET.SubElement(meta, f"{{{gpx_ns}}}time").text = ride_plan.start_time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     link = ET.SubElement(meta, f"{{{gpx_ns}}}link", attrib={"href": "https://connect.garmin.com"})
     ET.SubElement(link, f"{{{gpx_ns}}}text").text = "Garmin Connect"
 
@@ -649,10 +763,14 @@ def generate_gpx_edge530(
         cad_val = _interpolate_cadence(progress, motion)
         ele_val = _interpolate_elevation(progress, motion)
 
-        trkpt = ET.SubElement(trkseg, f"{{{gpx_ns}}}trkpt", attrib={
-            "lat": f"{lat:.6f}",
-            "lon": f"{lon:.6f}",
-        })
+        trkpt = ET.SubElement(
+            trkseg,
+            f"{{{gpx_ns}}}trkpt",
+            attrib={
+                "lat": f"{lat:.6f}",
+                "lon": f"{lon:.6f}",
+            },
+        )
         ET.SubElement(trkpt, f"{{{gpx_ns}}}ele").text = str(round(ele_val, 1))
         ET.SubElement(trkpt, f"{{{gpx_ns}}}time").text = pt_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -683,15 +801,20 @@ def generate_gpx_from_live_points(
     ET.register_namespace("gpxtpx", gpxtpx_ns)
     ET.register_namespace("gpxx", gpxx_ns)
 
-    root = ET.Element(f"{{{gpx_ns}}}gpx", attrib={
-        "version": "1.1",
-        "creator": "Garmin Edge 530",
-    })
+    root = ET.Element(
+        f"{{{gpx_ns}}}gpx",
+        attrib={
+            "version": "1.1",
+            "creator": "Garmin Edge 530",
+        },
+    )
 
     ride_name = _ride_name(ride_plan)
     meta = ET.SubElement(root, f"{{{gpx_ns}}}metadata")
     ET.SubElement(meta, f"{{{gpx_ns}}}name").text = ride_name
-    ET.SubElement(meta, f"{{{gpx_ns}}}time").text = ride_plan.start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    ET.SubElement(meta, f"{{{gpx_ns}}}time").text = ride_plan.start_time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
     link = ET.SubElement(meta, f"{{{gpx_ns}}}link", attrib={"href": "https://connect.garmin.com"})
     ET.SubElement(link, f"{{{gpx_ns}}}text").text = "Garmin Connect"
 
@@ -716,10 +839,14 @@ def generate_gpx_from_live_points(
         else:
             pt_time = ride_plan.start_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        trkpt = ET.SubElement(trkseg, f"{{{gpx_ns}}}trkpt", attrib={
-            "lat": f"{lat:.6f}",
-            "lon": f"{lon:.6f}",
-        })
+        trkpt = ET.SubElement(
+            trkseg,
+            f"{{{gpx_ns}}}trkpt",
+            attrib={
+                "lat": f"{lat:.6f}",
+                "lon": f"{lon:.6f}",
+            },
+        )
         ET.SubElement(trkpt, f"{{{gpx_ns}}}ele").text = str(round(ele, 1))
         ET.SubElement(trkpt, f"{{{gpx_ns}}}time").text = pt_time
 
@@ -743,17 +870,25 @@ def schedule_rides(
     user_names: list[dict[str, str]] | None = None,
 ) -> dict:
     from activities.simulator_state import batch_blocks_live_simulation
+
     blocked, reason = batch_blocks_live_simulation()
     if blocked:
-        return {"status": "error", "message": f"Cannot start Garmin simulation: mass batch simulation is active ({reason})"}
+        return {
+            "status": "error",
+            "message": f"Cannot start Garmin simulation: mass batch simulation is active ({reason})",
+        }
 
     if not acquire_garmin_batch_lock(task_id or "manual"):
         return {"status": "error", "message": "Another Garmin batch is already running"}
 
     try:
         set_garmin_batch_state(
-            running=True, phase="creating_users", progress_pct=0,
-            rides_scheduled=0, rides_active=0, rides_done=0,
+            running=True,
+            phase="creating_users",
+            progress_pct=0,
+            rides_scheduled=0,
+            rides_active=0,
+            rides_done=0,
         )
         garmin_batch_log("Starting Garmin live simulation schedule")
 
@@ -785,6 +920,7 @@ def schedule_rides(
             )
 
             from activities.garmin_simulator_tasks import run_garmin_live_tick
+
             run_garmin_live_tick.apply_async(
                 args=[ride_id, 0, duration_s],
                 eta=plan.start_time,
@@ -798,7 +934,8 @@ def schedule_rides(
             )
 
         set_garmin_batch_state(
-            phase="scheduled", rides_scheduled=dispatched,
+            phase="scheduled",
+            rides_scheduled=dispatched,
             progress_pct=10,
         )
         garmin_batch_log(
@@ -843,9 +980,7 @@ def run_live_tick(ride_id: str, tick: int, duration_s: int) -> dict:
         set_garmin_batch_state(phase="riding")
         incr_active_rides(1)
 
-        waypoints, source = generate_route(
-            plan.start_lat, plan.start_lon, plan.distance_km, "BIKE"
-        )
+        waypoints, source = generate_route(plan.start_lat, plan.start_lon, plan.distance_km, "BIKE")
         waypoints_json = json.dumps({"waypoints": waypoints, "source": source})
         r.hset(_ride_state_key(ride_id), "waypoints_json", waypoints_json)
         garmin_batch_log(
@@ -873,6 +1008,7 @@ def run_live_tick(ride_id: str, tick: int, duration_s: int) -> dict:
 
     try:
         from activities.services import TelemetryService
+
         TelemetryService.push_simulator_position(
             device_id=device_id,
             lat=lat,
@@ -902,6 +1038,7 @@ def run_live_tick(ride_id: str, tick: int, duration_s: int) -> dict:
 
     if tick < duration_s:
         from activities.garmin_simulator_tasks import run_garmin_live_tick
+
         run_garmin_live_tick.apply_async(
             args=[ride_id, tick + 1, duration_s],
             countdown=1,
@@ -910,6 +1047,7 @@ def run_live_tick(ride_id: str, tick: int, duration_s: int) -> dict:
 
     set_ride_state(ride_id, status="FINISHING")
     from activities.garmin_simulator_tasks import finish_garmin_ride
+
     finish_garmin_ride.delay(ride_id)
 
     return {"status": "final_tick", "ride_id": ride_id, "tick": tick}
@@ -957,9 +1095,8 @@ def finish_garmin_ride(ride_id: str) -> dict:
 
     try:
         from activities.garmin_upload import GarminUploadService
-        garmin_activity_id = GarminUploadService.upload_for_user(
-            user, gpx_xml, _ride_name(plan)
-        )
+
+        garmin_activity_id = GarminUploadService.upload_for_user(user, gpx_xml, _ride_name(plan))
     except Exception as exc:
         garmin_batch_log(f"WARNING: Garmin upload failed for ride {ride_id}: {exc}")
         garmin_activity_id = None
@@ -967,6 +1104,7 @@ def finish_garmin_ride(ride_id: str) -> dict:
     route_path = None
     try:
         from django.contrib.gis.geos import LineString
+
         coords_xy = [(p["lon"], p["lat"]) for p in points if "lon" in p and "lat" in p]
         if len(coords_xy) >= 2:
             route_path = LineString(coords_xy, srid=4326)
@@ -979,12 +1117,14 @@ def finish_garmin_ride(ride_id: str) -> dict:
     storage_key = ""
     try:
         from activities.gpx_storage import store_gpx
+
         storage_key = f"garmin_sim/{user.username}/{plan.date.isoformat()}_{plan.start_time.strftime('%H%M')}.gpx"
         store_gpx(storage_key, gpx_body)
     except Exception:
         pass
 
     from activities.models import Activity
+
     Activity.objects.create(
         user=user,
         tenant=user.tenant,
@@ -1028,11 +1168,13 @@ def finish_garmin_ride(ride_id: str) -> dict:
 
 
 # ── User utilities ───────────────────────────────────────────────
-def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names: list[dict[str, str]] | None = None) -> list[Any]:
+def _create_sim_users(
+    credentials: list[dict[str, str]], count: int, user_names: list[dict[str, str]] | None = None
+) -> list[Any]:
     from django.contrib.auth import get_user_model
-    from users.models import Tenant
 
     from activities.models import GarminSimulatorCredential
+    from users.models import Tenant
 
     User = get_user_model()
 
@@ -1051,7 +1193,11 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names:
             first_name = nm.get("first", first_name)
             last_name = nm.get("last", last_name)
             display_name = nm.get("display", f"{first_name} {last_name}")
-        cred = credentials[i] if i < len(credentials) else {"email": f"sim{i + 1:02d}@test.local", "password": ""}
+        cred = (
+            credentials[i]
+            if i < len(credentials)
+            else {"email": f"sim{i + 1:02d}@test.local", "password": ""}
+        )
         user, created = User.objects.get_or_create(
             username=username,
             defaults={
@@ -1079,15 +1225,17 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names:
             },
         )
         users.append(user)
-        users_summary.append({
-            "index": i + 1,
-            "username": username,
-            "display_name": display_name,
-            "first_name": first_name,
-            "last_name": last_name,
-            "email": cred.get("email", ""),
-            "user_id": user.id,
-        })
+        users_summary.append(
+            {
+                "index": i + 1,
+                "username": username,
+                "display_name": display_name,
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": cred.get("email", ""),
+                "user_id": user.id,
+            }
+        )
 
     store_garmin_summary(users_summary)
     return users
@@ -1095,6 +1243,7 @@ def _create_sim_users(credentials: list[dict[str, str]], count: int, user_names:
 
 def _get_user(user_id: int) -> Any | None:
     from django.contrib.auth import get_user_model
+
     User = get_user_model()
     try:
         return User.objects.get(id=user_id)

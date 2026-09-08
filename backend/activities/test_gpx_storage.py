@@ -3,8 +3,6 @@
 import os
 from pathlib import Path
 
-import pytest
-
 from activities.gpx_storage import read_gpx, storage_backend, store_gpx
 
 

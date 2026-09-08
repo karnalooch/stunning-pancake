@@ -27,7 +27,7 @@ def close_expired_events() -> None:
     Also resets the Redis leaderboard for completed events to free memory.
     """
     from activities.leaderboards import LeaderboardService
-    from events.models import Event
+    from events.models import Event, Participation
 
     now = timezone.now()
     expired = Event.objects.filter(status="ACTIVE", end_date__lt=now)

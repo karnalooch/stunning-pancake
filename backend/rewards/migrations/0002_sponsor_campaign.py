@@ -1,9 +1,8 @@
-from django.db import migrations, models
 import django.db.models.deletion
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("rewards", "0001_initial"),
     ]
@@ -12,7 +11,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="SponsorCampaign",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
                 ("title", models.CharField(max_length=200)),
                 (
                     "status",
@@ -29,7 +33,10 @@ class Migration(migrations.Migration):
                 ),
                 ("start_date", models.DateTimeField(blank=True, null=True)),
                 ("end_date", models.DateTimeField(blank=True, null=True)),
-                ("budget_points", models.PositiveIntegerField(default=0, help_text="0 = unlimited")),
+                (
+                    "budget_points",
+                    models.PositiveIntegerField(default=0, help_text="0 = unlimited"),
+                ),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 (
                     "sponsor",

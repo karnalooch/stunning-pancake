@@ -146,7 +146,6 @@ def test_setup_live_athlete_pool_populates_redis(db):
     from django.contrib.auth import get_user_model
 
     from activities.simulator_live_start import setup_live_athlete_pool
-
     from simulate_active_cities import CITIES
     from users.models import Tenant
 

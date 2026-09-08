@@ -140,9 +140,7 @@ class RoutingBackpressureLogicTest(SimpleTestCase):
         self.assertTrue(bp.should_pause_new_starts(warming_count=1800))
         self.assertFalse(bp.should_pause_new_starts(warming_count=10))
         # Scale pause threshold with target_on_map so medium sims ramp faster.
-        self.assertFalse(
-            bp.should_pause_new_starts(warming_count=350, target_on_map=300)
-        )
+        self.assertFalse(bp.should_pause_new_starts(warming_count=350, target_on_map=300))
 
     @patch.dict(
         "os.environ",
@@ -300,9 +298,7 @@ class SimKpiSnapshotMockedTest(SimpleTestCase):
     @patch("activities.sim_lab_proxy.fetch_sim_lab_admin_json")
     @patch("activities.sim_lab_proxy.probe_sim_lab_health")
     @patch("activities.sim_lab_proxy.sim_lab_proxy_enabled", return_value=True)
-    def test_build_sim_kpi_from_sim_lab_when_proxy_on(
-        self, _mock_enabled, mock_health, mock_fetch
-    ):
+    def test_build_sim_kpi_from_sim_lab_when_proxy_on(self, _mock_enabled, mock_health, mock_fetch):
         from activities.admin_stats import build_sim_kpi_snapshot
 
         mock_health.return_value = {"reachable": True}

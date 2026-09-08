@@ -1,12 +1,12 @@
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from users.permissions import IsGlobalOwner, IsTenantAdmin
+from users.permissions import IsTenantAdmin
 
 from .models import PlatformNotice
 from .notice_serializers import ActivePlatformNoticeSerializer, PlatformNoticeSerializer

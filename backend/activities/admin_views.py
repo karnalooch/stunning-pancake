@@ -18,6 +18,7 @@ from users.models import Tenant
 from users.permissions import IsAdminOrModerator, IsGlobalOwner
 
 from . import simulator_state as sim
+from .garmin_simulator_tasks import schedule_garmin_rides
 from .models import Activity
 from .serializers import ActivitySerializer
 from .sim_lab_proxy import (
@@ -26,7 +27,6 @@ from .sim_lab_proxy import (
     try_forward_sim_lab,
 )
 from .simulator_tasks import run_batch_simulation, run_live_simulation
-from .garmin_simulator_tasks import schedule_garmin_rides
 
 # Keep IsAdminRole as an alias for backward compatibility
 IsAdminRole = IsAdminOrModerator
@@ -279,8 +279,9 @@ class ActivityApproveView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def post(self, request, activity_id):
-        from activities.moderation_views import apply_moderation_approve, _get_moderatable_activity
         from rest_framework.exceptions import PermissionDenied
+
+        from activities.moderation_views import _get_moderatable_activity, apply_moderation_approve
 
         try:
             activity = _get_moderatable_activity(request, activity_id)
@@ -299,12 +300,15 @@ class ActivityRejectView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminRole)
 
     def post(self, request, activity_id):
-        from activities.moderation_views import apply_moderation_reject, _get_moderatable_activity
         from rest_framework.exceptions import PermissionDenied
+
+        from activities.moderation_views import _get_moderatable_activity, apply_moderation_reject
 
         try:
             activity = _get_moderatable_activity(request, activity_id)
-            reason = (request.data.get("reason") or request.data.get("rejection_reason") or "").strip()
+            reason = (
+                request.data.get("reason") or request.data.get("rejection_reason") or ""
+            ).strip()
             notes = (request.data.get("notes") or request.data.get("rejection_notes") or "").strip()
             if not reason:
                 return Response(
@@ -396,9 +400,7 @@ class ExportDataView(APIView):
         return qs.none()
 
     def _export_activities(self, request, fmt):
-        qs = self._tenant_scope_qs(
-            request, Activity.objects.select_related("user").all()
-        )[:10000]
+        qs = self._tenant_scope_qs(request, Activity.objects.select_related("user").all())[:10000]
         activities = []
         for a in qs:
             activities.append(
@@ -1415,9 +1417,7 @@ class RunSimulationView(APIView):
     permission_classes = [IsAdminRole]
 
     def get(self, request):
-        proxied = try_forward_sim_lab(
-            request, "simulate/", timeout=45, allow_local_fallback=True
-        )
+        proxied = try_forward_sim_lab(request, "simulate/", timeout=45, allow_local_fallback=True)
         if proxied is not None:
             return proxied
         try:
@@ -1669,26 +1669,36 @@ class GarminSimulateView(APIView):
 
     def get(self, request):
         try:
-            from .garmin_simulator import get_garmin_batch_logs, get_garmin_batch_state, get_garmin_summary
+            from .garmin_simulator import (
+                get_garmin_batch_logs,
+                get_garmin_batch_state,
+                get_garmin_summary,
+            )
 
             state = get_garmin_batch_state()
             log = get_garmin_batch_logs()
             summary = get_garmin_summary()
-            return Response({
-                "running": state.get("running", False),
-                "progress_pct": state.get("progress_pct", 0.0),
-                "phase": state.get("phase", "idle"),
-                "total_rides": state.get("total_rides", 0),
-                "rides_scheduled": state.get("rides_scheduled", 0),
-                "rides_active": state.get("rides_active", 0),
-                "rides_done": state.get("rides_done", 0),
-                "error": state.get("error"),
-                "log": log,
-                "summary": summary,
-            })
+            return Response(
+                {
+                    "running": state.get("running", False),
+                    "progress_pct": state.get("progress_pct", 0.0),
+                    "phase": state.get("phase", "idle"),
+                    "total_rides": state.get("total_rides", 0),
+                    "rides_scheduled": state.get("rides_scheduled", 0),
+                    "rides_active": state.get("rides_active", 0),
+                    "rides_done": state.get("rides_done", 0),
+                    "error": state.get("error"),
+                    "log": log,
+                    "summary": summary,
+                }
+            )
         except Exception as exc:
             return Response(
-                {"error": f"Garmin simulator state unavailable: {exc}", "running": False, "log": []},
+                {
+                    "error": f"Garmin simulator state unavailable: {exc}",
+                    "running": False,
+                    "log": [],
+                },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -1701,11 +1711,13 @@ class GarminSimulateView(APIView):
 
         set_garmin_batch_state(running=False, phase="aborted")
         clear_garmin_batch_state()
-        return Response({
-            "status": "abort_requested",
-            "garmin_batch_lock_held": is_garmin_batch_lock_held(),
-            "message": "Garmin batch simulation stopped.",
-        })
+        return Response(
+            {
+                "status": "abort_requested",
+                "garmin_batch_lock_held": is_garmin_batch_lock_held(),
+                "message": "Garmin batch simulation stopped.",
+            }
+        )
 
     def post(self, request):
         from .garmin_simulator import get_garmin_batch_state, is_garmin_batch_lock_held
@@ -1713,7 +1725,10 @@ class GarminSimulateView(APIView):
         state = get_garmin_batch_state()
         if state.get("running") or is_garmin_batch_lock_held():
             return Response(
-                {"error": "Garmin simulation already running. Wait for it to finish or abort it.", "running": True},
+                {
+                    "error": "Garmin simulation already running. Wait for it to finish or abort it.",
+                    "running": True,
+                },
                 status=status.HTTP_409_CONFLICT,
             )
 
@@ -1742,18 +1757,18 @@ class GarminSimulateView(APIView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        total_rides = user_count * (
-            schedule_config.get("weekday_rides", 3) + 1
-        )
+        total_rides = user_count * (schedule_config.get("weekday_rides", 3) + 1)
 
         schedule_garmin_rides.delay(credentials, schedule_config, user_names)
 
-        return Response({
-            "status": "started",
-            "user_count": user_count,
-            "total_rides": total_rides,
-            "message": f"Garmin simulation scheduled: {user_count} users, ~{total_rides} rides.",
-        })
+        return Response(
+            {
+                "status": "started",
+                "user_count": user_count,
+                "total_rides": total_rides,
+                "message": f"Garmin simulation scheduled: {user_count} users, ~{total_rides} rides.",
+            }
+        )
 
 
 class GarminSummaryClearView(APIView):
@@ -1761,6 +1776,7 @@ class GarminSummaryClearView(APIView):
 
     def post(self, request):
         from .garmin_simulator import clear_garmin_summary
+
         clear_garmin_summary()
         return Response({"status": "cleared"})
 
@@ -1791,8 +1807,8 @@ class GarminGenerateEmailView(APIView):
         import unicodedata
 
         def clean_word(w: str) -> str:
-            normalized = unicodedata.normalize('NFD', w)
-            ascii_only = "".join(c for c in normalized if unicodedata.category(c) != 'Mn')
+            normalized = unicodedata.normalize("NFD", w)
+            ascii_only = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
             return "".join(c for c in ascii_only if c.isalnum()).lower()
 
         for i in range(count):
@@ -1805,7 +1821,7 @@ class GarminGenerateEmailView(APIView):
 
             cf = clean_word(first_name)
             cl = clean_word(last_name)
-            salt = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4))
+            salt = "".join(random.choices(string.ascii_lowercase + string.digits, k=4))
             prefix = f"{cf}.{cl}.{salt}"
 
             account = None
@@ -1817,25 +1833,33 @@ class GarminGenerateEmailView(APIView):
 
             if account and account.email:
                 real_count += 1
-                emails.append({
-                    "email": account.email,
-                    "password": account.password,
-                    "mailtm_token": account.token,
-                    "mailtm_id": account.account_id,
-                    "source": "mailtm",
-                })
+                emails.append(
+                    {
+                        "email": account.email,
+                        "password": account.password,
+                        "mailtm_token": account.token,
+                        "mailtm_id": account.account_id,
+                        "source": "mailtm",
+                    }
+                )
             else:
-                suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-                emails.append({
-                    "email": f"{cf}.{cl}.{suffix}@inbox.testmail.app",
-                    "password": ''.join(random.choices(string.ascii_letters + string.digits + "!@#$", k=16)),
-                    "source": "mock",
-                    "mailtm_error": error_msg if not account else "",
-                })
+                suffix = "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
+                emails.append(
+                    {
+                        "email": f"{cf}.{cl}.{suffix}@inbox.testmail.app",
+                        "password": "".join(
+                            random.choices(string.ascii_letters + string.digits + "!@#$", k=16)
+                        ),
+                        "source": "mock",
+                        "mailtm_error": error_msg if not account else "",
+                    }
+                )
 
         diagnostics.append(f"real={real_count}/{count}")
 
-        return Response({
-            "emails": emails,
-            "diagnostics": diagnostics,
-        })
+        return Response(
+            {
+                "emails": emails,
+                "diagnostics": diagnostics,
+            }
+        )

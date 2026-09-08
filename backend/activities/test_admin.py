@@ -248,9 +248,7 @@ class TestActivityModeration:
         self, api_client, owner_user, tenant, tenant2, create_activities
     ):
         api_client.force_authenticate(user=owner_user)
-        response = api_client.get(
-            reverse("global-activities"), {"tenant_id": str(tenant.id)}
-        )
+        response = api_client.get(reverse("global-activities"), {"tenant_id": str(tenant.id)})
         assert response.status_code == 200
         results = response.data.get("results", response.data)
         assert len(results) == 7

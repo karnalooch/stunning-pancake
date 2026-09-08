@@ -23,8 +23,8 @@ def schedule_garmin_rides(
 ) -> dict:
     from activities.garmin_simulator import (
         release_garmin_batch_lock,
-        schedule_rides,
         schedule_config_from_dict,
+        schedule_rides,
         set_garmin_batch_state,
     )
 
@@ -64,11 +64,13 @@ def run_garmin_live_tick(
 ) -> dict:
     try:
         from activities.garmin_simulator import run_live_tick
+
         return run_live_tick(ride_id, tick, duration_s)
     except Exception as exc:
         logger.exception("Garmin live tick %s/%d failed", ride_id, tick)
         if tick < duration_s:
             from activities.garmin_simulator import garmin_batch_log
+
             garmin_batch_log(f"ERROR: tick {tick} for {ride_id}: {exc} — retrying next tick")
             run_garmin_live_tick.apply_async(
                 args=[ride_id, tick + 1, duration_s],
@@ -89,6 +91,7 @@ def finish_garmin_ride(
 ) -> dict:
     try:
         from activities.garmin_simulator import finish_garmin_ride
+
         return finish_garmin_ride(ride_id)
     except Exception as exc:
         logger.exception("Garmin finish task for %s failed", ride_id)

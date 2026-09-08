@@ -5,7 +5,6 @@ import path from 'path'
 
 const repoReact = path.resolve(__dirname, '../node_modules/react')
 const repoReactDom = path.resolve(__dirname, '../node_modules/react-dom')
-const adminNodeModules = path.resolve(__dirname, 'node_modules')
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -39,9 +38,6 @@ export default defineConfig(({ mode }) => {
       'react-dom/client': path.resolve(repoReactDom, 'client'),
       'react/jsx-runtime': path.resolve(repoReact, 'jsx-runtime.js'),
       'react/jsx-dev-runtime': path.resolve(repoReact, 'jsx-dev-runtime.js'),
-      // Force Mantine ESM builds — Vitest otherwise resolves to src/ with a separate React copy.
-      '@mantine/core': path.resolve(adminNodeModules, '@mantine/core/esm/index.mjs'),
-      '@mantine/hooks': path.resolve(adminNodeModules, '@mantine/hooks/esm/index.mjs'),
     },
     dedupe: ['react', 'react-dom'],
   },
