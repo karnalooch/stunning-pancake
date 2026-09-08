@@ -68,10 +68,11 @@ def test_kinematic_speed_flag(tenant):
     assert any("kinematic_speed_anomaly" in f for f in flags)
 
 
-def test_simulated_activity_flag(tenant):
+def test_simulated_activity_flag(tenant, monkeypatch):
     from django.contrib.auth import get_user_model
     from django.utils import timezone
 
+    monkeypatch.setenv("SIM_LAB_ACCEPT_PROXY", "1")
     User = get_user_model()
     u1 = User.objects.create_user(
         username="sim_athlete", email="s@t.com", password="x", tenant=tenant

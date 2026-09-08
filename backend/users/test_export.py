@@ -34,7 +34,7 @@ def test_export_task_builds_zip_and_marks_ready(tenant):
         password="x",
         tenant=tenant,
     )
-    route = LineString([(21.0, 52.0), (21.01, 52.01)], srid=4326)
+    route = LineString((21.0, 52.0), (21.01, 52.01), srid=4326)
     Activity.objects.create(
         user=user,
         tenant=tenant,
