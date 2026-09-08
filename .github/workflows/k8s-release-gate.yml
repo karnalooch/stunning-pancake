@@ -81,7 +81,8 @@ jobs:
       - name: Build admin image (no push)
         uses: docker/build-push-action@v6
         with:
-          context: ./admin
+          context: .
+          file: ./admin/Dockerfile
           push: false
           tags: ${{ env.IMAGE_REPOSITORY }}-admin:ci-${{ github.sha }}
 
