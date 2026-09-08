@@ -33,13 +33,13 @@ Make sure you have installed:
 | Tool | Version | Verification command |
 |-----------|--------|----------------------|
 | Python | 3.11+ | `python --version` |
-| Node.js | 18+ | `node --version` |
+| Node.js | 20 LTS | `node --version` |
 | PostgreSQL | 15+ (with PostGIS) | `psql --version` |
 | Redis | 7+ | `redis-cli --version` |
 | Git | 2.30+ | `git --version` |
 
 ### Step 2: Clone the repository```bash
-git clone https://github.com/your-org/4velo.git
+git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
 ```### Step 3: Backend configuration```bash
 cd backend

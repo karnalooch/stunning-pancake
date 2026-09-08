@@ -249,7 +249,7 @@ def run_wipe_sync():
         deleted["tenants"] = _chunk_delete(Tenant.objects.all(), "tenants", deleted, 92, 5)
 
         ws.set_wipe_state(phase="finalizing", progress_pct=96, message="Recreating Global Owner…")
-        owner, _ = User.objects.get_or_create(
+        owner, owner_created = User.objects.get_or_create(
             username="global_owner",
             defaults={
                 "email": "owner@4velo.app",
@@ -258,7 +258,12 @@ def run_wipe_sync():
                 "is_staff": True,
             },
         )
-        owner.set_password(os.getenv("GLOBAL_OWNER_PASSWORD", "admin123"))
+        if owner_created:
+            owner_password = os.getenv("GLOBAL_OWNER_PASSWORD") or os.getenv("ADMIN_PASSWORD")
+            if owner_password:
+                owner.set_password(owner_password)
+            else:
+                owner.set_unusable_password()
         owner.is_superuser = True
         owner.is_staff = True
         owner.role = "GLOBAL_OWNER"

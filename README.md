@@ -4,6 +4,8 @@ A state-of-the-art, high-precision B2B/B2C sports ecosystem designed for city-wi
 
 > **Docs (PL):** [docs/pl/](docs/pl/) · **Docs (EN):** [docs/en/](docs/en/) · **Legacy redirects:** [docs/README.md](docs/README.md) · **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md) · **Changelog:** [CHANGELOG.md](CHANGELOG.md) (current: `v0.3.3-dev` + unreleased on `main`)
 
+> **New owner:** start with [PROJECT_TAKEOVER.md](docs/PROJECT_TAKEOVER.md). It separates verified capabilities from claims that still require an environment or production check.
+
 ## 🌟 Key Features
 
 -   **🎮 Game Vibe Mobile**: Map-first Tracking with auto-hide HUD, Metal Slug borders, Octopath vignettes, S/A/B/C/D quest grades, pixel-art navigation — a fitness ARPG, not a utility.

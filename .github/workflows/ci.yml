@@ -1,4 +1,4 @@
-name: SPORT CI/CD Pipeline
+name: 4VELO CI/CD Pipeline
 
 on:
   push:

@@ -6,7 +6,7 @@ Safe to run multiple times — skips if user already exists.
 import os
 
 from django.contrib.auth import get_user_model
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.utils.crypto import get_random_string
 
 User = get_user_model()
@@ -14,6 +14,7 @@ User = get_user_model()
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "global_owner")
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@4velo.app")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD") or os.getenv("GLOBAL_OWNER_PASSWORD")
+UNSAFE_PASSWORDS = {"admin123", "change_me", "changeme", "password", "sport2026!"}
 
 
 class Command(BaseCommand):
@@ -25,6 +26,11 @@ class Command(BaseCommand):
             return
 
         password = ADMIN_PASSWORD
+        if password and password.strip().lower() in UNSAFE_PASSWORDS:
+            raise CommandError(
+                "Refusing an unsafe admin password. Set ADMIN_PASSWORD or "
+                "GLOBAL_OWNER_PASSWORD to a strong, unique value."
+            )
         if not password:
             password = get_random_string(20)
 

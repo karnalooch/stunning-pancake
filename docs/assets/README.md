@@ -31,7 +31,7 @@
 
 Historyczne mockupy PNG i diagram architektury **nie są** trzymane w repo na tej gałęzi; manifest archiwalny opisuje je w [archive/ASSET_MANIFEST.json](../archive/ASSET_MANIFEST.json) z adnotacją `archivedPaths`.
 
-**HTML mockupy STITCH (mobile):** [../mockups/](../mockups/) — pliki `*.html` mogą być lokalne (`.gitignore`); indeks: [README.md](../README.md#docsmockups--design-mobile).
+**HTML mockupy STITCH (mobile):** mogą istnieć lokalnie w `docs/mockups/` (`*.html` są ignorowane przez Git); indeks: [README.md](../README.md#docsmockups--design-mobile).
 
 ---
 

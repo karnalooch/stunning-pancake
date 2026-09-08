@@ -2,6 +2,7 @@ import os
 
 import django
 from django.contrib.gis.geos import Point
+from django.utils.crypto import get_random_string
 
 # Setup Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
@@ -32,10 +33,14 @@ def _get_or_create_poi(*, name: str, tenant, defaults: dict | None = None):
 
 
 def seed():
-    print("🌱 Seeding SPORT Platform...")
+    print("🌱 Seeding 4VELO demonstration data...")
+
+    configured_demo_password = os.getenv("DEMO_USER_PASSWORD")
+    demo_password = configured_demo_password or get_random_string(20)
+    generated_demo_password = not configured_demo_password
 
     # 1. Create Global Owner
-    owner, _ = User.objects.get_or_create(
+    owner, owner_created = User.objects.get_or_create(
         username="global_owner",
         defaults={
             "email": "owner@sport-platform.com",
@@ -46,8 +51,12 @@ def seed():
     )
     owner.is_staff = True
     owner.is_superuser = True
-    password = os.getenv("ADMIN_PASSWORD") or os.getenv("GLOBAL_OWNER_PASSWORD", "admin123")
-    owner.set_password(password)
+    if owner_created:
+        owner_password = os.getenv("ADMIN_PASSWORD") or os.getenv("GLOBAL_OWNER_PASSWORD")
+        if owner_password:
+            owner.set_password(owner_password)
+        else:
+            owner.set_unusable_password()
     owner.save()
 
     # 2. Create Tenants
@@ -60,11 +69,12 @@ def seed():
     )
 
     # 3. Create Tenant Admins
-    siedlce_admin, _ = User.objects.get_or_create(
+    siedlce_admin, siedlce_admin_created = User.objects.get_or_create(
         username="siedlce_admin", defaults={"role": "TENANT_ADMIN", "tenant": siedlce}
     )
-    siedlce_admin.set_password("siedlce123")
-    siedlce_admin.save()
+    if siedlce_admin_created:
+        siedlce_admin.set_password(demo_password)
+        siedlce_admin.save(update_fields=["password"])
 
     # 4. Create POIs & Vouchers
     coffee_poi, _ = _get_or_create_poi(
@@ -83,9 +93,12 @@ def seed():
     )
 
     # 5. Create Mock Activities
-    athlete, _ = User.objects.get_or_create(
+    athlete, athlete_created = User.objects.get_or_create(
         username="athlete_01", defaults={"role": "ATHLETE", "tenant": siedlce}
     )
+    if athlete_created:
+        athlete.set_password(demo_password)
+        athlete.save(update_fields=["password"])
 
     for i in range(5):
         Activity.objects.get_or_create(
@@ -102,9 +115,12 @@ def seed():
         )
 
     # 6. Create Mock for Warsaw
-    athlete_w, _ = User.objects.get_or_create(
+    athlete_w, athlete_w_created = User.objects.get_or_create(
         username="athlete_warsaw", defaults={"role": "ATHLETE", "tenant": warsaw}
     )
+    if athlete_w_created:
+        athlete_w.set_password(demo_password)
+        athlete_w.save(update_fields=["password"])
     Activity.objects.get_or_create(
         user=athlete_w,
         tenant=warsaw,
@@ -124,7 +140,10 @@ def seed():
     call_command("seed_rbac")
     print("✅ RBAC system seeded.")
 
-    print("✅ Seeding complete. Use 'global_owner / admin123' to log in.")
+    print("✅ Demonstration data seeding complete.")
+    if generated_demo_password:
+        print(f"⚠️ Generated one-time demo user password: {demo_password}")
+    print("Global owner credentials are managed separately by `python manage.py create_admin`.")
 
 
 if __name__ == "__main__":

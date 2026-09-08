@@ -79,12 +79,12 @@ if len(user_ids) < total_users:
 ```Spowoduje to jedynie zarejestrowanie ostrzeżenia, ale będzie kontynuowane. Pętla zaznaczająca w linii [624](../../backend/activities/admin_views.py:624) wywołuje funkcję `_live_tick()`, która w linii [551](../../backend/activities/admin_views.py:551) wykonuje `random.sample(pool, ...)` — jeśli `pula` jest pusta, pojawia się `ValueError: Próbka większa niż populacja lub jest negatywny”. Błąd zostaje wykryty w linii [632](../../backend/activities/admin_views.py:632), ale symulacja po cichu kończy się wraz z wpisem do dziennika.
 
 #### Błąd 3: Odpytywanie frontonu nigdy nie uruchamia się ponownie po ponownym wejściu na kartę
-W [`SimulatorPage.tsx`](../../admin/src/modules/analytics/SimulatorPage.tsx:44):```tsx
+W [`SimulatorPage.tsx`](../../admin/src/modules/simulator/SimulatorPage.tsx):```tsx
 useEffect(() => {
     fetchLiveStatus();
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
 }, [fetchLiveStatus]);
-```Efekt ten działa raz na wierzchowca. Funkcja czyszczenia czyści interwał. Kiedy użytkownik przełącza karty w przeglądarce, React nie odmontowuje/ponownie montuje — ALE jeśli przeglądarka zawiesi kartę i później ją przywróci, odstęp mógł zostać wyzerowany. Co ważniejsze, wywołanie zwrotne `fetchLiveStatus` w linii [41](../../admin/src/modules/analytics/SimulatorPage.tsx:41) zatrzymuje odpytywanie, gdy `!data.running`:```tsx
+```Efekt ten działa raz na wierzchowca. Funkcja czyszczenia czyści interwał. Kiedy użytkownik przełącza karty w przeglądarce, React nie odmontowuje/ponownie montuje — ALE jeśli przeglądarka zawiesi kartę i później ją przywróci, odstęp mógł zostać wyzerowany. Co ważniejsze, wywołanie zwrotne `fetchLiveStatus` w [`SimulatorPage.tsx`](../../admin/src/modules/simulator/SimulatorPage.tsx) zatrzymuje odpytywanie, gdy `!data.running`:```tsx
 const fetchLiveStatus = useCallback(async () => {
     try {
         const { data } = await apiClient.get('/activities/admin/live-simulate/');
@@ -98,7 +98,7 @@ const fetchLiveStatus = useCallback(async () => {
 ```Gdy użytkownik ponownie odwiedzi kartę po zakończeniu symulacji, parametr „data.running” ma wartość „false”, więc odpytywanie zostaje natychmiast zatrzymane — ale jeśli status był nieaktualny (inny proces roboczy zwrócił komunikat „uruchomiony: fałsz”), użytkownik widzi nieprawidłowy stan bez ścieżki do odzyskania.
 
 #### Błąd 4: Kody stałe generatora wsadowego „skip_activities: true”.
-W [`SimulatorPage.tsx`](../../admin/src/modules/analytics/SimulatorPage.tsx:67):```tsx
+W [`SimulatorPage.tsx`](../../admin/src/modules/simulator/SimulatorPage.tsx):```tsx
 await apiClient.post('/activities/admin/simulate/', {
     total_users: userCount, days, clear: true, skip_activities: true
 });
@@ -867,7 +867,7 @@ except Exception as e:
 
 ### 10.1 Błąd
 
-W [`SimulatorPage.tsx`](../../admin/src/modules/analytics/SimulatorPage.tsx:44) element `useEffect` zarządzający odpytywaniem jest uruchamiany raz na zamontowaniu. Gdy użytkownik przełącza karty przeglądarki i wraca lub gdy interfejs API zwraca komunikat „running: false” (z powodu przestarzałego procesu roboczego), odpytywanie zostaje zatrzymane i nigdy nie jest uruchamiane ponownie.
+W [`SimulatorPage.tsx`](../../admin/src/modules/simulator/SimulatorPage.tsx) element `useEffect` zarządzający odpytywaniem jest uruchamiany raz na zamontowaniu. Gdy użytkownik przełącza karty przeglądarki i wraca lub gdy interfejs API zwraca komunikat „running: false” (z powodu przestarzałego procesu roboczego), odpytywanie zostaje zatrzymane i nigdy nie jest uruchamiane ponownie.
 
 ### Poprawka 10.2: Solidny hak do odpytywania
 
@@ -980,7 +980,7 @@ export const SimulatorPage: React.FC = () => {
 - [ ] Usuń opcję „importuj wątki” (jeśli nie są już używane gdzie indziej)
 
 ### Faza 4: Poprawki frontonu
-- [ ] Przepisz [`SimulatorPage.tsx`](../../admin/src/modules/analytics/SimulatorPage.tsx) za pomocą haka `useSimulatorPoll`
+- [ ] Przepisz [`SimulatorPage.tsx`](../../admin/src/modules/simulator/SimulatorPage.tsx) za pomocą haka `useSimulatorPoll`
 - [ ] Dodaj ponowne uruchomienie odpytywania na podstawie widoczności
 - [ ] Dodaj przełącznik „skip_activities” na karcie Kontroli wsadowej
 - [ ] Dodaj wywołanie sprawdzające przed lotem na stronie montowanej (`GET /validate/`)

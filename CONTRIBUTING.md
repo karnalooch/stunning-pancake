@@ -49,7 +49,7 @@ Checklist utrzymania: [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
 ## CI
 
-- **SPORT CI/CD** — backend, telemetry, mobile, admin, scripts, tokens, docs links, audit, E2E (`.github/workflows/ci.yml`).
+- **4VELO CI/CD** — backend, telemetry, mobile, admin, scripts, tokens, docs links, audit, E2E (`.github/workflows/ci.yml`).
 - **Documentation** (push do `docs/` tylko) — `.github/workflows/docs.yml`.
 - **Jakość** — program faz 0–5: [docs/quality/README.md](docs/quality/README.md).
 

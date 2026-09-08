@@ -45,7 +45,7 @@ Content-Type: application/json
 
 {
   "username": "global_owner",
-  "password": "admin123"
+  "password": "<haslo_administratora>"
 }
 ```**Odpowiedź:**```json
 {

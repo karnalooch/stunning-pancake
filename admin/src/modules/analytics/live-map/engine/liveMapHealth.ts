@@ -74,11 +74,11 @@ export function resolveStaleAfterMs(input: ResolveStaleAfterMsInput = {}): numbe
 
 export function parseLiveMapReadMode(meta: Record<string, unknown> | null | undefined): LiveMapReadMode {
     if (!meta) return 'normal';
-    if (Boolean(meta.cached) && (meta.positions_returned as number | undefined) !== 0) {
+    if (meta.cached && (meta.positions_returned as number | undefined) !== 0) {
         return 'cached';
     }
-    if (Boolean(meta.ingest_engaged ?? meta.live_read_throttled)) return 'ingest_protected';
-    if (Boolean(meta.capped)) return 'viewport_capped';
+    if (meta.ingest_engaged ?? meta.live_read_throttled) return 'ingest_protected';
+    if (meta.capped) return 'viewport_capped';
     return 'normal';
 }
 
