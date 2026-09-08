@@ -83,14 +83,14 @@ if len(user_ids) < total_users:
 This only logs a warning but proceeds. The tick loop at line [624](../backend/activities/admin_views.py:624) calls `_live_tick()` which at line [551](../backend/activities/admin_views.py:551) does `random.sample(pool, ...)` — if `pool` is empty, this raises `ValueError: Sample larger than population or is negative`. The error is caught at line [632](../backend/activities/admin_views.py:632), but the simulation silently dies with a log entry.
 
 #### Bug 3: Frontend Polling Never Restarts on Tab Revisit
-In [`SimulatorPage.tsx`](../admin/src/modules/analytics/SimulatorPage.tsx:44):
+In [`SimulatorPage.tsx`](../admin/src/modules/simulator/SimulatorPage.tsx):
 ```tsx
 useEffect(() => {
     fetchLiveStatus();
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
 }, [fetchLiveStatus]);
 ```
-This effect runs once on mount. The cleanup function clears the interval. When a user switches tabs in the browser, React doesn't unmount/remount — BUT if the browser suspends the tab and later restores it, the interval may have been cleared. More critically, the `fetchLiveStatus` callback at line [41](../admin/src/modules/analytics/SimulatorPage.tsx:41) stops polling when `!data.running`:
+This effect runs once on mount. The cleanup function clears the interval. When a user switches tabs in the browser, React doesn't unmount/remount — BUT if the browser suspends the tab and later restores it, the interval may have been cleared. More critically, the `fetchLiveStatus` callback in [`SimulatorPage.tsx`](../admin/src/modules/simulator/SimulatorPage.tsx) stops polling when `!data.running`:
 ```tsx
 const fetchLiveStatus = useCallback(async () => {
     try {
@@ -106,7 +106,7 @@ const fetchLiveStatus = useCallback(async () => {
 When a user revisits a tab after the simulation has ended, `data.running` is `false`, so polling stops immediately — but if the status was stale (from a different worker returning `running: false`), the user sees the wrong state with no path to recovery.
 
 #### Bug 4: Batch Generator Hardcodes `skip_activities: true`
-In [`SimulatorPage.tsx`](../admin/src/modules/analytics/SimulatorPage.tsx:67):
+In [`SimulatorPage.tsx`](../admin/src/modules/simulator/SimulatorPage.tsx):
 ```tsx
 await apiClient.post('/activities/admin/simulate/', {
     total_users: userCount, days, clear: true, skip_activities: true
@@ -941,7 +941,7 @@ except Exception as e:
 
 ### 10.1 The Bug
 
-In [`SimulatorPage.tsx`](../admin/src/modules/analytics/SimulatorPage.tsx:44), the `useEffect` that manages polling runs once on mount. When a user switches browser tabs and returns, or when the API returns `running: false` (due to a stale worker), polling stops and never restarts.
+In [`SimulatorPage.tsx`](../admin/src/modules/simulator/SimulatorPage.tsx), the `useEffect` that manages polling runs once on mount. When a user switches browser tabs and returns, or when the API returns `running: false` (due to a stale worker), polling stops and never restarts.
 
 ### 10.2 Fix: Robust Polling Hook
 
@@ -1062,7 +1062,7 @@ export const SimulatorPage: React.FC = () => {
 - [ ] Remove `import threading` (if no longer used elsewhere)
 
 ### Phase 4: Frontend Fixes
-- [ ] Rewrite [`SimulatorPage.tsx`](../admin/src/modules/analytics/SimulatorPage.tsx) with `useSimulatorPoll` hook
+- [ ] Rewrite [`SimulatorPage.tsx`](../admin/src/modules/simulator/SimulatorPage.tsx) with `useSimulatorPoll` hook
 - [ ] Add visibility-based polling restart
 - [ ] Add `skip_activities` toggle in Batch Controls card
 - [ ] Add pre-flight validation call on page mount (`GET /validate/`)

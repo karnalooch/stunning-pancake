@@ -16,6 +16,15 @@ export async function seedPlaywrightE2e(page: Page) {
   });
 }
 
+/** Exercise the real login screen even when the preview was built with VITE_E2E=1. */
+export async function disablePlaywrightE2eAuth(page: Page) {
+  await page.addInitScript(() => {
+    sessionStorage.setItem('playwright-e2e', '0');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  });
+}
+
 function isApiRequest(url: string): boolean {
   try {
     const path = new URL(url).pathname;
@@ -151,14 +160,10 @@ export async function mockBackendWithLiveMap(page: Page) {
 }
 
 export async function login(page: Page) {
-  await page.goto('/');
-  // HashRouter redirects to /login when unauthenticated
-  await page.waitForTimeout(500);
-  const isOnLogin = page.url().includes('login') || (await page.getByRole('button', { name: 'Sign In' }).isVisible().catch(() => false));
-  if (isOnLogin) {
-    await page.getByLabel('Username or Email').fill('admin');
-    await page.getByLabel('Password', { exact: true }).fill('password');
-    await page.getByRole('button', { name: 'Sign in' }).click();
-  }
+  await disablePlaywrightE2eAuth(page);
+  await page.goto('/#/login');
+  await page.getByLabel('Username or Email').fill('admin');
+  await page.getByLabel('Password', { exact: true }).fill('password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('admin-sidebar')).toBeVisible({ timeout: 15000 });
 }

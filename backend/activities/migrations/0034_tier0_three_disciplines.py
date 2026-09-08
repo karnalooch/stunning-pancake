@@ -7,7 +7,6 @@ def wheelchair_to_walk(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("activities", "0033_activity_moderation_assignee"),
     ]

@@ -31,7 +31,7 @@ Launch the 4VELO platform in 15 minutes.
 | Tool | Version | Description |
 |-----------|--------|------|
 | [Python](https://www.python.org/downloads/) | 3.11+ | Backend (Django) |
-| [Node.js](https://nodejs.org/) | 18+ | Frontend (Admin Panel) |
+| [Node.js](https://nodejs.org/) | 20 LTS | Monorepo, admin panel and mobile app |
 | [Docker](https://www.docker.com/) | 20/10+ | Containerization |
 | [Docker Compose](https://docs.docker.com/compose/) | 2.0+ | Container orchestration |
 
@@ -50,7 +50,7 @@ Launch the 4VELO platform in 15 minutes.
 The fastest way to run a full stack.
 
 ### Step 1: Clone the repository```bash
-git clone https://github.com/your-org/4velo.git
+git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
 ```### Step 2: Environment configuration```bash
 # Skopiuj plik konfiguracyjny
@@ -126,7 +126,7 @@ After running with seed data:
 | Field | Value |
 |------|---------|
 | Username | `global_owner` |
-| Password | `admin123` |
+| Password | `ADMIN_PASSWORD` value or the password printed during the first startup |
 | Role | `GLOBAL_OWNER` |
 
 ### Change password
@@ -137,7 +137,7 @@ After running with seed data:
 curl -X POST http://localhost:8000/api/users/password/change/ \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"old_password": "admin123", "new_password": "nowe_bezpieczne_haslo"}'
+  -d '{"old_password": "<current_password>", "new_password": "<new_secure_password>"}'
 ```---
 
 ## ✅ What's next?

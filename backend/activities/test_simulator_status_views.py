@@ -146,7 +146,6 @@ def test_setup_live_athlete_pool_populates_redis(db):
     from django.contrib.auth import get_user_model
 
     from activities.simulator_live_start import setup_live_athlete_pool
-
     from simulate_active_cities import CITIES
     from users.models import Tenant
 
@@ -172,8 +171,8 @@ def test_setup_live_athlete_pool_populates_redis(db):
 @pytest.mark.django_db
 @patch("activities.railway_osrm_lifecycle.scale_osrm_for_live_sim")
 @patch("activities.sim_lab_proxy.assert_prod_heavy_sim_allowed", return_value=None)
-@patch("activities.simulator_tasks.live_tick_task")
-def test_maybe_auto_start_live_after_batch(mock_live_tick, _mock_prod, _mock_osrm, db):
+@patch("activities.simulator_tasks.run_live_simulation")
+def test_maybe_auto_start_live_after_batch(mock_live_task, _mock_prod, _mock_osrm, db):
     from django.contrib.auth import get_user_model
 
     from activities.simulator_live_start import maybe_auto_start_live_after_batch
@@ -204,4 +203,4 @@ def test_maybe_auto_start_live_after_batch(mock_live_tick, _mock_prod, _mock_osr
     assert result.get("started") is True
     assert result.get("ok") is True
     assert sim.get_live_state()["running"] is True
-    mock_live_tick.delay.assert_called_once()
+    mock_live_task.delay.assert_called_once()

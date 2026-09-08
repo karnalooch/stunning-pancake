@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 import math
 import time
-from datetime import datetime, timezone as dt_timezone
+from datetime import UTC, datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -59,7 +59,7 @@ def timescale_available() -> bool:
 
 def _bucket_ts(epoch: float) -> datetime:
     floored = int(epoch // 10) * 10
-    return datetime.fromtimestamp(floored, tz=dt_timezone.utc)
+    return datetime.fromtimestamp(floored, tz=UTC)
 
 
 def _dedupe_key(bucket_epoch: int, device_id: str) -> str:

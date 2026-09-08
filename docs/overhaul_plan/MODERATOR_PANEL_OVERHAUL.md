@@ -17,7 +17,7 @@ Jestem **koordynatorem programu miejskiego** (np. „Kraków na rowerze”). Mam
 
 Dzisiaj panel mnie rozczarowuje:
 
-- Po logowaniu trafiam na [`ModeratorInbox`](../../admin/src/modules/dashboard/ModeratorInbox.tsx), ale **dashboard nadal pokazuje globalne KPI** i duplikuje pracę przez [`ModeratorWorklist`](../../admin/src/modules/dashboard/ModeratorWorklist.tsx) — to samo approve/reject w dwóch miejscach.
+- Po logowaniu trafiam na [`ModerationInbox`](../../admin/src/modules/moderation/ModerationInbox.tsx). Historyczne komponenty `ModeratorInbox` i `ModeratorWorklist` zostały już zastąpione jednym modułem moderacji.
 - W [`ActivityDetail`](../../admin/src/modules/dashboard/ActivityDetail.tsx) widzę mapę GPX i wynik anti-cheat, ale **nie mogę zatwierdzić ani odrzucić** — muszę wracać do tabeli.
 - [`AntiCheat`](../../admin/src/modules/anti-cheat/AntiCheat.tsx) pozwala mi **edytować progi systemu** — to nie moja rola; chcę tylko rozpatrywać przypadki.
 - Odrzucenie bez **powodu** to problem prawny i operacyjny — uczestnik dzwoni, a ja nie wiem co mu powiedzieć.

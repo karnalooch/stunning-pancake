@@ -1,7 +1,6 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .moderation_views import ModerationAssignView, ModerationHistoryView, ModerationQueueView
 from .admin_views import (
     ActivityApproveView,
     ActivityRejectView,
@@ -14,11 +13,11 @@ from .admin_views import (
     GarminSummaryClearView,
     GlobalActivityListView,
     IntegrationTestModeView,
-    SimDataPlaneView,
     LiveSimulationView,
     RunSimulationView,
     ScalePreflightView,
     SimCapacityView,
+    SimDataPlaneView,
     SimTargetView,
     SimulatorResetView,
     TenantActivityListView,
@@ -36,6 +35,7 @@ from .leaderboard_views import (
     leaderboard_list,
     my_rank,
 )
+from .moderation_views import ModerationAssignView, ModerationHistoryView, ModerationQueueView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
 from .views import (
     ActivityDetailView,
@@ -187,8 +187,16 @@ urlpatterns = [
     path("admin/live-simulate/", LiveSimulationView.as_view(), name="admin-live-simulate"),
     path("admin/simulator-reset/", SimulatorResetView.as_view(), name="admin-simulator-reset"),
     path("admin/garmin-simulate/", GarminSimulateView.as_view(), name="admin-garmin-simulate"),
-    path("admin/garmin-summary-clear/", GarminSummaryClearView.as_view(), name="admin-garmin-summary-clear"),
-    path("admin/garmin-generate-emails/", GarminGenerateEmailView.as_view(), name="admin-garmin-generate-emails"),
+    path(
+        "admin/garmin-summary-clear/",
+        GarminSummaryClearView.as_view(),
+        name="admin-garmin-summary-clear",
+    ),
+    path(
+        "admin/garmin-generate-emails/",
+        GarminGenerateEmailView.as_view(),
+        name="admin-garmin-generate-emails",
+    ),
     # Data Wipe — delete all except GLOBAL_OWNER
     path("admin/wipe-data/", WipeDataView.as_view(), name="admin-wipe-data"),
     # Worker Status — Celery worker monitoring

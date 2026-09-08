@@ -215,7 +215,10 @@ def calibrate_ml_from_sim() -> dict:
 
     # Fallback to standard verified activities if not enough Garmin samples yet (e.g. at start)
     if len(clean_features) < 10:
-        logger.info("ml_retrain: insufficient Garmin-only samples (%d), falling back to all verified", len(clean_features))
+        logger.info(
+            "ml_retrain: insufficient Garmin-only samples (%d), falling back to all verified",
+            len(clean_features),
+        )
         fallback_qs = Activity.objects.filter(
             is_verified=True,
             route_path__isnull=False,
@@ -224,13 +227,19 @@ def calibrate_ml_from_sim() -> dict:
             coords = list(act.route_path.coords)
             if len(coords) < 20:
                 continue
-            points = [GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)]
+            points = [
+                GpsPoint(lat=c[1], lon=c[0], timestamp=float(i)) for i, c in enumerate(coords)
+            ]
             feats = extract_features(points)
             if feats and feats not in clean_features:
                 clean_features.append(feats)
 
     if len(clean_features) < 10:
-        return {"status": "skipped", "reason": "insufficient clean samples", "count": len(clean_features)}
+        return {
+            "status": "skipped",
+            "reason": "insufficient clean samples",
+            "count": len(clean_features),
+        }
 
     # 2. Fetch Anomaly Validation Dataset (Simulator cheaters)
     cheater_qs = Activity.objects.filter(
@@ -290,13 +299,16 @@ def calibrate_ml_from_sim() -> dict:
         pickle.dump(model_payload, tmp)
 
     if MODEL_PATH.exists():
-        backup = MODEL_PATH.with_suffix(f".backup_sim_calib_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pkl")
+        backup = MODEL_PATH.with_suffix(
+            f".backup_sim_calib_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pkl"
+        )
         shutil.copy2(MODEL_PATH, backup)
 
     tmp_path.replace(MODEL_PATH)
 
     # Invalidate in-memory singleton
     import activities.ml_anomaly as ml_mod
+
     ml_mod._model_payload = None
     ml_mod._model_loaded = False
 
@@ -305,7 +317,9 @@ def calibrate_ml_from_sim() -> dict:
         "clean_samples_used": len(clean_features),
         "anomalous_samples_validated": len(anomalous_features),
         "false_positive_rate": round(false_positive_rate, 4),
-        "true_positive_rate": round(true_positive_rate, 4) if true_positive_rate is not None else None,
+        "true_positive_rate": round(true_positive_rate, 4)
+        if true_positive_rate is not None
+        else None,
         "dynamic_threshold": round(dynamic_threshold, 4),
         "model_path": str(MODEL_PATH),
     }

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 from django.test import SimpleTestCase
@@ -22,7 +22,7 @@ class LiveMapReplayParseTest(SimpleTestCase):
         self.assertIsNotNone(req)
         assert req is not None
         self.assertEqual(req.step_ms, 30000)
-        self.assertEqual(req.time_from, datetime(2026, 6, 4, 10, 0, tzinfo=timezone.utc))
+        self.assertEqual(req.time_from, datetime(2026, 6, 4, 10, 0, tzinfo=UTC))
 
     def test_parse_replay_invalid_window(self):
         req = parse_replay_query_params({"from": "bad", "to": "2026-06-04T10:00:00Z"})

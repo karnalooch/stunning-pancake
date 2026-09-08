@@ -20,7 +20,9 @@ os.environ.setdefault("REDIS_URL", "redis://127.0.0.1:6379/15")
 
 import importlib.util
 
-_spec = importlib.util.spec_from_file_location("_pytest_bootstrap", os.path.join(_ROOT, "run_pytest.py"))
+_spec = importlib.util.spec_from_file_location(
+    "_pytest_bootstrap", os.path.join(_ROOT, "run_pytest.py")
+)
 _mod = importlib.util.module_from_spec(_spec)
 assert _spec.loader is not None
 _spec.loader.exec_module(_mod)

@@ -527,7 +527,10 @@ class TelemetryLiveView(generics.GenericAPIView):
                     },
                 }
             else:
-                from activities.live_map_api import build_live_map_payload, parse_live_map_query_params
+                from activities.live_map_api import (
+                    build_live_map_payload,
+                    parse_live_map_query_params,
+                )
 
                 from . import simulator_state as sim
 

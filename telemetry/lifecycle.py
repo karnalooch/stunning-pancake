@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastapi import FastAPI
 
@@ -82,8 +82,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if not jwt_enforced():
         import os
 
-        env = (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "").strip().lower()
-        on_paas = bool(os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER"))
+        env = (
+            (os.getenv("SENTRY_ENVIRONMENT") or os.getenv("RAILWAY_ENVIRONMENT") or "")
+            .strip()
+            .lower()
+        )
+        on_paas = bool(
+            os.getenv("RAILWAY_SERVICE_NAME") or os.getenv("DYNO") or os.getenv("RENDER")
+        )
         if env in ("production", "prod") or on_paas:
             logger.warning(
                 "TELEMETRY_INGEST_JWT_REQUIRED is off — ingest POSTs are unauthenticated. "

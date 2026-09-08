@@ -49,7 +49,7 @@ Content-Type: application/json
 
 {
   "username": "global_owner",
-  "password": "admin123"
+  "password": "<admin_password>"
 }
 ```
 
@@ -567,6 +567,10 @@ Analiza ryzyka przed dużym testem (dysk, ETA, parallel cities).
 | `target_users` | tak | Np. `10000`, `300000` |
 | `active_ratio` | nie | Domyślnie `0.3` |
 | `skip_activities` | nie | `true` / `1` |
+
+### `GET /api/activities/admin/sim-capacity/`
+
+Szybka estymacja wymaganych workerów, pamięci i przepustowości dla planowanej symulacji. Przyjmuje `target_users`, `active_ratio` i `cheat_ratio`; nie uruchamia symulacji ani nie zapisuje danych.
 
 ### `GET /api/activities/admin/disk-audit/`
 

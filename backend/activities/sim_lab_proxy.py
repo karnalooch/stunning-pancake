@@ -97,7 +97,9 @@ def _health_cache_ttl(*, reachable: bool) -> float:
     if reachable:
         return _HEALTH_CACHE_TTL_OK_SECONDS
     try:
-        return float(os.getenv("SIM_LAB_PROXY_HEALTH_FAIL_CACHE_TTL", str(_HEALTH_CACHE_TTL_FAIL_SECONDS)))
+        return float(
+            os.getenv("SIM_LAB_PROXY_HEALTH_FAIL_CACHE_TTL", str(_HEALTH_CACHE_TTL_FAIL_SECONDS))
+        )
     except (TypeError, ValueError):
         return _HEALTH_CACHE_TTL_FAIL_SECONDS
 
@@ -187,7 +189,10 @@ def _integration_mode_target_fields(*, health: dict[str, Any] | None = None) -> 
 
     now = time.time()
     cached = _INTEGRATION_TARGET_CACHE.get("fields")
-    if isinstance(cached, dict) and now - float(cached.get("_ts") or 0) < _INTEGRATION_TARGET_CACHE_TTL_SECONDS:
+    if (
+        isinstance(cached, dict)
+        and now - float(cached.get("_ts") or 0) < _INTEGRATION_TARGET_CACHE_TTL_SECONDS
+    ):
         return {k: v for k, v in cached.items() if k != "_ts"}
 
     if health is not None and not health.get("reachable"):
@@ -409,7 +414,7 @@ def _forward_upstream(
 
     try:
         payload = upstream.json() if upstream.content else {}
-    except json.JSONDecodeError:
+    except (TypeError, ValueError, json.JSONDecodeError):
         payload = {"error": upstream.text or "Non-JSON sim-lab response", "sim_lab_proxy": True}
 
     if allow_local_fallback and _upstream_should_fallback(payload, upstream.status_code):
@@ -436,9 +441,18 @@ def _forward_upstream(
 
 def _skip_sim_lab_proxy(request) -> bool:
     """Allow destructive/local ops on prod DB when explicitly requested."""
-    if request.query_params.get("local") in ("1", "true", "yes"):
+    query = getattr(request, "query_params", None)
+    if query is None:
+        query = getattr(request, "GET", {})
+    if query.get("local") in ("1", "true", "yes"):
         return True
     data = getattr(request, "data", None) or {}
+    if not data and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        try:
+            raw_body = getattr(getattr(request, "_request", request), "body", b"")
+            data = json.loads(raw_body) if raw_body else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            data = {}
     if isinstance(data, dict) and data.get("force_local") in (True, "true", "1", 1):
         return True
     return False
@@ -602,7 +616,7 @@ def fetch_sim_lab_admin_json(
         return None
     try:
         payload = upstream.json() if upstream.content else {}
-    except json.JSONDecodeError:
+    except (TypeError, ValueError, json.JSONDecodeError):
         return None
     return payload if isinstance(payload, dict) else None
 
@@ -613,9 +627,7 @@ def assert_prod_heavy_sim_allowed(
     target_active: int | None = None,
 ) -> Response | None:
     """Block heavy sim on prod when proxy is off. Return error Response or None."""
-    from activities.sim_integration_mode import sim_prod_local_writes
-
-    if sim_lab_tenant() or sim_prod_local_writes() or sim_lab_proxy_enabled():
+    if sim_lab_tenant() or sim_lab_proxy_enabled():
         return None
     if os.getenv("ALLOW_PROD_HEAVY_SIM", "0").lower() in ("1", "true", "yes"):
         return None

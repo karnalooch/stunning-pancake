@@ -201,7 +201,7 @@ flowchart LR
 
 1. **Jeden model autoryzacji** — dziś nav filtruje po `role`, routes po `permissions`, RBAC Manager edytuje coś trzeciego. Klient nie powinien widzieć `/owner/system/rbac` po wpisaniu URL, jeśli nie ma go w nav.
 2. **Command palette** (`cmdk` w package.json, zero użycia) — „Idź do Users”, „Pokaż pending”, „Eksportuj dział X”.
-3. **React Query** — provider jest w [main.tsx](../../admin/src/main.tsx), ale każda strona robi własny `useEffect` + axios (np. [ModeratorInbox.tsx](../../admin/src/modules/dashboard/ModeratorInbox.tsx)).
+3. **React Query** — provider jest w [main.tsx](../../admin/src/main.tsx); wzorzec zapytań skrzynki moderacji znajduje się w [useModerationInboxData.ts](../../admin/src/hooks/queries/useModerationInboxData.ts).
 4. **i18n** — `strings.pl.ts` dla moderatora/admina; jeden język per tenant lub user preference.
 5. **Powiadomienia** — dzwonek w top bar: wzrost pending count, nowy feedback, event do publikacji.
 

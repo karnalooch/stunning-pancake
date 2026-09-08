@@ -6,12 +6,12 @@ import pytest
 from rest_framework.test import APIRequestFactory
 
 from activities.sim_lab_proxy import (
-    require_sim_lab_reachable,
     annotate_federated_payload,
     annotate_production_payload,
     assert_prod_heavy_sim_allowed,
     dashboard_data_source,
     probe_sim_lab_health,
+    require_sim_lab_reachable,
     sim_lab_proxy_enabled,
     sim_lab_proxy_target_info,
     sim_lab_read_federation_enabled,
@@ -459,9 +459,7 @@ def test_telemetry_live_serves_local_when_prod_local_writes(
     user = MagicMock(username="global_owner", role="GLOBAL_OWNER", is_authenticated=True)
     client.force_authenticate(user=user)
 
-    response = client.get(
-        "/api/activities/telemetry/live/?zoom=10&limit=50&bbox=19,51,22,53"
-    )
+    response = client.get("/api/activities/telemetry/live/?zoom=10&limit=50&bbox=19,51,22,53")
     assert response.status_code == 200
     assert mock_build.called
     assert len(response.data["positions"]) == 1

@@ -209,13 +209,12 @@ def build_sim_kpi_snapshot() -> dict:
     When SIM_LAB_PROXY is enabled, reads sim-lab Redis via admin API (not prod local).
     """
     try:
+        from activities.sim_integration_mode import sim_prod_local_writes
         from activities.sim_lab_proxy import (
             fetch_sim_lab_admin_json,
             probe_sim_lab_health,
             sim_lab_proxy_enabled,
         )
-
-        from activities.sim_integration_mode import sim_prod_local_writes
 
         if sim_lab_proxy_enabled() and not sim_prod_local_writes():
             health = probe_sim_lab_health()

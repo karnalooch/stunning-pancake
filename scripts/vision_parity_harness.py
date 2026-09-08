@@ -31,7 +31,6 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_VISION = REPO_ROOT / "docs/design/screenshots/2026-06-14-emulator-audit/vision"
@@ -73,7 +72,7 @@ def _get_screen_manifest(manifest: dict, screen_name: str) -> dict:
     return manifest.get("screens", {}).get(screen_name.replace(".png", ""), {})
 
 
-def _apply_roi_mask(img: "Image.Image", roi: Optional[list[float]]) -> "Image.Image":
+def _apply_roi_mask(img: Image.Image, roi: list[float] | None) -> Image.Image:
     """
     Apply a region-of-interest mask to an image.
 
@@ -97,11 +96,11 @@ def _apply_roi_mask(img: "Image.Image", roi: Optional[list[float]]) -> "Image.Im
 
 # ─── Image I/O ───────────────────────────────────────────────────────
 
-def _load_gray(path: Path, size: tuple[int, int]) -> "Image.Image":
+def _load_gray(path: Path, size: tuple[int, int]) -> Image.Image:
     return Image.open(path).convert("L").resize(size)
 
 
-def similarity(actual: Path, vision: Path, roi: Optional[list[float]] = None) -> float:
+def similarity(actual: Path, vision: Path, roi: list[float] | None = None) -> float:
     """Return a 0..1 similarity score (SSIM if available, else 1 - normalized MAE)."""
     size = (512, 341)  # canonical compare size, mock aspect ~1.5
     a = _load_gray(actual, size)
@@ -127,7 +126,7 @@ def make_composite(actual: Path, vision: Path, out: Path, score: float) -> None:
     canvas = Image.new("RGB", (width, h + label_h + pad * 2), (251, 243, 226))
     draw = ImageDraw.Draw(canvas)
     x = pad
-    for im, label in zip(scaled, ("VISION", "ACTUAL")):
+    for im, label in zip(scaled, ("VISION", "ACTUAL"), strict=True):
         canvas.paste(im, (x, label_h + pad))
         draw.text((x, pad), label, fill=(11, 29, 51))
         x += im.width + gap
@@ -197,7 +196,7 @@ def write_checklist(out_dir: Path, results: list[dict], manifest: dict) -> None:
     lines = [
         "# Vision parity checklist (human gate)",
         "",
-        f"SSIM is directional only (mocks are illustrations, ROI-masked comparison).",
+        "SSIM is directional only (mocks are illustrations, ROI-masked comparison).",
         "Mark each dimension [x] when the built screen matches the vision mock.",
         "Auto-filled items come from `scripts/parity_manifest.json`.",
         "",

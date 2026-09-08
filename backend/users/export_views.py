@@ -88,7 +88,9 @@ def user_data_export_download_view(request, job_id: str):
     try:
         body = read_gpx(job.storage_uri)
     except Exception as exc:
-        return Response({"detail": f"Download failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            {"detail": f"Download failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
     response = HttpResponse(body, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="4velo-export-{job_id}.zip"'

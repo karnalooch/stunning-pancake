@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
-import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -38,7 +37,7 @@ def _mini_app() -> Starlette:
 def _make_token(secret: str) -> str:
     import jwt
 
-    exp = datetime.now(timezone.utc) + timedelta(hours=1)
+    exp = datetime.now(UTC) + timedelta(hours=1)
     return jwt.encode({"sub": "42", "exp": exp}, secret, algorithm="HS256")
 
 

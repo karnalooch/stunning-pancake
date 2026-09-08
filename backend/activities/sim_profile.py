@@ -56,9 +56,7 @@ def map_load(load: int) -> dict[str, int]:
     """Obciążenie systemu → tick + scale_overrides."""
     load_pct = _clamp_int(load)
     # Steeper mid curve: 8× routing workers + inline ticks can sustain much higher dispatch.
-    starts = int(
-        round(piecewise_lerp([(0, 50), (50, 200), (75, 400), (100, 1000)], load_pct))
-    )
+    starts = int(round(piecewise_lerp([(0, 50), (50, 200), (75, 400), (100, 1000)], load_pct)))
     brouter = int(round(starts * 0.83))
     attempts = 4 if load_pct < 75 else 5
     tick_seconds = int(round(piecewise_lerp([(0, 10), (50, 6), (75, 5), (100, 4)], load_pct)))

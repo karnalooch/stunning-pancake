@@ -3,7 +3,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("users", "0005_tenant_delete_tenantprofile_remove_user_tenant_id_and_more"),
         ("core", "0001_feature_flags"),
@@ -13,11 +12,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="PlatformNotice",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
                 (
                     "severity",
                     models.CharField(
-                        choices=[("info", "Info"), ("warning", "Warning"), ("critical", "Critical")],
+                        choices=[
+                            ("info", "Info"),
+                            ("warning", "Warning"),
+                            ("critical", "Critical"),
+                        ],
                         default="info",
                         max_length=16,
                     ),

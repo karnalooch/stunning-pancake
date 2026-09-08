@@ -146,9 +146,7 @@ def apply_moderation_approve(request, activity: Activity) -> dict:
     }
 
 
-def apply_moderation_reject(
-    request, activity: Activity, reason: str = "", notes: str = ""
-) -> dict:
+def apply_moderation_reject(request, activity: Activity, reason: str = "", notes: str = "") -> dict:
     valid_reasons = {c[0] for c in Activity.REJECTION_REASONS}
     if reason and reason not in valid_reasons:
         reason = "OTHER"
@@ -215,7 +213,9 @@ class ModerationAssignView(APIView):
             try:
                 assignee = User.objects.get(pk=assignee_id)
             except User.DoesNotExist:
-                return Response({"detail": "Assignee not found"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": "Assignee not found"}, status=status.HTTP_400_BAD_REQUEST
+                )
             activity.moderation_assignee = assignee
         activity.save(update_fields=["moderation_assignee"])
         return Response(_queue_row(activity))

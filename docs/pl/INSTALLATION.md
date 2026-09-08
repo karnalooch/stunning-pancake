@@ -35,7 +35,7 @@ Upewnij się, że masz zainstalowane:
 | Narzędzie | Wersja | Komenda weryfikacyjna |
 |-----------|--------|----------------------|
 | Python | 3.11+ | `python --version` |
-| Node.js | 18+ | `node --version` |
+| Node.js | 20 LTS | `node --version` |
 | PostgreSQL | 15+ (z PostGIS) | `psql --version` |
 | Redis | 7+ | `redis-cli --version` |
 | Git | 2.30+ | `git --version` |
@@ -43,7 +43,7 @@ Upewnij się, że masz zainstalowane:
 ### Krok 2: Klonowanie repozytorium
 
 ```bash
-git clone https://github.com/your-org/4velo.git
+git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
 ```
 

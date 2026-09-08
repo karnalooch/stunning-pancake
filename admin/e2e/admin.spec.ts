@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { mockBackend, login } from './helpers';
+import { disablePlaywrightE2eAuth, mockBackend, login } from './helpers';
 
 test.describe('Authentication', () => {
   test('unauthenticated visit shows login page', async ({ page }) => {
     await mockBackend(page);
-    await page.goto('/');
+    await disablePlaywrightE2eAuth(page);
+    await page.goto('/#/login');
     await expect(page.getByText('4VELO Platform')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });

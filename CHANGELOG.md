@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Takeover hardening
+- Made demo seeding opt-in (`RUN_DEMO_SEED=1`) instead of running it on every backend container start.
+- Removed built-in weak admin passwords and stopped seed data from resetting existing owner credentials.
+- Added `docs/PROJECT_TAKEOVER.md` and a dated takeover baseline report.
+- Restored documentation link/OpenAPI drift gates and aligned the admin lint configuration with the current non-React-Compiler build.
+
 ### Documentation
 - Reorganized `docs/`: [operations/](./docs/operations/) runbooks (simulator, BRouter, mobile), [reports/](./docs/reports/) for audit snapshots, [MAINTENANCE.md](./docs/MAINTENANCE.md) inventory.
 - [API.md](./docs/API.md): Admin simulator endpoints (batch, live, reset, disk-audit, 409 examples).

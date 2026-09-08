@@ -1,3 +1,4 @@
+import logging
 import os
 import threading
 import time
@@ -8,6 +9,8 @@ from django.utils import timezone
 from requests.adapters import HTTPAdapter
 
 from .models import PrivacyZone
+
+logger = logging.getLogger(__name__)
 
 
 class BRouterService:
@@ -175,16 +178,19 @@ class BRouterService:
         coord_str = "|".join([f"{c[0]},{c[1]}" for c in coordinates])
 
         # Redis Cache check
-        import json
         import hashlib
+        import json
+
         from core.redis_cluster import get_redis
-        
+
         cache_key = f"{{sim}}:routes:cache:{hashlib.sha256(f'{activity_type}:{profile}:{coord_str}'.encode()).hexdigest()}"
         try:
             r = get_redis()
             cached_data = r.get(cache_key)
             if cached_data:
-                return json.loads(cached_data.decode() if isinstance(cached_data, bytes) else cached_data)
+                return json.loads(
+                    cached_data.decode() if isinstance(cached_data, bytes) else cached_data
+                )
         except Exception as exc:
             logger.warning("Failed to fetch from routing cache: %s", exc)
 
@@ -486,7 +492,8 @@ class TelemetryService:
                 else e.get("department_id")
             )
             try:
-                entry["departmentId"] = int(raw_dept)
+                if raw_dept is not None:
+                    entry["departmentId"] = int(raw_dept)
             except (TypeError, ValueError):
                 pass
         if e.get("citySlug") or e.get("city_slug"):
@@ -1052,7 +1059,7 @@ class TelemetryService:
         cache_key = cls._live_cache_key(bbox, cap, zoom) if bbox else None
         # Ingest guard: skip bbox cache — stale snapshots caused empty map + live meta counts.
         use_live_cache = cache_key and not skip_cache and not read_policy.ingest_engaged
-        if use_live_cache:
+        if use_live_cache and cache_key is not None:
             cached = cls._get_live_cached(cache_key, effective_cache_ttl)
             if cached is not None:
                 return cached

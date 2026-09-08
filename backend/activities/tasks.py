@@ -16,6 +16,7 @@ from __future__ import annotations
 import logging
 
 from celery import shared_task
+
 from users.push_tasks import send_city_ranking_push, send_quest_push
 
 logger = logging.getLogger(__name__)
@@ -384,7 +385,9 @@ def evaluate_live_map_alerts() -> dict:
     try:
         from users.models import User
 
-        sample_users = list(User.objects.filter(is_active=True, role="ATHLETE").values_list("id", flat=True)[:100])
+        sample_users = list(
+            User.objects.filter(is_active=True, role="ATHLETE").values_list("id", flat=True)[:100]
+        )
         if sample_users:
             send_quest_push.delay(sample_users, "Nearby challenge")
     except Exception:
@@ -410,7 +413,11 @@ def generate_gpx_task(activity_id: int) -> dict:
     from django.utils import timezone
 
     from activities.gpx_export import linestring_to_gpx
-    from activities.gpx_forensics import is_simulated_activity, route_fingerprint, scan_activity_forensics
+    from activities.gpx_forensics import (
+        is_simulated_activity,
+        route_fingerprint,
+        scan_activity_forensics,
+    )
     from activities.gpx_storage import store_gpx
     from activities.models import Activity
 

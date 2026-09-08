@@ -10,7 +10,6 @@ from activities.sim_integration_mode import (
     prod_local_writes_info,
     set_prod_local_writes,
     sim_data_plane,
-    sim_integration_test_mode,
     sim_prod_local_writes,
     sim_users_are_synthetic,
 )

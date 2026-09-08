@@ -88,7 +88,7 @@ def start_live_simulation_internal(
 ) -> dict[str, Any]:
     """
     Core live start (no DRF Response). Returns {ok: True, ...} or {ok: False, error: ...}.
-  """
+    """
     from activities import wipe_state as ws
     from activities.admin_views import _bootstrap_live_athletes
     from activities.scale_config import (

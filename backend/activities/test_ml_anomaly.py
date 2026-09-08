@@ -7,11 +7,11 @@ anomaly detector (Layer 1.5 anti-cheat).
 
 from unittest.mock import MagicMock, patch
 
+from django.test import SimpleTestCase, TestCase
+
 from activities.ml_anomaly import extract_features, is_ml_anomaly, ml_anomaly_score
 from activities.signal_processing import GpsPoint
 
-
-from django.test import SimpleTestCase, TestCase
 
 class TestMLAnomaly(SimpleTestCase):
     def test_extract_features_returns_none_for_short_track(self):
@@ -95,16 +95,19 @@ class TestMLRetrainFromSim(TestCase):
     @patch("activities.ml_retrain.pickle.dump")
     @patch("activities.ml_retrain.Path.exists", return_value=False)
     @patch("builtins.open")
-    def test_calibrate_ml_from_sim_skipped_on_insufficient_samples(self, mock_open, mock_exists, mock_dump, mock_filter):
-        from activities.ml_retrain import calibrate_ml_from_sim
+    def test_calibrate_ml_from_sim_skipped_on_insufficient_samples(
+        self, mock_open, mock_exists, mock_dump, mock_filter
+    ):
         from unittest.mock import MagicMock
-        
+
+        from activities.ml_retrain import calibrate_ml_from_sim
+
         # Simulate insufficient clean samples
         mock_qs = MagicMock()
         mock_qs.only.return_value = mock_qs
         mock_qs.__getitem__.return_value = []
         mock_filter.return_value = mock_qs
-        
+
         res = calibrate_ml_from_sim()
         assert res["status"] == "skipped"
         assert "insufficient clean samples" in res["reason"]
@@ -114,10 +117,13 @@ class TestMLRetrainFromSim(TestCase):
     @patch("activities.ml_retrain.Path.exists", return_value=True)
     @patch("activities.ml_retrain.shutil.copy2")
     @patch("builtins.open")
-    def test_calibrate_ml_from_sim_success(self, mock_open, mock_copy, mock_exists, mock_dump, mock_filter):
-        from activities.ml_retrain import calibrate_ml_from_sim
+    def test_calibrate_ml_from_sim_success(
+        self, mock_open, mock_copy, mock_exists, mock_dump, mock_filter
+    ):
         from unittest.mock import MagicMock
-        
+
+        from activities.ml_retrain import calibrate_ml_from_sim
+
         # Build 15 clean and 5 anomalous mocks to satisfy the minimum of 10 clean samples
         mock_acts_clean = []
         for i in range(15):
@@ -125,14 +131,14 @@ class TestMLRetrainFromSim(TestCase):
             act.route_path = MagicMock()
             act.route_path.coords = [(21.0 + j * 0.0001, 52.0) for j in range(25)]
             mock_acts_clean.append(act)
-            
+
         mock_acts_anomaly = []
         for i in range(5):
             act = MagicMock()
             act.route_path = MagicMock()
             act.route_path.coords = [(21.0 + j * 0.0001, 52.0) for j in range(25)]
             mock_acts_anomaly.append(act)
-            
+
         # We need mock_filter to return clean acts on first call (for Garmin or fallback), and anomalous on last call
         mock_qs_clean = MagicMock()
         mock_qs_clean.only.return_value = mock_qs_clean
@@ -143,7 +149,7 @@ class TestMLRetrainFromSim(TestCase):
         mock_qs_anomaly.__getitem__.return_value = mock_acts_anomaly
 
         mock_filter.side_effect = [mock_qs_clean, mock_qs_anomaly]
-        
+
         res = calibrate_ml_from_sim()
         assert res["status"] == "ok"
         assert res["clean_samples_used"] == 15

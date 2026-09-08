@@ -83,11 +83,13 @@ def _check_warming(samples: list[GateSample]) -> tuple[bool, str]:
         return True, f"warming_stable_{first}_to_{last}"
     tail = _tail_fraction(samples, 0.25)
     if len(tail) >= 2 and tail[-1].ride_warming <= tail[0].ride_warming:
-        return True, f"warming_tail_decreasing"
+        return True, "warming_tail_decreasing"
     return False, f"warming_growing_{first}_to_{last}"
 
 
-def _check_backpressure(samples: list[GateSample], max_sustained_ratio: float = 0.8) -> tuple[bool, str]:
+def _check_backpressure(
+    samples: list[GateSample], max_sustained_ratio: float = 0.8
+) -> tuple[bool, str]:
     if not samples:
         return True, "no_samples"
     active = sum(1 for s in samples if s.routing_backpressure_active)

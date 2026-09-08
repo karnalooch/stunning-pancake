@@ -17,7 +17,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -92,7 +92,7 @@ def main() -> int:
     print(f"=== Simulator operational gate ===\nAPI: {base}\n")
 
     while True:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         payload = _fetch_live_state(session, base, token)
         sample = GateSample.from_api_payload(payload, at=now)
         samples.append(sample)
@@ -107,7 +107,7 @@ def main() -> int:
 
     result = evaluate_gate(samples)
     report = {
-        "evaluated_at": datetime.now(timezone.utc).isoformat(),
+        "evaluated_at": datetime.now(UTC).isoformat(),
         "api_base": base,
         "window_minutes": args.minutes if not args.once else 0,
         "poll_interval_s": args.interval,
@@ -116,7 +116,7 @@ def main() -> int:
     }
 
     args.report_dir.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%S")
     report_path = args.report_dir / f"sim-operational-gate-{stamp}.json"
     report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
 

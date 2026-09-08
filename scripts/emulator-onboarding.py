@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 import subprocess
-import sys
 import time
 from io import BytesIO
-from pathlib import Path
 
 from PIL import Image
 

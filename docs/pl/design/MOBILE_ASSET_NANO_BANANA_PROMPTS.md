@@ -206,7 +206,7 @@ Używane przez `mobile/app.config.js`: `app_icon` (1024×1024), `splash_icon` (1
 
 ## 19. Spięcie z pipeline (follow-up, śledzone osobno)
 
-Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), deprecjacja proceduralnego [`scripts/generate_grand_prix_assets.py`](../../../scripts/generate_grand_prix_assets.py) i [`scripts/grand_prix/`](../../../scripts/grand_prix/), oraz import PNG zamiast SVG w [`mobile/src/assets/tabIcons.ts`](../../../mobile/src/assets/tabIcons.ts).
+Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), zastąpienie historycznego generatora Grand Prix oraz import PNG zamiast SVG w [`mobile/src/assets/tabIcons.ts`](../../../mobile/src/assets/tabIcons.ts).
 
 ## 20. Sun-readability spec (chrome HUD — normatywne)
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from activities.live_map_api import LiveMapRequest, parse_live_map_query_params
@@ -32,7 +32,7 @@ def _parse_iso_dt(raw: str | None) -> datetime | None:
     try:
         dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
         if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=dt_timezone.utc)
+            dt = dt.replace(tzinfo=UTC)
         return dt
     except (TypeError, ValueError):
         return None
@@ -268,9 +268,9 @@ def build_replay_payload(req: ReplayRequest) -> dict[str, Any]:
             "meta": {"timescale_available": False},
         }
 
-    started = datetime.now(dt_timezone.utc)
+    started = datetime.now(UTC)
     frames = _query_frames(req, time_from=req.time_from, time_to=req.time_to)
-    latency_ms = int((datetime.now(dt_timezone.utc) - started).total_seconds() * 1000)
+    latency_ms = int((datetime.now(UTC) - started).total_seconds() * 1000)
     logger.info("live_map.replay.latency_ms=%s frames=%s", latency_ms, len(frames))
 
     return {

@@ -98,9 +98,7 @@ def build_live_launch_plan(
     routes_per_tick = min(max_starts, dispatch) if infra["async_routing"] else max_starts
     effective_starts_per_sec = routes_per_tick / max(1, tick_seconds)
     if effective_starts_per_sec > 0:
-        ramp_seconds = int(
-            math.ceil(target_on_map / effective_starts_per_sec * 1.35)
-        )
+        ramp_seconds = int(math.ceil(target_on_map / effective_starts_per_sec * 1.35))
     else:
         ramp_seconds = 0
 

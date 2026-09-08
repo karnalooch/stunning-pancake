@@ -48,3 +48,17 @@ def test_check_file_skips_http_and_anchor() -> None:
         assert check_file(sample) == []
     finally:
         sample.unlink(missing_ok=True)
+
+
+def test_check_file_skips_template_placeholder(fixture_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("check_docs_links.REPO", fixture_dir)
+    sample = fixture_dir / "docs" / "quality" / "template.md"
+    sample.write_text("[FAQ]([FAQ_LINK])\n", encoding="utf-8")
+    assert check_file(sample) == []
+
+
+def test_check_file_accepts_github_line_range(fixture_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("check_docs_links.REPO", fixture_dir)
+    sample = fixture_dir / "docs" / "quality" / "line-range.md"
+    sample.write_text("[target](./target.md:10-12)\n", encoding="utf-8")
+    assert check_file(sample) == []

@@ -408,7 +408,7 @@ Mobile GPS/OS/UX checklist: [Mobile-side guarantees](#mobile-side-guarantees) (P
 
 | Change | Files | Status |
 |--------|--------|--------|
-| Live map throttle under `guard_snapshot().signals.ingest.engaged` | [`backend/activities/telemetry_shard.py`](../../backend/activities/telemetry_shard.py), [`services.py`](../../backend/activities/services.py), admin [`LiveMap.tsx`](../../admin/src/modules/analytics/LiveMap.tsx) | **Done** — `live_map_read_policy()`, cap/cache/detail ceiling, client poll multiplier |
+| Live map throttle under `guard_snapshot().signals.ingest.engaged` | [`backend/activities/telemetry_shard.py`](../../backend/activities/telemetry_shard.py), [`services.py`](../../backend/activities/services.py), admin [`LiveMap.tsx`](../../admin/src/modules/analytics/live-map/LiveMap.tsx) | **Done** — `live_map_read_policy()`, cap/cache/detail ceiling, client poll multiplier |
 | Post-ride backfill API + bounded merge window | [`telemetry/routes.py`](../../telemetry/routes.py), Django `finalize` `post_ride_telemetry` hint | **Done** |
 | Evaluate Kafka only if Redis queue SLO breached | New ADR or amendment — out of P1 scope | **Deferred** |
 | Server `GET …/gpx/` | [`backend/activities/gpx_export.py`](../../backend/activities/gpx_export.py) | **Done** |

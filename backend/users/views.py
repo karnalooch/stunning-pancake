@@ -996,7 +996,9 @@ class PushTokenRegisterView(generics.GenericAPIView):
         if not token:
             return error("token is required.", status_code=status.HTTP_400_BAD_REQUEST)
         if platform not in ("android", "ios"):
-            return error("platform must be android or ios.", status_code=status.HTTP_400_BAD_REQUEST)
+            return error(
+                "platform must be android or ios.", status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         push_token, _created = UserPushToken.objects.update_or_create(
             token=token,

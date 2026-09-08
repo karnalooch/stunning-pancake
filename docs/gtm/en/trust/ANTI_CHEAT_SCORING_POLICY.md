@@ -96,7 +96,7 @@ For material prizes, the organizer may require additional moderator verification
 | **Rejected** | Does not count; reason available in training history |
 | **Flagged** | Visible with caveat; moderator decision pending |
 
-If your route was rejected, check: no motor vehicle, GPS did not "jump", route matched roads (cycling). GPS FAQ: [campaign-start/FAQ_GPS_BATERIA.md](../campaign-start/FAQ_GPS_BATERIA.md).
+If your route was rejected, check: no motor vehicle, GPS did not "jump", route matched roads (cycling). GPS FAQ: [campaign-start/FAQ_GPS_BATTERY.md](../campaign-start/FAQ_GPS_BATTERY.md).
 
 ---
 

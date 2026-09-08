@@ -124,11 +124,15 @@ BaseSpatialField.db_type = lambda self, connection: "text"
 django.setup()
 
 from django.conf import settings
+
+
 class DisableMigrations:
     def __contains__(self, item):
         return True
+
     def __getitem__(self, item):
         return None
+
 
 settings.MIGRATION_MODULES = DisableMigrations()
 

@@ -22,13 +22,16 @@ def check_file(md_path: Path) -> list[str]:
         target = match.group(1).strip()
         if not target or target.startswith(("http://", "https://", "mailto:", "#")):
             continue
+        # Templates use placeholders such as `[FAQ_LINK]`; they are not filesystem links.
+        if "[" in target or "]" in target:
+            continue
         path_part = target.split("#", 1)[0].strip()
         if not path_part or path_part.startswith("<"):
             continue
         if path_part.startswith("file://"):
             continue
         # GitHub-style path:line — verify file only
-        path_part = re.sub(r":\d+$", "", path_part)
+        path_part = re.sub(r":\d+(?:-\d+)?$", "", path_part)
         if path_part.startswith(("mobile/", "backend/", "admin/", "infrastructure/")):
             resolved = (REPO / path_part).resolve()
         else:
@@ -43,8 +46,8 @@ def main() -> int:
     files: list[Path] = []
     if DOCS.is_dir():
         for md in DOCS.rglob("*.md"):
-            # Historical snapshots — links not enforced
-            if "archive" in md.parts and "plans" not in md.parts:
+            # Historical snapshots describe files that intentionally no longer exist.
+            if "archive" in md.parts:
                 continue
             files.append(md)
     for root in SCAN_ROOTS:

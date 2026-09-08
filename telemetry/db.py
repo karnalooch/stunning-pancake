@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import asyncpg
 
@@ -59,7 +59,7 @@ def _rows_for_copy(rows: list[tuple]) -> list[tuple]:
     for r in rows:
         out.append(
             (
-                datetime.fromtimestamp(float(r[0]), tz=timezone.utc),
+                datetime.fromtimestamp(float(r[0]), tz=UTC),
                 r[1],
                 r[2],
                 float(r[3]),
