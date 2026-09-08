@@ -447,6 +447,12 @@ def _skip_sim_lab_proxy(request) -> bool:
     if query.get("local") in ("1", "true", "yes"):
         return True
     data = getattr(request, "data", None) or {}
+    if not data and request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        try:
+            raw_body = getattr(getattr(request, "_request", request), "body", b"")
+            data = json.loads(raw_body) if raw_body else {}
+        except (TypeError, ValueError, json.JSONDecodeError):
+            data = {}
     if isinstance(data, dict) and data.get("force_local") in (True, "true", "1", 1):
         return True
     return False

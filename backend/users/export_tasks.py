@@ -63,6 +63,20 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
                 activity_count += 1
             except Exception as exc:
                 logger.warning("export.skip_gpx activity=%s err=%s", activity.id, exc)
+                zf.writestr(
+                    f"activities/{activity.id}.json",
+                    json.dumps(
+                        {
+                            "id": activity.id,
+                            "type": activity.type,
+                            "start_time": activity.start_time.isoformat(),
+                            "distance": activity.distance,
+                            "gpx_error": str(exc),
+                        },
+                        indent=2,
+                    ),
+                )
+                activity_count += 1
 
     key = f"exports/{user_id}/{job_id}.zip"
     uri = store_export(key, buf.getvalue())
