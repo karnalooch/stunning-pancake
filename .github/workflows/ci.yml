@@ -553,7 +553,7 @@ jobs:
           cd admin
           pnpm exec vite preview --port 3000 &
           sleep 3
-          pnpm exec playwright test --reporter=github
+          pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_SKIP_WEB_SERVER: '1'
