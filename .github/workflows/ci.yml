@@ -553,6 +553,7 @@ jobs:
           pnpm exec playwright test --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
+          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Live Map LOD + WebGL audit gate
         run: |

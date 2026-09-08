@@ -86,7 +86,7 @@ function main(): never {
   // 1. Check redirect targets exist
   console.log('─── Redirect validity check ───');
   for (const nr of navigateRoutes) {
-    const target = nr.navigateTo?.replace(/^\/owner\//, '');
+    const target = nr.navigateTo?.split('#', 1)[0].replace(/^\/owner\//, '');
     if (target && !routePaths.has(target) && target !== 'login' && target !== 'dashboard') {
       // Check for catch-all
       if (routePaths.has('*')) continue;
