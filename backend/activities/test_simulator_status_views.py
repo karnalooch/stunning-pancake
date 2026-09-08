@@ -171,7 +171,7 @@ def test_setup_live_athlete_pool_populates_redis(db):
 @pytest.mark.django_db
 @patch("activities.railway_osrm_lifecycle.scale_osrm_for_live_sim")
 @patch("activities.sim_lab_proxy.assert_prod_heavy_sim_allowed", return_value=None)
-@patch("activities.simulator_live_start.run_live_simulation")
+@patch("activities.simulator_tasks.run_live_simulation")
 def test_maybe_auto_start_live_after_batch(mock_live_task, _mock_prod, _mock_osrm, db):
     from django.contrib.auth import get_user_model
 
