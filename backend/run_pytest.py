@@ -125,6 +125,7 @@ sys.modules["django.contrib.gis.geos"] = mock_geos
 
 mock_geos_prototypes = ModuleType("django.contrib.gis.geos.prototypes")
 mock_geos_prototypes.io = ModuleType("io")
+mock_geos_prototypes.io.MAX_GEOM_COLLECTIONS = 1000
 sys.modules["django.contrib.gis.geos.prototypes"] = mock_geos_prototypes
 sys.modules["django.contrib.gis.geos.prototypes.io"] = mock_geos_prototypes.io
 
