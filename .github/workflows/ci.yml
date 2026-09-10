@@ -402,7 +402,7 @@ jobs:
   # Security: Dependency vulnerability scan
   # ──────────────────────────────────────────
   security:
-    name: Security Scan (pip-audit + npm audit)
+    name: Security inventory (non-blocking)
     runs-on: ubuntu-latest
     needs: [changes, backend, admin]
     if: |
@@ -426,19 +426,19 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Audit Python dependencies (pip-audit)
+        continue-on-error: true
         run: |
           pip install pip-audit
-          pip-audit -r backend/requirements.txt --ignore-vuln PYSEC-2024-60 || true
+          pip-audit -r backend/requirements.txt --ignore-vuln PYSEC-2024-60
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Audit Node dependencies (pnpm audit)
-        run: |
-          pnpm --filter admin audit --audit-level=high || true
-          pnpm --filter mobile audit --audit-level=high || true
+      - name: Audit Node workspace dependencies (pnpm audit)
+        continue-on-error: true
+        run: pnpm audit --audit-level=high
 
       - name: License compliance check (OSS inventory)
         run: |
