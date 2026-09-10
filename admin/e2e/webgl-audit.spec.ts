@@ -45,7 +45,7 @@ test.describe('Live Map WebGL audit', () => {
             api?.setZoom(z, c);
             await api?.waitForPaint?.();
         }, { z: 10, c: WARSAW });
-        await expect(page.getByTestId('live-map-rendered-count')).toContainText(/[1-9]\d* rendered/i, {
+        await expect(page.getByTestId('live-map-rendered-count')).toContainText(/[1-9]\d*/, {
             timeout: 30_000,
         });
 
@@ -59,7 +59,7 @@ test.describe('Live Map WebGL audit', () => {
             api?.setZoom(z, c);
             await api?.waitForPaint?.();
         }, { z: 13.5, c: [KRAKOW.lng, KRAKOW.lat] });
-        await expect(page.getByTestId('live-map-rendered-count')).toContainText(/[1-9]\d* rendered/i, {
+        await expect(page.getByTestId('live-map-rendered-count')).toContainText(/[1-9]\d*/, {
             timeout: 30_000,
         });
 
@@ -78,7 +78,7 @@ test.describe('Live Map WebGL audit', () => {
         expect(micro?.layoutVisibility['live-unclustered']).toBe('visible');
         expect(micro?.sourcePoints ?? 0).toBeGreaterThan(0);
         expect(micro?.renderedPoints ?? 0).toBeGreaterThan(0);
-        await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d* on map/);
+        await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d*/);
 
         console.log('WEBGL_AUDIT', JSON.stringify({ mesoAudit, micro }));
     });

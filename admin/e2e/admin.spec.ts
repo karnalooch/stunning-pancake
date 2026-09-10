@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
     await mockBackend(page);
     await disablePlaywrightE2eAuth(page);
     await page.goto('/#/login');
-    await expect(page.getByText('4VELO Platform')).toBeVisible();
+    await expect(page.getByText('Welcome back')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
 
@@ -19,6 +19,7 @@ test.describe('Authentication', () => {
 });
 
 test.describe('Admin shell navigation', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop sidebar interactions are covered by Chromium.');
   test.beforeEach(async ({ page }) => {
     await mockBackend(page);
     await login(page);

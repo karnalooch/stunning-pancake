@@ -27,13 +27,11 @@ const ALL_ROUTES = [
 ];
 
 test.describe('Route liveness probe', () => {
-  test.beforeEach(async ({ page }) => {
+  test('all registered routes render without crashing', async ({ page }) => {
     await mockBackend(page);
     await login(page);
-  });
 
-  for (const route of ALL_ROUTES) {
-    test(`GET ${route} renders without crash`, async ({ page }) => {
+    for (const route of ALL_ROUTES) {
       // Navigate directly to the route
       // HashRouter needs the full URL with hash
       const hashRoute = route.startsWith('/') ? route : `/${route}`;
@@ -59,8 +57,12 @@ test.describe('Route liveness probe', () => {
       if (is404) {
         console.warn(`  ⚠️  Route ${route} shows 404/page-not-found`);
       }
-    });
-  }
+
+      // The loop keeps one authenticated browser context. A failed route is
+      // reported with its route name instead of spending three login retries.
+      expect(page.url(), `Route ${route} did not finish navigation`).toContain('#');
+    }
+  });
 
   test('authenticated route access works end-to-end', async ({ page }) => {
     // Smoke: make sure the dashboard actually renders content

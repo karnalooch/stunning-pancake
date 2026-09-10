@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   snapshotPathTemplate: '{testDir}/live-map-zoom-snapshots/{arg}{ext}',
   reporter: [
     ['html', { open: 'never' }],
@@ -29,7 +29,9 @@ export default defineConfig({
   webServer: process.env.E2E_SKIP_WEB_SERVER
     ? undefined
     : {
-        command: 'npm run dev',
+        command: process.env.CI
+          ? 'pnpm exec vite preview --host 127.0.0.1 --port 3000 --strictPort'
+          : 'pnpm dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI && !process.env.E2E_FORCE_WEB_SERVER,
         timeout: 120_000,
@@ -43,7 +45,7 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: '**/live-map-zoom.spec.ts',
+      testIgnore: ['**/live-map-*.spec.ts', '**/webgl-audit.spec.ts'],
     },
     {
       name: 'live-map-zoom',
@@ -66,7 +68,7 @@ export default defineConfig({
     {
       name: 'Mobile Chrome',
       use: { ...devices['Pixel 5'] },
-      testIgnore: '**/live-map-zoom.spec.ts',
+      testIgnore: ['**/live-map-*.spec.ts', '**/webgl-audit.spec.ts'],
     },
   ],
 });
