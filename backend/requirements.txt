@@ -1,38 +1,39 @@
 django==5.2.17
 djangorestframework==3.15.2
-djangorestframework-simplejwt==5.3.1
-django-cors-headers==4.6.0
-psycopg2-binary==2.9.10
+django-cors-headers==4.7.0
+psycopg2-binary==2.9.12
+python-dotenv==1.2.2
 gunicorn==23.0.0
 drf-spectacular==0.28.0
-pillow==12.3.0
+redis==5.2.1
 pydantic==2.10.6
 requests==2.33.0
-celery==5.4.0
-redis==5.2.1
-djangorestframework-gis==1.1.0
+dj-database-url==3.1.2
 django-filter==24.3
-channels==4.2.0
-channels-redis==4.2.1
-uvicorn[standard]==0.34.0
-httpx==0.28.1
-django-allauth==65.3.0
-dj-rest-auth==7.0.1
-django-storages==1.14.4
-boto3==1.36.5
-django-csp==3.8
-django-ratelimit==4.1.0
+djangorestframework-gis==1.1.0
 stripe==11.5.0
-sentry-sdk==2.20.0
+Pillow==12.3.0
+# Phase 2: Authentication
+djangorestframework-simplejwt>=5.3.1
+django-allauth==65.14.1
+# Phase 7: Async + Notifications
+celery==5.4.0
+django-celery-results==2.5.1
+django-celery-beat==2.6.0
+pluggy==1.5.0
+firebase-admin>=6.5.0
+# Phase 10: Observability
+sentry-sdk[django,celery]==2.22.0
 whitenoise==6.9.0
-
+# Milestone 5: ML Anti-Cheat Layer
 scikit-learn==1.5.0
 numpy==1.26.4
-
+# RC v0.2: Email (SendGrid)
 sendgrid==6.11.0
-
+# Token encryption at rest (WearableIntegration OAuth credentials)
 cryptography>=41.0.0
-
+# Optional: Live Map H3 aggregate (hexbin fallback when missing)
 h3>=3.7.0
 django-stubs==5.1.1
+# Garmin Connect activity upload (unofficial library)
 garminconnect>=0.2.20
