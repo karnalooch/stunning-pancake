@@ -290,9 +290,7 @@ class TestRoleApi:
         assert assignment.tenant_id == tenant.id
         assert assignment.tenant_scoped is True
 
-    def test_tenant_admin_cannot_assign_cross_tenant_user(
-        self, tenant_admin, rbac_roles
-    ):
+    def test_tenant_admin_cannot_assign_cross_tenant_user(self, tenant_admin, rbac_roles):
         from rest_framework.test import APIClient
 
         other_tenant = Tenant.objects.create(name="Other City", is_active=True)
@@ -317,9 +315,7 @@ class TestRoleApi:
         assert response.status_code == 400
         assert not UserRole.objects.filter(user=other_user).exists()
 
-    def test_tenant_admin_cannot_assign_privileged_role(
-        self, tenant_admin, athlete, rbac_roles
-    ):
+    def test_tenant_admin_cannot_assign_privileged_role(self, tenant_admin, athlete, rbac_roles):
         from rest_framework.test import APIClient
 
         role = Role.objects.get(slug="global_owner")
