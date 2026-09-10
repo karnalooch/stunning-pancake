@@ -46,9 +46,7 @@ mock_gdal_raster = ModuleType("django.contrib.gis.gdal.raster")
 mock_gdal_raster_const = ModuleType("django.contrib.gis.gdal.raster.const")
 mock_gdal_raster_const.VSI_FILESYSTEM_PREFIX = "/vsimem/"
 mock_gdal_raster_source = ModuleType("django.contrib.gis.gdal.raster.source")
-mock_gdal_raster_source.DisallowedRasterLookup = type(
-    "DisallowedRasterLookup", (Exception,), {}
-)
+mock_gdal_raster_source.DisallowedRasterLookup = type("DisallowedRasterLookup", (Exception,), {})
 sys.modules["django.contrib.gis.gdal.raster"] = mock_gdal_raster
 sys.modules["django.contrib.gis.gdal.raster.const"] = mock_gdal_raster_const
 sys.modules["django.contrib.gis.gdal.raster.source"] = mock_gdal_raster_source
