@@ -297,7 +297,10 @@ class TestRoleApi:
 
         other_tenant = Tenant.objects.create(name="Other City", is_active=True)
         other_user = User.objects.create_user(
-            username="other-athlete", password="pass", role="ATHLETE", tenant=other_tenant
+            username="other-athlete",
+            password="pass",
+            role="ATHLETE",
+            tenant=other_tenant,
         )
         role = Role.objects.get(slug="athlete")
         client = APIClient()
