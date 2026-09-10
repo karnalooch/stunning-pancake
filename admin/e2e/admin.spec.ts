@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
     await mockBackend(page);
     await disablePlaywrightE2eAuth(page);
     await page.goto('/#/login');
-    await expect(page.getByText('4VELO').first()).toBeVisible();
+    await expect(page.getByText('Welcome back')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
   });
 
