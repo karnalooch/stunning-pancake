@@ -14,7 +14,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 2 : undefined,
   snapshotPathTemplate: '{testDir}/live-map-zoom-snapshots/{arg}{ext}',
   reporter: [
     ['html', { open: 'never' }],
