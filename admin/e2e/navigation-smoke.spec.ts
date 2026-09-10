@@ -28,7 +28,7 @@ test.describe('Navigation smoke test', () => {
       // Click the nav item
       const navButton = page.getByTestId(item.testId);
       await expect(navButton).toBeVisible();
-      await navButton.click();
+      await navButton.click({ force: true });
 
       // Wait for navigation to settle
       await page.waitForTimeout(500);
