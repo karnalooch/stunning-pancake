@@ -290,9 +290,7 @@ class TestRoleApi:
         assert assignment.tenant_id == tenant.id
         assert assignment.tenant_scoped is True
 
-    def test_tenant_admin_cannot_assign_cross_tenant_user(
-        self, tenant_admin, rbac_roles
-    ):
+    def test_tenant_admin_cannot_assign_cross_tenant_user(self, tenant_admin, rbac_roles):
         from rest_framework.test import APIClient
 
         other_tenant = Tenant.objects.create(name="Other City", is_active=True)
@@ -304,7 +302,11 @@ class TestRoleApi:
         client.force_authenticate(user=tenant_admin)
         response = client.post(
             "/api/users/rbac/user-roles/",
-            {"user_id": other_user.id, "role_id": role.id, "tenant_id": other_tenant.id},
+            {
+                "user_id": other_user.id,
+                "role_id": role.id,
+                "tenant_id": other_tenant.id,
+            },
             format="json",
         )
         assert response.status_code == 400
