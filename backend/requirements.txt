@@ -19,7 +19,7 @@ django-allauth==65.14.1
 # Phase 7: Async + Notifications
 celery==5.4.0
 django-celery-results==2.5.1
-django-celery-beat==2.6.0
+django-celery-beat==2.9.0
 pluggy==1.5.0
 firebase-admin>=6.5.0
 # Phase 10: Observability
