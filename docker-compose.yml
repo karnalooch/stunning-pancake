@@ -74,7 +74,6 @@ services:
     build: ./backend
     container_name: 4velo_backend
     restart: always
-    command: sh -c "python manage.py makemigrations users activities && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
       DEBUG: ${DEBUG:-0}
       SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}

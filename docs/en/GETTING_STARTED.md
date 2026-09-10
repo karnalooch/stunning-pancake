@@ -1,161 +1,90 @@
-# Document
+# 4VELO local setup
 
-| | |
-|--|--|
-| **Status** | ✅ Active |
-| **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
-| **Audience** | See canonical document |
-| **lang** | en |
-| **translation** | [Polski](../GETTING_STARTED.md) |
-| **canonical_path** | docs/en/GETTING_STARTED.md |
----
-
-| | |
-|--|--|
-| **Status** | ✅ Active |
+| Pole / Field | Wartość / Value |
+|---|---|
+| **Status** | Active |
 | **Owner role** | Developer onboarding |
-| **Last reviewed** | 2026-06-03 |
-| **Audience** | New developers |
+| **Last reviewed** | 2026-09-10 |
+| **lang** | en |
+| **translation** | [Polski](../pl/GETTING_STARTED.md) |
+| **canonical_path** | docs/en/GETTING_STARTED.md |
 
-Launch the 4VELO platform in 15 minutes.
+## Scope
 
-**Related:** [INSTALLATION.md](./INSTALLATION.md) · [DEVELOPMENT.md](./DEVELOPMENT.md) · [README.md](./README.md)
+This guide is based on repository configuration. Full Compose startup still requires
+local verification; the addresses below are not evidence of healthy services.
+See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
 
----
+## Tools
 
-## 📋 Prerequisites
+- Git, Node 20 (CI version), pnpm 9.15.
+- Docker with Compose 2 and resources for PostGIS, Redis and routing services.
+- Python 3.12 for CI-aligned local tools; service images use Python 3.11.
 
-### Required software
+## Preparation
 
-| Tool | Version | Description |
-|-----------|--------|------|
-| [Python](https://www.python.org/downloads/) | 3.11+ | Backend (Django) |
-| [Node.js](https://nodejs.org/) | 20 LTS | Monorepo, admin panel and mobile app |
-| [Docker](https://www.docker.com/) | 20/10+ | Containerization |
-| [Docker Compose](https://docs.docker.com/compose/) | 2.0+ | Container orchestration |
-
-### Optional
-
-| Tool | Version | Description |
-|-----------|--------|------|
-| [PostgreSQL](https://www.postgresql.org/) | 15+ | Local database (instead of Docker) |
-| [Redis](https://redis.io/) | 7+ | Local cache (instead of Docker) |
-| [Git](https://git-scm.com/) | 2.30+ | Version control |
-
----
-
-## 🚀 Option 1: Docker Compose (Recommended)
-
-The fastest way to run a full stack.
-
-### Step 1: Clone the repository```bash
+```powershell
 git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
-```### Step 2: Environment configuration```bash
-# Skopiuj plik konfiguracyjny
-cp .env.example .env
+corepack pnpm install --frozen-lockfile
+Copy-Item .env.example .env
+```
 
-# Wygeneruj bezpieczny SECRET_KEY
-python -c "import secrets; print('SECRET_KEY=' + secrets.token_urlsafe(50))" >> .env
-```### Step 3: Startup```bash
-# Windows PowerShell
-.\dev.ps1
+Copy `.env` only on first setup. In Bash, use `cp .env.example .env`.
+Install JavaScript dependencies from the workspace root. Replace existing values
+in `.env` rather than appending a duplicate `SECRET_KEY`. Set a private random key,
+the database variables required by Compose, and `DEBUG=1` for local use only.
+Do not use production credentials.
 
-# Lub bezpośrednio Docker Compose
-docker compose up -d
-```### Step 4: Verification
+Keep `RUN_DEMO_SEED=0`. The backend creates an initial administrator without demo
+seeding. The default username is `global_owner`; if no password reaches the container,
+the first startup log contains a generated password. Adding a variable to `.env`
+does not automatically pass it into a container: inspect the service's `environment`.
+Do not publish the first-start log.
 
-Service | URL | Status
--------|-----|-------
-Backend API | http://localhost:8000 | ✅
-Global Admin | http://localhost:3001 | ✅
-Tenant Admin | http://localhost:3002 | ✅
-Moderator | http://localhost:3003 | ✅
-Telemetry | http://localhost:8001 | ✅
-PostgreSQL | localhost:5432 | ✅
-Redis | localhost:6379 | ✅
-Swagger Docs | http://localhost:8000/api/docs/ | ✅
-BRouter | http://localhost:17777/brouter | ✅ (Compose) |
-Celery simulation | `simulation` queue | ✅ (`celery_worker_simulation`) |
+## Startup and verification
 
-### Simulator / Live Map (optional)
+```bash
+docker compose config --quiet
+docker compose up -d --build
+docker compose ps
+```
 
-For load tests from the admin panel (user batch + live map):
+Compose also includes BRouter, OSRM, Traccar and simulators; image builds and map
+downloads can take time. By default the backend migrates, creates the administrator,
+collects static files and starts Gunicorn. It does not generate migrations at startup.
+Workers and beat run their own commands without web initialization. Wait for the
+database and backend migrations before running integration tests.
 
-1. Make sure `brouter` and `celery_worker_simulation` (`docker compose ps`) are running.
-2. Log in as admin → **Simulator** - first batch, then live (UI waits for the end of the batch).
-3. Runbook: [operations/SIMULATOR.md](./operations/SIMULATOR.md).
+| Service | Expected local address |
+|---|---|
+| API documentation | http://localhost:8000/api/docs/ |
+| Global Admin | http://localhost:3001 |
+| Tenant Admin | http://localhost:3002 |
+| Moderator | http://localhost:3003 |
+| Telemetry | http://localhost:8001 |
 
----
+These addresses come from Compose, not a live availability test. Inspect local
+service logs if a container restarts. Do not publish credentials or user data.
 
-## 🚀 Option 2: Railway (Cloud)
+## Tests and shutdown
 
-Fast cloud deployment without infrastructure configuration.
+The [command matrix](../reports/QUALITY_COMMAND_MATRIX.md) records requirements
+and audit results. PostGIS tests require PostGIS, not substitute SQLite storage.
 
-### Step 1: Railway account
+```bash
+python scripts/check_docs_links.py
+corepack pnpm --filter admin typecheck
+corepack pnpm --filter admin test:run
+docker compose stop
+```
 
-1. Register on [railway.app](https://railway.app)
-2. Connect your GitHub account
+`stop` preserves containers and data. Do not use `down -v` for routine shutdown.
 
-### Step 2: Deploy
+## Deployment and next steps
 
-1. Click the "Deploy from GitHub" button in Railway
-2. Select the 4VELO repository
-3. Railway will automatically detect `railway.json` and configure the service
+Deployment is separate from local setup. Read [operations](operations/README.md)
+and the [risk map](../reports/RISK_AND_OWNERSHIP_MAP.md) before configuring Railway
+or Kubernetes. Do not seed production or migrate external databases during local trials.
 
-### Step 3: Environment Variables
-
-In the Railway → Backend → Variables panel, add:```
-SECRET_KEY=<wygenerowany-klucz>
-DATABASE_URL=<URL-bazy-Railway>
-REDIS_URL=<URL-Redis-Railway>
-```### Step 4: Migrations```bash
-# Przez Railway Shell
-railway run python manage.py migrate
-railway run python manage.py create_admin
-railway run python manage.py seed_data
-```---
-
-## 🔐 First login
-
-### Default administrator details
-
-After running with seed data:
-
-| Field | Value |
-|------|---------|
-| Username | `global_owner` |
-| Password | `ADMIN_PASSWORD` value or the password printed during the first startup |
-| Role | `GLOBAL_OWNER` |
-
-### Change password
-
-1. Log in to the admin panel
-2. Go to Settings → Change Password
-3. Or via API:```bash
-curl -X POST http://localhost:8000/api/users/password/change/ \
-  -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" \
-  -d '{"old_password": "<current_password>", "new_password": "<new_secure_password>"}'
-```---
-
-## ✅ What's next?
-
-After first launch:
-
-1. **📖 Read [Architecture](../ARCHITECTURE.md)** - understand system architecture
-2. **⚙️ Configure [Configuration](./CONFIGURATION.md)** - adjust environment variables
-3. **🛡️ Get to know [RBAC](./RBAC.md)** - learn how to manage permissions
-4. **📡 Check [API Reference](../API.md)** - endpoints, including admin simulator (§ Admin)
-5. **🚂 Load test:** [operations/](./operations/) — Railway worker + BRouter
-6. **🧪 Run tests** - verify correct installation:```bash
-cd backend
-python run_tests.py
-```---
-
-## 🆘 Need help?
-
-- [🔍 Troubleshooting](./TROUBLESHOOTING.md) - Troubleshooting common problems
-- [📦 Installation Guide](./INSTALLATION.md) - detailed installation guide
-- [💻 Development Guide](./DEVELOPMENT.md) - working with code
+[Development](DEVELOPMENT.md) · [Troubleshooting](TROUBLESHOOTING.md) · [Index](README.md)
