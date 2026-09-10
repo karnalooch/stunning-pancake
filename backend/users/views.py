@@ -24,6 +24,26 @@ from .serializers import (
     UserSerializer,
 )
 
+TENANT_ADMIN_ASSIGNABLE_ROLES = {"ATHLETE", "TENANT_MODERATOR", "SPONSOR"}
+
+
+def _tenant_admin_assignment(request, requested_tenant_id, requested_role):
+    """Return the effective tenant or a 403 response for tenant-admin assignments."""
+    if getattr(request.user, "role", None) != "TENANT_ADMIN":
+        return requested_tenant_id, None
+    own_tenant_id = getattr(request.user, "tenant_id", None)
+    if not own_tenant_id:
+        return None, error(
+            "Tenant administrator has no tenant.", status_code=status.HTTP_403_FORBIDDEN
+        )
+    if requested_tenant_id and str(requested_tenant_id) != str(own_tenant_id):
+        return None, error(
+            "You cannot manage users outside your tenant.", status_code=status.HTTP_403_FORBIDDEN
+        )
+    if requested_role not in TENANT_ADMIN_ASSIGNABLE_ROLES:
+        return None, error("You cannot assign this role.", status_code=status.HTTP_403_FORBIDDEN)
+    return own_tenant_id, None
+
 
 def _allowed_role_values() -> set[str]:
     """
@@ -562,7 +582,17 @@ class UserCreateView(generics.CreateAPIView):
         if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
             return error("Only admins can create users.", status_code=status.HTTP_403_FORBIDDEN)
 
-        serializer = self.get_serializer(data=request.data)
+        role = request.data.get("role", "ATHLETE")
+        tenant_id, assignment_error = _tenant_admin_assignment(
+            request, request.data.get("tenant_id"), role
+        )
+        if assignment_error is not None:
+            return assignment_error
+
+        payload = request.data.copy()
+        if tenant_id:
+            payload["tenant_id"] = str(tenant_id)
+        serializer = self.get_serializer(data=payload)
         if not serializer.is_valid():
             return error(
                 "Validation failed",
@@ -571,15 +601,10 @@ class UserCreateView(generics.CreateAPIView):
             )
 
         user = serializer.save()
-        role = request.data.get("role", "ATHLETE")
         if role in _allowed_role_values():
             user.role = role
-        tenant_id = request.data.get("tenant_id")
         if tenant_id:
-            try:
-                user.tenant = Tenant.objects.get(id=tenant_id)
-            except Tenant.DoesNotExist:
-                pass
+            user.tenant_id = tenant_id
         user.save()
 
         AuditLog.objects.create(
@@ -601,7 +626,9 @@ class UserCreateView(generics.CreateAPIView):
 class UserUpdateView(generics.UpdateAPIView):
     """Admin updates an existing user's profile, role, tenant, bio, avatar, status, and password."""
 
-    queryset = User.objects.all()
+    def get_queryset(self):
+        return _scoped_user_queryset(self.request)
+
     serializer_class = UserAdminUpdateSerializer
     permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
@@ -683,7 +710,7 @@ class UserDeleteView(generics.DestroyAPIView):
             return error("Only admins can delete users.", status_code=status.HTTP_403_FORBIDDEN)
 
         try:
-            target = User.objects.get(pk=kwargs["pk"])
+            target = _scoped_user_queryset(request).get(pk=kwargs["pk"])
             # In SQLite-based test runs, FK "SET NULL" enforcement can be flaky
             # during teardown constraint checking. The test suite for self-delete
             # doesn't assert audit-log presence, so avoid creating the FK row
@@ -717,7 +744,13 @@ class InvitationTokenView(generics.GenericAPIView):
         email = request.data.get("email")
         name = request.data.get("name", "")
         role = request.data.get("role", "TENANT_MODERATOR")
-        tenant_id = request.data.get("tenant_id", getattr(request.user, "tenant_id", None))
+        tenant_id, assignment_error = _tenant_admin_assignment(
+            request,
+            request.data.get("tenant_id", getattr(request.user, "tenant_id", None)),
+            role,
+        )
+        if assignment_error is not None:
+            return assignment_error
 
         if not email:
             return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
