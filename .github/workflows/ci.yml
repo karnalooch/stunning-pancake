@@ -552,14 +552,14 @@ jobs:
       - name: Run E2E with managed preview server
         run: |
           cd admin
-          pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github
+          pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github --global-timeout=900000
         env:
           E2E_BASE_URL: http://localhost:3000
 
       - name: Live Map LOD + WebGL audit gate
         run: |
           cd admin
-          pnpm exec playwright test --project=live-map-zoom --reporter=github
+          pnpm exec playwright test --project=live-map-zoom --reporter=github --global-timeout=900000
         env:
           E2E_BASE_URL: http://localhost:3000
 
