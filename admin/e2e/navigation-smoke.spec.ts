@@ -5,9 +5,9 @@ const NAV_ITEMS = [
   { testId: 'nav-dashboard',        path: '/owner/dashboard' },
   { testId: 'nav-tenants-branding', path: '/owner/white-label' },
   { testId: 'nav-users',            path: '/owner/users' },
-  { testId: 'nav-działy',           path: '/owner/departments' },
+  { testId: 'nav-departments',           path: '/owner/departments' },
   { testId: 'nav-anti-cheat',       path: '/owner/anti-cheat' },
-  { testId: 'nav-sponsorship',      path: '/owner/sponsor' },
+  { testId: 'nav-sponsor-dashboard', path: '/owner/sponsor' },
   { testId: 'nav-events',           path: '/owner/analytics/events' },
   // The second 'Sponsorship' nav item uses icon TrendingUp, testId derived from label
   // It maps to 'nav-sponsorship' but is a DIFFERENT item in Analytics section
