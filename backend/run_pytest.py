@@ -164,7 +164,9 @@ sys.modules["sendgrid.helpers.mail"] = mock_sendgrid.helpers.mail
 # Monkey-patch GIS fields to work with SQLite (which has no PostGIS)
 # SQLite DatabaseOperations doesn't have geo_db_type, so we add it.
 # ---------------------------------------------------------------------------
-from django.db.backends.sqlite3.operations import DatabaseOperations as SQLiteOps
+from django.db.backends.sqlite3.base import DatabaseWrapper as SQLiteDatabaseWrapper
+
+SQLiteOps = SQLiteDatabaseWrapper.ops_class
 
 
 class _MockAdapter(str):
