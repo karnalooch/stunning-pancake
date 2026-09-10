@@ -46,6 +46,14 @@ class HomeLabTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 home_lab.validate_backup(text)
 
+    def test_parse_compose_ps_accepts_json_array(self):
+        output = '[{"Service":"db","State":"running"},{"Service":"redis","State":"running"}]'
+        self.assertEqual([row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"])
+
+    def test_parse_compose_ps_accepts_json_lines(self):
+        output = '{"Service":"db","State":"running"}\n{"Service":"redis","State":"running"}'
+        self.assertEqual([row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"])
+
 
 if __name__ == "__main__":
     unittest.main()

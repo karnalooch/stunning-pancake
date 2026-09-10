@@ -85,6 +85,21 @@ def up(args: argparse.Namespace) -> None:
     check_health()
 
 
+def parse_compose_ps(output: str) -> list[dict]:
+    """Accept both JSON-array and newline-delimited Compose `ps` output."""
+    output = output.strip()
+    if not output:
+        return []
+    if output.startswith("["):
+        decoded = json.loads(output)
+        if not isinstance(decoded, list):
+            raise ValueError("Docker Compose JSON array expected")
+        return decoded
+    if "\n" not in output:
+        return [json.loads(output)]
+    return [json.loads(line) for line in output.splitlines() if line.strip()]
+
+
 def check_health() -> None:
     require_environment()
     result = subprocess.run(
@@ -94,7 +109,7 @@ def check_health() -> None:
         text=True,
         capture_output=True,
     )
-    records = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    records = parse_compose_ps(result.stdout)
     states = {
         record.get("Service"): (record.get("State"), record.get("Health")) for record in records
     }
