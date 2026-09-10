@@ -10,7 +10,11 @@ export interface MassFormValues {
     liveEnabled: boolean;
 }
 
-const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
+export const FORCE_SKIP_ACTIVITIES_ABOVE = 150_000;
+
+export function shouldSkipActivityGeneration(cyclists: number, generateActivities: boolean) {
+    return cyclists >= FORCE_SKIP_ACTIVITIES_ABOVE && generateActivities;
+}
 
 function buildInitialValues(): MassFormValues {
     const draft = loadMassDraft();
@@ -77,11 +81,5 @@ export function useMassForm() {
         });
     };
 
-    const enforceActivitySkip = () => {
-        if (form.values.cyclists >= FORCE_SKIP_ACTIVITIES_ABOVE && form.values.generateActivities) {
-            form.setFieldValue('generateActivities', false);
-        }
-    };
-
-    return { form, validateStep, applyScale300k, enforceActivitySkip, FORCE_SKIP_ACTIVITIES_ABOVE };
+    return { form, validateStep, applyScale300k };
 }
