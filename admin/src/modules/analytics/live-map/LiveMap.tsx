@@ -218,7 +218,7 @@ export const LiveMap: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [viewportRefreshing, setViewportRefreshing] = useState(false);
     const [mapReady, setMapReady] = useState(false);
-    const [mlReady, setMlReady] = useState(false);
+    const [, setMlReady] = useState(false);
     const [tabVisible, setTabVisible] = useState(tabVisibleRef.current);
     const [showHeatmap, setShowHeatmap] = useState(false);
     const [heatmapLoading, setHeatmapLoading] = useState(false);
