@@ -6,6 +6,7 @@ import os
 import sys
 from datetime import UTC, datetime, timedelta
 
+import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -85,3 +86,62 @@ def test_ingest_accepts_valid_jwt_when_required(monkeypatch):
             headers={"Authorization": f"Bearer {token}"},
         )
     assert resp.status_code == 200
+
+
+@pytest.mark.parametrize("secret", [None, "", "   "])
+def test_required_jwt_without_usable_key_rejects_ingest(monkeypatch, secret):
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("TELEMETRY_INGEST_JWT_SECRET", raising=False)
+    if secret is not None:
+        monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", secret)
+    with TestClient(_mini_app()) as client:
+        response = client.post("/api/telemetry/ingest")
+    assert response.status_code == 503
+    assert response.json() == {"detail": "Ingest authentication unavailable"}
+
+
+def test_required_jwt_uses_shared_key_fallback(monkeypatch):
+    secret = "shared-test-key-" * 4
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.delenv("TELEMETRY_INGEST_JWT_SECRET", raising=False)
+    monkeypatch.setenv("SECRET_KEY", secret)
+    with TestClient(_mini_app()) as client:
+        response = client.post(
+            "/api/telemetry/ingest",
+            headers={"Authorization": f"Bearer {_make_token(secret)}"},
+        )
+    assert response.status_code == 200
+
+
+def test_required_jwt_missing_key_does_not_block_health(monkeypatch):
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.delenv("SECRET_KEY", raising=False)
+    monkeypatch.delenv("TELEMETRY_INGEST_JWT_SECRET", raising=False)
+    app = Starlette(routes=[Route("/health", _ingest_ok)])
+    app.add_middleware(IngestJwtMiddleware)
+    with TestClient(app) as client:
+        assert client.get("/health").status_code == 200
+
+
+@pytest.mark.parametrize("kind", ["expired", "missing-exp", "wrong-algorithm"])
+def test_ingest_rejects_invalid_claims_or_algorithm(monkeypatch, kind):
+    import jwt
+
+    secret = "invalid-token-test-" * 4
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", secret)
+    claims = {"sub": "42", "exp": datetime.now(UTC) + timedelta(hours=1)}
+    algorithm = "HS256"
+    if kind == "expired":
+        claims["exp"] = datetime.now(UTC) - timedelta(hours=1)
+    elif kind == "missing-exp":
+        del claims["exp"]
+    else:
+        algorithm = "HS384"
+    token = jwt.encode(claims, secret, algorithm=algorithm)
+    with TestClient(_mini_app()) as client:
+        response = client.post(
+            "/api/telemetry/ingest", headers={"Authorization": f"Bearer {token}"}
+        )
+    assert response.status_code == 401

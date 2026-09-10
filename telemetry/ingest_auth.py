@@ -54,9 +54,15 @@ class IngestJwtMiddleware(BaseHTTPMiddleware):
         if request.method != "POST" or not _is_ingest_path(request.url.path):
             return await call_next(request)
 
-        secret = jwt_secret()
-        if not secret or not jwt_enforced():
+        if not jwt_enforced():
             return await call_next(request)
+
+        secret = jwt_secret()
+        if not secret:
+            return JSONResponse(
+                status_code=503,
+                content={"detail": "Ingest authentication unavailable"},
+            )
 
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
