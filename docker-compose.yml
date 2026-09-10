@@ -14,6 +14,11 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   # Redis for high-speed caching and leaderboard Sorted Sets
   redis:
@@ -22,9 +27,15 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   # BRouter for track validation and anti-cheat (Topological matching)
   brouter:
+    profiles: ["routing", "simulation"]
     build:
       context: .
       dockerfile: infrastructure/brouter/Dockerfile
@@ -37,6 +48,7 @@ services:
 
   # OSRM — live simulator routing (BSD engine; OSM ODbL). First start builds graph in volume.
   osrm:
+    profiles: ["routing", "simulation"]
     build:
       context: .
       dockerfile: infrastructure/osrm/Dockerfile
@@ -51,6 +63,7 @@ services:
 
   # Traccar for real-time telemetry collection
   traccar:
+    profiles: ["tracking"]
     image: traccar/traccar:latest
     container_name: 4velo_traccar
     restart: always
@@ -92,10 +105,16 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - db
-      - redis
-      - traccar
-      - osrm
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
 
   # Telemetry Microservice (FastAPI — Constitution §24.1)
   telemetry:
@@ -108,14 +127,24 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       TRACCAR_REDIS_CHANNEL: ${TRACCAR_REDIS_CHANNEL:-traccar:positions}
+      TELEMETRY_INGEST_JWT_REQUIRED: ${TELEMETRY_INGEST_JWT_REQUIRED:-1}
+      TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   # 1. Global Admin Application (Port 3001)
   global_admin:
     build:
-      context: ./admin
+      context: .
+      dockerfile: admin/Dockerfile
       args:
         - VITE_APP_MODE=GLOBAL_ADMIN
         - VITE_API_URL
@@ -124,6 +153,8 @@ services:
         - VITE_LLM_MODEL
     container_name: 4velo_global_admin
     restart: always
+    environment:
+      PORT: "80"
     ports:
       - "3001:80"
     depends_on:
@@ -131,8 +162,10 @@ services:
 
   # 2. Tenant Admin Application (Port 3002)
   tenant_admin:
+    profiles: ["all-admin"]
     build:
-      context: ./admin
+      context: .
+      dockerfile: admin/Dockerfile
       args:
         - VITE_APP_MODE=LOCAL_ADMIN
         - VITE_API_URL
@@ -141,6 +174,8 @@ services:
         - VITE_LLM_MODEL
     container_name: 4velo_tenant_admin
     restart: always
+    environment:
+      PORT: "80"
     ports:
       - "3002:80"
     depends_on:
@@ -148,8 +183,10 @@ services:
 
   # 3. Moderator Application (Port 3003)
   moderator:
+    profiles: ["all-admin"]
     build:
-      context: ./admin
+      context: .
+      dockerfile: admin/Dockerfile
       args:
         - VITE_APP_MODE=MODERATOR
         - VITE_API_URL
@@ -158,6 +195,8 @@ services:
         - VITE_LLM_MODEL
     container_name: 4velo_moderator
     restart: always
+    environment:
+      PORT: "80"
     ports:
       - "3003:80"
     depends_on:
@@ -171,7 +210,7 @@ services:
     command: celery -A core worker -Q critical,notifications,default -l info --concurrency=4
     environment:
       DEBUG: ${DEBUG:-0}
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       MATRIX_HOMESERVER: ${MATRIX_HOMESERVER:-}
@@ -184,13 +223,14 @@ services:
 
   # Celery Worker — batch + live simulator only (queue: simulation)
   celery_worker_simulation:
+    profiles: ["simulation"]
     build: ./backend
     container_name: 4velo_celery_simulation
     restart: always
     command: celery -A core worker -Q simulation -l info --concurrency=6 --hostname=simulation@%h
     environment:
       DEBUG: ${DEBUG:-0}
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       BROUTER_URL: ${BROUTER_URL:-http://brouter:17777/brouter}
@@ -223,7 +263,7 @@ services:
     command: celery -A core beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
       DEBUG: ${DEBUG:-0}
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: ${SECRET_KEY:?err_SECRET_KEY_not_set}
       DATABASE_URL: postgres://${POSTGRES_USER}:${DB_PASSWORD}@db:5432/${POSTGRES_DB}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
     volumes:

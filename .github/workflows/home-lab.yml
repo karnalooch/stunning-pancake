@@ -1,0 +1,40 @@
+name: Home lab configuration
+
+on:
+  pull_request:
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.override.yml'
+      - '.env.home.example'
+      - 'scripts/home_lab.py'
+      - 'scripts/test_home_lab.py'
+      - '.github/workflows/home-lab.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docker-compose.yml'
+      - 'docker-compose.override.yml'
+      - '.env.home.example'
+      - 'scripts/home_lab.py'
+      - 'scripts/test_home_lab.py'
+      - '.github/workflows/home-lab.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Test home-lab control script
+        working-directory: scripts
+        run: python -m unittest test_home_lab.py
+      - name: Validate core Compose model
+        run: docker compose --env-file .env.home.example config --quiet
+      - name: Validate optional Compose profiles
+        run: |
+          docker compose --env-file .env.home.example --profile routing --profile simulation --profile tracking --profile all-admin config --quiet

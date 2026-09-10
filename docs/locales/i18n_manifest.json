@@ -3,6 +3,36 @@
   "generated_by": "scripts/docs_i18n_manifest.py",
   "entries": [
     {
+      "mode": "en_only",
+      "canonical": "docs/API.md",
+      "en": "docs/API.md",
+      "pl": "docs/pl/API.md"
+    },
+    {
+      "mode": "en_only",
+      "canonical": "docs/ARCHITECTURE.md",
+      "en": "docs/ARCHITECTURE.md",
+      "pl": "docs/pl/ARCHITECTURE.md"
+    },
+    {
+      "mode": "en_only",
+      "canonical": "docs/DATA_RESILIENCE.md",
+      "en": "docs/DATA_RESILIENCE.md",
+      "pl": "docs/pl/DATA_RESILIENCE.md"
+    },
+    {
+      "mode": "en_only",
+      "canonical": "docs/DEPARTMENT_ARCHITECTURE.md",
+      "en": "docs/DEPARTMENT_ARCHITECTURE.md",
+      "pl": "docs/pl/DEPARTMENT_ARCHITECTURE.md"
+    },
+    {
+      "mode": "en_only",
+      "canonical": "docs/SIMULATOR_ARCHITECTURE.md",
+      "en": "docs/SIMULATOR_ARCHITECTURE.md",
+      "pl": "docs/pl/SIMULATOR_ARCHITECTURE.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/admin/ADMIN_INDEX.md",
       "en": "docs/admin/ADMIN_INDEX.md",
@@ -37,6 +67,10 @@
       "canonical": "docs/admin/ROADMAP_V3.md",
       "en": "docs/admin/ROADMAP_V3.md",
       "pl": "docs/pl/admin/ROADMAP_V3.md"
+    },
+    {
+      "mode": "n/a",
+      "canonical": "docs/admin/UI_AUDIT_2026-06-02.md"
     },
     {
       "mode": "en_only",
@@ -105,16 +139,22 @@
       "pl": "docs/pl/adr/011-telemetry-ingest-durability-under-load.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/API.md",
-      "en": "docs/API.md",
-      "pl": "docs/pl/API.md"
+      "mode": "paired",
+      "canonical": "docs/assets/README.md",
+      "pl": "docs/assets/README.md",
+      "en": "docs/en/assets/README.md"
     },
     {
-      "mode": "en_only",
-      "canonical": "docs/ARCHITECTURE.md",
-      "en": "docs/ARCHITECTURE.md",
-      "pl": "docs/pl/ARCHITECTURE.md"
+      "mode": "paired",
+      "canonical": "docs/assets/live/README.md",
+      "pl": "docs/assets/live/README.md",
+      "en": "docs/en/assets/live/README.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/compliance/COMPLIANCE_INDEX.md",
+      "pl": "docs/compliance/COMPLIANCE_INDEX.md",
+      "en": "docs/en/compliance/COMPLIANCE_INDEX.md"
     },
     {
       "mode": "en_only",
@@ -123,46 +163,22 @@
       "pl": "docs/pl/compliance/MAP_BASEMAP_LICENSING.md"
     },
     {
+      "mode": "paired",
+      "canonical": "docs/compliance/RCP.md",
+      "pl": "docs/compliance/RCP.md",
+      "en": "docs/en/compliance/RCP.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/compliance/README.md",
+      "pl": "docs/compliance/README.md",
+      "en": "docs/en/compliance/README.md"
+    },
+    {
       "mode": "en_only",
       "canonical": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
       "en": "docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md",
       "pl": "docs/pl/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/CONFIGURATION.md",
-      "pl": "docs/pl/CONFIGURATION.md",
-      "en": "docs/en/CONFIGURATION.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/CONSTITUTION.md",
-      "pl": "docs/pl/CONSTITUTION.md",
-      "en": "docs/en/CONSTITUTION.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/DATA_RESILIENCE.md",
-      "en": "docs/DATA_RESILIENCE.md",
-      "pl": "docs/pl/DATA_RESILIENCE.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/DEPARTMENT_ARCHITECTURE.md",
-      "en": "docs/DEPARTMENT_ARCHITECTURE.md",
-      "pl": "docs/pl/DEPARTMENT_ARCHITECTURE.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/DEPLOYMENT.md",
-      "pl": "docs/pl/DEPLOYMENT.md",
-      "en": "docs/en/DEPLOYMENT.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/DEVELOPMENT.md",
-      "pl": "docs/pl/DEVELOPMENT.md",
-      "en": "docs/en/DEVELOPMENT.md"
     },
     {
       "mode": "en_only",
@@ -172,9 +188,80 @@
     },
     {
       "mode": "paired",
+      "canonical": "docs/en/operations/HOME_LAB.md",
+      "en": "docs/en/operations/HOME_LAB.md",
+      "pl": "docs/pl/operations/HOME_LAB.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/onboarding/GUIDE.md",
+      "pl": "docs/onboarding/GUIDE.md",
+      "en": "docs/en/onboarding/GUIDE.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/CONFIGURATION.md",
+      "pl": "docs/pl/CONFIGURATION.md",
+      "en": "docs/en/CONFIGURATION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/CONFIGURATION.md",
+      "pl": "docs/pl/CONFIGURATION.md",
+      "en": "docs/en/CONFIGURATION.md",
+      "legacy": "docs/CONFIGURATION.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/CONSTITUTION.md",
+      "pl": "docs/pl/CONSTITUTION.md",
+      "en": "docs/en/CONSTITUTION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/CONSTITUTION.md",
+      "pl": "docs/pl/CONSTITUTION.md",
+      "en": "docs/en/CONSTITUTION.md",
+      "legacy": "docs/CONSTITUTION.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/DEPLOYMENT.md",
+      "pl": "docs/pl/DEPLOYMENT.md",
+      "en": "docs/en/DEPLOYMENT.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/DEPLOYMENT.md",
+      "pl": "docs/pl/DEPLOYMENT.md",
+      "en": "docs/en/DEPLOYMENT.md",
+      "legacy": "docs/DEPLOYMENT.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/DEVELOPMENT.md",
+      "pl": "docs/pl/DEVELOPMENT.md",
+      "en": "docs/en/DEVELOPMENT.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/DEVELOPMENT.md",
+      "pl": "docs/pl/DEVELOPMENT.md",
+      "en": "docs/en/DEVELOPMENT.md",
+      "legacy": "docs/DEVELOPMENT.md"
+    },
+    {
+      "mode": "paired",
       "canonical": "docs/pl/DISK_GUARD.md",
       "pl": "docs/pl/DISK_GUARD.md",
       "en": "docs/en/DISK_GUARD.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/DISK_GUARD.md",
+      "pl": "docs/pl/DISK_GUARD.md",
+      "en": "docs/en/DISK_GUARD.md",
+      "legacy": "docs/DISK_GUARD.md"
     },
     {
       "mode": "paired",
@@ -183,10 +270,24 @@
       "en": "docs/en/DOCUMENTATION_STANDARDS.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/DOCUMENTATION_STANDARDS.md",
+      "pl": "docs/pl/DOCUMENTATION_STANDARDS.md",
+      "en": "docs/en/DOCUMENTATION_STANDARDS.md",
+      "legacy": "docs/DOCUMENTATION_STANDARDS.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/EVENT_BURST_50K.md",
       "pl": "docs/pl/EVENT_BURST_50K.md",
       "en": "docs/en/EVENT_BURST_50K.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/EVENT_BURST_50K.md",
+      "pl": "docs/pl/EVENT_BURST_50K.md",
+      "en": "docs/en/EVENT_BURST_50K.md",
+      "legacy": "docs/EVENT_BURST_50K.md"
     },
     {
       "mode": "paired",
@@ -195,10 +296,24 @@
       "en": "docs/en/GETTING_STARTED.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/GETTING_STARTED.md",
+      "pl": "docs/pl/GETTING_STARTED.md",
+      "en": "docs/en/GETTING_STARTED.md",
+      "legacy": "docs/GETTING_STARTED.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/INSTALLATION.md",
       "pl": "docs/pl/INSTALLATION.md",
       "en": "docs/en/INSTALLATION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/INSTALLATION.md",
+      "pl": "docs/pl/INSTALLATION.md",
+      "en": "docs/en/INSTALLATION.md",
+      "legacy": "docs/INSTALLATION.md"
     },
     {
       "mode": "paired",
@@ -207,10 +322,102 @@
       "en": "docs/en/MAINTENANCE.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/MAINTENANCE.md",
+      "pl": "docs/pl/MAINTENANCE.md",
+      "en": "docs/en/MAINTENANCE.md",
+      "legacy": "docs/MAINTENANCE.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/MIGRATION.md",
       "pl": "docs/pl/MIGRATION.md",
       "en": "docs/en/MIGRATION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/MIGRATION.md",
+      "pl": "docs/pl/MIGRATION.md",
+      "en": "docs/en/MIGRATION.md",
+      "legacy": "docs/MIGRATION.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
+      "pl": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
+      "en": "docs/en/RAILWAY_CELERY_SIMULATION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
+      "pl": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
+      "en": "docs/en/RAILWAY_CELERY_SIMULATION.md",
+      "legacy": "docs/RAILWAY_CELERY_SIMULATION.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/RBAC.md",
+      "pl": "docs/pl/RBAC.md",
+      "en": "docs/en/RBAC.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/RBAC.md",
+      "pl": "docs/pl/RBAC.md",
+      "en": "docs/en/RBAC.md",
+      "legacy": "docs/RBAC.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/README.md",
+      "pl": "docs/pl/README.md",
+      "en": "docs/en/README.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/README.md",
+      "pl": "docs/pl/README.md",
+      "en": "docs/en/README.md",
+      "legacy": "docs/README.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/SCALE_TEST_300K.md",
+      "pl": "docs/pl/SCALE_TEST_300K.md",
+      "en": "docs/en/SCALE_TEST_300K.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/SCALE_TEST_300K.md",
+      "pl": "docs/pl/SCALE_TEST_300K.md",
+      "en": "docs/en/SCALE_TEST_300K.md",
+      "legacy": "docs/SCALE_TEST_300K.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/TROUBLESHOOTING.md",
+      "pl": "docs/pl/TROUBLESHOOTING.md",
+      "en": "docs/en/TROUBLESHOOTING.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/TROUBLESHOOTING.md",
+      "pl": "docs/pl/TROUBLESHOOTING.md",
+      "en": "docs/en/TROUBLESHOOTING.md",
+      "legacy": "docs/TROUBLESHOOTING.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/UPDATES.md",
+      "pl": "docs/pl/UPDATES.md",
+      "en": "docs/en/UPDATES.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/UPDATES.md",
+      "pl": "docs/pl/UPDATES.md",
+      "en": "docs/en/UPDATES.md",
+      "legacy": "docs/UPDATES.md"
     },
     {
       "mode": "paired",
@@ -225,10 +432,24 @@
       "en": "docs/en/operations/BROUTER.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/BROUTER.md",
+      "pl": "docs/pl/operations/BROUTER.md",
+      "en": "docs/en/operations/BROUTER.md",
+      "legacy": "docs/operations/BROUTER.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/operations/DATADOG_SIMULATOR.md",
       "pl": "docs/pl/operations/DATADOG_SIMULATOR.md",
       "en": "docs/en/operations/DATADOG_SIMULATOR.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/DATADOG_SIMULATOR.md",
+      "pl": "docs/pl/operations/DATADOG_SIMULATOR.md",
+      "en": "docs/en/operations/DATADOG_SIMULATOR.md",
+      "legacy": "docs/operations/DATADOG_SIMULATOR.md"
     },
     {
       "mode": "paired",
@@ -237,10 +458,24 @@
       "en": "docs/en/operations/HANDOFF_AUTOMATION.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/HANDOFF_AUTOMATION.md",
+      "pl": "docs/pl/operations/HANDOFF_AUTOMATION.md",
+      "en": "docs/en/operations/HANDOFF_AUTOMATION.md",
+      "legacy": "docs/operations/HANDOFF_AUTOMATION.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/operations/KUBERNETES.md",
       "pl": "docs/pl/operations/KUBERNETES.md",
       "en": "docs/en/operations/KUBERNETES.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/KUBERNETES.md",
+      "pl": "docs/pl/operations/KUBERNETES.md",
+      "en": "docs/en/operations/KUBERNETES.md",
+      "legacy": "docs/operations/KUBERNETES.md"
     },
     {
       "mode": "paired",
@@ -249,10 +484,24 @@
       "en": "docs/en/operations/LIVE_MAP.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/LIVE_MAP.md",
+      "pl": "docs/pl/operations/LIVE_MAP.md",
+      "en": "docs/en/operations/LIVE_MAP.md",
+      "legacy": "docs/operations/LIVE_MAP.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/operations/MOBILE.md",
       "pl": "docs/pl/operations/MOBILE.md",
       "en": "docs/en/operations/MOBILE.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/MOBILE.md",
+      "pl": "docs/pl/operations/MOBILE.md",
+      "en": "docs/en/operations/MOBILE.md",
+      "legacy": "docs/operations/MOBILE.md"
     },
     {
       "mode": "paired",
@@ -261,58 +510,24 @@
       "en": "docs/en/operations/OPERATIONS_INDEX.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/OPERATIONS_INDEX.md",
+      "pl": "docs/pl/operations/OPERATIONS_INDEX.md",
+      "en": "docs/en/operations/OPERATIONS_INDEX.md",
+      "legacy": "docs/operations/OPERATIONS_INDEX.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/operations/OSRM.md",
       "pl": "docs/pl/operations/OSRM.md",
       "en": "docs/en/operations/OSRM.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
-      "pl": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
-      "en": "docs/en/operations/PRE_RELEASE_VERIFICATION.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
-      "pl": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
-      "en": "docs/en/operations/RAILWAY_CELERY_MEMORY.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/RAILWAY_KUBERNETES.md",
-      "pl": "docs/pl/operations/RAILWAY_KUBERNETES.md",
-      "en": "docs/en/operations/RAILWAY_KUBERNETES.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
-      "pl": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
-      "en": "docs/en/operations/RAILWAY_PRODUCTION_CHECKLIST.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/README.md",
-      "pl": "docs/pl/operations/README.md",
-      "en": "docs/en/operations/README.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/SIMULATOR.md",
-      "pl": "docs/pl/operations/SIMULATOR.md",
-      "en": "docs/en/operations/SIMULATOR.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
-      "pl": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
-      "en": "docs/en/operations/TELEMETRY_INGEST_QUEUE.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
-      "pl": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
-      "en": "docs/en/operations/TELEMETRY_LOAD_TEST.md"
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/OSRM.md",
+      "pl": "docs/pl/operations/OSRM.md",
+      "en": "docs/en/operations/OSRM.md",
+      "legacy": "docs/operations/OSRM.md"
     },
     {
       "mode": "paired",
@@ -321,15 +536,165 @@
       "en": "docs/en/operations/PERFORMANCE_TESTING.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "pl": "docs/pl/operations/PERFORMANCE_TESTING.md",
+      "en": "docs/en/operations/PERFORMANCE_TESTING.md",
+      "legacy": "docs/operations/PERFORMANCE_TESTING.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
+      "pl": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
+      "en": "docs/en/operations/PRE_RELEASE_VERIFICATION.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
+      "pl": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
+      "en": "docs/en/operations/PRE_RELEASE_VERIFICATION.md",
+      "legacy": "docs/operations/PRE_RELEASE_VERIFICATION.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
+      "pl": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
+      "en": "docs/en/operations/RAILWAY_CELERY_MEMORY.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
+      "pl": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
+      "en": "docs/en/operations/RAILWAY_CELERY_MEMORY.md",
+      "legacy": "docs/operations/RAILWAY_CELERY_MEMORY.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/RAILWAY_KUBERNETES.md",
+      "pl": "docs/pl/operations/RAILWAY_KUBERNETES.md",
+      "en": "docs/en/operations/RAILWAY_KUBERNETES.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/RAILWAY_KUBERNETES.md",
+      "pl": "docs/pl/operations/RAILWAY_KUBERNETES.md",
+      "en": "docs/en/operations/RAILWAY_KUBERNETES.md",
+      "legacy": "docs/operations/RAILWAY_KUBERNETES.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
+      "pl": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
+      "en": "docs/en/operations/RAILWAY_PRODUCTION_CHECKLIST.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
+      "pl": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
+      "en": "docs/en/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
+      "legacy": "docs/operations/RAILWAY_PRODUCTION_CHECKLIST.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/README.md",
+      "pl": "docs/pl/operations/README.md",
+      "en": "docs/en/operations/README.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/README.md",
+      "pl": "docs/pl/operations/README.md",
+      "en": "docs/en/operations/README.md",
+      "legacy": "docs/operations/README.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/SIMULATOR.md",
+      "pl": "docs/pl/operations/SIMULATOR.md",
+      "en": "docs/en/operations/SIMULATOR.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/SIMULATOR.md",
+      "pl": "docs/pl/operations/SIMULATOR.md",
+      "en": "docs/en/operations/SIMULATOR.md",
+      "legacy": "docs/operations/SIMULATOR.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
+      "pl": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
+      "en": "docs/en/operations/TELEMETRY_INGEST_QUEUE.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
+      "pl": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
+      "en": "docs/en/operations/TELEMETRY_INGEST_QUEUE.md",
+      "legacy": "docs/operations/TELEMETRY_INGEST_QUEUE.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
+      "pl": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
+      "en": "docs/en/operations/TELEMETRY_LOAD_TEST.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
+      "pl": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
+      "en": "docs/en/operations/TELEMETRY_LOAD_TEST.md",
+      "legacy": "docs/operations/TELEMETRY_LOAD_TEST.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/operations/TELEMETRY_SHARDING.md",
       "pl": "docs/pl/operations/TELEMETRY_SHARDING.md",
       "en": "docs/en/operations/TELEMETRY_SHARDING.md"
     },
     {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/operations/TELEMETRY_SHARDING.md",
+      "pl": "docs/pl/operations/TELEMETRY_SHARDING.md",
+      "en": "docs/en/operations/TELEMETRY_SHARDING.md",
+      "legacy": "docs/operations/TELEMETRY_SHARDING.md"
+    },
+    {
       "mode": "paired",
       "canonical": "docs/pl/product/FAQ.md",
       "pl": "docs/pl/product/FAQ.md",
+      "en": "docs/en/product/FAQ.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/runbooks/celery-backlog.md",
+      "pl": "docs/pl/runbooks/celery-backlog.md",
+      "en": "docs/en/runbooks/celery-backlog.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/runbooks/celery-backlog.md",
+      "pl": "docs/pl/runbooks/celery-backlog.md",
+      "en": "docs/en/runbooks/celery-backlog.md",
+      "legacy": "docs/runbooks/celery-backlog.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/pl/runbooks/db_recovery.md",
+      "pl": "docs/pl/runbooks/db_recovery.md",
+      "en": "docs/en/runbooks/db_recovery.md"
+    },
+    {
+      "mode": "legacy_redirect",
+      "canonical": "docs/pl/runbooks/db_recovery.md",
+      "pl": "docs/pl/runbooks/db_recovery.md",
+      "en": "docs/en/runbooks/db_recovery.md",
+      "legacy": "docs/runbooks/db_recovery.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/product/FAQ.md",
+      "pl": "docs/product/FAQ.md",
       "en": "docs/en/product/FAQ.md"
     },
     {
@@ -375,336 +740,6 @@
       "pl": "docs/pl/quality/VERIFICATION.md"
     },
     {
-      "mode": "paired",
-      "canonical": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
-      "pl": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
-      "en": "docs/en/RAILWAY_CELERY_SIMULATION.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/RBAC.md",
-      "pl": "docs/pl/RBAC.md",
-      "en": "docs/en/RBAC.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/README.md",
-      "pl": "docs/pl/README.md",
-      "en": "docs/en/README.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "en": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
-      "pl": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/runbooks/celery-backlog.md",
-      "pl": "docs/pl/runbooks/celery-backlog.md",
-      "en": "docs/en/runbooks/celery-backlog.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/runbooks/db_recovery.md",
-      "pl": "docs/pl/runbooks/db_recovery.md",
-      "en": "docs/en/runbooks/db_recovery.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/SCALE_TEST_300K.md",
-      "pl": "docs/pl/SCALE_TEST_300K.md",
-      "en": "docs/en/SCALE_TEST_300K.md"
-    },
-    {
-      "mode": "en_only",
-      "canonical": "docs/SIMULATOR_ARCHITECTURE.md",
-      "en": "docs/SIMULATOR_ARCHITECTURE.md",
-      "pl": "docs/pl/SIMULATOR_ARCHITECTURE.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/TROUBLESHOOTING.md",
-      "pl": "docs/pl/TROUBLESHOOTING.md",
-      "en": "docs/en/TROUBLESHOOTING.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/pl/UPDATES.md",
-      "pl": "docs/pl/UPDATES.md",
-      "en": "docs/en/UPDATES.md"
-    },
-    {
-      "mode": "n/a",
-      "canonical": "docs/admin/UI_AUDIT_2026-06-02.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/assets/live/README.md",
-      "pl": "docs/assets/live/README.md",
-      "en": "docs/en/assets/live/README.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/assets/README.md",
-      "pl": "docs/assets/README.md",
-      "en": "docs/en/assets/README.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/compliance/COMPLIANCE_INDEX.md",
-      "pl": "docs/compliance/COMPLIANCE_INDEX.md",
-      "en": "docs/en/compliance/COMPLIANCE_INDEX.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/compliance/RCP.md",
-      "pl": "docs/compliance/RCP.md",
-      "en": "docs/en/compliance/RCP.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/compliance/README.md",
-      "pl": "docs/compliance/README.md",
-      "en": "docs/en/compliance/README.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/CONFIGURATION.md",
-      "pl": "docs/pl/CONFIGURATION.md",
-      "en": "docs/en/CONFIGURATION.md",
-      "legacy": "docs/CONFIGURATION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/CONSTITUTION.md",
-      "pl": "docs/pl/CONSTITUTION.md",
-      "en": "docs/en/CONSTITUTION.md",
-      "legacy": "docs/CONSTITUTION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/DEPLOYMENT.md",
-      "pl": "docs/pl/DEPLOYMENT.md",
-      "en": "docs/en/DEPLOYMENT.md",
-      "legacy": "docs/DEPLOYMENT.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/DEVELOPMENT.md",
-      "pl": "docs/pl/DEVELOPMENT.md",
-      "en": "docs/en/DEVELOPMENT.md",
-      "legacy": "docs/DEVELOPMENT.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/DISK_GUARD.md",
-      "pl": "docs/pl/DISK_GUARD.md",
-      "en": "docs/en/DISK_GUARD.md",
-      "legacy": "docs/DISK_GUARD.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/DOCUMENTATION_STANDARDS.md",
-      "pl": "docs/pl/DOCUMENTATION_STANDARDS.md",
-      "en": "docs/en/DOCUMENTATION_STANDARDS.md",
-      "legacy": "docs/DOCUMENTATION_STANDARDS.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/EVENT_BURST_50K.md",
-      "pl": "docs/pl/EVENT_BURST_50K.md",
-      "en": "docs/en/EVENT_BURST_50K.md",
-      "legacy": "docs/EVENT_BURST_50K.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/GETTING_STARTED.md",
-      "pl": "docs/pl/GETTING_STARTED.md",
-      "en": "docs/en/GETTING_STARTED.md",
-      "legacy": "docs/GETTING_STARTED.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/INSTALLATION.md",
-      "pl": "docs/pl/INSTALLATION.md",
-      "en": "docs/en/INSTALLATION.md",
-      "legacy": "docs/INSTALLATION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/MAINTENANCE.md",
-      "pl": "docs/pl/MAINTENANCE.md",
-      "en": "docs/en/MAINTENANCE.md",
-      "legacy": "docs/MAINTENANCE.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/MIGRATION.md",
-      "pl": "docs/pl/MIGRATION.md",
-      "en": "docs/en/MIGRATION.md",
-      "legacy": "docs/MIGRATION.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/onboarding/GUIDE.md",
-      "pl": "docs/onboarding/GUIDE.md",
-      "en": "docs/en/onboarding/GUIDE.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/BROUTER.md",
-      "pl": "docs/pl/operations/BROUTER.md",
-      "en": "docs/en/operations/BROUTER.md",
-      "legacy": "docs/operations/BROUTER.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/DATADOG_SIMULATOR.md",
-      "pl": "docs/pl/operations/DATADOG_SIMULATOR.md",
-      "en": "docs/en/operations/DATADOG_SIMULATOR.md",
-      "legacy": "docs/operations/DATADOG_SIMULATOR.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/HANDOFF_AUTOMATION.md",
-      "pl": "docs/pl/operations/HANDOFF_AUTOMATION.md",
-      "en": "docs/en/operations/HANDOFF_AUTOMATION.md",
-      "legacy": "docs/operations/HANDOFF_AUTOMATION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/KUBERNETES.md",
-      "pl": "docs/pl/operations/KUBERNETES.md",
-      "en": "docs/en/operations/KUBERNETES.md",
-      "legacy": "docs/operations/KUBERNETES.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/LIVE_MAP.md",
-      "pl": "docs/pl/operations/LIVE_MAP.md",
-      "en": "docs/en/operations/LIVE_MAP.md",
-      "legacy": "docs/operations/LIVE_MAP.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/MOBILE.md",
-      "pl": "docs/pl/operations/MOBILE.md",
-      "en": "docs/en/operations/MOBILE.md",
-      "legacy": "docs/operations/MOBILE.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/OPERATIONS_INDEX.md",
-      "pl": "docs/pl/operations/OPERATIONS_INDEX.md",
-      "en": "docs/en/operations/OPERATIONS_INDEX.md",
-      "legacy": "docs/operations/OPERATIONS_INDEX.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/OSRM.md",
-      "pl": "docs/pl/operations/OSRM.md",
-      "en": "docs/en/operations/OSRM.md",
-      "legacy": "docs/operations/OSRM.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
-      "pl": "docs/pl/operations/PRE_RELEASE_VERIFICATION.md",
-      "en": "docs/en/operations/PRE_RELEASE_VERIFICATION.md",
-      "legacy": "docs/operations/PRE_RELEASE_VERIFICATION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
-      "pl": "docs/pl/operations/RAILWAY_CELERY_MEMORY.md",
-      "en": "docs/en/operations/RAILWAY_CELERY_MEMORY.md",
-      "legacy": "docs/operations/RAILWAY_CELERY_MEMORY.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/RAILWAY_KUBERNETES.md",
-      "pl": "docs/pl/operations/RAILWAY_KUBERNETES.md",
-      "en": "docs/en/operations/RAILWAY_KUBERNETES.md",
-      "legacy": "docs/operations/RAILWAY_KUBERNETES.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
-      "pl": "docs/pl/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
-      "en": "docs/en/operations/RAILWAY_PRODUCTION_CHECKLIST.md",
-      "legacy": "docs/operations/RAILWAY_PRODUCTION_CHECKLIST.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/README.md",
-      "pl": "docs/pl/operations/README.md",
-      "en": "docs/en/operations/README.md",
-      "legacy": "docs/operations/README.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/SIMULATOR.md",
-      "pl": "docs/pl/operations/SIMULATOR.md",
-      "en": "docs/en/operations/SIMULATOR.md",
-      "legacy": "docs/operations/SIMULATOR.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
-      "pl": "docs/pl/operations/TELEMETRY_INGEST_QUEUE.md",
-      "en": "docs/en/operations/TELEMETRY_INGEST_QUEUE.md",
-      "legacy": "docs/operations/TELEMETRY_INGEST_QUEUE.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
-      "pl": "docs/pl/operations/TELEMETRY_LOAD_TEST.md",
-      "en": "docs/en/operations/TELEMETRY_LOAD_TEST.md",
-      "legacy": "docs/operations/TELEMETRY_LOAD_TEST.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/PERFORMANCE_TESTING.md",
-      "pl": "docs/pl/operations/PERFORMANCE_TESTING.md",
-      "en": "docs/en/operations/PERFORMANCE_TESTING.md",
-      "legacy": "docs/operations/PERFORMANCE_TESTING.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/operations/TELEMETRY_SHARDING.md",
-      "pl": "docs/pl/operations/TELEMETRY_SHARDING.md",
-      "en": "docs/en/operations/TELEMETRY_SHARDING.md",
-      "legacy": "docs/operations/TELEMETRY_SHARDING.md"
-    },
-    {
-      "mode": "paired",
-      "canonical": "docs/product/FAQ.md",
-      "pl": "docs/product/FAQ.md",
-      "en": "docs/en/product/FAQ.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
-      "pl": "docs/pl/RAILWAY_CELERY_SIMULATION.md",
-      "en": "docs/en/RAILWAY_CELERY_SIMULATION.md",
-      "legacy": "docs/RAILWAY_CELERY_SIMULATION.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/RBAC.md",
-      "pl": "docs/pl/RBAC.md",
-      "en": "docs/en/RBAC.md",
-      "legacy": "docs/RBAC.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/README.md",
-      "pl": "docs/pl/README.md",
-      "en": "docs/en/README.md",
-      "legacy": "docs/README.md"
-    },
-    {
       "mode": "n/a",
       "canonical": "docs/reports/AUDIT_REPORT_2026-05-16.md"
     },
@@ -733,43 +768,14 @@
       "en": "docs/en/reports/README.md"
     },
     {
+      "mode": "en_only",
+      "canonical": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
+      "en": "docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md",
+      "pl": "docs/pl/reports/RELIABILITY_AUDIT_PLAYBOOK.md"
+    },
+    {
       "mode": "n/a",
       "canonical": "docs/reports/STRATEGIC_AUDIT_REPORT_2026-05-16.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/runbooks/celery-backlog.md",
-      "pl": "docs/pl/runbooks/celery-backlog.md",
-      "en": "docs/en/runbooks/celery-backlog.md",
-      "legacy": "docs/runbooks/celery-backlog.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/runbooks/db_recovery.md",
-      "pl": "docs/pl/runbooks/db_recovery.md",
-      "en": "docs/en/runbooks/db_recovery.md",
-      "legacy": "docs/runbooks/db_recovery.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/SCALE_TEST_300K.md",
-      "pl": "docs/pl/SCALE_TEST_300K.md",
-      "en": "docs/en/SCALE_TEST_300K.md",
-      "legacy": "docs/SCALE_TEST_300K.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/TROUBLESHOOTING.md",
-      "pl": "docs/pl/TROUBLESHOOTING.md",
-      "en": "docs/en/TROUBLESHOOTING.md",
-      "legacy": "docs/TROUBLESHOOTING.md"
-    },
-    {
-      "mode": "legacy_redirect",
-      "canonical": "docs/pl/UPDATES.md",
-      "pl": "docs/pl/UPDATES.md",
-      "en": "docs/en/UPDATES.md",
-      "legacy": "docs/UPDATES.md"
     }
   ]
 }
