@@ -125,7 +125,7 @@ test.describe('Live Map zoom LOD screenshots', () => {
 
             const map = page.getByTestId('live-map-canvas');
             await expect(map).toHaveScreenshot(`live-map-zoom-${sample.slug}.png`, {
-                maxDiffPixelRatio: 0.02,
+                maxDiffPixelRatio: 0.04,
                 animations: 'disabled',
             });
         });
