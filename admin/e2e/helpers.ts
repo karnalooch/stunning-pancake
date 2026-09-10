@@ -163,7 +163,7 @@ export async function login(page: Page) {
   await disablePlaywrightE2eAuth(page);
   await page.goto('/#/login');
   await page.getByLabel('Username or Email').fill('admin');
-  await page.getByLabel('Password').fill('password');
+  await page.getByRole('textbox', { name: 'Password' }).fill('password');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByTestId('admin-sidebar')).toBeVisible({ timeout: 15000 });
 }
