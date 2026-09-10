@@ -527,6 +527,7 @@ jobs:
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: [changes, admin]
     if: |
       always() && needs.admin.result == 'success' && (

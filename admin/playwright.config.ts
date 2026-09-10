@@ -29,7 +29,9 @@ export default defineConfig({
   webServer: process.env.E2E_SKIP_WEB_SERVER
     ? undefined
     : {
-        command: 'npm run dev',
+        command: process.env.CI
+          ? 'pnpm exec vite preview --host 127.0.0.1 --port 3000 --strictPort'
+          : 'pnpm dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI && !process.env.E2E_FORCE_WEB_SERVER,
         timeout: 120_000,
