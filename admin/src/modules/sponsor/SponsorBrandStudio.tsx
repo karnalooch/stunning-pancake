@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Card, Text, TextInput, ColorInput, Button, Stack } from '@mantine/core';
+import { Box, Card, TextInput, ColorInput, Button, Stack } from '@mantine/core';
 import { PageHeader } from '../../core/components/PageHeader';
 import { notifications } from '@mantine/notifications';
 import { useI18n } from '../../i18n/useI18n';

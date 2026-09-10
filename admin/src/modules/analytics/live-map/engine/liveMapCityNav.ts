@@ -1,6 +1,5 @@
 import { cityBySlug } from './liveMapCities';
 import type { LiveMapFilters } from './liveMapFilters';
-import { filtersToApiParams } from './liveMapFilters';
 import { getViewportCache, viewportCacheKey } from './liveMapViewportCache';
 import { apiDetailForZoom } from './liveMapZoom';
 
@@ -45,4 +44,3 @@ export function cityFlyParams(
         instant,
     };
 }
-
