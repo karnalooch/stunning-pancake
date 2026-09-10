@@ -548,15 +548,12 @@ jobs:
       - name: Build admin for preview (VITE_E2E=1 — Live Map bridge)
         run: VITE_E2E=1 pnpm --filter admin build
 
-      - name: Start preview server and run E2E
+      - name: Run E2E with managed preview server
         run: |
           cd admin
-          pnpm exec vite preview --port 3000 &
-          sleep 3
           pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
-          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Live Map LOD + WebGL audit gate
         run: |
@@ -564,7 +561,6 @@ jobs:
           pnpm exec playwright test --project=live-map-zoom --reporter=github
         env:
           E2E_BASE_URL: http://localhost:3000
-          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
