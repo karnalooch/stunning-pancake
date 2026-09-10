@@ -290,7 +290,9 @@ class TestRoleApi:
         assert assignment.tenant_id == tenant.id
         assert assignment.tenant_scoped is True
 
-    def test_tenant_admin_cannot_assign_cross_tenant_user(self, tenant_admin, rbac_roles):
+    def test_tenant_admin_cannot_assign_cross_tenant_user(
+        self, tenant_admin, rbac_roles
+    ):
         from rest_framework.test import APIClient
 
         other_tenant = Tenant.objects.create(name="Other City", is_active=True)
