@@ -42,6 +42,15 @@ mock_gdal.Envelope = type("Envelope", (), {})
 mock_gdal.GDALRaster = type("GDALRaster", (), {})
 sys.modules["django.contrib.gis.gdal"] = mock_gdal
 
+mock_gdal_raster = ModuleType("django.contrib.gis.gdal.raster")
+mock_gdal_raster_const = ModuleType("django.contrib.gis.gdal.raster.const")
+mock_gdal_raster_const.VSI_FILESYSTEM_PREFIX = "/vsimem/"
+mock_gdal_raster_source = ModuleType("django.contrib.gis.gdal.raster.source")
+mock_gdal_raster_source.DisallowedRasterLookup = type("DisallowedRasterLookup", (Exception,), {})
+sys.modules["django.contrib.gis.gdal.raster"] = mock_gdal_raster
+sys.modules["django.contrib.gis.gdal.raster.const"] = mock_gdal_raster_const
+sys.modules["django.contrib.gis.gdal.raster.source"] = mock_gdal_raster_source
+
 # gdal submodules
 mock_gdal_error = ModuleType("django.contrib.gis.gdal.error")
 mock_gdal_error.GDALException = type("GDALException", (Exception,), {})
@@ -125,6 +134,7 @@ sys.modules["django.contrib.gis.geos"] = mock_geos
 
 mock_geos_prototypes = ModuleType("django.contrib.gis.geos.prototypes")
 mock_geos_prototypes.io = ModuleType("io")
+mock_geos_prototypes.io.MAX_GEOM_COLLECTIONS = 1000
 sys.modules["django.contrib.gis.geos.prototypes"] = mock_geos_prototypes
 sys.modules["django.contrib.gis.geos.prototypes.io"] = mock_geos_prototypes.io
 
@@ -164,7 +174,9 @@ sys.modules["sendgrid.helpers.mail"] = mock_sendgrid.helpers.mail
 # Monkey-patch GIS fields to work with SQLite (which has no PostGIS)
 # SQLite DatabaseOperations doesn't have geo_db_type, so we add it.
 # ---------------------------------------------------------------------------
-from django.db.backends.sqlite3.operations import DatabaseOperations as SQLiteOps
+from django.db.backends.sqlite3.base import DatabaseWrapper as SQLiteDatabaseWrapper
+
+SQLiteOps = SQLiteDatabaseWrapper.ops_class
 
 
 class _MockAdapter(str):
