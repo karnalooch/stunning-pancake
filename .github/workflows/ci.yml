@@ -446,6 +446,11 @@ jobs:
           pip install pip-licenses
           node scripts/compliance/generate-third-party-notices.mjs --check
 
+      - name: Reject embedded signing keys in tracked railway configs
+        run: |
+          python -m unittest test_check_config_secrets
+          python scripts/check_config_secrets.py
+
   # ──────────────────────────────────────────
   # Trivy: Container & Filesystem CVE Scan (Milestone 3)
   # Results appear in GitHub Security → Code Scanning tab
