@@ -3,7 +3,7 @@
 Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
 Aktualny `main` HEAD: `df2f5fe`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
 
-Każda transza = jeden mały PR (gałąź → 1 commit → review). Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
+Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
 ## Decyzje właściciela (potwierdzone)
 
@@ -40,6 +40,8 @@ Status `STATUS`:
 - `ACTIVE` — w toku (na gałęzi)
 - `DONE` — scalona do main
 - `BLOCKED` — wymaga właściciela lub środowiska
+
+`ACTIVE` oznacza transzę z otwartym PR. Status `DONE` można nadać dopiero po merge; aktualizacja następuje w pierwszej kolejnej zmianie planu po scaleniu.
 
 | ID | Transza | Priorytet | Status | Gałąź | Zależności | PR |
 |----|---------|-----------|--------|-------|------------|----|
@@ -178,7 +180,7 @@ Każda transza wstawiana jest w istniejący PR (jeżeli odpowiada) lub tworzy no
 ## Transza referencyjna – przykład dla T01 (signing key removal + ci guard)
 
 ### Scope
-- `backend/railway.json` – usunięcie `SECRET_KEY`, zachowanie struktury z placeholderem referencyjnym.
+- `backend/railway.json` – usunięcie pola `SECRET_KEY` w całości; pozostała struktura JSON (`variables` i pozostałe wpisy) pozostaje bez zmian.
 - `backend/celery-worker/railway.json`, `backend/celery-worker-simulation/railway.json`, `celery-worker-routing/railway.json`, `admin/railway.json`, `telemetry/railway.json` – audyt tych samych kluczy.
 - `scripts/check_config_secrets.py` (śledzony w `docs/operations/SIGNING_KEY_ROTATION.md`, ale nieobecny w `git ls-files`) – dodanie skryptu z testami.
 - `.github/workflows/ci.yml` – dodanie kroku skanowania w jobie `security`.
@@ -227,7 +229,7 @@ docs/TAKEOVER_CLEANUP_PLAN.md (sekcja „Transza referencyjna – T01") i nic wi
 Kroki:
 1. `git switch main && git pull --ff-only origin main && git status --short` – potwierdź czyste drzewo.
 2. Utwórz gałąź `security/remove-committed-signing-key` (faktyczna gałąź PR #47) z aktualnego main. Nie używaj `security/signing-key-removal`.
-3. W `backend/railway.json` usuń klucz `SECRET_KEY` (zachowaj strukturę JSON i referencję środowiskową); w pozostałych `*/railway.json` pozostaw audyt bez zmian.
+3. W `backend/railway.json` usuń pole `SECRET_KEY` w całości; pozostała struktura JSON (`variables` i inne wpisy) pozostaje bez zmian. W pozostałych `*/railway.json` wykonaj audyt bez zmian ich treści.
 4. Dodaj `scripts/check_config_secrets.py` z testami w `scripts/test_check_config_secrets.py`:
    - `SECRET_KEY` jest odrzucane dla placeholder/empty/null,
    - konfiguracja bez kluczy podpisujących jest akceptowana,
