@@ -46,6 +46,9 @@ jobs:
               - 'admin/**'
             packages:
               - 'packages/**'
+              - '.github/actions/pnpm-setup/**'
+              - '.npmrc'
+              - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
             scripts:
@@ -286,6 +289,9 @@ jobs:
 
       - name: Test load report helpers
         run: python -m pytest scripts/test_load_report.py -q
+
+      - name: Test CI mobile path routing
+        run: python -m unittest scripts/test_ci_mobile_path_filter.py
 
   repo-assets:
     name: Shared tokens
