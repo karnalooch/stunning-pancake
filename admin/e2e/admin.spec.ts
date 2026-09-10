@@ -19,6 +19,7 @@ test.describe('Authentication', () => {
 });
 
 test.describe('Admin shell navigation', () => {
+  test.skip(({ isMobile }) => isMobile, 'Desktop sidebar interactions are covered by Chromium.');
   test.beforeEach(async ({ page }) => {
     await mockBackend(page);
     await login(page);
