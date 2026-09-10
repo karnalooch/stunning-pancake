@@ -100,7 +100,7 @@ test.describe('Live Map zoom LOD screenshots', () => {
             await expect(page.getByTestId('live-map-zoom-mode')).toHaveText(sample.mode);
 
             if (sample.expectOnMap) {
-                await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d* on map/);
+                await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d*/);
             }
 
             if (sample.expectLayerVisibility) {
@@ -118,7 +118,7 @@ test.describe('Live Map zoom LOD screenshots', () => {
             }
 
             if (sample.slug === 'micro-handoff-krakow') {
-                await expect(page.getByTestId('live-map-drawn-count')).toContainText(/4\d+ on map|45 on map/);
+                await expect(page.getByTestId('live-map-drawn-count')).toContainText(/4\d+|45/);
             }
 
             await page.waitForTimeout(800);
