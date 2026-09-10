@@ -12,7 +12,7 @@ dj-database-url==3.1.2
 django-filter==24.3
 djangorestframework-gis==1.1.0
 stripe==11.5.0
-Pillow==12.2.0
+Pillow==12.3.0
 # Phase 2: Authentication
 djangorestframework-simplejwt>=5.3.1
 django-allauth==65.14.1
