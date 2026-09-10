@@ -42,6 +42,12 @@ mock_gdal.Envelope = type("Envelope", (), {})
 mock_gdal.GDALRaster = type("GDALRaster", (), {})
 sys.modules["django.contrib.gis.gdal"] = mock_gdal
 
+mock_gdal_raster = ModuleType("django.contrib.gis.gdal.raster")
+mock_gdal_raster_const = ModuleType("django.contrib.gis.gdal.raster.const")
+mock_gdal_raster_const.VSI_FILESYSTEM_PREFIX = "/vsimem/"
+sys.modules["django.contrib.gis.gdal.raster"] = mock_gdal_raster
+sys.modules["django.contrib.gis.gdal.raster.const"] = mock_gdal_raster_const
+
 # gdal submodules
 mock_gdal_error = ModuleType("django.contrib.gis.gdal.error")
 mock_gdal_error.GDALException = type("GDALException", (Exception,), {})
