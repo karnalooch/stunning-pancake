@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+# Explicit commands (workers, beat, maintenance) must not start the web server.
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 python manage.py migrate --no-input
 python manage.py create_admin
 
