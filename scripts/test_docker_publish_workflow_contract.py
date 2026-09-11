@@ -54,17 +54,11 @@ class CallableOnlyTests(unittest.TestCase):
         return "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
 
     def test_no_metadata_action_or_semver_inference(self):
-        # metadata-action and semver inference must not appear anywhere in the
-        # workflow (excluding comments). github.ref / github.sha must not be
-        # used in any step value (we only check steps + workflow_call, not
-        # free-form comments which legitimately mention those names).
         text = self._strip_comments(_text())
-        self.assertNotIn("docker/metadata-action", text)
+        # metadata-action is allowed (we use it for raw tags); semver inference is not.
         self.assertNotIn("type=semver", text)
 
         wf = _wf()
-        # Inputs description may mention `github.ref` in prose, but no step
-        # should actually reference `github.ref` or `github.sha`.
         for job in wf["jobs"].values():
             for step in job.get("steps", []):
                 step_text = str(step)
@@ -103,16 +97,42 @@ class BuildJobContractTests(unittest.TestCase):
     def _job(self, name: str) -> dict:
         return _wf()["jobs"][name]
 
+    def _build_push_steps(self, name: str) -> list[dict]:
+        return [
+            step
+            for step in self._job(name)["steps"]
+            if isinstance(step, dict)
+            and step.get("uses", "").startswith("docker/build-push-action")
+        ]
+
+    def _metadata_step(self, name: str) -> dict:
+        return next(
+            s
+            for s in self._job(name)["steps"]
+            if isinstance(s, dict) and s.get("uses", "").startswith("docker/metadata-action")
+        )
+
+    # ---- exactly one build-push-action call per image ------------------
+
+    def test_backend_single_build_push_action(self):
+        self.assertEqual(
+            len(self._build_push_steps("build-backend")),
+            1,
+            "build-backend must invoke docker/build-push-action exactly once",
+        )
+
+    def test_admin_single_build_push_action(self):
+        self.assertEqual(
+            len(self._build_push_steps("build-admin")),
+            1,
+            "build-admin must invoke docker/build-push-action exactly once",
+        )
+
     # ---- backend ----------------------------------------------------------
 
     def test_backend_context_preserved(self):
-        steps = self._job("build-backend")["steps"]
-        sha_step = next(
-            s
-            for s in steps
-            if s.get("uses", "").startswith("docker/build-push-action") and "if" not in s
-        )
-        self.assertEqual(sha_step["with"]["context"], "./backend")
+        step = self._build_push_steps("build-backend")[0]
+        self.assertEqual(step["with"]["context"], "./backend")
 
     def test_backend_checkout_uses_validated_sha(self):
         steps = self._job("build-backend")["steps"]
@@ -123,30 +143,52 @@ class BuildJobContractTests(unittest.TestCase):
         text = _text()
         self.assertIn("sha-${{ inputs.validated_sha }}", text)
 
-    def test_backend_push_always(self):
-        for step in self._job("build-backend")["steps"]:
-            if step.get("uses", "").startswith("docker/build-push-action"):
-                self.assertTrue(step["with"].get("push"))
+    def test_backend_metadata_declares_sha_tag(self):
+        meta = self._metadata_step("build-backend")
+        self.assertIn("sha-${{ inputs.validated_sha }}", meta["with"]["tags"])
+
+    def test_backend_metadata_declares_latest_tag_with_branch_guard(self):
+        meta = self._metadata_step("build-backend")
+        self.assertIn("latest", meta["with"]["tags"])
+        self.assertIn("publish_kind == 'branch'", meta["with"]["tags"])
+
+    def test_backend_metadata_declares_version_tag_with_tag_guard(self):
+        meta = self._metadata_step("build-backend")
+        self.assertIn("inputs.version", meta["with"]["tags"])
+        self.assertIn("publish_kind == 'tag'", meta["with"]["tags"])
+
+    def test_backend_metadata_declares_major_minor_tag_with_tag_guard(self):
+        meta = self._metadata_step("build-backend")
+        self.assertIn("inputs.major_minor", meta["with"]["tags"])
+        self.assertIn("publish_kind == 'tag'", meta["with"]["tags"])
+
+    def test_backend_metadata_uses_only_raw_type(self):
+        meta = self._metadata_step("build-backend")
+        tags = meta["with"]["tags"]
+        self.assertNotIn("type=semver", tags)
+        # Every tag line should use type=raw
+        for line in tags.splitlines():
+            if line.strip():
+                self.assertIn("type=raw", line, f"tag line must be raw: {line!r}")
+
+    def test_backend_build_step_has_cache_to(self):
+        step = self._build_push_steps("build-backend")[0]
+        self.assertEqual(step["with"]["cache-from"], "type=gha")
+        self.assertEqual(step["with"]["cache-to"], "type=gha,mode=max")
+
+    def test_backend_build_step_has_labels(self):
+        step = self._build_push_steps("build-backend")[0]
+        self.assertIn("labels", step["with"])
 
     # ---- admin ------------------------------------------------------------
 
     def test_admin_context_is_root(self):
-        steps = self._job("build-admin")["steps"]
-        sha_step = next(
-            s
-            for s in steps
-            if s.get("uses", "").startswith("docker/build-push-action") and "if" not in s
-        )
-        self.assertEqual(sha_step["with"]["context"], ".")
+        step = self._build_push_steps("build-admin")[0]
+        self.assertEqual(step["with"]["context"], ".")
 
     def test_admin_uses_admin_dockerfile(self):
-        steps = self._job("build-admin")["steps"]
-        sha_step = next(
-            s
-            for s in steps
-            if s.get("uses", "").startswith("docker/build-push-action") and "if" not in s
-        )
-        self.assertEqual(sha_step["with"]["file"], "admin/Dockerfile")
+        step = self._build_push_steps("build-admin")[0]
+        self.assertEqual(step["with"]["file"], "admin/Dockerfile")
 
     def test_admin_checkout_uses_validated_sha(self):
         steps = self._job("build-admin")["steps"]
@@ -157,54 +199,57 @@ class BuildJobContractTests(unittest.TestCase):
         text = _text()
         self.assertIn("sha-${{ inputs.validated_sha }}", text)
 
-    def test_admin_push_always(self):
-        for step in self._job("build-admin")["steps"]:
-            if step.get("uses", "").startswith("docker/build-push-action"):
-                self.assertTrue(step["with"].get("push"))
+    def test_admin_metadata_declares_sha_tag(self):
+        meta = self._metadata_step("build-admin")
+        self.assertIn("sha-${{ inputs.validated_sha }}", meta["with"]["tags"])
+
+    def test_admin_metadata_declares_latest_tag_with_branch_guard(self):
+        meta = self._metadata_step("build-admin")
+        self.assertIn("latest", meta["with"]["tags"])
+        self.assertIn("publish_kind == 'branch'", meta["with"]["tags"])
+
+    def test_admin_metadata_declares_version_tag_with_tag_guard(self):
+        meta = self._metadata_step("build-admin")
+        self.assertIn("inputs.version", meta["with"]["tags"])
+        self.assertIn("publish_kind == 'tag'", meta["with"]["tags"])
+
+    def test_admin_metadata_does_not_include_major_minor(self):
+        meta = self._metadata_step("build-admin")
+        self.assertNotIn("inputs.major_minor", meta["with"]["tags"])
+
+    def test_admin_build_step_has_cache_to(self):
+        step = self._build_push_steps("build-admin")[0]
+        self.assertEqual(step["with"]["cache-from"], "type=gha")
+        self.assertEqual(step["with"]["cache-to"], "type=gha,mode=max")
+
+    def test_admin_build_step_has_labels(self):
+        step = self._build_push_steps("build-admin")[0]
+        self.assertIn("labels", step["with"])
 
 
-class TagKindContractTests(unittest.TestCase):
-    """Tags must be branched by ``publish_kind`` (branch vs tag)."""
+class WorkflowEnvContractTests(unittest.TestCase):
+    """Workflow-level env must not declare same-level self-references."""
 
-    def _steps_by_uses(self, job_name: str):
-        return _wf()["jobs"][job_name]["steps"]
+    def test_no_sha_tag_env_keys(self):
+        env = _wf().get("env", {})
+        for key in env:
+            self.assertNotIn(
+                "SHA_TAG",
+                key,
+                f"env key {key!r} is a same-level SHA-tag fragment; inline at consumption",
+            )
 
-    def _latest_step(self, job_name: str):
-        # step whose name contains "latest"
-        for step in self._steps_by_uses(job_name):
-            if "latest" in step.get("name", ""):
-                return step
-        self.fail(f"no latest tag step found in {job_name}")
-
-    def _version_step(self, job_name: str):
-        # step that pushes ${{ inputs.version }}
-        for step in self._steps_by_uses(job_name):
-            if "inputs.version" in (
-                step.get("name", "") + str(step.get("with", {}).get("tags", ""))
-            ):
-                return step
-        self.fail(f"no version tag step found in {job_name}")
-
-    def test_backend_latest_step_guarded_by_branch(self):
-        step = self._latest_step("build-backend")
-        self.assertEqual(step.get("if"), "inputs.publish_kind == 'branch'")
-
-    def test_backend_version_step_guarded_by_tag(self):
-        step = self._version_step("build-backend")
-        self.assertEqual(step.get("if"), "inputs.publish_kind == 'tag'")
-
-    def test_admin_latest_step_guarded_by_branch(self):
-        step = self._latest_step("build-admin")
-        self.assertEqual(step.get("if"), "inputs.publish_kind == 'branch'")
-
-    def test_admin_version_step_guarded_by_tag(self):
-        step = self._version_step("build-admin")
-        self.assertEqual(step.get("if"), "inputs.publish_kind == 'tag'")
-
-    def test_no_unconditional_latest(self):
-        text = _text()
-        self.assertIn("inputs.publish_kind == 'branch'", text)
-        self.assertIn("inputs.publish_kind == 'tag'", text)
+    def test_no_same_level_env_self_reference(self):
+        """No env key value should reference another env key declared at the
+        same workflow-level env mapping. Inline expansion at the consumption
+        site is the only allowed pattern."""
+        env = _wf().get("env", {})
+        for key, value in env.items():
+            self.assertNotIn(
+                "env.",
+                str(value),
+                f"env key {key!r} depends on another env key: {value!r}",
+            )
 
 
 class ScanContractTests(unittest.TestCase):
@@ -215,14 +260,13 @@ class ScanContractTests(unittest.TestCase):
         self.assertEqual(set(self._job()["needs"]), {"build-backend", "build-admin"})
 
     def test_scan_uses_immutable_sha_tags(self):
-        # Scan steps reference env.BACKEND_SHA_TAG / env.ADMIN_SHA_TAG. Those
-        # env vars are defined at the workflow level and include the literal
-        # substring `sha-${{ inputs.validated_sha }}`. This proves the scan
-        # always targets an immutable SHA-tagged image and never :latest.
-        text = _text()
-        self.assertIn("env.BACKEND_SHA_TAG", text)
-        self.assertIn("env.ADMIN_SHA_TAG", text)
-        self.assertIn("sha-${{ inputs.validated_sha }}", text)
+        for step in self._job()["steps"]:
+            ref = step.get("with", {}).get("image-ref", "")
+            if ref:
+                self.assertIn(
+                    "inputs.validated_sha", ref, f"scan must reference validated_sha, got {ref}"
+                )
+                self.assertNotIn(":latest", ref)
 
     def test_scan_never_scans_latest(self):
         for step in self._job()["steps"]:
@@ -257,16 +301,14 @@ class PRTriggerSafetyTests(unittest.TestCase):
 
     def test_ci_workflow_caller_passes_validated_outputs(self):
         pub = _ci()["jobs"]["publish-containers"]
-        # The job calls the reusable workflow as a `uses:` step
-        call_steps = [
-            s for s in pub["steps"] if s.get("uses") == "./.github/workflows/docker-publish.yml"
-        ]
+        # The caller is a job-level reusable-workflow invocation: `uses` lives
+        # on the job, and inputs live under `with`.
         self.assertEqual(
-            len(call_steps), 1, "publish-containers must call the reusable workflow exactly once"
+            pub.get("uses"),
+            "./.github/workflows/docker-publish.yml",
         )
-        call = call_steps[0]
-        self.assertIn("with", call, "caller must use `with:` to pass inputs")
-        with_inputs = call["with"]
+        self.assertIn("with", pub)
+        with_inputs = pub["with"]
         for input_name in (
             "validated_sha",
             "validated_ref",

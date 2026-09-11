@@ -418,14 +418,45 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 - `python -m ruff check scripts/test_ci_workflow_contract.py scripts/test_docker_publish_workflow_contract.py scripts/test_root_dockerignore_vs_dockerfiles.py --config pyproject.toml`
 - `python -m ruff format --check scripts/test_ci_workflow_contract.py scripts/test_docker_publish_workflow_contract.py scripts/test_root_dockerignore_vs_dockerfiles.py --config pyproject.toml`
 - `git diff --check`
-- Lokalne `docker build -f admin/Dockerfile .` i `docker build ./backend` bez `push` (jeśli środowisko pozwala; w przeciwnym razie `BLOCKED — ENVIRONMENT REQUIRED`).
+- Lokalne `docker build -f admin/Dockerfile .` i `docker build ./backend` bez `push` (jeśli środowisko pozwala; w przeciwnym razie `BLOCKED — ENVIRONMENT REQUIRED`). Walidacja Admin kontekstu w praktyce jest zapewniana przez blokujący krok `Validate Admin Docker build (no push, blocks PR on context repair)` w istniejącym jobie `admin` (zob. sekcja *PR-safe Admin Docker build validation* poniżej).
 
 ### Risks
 
 - Gałąź zawiera nowy job `publish-containers`; jeśli ktoś ustawi `permissions: write-all` na workflow, pierwszy publish mógłby ominąć gate, ale `aggregate` jest w `needs`, więc dopóki gate nie przejdzie, `publish-containers` nie startuje.
 - `:latest` jest nadal pushowany, ale wyłącznie po `aggregate == success` i wyłącznie dla gałęzi (`publish_kind == 'branch'`). Tagi release dostają `version` + `major_minor`, nigdy `:latest`.
 - Konwersja `docker-publish.yml` na reusable workflow oznacza, że istniejące PR-y uruchamiające ten plik bezpośrednio (jeśli istnieją) zakończyłyby się bezczynnie — żaden taki przypadek nie został zidentyfikowany.
-- `docker/build-push-action` w krokach tagujących `latest`/`version` buduje obraz od nowa zamiast `docker tag`. To świadoma decyzja dla prostoty — warstwa cache GHA utrzymuje czas niski; alternatywą byłoby `docker/build-push-action@v6` z `push: true` i wieloma tagami (ale wtedy `:latest` i `sha-...` musiałyby być razem, co komplikuje warunkowanie). Rozwiązanie przyjęte spełnia kontrakt (pushowane są dokładnie tagi SHA + odpowiedni tag warunkowy).
+- Caller `publish-containers` w `ci.yml` jest job-level reusable call (`uses:` + `with:` bezpośrednio na joście). Brak `runs-on` i `steps` w callerze — to wymóg składni GitHub Actions dla reusable workflows.
+- Każdy obraz (backend i admin) budowany jest dokładnie raz przez `docker/build-push-action@v6`. Lista tagów (pełny SHA + warunkowy `:latest` / `version` / `major_minor`) obliczana jest raz przez `docker/metadata-action@v6` z `type=raw` (bez `type=semver`, bez inferencji z `github.ref`). Brak wielokrotnych buildów dla różnych tagów.
+
+### Single-build, multi-tag design
+
+Reusable workflow `docker-publish.yml` buduje każdy obraz **dokładnie raz**. Kroki:
+
+1. `docker/metadata-action@v6` z listą `type=raw` (bez `type=semver`):
+   - Backend: `sha-<full SHA>` zawsze, `latest` gdy `publish_kind == 'branch'`, `version` i `major_minor` gdy `publish_kind == 'tag'`.
+   - Admin: `sha-<full SHA>` zawsze, `latest` gdy `publish_kind == 'branch'`, `version` gdy `publish_kind == 'tag'` (admin nie otrzymuje tagu `major_minor`).
+2. `docker/build-push-action@v6` (jedno wywołanie per obraz) konsumuje `steps.meta-X.outputs.tags` i pakuje wszystkie tagi w jednym pushu (`push: true`, `cache-from: type=gha`, `cache-to: type=gha,mode=max`, `labels`).
+
+### PR-safe Admin Docker build validation
+
+Ponieważ lokalne środowisko nie ma Docker CLI (raportowane wcześniej jako `BLOCKED — ENVIRONMENT REQUIRED`), walidacja naprawy kontekstu monorepo dla `admin/Dockerfile` jest realizowana w **istniejącym** jobie `admin` w `ci.yml` jako krok blokujący:
+
+```yaml
+- name: Validate Admin Docker build (no push, blocks PR on context repair)
+  run: |
+    docker build \
+      --file admin/Dockerfile \
+      --tag 4velo-admin-ci:${{ github.sha }} \
+      .
+  shell: bash
+```
+
+Wymagania:
+
+- uruchamiany dla PR gdy `admin`, `packages` lub `workflow` się zmieniły (istniejący `if: needs.changes.outputs.*` joba `admin`);
+- brak `docker login`, brak `push` — krok tylko waliduje build;
+- failure → `admin` job FAIL → `Aggregate CI gate` FAIL → branch protection blokuje merge;
+- brak nowego joba, brak zmiany `aggregate.needs`.
 
 ### Dependencies
 

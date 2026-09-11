@@ -12,11 +12,16 @@ These tests are written TDD-first and intentionally fail until the
 * a ``publish-containers`` job depends on ``aggregate`` and ``prepare-publish``,
   is guarded by the ``allowed == 'true'`` output and uses the right caller
   permissions (including ``security-events: write``);
-* the ``publish-containers`` job uses the prepared outputs as inputs and does
-  not recompute them;
-* ``aggregate`` does not depend on ``publish-containers`` (no cycle).
+* the ``publish-containers`` job is a job-level reusable-workflow call:
+  ``uses`` is set directly on the job, ``runs-on`` is absent, ``steps`` is
+  absent, and ``with`` lives directly on the job; all five inputs reference
+  ``needs.prepare-publish.outputs.*``;
+* ``aggregate`` does not depend on ``publish-containers`` (no cycle);
+* the existing ``admin`` CI job runs a blocking PR-safe Admin Docker build
+  validation step (context = repo root, file = admin/Dockerfile, no push,
+  no GHCR login).
 
-This module only inspects workflow text. It does not execute GitHub Actions.
+This module parses the workflow as YAML and inspects the parsed structure.
 """
 
 from __future__ import annotations
@@ -55,7 +60,6 @@ class CITriggerTests(unittest.TestCase):
     def test_tag_trigger_present(self):
         on = _on(_ci())
         push = on.get("push", {})
-        # Either inline list or block-list under push.tags
         self.assertEqual(
             push.get("tags"),
             ["v*.*.*"],
@@ -77,7 +81,6 @@ class PreparePublishJobTests(unittest.TestCase):
 
     def test_prepare_publish_has_no_checkout(self):
         text = _ci_text()
-        # Only check within the prepare-publish block
         start = text.index("prepare-publish:")
         end = text.index("publish-containers:", start)
         block = text[start:end]
@@ -118,8 +121,6 @@ class PreparePublishJobTests(unittest.TestCase):
         start = block.index("prepare-publish:")
         end = block.index("publish-containers:", start)
         body = block[start:end]
-        # The strict semver tag pattern must be enforced by an anchored regex
-        # matching `^refs/tags/v([0-9]+)\.([0-9]+)\.([0-9]+)$`.
         self.assertRegex(
             body,
             r"\^refs/tags/v\(\[0-9\]\+\)\\\.\(\[0-9\]\+\)\\\.\(\[0-9\]\+\)\$",
@@ -142,11 +143,77 @@ class PreparePublishJobTests(unittest.TestCase):
 
 
 class PublishContainersJobTests(unittest.TestCase):
-    def _job(self):
+    """publish-containers must be a job-level reusable-workflow call."""
+
+    def _job(self) -> dict:
         return _ci()["jobs"]["publish-containers"]
 
     def test_publish_containers_job_exists(self):
         self.assertIn("publish-containers", _ci()["jobs"])
+
+    def test_publish_containers_uses_reusable_workflow_at_job_level(self):
+        job = self._job()
+        self.assertEqual(
+            job.get("uses"),
+            "./.github/workflows/docker-publish.yml",
+            "publish-containers must invoke the reusable workflow at job level",
+        )
+
+    def test_publish_containers_has_no_runs_on(self):
+        job = self._job()
+        self.assertNotIn(
+            "runs-on",
+            job,
+            "publish-containers (caller of a reusable workflow) must not declare runs-on",
+        )
+
+    def test_publish_containers_has_no_steps(self):
+        job = self._job()
+        self.assertNotIn(
+            "steps",
+            job,
+            "publish-containers (caller of a reusable workflow) must not declare steps",
+        )
+
+    def test_publish_containers_with_is_a_job_level_dict(self):
+        job = self._job()
+        self.assertIn("with", job, "publish-containers must declare job-level `with:`")
+        self.assertIsInstance(job["with"], dict)
+
+    def test_publish_containers_passes_all_five_inputs(self):
+        job = self._job()
+        with_inputs = job["with"]
+        for name in (
+            "validated_sha",
+            "validated_ref",
+            "publish_kind",
+            "version",
+            "major_minor",
+        ):
+            with self.subTest(input=name):
+                self.assertIn(
+                    name,
+                    with_inputs,
+                    f"publish-containers must pass {name!r} to docker-publish.yml",
+                )
+
+    def test_publish_containers_inputs_reference_prepare_publish_outputs(self):
+        job = self._job()
+        with_inputs = job["with"]
+        for name, value in with_inputs.items():
+            with self.subTest(input=name):
+                self.assertIn(
+                    "needs.prepare-publish.outputs.",
+                    value,
+                    f"{name!r} must reference needs.prepare-publish.outputs.*, got {value!r}",
+                )
+
+    def test_publish_containers_no_github_sha_or_github_ref(self):
+        job = self._job()
+        # The caller's `with` block must not recompute github.sha/github.ref
+        with_text = str(job.get("with", {}))
+        self.assertNotIn("github.sha", with_text)
+        self.assertNotIn("github.ref", with_text)
 
     def test_publish_containers_needs_aggregate_and_prepare_publish(self):
         job = self._job()
@@ -163,45 +230,11 @@ class PublishContainersJobTests(unittest.TestCase):
         perms = job.get("permissions", {})
         for required in ("contents: read", "packages: write", "security-events: write"):
             with self.subTest(perm=required):
-                # value can be string OR dict; both forms acceptable
                 self.assertIn(
                     required.split(":")[0],
                     perms,
                     f"publish-containers caller permissions must include {required!r}",
                 )
-
-    def test_publish_containers_uses_reusable_workflow(self):
-        block = _ci_text()
-        start = block.index("publish-containers:")
-        body = block[start:]
-        self.assertIn(
-            "./.github/workflows/docker-publish.yml",
-            body,
-            "publish-containers must call ./docker-publish.yml",
-        )
-
-    def test_publish_containers_passes_prepared_outputs(self):
-        block = _ci_text()
-        start = block.index("publish-containers:")
-        body = block[start:]
-        # Each passed value must come from prepare-publish.outputs.*
-        for name in (
-            "validated_sha",
-            "validated_ref",
-            "publish_kind",
-            "version",
-            "major_minor",
-        ):
-            with self.subTest(input=name):
-                self.assertIn(
-                    f"needs.prepare-publish.outputs.{name}",
-                    body,
-                    f"publish-containers must pass needs.prepare-publish.outputs.{name}",
-                )
-        # must not recompute github.sha/github.ref in the publish-containers block
-        # (allowed github.sha would bypass the gate)
-        self.assertNotIn("github.sha", body)
-        self.assertNotIn("github.ref", body)
 
     def test_aggregate_does_not_depend_on_publish_containers(self):
         aggregate = _ci()["jobs"]["aggregate"]
@@ -212,7 +245,6 @@ class PublishContainersJobTests(unittest.TestCase):
         )
 
     def test_no_job_depends_on_publish_containers(self):
-        """publish-containers must be a sink node (no downstream job)."""
         for name, job in _ci()["jobs"].items():
             if name == "publish-containers":
                 continue
@@ -254,7 +286,6 @@ class ReusableWorkflowContractTests(unittest.TestCase):
                     "string",
                     f"input {input_name} must be type: string",
                 )
-                # no semver type allowed
                 self.assertNotIn("semver", inputs[input_name])
 
     def test_required_inputs(self):
@@ -289,81 +320,203 @@ class DockerPublishStepContractTests(unittest.TestCase):
     def _job(self, name: str) -> dict:
         return _docker_publish()["jobs"][name]
 
-    def test_backend_context_preserved(self):
-        steps = self._job("build-backend")["steps"]
-        build_step = next(
-            s for s in steps if s.get("uses", "").startswith("docker/build-push-action")
+    def _build_steps(self, name: str) -> list[dict]:
+        return [
+            step
+            for step in self._job(name)["steps"]
+            if isinstance(step, dict)
+            and step.get("uses", "").startswith("docker/build-push-action")
+        ]
+
+    def test_backend_single_build_push_action(self):
+        """Exactly one build-push-action invocation for the backend image."""
+        self.assertEqual(
+            len(self._build_steps("build-backend")),
+            1,
+            "build-backend must invoke docker/build-push-action exactly once",
         )
-        # The first build step is the SHA-tag build; context must remain ./backend
-        self.assertEqual(build_step["with"]["context"], "./backend")
 
-    def test_backend_checkout_uses_validated_sha(self):
-        steps = self._job("build-backend")["steps"]
-        checkout = next(s for s in steps if s.get("uses", "").startswith("actions/checkout"))
-        self.assertEqual(checkout["with"]["ref"], "${{ inputs.validated_sha }}")
+    def test_admin_single_build_push_action(self):
+        """Exactly one build-push-action invocation for the admin image."""
+        self.assertEqual(
+            len(self._build_steps("build-admin")),
+            1,
+            "build-admin must invoke docker/build-push-action exactly once",
+        )
 
-    def test_backend_uses_full_sha_tag(self):
-        block = _docker_publish_text()
-        self.assertIn("sha-${{ inputs.validated_sha }}", block)
+    def test_backend_build_step_uses_full_sha_tag(self):
+        # The build-push-action receives `tags` from the metadata step. The
+        # contract is: metadata declares `sha-${{ inputs.validated_sha }}` as
+        # one of its raw tags, so the final push always carries the full SHA.
+        meta = next(
+            s
+            for s in self._job("build-backend")["steps"]
+            if isinstance(s, dict) and s.get("uses", "").startswith("docker/metadata-action")
+        )
+        self.assertIn("sha-${{ inputs.validated_sha }}", meta["with"]["tags"])
+        # build step's `tags:` must reference the metadata step output (not a literal)
+        build_step = self._build_steps("build-backend")[0]
+        self.assertIn("steps.meta-backend.outputs.tags", build_step["with"]["tags"])
+
+    def test_admin_build_step_uses_full_sha_tag(self):
+        meta = next(
+            s
+            for s in self._job("build-admin")["steps"]
+            if isinstance(s, dict) and s.get("uses", "").startswith("docker/metadata-action")
+        )
+        self.assertIn("sha-${{ inputs.validated_sha }}", meta["with"]["tags"])
+        build_step = self._build_steps("build-admin")[0]
+        self.assertIn("steps.meta-admin.outputs.tags", build_step["with"]["tags"])
+
+    def test_backend_context_preserved(self):
+        step = self._build_steps("build-backend")[0]
+        self.assertEqual(step["with"]["context"], "./backend")
 
     def test_admin_context_root_with_dockerfile(self):
-        steps = self._job("build-admin")["steps"]
-        # Filter to the SHA-tag build (no `if:`) so we look at the right one
-        sha_step = next(
-            s
-            for s in steps
-            if s.get("uses", "").startswith("docker/build-push-action") and "if" not in s
-        )
-        self.assertEqual(sha_step["with"]["context"], ".")
-        self.assertEqual(sha_step["with"]["file"], "admin/Dockerfile")
+        step = self._build_steps("build-admin")[0]
+        self.assertEqual(step["with"]["context"], ".")
+        self.assertEqual(step["with"]["file"], "admin/Dockerfile")
 
-    def test_admin_checkout_uses_validated_sha(self):
-        steps = self._job("build-admin")["steps"]
-        checkout = next(s for s in steps if s.get("uses", "").startswith("actions/checkout"))
-        self.assertEqual(checkout["with"]["ref"], "${{ inputs.validated_sha }}")
+    def test_backend_build_step_has_cache_to(self):
+        step = self._build_steps("build-backend")[0]
+        self.assertEqual(step["with"]["cache-from"], "type=gha")
+        self.assertEqual(step["with"]["cache-to"], "type=gha,mode=max")
 
-    def test_admin_uses_full_sha_tag(self):
-        block = _docker_publish_text()
-        self.assertIn("sha-${{ inputs.validated_sha }}", block)
+    def test_admin_build_step_has_cache_to(self):
+        step = self._build_steps("build-admin")[0]
+        self.assertEqual(step["with"]["cache-from"], "type=gha")
+        self.assertEqual(step["with"]["cache-to"], "type=gha,mode=max")
 
-    def test_no_latest_tag_for_tag_kind(self):
+    def test_backend_build_step_has_labels(self):
+        step = self._build_steps("build-backend")[0]
+        self.assertIn("labels", step["with"])
+        self.assertIn("meta-backend", step["with"]["labels"])
+
+    def test_admin_build_step_has_labels(self):
+        step = self._build_steps("build-admin")[0]
+        self.assertIn("labels", step["with"])
+        self.assertIn("meta-admin", step["with"]["labels"])
+
+    def test_metadata_action_present_and_pinned(self):
         text = _docker_publish_text()
-        # Every step that pushes `:latest` must be guarded by publish_kind == 'branch'
-        self.assertIn("inputs.publish_kind == 'branch'", text)
-        # Every step that pushes the version tag must be guarded by publish_kind == 'tag'
-        self.assertIn("inputs.publish_kind == 'tag'", text)
+        self.assertIn("docker/metadata-action@v6", text)
+        # No semver inference
+        self.assertNotIn("type=semver", text)
+
+    def test_backend_metadata_action_declares_all_four_raw_tags(self):
+        step = next(
+            s
+            for s in self._job("build-backend")["steps"]
+            if isinstance(s, dict) and s.get("uses", "").startswith("docker/metadata-action")
+        )
+        tags_block = step["with"]["tags"]
+        self.assertIn("sha-${{ inputs.validated_sha }}", tags_block)
+        self.assertIn("latest", tags_block)
+        self.assertIn("inputs.version", tags_block)
+        self.assertIn("inputs.major_minor", tags_block)
+        # Must use raw type, never semver
+        self.assertNotIn("semver", tags_block)
+        self.assertRegex(tags_block, r"type=raw,value=sha-")
+        self.assertRegex(tags_block, r"type=raw,value=latest")
+        self.assertRegex(tags_block, r"type=raw,value=\$?\{\{ inputs\.version \}\}")
+        self.assertRegex(tags_block, r"type=raw,value=\$?\{\{ inputs\.major_minor \}\}")
+
+    def test_admin_metadata_action_declares_all_three_raw_tags(self):
+        step = next(
+            s
+            for s in self._job("build-admin")["steps"]
+            if isinstance(s, dict) and s.get("uses", "").startswith("docker/metadata-action")
+        )
+        tags_block = step["with"]["tags"]
+        self.assertIn("sha-${{ inputs.validated_sha }}", tags_block)
+        self.assertIn("latest", tags_block)
+        self.assertIn("inputs.version", tags_block)
+        # Admin does NOT receive a major_minor tag
+        self.assertNotIn("inputs.major_minor", tags_block)
+
+    def test_no_env_self_references_for_image_sha_tags(self):
+        """Workflow-level env must not declare SHA-tag env values depending on
+        another same-level env key. The base image refs and registry are fine;
+        the SHA-tag fragments must be inline at consumption sites."""
+        wf = _docker_publish()
+        env = wf.get("env", {})
+        for key in env:
+            self.assertNotIn(
+                "SHA_TAG",
+                key,
+                f"env key {key!r} looks like a SHA-tag fragment; inline at consumption site instead",
+            )
+
+    def test_no_inference_from_github_ref_in_steps(self):
+        wf = _docker_publish()
+        for job in wf["jobs"].values():
+            for step in job.get("steps", []):
+                step_text = str(step)
+                self.assertNotIn("github.ref", step_text, f"step references github.ref: {step}")
+                self.assertNotIn("github.sha", step_text, f"step references github.sha: {step}")
 
     def test_scan_uses_immutable_sha_tags(self):
-        # Scan steps reference env.BACKEND_SHA_TAG / env.ADMIN_SHA_TAG. Those
-        # env vars are defined at the workflow level and include the literal
-        # substring `sha-${{ inputs.validated_sha }}`. This proves the scan
-        # always targets an immutable SHA-tagged image and never :latest.
-        scan = self._job("scan")
-        text = _docker_publish_text()
-        self.assertIn("env.BACKEND_SHA_TAG", text)
-        self.assertIn("env.ADMIN_SHA_TAG", text)
-        self.assertIn("sha-${{ inputs.validated_sha }}", text)
-        # Each trivy image-ref must not be :latest
+        scan = _docker_publish()["jobs"]["scan"]
         for step in scan["steps"]:
             ref = step.get("with", {}).get("image-ref", "")
             if ref:
+                self.assertIn(
+                    "inputs.validated_sha", ref, f"scan must reference validated_sha, got {ref}"
+                )
                 self.assertNotIn(":latest", ref)
 
     def test_scan_does_not_use_continue_on_error(self):
-        scan = self._job("scan")
+        scan = _docker_publish()["jobs"]["scan"]
         for step in scan["steps"]:
             self.assertNotIn("continue-on-error", step)
 
-    def test_scan_needs_both_build_jobs(self):
-        scan = self._job("scan")
-        self.assertEqual(set(scan["needs"]), {"build-backend", "build-admin"})
 
-    def test_trivy_action_pinned(self):
-        text = _docker_publish_text()
-        self.assertIn(
-            "aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1",
-            text,
+class AdminDockerBuildValidationTests(unittest.TestCase):
+    """The existing admin CI job must run a non-publishing Docker build."""
+
+    def _admin_job(self) -> dict:
+        return _ci()["jobs"]["admin"]
+
+    def _docker_build_step(self) -> dict | None:
+        for step in self._admin_job()["steps"]:
+            run = step.get("run", "")
+            if isinstance(run, str) and "docker build" in run and "admin/Dockerfile" in run:
+                return step
+        return None
+
+    def test_admin_docker_build_step_present(self):
+        step = self._docker_build_step()
+        self.assertIsNotNone(
+            step,
+            "admin job must run a blocking docker build --file admin/Dockerfile . step",
         )
+
+    def test_admin_docker_build_step_uses_repo_root_context(self):
+        step = self._docker_build_step()
+        run = step["run"]
+        # The very last non-empty positional argument to `docker build` must be
+        # the build context. We allow a trailing newline.
+        lines = [ln.strip() for ln in run.splitlines() if ln.strip()]
+        self.assertEqual(lines[-1], ".", f"build context must be repo root '.', got {lines[-1]!r}")
+
+    def test_admin_docker_build_step_uses_admin_dockerfile(self):
+        step = self._docker_build_step()
+        self.assertIn("--file admin/Dockerfile", step["run"])
+
+    def test_admin_docker_build_step_has_no_push(self):
+        step = self._docker_build_step()
+        self.assertNotIn("--push", step["run"])
+        self.assertNotIn("push:", step["run"])
+
+    def test_admin_docker_build_step_has_no_login(self):
+        admin_text = str(self._admin_job())
+        self.assertNotIn("docker/login-action", admin_text)
+        self.assertNotIn("secrets.GITHUB_TOKEN", admin_text)
+
+    def test_admin_docker_build_step_is_blocking(self):
+        step = self._docker_build_step()
+        # No continue-on-error
+        self.assertNotIn("continue-on-error", step)
 
 
 class NoSecretInheritTests(unittest.TestCase):

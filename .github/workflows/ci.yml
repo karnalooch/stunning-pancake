@@ -362,6 +362,17 @@ jobs:
       - name: Build production bundle
         run: pnpm --filter admin build
 
+      - name: Validate Admin Docker build (no push, blocks PR on context repair)
+        # T24: build the admin image from the monorepo root using admin/Dockerfile.
+        # Failure fails the admin job (and therefore Aggregate CI gate) so a
+        # broken monorepo context cannot reach main. No login, no push, no GHCR.
+        run: |
+          docker build \
+            --file admin/Dockerfile \
+            --tag 4velo-admin-ci:${{ github.sha }} \
+            .
+        shell: bash
+
   # ──────────────────────────────────────────
   # Audit: Route parity, dead screens, RBAC consistency, env drift
   # ──────────────────────────────────────────
@@ -696,21 +707,18 @@ jobs:
   # Runs only when prepare-publish marked the push as allowed. Passes the
   # pre-validated outputs to docker-publish.yml; never recomputes them.
   # ──────────────────────────────────────────
-  publish-containers: # post-gate publish caller
+  publish-containers: # post-gate publish caller (job-level reusable workflow call)
     name: Publish containers (gated by Aggregate CI gate)
-    runs-on: ubuntu-latest
     needs: [aggregate, prepare-publish]
     if: needs.prepare-publish.outputs.allowed == 'true'
     permissions:
       contents: read
       packages: write
       security-events: write
-    steps:
-      - name: Call reusable docker-publish workflow
-        uses: ./.github/workflows/docker-publish.yml
-        with:
-          validated_sha: ${{ needs.prepare-publish.outputs.validated_sha }}
-          validated_ref: ${{ needs.prepare-publish.outputs.validated_ref }}
-          publish_kind: ${{ needs.prepare-publish.outputs.publish_kind }}
-          version: ${{ needs.prepare-publish.outputs.version }}
-          major_minor: ${{ needs.prepare-publish.outputs.major_minor }}
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      validated_sha: ${{ needs.prepare-publish.outputs.validated_sha }}
+      validated_ref: ${{ needs.prepare-publish.outputs.validated_ref }}
+      publish_kind: ${{ needs.prepare-publish.outputs.publish_kind }}
+      version: ${{ needs.prepare-publish.outputs.version }}
+      major_minor: ${{ needs.prepare-publish.outputs.major_minor }}
