@@ -203,13 +203,6 @@ def _realistic_full_needs(overrides=None):
     return needs
 
 
-def _flip(needs, job, result):
-    clone = json.loads(json.dumps(needs))
-    if job in clone:
-        clone[job] = {"result": result, "outputs": clone[job].get("outputs", {})}
-    return clone
-
-
 # ---------------------------------------------------------------------------
 # Workflow structure tests (unchanged).
 # ---------------------------------------------------------------------------
