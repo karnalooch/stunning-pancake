@@ -1,7 +1,7 @@
 # 4VELO — Master Cleanup Plan
 
 Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
-Aktualny `main` HEAD: `df2f5fe`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+Aktualny `main` HEAD: `b03fb9e`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
 
 Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
@@ -45,7 +45,7 @@ Status `STATUS`:
 
 | ID | Transza | Priorytet | Status | Gałąź | Zależności | PR |
 |----|---------|-----------|--------|-------|------------|----|
-| T00 | Publikacja master planu | P0 | ACTIVE | docs/takeover-cleanup-plan | - | ten PR |
+| T00 | Publikacja master planu | P0 | DONE | docs/takeover-cleanup-plan | - | #60 |
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
 | T02 | Emergency LLM proxy lockdown | P0 | PLANNED | security/llm-proxy-readonly | - | — |
 | T03 | Tenant destructive simulator authority | P0 | PLANNED | security/simulator-global-owner | - | — |
@@ -66,8 +66,8 @@ Status `STATUS`:
 | T18 | Telemetry schema out of worker startup | P1 | PLANNED | telemetry/schema-out-of-startup | T17 | — |
 | T19 | True PostGIS pytest backend gate | P1 | PLANNED | ci/backend-postgis-pytest | T11, T17 | — |
 | T20 | Telemetry service integration gate | P1 | PLANNED | ci/telemetry-integration | T14, T18 | — |
-| T21 | Mobile CI filter + test integrity | P0 | ACTIVE | ci/mobile-path-filter-integrity | - | #59 |
-| T22 | CI path routing + aggregate check | P1 | PLANNED | ci/required-aggregate-check | T21 | — |
+| T21 | Mobile CI filter + test integrity | P0 | DONE | ci/mobile-path-filter-integrity | - | #59 |
+| T22 | CI path routing + aggregate check | P1 | ACTIVE | ci/required-aggregate-check | T21 | ten PR |
 | T23 | Fail-closed security gates | P1 | PLANNED | ci/security-fail-closed | T22 | — |
 | T24 | Docker publish gated by CI | P1 | PLANNED | ci/docker-publish-gated | T22 | — |
 | T25 | Quality baseline scripts unified | P2 | PLANNED | scripts/quality-baseline-unified | T19, T20 | — |
@@ -123,26 +123,26 @@ Kolejność minimalizuje ryzyko regresji i respektuje zależności:
 2. T01 kontynuacja #47, secret removal + ci guard.
 3. T21 mobile filter + test integrity.
 4. T22 CI path routing + aggregate check (T22 zależy od T21; następuje po merge T21).
-5. T19 true PostGIS pytest backend gate (zależy od T11, ale T11 zależy od T10 itd.; realizacja T19-T11 odwrócona jest bezpieczna dopiero po T22).
-6. T03 tenant destructive simulator authority.
-7. T02 LLM proxy lockdown (read-only poza home labem).
-8. T05 telemetry auth (HTTP + WS).
-9. T16 mobile telemetry bearer + WS auth.
-10. T06 telemetry read/privacy isolation.
-11. T07 MFA mandatory for administrators.
-12. T08 OAuth state + provider binding.
-13. T09 tenant webhook admin/SSRF.
-14. T10 department/moderation/heatmap tenant scope.
-15. T11 RLS real enforcement.
-16. T12 B2B billing isolate or disable.
-17. T13 telemetry packet/batch contract.
-18. T14 telemetry flush/ACK lifecycle.
-19. T15 telemetry multi-worker broadcast (Redis).
-20. T17 backend startup migrations out of replica.
-21. T18 telemetry schema out of worker startup.
-22. T20 telemetry service integration gate.
-23. T23 fail-closed security gates.
-24. T24 Docker publish gated by CI.
+5. T24 Docker publish gated by CI (zależy od T22; bezpośrednio po T22, przed kolejnymi transzami wymagającymi merge do main).
+6. T19 true PostGIS pytest backend gate (zależy od T11, ale T11 zależy od T10 itd.; realizacja T19-T11 odwrócona jest bezpieczna dopiero po T22).
+7. T03 tenant destructive simulator authority.
+8. T02 LLM proxy lockdown (read-only poza home labem).
+9. T05 telemetry auth (HTTP + WS).
+10. T16 mobile telemetry bearer + WS auth.
+11. T06 telemetry read/privacy isolation.
+12. T07 MFA mandatory for administrators.
+13. T08 OAuth state + provider binding.
+14. T09 tenant webhook admin/SSRF.
+15. T10 department/moderation/heatmap tenant scope.
+16. T11 RLS real enforcement.
+17. T12 B2B billing isolate or disable.
+18. T13 telemetry packet/batch contract.
+19. T14 telemetry flush/ACK lifecycle.
+20. T15 telemetry multi-worker broadcast (Redis).
+21. T17 backend startup migrations out of replica.
+22. T18 telemetry schema out of worker startup.
+23. T20 telemetry service integration gate.
+24. T23 fail-closed security gates (zależy od T22; po T24).
 25. T27 dependency manifest ownership + Dependabot.
 26. T28 security/dependency inventory (commit-bound).
 27. T30 node dev transitive remediation.
@@ -325,6 +325,34 @@ Wszystkie komendy są obowiązkowe dla danego scope; brakujące wyniki traktowan
 - `T05`/`T06`/`T14`/`T15`/`T16`/`T18` wymagają koordynacji między backend, telemetry i mobile; każda transza zaczyna się od obserwowalności i testów, nie od zmiany kodu.
 - `T21`/`T22`/`T23`/`T24` są technicznym refaktorem CI; błędna konfiguracja może zablokować wszystkie PR-y – planowane jako wczesne transze z możliwością revert pojedynczego kroku.
 - `T49`/`T57`/`T58` są środowiskowo zależne; brak działającego home lab blokuje całą RC deklarację.
+
+## Operational notes (post-T21)
+
+Po merge T21 backend image został automatycznie wypchnięty przed zakończeniem pełnego CI, a Admin image nie zbudował się przez błędny monorepo build context. Naprawa należy do T24 (`Docker publish gated by CI`).
+
+## T22 – CI path routing + aggregate check
+
+### Scope
+
+- `.github/workflows/ci.yml` – naprawa routingu `audit` (przyjęcie `admin.result == 'skipped'` dla scripts-only bez maskowania failure/cancelled), dodanie joba `aggregate` (`Aggregate CI gate`, `if: always()`, `timeout-minutes: 15`, `needs` obejmujące dokładnie 12 jobów), dodanie kroku uruchamiającego `python scripts/check_ci_aggregate.py` z `CI_NEEDS_JSON` i `CI_EVENT_NAME`.
+- `scripts/check_ci_aggregate.py` – nowy, wyłącznie biblioteka standardowa; nie drukuje surowego JSON-a.
+- `scripts/test_ci_aggregate.py` – nowe testy (TDD: RED przed implementacją, GREEN po).
+- `docs/TAKEOVER_CLEANUP_PLAN.md` – aktualizacja statusów (niniejszy plik).
+
+### Validation commands (T22)
+
+- `python -m unittest scripts/test_ci_aggregate.py -v`
+- `python -m unittest scripts/test_ci_mobile_path_filter.py -v`
+- `python -m pytest scripts/test_check_docs_links.py scripts/test_load_report.py -q`
+- `python scripts/check_docs_links.py`
+- `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"`
+- `git diff --check`
+- `python -m ruff check scripts/check_ci_aggregate.py scripts/test_ci_aggregate.py --config pyproject.toml`
+- `python -m ruff format --check scripts/check_ci_aggregate.py scripts/test_ci_aggregate.py --config pyproject.toml`
+
+### Blocker po merge – required check
+
+Po merge implementacji T22 wymagane jest właścicielskie ustawienie joba `Aggregate CI gate` jako required check dla `main` w branch protection. Do czasu tej operacji T22 po merge ma status `BLOCKED — OWNER ACTION REQUIRED`. `turbo.json` nie został sztucznie dodany do filtra `packages` (świadoma decyzja: obecne joby CI używają bezpośrednich `pnpm --filter`, `turbo.json` nie ma potwierdzonego konsumenta w tym workflow).
 
 ## Executor handoff
 
