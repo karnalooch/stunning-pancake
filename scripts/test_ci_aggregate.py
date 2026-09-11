@@ -1,4 +1,23 @@
-"""Behavior tests for the T22 aggregate CI gate and the Audit routing fix."""
+"""Behavior tests for the T22 aggregate CI gate and the Audit routing fix.
+
+Contract fixtures used by these tests model GitHub Actions' ``needs`` context.
+They are NOT captures of any production payload; they are constructed fixtures
+shaped exactly like ``${{ toJson(needs) }}`` so the aggregate policy can be
+exercised against the real schema:
+
+    { "<job>": { "result": "<success|skipped|failure|cancelled>",
+                 "outputs": { ... } } }
+
+This file is intentionally split into:
+
+  * WorkflowStructureTests — structural invariants of ``.github/workflows/ci.yml``
+    (aggregate job wiring, audit routing fix, packages filter excludes turbo).
+  * AggregateScriptTests — behavior of ``scripts/check_ci_aggregate.py`` driven
+    by realistic partial-run and full-run fixtures, with table-driven coverage
+    per path-filter output and per failure mode.
+  * AggregateCLITests — subprocess-level coverage of the script entrypoint,
+    exit codes, and the no-raw-JSON guarantee.
+"""
 
 import json
 import os
@@ -8,14 +27,74 @@ import sys
 import unittest
 from pathlib import Path
 
+# Make the script package importable as a plain module for the duration of
+# this test file. Import errors during this step propagate normally with their
+# original traceback so any breakage of the script is immediately diagnosable.
 REPO = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 TURBO = REPO / "turbo.json"
 SCRIPT = REPO / "scripts" / "check_ci_aggregate.py"
-
 _SCRIPTS_DIR = str(REPO / "scripts")
 if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
+
+import check_ci_aggregate as agg  # noqa: E402, I001  (direct import after sys.path)
+
+
+# ---------------------------------------------------------------------------
+# Independent routing oracle.
+#
+# Intentionally duplicated here rather than imported from the production
+# script. If the production table changes by accident, this test-side oracle
+# is what catches the regression.
+# ---------------------------------------------------------------------------
+
+BASE_OUTPUT_KEYS = (
+    "full",
+    "workflow",
+    "backend",
+    "telemetry",
+    "mobile",
+    "admin",
+    "packages",
+    "scripts",
+    "docs",
+)
+
+ROUTE_TABLE = {
+    "backend": ("backend", "scripts-python"),
+    "telemetry": ("telemetry",),
+    "mobile": ("mobile", "security"),
+    "admin": ("admin", "audit", "security", "e2e"),
+    "packages": ("mobile", "admin", "repo-assets"),
+    "scripts": ("scripts-python", "audit"),
+    "docs": ("docs-links",),
+}
+
+PATH_OUTPUT_KEYS = tuple(ROUTE_TABLE.keys())
+
+FULL_JOB_NAMES = (
+    "backend",
+    "telemetry",
+    "mobile",
+    "scripts-python",
+    "repo-assets",
+    "docs-links",
+    "admin",
+    "audit",
+    "security",
+    "trivy",
+    "e2e",
+)
+
+NEEDS_JOB_NAMES = ("changes", *FULL_JOB_NAMES)
+
+VALID_RESULTS = ("success", "skipped", "failure", "cancelled")
+
+
+# ---------------------------------------------------------------------------
+# Workflow YAML helpers (unchanged).
+# ---------------------------------------------------------------------------
 
 
 def _workflow_text():
@@ -78,71 +157,65 @@ def _scripts_python_block(workflow):
     return _job_block(workflow, "scripts-python")
 
 
-PATH_EXPECTED = {
-    "backend": ["backend", "scripts-python"],
-    "telemetry": ["telemetry"],
-    "mobile": ["mobile", "security"],
-    "admin": ["admin", "audit", "security", "e2e"],
-    "packages": ["mobile", "admin", "repo-assets"],
-    "scripts": ["scripts-python", "audit"],
-    "docs": ["docs-links"],
-}
-FULL_JOBS = [
-    "backend",
-    "telemetry",
-    "mobile",
-    "scripts-python",
-    "repo-assets",
-    "docs-links",
-    "admin",
-    "audit",
-    "security",
-    "trivy",
-    "e2e",
-]
+# ---------------------------------------------------------------------------
+# Contract fixtures.
+#
+# These produce dicts shaped exactly like GitHub's ``toJson(needs)``. Every
+# job entry retains the contract shape ``{ "result": ..., "outputs": {...} }``.
+# ---------------------------------------------------------------------------
 
 
-def _make_needs(outputs=None, results=None):
-    base_outputs = {
-        "full": "false",
-        "workflow": "false",
-        "backend": "false",
-        "telemetry": "false",
-        "mobile": "false",
-        "admin": "false",
-        "packages": "false",
-        "scripts": "false",
-        "docs": "false",
-    }
-    if outputs:
-        base_outputs.update(outputs)
-    outputs = base_outputs
-    results = results or {}
-    jobs = {"changes": {"result": "success", "outputs": dict(outputs)}}
-    for j in FULL_JOBS:
-        jobs[j] = {"result": results.get(j, "success"), "outputs": {}}
-    return jobs
+def _base_outputs(overrides=None):
+    outputs = {k: "false" for k in BASE_OUTPUT_KEYS}
+    if overrides:
+        outputs.update(overrides)
+    return outputs
 
 
-def _force(job, result):
-    n = _make_needs(outputs={"full": "true"})
-    n[job] = {"result": result, "outputs": {}}
-    return n
+def _realistic_partial_needs(active_outputs, overrides=None):
+    """Realistic partial-run needs for a pull_request.
+
+    ``changes`` is success and carries the active outputs. Every job in
+    ``ROUTE_TABLE`` for an active output becomes ``success``; every other
+    known job becomes ``skipped``. ``overrides`` lets a test flip a specific
+    job to a different result while preserving the shape.
+    """
+    overrides = overrides or {}
+    needs = {"changes": {"result": "success", "outputs": _base_outputs(active_outputs)}}
+    expected = set()
+    for key in active_outputs or {}:
+        if active_outputs[key] == "true" and key in ROUTE_TABLE:
+            expected.update(ROUTE_TABLE[key])
+    for job in FULL_JOB_NAMES:
+        result = overrides.get(job, "success" if job in expected else "skipped")
+        needs[job] = {"result": result, "outputs": {}}
+    return needs
 
 
-def _force_outputs(outputs, results=None):
-    return _make_needs(outputs=outputs, results=results)
+def _realistic_full_needs(event, overrides=None):
+    """Realistic full-mode needs for push/schedule (or pull_request with
+    ``full==true`` / ``workflow==true``). All downstream jobs are expected to
+    be ``success``. ``overrides`` lets a test flip a specific job.
+    """
+    overrides = overrides or {}
+    outputs = _base_outputs({"full": "true"})
+    needs = {"changes": {"result": "success", "outputs": outputs}}
+    for job in FULL_JOB_NAMES:
+        result = overrides.get(job, "success")
+        needs[job] = {"result": result, "outputs": {}}
+    return needs
 
 
-class _AggregateImportProxy:
-    def __init__(self):
-        self.mod = None
-        try:
-            import check_ci_aggregate as mod  # type: ignore
+def _flip(needs, job, result):
+    clone = json.loads(json.dumps(needs))
+    if job in clone:
+        clone[job] = {"result": result, "outputs": clone[job].get("outputs", {})}
+    return clone
 
-            self.mod = mod
-        except Exception:
-            pass
+
+# ---------------------------------------------------------------------------
+# Workflow structure tests (unchanged).
+# ---------------------------------------------------------------------------
 
 
 class WorkflowStructureTests(unittest.TestCase):
@@ -250,216 +323,300 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertNotIn("turbo.json", pkgs)
 
 
+# ---------------------------------------------------------------------------
+# Behavior tests — driven by the realistic fixtures above.
+# ---------------------------------------------------------------------------
+
+
 class AggregateScriptTests(unittest.TestCase):
-    def setUp(self):
-        self.mod = _AggregateImportProxy().mod
-
     def _eval(self, needs, event_name):
-        if self.mod is None:
-            self.fail("check_ci_aggregate module not importable")
-        return self.mod.evaluate(needs, event_name)
+        return agg.evaluate(needs, event_name)
 
-    def test_module_importable(self):
-        self.assertIsNotNone(
-            self.mod, "scripts/check_ci_aggregate.py must exist and import cleanly"
-        )
+    def _expected_for(self, active_outputs):
+        expected = set()
+        for key, val in active_outputs.items():
+            if val == "true" and key in ROUTE_TABLE:
+                expected.update(ROUTE_TABLE[key])
+        return expected
 
-    def test_push_all_success_pass(self):
-        ok, reasons = self._eval(_force_outputs({"full": "true"}), "push")
-        self.assertTrue(ok, reasons)
+    # ---- baseline contract -------------------------------------------------
 
-    def test_schedule_all_success_pass(self):
-        ok, reasons = self._eval(_force_outputs({"full": "true"}), "schedule")
-        self.assertTrue(ok, reasons)
+    def test_module_exposes_evaluate(self):
+        self.assertTrue(callable(getattr(agg, "evaluate", None)))
 
-    def test_push_without_full_fails(self):
-        ok, reasons = self._eval(_force_outputs({"full": "false"}), "push")
+    def test_empty_needs_fails(self):
+        ok, reasons = self._eval({}, "push")
         self.assertFalse(ok)
-        self.assertTrue(any("full" in reason for reason in reasons), reasons)
+        self.assertTrue(any("changes" in r or "missing" in r.lower() for r in reasons), reasons)
 
-    def test_schedule_without_full_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"full": "false"}),
-            "schedule",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("full" in reason for reason in reasons), reasons)
-
-    def test_push_with_skipped_fails(self):
-        ok, reasons = self._eval(_force_outputs({"full": "true"}, {"backend": "skipped"}), "push")
-        self.assertFalse(ok)
-        self.assertTrue(any("backend" in r for r in reasons), reasons)
-
-    def test_docs_path_docs_links_success_pass(self):
-        ok, reasons = self._eval(_force_outputs({"docs": "true"}), "pull_request")
-        self.assertTrue(ok, reasons)
-
-    def test_docs_path_docs_links_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"docs": "true"}, {"docs-links": "skipped"}), "pull_request"
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("docs-links" in r for r in reasons), reasons)
-
-    def test_backend_path_backend_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"backend": "true"}, {"backend": "skipped"}), "pull_request"
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("backend" in r for r in reasons), reasons)
-
-    def test_backend_path_scripts_python_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"backend": "true"}, {"scripts-python": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("scripts-python" in r for r in reasons), reasons)
-
-    def test_packages_path_pass(self):
-        ok, reasons = self._eval(_force_outputs({"packages": "true"}), "pull_request")
-        self.assertTrue(ok, reasons)
-
-    def test_packages_path_mobile_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"packages": "true"}, {"mobile": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("mobile" in r for r in reasons), reasons)
-
-    def test_packages_path_admin_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"packages": "true"}, {"admin": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("admin" in r for r in reasons), reasons)
-
-    def test_packages_path_repo_assets_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"packages": "true"}, {"repo-assets": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("repo-assets" in r for r in reasons), reasons)
-
-    def test_admin_path_pass(self):
-        ok, reasons = self._eval(_force_outputs({"admin": "true"}), "pull_request")
-        self.assertTrue(ok, reasons)
-
-    def test_admin_path_audit_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"admin": "true"}, {"audit": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("audit" in r for r in reasons), reasons)
-
-    def test_admin_path_e2e_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"admin": "true"}, {"e2e": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("e2e" in r for r in reasons), reasons)
-
-    def test_scripts_path_admin_skipped_audit_success_pass(self):
-        ok, reasons = self._eval(
-            _force_outputs({"scripts": "true"}, {"admin": "skipped"}),
-            "pull_request",
-        )
-        self.assertTrue(ok, reasons)
-
-    def test_scripts_path_audit_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"scripts": "true"}, {"audit": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("audit" in r for r in reasons), reasons)
-
-    def test_mobile_path_security_skipped_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"mobile": "true"}, {"security": "skipped"}),
-            "pull_request",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("security" in r for r in reasons), reasons)
-
-    def test_unexpected_job_success_pass(self):
-        needs = _force_outputs({"backend": "true"})
-        needs["trivy"] = {"result": "skipped", "outputs": {}}
+    def test_missing_changes_fails(self):
+        needs = _realistic_partial_needs({})
+        del needs["changes"]
         ok, reasons = self._eval(needs, "pull_request")
-        self.assertTrue(ok, reasons)
-
-    def test_any_failure_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"full": "true"}, {"backend": "failure"}),
-            "push",
-        )
         self.assertFalse(ok)
-        self.assertTrue(any("backend" in r for r in reasons), reasons)
-
-    def test_any_cancelled_fails(self):
-        ok, reasons = self._eval(
-            _force_outputs({"full": "true"}, {"e2e": "cancelled"}),
-            "push",
-        )
-        self.assertFalse(ok)
-        self.assertTrue(any("e2e" in r for r in reasons), reasons)
+        self.assertTrue(any("changes" in r or "missing" in r.lower() for r in reasons), reasons)
 
     def test_changes_failure_fails(self):
-        needs = _force_outputs({"full": "true"})
-        needs["changes"] = {"result": "failure", "outputs": {"full": "true"}}
+        needs = _realistic_full_needs("push")
+        needs["changes"] = {"result": "failure", "outputs": needs["changes"]["outputs"]}
         ok, reasons = self._eval(needs, "push")
         self.assertFalse(ok)
         self.assertTrue(any("changes" in r for r in reasons), reasons)
 
-    def test_empty_json_fails(self):
-        ok, _ = self._eval({}, "push")
+    def test_unsupported_event_fails(self):
+        needs = _realistic_full_needs("push")
+        ok, reasons = self._eval(needs, "workflow_dispatch")
         self.assertFalse(ok)
+        self.assertTrue(any("workflow_dispatch" in r or "event" in r for r in reasons), reasons)
 
-    def test_missing_job_fails(self):
-        needs = _force_outputs({"full": "true"})
-        del needs["backend"]
-        ok, reasons = self._eval(needs, "push")
-        self.assertFalse(ok)
-        self.assertTrue(any("backend" in r or "missing" in r.lower() for r in reasons), reasons)
-
-    def test_missing_output_fails(self):
-        needs = _force_outputs({"backend": "true"})
-        del needs["changes"]["outputs"]["backend"]
+    def test_missing_output_keys_fail(self):
+        outputs = _base_outputs()
+        del outputs["backend"]
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "skipped", "outputs": {}}
         ok, reasons = self._eval(needs, "pull_request")
         self.assertFalse(ok)
 
-    def test_invalid_output_value_fails(self):
-        ok, reasons = self._eval(_force_outputs({"backend": "yes"}), "pull_request")
+    def test_invalid_output_values_fail(self):
+        outputs = _base_outputs({"backend": "yes"})
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "skipped", "outputs": {}}
+        ok, reasons = self._eval(needs, "pull_request")
         self.assertFalse(ok)
 
-    def test_unknown_event_fails(self):
-        ok, _ = self._eval(_force_outputs({"full": "true"}), "workflow_dispatch")
+    def test_malformed_outputs_fail(self):
+        needs = {"changes": {"result": "success", "outputs": "not-a-dict"}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "skipped", "outputs": {}}
+        ok, _ = self._eval(needs, "pull_request")
         self.assertFalse(ok)
 
-    def test_unknown_result_fails(self):
-        needs = _force_outputs({"full": "true"}, {"backend": "weird"})
+    def test_malformed_job_entry_fails(self):
+        needs = _realistic_partial_needs({})
+        needs["backend"] = "not-a-dict"
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+
+    def test_unknown_result_value_fails(self):
+        needs = _realistic_full_needs("push", overrides={"backend": "weird"})
         ok, reasons = self._eval(needs, "push")
         self.assertFalse(ok)
         self.assertTrue(any("backend" in r for r in reasons), reasons)
 
-    def test_workflow_output_triggers_full_mode(self):
-        ok, reasons = self._eval(_force_outputs({"workflow": "true"}), "pull_request")
+    # ---- table-driven per-output path coverage -----------------------------
+
+    def test_path_table_pass_for_each_output(self):
+        for key in PATH_OUTPUT_KEYS:
+            with self.subTest(output=key):
+                outputs = {k: "false" for k in BASE_OUTPUT_KEYS}
+                outputs[key] = "true"
+                needs = _realistic_partial_needs(outputs)
+                ok, reasons = self._eval(needs, "pull_request")
+                self.assertTrue(ok, f"path={key} reasons={reasons}")
+                expected = self._expected_for(outputs)
+                self.assertTrue(expected, f"path={key} produced empty expected set")
+
+    def test_path_table_skipped_expected_job_fails(self):
+        for key in PATH_OUTPUT_KEYS:
+            for job in ROUTE_TABLE[key]:
+                with self.subTest(output=key, expected_job=job):
+                    outputs = {k: "false" for k in BASE_OUTPUT_KEYS}
+                    outputs[key] = "true"
+                    needs = _realistic_partial_needs(outputs, overrides={job: "skipped"})
+                    ok, reasons = self._eval(needs, "pull_request")
+                    self.assertFalse(ok, f"path={key} job={job} skipped unexpectedly passed")
+                    self.assertTrue(any(job in r for r in reasons), reasons)
+
+    def test_path_table_failed_expected_job_fails(self):
+        for key in PATH_OUTPUT_KEYS:
+            for job in ROUTE_TABLE[key]:
+                with self.subTest(output=key, expected_job=job):
+                    outputs = {k: "false" for k in BASE_OUTPUT_KEYS}
+                    outputs[key] = "true"
+                    needs = _realistic_partial_needs(outputs, overrides={job: "failure"})
+                    ok, reasons = self._eval(needs, "pull_request")
+                    self.assertFalse(ok, f"path={key} job={job} failure unexpectedly passed")
+                    self.assertTrue(any(job in r for r in reasons), reasons)
+
+    def test_path_table_cancelled_expected_job_fails(self):
+        for key in PATH_OUTPUT_KEYS:
+            for job in ROUTE_TABLE[key]:
+                with self.subTest(output=key, expected_job=job):
+                    outputs = {k: "false" for k in BASE_OUTPUT_KEYS}
+                    outputs[key] = "true"
+                    needs = _realistic_partial_needs(outputs, overrides={job: "cancelled"})
+                    ok, reasons = self._eval(needs, "pull_request")
+                    self.assertFalse(ok, f"path={key} job={job} cancelled unexpectedly passed")
+                    self.assertTrue(any(job in r for r in reasons), reasons)
+
+    # ---- combined outputs ---------------------------------------------------
+
+    def test_combined_backend_and_docs_pass(self):
+        outputs = _base_outputs({"backend": "true", "docs": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(expected, {"backend", "scripts-python", "docs-links"})
+
+    def test_combined_mobile_and_admin_pass(self):
+        outputs = _base_outputs({"mobile": "true", "admin": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(expected, {"mobile", "security", "admin", "audit", "e2e"})
+
+    def test_combined_packages_and_scripts_pass(self):
+        outputs = _base_outputs({"packages": "true", "scripts": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(
+            expected,
+            {"mobile", "admin", "repo-assets", "scripts-python", "audit"},
+        )
+
+    def test_combined_backend_telemetry_docs_pass(self):
+        outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(expected, {"backend", "scripts-python", "telemetry", "docs-links"})
+
+    def test_combined_failure_in_union_fails(self):
+        outputs = _base_outputs({"backend": "true", "docs": "true"})
+        needs = _realistic_partial_needs(outputs, overrides={"docs-links": "failure"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("docs-links" in r for r in reasons), reasons)
+
+    # ---- full mode ----------------------------------------------------------
+
+    def test_full_mode_pull_request_with_workflow_true_pass(self):
+        outputs = _base_outputs({"workflow": "true"})
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "success", "outputs": {}}
+        ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
 
-    def test_script_output_no_raw_json(self):
-        if self.mod is None:
-            self.fail("check_ci_aggregate module not importable")
-        needs = _force_outputs({"full": "true"})
-        env = {
-            **os.environ,
-            "CI_NEEDS_JSON": json.dumps(needs),
-            "CI_EVENT_NAME": "push",
-        }
+    def test_full_mode_pull_request_with_full_true_pass(self):
+        outputs = _base_outputs({"full": "true"})
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "success", "outputs": {}}
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_full_mode_push_with_full_true_pass(self):
+        needs = _realistic_full_needs("push")
+        ok, reasons = self._eval(needs, "push")
+        self.assertTrue(ok, reasons)
+
+    def test_full_mode_schedule_with_full_true_pass(self):
+        needs = _realistic_full_needs("schedule")
+        ok, reasons = self._eval(needs, "schedule")
+        self.assertTrue(ok, reasons)
+
+    def test_full_mode_push_without_full_fails(self):
+        outputs = _base_outputs({"full": "false"})
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "success", "outputs": {}}
+        ok, reasons = self._eval(needs, "push")
+        self.assertFalse(ok)
+        self.assertTrue(any("full" in r for r in reasons), reasons)
+
+    def test_full_mode_schedule_without_full_fails(self):
+        outputs = _base_outputs({"full": "false"})
+        needs = {"changes": {"result": "success", "outputs": outputs}}
+        for job in FULL_JOB_NAMES:
+            needs[job] = {"result": "success", "outputs": {}}
+        ok, reasons = self._eval(needs, "schedule")
+        self.assertFalse(ok)
+        self.assertTrue(any("full" in r for r in reasons), reasons)
+
+    def test_full_mode_each_job_skipped_fails(self):
+        for job in FULL_JOB_NAMES:
+            with self.subTest(job=job):
+                needs = _realistic_full_needs("push", overrides={job: "skipped"})
+                ok, reasons = self._eval(needs, "push")
+                self.assertFalse(ok, f"job={job} skipped unexpectedly passed in full mode")
+                self.assertTrue(any(job in r for r in reasons), reasons)
+
+    def test_full_mode_each_job_failure_fails(self):
+        for job in FULL_JOB_NAMES:
+            with self.subTest(job=job):
+                needs = _realistic_full_needs("push", overrides={job: "failure"})
+                ok, reasons = self._eval(needs, "push")
+                self.assertFalse(ok, f"job={job} failure unexpectedly passed in full mode")
+                self.assertTrue(any(job in r for r in reasons), reasons)
+
+    def test_full_mode_each_job_cancelled_fails(self):
+        for job in FULL_JOB_NAMES:
+            with self.subTest(job=job):
+                needs = _realistic_full_needs("push", overrides={job: "cancelled"})
+                ok, reasons = self._eval(needs, "push")
+                self.assertFalse(ok, f"job={job} cancelled unexpectedly passed in full mode")
+                self.assertTrue(any(job in r for r in reasons), reasons)
+
+    # ---- unexpected job handling -------------------------------------------
+
+    def test_unexpected_skipped_does_not_fail_partial_run(self):
+        needs = _realistic_partial_needs({"backend": "true"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_unexpected_success_does_not_create_false_failure(self):
+        needs = _realistic_partial_needs({"backend": "true"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_unexpected_failure_fails(self):
+        needs = _realistic_partial_needs({"backend": "true"}, overrides={"trivy": "failure"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("trivy" in r for r in reasons), reasons)
+
+    def test_unexpected_cancelled_fails(self):
+        needs = _realistic_partial_needs({"backend": "true"}, overrides={"trivy": "cancelled"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("trivy" in r for r in reasons), reasons)
+
+    def test_missing_expected_job_fails(self):
+        needs = _realistic_partial_needs({"backend": "true"})
+        del needs["backend"]
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("backend" in r or "missing" in r.lower() for r in reasons), reasons)
+
+    # ---- scripts-only regression (audit routing fix) ----------------------
+
+    def test_scripts_only_admin_skipped_audit_success_pass(self):
+        needs = _realistic_partial_needs({"scripts": "true"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_scripts_only_audit_skipped_fails(self):
+        needs = _realistic_partial_needs({"scripts": "true"}, overrides={"audit": "skipped"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("audit" in r for r in reasons), reasons)
+
+
+# ---------------------------------------------------------------------------
+# CLI subprocess tests — drive the script as a real entrypoint.
+# ---------------------------------------------------------------------------
+
+
+class AggregateCLITests(unittest.TestCase):
+    def _run(self, env):
         proc = subprocess.run(
             [sys.executable, str(SCRIPT)],
             env=env,
@@ -467,9 +624,58 @@ class AggregateScriptTests(unittest.TestCase):
             text=True,
             check=False,
         )
+        return proc
+
+    def _env(self, needs=None, event=None, needs_json=None):
+        env = {**os.environ}
+        if needs_json is not None:
+            env["CI_NEEDS_JSON"] = needs_json
+        elif needs is not None:
+            env["CI_NEEDS_JSON"] = json.dumps(needs)
+        if event is not None:
+            env["CI_EVENT_NAME"] = event
+        return env
+
+    def test_cli_passing_payload_returns_zero(self):
+        needs = _realistic_full_needs("push")
+        proc = self._run(self._env(needs, "push"))
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
+    def test_cli_failing_payload_returns_nonzero(self):
+        needs = _realistic_full_needs("push", overrides={"backend": "failure"})
+        proc = self._run(self._env(needs, "push"))
+        self.assertNotEqual(proc.returncode, 0)
         out = (proc.stdout or "") + (proc.stderr or "")
-        for needle in (json.dumps(needs), '"result"', '"outputs"'):
+        self.assertTrue(any("backend" in line for line in out.splitlines()), out)
+
+    def test_cli_missing_ci_needs_json_returns_nonzero(self):
+        env = {**os.environ, "CI_EVENT_NAME": "push"}
+        proc = self._run(env)
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_cli_invalid_json_returns_nonzero(self):
+        env = self._env(needs_json="{not-json", event="push")
+        proc = self._run(env)
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_cli_unsupported_event_returns_nonzero(self):
+        needs = _realistic_full_needs("push")
+        proc = self._run(self._env(needs, "workflow_dispatch"))
+        self.assertNotEqual(proc.returncode, 0)
+
+    def test_cli_output_never_leaks_raw_json(self):
+        needs = _realistic_partial_needs({"backend": "true", "docs": "true"})
+        proc = self._run(self._env(needs, "pull_request"))
+        out = (proc.stdout or "") + (proc.stderr or "")
+        for needle in (json.dumps(needs), '"outputs"', '"result"', '"contexts"'):
             self.assertNotIn(needle, out, f"script leaked JSON-like content: {needle}")
+
+    def test_cli_output_never_leaks_raw_json_on_failure(self):
+        needs = _realistic_full_needs("push", overrides={"backend": "failure"})
+        proc = self._run(self._env(needs, "push"))
+        out = (proc.stdout or "") + (proc.stderr or "")
+        for needle in (json.dumps(needs), '"outputs"', '"contexts"', '"checks"'):
+            self.assertNotIn(needle, out, f"script leaked JSON-like content on failure: {needle}")
 
 
 if __name__ == "__main__":

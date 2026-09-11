@@ -67,7 +67,7 @@ Status `STATUS`:
 | T19 | True PostGIS pytest backend gate | P1 | PLANNED | ci/backend-postgis-pytest | T11, T17 | — |
 | T20 | Telemetry service integration gate | P1 | PLANNED | ci/telemetry-integration | T14, T18 | — |
 | T21 | Mobile CI filter + test integrity | P0 | DONE | ci/mobile-path-filter-integrity | - | #59 |
-| T22 | CI path routing + aggregate check | P1 | ACTIVE | ci/required-aggregate-check | T21 | ten PR |
+| T22 | CI path routing + aggregate check | P1 | DONE | ci/required-aggregate-check | T21 | #61 |
 | T23 | Fail-closed security gates | P1 | PLANNED | ci/security-fail-closed | T22 | — |
 | T24 | Docker publish gated by CI | P1 | PLANNED | ci/docker-publish-gated | T22 | — |
 | T25 | Quality baseline scripts unified | P2 | PLANNED | scripts/quality-baseline-unified | T19, T20 | — |
@@ -350,9 +350,24 @@ Po merge T21 backend image został automatycznie wypchnięty przed zakończeniem
 - `python -m ruff check scripts/check_ci_aggregate.py scripts/test_ci_aggregate.py --config pyproject.toml`
 - `python -m ruff format --check scripts/check_ci_aggregate.py scripts/test_ci_aggregate.py --config pyproject.toml`
 
-### Blocker po merge – required check
+### Merge outcome and branch protection
 
-Po merge implementacji T22 wymagane jest właścicielskie ustawienie joba `Aggregate CI gate` jako required check dla `main` w branch protection. Do czasu tej operacji T22 po merge ma status `BLOCKED — OWNER ACTION REQUIRED`. `turbo.json` nie został sztucznie dodany do filtra `packages` (świadoma decyzja: obecne joby CI używają bezpośrednich `pnpm --filter`, `turbo.json` nie ma potwierdzonego konsumenta w tym workflow).
+- Scalony commit: `91bbba638d42e2762bd9dbdf8247a8832e7367e0` (PR #61, squash).
+- Branch protection dla `main` została skonfigurowana pomyślnie:
+  - `strict = true`
+  - required check = `Aggregate CI gate`
+  - `app_id = 15368` (GitHub Actions)
+  - `enforce_admins = true`
+- T22 jest teraz zamknięty; poprzedni wpis `BLOCKED — OWNER ACTION REQUIRED` został rozwiązany przez właścicielskie ustawienie branch protection.
+- `turbo.json` nie został sztucznie dodany do filtra `packages` (świadoma decyzja: obecne joby CI używają bezpośrednich `pnpm --filter`, `turbo.json` nie ma potwierdzonego konsumenta w tym workflow).
+
+### Post-T22 test hardening (follow-up)
+
+Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-driven per-output, CLI exit-code coverage, direct import bez broad `except`) zostało dostarczone jako osobny PR hardeningowy. Jest to pierwsza walidacja ochrony `main` (PR nie przejdzie, jeśli `Aggregate CI gate` nie zwróci sukcesu).
+
+### Actionlint — deferred do T25
+
+W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
 
 ## Executor handoff
 
