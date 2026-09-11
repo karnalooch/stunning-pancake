@@ -87,10 +87,6 @@ FULL_JOB_NAMES = (
     "e2e",
 )
 
-NEEDS_JOB_NAMES = ("changes", *FULL_JOB_NAMES)
-
-VALID_RESULTS = ("success", "skipped", "failure", "cancelled")
-
 
 # ---------------------------------------------------------------------------
 # Workflow YAML helpers (unchanged).
@@ -192,10 +188,11 @@ def _realistic_partial_needs(active_outputs, overrides=None):
     return needs
 
 
-def _realistic_full_needs(event, overrides=None):
+def _realistic_full_needs(overrides=None):
     """Realistic full-mode needs for push/schedule (or pull_request with
     ``full==true`` / ``workflow==true``). All downstream jobs are expected to
-    be ``success``. ``overrides`` lets a test flip a specific job.
+    be ``success``. ``overrides`` lets a test flip a specific job. The event
+    is supplied separately to ``_eval`` and the CLI environment.
     """
     overrides = overrides or {}
     outputs = _base_outputs({"full": "true"})
@@ -357,14 +354,14 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertTrue(any("changes" in r or "missing" in r.lower() for r in reasons), reasons)
 
     def test_changes_failure_fails(self):
-        needs = _realistic_full_needs("push")
+        needs = _realistic_full_needs()
         needs["changes"] = {"result": "failure", "outputs": needs["changes"]["outputs"]}
         ok, reasons = self._eval(needs, "push")
         self.assertFalse(ok)
         self.assertTrue(any("changes" in r for r in reasons), reasons)
 
     def test_unsupported_event_fails(self):
-        needs = _realistic_full_needs("push")
+        needs = _realistic_full_needs()
         ok, reasons = self._eval(needs, "workflow_dispatch")
         self.assertFalse(ok)
         self.assertTrue(any("workflow_dispatch" in r or "event" in r for r in reasons), reasons)
@@ -394,13 +391,14 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertFalse(ok)
 
     def test_malformed_job_entry_fails(self):
-        needs = _realistic_partial_needs({})
+        needs = _realistic_partial_needs({"backend": "true"})
         needs["backend"] = "not-a-dict"
         ok, reasons = self._eval(needs, "pull_request")
         self.assertFalse(ok)
+        self.assertTrue(any("backend" in r for r in reasons), reasons)
 
     def test_unknown_result_value_fails(self):
-        needs = _realistic_full_needs("push", overrides={"backend": "weird"})
+        needs = _realistic_full_needs(overrides={"backend": "weird"})
         ok, reasons = self._eval(needs, "push")
         self.assertFalse(ok)
         self.assertTrue(any("backend" in r for r in reasons), reasons)
@@ -514,12 +512,12 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertTrue(ok, reasons)
 
     def test_full_mode_push_with_full_true_pass(self):
-        needs = _realistic_full_needs("push")
+        needs = _realistic_full_needs()
         ok, reasons = self._eval(needs, "push")
         self.assertTrue(ok, reasons)
 
     def test_full_mode_schedule_with_full_true_pass(self):
-        needs = _realistic_full_needs("schedule")
+        needs = _realistic_full_needs()
         ok, reasons = self._eval(needs, "schedule")
         self.assertTrue(ok, reasons)
 
@@ -544,7 +542,7 @@ class AggregateScriptTests(unittest.TestCase):
     def test_full_mode_each_job_skipped_fails(self):
         for job in FULL_JOB_NAMES:
             with self.subTest(job=job):
-                needs = _realistic_full_needs("push", overrides={job: "skipped"})
+                needs = _realistic_full_needs(overrides={job: "skipped"})
                 ok, reasons = self._eval(needs, "push")
                 self.assertFalse(ok, f"job={job} skipped unexpectedly passed in full mode")
                 self.assertTrue(any(job in r for r in reasons), reasons)
@@ -552,7 +550,7 @@ class AggregateScriptTests(unittest.TestCase):
     def test_full_mode_each_job_failure_fails(self):
         for job in FULL_JOB_NAMES:
             with self.subTest(job=job):
-                needs = _realistic_full_needs("push", overrides={job: "failure"})
+                needs = _realistic_full_needs(overrides={job: "failure"})
                 ok, reasons = self._eval(needs, "push")
                 self.assertFalse(ok, f"job={job} failure unexpectedly passed in full mode")
                 self.assertTrue(any(job in r for r in reasons), reasons)
@@ -560,7 +558,7 @@ class AggregateScriptTests(unittest.TestCase):
     def test_full_mode_each_job_cancelled_fails(self):
         for job in FULL_JOB_NAMES:
             with self.subTest(job=job):
-                needs = _realistic_full_needs("push", overrides={job: "cancelled"})
+                needs = _realistic_full_needs(overrides={job: "cancelled"})
                 ok, reasons = self._eval(needs, "push")
                 self.assertFalse(ok, f"job={job} cancelled unexpectedly passed in full mode")
                 self.assertTrue(any(job in r for r in reasons), reasons)
@@ -569,11 +567,16 @@ class AggregateScriptTests(unittest.TestCase):
 
     def test_unexpected_skipped_does_not_fail_partial_run(self):
         needs = _realistic_partial_needs({"backend": "true"})
+        self.assertEqual(needs["trivy"]["result"], "skipped")
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
 
     def test_unexpected_success_does_not_create_false_failure(self):
-        needs = _realistic_partial_needs({"backend": "true"})
+        needs = _realistic_partial_needs(
+            {"backend": "true"},
+            overrides={"trivy": "success"},
+        )
+        self.assertEqual(needs["trivy"]["result"], "success")
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
 
@@ -616,6 +619,8 @@ class AggregateScriptTests(unittest.TestCase):
 
 
 class AggregateCLITests(unittest.TestCase):
+    _CI_ENV_VARS = ("CI_NEEDS_JSON", "CI_EVENT_NAME")
+
     def _run(self, env):
         proc = subprocess.run(
             [sys.executable, str(SCRIPT)],
@@ -627,7 +632,7 @@ class AggregateCLITests(unittest.TestCase):
         return proc
 
     def _env(self, needs=None, event=None, needs_json=None):
-        env = {**os.environ}
+        env = {k: v for k, v in os.environ.items() if k not in self._CI_ENV_VARS}
         if needs_json is not None:
             env["CI_NEEDS_JSON"] = needs_json
         elif needs is not None:
@@ -637,19 +642,20 @@ class AggregateCLITests(unittest.TestCase):
         return env
 
     def test_cli_passing_payload_returns_zero(self):
-        needs = _realistic_full_needs("push")
+        needs = _realistic_full_needs()
         proc = self._run(self._env(needs, "push"))
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
 
     def test_cli_failing_payload_returns_nonzero(self):
-        needs = _realistic_full_needs("push", overrides={"backend": "failure"})
+        needs = _realistic_full_needs(overrides={"backend": "failure"})
         proc = self._run(self._env(needs, "push"))
         self.assertNotEqual(proc.returncode, 0)
         out = (proc.stdout or "") + (proc.stderr or "")
         self.assertTrue(any("backend" in line for line in out.splitlines()), out)
 
     def test_cli_missing_ci_needs_json_returns_nonzero(self):
-        env = {**os.environ, "CI_EVENT_NAME": "push"}
+        env = self._env(event="push")
+        self.assertNotIn("CI_NEEDS_JSON", env)
         proc = self._run(env)
         self.assertNotEqual(proc.returncode, 0)
 
@@ -659,7 +665,7 @@ class AggregateCLITests(unittest.TestCase):
         self.assertNotEqual(proc.returncode, 0)
 
     def test_cli_unsupported_event_returns_nonzero(self):
-        needs = _realistic_full_needs("push")
+        needs = _realistic_full_needs()
         proc = self._run(self._env(needs, "workflow_dispatch"))
         self.assertNotEqual(proc.returncode, 0)
 
@@ -671,7 +677,7 @@ class AggregateCLITests(unittest.TestCase):
             self.assertNotIn(needle, out, f"script leaked JSON-like content: {needle}")
 
     def test_cli_output_never_leaks_raw_json_on_failure(self):
-        needs = _realistic_full_needs("push", overrides={"backend": "failure"})
+        needs = _realistic_full_needs(overrides={"backend": "failure"})
         proc = self._run(self._env(needs, "push"))
         out = (proc.stdout or "") + (proc.stderr or "")
         for needle in (json.dumps(needs), '"outputs"', '"contexts"', '"checks"'):
