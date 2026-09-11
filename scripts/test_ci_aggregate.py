@@ -139,6 +139,7 @@ class _AggregateImportProxy:
         self.mod = None
         try:
             import check_ci_aggregate as mod  # type: ignore
+
             self.mod = mod
         except Exception:
             pass
@@ -259,7 +260,9 @@ class AggregateScriptTests(unittest.TestCase):
         return self.mod.evaluate(needs, event_name)
 
     def test_module_importable(self):
-        self.assertIsNotNone(self.mod, "scripts/check_ci_aggregate.py must exist and import cleanly")
+        self.assertIsNotNone(
+            self.mod, "scripts/check_ci_aggregate.py must exist and import cleanly"
+        )
 
     def test_push_all_success_pass(self):
         ok, reasons = self._eval(_force_outputs({"full": "true"}), "push")
@@ -268,6 +271,19 @@ class AggregateScriptTests(unittest.TestCase):
     def test_schedule_all_success_pass(self):
         ok, reasons = self._eval(_force_outputs({"full": "true"}), "schedule")
         self.assertTrue(ok, reasons)
+
+    def test_push_without_full_fails(self):
+        ok, reasons = self._eval(_force_outputs({"full": "false"}), "push")
+        self.assertFalse(ok)
+        self.assertTrue(any("full" in reason for reason in reasons), reasons)
+
+    def test_schedule_without_full_fails(self):
+        ok, reasons = self._eval(
+            _force_outputs({"full": "false"}),
+            "schedule",
+        )
+        self.assertFalse(ok)
+        self.assertTrue(any("full" in reason for reason in reasons), reasons)
 
     def test_push_with_skipped_fails(self):
         ok, reasons = self._eval(_force_outputs({"full": "true"}, {"backend": "skipped"}), "push")
@@ -279,12 +295,16 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertTrue(ok, reasons)
 
     def test_docs_path_docs_links_skipped_fails(self):
-        ok, reasons = self._eval(_force_outputs({"docs": "true"}, {"docs-links": "skipped"}), "pull_request")
+        ok, reasons = self._eval(
+            _force_outputs({"docs": "true"}, {"docs-links": "skipped"}), "pull_request"
+        )
         self.assertFalse(ok)
         self.assertTrue(any("docs-links" in r for r in reasons), reasons)
 
     def test_backend_path_backend_skipped_fails(self):
-        ok, reasons = self._eval(_force_outputs({"backend": "true"}, {"backend": "skipped"}), "pull_request")
+        ok, reasons = self._eval(
+            _force_outputs({"backend": "true"}, {"backend": "skipped"}), "pull_request"
+        )
         self.assertFalse(ok)
         self.assertTrue(any("backend" in r for r in reasons), reasons)
 
@@ -370,7 +390,7 @@ class AggregateScriptTests(unittest.TestCase):
     def test_unexpected_job_success_pass(self):
         needs = _force_outputs({"backend": "true"})
         needs["trivy"] = {"result": "skipped", "outputs": {}}
-        ok, reasons = self.eval(needs, "pull_request") if False else self._eval(needs, "pull_request")
+        ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
 
     def test_any_failure_fails(self):
