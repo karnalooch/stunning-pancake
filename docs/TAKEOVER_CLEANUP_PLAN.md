@@ -69,7 +69,7 @@ Status `STATUS`:
 | T21 | Mobile CI filter + test integrity | P0 | DONE | ci/mobile-path-filter-integrity | - | #59 |
 | T22 | CI path routing + aggregate check | P1 | DONE | ci/required-aggregate-check | T21 | #61 |
 | T23 | Fail-closed security gates | P1 | PLANNED | ci/security-fail-closed | T22 | — |
-| T24 | Docker publish gated by CI | P1 | PLANNED | ci/docker-publish-gated | T22 | — |
+| T24 | Docker publish gated by CI | P1 | ACTIVE | ci/docker-publish-gated | T22 | Draft PR (this branch) |
 | T25 | Quality baseline scripts unified | P2 | PLANNED | scripts/quality-baseline-unified | T19, T20 | — |
 | T26 | Audit scripts truthful | P2 | PLANNED | scripts/audit-truthful | T22, T23 | — |
 | T27 | Dependency manifest ownership + Dependabot | P2 | PLANNED | deps/manifest-ownership | - | — |
@@ -368,6 +368,75 @@ Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-drive
 ### Actionlint — deferred do T25
 
 W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
+
+## T24 – Docker publish gated by CI (ACTIVE)
+
+### Scope
+
+- `.github/workflows/ci.yml` — dodanie triggerów tagów `v*.*.*`, nowego joba `prepare-publish` (walidacja SHA + ścisłego `refs/tags/vX.Y.Z`, brak checkout, `permissions: {}`), nowego joba `publish-containers` wywołującego reusable workflow z wcześniej zwalidowanymi outputami; `aggregate.needs` pozostaje bez zmian; brak cyklu zależności.
+- `.github/workflows/docker-publish.yml` — konwersja na callable-only reusable workflow (`on.workflow_call`); usunięcie `docker/metadata-action`, `type=semver`, inferencji z `github.ref`; backend context zachowany (`./backend`), admin context poprawiony (`.` + `admin/Dockerfile`); tagi oparte na full SHA; `:latest` tylko dla `publish_kind == 'branch'`; `version`/`major_minor` tylko dla `publish_kind == 'tag'`; skan korzysta z immutable tagów `sha-<full SHA>` i nigdy `:latest`; brak `continue-on-error`; pinned Trivy action zachowany.
+- `.dockerignore` (nowy) — bezpieczne wykluczenia root context dla `admin/Dockerfile` (monorepo root); backend context (`./backend`) nietknięty.
+- `scripts/test_ci_workflow_contract.py` (nowy) — TDD RED→GREEN: kontrakty `ci.yml`.
+- `scripts/test_docker_publish_workflow_contract.py` (nowy) — TDD RED→GREEN: kontrakty reusable workflow.
+- `scripts/test_root_dockerignore_vs_dockerfiles.py` (nowy) — TDD RED→GREEN: `admin/Dockerfile` COPY sources nie mogą być wykluczone.
+- `docs/TAKEOVER_CLEANUP_PLAN.md` — niniejszy wpis (status ACTIVE, referencja do Draft PR tej gałęzi). Sekcje niezwiązane z T24 zachowane bez zmian.
+
+### Non-scope
+
+- Brak `check_ci_aggregate.py` (z T22) — nie modyfikowany.
+- Brak zmian w istniejących Dockerfile'ach (`backend/Dockerfile`, `admin/Dockerfile`).
+- Brak zmian w kodzie aplikacji, zależnościach, lockfile'ach.
+- Brak zmian w branch protection ani retencji GHCR.
+- Brak zmian w T01, T23, T25, w żadnym `.kilo/plans/*.md`.
+- Brak publikacji obrazów, push taga release, merge PR.
+
+### Acceptance criteria
+
+- Tagi `v*.*.*` wyzwalają `push` w CI.
+- `prepare-publish`: brak `actions/checkout`, `permissions: {}`, SHA walidowane jako dokładnie 40 znaków `[0-9a-fA-F]`, tag jako `^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$`, sześć outputów (`allowed`, `publish_kind`, `validated_sha`, `validated_ref`, `version`, `major_minor`); dla nieobsługiwanych refów `allowed=false` bez failu całego CI workflow.
+- `publish-containers`: `needs: [aggregate, prepare-publish]`, `if: needs.prepare-publish.outputs.allowed == 'true'`, wywołuje `./.github/workflows/docker-publish.yml`, przekazuje wyłącznie `needs.prepare-publish.outputs.*`, caller permissions `contents: read` / `packages: write` / `security-events: write`.
+- `aggregate.needs` niezależny od `publish-containers` (brak cyklu).
+- `docker-publish.yml`: wyłącznie `workflow_call`; brak `secrets: inherit`; brak `type=semver`, `docker/metadata-action`, inferencji z `github.ref`/`github.sha`.
+- Backend context: `./backend`; admin context: `.` z `admin/Dockerfile`; oba `actions/checkout` używają `inputs.validated_sha`.
+- Tagi: zawsze `sha-<full validated SHA>`; `:latest` wyłącznie gdy `publish_kind == 'branch'`; `version`/`major_minor` wyłącznie gdy `publish_kind == 'tag'`.
+- Skan Trivy skanuje wyłącznie tagi SHA; brak `:latest` w skanie; brak `continue-on-error`; pinned Trivy action zachowany.
+- `.dockerignore` nie ukrywa żadnego pliku COPY z `admin/Dockerfile` (workspace manifests, `admin/`, `packages/`, `mobile/package.json`, `admin/nginx.conf.template`).
+- Wszystkie trzy nowe pliki testowe zielone; `test_ci_aggregate.py` i `test_ci_mobile_path_filter.py` nadal zielone.
+- YAML obu workflow parsuje się czysto; `ruff check` i `ruff format --check` czyste dla trzech nowych testów.
+- `git diff --check` czysty.
+- Local Docker build (Admin i Backend) bez `push` — zależne od środowiska (raportowane jako `BLOCKED — ENVIRONMENT REQUIRED` jeśli Docker nieosiągalny lokalnie).
+
+### Validation commands (T24)
+
+- `python -m unittest scripts/test_ci_workflow_contract.py -v`
+- `python -m unittest scripts/test_docker_publish_workflow_contract.py -v`
+- `python -m unittest scripts/test_root_dockerignore_vs_dockerfiles.py -v`
+- `python -m unittest scripts/test_ci_aggregate.py -v`
+- `python -m unittest scripts/test_ci_mobile_path_filter.py`
+- `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"`
+- `python -c "import yaml; yaml.safe_load(open('.github/workflows/docker-publish.yml', encoding='utf-8'))"`
+- `python -m ruff check scripts/test_ci_workflow_contract.py scripts/test_docker_publish_workflow_contract.py scripts/test_root_dockerignore_vs_dockerfiles.py --config pyproject.toml`
+- `python -m ruff format --check scripts/test_ci_workflow_contract.py scripts/test_docker_publish_workflow_contract.py scripts/test_root_dockerignore_vs_dockerfiles.py --config pyproject.toml`
+- `git diff --check`
+- Lokalne `docker build -f admin/Dockerfile .` i `docker build ./backend` bez `push` (jeśli środowisko pozwala; w przeciwnym razie `BLOCKED — ENVIRONMENT REQUIRED`).
+
+### Risks
+
+- Gałąź zawiera nowy job `publish-containers`; jeśli ktoś ustawi `permissions: write-all` na workflow, pierwszy publish mógłby ominąć gate, ale `aggregate` jest w `needs`, więc dopóki gate nie przejdzie, `publish-containers` nie startuje.
+- `:latest` jest nadal pushowany, ale wyłącznie po `aggregate == success` i wyłącznie dla gałęzi (`publish_kind == 'branch'`). Tagi release dostają `version` + `major_minor`, nigdy `:latest`.
+- Konwersja `docker-publish.yml` na reusable workflow oznacza, że istniejące PR-y uruchamiające ten plik bezpośrednio (jeśli istnieją) zakończyłyby się bezczynnie — żaden taki przypadek nie został zidentyfikowany.
+- `docker/build-push-action` w krokach tagujących `latest`/`version` buduje obraz od nowa zamiast `docker tag`. To świadoma decyzja dla prostoty — warstwa cache GHA utrzymuje czas niski; alternatywą byłoby `docker/build-push-action@v6` z `push: true` i wieloma tagami (ale wtedy `:latest` i `sha-...` musiałyby być razem, co komplikuje warunkowanie). Rozwiązanie przyjęte spełnia kontrakt (pushowane są dokładnie tagi SHA + odpowiedni tag warunkowy).
+
+### Dependencies
+
+- Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
+- Otwarty Draft PR na `ci/docker-publish-gated` czeka na review właściciela.
+- Brak nowych zależności środowiskowych ani sekretów.
+
+### Branch / commit
+
+- Branch: `ci/docker-publish-gated`
+- Commit message: `ci: gate container publishing on validated CI`
 
 ## Executor handoff
 
