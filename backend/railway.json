@@ -18,7 +18,6 @@
     }
   },
   "variables": {
-    "SECRET_KEY": "ZrC7TWnC5xgIaUI_SX43-Z4hXrHErAOUxA4Lfflk54VfkoAQbNAcJFVAaaYv6KRLqis",
     "DEBUG": "0",
     "ALLOWED_HOSTS": "backend-production-55c7.up.railway.app,sport-platform.com",
     "STRIPE_SECRET_KEY": "sk_test_REPLACE_ME_in_Railway_Dashboard",
