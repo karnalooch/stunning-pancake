@@ -155,7 +155,7 @@ jobs:
         run: |
           cd backend
           pip install pytest pytest-django
-          python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
+          python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
 
       - name: P1 admin pytest (anomaly queue, sponsor pools)
         env:

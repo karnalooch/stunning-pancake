@@ -48,7 +48,7 @@ Status `STATUS`:
 | T00 | Publikacja master planu | P0 | DONE | docs/takeover-cleanup-plan | - | #60 |
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
 | T02 | Emergency LLM proxy lockdown | P0 | PLANNED | security/llm-proxy-readonly | - | — |
-| T03 | Tenant destructive simulator authority | P0 | PLANNED | security/simulator-global-owner | - | — |
+| T03 | Tenant destructive simulator authority | P0 | ACTIVE | security/simulator-global-owner | - | #65 |
 | T04 | Tenant moderator privilege review (reszta) | P1 | PLANNED | security/tenant-moderator-scope | T03 | — |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
@@ -69,7 +69,7 @@ Status `STATUS`:
 | T21 | Mobile CI filter + test integrity | P0 | DONE | ci/mobile-path-filter-integrity | - | #59 |
 | T22 | CI path routing + aggregate check | P1 | DONE | ci/required-aggregate-check | T21 | #61 |
 | T23 | Fail-closed security gates | P1 | PLANNED | ci/security-fail-closed | T22 | — |
-| T24 | Docker publish gated by CI | P1 | BLOCKED | ci/docker-publish-gated | T22; BLOCKED — OWNER ACTION REQUIRED: merge publishes GHCR images | #63 |
+| T24 | Docker publish gated by CI | P1 | DONE | ci/docker-publish-gated | T22 | #63 |
 | T25 | Quality baseline scripts unified | P2 | PLANNED | scripts/quality-baseline-unified | T19, T20 | — |
 | T26 | Audit scripts truthful | P2 | PLANNED | scripts/audit-truthful | T22, T23 | — |
 | T27 | Dependency manifest ownership + Dependabot | P2 | PLANNED | deps/manifest-ownership | - | — |
@@ -369,7 +369,38 @@ Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-drive
 
 W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
 
-## T24 – Docker publish gated by CI (BLOCKED)
+## T03 – Tenant destructive simulator authority (ACTIVE)
+
+### Scope
+
+- `backend/activities/admin_views.py` — `POST`/`DELETE` dla batch/live simulatora oraz `POST simulator-reset` wymagają `GLOBAL_OWNER`; bezpieczne odczyty statusu pozostają dostępne dla istniejących ról administracyjnych.
+- `backend/activities/test_simulator_authority.py` — test macierzy metod i podpięcia guardów, w tym regresja istniejącego `IsGlobalOwner` dla wipe.
+- `.github/workflows/ci.yml` — nowy test działa w blokującym gate `Simulator light tests (pytest)`.
+- `docs/TAKEOVER_CLEANUP_PLAN.md` — status i dowody transzy.
+
+### Non-scope
+
+- Brak zmian uprawnień Garmin Simulator i endpointów tylko do odczytu.
+- Brak uruchamiania symulatora, wipe, seed, migracji lub operacji środowiskowych.
+- Brak zmian ogólnego `IsAdminOrModerator`; pozostały przegląd moderatora należy do T04.
+
+### Acceptance criteria
+
+- Tylko `GLOBAL_OWNER` może rozpocząć lub przerwać batch/live simulator oraz wykonać simulator reset.
+- `GLOBAL_OWNER`, `TENANT_ADMIN` i `TENANT_MODERATOR` zachowują odczyt statusu batch/live; role nieadministracyjne są odrzucane.
+- Wipe pozostaje ograniczony do `GLOBAL_OWNER`.
+- Nowy test oraz istniejące testy status/operational gate przechodzą; scoped Ruff, format-check, mypy i `git diff --check` są czyste.
+
+### Validation commands (T03)
+
+- `cd backend && python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_status_views.py activities/test_simulator_operational_gate.py -m simulator_light -q`
+- `cd backend && ruff check activities/admin_views.py activities/test_simulator_authority.py`
+- `cd backend && ruff format --check activities/admin_views.py activities/test_simulator_authority.py`
+- `cd backend && mypy --config-file mypy-ci.ini activities/admin_views.py`
+- `python scripts/check_docs_links.py`
+- `git diff --check`
+
+## T24 – Docker publish gated by CI (DONE)
 
 ### Scope
 
@@ -461,8 +492,8 @@ Wymagania:
 ### Dependencies
 
 - Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
-- PR #63 na `ci/docker-publish-gated` ma zielony wymagany `Aggregate CI gate` dla aktualnego head SHA i jest gotowy do review.
-- `BLOCKED — OWNER ACTION REQUIRED`: merge do `main` uruchomi push workflow, który po udanym agregacie opublikuje obrazy backend/admin do GHCR. Publikacja obrazów nie mieści się w bieżącej autoryzacji.
+- PR #63 scalono jako `1d57137a3443702635963f36e808eaf7533810aa` po zielonym wymaganym `Aggregate CI gate` dla aktualnego head SHA.
+- Push run `34689664201` uruchomił publikację dopiero po udanym agregacie dla dokładnie merge SHA; końcowy wynik publikacji jest weryfikowany osobno po merge.
 - Brak nowych zależności środowiskowych ani sekretów.
 
 ### Branch / commit
