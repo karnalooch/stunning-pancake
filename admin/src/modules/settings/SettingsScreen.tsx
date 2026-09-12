@@ -44,16 +44,12 @@ export const SettingsScreen: React.FC = () => {
   const [mfaCode, setMfaCode] = useState('');
 
   useEffect(() => {
-    if (isGlobalOwner) {
-      setMfaLoading(false);
-      return;
-    }
     setMfaLoading(true);
     apiClient.get('/users/mfa/status/')
       .then((r) => setMfaEnabled(Boolean(r.data?.mfa_enabled)))
       .catch(() => {})
       .finally(() => setMfaLoading(false));
-  }, [isGlobalOwner]);
+  }, []);
 
   useEffect(() => {
     setSettings((prev) => ({ ...prev, language: locale }));
@@ -87,7 +83,12 @@ export const SettingsScreen: React.FC = () => {
 
   const confirmMfa = async () => {
     try {
-      await apiClient.post('/users/mfa/enable/', { code: mfaCode });
+      const { data } = await apiClient.post('/users/mfa/enable/', { code: mfaCode });
+      if (data.access && data.refresh) {
+        localStorage.setItem('access_token', data.access);
+        localStorage.setItem('refresh_token', data.refresh);
+        useAuth.setState({ token: data.access, refreshToken: data.refresh });
+      }
       setMfaEnabled(true);
       setMfaSetupUri(null);
       setMfaCode('');
@@ -141,8 +142,7 @@ export const SettingsScreen: React.FC = () => {
       icon: <Shield size={22} />, color: 'red', title: t.settings.securityTitle, children: (
         <Stack gap="md">
           <Button variant="light" color="red" leftSection={<Shield size={16} />}>{t.settings.changePassword}</Button>
-          {!isGlobalOwner && (
-            mfaLoading ? (
+          {mfaLoading ? (
               <Stack gap="sm">
                 <Skeleton height={20} width="60%" radius="md" />
                 <Skeleton height={36} radius="md" />
@@ -169,8 +169,7 @@ export const SettingsScreen: React.FC = () => {
                   </>
                 )}
               </>
-            )
-          )}
+            )}
         </Stack>
       )
     },

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, Stack, Skeleton, Badge, Group, ThemeIcon } from '@mantine/core';
-import { Brain, TrendingUp, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Brain, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { normalizeInsightsPayload } from './systemIntelligenceLogic';
 
@@ -22,7 +22,7 @@ export const SystemIntelligence: React.FC = () => {
       try {
         const { data } = await apiClient.get('/activities/ai/insights/');
         setInsights(normalizeInsightsPayload(data));
-      } catch (err) {
+      } catch {
         setError('Unable to load AI insights. Please try again later.');
       } finally {
         setLoading(false);

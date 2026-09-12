@@ -40,6 +40,34 @@ python scripts/check_openapi_drift.py
 
 Backend and full-stack checks require PostgreSQL/PostGIS and Redis; use the CI workflow or Docker Compose rather than silently replacing them with SQLite.
 
+## Verified takeover progress — 2026-09-10
+
+The following work is merged into `main` and backed by repository history and CI results:
+
+| Area | Evidence | Verified result |
+|---|---|---|
+| Safe backend startup | PR #34 | Demo seeding is opt-in, existing owner passwords are not reset and the backend uses an explicit container entrypoint |
+| Repository inventory | PR #37 | Component, dependency, infrastructure and documentation map recorded in `docs/reports/REPOSITORY_MAP.md` |
+| Quality command inventory | PR #38 | Commands and environment-dependent blockers recorded in `docs/reports/QUALITY_COMMAND_MATRIX.md` |
+| Risk and ownership inventory | PR #39 | Prioritized evidence register and owner decisions recorded in `docs/reports/RISK_AND_OWNERSHIP_MAP.md` |
+| Telemetry authentication | PR #43 and PR #53 | Required JWT configuration fails closed and telemetry uses PyJWT 2.13.0 |
+| Dependency and tenant hardening | PR #49, PR #52 and PR #54 | Pillow and Django security updates merged; user administration has explicit tenant-boundary tests |
+| Playwright lifecycle | PR #45 | Preview server is managed by Playwright; the job has a 45-minute limit and each E2E phase has a 15-minute global limit |
+| Admin cleanup | PR #56 | Unused admin code removed; ESLint, unit tests, TypeScript, production build and Playwright E2E passed before merge |
+
+The final PR #56 verification included 23 passing application E2E tests and 8 passing Live Map/WebGL tests. The earlier run lasting more than an hour was not accepted as normal: lifecycle management, bounded timeouts, stale navigation selectors and locale-dependent map assertions were corrected before merge.
+
+This progress does **not** prove production readiness. In particular, it does not verify production secret rotation, provider-managed backups, restore time, production telemetry flags, external account ownership or a monitored staging release.
+
+### Next takeover tranche
+
+1. Reconcile the open dependency/security inventory with direct runtime dependencies; fix critical and high findings in isolated PRs.
+2. Verify production configuration without exposing values: telemetry JWT enforcement, allowed origins, demo flags and secret ownership.
+3. Perform an isolated PostGIS backup-and-restore exercise and record measured RPO/RTO evidence.
+4. Run the critical staging journey: sign in, record or synchronize an activity, ingest telemetry and review it in admin.
+5. Select Railway or Kubernetes as the primary production path and mark the other path experimental until it has an owner and release gate.
+6. Continue small code cleanups by module, preserving behavior and requiring lint, typecheck, unit tests, build and relevant E2E checks before merge.
+
 ## Current takeover risks
 
 | Priority | Risk | Owner action |

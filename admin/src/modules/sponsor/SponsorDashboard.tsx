@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Text, Group, SimpleGrid, ThemeIcon, Box, Stack, Skeleton, Button } from '@mantine/core';
+import { Card, Text, Group, SimpleGrid, ThemeIcon, Box, Skeleton, Button } from '@mantine/core';
 import { Gift, TrendingUp, Activity, MapPin, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { API_PATHS } from '@4velo/api-client';

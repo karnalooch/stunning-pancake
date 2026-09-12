@@ -55,7 +55,7 @@ export class LivePositionInterpolator {
 
     private ensureLoop(): void {
         if (this.rafId != null) return;
-        const tick = (now: number) => {
+        const tick = (_now: number) => {
             this.pushFrame(1);
             this.rafId = requestAnimationFrame(tick);
         };

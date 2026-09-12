@@ -271,3 +271,60 @@ class TestRoleApi:
         assert response.status_code == 200
         assert len(response.data) == 1
         assert response.data[0]["role"]["slug"] == "sponsor"
+
+    def test_tenant_admin_assignment_is_forced_to_own_tenant(
+        self, tenant_admin, athlete, tenant, rbac_roles
+    ):
+        from rest_framework.test import APIClient
+
+        role = Role.objects.get(slug="athlete")
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+        response = client.post(
+            "/api/users/rbac/user-roles/",
+            {"user_id": athlete.id, "role_id": role.id},
+            format="json",
+        )
+        assert response.status_code == 201
+        assignment = UserRole.objects.get(id=response.data["id"])
+        assert assignment.tenant_id == tenant.id
+        assert assignment.tenant_scoped is True
+
+    def test_tenant_admin_cannot_assign_cross_tenant_user(self, tenant_admin, rbac_roles):
+        from rest_framework.test import APIClient
+
+        other_tenant = Tenant.objects.create(name="Other City", is_active=True)
+        other_user = User.objects.create_user(
+            username="other-athlete",
+            password="pass",
+            role="ATHLETE",
+            tenant=other_tenant,
+        )
+        role = Role.objects.get(slug="athlete")
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+        response = client.post(
+            "/api/users/rbac/user-roles/",
+            {
+                "user_id": other_user.id,
+                "role_id": role.id,
+                "tenant_id": other_tenant.id,
+            },
+            format="json",
+        )
+        assert response.status_code == 400
+        assert not UserRole.objects.filter(user=other_user).exists()
+
+    def test_tenant_admin_cannot_assign_privileged_role(self, tenant_admin, athlete, rbac_roles):
+        from rest_framework.test import APIClient
+
+        role = Role.objects.get(slug="global_owner")
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+        response = client.post(
+            "/api/users/rbac/user-roles/",
+            {"user_id": athlete.id, "role_id": role.id},
+            format="json",
+        )
+        assert response.status_code == 400
+        assert not UserRole.objects.filter(user=athlete, role=role).exists()

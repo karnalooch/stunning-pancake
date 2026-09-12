@@ -1,0 +1,73 @@
+# Root .dockerignore for monorepo Docker build contexts.
+#
+# Consumed by `admin/Dockerfile` whose build context is the repo root.
+# Backend still uses `./backend` as context, so this file does not affect it.
+#
+# Rules:
+# - Exclude noisy / unsafe build artifacts at root and recursively.
+# - Do NOT exclude anything copied by `admin/Dockerfile`:
+#   package.json, pnpm-lock.yaml, pnpm-workspace.yaml, .npmrc,
+#   admin/**, mobile/** (only its package.json is copied but the folder is
+#   walked by pnpm install), packages/**, admin/nginx.conf.template.
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Node / pnpm artifacts (root + nested)
+node_modules
+**/node_modules
+.pnpm-store
+
+# Build outputs
+dist
+**/dist
+build
+**/build
+out
+**/out
+.next
+**/.next
+.turbo
+**/.turbo
+
+# Python artifacts
+__pycache__
+**/__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+**/.pytest_cache
+.ruff_cache
+**/.ruff_cache
+.mypy_cache
+**/.mypy_cache
+.venv
+**/.venv
+venv
+**/venv
+
+# Editor / IDE / logs
+.vscode
+.idea
+*.log
+**/*.log
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Telemetry / artifacts that must never enter a published image
+coverage
+**/coverage
+.playwright
+**/.playwright
+playwright-report
+**/playwright-report
+test-results
+**/test-results
+CI_ENV_FILES_PLACEHOLDER_ACK
+*.tmp
+*.swp

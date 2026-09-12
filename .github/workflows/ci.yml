@@ -3,6 +3,7 @@ name: 4VELO CI/CD Pipeline
 on:
   push:
     branches: [master, main, develop]
+    tags: ['v*.*.*']
   pull_request:
     branches: [master, main, develop]
   schedule:
@@ -46,6 +47,9 @@ jobs:
               - 'admin/**'
             packages:
               - 'packages/**'
+              - '.github/actions/pnpm-setup/**'
+              - '.npmrc'
+              - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
             scripts:
@@ -151,16 +155,16 @@ jobs:
         run: |
           cd backend
           pip install pytest pytest-django
-          python run_pytest.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
+          python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
 
-      - name: P1 admin pytest (anomaly queue, sponsor pools)
+      - name: P1 admin pytest (moderator scope, anomaly queue, sponsor pools)
         env:
           DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
           cd backend
-          python run_pytest.py activities/test_anomaly_queue.py activities/test_sim_lab_proxy.py activities/test_gpx_export.py activities/test_gpx_forensics.py activities/test_gpx_storage.py rewards/test_pools.py users/test_export.py users/test_jwt_mfa.py test_openapi_schema.py -q
+          python run_pytest.py activities/test_tenant_moderator_scope.py activities/test_anomaly_queue.py activities/test_sim_lab_proxy.py activities/test_gpx_export.py activities/test_gpx_forensics.py activities/test_gpx_storage.py rewards/test_pools.py users/test_export.py users/test_jwt_mfa.py test_openapi_schema.py -q
 
       - name: Backend coverage gate (phased P2, 40% on guarded modules)
         env:
@@ -287,6 +291,12 @@ jobs:
       - name: Test load report helpers
         run: python -m pytest scripts/test_load_report.py -q
 
+      - name: Test CI mobile path routing
+        run: python -m unittest scripts/test_ci_mobile_path_filter.py
+
+      - name: Test CI aggregate policy
+        run: python -m unittest scripts/test_ci_aggregate.py -v
+
   repo-assets:
     name: Shared tokens
     runs-on: ubuntu-latest
@@ -352,6 +362,20 @@ jobs:
       - name: Build production bundle
         run: pnpm --filter admin build
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Admin Docker build (no push, blocks PR on context repair)
+        # Build from the monorepo root and persist BuildKit layers independently
+        # of the post-gate publishing cache. No registry login and no push.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: admin/Dockerfile
+          push: false
+          cache-from: type=gha,scope=admin-pr-validation
+          cache-to: type=gha,mode=max,scope=admin-pr-validation
+
   # ──────────────────────────────────────────
   # Audit: Route parity, dead screens, RBAC consistency, env drift
   # ──────────────────────────────────────────
@@ -360,7 +384,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, admin]
     if: |
-      always() && needs.admin.result == 'success' && (
+      always() && (needs.admin.result == 'success' || needs.admin.result == 'skipped') && (
         needs.changes.outputs.full == 'true' ||
         needs.changes.outputs.admin == 'true' ||
         needs.changes.outputs.scripts == 'true'
@@ -527,6 +551,7 @@ jobs:
   e2e:
     name: E2E Tests (Playwright)
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: [changes, admin]
     if: |
       always() && needs.admin.result == 'success' && (
@@ -548,23 +573,19 @@ jobs:
       - name: Build admin for preview (VITE_E2E=1 — Live Map bridge)
         run: VITE_E2E=1 pnpm --filter admin build
 
-      - name: Start preview server and run E2E
+      - name: Run E2E with managed preview server
         run: |
           cd admin
-          pnpm exec vite preview --port 3000 &
-          sleep 3
-          pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github
+          pnpm exec playwright test --project=chromium --project="Mobile Chrome" --reporter=github --global-timeout=900000
         env:
           E2E_BASE_URL: http://localhost:3000
-          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Live Map LOD + WebGL audit gate
         run: |
           cd admin
-          pnpm exec playwright test --project=live-map-zoom --reporter=github
+          pnpm exec playwright test --project=live-map-zoom --reporter=github --global-timeout=900000
         env:
           E2E_BASE_URL: http://localhost:3000
-          E2E_SKIP_WEB_SERVER: '1'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -573,3 +594,134 @@ jobs:
           name: playwright-report
           path: admin/playwright-report/
           retention-days: 7
+
+  # ──────────────────────────────────────────
+  # Aggregate gate: single required CI signal (T22)
+  # ──────────────────────────────────────────
+  aggregate:
+    name: Aggregate CI gate
+    runs-on: ubuntu-latest
+    if: always()
+    timeout-minutes: 15
+    needs: [changes, backend, telemetry, mobile, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
+    env:
+      CI_NEEDS_JSON: ${{ toJson(needs) }}
+      CI_EVENT_NAME: ${{ github.event_name }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Evaluate required-job matrix
+        run: python scripts/check_ci_aggregate.py
+
+  # ──────────────────────────────────────────
+  # T24: prepare-publish — validate ref/SHA before any publish job runs.
+  # Runs only on `push` events. Does no checkout, has no permissions.
+  # Outputs are consumed by `publish-containers` and the reusable
+  # `.github/workflows/docker-publish.yml` workflow.
+  # ──────────────────────────────────────────
+  prepare-publish: # pre-publish ref/sha validation
+    name: Prepare publish inputs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions: {}
+    outputs:
+      allowed: ${{ steps.validate.outputs.allowed }}
+      publish_kind: ${{ steps.validate.outputs.publish_kind }}
+      validated_sha: ${{ steps.validate.outputs.validated_sha }}
+      validated_ref: ${{ steps.validate.outputs.validated_ref }}
+      version: ${{ steps.validate.outputs.version }}
+      major_minor: ${{ steps.validate.outputs.major_minor }}
+    steps:
+      - name: Validate SHA, ref, and version
+        id: validate
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA}"
+          REF="${GITHUB_REF}"
+
+          # SHA must be exactly 40 hex chars
+          if [[ ! "${SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "allowed=false"        >> "$GITHUB_OUTPUT"
+            echo "publish_kind="        >> "$GITHUB_OUTPUT"
+            echo "validated_sha="       >> "$GITHUB_OUTPUT"
+            echo "validated_ref="       >> "$GITHUB_OUTPUT"
+            echo "version="             >> "$GITHUB_OUTPUT"
+            echo "major_minor="         >> "$GITHUB_OUTPUT"
+            echo "prepare-publish: invalid SHA=${SHA}" >&2
+            exit 0
+          fi
+
+          case "${REF}" in
+            refs/heads/main|refs/heads/master)
+              echo "allowed=true"        >> "$GITHUB_OUTPUT"
+              echo "publish_kind=branch" >> "$GITHUB_OUTPUT"
+              echo "validated_sha=${SHA}"      >> "$GITHUB_OUTPUT"
+              echo "validated_ref=${REF}"      >> "$GITHUB_OUTPUT"
+              echo "version="                  >> "$GITHUB_OUTPUT"
+              echo "major_minor="              >> "$GITHUB_OUTPUT"
+              ;;
+            refs/tags/v*)
+              # strict semver tag
+              if [[ "${REF}" =~ ^refs/tags/v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                MAJOR="${BASH_REMATCH[1]}"
+                MINOR="${BASH_REMATCH[2]}"
+                PATCH="${BASH_REMATCH[3]}"
+                echo "allowed=true"                    >> "$GITHUB_OUTPUT"
+                echo "publish_kind=tag"                >> "$GITHUB_OUTPUT"
+                echo "validated_sha=${SHA}"            >> "$GITHUB_OUTPUT"
+                echo "validated_ref=${REF}"            >> "$GITHUB_OUTPUT"
+                echo "version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+                echo "major_minor=${MAJOR}.${MINOR}"  >> "$GITHUB_OUTPUT"
+              else
+                echo "allowed=false"        >> "$GITHUB_OUTPUT"
+                echo "publish_kind="        >> "$GITHUB_OUTPUT"
+                echo "validated_sha="       >> "$GITHUB_OUTPUT"
+                echo "validated_ref="       >> "$GITHUB_OUTPUT"
+                echo "version="             >> "$GITHUB_OUTPUT"
+                echo "major_minor="         >> "$GITHUB_OUTPUT"
+                echo "prepare-publish: tag does not match strict vX.Y.Z pattern: ${REF}" >&2
+              fi
+              ;;
+            *)
+              # Unsupported ref (e.g. branch protection refs, non-publishable refs).
+              # Report allowed=false so publish-containers is skipped; the overall
+              # CI workflow still passes.
+              echo "allowed=false"        >> "$GITHUB_OUTPUT"
+              echo "publish_kind="        >> "$GITHUB_OUTPUT"
+              echo "validated_sha="       >> "$GITHUB_OUTPUT"
+              echo "validated_ref="       >> "$GITHUB_OUTPUT"
+              echo "version="             >> "$GITHUB_OUTPUT"
+              echo "major_minor="         >> "$GITHUB_OUTPUT"
+              echo "prepare-publish: unsupported ref ${REF}" >&2
+              ;;
+          esac
+
+  # ──────────────────────────────────────────
+  # T24: publish-containers — caller of the reusable docker-publish workflow.
+  # Runs only when prepare-publish marked the push as allowed. Passes the
+  # pre-validated outputs to docker-publish.yml; never recomputes them.
+  # ──────────────────────────────────────────
+  publish-containers: # post-gate publish caller (job-level reusable workflow call)
+    name: Publish containers (gated by Aggregate CI gate)
+    needs: [aggregate, prepare-publish]
+    if: needs.prepare-publish.outputs.allowed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      validated_sha: ${{ needs.prepare-publish.outputs.validated_sha }}
+      validated_ref: ${{ needs.prepare-publish.outputs.validated_ref }}
+      publish_kind: ${{ needs.prepare-publish.outputs.publish_kind }}
+      version: ${{ needs.prepare-publish.outputs.version }}
+      major_minor: ${{ needs.prepare-publish.outputs.major_minor }}

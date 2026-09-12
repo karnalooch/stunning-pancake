@@ -235,7 +235,6 @@ export function shouldRenderIndividualRiders(zoom: number): boolean {
 
 /** Cluster circle paint opacity (mirrors live-clusters layer). */
 export function clusterLayerOpacityAtZoom(zoom: number): number {
-    const L = LIVE_MAP_LOD;
     return maplibreInterp(zoom, CLUSTER_CIRCLE_OPACITY_STOPS);
 }
 
