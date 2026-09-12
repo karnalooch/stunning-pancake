@@ -157,14 +157,14 @@ jobs:
           pip install pytest pytest-django
           python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
 
-      - name: P1 admin pytest (anomaly queue, sponsor pools)
+      - name: P1 admin pytest (moderator scope, anomaly queue, sponsor pools)
         env:
           DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
           cd backend
-          python run_pytest.py activities/test_anomaly_queue.py activities/test_sim_lab_proxy.py activities/test_gpx_export.py activities/test_gpx_forensics.py activities/test_gpx_storage.py rewards/test_pools.py users/test_export.py users/test_jwt_mfa.py test_openapi_schema.py -q
+          python run_pytest.py activities/test_tenant_moderator_scope.py activities/test_anomaly_queue.py activities/test_sim_lab_proxy.py activities/test_gpx_export.py activities/test_gpx_forensics.py activities/test_gpx_storage.py rewards/test_pools.py users/test_export.py users/test_jwt_mfa.py test_openapi_schema.py -q
 
       - name: Backend coverage gate (phased P2, 40% on guarded modules)
         env:

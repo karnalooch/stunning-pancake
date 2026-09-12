@@ -15,7 +15,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import Tenant
-from users.permissions import IsAdminOrModerator, IsGlobalOwner
+from users.permissions import IsAdminOrModerator, IsGlobalOwner, IsTenantAdmin
 
 from . import simulator_state as sim
 from .garmin_simulator_tasks import schedule_garmin_rides
@@ -336,7 +336,7 @@ class ExportDataView(APIView):
     Resources: activities, users, statistics
     """
 
-    permission_classes = (permissions.IsAuthenticated, IsAdminRole)
+    permission_classes = (permissions.IsAuthenticated, IsTenantAdmin)
 
     def get(self, request, resource):
         export_format = request.query_params.get("format", "json")
@@ -1672,7 +1672,7 @@ class GarminSimulateView(APIView):
     DELETE /api/activities/admin/garmin-simulate/   — abort
     """
 
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwner]
 
     def get(self, request):
         try:
@@ -1779,7 +1779,7 @@ class GarminSimulateView(APIView):
 
 
 class GarminSummaryClearView(APIView):
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwner]
 
     def post(self, request):
         from .garmin_simulator import clear_garmin_summary
@@ -1789,7 +1789,7 @@ class GarminSummaryClearView(APIView):
 
 
 class GarminGenerateEmailView(APIView):
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwner]
 
     def post(self, request):
         count = min(int(request.data.get("count", 10)), 50)
