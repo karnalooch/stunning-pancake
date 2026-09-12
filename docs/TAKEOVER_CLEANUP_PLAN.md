@@ -53,8 +53,8 @@ Status `STATUS`:
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
 | T07 | MFA mandatory for administrators | P0 | DONE | security/mfa-mandatory-admins | - | #69 |
-| T08 | OAuth state enforcement + provider binding | P1 | ACTIVE | security/oauth-state-and-binding | - | ten PR |
-| T09 | Tenant webhook admin/SSRF | P1 | PLANNED | security/webhook-admin-and-ssrf | - | — |
+| T08 | OAuth state enforcement + provider binding | P1 | DONE | security/oauth-state-and-binding | - | #70 |
+| T09 | Tenant webhook admin/SSRF | P1 | ACTIVE | security/webhook-admin-and-ssrf | - | ten PR |
 | T10 | Department/Moderation/Heatmap tenant scope | P1 | PLANNED | security/tenant-orm-gap-fix | - | — |
 | T11 | RLS real enforcement (Postgres-only tests) | P1 | PLANNED | security/rls-real-enforcement | T10 | — |
 | T12 | B2B billing isolate or disable | P1 | PLANNED | rewards/b2b-isolate-or-disable | - | — |

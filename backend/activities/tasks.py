@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 
+import requests
 from celery import shared_task
 
 from users.push_tasks import send_city_ranking_push, send_quest_push
@@ -291,20 +292,52 @@ def snapshot_live_positions_to_timescale() -> dict:
     name="activities.tasks.deliver_live_map_webhook",
 )
 def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict) -> dict:
-    """Deliver signed webhook POST with exponential backoff."""
+    """Deliver signed webhook POST with exponential backoff.
+
+    Re-runs the SSRF guard immediately before sending so that an out-of-band
+    record edit (or DNS-rebind TOCTOU window) cannot bypass write-time
+    validation. Unsafe URLs short-circuit without ``requests.post`` and are
+    not retried — a controlled ``blocked`` log entry is recorded instead.
+    Redirect responses (3xx) are also rejected and not retried.
+    """
     import hashlib
     import hmac
     import json
 
-    import requests
     from django.utils import timezone
 
     from activities.models_webhooks import LiveMapAlertWebhook, append_delivery_log
+    from activities.ssrf import UnsafeWebhookURL, validate_outbound_url
 
     try:
         wh = LiveMapAlertWebhook.objects.get(pk=webhook_id, enabled=True)
     except LiveMapAlertWebhook.DoesNotExist:
         return {"status": "missing"}
+
+    event_name = payload.get("event") if isinstance(payload, dict) else None
+
+    # Runtime SSRF guard — must match the serializer policy.
+    try:
+        validate_outbound_url(wh.url)
+    except UnsafeWebhookURL as exc:
+        LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
+        append_delivery_log(
+            wh.pk,
+            {
+                "event_id": event_id,
+                "event": event_name,
+                "status": "blocked",
+                "reason": "unsafe_url",
+                "at": timezone.now().isoformat(),
+            },
+        )
+        logger.warning(
+            "live_map.webhook.delivery_status=blocked id=%s reason=%s",
+            webhook_id,
+            exc,
+        )
+        # Policy-blocked deliveries must not retry.
+        return {"status": "blocked", "reason": "unsafe_url"}
 
     body = json.dumps(payload, separators=(",", ":"), sort_keys=True)
     signature = hmac.new(
@@ -317,9 +350,33 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         "X-LiveMap-Signature": signature,
         "X-Event-Id": event_id,
     }
-    event_name = payload.get("event") if isinstance(payload, dict) else None
     try:
-        resp = requests.post(wh.url, data=body, headers=headers, timeout=10)
+        resp = requests.post(
+            wh.url,
+            data=body,
+            headers=headers,
+            timeout=10,
+            allow_redirects=False,
+        )
+        if 300 <= resp.status_code < 400:
+            # Redirects are not followed and not retried as transient errors.
+            LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
+            append_delivery_log(
+                wh.pk,
+                {
+                    "event_id": event_id,
+                    "event": event_name,
+                    "status": "redirect_blocked",
+                    "code": resp.status_code,
+                    "at": timezone.now().isoformat(),
+                },
+            )
+            logger.warning(
+                "live_map.webhook.delivery_status=redirect_blocked id=%s code=%s",
+                webhook_id,
+                resp.status_code,
+            )
+            return {"status": "redirect_blocked", "code": resp.status_code}
         if resp.status_code >= 500:
             raise requests.RequestException(f"HTTP {resp.status_code}")
         if resp.status_code >= 400:
