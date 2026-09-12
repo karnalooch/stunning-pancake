@@ -1,7 +1,7 @@
 # 4VELO — Master Cleanup Plan
 
 Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
-Aktualny `main` HEAD: `8916aa6`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+Aktualny `main` HEAD: `7381173`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
 
 Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
@@ -49,7 +49,7 @@ Status `STATUS`:
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
 | T02 | Emergency LLM proxy lockdown | P0 | DONE | security/llm-proxy-readonly | - | #66 |
 | T03 | Tenant destructive simulator authority | P0 | DONE | security/simulator-global-owner | - | #65 |
-| T04 | Tenant moderator privilege review (reszta) | P1 | PLANNED | security/tenant-moderator-scope | T03 | — |
+| T04 | Tenant moderator privilege review (reszta) | P1 | ACTIVE | security/tenant-moderator-scope | T03 | — |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
 | T07 | MFA mandatory for administrators | P0 | PLANNED | security/mfa-mandatory-admins | - | — |
@@ -430,6 +430,37 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 - `cd backend && ruff check activities/admin_views.py activities/test_simulator_authority.py`
 - `cd backend && ruff format --check activities/admin_views.py activities/test_simulator_authority.py`
 - `cd backend && mypy --config-file mypy-ci.ini activities/admin_views.py`
+- `python scripts/check_docs_links.py`
+- `git diff --check`
+
+## T04 – Tenant moderator privilege review (ACTIVE)
+
+### Scope
+
+- `backend/activities/admin_views.py` — eksport danych wymaga co najmniej `TENANT_ADMIN`; Garmin Simulator, czyszczenie podsumowania i generowanie zewnętrznych kont wymagają `GLOBAL_OWNER`.
+- `backend/activities/leaderboard_views.py` — globalne listowanie, przeliczanie i czyszczenie administracyjnych leaderboardów wymaga `GLOBAL_OWNER`.
+- `backend/activities/test_tenant_moderator_scope.py` — macierz guardów, odmowy bez skutków ubocznych oraz pozytywne przypadki dla uprawnionych ról.
+- `.github/workflows/ci.yml` — test kontraktu T04 działa w blokującym kroku backendowym `P1 admin pytest`.
+
+### Non-scope
+
+- Brak zmian ogólnego `IsAdminOrModerator`, moderacji aktywności, kolejki moderatora, publikacji draftów wydarzeń i odczytów dashboardu/analityki.
+- Brak zmian statusowych odczytów batch/live simulatora chronionych kontraktem T03.
+- Brak uruchamiania symulatorów, zewnętrznego Mail.tm, przeliczeń leaderboardów ani eksportu rzeczywistych danych.
+
+### Acceptance criteria
+
+- `TENANT_ADMIN` i `TENANT_MODERATOR` otrzymują HTTP 403 przed wykonaniem operacji Garmin i administracyjnego zarządzania leaderboardami; moderator otrzymuje HTTP 403 przed eksportem danych.
+- `GLOBAL_OWNER` zachowuje administrację Garmin/leaderboardami, a `TENANT_ADMIN` zachowuje eksport.
+- Zamierzone operacje moderatora — scoped read, approve/reject i kolejka moderacji — pozostają bez zmian.
+- Test T04 i adekwatne regresje moderatora przechodzą; test jest wykonywany w blokującym backend CI; scoped Ruff, dokumentacja i `git diff --check` są czyste.
+
+### Validation commands (T04)
+
+- `cd backend && python run_pytest.py activities/test_tenant_moderator_scope.py activities/tests/test_moderation_scope.py activities/test_anomaly_queue.py activities/test_simulator_authority.py -q`
+- `cd backend && ruff check activities/admin_views.py activities/leaderboard_views.py activities/test_tenant_moderator_scope.py`
+- `cd backend && ruff format --check activities/test_tenant_moderator_scope.py`
+- `python -m pytest scripts/test_ci_workflow_contract.py -q`
 - `python scripts/check_docs_links.py`
 - `git diff --check`
 
