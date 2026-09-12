@@ -47,8 +47,8 @@ Status `STATUS`:
 |----|---------|-----------|--------|-------|------------|----|
 | T00 | Publikacja master planu | P0 | DONE | docs/takeover-cleanup-plan | - | #60 |
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
-| T02 | Emergency LLM proxy lockdown | P0 | PLANNED | security/llm-proxy-readonly | - | — |
-| T03 | Tenant destructive simulator authority | P0 | ACTIVE | security/simulator-global-owner | - | #65 |
+| T02 | Emergency LLM proxy lockdown | P0 | ACTIVE | security/llm-proxy-readonly | - | PR tej gałęzi |
+| T03 | Tenant destructive simulator authority | P0 | DONE | security/simulator-global-owner | - | #65 |
 | T04 | Tenant moderator privilege review (reszta) | P1 | PLANNED | security/tenant-moderator-scope | T03 | — |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
@@ -369,7 +369,36 @@ Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-drive
 
 W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
 
-## T03 – Tenant destructive simulator authority (ACTIVE)
+## T02 – Emergency LLM proxy lockdown (ACTIVE)
+
+### Scope
+
+- `backend/core/llm_proxy.py` — endpoint `/api/llm/proxy/` domyślnie zwraca HTTP 404 (poza home labem / gdy wyłączony); klient nie może nadpisać `base_url`/`apiUrl` (odrzucenie 400 Bad Request w celu ochrony przed SSRF).
+- `backend/core/test_llm_proxy.py` — testy jednostkowe pokrywające: domyślny 404, OPTIONS 404/200, odrzucenie custom base_url (400), brak klucza API (503), błędy walidacji (400) oraz proxy do dozwolonego URL serwerowego.
+- `docs/TAKEOVER_CLEANUP_PLAN.md` — status i dowody transzy T02 oraz potwierdzenie DONE dla T03 (#65).
+
+### Non-scope
+
+- Brak zmian w kodzie mobilnym `AvatarTrainerService` i `LlmCoachService`.
+- Brak kluczy produkcyjnych i zewnętrznych zapytań LLM w CI.
+
+### Acceptance criteria
+
+- Domyślnie żądania do `/api/llm/proxy/` zwracają HTTP 404.
+- Przy włączonym `ENABLE_LLM_PROXY=1` / `LLM_PROXY_ENABLED=1` / `HOME_LAB=1`:
+  - próba podania przez klienta `base_url`/`apiUrl`/`url` zwraca HTTP 400;
+  - poprawne zapytanie trafia wyłącznie pod serwerowy `LLM_API_URL`.
+- Wszystkie testy jednostkowe `core/test_llm_proxy.py` przechodzą; scoped Ruff, format-check i `git diff --check` czyste.
+
+### Validation commands (T02)
+
+- `cd backend && python run_pytest.py core/test_llm_proxy.py -v`
+- `cd backend && ruff check core/llm_proxy.py core/test_llm_proxy.py`
+- `cd backend && ruff format --check core/llm_proxy.py core/test_llm_proxy.py`
+- `python scripts/check_docs_links.py`
+- `git diff --check`
+
+## T03 – Tenant destructive simulator authority (DONE)
 
 ### Scope
 
