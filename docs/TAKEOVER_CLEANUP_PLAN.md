@@ -1,7 +1,7 @@
 # 4VELO — Master Cleanup Plan
 
 Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
-Aktualny `main` HEAD: `7381173`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+Aktualny `main` HEAD: `1f6dfcb`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
 
 Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
@@ -49,10 +49,10 @@ Status `STATUS`:
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
 | T02 | Emergency LLM proxy lockdown | P0 | DONE | security/llm-proxy-readonly | - | #66 |
 | T03 | Tenant destructive simulator authority | P0 | DONE | security/simulator-global-owner | - | #65 |
-| T04 | Tenant moderator privilege review (reszta) | P1 | ACTIVE | security/tenant-moderator-scope | T03 | #68 |
+| T04 | Tenant moderator privilege review (reszta) | P1 | DONE | security/tenant-moderator-scope | T03 | #68 |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
-| T07 | MFA mandatory for administrators | P0 | PLANNED | security/mfa-mandatory-admins | - | — |
+| T07 | MFA mandatory for administrators | P0 | ACTIVE | security/mfa-mandatory-admins | - | ten PR |
 | T08 | OAuth state enforcement + provider binding | P1 | PLANNED | security/oauth-state-and-binding | - | — |
 | T09 | Tenant webhook admin/SSRF | P1 | PLANNED | security/webhook-admin-and-ssrf | - | — |
 | T10 | Department/Moderation/Heatmap tenant scope | P1 | PLANNED | security/tenant-orm-gap-fix | - | — |
@@ -433,7 +433,7 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 - `python scripts/check_docs_links.py`
 - `git diff --check`
 
-## T04 – Tenant moderator privilege review (ACTIVE)
+## T04 – Tenant moderator privilege review (DONE)
 
 ### Scope
 
@@ -461,6 +461,42 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 - `cd backend && ruff check activities/admin_views.py activities/leaderboard_views.py activities/test_tenant_moderator_scope.py`
 - `cd backend && ruff format --check activities/test_tenant_moderator_scope.py`
 - `python -m pytest scripts/test_ci_workflow_contract.py -q`
+- `python scripts/check_docs_links.py`
+- `git diff --check`
+
+T04 scalono przez PR #68 jako squash `1f6dfcb`; wymagany `Aggregate CI gate` był zielony dla dokładnego HEAD PR.
+
+## T07 – MFA mandatory for administrators (ACTIVE)
+
+### Scope
+
+- Logowanie hasłem wymaga poprawnego TOTP od administratora z aktywnym MFA; administrator bez konfiguracji otrzymuje wyłącznie ograniczoną sesję rejestracyjną.
+- Tokeny administratorów mają jawny dowód `mfa_verified`; backend sprawdza także aktualną rolę z bazy, dzięki czemu token wydany przed awansem roli nie omija MFA.
+- OAuth i impersonacja wydają administratorom sesje ograniczone do konfiguracji lub weryfikacji MFA.
+- Ograniczona sesja dopuszcza wyłącznie profil i endpointy MFA. Po konfiguracji lub weryfikacji backend wydaje nowe, pełne tokeny.
+- `GLOBAL_OWNER`, `TENANT_ADMIN` i `TENANT_MODERATOR` nie mogą wyłączyć MFA. Panel admina udostępnia konfigurację wszystkim tym rolom i obsługuje TOTP przy logowaniu/OAuth.
+
+### Non-scope
+
+- Brak zmian issuer/audience i kontraktu tokenów telemetry (T05).
+- Brak zmian polityki ról, czasu życia JWT, recovery codes, SMS/e-mail MFA oraz zależności.
+- Brak migracji bazy: istniejące pola TOTP pozostają kanoniczne.
+
+### Acceptance criteria
+
+- Każda rola administracyjna bez MFA może wejść tylko do profilu i konfiguracji MFA; operacje chronione kończą się 401 bez skutków ubocznych.
+- Każda rola administracyjna z MFA loguje się tylko z poprawnym TOTP; zwykły użytkownik zachowuje dotychczasowy login.
+- Zmiana bieżącej roli użytkownika na administracyjną natychmiast ogranicza wcześniej wydany token bez `mfa_verified`.
+- Włączenie lub sesyjna weryfikacja MFA zwraca nowe tokeny z `mfa_verified`; odświeżanie zachowuje ograniczenie.
+- Wszystkie role administracyjne mają `required_for_role=true` i nie mogą wyłączyć MFA.
+- Testy backendu, typecheck/lint admina, Ruff, dokumentacja i `git diff --check` przechodzą.
+
+### Validation commands (T07)
+
+- `cd backend && python run_pytest.py users/test_jwt_mfa.py users/test_mfa.py users/test_admin.py::TestRolePermissions::test_impersonation_requires_global_owner users/test_admin.py::TestRolePermissions::test_impersonation_succeeds_for_owner -q`
+- `cd backend && ruff check users/jwt_auth.py users/jwt_views.py users/mfa_policy.py users/mfa_views.py users/test_jwt_mfa.py core/social_auth.py users/views.py`
+- `cd backend && ruff format --check users/jwt_auth.py users/jwt_views.py users/mfa_policy.py users/mfa_views.py users/test_jwt_mfa.py core/social_auth.py users/views.py`
+- `pnpm --filter admin typecheck && pnpm --filter admin lint`
 - `python scripts/check_docs_links.py`
 - `git diff --check`
 

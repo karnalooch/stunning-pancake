@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useEffect, useState } from 'react';
-import { MantineProvider, Box, Text, Title, Button, Loader } from '@mantine/core';
+import { MantineProvider, Box, Text, Title, Button, Loader, TextInput } from '@mantine/core';
 import { HashRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/notifications/styles.css';
@@ -62,9 +62,26 @@ import { E2EAuthBootstrap } from './core/auth/E2EAuthBootstrap';
 import { useI18n } from './i18n/useI18n';
 const LiveMapPage = lazy(() => import('./modules/analytics/live-map/LiveMap').then(m => ({ default: m.LiveMap })));
 
-const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: any) => void }> = ({ onLogin }) => {
+const AuthCallback: React.FC<{
+  onLogin: (token: string, refresh: string, user: any) => Promise<void>;
+}> = ({ onLogin }) => {
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [pendingTokens, setPendingTokens] = useState<{ access: string; refresh: string } | null>(null);
+
+  const completeLogin = React.useCallback((access: string, refresh: string, destination: string) => {
+    apiClient.get(API_PATHS.usersProfile, { headers: { Authorization: `Bearer ${access}` } })
+      .then(r => {
+        const d = r.data?.data || r.data;
+        onLogin(access, refresh, profileToAuthUser(d)).then(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.hash = destination;
+        }).catch(() => setError(t.auth.callbackFailedComplete));
+      })
+      .catch(() => setError(t.auth.callbackFailedProfile));
+  }, [onLogin, t.auth.callbackFailedComplete, t.auth.callbackFailedProfile]);
+
   useEffect(() => {
     // 1. Try parsing from hash query string
     const hash = window.location.hash;
@@ -83,24 +100,44 @@ const AuthCallback: React.FC<{ onLogin: (token: string, refresh: string, user: a
     if (access && refresh) {
       const finalAccess = access;
       const finalRefresh = refresh;
-      // Fetch user profile
-      import('./api/client').then(({ apiClient }) => {
-        apiClient.get(API_PATHS.usersProfile, { headers: { Authorization: `Bearer ${finalAccess}` } })
-          .then(r => {
-            const d = r.data?.data || r.data;
-            onLogin(finalAccess, finalRefresh, profileToAuthUser(d)).then(() => {
-              window.history.replaceState({}, document.title, window.location.pathname);
-              window.location.hash = '#/owner/dashboard';
-            }).catch(() => setError(t.auth.callbackFailedComplete));
-          })
-          .catch(() => setError(t.auth.callbackFailedProfile));
-      });
+      try {
+        const encodedPayload = finalAccess.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const paddedPayload = encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, '=');
+        const payload = JSON.parse(atob(paddedPayload));
+        if (payload.mfa_verification_required) {
+          setPendingTokens({ access: finalAccess, refresh: finalRefresh });
+          return;
+        }
+        completeLogin(
+          finalAccess,
+          finalRefresh,
+          payload.mfa_setup_required ? '#/owner/settings' : '#/owner/dashboard',
+        );
+      } catch {
+        setError(t.auth.callbackFailedComplete);
+      }
     } else {
       Promise.resolve().then(() => setError(t.auth.callbackNoToken));
     }
-  }, [onLogin, t.auth.callbackFailedComplete, t.auth.callbackFailedProfile, t.auth.callbackNoToken]);
+  }, [completeLogin, t.auth.callbackFailedComplete, t.auth.callbackNoToken]);
+
+  const verifyMfa = async () => {
+    if (!pendingTokens) return;
+    try {
+      const response = await axios.post(
+        `${apiClient.defaults.baseURL || '/api'}/users/mfa/verify-session/`,
+        { code: mfaCode },
+        { headers: { Authorization: `Bearer ${pendingTokens.access}` } },
+      );
+      completeLogin(response.data.access, response.data.refresh, '#/owner/dashboard');
+      setPendingTokens(null);
+    } catch {
+      setError('Invalid MFA code.');
+    }
+  };
 
   if (error) return <Box p={50} ta="center"><Title order={2} c="red">{t.auth.callbackTitleFailed}</Title><Text c="dimmed" mt="md">{error}</Text></Box>;
+  if (pendingTokens) return <Box p={50} maw={400} mx="auto"><Title order={2}>MFA verification</Title><TextInput mt="md" value={mfaCode} onChange={(e) => setMfaCode(e.currentTarget.value.replace(/\D/g, '').slice(0, 6))} placeholder="123456" inputMode="numeric" autoComplete="one-time-code" /><Button mt="md" onClick={verifyMfa}>Verify</Button></Box>;
   return <Box p={50} ta="center"><Loader size="lg" /><Text c="dimmed" mt="md">{t.auth.callbackCompleting}</Text></Box>;
 };
 
@@ -108,13 +145,17 @@ export default function App() {
   const { t } = useI18n();
   const { isAuthenticated, login } = useAuth();
 
-  const handleLogin = async (username: string, password: string) => {
+  const handleLogin = async (username: string, password: string, mfaCode?: string) => {
     try {
       clearStoredSession();
       useAuth.getState().logout();
 
       const baseURL = apiClient.defaults.baseURL || '/api';
-      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, { username, password });
+      const res = await axios.post(`${baseURL}${API_PATHS.authToken}`, {
+        username,
+        password,
+        ...(mfaCode ? { mfa_code: mfaCode } : {}),
+      });
       const { access, refresh } = res.data;
 
       localStorage.setItem('access_token', access);
@@ -125,12 +166,14 @@ export default function App() {
       const profileData = profileRes.data?.data || profileRes.data;
 
       await login(access, refresh, profileToAuthUser(profileData));
+      if (res.data.mfa_setup_required) window.location.hash = '#/owner/settings';
     } catch (error: any) {
       const data = error?.response?.data;
       const detail = data?.detail;
       const msg =
         (typeof detail === 'string' && detail) ||
         (Array.isArray(detail) && detail[0]) ||
+        data?.mfa_code?.[0] ||
         data?.non_field_errors?.[0] ||
         data?.error ||
         t.app.loginFailedDefault;

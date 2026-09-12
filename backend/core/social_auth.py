@@ -11,9 +11,9 @@ import secrets
 from urllib.parse import quote, urlencode
 
 from django.contrib.auth import get_user_model
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from core.redis_cluster import get_redis
+from users.jwt_views import restricted_token_pair_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -130,10 +130,7 @@ def find_or_create_oauth_user(
 
 
 def build_auth_redirect(user, client: str = "admin") -> str:
-    refresh = RefreshToken.for_user(user)
-    access = str(refresh.access_token)
-    refresh_str = str(refresh)
-    params = urlencode({"access": access, "refresh": refresh_str})
+    params = urlencode(restricted_token_pair_for_user(user))
 
     if client == "mobile":
         return f"{MOBILE_DEEP_LINK_SCHEME}://auth/callback?{params}"
