@@ -124,6 +124,17 @@ class FakeRedis:
             return None
         return val.decode() if isinstance(val, bytes) else val
 
+    def getdel(self, key: str) -> Any:
+        """Atomic GETDEL — returns the value and removes the key in one step.
+
+        Mirrors ``redis.Redis.getdel`` (redis-py 4.0+). Required by T08 so that
+        OAuth state cannot be replayed by parallel callbacks.
+        """
+        val = self.get(key)
+        if val is not None:
+            self.storage.pop(key, None)
+        return val
+
     def sadd(self, key: str, *members: Any) -> int:
         if key not in self.storage:
             self.storage[key] = set()

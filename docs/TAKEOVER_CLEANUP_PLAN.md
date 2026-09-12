@@ -52,8 +52,8 @@ Status `STATUS`:
 | T04 | Tenant moderator privilege review (reszta) | P1 | DONE | security/tenant-moderator-scope | T03 | #68 |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
-| T07 | MFA mandatory for administrators | P0 | ACTIVE | security/mfa-mandatory-admins | - | ten PR |
-| T08 | OAuth state enforcement + provider binding | P1 | PLANNED | security/oauth-state-and-binding | - | — |
+| T07 | MFA mandatory for administrators | P0 | DONE | security/mfa-mandatory-admins | - | #69 |
+| T08 | OAuth state enforcement + provider binding | P1 | ACTIVE | security/oauth-state-and-binding | - | ten PR |
 | T09 | Tenant webhook admin/SSRF | P1 | PLANNED | security/webhook-admin-and-ssrf | - | — |
 | T10 | Department/Moderation/Heatmap tenant scope | P1 | PLANNED | security/tenant-orm-gap-fix | - | — |
 | T11 | RLS real enforcement (Postgres-only tests) | P1 | PLANNED | security/rls-real-enforcement | T10 | — |
@@ -466,7 +466,9 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 
 T04 scalono przez PR #68 jako squash `1f6dfcb`; wymagany `Aggregate CI gate` był zielony dla dokładnego HEAD PR.
 
-## T07 – MFA mandatory for administrators (ACTIVE)
+## T07 – MFA mandatory for administrators (DONE)
+
+Scalone jako squash `038971a86c9c3a725ac055111cbdabd7d86afbe6` (PR #69) po zielonym wymaganym `Aggregate CI gate` dla dokładnego head SHA.
 
 ### Scope
 
@@ -499,6 +501,168 @@ T04 scalono przez PR #68 jako squash `1f6dfcb`; wymagany `Aggregate CI gate` by�
 - `pnpm --filter admin typecheck && pnpm --filter admin lint`
 - `python scripts/check_docs_links.py`
 - `git diff --check`
+
+## T08 – OAuth state enforcement + provider binding (ACTIVE)
+
+Status: `ACTIVE` — PR otwarty na gałęzi `security/oauth-state-and-binding`. Po scaleniu zostanie zaktualizowany na `DONE` ze wskazaniem PR i squash SHA.
+
+### Root cause
+
+`core/social_auth.py::resolve_oauth_state` używał nieatomowej pary `GET` + `DELETE`, nie wiązał stanu z providerem OAuth i nie miał ścisłego allow-list klienta. Brakujący stan cicho powracał do `client="admin"`, a błędy Redis były połykane. To pozwalało na:
+
+* race condition / replay tego samego nonce przed usunięciem,
+* atrybut atakującego mógł podstawić `state` z innego providera (Google↔Facebook swap),
+* callback mógł wyciec do `client=admin` nawet gdy logowanie zaczęło się dla `mobile`,
+* Redis outage powodował ciche użycie domyślnego klienta zamiast 400.
+
+### Scope
+
+* `backend/core/social_auth.py` — `OAuthStateError`, `consume_oauth_state(nonce, *, expected_provider)`, allow-list `ALLOWED_OAUTH_PROVIDERS = ("google", "facebook")`, allow-list `ALLOWED_OAUTH_CLIENTS = ("admin", "mobile")`, atomowy `r.getdel(...)`, walidacja payload (object / provider / client), usunięcie `resolve_oauth_state`.
+* `backend/core/google_auth.py` — callback konsumuje i waliduje stan przed wymianą tokena; wiąże stan z `expected_provider="google"`; odrzuca każdy `OAuthStateError` stabilnym HTTP 400; wyprowadza `client` wyłącznie ze zweryfikowanego stanu.
+* `backend/core/facebook_auth.py` — symetrycznie z Google: `consume_oauth_state(..., expected_provider="facebook")`, `_oauth_state_error_response`, brak fallbacku do `client="admin"`.
+* `backend/core/fake_redis.py` — `FakeRedis.getdel(key)` (kompatybilne z `redis.Redis.getdel`) dla testów.
+* `backend/core/oauth_callback_redirect` — wąsko-scoped `OAuthCallbackRedirect(HttpResponseRedirect)` z `allowed_schemes = {"http","https","ftp", MOBILE_DEEP_LINK_SCHEME}`; produkcyjna ścieżka mobile deep-link używa tego helpera, a nie globalnej zmiany Django. Bazowy `HttpResponseRedirectBase.allowed_schemes` pozostaje nietknięty (`["http","https","ftp"]`).
+* `backend/core/test_oauth_state.py` — 62 testy: generowanie stanu, normalizacja klienta, macierz odmów callback (Google + Facebook), realna atomowość `getdel`, replay po success / malformed / provider-mismatch, Redis failure fail-closed, realne mobile deep-link redirect (bez patchy na `redirect` / `HttpResponseRedirect` / scheme-validation), query-override, T07 restricted admin flow, login start.
+* `.github/workflows/ci.yml` — dodanie `core/test_oauth_state.py` do istniejącego blokującego kroku `P1 admin pytest` (brak `continue-on-error`, brak duplikatu).
+* `scripts/test_ci_workflow_contract.py` — klasa `P1AdminPytestT08ContractTests` weryfikująca, że wskazany krok `P1 admin pytest*` zawiera `core/test_oauth_state.py` w `run:`, nie ma `continue-on-error`, oraz nie istnieje żaden inny krok z referencją do tego pliku.
+
+### Non-scope
+
+* Brak startu T09 ani żadnej innej transzy.
+* Brak zmian w T01 / PR #47.
+* Brak zmian w telemetrii poza T05.
+* Brak redizajnu polityki MFA poza wymaganą kompatybilnością T07.
+* Brak zmian JWT TTLs / issuer / audience / schematów.
+* Brak migracji bazy, brak nowych zależności.
+* Brak zmian UI OAuth ani kodu mobilnego.
+* Brak globalnej zmiany `HttpResponseRedirect.allowed_schemes` — jedynie per-instancja subclass.
+* Brak zmian production throttlingu (DRF AnonRateThrottle / UserRateThrottle / login pozostają nietknięte).
+* Brak edycji `.kilo/plans/*.md`.
+
+### State contract
+
+Stan (`payload`) zapisywany przez `store_oauth_state(client, provider)` do `oauth:social:{nonce}` z TTL `OAUTH_STATE_TTL` (default 600s):
+
+```json
+{"client": "admin|mobile", "provider": "google|facebook"}
+```
+
+Odczyt atomowy przez `consume_oauth_state(nonce, *, expected_provider)`:
+
+* `nonce is None or ""` → `OAuthStateError(code="missing")`.
+* Redis exception → `OAuthStateError(code="redis_failure")` (fail-closed, bez fallbacku na klienta).
+* Brak wpisu (unknown/expired/replayed) → `OAuthStateError(code="unknown")`.
+* Wartość nie jest JSON-em → `OAuthStateError(code="malformed")` (stan skonsumowany).
+* Nieobiekt JSON → `OAuthStateError(code="malformed")` (stan skonsumowany).
+* Brak `provider` lub `client`, zły typ → `OAuthStateError(code="invalid_payload")` (stan skonsumowany).
+* `provider` poza allow-list → `OAuthStateError(code="invalid_payload")` (stan skonsumowany).
+* `client` poza allow-list → `OAuthStateError(code="invalid_client")` (stan skonsumowany).
+* `provider != expected_provider` → `OAuthStateError(code="provider_mismatch")` (stan skonsumowany).
+
+Stan jest **zawsze** konsumowany (nawet malformed / provider-mismatch) — w przeciwnym razie atakujący mógłby sondować nonces dowolnymi payloadami. Sukces zwraca dict `{"provider": str, "client": str}` (z normalizacji `normalize_client`).
+
+### Allowed-client policy
+
+`normalize_client(raw)` mapuje `"mobile"` na `"mobile"`, wszystko inne (`None`, `""`, `"admin"`, nieznane) na `"admin"`. Callback **nie używa** `request.GET.get("client")` — `client` pochodzi wyłącznie ze zweryfikowanego stanu. Test `test_callback_client_query_param_does_not_override_state` asercja, że `?client=mobile` w query callback nie zmienia trasy.
+
+### Provider binding
+
+* `google_callback` wywołuje `consume_oauth_state(..., expected_provider="google")`.
+* `facebook_callback` wywołuje `consume_oauth_state(..., expected_provider="facebook")`.
+* Cross-provider state (Google nonce w Facebook callback, Facebook nonce w Google callback) → HTTP 400 z kodem `provider_mismatch`.
+
+### Atomic replay protection
+
+Pojedynczy `r.getdel(_state_key(nonce))`. Brak `r.get(...)` + `r.delete(...)`. Test `test_state_is_consumed_atomically` patchuje `FakeRedis.getdel` i asercja wyłącznie jednego wywołania na poprawny klucz. Replay testy (`test_replay_after_*`) potwierdzają, że po pierwszym (sukces lub odmowa) stanu nie da się ponownie skonsumować.
+
+### Failure behavior
+
+Każdy `OAuthStateError` zwraca:
+
+```
+HTTP 400
+{"error": "OAuth state rejected: <code>"}
+```
+
+`<code>` jest jednym z: `missing`, `redis_failure`, `unknown`, `malformed`, `invalid_payload`, `invalid_client`, `provider_mismatch`. **Nigdy** nie zawiera nonce, tokena, payloadu, sekretu providera, danych użytkownika. Callback nie wykonuje `requests.post`/`requests.get` do providera, nie tworzy użytkownika, nie wystawia JWT i nie buduje redirect URL przed pozytywną walidacją stanu.
+
+### Real mobile redirect handling
+
+`build_auth_redirect(user, client="mobile")` zwraca `{MOBILE_DEEP_LINK_SCHEME}://auth/callback?...`. Domyślny `HttpResponseRedirect` odrzuca nieznane schematy (`DisallowedRedirect`), co w produkcji zablokowałoby legalny mobile deep-link. Rozwiązanie: subclass `OAuthCallbackRedirect(HttpResponseRedirect)` z `allowed_schemes = set(HttpResponseRedirect.allowed_schemes) | {MOBILE_DEEP_LINK_SCHEME}` (per-instancja, nie globalnie). Helper `oauth_callback_redirect(user, *, client)` buduje odpowiedź i jest używany przez oba callbacki. Bazowy `HttpResponseRedirectBase.allowed_schemes` pozostaje `["http","https","ftp"]` — tylko ten subclass ma rozszerzenie. `client` jest walidowany względem `ALLOWED_OAUTH_CLIENTS` przed konstrukcją; URL nigdy nie pochodzi z query. Testy `TestOAuthCallbackRedirectHelper` weryfikują: realna instancja `HttpResponseRedirect`, `Location` header, odmowa `javascript:` / `file:`.
+
+### Deterministic throttle-test isolation
+
+DRF `AnonRateThrottle` jest skonfigurowany na 30/min — pełny suite 62 callback testów przekraczałby ten limit w obrębie jednego okna, produkując 429 i maskując rzeczywistą odmowę T08. Fixture `_reset_throttle_cache` (autouse) czyści `django.core.cache` przed i po każdym teście. Throttle pozostaje aktywny (nie wyłączony), szybkość produkcyjna nie jest zmieniana, ustawienia globalne nietknięte. Izolacja deterministyczna — drugi pełny przebieg suite'u nie zwraca 429.
+
+### T07 compatibility
+
+* `build_auth_redirect` nadal używa `restricted_token_pair_for_user` z `users/jwt_views.py` — administrator OAuth otrzymuje `mfa_setup_required=True` (lub `mfa_verification_required=True`) zamiast `mfa_verified=True`.
+* Brak zmian w `users/jwt_views.py`, `users/mfa_policy.py`, `users/mfa_views.py`.
+* Test `test_admin_receives_restricted_mfa_token_from_t07` asercja: `restricted_token_pair_for_user(admin).access` → claim `mfa_setup_required`, brak `mfa_verified`.
+* Regresja T07: `cd backend && python run_pytest.py users/test_jwt_mfa.py -q` (18 passed).
+
+### Acceptance criteria
+
+* Każdy `OAuthStateError` z `consume_oauth_state` skutkuje HTTP 400 z `{"error": "OAuth state rejected: <code>"}`.
+* Brak wywołań `requests.post`/`requests.get`, `find_or_create_oauth_user`, JWT issuance ani budowy redirect URL przed pozytywną walidacją stanu.
+* Callback Google akceptuje wyłącznie stan wystawiony dla `google`; callback Facebook wyłącznie dla `facebook`.
+* Brak fallbacku `client="admin"` przy brakującym / nieprawidłowym stanie.
+* `request.GET["client"]` nie wpływa na wybór klienta.
+* Real mobile deep-link redirect (`fourvelo://auth/callback?access=...`) jest zwracany przez oba callbacki bez żadnego patcha na `redirect`, `HttpResponseRedirect` czy walidację schematu.
+* Redis outage → HTTP 400 (fail-closed), brak konsumpcji stanu.
+* Stan jest zawsze atomowo konsumowany; replay po success / malformed / provider-mismatch → HTTP 400.
+* T07 admin restricted token flow pozostaje niezmieniony.
+* CI: `core/test_oauth_state.py` działa w blokującym kroku `P1 admin pytest`, brak duplikatu, brak `continue-on-error`. Kontrakt weryfikowany przez `scripts/test_ci_workflow_contract.py::P1AdminPytestT08ContractTests` (4 testy).
+* Aggregate contract nietknięty (pełny `scripts.test_ci_aggregate` 59 passed).
+* `ruff check` i `ruff format --check` czyste dla 5 zmienionych plików.
+* `git diff --check` czysty.
+* Brak edycji `.kilo/plans/*.md`.
+
+### Test coverage
+
+`backend/core/test_oauth_state.py` — 62 testy w 8 klasach:
+
+* `TestStateGeneration` (3) — Google + Facebook login zapisuje provider+client; TTL.
+* `TestNormalizeClient` (5) — `mobile`, `admin`, inne wartości, pusty, `None`.
+* `TestConsumeOAuthState` (18) — missing/empty nonce, unknown, malformed JSON, non-object, missing provider, missing client, invalid client, provider mismatch w obu kierunkach, valid Google + Facebook state, replay po success / malformed / provider-mismatch, Redis failure fail-closed, atomowość `getdel`, izolacja payload.
+* `TestOAuthCallbackRedirectHelper` (6) — admin http redirect, mobile deep-link, invalid client ValueError, bazowy `allowed_schemes` nietknięty, subclass akceptuje `fourvelo://`, subclass odrzuca `javascript:` i `file:`.
+* `TestGoogleCallbackDenial` (10) i `TestFacebookCallbackDenial` (10) — missing/empty/unknown/malformed/list/missing-provider/missing-client/invalid-client/cross-provider/Redis-failure → HTTP 400, brak side-effects.
+* `TestReplayHappyPath` (2) — Google + Facebook replay po success.
+* `TestGoogleCallbackPositive` (4) i `TestFacebookCallbackPositive` (2) — admin redirect (real `HttpResponseRedirect`, `Location`), mobile deep-link (real `OAuthCallbackRedirect`, `fourvelo://...`), query-override, T07 restricted admin flow.
+* `TestLoginFlow` (2) — Google + Facebook login redirect do providera z `state=`.
+
+### Risks
+
+* Subclass `OAuthCallbackRedirect` jest per-instancja — regresja w `HttpResponseRedirect.allowed_schemes` w przyszłej wersji Django nie wpłynie na subclass (override).
+* `consume_oauth_state` sprawdza `expected_provider in ALLOWED_OAUTH_PROVIDERS` — literówka w callbacku (np. `"googlee"`) zostanie odrzucona z kodem `invalid_payload` (programmer error widoczny w logu).
+* Throttle cache fixture zakłada, że `django.core.cache` jest skonfigurowane — w produkcji DRF throttle cache jest domyślny. W testach bez Redis cache może wymagać explicit `CACHES` (in-memory domyślny fallback działa).
+* Brak koordynacji z mobilem — klient mobilny musi używać tej samej nazwy schematu (`MOBILE_DEEP_LINK_SCHEME` env var, default `fourvelo`) co backend.
+
+### Rollback
+
+Pojedynczy revert squash merge'a tego PR przywraca stan sprzed T08. Przed revert należy:
+
+1. Potwierdzić, że żaden aktywny provider login nie polega na `?state=...` wystawionym przez starą wersję (Redis TTL = 10 min, więc okno jest krótkie).
+2. Wyczyścić `oauth:social:*` w Redis (TTL i tak to zrobi).
+
+Brak migracji, brak zmian w lockfile'ach, brak kompatybilności wstecznej do zachowania — revert jest bezpieczny atomowo.
+
+### Validation commands
+
+* `cd backend && python run_pytest.py core/test_oauth_state.py -q` (62 passed, uruchomić dwukrotnie dla determinizmu)
+* `cd backend && python run_pytest.py users/test_jwt_mfa.py -q` (18 passed, regresja T07)
+* `cd backend && ruff check core/social_auth.py core/google_auth.py core/facebook_auth.py core/test_oauth_state.py core/fake_redis.py`
+* `cd backend && ruff format --check core/social_auth.py core/google_auth.py core/facebook_auth.py core/test_oauth_state.py core/fake_redis.py`
+* `python -m unittest scripts.test_ci_workflow_contract -v` (60 passed, w tym 4 z `P1AdminPytestT08ContractTests`)
+* `python -m unittest scripts.test_ci_aggregate -v` (59 passed)
+* `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"`
+* `python scripts/check_docs_links.py`
+* `git diff --check`
+
+### Branch / commit
+
+* Branch: `security/oauth-state-and-binding`
+* Commit message: `security: enforce OAuth state provider binding`
 
 ## T24 – Docker publish gated by CI (DONE)
 

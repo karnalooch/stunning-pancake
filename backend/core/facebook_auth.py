@@ -1,5 +1,10 @@
 """
 Custom Facebook OAuth2 login — matches Google OAuth style.
+
+T08: OAuth state is mandatory and consumed atomically with provider binding.
+Any state failure (missing, malformed, replayed, provider-mismatched,
+client-invalid, or Redis down) returns HTTP 400 BEFORE any external request,
+user creation or token issuance. Mirrors ``core/google_auth.py``.
 """
 
 import os
@@ -11,11 +16,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 
 from core.social_auth import (
+    OAuthStateError,
     append_state_to_auth_url,
-    build_auth_redirect,
+    consume_oauth_state,
     find_or_create_oauth_user,
     normalize_client,
-    resolve_oauth_state,
+    oauth_callback_redirect,
     store_oauth_state,
 )
 
@@ -25,6 +31,15 @@ REDIRECT_URI = os.getenv(
     "FACEBOOK_REDIRECT_URI",
     "https://backend-production-55c7.up.railway.app/api/auth/facebook/callback/",
 )
+
+
+def _oauth_state_error_response(exc: OAuthStateError) -> JsonResponse:
+    """Build a generic, non-leaking 400 for OAuth state failures.
+
+    The raw nonce, access tokens, and stored payload must never reach the
+    response body or logs.
+    """
+    return JsonResponse({"error": f"OAuth state rejected: {exc.code}"}, status=400)
 
 
 @api_view(["GET"])
@@ -60,8 +75,14 @@ def facebook_callback(request):
         )
         return JsonResponse({"error": error}, status=400)
 
-    state_data = resolve_oauth_state(request.GET.get("state"))
-    client = state_data.get("client", "admin") if state_data else "admin"
+    # T08: state is mandatory and consumed atomically with provider binding.
+    # Any failure here short-circuits BEFORE token exchange, profile fetch,
+    # user creation, JWT issuance and redirect.
+    try:
+        state_data = consume_oauth_state(request.GET.get("state"), expected_provider="facebook")
+    except OAuthStateError as exc:
+        return _oauth_state_error_response(exc)
+    client = state_data["client"]
 
     token_resp = requests.get(
         "https://graph.facebook.com/v18.0/oauth/access_token",
@@ -117,4 +138,4 @@ def facebook_callback(request):
     except ValueError as exc:
         return JsonResponse({"error": str(exc)}, status=400)
 
-    return redirect(build_auth_redirect(user, client=client))
+    return oauth_callback_redirect(user, client=client)
