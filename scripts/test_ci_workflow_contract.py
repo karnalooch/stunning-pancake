@@ -17,9 +17,10 @@ These tests are written TDD-first and intentionally fail until the
   absent, and ``with`` lives directly on the job; all five inputs reference
   ``needs.prepare-publish.outputs.*``;
 * ``aggregate`` does not depend on ``publish-containers`` (no cycle);
-* the existing ``admin`` CI job runs a blocking PR-safe Admin Docker build
-  validation step (context = repo root, file = admin/Dockerfile, no push,
-  no GHCR login).
+* the existing ``admin`` CI job runs a blocking PR-safe Admin Buildx
+  validation step (context = repo root, file = admin/Dockerfile, scoped GHA
+  layer cache, no push and no GHCR login);
+* pnpm's setup-node cache key is explicitly bound to the root lockfile.
 
 This module parses the workflow as YAML and inspects the parsed structure.
 """
@@ -34,6 +35,7 @@ import yaml
 REPO = Path(__file__).resolve().parents[1]
 WORKFLOW = REPO / ".github" / "workflows" / "ci.yml"
 DOCKER_PUBLISH = REPO / ".github" / "workflows" / "docker-publish.yml"
+PNPM_SETUP = REPO / ".github" / "actions" / "pnpm-setup" / "action.yml"
 
 
 def _ci() -> dict:
@@ -50,6 +52,10 @@ def _docker_publish() -> dict:
 
 def _docker_publish_text() -> str:
     return DOCKER_PUBLISH.read_text(encoding="utf-8")
+
+
+def _pnpm_setup() -> dict:
+    return yaml.safe_load(PNPM_SETUP.read_text(encoding="utf-8"))
 
 
 def _on(workflow: dict) -> dict:
@@ -472,41 +478,48 @@ class DockerPublishStepContractTests(unittest.TestCase):
 
 
 class AdminDockerBuildValidationTests(unittest.TestCase):
-    """The existing admin CI job must run a non-publishing Docker build."""
+    """The admin CI job must run a cached, non-publishing Buildx build."""
 
     def _admin_job(self) -> dict:
         return _ci()["jobs"]["admin"]
 
-    def _docker_build_step(self) -> dict | None:
-        for step in self._admin_job()["steps"]:
-            run = step.get("run", "")
-            if isinstance(run, str) and "docker build" in run and "admin/Dockerfile" in run:
-                return step
-        return None
+    def _build_step(self) -> dict:
+        step = next(
+            (
+                step
+                for step in self._admin_job()["steps"]
+                if step.get("uses", "").startswith("docker/build-push-action")
+            ),
+            None,
+        )
+        self.assertIsNotNone(step, "admin job must invoke docker/build-push-action")
+        return step
 
-    def test_admin_docker_build_step_present(self):
-        step = self._docker_build_step()
-        self.assertIsNotNone(
-            step,
-            "admin job must run a blocking docker build --file admin/Dockerfile . step",
+    def test_admin_buildx_setup_present(self):
+        steps = self._admin_job()["steps"]
+        self.assertTrue(
+            any(step.get("uses", "").startswith("docker/setup-buildx-action") for step in steps)
+        )
+
+    def test_admin_build_push_action_present(self):
+        self.assertEqual(
+            self._build_step()["uses"],
+            "docker/build-push-action@v6",
         )
 
     def test_admin_docker_build_step_uses_repo_root_context(self):
-        step = self._docker_build_step()
-        run = step["run"]
-        # The very last non-empty positional argument to `docker build` must be
-        # the build context. We allow a trailing newline.
-        lines = [ln.strip() for ln in run.splitlines() if ln.strip()]
-        self.assertEqual(lines[-1], ".", f"build context must be repo root '.', got {lines[-1]!r}")
+        self.assertEqual(self._build_step()["with"]["context"], ".")
 
     def test_admin_docker_build_step_uses_admin_dockerfile(self):
-        step = self._docker_build_step()
-        self.assertIn("--file admin/Dockerfile", step["run"])
+        self.assertEqual(self._build_step()["with"]["file"], "admin/Dockerfile")
 
     def test_admin_docker_build_step_has_no_push(self):
-        step = self._docker_build_step()
-        self.assertNotIn("--push", step["run"])
-        self.assertNotIn("push:", step["run"])
+        self.assertFalse(self._build_step()["with"]["push"])
+
+    def test_admin_docker_build_step_has_scoped_gha_cache(self):
+        build = self._build_step()["with"]
+        self.assertEqual(build["cache-from"], "type=gha,scope=admin-pr-validation")
+        self.assertEqual(build["cache-to"], "type=gha,mode=max,scope=admin-pr-validation")
 
     def test_admin_docker_build_step_has_no_login(self):
         admin_text = str(self._admin_job())
@@ -514,9 +527,20 @@ class AdminDockerBuildValidationTests(unittest.TestCase):
         self.assertNotIn("secrets.GITHUB_TOKEN", admin_text)
 
     def test_admin_docker_build_step_is_blocking(self):
-        step = self._docker_build_step()
+        step = self._build_step()
         # No continue-on-error
         self.assertNotIn("continue-on-error", step)
+
+
+class PnpmSetupCacheTests(unittest.TestCase):
+    def test_setup_node_cache_is_bound_to_root_lockfile(self):
+        setup_node = next(
+            step
+            for step in _pnpm_setup()["runs"]["steps"]
+            if step.get("uses", "").startswith("actions/setup-node")
+        )
+        self.assertEqual(setup_node["with"]["cache"], "pnpm")
+        self.assertEqual(setup_node["with"]["cache-dependency-path"], "pnpm-lock.yaml")
 
 
 class NoSecretInheritTests(unittest.TestCase):
