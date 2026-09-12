@@ -69,7 +69,7 @@ Status `STATUS`:
 | T21 | Mobile CI filter + test integrity | P0 | DONE | ci/mobile-path-filter-integrity | - | #59 |
 | T22 | CI path routing + aggregate check | P1 | DONE | ci/required-aggregate-check | T21 | #61 |
 | T23 | Fail-closed security gates | P1 | PLANNED | ci/security-fail-closed | T22 | — |
-| T24 | Docker publish gated by CI | P1 | ACTIVE | ci/docker-publish-gated | T22 | Draft PR (this branch) |
+| T24 | Docker publish gated by CI | P1 | BLOCKED | ci/docker-publish-gated | T22; BLOCKED — OWNER ACTION REQUIRED: merge publishes GHCR images | #63 |
 | T25 | Quality baseline scripts unified | P2 | PLANNED | scripts/quality-baseline-unified | T19, T20 | — |
 | T26 | Audit scripts truthful | P2 | PLANNED | scripts/audit-truthful | T22, T23 | — |
 | T27 | Dependency manifest ownership + Dependabot | P2 | PLANNED | deps/manifest-ownership | - | — |
@@ -369,7 +369,7 @@ Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-drive
 
 W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
 
-## T24 – Docker publish gated by CI (ACTIVE)
+## T24 – Docker publish gated by CI (BLOCKED)
 
 ### Scope
 
@@ -461,7 +461,8 @@ Wymagania:
 ### Dependencies
 
 - Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
-- Otwarty Draft PR na `ci/docker-publish-gated` czeka na review właściciela.
+- PR #63 na `ci/docker-publish-gated` ma zielony wymagany `Aggregate CI gate` dla aktualnego head SHA i jest gotowy do review.
+- `BLOCKED — OWNER ACTION REQUIRED`: merge do `main` uruchomi push workflow, który po udanym agregacie opublikuje obrazy backend/admin do GHCR. Publikacja obrazów nie mieści się w bieżącej autoryzacji.
 - Brak nowych zależności środowiskowych ani sekretów.
 
 ### Branch / commit
