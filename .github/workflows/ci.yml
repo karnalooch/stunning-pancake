@@ -3,6 +3,7 @@ name: 4VELO CI/CD Pipeline
 on:
   push:
     branches: [master, main, develop]
+    tags: ['v*.*.*']
   pull_request:
     branches: [master, main, develop]
   schedule:
@@ -361,6 +362,17 @@ jobs:
       - name: Build production bundle
         run: pnpm --filter admin build
 
+      - name: Validate Admin Docker build (no push, blocks PR on context repair)
+        # T24: build the admin image from the monorepo root using admin/Dockerfile.
+        # Failure fails the admin job (and therefore Aggregate CI gate) so a
+        # broken monorepo context cannot reach main. No login, no push, no GHCR.
+        run: |
+          docker build \
+            --file admin/Dockerfile \
+            --tag 4velo-admin-ci:${{ github.sha }} \
+            .
+        shell: bash
+
   # ──────────────────────────────────────────
   # Audit: Route parity, dead screens, RBAC consistency, env drift
   # ──────────────────────────────────────────
@@ -602,3 +614,111 @@ jobs:
 
       - name: Evaluate required-job matrix
         run: python scripts/check_ci_aggregate.py
+
+  # ──────────────────────────────────────────
+  # T24: prepare-publish — validate ref/SHA before any publish job runs.
+  # Runs only on `push` events. Does no checkout, has no permissions.
+  # Outputs are consumed by `publish-containers` and the reusable
+  # `.github/workflows/docker-publish.yml` workflow.
+  # ──────────────────────────────────────────
+  prepare-publish: # pre-publish ref/sha validation
+    name: Prepare publish inputs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions: {}
+    outputs:
+      allowed: ${{ steps.validate.outputs.allowed }}
+      publish_kind: ${{ steps.validate.outputs.publish_kind }}
+      validated_sha: ${{ steps.validate.outputs.validated_sha }}
+      validated_ref: ${{ steps.validate.outputs.validated_ref }}
+      version: ${{ steps.validate.outputs.version }}
+      major_minor: ${{ steps.validate.outputs.major_minor }}
+    steps:
+      - name: Validate SHA, ref, and version
+        id: validate
+        env:
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          SHA="${GITHUB_SHA}"
+          REF="${GITHUB_REF}"
+
+          # SHA must be exactly 40 hex chars
+          if [[ ! "${SHA}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "allowed=false"        >> "$GITHUB_OUTPUT"
+            echo "publish_kind="        >> "$GITHUB_OUTPUT"
+            echo "validated_sha="       >> "$GITHUB_OUTPUT"
+            echo "validated_ref="       >> "$GITHUB_OUTPUT"
+            echo "version="             >> "$GITHUB_OUTPUT"
+            echo "major_minor="         >> "$GITHUB_OUTPUT"
+            echo "prepare-publish: invalid SHA=${SHA}" >&2
+            exit 0
+          fi
+
+          case "${REF}" in
+            refs/heads/main|refs/heads/master)
+              echo "allowed=true"        >> "$GITHUB_OUTPUT"
+              echo "publish_kind=branch" >> "$GITHUB_OUTPUT"
+              echo "validated_sha=${SHA}"      >> "$GITHUB_OUTPUT"
+              echo "validated_ref=${REF}"      >> "$GITHUB_OUTPUT"
+              echo "version="                  >> "$GITHUB_OUTPUT"
+              echo "major_minor="              >> "$GITHUB_OUTPUT"
+              ;;
+            refs/tags/v*)
+              # strict semver tag
+              if [[ "${REF}" =~ ^refs/tags/v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+                MAJOR="${BASH_REMATCH[1]}"
+                MINOR="${BASH_REMATCH[2]}"
+                PATCH="${BASH_REMATCH[3]}"
+                echo "allowed=true"                    >> "$GITHUB_OUTPUT"
+                echo "publish_kind=tag"                >> "$GITHUB_OUTPUT"
+                echo "validated_sha=${SHA}"            >> "$GITHUB_OUTPUT"
+                echo "validated_ref=${REF}"            >> "$GITHUB_OUTPUT"
+                echo "version=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+                echo "major_minor=${MAJOR}.${MINOR}"  >> "$GITHUB_OUTPUT"
+              else
+                echo "allowed=false"        >> "$GITHUB_OUTPUT"
+                echo "publish_kind="        >> "$GITHUB_OUTPUT"
+                echo "validated_sha="       >> "$GITHUB_OUTPUT"
+                echo "validated_ref="       >> "$GITHUB_OUTPUT"
+                echo "version="             >> "$GITHUB_OUTPUT"
+                echo "major_minor="         >> "$GITHUB_OUTPUT"
+                echo "prepare-publish: tag does not match strict vX.Y.Z pattern: ${REF}" >&2
+              fi
+              ;;
+            *)
+              # Unsupported ref (e.g. branch protection refs, non-publishable refs).
+              # Report allowed=false so publish-containers is skipped; the overall
+              # CI workflow still passes.
+              echo "allowed=false"        >> "$GITHUB_OUTPUT"
+              echo "publish_kind="        >> "$GITHUB_OUTPUT"
+              echo "validated_sha="       >> "$GITHUB_OUTPUT"
+              echo "validated_ref="       >> "$GITHUB_OUTPUT"
+              echo "version="             >> "$GITHUB_OUTPUT"
+              echo "major_minor="         >> "$GITHUB_OUTPUT"
+              echo "prepare-publish: unsupported ref ${REF}" >&2
+              ;;
+          esac
+
+  # ──────────────────────────────────────────
+  # T24: publish-containers — caller of the reusable docker-publish workflow.
+  # Runs only when prepare-publish marked the push as allowed. Passes the
+  # pre-validated outputs to docker-publish.yml; never recomputes them.
+  # ──────────────────────────────────────────
+  publish-containers: # post-gate publish caller (job-level reusable workflow call)
+    name: Publish containers (gated by Aggregate CI gate)
+    needs: [aggregate, prepare-publish]
+    if: needs.prepare-publish.outputs.allowed == 'true'
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      validated_sha: ${{ needs.prepare-publish.outputs.validated_sha }}
+      validated_ref: ${{ needs.prepare-publish.outputs.validated_ref }}
+      publish_kind: ${{ needs.prepare-publish.outputs.publish_kind }}
+      version: ${{ needs.prepare-publish.outputs.version }}
+      major_minor: ${{ needs.prepare-publish.outputs.major_minor }}
