@@ -32,6 +32,13 @@ from .simulator_tasks import run_batch_simulation, run_live_simulation
 IsAdminRole = IsAdminOrModerator
 
 
+class IsGlobalOwnerForSimulatorWrites(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return IsAdminRole().has_permission(request, view)
+        return IsGlobalOwner().has_permission(request, view)
+
+
 def _scale_overrides_from_request(request) -> tuple[dict[str, int] | None, str | None]:
     """Parse optional scale_overrides; return (clamped dict, redis JSON or None)."""
     from activities.scale_config import parse_scale_overrides_payload, scale_overrides_for_storage
@@ -486,7 +493,7 @@ class LiveSimulationView(APIView):
     DELETE /api/activities/admin/live-simulate/   — abort
     """
 
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwnerForSimulatorWrites]
 
     def get(self, request):
         light = _live_sim_status_light(request)
@@ -1046,7 +1053,7 @@ class SimulatorResetView(APIView):
     Emergency: clear batch/live locks and running flags without deleting data.
     """
 
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwnerForSimulatorWrites]
 
     def post(self, request):
         proxied = try_forward_sim_lab(request, "simulator-reset/", timeout=60)
@@ -1414,7 +1421,7 @@ class RunSimulationView(APIView):
     DELETE /api/activities/admin/simulate/        — abort
     """
 
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsGlobalOwnerForSimulatorWrites]
 
     def get(self, request):
         proxied = try_forward_sim_lab(request, "simulate/", timeout=45, allow_local_fallback=True)
