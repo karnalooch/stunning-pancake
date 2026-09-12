@@ -49,7 +49,7 @@ Status `STATUS`:
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
 | T02 | Emergency LLM proxy lockdown | P0 | DONE | security/llm-proxy-readonly | - | #66 |
 | T03 | Tenant destructive simulator authority | P0 | DONE | security/simulator-global-owner | - | #65 |
-| T04 | Tenant moderator privilege review (reszta) | P1 | ACTIVE | security/tenant-moderator-scope | T03 | — |
+| T04 | Tenant moderator privilege review (reszta) | P1 | ACTIVE | security/tenant-moderator-scope | T03 | #68 |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
 | T07 | MFA mandatory for administrators | P0 | PLANNED | security/mfa-mandatory-admins | - | — |
