@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { validateMassForm, validateMassPopulation } from './massSimForm';
+import {
+    shouldSkipActivityGeneration,
+    validateMassForm,
+    validateMassPopulation,
+} from './massSimForm';
 
 describe('massSimForm validation', () => {
     it('rejects cyclists outside bounds', () => {
@@ -22,5 +26,11 @@ describe('massSimForm validation', () => {
             liveEnabled: true,
         });
         expect(Object.keys(errors)).toHaveLength(0);
+    });
+
+    it('skips activity generation only at the high-scale threshold', () => {
+        expect(shouldSkipActivityGeneration(149_999, true)).toBe(false);
+        expect(shouldSkipActivityGeneration(150_000, true)).toBe(true);
+        expect(shouldSkipActivityGeneration(300_000, false)).toBe(false);
     });
 });
