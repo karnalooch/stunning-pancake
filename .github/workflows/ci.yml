@@ -362,16 +362,19 @@ jobs:
       - name: Build production bundle
         run: pnpm --filter admin build
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Validate Admin Docker build (no push, blocks PR on context repair)
-        # T24: build the admin image from the monorepo root using admin/Dockerfile.
-        # Failure fails the admin job (and therefore Aggregate CI gate) so a
-        # broken monorepo context cannot reach main. No login, no push, no GHCR.
-        run: |
-          docker build \
-            --file admin/Dockerfile \
-            --tag 4velo-admin-ci:${{ github.sha }} \
-            .
-        shell: bash
+        # Build from the monorepo root and persist BuildKit layers independently
+        # of the post-gate publishing cache. No registry login and no push.
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: admin/Dockerfile
+          push: false
+          cache-from: type=gha,scope=admin-pr-validation
+          cache-to: type=gha,mode=max,scope=admin-pr-validation
 
   # ──────────────────────────────────────────
   # Audit: Route parity, dead screens, RBAC consistency, env drift

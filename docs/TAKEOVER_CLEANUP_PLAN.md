@@ -1,7 +1,7 @@
 # 4VELO — Master Cleanup Plan
 
 Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
-Aktualny `main` HEAD: `b03fb9e`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+Aktualny `main` HEAD: `8916aa6`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
 
 Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
@@ -47,7 +47,7 @@ Status `STATUS`:
 |----|---------|-----------|--------|-------|------------|----|
 | T00 | Publikacja master planu | P0 | DONE | docs/takeover-cleanup-plan | - | #60 |
 | T01 | Signing key removal + ci guard | P0 | BLOCKED | security/remove-committed-signing-key | kontynuacja #47 (Draft, APPROVE, BLOCKED — OWNER ACTION REQUIRED) | #47 |
-| T02 | Emergency LLM proxy lockdown | P0 | ACTIVE | security/llm-proxy-readonly | - | PR tej gałęzi |
+| T02 | Emergency LLM proxy lockdown | P0 | DONE | security/llm-proxy-readonly | - | #66 |
 | T03 | Tenant destructive simulator authority | P0 | DONE | security/simulator-global-owner | - | #65 |
 | T04 | Tenant moderator privilege review (reszta) | P1 | PLANNED | security/tenant-moderator-scope | T03 | — |
 | T05 | Telemetry auth (HTTP + WS) | P0 | PLANNED | security/telemetry-aud-tokens | kontynuacja fix/telemetry-required-jwt | — |
@@ -369,7 +369,7 @@ Pierwsze wzmocnienie testów agregatu (realistyczne fixture `needs`, table-drive
 
 W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality baseline scripts unified`) i zostanie wprowadzony razem z ujednoliconą bazą jakości.
 
-## T02 – Emergency LLM proxy lockdown (ACTIVE)
+## T02 – Emergency LLM proxy lockdown (DONE)
 
 ### Scope
 
@@ -397,6 +397,10 @@ W tej transzy **nie dodano actionlint**. Actionlint należy do T25 (`Quality bas
 - `cd backend && ruff format --check core/llm_proxy.py core/test_llm_proxy.py`
 - `python scripts/check_docs_links.py`
 - `git diff --check`
+
+### Merge outcome
+
+- PR #66 scalono jako `8916aa68c9599fd7ded3b93d3ffa45edb4fef809` po zielonym wymaganym `Aggregate CI gate` dla aktualnego head PR.
 
 ## T03 – Tenant destructive simulator authority (DONE)
 
@@ -517,6 +521,25 @@ Wymagania:
 - brak `docker login`, brak `push` — krok tylko waliduje build;
 - failure → `admin` job FAIL → `Aggregate CI gate` FAIL → branch protection blokuje merge;
 - brak nowego joba, brak zmiany `aggregate.needs`.
+
+### Follow-up: cache walidacji Admin Docker build
+
+Pomiar pięciu zakończonych przebiegów joba Admin przed zmianą wykazał 28–30 s dla
+`Set up pnpm workspace` (w logu potwierdzony hit klucza setup-node opartego o
+`pnpm-lock.yaml`). W dwóch przebiegach po wprowadzeniu walidacji Admin Docker build
+ten krok trwał 55–59 s. Log niecache'owanego builda pokazał ponowne pobranie 1687
+pakietów i około 31,6 s w samej warstwie `pnpm install` obrazu.
+
+Kontrolowany follow-up zachowuje ten sam root context i `admin/Dockerfile`, ale używa
+`docker/setup-buildx-action` oraz `docker/build-push-action` z `push: false`, bez
+loginu do registry. Warstwy są przechowywane w osobnym GHA cache scope
+`admin-pr-validation`; cache publikacyjny T24 i graf `Aggregate CI gate` pozostają
+bez zmian. Composite action pnpm jawnie wskazuje root `pnpm-lock.yaml` jako
+`cache-dependency-path`.
+
+Rzeczywista oszczędność cold/warm jest raportowana dopiero na podstawie dwóch
+przebiegów CI dla dokładnego HEAD tej zmiany; konfiguracja cache sama nie jest
+dowodem przyspieszenia.
 
 ### Dependencies
 
