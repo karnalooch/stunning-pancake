@@ -486,6 +486,17 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(any("docs-links" in r for r in reasons), reasons)
 
+    def test_admin_failure_with_e2e_skipped_fails(self):
+        outputs = _base_outputs({"admin": "true"})
+        needs = _realistic_partial_needs(
+            outputs,
+            overrides={"admin": "failure", "e2e": "skipped"},
+        )
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("admin" in r for r in reasons), reasons)
+        self.assertTrue(any("e2e" in r for r in reasons), reasons)
+
     # ---- full mode ----------------------------------------------------------
 
     def test_full_mode_pull_request_with_workflow_true_pass(self):

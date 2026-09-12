@@ -1,18 +1,56 @@
-name: SPORT Container Registry — Build & Push
+name: SPORT Container Registry — Build & Push (reusable)
+
+# Callable-only reusable workflow (T24).
+# Inputs are pre-validated by the caller's `prepare-publish` job, so this
+# workflow performs no validation and infers no tags from github.ref.
+#
+# This workflow must never be triggered directly. It exposes `workflow_call`
+# only and does not declare any direct triggers or `secrets: inherit`.
 
 on:
-  push:
-    branches: [master, main]
-    tags: ['v*.*.*']
+  workflow_call:
+    inputs:
+      validated_sha:
+        description: Exact 40-character SHA that passed the upstream CI gate.
+        type: string
+        required: true
+      validated_ref:
+        description: The upstream validated ref (refs/heads/<branch> or refs/tags/vX.Y.Z).
+        type: string
+        required: true
+      publish_kind:
+        description: 'Either "branch" or "tag". Determines which tags are pushed.'
+        type: string
+        required: true
+      version:
+        description: "Strict semver tag value (X.Y.Z) when publish_kind == 'tag', otherwise ''."
+        type: string
+        required: false
+        default: ''
+      major_minor:
+        description: "X.Y (major.minor) when publish_kind == 'tag', otherwise ''."
+        type: string
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository_owner }}/sport-backend
   ADMIN_IMAGE: ghcr.io/${{ github.repository_owner }}/sport-admin
+  # Versioned / latest tag fragments — never depend on another env key declared
+  # at the same level. Each image produces exactly one build-push-action call
+  # whose `tags:` list is computed inline from inputs and the immutable SHA.
+  BACKEND_VERSION_TAG: ${{ inputs.version }}
+  BACKEND_MAJOR_MINOR_TAG: ${{ inputs.major_minor }}
+  ADMIN_VERSION_TAG: ${{ inputs.version }}
 
 jobs:
   # ──────────────────────────────────────────
-  # Build and push backend Docker image
+  # Build and push backend Docker image — exactly one build-push-action call.
+  # Tag list (computed once):
+  #   * sha-<full validated SHA>  — always pushed
+  #   * latest                     — only when publish_kind == 'branch'
+  #   * <version>, <major_minor>   — only when publish_kind == 'tag'
   # ──────────────────────────────────────────
   build-backend:
     name: Build Backend Image
@@ -22,7 +60,10 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout validated SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.validated_sha }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -31,21 +72,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute backend tags (raw, no semver inference)
         id: meta-backend
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.BACKEND_IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sha-${{ inputs.validated_sha }}
+            type=raw,value=latest,enable=${{ inputs.publish_kind == 'branch' }}
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.publish_kind == 'tag' }}
+            type=raw,value=${{ inputs.major_minor }},enable=${{ inputs.publish_kind == 'tag' }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push backend
+      - name: Build and push backend (single invocation, all tags at once)
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -56,7 +97,12 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ──────────────────────────────────────────
-  # Build and push admin dashboard image
+  # Build and push admin dashboard image — exactly one build-push-action call.
+  # Tag list (computed once):
+  #   * sha-<full validated SHA>  — always pushed
+  #   * latest                     — only when publish_kind == 'branch'
+  #   * <version>                  — only when publish_kind == 'tag'
+  # Admin does NOT receive a <major_minor> tag.
   # ──────────────────────────────────────────
   build-admin:
     name: Build Admin Image
@@ -66,7 +112,10 @@ jobs:
       packages: write
 
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout validated SHA
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.validated_sha }}
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -75,23 +124,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute admin tags (raw, no semver inference)
         id: meta-admin
         uses: docker/metadata-action@v6
         with:
           images: ${{ env.ADMIN_IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=sha,prefix=sha-,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sha-${{ inputs.validated_sha }}
+            type=raw,value=latest,enable=${{ inputs.publish_kind == 'branch' }}
+            type=raw,value=${{ inputs.version }},enable=${{ inputs.publish_kind == 'tag' }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push admin
+      - name: Build and push admin (single invocation, all tags at once)
         uses: docker/build-push-action@v6
         with:
-          context: ./admin
+          context: .
+          file: admin/Dockerfile
           push: true
           tags: ${{ steps.meta-admin.outputs.tags }}
           labels: ${{ steps.meta-admin.outputs.labels }}
@@ -99,7 +149,8 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ──────────────────────────────────────────
-  # Security: Trivy container vulnerability scan
+  # Security: Trivy container vulnerability scan (always scans the SHA tag).
+  # The SHA tag is reconstructed inline from inputs (no same-level env self-ref).
   # ──────────────────────────────────────────
   scan:
     name: Container Security Scan
@@ -118,11 +169,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Scan backend image
+      - name: Scan backend image (SHA tag, never :latest)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
-          image-ref: ${{ env.BACKEND_IMAGE }}:latest
+          image-ref: ${{ env.BACKEND_IMAGE }}:sha-${{ inputs.validated_sha }}
           format: sarif
           output: trivy-backend.sarif
           severity: HIGH,CRITICAL
@@ -134,11 +185,11 @@ jobs:
           sarif_file: trivy-backend.sarif
           category: trivy-backend
 
-      - name: Scan admin image
+      - name: Scan admin image (SHA tag, never :latest)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
-          image-ref: ${{ env.ADMIN_IMAGE }}:latest
+          image-ref: ${{ env.ADMIN_IMAGE }}:sha-${{ inputs.validated_sha }}
           format: sarif
           output: trivy-admin.sarif
           severity: HIGH,CRITICAL
