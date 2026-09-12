@@ -569,5 +569,84 @@ class DependencyGraphTests(unittest.TestCase):
         self.assertNotIn("publish-containers", agg["needs"])
 
 
+class P1AdminPytestT08ContractTests(unittest.TestCase):
+    """T08: ``core/test_oauth_state.py`` MUST be referenced by the blocking
+    ``P1 admin pytest`` step — not by an arbitrary, non-blocking duplicate.
+
+    The assertion locates the step by a stable prefix on its ``name:``
+    attribute (the only authoritative handle in the workflow) and checks the
+    resolved ``run:`` block rather than a raw text grep, so a duplicate
+    ``continue-on-error`` job or a stray mention elsewhere in the YAML cannot
+    satisfy it.
+    """
+
+    STEP_NAME_PREFIX = "P1 admin pytest"
+    TARGET_FILE = "core/test_oauth_state.py"
+
+    @staticmethod
+    def _find_step(workflow: dict, prefix: str) -> dict | None:
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(prefix):
+                    return step
+        return None
+
+    def test_p1_admin_pytest_step_exists(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(
+            step,
+            f"workflow must declare a step named {self.STEP_NAME_PREFIX!r}*",
+        )
+
+    def test_p1_admin_pytest_step_runs_test_oauth_state(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        run = step.get("run", "")
+        self.assertIsInstance(run, str)
+        self.assertIn(
+            self.TARGET_FILE,
+            run,
+            (
+                f"{self.STEP_NAME_PREFIX!r}* step must invoke pytest with "
+                f"{self.TARGET_FILE!r}; run block was:\n{run}"
+            ),
+        )
+
+    def test_p1_admin_pytest_step_is_blocking(self):
+        """T08 must not be demoted to a non-blocking baseline.
+
+        The step must NOT carry ``continue-on-error: true``. The next assertion
+        rejects any duplicate reference to ``core/test_oauth_state.py`` that
+        could silently swallow a failure.
+        """
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        self.assertNotIn("continue-on-error", step)
+
+    def test_p1_admin_pytest_step_is_not_duplicated_non_blocking(self):
+        """No other step may silently swallow ``core/test_oauth_state.py``."""
+        duplicate_count = 0
+        for job_name, job in _ci().get("jobs", {}).items():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(self.STEP_NAME_PREFIX):
+                    continue
+                run = step.get("run", "")
+                if not isinstance(run, str):
+                    continue
+                if self.TARGET_FILE in run:
+                    duplicate_count += 1
+        self.assertEqual(
+            duplicate_count,
+            0,
+            "core/test_oauth_state.py must not be referenced by any other step",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
