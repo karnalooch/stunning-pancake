@@ -537,9 +537,14 @@ loginu do registry. Warstwy są przechowywane w osobnym GHA cache scope
 bez zmian. Composite action pnpm jawnie wskazuje root `pnpm-lock.yaml` jako
 `cache-dependency-path`.
 
-Rzeczywista oszczędność cold/warm jest raportowana dopiero na podstawie dwóch
-przebiegów CI dla dokładnego HEAD tej zmiany; konfiguracja cache sama nie jest
-dowodem przyspieszenia.
+Pomiar dla tego samego SHA PR (`02c7f45`) potwierdził cold/warm cache. Pierwszy
+Buildx validation trwał 207 s i cały job Admin 305 s, ponieważ tworzył oraz
+eksportował cache. Kontrolowany rerun zaimportował manifest GHA i oznaczył warstwy
+`pnpm install` oraz `pnpm --filter admin build` jako `CACHED`: walidacja trwała 3 s,
+a cały job 97 s. Warm build oszczędził 52 s względem ostatniego porównywalnego
+niecache'owanego kroku (55 s) i skrócił cały job o 44 s (141 s → 97 s, około 31%).
+Cold run jest droższy o 164 s na utworzenie cache; oszczędność pojawia się od
+drugiego przebiegu dla zgodnych wejść warstw.
 
 ### Dependencies
 
