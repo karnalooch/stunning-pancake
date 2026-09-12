@@ -629,7 +629,7 @@ class P1AdminPytestT08ContractTests(unittest.TestCase):
     def test_p1_admin_pytest_step_is_not_duplicated_non_blocking(self):
         """No other step may silently swallow ``core/test_oauth_state.py``."""
         duplicate_count = 0
-        for job_name, job in _ci().get("jobs", {}).items():
+        for _job_name, job in _ci().get("jobs", {}).items():
             for step in job.get("steps", []):
                 if not isinstance(step, dict):
                     continue
