@@ -158,7 +158,7 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 _REST_AUTH_CLASSES = [
-    "rest_framework_simplejwt.authentication.JWTAuthentication",
+    "users.jwt_auth.MFAEnforcingJWTAuthentication",
 ]
 if os.getenv("SIM_LAB_ACCEPT_PROXY", "0").lower() in ("1", "true", "yes"):
     _REST_AUTH_CLASSES.insert(0, "users.sim_lab_proxy_auth.SimLabProxyAuthentication")

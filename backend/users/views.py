@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from core.api_response import error, success
 from core.email_service import EmailService
 
+from .mfa_policy import ADMIN_ROLES
 from .models import AuditLog, Role, Tenant, User, UserPushToken
 from .permissions import IsGlobalOwner, IsTenantAdmin
 from .serializers import (
@@ -267,6 +268,11 @@ class ImpersonateUserView(generics.GenericAPIView):
             refresh = RefreshToken.for_user(target_user)
             refresh["impersonated"] = True
             refresh["impersonator_id"] = request.user.id
+            if target_user.role in ADMIN_ROLES:
+                claim = (
+                    "mfa_verification_required" if target_user.mfa_enabled else "mfa_setup_required"
+                )
+                refresh[claim] = True
             AuditLog.objects.create(
                 impersonator=request.user,
                 target_user=target_user,
