@@ -54,8 +54,8 @@ Status `STATUS`:
 | T06 | Telemetry read/privacy isolation | P0 | PLANNED | security/telemetry-tenant-reads | T05 | — |
 | T07 | MFA mandatory for administrators | P0 | DONE | security/mfa-mandatory-admins | - | #69 |
 | T08 | OAuth state enforcement + provider binding | P1 | DONE | security/oauth-state-and-binding | - | #70 |
-| T09 | Tenant webhook admin/SSRF | P1 | ACTIVE | security/webhook-admin-and-ssrf | - | ten PR |
-| T10 | Department/Moderation/Heatmap tenant scope | P1 | PLANNED | security/tenant-orm-gap-fix | - | — |
+| T09 | Tenant webhook admin/SSRF | P1 | DONE | security/webhook-admin-and-ssrf | - | #71 |
+| T10 | Department/Moderation/Heatmap tenant scope | P1 | ACTIVE | security/tenant-orm-gap-fix | - | — |
 | T11 | RLS real enforcement (Postgres-only tests) | P1 | PLANNED | security/rls-real-enforcement | T10 | — |
 | T12 | B2B billing isolate or disable | P1 | PLANNED | rewards/b2b-isolate-or-disable | - | — |
 | T13 | Telemetry packet/batch contract validation | P1 | PLANNED | telemetry/packet-contract | - | — |
@@ -663,6 +663,129 @@ Brak migracji, brak zmian w lockfile'ach, brak kompatybilności wstecznej do zac
 
 * Branch: `security/oauth-state-and-binding`
 * Commit message: `security: enforce OAuth state provider binding`
+
+## T09 – Tenant webhook admin/SSRF (DONE)
+
+Scalone PR-em #71 (squash `7b72142853b3d9b88a30059b627e62ae235259f1`) po zielonym wymaganym `Aggregate CI gate` dla dokładnego head SHA. Transza zamyka ochronę webhooków po stronie backendu (SSRF, walidacja URL, autoryzacja endpointu administracyjnego). T10 wykorzystuje ten sam `Aggregate CI gate` do zabezpieczenia warstwy ORM dla Department / Moderation / Heatmap.
+
+## T10 – Department/Moderation/Heatmap tenant scope (ACTIVE)
+
+Status: `ACTIVE` — PR otwarty na gałęzi `security/tenant-orm-gap-fix`. Po scaleniu zostanie zaktualizowany na `DONE` ze wskazaniem PR i squash SHA. T11 (RLS) pozostaje `PLANNED` i zależy od T10.
+
+### Scope
+
+* `backend/users/department_views.py` — `DepartmentAccessPermission` (macierz akcji: mutacje tylko `GLOBAL_OWNER` / tenantowy `TENANT_ADMIN`; `self_join` bez `SPONSOR`; reszta ról odczytuje swój zakres); `get_queryset` i `perform_create` wymuszają `tenant_id`; `assign` / `remove` walidują `user.tenant_id == department.tenant_id`; `self_join` 403 przy braku tenanta; `my` nie ujawnia obcych działów nawet przy niespójnej historii; `users` filtruje po tenancie działu; `UserDepartmentViewSet` tenant-scoped read i admin-only write.
+* `backend/users/department_serializers.py` — `tenant` read-only dla ról tenantowych; querysety `parent` / `moderator` / `user_id` / `department_id` ograniczone do tenanta; object-level walidacja spójności tenanta; `GLOBAL_OWNER` wymaga jawnego istniejącego tenanta.
+* `backend/users/department_urls.py` — kolejność rejestracji routera (`user-departments` przed `""`), bo trasa `user-departments/` była przesłonięta przez catch-all `(?P<pk>…)/` (zmiana konieczna, aby `UserDepartmentViewSet` był osiągalny).
+* `backend/activities/moderation_views.py` — `scope_moderation_queryset(user)` jako SSOT filtrujący po kanonicznym `Activity.tenant_id`; `_get_moderatable_activity` zachowuje 403 dla jawnego cross-tenant i zwraca fail-closed 403 dla roli tenantowej bez tenanta; `ModerationQueueView` nie dopuszcza już globalnego query dla roli tenantowej bez tenanta; `ModerationAssignView` waliduje istnienie, rolę moderacyjną i ten sam tenant aktywności; `assignee_id=None` działa; `ModerationHistoryView` używa tego samego scope.
+* `backend/activities/heatmap.py` — `_resolve_heatmap_scope(request)` zwraca `(scope, error_response)`; `?tenant=` nigdy nie jest zaufany dla ról tenantowych; 403 dla braku tenanta / nieaktywnego / bez `has_heatmap_analytics`; `GLOBAL_OWNER` bez `?tenant=` → sentinel `HEATMAP_GLOBAL_SCOPE`; `_build_heatmap_features` filtruje po `Activity.tenant_id`, nie po `user__tenant_id`; `_cache_key` używa efektywnego scope (klucze A / B / global są różne); `_scoped_heatmap_activities` udostępnia queryset dla testów; `analytics_summary_view` z `?department=` rozwiązuje dział w zatwierdzonym scope (spójny filtr dla weekly / daily / best, dodatkowo `Activity.tenant_id` obok `user__departments`).
+* `backend/users/test_department_tenant_scope.py`, `backend/activities/test_moderation_tenant_scope.py`, `backend/activities/test_heatmap_tenant_scope.py` — testy TDD; RED wykazane przed implementacją, GREEN po.
+* `.github/workflows/ci.yml` — trzy pliki T10 dopisane do istniejącego blokującego kroku `P1 admin pytest` (bez nowego joba, bez `continue-on-error`).
+* `scripts/test_ci_workflow_contract.py` — klasa `P1AdminPytestT10ContractTests` weryfikuje obecność wszystkich trzech plików w kroku, brak `continue-on-error`, brak duplikatu, `aggregate.needs` zawiera `backend`, a backend job jest sterowany filtrem `changes.outputs.backend`.
+
+### Non-scope
+
+* Brak `apply_moderation_approve` business-fix (`route_path_id` AttributeError — pre-existing, nie powiązany z tenant scope, nie naprawiony).
+* Brak migracji, brak nowych zależności, brak zmian w lockfile.
+* Brak zmian w `core/social_auth.py`, `users/jwt_auth.py`, `users/mfa_*`, telemetry, mobile, admin frontend, billing, RBAC poza opisanym zakresem.
+* Brak restrukturyzacji `admin_views.py` (approve/reject korzystają z istniejącego `_get_moderatable_activity`).
+* Brak RLS / middleware / migracji Postgres — to zakres T11.
+* Brak zmian algorytmów `trend_analysis`, `training_load`, `predict_race_time`.
+
+### Role / tenant access matrix (po T10)
+
+| Endpoint | GLOBAL_OWNER | TENANT_ADMIN | TENANT_MODERATOR | ATHLETE | SPONSOR | brak tenanta | anonymous |
+|----------|--------------|--------------|------------------|---------|---------|--------------|-----------|
+| Department list/retrieve/tree/users/my | all tenants | own tenant | own tenant | own tenant | own tenant | empty (fail-closed) | 401 |
+| Department `my` | tylko własne członkostwa | own tenant | own tenant | own tenant | own tenant | empty | 401 |
+| Department create/update/destroy | tak (wymaga jawnego tenanta) | tak (wymuszony tenant) | 403 | 403 | 403 | 403 | 401 |
+| Department `assign` / `remove` | tak (cross-tenant 400) | tak (cross-tenant 400) | 403 | 403 | 403 | 403 | 401 |
+| Department `self_join` | tak (wymaga własnego tenanta) | tak | tak | tak (własny tenant) | 403 | 403 | 401 |
+| UserDepartment list/retrieve | all tenants | own tenant | own tenant | own tenant | own tenant | empty | 401 |
+| UserDepartment create/update/destroy | tak (walidacja tenanta) | tak (walidacja tenanta) | 403 | 403 | 403 | 403 | 401 |
+| Moderation queue | global | own tenant | own tenant | 403 | 403 | empty | 401/403 |
+| Moderation approve/reject/assign | global | own tenant (403 cross) | own tenant (403 cross) | 403 | 403 | 403 | 401 |
+| Moderation history | global | own tenant | own tenant | 403 | 403 | empty | 401/403 |
+| Heatmap bez `?tenant=` | global | own tenant | own tenant | own tenant | own tenant | 403 | 401 |
+| Heatmap `?tenant=B` dla roli tenantowej | ign., scope=A | ign., scope=A | ign., scope=A | ign., scope=A | ign., scope=A | 403 | 401 |
+| Heatmap `?tenant=` invalid GLOBAL_OWNER | 400 (no fallback) | n/a | n/a | n/a | n/a | n/a | 401 |
+| Analytics bez `department` | self | self | self | self | self | self | 401 |
+| Analytics `?department=` obcy dział | tak (istniejący) | 404 | 404 | 404 | 404 | 403 | 401 |
+
+### Acceptance criteria
+
+* Anonymous → 401 dla wszystkich endpointów T10.
+* Rola tenantowa bez `tenant_id` → 403 lub empty queryset w zależności od endpointu; nigdy nie ujawnia danych.
+* Global query dla roli tenantowej bez tenanta jest niemożliwy (queue, assign, history).
+* Cross-tenant approve/reject/assign → 403; cross-tenant parent/moderator/user na Department → 400 (queryset lub object-level); niespójna relacja `UserDepartment` nie powoduje przecieku.
+* Heatmap filtruje po `Activity.tenant_id`; ten sam bbox/type/zoom dla dwóch tenantów daje różne klucze cache; sentinel `global` nie koliduje z UUID tenantu.
+* Analytics z `?department=` używa zatwierdzonego scope; weekly / daily / best korzystają z identycznego filtra.
+* Trzy pliki testowe T10 uruchamiane w blokującym kroku `P1 admin pytest`, brak `continue-on-error`, brak duplikatu.
+* Aggregate CI gate zależy od backend job i pozostaje zielony dla head SHA Draft PR.
+
+### Test coverage
+
+* `users/test_department_tenant_scope.py` — 33 testy (anon 401, denied mutacje dla ATHLETE/SPONSOR/TENANT_MODERATOR, tenant admin read scope, create force tenant, update no cross-tenant, foreign parent/moderator 400, assign/remove w tenancie, `user-departments` direct POST, self_join scenarios, `my` bez leaku, GLOBAL_OWNER global odczyt i create z tenantem, GLOBAL_OWNER nie tworzy cross-tenant relacji, happy paths).
+* `activities/test_moderation_tenant_scope.py` — 23 testy (macierz ról, queue scope, brak tenanta → empty, brak tenanta → 403 approve/reject/assign, cross-tenant 403, assignee foreign tenant 400, assignee disallowed role 400, `assignee_id=None`, history scope bez leaku, history bez tenanta → empty, GLOBAL_OWNER global, reject positive, approve path mock + scope, GLOBAL_OWNER reject pozytywny).
+* `activities/test_heatmap_tenant_scope.py` — 25 testy (anon 401, foreign `?tenant=` ignorowany, empty `?tenant=` ignorowany, brak tenanta 403, inactive 403, brak flagi 403, owner global, owner valid tenant, owner invalid → 400 bez fallbacku, ORM filtruje `tenant_id` i nie `user__tenant_id`, niespójność nie leak, global scope widzi oba, klucze cache różne, view używa scope, cache isolation między tenantami, owner invalid 400, bbox walidacje, analytics own department OK, foreign 404, brak tenanta 403, niespójność nie leak, GLOBAL_OWNER department, owner nieistniejący 404, weekly/daily/best share scope).
+
+### CI contract (blokujący)
+
+Krok `P1 admin pytest` zawiera dodatkowo:
+
+* `users/test_department_tenant_scope.py`
+* `activities/test_moderation_tenant_scope.py`
+* `activities/test_heatmap_tenant_scope.py`
+
+Walidowane przez `scripts/test_ci_workflow_contract.py::P1AdminPytestT10ContractTests`:
+
+* wszystkie trzy pliki obecne w `run:` kroku;
+* brak `continue-on-error`;
+* brak duplikatu w innym kroku;
+* `aggregate.needs` zawiera `backend`;
+* backend job jest sterowany filtrem `changes.outputs.backend`.
+
+`scripts.test_ci_aggregate` pozostaje zielony (59 passed).
+
+### Validation commands
+
+* `cd backend && python run_pytest.py users/test_department_tenant_scope.py -q` (33 passed)
+* `cd backend && python run_pytest.py activities/test_moderation_tenant_scope.py -q` (23 passed)
+* `cd backend && python run_pytest.py activities/test_heatmap_tenant_scope.py -q` (25 passed)
+* `cd backend && python run_pytest.py <powyższe trzy> -q` (81 passed)
+* `cd backend && python run_pytest.py activities/test_tenant_moderator_scope.py activities/tests/test_moderation_scope.py users/test_jwt_mfa.py core/test_oauth_state.py activities/test_live_map_webhooks.py -q` (regresje T03/T04/T07/T08/T09)
+* `cd backend && python -m ruff check users/department_views.py users/department_serializers.py users/test_department_tenant_scope.py activities/moderation_views.py activities/heatmap.py activities/test_moderation_tenant_scope.py activities/test_heatmap_tenant_scope.py`
+* `cd backend && python -m ruff format --check <te same pliki>`
+* `python -m unittest scripts.test_ci_workflow_contract -v` (69 passed)
+* `python -m unittest scripts.test_ci_aggregate -v` (59 passed)
+* `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"`
+* `python scripts/check_docs_links.py`
+* `git diff --check`
+
+### Risks
+
+* `apply_moderation_approve` zawiera pre-existing `AttributeError` (`route_path_id`) — nie naprawiony (poza scope T10). T10 pozytywny test approve opiera się na mocku scope helper.
+* Routing `user-departments` wymagał zmiany kolejności rejestracji — istniejący klienci (frontend) nie powinni być dotknięci, ale zachować ostrożność przy wdrożeniu (zmiana jest minimalna i adresuje realny shadowing bug).
+* Heatmap mock geometrii w run_pytest ogranicza testy do scope helper i mocked build; integracyjne testy bbox z PostGIS są BLOCKED — ENVIRONMENT REQUIRED i pozostają domeną CI.
+
+### Rollback
+
+Pojedynczy revert squash merge'a PR T10 przywraca stan sprzed transzy. Brak migracji, brak kompatybilności wstecznej do zachowania. Kroki:
+
+1. Potwierdzić, że żaden Draft PR konsument nie polega na twardym 403 dla history bez tenanta (zachowanie zgodne z dotychczasowym kontraktem dla ról z tenantem).
+2. Wyczyścić `heatmap:tile:*` w Redis (TTL = 300 s, więc krótkie okno).
+
+### Dependencies
+
+* Brak nowych zależności środowiskowych ani sekretów.
+* Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
+* T11 (RLS) pozostaje `PLANNED` i zależy od T10.
+
+### Branch / commit
+
+* Branch: `security/tenant-orm-gap-fix`
+* Commit 1: `docs: activate T10 tenant ORM scope`
+* Commit 2: `security: enforce tenant scope for departments moderation and heatmaps`
 
 ## T24 – Docker publish gated by CI (DONE)
 

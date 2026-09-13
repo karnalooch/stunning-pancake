@@ -6,7 +6,6 @@ Endpoints for managing departments and user assignments.
 
 from django.conf import settings
 from django.db.models import Count
-from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,12 +18,52 @@ from .departments import Department, UserDepartment
 from .models import User
 
 
+def _user_tenant_id(user):
+    """Approved tenant scope for a request user (``None`` means fail-closed)."""
+    return getattr(user, "tenant_id", None)
+
+
+class DepartmentAccessPermission(permissions.BasePermission):
+    """Action-scoped RBAC for department and user-department administration.
+
+    * mutations (create/update/partial_update/destroy/assign/remove) require
+      ``GLOBAL_OWNER`` or a tenant-bound ``TENANT_ADMIN``;
+    * ``self_join`` keeps the documented roles (no ``SPONSOR``);
+    * every other (read) action is open to authenticated users and the tenant
+      scope is applied in the queryset/serializer, never by the client.
+    """
+
+    ADMIN_MUTATION_ACTIONS = {
+        "create",
+        "update",
+        "partial_update",
+        "destroy",
+        "assign",
+        "remove",
+    }
+    SELF_JOIN_ROLES = ("ATHLETE", "TENANT_MODERATOR", "TENANT_ADMIN", "GLOBAL_OWNER")
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        role = getattr(user, "role", None)
+        action = getattr(view, "action", None)
+        if action in self.ADMIN_MUTATION_ACTIONS:
+            if role == "GLOBAL_OWNER":
+                return True
+            return role == "TENANT_ADMIN" and bool(_user_tenant_id(user))
+        if action == "self_join":
+            return role in self.SELF_JOIN_ROLES
+        return True
+
+
 class DepartmentViewSet(viewsets.ModelViewSet):
     """CRUD for departments. Scoped to user's tenant."""
 
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, DepartmentAccessPermission]
 
     def get_queryset(self):
         if not getattr(settings, "DEPARTMENTS_ENABLED", True):
@@ -35,13 +74,17 @@ class DepartmentViewSet(viewsets.ModelViewSet):
             .filter(is_active=True)
             .annotate(_member_count=Count("userdepartment", distinct=True))
         )
-        # Global owners see all, tenant admins see their tenant
+        # Global owners see all; tenant-bound roles see only their own tenant.
         if self.request.user.role == "GLOBAL_OWNER":
             return qs
-        return qs.filter(tenant_id=self.request.user.tenant_id)
+        tenant_id = _user_tenant_id(self.request.user)
+        if not tenant_id:
+            return Department.objects.none()
+        return qs.filter(tenant_id=tenant_id)
 
     def perform_create(self, serializer):
-        # Auto-assign tenant for non-global owners
+        # Tenant admins can never choose/override the tenant; it is always the
+        # authenticated user's tenant. Global owners must pick an existing one.
         if self.request.user.role != "GLOBAL_OWNER":
             serializer.save(tenant_id=self.request.user.tenant_id)
         else:
@@ -51,8 +94,6 @@ class DepartmentViewSet(viewsets.ModelViewSet):
     def tree(self, request):
         """Get department hierarchy as a tree (single query + in-memory build)."""
         qs = self.get_queryset()
-        if request.user.role != "GLOBAL_OWNER":
-            qs = qs.filter(tenant_id=request.user.tenant_id)
 
         by_parent: dict[int | None, list] = {}
         direct_counts: dict[int, int] = {}
@@ -77,39 +118,60 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def my(self, request):
-        """Get departments the current user belongs to."""
-        departments = Department.objects.filter(members=request.user, is_active=True)
+        """Get active departments the current user is actually a member of.
+
+        Tenant-bound users never see a department outside their tenant, even if
+        an inconsistent historical ``UserDepartment`` row exists. ``GLOBAL_OWNER``
+        receives only their own memberships, never the whole platform.
+        """
+        user = request.user
+        links = UserDepartment.objects.filter(user=user, department__is_active=True).select_related(
+            "department"
+        )
+        if getattr(user, "role", None) != "GLOBAL_OWNER":
+            tenant_id = _user_tenant_id(user)
+            if not tenant_id:
+                return Response([])
+            links = links.filter(department__tenant_id=tenant_id)
+        departments = [link.department for link in links]
         serializer = self.get_serializer(departments, many=True)
         return Response(serializer.data)
 
     @action(detail=True, methods=["get"])
     def users(self, request, pk=None):
-        """Get all users in a department."""
+        """Get all users in a department (scoped to the department's tenant)."""
         department = self.get_object()
-        users = User.objects.filter(departments=department)
+        users = User.objects.filter(departments=department, tenant_id=department.tenant_id)
         from .serializers import UserSerializer
 
         return Response(UserSerializer(users, many=True).data)
 
     @action(detail=True, methods=["post"])
     def assign(self, request, pk=None):
-        """Assign a user to this department."""
+        """Assign a user to this department. Cross-tenant relations are refused."""
         department = self.get_object()
         user_id = request.data.get("user_id")
         if not user_id:
             return Response({"error": "user_id required"}, status=status.HTTP_400_BAD_REQUEST)
-        user = get_object_or_404(User, id=user_id)
+        try:
+            user = User.objects.get(id=user_id, tenant_id=department.tenant_id)
+        except (User.DoesNotExist, TypeError, ValueError):
+            return Response(
+                {"error": "user not found in department tenant"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         UserDepartment.objects.get_or_create(user=user, department=department)
         return Response({"status": "assigned"})
 
     @action(detail=True, methods=["post"], url_path="self-join")
     def self_join(self, request, pk=None):
         """Assign authenticated user to selected department (tenant-scoped)."""
-        department = self.get_object()
         user = request.user
-        if user.role not in ("ATHLETE", "TENANT_MODERATOR", "TENANT_ADMIN", "GLOBAL_OWNER"):
-            return Response({"error": "role_not_allowed"}, status=status.HTTP_403_FORBIDDEN)
-        if user.tenant_id and str(user.tenant_id) != str(department.tenant_id):
+        user_tenant = _user_tenant_id(user)
+        if not user_tenant:
+            return Response({"error": "tenant_context_required"}, status=status.HTTP_403_FORBIDDEN)
+        department = self.get_object()
+        if str(user_tenant) != str(department.tenant_id):
             return Response({"error": "cross_tenant_join_denied"}, status=status.HTTP_403_FORBIDDEN)
 
         UserDepartment.objects.get_or_create(user=user, department=department)
@@ -117,26 +179,37 @@ class DepartmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def remove(self, request, pk=None):
-        """Remove a user from this department."""
+        """Remove a user from this department within the same tenant scope."""
         department = self.get_object()
         user_id = request.data.get("user_id")
         if not user_id:
             return Response({"error": "user_id required"}, status=status.HTTP_400_BAD_REQUEST)
-        UserDepartment.objects.filter(user_id=user_id, department=department).delete()
+        try:
+            user = User.objects.get(id=user_id, tenant_id=department.tenant_id)
+        except (User.DoesNotExist, TypeError, ValueError):
+            return Response(
+                {"error": "user not found in department tenant"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        UserDepartment.objects.filter(user=user, department=department).delete()
         return Response({"status": "removed"})
 
 
 class UserDepartmentViewSet(viewsets.ModelViewSet):
-    """Manage user-department assignments."""
+    """Manage user-department assignments (tenant-scoped)."""
 
     queryset = UserDepartment.objects.all()
     serializer_class = UserDepartmentSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, DepartmentAccessPermission]
 
     def get_queryset(self):
         if not getattr(settings, "DEPARTMENTS_ENABLED", True):
             return UserDepartment.objects.none()
-        qs = super().get_queryset()
-        if self.request.user.role == "GLOBAL_OWNER":
+        qs = super().get_queryset().select_related("user", "department")
+        user = self.request.user
+        if getattr(user, "role", None) == "GLOBAL_OWNER":
             return qs
-        return qs.filter(department__tenant_id=self.request.user.tenant_id)
+        tenant_id = _user_tenant_id(user)
+        if not tenant_id:
+            return UserDepartment.objects.none()
+        return qs.filter(department__tenant_id=tenant_id)
