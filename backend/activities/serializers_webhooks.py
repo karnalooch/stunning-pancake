@@ -5,13 +5,20 @@ from activities.ssrf import UnsafeWebhookURL, validate_outbound_url
 
 
 def _validate_outbound_url(value: str) -> str:
-    """Shared SSRF guard used by both the serializer and the worker."""
+    """Shared SSRF guard used by both the serializer and the worker.
+
+    Returns the original URL on success. Raises ``serializers.ValidationError``
+    with a flat, field-level error shape (``{"url": [<safe message>]}``) on
+    failure. The full URL, hostname, resolved addresses, userinfo, port value
+    and query string must never appear in the surfaced message.
+    """
     try:
         return validate_outbound_url(value)
     except UnsafeWebhookURL as exc:
-        # Surface a short, redacted reason to the API client; the full URL
-        # and any userinfo must never appear in the error message.
-        raise serializers.ValidationError({"url": [str(exc)]})
+        # Flat field-level error: a list of messages under the ``url`` key.
+        # Do not nest a second ``url`` key inside the error dict — DRF expects
+        # ``errors[url]`` to be a list of strings.
+        raise serializers.ValidationError([str(exc)])
 
 
 class LiveMapAlertWebhookSerializer(serializers.ModelSerializer):
@@ -43,13 +50,6 @@ class LiveMapAlertWebhookSerializer(serializers.ModelSerializer):
         }
 
     def validate_url(self, value: str) -> str:
+        # DRF runs ``validate_<field>`` on both full and partial updates when
+        # ``url`` is present in the payload — no second pass is needed.
         return _validate_outbound_url(value)
-
-    def validate(self, attrs):
-        # Re-run the SSRF guard when the URL field is present in ``update``
-        # payloads that may arrive as partial dicts without touching the
-        # ``url`` field validator explicitly.
-        url = attrs.get("url")
-        if url:
-            _validate_outbound_url(url)
-        return attrs

@@ -23,6 +23,20 @@ from users.push_tasks import send_city_ranking_push, send_quest_push
 logger = logging.getLogger(__name__)
 
 
+class WebhookDeliveryError(Exception):
+    """Sanitised exception used for Celery retries.
+
+    Carries only the original exception's class name (never its message) so
+    that Celery's retry metadata cannot echo URLs or other user-controlled
+    data that ``requests`` and friends routinely include in ``str(exc)``.
+    """
+
+    def __init__(self, error_type: str) -> None:
+        # ``str(self)`` is the redacted class name — no exception message.
+        self.error_type = error_type
+        super().__init__(error_type)
+
+
 @shared_task(
     bind=True,
     queue="critical",
@@ -295,10 +309,19 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
     """Deliver signed webhook POST with exponential backoff.
 
     Re-runs the SSRF guard immediately before sending so that an out-of-band
-    record edit (or DNS-rebind TOCTOU window) cannot bypass write-time
-    validation. Unsafe URLs short-circuit without ``requests.post`` and are
-    not retried — a controlled ``blocked`` log entry is recorded instead.
-    Redirect responses (3xx) are also rejected and not retried.
+    record edit cannot bypass write-time validation. Unsafe URLs short-circuit
+    without ``requests.post`` and are not retried — a controlled ``blocked``
+    log entry is recorded instead. Redirect responses (3xx) are also rejected
+    and not retried.
+
+    Note on DNS rebinding / TOCTOU: this re-check tightens the window between
+    write-time and delivery-time validation, but the underlying ``requests``
+    connection is **not** pinned to the previously resolved IP — ``requests``
+    performs its own ``getaddrinfo`` and a hostname that flips between the
+    worker validation and the outbound socket connect could still redirect
+    the request to a different address. Full DNS-rebind mitigation (a
+    pinned-address socket pool or equivalent) remains out of scope for T09;
+    see ``activities/ssrf.py`` for the policy contract.
     """
     import hashlib
     import hmac
@@ -319,7 +342,7 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
     # Runtime SSRF guard — must match the serializer policy.
     try:
         validate_outbound_url(wh.url)
-    except UnsafeWebhookURL as exc:
+    except UnsafeWebhookURL:
         LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
         append_delivery_log(
             wh.pk,
@@ -331,10 +354,11 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
                 "at": timezone.now().isoformat(),
             },
         )
+        # Stable, redacted log line — never echo the URL, the exception text,
+        # or anything derived from user input.
         logger.warning(
-            "live_map.webhook.delivery_status=blocked id=%s reason=%s",
+            "live_map.webhook.delivery_status=blocked id=%s reason=unsafe_url",
             webhook_id,
-            exc,
         )
         # Policy-blocked deliveries must not retry.
         return {"status": "blocked", "reason": "unsafe_url"}
@@ -414,6 +438,15 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
         logger.info("live_map.webhook.delivery_status=ok id=%s event=%s", webhook_id, event_id)
         return {"status": "ok", "code": resp.status_code}
     except Exception as exc:
+        # ``requests`` exceptions (InvalidURL, ConnectionError, ConnectTimeout,
+        # SSLError, …) and many other transport-level errors include the full
+        # URL in their message. We must never log or persist that text — it
+        # would defeat the SSRF guard for any caller that can observe the
+        # delivery log or the application logger. Keep only the exception
+        # class name (no message) for diagnostics, and pass a sanitised
+        # exception to ``self.retry`` so Celery's own retry metadata does not
+        # leak the URL either.
+        error_type = type(exc).__name__
         LiveMapAlertWebhook.objects.filter(pk=wh.pk).update(failure_count=wh.failure_count + 1)
         append_delivery_log(
             wh.pk,
@@ -421,12 +454,20 @@ def deliver_live_map_webhook(self, webhook_id: int, event_id: str, payload: dict
                 "event_id": event_id,
                 "event": event_name,
                 "status": "retry",
-                "error": str(exc)[:200],
+                "reason": "delivery_error",
+                "error_type": error_type,
                 "at": timezone.now().isoformat(),
             },
         )
-        logger.warning("live_map.webhook.delivery_status=retry id=%s err=%s", webhook_id, exc)
-        raise self.retry(exc=exc, countdown=min(600, 30 * (2**self.request.retries)))
+        logger.warning(
+            "live_map.webhook.delivery_status=retry id=%s error_type=%s",
+            webhook_id,
+            error_type,
+        )
+        raise self.retry(
+            exc=WebhookDeliveryError(error_type),
+            countdown=min(600, 30 * (2**self.request.retries)),
+        )
 
 
 @shared_task(
