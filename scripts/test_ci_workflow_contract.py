@@ -728,5 +728,111 @@ class P1AdminPytestT09ContractTests(unittest.TestCase):
         )
 
 
+class P1AdminPytestT10ContractTests(unittest.TestCase):
+    """T10: department / moderation / heatmap tenant-scope tests MUST be wired
+    into the blocking ``P1 admin pytest`` step — and only into that step.
+
+    Three test files must be referenced:
+
+    * ``users/test_department_tenant_scope.py``
+    * ``activities/test_moderation_tenant_scope.py``
+    * ``activities/test_heatmap_tenant_scope.py``
+
+    The step must remain blocking (no ``continue-on-error``) and there must be
+    no duplicate reference that could silently swallow a failure.
+    """
+
+    STEP_NAME_PREFIX = "P1 admin pytest"
+    TARGET_FILES = (
+        "users/test_department_tenant_scope.py",
+        "activities/test_moderation_tenant_scope.py",
+        "activities/test_heatmap_tenant_scope.py",
+    )
+
+    @staticmethod
+    def _find_step(workflow: dict, prefix: str) -> dict | None:
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(prefix):
+                    return step
+        return None
+
+    def test_p1_admin_pytest_step_exists(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(
+            step,
+            f"workflow must declare a step named {self.STEP_NAME_PREFIX!r}*",
+        )
+
+    def test_p1_admin_pytest_step_runs_all_t10_test_files(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        run = step.get("run", "")
+        self.assertIsInstance(run, str)
+        for target in self.TARGET_FILES:
+            with self.subTest(target=target):
+                self.assertIn(
+                    target,
+                    run,
+                    (
+                        f"{self.STEP_NAME_PREFIX!r}* step must invoke pytest with "
+                        f"{target!r}; run block was:\n{run}"
+                    ),
+                )
+
+    def test_p1_admin_pytest_step_is_blocking(self):
+        """T10 must not be demoted to a non-blocking baseline."""
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        self.assertNotIn("continue-on-error", step)
+
+    def test_no_other_step_references_t10_files(self):
+        duplicate_count = 0
+        for _job_name, job in _ci().get("jobs", {}).items():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(self.STEP_NAME_PREFIX):
+                    continue
+                run = step.get("run", "")
+                if not isinstance(run, str):
+                    continue
+                for target in self.TARGET_FILES:
+                    if target in run:
+                        duplicate_count += 1
+        self.assertEqual(
+            duplicate_count,
+            0,
+            "T10 test files must not be referenced by any other CI step",
+        )
+
+    def test_backend_path_routing_triggers_backend_job(self):
+        """The T10 test files live under ``backend/`` so the backend CI job
+        must run when those paths change. The aggregate gate must continue to
+        depend on the backend job.
+        """
+        on = _on(_ci())
+        # The path filter for "backend" is defined in the ``changes`` job and
+        # drives the backend job's ``if:`` condition. Both must reference the
+        # backend path key consistently.
+        backend_job = _ci()["jobs"]["backend"]
+        backend_if = backend_job.get("if", "")
+        self.assertIn(
+            "changes.outputs.backend",
+            backend_if,
+            "backend job must be guarded by the changes.backend path filter",
+        )
+        aggregate = _ci()["jobs"]["aggregate"]
+        self.assertIn(
+            "backend",
+            aggregate.get("needs", []),
+            "aggregate must depend on the backend job (T10 CI contract)",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

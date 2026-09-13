@@ -2,6 +2,7 @@
 
 from django.utils import timezone
 from rest_framework import permissions, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -9,18 +10,49 @@ from users.permissions import IsAdminOrModerator
 
 from .models import Activity
 
+MODERATION_TENANT_ROLES = ("TENANT_ADMIN", "TENANT_MODERATOR")
+MODERATION_ALLOWED_ASSIGNEE_ROLES = MODERATION_TENANT_ROLES + ("GLOBAL_OWNER",)
+
+
+def _user_tenant_id(user):
+    return getattr(user, "tenant_id", None)
+
+
+def scope_moderation_queryset(user, qs=None):
+    """Return a moderation queryset scoped to the effective tenant of ``user``.
+
+    ``GLOBAL_OWNER`` keeps the full queryset; ``TENANT_ADMIN`` / ``TENANT_MODERATOR``
+    see only their own tenant; every other role (or a tenant role without a
+    tenant) gets an empty queryset — there is no implicit global fallback.
+    The filter always operates on the canonical ``Activity.tenant_id`` column.
+    """
+    if qs is None:
+        qs = Activity.objects.all()
+    role = getattr(user, "role", None)
+    if role == "GLOBAL_OWNER":
+        return qs
+    if role in MODERATION_TENANT_ROLES:
+        tenant_id = _user_tenant_id(user)
+        if tenant_id:
+            return qs.filter(tenant_id=tenant_id)
+    return qs.none()
+
 
 def _get_moderatable_activity(request, activity_id: int) -> Activity:
-    """Load activity with tenant guard — 403 cross-tenant for scoped roles."""
-    activity = Activity.objects.select_related("user", "tenant").get(pk=activity_id)
-    role = getattr(request.user, "role", None)
-    user_tenant = getattr(request.user, "tenant_id", None)
-    if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and user_tenant:
-        if str(activity.tenant_id) != str(user_tenant):
-            from rest_framework.exceptions import PermissionDenied
+    """Load an activity through the approved moderation scope.
 
+    Preserves the documented 403 contract for explicit cross-tenant attempts
+    while routing tenant roles without a tenant and other disallowed roles
+    through the same ``PermissionDenied`` path (fail-closed).
+    """
+    user = request.user
+    role = getattr(user, "role", None)
+    if role == "GLOBAL_OWNER" or role in MODERATION_TENANT_ROLES:
+        activity = Activity.objects.select_related("user", "tenant").get(pk=activity_id)
+        if not scope_moderation_queryset(user, Activity.objects.filter(pk=activity.id)).exists():
             raise PermissionDenied("Cross-tenant moderation is not allowed.")
-    return activity
+        return activity
+    raise PermissionDenied("Moderation is not permitted for this role.")
 
 
 def _queue_row(activity: Activity) -> dict:
@@ -49,8 +81,6 @@ class ModerationQueueView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminOrModerator)
 
     def get(self, request):
-        role = getattr(request.user, "role", None)
-        tenant_id = getattr(request.user, "tenant_id", None)
         score_lt = request.query_params.get("score_lt")
         assigned_to = request.query_params.get("assigned_to")
         queue_type = request.query_params.get("type", "activities")
@@ -58,16 +88,12 @@ class ModerationQueueView(APIView):
         if queue_type != "activities":
             return Response({"results": [], "count": 0, "type": queue_type})
 
-        qs = (
+        qs = scope_moderation_queryset(
+            request.user,
             Activity.objects.filter(is_verified=False)
             .select_related("user", "moderation_assignee")
-            .order_by("-created_at")
+            .order_by("-created_at"),
         )
-
-        if role in ("TENANT_ADMIN", "TENANT_MODERATOR") and tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
-        elif role != "GLOBAL_OWNER" and tenant_id:
-            qs = qs.filter(tenant_id=tenant_id)
 
         if score_lt is not None:
             try:
@@ -78,13 +104,14 @@ class ModerationQueueView(APIView):
         if assigned_to == "me":
             qs = qs.filter(moderation_assignee=request.user)
 
+        user_tenant = _user_tenant_id(request.user)
         limit = min(int(request.query_params.get("limit", 50)), 200)
         rows = [_queue_row(a) for a in qs[:limit]]
         return Response(
             {
                 "results": rows,
                 "count": qs.count(),
-                "scoped_tenant_id": str(tenant_id) if tenant_id else None,
+                "scoped_tenant_id": str(user_tenant) if user_tenant else None,
             }
         )
 
@@ -194,8 +221,6 @@ class ModerationAssignView(APIView):
     permission_classes = (permissions.IsAuthenticated, IsAdminOrModerator)
 
     def patch(self, request, activity_id: int):
-        from rest_framework.exceptions import PermissionDenied
-
         try:
             activity = _get_moderatable_activity(request, activity_id)
         except Activity.DoesNotExist:
@@ -216,22 +241,38 @@ class ModerationAssignView(APIView):
                 return Response(
                     {"detail": "Assignee not found"}, status=status.HTTP_400_BAD_REQUEST
                 )
+            if getattr(assignee, "role", None) not in MODERATION_ALLOWED_ASSIGNEE_ROLES:
+                return Response(
+                    {"detail": "Assignee role is not allowed for moderation."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if activity.tenant_id and str(getattr(assignee, "tenant_id", None)) != str(
+                activity.tenant_id
+            ):
+                return Response(
+                    {"detail": "Assignee must belong to the activity tenant."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             activity.moderation_assignee = assignee
         activity.save(update_fields=["moderation_assignee"])
         return Response(_queue_row(activity))
 
 
 class ModerationHistoryView(APIView):
-    """GET moderated activities for current user (decision history)."""
+    """GET moderated activities for current user, restricted to their tenant scope."""
 
     permission_classes = (permissions.IsAuthenticated, IsAdminOrModerator)
 
     def get(self, request):
-        qs = (
+        base = (
             Activity.objects.filter(moderated_by=request.user, moderated_at__isnull=False)
             .select_related("user")
-            .order_by("-moderated_at")[:100]
+            .order_by("-moderated_at")
         )
+        # Route tenant roles through the approved moderation scope so the
+        # history can never surface an activity outside the requester's tenant,
+        # even when an inconsistent historical row exists.
+        qs = scope_moderation_queryset(request.user, base)[:100]
         rows = [
             {
                 "activity_id": a.id,
