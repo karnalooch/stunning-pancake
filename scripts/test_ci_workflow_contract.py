@@ -815,7 +815,6 @@ class P1AdminPytestT10ContractTests(unittest.TestCase):
         must run when those paths change. The aggregate gate must continue to
         depend on the backend job.
         """
-        on = _on(_ci())
         # The path filter for "backend" is defined in the ``changes`` job and
         # drives the backend job's ``if:`` condition. Both must reference the
         # backend path key consistently.
