@@ -121,18 +121,25 @@ Nie obchodzimy istniejących wymagań pełnego PostGIS/Redis gate ani zależnoś
 
 ## P1 — przygotowanie po stronie repo (2026-09-14)
 
-Status: środowisko home lab jest dostępne na main po merge PR #51 (squash `1c7e7840a580208affb7d74a0432d4dbe704a82e`); uruchomienie telefonu i pełna ścieżka użytkownika pozostają NOT RUN — ENVIRONMENT REQUIRED. Dostępny connector GitHub nie daje sesji terminala na komputerze właściciela ani dostępu do telefonu. Nie wykonano builda Androida, migracji ani połączeń z Railway.
+Status: home lab jest dostępny na main po scaleniu PR #51 (squash `1c7e7840a580208affb7d74a0432d4dbe704a82e`); uruchomienie telefonu i pełna ścieżka użytkownika pozostają NOT RUN — ENVIRONMENT REQUIRED. Dostępny connector GitHub nie daje sesji terminala na komputerze właściciela ani dostępu do telefonu. Nie wykonano builda Androida, migracji ani połączeń z Railway. W ramach tej transzy home lab nie był ponownie uruchamiany.
 
-### Potwierdzona walidacja home labu (po merge PR #51, na izolowanym środowisku)
+### Chronologia wcześniejszej walidacji home labu (PR #51, przed merge)
 
-- Docker Desktop 4.91.0; Engine 29.8.0; Compose v5.5.1 — zweryfikowane poleceniami `docker version`, `docker compose version`.
-- Siedem usług rdzenia (`db`, `redis`, `backend`, `telemetry`, `global_admin`, `celery_worker`, `celery_beat`) uruchomionych i raportowanych jako `Healthy` przez `python scripts/home_lab.py status` oraz `python scripts/home_lab.py check`.
-- `backend` `/health` zwrócił HTTP 200.
-- `telemetry` `/health` zwrócił HTTP 200.
-- Backup utworzony poleceniem home labu.
-- `verify-restore` wykonany w izolowanej bazie; główna baza pozostała sprawna (brak wpływu na `4velo-home_pgdata`).
-- Entrypoint zweryfikowany z LF w świeżym worktree oraz w obrazie (`docker inspect`, `docker exec ... file`).
-- Home lab został zatrzymany poleceniem `down` (bez `-v`); wolumen `4velo-home_pgdata` nie został usunięty.
+- Pełną walidację runtime home labu wykonano na końcowym HEAD PR #51 (przed jego scaleniem do main), w izolowanym środowisku:
+  - Docker Desktop 4.91.0; Engine 29.8.0; Compose v5.5.1 — zweryfikowane poleceniami `docker version`, `docker compose version`.
+  - Siedem usług rdzenia (`db`, `redis`, `backend`, `telemetry`, `global_admin`, `celery_worker`, `celery_beat`) uruchomionych i raportowanych jako `Healthy` przez `python scripts/home_lab.py status` oraz `python scripts/home_lab.py check`.
+  - `backend` `http://127.0.0.1:8000/health/` → HTTP 200.
+  - `telemetry` `http://127.0.0.1:8001/api/telemetry/health` → HTTP 200.
+  - Backup utworzony poleceniem home labu.
+  - `verify-restore` wykonany w izolowanej bazie; główna baza pozostała sprawna (brak wpływu na `4velo-home_pgdata`).
+  - Home lab został zatrzymany poleceniem `down` (bez `-v`); wolumen `4velo-home_pgdata` nie został usunięty.
+- Dodatkowa walidacja LF entrypointu wykonana na końcowym HEAD PR #51 w świeżym worktree i zbudowanym z niego obrazie (przed merge):
+  - w świeżym worktree potwierdzono binarnie: `CRLF=0` dla `backend/docker-entrypoint.sh`;
+  - obraz backendu zbudowano z tego świeżego worktree;
+  - zawartość `/app/docker-entrypoint.sh` sprawdzono w obrazie przez `docker run --rm`;
+  - potwierdzono brak znaku CR oraz prawidłowy shebang `#!/bin/sh`.
+- Dokładnie ten zweryfikowany stan został następnie scalony do main jako squash: `1c7e7840a580208affb7d74a0432d4dbe704a82e`.
+- Home lab jest obecnie dostępny na main, ale w ramach PR #84 nie był ponownie uruchamiany.
 
 Powyższe potwierdza techniczną możliwość uruchomienia i odtworzenia środowiska oraz obecność `django_migrations` w odtworzonej bazie. Dotychczasowy `verify-restore` nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem spełnienia RPO 24h / RTO 4h — to zostaje odrębną kontrolą po merge PR #84.
 
