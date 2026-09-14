@@ -928,7 +928,10 @@ class TestActivityIsolation:
         )
         start = datetime(2026, 2, 1, 12, 0, tzinfo=UTC)
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "INSERT INTO activities_activity "
                     "(user_id, tenant_id, type, start_time, end_time, distance, "
@@ -963,7 +966,10 @@ class TestActivityIsolation:
     def test_reassignment_to_other_tenant_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "UPDATE activities_activity SET tenant_id = %s WHERE id = %s",
                     [
@@ -1024,7 +1030,10 @@ class TestPOIIsolation:
     def test_cross_tenant_insert_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "INSERT INTO activities_poi "
                     "(name, location, category, tenant_id, sponsor_id, description) "
@@ -1061,7 +1070,10 @@ class TestVoucherIsolation:
     def test_cannot_attach_to_foreign_poi(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "INSERT INTO activities_voucher "
                     "(poi_id, code, discount_value, is_redeemed, redeemed_by_id, "
@@ -1073,7 +1085,10 @@ class TestVoucherIsolation:
     def test_cannot_move_to_foreign_poi(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "UPDATE activities_voucher SET poi_id = %s WHERE id = %s",
                     [
@@ -1113,7 +1128,10 @@ class TestDepartmentIsolation:
     def test_cross_tenant_insert_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "INSERT INTO users_department (name, tenant_id, parent_id, "
                     "moderator_id, department_type, description, is_active, "
@@ -1140,7 +1158,10 @@ class TestUserDepartmentIsolation:
     def test_cannot_attach_to_foreign_department(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "INSERT INTO users_userdepartment "
                     "(user_id, department_id, joined_at) "
@@ -1154,7 +1175,10 @@ class TestUserDepartmentIsolation:
     def test_cannot_move_to_foreign_department(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
+            with (
+                pytest.raises(DatabaseError, match="row-level security"),
+                transaction.atomic(),
+            ):
                 _exec(
                     "UPDATE users_userdepartment SET department_id = %s WHERE id = %s",
                     [
