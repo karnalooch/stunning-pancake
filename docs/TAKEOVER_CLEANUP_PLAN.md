@@ -1,9 +1,11 @@
 # 4VELO — Master Cleanup Plan
 
-Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
-Aktualny `main` HEAD: `1f6dfcb`. Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+> Od 2026-09-14 zakres i kolejność pilotażu określa [plan częściowego takeoveru](PARTIAL_TAKEOVER_PILOT_PLAN.md). Ten dokument jest backlogiem i historią kontraktów; wykonanie wszystkich T00–T59 nie jest warunkiem pilotażu. Istniejące bramki i zabezpieczenia pozostają obowiązujące.
 
-Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #51/#57 (home lab + release gate). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
+Ścieżka: Home lab (obowiązkowy RC gate) → Railway (docelowa produkcja) → Kubernetes (eksperymentalny).
+Historyczna baza pierwotnego planu: `1f6dfcb` (nie bieżący HEAD). Zakres RC = krytyczna ścieżka użytkownika (logowanie → zapis/synchronizacja aktywności → ingest telemetrii → przegląd w adminie). Pozostałe funkcje (AI, symulatory, Citus, Electron) są poza RC.
+
+Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność → review). Preferowany jest jeden commit; poprawki wynikające z Code Review mogą być dodatkowymi commitami w tym samym PR. Merge wykonujemy metodą squash, aby transza trafiła do `main` jako jeden commit. Wszystkie transze respektują granice PR #44 (Compose prod Dockerfile) i PR #57 (release gate oparty o scalony home lab z PR #51). Open PR-y są włączane, a nie powielane. `BLOCKED` jest zawsze zapisany w planie z minimalnym działaniem potrzebnym do zdjęcia blokady.
 
 ## Decyzje właściciela (potwierdzone)
 
@@ -30,7 +32,7 @@ Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność →
 - Generowany klient API jako kanon: `packages/api-client/src/generated` commitowany + dryft CI.
 - EAS ownership: `mobile/app.config.js` i `mobile/eas.json` jako kanoniczne; root pliki są cienkimi shimami lub zostaną usunięte po potwierdzeniu.
 - Firebase wyłączony w RC: `EXPO_PUBLIC_ENABLE_FIREBASE` konsumowane przez kod; produkcja wymaga `false`; iOS placeholder odrzucany przez CI.
-- Otwarte PR-y (szczególnie #44, #51, #55, #57) są kontynuowane, a nie duplikowane.
+- Otwarte PR-y (szczególnie #44, #57) są kontynuowane, a nie duplikowane; #51 (squash `1c7e7840a580208affb7d74a0432d4dbe704a82e`) i #55 (squash `dc3e20e8a48b594a469b28c1a3e80ebceb527d82`) zostały scalone.
 - Status techniczny PR (`APPROVE` / `Draft` / `green CI`) i blokery właścicielskie/środowiskowe są rozróżnione: `STATUS` opisuje stan techniczny transzy; ewentualny bloker jest wypisany w `Zależności` jako `BLOCKED — OWNER ACTION REQUIRED` lub `BLOCKED — ENVIRONMENT REQUIRED`. `APPROVE` w Code Review ≠ gotowość do merge, gdy istnieje bloker właścicielski/środowiskowy.
 
 ## Stan planu
@@ -56,7 +58,7 @@ Status `STATUS`:
 | T08 | OAuth state enforcement + provider binding | P1 | DONE | security/oauth-state-and-binding | - | #70 |
 | T09 | Tenant webhook admin/SSRF | P1 | DONE | security/webhook-admin-and-ssrf | - | #71 |
 | T10 | Department/Moderation/Heatmap tenant scope | P1 | DONE | security/tenant-orm-gap-fix | - | #72 |
-| T11 | RLS real enforcement (Postgres-only tests) | P1 | ACTIVE | security/rls-real-enforcement | T10 | — |
+| T11 | RLS real enforcement (Postgres-only tests) | P1 | DONE | security/rls-real-enforcement | T10; squash 6e0c720599fce7afc7ef1861f9342303d0b0344b | #83 |
 | T12 | B2B billing isolate or disable | P1 | PLANNED | rewards/b2b-isolate-or-disable | - | — |
 | T13 | Telemetry packet/batch contract validation | P1 | PLANNED | telemetry/packet-contract | - | — |
 | T14 | Telemetry flush/ACK lifecycle | P1 | PLANNED | telemetry/flush-and-ack | T13 | — |
@@ -116,6 +118,8 @@ Status `STATUS`:
 - Integracje płatne/stripe/Strava/Garmin testowane tylko w trybie testowym.
 
 ## Master plan – ordered execution
+
+Historyczna kolejność pełnego programu, nie aktywna kolejka pilotażu. Wybór następnego zadania: [plan częściowego takeoveru](PARTIAL_TAKEOVER_PILOT_PLAN.md).
 
 Kolejność minimalizuje ryzyko regresji i respektuje zależności:
 
@@ -670,7 +674,7 @@ Scalone PR-em #71 (squash `7b72142853b3d9b88a30059b627e62ae235259f1`) po zielony
 
 ## T10 – Department/Moderation/Heatmap tenant scope (DONE)
 
-Status: `DONE` — squash `ed261c8418d1d16127f0c35d169aaecbfe33dc84`, PR #72. T11 (RLS) pozostaje `PLANNED` i zależy od T10.
+Status: `DONE` — squash `ed261c8418d1d16127f0c35d169aaecbfe33dc84`, PR #72. T11 (RLS) jest `DONE`, PR #83, squash `6e0c720599fce7afc7ef1861f9342303d0b0344b`.
 
 ### Scope
 
@@ -779,7 +783,7 @@ Pojedynczy revert squash merge'a PR T10 przywraca stan sprzed transzy. Brak migr
 
 * Brak nowych zależności środowiskowych ani sekretów.
 * Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
-* T11 (RLS) jest `ACTIVE` na gałęzi `security/rls-real-enforcement` i zależy od T10.
+* T11 (RLS) jest `DONE`, PR #83, squash `6e0c720599fce7afc7ef1861f9342303d0b0344b`.
 
 ### Branch / commit
 
@@ -788,9 +792,9 @@ Pojedynczy revert squash merge'a PR T10 przywraca stan sprzed transzy. Brak migr
 * Commit 2: `security: enforce tenant scope for departments moderation and heatmaps`
 * Squash: `ed261c8418d1d16127f0c35d169aaecbfe33dc84` (PR #72)
 
-## T11 – RLS real enforcement (ACTIVE)
+## T11 – RLS real enforcement (DONE)
 
-Status: `ACTIVE` — gałąź `security/rls-real-enforcement`. T10 (squash
+Status: `DONE` — PR #83, squash `6e0c720599fce7afc7ef1861f9342303d0b0344b`; gałąź `security/rls-real-enforcement`. T10 (squash
 `ed261c8418d1d16127f0c35d169aaecbfe33dc84`, PR #72) zakończył warstwę ORM;
 T11 dodaje niezależną ochronę na poziomie PostgreSQL. Runtime PostgreSQL
 pozostaje do walidacji w home lab / Railway (`PARTIAL — ENVIRONMENT
@@ -1064,28 +1068,12 @@ drugiego przebiegu dla zgodnych wejść warstw.
 
 ## Executor handoff
 
-Cel: doprowadzić repozytorium do stanu opisanego w sekcji „Acceptance criteria dla całego programu" poprzez realizację transz T00–T59 w kolejności z sekcji „Master plan – ordered execution".
+Aktywny cel i następne zadanie: [plan częściowego takeoveru i pilotażu](PARTIAL_TAKEOVER_PILOT_PLAN.md).
 
-Zatwierdzony scope: wszystkie transze T00–T59, każda jako osobny PR zgodnie z zasadą „jedna odpowiedzialność → jedna gałąź → jeden mały PR".
+Nie realizuj automatycznie T00–T59 ani historycznej kolejności powyżej. Wybieraj małe zadanie według blokerów krytycznej ścieżki pilotażu; odłożenie transzy nie oznacza DONE. Zachowaj istniejące kontrakty bezpieczeństwa i bramki CI.
 
-Zakazane zmiany:
-- Modyfikacje poza plikami wymienionymi w scope transzy.
-- Globalne formatowanie, masowe aktualizacje zależności, historia rewrite.
-- Wdrożenia produkcyjne, migracje produkcyjne, seed, wipe, rotacja sekretów.
-- Publikacja obrazów, operacje Railway/EAS, płatne usługi zewnętrzne.
-- Wyłączanie testów, asercji, reguł lint, progów pokrycia.
+Następny krok: P1 — przygotowanie punktu odniesienia, istniejący home lab i ścieżka jazdy na Androidzie. Brak dostępu do środowiska raportuj jako BLOCKED, nie PASS.
 
-Kolejność: T00 → T59 wg sekcji „Master plan – ordered execution". Dopuszczalne jest łączenie sąsiednich transz tylko wtedy, gdy należą do tego samego właściciela i nie powodują konfliktu.
+Zakazane bez osobnego zlecenia: wdrożenia i migracje produkcyjne, seed/wipe, rotacja sekretów, płatne usługi, merge, force-push oraz osłabianie testów i zabezpieczeń. Nie modyfikuj chronionych lokalnych plików ani niepowiązanego kodu.
 
-Acceptance criteria: sekcja „Acceptance criteria dla całego programu".
-
-Verification: sekcja „Verification" plus specyficzne komendy dla każdej transzy (wzorzec w „Transza referencyjna – T01").
-
-Wymagania:
-- Przed rozpoczęciem: przejrzyj `docs/TAKEOVER_CLEANUP_PLAN.md` w całości i sprawdź aktualny `git status`.
-- Po każdej transzy: przejrzyj `git diff main...HEAD` w poszukiwaniu przypadkowych zmian, sekretów, masowego formatowania.
-- Po każdej transzy: uruchom pełen zestaw komend weryfikacyjnych odpowiadający scope.
-- Po merge każdej transzy: zaktualizuj tabelę `STATUS` w `docs/TAKEOVER_CLEANUP_PLAN.md` (`PLANNED` → `ACTIVE` → `DONE`/`BLOCKED`) i zaktualizuj odpowiednie sekcje.
-- W razie jakichkolwiek rozbieżności z planem: zatrzymaj się, opisz dowody i minimalną poprawkę, nie rozszerzaj scope.
-
-W razie niepowodzenia któregokolwiek warunku blokującego (`BLOCKED`): nie zgaduj – zapisz dokładny powód i wymagane minimalne działanie do zdjęcia blokady (decyzja właściciela, dostęp do konta, dane produkcyjne, środowisko itp.).
+Stosuj AGENTS.md: zakres jednego zadania, właściwe testy, kontrola diffu, prawdziwe wyniki i raport przed kolejnym zadaniem.
