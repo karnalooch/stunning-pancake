@@ -1,81 +1,55 @@
-# Pre-release Verification (single command + checklist)
-
+# Weryfikacja przed wydaniem
 
 | | |
 |--|--|
-| **Status** | ✅ Active |
-| **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
-| **Audience** | See canonical document |
+| **Status** | Aktywny |
+| **Rola właściciela** | Właściciel wydania |
+| **Ostatni przegląd** | 2026-09-10 |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/PRE_RELEASE_VERIFICATION.md) |
-| **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
 | **canonical_path** | docs/pl/operations/PRE_RELEASE_VERIFICATION.md |
 
----
+To jest zapis decyzji o wydaniu w obecnej fazie, opartej na domowym labie. Railway i
+Kubernetes są wariantami wdrożenia, a nie dowodem gotowości aplikacji.
 
-| | |
-|--|--|
-| **Status** | ✅ Active |
-| **Owner role** | Release Manager |
-| **Last reviewed** | 2026-06-03 |
-| **Audience** | Release Manager |
-| **Compliance** | [COMPLIANCE_INDEX.md](../../compliance/COMPLIANCE_INDEX.md) |
+## Tożsamość kandydata
 
-Krótki runbook spinający CI, niezawodność i compliance przed wypuszczeniem release.
+Zapisz SHA commita, tagi obrazów, zakres migracji bazy, operatora, datę testu i nazwę
+backupu. Nie wydawaj z brudnego drzewa roboczego ani ze zmiennego tagu obrazu.
 
-## 1) Single command (lokalny quick gate)
+## Wymagane bramki
 
-Uruchom z root repo:
+1. Uruchom z katalogu repo `python scripts/release/pre_release_check.py`.
+2. Wszystkie blokujące kontrole dla dokładnego SHA kandydata muszą przejść. Kontrola
+   pominięta, anulowana lub nieblokujący audyt bezpieczeństwa nie oznacza PASS.
+3. W domowym labie wykonaj `python scripts/home_lab.py up`, a potem
+   `python scripts/home_lab.py check`.
+4. Sprawdź kolejno: logowanie, utworzenie użytkownika tenanta, zapis aktywności,
+   ingest GPS z ważnym JWT, obsługę zadania Celery i wynik w panelu admina.
+5. Wykonaj `python scripts/home_lab.py backup`, a plik sprawdź przez
+   `python scripts/home_lab.py verify-restore <plik>`.
+6. Przejrzyj migracje przez `python manage.py showmigrations --plan` oraz
+   `python manage.py makemigrations --check --dry-run`. Przed produkcją uruchom je
+   wyłącznie w labie.
+7. Zapisz decyzję GO/NO-GO. Brak dowodu odtworzenia, czerwone E2E, nieznany klucz
+   podpisujący albo nieprzejrzane migracje destrukcyjne oznaczają NO-GO.
 
-```bash
-python scripts/release/pre_release_check.py
-```
+## Kontrakt rollbacku
 
-To jest szybki "artifact gate" (sprawdza wymagane pliki release i k8s baseline).
-Nie zastępuje pełnych testów CI.
+Przed wdrożeniem zapisz poprzednie niezmienne tagi obrazów i backup bazy. Rollback
+aplikacji polega na wdrożeniu tych tagów. Rollback bazy zaczyna się od odtworzenia
+zweryfikowanego backupu do osobnej bazy, sprawdzenia jej i dopiero przełączenia
+aplikacji w oknie serwisowym. Nie cofaj destrukcyjnej migracji bez jej osobnej,
+przetestowanej operacji odwrotnej.
 
-## 2) CI reliability gate (wymagane)
+Po rollbacku sprawdź zdrowie backendu i telemetrii, logowanie, odczyt znanej
+aktywności, jedno bezpieczne zadanie Celery i widoczność w adminie. Zapisz czas,
+operatora i wynik.
 
-Workflow: `.github/workflows/k8s-release-gate.yml`
+## Późniejsze przeniesienie tego samego kandydata na Railway
 
-Must-pass jobs:
-- `Build/Test Baseline`
-- `Docker Build/Publish Placeholder`
-- `Kubernetes Manifest Validation` (`kubeconform`)
-- `Reliability + Release Gate`
-
-Deploy job:
-- `Deploy Placeholder (Manual + Protected)` uruchamia się tylko przy ręcznym `workflow_dispatch` i wyborze `production`.
-- Domyślnie kończy się błędem celowo, aby wymusić świadome uzupełnienie sekretów/auth/reviewerów.
-
-## 3) Połączenie z reliability playbook
-
-Przed release przejdź:
-1. `docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md` (must-pass matrix + Go/No-Go),
-2. wyniki CI z workflow release gate,
-3. checklistę legal/compliance:
-   - `docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md`.
-
-## 4) Checklista operatora release (praktyczna)
-
-- [ ] Wszystkie wymagane joby CI są zielone.
-- [ ] Walidacja manifestów k8s (`kubeconform`) przeszła bez errorów.
-- [ ] Reliability matrix i Go/No-Go z playbooka odhaczone.
-- [ ] Legal/compliance checklist wypełniona i podpisana.
-- [ ] Plan rollback i owner on-call potwierdzeni.
-- [ ] Decyzja release owner: GO.
-
-## 5) Co automatyczne vs manualne
-
-Automatyczne:
-- build/test baseline,
-- budowa obrazów docker (bez publikacji),
-- walidacja manifestów k8s,
-- obecność krytycznych artefaktów release.
-
-Manualne:
-- faktyczna publikacja obrazów do rejestru,
-- autentykacja do klastra i `kubectl apply`,
-- podpis prawny/compliance oraz finalna decyzja GO/NO-GO.
+Promuj przetestowane, niezmienne obrazy. Ustaw sekrety Railway poza repo, obróć każdy
+klucz wcześniej zapisany w Git, podłącz trwały Postgres/Redis, wykonaj ten sam plan
+migracji i smoke test oraz osobno potwierdź backup dostawcy. Nie seeduj danych demo.
+Gotowość Railway pozostaje zablokowana do czasu sprawdzenia klucza podpisującego,
+backupu, healthchecków i uprawnień do rollbacku na tym koncie.
