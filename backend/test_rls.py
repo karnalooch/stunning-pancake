@@ -40,7 +40,7 @@ from contextlib import contextmanager
 from datetime import UTC
 
 import pytest
-from django.db import connection
+from django.db import DatabaseError, connection, transaction
 from rest_framework import permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -928,15 +928,15 @@ class TestActivityIsolation:
         )
         start = datetime(2026, 2, 1, 12, 0, tzinfo=UTC)
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "INSERT INTO activities_activity "
                     "(user_id, tenant_id, type, start_time, end_time, distance, "
                     " created_at, is_verified, verification_score, moderated_at, "
                     " route_path, external_source, external_id, gpx_storage_key, "
-                    " gpx_sha256, route_fingerprint, gpx_forensics_flags) "
+                    " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
                     "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
-                    " NULL, NULL, '', '', '', '', '[]'::jsonb)",
+                    " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                     [
                         foreign_user.id,
                         str(rls_fixtures["tenant_b"].id),
@@ -963,7 +963,7 @@ class TestActivityIsolation:
     def test_reassignment_to_other_tenant_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "UPDATE activities_activity SET tenant_id = %s WHERE id = %s",
                     [
@@ -996,9 +996,9 @@ class TestActivityIsolation:
                 "(user_id, tenant_id, type, start_time, end_time, distance, "
                 " created_at, is_verified, verification_score, moderated_at, "
                 " route_path, external_source, external_id, gpx_storage_key, "
-                " gpx_sha256, route_fingerprint, gpx_forensics_flags) "
+                " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
                 "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
-                " NULL, NULL, '', '', '', '', '[]'::jsonb)",
+                " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                 [
                     rls_fixtures["user_a"].id,
                     str(rls_fixtures["tenant_a"].id),
@@ -1024,7 +1024,7 @@ class TestPOIIsolation:
     def test_cross_tenant_insert_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "INSERT INTO activities_poi "
                     "(name, location, category, tenant_id, sponsor_id, description) "
@@ -1061,19 +1061,19 @@ class TestVoucherIsolation:
     def test_cannot_attach_to_foreign_poi(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "INSERT INTO activities_voucher "
                     "(poi_id, code, discount_value, is_redeemed, redeemed_by_id, "
                     " expiry_date) "
-                    "VALUES (%s, 'foreign-attempt', '0%', false, NULL, NOW())",
-                    [str(rls_fixtures["poi_b"].id)],
+                    "VALUES (%s, 'foreign-attempt', %s, false, NULL, NOW())",
+                    [str(rls_fixtures["poi_b"].id), "0%"],
                 )
 
     def test_cannot_move_to_foreign_poi(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "UPDATE activities_voucher SET poi_id = %s WHERE id = %s",
                     [
@@ -1092,8 +1092,8 @@ class TestVoucherIsolation:
                 "INSERT INTO activities_voucher "
                 "(poi_id, code, discount_value, is_redeemed, redeemed_by_id, "
                 " expiry_date) "
-                "VALUES (%s, 'legal-attach', '5%', false, NULL, %s)",
-                [str(rls_fixtures["poi_a"].id), start + timedelta(days=1)],
+                "VALUES (%s, 'legal-attach', %s, false, NULL, %s)",
+                [str(rls_fixtures["poi_a"].id), "5%", start + timedelta(days=1)],
             )
 
 
@@ -1113,7 +1113,7 @@ class TestDepartmentIsolation:
     def test_cross_tenant_insert_blocked(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "INSERT INTO users_department (name, tenant_id, parent_id, "
                     "moderator_id, department_type, description, is_active, "
@@ -1140,7 +1140,7 @@ class TestUserDepartmentIsolation:
     def test_cannot_attach_to_foreign_department(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "INSERT INTO users_userdepartment "
                     "(user_id, department_id, joined_at) "
@@ -1154,7 +1154,7 @@ class TestUserDepartmentIsolation:
     def test_cannot_move_to_foreign_department(self, rls_fixtures):
         _require_postgres()
         with _as_test_role(), _with_gucs(str(rls_fixtures["tenant_a"].id)):
-            with pytest.raises(Exception):
+            with pytest.raises(DatabaseError, match="row-level security"), transaction.atomic():
                 _exec(
                     "UPDATE users_userdepartment SET department_id = %s WHERE id = %s",
                     [
@@ -1195,9 +1195,9 @@ class TestGlobalOwnerScope:
                 "(user_id, tenant_id, type, start_time, end_time, distance, "
                 " created_at, is_verified, verification_score, moderated_at, "
                 " route_path, external_source, external_id, gpx_storage_key, "
-                " gpx_sha256, route_fingerprint, gpx_forensics_flags) "
+                " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
                 "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
-                " NULL, NULL, '', '', '', '', '[]'::jsonb)",
+                " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                 [
                     rls_fixtures["user_a"].id,
                     str(rls_fixtures["tenant_b"].id),
@@ -1441,7 +1441,8 @@ class TestRLSReverseForward:
         reverse_blocks = list(_load_reverse_sql().values())
         for table in PROTECTED_TABLES:
             assert any(
-                f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY" in block
+                f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"
+                in " ".join(block.split())
                 for block in reverse_blocks
             ), (
                 f"reverse_sql must remove FORCE on {table} via "
@@ -1465,6 +1466,7 @@ class TestRLSReverseForward:
                     f"T11 never creates that role"
                 )
 
+    @pytest.mark.django_db(transaction=True)
     def test_round_trip_forward_reverses_then_forwards(self, rls_fixtures):
         """Execute the literal ``reverse_sql`` blocks against the live
         database, assert ``pg_class`` / ``pg_policy`` state matches the
@@ -1915,7 +1917,7 @@ class TestFullRequestJWT:
         from django.test import Client
 
         client = Client(HTTP_AUTHORIZATION=self._client_for(rls_fixtures["user_a"]))
-        response = client.get("/rls-test/_RlsProbeTenantView/")
+        response = client.get("/rls-test/_RlsProbeTenantView/", secure=True)
         assert response.status_code == 200, response.content
         body = response.json()
         assert _RLSProbeMixin._inside_request, "view did not run"
@@ -1937,7 +1939,7 @@ class TestFullRequestJWT:
         owner = User.objects.create_user(username="t11_e2e_go", password="x", role="GLOBAL_OWNER")
         try:
             client = Client(HTTP_AUTHORIZATION=self._client_for(owner))
-            response = client.get("/rls-test/_RlsProbeGlobalOwnerView/")
+            response = client.get("/rls-test/_RlsProbeGlobalOwnerView/", secure=True)
             assert response.status_code == 200, response.content
             body = response.json()
             assert body["tenant_guc"] == ""
@@ -1955,7 +1957,7 @@ class TestFullRequestJWT:
         from django.test import Client
 
         client = Client(HTTP_AUTHORIZATION="Bearer not-a-real-jwt")
-        response = client.get("/rls-test/_RlsProbeTenantView/")
+        response = client.get("/rls-test/_RlsProbeTenantView/", secure=True)
         # DRF returns 401 for invalid JWT; the request still completes
         # through the middleware chain (which runs its ``finally``).
         assert response.status_code == 401
@@ -1971,7 +1973,7 @@ class TestFullRequestJWT:
         # DRF will translate the view's RuntimeError into a 500 response
         # after the middleware ``finally`` runs.
         with pytest.raises(RuntimeError):
-            client.get("/rls-test/_RlsProbeBoomView/")
+            client.get("/rls-test/_RlsProbeBoomView/", secure=True)
         (tenant_after,) = _fetchone("SELECT current_setting('app.tenant_id', true)")
         (global_after,) = _fetchone("SELECT current_setting('app.is_global_owner', true)")
         assert tenant_after == ""
