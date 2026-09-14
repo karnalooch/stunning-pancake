@@ -7,10 +7,7 @@ import {
 import { notifications } from '@mantine/notifications';
 import { Link, useLocation, Outlet } from 'react-router-dom';
 import {
-  LayoutDashboard, Building2, Users, ShieldAlert, Settings, Gift, LogOut,
-  Menu, ChevronLeft, ChevronRight, Sun, Moon, Zap, Network,
-  Calendar, TrendingUp, MessageSquare, Map, Play, Bike, MapPin,
-  Inbox, Sparkles, Leaf,
+  LogOut, Menu, ChevronLeft, Sun, Moon, Zap,
 } from 'lucide-react';
 import { useAuth } from './auth/useAuth';
 import { useModerationBadgeCount } from '../hooks/useModerationBadgeCount';
@@ -20,7 +17,6 @@ import { CommandPalette } from './components/CommandPalette';
 import { OpsNotificationBell } from './components/OpsNotificationBell';
 import { useI18n } from '../i18n/useI18n';
 import { NAV_CONFIG } from '../i18n/navConfig';
-import type { I18nCatalog } from '../i18n/types';
 
 /* ─── Layout component ──────────────────────────────────── */
 export const Layout = () => {

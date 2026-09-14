@@ -11,7 +11,7 @@ const GOOGLE_AUTH_URL = `${API_BASE}/auth/google/login/?client=admin`;
 const FACEBOOK_AUTH_URL = `${API_BASE}/auth/facebook/login/?client=admin`;
 
 interface LoginPageProps {
-  onLogin: (username: string, password: string) => Promise<void>;
+  onLogin: (username: string, password: string, mfaCode?: string) => Promise<void>;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
@@ -19,6 +19,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const logout = useAuth((s) => s.logout);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const features = [
@@ -53,7 +54,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     setLoading(true);
     setError(null);
     try {
-      await onLogin(username, password);
+      await onLogin(username, password, mfaCode || undefined);
     } catch (err: any) {
       setError(err?.message || t.auth.invalidCredentials);
     } finally {
@@ -346,6 +347,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                       fontSize: '14px',
                     },
                   }}
+                />
+
+                <TextInput
+                  label="MFA code (administrative accounts)"
+                  placeholder="123456"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.currentTarget.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
                 />
 
                 {/* Error message */}

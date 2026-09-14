@@ -54,6 +54,7 @@ class UserRoleViewSet(viewsets.ModelViewSet):
     queryset = UserRole.objects.all()
     serializer_class = UserRoleSerializer
     permission_classes = [IsTenantAdmin]
+    TENANT_ADMIN_ASSIGNABLE_ROLES = {"athlete", "sponsor", "tenant_moderator"}
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -62,8 +63,34 @@ class UserRoleViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(tenant_id=self.request.user.tenant_id)
 
+    def _tenant_admin_values(self, serializer):
+        """Return tenant-safe assignment values for a legacy tenant admin."""
+        actor = self.request.user
+        if actor.role == "GLOBAL_OWNER":
+            return {}
+
+        if not actor.tenant_id:
+            raise serializers.ValidationError("Tenant admin has no tenant.")
+
+        target_user = serializer.validated_data.get("user")
+        target_role = serializer.validated_data.get("role")
+        if target_user is None and serializer.instance is not None:
+            target_user = serializer.instance.user
+        if target_role is None and serializer.instance is not None:
+            target_role = serializer.instance.role
+
+        if target_user is None or target_user.tenant_id != actor.tenant_id:
+            raise serializers.ValidationError("User must belong to your tenant.")
+        if target_role is None or target_role.slug not in self.TENANT_ADMIN_ASSIGNABLE_ROLES:
+            raise serializers.ValidationError("Role cannot be assigned by a tenant admin.")
+
+        return {"tenant_id": actor.tenant_id, "tenant_scoped": True}
+
     def perform_create(self, serializer):
-        serializer.save(granted_by=self.request.user)
+        serializer.save(granted_by=self.request.user, **self._tenant_admin_values(serializer))
+
+    def perform_update(self, serializer):
+        serializer.save(**self._tenant_admin_values(serializer))
 
     @action(detail=True, methods=["post"])
     def revoke(self, request, pk=None):

@@ -160,13 +160,11 @@ def leaderboard_list(request: Request) -> Response:
 # Admin Management Endpoints
 # ---------------------------------------------------------------------------
 
-from users.permissions import IsAdminOrModerator
-
-IsAdminRole = IsAdminOrModerator
+from users.permissions import IsGlobalOwner
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsGlobalOwner])
 def admin_recalculate_leaderboards(request: Request) -> Response:
     """
     POST /api/activities/leaderboard/admin/recalculate/
@@ -192,7 +190,7 @@ def admin_recalculate_leaderboards(request: Request) -> Response:
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsGlobalOwner])
 def admin_leaderboard_list(request: Request) -> Response:
     """
     GET /api/activities/leaderboard/admin/list/
@@ -205,7 +203,7 @@ def admin_leaderboard_list(request: Request) -> Response:
 
 
 @api_view(["DELETE"])
-@permission_classes([IsAuthenticated, IsAdminRole])
+@permission_classes([IsAuthenticated, IsGlobalOwner])
 def admin_clear_leaderboard(request: Request, city_id: str) -> Response:
     """
     DELETE /api/activities/leaderboard/admin/<city_id>/

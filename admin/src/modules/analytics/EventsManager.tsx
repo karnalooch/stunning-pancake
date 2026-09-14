@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Card, Text, Table, Badge, SimpleGrid, ThemeIcon, Skeleton } from '@mantine/core';
-import { Calendar, Clock, Users, Trophy } from 'lucide-react';
+import { Calendar, Users, Trophy } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
 export const EventsManager: React.FC = () => {

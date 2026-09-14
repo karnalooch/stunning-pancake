@@ -1,13 +1,54 @@
-from django.db import connection
+"""4VELO request middleware.
 
+``TenantRLSMiddleware`` binds the PostgreSQL ``app.tenant_id`` and
+``app.is_global_owner`` GUCs to the authenticated session user for the
+duration of a single request.
+
+The middleware MUST run **after** Django session authentication
+(``AuthenticationMiddleware``) so that ``request.user`` already reflects the
+resolved principal. JWT-only requests reach the same code path: the DRF
+``MFAEnforcingJWTAuthentication`` class sets the GUCs directly after it
+successfully authenticates a JWT - see ``users/jwt_auth.py``.
+
+Tenant resolution rules:
+
+* Session-authenticated ``GLOBAL_OWNER`` (``request.user.role ==
+  'GLOBAL_OWNER'``) sets ``app.is_global_owner = 'true'`` and clears
+  ``app.tenant_id``.
+* Session-authenticated user with a non-empty ``request.user.tenant_id``
+  sets ``app.tenant_id`` and clears the global-owner flag.
+* Any other request (anonymous, JWT-only before DRF auth runs, or a user
+  with neither role nor tenant) clears both GUCs.
+
+Cleanup is unconditional: both GUCs are cleared at the start of the request
+and again in ``finally``, so connection pool reuse can never leak scope
+across requests.
+"""
+
+from __future__ import annotations
+
+from core.rls import (
+    clear_all_context,
+    set_global_owner_context,
+    set_tenant_context,
+)
 from users.models import AuditLog
+
+GLOBAL_OWNER_ROLE = "GLOBAL_OWNER"
 
 
 class TenantRLSMiddleware:
-    """
-    Extracts the tenant ID from the authenticated user and sets the PostgreSQL
-    session variable 'sport.current_tenant_id' so that Row-Level Security (RLS)
-    policies can enforce data isolation at the database level.
+    """Bind ``app.tenant_id`` / ``app.is_global_owner`` to the authenticated
+    user for the duration of a single request.
+
+    The middleware MUST run **after** Django authentication (``SessionMiddleware``
+    + ``AuthenticationMiddleware``) so that ``request.user`` already reflects
+    the resolved principal. The JWT counterpart
+    (``users.jwt_auth.MFAEnforcingJWTAuthentication``) sets the same GUCs
+    directly inside the DRF request lifecycle after a successful JWT
+    authentication; that path is responsible for the GUCs while the request
+    is in-flight, and ``TenantRLSMiddleware`` still performs the final
+    cleanup in ``finally`` so connection pool reuse cannot leak scope.
     """
 
     SKIP_PATHS = ("/static/", "/media/", "/health/", "/favicon.ico", "/docs/", "/schema/")
@@ -16,29 +57,58 @@ class TenantRLSMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if any(request.path.startswith(p) for p in self.SKIP_PATHS):
-            return self.get_response(request)
-        if (
-            request.user.is_authenticated
-            and hasattr(request.user, "tenant_id")
-            and request.user.tenant_id
-        ):
-            # Set the Postgres session variable for RLS
-            with connection.cursor() as cursor:
-                # UUIDs must be cast to text for set_config; use parameterized query to prevent SQL injection
-                cursor.execute(
-                    "SELECT set_config('app.tenant_id', %s, false);", [str(request.user.tenant_id)]
-                )
-        else:
-            # Clear it out if unauthenticated or no tenant (e.g. GLOBAL_OWNER)
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT set_config('app.tenant_id', '', false);")
+        # Always start with a clean slate - the previous request that used
+        # this pooled connection must not have left scope behind.
+        clear_all_context()
 
-        # Set RBAC context
+        skip = any(request.path.startswith(p) for p in self.SKIP_PATHS)
+
+        if not skip:
+            self._apply_session_scope(request)
+
         self._set_rbac_context(request)
 
-        response = self.get_response(request)
+        try:
+            response = self.get_response(request)
+        finally:
+            # Unconditional cleanup: also covers exceptions, rollbacks, and
+            # requests served via DRF JWT (whose auth class sets the same
+            # GUCs inside the view execution). The cleanup runs even when
+            # the view raised - leaving scope behind would expose it to
+            # the next request on this pooled connection.
+            try:
+                clear_all_context()
+            except Exception:
+                pass
+
         return response
+
+    def _apply_session_scope(self, request) -> None:
+        user = getattr(request, "user", None)
+        if user is None or not getattr(user, "is_authenticated", False):
+            clear_all_context()
+            return
+
+        role = getattr(user, "role", None)
+        if role == GLOBAL_OWNER_ROLE:
+            try:
+                set_global_owner_context()
+            except Exception:
+                clear_all_context()
+            return
+
+        raw_tenant = getattr(user, "tenant_id", None)
+        if raw_tenant:
+            try:
+                set_tenant_context(raw_tenant)
+            except Exception:
+                # Invalid tenant id on an authenticated user is a programming
+                # error; treat as no scope rather than raising - the policies
+                # below fail-closed anyway.
+                clear_all_context()
+            return
+
+        clear_all_context()
 
     def _set_rbac_context(self, request):
         """Set RBAC permissions in request for use in views."""
@@ -71,7 +141,6 @@ class ImpersonationAuditMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        # Determine auth state once
         is_authenticated = request.user.is_authenticated if hasattr(request, "user") else False
         user_role = getattr(request.user, "role", None) if is_authenticated else None
         tenant_id = (
@@ -82,11 +151,9 @@ class ImpersonationAuditMiddleware:
         auth_is_dict = has_auth and hasattr(request.auth, "get")
         is_impersonated = request.auth.get("impersonated", False) if auth_is_dict else False
 
-        # Only log mutating requests
         if request.method not in self.MUTATING_METHODS:
             return response
 
-        # Block 1: Impersonation logging
         logged_as_impersonation = False
         if auth_is_dict and is_impersonated:
             impersonator_id = request.auth.get("impersonator_id")
@@ -102,15 +169,11 @@ class ImpersonationAuditMiddleware:
             )
             logged_as_impersonation = True
 
-        # Block 2: Admin logging — only for mutating requests, skip if already logged as impersonation
         if (
             is_authenticated
             and user_role in ("GLOBAL_OWNER", "TENANT_ADMIN")
             and not logged_as_impersonation
         ):
-            # If the admin deletes their own user account, avoid creating an AuditLog row
-            # that would temporarily reference the row being deleted (SQLite teardown FK checks
-            # can otherwise fail for this self-delete scenario).
             skip_self_delete_audit = False
             if (
                 request.method == "DELETE"

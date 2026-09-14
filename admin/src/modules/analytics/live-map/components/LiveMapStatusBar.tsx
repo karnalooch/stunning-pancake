@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Badge, Button, Group, Text, Tooltip } from '@mantine/core';
+import { Alert, Badge, Button, Group, Text } from '@mantine/core';
 import { AlertCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import {
     computeLiveMapHealth,

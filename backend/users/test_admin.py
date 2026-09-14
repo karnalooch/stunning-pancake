@@ -480,3 +480,81 @@ class TestBulkUserEndpoints:
         ok = api_client.post(url, {"user_ids": [u1.id], "role": "TENANT_MODERATOR"}, format="json")
         assert ok.status_code == 202
         assert ok.data["allowed"] == 1
+
+
+@pytest.mark.django_db
+class TestTenantAdminIsolation:
+    def test_create_forces_own_tenant(self, api_client, admin_user, tenant):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("user-create"),
+            {"username": "scoped", "email": "scoped@test.com", "password": "securepass123"},
+            format="json",
+        )
+        assert response.status_code == 201
+        assert User.objects.get(username="scoped").tenant_id == tenant.id
+
+    def test_create_rejects_other_tenant(self, api_client, admin_user, other_tenant):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "foreign",
+                "email": "foreign@test.com",
+                "password": "securepass123",
+                "tenant_id": str(other_tenant.id),
+            },
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(username="foreign").exists()
+
+    def test_create_rejects_global_owner_role(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "owner2",
+                "email": "owner2@test.com",
+                "password": "securepass123",
+                "role": "GLOBAL_OWNER",
+            },
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(username="owner2").exists()
+
+    def test_delete_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.delete(reverse("user-delete", kwargs={"pk": other_tenant_admin.id}))
+        assert response.status_code == 404
+        assert User.objects.filter(pk=other_tenant_admin.id).exists()
+
+    def test_update_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            reverse("user-update", kwargs={"pk": other_tenant_admin.id}),
+            {"first_name": "Changed"},
+            format="json",
+        )
+        assert response.status_code == 404
+
+    def test_invitation_rejects_other_tenant(self, api_client, admin_user, other_tenant):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("invitation"),
+            {"email": "outside@test.com", "tenant_id": str(other_tenant.id)},
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(email="outside@test.com").exists()
+
+    def test_invitation_rejects_global_owner_role(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("invitation"),
+            {"email": "owner-invite@test.com", "role": "GLOBAL_OWNER"},
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(email="owner-invite@test.com").exists()

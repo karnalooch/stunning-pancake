@@ -47,68 +47,6 @@ import {
   type DashboardBootStep,
 } from '../../core/components/DashboardBootOverlay';
 
-/* ─── Types ─────────────────────────────────────────────── */
-interface TenantRow {
-  tenant_id: string;
-  tenant_name: string;
-  users: number;
-  activities: number;
-  distance_km: number;
-  verified_pct: number;
-  primary_color: string;
-  secondary_color: string;
-}
-
-interface SimKpi {
-  sim_on: boolean;
-  live_running: boolean;
-  batch_running: boolean;
-  batch_phase?: string;
-  currently_riding: number;
-  ride_warming: number;
-  ride_routing: number;
-  ride_routed?: number;
-  ride_active?: number;
-  async_routing_enabled: boolean;
-  routing_queue_depth: number;
-  routing_backpressure_active: boolean;
-  dispatches_throttled: boolean;
-  max_routing_queue_depth?: number | null;
-  tick_stale?: boolean;
-  sim_lab_unreachable?: boolean;
-  sim_kpi_source?: string;
-  error?: string;
-}
-
-interface DashboardStats {
-  total_users: number;
-  total_activities: number;
-  total_distance_km: number;
-  total_calories: number;
-  new_users_last_7d: number;
-  new_activities_last_7d: number;
-  verified_total: number;
-  verified_pct: number;
-  unverified_total: number;
-  per_tenant: TenantRow[];
-  stale?: boolean;
-  batch_running?: boolean;
-  sim_kpi?: SimKpi;
-  data_source?: 'production' | 'sim-lab';
-  synthetic?: boolean;
-  federation_fallback?: boolean;
-  sim_lab_label?: string;
-  scoped_tenant_id?: string | null;
-  per_department?: Array<{
-    department_id: number;
-    department_name: string;
-    users: number;
-    activities: number;
-    distance_km: number;
-    verified_pct: number;
-  }>;
-}
-
 /* ─── Animation variants ────────────────────────────────── */
 const containerVariants = {
   hidden: { opacity: 0 },

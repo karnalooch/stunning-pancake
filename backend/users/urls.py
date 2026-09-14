@@ -1,7 +1,13 @@
 from django.urls import path
 
 from .export_views import user_data_export_download_view, user_data_export_view
-from .mfa_views import mfa_disable_view, mfa_enable_view, mfa_setup_view, mfa_status_view
+from .mfa_views import (
+    mfa_disable_view,
+    mfa_enable_view,
+    mfa_setup_view,
+    mfa_status_view,
+    mfa_verify_session_view,
+)
 from .views import (
     AuditLogListView,
     ImpersonateUserView,
@@ -55,6 +61,7 @@ urlpatterns = [
     path("mfa/status/", mfa_status_view, name="mfa-status"),
     path("mfa/setup/", mfa_setup_view, name="mfa-setup"),
     path("mfa/enable/", mfa_enable_view, name="mfa-enable"),
+    path("mfa/verify-session/", mfa_verify_session_view, name="mfa-verify-session"),
     path("mfa/disable/", mfa_disable_view, name="mfa-disable"),
     path("me/export/", user_data_export_view, name="user-data-export"),
     path(

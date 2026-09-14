@@ -4,7 +4,7 @@ import { Users, Zap, Play } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { useWizard } from '../hooks/useWizard';
-import { useMassForm } from './massSimForm';
+import { shouldSkipActivityGeneration, useMassForm } from './massSimForm';
 import { PopulationStep } from './steps/PopulationStep';
 import { LiveMapStep } from './steps/LiveMapStep';
 import { MassReviewStep } from './steps/ReviewStep';
@@ -45,7 +45,7 @@ interface MassSimWizardProps {
 
 export const MassSimWizard: React.FC<MassSimWizardProps> = ({ step, setStep }) => {
     const navigate = useNavigate();
-    const { form, validateStep, applyScale300k, enforceActivitySkip } = useMassForm();
+    const { form, validateStep, applyScale300k } = useMassForm();
     const { data: simTarget } = useSimTarget();
     const { data: batchStatus } = useBatchStatus();
     const { data: liveStatus } = useLiveStatus();
@@ -58,6 +58,7 @@ export const MassSimWizard: React.FC<MassSimWizardProps> = ({ step, setStep }) =
     const [launching, setLaunching] = useState(false);
 
     const { cyclists, generateActivities, activePercent, cheatPercent, liveEnabled } = form.values;
+    const { setFieldValue } = form;
 
     const capacityParams = useMemo(
         () => ({
@@ -82,8 +83,10 @@ export const MassSimWizard: React.FC<MassSimWizardProps> = ({ step, setStep }) =
     }, [capacityData, step, liveEnabled, cyclists, activePercent, cheatPercent]);
 
     useEffect(() => {
-        enforceActivitySkip();
-    }, [cyclists, generateActivities]);
+        if (shouldSkipActivityGeneration(cyclists, generateActivities)) {
+            setFieldValue('generateActivities', false);
+        }
+    }, [cyclists, generateActivities, setFieldValue]);
 
     useEffect(() => {
         saveMassDraft({

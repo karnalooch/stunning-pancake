@@ -2,6 +2,11 @@
 LlmProxyView — SPORT Backend LLM Proxy
 Routes OpenAI-compatible LLM requests through the backend server
 to prevent API key exposure in the mobile client bundle.
+
+T02 Emergency Lockdown:
+- Out of RC: endpoint returns 404 by default (outside home lab / when not enabled).
+- Client cannot supply custom base_url / apiUrl (prevents SSRF / open proxy abuse).
+- Server configuration is read dynamically from environment.
 """
 
 import json
@@ -15,10 +20,16 @@ from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
-LLM_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-LLM_API_URL = os.environ.get("LLM_API_URL", "https://api.openai.com/v1")
-LLM_DEFAULT_MODEL = os.environ.get("LLM_MODEL", "gpt-4o-mini")
-LLM_TIMEOUT_MS = int(os.environ.get("LLM_TIMEOUT_MS", "5000"))
+FORBIDDEN_CLIENT_URL_KEYS = ("base_url", "baseurl", "api_url", "apiurl", "url")
+
+
+def is_llm_proxy_enabled() -> bool:
+    """Returns True if LLM proxy is enabled via environment (e.g. in home lab)."""
+    return (
+        os.getenv("ENABLE_LLM_PROXY", "0").strip().lower() in ("1", "true", "yes", "on")
+        or os.getenv("LLM_PROXY_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
+        or os.getenv("HOME_LAB", "0").strip().lower() in ("1", "true", "yes", "on")
+    )
 
 
 @csrf_exempt
@@ -31,6 +42,9 @@ def llm_proxy(request):
     Proxies the request to the configured LLM API.
     The API key NEVER leaves the server.
     """
+    if not is_llm_proxy_enabled():
+        return JsonResponse({"error": "LLM proxy is disabled"}, status=404)
+
     if request.method == "OPTIONS":
         response = JsonResponse({})
         response["Access-Control-Allow-Origin"] = "*"
@@ -38,7 +52,8 @@ def llm_proxy(request):
         response["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
         return response
 
-    if not LLM_API_KEY:
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    if not api_key:
         logger.warning("[LlmProxy] No OPENAI_API_KEY configured")
         return JsonResponse(
             {"error": "LLM not configured on server"},
@@ -50,17 +65,31 @@ def llm_proxy(request):
     except (json.JSONDecodeError, UnicodeDecodeError):
         return JsonResponse({"error": "Invalid JSON"}, status=400)
 
+    if not isinstance(body, dict):
+        return JsonResponse({"error": "Invalid JSON object"}, status=400)
+
+    for key in body:
+        if key.lower() in FORBIDDEN_CLIENT_URL_KEYS:
+            return JsonResponse({"error": "Custom base_url is not allowed"}, status=400)
+
     messages = body.get("messages")
     if not messages or not isinstance(messages, list):
         return JsonResponse({"error": 'Missing or invalid "messages" field'}, status=400)
 
-    model = body.get("model", LLM_DEFAULT_MODEL)
+    api_url = os.environ.get("LLM_API_URL", "https://api.openai.com/v1").rstrip("/")
+    default_model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
+    try:
+        timeout_ms = int(os.environ.get("LLM_TIMEOUT_MS", "5000"))
+    except (ValueError, TypeError):
+        timeout_ms = 5000
+
+    model = body.get("model", default_model)
     max_tokens = body.get("max_tokens", 80)
     temperature = body.get("temperature", 0.9)
 
     try:
         response = requests.post(
-            f"{LLM_API_URL}/chat/completions",
+            f"{api_url}/chat/completions",
             json={
                 "model": model,
                 "messages": messages,
@@ -68,18 +97,18 @@ def llm_proxy(request):
                 "temperature": temperature,
             },
             headers={
-                "Authorization": f"Bearer {LLM_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json",
             },
-            timeout=LLM_TIMEOUT_MS / 1000.0,
+            timeout=timeout_ms / 1000.0,
         )
         response.raise_for_status()
         return JsonResponse(response.json())
 
     except requests.exceptions.Timeout:
-        logger.warning(f"[LlmProxy] LLM timeout after {LLM_TIMEOUT_MS}ms")
+        logger.warning(f"[LlmProxy] LLM timeout after {timeout_ms}ms")
         return JsonResponse(
-            {"error": f"LLM request timed out after {LLM_TIMEOUT_MS}ms"},
+            {"error": f"LLM request timed out after {timeout_ms}ms"},
             status=504,
         )
     except requests.exceptions.RequestException as e:

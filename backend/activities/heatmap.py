@@ -1,9 +1,13 @@
 """
 Heatmap API — SPORT Platform (Milestone 5)
 ============================================
+
 Constitution §25.2: City Analytics Layer
 
-BBox-limited, cached GeoJSON heatmaps — safe at 300k+ users / millions of activities.
+BBox-limited, cached GeoJSON heatmaps — safe at 300k+ users / millions of
+activities. All access is tenant-scoped: the tenant scope is never taken from
+a client query parameter; it is derived from ``request.user`` for tenant roles
+and from an explicit, validated tenant id only for ``GLOBAL_OWNER``.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ import logging
 import math
 from collections import defaultdict
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -23,6 +28,11 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_CELL_DEG = 0.002
 HEATMAP_CACHE_PREFIX = "{heatmap}:tile:"
+HEATMAP_GLOBAL_SCOPE = "global"
+
+
+def _user_tenant_id(user):
+    return getattr(user, "tenant_id", None)
 
 
 def _bbox_diagonal_km(lon_min: float, lat_min: float, lon_max: float, lat_max: float) -> float:
@@ -32,10 +42,8 @@ def _bbox_diagonal_km(lon_min: float, lat_min: float, lon_max: float, lat_max: f
     return math.sqrt(dx * dx + dy * dy)
 
 
-def _cache_key(bbox_raw: str, activity_type: str, zoom: int, tenant_id: str) -> str:
-    digest = hashlib.sha256(f"{bbox_raw}|{activity_type}|{zoom}|{tenant_id}".encode()).hexdigest()[
-        :24
-    ]
+def _cache_key(bbox_raw: str, activity_type: str, zoom: int, scope: str) -> str:
+    digest = hashlib.sha256(f"{bbox_raw}|{activity_type}|{zoom}|{scope}".encode()).hexdigest()[:24]
     return f"{HEATMAP_CACHE_PREFIX}{digest}"
 
 
@@ -68,6 +76,104 @@ def _cell_to_centroid(row: int, col: int, cell_size: float) -> tuple[float, floa
     return (row * cell_size + cell_size / 2, col * cell_size + cell_size / 2)
 
 
+def _scoped_heatmap_activities(scope, *, activity_type=None):
+    """Base queryset for heatmap features, tenant-scoped by the effective scope.
+
+    The ``scope`` argument is the canonical effective scope produced by
+    ``_resolve_heatmap_scope`` (either ``HEATMAP_GLOBAL_SCOPE`` or a tenant id).
+    Filters operate on ``Activity.tenant_id`` — never on ``user__tenant_id``.
+    """
+    from activities.models import Activity
+
+    qs = Activity.objects.filter(
+        is_verified=True,
+        route_path__isnull=False,
+    )
+    if activity_type:
+        qs = qs.filter(type=activity_type.upper())
+    if scope != HEATMAP_GLOBAL_SCOPE:
+        qs = qs.filter(tenant_id=scope)
+    return qs.only("route_path", "tenant_id", "type").order_by("-created_at")
+
+
+def _resolve_heatmap_scope(request) -> tuple[str | None, Response | None]:
+    """Return ``(scope, None)`` or ``(None, error_response)``.
+
+    * ``GLOBAL_OWNER``: no param → ``HEATMAP_GLOBAL_SCOPE``; an existing tenant
+      id → that tenant; an invalid/missing tenant id → 400 (no global fallback).
+    * Tenant roles: scope is always ``request.user.tenant_id``; the
+      ``?tenant=`` query parameter is ignored. A missing tenant, inactive
+      tenant, or a tenant without ``has_heatmap_analytics`` yields 403.
+    """
+    from users.models import Tenant
+
+    user = request.user
+    role = getattr(user, "role", None)
+    requested = (request.query_params.get("tenant") or "").strip()
+
+    if role == "GLOBAL_OWNER":
+        if not requested:
+            return HEATMAP_GLOBAL_SCOPE, None
+        try:
+            tenant = Tenant.objects.filter(pk=requested).first()
+        except (DjangoValidationError, ValueError, TypeError):
+            tenant = None
+        if tenant is None:
+            return None, Response({"error": "Unknown tenant."}, status=400)
+        return str(tenant.id), None
+
+    tenant_id = _user_tenant_id(user)
+    if not tenant_id:
+        return None, Response({"error": "Tenant scope required."}, status=403)
+    try:
+        tenant = Tenant.objects.filter(pk=tenant_id).first()
+    except (DjangoValidationError, ValueError, TypeError):
+        tenant = None
+    if tenant is None or not tenant.is_active or not tenant.has_heatmap_analytics:
+        return None, Response({"error": "Heatmap analytics not available."}, status=403)
+    return str(tenant.id), None
+
+
+def _resolve_department_for_analytics(request):
+    """Resolve the ``Department`` for ``?department=`` within the approved scope.
+
+    * Without ``?department`` → ``Q(user=request.user)`` filter.
+    * With ``?department``: tenant-bound users must reference an active
+      department in their own tenant; ``GLOBAL_OWNER`` may reference any
+      existing department. A tenant-bound user without a tenant is rejected
+      with 403. A foreign / non-existent / inactive department returns 404.
+    """
+    from users.departments import Department
+
+    user = request.user
+    department_id = request.query_params.get("department")
+    if not department_id:
+        return None, None
+
+    role = getattr(user, "role", None)
+    if role != "GLOBAL_OWNER":
+        tenant_id = _user_tenant_id(user)
+        if not tenant_id:
+            return None, Response({"error": "Tenant scope required."}, status=403)
+        try:
+            department = Department.objects.filter(
+                pk=department_id, is_active=True, tenant_id=tenant_id
+            ).first()
+        except (DjangoValidationError, ValueError, TypeError):
+            department = None
+        if department is None:
+            return None, Response({"error": "Department not found."}, status=404)
+        return department, None
+
+    try:
+        department = Department.objects.filter(pk=department_id, is_active=True).first()
+    except (DjangoValidationError, ValueError, TypeError):
+        department = None
+    if department is None:
+        return None, Response({"error": "Department not found."}, status=404)
+    return department, None
+
+
 def _build_heatmap_features(
     lon_min: float,
     lat_min: float,
@@ -75,28 +181,19 @@ def _build_heatmap_features(
     lat_max: float,
     activity_type: str,
     zoom: int,
-    tenant_id: str,
+    scope: str,
 ) -> dict:
     from django.contrib.gis.geos import Polygon
 
-    from activities.models import Activity
     from activities.scale_config import HEATMAP_MAX_ACTIVITIES_SAMPLE
 
     cell_size = max(0.0001, DEFAULT_CELL_DEG / (2 ** max(0, zoom - 12)))
     bbox_poly = Polygon.from_bbox((lon_min, lat_min, lon_max, lat_max))
     bbox_poly.srid = 4326
 
-    qs = Activity.objects.filter(
-        is_verified=True,
-        route_path__isnull=False,
-        route_path__bboverlaps=bbox_poly,
+    qs = _scoped_heatmap_activities(scope, activity_type=activity_type).filter(
+        route_path__bboverlaps=bbox_poly
     )
-    if activity_type:
-        qs = qs.filter(type=activity_type.upper())
-    if tenant_id:
-        qs = qs.filter(user__tenant_id=tenant_id)
-
-    qs = qs.only("route_path").order_by("-created_at")
     max_sample = HEATMAP_MAX_ACTIVITIES_SAMPLE
 
     grid: dict[tuple[int, int], int] = defaultdict(int)
@@ -117,7 +214,13 @@ def _build_heatmap_features(
         return {
             "type": "FeatureCollection",
             "features": [],
-            "meta": {"totalCells": 0, "maxCount": 0, "cellSizeDeg": cell_size, "sampled": seen},
+            "meta": {
+                "totalCells": 0,
+                "maxCount": 0,
+                "cellSizeDeg": cell_size,
+                "sampled": seen,
+                "scope": scope,
+            },
         }
 
     max_count = max(grid.values())
@@ -158,6 +261,7 @@ def _build_heatmap_features(
             "cellSizeDeg": cell_size,
             "sampled": seen,
             "sampleCap": max_sample,
+            "scope": scope,
         },
     }
 
@@ -177,7 +281,6 @@ def heatmap_view(request: Request) -> Response:
         zoom = int(request.query_params.get("zoom", 12))
     except (TypeError, ValueError):
         zoom = 12
-    tenant_id = request.query_params.get("tenant", "")
 
     if not bbox_raw:
         return Response(
@@ -212,7 +315,11 @@ def heatmap_view(request: Request) -> Response:
             status=400,
         )
 
-    cache_key = _cache_key(bbox_raw, activity_type, zoom, tenant_id)
+    scope, error = _resolve_heatmap_scope(request)
+    if error is not None:
+        return error
+
+    cache_key = _cache_key(bbox_raw, activity_type, zoom, scope)
     if request.query_params.get("refresh") != "1":
         cached = _get_cached(cache_key)
         if cached:
@@ -227,17 +334,18 @@ def heatmap_view(request: Request) -> Response:
         lat_max,
         activity_type,
         zoom,
-        tenant_id,
+        scope,
     )
     payload.setdefault("meta", {})["cached"] = False
     _set_cached(cache_key, payload, HEATMAP_CACHE_TTL)
 
     logger.info(
-        "heatmap.generated cells=%d bbox=%s zoom=%d sampled=%s",
+        "heatmap.generated cells=%d bbox=%s zoom=%d sampled=%s scope=%s",
         len(payload.get("features", [])),
         bbox_raw,
         zoom,
         payload.get("meta", {}).get("sampled"),
+        scope,
     )
     return Response(payload)
 
@@ -257,16 +365,24 @@ def analytics_summary_view(request: Request) -> Response:
     from activities.models import Activity
 
     user = request.user
-    department_id = request.query_params.get("department")
+    department, error = _resolve_department_for_analytics(request)
+    if error is not None:
+        return error
     today = date.today()
 
-    user_filter = Q(user=user)
-    if department_id:
-        user_filter = Q(user__departments__id=department_id)
+    if department is None:
+        activity_scope = Q(user=user)
+    else:
+        # Department membership is paired with the canonical ``Activity.tenant_id``
+        # filter to defeat inconsistent historical relations across tenants.
+        activity_scope = Q(
+            user__departments__id=department.id,
+            tenant_id=department.tenant_id,
+        )
 
     weekly_qs = (
         Activity.objects.filter(
-            user_filter,
+            activity_scope,
             is_verified=True,
             start_time__date__gte=today - timedelta(weeks=12),
         )
@@ -288,7 +404,7 @@ def analytics_summary_view(request: Request) -> Response:
 
     daily_qs = (
         Activity.objects.filter(
-            user_filter,
+            activity_scope,
             is_verified=True,
             start_time__date__gte=today - timedelta(days=28),
         )
@@ -308,7 +424,7 @@ def analytics_summary_view(request: Request) -> Response:
 
     best = (
         Activity.objects.filter(
-            user_filter,
+            activity_scope,
             is_verified=True,
             type="RUN",
         )

@@ -120,7 +120,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   }),
   setPermissions: (permissions) => set({ permissions }),
   hasPermission: (permission) => {
-    const { permissions, user } = get();
+    const { permissions } = get();
     if (permissions.includes('*')) return true;
     return permissions.includes(permission);
   },

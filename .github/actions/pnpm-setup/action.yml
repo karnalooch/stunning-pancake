@@ -15,5 +15,6 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
     - run: pnpm install --frozen-lockfile
       shell: bash

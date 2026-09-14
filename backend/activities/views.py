@@ -2,7 +2,7 @@ import json
 import time
 
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, permissions, status, views, viewsets
+from rest_framework import generics, permissions, serializers, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
@@ -688,10 +688,31 @@ class TelemetryLiveAuditView(generics.GenericAPIView):
         return Response(result, status=status.HTTP_202_ACCEPTED)
 
 
+class _IsWebhookAdmin(permissions.BasePermission):
+    """Local permission: only ``GLOBAL_OWNER`` or a ``TENANT_ADMIN`` with a
+    non-empty ``tenant_id`` may manage tenant webhooks. Every other role —
+    including ``ATHLETE``, ``SPONSOR`` and ``TENANT_MODERATOR`` — is denied,
+    and a ``TENANT_ADMIN`` without a tenant is also denied.
+    """
+
+    message = "Tenant webhook administration requires GLOBAL_OWNER or a tenant-bound TENANT_ADMIN."
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        if user is None or not getattr(user, "is_authenticated", False):
+            return False
+        role = getattr(user, "role", None)
+        if role == "GLOBAL_OWNER":
+            return True
+        if role == "TENANT_ADMIN" and getattr(user, "tenant_id", None):
+            return True
+        return False
+
+
 class LiveMapWebhookListCreateView(generics.ListCreateAPIView):
     """List/create Live Map alert webhooks for tenant."""
 
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (_IsWebhookAdmin,)
     serializer_class = None
 
     def get_serializer_class(self):
@@ -715,15 +736,32 @@ class LiveMapWebhookListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
-        if getattr(user, "role", "") != "GLOBAL_OWNER":
+
+        if getattr(user, "role", "") == "GLOBAL_OWNER":
+            # The serializer already resolved the FK; trust validated_data.
+            tenant = serializer.validated_data.get("tenant")
+            if tenant is None:
+                raise serializers.ValidationError(
+                    {"tenant": ["tenant is required for GLOBAL_OWNER create."]}
+                )
+            serializer.save()
+            return
+
+        # TENANT_ADMIN: tenant is always the caller's tenant. Explicit
+        # cross-tenant attempts are rejected with a controlled 400.
+        requested = serializer.validated_data.get("tenant")
+        if requested is None:
             serializer.save(tenant_id=user.tenant_id)
-        else:
-            tenant_id = self.request.data.get("tenant") or self.request.data.get("tenant_id")
-            serializer.save(tenant_id=tenant_id or user.tenant_id)
+            return
+        if requested.id != user.tenant_id:
+            raise serializers.ValidationError(
+                {"tenant": ["tenant must match the authenticated tenant."]}
+            )
+        serializer.save(tenant_id=user.tenant_id)
 
 
 class LiveMapWebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (_IsWebhookAdmin,)
     serializer_class = None
 
     def get_serializer_class(self):
@@ -742,11 +780,38 @@ class LiveMapWebhookDetailView(generics.RetrieveUpdateDestroyAPIView):
             return qs.filter(tenant_id=user.tenant_id)
         return LiveMapAlertWebhook.objects.none()
 
+    def perform_update(self, serializer):
+        user = self.request.user
+        instance = serializer.instance
+
+        if getattr(user, "role", "") != "GLOBAL_OWNER":
+            # Tenant-scoped admins cannot re-assign webhooks across tenants.
+            # The serializer has already resolved any provided tenant FK into
+            # a Tenant instance in validated_data.
+            requested = serializer.validated_data.get("tenant")
+            if requested is not None and requested.id != user.tenant_id:
+                raise serializers.ValidationError(
+                    {"tenant": ["tenant cannot be changed for tenant-scoped admins."]}
+                )
+            # Pin the row to the caller's tenant (defence in depth against
+            # out-of-band edits and missing tenant field).
+            serializer.save(tenant_id=user.tenant_id)
+            return
+
+        # GLOBAL_OWNER may reassign to another existing tenant or leave it
+        # untouched by omitting the field. validated_data already contains the
+        # resolved Tenant instance (or is absent).
+        requested = serializer.validated_data.get("tenant")
+        if requested is None:
+            serializer.save()
+            return
+        serializer.save(tenant_id=requested.id)
+
 
 class LiveMapWebhookTestView(generics.GenericAPIView):
     """Send test_ping to configured webhook URL."""
 
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (_IsWebhookAdmin,)
 
     def post(self, request, pk):
         import uuid
@@ -758,7 +823,12 @@ class LiveMapWebhookTestView(generics.GenericAPIView):
 
         user = request.user
         qs = LiveMapAlertWebhook.objects.filter(pk=pk, enabled=True)
-        if getattr(user, "role", "") != "GLOBAL_OWNER" and user.tenant_id:
+        if getattr(user, "role", "") != "GLOBAL_OWNER":
+            if not user.tenant_id:
+                return Response(
+                    {"detail": "Forbidden."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
             qs = qs.filter(tenant_id=user.tenant_id)
         wh = qs.first()
         if not wh:

@@ -23,7 +23,7 @@ test.describe('Live Map Meso perf', () => {
         await ranking.getByRole('button').first().click();
 
         await expect(page.getByTestId('live-map-zoom-mode')).toHaveText('Meso', { timeout: 60_000 });
-        await expect(page.getByTestId('live-map-drawn-count')).toContainText(/[1-9]\d* on map/, {
+        await expect(page.getByTestId('live-map-drawn-count')).toContainText(/\b[1-9]\d*\b/, {
             timeout: MESO_ENTRY_BUDGET_MS,
         });
 

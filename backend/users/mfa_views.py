@@ -7,7 +7,9 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from users.jwt_views import token_pair_for_user
 from users.mfa import generate_totp_secret, provisioning_uri, verify_totp
+from users.mfa_policy import ADMIN_ROLES
 
 
 @api_view(["GET"])
@@ -17,7 +19,7 @@ def mfa_status_view(request):
     return Response(
         {
             "mfa_enabled": bool(getattr(user, "mfa_enabled", False)),
-            "required_for_role": user.role == "GLOBAL_OWNER",
+            "required_for_role": user.role in ADMIN_ROLES,
         }
     )
 
@@ -50,13 +52,28 @@ def mfa_enable_view(request):
     user.mfa_enabled = True
     user.mfa_secret_pending = ""
     user.save(update_fields=["mfa_secret", "mfa_enabled", "mfa_secret_pending"])
-    return Response({"mfa_enabled": True})
+    return Response({"mfa_enabled": True, **token_pair_for_user(user)})
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def mfa_verify_session_view(request):
+    user = request.user
+    code = str(request.data.get("code", "")).strip()
+    if not user.mfa_enabled or not verify_totp(user.mfa_secret, code):
+        return Response({"error": "Invalid verification code."}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(token_pair_for_user(user))
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def mfa_disable_view(request):
     user = request.user
+    if getattr(user, "role", None) in ADMIN_ROLES:
+        return Response(
+            {"error": "MFA is mandatory for administrative roles."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     code = str(request.data.get("code", "")).strip()
     secret = getattr(user, "mfa_secret", None)
     if user.mfa_enabled and secret and not verify_totp(secret, code):
