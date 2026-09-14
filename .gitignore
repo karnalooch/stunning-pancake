@@ -6,6 +6,8 @@
 .env.*.local
 .env.railway.local
 .env.sim-lab
+.env.home
+backups/home-lab/
 infrastructure/sim-lab/railway/sim-lab.created.env
 infrastructure/sim-lab/railway/proxy.secret
 mobile/.env

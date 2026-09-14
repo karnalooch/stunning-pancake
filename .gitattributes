@@ -3,3 +3,6 @@ infrastructure/brouter/entrypoint.sh text eol=lf
 infrastructure/osrm/entrypoint.sh text eol=lf
 celery-worker-simulation/start.sh text eol=lf
 celery-worker/start.sh text eol=lf
+backend/docker-entrypoint.sh text eol=lf
+scripts/home_lab.py text eol=lf
+scripts/test_home_lab.py text eol=lf
