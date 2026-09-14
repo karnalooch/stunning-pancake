@@ -112,7 +112,7 @@ Nie obchodzimy istniejących wymagań pełnego PostGIS/Redis gate ani zależnoś
 
 ## Zasady pracy i status
 
-- P0: publikacja dokumentacji; P1–P5: PLANNED. Uruchomienie na telefonie: NOT RUN.
+- P0: ACTIVE do chwili merge PR #84; P1: PLANNED (home lab gotowy, telefon NOT RUN); P2–P5: PLANNED. Uruchomienie na telefonie: NOT RUN.
 - Jedno zlecenie = jeden ograniczony cel; mały PR, test zachowania i review.
 - Po dwóch nieskutecznych poprawkach tego samego problemu wracamy do dowodów, nie mnożymy spekulacyjnych zmian.
 - Nie ruszamy niepowiązanych modułów, zależności ani chronionych lokalnych plików.
@@ -121,19 +121,33 @@ Nie obchodzimy istniejących wymagań pełnego PostGIS/Redis gate ani zależnoś
 
 ## P1 — przygotowanie po stronie repo (2026-09-14)
 
-Status: analiza zależności wykonana; uruchomienie home labu i test telefonu BLOCKED — ENVIRONMENT REQUIRED. Dostępny connector GitHub nie daje sesji terminala na komputerze właściciela ani dostępu do telefonu. Nie wykonano builda, migracji ani połączeń z Railway.
+Status: środowisko home lab jest dostępne na main po merge PR #51 (squash `1c7e7840a580208affb7d74a0432d4dbe704a82e`); uruchomienie telefonu i pełna ścieżka użytkownika pozostają NOT RUN — ENVIRONMENT REQUIRED. Dostępny connector GitHub nie daje sesji terminala na komputerze właściciela ani dostępu do telefonu. Nie wykonano builda Androida, migracji ani połączeń z Railway.
+
+### Potwierdzona walidacja home labu (po merge PR #51, na izolowanym środowisku)
+
+- Docker Desktop 4.91.0; Engine 29.8.0; Compose v5.5.1 — zweryfikowane poleceniami `docker version`, `docker compose version`.
+- Siedem usług rdzenia (`db`, `redis`, `backend`, `telemetry`, `global_admin`, `celery_worker`, `celery_beat`) uruchomionych i raportowanych jako `Healthy` przez `python scripts/home_lab.py status` oraz `python scripts/home_lab.py check`.
+- `backend` `/health` zwrócił HTTP 200.
+- `telemetry` `/health` zwrócił HTTP 200.
+- Backup utworzony poleceniem home labu.
+- `verify-restore` wykonany w izolowanej bazie; główna baza pozostała sprawna (brak wpływu na `4velo-home_pgdata`).
+- Entrypoint zweryfikowany z LF w świeżym worktree oraz w obrazie (`docker inspect`, `docker exec ... file`).
+- Home lab został zatrzymany poleceniem `down` (bez `-v`); wolumen `4velo-home_pgdata` nie został usunięty.
+
+Powyższe potwierdza techniczną możliwość uruchomienia i odtworzenia środowiska oraz obecność `django_migrations` w odtworzonej bazie. Dotychczasowy `verify-restore` nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem spełnienia RPO 24h / RTO 4h — to zostaje odrębną kontrolą po merge PR #84.
 
 ### Potwierdzone zależności
 
 | Element | Stan w chwili odczytu | Wniosek |
 | --- | --- | --- |
-| PR #84, plan | OPEN, Draft; SHA 37ab9f66f6d21bda620d5c98699cd93836361375, workflowy success, Aggregate CI gate success | Wynik dotyczy tego SHA; każda aktualizacja wymaga nowego CI |
-| PR #51, home lab | OPEN; SHA b541d599b82e3ebe6de0514cf4486a7e1b10bec6 | Kontynuować istniejący PR i sprawdzić zgodność z main po T11; nie kopiować starej gałęzi w całości |
-| PR #57, release gate | OPEN; SHA 9d726eb76f1f0798ca08639f1e25f80e9032d02f, oparty na #51 | Nie scalać przed przygotowaniem zależności |
-| PR #44, Compose prod | OPEN; SHA 87962874f18ea9c9570b84eea6f48906147fb932 | Osobna poprawka ścieżki obrazu; nie dowodzi gotowości wdrożenia |
+| PR #84, plan | OPEN, Draft; SHA początkowy 96bf6b096fbf26cfc5bab30621079ea55e81d143 (sprzed synchronizacji z main); workflowy success, Aggregate CI gate success | Wynik dotyczy tego SHA; każda aktualizacja wymaga nowego CI |
+| PR #51, home lab | MERGED, squash `1c7e7840a580208affb7d74a0432d4dbe704a82e` (2026-09-14) | Home lab, runbooki i `scripts/home_lab.py` są już na main; numer PR pozostaje historyczną wskazówką |
+| PR #55, simulator guard | MERGED, squash `dc3e20e8a48b594a469b28c1a3e80ebceb527d82` | Zamknięty; nie wymaga kontynuacji |
+| PR #57, release gate | OPEN; SHA historyczny, oparty na #51 | Nadal wymaga osobnej oceny po włączeniu #51 do main |
+| PR #44, Compose prod | OPEN; SHA historyczny | Osobna poprawka ścieżki obrazu; nie dowodzi gotowości wdrożenia |
 | mobile/eas.json | development, preview i production wskazują adresy Railway | Żaden obecny profil nie jest potwierdzonym profilem lokalnego pilotażu |
 
-Odczyt drzewa main nie wykazał scripts/home_lab.py ani runbooka HOME_LAB.md — są dopiero w #51.
+Home lab (`scripts/home_lab.py`, `docs/{en,pl}/operations/HOME_LAB.md`, `.env.home.example`, `.github/workflows/home-lab.yml`) jest dostępny na aktualnym main po merge PR #51. Numery PR-ów w tabeli są historycznymi odnośnikami, nie gwarancją bieżącego stanu — faktyczny stan potwierdza `git rev-parse origin/main` i polecenia repo, nie nagłówki tabeli.
 Źródła: [PR #51](https://github.com/karnalooch/stunning-pancake/pull/51), [PR #57](https://github.com/karnalooch/stunning-pancake/pull/57), [PR #44](https://github.com/karnalooch/stunning-pancake/pull/44), [profile mobile](../mobile/eas.json).
 
 ### Minimalny zestaw usług do sprawdzenia
@@ -148,21 +162,27 @@ Potrzebny jest natywny build Android z lokalnymi adresami, uprawnieniami GPS i d
 
 ### Warunkowa procedura home lab
 
-Dopiero po sprawdzeniu i przygotowaniu #51 na aktualnej bazie, na komputerze z Dockerem i w izolowanym checkoutcie:
+PR #51 jest już scalony, więc poniższe kroki są dostępne na aktualnym main. Nie uruchamiać ich ponownie w ramach tej transzy; kolejne użycie wykonywać tylko na komputerze z Dockerem i w izolowanym checkoutcie:
 
 1. Sprawdzić git status --short --branch, git rev-parse HEAD, docker version, docker compose version i python --version.
-2. Potwierdzić co najmniej 16 GB RAM i 40 GB wolnego miejsca według runbooka #51.
-3. Uruchomić python scripts/home_lab.py init tylko jeśli lokalny .env.home jeszcze nie istnieje. Nie wyświetlać zawartości pliku.
+2. Potwierdzić co najmniej 16 GB RAM i 40 GB wolnego miejsca według runbooka HOME_LAB.md.
+3. Uruchomić python scripts/home_lab.py init tylko jeśli lokalny .env.home jeszcze nie istnieje. Nie wyświetlać zawartości pliku; nie dodawać .env.home do Git.
 4. Uruchomić python scripts/home_lab.py config, następnie python scripts/home_lab.py up.
 5. Uruchomić python scripts/home_lab.py status oraz python scripts/home_lab.py check; zapisać wyniki i kody wyjścia bez sekretów.
 6. Dopiero po zielonym check i sprawdzeniu izolacji przygotować syntetyczne konta tenantów A/B, admina i GLOBAL_OWNER przez zatwierdzoną ścieżkę aplikacji.
 7. Zweryfikować lokalne adresy w buildzie telefonu, następnie wykonać krótki zapis jazdy, synchronizację i odczyt w panelu. Rozszerzone scenariusze są w bramce powyżej.
 
-Polecenia są odczytane ze skryptu w #51, nie przetestowane tutaj i nie są obecnie dostępne na main.
-Nie uruchamiać down -v, wipe, seed produkcyjnego ani przywracania backupu nad istniejącą bazą.
-Backup/restore zostaje osobną kontrolą po review procedury — samo sprawdzenie tabeli migracji nie jest dowodem odzyskania pełnych danych.
+Powyższe kroki zostały już przetestowane w izolacji po merge PR #51 (wyniki w sekcji „Potwierdzona walidacja home labu" powyżej). Nie uruchamiać down -v, wipe, seed produkcyjnego ani przywracania backupu nad istniejącą bazą.
+Backup/restore zostaje osobną kontrolą po review procedury — dotychczasowy verify-restore potwierdza techniczną możliwość odtworzenia i obecność django_migrations, ale nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem RPO/RTO.
 
-### Najbliższa potrzebna informacja
+### Najbliższa potrzebna informacja / następne zadanie
 
-Ustalić dostępny komputer home lab oraz obecność działającego Dockera. Nie wymaga to podawania haseł ani tokenów.
-Następne zadanie implementacyjne: kontynuacja #51 na bazie po T11 i bezpieczna konfiguracja lokalnego testu, z małym zakresem i rzeczywistą walidacją środowiskową.
+Docker oraz komputer home lab zostały potwierdzone w izolowanej walidacji po merge PR #51.
+
+Następne zadanie po merge PR #84 ma być ograniczonym przygotowaniem P1 dla Androida:
+
+- zinwentaryzować aktualne profile EAS/Expo (`mobile/eas.json`, `mobile/app.config.js`) i efektywne adresy backendu oraz telemetry, w tym to, który profil wskazuje na Railway, a który mógłby wskazywać lokalny home lab;
+- ustalić najmniejszy bezpieczny wariant połączenia prawdziwego telefonu z lokalnym home labem (adresy LAN, certyfikaty, wyłącznie sieć właściciela);
+- sprawdzić wymagania sieci LAN, firewall, cleartext HTTP, uprawnienia GPS oraz trwałego zapisu (MMKV) w bieżącej konfiguracji natywnej;
+- nie wystawiać niezabezpieczonego serwisu publicznie i nie wykonywać jeszcze builda ani zmian kodu w ramach PR #84;
+- wynikiem następnego zadania ma być plan i pierwszy mały, testowalny zakres implementacyjny, a nie gotowy build.
