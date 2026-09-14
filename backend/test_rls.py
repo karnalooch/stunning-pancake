@@ -199,11 +199,20 @@ def _table_sequences(table: str) -> list[tuple[str, str]]:
     and the sequence name are returned as separate strings so the caller
     can compose a safe two-part SQL identifier (``psycopg2.sql.Identifier``
     with two parts) instead of an identifier that spans a dot.
+
+    The qualified table name is composed via ``quote_ident(...)`` rather
+    than ``format('%I.%I', ...)`` because the ``%I`` placeholder in a
+    SQL literal is mis-parsed by the ``psycopg2`` cursor adapter as an
+    ``execute`` placeholder, which causes ``IndexError`` whenever the
+    query is executed with a parameter list (see
+    https://github.com/psycopg/psycopg2/issues/1793).
     """
     rows = _fetchall(
         "WITH found AS ("
         "  SELECT DISTINCT pg_catalog.pg_get_serial_sequence("
-        "    format('%I.%I', table_schema, table_name), column_name"
+        "    quote_ident(table_schema) || '.' "
+        "    || quote_ident(table_name),"
+        "    column_name"
         "  ) AS qualified_name "
         "  FROM information_schema.columns "
         "  WHERE table_schema = current_schema() AND table_name = %s"
