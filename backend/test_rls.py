@@ -1829,10 +1829,8 @@ class _RlsProbeTenantView(APIView):
         current = _scalar("SELECT current_user")
         # Run the protected query under the limited test role so the
         # ``TO PUBLIC`` policy is actually consulted.
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET LOCAL ROLE {TEST_ROLE}")
-            cursor.execute("SELECT count(*) FROM activities_activity")
-            (count,) = cursor.fetchone()
+        with _as_test_role():
+            (count,) = _fetchone("SELECT count(*) FROM activities_activity")
         return Response(
             {
                 "current_user": current,
@@ -1859,10 +1857,8 @@ class _RlsProbeGlobalOwnerView(APIView):
         _RLSProbeMixin._inside_request = True
         tenant_guc = _scalar("SELECT current_setting('app.tenant_id', true)")
         global_guc = _scalar("SELECT current_setting('app.is_global_owner', true)")
-        with connection.cursor() as cursor:
-            cursor.execute(f"SET LOCAL ROLE {TEST_ROLE}")
-            cursor.execute("SELECT count(*) FROM activities_activity")
-            (count,) = cursor.fetchone()
+        with _as_test_role():
+            (count,) = _fetchone("SELECT count(*) FROM activities_activity")
         return Response(
             {
                 "tenant_guc": tenant_guc,
