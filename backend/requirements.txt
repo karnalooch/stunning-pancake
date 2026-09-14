@@ -23,7 +23,7 @@ django-celery-beat==2.9.0
 pluggy==1.5.0
 firebase-admin>=6.5.0
 # Phase 10: Observability
-sentry-sdk[django,celery]==2.22.0
+sentry-sdk[django,celery]==2.69.1
 whitenoise==6.9.0
 # Milestone 5: ML Anti-Cheat Layer
 scikit-learn==1.5.0
