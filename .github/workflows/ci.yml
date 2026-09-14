@@ -115,7 +115,7 @@ jobs:
           pip install "ruff>=0.8,<0.16"
           cd backend
           ruff check . --output-format=github
-          ruff format --check --diff .
+          ruff format --check .
 
       - name: Type check with mypy (guarded modules)
         run: |
