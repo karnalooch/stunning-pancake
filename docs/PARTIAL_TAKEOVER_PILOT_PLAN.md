@@ -125,23 +125,30 @@ Status: home lab jest dostępny na main po scaleniu PR #51 (squash `1c7e7840a580
 
 ### Chronologia wcześniejszej walidacji home labu (PR #51, przed merge)
 
-- Pełną walidację runtime home labu wykonano na końcowym HEAD PR #51 (przed jego scaleniem do main), w izolowanym środowisku:
+Walidacja PR #51 przebiegała na dwóch commitach gałęzi `feat/home-lab`. Rozróżnienie jest istotne, bo pełny runtime wykonano tylko na wcześniejszym z nich.
+
+- Pełna walidacja runtime home labu wykonana na `04b7a228b573ac5eb691455f7fceb7dbfc90d198` (`fix: make home lab compatible with current main`), w izolowanym środowisku, przed dalszą pracą nad LF i przed merge:
   - Docker Desktop 4.91.0; Engine 29.8.0; Compose v5.5.1 — zweryfikowane poleceniami `docker version`, `docker compose version`.
   - Siedem usług rdzenia (`db`, `redis`, `backend`, `telemetry`, `global_admin`, `celery_worker`, `celery_beat`) uruchomionych i raportowanych jako `Healthy` przez `python scripts/home_lab.py status` oraz `python scripts/home_lab.py check`.
   - `backend` `http://127.0.0.1:8000/health/` → HTTP 200.
   - `telemetry` `http://127.0.0.1:8001/api/telemetry/health` → HTTP 200.
   - Backup utworzony poleceniem home labu.
   - `verify-restore` wykonany w izolowanej bazie; główna baza pozostała sprawna (brak wpływu na `4velo-home_pgdata`).
+  - Ponowny `check` głównej bazy potwierdził brak regresji po `verify-restore`.
   - Home lab został zatrzymany poleceniem `down` (bez `-v`); wolumen `4velo-home_pgdata` nie został usunięty.
-- Dodatkowa walidacja LF entrypointu wykonana na końcowym HEAD PR #51 w świeżym worktree i zbudowanym z niego obrazie (przed merge):
-  - w świeżym worktree potwierdzono binarnie: `CRLF=0` dla `backend/docker-entrypoint.sh`;
+- Późniejszy commit `e03b4e04901c2e9d51f09f45a3477c4ecdc9083d` (`fix: enforce LF for home lab entrypoints`) różnił się od `04b7a22` wyłącznie dodaniem trzech reguł LF w `.gitattributes`; nie wprowadzał innych zmian w kodzie, konfiguracji ani runtime home labu.
+- Dla `e03b4e0` wykonano osobną walidację (bez ponownego pełnego runtime całego home labu):
+  - świeży worktree z `e03b4e0`;
+  - binarnie potwierdzono `CRLF=0` dla `backend/docker-entrypoint.sh`;
   - obraz backendu zbudowano z tego świeżego worktree;
   - zawartość `/app/docker-entrypoint.sh` sprawdzono w obrazie przez `docker run --rm`;
-  - potwierdzono brak znaku CR oraz prawidłowy shebang `#!/bin/sh`.
-- Dokładnie ten zweryfikowany stan został następnie scalony do main jako squash: `1c7e7840a580208affb7d74a0432d4dbe704a82e`.
-- Home lab jest obecnie dostępny na main, ale w ramach PR #84 nie był ponownie uruchamiany.
+  - potwierdzono brak znaku CR oraz prawidłowy shebang `#!/bin/sh`;
+  - uruchomiono odpowiednie testy; wymagane CI dla `e03b4e0` zielone.
+- Pełnego runtime całego home labu (siedem usług, healthchecki, backup, `verify-restore`) nie uruchamiano ponownie po commicie `e03b4e0`.
+- `e03b4e0` został następnie scalony do main jako squash: `1c7e7840a580208affb7d74a0432d4dbe704a82e`.
+- Home lab jest obecnie dostępny na main (opis dostępności kodu, nie ponownego testu runtime); w ramach PR #84 home lab nie był uruchamiany.
 
-Powyższe potwierdza techniczną możliwość uruchomienia i odtworzenia środowiska oraz obecność `django_migrations` w odtworzonej bazie. Dotychczasowy `verify-restore` nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem spełnienia RPO 24h / RTO 4h — to zostaje odrębną kontrolą po merge PR #84.
+Powyższe potwierdza techniczną możliwość uruchomienia i odtworzenia środowiska oraz obecność `django_migrations` w odtworzonej bazie (walidacja na `04b7a22`). Dotychczasowy `verify-restore` nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem spełnienia RPO 24h / RTO 4h — to zostaje odrębną kontrolą po merge PR #84.
 
 ### Potwierdzone zależności
 
@@ -179,12 +186,12 @@ PR #51 jest już scalony, więc poniższe kroki są dostępne na aktualnym main.
 6. Dopiero po zielonym check i sprawdzeniu izolacji przygotować syntetyczne konta tenantów A/B, admina i GLOBAL_OWNER przez zatwierdzoną ścieżkę aplikacji.
 7. Zweryfikować lokalne adresy w buildzie telefonu, następnie wykonać krótki zapis jazdy, synchronizację i odczyt w panelu. Rozszerzone scenariusze są w bramce powyżej.
 
-Powyższe kroki zostały już przetestowane w izolacji po merge PR #51 (wyniki w sekcji „Potwierdzona walidacja home labu" powyżej). Nie uruchamiać down -v, wipe, seed produkcyjnego ani przywracania backupu nad istniejącą bazą.
-Backup/restore zostaje osobną kontrolą po review procedury — dotychczasowy verify-restore potwierdza techniczną możliwość odtworzenia i obecność django_migrations, ale nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem RPO/RTO.
+Kroki `init`/`config`/`up`/`status`/`check` oraz sekwencję backup/verify-restore wykonano w izolacji podczas walidacji PR #51 na `04b7a22` (wyniki w sekcji „Chronologia wcześniejszej walidacji home labu" powyżej); w ramach PR #84 nie powtarzano runtime home labu. Nie uruchamiać down -v, wipe, seed produkcyjnego ani przywracania backupu nad istniejącą bazą.
+Backup/restore zostaje osobną kontrolą po review procedury — dotychczasowy verify-restore (z `04b7a22`) potwierdza techniczną możliwość odtworzenia i obecność django_migrations, ale nie jest jeszcze pełnym testem integralności wszystkich danych biznesowych ani dowodem RPO/RTO.
 
 ### Najbliższa potrzebna informacja / następne zadanie
 
-Docker oraz komputer home lab zostały potwierdzone w izolowanej walidacji po merge PR #51.
+Środowisko home lab oraz jego pełny runtime zostały potwierdzone podczas walidacji PR #51 przed merge (na `04b7a22`); kod home labu jest obecnie dostępny na main.
 
 Następne zadanie po merge PR #84 ma być ograniczonym przygotowaniem P1 dla Androida:
 
