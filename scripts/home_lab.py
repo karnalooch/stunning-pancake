@@ -121,7 +121,7 @@ def check_health() -> None:
     ]
     if missing or unhealthy:
         raise SystemExit(f"Home lab is not healthy; missing={missing}, unhealthy={unhealthy}")
-    for url in ("http://127.0.0.1:8000/health/", "http://127.0.0.1:8001/health"):
+    for url in ("http://127.0.0.1:8000/health/", "http://127.0.0.1:8001/api/telemetry/health"):
         with urllib.request.urlopen(url, timeout=5) as response:
             if response.status != 200:
                 raise SystemExit(f"Health endpoint failed: {url} returned {response.status}")
