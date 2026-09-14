@@ -770,6 +770,12 @@
       "pl": "docs/pl/UPDATES.md",
       "en": "docs/en/UPDATES.md",
       "legacy": "docs/UPDATES.md"
+    },
+    {
+      "mode": "paired",
+      "canonical": "docs/en/operations/HOME_LAB.md",
+      "en": "docs/en/operations/HOME_LAB.md",
+      "pl": "docs/pl/operations/HOME_LAB.md"
     }
   ]
 }
