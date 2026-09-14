@@ -161,10 +161,21 @@ def _policy_clause(table: str, policy: str, kind: str) -> str | None:
 
 
 def _policy_roles(table: str, policy: str) -> set[str]:
+    """Return the set of role names the policy applies to.
+
+    ``TO PUBLIC`` policies bind to the OID ``0`` pseudo-role, which has
+    no row in ``pg_roles`` - so a direct join returns nothing for them.
+    We surface ``"PUBLIC"`` explicitly whenever the policy array
+    contains OID 0. For real roles we keep the ``pg_roles`` join.
+    """
     rows = _fetchall(
-        "SELECT rol.rolname FROM pg_policy pol "
+        "SELECT "
+        "  CASE WHEN 0 = ANY(pol.polroles) THEN 'PUBLIC' "
+        "       ELSE rol.rolname END AS role_name "
+        "FROM pg_policy pol "
         "JOIN pg_class rel ON rel.oid = pol.polrelid "
-        "JOIN pg_roles rol ON rol.oid = ANY(pol.polroles) "
+        "LEFT JOIN pg_roles rol "
+        "  ON rol.oid = ANY(pol.polroles) AND rol.oid <> 0 "
         "WHERE rel.relname = %s AND pol.polname = %s",
         [table, policy],
     )
@@ -709,9 +720,14 @@ class TestTableSequencesHelper:
         table = self._create_table(quoted_name, "id SERIAL PRIMARY KEY")
         try:
             schema, name = self._assert_one_sequence_for(table)
-            assert name.startswith("Mixed-"), (
+            # PG returns the sequence name with surrounding double
+            # quotes because the source table name requires quoting.
+            # Accept either form so the assertion does not depend on
+            # the exact quoting convention.
+            assert name.startswith("Mixed-") or name.startswith('"Mixed-'), (
                 f"sequence name {name!r} must begin with the case-preserved "
-                f"table identifier 'Mixed-'"
+                f"table identifier 'Mixed-' (with or without surrounding "
+                f"double quotes)"
             )
             assert bare_suffix in name, (
                 f"sequence name {name!r} must contain the unique table suffix {bare_suffix!r}"
