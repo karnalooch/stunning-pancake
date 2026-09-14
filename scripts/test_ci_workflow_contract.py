@@ -833,5 +833,215 @@ class P1AdminPytestT10ContractTests(unittest.TestCase):
         )
 
 
+class T11RLSContractTests(unittest.TestCase):
+    """T11: the canonical PostgreSQL RLS contract must be enforced by a
+    blocking CI step in the existing backend job.
+
+    The assertions verify the contract end-to-end rather than relying on
+    a substring grep, so a future refactor cannot silently demote the gate.
+
+    Requirements:
+
+    * A blocking step (``continue-on-error`` absent) named ``T11 RLS ...``
+      lives in the ``backend`` job and runs pytest on ``test_rls.py``.
+    * The step's resolved ``run`` block contains a ``test_rls.py`` reference
+      and a PostgreSQL ``DATABASE_URL`` — never ``sqlite``.
+    * The step is NOT duplicated as a non-blocking baseline.
+    * ``aggregate.needs`` continues to depend on the ``backend`` job.
+    """
+
+    STEP_NAME_PREFIX = "T11 RLS"
+    TARGET_FILE = "test_rls.py"
+
+    @staticmethod
+    def _find_step(workflow: dict, prefix: str) -> dict | None:
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(prefix):
+                    return step
+        return None
+
+    def test_t11_step_exists(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(
+            step,
+            f"workflow must declare a step named {self.STEP_NAME_PREFIX!r}*",
+        )
+
+    def test_t11_step_runs_test_rls(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        run = step.get("run", "")
+        self.assertIsInstance(run, str)
+        self.assertIn(
+            self.TARGET_FILE,
+            run,
+            (
+                f"{self.STEP_NAME_PREFIX!r}* step must invoke pytest with "
+                f"{self.TARGET_FILE!r}; run block was:\n{run}"
+            ),
+        )
+
+    def test_t11_step_uses_postgresql_backend(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        env = step.get("env", {})
+        db_url = env.get("DATABASE_URL", "")
+        self.assertTrue(
+            db_url.startswith("postgres://") or db_url.startswith("postgresql://"),
+            f"T11 step DATABASE_URL must be PostgreSQL, got {db_url!r}",
+        )
+        self.assertNotIn("sqlite", db_url.lower())
+
+    def test_t11_step_does_not_use_sqlite_in_any_field(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        text = str(step)
+        self.assertNotIn(
+            "sqlite",
+            text.lower(),
+            "T11 step must not reference SQLite anywhere",
+        )
+
+    def test_t11_step_does_not_invoke_run_pytest_py(self):
+        """T11 RLS test must NOT go through ``backend/run_pytest.py`` because
+        that runner monkey-patches ``dj_database_url.parse`` and forces a
+        SQLite engine even when ``DATABASE_URL`` points at PostgreSQL, which
+        would silently make the test pass against a fake backend.
+
+        The step must invoke ``python -m pytest`` (or an equivalent runner
+        that preserves the real PostGIS backend) so that any real RLS
+        regression surfaces as a FAIL.
+        """
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        run = step.get("run", "")
+        self.assertIsInstance(run, str)
+        self.assertNotIn(
+            "run_pytest.py",
+            run,
+            (
+                "T11 step must not invoke backend/run_pytest.py — that runner "
+                "forces a SQLite engine via dj_database_url monkeypatch and "
+                "would mask real RLS failures.\n"
+                f"run block was:\n{run}"
+            ),
+        )
+        self.assertIn(
+            "pytest",
+            run,
+            (
+                "T11 step must invoke a real pytest runner (python -m pytest) "
+                "so the configured PostGIS backend is preserved.\n"
+                f"run block was:\n{run}"
+            ),
+        )
+
+    def test_t11_step_is_blocking(self):
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        self.assertNotIn(
+            "continue-on-error",
+            step,
+            "T11 RLS step must be blocking — no continue-on-error",
+        )
+
+    def test_t11_step_is_not_duplicated_non_blocking(self):
+        duplicate_count = 0
+        for _job_name, job in _ci().get("jobs", {}).items():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(self.STEP_NAME_PREFIX):
+                    continue
+                run = step.get("run", "")
+                if not isinstance(run, str):
+                    continue
+                if self.TARGET_FILE in run:
+                    duplicate_count += 1
+        self.assertEqual(
+            duplicate_count,
+            0,
+            f"{self.TARGET_FILE} must not be referenced by any other CI step",
+        )
+
+    def test_t11_step_lives_in_backend_job(self):
+        for job_name, job in _ci().get("jobs", {}).items():
+            for step in job.get("steps", []):
+                if not isinstance(step, dict):
+                    continue
+                name = step.get("name")
+                if isinstance(name, str) and name.startswith(self.STEP_NAME_PREFIX):
+                    self.assertEqual(
+                        job_name,
+                        "backend",
+                        f"T11 step must live in backend job, found in {job_name!r}",
+                    )
+                    return
+        self.fail("T11 step not found")
+
+    def test_aggregate_still_depends_on_backend(self):
+        """Adding the T11 step must not remove the backend job from the
+        aggregate gate's ``needs``."""
+        aggregate = _ci()["jobs"]["aggregate"]
+        self.assertIn(
+            "backend",
+            aggregate.get("needs", []),
+            "aggregate must continue to depend on the backend job (T11 contract)",
+        )
+
+    def test_t11_step_does_not_reinstall_pytest_in_job(self):
+        """pytest / pytest-django must be installed earlier in the backend
+        job (see ``Simulator light tests`` step); the T11 step must rely
+        on those existing wheels instead of triggering another
+        ``pip install pytest pytest-django`` whose version pinning is not
+        controlled by the repo's dependency manifest.
+        """
+        step = self._find_step(_ci(), self.STEP_NAME_PREFIX)
+        self.assertIsNotNone(step)
+        run = step.get("run", "")
+        self.assertIsInstance(run, str)
+        self.assertNotIn(
+            "pip install",
+            run,
+            (
+                "T11 step must not run ``pip install`` - pytest / "
+                "pytest-django are deterministic dependencies of the repo "
+                "and must be installed once, earlier in the backend job.\n"
+                f"run block was:\n{run}"
+            ),
+        )
+
+    def test_backend_job_does_not_reference_legacy_sport_test_credentials(self):
+        """The isolated PostgreSQL service for the backend job was renamed
+        from the legacy ``sport_*`` triple to a coherent ``fourvelo_ci``
+        triple. This assertion guards against accidental reintroduction
+        of the legacy names in any backend step - those names belong to
+        the deprecated ``sport`` branding and must not appear in the
+        canonical 4VELO CI configuration.
+        """
+        backend = _ci()["jobs"]["backend"]
+        text = yaml.safe_dump(backend, sort_keys=False)
+        for forbidden in ("sport_user", "sport_pass", "sport_test"):
+            self.assertNotIn(
+                forbidden,
+                text,
+                (
+                    f"backend job must not reference legacy {forbidden!r}; "
+                    f"use the fourvelo_ci triple instead"
+                ),
+            )
+        # Positive: the new triple must be present in the service config.
+        self.assertIn(
+            "fourvelo_ci",
+            yaml.safe_dump(_ci()["jobs"]["backend"]["services"], sort_keys=False),
+            "backend postgres service must declare the fourvelo_ci triple",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

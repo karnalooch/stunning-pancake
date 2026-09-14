@@ -11,8 +11,10 @@ from core.middleware import ImpersonationAuditMiddleware, TenantRLSMiddleware
 
 
 class TestTenantRLSMiddleware:
-    def test_skips_static_paths(self):
-        """Middleware should skip SQL execution for static/health paths."""
+    def test_skips_static_paths_still_clears_tenant(self):
+        """Middleware MUST clear ``app.tenant_id`` on SKIP_PATHS so the next
+        request never inherits a previous request's tenant via a reused
+        connection."""
         mock_get_response = MagicMock()
         middleware = TenantRLSMiddleware(mock_get_response)
 
@@ -28,9 +30,12 @@ class TestTenantRLSMiddleware:
             request.path = path
             request.user.is_authenticated = True
 
-            with patch("core.middleware.connection") as mock_conn:
+            with patch("core.rls.connection") as mock_conn:
+                mock_cursor = MagicMock()
+                mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
+                mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
                 middleware(request)
-                mock_conn.cursor.assert_not_called()
+                mock_conn.cursor.assert_called()
 
     def test_sets_tenant_for_authenticated_user(self):
         """Middleware should set tenant_id for authenticated users with a tenant."""
@@ -40,9 +45,9 @@ class TestTenantRLSMiddleware:
         request = MagicMock()
         request.path = "/api/activities/"
         request.user.is_authenticated = True
-        request.user.tenant_id = "test-uuid-123"
+        request.user.tenant_id = "11111111-1111-1111-1111-111111111111"
 
-        with patch("core.middleware.connection") as mock_conn:
+        with patch("core.rls.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
@@ -58,7 +63,7 @@ class TestTenantRLSMiddleware:
         request.path = "/api/activities/"
         request.user.is_authenticated = False
 
-        with patch("core.middleware.connection") as mock_conn:
+        with patch("core.rls.connection") as mock_conn:
             mock_cursor = MagicMock()
             mock_conn.cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
             mock_conn.cursor.return_value.__exit__ = MagicMock(return_value=False)

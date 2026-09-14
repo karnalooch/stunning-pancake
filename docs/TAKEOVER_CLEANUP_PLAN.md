@@ -55,8 +55,8 @@ Status `STATUS`:
 | T07 | MFA mandatory for administrators | P0 | DONE | security/mfa-mandatory-admins | - | #69 |
 | T08 | OAuth state enforcement + provider binding | P1 | DONE | security/oauth-state-and-binding | - | #70 |
 | T09 | Tenant webhook admin/SSRF | P1 | DONE | security/webhook-admin-and-ssrf | - | #71 |
-| T10 | Department/Moderation/Heatmap tenant scope | P1 | ACTIVE | security/tenant-orm-gap-fix | - | — |
-| T11 | RLS real enforcement (Postgres-only tests) | P1 | PLANNED | security/rls-real-enforcement | T10 | — |
+| T10 | Department/Moderation/Heatmap tenant scope | P1 | DONE | security/tenant-orm-gap-fix | - | #72 |
+| T11 | RLS real enforcement (Postgres-only tests) | P1 | ACTIVE | security/rls-real-enforcement | T10 | — |
 | T12 | B2B billing isolate or disable | P1 | PLANNED | rewards/b2b-isolate-or-disable | - | — |
 | T13 | Telemetry packet/batch contract validation | P1 | PLANNED | telemetry/packet-contract | - | — |
 | T14 | Telemetry flush/ACK lifecycle | P1 | PLANNED | telemetry/flush-and-ack | T13 | — |
@@ -668,9 +668,9 @@ Brak migracji, brak zmian w lockfile'ach, brak kompatybilności wstecznej do zac
 
 Scalone PR-em #71 (squash `7b72142853b3d9b88a30059b627e62ae235259f1`) po zielonym wymaganym `Aggregate CI gate` dla dokładnego head SHA. Transza zamyka ochronę webhooków po stronie backendu (SSRF, walidacja URL, autoryzacja endpointu administracyjnego). T10 wykorzystuje ten sam `Aggregate CI gate` do zabezpieczenia warstwy ORM dla Department / Moderation / Heatmap.
 
-## T10 – Department/Moderation/Heatmap tenant scope (ACTIVE)
+## T10 – Department/Moderation/Heatmap tenant scope (DONE)
 
-Status: `ACTIVE` — PR otwarty na gałęzi `security/tenant-orm-gap-fix`. Po scaleniu zostanie zaktualizowany na `DONE` ze wskazaniem PR i squash SHA. T11 (RLS) pozostaje `PLANNED` i zależy od T10.
+Status: `DONE` — squash `ed261c8418d1d16127f0c35d169aaecbfe33dc84`, PR #72. T11 (RLS) pozostaje `PLANNED` i zależy od T10.
 
 ### Scope
 
@@ -779,15 +779,165 @@ Pojedynczy revert squash merge'a PR T10 przywraca stan sprzed transzy. Brak migr
 
 * Brak nowych zależności środowiskowych ani sekretów.
 * Zależność od T22 (`Aggregate CI gate`) spełniona (PR #61 scalony).
-* T11 (RLS) pozostaje `PLANNED` i zależy od T10.
+* T11 (RLS) jest `ACTIVE` na gałęzi `security/rls-real-enforcement` i zależy od T10.
 
 ### Branch / commit
 
 * Branch: `security/tenant-orm-gap-fix`
 * Commit 1: `docs: activate T10 tenant ORM scope`
 * Commit 2: `security: enforce tenant scope for departments moderation and heatmaps`
+* Squash: `ed261c8418d1d16127f0c35d169aaecbfe33dc84` (PR #72)
 
-## T24 – Docker publish gated by CI (DONE)
+## T11 – RLS real enforcement (ACTIVE)
+
+Status: `ACTIVE` — gałąź `security/rls-real-enforcement`. T10 (squash
+`ed261c8418d1d16127f0c35d169aaecbfe33dc84`, PR #72) zakończył warstwę ORM;
+T11 dodaje niezależną ochronę na poziomie PostgreSQL. Runtime PostgreSQL
+pozostaje do walidacji w home lab / Railway (`PARTIAL — ENVIRONMENT
+VALIDATION BLOCKED` do czasu pierwszego uruchomienia w docelowym środowisku
+z prawdziwym `DATABASE_URL`). T19 pozostaje w swoim statusie.
+
+Decyzja architektoniczna (wiążąca): RLS w T11 chroni pięć tabel kanoniczną
+polityką `fourvelo_tenant_isolation` opartą o `TO PUBLIC` (rola runtime),
+`ENABLE` + `FORCE ROW LEVEL SECURITY`, dwa GUCy (`app.tenant_id`,
+`app.is_global_owner`) ustawiane wyłącznie przez zaufany kod backendu po
+uwierzytelnieniu `request.user`. Brak tworzenia osobnych ról PostgreSQL,
+brak membership, brak `SET ROLE` w runtime. Rozdzielenie ról
+migracyjnej / runtime / administracyjnej jest planowanym hardeningiem
+infrastruktury poza T11.
+
+### Scope
+
+* `backend/activities/migrations/0036_canonical_fourvelo_rls.py` — drop wszystkich legacy polityk na `activities_activity`, `activities_poi`, `activities_voucher`; jeden kanoniczny zestaw polityk `fourvelo_tenant_isolation` z `FOR ALL TO PUBLIC`, `ENABLE` + `FORCE ROW LEVEL SECURITY`, jawnym `USING` i `WITH CHECK`, warunek fail-closed: `app.is_global_owner = 'true'` LUB (`app.tenant_id` niepuste AND `tenant_id` niepuste AND `tenant_id = app.tenant_id`). Migracja nie tworzy / nie zmienia / nie usuwa żadnej roli PostgreSQL, nie wymaga `CREATEROLE`, nie wykonuje `GRANT` ani `REVOKE`.
+* `backend/users/migrations/0022_canonical_fourvelo_rls.py` — analogicznie dla `users_department` (direct) i `users_userdepartment` (via `users_department.tenant_id`); drop legacy `department_tenant_isolation` / `userdepartment_tenant_isolation`, które polegały na `app.user_id` / `users_user` lookup; `reverse_sql` odtwarza historyczne polityki `tenant_isolation TO PUBLIC` i wyłącza FORCE (zgodnie ze stanem sprzed T11) — nie wykonuje `REVOKE` i nie odwołuje się do `fourvelo_app` / `fourvelo_admin` / `sport_app`.
+* `backend/core/rls.py` — helpery dla dwóch GUCów: `set_tenant_context(tenant_id)` (walidacja UUID, czyści flagę global-owner), `set_global_owner_context()` (bez argumentu; czyści `app.tenant_id`; ustawia wyłącznie kanoniczny literal `'true'`), `clear_tenant_context()`, `clear_global_owner_context()`, `clear_all_context()`. Context manager `tenant_context()` i `global_owner_context()` z cleanup obu GUC w `finally`. Brak tworzenia ról, brak interpolowania danych wejściowych do SQL, brak `sport_app`, brak `sport.current_tenant_id`. Helper niskiego poziomu nie przyjmuje niezaufanej wartości query/body/header jako decyzji GLOBAL_OWNER.
+* `backend/core/middleware.py` — `TenantRLSMiddleware`: na początku requestu czyści oba GUC (`clear_all_context()`); dla uwierzytelnionego session user `role == GLOBAL_OWNER` ustawia `app.is_global_owner='true'` i czyści `app.tenant_id`; dla session user z `tenant_id` ustawia `app.tenant_id` i czyści flagę globalną; każdy inny przypadek czyści oba. `SKIP_PATHS` jawnie zaczynają i kończą z pustym kontekstem. `finally` czyści oba GUC po poprawnej odpowiedzi, wyjątku i rollbacku — także dla requestów obsłużonych przez DRF JWT (który ustawia GUCy wewnątrz widoku).
+* `backend/users/jwt_auth.py` — `MFAEnforcingJWTAuthentication`: po prawidłowym `super().authenticate(request)` ustawia GUCy na podstawie zweryfikowanego `request.user` (rola + tenant_id) — dla `GLOBAL_OWNER` wywołuje `set_global_owner_context()`, dla tenant user `set_tenant_context(tenant_id)`, w innym razie `clear_all_context()`. Scope pochodzi wyłącznie z bazy danych; nie z query/body/header. Klasa czyści GUCy w każdym error path. `TenantRLSMiddleware` nadal odpowiada za końcowy cleanup w `finally` po całym requeście.
+* `backend/apply_rls.py` — usunięty (jego jedyny konsument to on sam; migracje są jedynym źródłem prawdy dla polityk).
+* `backend/test_rls.py` — realny test integracyjny PostgreSQL RLS. Twardo FAILuje na SQLite. Weryfikuje: (a) metadane (`relrowsecurity`, `relforcerowsecurity`, polityka `TO PUBLIC`, USING, WITH CHECK, oba GUCy w USING), (b) `current_user` nie ma SUPERUSER / BYPASSRLS, (c) izolację per-tabela dla pięciu tabel przez `SET LOCAL ROLE fourvelo_rls_test` (ograniczona rola fixture, NOLOGIN, NOSUPERUSER, NOBYPASSRLS, granty minimalne, usuwana w teardown), (d) relacje pośrednie (`activities_voucher` via `activities_poi`, `users_userdepartment` via `users_department`) bez rekurencji, (e) GLOBAL_OWNER widzi A i B, (f) lifecycle A→B→brak, A→global→brak, finally cleanup po wyjątku, (g) session auth przez `TenantRLSMiddleware._apply_session_scope`, (h) JWT auth przez `MFAEnforcingJWTAuthentication.authenticate`, (i) reverse_sql nie zawiera CREATE ROLE / ALTER ROLE / DROP ROLE / REVOKE / fourvelo_app / fourvelo_admin, (j) round-trip reverse+forward na prawdziwej bazie.
+* `.github/workflows/ci.yml` — nowy krok `T11 RLS integration test (PostgreSQL only)` w istniejącym jobie `backend`; service PostGIS zmigrowany do spójnej nazwy 4VELO (`fourvelo_ci / fourvelo_ci_pass / fourvelo_ci`); bez `continue-on-error`, bez SQLite, bez `run_pytest.py`, bez `pip install pytest pytest-django` (instalowane wcześniej w jobie przez `Simulator light tests`).
+* `scripts/test_ci_workflow_contract.py` — klasa `T11RLSContractTests` weryfikuje: obecność kroku, brak `continue-on-error`, brak duplikatu, `DATABASE_URL` PostgreSQL, brak SQLite nigdzie, brak `run_pytest.py`, brak `pip install` w kroku, brak legacy `sport_user/sport_pass/sport_test` w jobie backend, obecność `fourvelo_ci` w postgres service, lokalizacja w jobie `backend`, `aggregate.needs` nadal zawiera `backend`.
+
+### Non-scope
+
+- Brak tworzenia `fourvelo_app`, `fourvelo_admin`, `sport_app`, ani żadnej innej roli PostgreSQL w migracjach / helperach / runtime.
+- Brak `SET ROLE` w runtime poza testami (fixture tworzy wyłącznie `fourvelo_rls_test`).
+- Brak membership między rolami PostgreSQL.
+- Brak nowych użytkowników LOGIN PostgreSQL poza fixture testową.
+- Brak nowych sekretów produkcyjnych.
+- Brak osobnego połączenia administracyjnego.
+- Brak zmian modeli biznesowych, lockfile, requirements, Dockerfile.
+- Brak zmian w `backend/activities/tasks.py` (Celery), `backend/activities/management/commands/*` i innych workerach — T11 nie przebudowuje tych ścieżek; wszystkie takie miejsca wypisane są jako follow-up. RLS działa tylko wtedy, gdy middleware lub auth class ustawi kontekst.
+- Brak automatycznego usunięcia legacy `sport_app` jeśli kiedykolwiek istniał w bazie — poza zakresem.
+- Brak zmian w `core/social_auth.py`, telemetry, mobile, admin frontend, billing.
+- Brak modyfikacji historycznych migracji RLS (`0006`, `0007`, `0008`, `0014`) — T11 je nadpisuje nowymi migracjami, a `reverse_sql` odtwarza historyczny stan.
+- Brak rozszerzania zakresu o testy inne niż pięć chronionych tabel.
+- Legacy `sport_app`, `sportuser`, `sportpass`, `sport.current_tenant_id` nie wracają do aktywnej implementacji (testy, helpery, CI, migracje). Mogą wystąpić wyłącznie w historycznych migracjach przed T11, których T11 nie modyfikuje.
+
+### Finalny kontrakt RLS
+
+* Tabele: 5 chronionych (`activities_activity`, `activities_poi`, `activities_voucher`, `users_department`, `users_userdepartment`), wszystkie z `ENABLE` + `FORCE ROW LEVEL SECURITY`.
+* Polityka: `fourvelo_tenant_isolation` na każdej z pięciu tabel, `FOR ALL TO PUBLIC`, jawna `USING` i `WITH CHECK`.
+* GUC `app.tenant_id`: kanoniczny UUID tenanta. Warunek: `NULLIF(current_setting('app.tenant_id', true), '') IS NOT NULL`.
+* GUC `app.is_global_owner`: kanoniczny literal `'true'`. Warunek: `current_setting('app.is_global_owner', true) = 'true'`. Każda inna wartość (włącznie z pustą, `'1'`, `'yes'`) jest fail-closed.
+* Granica bezpieczeństwa `app.is_global_owner`:
+  * użytkownik API nie może ustawić GUC przez query/body/header — helper `set_global_owner_context()` nie przyjmuje argumentu;
+  * zaufany kod backendu (`TenantRLSMiddleware` dla sesji, `MFAEnforcingJWTAuthentication` dla JWT) ustawia GUC wyłącznie na podstawie zweryfikowanej roli użytkownika z bazy;
+  * rola z bezpośrednim dostępem SQL może samodzielnie wykonać `set_config('app.is_global_owner', 'true')` — ten wariant nie chroni przed przejęciem poświadczeń DB ani dowolnym SQL injection;
+  * brak argumentu helpera Python jest zabezpieczeniem interfejsu aplikacji, a nie uprawnieniem DB;
+  * rozdzielenie ról DB (np. dedykowany użytkownik administracyjny bez `BYPASSRLS` dla runtime) pozostaje późniejszym hardeningiem infrastruktury poza T11.
+* Warunek polityki (wspólny dla `USING` i `WITH CHECK`):
+  * `app.is_global_owner = 'true'` — globalny dostęp;
+  * LUB (`app.tenant_id` niepuste AND `tenant_id IS NOT NULL` AND `tenant_id = app.tenant_id::uuid`).
+* Lifecycle: `clear_all_context()` na początku każdego requestu; ustawienie kontekstu przez `TenantRLSMiddleware` (session) lub `MFAEnforcingJWTAuthentication` (JWT); `clear_all_context()` w `finally` po każdym requeście niezależnie od wyniku.
+* Rola runtime: `current_user` zwrócony przez `DATABASE_URL` (produkcja Railway `4velo_user`, CI `fourvelo_ci`); nie jest tworzona przez T11.
+* Brak tworzenia / modyfikacji / usuwania jakiejkolwiek roli PostgreSQL przez T11 — migracje, helpery, middleware, auth class, fixture.
+
+### Tabela pięciu chronionych tabel
+
+| Tabela | Źródło tenanta | USING | WITH CHECK | FORCE |
+|--------|----------------|-------|------------|-------|
+| `activities_activity` | bezpośrednie `tenant_id` | global-owner LUB (`app.tenant_id` set AND `tenant_id IS NOT NULL` AND `tenant_id = app.tenant_id`) | j.w. | yes |
+| `activities_poi` | bezpośrednie `tenant_id` | j.w. | j.w. | yes |
+| `activities_voucher` | via `activities_poi.tenant_id` | global-owner LUB (`app.tenant_id` set AND EXISTS na `activities_poi` o tym `tenant_id`) | j.w. (target POI) | yes |
+| `users_department` | bezpośrednie `tenant_id` | global-owner LUB (`app.tenant_id` set AND `tenant_id IS NOT NULL` AND `tenant_id = app.tenant_id`) | j.w. | yes |
+| `users_userdepartment` | via `users_department.tenant_id` | global-owner LUB (`app.tenant_id` set AND EXISTS na `users_department` o tym `tenant_id`) | j.w. (target department) | yes |
+
+### Acceptance criteria
+
+* `python -m pytest backend/test_rls.py -v` zielony na PostgreSQL/PostGIS (CI); FAILuje (nie pomija) na SQLite lub gdy `current_user` ma SUPERUSER / BYPASSRLS.
+* Wszystkie pięć tabel ma `ENABLE` + `FORCE ROW LEVEL SECURITY` oraz politykę `fourvelo_tenant_isolation TO PUBLIC` z jawnym `USING` i `WITH CHECK`, w których `app.tenant_id` i `app.is_global_owner` są sprawdzane.
+* `app.is_global_owner` jest porównywane z literalnym `'true'`; każda inna wartość fail-closed.
+* Brak `fourvelo_app`, `fourvelo_admin`, `sport_app` w nowym kodzie, migracjach T11, helperach, middleware, CI. Legacy `sport_app`, `sportuser`, `sportpass`, `sport.current_tenant_id` nie pojawiają się w nowej implementacji (mogą występować wyłącznie w historycznych migracjach sprzed T11).
+* Brak `CREATE ROLE` / `ALTER ROLE` / `DROP ROLE` / `GRANT <role> TO <role>` / wymogu `CREATEROLE` w nowych migracjach i helperach.
+* Lifecycle: A→B→brak, A→global→brak, finally cleanup po wyjątku i rollbacku; `SKIP_PATHS` nie dziedziczą kontekstu; JWT (`MFAEnforcingJWTAuthentication`) i session authentication (`TenantRLSMiddleware`) ustawiają poprawny kontekst dla tego samego `request.user`.
+* GLOBAL_OWNER widzi wszystkie wiersze z 5 tabel; zwykły tenant nie może uzyskać globalnego zakresu przez parametry requestu; brak uwierzytelnienia nie ustawia flagi globalnej; po requeście GLOBAL_OWNER oba GUC są puste.
+* Detekcja negatywna: brak FORCE RLS, polityka niezwiązana z PUBLIC, polityka bez `app.tenant_id` lub `app.is_global_owner`, polityka porównująca flagę globalną z czymś innym niż literal `'true'` → twardy FAIL.
+* Reverse SQL odtwarza historyczne polityki `tenant_isolation TO PUBLIC`, wyłącza FORCE (zgodnie ze stanem sprzed T11), nie wykonuje REVOKE, nie odwołuje się do `fourvelo_app` / `fourvelo_admin` / `sport_app`. Po reverse: `relrowsecurity=true`, obecna historyczna polityka, brak polityk T11, brak zależności od `fourvelo_app`. Ponowny forward działa bez błędów.
+* Regresja T10: `users/test_department_tenant_scope.py`, `activities/test_moderation_tenant_scope.py`, `activities/test_heatmap_tenant_scope.py` nadal zielone.
+* `scripts/test_ci_workflow_contract.py` zielony (stare + nowe klasy T11), w tym asercje: brak `run_pytest.py` w kroku T11, brak `pip install` w kroku T11, brak legacy `sport_user/sport_pass/sport_test` w jobie backend, obecność `fourvelo_ci` w postgres service.
+* `python manage.py makemigrations --check --dry-run` czyste.
+* Migracje od zera → `migrate` → `migrate <0022 zero>` → `migrate` (forward) → reverse T11 → forward T11 bez błędów.
+
+### Validation commands
+
+* `cd backend && python -m pytest test_rls.py -v` (PostgreSQL/PostGIS — krok CI uruchamia pytest bezpośrednio, z pominięciem `run_pytest.py`, który wymusza SQLite)
+* `cd backend && python -m pytest users/test_department_tenant_scope.py activities/test_moderation_tenant_scope.py activities/test_heatmap_tenant_scope.py -q` (regresja T10; na CI ten sam krok `P1 admin pytest` co dla T10)
+* `cd backend && python -m ruff check core/rls.py core/middleware.py users/jwt_auth.py test_rls.py activities/migrations/0036_canonical_fourvelo_rls.py users/migrations/0022_canonical_fourvelo_rls.py`
+* `cd backend && python -m ruff format --check core/rls.py core/middleware.py users/jwt_auth.py test_rls.py activities/migrations/0036_canonical_fourvelo_rls.py users/migrations/0022_canonical_fourvelo_rls.py`
+* `python -m pytest scripts/test_ci_workflow_contract.py -q` (T11 + wcześniejsze kontrakty)
+* `python -c "import yaml; yaml.safe_load(open('.github/workflows/ci.yml', encoding='utf-8'))"`
+* `python scripts/check_docs_links.py`
+* `cd backend && python manage.py makemigrations --check --dry-run`
+* `git diff --check`
+
+### Risks
+
+* `users_user` i `users_department` są w tej samej aplikacji Django; `users_user` ma FK do `users.Tenant` o nazwie `tenant` (kolumna `tenant_id`). Migracja T11 wykorzystuje to bez zmian modeli.
+* W CI service `postgis/postgis:15-3.3` tworzy `POSTGRES_USER` jako superuser; T11 wymaga, by behavioral testy były wykonywane jako ograniczona rola testowa (`fourvelo_rls_test` z NOSUPERUSER / NOBYPASSRLS / NOLOGIN). Fixture `_rls_test_role_setup` tworzy ją session-scoped i usuwa w teardown. Jeśli runtime w CI jest superuserem, behavioral testy działają poprawnie dzięki `SET LOCAL ROLE fourvelo_rls_test` w każdym asercjach; metadata testy sprawdzają `current_user` bezpośrednio.
+* Wyłączenie `app.tenant_id` w workersach Celery i management commands wymaga follow-up; T11 nie przebudowuje tych ścieżek — RLS działa tylko wtedy, gdy middleware lub auth class ustawi kontekst. Workers i management commands muszą jawnie wywołać `tenant_context()` / `global_owner_context()` (follow-up poza T11).
+* `users_user` (User) nie jest objęty T11 — to poza pięcioma tabelami.
+* Legacy `sport_app` rola może pozostać w bazach, które nie miały migracji `0008`. T11 nie tworzy ani nie usuwa tej roli; opisany follow-up w raporcie końcowym.
+* `test_rls.py` wymaga PostGIS (ST_GeomFromText) — CI dostarcza `postgis/postgis:15-3.3`. Lokalne uruchomienie bez PostGIS → test FAILuje (wymagane przez `pytest.fail`).
+* Planowany hardening infrastruktury (poza T11): rozdzielenie ról migracyjnej / runtime / administracyjnej, ewentualne audytowe `SET ROLE` dla `GLOBAL_OWNER`, dedykowany `DATABASE_URL_ADMIN`. Decyzja właściciela po pierwszej walidacji w home lab.
+
+### Rollback
+
+Pojedynczy revert squash merge'a PR T11 przywraca stan sprzed transzy. Migracje T11 mają bezpieczne `reverse_sql` (drop polityk T11, recreate historycznych polityk, `NO FORCE ROW LEVEL SECURITY`). Kroki:
+
+1. `python manage.py migrate activities 0035_garmin_simulator_credential`
+2. `python manage.py migrate users 0021_userpushtoken`
+3. Legacy `sport_app` (jeśli obecny w bazie) pozostaje nietknięty.
+4. Po reverse (dokładny stan sprzed T11):
+   * `relrowsecurity=true` dla pięciu tabel (RLS włączony),
+   * `relforcerowsecurity=false` (FORCE usunięte przez `NO FORCE ROW LEVEL SECURITY`),
+   * brak polityk T11 (`fourvelo_tenant_isolation` usunięte),
+   * aktywne polityki historyczne:
+     * `activities_activity`, `activities_poi`, `activities_voucher`: `tenant_isolation TO sport_app` (z migracji `0008`),
+     * `users_department`: `department_tenant_isolation TO PUBLIC` (z migracji `0014`),
+     * `users_userdepartment`: `userdepartment_tenant_isolation TO PUBLIC` (z migracji `0014`),
+   * brak zależności od `fourvelo_app` / `fourvelo_admin`.
+5. Reverse NIE wykonuje `DISABLE ROW LEVEL SECURITY` (pozostawiałoby tabele bez RLS — szerszy dostęp niż przed T11) ani nie wykonuje `REVOKE` dla nieistniejących ról T11.
+
+### Dependencies
+
+* T10 (DONE, PR #72, squash `ed261c8418d1d16127f0c35d169aaecbfe33dc84`).
+* T22 (`Aggregate CI gate`, DONE).
+* Istniejąca usługa PostgreSQL/PostGIS w jobie `backend` (`postgis/postgis:15-3.3`).
+
+### Branch / commit
+
+* Branch: `security/rls-real-enforcement`
+* Commit 1: `docs: activate T11 RLS real enforcement`
+* Commit 2: `security: enforce tenant isolation with PostgreSQL RLS`
+
+### Follow-up (poza T11)
+
+* Integracja `tenant_context()` / `global_owner_context()` w workersach Celery i management commands. T11 nie przebudowuje tych ścieżek.
+* Rozszerzenie RLS na `users_user`, `core_platformnotice` i inne tabele tenantowe (poza zakresem małej transzy T11).
+* Planowany hardening infrastruktury: rozdzielenie ról PostgreSQL — migracyjna (tworzy tabele), runtime (właściciel tabeli, `DATABASE_URL`), administracyjna (`fourvelo_admin` z `BYPASSRLS` dla `GLOBAL_OWNER`). Decyzja właściciela po pierwszej walidacji T11 w home lab.
+* Aktualizacja dokumentacji operacyjnej (`docs/en/INSTALLATION.md`, `docs/pl/INSTALLATION.md`, `docs/en/TROUBLESHOOTING.md`, `docs/pl/TROUBLESHOOTING.md`) o usunięcie `python apply_rls.py` — follow-up po merge T11.
+* Automatyczne usunięcie legacy roli `sport_app` (jeśli kiedykolwiek istniała w bazie) — follow-up po decyzji właściciela.
 
 ### Scope
 
