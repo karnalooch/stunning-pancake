@@ -82,9 +82,9 @@ jobs:
       postgres:
         image: postgis/postgis:15-3.3
         env:
-          POSTGRES_DB: sport_test
-          POSTGRES_USER: sport_user
-          POSTGRES_PASSWORD: sport_pass
+          POSTGRES_DB: fourvelo_ci
+          POSTGRES_USER: fourvelo_ci
+          POSTGRES_PASSWORD: fourvelo_ci_pass
         ports: ['5432:5432']
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
@@ -130,7 +130,7 @@ jobs:
 
       - name: Run Django system checks
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: ci-insecure-key
           DJANGO_SETTINGS_MODULE: core.settings
@@ -140,7 +140,7 @@ jobs:
 
       - name: Run migrations
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: ci-insecure-key
         run: |
@@ -149,7 +149,7 @@ jobs:
 
       - name: Simulator light tests (pytest)
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
@@ -157,9 +157,22 @@ jobs:
           pip install pytest pytest-django
           python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
 
+      - name: T11 RLS integration test (PostgreSQL only)
+        env:
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
+          REDIS_URL: redis://localhost:6379/15
+          SECRET_KEY: ci-insecure-key
+        # T11 must run on the real PostGIS backend. Use pytest directly so the
+        # configured DATABASE_URL is preserved (avoid the SQLite-patched runner).
+        # pytest/pytest-django are already installed by the ``Simulator light
+        # tests`` step earlier in this job.
+        run: |
+          cd backend
+          python -m pytest test_rls.py -v
+
       - name: P1 admin pytest (moderator scope, anomaly queue, sponsor pools)
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
@@ -168,7 +181,7 @@ jobs:
 
       - name: Backend coverage gate (phased P2, 40% on guarded modules)
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
@@ -189,7 +202,7 @@ jobs:
       - name: Full legacy suite (non-blocking baseline)
         continue-on-error: true
         env:
-          DATABASE_URL: postgres://sport_user:sport_pass@localhost:5432/sport_test
+          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: ci-insecure-key
         run: |
