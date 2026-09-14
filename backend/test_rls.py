@@ -937,7 +937,8 @@ class TestActivityIsolation:
                     "(user_id, tenant_id, type, start_time, end_time, distance, "
                     " created_at, is_verified, verification_score, moderated_at, "
                     " route_path, external_source, external_id, gpx_storage_key, "
-                    " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
+                    " gpx_sha256, route_fingerprint, gpx_forensics_flags, "
+                    "rejection_reason, rejection_notes) "
                     "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
                     " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                     [
@@ -1002,7 +1003,8 @@ class TestActivityIsolation:
                 "(user_id, tenant_id, type, start_time, end_time, distance, "
                 " created_at, is_verified, verification_score, moderated_at, "
                 " route_path, external_source, external_id, gpx_storage_key, "
-                " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
+                " gpx_sha256, route_fingerprint, gpx_forensics_flags, "
+                    "rejection_reason, rejection_notes) "
                 "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
                 " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                 [
@@ -1219,7 +1221,8 @@ class TestGlobalOwnerScope:
                 "(user_id, tenant_id, type, start_time, end_time, distance, "
                 " created_at, is_verified, verification_score, moderated_at, "
                 " route_path, external_source, external_id, gpx_storage_key, "
-                " gpx_sha256, route_fingerprint, gpx_forensics_flags, rejection_reason, rejection_notes) "
+                " gpx_sha256, route_fingerprint, gpx_forensics_flags, "
+                    "rejection_reason, rejection_notes) "
                 "VALUES (%s, %s, 'RUN', %s, %s, 0, NOW(), false, 0, NULL, "
                 " NULL, NULL, '', '', '', '', '[]'::jsonb, '', '')",
                 [
@@ -1464,9 +1467,11 @@ class TestRLSReverseForward:
         """
         reverse_blocks = list(_load_reverse_sql().values())
         for table in PROTECTED_TABLES:
-            assert any(
+            expected_no_force = (
                 f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"
-                in " ".join(block.split())
+            )
+            assert any(
+                expected_no_force in " ".join(block.split())
                 for block in reverse_blocks
             ), (
                 f"reverse_sql must remove FORCE on {table} via "
