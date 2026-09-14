@@ -1467,13 +1467,8 @@ class TestRLSReverseForward:
         """
         reverse_blocks = list(_load_reverse_sql().values())
         for table in PROTECTED_TABLES:
-            expected_no_force = (
-                f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"
-            )
-            assert any(
-                expected_no_force in " ".join(block.split())
-                for block in reverse_blocks
-            ), (
+            expected_no_force = f"ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY"
+            assert any(expected_no_force in " ".join(block.split()) for block in reverse_blocks), (
                 f"reverse_sql must remove FORCE on {table} via "
                 f"``ALTER TABLE {table} NO FORCE ROW LEVEL SECURITY``"
             )
