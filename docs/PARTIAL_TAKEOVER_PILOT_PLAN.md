@@ -118,3 +118,51 @@ Nie obchodzimy istniejących wymagań pełnego PostGIS/Redis gate ani zależnoś
 - Nie ruszamy niepowiązanych modułów, zależności ani chronionych lokalnych plików.
 - Merge i wdrożenie wymagają zlecenia obejmującego tę czynność.
 - Nie kontynuujemy mechanicznie według numerów T; zadania wybieramy według blokerów ścieżki pilotażu.
+
+## P1 — przygotowanie po stronie repo (2026-09-14)
+
+Status: analiza zależności wykonana; uruchomienie home labu i test telefonu BLOCKED — ENVIRONMENT REQUIRED. Dostępny connector GitHub nie daje sesji terminala na komputerze właściciela ani dostępu do telefonu. Nie wykonano builda, migracji ani połączeń z Railway.
+
+### Potwierdzone zależności
+
+| Element | Stan w chwili odczytu | Wniosek |
+| --- | --- | --- |
+| PR #84, plan | OPEN, Draft; SHA 37ab9f66f6d21bda620d5c98699cd93836361375, workflowy success, Aggregate CI gate success | Wynik dotyczy tego SHA; każda aktualizacja wymaga nowego CI |
+| PR #51, home lab | OPEN; SHA b541d599b82e3ebe6de0514cf4486a7e1b10bec6 | Kontynuować istniejący PR i sprawdzić zgodność z main po T11; nie kopiować starej gałęzi w całości |
+| PR #57, release gate | OPEN; SHA 9d726eb76f1f0798ca08639f1e25f80e9032d02f, oparty na #51 | Nie scalać przed przygotowaniem zależności |
+| PR #44, Compose prod | OPEN; SHA 87962874f18ea9c9570b84eea6f48906147fb932 | Osobna poprawka ścieżki obrazu; nie dowodzi gotowości wdrożenia |
+| mobile/eas.json | development, preview i production wskazują adresy Railway | Żaden obecny profil nie jest potwierdzonym profilem lokalnego pilotażu |
+
+Odczyt drzewa main nie wykazał scripts/home_lab.py ani runbooka HOME_LAB.md — są dopiero w #51.
+Źródła: [PR #51](https://github.com/karnalooch/stunning-pancake/pull/51), [PR #57](https://github.com/karnalooch/stunning-pancake/pull/57), [PR #44](https://github.com/karnalooch/stunning-pancake/pull/44), [profile mobile](../mobile/eas.json).
+
+### Minimalny zestaw usług do sprawdzenia
+
+Proponowany rdzeń z #51: db (PostGIS/TimescaleDB), redis, backend, telemetry, global_admin, celery_worker i celery_beat.
+Profile routing, simulation, tracking i all-admin pozostają wyłączone, chyba że test krytycznej ścieżki wykaże konkretną zależność.
+Przed uruchomieniem sprawdzić bind portów, brak publicznego wystawienia, lokalne sekrety oraz faktyczne role DB po T11.
+
+Nie uruchamiać obecnych poleceń EAS development/preview jako testu lokalnego bez sprawdzenia efektywnych adresów API i telemetry.
+Nie korzystać automatycznie z build:local:preview:android: zawiera expo prebuild --clean, co wymaga przeglądu istniejących plików natywnych.
+Potrzebny jest natywny build Android z lokalnymi adresami, uprawnieniami GPS i działającym MMKV, a nie samo uruchomienie wersji web.
+
+### Warunkowa procedura home lab
+
+Dopiero po sprawdzeniu i przygotowaniu #51 na aktualnej bazie, na komputerze z Dockerem i w izolowanym checkoutcie:
+
+1. Sprawdzić git status --short --branch, git rev-parse HEAD, docker version, docker compose version i python --version.
+2. Potwierdzić co najmniej 16 GB RAM i 40 GB wolnego miejsca według runbooka #51.
+3. Uruchomić python scripts/home_lab.py init tylko jeśli lokalny .env.home jeszcze nie istnieje. Nie wyświetlać zawartości pliku.
+4. Uruchomić python scripts/home_lab.py config, następnie python scripts/home_lab.py up.
+5. Uruchomić python scripts/home_lab.py status oraz python scripts/home_lab.py check; zapisać wyniki i kody wyjścia bez sekretów.
+6. Dopiero po zielonym check i sprawdzeniu izolacji przygotować syntetyczne konta tenantów A/B, admina i GLOBAL_OWNER przez zatwierdzoną ścieżkę aplikacji.
+7. Zweryfikować lokalne adresy w buildzie telefonu, następnie wykonać krótki zapis jazdy, synchronizację i odczyt w panelu. Rozszerzone scenariusze są w bramce powyżej.
+
+Polecenia są odczytane ze skryptu w #51, nie przetestowane tutaj i nie są obecnie dostępne na main.
+Nie uruchamiać down -v, wipe, seed produkcyjnego ani przywracania backupu nad istniejącą bazą.
+Backup/restore zostaje osobną kontrolą po review procedury — samo sprawdzenie tabeli migracji nie jest dowodem odzyskania pełnych danych.
+
+### Najbliższa potrzebna informacja
+
+Ustalić dostępny komputer home lab oraz obecność działającego Dockera. Nie wymaga to podawania haseł ani tokenów.
+Następne zadanie implementacyjne: kontynuacja #51 na bazie po T11 i bezpieczna konfiguracja lokalnego testu, z małym zakresem i rzeczywistą walidacją środowiskową.
