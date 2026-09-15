@@ -1,5 +1,17 @@
 {
   "build": {
+    "pilot-local": {
+      "node": "22.13.0",
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "pilot-local",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:8000",
+        "EXPO_PUBLIC_TELEMETRY_URL": "http://localhost:8001",
+        "EXPO_PUBLIC_ENABLE_FIREBASE": "false",
+        "EXPO_PUBLIC_TELEMETRY_WS_INGEST": "false"
+      }
+    },
     "development": {
       "node": "22.13.0",
       "developmentClient": true,
