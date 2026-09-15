@@ -200,3 +200,62 @@ Następne zadanie po merge PR #84 ma być ograniczonym przygotowaniem P1 dla And
 - sprawdzić wymagania sieci LAN, firewall, cleartext HTTP, uprawnienia GPS oraz trwałego zapisu (MMKV) w bieżącej konfiguracji natywnej;
 - nie wystawiać niezabezpieczonego serwisu publicznie i nie wykonywać jeszcze builda ani zmian kodu w ramach PR #84;
 - wynikiem następnego zadania ma być plan i pierwszy mały, testowalny zakres implementacyjny, a nie gotowy build.
+
+### P1 — przygotowanie profilu `pilot-local` (2026-09-14)
+
+Dodano niezależny profil w [mobile/eas.json](../mobile/eas.json): development build,
+dystrybucja internal, kanał `pilot-local`, API `http://localhost:8000`, telemetry
+`http://localhost:8001`, WS jawnie wyłączony. Dotychczasowe profile Railway pozostają
+bez zmian. Jest to przygotowanie konfiguracji, nie potwierdzenie gotowego APK ani
+ukończenie P1. Build, home lab i telefon pozostają NOT RUN.
+
+EAS należy wywoływać z katalogu `mobile`, używając jego `eas.json`. Lokalny Metro
+nie dziedziczy automatycznie env profilu EAS. Przed jego przyszłym uruchomieniem
+ustawić w tym samym procesie powłoki następujące wartości (nie dopisywać ich do
+współdzielonego `.env`):
+
+| Zmienna | Wartość |
+| --- | --- |
+| `EXPO_PUBLIC_API_URL` | `http://localhost:8000` |
+| `EXPO_PUBLIC_TELEMETRY_URL` | `http://localhost:8001` |
+| `EXPO_PUBLIC_TELEMETRY_WS_INGEST` | `false` |
+| `EXPO_PUBLIC_ENABLE_FIREBASE` | `false` — deklaracja, nie działające zabezpieczenie |
+
+Po zatwierdzeniu warunków runtime planowany start to `pnpm --dir mobile exec expo
+start --dev-client --localhost --port 8081`. Po zmianie środowiska zrestartować
+Metro i przeładować aplikację; sprawdzić efektywne adresy przed logowaniem.
+Planowane tunele USB: `adb reverse tcp:8000 tcp:8000`,
+`adb reverse tcp:8001 tcp:8001` i `adb reverse tcp:8081 tcp:8081`.
+Nie uruchomiono tych poleceń w transzy konfiguracyjnej.
+
+Klienci API/telemetry już czytają `EXPO_PUBLIC_*`; brak zmiennej w trybie dev
+przywraca fallback Railway, natomiast pusty string pozostaje pusty. Stałe adresy
+w `app.config.js → extra` nie są źródłem adresów tych klientów i nie zostały
+zmienione. Profil nie gwarantuje izolacji całego ruchu aplikacji, w tym Firebase
+i aktualizacji OTA.
+
+Warunki przed buildem i testem telefonu:
+
+- Ustalić obsługiwaną ścieżkę development builda: brak `expo-dev-client` w
+  zależnościach; sama flaga EAS go nie instaluje. Na Windows nie traktować EAS
+  `--local` jako oficjalnie wspieranej ścieżki; lokalny toolchain Android i EAS
+  cloud wymagają osobnego przygotowania.
+- Rozwiązać wyłączenie Firebase: konfiguracja pluginów zależy od obecności
+  plików Google, a odczytany kod nie respektuje flagi. Samo `false` nie wystarcza.
+- Zweryfikować zgodność MMKV 2.12.2 z RN 0.83.6 i trwałość na urządzeniu.
+  Fallback w `getGpsStorage()` ma puste operacje zapisu; nie zapewnia magazynu
+  w pamięci ani trwałego zapisu.
+- Sprawdzić wynikowy manifest debug i release przed zmianą polityki cleartext.
+  Nie dodano `usesCleartextTraffic`, `networkSecurityConfig` ani zależności.
+- Zweryfikować izolację home labu: ADB reverse nie ogranicza portów opublikowanych
+  przez Docker. Rdzeń publikuje 5432, 6379, 8000, 8001 i 3001 bez jawnego bind.
+  Sam wpis `ALLOWED_HOSTS` w `.env.home` nie przekazuje go do kontenera backendu
+  przez obecną konfigurację Compose.
+- Przed oczekiwaniem udanego ingest zapewnić token `aud=telemetry` i przesyłanie
+  go przez mobile. Nie wyłączać wymogu JWT jako obejścia.
+
+Test kontraktu profilu: `pnpm --dir mobile exec jest --config jest.config.js
+--runInBand --runTestsByPath __tests__/services/pilotLocalConfig.test.ts`.
+Nie używać `--passWithNoTests` jako dowodu wykonania testu. Niezmienność starych
+profili sprawdzać przez semantyczne porównanie JSON z bazą transzy, bez utrwalania
+kopii ich konfiguracji w snapshotach testowych.
