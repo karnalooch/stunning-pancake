@@ -19,12 +19,15 @@ const e2eExtra = {
 
 // Security boundary: EAS_BUILD_PROFILE is the authoritative signal for enabling
 // Android cleartext. EAS CLI sets it to the selected profile name (matching a key
-// in eas.json "build") before this module is evaluated. We attach
-// `usesCleartextTraffic` exclusively for the `pilot-local` artifact (which talks
-// to backend/telemetry over `adb reverse` localhost). Railway profiles
-// (development, preview, production) and any default / unset resolution keep the
-// Android 9+ default — cleartext disabled — regardless of EXPO_PUBLIC_API_URL.
-// Evaluated per-call so tests can mutate process.env between resolutions.
+// in eas.json "build") before this module is evaluated. We register the
+// `expo-build-properties` config plugin exclusively for the `pilot-local`
+// artifact (which talks to backend/telemetry over `adb reverse` localhost).
+// The plugin then sets `android:usesCleartextTraffic="true"` on the Android
+// manifest <application> element at prebuild time. Railway profiles
+// (development, preview, production) and any default / unset resolution skip
+// the plugin entirely, so the Android 9+ default — cleartext disabled — stays
+// in force regardless of EXPO_PUBLIC_API_URL. Evaluated per-call so tests can
+// mutate process.env between resolutions.
 const isPilotLocalBuild = () =>
   process.env.EAS_BUILD_PROFILE === 'pilot-local';
 
@@ -81,7 +84,6 @@ export default ({ config }) => {
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION"
       ],
-      ...(isPilotLocalBuild() ? { "usesCleartextTraffic": true } : {}),
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -109,7 +111,17 @@ export default ({ config }) => {
         }
       ],
       "expo-font",
-      "@maplibre/maplibre-react-native"
+      "@maplibre/maplibre-react-native",
+      ...(isPilotLocalBuild() ? [
+        [
+          "expo-build-properties",
+          {
+            "android": {
+              "usesCleartextTraffic": true
+            }
+          }
+        ]
+      ] : [])
     ]
   };
 };

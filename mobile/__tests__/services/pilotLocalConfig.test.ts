@@ -12,6 +12,8 @@ const { build } = JSON.parse(
 
 jest.mock('dotenv', () => ({ config: () => undefined }));
 
+type PluginEntry = string | [string, Record<string, unknown>];
+
 type AppConfigFn = (context: { config: Record<string, unknown> }) => Record<string, unknown>;
 
 const envKeysToRestore = [
@@ -47,19 +49,11 @@ afterEach(() => {
   restoreEnv();
 });
 
-let appConfigModule: { default: AppConfigFn } | null = null;
-
 const loadAppConfig = (): AppConfigFn => {
-  // Cache the module reference locally so TypeScript can narrow the nullable
-  // module-level `appConfigModule` across the if-block. Assign back to the
-  // cache only after the local value is established; never widen to `any` and
-  // never use a non-null assertion.
-  let module = appConfigModule;
-  if (!module) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    module = require('../../app.config.js') as { default: AppConfigFn };
-    appConfigModule = module;
-  }
+  // Re-require on every call so process.env mutations between tests produce a
+  // fresh module graph (avoiding stale env captured by top-level reads).
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const module = require('../../app.config.js') as { default: AppConfigFn };
   return module.default;
 };
 
@@ -101,7 +95,27 @@ const resolveWithProfile = (
   return fn({ config: {} });
 };
 
-describe('pilot-local build configuration', () => {
+const isCleartextPluginEntry = (
+  entry: PluginEntry,
+): entry is [string, { android: { usesCleartextTraffic?: boolean } }] =>
+  Array.isArray(entry) &&
+  entry[0] === 'expo-build-properties' &&
+  typeof entry[1]?.android === 'object';
+
+const findCleartextPluginEntries = (
+  plugins: PluginEntry[],
+): [string, { android: { usesCleartextTraffic?: boolean } }][] =>
+  plugins.filter(isCleartextPluginEntry);
+
+const findAnyBuildPropertiesEntries = (
+  plugins: PluginEntry[],
+): [string, Record<string, unknown>][] =>
+  plugins.filter(
+    (entry): entry is [string, Record<string, unknown>] =>
+      Array.isArray(entry) && entry[0] === 'expo-build-properties',
+  );
+
+describe('pilot-local eas.json contract', () => {
   test('uses an independent internal development profile', () => {
     expect(build['pilot-local']).toMatchObject({
       node: '22.13.0',
@@ -122,64 +136,125 @@ describe('pilot-local build configuration', () => {
     expect(build['pilot-local'].env.EXPO_PUBLIC_TELEMETRY_WS_INGEST).toBe('false');
     expect(build['pilot-local'].env.EXPO_PUBLIC_ENABLE_FIREBASE).toBe('false');
   });
+
+  test('Railway URLs in development/preview/production remain exactly unchanged in eas.json', () => {
+    for (const profile of ['development', 'preview', 'production'] as const) {
+      expect(profile in build).toBe(true);
+      expect(build[profile].env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
+      expect(build[profile].env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
+    }
+  });
 });
 
-describe('app.config.js resolved Android cleartext', () => {
-  test('pilot-local enables Android cleartext to reach localhost via ADB reverse', () => {
-    const resolved = resolveWithProfile('pilot-local') as { android?: { usesCleartextTraffic?: boolean } };
-    expect(resolved.android?.usesCleartextTraffic).toBe(true);
+describe('app.config.js resolved Android cleartext plugin', () => {
+  test('pilot-local registers expo-build-properties with android.usesCleartextTraffic=true', () => {
+    const resolved = resolveWithProfile('pilot-local') as { plugins?: PluginEntry[] };
+    const entries = findCleartextPluginEntries(resolved.plugins ?? []);
+    expect(entries).toHaveLength(1);
+    const first = entries[0];
+    if (!first) throw new Error('expected one cleartext plugin entry');
+    expect(first[1].android.usesCleartextTraffic).toBe(true);
+  });
+
+  test('pilot-local registers expo-build-properties exactly once', () => {
+    const resolved = resolveWithProfile('pilot-local') as { plugins?: PluginEntry[] };
+    const entries = findAnyBuildPropertiesEntries(resolved.plugins ?? []);
+    expect(entries).toHaveLength(1);
+  });
+
+  test('pilot-local exposes no iOS keys to expo-build-properties', () => {
+    const resolved = resolveWithProfile('pilot-local') as { plugins?: PluginEntry[] };
+    const entries = findCleartextPluginEntries(resolved.plugins ?? []);
+    expect(entries).toHaveLength(1);
+    const first = entries[0];
+    if (!first) throw new Error('expected one cleartext plugin entry');
+    const opts = first[1] as { android?: unknown; ios?: unknown };
+    expect(opts.ios).toBeUndefined();
   });
 
   test.each(['development', 'preview', 'production'] as const)(
-    '%s profile does not enable Android cleartext',
+    '%s profile does not register expo-build-properties for cleartext',
     (profile) => {
-      const resolved = resolveWithProfile(profile) as { android?: { usesCleartextTraffic?: boolean } };
-      expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+      const resolved = resolveWithProfile(profile) as { plugins?: PluginEntry[] };
+      expect(findCleartextPluginEntries(resolved.plugins ?? [])).toEqual([]);
     },
   );
 
-  test('default resolution without EAS profile does not enable Android cleartext', () => {
-    const resolved = resolveWithProfile(null) as { android?: { usesCleartextTraffic?: boolean } };
-    expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+  test('default resolution without EAS profile does not register expo-build-properties for cleartext', () => {
+    const resolved = resolveWithProfile(null) as { plugins?: PluginEntry[] };
+    expect(findCleartextPluginEntries(resolved.plugins ?? [])).toEqual([]);
   });
 
-  test('localhost API URL without EAS_BUILD_PROFILE still does not enable Android cleartext', () => {
-    // Regression guard: the cleartext gate must depend solely on EAS_BUILD_PROFILE.
-    // A misconfigured shell that exports EXPO_PUBLIC_API_URL=http://localhost:8000
-    // without setting EAS_BUILD_PROFILE must NOT enable cleartext.
-    const resolved = resolveWithProfile(null, {
-      EXPO_PUBLIC_API_URL: 'http://localhost:8000',
-      EXPO_PUBLIC_TELEMETRY_URL: 'http://localhost:8001',
-    }) as { android?: { usesCleartextTraffic?: boolean } };
-    expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+  test('unknown EAS profile does not register expo-build-properties for cleartext', () => {
+    const resolved = resolveWithProfile('mystery-profile') as { plugins?: PluginEntry[] };
+    expect(findCleartextPluginEntries(resolved.plugins ?? [])).toEqual([]);
   });
 
-  test('development profile with overridden localhost URL still does not enable Android cleartext', () => {
+  test('development profile with overridden localhost URL still does not register cleartext plugin', () => {
     // Regression guard: EAS_BUILD_PROFILE is the security boundary. Even if a
     // developer overrides EXPO_PUBLIC_API_URL to localhost while keeping the
     // development profile, cleartext must remain disabled so a Railway-bound
     // development build never talks HTTP in cleartext.
     const resolved = resolveWithProfile('development', {
       EXPO_PUBLIC_API_URL: 'http://localhost:8000',
-    }) as { android?: { usesCleartextTraffic?: boolean } };
-    expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+    }) as { plugins?: PluginEntry[] };
+    expect(findCleartextPluginEntries(resolved.plugins ?? [])).toEqual([]);
     expect(process.env.EAS_BUILD_PROFILE).toBe('development');
     expect(process.env.EXPO_PUBLIC_API_URL).toBe('http://localhost:8000');
   });
 
-  test('Railway URLs in development/preview/production remain exactly unchanged', () => {
+  test('unset profile with localhost API/telemetry does not register cleartext plugin', () => {
+    // Regression guard: the cleartext gate must depend solely on EAS_BUILD_PROFILE.
+    // A misconfigured shell that exports EXPO_PUBLIC_API_URL=http://localhost:8000
+    // without setting EAS_BUILD_PROFILE must NOT register the cleartext plugin.
+    const resolved = resolveWithProfile(null, {
+      EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+      EXPO_PUBLIC_TELEMETRY_URL: 'http://localhost:8001',
+    }) as { plugins?: PluginEntry[] };
+    expect(findCleartextPluginEntries(resolved.plugins ?? [])).toEqual([]);
+  });
+
+  test('resolved pilot-local contract matches the documented pilot-local profile', () => {
+    // The full contract the pilot-local artifact must satisfy: development
+    // client on the pilot-local channel talking to localhost only, with WS
+    // ingest and Firebase explicitly disabled.
+    expect(build['pilot-local']).toMatchObject({
+      developmentClient: true,
+      channel: 'pilot-local',
+    });
+    expect(build['pilot-local'].env).toMatchObject({
+      EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+      EXPO_PUBLIC_TELEMETRY_URL: 'http://localhost:8001',
+      EXPO_PUBLIC_TELEMETRY_WS_INGEST: 'false',
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'false',
+    });
+  });
+
+  test('Railway URLs in development/preview/production remain exactly unchanged in resolved app.config.js', () => {
     for (const profile of ['development', 'preview', 'production'] as const) {
       const resolved = resolveWithProfile(profile) as { extra?: Record<string, unknown> };
-      // app.config.js does not source these from extra; the gates come from process.env.
-      // Confirm the resolved process.env-driven values reach the test unchanged.
+      // app.config.js does not source these from extra; the gates come from
+      // process.env. Confirm the resolved process.env-driven values reach the
+      // test unchanged and the documented Railway defaults are still exported.
       expect(process.env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
       expect(process.env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
-      // Sanity: extra still carries the documented Railway defaults.
       expect(resolved.extra?.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
       expect(resolved.extra?.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
-      expect(profile in build).toBe(true);
-      expect(build[profile].env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
-      expect(build[profile].env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
     }
+  });
+
+  test('preserves the original plugins (expo-location, expo-font, maplibre) when adding the cleartext plugin', () => {
+    const resolved = resolveWithProfile('pilot-local') as { plugins?: PluginEntry[] };
+    const pluginNames = (resolved.plugins ?? []).map((p) =>
+      Array.isArray(p) ? p[0] : p,
+    );
+    expect(pluginNames).toEqual(
+      expect.arrayContaining([
+        'expo-location',
+        'expo-font',
+        '@maplibre/maplibre-react-native',
+        'expo-build-properties',
+      ]),
+    );
   });
 });
