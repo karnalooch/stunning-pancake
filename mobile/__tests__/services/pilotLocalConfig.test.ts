@@ -15,6 +15,7 @@ jest.mock('dotenv', () => ({ config: () => undefined }));
 type AppConfigFn = (context: { config: Record<string, unknown> }) => Record<string, unknown>;
 
 const envKeysToRestore = [
+  'EAS_BUILD_PROFILE',
   'EXPO_PUBLIC_API_URL',
   'EXPO_PUBLIC_TELEMETRY_URL',
   'EXPO_PUBLIC_TELEMETRY_WS_INGEST',
@@ -48,17 +49,27 @@ afterEach(() => {
 
 let appConfigModule: { default: AppConfigFn } | null = null;
 
-const loadAppConfig = () => {
-  if (!appConfigModule) {
+const loadAppConfig = (): AppConfigFn => {
+  // Cache the module reference locally so TypeScript can narrow the nullable
+  // module-level `appConfigModule` across the if-block. Assign back to the
+  // cache only after the local value is established; never widen to `any` and
+  // never use a non-null assertion.
+  let module = appConfigModule;
+  if (!module) {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    appConfigModule = require('../../app.config.js');
+    module = require('../../app.config.js') as { default: AppConfigFn };
+    appConfigModule = module;
   }
-  return appConfigModule.default;
+  return module.default;
 };
 
-const resolveWithProfile = (profile: string | null) => {
+const resolveWithProfile = (
+  profile: string | null,
+  overrides: Record<string, string | null> = {},
+) => {
   const fn = loadAppConfig();
   if (profile === 'pilot-local') {
+    process.env.EAS_BUILD_PROFILE = 'pilot-local';
     process.env.EXPO_PUBLIC_API_URL = PILOT_LOCAL_API_URL;
     process.env.EXPO_PUBLIC_TELEMETRY_URL = PILOT_LOCAL_TELEMETRY_URL;
     process.env.EXPO_PUBLIC_TELEMETRY_WS_INGEST = 'false';
@@ -68,15 +79,24 @@ const resolveWithProfile = (profile: string | null) => {
     profile === 'preview' ||
     profile === 'production'
   ) {
+    process.env.EAS_BUILD_PROFILE = profile;
     process.env.EXPO_PUBLIC_API_URL = RAILWAY_API_URL;
     process.env.EXPO_PUBLIC_TELEMETRY_URL = RAILWAY_TELEMETRY_URL;
     process.env.EXPO_PUBLIC_ENABLE_FIREBASE = 'false';
     delete process.env.EXPO_PUBLIC_TELEMETRY_WS_INGEST;
   } else {
+    delete process.env.EAS_BUILD_PROFILE;
     delete process.env.EXPO_PUBLIC_API_URL;
     delete process.env.EXPO_PUBLIC_TELEMETRY_URL;
     delete process.env.EXPO_PUBLIC_TELEMETRY_WS_INGEST;
     delete process.env.EXPO_PUBLIC_ENABLE_FIREBASE;
+  }
+  for (const [key, value] of Object.entries(overrides)) {
+    if (value === null) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
   }
   return fn({ config: {} });
 };
@@ -121,6 +141,30 @@ describe('app.config.js resolved Android cleartext', () => {
   test('default resolution without EAS profile does not enable Android cleartext', () => {
     const resolved = resolveWithProfile(null) as { android?: { usesCleartextTraffic?: boolean } };
     expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+  });
+
+  test('localhost API URL without EAS_BUILD_PROFILE still does not enable Android cleartext', () => {
+    // Regression guard: the cleartext gate must depend solely on EAS_BUILD_PROFILE.
+    // A misconfigured shell that exports EXPO_PUBLIC_API_URL=http://localhost:8000
+    // without setting EAS_BUILD_PROFILE must NOT enable cleartext.
+    const resolved = resolveWithProfile(null, {
+      EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+      EXPO_PUBLIC_TELEMETRY_URL: 'http://localhost:8001',
+    }) as { android?: { usesCleartextTraffic?: boolean } };
+    expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+  });
+
+  test('development profile with overridden localhost URL still does not enable Android cleartext', () => {
+    // Regression guard: EAS_BUILD_PROFILE is the security boundary. Even if a
+    // developer overrides EXPO_PUBLIC_API_URL to localhost while keeping the
+    // development profile, cleartext must remain disabled so a Railway-bound
+    // development build never talks HTTP in cleartext.
+    const resolved = resolveWithProfile('development', {
+      EXPO_PUBLIC_API_URL: 'http://localhost:8000',
+    }) as { android?: { usesCleartextTraffic?: boolean } };
+    expect(resolved.android?.usesCleartextTraffic).toBeUndefined();
+    expect(process.env.EAS_BUILD_PROFILE).toBe('development');
+    expect(process.env.EXPO_PUBLIC_API_URL).toBe('http://localhost:8000');
   });
 
   test('Railway URLs in development/preview/production remain exactly unchanged', () => {

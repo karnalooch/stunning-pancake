@@ -17,14 +17,16 @@ const e2eExtra = {
   EXPO_PUBLIC_VISION_FIXTURES: process.env.EXPO_PUBLIC_VISION_FIXTURES,
 };
 
-// EAS CLI loads the selected profile's `env` block from eas.json into process.env
-// before evaluating this module. For pilot-local that means
-// EXPO_PUBLIC_API_URL === 'http://localhost:8000'. We use that deterministic signal
-// to enable Android cleartext exclusively for the pilot-local artifact; Railway
-// profiles keep the Android 9+ default (cleartext disabled). Evaluated per-call so
-// tests can mutate process.env between resolutions.
+// Security boundary: EAS_BUILD_PROFILE is the authoritative signal for enabling
+// Android cleartext. EAS CLI sets it to the selected profile name (matching a key
+// in eas.json "build") before this module is evaluated. We attach
+// `usesCleartextTraffic` exclusively for the `pilot-local` artifact (which talks
+// to backend/telemetry over `adb reverse` localhost). Railway profiles
+// (development, preview, production) and any default / unset resolution keep the
+// Android 9+ default — cleartext disabled — regardless of EXPO_PUBLIC_API_URL.
+// Evaluated per-call so tests can mutate process.env between resolutions.
 const isPilotLocalBuild = () =>
-  process.env.EXPO_PUBLIC_API_URL === 'http://localhost:8000';
+  process.env.EAS_BUILD_PROFILE === 'pilot-local';
 
 export default ({ config }) => {
   const hasAndroidGoogleServices = fs.existsSync(path.resolve(__dirname, './google-services.json'));
