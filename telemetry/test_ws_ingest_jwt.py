@@ -74,12 +74,14 @@ def _build_shim_app() -> FastAPI:
             if not token:
                 await websocket.close(code=4401, reason="Authorization required")
                 return
-            ok, _reason = _validate_bearer_with_audience(token, secret, expected_audience())
-            if not ok and audience_required():
-                await websocket.close(code=4401, reason="Audience mismatch")
-                return
+            ok, reason = _validate_bearer_with_audience(token, secret, expected_audience())
             if not ok:
-                await websocket.close(code=4401, reason="Invalid or expired token")
+                detail = (
+                    "Audience mismatch"
+                    if audience_required() and reason == "aud"
+                    else "Invalid or expired token"
+                )
+                await websocket.close(code=4401, reason=detail)
                 return
         await websocket.accept()
         await websocket.send_json({"type": "pong", "ack": True})
@@ -120,6 +122,19 @@ def test_shim_app_ws_rejects_wrong_audience(monkeypatch, shim_app):
             with c.websocket_connect(f"/ws/telemetry/ingest?token={token}"):
                 pass
     assert ei.value.code == 4401
+    assert ei.value.reason == "Audience mismatch"
+
+
+def test_shim_app_ws_rejects_invalid_token_as_invalid_not_audience(monkeypatch, shim_app):
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
+    monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", "ws-secret-key-1234567890")
+    monkeypatch.setenv("TELEMETRY_INGEST_AUDIENCE_REQUIRED", "1")
+    with TestClient(shim_app) as c:
+        with pytest.raises(WebSocketDisconnect) as ei:
+            with c.websocket_connect("/ws/telemetry/ingest?token=not-a-valid-jwt"):
+                pass
+    assert ei.value.code == 4401
+    assert ei.value.reason == "Invalid or expired token"
 
 
 def test_shim_app_ws_accepts_correct_token_and_audience(monkeypatch, shim_app):
