@@ -5,6 +5,7 @@
 import { MMKV } from 'react-native-mmkv';
 import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
+import { getTelemetryIngestToken } from './apiClient';
 import { postTelemetryBatchViaWs, WS_INGEST_ENABLED } from './gpsWsIngest';
 import {
   appendToOutbox,
@@ -151,8 +152,26 @@ async function postTelemetryBatch(
     (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
     -1,
   );
+  // Telemetry middleware rejects JWTs whose ``aud`` does not match
+  // ``telemetry`` once TELEMETRY_INGEST_AUDIENCE_REQUIRED=1 is set in the
+  // deploy env (default OFF). The Django access token is accepted for
+  // ``/api/`` paths but rejected at the telemetry service. Fetching the
+  // dedicated token here keeps a single code path for both modes.
+  let ingestToken: string | undefined;
+  if (activityId != null) {
+    const issued = await getTelemetryIngestToken(activityId);
+    if (!issued) {
+      if (__DEV__) {
+        console.warn(
+          `[GPS] No telemetry token for activity ${activityId}; skipping batch.`,
+        );
+      }
+      return { acked: false, inserted: 0 };
+    }
+    ingestToken = issued.token;
+  }
   if (WS_INGEST_ENABLED) {
-    const wsAck = await postTelemetryBatchViaWs(points, maxSeq >= 0 ? maxSeq : null);
+    const wsAck = await postTelemetryBatchViaWs(points, maxSeq >= 0 ? maxSeq : null, ingestToken);
     if (wsAck?.acked) return wsAck;
   }
   const res = await measureAsync('gpsIngestLatencyMs', () =>
@@ -165,7 +184,11 @@ async function postTelemetryBatch(
         max_seq: maxSeq || undefined,
         activity_id: activityId,
       },
-      { timeout: 15_000, validateStatus: (s) => s === 202 || s === 201 },
+      {
+        timeout: 15_000,
+        validateStatus: (s) => s === 202 || s === 201,
+        headers: ingestToken ? { Authorization: `Bearer ${ingestToken}` } : undefined,
+      },
     ),
   );
   return parseIngestAck(res.data, points.length);
