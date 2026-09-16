@@ -1,0 +1,27 @@
+services:
+  # Loopback-only port bindings for the isolated home lab.
+  #
+  # Loaded by `scripts/home_lab.py` through `-f docker-compose.home.yml` so
+  # the LAN-facing `docker-compose.yml` defaults stay untouched for Railway /
+  # production / CI. ADB reverse talks to the host through 127.0.0.1 only,
+  # so publishing services on all interfaces would be a needless exposure.
+  #
+  # Profile opt-ins (routing/simulation/tracking/all-admin) keep their
+  # LAN bindings from docker-compose.yml because they are not part of the
+  # pilot-local phone path. To switch them to loopback too, add them here
+  # under the same `services:` key.
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6379:6379"
+  backend:
+    ports:
+      - "127.0.0.1:8000:8000"
+  telemetry:
+    ports:
+      - "127.0.0.1:8001:8001"
+  global_admin:
+    ports:
+      - "127.0.0.1:3001:80"

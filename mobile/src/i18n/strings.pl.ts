@@ -26,6 +26,7 @@ export const stringsPl = {
     warrior: 'Wojownik drogi',
     distance: 'Dystans',
     rides: 'Przejazdy',
+    avgSpeed: 'Śr. prędkość',
     verified: 'Zweryfikowane',
     pending: 'Oczekujące',
     trainingLog: 'Dziennik treningów',

@@ -26,6 +26,7 @@ export const stringsEn = {
     warrior: 'Road warrior',
     distance: 'Distance',
     rides: 'Rides',
+    avgSpeed: 'Avg speed',
     verified: 'Verified',
     pending: 'Pending',
     trainingLog: 'Training Log',
