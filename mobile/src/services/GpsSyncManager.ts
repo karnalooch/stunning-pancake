@@ -19,9 +19,9 @@ import {
   appendToBuffer,
   buildGpsPoint,
   buildRouteCoordinates,
-  clearBuffer,
   clearPendingFinalization,
   clearPendingSession,
+  clearPointSeq,
   ensureBufferSchema,
   GPS_STORAGE_KEYS,
   GpsPoint,
@@ -191,7 +191,8 @@ export async function retryPendingSessionCreate(): Promise<number | null> {
       const buf = loadBuffer(storage);
       if (buf.length > 0) {
         const updated = buf.map((p) => ({ ...p, activity_id: activityId }));
-        clearBuffer(storage);
+        storage.delete(GPS_STORAGE_KEYS.BUFFER);
+        storage.delete(GPS_STORAGE_KEYS.BUFFER_OVERFLOW);
         updated.forEach((p) => appendToBuffer(storage, p));
       }
       return activityId;
@@ -228,6 +229,8 @@ export async function retryPendingFinalization(): Promise<boolean> {
   }
 
   clearPendingFinalization(storage);
+  clearPointSeq(storage, pending.activity_id);
+  _filterStateByActivity.delete(pending.activity_id);
   const state = loadTrackingState(storage);
   if (state && !state.isTracking && state.activityId === pending.activity_id) {
     storage.set(
@@ -418,7 +421,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
   if (data) {
     const { locations } = data as { locations: Location.LocationObject[] };
-    const state = loadTrackingState(storage);
+    let state = loadTrackingState(storage);
 
     if (!state?.isTracking) return;
     const activityId = state.activityId;
@@ -426,7 +429,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
 
     ensureBufferSchema(storage);
 
-    locations.forEach((loc) => {
+    for (const loc of locations) {
       const currentStats = JSON.parse(
         storage.getString(GPS_STORAGE_KEYS.CURRENT_STATS) ||
           '{"distanceM":0,"elevationGainM":0,"gpsActiveTimeS":0}',
@@ -468,7 +471,7 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       );
       if (!acceptGpsPoint(candidate, filterState)) {
         persistFilterStates(storage);
-        return;
+        continue;
       }
       persistFilterStates(storage);
 
@@ -494,16 +497,14 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
         segment_break: filterState.segmentBreak || undefined,
       });
 
+      state = {
+        ...state,
+        lastCoord: [loc.coords.longitude, loc.coords.latitude],
+        lastAltitude: loc.coords.altitude,
+      };
       storage.set(GPS_STORAGE_KEYS.CURRENT_STATS, JSON.stringify(newStats));
-      storage.set(
-        GPS_STORAGE_KEYS.TRACKING_STATE,
-        JSON.stringify({
-          ...state,
-          lastCoord: [loc.coords.longitude, loc.coords.latitude],
-          lastAltitude: loc.coords.altitude,
-        } satisfies TrackingState),
-      );
-    });
+      storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(state));
+    }
   }
 });
 
@@ -569,6 +570,30 @@ export class GpsSyncManager {
     });
   }
 
+  private async _closeUnstartedActivity(
+    storage: NonNullable<ReturnType<typeof getGpsStorage>>,
+    activityId: number,
+  ): Promise<void> {
+    storage.set(
+      GPS_STORAGE_KEYS.TRACKING_STATE,
+      JSON.stringify({
+        isTracking: false,
+        activityId,
+        deviceId: this._deviceId,
+        userId: this._userId,
+        lastCoord: null,
+        lastAltitude: null,
+      } satisfies TrackingState),
+    );
+    savePendingFinalization(storage, {
+      activity_id: activityId,
+      distance_m: 0,
+      attempts: 0,
+    });
+    setRecoveryPending(storage, true);
+    await retryPendingFinalization();
+  }
+
   async startTracking(
     activityId: number,
     resolution: PollingResolution = PollingResolution.BALANCED,
@@ -580,11 +605,13 @@ export class GpsSyncManager {
 
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
     if (foregroundStatus !== 'granted') {
+      await this._closeUnstartedActivity(storage, activityId);
       throw new Error('Foreground location permission not granted');
     }
 
     const { status: backgroundStatus } = await Location.requestBackgroundPermissionsAsync();
     if (backgroundStatus !== 'granted') {
+      await this._closeUnstartedActivity(storage, activityId);
       throw new Error('Background location permission not granted');
     }
 
@@ -615,14 +642,19 @@ export class GpsSyncManager {
     storage.set('ride_wall_start_ms', String(Date.now()));
 
     const config = RESOLUTION_CONFIG[resolution];
-    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-      ...config,
-      foregroundService: {
-        notificationTitle: '4VELO — Tracking Active',
-        notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
-        notificationColor: '#00FFFF',
-      },
-    });
+    try {
+      await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+        ...config,
+        foregroundService: {
+          notificationTitle: '4VELO — Tracking Active',
+          notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
+          notificationColor: '#00FFFF',
+        },
+      });
+    } catch (error) {
+      await this._closeUnstartedActivity(storage, activityId);
+      throw error;
+    }
 
     startGpsBackgroundSync();
     this._statsCheckTimer = setInterval(() => this._emitStats(), 2000);
@@ -652,7 +684,10 @@ export class GpsSyncManager {
 
   async stopTracking(): Promise<{ finalized: boolean; pendingUpload: number }> {
     stopGpsBackgroundSync();
-    if (this._statsCheckTimer) clearInterval(this._statsCheckTimer);
+    if (this._statsCheckTimer) {
+      clearInterval(this._statsCheckTimer);
+      this._statsCheckTimer = null;
+    }
 
     const storage = getGpsStorage();
     if (!storage) {
@@ -661,8 +696,28 @@ export class GpsSyncManager {
 
     const state = loadTrackingState(storage);
     const activityId = state?.activityId ?? null;
-    const stopBufferSnapshot = loadBuffer(storage);
+    const stoppedState: TrackingState = {
+      ...(state ?? {
+        deviceId: this._deviceId,
+        userId: this._userId,
+        lastCoord: null,
+        lastAltitude: null,
+      }),
+      isTracking: false,
+      activityId,
+    };
 
+    // Quiesce the producer before taking the final buffer snapshot. The state
+    // flag is persisted first so an already-running TaskManager callback sees
+    // the ride as stopped even if stopping the native location service awaits.
+    storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(stoppedState));
+    try {
+      await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch (error) {
+      firebaseCapture(error, 'GPS_LOCATION_STOP_FAILED');
+    }
+
+    const stopBufferSnapshot = loadBuffer(storage);
     if (activityId && stopBufferSnapshot.length >= 2) {
       await saveLocalRideSnapshot(activityId, stopBufferSnapshot);
     }
@@ -694,28 +749,17 @@ export class GpsSyncManager {
     }
 
     const finalizationPending = loadPendingFinalization(storage) != null;
+    const latestState = loadTrackingState(storage) ?? stoppedState;
     storage.set(
       GPS_STORAGE_KEYS.TRACKING_STATE,
       JSON.stringify({
-        ...(state ?? {
-          deviceId: this._deviceId,
-          userId: this._userId,
-          lastCoord: null,
-          lastAltitude: null,
-        }),
+        ...latestState,
         isTracking: false,
         activityId: pendingUpload > 0 || finalizationPending ? activityId : null,
       }),
     );
 
-    if (pendingUpload === 0 && !finalizationPending) {
-      clearBuffer(storage);
-      setRecoveryPending(storage, false);
-    } else {
-      setRecoveryPending(storage, true);
-    }
-
-    await Location.stopLocationUpdatesAsync(LOCATION_TASK_NAME);
+    setRecoveryPending(storage, pendingUpload > 0 || finalizationPending);
     return { finalized, pendingUpload };
   }
 }
