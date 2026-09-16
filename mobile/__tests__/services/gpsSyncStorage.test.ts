@@ -6,6 +6,7 @@
 import {
   appendToOutbox,
   appendToBuffer,
+  buildGpsPoint,
   clearPendingFinalization,
   createClientBatchId,
   GPS_STORAGE_KEYS,
@@ -16,8 +17,10 @@ import {
   loadOutbox,
   mergeRouteCoordinates,
   MAX_BUFFER_SIZE,
+  nextPointSeq,
   pendingPointCount,
   removeOutboxEntry,
+  removePointsFromBuffer,
   saveBuffer,
   savePendingFinalization,
   setRecoveryPending,
@@ -165,5 +168,42 @@ describe('gpsSyncStorage', () => {
     expect(storage.getString(GPS_STORAGE_KEYS.RECOVERY_PENDING)).toBe('true');
     setRecoveryPending(storage, false);
     expect(isRecoveryPending(storage)).toBe(false);
+  });
+
+  test('point sequence stays monotonic after ACKed data leaves buffer and outbox', () => {
+    const storage = mockStorage();
+
+    expect(nextPointSeq(storage, 42)).toBe(1);
+    expect(nextPointSeq(storage, 42)).toBe(2);
+    expect(loadBuffer(storage)).toHaveLength(0);
+    expect(loadOutbox(storage)).toHaveLength(0);
+
+    const restartedStorage = mockStorage();
+    restartedStorage._data[GPS_STORAGE_KEYS.POINT_SEQ_STATE] =
+      storage._data[GPS_STORAGE_KEYS.POINT_SEQ_STATE]!;
+    expect(nextPointSeq(restartedStorage, 42)).toBe(3);
+  });
+
+  test('removePointsFromBuffer removes only the exact idempotent point', () => {
+    const storage = mockStorage();
+    const base = {
+      device_id: 'dev-1',
+      user_id: 1,
+      activity_id: 42,
+      lat: 52.1,
+      lon: 21.0,
+      altitude_m: 100,
+      speed_ms: 3,
+      accuracy_m: 5,
+      timestamp: 123,
+    };
+    const first = buildGpsPoint(base, 1);
+    const second = buildGpsPoint(base, 2);
+    appendToBuffer(storage, first);
+    appendToBuffer(storage, second);
+
+    removePointsFromBuffer(storage, [first]);
+
+    expect(loadBuffer(storage)).toEqual([second]);
   });
 });
