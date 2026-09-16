@@ -24,11 +24,14 @@ import { e2eConfig, isE2eAutoLoginEnabled, shouldSkipOnboardingForE2e } from './
 import { isVisionFixtures } from './visionFixtures';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
+import { buildRegistrationPayload } from './authRegistration';
 
 // Resolve via the robust path (process.env -> Constants.expoConfig.extra) so the
 // flag survives release bundles where Metro does not inline `process.env`.
 // `e2eConfig.autoLogin` and `isVisionFixtures()` both read the baked `extra`.
 const BYPASS_AUTH = isVisionFixtures() || e2eConfig.autoLogin;
+
+export type AuthMode = 'welcome' | 'login' | 'register';
 
 export function useAuthSession(onUserReady: (userId: number | null) => Promise<void>) {
   const { t } = useI18n();
@@ -37,7 +40,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     isOnboarded: false,
     isLoading: true,
     isSubmitting: false,
-    mode: 'login' as 'login' | 'register',
+    mode: 'welcome' as AuthMode,
     email: '',
     username: '',
     password: '',
@@ -77,6 +80,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     auth.isAuthenticated.set(false);
     auth.email.set('');
     auth.password.set('');
+    auth.mode.set('login');
   }, [auth]);
 
   useEffect(() => {
@@ -186,7 +190,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       setOnboardingCompleteForUser(userId);
     } else {
       // No stable user id yet — persist a device-global flag so a restart does
-      // not loop the user back to the city step (emulator audit P0 #2).
+      // not loop the user back to onboarding.
       setOnboardingCompleteGlobal();
     }
     if (options?.refreshProfile !== false) {
@@ -229,6 +233,11 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
       }
     }
 
+    if (auth.mode.get() === 'welcome') {
+      auth.mode.set('login');
+      return;
+    }
+
     auth.isSubmitting.set(true);
     try {
       if (auth.mode.get() === 'login') {
@@ -236,12 +245,11 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
         await applyUserSession(user);
       } else {
         const user = await registerAndLogin(
-          {
-            email: auth.email.get(),
-            username: auth.username.get(),
-            password: auth.password.get(),
-            tenant_id: 'siedlce-city',
-          },
+          buildRegistrationPayload(
+            auth.username.get(),
+            auth.email.get(),
+            auth.password.get(),
+          ),
           auth.email.get(),
           auth.password.get(),
         );
@@ -265,7 +273,10 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     auth.user.set(null);
     auth.isAuthenticated.set(false);
     auth.email.set('');
+    auth.username.set('');
     auth.password.set('');
+    auth.confirmPassword.set('');
+    auth.mode.set('welcome');
     setBanner(null);
   };
 
@@ -278,4 +289,4 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
     openSocialLogin,
     clearAuthBanner: () => setBanner(null),
   };
-};
+}
