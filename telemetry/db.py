@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 import asyncpg
 
@@ -97,6 +98,64 @@ async def flush_insert_buffer(rows: list[tuple]) -> None:
             )
         else:
             await conn.executemany(INSERT_SQL, rows)
+
+
+async def persist_direct_batch_with_receipt(
+    rows: list[tuple],
+    *,
+    client_batch_id: str,
+    activity_id: int,
+    user_id: int,
+    point_count: int,
+    dropped_privacy: int,
+    max_seq: int,
+) -> None:
+    """Atomically persist public GPS rows and the durable batch receipt.
+
+    The receipt is the server-side proof used by the finalization barrier. It
+    is committed in the same PostgreSQL transaction as the GPS rows; therefore
+    a client ACK may safely mean that every sequence in the batch is either a
+    durable public row or an intentional privacy drop.
+    """
+
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            if rows:
+                await conn.executemany(INSERT_SQL, _sort_rows(rows))
+            await conn.execute(
+                """
+                INSERT INTO telemetry_ingest_receipts (
+                    client_batch_id, activity_id, user_id, point_count,
+                    persisted_count, dropped_privacy, max_seq
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (client_batch_id) DO NOTHING
+                """,
+                client_batch_id,
+                activity_id,
+                user_id,
+                point_count,
+                len(rows),
+                dropped_privacy,
+                max_seq,
+            )
+
+
+async def fetch_ingest_receipt(client_batch_id: str) -> dict[str, Any] | None:
+    if SKIP_DB:
+        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT client_batch_id, activity_id, user_id, point_count,
+                   persisted_count, dropped_privacy, max_seq
+            FROM telemetry_ingest_receipts
+            WHERE client_batch_id = $1
+            """,
+            client_batch_id,
+        )
+    return dict(row) if row is not None else None
 
 
 async def _insert_worker() -> None:
