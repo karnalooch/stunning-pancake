@@ -1,9 +1,13 @@
 /**
  * Optional WebSocket telemetry ingest lane (ADR 011 §4).
  * Enabled when EXPO_PUBLIC_TELEMETRY_WS_INGEST=1; HTTP batch remains default.
+ *
+ * WS handshake does not carry the Django Authorization header (the browser
+ * WebSocket API does not let us set arbitrary request headers). We append
+ * the telemetry-scoped JWT as ``?token=...`` query param — the telemetry
+ * WS endpoint validates it the same way as the HTTP middleware.
  */
 
-import { api } from './apiClient';
 import type { GpsPoint } from './gpsSyncStorage';
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
 
@@ -31,15 +35,11 @@ export const WS_INGEST_ENABLED =
   process.env.EXPO_PUBLIC_TELEMETRY_WS_INGEST === '1' ||
   process.env.EXPO_PUBLIC_TELEMETRY_WS_INGEST === 'true';
 
-function telemetryWsUrl(): string {
+function telemetryWsUrl(token?: string): string {
   const base = TELEMETRY_URL.replace(/\/$/, '');
   const wsBase = base.replace(/^https:/i, 'wss:').replace(/^http:/i, 'ws:');
-  return `${wsBase}/ws/telemetry/ingest`;
-}
-
-function authHeader(): string | undefined {
-  const h = api.defaults.headers.common['Authorization'];
-  return typeof h === 'string' ? h : undefined;
+  if (!token) return `${wsBase}/ws/telemetry/ingest`;
+  return `${wsBase}/ws/telemetry/ingest?token=${encodeURIComponent(token)}`;
 }
 
 type WsAckMessage = {
@@ -56,6 +56,7 @@ type WsAckMessage = {
 export async function postTelemetryBatchViaWs(
   points: GpsPoint[],
   lastAckedSeq: number | null,
+  token?: string,
 ): Promise<IngestAckResult | null> {
   if (!WS_INGEST_ENABLED || points.length === 0) return null;
 
@@ -72,9 +73,7 @@ export async function postTelemetryBatchViaWs(
       resolve(value);
     };
 
-    const protocols: string[] = [];
-    const auth = authHeader();
-    const ws = new WebSocket(telemetryWsUrl(), protocols);
+    const ws = new WebSocket(telemetryWsUrl(token));
     const timeout = setTimeout(() => finish(null), 15_000);
 
     ws.onopen = () => {

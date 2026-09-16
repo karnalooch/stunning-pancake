@@ -87,6 +87,8 @@ export const mobileActivityPaths = {
     `/api/activities/sessions/${activityId}/sync_path/` as const,
   sessionFinalize: (activityId: number) =>
     `/api/activities/sessions/${activityId}/finalize/` as const,
+  sessionTelemetryToken: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/telemetry-token/` as const,
   leaderboard: (cityId: string) => `/api/activities/leaderboard/${cityId}/` as const,
   leaderboardMe: (cityId: string) => `/api/activities/leaderboard/${cityId}/me/` as const,
   privacyZone: (zoneId: string) => `/api/activities/privacy-zones/${zoneId}/` as const,
