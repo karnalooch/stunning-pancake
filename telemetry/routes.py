@@ -262,12 +262,14 @@ async def websocket_ingest(
         if not token:
             await ws.close(code=4401, reason="Authorization required")
             return
-        ok, _reason = _validate_bearer_with_audience(token, secret, expected_audience())
-        if not ok and audience_required():
-            await ws.close(code=4401, reason="Audience mismatch")
-            return
+        ok, reason = _validate_bearer_with_audience(token, secret, expected_audience())
         if not ok:
-            await ws.close(code=4401, reason="Invalid or expired token")
+            detail = (
+                "Audience mismatch"
+                if audience_required() and reason == "aud"
+                else "Invalid or expired token"
+            )
+            await ws.close(code=4401, reason=detail)
             return
     await ws.accept()
     logger.info("ws.ingest: mobile client connected")
