@@ -24,76 +24,50 @@ import {
   setIngestPauseUntil,
   updateOutboxEntry,
 } from './gpsSyncStorage';
+import {
+  parseIngestAck,
+  type IngestAckResult,
+} from './gpsIngestAck';
+import { ActivitySerialQueue } from './gpsActivityQueue';
 
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
 import { measureAsync } from './performanceBudget';
 import { warnMmkvUnavailable } from './mmkvSupport';
 
-export { TELEMETRY_URL };
+export { TELEMETRY_URL, parseIngestAck };
+export type { IngestAckResult };
 
 export const MAX_RETRIES = 5;
+export const MAX_UPLOAD_BATCH_POINTS = 500;
 
 let _ingestPauseUntil = 0;
 let _lastAckAt: number | null = null;
-const _inflightByActivity = new Map<number, Promise<boolean>>();
+const _activityUploadQueue = new ActivitySerialQueue();
 
 let _storage: MMKV | null = null;
 let _storageOverride: GpsStorageAdapter | null = null;
+let _storageInitFailed = false;
 
 /** Test-only: inject mock MMKV adapter without native module. */
 export function __setGpsStorageForTests(adapter: GpsStorageAdapter | null): void {
   _storageOverride = adapter;
   _storage = null;
+  _storageInitFailed = false;
 }
 
 export function getGpsStorage(): GpsStorageAdapter | null {
   if (_storageOverride) return _storageOverride;
+  if (_storageInitFailed) return null;
   if (!_storage) {
     try {
       _storage = new MMKV({ id: 'gps-buffer' });
     } catch (e) {
       warnMmkvUnavailable('GpsSyncManager', e);
-      _storage = {
-        getString: () => null,
-        set: () => {},
-        delete: () => {},
-      } as unknown as MMKV;
+      _storageInitFailed = true;
+      return null;
     }
   }
   return _storage as GpsStorageAdapter;
-}
-
-export interface IngestAckResult {
-  acked: boolean;
-  inserted: number;
-  queued?: boolean;
-  deduped?: boolean;
-}
-
-export function parseIngestAck(data: unknown, sentCount: number): IngestAckResult {
-  if (!data || typeof data !== 'object') {
-    return { acked: false, inserted: 0 };
-  }
-  const body = data as Record<string, unknown>;
-  if (body.deduped === true) {
-    return { acked: true, inserted: 0, deduped: true };
-  }
-  if (body.acked === true) {
-    const inserted =
-      typeof body.inserted === 'number' ? body.inserted : sentCount;
-    return {
-      acked: true,
-      inserted,
-      queued: body.queued === true,
-    };
-  }
-  const status = body.status;
-  if (status === 'accepted' || status === 'dropped_privacy') {
-    const inserted =
-      typeof body.inserted === 'number' ? body.inserted : sentCount;
-    return { acked: true, inserted, queued: body.queued === true };
-  }
-  return { acked: false, inserted: 0 };
 }
 
 function applyGlobalIngestPause(headers: Record<string, unknown> | undefined): void {
@@ -181,7 +155,7 @@ async function postTelemetryBatch(
         packets: points,
         client_batch_id: clientBatchId,
         point_count: points.length,
-        max_seq: maxSeq || undefined,
+        max_seq: maxSeq >= 0 ? maxSeq : undefined,
         activity_id: activityId,
       },
       {
@@ -191,7 +165,7 @@ async function postTelemetryBatch(
       },
     ),
   );
-  return parseIngestAck(res.data, points.length);
+  return parseIngestAck(res.data, points.length, clientBatchId);
 }
 
 async function uploadPointsWithRetryInner(
@@ -239,20 +213,9 @@ export async function uploadPointsWithRetry(
 
   const activityId = points[0]?.activity_id;
   if (activityId != null) {
-    const inflight = _inflightByActivity.get(activityId);
-    if (inflight) {
-      const ok = await inflight;
-      return ok
-        ? { acked: true, inserted: points.length }
-        : { acked: false, inserted: 0 };
-    }
-    const promise = uploadPointsWithRetryInner(points, clientBatchId, attempt);
-    _inflightByActivity.set(activityId, promise.then((r) => r.acked));
-    try {
-      return await promise;
-    } finally {
-      _inflightByActivity.delete(activityId);
-    }
+    return _activityUploadQueue.run(activityId, () =>
+      uploadPointsWithRetryInner(points, clientBatchId, attempt),
+    );
   }
   return uploadPointsWithRetryInner(points, clientBatchId, attempt);
 }
@@ -298,15 +261,16 @@ export async function uploadBufferSnapshot(): Promise<void> {
   const storage = getGpsStorage();
   if (!storage) return;
   ensureBufferSchema(storage);
-  const points = loadBuffer(storage);
-  if (points.length === 0) return;
+  const buffered = loadBuffer(storage);
+  if (buffered.length === 0) return;
   if (isGlobalIngestPaused()) return;
 
+  const points = buffered.slice(0, MAX_UPLOAD_BATCH_POINTS);
   const clientBatchId = createClientBatchId();
   const activityId = points[0]?.activity_id ?? null;
   const maxSeq = points.reduce(
     (m, p) => (p.seq != null ? Math.max(m, p.seq) : m),
-    0,
+    -1,
   );
 
   appendToOutbox(storage, {
@@ -317,7 +281,7 @@ export async function uploadBufferSnapshot(): Promise<void> {
     state: 'syncing',
     activity_id: activityId,
     point_count: points.length,
-    max_seq: maxSeq || undefined,
+    max_seq: maxSeq >= 0 ? maxSeq : undefined,
   });
   removePointsFromBuffer(storage, points);
 
