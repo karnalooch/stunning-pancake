@@ -1190,15 +1190,14 @@ def issue_telemetry_ingest_token(*, user, activity) -> tuple[str, datetime]:
 
     secret = _telemetry_jwt_secret()
     if not secret:
-        raise RuntimeError(
-            "TELEMETRY_INGEST_JWT_SECRET (or SECRET_KEY) is not configured."
-        )
+        raise RuntimeError("TELEMETRY_INGEST_JWT_SECRET (or SECRET_KEY) is not configured.")
 
+    tenant_id = getattr(user, "tenant_id", None)
     expires_at = datetime.now(UTC) + timedelta(minutes=5)
     claims = {
         "sub": str(user.id),
         "aud": "telemetry",
-        "tenant_id": getattr(user, "tenant_id", None),
+        "tenant_id": str(tenant_id) if tenant_id is not None else None,
         "activity_id": activity.id,
         "role": getattr(user, "role", None),
         "exp": expires_at,
