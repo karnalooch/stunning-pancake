@@ -9,7 +9,7 @@ from pydantic import ValidationError
 sys.path.insert(0, os.path.dirname(__file__))
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
 
-from schemas import BatchPacket, GpsPacket, MAX_INGEST_BATCH_POINTS
+from schemas import MAX_INGEST_BATCH_POINTS, BatchPacket, GpsPacket
 
 
 def packet(**overrides) -> GpsPacket:
