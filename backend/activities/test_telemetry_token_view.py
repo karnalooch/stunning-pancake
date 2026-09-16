@@ -18,6 +18,7 @@ import pytest
 from rest_framework.test import APIClient
 
 from activities.models import Activity
+from users.models import Tenant
 
 pytestmark = pytest.mark.simulator_light
 
@@ -32,10 +33,12 @@ def _jwt_secret(monkeypatch):
 
 @pytest.fixture
 def user(django_user_model):
+    tenant = Tenant.objects.create(name="Telemetry token test tenant")
     return django_user_model.objects.create_user(
         username="rider",
         email="rider@test.local",
         password="x",
+        tenant=tenant,
     )
 
 
@@ -85,6 +88,7 @@ def test_token_endpoint_returns_telemetry_audience_jwt(client_with_user, activit
     assert claims["aud"] == "telemetry"
     assert claims["activity_id"] == activity.id
     assert claims["sub"] == str(client_with_user.handler._force_user.id)
+    assert claims["tenant_id"] == str(activity.user.tenant_id)
 
 
 def test_token_endpoint_rejects_other_users_activity(client_with_user, other_user):
@@ -122,3 +126,4 @@ def test_token_works_against_telemetry_ingest_auth(client_with_user, activity, m
     )
     assert claims["aud"] == "telemetry"
     assert claims["activity_id"] == activity.id
+    assert claims["tenant_id"] == str(activity.user.tenant_id)
