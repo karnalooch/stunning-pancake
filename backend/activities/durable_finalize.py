@@ -10,7 +10,7 @@ from rest_framework import permissions, status, views
 from rest_framework.response import Response
 
 from .models import Activity
-from .route_reconciliation import RouteReconciliationPending, reconcile_activity_route
+from .route_reconciliation import reconcile_activity_route
 from .serializers import ActivitySerializer
 
 
@@ -18,10 +18,10 @@ class DurableActivityFinalizeView(views.APIView):
     """Finalize only after the complete ACKed telemetry sequence is provable.
 
     ADR 015 treats finalization as a critical-data acknowledgement boundary.
-    The mobile client sends the last sequence number it produced for the ride;
-    the backend requires matching durable ingest receipts and reconstructs the
-    canonical privacy-safe route from persisted ``gps_points`` before setting
-    ``end_time``. A retryable 409 keeps the mobile pending-finalization record.
+    Durable telemetry receipts must cover one continuous activity sequence;
+    the canonical privacy-safe route is then rebuilt from persisted
+    ``gps_points`` before ``end_time`` is set. A retryable 409 from route
+    reconciliation keeps the mobile pending-finalization record intact.
     """
 
     permission_classes = (permissions.IsAuthenticated,)
@@ -35,24 +35,7 @@ class DurableActivityFinalizeView(views.APIView):
         if activity.end_time:
             return Response(ActivitySerializer(activity).data, status=status.HTTP_200_OK)
 
-        expected_raw = request.data.get("expected_max_seq")
-        try:
-            expected_max_seq = int(expected_raw)
-        except (TypeError, ValueError):
-            raise RouteReconciliationPending(
-                "expected_sequence_missing",
-                "Finalization requires the last produced GPS sequence.",
-            )
-        if expected_max_seq <= 0:
-            raise RouteReconciliationPending(
-                "expected_sequence_missing",
-                "Finalization requires the last produced GPS sequence.",
-            )
-
-        canonical_route = reconcile_activity_route(
-            activity,
-            expected_max_seq=expected_max_seq,
-        )
+        canonical_route = reconcile_activity_route(activity)
 
         end_raw = request.data.get("end_time")
         end_time = parse_datetime(end_raw) if end_raw else timezone.now()
@@ -84,5 +67,4 @@ class DurableActivityFinalizeView(views.APIView):
 
         payload = dict(ActivitySerializer(locked).data)
         payload["telemetry_reconciled"] = True
-        payload["expected_max_seq"] = expected_max_seq
         return Response(payload, status=status.HTTP_200_OK)
