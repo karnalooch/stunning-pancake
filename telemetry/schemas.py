@@ -36,7 +36,7 @@ class BatchPacket(BaseModel):
     activity_id: int | None = Field(default=None, ge=1)
 
     @model_validator(mode="after")
-    def validate_batch_contract(self) -> "BatchPacket":
+    def validate_batch_contract(self) -> BatchPacket:
         if self.point_count is not None and self.point_count != len(self.packets):
             raise ValueError("point_count must equal len(packets)")
 
