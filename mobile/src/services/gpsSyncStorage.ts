@@ -10,6 +10,7 @@ export const GPS_STORAGE_KEYS = {
   OUTBOX: 'gps_outbox',
   BUFFER_SCHEMA: 'gps_buffer_schema',
   FILTER_STATE: 'gps_filter_state',
+  POINT_SEQ_STATE: 'gps_point_seq_state',
   INGEST_PAUSE_UNTIL: 'gps_ingest_pause_until',
   TRACKING_STATE: 'tracking_state',
   CURRENT_STATS: 'current_stats',
@@ -182,17 +183,25 @@ export function clearBuffer(storage: GpsStorageAdapter): void {
   storage.delete(GPS_STORAGE_KEYS.BUFFER_OVERFLOW);
 }
 
+function pointIdentity(point: GpsPoint): string {
+  if (point.idempotency_key) return `key:${point.idempotency_key}`;
+  return [
+    'legacy',
+    point.activity_id ?? 'na',
+    point.timestamp,
+    point.lat,
+    point.lon,
+    point.seq ?? 'na',
+  ].join(':');
+}
+
 export function removePointsFromBuffer(
   storage: GpsStorageAdapter,
   toRemove: GpsPoint[],
 ): void {
   if (toRemove.length === 0) return;
-  const removeKeys = new Set(
-    toRemove.map((p) => `${p.timestamp}:${p.lat}:${p.lon}`),
-  );
-  const remaining = loadBuffer(storage).filter(
-    (p) => !removeKeys.has(`${p.timestamp}:${p.lat}:${p.lon}`),
-  );
+  const removeKeys = new Set(toRemove.map(pointIdentity));
+  const remaining = loadBuffer(storage).filter((p) => !removeKeys.has(pointIdentity(p)));
   if (remaining.length === 0) {
     clearBuffer(storage);
   } else {
@@ -239,8 +248,21 @@ export function updateOutboxEntry(
   );
 }
 
+function loadPointSeqState(storage: GpsStorageAdapter): Record<string, number> {
+  return parseJson<Record<string, number>>(
+    storage.getString(GPS_STORAGE_KEYS.POINT_SEQ_STATE),
+    {},
+  );
+}
+
+/**
+ * Return a sequence number that is monotonic for the whole activity, including
+ * after ACKed batches have been removed from both the buffer and outbox.
+ */
 export function nextPointSeq(storage: GpsStorageAdapter, activityId: number): number {
-  let maxSeq = 0;
+  const state = loadPointSeqState(storage);
+  const key = String(activityId);
+  let maxSeq = Number.isFinite(state[key]) ? state[key]! : 0;
   for (const p of loadBuffer(storage)) {
     if (p.activity_id === activityId && p.seq != null) maxSeq = Math.max(maxSeq, p.seq);
   }
@@ -252,7 +274,24 @@ export function nextPointSeq(storage: GpsStorageAdapter, activityId: number): nu
       }
     }
   }
-  return maxSeq + 1;
+  const next = maxSeq + 1;
+  storage.set(
+    GPS_STORAGE_KEYS.POINT_SEQ_STATE,
+    JSON.stringify({ ...state, [key]: next }),
+  );
+  return next;
+}
+
+export function clearPointSeq(storage: GpsStorageAdapter, activityId: number): void {
+  const state = loadPointSeqState(storage);
+  const key = String(activityId);
+  if (!(key in state)) return;
+  delete state[key];
+  if (Object.keys(state).length === 0) {
+    storage.delete(GPS_STORAGE_KEYS.POINT_SEQ_STATE);
+  } else {
+    storage.set(GPS_STORAGE_KEYS.POINT_SEQ_STATE, JSON.stringify(state));
+  }
 }
 
 export function buildGpsPoint(
