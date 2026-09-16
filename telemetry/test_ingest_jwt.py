@@ -22,6 +22,7 @@ from ingest_auth import (  # noqa: E402
     audience_required,
     expected_audience,
     jwt_enforced,
+    validate_ingest_claim_scope,
 )
 
 
@@ -177,7 +178,7 @@ def test_ingest_rejects_token_without_audience(monkeypatch):
     monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
     monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", secret)
     monkeypatch.setenv("TELEMETRY_INGEST_AUDIENCE_REQUIRED", "1")
-    token = _make_token(secret)  # no audience
+    token = _make_token(secret)
 
     with TestClient(_mini_app()) as client:
         response = client.post(
@@ -242,7 +243,7 @@ def test_ingest_skips_audience_check_when_disabled(monkeypatch):
     monkeypatch.setenv("TELEMETRY_INGEST_JWT_REQUIRED", "1")
     monkeypatch.setenv("TELEMETRY_INGEST_JWT_SECRET", secret)
     monkeypatch.setenv("TELEMETRY_INGEST_AUDIENCE_REQUIRED", "0")
-    token = _make_token(secret)  # no audience, but check disabled
+    token = _make_token(secret)
 
     with TestClient(_mini_app()) as client:
         response = client.post(
@@ -262,3 +263,50 @@ def test_validate_bearer_with_audience_unit(monkeypatch):
     assert _validate_bearer_with_audience(bad_token, secret, "telemetry") == (False, "aud")
     assert _validate_bearer_with_audience(no_aud_token, secret, "telemetry") == (False, "aud")
     assert _validate_bearer_with_audience("not-a-jwt", secret, "telemetry") == (False, "invalid")
+
+
+def test_scoped_token_accepts_only_matching_activity_and_user():
+    claims = {"sub": "42", "activity_id": 99, "aud": "telemetry"}
+
+    assert validate_ingest_claim_scope(
+        claims,
+        activity_id=99,
+        user_ids=[42, 42],
+        require_scope=True,
+    ) == (True, None)
+    assert validate_ingest_claim_scope(
+        claims,
+        activity_id=100,
+        user_ids=[42],
+        require_scope=True,
+    ) == (False, "activity")
+    assert validate_ingest_claim_scope(
+        claims,
+        activity_id=99,
+        user_ids=[43],
+        require_scope=True,
+    ) == (False, "user")
+
+
+def test_strict_scope_rejects_missing_activity_or_subject():
+    assert validate_ingest_claim_scope(
+        {"sub": "42", "aud": "telemetry"},
+        activity_id=99,
+        user_ids=[42],
+        require_scope=True,
+    ) == (False, "activity")
+    assert validate_ingest_claim_scope(
+        {"activity_id": 99, "aud": "telemetry"},
+        activity_id=99,
+        user_ids=[42],
+        require_scope=True,
+    ) == (False, "user")
+
+
+def test_legacy_scope_can_roll_out_before_strict_audience_mode():
+    assert validate_ingest_claim_scope(
+        {"sub": "42"},
+        activity_id=99,
+        user_ids=[42],
+        require_scope=False,
+    ) == (True, None)
