@@ -69,26 +69,24 @@ async def ingest_batch_durable(batch: BatchPacket) -> dict:
     )
 
     if len(rows) > 0:
+        last_public_seq = rows[-1][8]
         last_public = next(
-            p
-            for p in reversed(batch.packets)
-            if not all(
-                row[0] != p.timestamp or row[1] != p.device_id
-                for row in rows
+            (p for p in reversed(batch.packets) if p.seq == last_public_seq),
+            None,
+        )
+        if last_public is not None:
+            await maybe_broadcast(
+                {
+                    "type": "position_update",
+                    "device_id": last_public.device_id,
+                    "user_id": last_public.user_id,
+                    "lat": last_public.lat,
+                    "lon": last_public.lon,
+                    "speed_ms": last_public.speed_ms,
+                    "activity_id": last_public.activity_id,
+                    "batch_size": len(rows),
+                }
             )
-        )
-        await maybe_broadcast(
-            {
-                "type": "position_update",
-                "device_id": last_public.device_id,
-                "user_id": last_public.user_id,
-                "lat": last_public.lat,
-                "lon": last_public.lon,
-                "speed_ms": last_public.speed_ms,
-                "activity_id": last_public.activity_id,
-                "batch_size": len(rows),
-            }
-        )
 
     return {
         "status": "accepted",
