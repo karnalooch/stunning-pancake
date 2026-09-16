@@ -7,7 +7,7 @@ import logging
 from fastapi import HTTPException
 
 from config import DEDUPE_TTL_S, REDIS_URL, SKIP_BROADCAST, SKIP_DB
-from db import enqueue_gps_rows, get_pool
+from db import flush_insert_buffer, get_pool
 from ingest_queue import (
     enqueue_rows as enqueue_stream_rows,
     is_queue_saturated,
@@ -115,6 +115,17 @@ async def is_active_activity(activity_id: int | None) -> bool:
     return active
 
 
+async def mark_batch_acked(client_batch_id: str | None) -> None:
+    if not client_batch_id:
+        return
+    client = await get_ingest_redis()
+    await client.set(
+        f"telemetry:dedupe:{client_batch_id}",
+        "acked",
+        ex=DEDUPE_TTL_S,
+    )
+
+
 async def persist_ingest_rows(
     rows: list[tuple],
     *,
@@ -123,6 +134,7 @@ async def persist_ingest_rows(
     guard,
 ) -> dict:
     if not rows:
+        await mark_batch_acked(client_batch_id)
         return {"inserted": 0, "queued": False, "ingest_mode": "direct"}
 
     use_stream = False
@@ -149,6 +161,7 @@ async def persist_ingest_rows(
             activity_id=activity_id,
         )
         if ok:
+            await mark_batch_acked(client_batch_id)
             return {"inserted": len(rows), "queued": True, "ingest_mode": "stream"}
         raise_system_overload(5)
 
@@ -157,17 +170,27 @@ async def persist_ingest_rows(
             raise_system_overload(guard.retry_after or 5)
         raise_ingest_throttled(guard.retry_after or 1)
 
-    await enqueue_gps_rows(rows)
+    # Direct-mode ACK is emitted only after the DB write has completed. The old
+    # in-process asyncio queue could acknowledge a client batch and then lose it
+    # if the telemetry process died before its periodic flush.
+    if not SKIP_DB:
+        await flush_insert_buffer(rows)
+    await mark_batch_acked(client_batch_id)
     return {"inserted": len(rows), "queued": False, "ingest_mode": "direct"}
 
 
 async def is_duplicate_batch(client_batch_id: str | None) -> bool:
+    """Return True only for a batch that was already durably acknowledged.
+
+    The dedupe key is deliberately written *after* durable DB/Redis acceptance
+    in ``persist_ingest_rows``. A failed first attempt therefore remains
+    retryable instead of becoming a false-positive duplicate ACK.
+    """
     if not client_batch_id:
         return False
     client = await get_ingest_redis()
-    key = f"telemetry:dedupe:{client_batch_id}"
-    was_new = await client.set(key, "1", nx=True, ex=DEDUPE_TTL_S)
-    return not was_new
+    value = await client.get(f"telemetry:dedupe:{client_batch_id}")
+    return value == "acked"
 
 
 def filter_privacy_packets(

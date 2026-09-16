@@ -306,7 +306,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
       const { finalized, pendingUpload } = await stopRideSession(userId);
 
-      if (pendingUpload > 0) {
+      if (pendingUpload > 0 || !finalized) {
 
         pushEdge({
 
@@ -318,25 +318,13 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
         });
 
-      } else if (finalized) {
+      } else {
 
         pushEdge({
 
           title: t.rideMessages.stopSaved,
 
           message: t.rideMessages.stopSavedBody,
-
-          variant: 'success',
-
-        });
-
-      } else {
-
-        pushEdge({
-
-          title: t.rideMessages.stopDone,
-
-          message: t.rideMessages.stopDoneBody,
 
           variant: 'success',
 
@@ -447,6 +435,3 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
     clearEdgeMessage: () => pushEdge(null),
 
   };
-
-}
-
