@@ -46,6 +46,36 @@ def _pending(code: str, detail: str) -> RouteReconciliationPending:
     return RouteReconciliationPending(code, detail)
 
 
+def _load_receipt_summary(activity: Activity) -> tuple[int, int, int, int]:
+    """Return durable batch proof: batches, total points, dropped privacy, max seq."""
+
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT COUNT(*), COALESCE(SUM(point_count), 0),
+                       COALESCE(SUM(dropped_privacy), 0), COALESCE(MAX(max_seq), 0)
+                FROM telemetry_ingest_receipts
+                WHERE activity_id = %s AND user_id = %s
+                """,
+                [activity.id, activity.user_id],
+            )
+            row = cursor.fetchone()
+    except DatabaseError as exc:
+        logger.warning(
+            "route_reconciliation.receipts_unavailable activity_id=%s error_type=%s",
+            activity.id,
+            type(exc).__name__,
+        )
+        raise _pending(
+            "telemetry_receipts_unavailable",
+            "Durable telemetry receipts are not available for finalization yet.",
+        ) from exc
+
+    assert row is not None
+    return int(row[0]), int(row[1]), int(row[2]), int(row[3])
+
+
 def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
     """Load one owner's durable telemetry in deterministic sequence order."""
 
@@ -112,21 +142,38 @@ def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
     return points
 
 
-def reconcile_activity_route(activity: Activity) -> LineString:
+def reconcile_activity_route(activity: Activity, *, expected_max_seq: int) -> LineString:
     """Build the privacy-safe canonical ``route_path`` for a completed ride.
 
-    Telemetry drops points inside privacy zones before they reach ``gps_points``.
-    We additionally run the backend privacy masker because it can apply a wider
-    effective radius (for example density protection). Its straight bridge
-    across a removed section is the project's established policy for hiding the
-    exact privacy-zone boundary.
-
-    Sequence gaps are allowed: under the pilot ACK contract every acknowledged
-    batch is complete, while intentional privacy drops are not stored as raw
-    coordinates. Missing/duplicate sequence *metadata* is not allowed.
+    ``telemetry_ingest_receipts`` proves that every client sequence through
+    ``expected_max_seq`` reached a durable ACK boundary, including points that
+    were deliberately discarded by privacy filtering. ``gps_points`` contains
+    only durable public telemetry used to build the canonical route.
     """
 
+    batch_count, point_count, dropped_privacy, receipt_max_seq = _load_receipt_summary(activity)
+    if batch_count <= 0:
+        raise _pending("telemetry_not_ready", "No durable telemetry receipts exist yet.")
+    if expected_max_seq <= 0:
+        raise _pending("expected_sequence_missing", "Finalization sequence proof is missing.")
+    if receipt_max_seq != expected_max_seq:
+        raise _pending(
+            "telemetry_incomplete",
+            "Durable telemetry has not reached the expected final sequence yet.",
+        )
+    if point_count != expected_max_seq:
+        raise _pending(
+            "sequence_range_incomplete",
+            "Durable telemetry receipts do not cover one complete activity sequence.",
+        )
+
     points = _load_durable_points(activity)
+    if len(points) + dropped_privacy != point_count:
+        raise _pending(
+            "persisted_point_count_mismatch",
+            "Durable GPS rows do not match acknowledged telemetry receipts.",
+        )
+
     raw_path = LineString([(lon, lat) for _, lon, lat in points], srid=4326)
     masked_path = PrivacyService.mask_track(activity.user, raw_path)
     if masked_path is None or masked_path.num_coords < 2:
