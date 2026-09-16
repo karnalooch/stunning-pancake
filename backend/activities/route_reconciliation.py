@@ -142,26 +142,21 @@ def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
     return points
 
 
-def reconcile_activity_route(activity: Activity, *, expected_max_seq: int) -> LineString:
+def reconcile_activity_route(activity: Activity) -> LineString:
     """Build the privacy-safe canonical ``route_path`` for a completed ride.
 
-    ``telemetry_ingest_receipts`` proves that every client sequence through
-    ``expected_max_seq`` reached a durable ACK boundary, including points that
-    were deliberately discarded by privacy filtering. ``gps_points`` contains
-    only durable public telemetry used to build the canonical route.
+    ``telemetry_ingest_receipts`` proves that every acknowledged client point
+    belongs to one continuous sequence beginning at 1. The official pilot
+    client calls finalization only after its local buffer/outbox reaches zero,
+    so a complete receipt sequence is the server-side barrier against a missing
+    middle batch. Physical Android tests still prove the final trailing batch
+    cannot be lost before this request is issued.
     """
 
     batch_count, point_count, dropped_privacy, receipt_max_seq = _load_receipt_summary(activity)
     if batch_count <= 0:
         raise _pending("telemetry_not_ready", "No durable telemetry receipts exist yet.")
-    if expected_max_seq <= 0:
-        raise _pending("expected_sequence_missing", "Finalization sequence proof is missing.")
-    if receipt_max_seq != expected_max_seq:
-        raise _pending(
-            "telemetry_incomplete",
-            "Durable telemetry has not reached the expected final sequence yet.",
-        )
-    if point_count != expected_max_seq:
+    if receipt_max_seq <= 0 or point_count != receipt_max_seq:
         raise _pending(
             "sequence_range_incomplete",
             "Durable telemetry receipts do not cover one complete activity sequence.",
