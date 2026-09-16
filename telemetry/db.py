@@ -33,6 +33,10 @@ _insert_queue: asyncio.Queue[list[tuple]] | None = None
 _insert_worker_task: asyncio.Task | None = None
 
 
+class ReceiptCollisionError(RuntimeError):
+    """Same client batch id was presented with different durable metadata."""
+
+
 async def get_pool() -> asyncpg.Pool:
     global _pool
     if _pool is None:
@@ -109,36 +113,66 @@ async def persist_direct_batch_with_receipt(
     point_count: int,
     dropped_privacy: int,
     max_seq: int,
-) -> None:
-    """Atomically persist public GPS rows and the durable batch receipt.
+) -> bool:
+    """Atomically persist public GPS rows and reserve the durable receipt.
 
-    The receipt is the server-side proof used by the finalization barrier. It
-    is committed in the same PostgreSQL transaction as the GPS rows; therefore
-    a client ACK may safely mean that every sequence in the batch is either a
-    durable public row or an intentional privacy drop.
+    Returns ``True`` when this transaction created the receipt and GPS rows.
+    A concurrent exact retry returns ``False`` after validating the already
+    committed receipt. Re-use of the same ``client_batch_id`` with different
+    metadata raises ``ReceiptCollisionError`` before any new GPS row is added.
+
+    The receipt reservation and GPS rows share one PostgreSQL transaction, so a
+    rollback can never leave an ACK proof without its corresponding public GPS
+    rows (or intentional privacy-drop count).
     """
 
+    expected = {
+        "activity_id": int(activity_id),
+        "user_id": int(user_id),
+        "point_count": int(point_count),
+        "persisted_count": len(rows),
+        "dropped_privacy": int(dropped_privacy),
+        "max_seq": int(max_seq),
+    }
     pool = await get_pool()
     async with pool.acquire() as conn:
         async with conn.transaction():
-            if rows:
-                await conn.executemany(INSERT_SQL, _sort_rows(rows))
-            await conn.execute(
+            inserted = await conn.fetchrow(
                 """
                 INSERT INTO telemetry_ingest_receipts (
                     client_batch_id, activity_id, user_id, point_count,
                     persisted_count, dropped_privacy, max_seq
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7)
                 ON CONFLICT (client_batch_id) DO NOTHING
+                RETURNING client_batch_id
                 """,
                 client_batch_id,
-                activity_id,
-                user_id,
-                point_count,
-                len(rows),
-                dropped_privacy,
-                max_seq,
+                expected["activity_id"],
+                expected["user_id"],
+                expected["point_count"],
+                expected["persisted_count"],
+                expected["dropped_privacy"],
+                expected["max_seq"],
             )
+            if inserted is None:
+                existing = await conn.fetchrow(
+                    """
+                    SELECT activity_id, user_id, point_count, persisted_count,
+                           dropped_privacy, max_seq
+                    FROM telemetry_ingest_receipts
+                    WHERE client_batch_id = $1
+                    """,
+                    client_batch_id,
+                )
+                if existing is None or any(
+                    int(existing[key]) != value for key, value in expected.items()
+                ):
+                    raise ReceiptCollisionError("client_batch_id metadata collision")
+                return False
+
+            if rows:
+                await conn.executemany(INSERT_SQL, _sort_rows(rows))
+            return True
 
 
 async def fetch_ingest_receipt(client_batch_id: str) -> dict[str, Any] | None:
