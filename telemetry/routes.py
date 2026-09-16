@@ -10,6 +10,13 @@ from fastapi import APIRouter, Header, HTTPException, Query, WebSocket, WebSocke
 
 from config import BACKFILL_MAX_POINTS, BACKFILL_WINDOW_MIN, WS_INGEST_BUFFER_MAX
 from db import get_pool
+from ingest_auth import (
+    _validate_bearer_with_audience,
+    audience_required,
+    expected_audience,
+    jwt_enforced,
+    jwt_secret,
+)
 from ingest_guard import check_ingest_allowed
 from ingest_queue import (
     DLQ_STREAM_KEY,
@@ -238,7 +245,30 @@ async def websocket_live(ws: WebSocket) -> None:
 
 
 @router.websocket("/ws/telemetry/ingest")
-async def websocket_ingest(ws: WebSocket) -> None:
+async def websocket_ingest(
+    ws: WebSocket,
+    token: str | None = Query(default=None),
+) -> None:
+    """WS lane for telemetry ingest. Accepts the same audience-scoped JWT
+    as the HTTP middleware via the ``?token=...`` query parameter — the
+    browser WebSocket API cannot set arbitrary request headers. Mirrors
+    ``IngestJwtMiddleware`` semantics so WS is no less protected than HTTP.
+    """
+    if jwt_enforced():
+        secret = jwt_secret()
+        if not secret:
+            await ws.close(code=1011, reason="Ingest authentication unavailable")
+            return
+        if not token:
+            await ws.close(code=4401, reason="Authorization required")
+            return
+        ok, _reason = _validate_bearer_with_audience(token, secret, expected_audience())
+        if not ok and audience_required():
+            await ws.close(code=4401, reason="Audience mismatch")
+            return
+        if not ok:
+            await ws.close(code=4401, reason="Invalid or expired token")
+            return
     await ws.accept()
     logger.info("ws.ingest: mobile client connected")
     pending_buffer: list[dict] = []

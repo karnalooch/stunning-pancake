@@ -1,6 +1,7 @@
 import axios, { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
 import {
   API_PATHS_FULL,
+  mobileActivityPaths,
   type TokenRefreshResponse,
 } from '@4velo/api-client';
 import { authTokenStorage } from './authTokenStorage';
@@ -167,5 +168,56 @@ export const setAuthToken = (token: string | null) => {
     delete api.defaults.headers.common.Authorization;
   }
 };
+
+export type TelemetryIngestToken = {
+  token: string;
+  expiresAt: string;
+  audience: 'telemetry';
+  activityId: number;
+};
+
+/**
+ * Fetch a short-lived JWT scoped to one activity for telemetry ingest.
+ *
+ * The middleware in `telemetry/ingest_auth.py` enforces ``aud='telemetry'`` by
+ * default so the Django access token cannot be replayed against the telemetry
+ * service. This endpoint is the supported way for mobile clients to obtain
+ * such a token once the activity has been created.
+ *
+ * Returns null on failure; callers should fall back to skipping the batch
+ * (the outbox retains points for the next attempt).
+ */
+export async function getTelemetryIngestToken(
+  activityId: number,
+): Promise<TelemetryIngestToken | null> {
+  try {
+    const res = await axios.post<{
+      token: string;
+      expires_at: string;
+      audience: 'telemetry';
+      activity_id: number;
+    }>(
+      `${BASE_URL}${mobileActivityPaths.sessionTelemetryToken(activityId)}`,
+      undefined,
+      { timeout: 10_000 },
+    );
+    const body = res.data;
+    if (!body?.token || body.audience !== 'telemetry') return null;
+    return {
+      token: body.token,
+      expiresAt: body.expires_at,
+      audience: 'telemetry',
+      activityId: body.activity_id,
+    };
+  } catch (err) {
+    if (__DEV__) {
+      console.warn(
+        `[API] telemetry-token(${activityId}) failed:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+    return null;
+  }
+}
 
 export default api;

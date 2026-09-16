@@ -1,5 +1,6 @@
 import json
 import time
+from datetime import UTC, datetime, timedelta
 
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, serializers, status, views, viewsets
@@ -200,6 +201,38 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @extend_schema(
+        request=None,
+        responses={200: serializers.Serializer},
+        description=(
+            "Returns a short-lived JWT with ``aud='telemetry'`` scoped to this "
+            "activity. The mobile client uses it as a Bearer on POSTs to "
+            "/api/telemetry/ingest. Issued only to the activity owner."
+        ),
+    )
+    @action(detail=True, methods=["post"], url_path="telemetry-token")
+    def telemetry_ingest_token(self, request, pk=None):
+        """Issue a telemetry-scoped ingest token (aud='telemetry', exp=+5min).
+
+        Required by ingest_auth.IngestJwtMiddleware when
+        ``TELEMETRY_INGEST_AUDIENCE_REQUIRED`` is enabled (default OFF —
+        opt-in). The Django access token cannot be reused here because its
+        ``aud`` claim is absent (or != 'telemetry').
+        """
+        activity = self.get_object()  # ownership enforced by get_queryset()
+        token, expires_at = issue_telemetry_ingest_token(
+            user=request.user,
+            activity=activity,
+        )
+        return Response(
+            {
+                "token": token,
+                "expires_at": expires_at.isoformat().replace("+00:00", "Z"),
+                "audience": "telemetry",
+                "activity_id": activity.id,
+            }
+        )
 
     @extend_schema(
         request=ActivityCreateSerializer,
@@ -1134,3 +1167,43 @@ def generate_insights(request_user=None):
             "color": "indigo",
         },
     ]
+
+
+def _telemetry_jwt_secret() -> str | None:
+    """Reuse the same key as the ingest middleware (PR #43 fallback chain)."""
+    import os
+
+    secret = os.getenv("TELEMETRY_INGEST_JWT_SECRET") or os.getenv("SECRET_KEY")
+    return secret.strip() if secret else None
+
+
+def issue_telemetry_ingest_token(*, user, activity) -> tuple[str, datetime]:
+    """Return (jwt, expires_at) for ingest to telemetry.
+
+    The token is signed with the same shared secret as
+    ``IngestJwtMiddleware`` so the middleware can verify it without
+    additional configuration. ``aud`` is set to ``telemetry`` so a Django
+    access token cannot be replayed against the telemetry service even if
+    the middleware defaults stay in place.
+    """
+    import jwt as pyjwt
+
+    secret = _telemetry_jwt_secret()
+    if not secret:
+        raise RuntimeError(
+            "TELEMETRY_INGEST_JWT_SECRET (or SECRET_KEY) is not configured."
+        )
+
+    expires_at = datetime.now(UTC) + timedelta(minutes=5)
+    claims = {
+        "sub": str(user.id),
+        "aud": "telemetry",
+        "tenant_id": getattr(user, "tenant_id", None),
+        "activity_id": activity.id,
+        "role": getattr(user, "role", None),
+        "exp": expires_at,
+        "iat": datetime.now(UTC),
+        "iss": "4velo-backend",
+    }
+    token = pyjwt.encode(claims, secret, algorithm="HS256")
+    return token, expires_at
