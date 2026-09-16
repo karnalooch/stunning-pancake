@@ -288,7 +288,7 @@ def test_scoped_token_accepts_only_matching_activity_and_user():
     ) == (False, "user")
 
 
-def test_strict_scope_rejects_missing_activity_or_subject():
+def test_strict_scope_rejects_missing_activity_subject_or_packet_user():
     assert validate_ingest_claim_scope(
         {"sub": "42", "aud": "telemetry"},
         activity_id=99,
@@ -299,6 +299,12 @@ def test_strict_scope_rejects_missing_activity_or_subject():
         {"activity_id": 99, "aud": "telemetry"},
         activity_id=99,
         user_ids=[42],
+        require_scope=True,
+    ) == (False, "user")
+    assert validate_ingest_claim_scope(
+        {"sub": "42", "activity_id": 99, "aud": "telemetry"},
+        activity_id=99,
+        user_ids=[42, None],
         require_scope=True,
     ) == (False, "user")
 
