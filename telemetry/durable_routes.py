@@ -7,8 +7,9 @@ ACKed client batch, including batches containing only privacy-dropped points.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
+from db import ReceiptCollisionError
 from ingest_auth import enforce_current_ingest_scope
 from ingest_guard import check_ingest_allowed
 from ingest_service import (
@@ -61,12 +62,18 @@ async def ingest_batch_durable(batch: BatchPacket) -> dict:
     n = len(batch.packets)
     guard = await check_ingest_allowed(await get_ingest_redis(), max(1, n))
     rows, dropped, activity_id, max_seq = filter_privacy_packets(batch.packets)
-    result = await persist_ingest_rows(
-        rows,
-        client_batch_id=batch.client_batch_id,
-        activity_id=activity_id,
-        guard=guard,
-    )
+    try:
+        result = await persist_ingest_rows(
+            rows,
+            client_batch_id=batch.client_batch_id,
+            activity_id=activity_id,
+            guard=guard,
+        )
+    except ReceiptCollisionError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="client_batch_id collision; local batch must be retained",
+        ) from exc
 
     if len(rows) > 0:
         last_public_seq = rows[-1][8]
