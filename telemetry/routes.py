@@ -11,11 +11,13 @@ from fastapi import APIRouter, Header, HTTPException, Query, WebSocket, WebSocke
 from config import BACKFILL_MAX_POINTS, BACKFILL_WINDOW_MIN, WS_INGEST_BUFFER_MAX
 from db import get_pool
 from ingest_auth import (
-    _validate_bearer_with_audience,
+    _validated_bearer_claims,
     audience_required,
+    enforce_current_ingest_scope,
     expected_audience,
     jwt_enforced,
     jwt_secret,
+    validate_ingest_claim_scope,
 )
 from ingest_guard import check_ingest_allowed
 from ingest_queue import (
@@ -52,6 +54,10 @@ async def health() -> dict:
 
 @router.post("/api/telemetry/ingest", status_code=202)
 async def ingest_packet(packet: GpsPacket) -> dict:
+    enforce_current_ingest_scope(
+        activity_id=packet.activity_id,
+        user_ids=[packet.user_id],
+    )
     guard = await check_ingest_allowed(await get_ingest_redis(), 1)
     if is_in_privacy_zone(packet.user_id, packet.lat, packet.lon):
         return {"status": "dropped_privacy"}
@@ -84,6 +90,17 @@ async def ingest_packet(packet: GpsPacket) -> dict:
 
 @router.post("/api/telemetry/ingest/batch", status_code=202)
 async def ingest_batch(batch: BatchPacket) -> dict:
+    packet_activity_ids = {
+        packet.activity_id for packet in batch.packets if packet.activity_id is not None
+    }
+    scoped_activity_id = batch.activity_id
+    if scoped_activity_id is None and len(packet_activity_ids) == 1:
+        scoped_activity_id = next(iter(packet_activity_ids))
+    enforce_current_ingest_scope(
+        activity_id=scoped_activity_id,
+        user_ids=[packet.user_id for packet in batch.packets],
+    )
+
     n = len(batch.packets)
     guard = await check_ingest_allowed(await get_ingest_redis(), max(1, n))
 
@@ -137,6 +154,11 @@ async def ingest_batch(batch: BatchPacket) -> dict:
 async def ingest_backfill(batch: BatchPacket, activity_id: int = Query(...)) -> dict:
     if not activity_id:
         raise HTTPException(status_code=400, detail="activity_id required")
+
+    enforce_current_ingest_scope(
+        activity_id=activity_id,
+        user_ids=[packet.user_id for packet in batch.packets],
+    )
 
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -249,11 +271,8 @@ async def websocket_ingest(
     ws: WebSocket,
     token: str | None = Query(default=None),
 ) -> None:
-    """WS lane for telemetry ingest. Accepts the same audience-scoped JWT
-    as the HTTP middleware via the ``?token=...`` query parameter — the
-    browser WebSocket API cannot set arbitrary request headers. Mirrors
-    ``IngestJwtMiddleware`` semantics so WS is no less protected than HTTP.
-    """
+    """WS lane for telemetry ingest using the same scoped JWT as HTTP."""
+    ws_claims: dict | None = None
     if jwt_enforced():
         secret = jwt_secret()
         if not secret:
@@ -262,8 +281,8 @@ async def websocket_ingest(
         if not token:
             await ws.close(code=4401, reason="Authorization required")
             return
-        ok, reason = _validate_bearer_with_audience(token, secret, expected_audience())
-        if not ok:
+        ws_claims, reason = _validated_bearer_claims(token, secret, expected_audience())
+        if ws_claims is None:
             detail = (
                 "Audience mismatch"
                 if audience_required() and reason == "aud"
@@ -303,17 +322,35 @@ async def websocket_ingest(
             rows = []
             activity_id: int | None = None
             max_seq: int | None = None
+            user_ids: list[int | None] = []
             for p in pending_buffer[-n:]:
                 try:
                     pkt = GpsPacket.model_validate(p)
+                    user_ids.append(pkt.user_id)
+                    activity_id = pkt.activity_id or activity_id
                     if is_in_privacy_zone(pkt.user_id, pkt.lat, pkt.lon):
                         continue
                     rows.append(packet_to_row(pkt))
-                    activity_id = pkt.activity_id or activity_id
                     if pkt.seq is not None:
                         max_seq = pkt.seq if max_seq is None else max(max_seq, pkt.seq)
                 except Exception:
                     continue
+
+            scope_ok, scope_reason = validate_ingest_claim_scope(
+                ws_claims,
+                activity_id=activity_id,
+                user_ids=user_ids,
+                require_scope=audience_required() if jwt_enforced() else False,
+            )
+            if jwt_enforced() and not scope_ok:
+                detail = (
+                    "Telemetry token activity mismatch"
+                    if scope_reason == "activity"
+                    else "Telemetry token user mismatch"
+                )
+                await ws.send_json({"type": "error", "status": 403, "detail": detail})
+                await ws.close(code=4403, reason=detail)
+                break
 
             if not rows:
                 continue
