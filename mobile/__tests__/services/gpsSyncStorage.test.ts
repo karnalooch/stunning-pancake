@@ -63,6 +63,26 @@ describe('gpsSyncStorage', () => {
     expect(loadOutbox(storage)).toHaveLength(0);
   });
 
+  test('long offline outbox never silently drops older unacknowledged batches', () => {
+    const storage = mockStorage();
+    for (let i = 0; i < 75; i += 1) {
+      appendToOutbox(storage, {
+        client_batch_id: `batch-${i}`,
+        points: [samplePoint(i + 1)],
+        created_at: i,
+        attempts: 0,
+        state: 'pending',
+        activity_id: 42,
+      });
+    }
+
+    const outbox = loadOutbox(storage);
+    expect(outbox).toHaveLength(75);
+    expect(outbox[0]?.client_batch_id).toBe('batch-0');
+    expect(outbox[74]?.client_batch_id).toBe('batch-74');
+    expect(pendingPointCount(storage)).toBe(75);
+  });
+
   test('buffer spills to overflow when exceeding MAX_BUFFER_SIZE', () => {
     const storage = mockStorage();
     const points = Array.from({ length: MAX_BUFFER_SIZE + 100 }, (_, i) =>
