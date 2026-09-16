@@ -77,7 +77,7 @@ def _load_receipt_summary(activity: Activity) -> tuple[int, int, int, int]:
 
 
 def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
-    """Load one owner's durable telemetry in deterministic sequence order."""
+    """Load one owner's durable public telemetry in deterministic sequence order."""
 
     try:
         with connection.cursor() as cursor:
@@ -101,12 +101,6 @@ def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
             "telemetry_source_unavailable",
             "Durable telemetry is not available for route reconciliation yet.",
         ) from exc
-
-    if not rows:
-        raise _pending(
-            "telemetry_not_ready",
-            "No durable GPS points are available for this activity yet.",
-        )
 
     points: list[tuple[int, float, float]] = []
     seen_seq: set[int] = set()
@@ -133,16 +127,10 @@ def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
             )
         points.append((seq_int, lon_float, lat_float))
 
-    if len(points) < 2:
-        raise _pending(
-            "telemetry_not_ready",
-            "At least two durable GPS points are required before finalization.",
-        )
-
     return points
 
 
-def reconcile_activity_route(activity: Activity) -> LineString:
+def reconcile_activity_route(activity: Activity) -> LineString | None:
     """Build the privacy-safe canonical ``route_path`` for a completed ride.
 
     ``telemetry_ingest_receipts`` proves that every acknowledged client point
@@ -151,6 +139,11 @@ def reconcile_activity_route(activity: Activity) -> LineString:
     so a complete receipt sequence is the server-side barrier against a missing
     middle batch. Physical Android tests still prove the final trailing batch
     cannot be lost before this request is issued.
+
+    A ride that has fewer than two public coordinates after privacy filtering
+    finalizes with ``route_path=None``. This deliberately removes any earlier
+    raw mobile ``sync_path`` rather than retaining coordinates that should be
+    private.
     """
 
     batch_count, point_count, dropped_privacy, receipt_max_seq = _load_receipt_summary(activity)
@@ -169,11 +162,11 @@ def reconcile_activity_route(activity: Activity) -> LineString:
             "Durable GPS rows do not match acknowledged telemetry receipts.",
         )
 
+    if len(points) < 2:
+        return None
+
     raw_path = LineString([(lon, lat) for _, lon, lat in points], srid=4326)
     masked_path = PrivacyService.mask_track(activity.user, raw_path)
     if masked_path is None or masked_path.num_coords < 2:
-        raise _pending(
-            "privacy_masked_empty",
-            "The privacy-safe route does not contain enough public points to finalize.",
-        )
+        return None
     return masked_path
