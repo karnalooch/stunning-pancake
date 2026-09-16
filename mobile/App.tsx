@@ -87,9 +87,10 @@ const AppContent = observer(function AppContent() {
         banner={banner}
         onDismissBanner={clearAuthBanner}
         onSubmit={() => void handleAuth()}
-        onToggleMode={() =>
-          auth.mode.set(auth.mode.get() === 'login' ? 'register' : 'login')
-        }
+        onModeChange={(mode) => {
+          clearAuthBanner();
+          auth.mode.set(mode);
+        }}
         onSocialLogin={(provider) => void openSocialLogin(provider)}
       />
     );
