@@ -21,6 +21,8 @@ class HomeLabTests(unittest.TestCase):
         rendered = home_lab.render_environment(home_lab.ENV_TEMPLATE.read_text())
         self.assertNotIn("GENERATE_WITH_HOME_LAB_INIT", rendered)
         self.assertIn("TELEMETRY_INGEST_JWT_REQUIRED=1", rendered)
+        self.assertIn("TELEMETRY_INGEST_AUDIENCE_REQUIRED=1", rendered)
+        self.assertIn("TELEMETRY_INGEST_QUEUE=0", rendered)
         values = dict(
             line.split("=", 1)
             for line in rendered.splitlines()
@@ -28,6 +30,16 @@ class HomeLabTests(unittest.TestCase):
         )
         self.assertGreaterEqual(len(values["SECRET_KEY"]), 64)
         self.assertNotEqual(values["SECRET_KEY"], values["TELEMETRY_INGEST_JWT_SECRET"])
+
+    def test_home_override_enforces_pilot_ack_and_shared_telemetry_signing_key(self):
+        content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        self.assertIn('TELEMETRY_INGEST_QUEUE: "0"', content)
+        self.assertIn('TELEMETRY_INGEST_AUDIENCE_REQUIRED: "1"', content)
+        self.assertIn('TELEMETRY_INGEST_JWT_REQUIRED: "1"', content)
+        self.assertIn(
+            "TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}",
+            content,
+        )
 
     def test_initialize_refuses_to_overwrite_environment(self):
         with tempfile.TemporaryDirectory() as folder:

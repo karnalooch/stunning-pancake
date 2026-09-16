@@ -17,9 +17,20 @@ services:
     ports:
       - "127.0.0.1:6379:6379"
   backend:
+    # The backend issues the activity-scoped telemetry JWT, so it MUST use
+    # the same signing key as the telemetry verifier in this isolated pilot.
+    environment:
+      TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}
     ports:
       - "127.0.0.1:8000:8000"
   telemetry:
+    # ADR 015 / P3: for the pilot an ACK must mean the batch reached the
+    # durable database. Redis Stream queue admission is not an ACK boundary
+    # until Redis persistence/replay/restart durability is separately proven.
+    environment:
+      TELEMETRY_INGEST_JWT_REQUIRED: "1"
+      TELEMETRY_INGEST_AUDIENCE_REQUIRED: "1"
+      TELEMETRY_INGEST_QUEUE: "0"
     ports:
       - "127.0.0.1:8001:8001"
   global_admin:
