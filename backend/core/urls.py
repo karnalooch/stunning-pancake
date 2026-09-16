@@ -4,6 +4,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
+from activities.durable_finalize import DurableActivityFinalizeView
 from core import facebook_auth, google_auth
 from core.infra_views import (
     SystemHealthView,
@@ -25,6 +26,11 @@ urlpatterns = [
     path("api/users/", include("users.urls")),
     path("api/users/rbac/", include("users.rbac_urls")),
     path("api/users/departments/", include("users.department_urls")),
+    path(
+        "api/activities/sessions/<int:pk>/finalize-durable/",
+        DurableActivityFinalizeView.as_view(),
+        name="activity-finalize-durable",
+    ),
     path("api/activities/", include("activities.urls")),
     path("api/clubs/", include("clubs.urls")),
     path("api/", include("events.urls")),  # Events Engine + OGC endpoints
