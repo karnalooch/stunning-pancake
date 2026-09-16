@@ -22,7 +22,6 @@ export type OutboxState = 'pending' | 'syncing' | 'acked';
 
 export const MAX_BUFFER_SIZE = 2000;
 export const OVERFLOW_CHUNK_SIZE = 500;
-export const MAX_OUTBOX_ENTRIES = 50;
 
 export interface GpsPoint {
   device_id: string;
@@ -198,8 +197,13 @@ export function loadOutbox(storage: GpsStorageAdapter): OutboxEntry[] {
   return parseJson<OutboxEntry[]>(storage.getString(GPS_STORAGE_KEYS.OUTBOX), []);
 }
 
+/**
+ * Persist every unacknowledged batch. A previous 50-entry cap silently dropped
+ * the oldest pending rides during long offline periods; durability is more
+ * important than bounding this local queue. Entries are removed only after ACK.
+ */
 export function saveOutbox(storage: GpsStorageAdapter, entries: OutboxEntry[]): void {
-  storage.set(GPS_STORAGE_KEYS.OUTBOX, JSON.stringify(entries.slice(-MAX_OUTBOX_ENTRIES)));
+  storage.set(GPS_STORAGE_KEYS.OUTBOX, JSON.stringify(entries));
 }
 
 export function appendToOutbox(
