@@ -77,6 +77,27 @@ def test_batch_rejects_metadata_mismatch_and_mixed_activities():
         )
 
 
+def test_batch_rejects_missing_point_activity_when_wrapper_is_scoped():
+    with pytest.raises(ValidationError):
+        BatchPacket(
+            client_batch_id="batch-missing-point-activity",
+            packets=[packet(seq=1), packet(activity_id=None, seq=2)],
+            point_count=2,
+            activity_id=42,
+            max_seq=2,
+        )
+
+
+def test_batch_rejects_mixed_present_and_missing_packet_activity_without_wrapper():
+    with pytest.raises(ValidationError):
+        BatchPacket(
+            client_batch_id="batch-mixed-activity-presence",
+            packets=[packet(seq=1), packet(activity_id=None, seq=2)],
+            point_count=2,
+            max_seq=2,
+        )
+
+
 def test_batch_accepts_mobile_contract_and_enforces_bound():
     batch = BatchPacket(
         client_batch_id="batch-ok",
