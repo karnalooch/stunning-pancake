@@ -43,6 +43,23 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             ON gps_points (activity_id, time, seq)
             WHERE activity_id IS NOT NULL AND seq IS NOT NULL;
         """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS telemetry_ingest_receipts (
+                client_batch_id TEXT PRIMARY KEY,
+                activity_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                point_count INTEGER NOT NULL CHECK (point_count > 0),
+                persisted_count INTEGER NOT NULL CHECK (persisted_count >= 0),
+                dropped_privacy INTEGER NOT NULL CHECK (dropped_privacy >= 0),
+                max_seq BIGINT NOT NULL CHECK (max_seq > 0),
+                acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                CHECK (persisted_count + dropped_privacy = point_count)
+            );
+        """)
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx
+            ON telemetry_ingest_receipts (activity_id, user_id, max_seq);
+        """)
         try:
             await conn.execute(
                 "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"
