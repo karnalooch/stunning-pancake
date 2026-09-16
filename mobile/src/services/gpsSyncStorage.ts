@@ -15,6 +15,7 @@ export const GPS_STORAGE_KEYS = {
   CURRENT_STATS: 'current_stats',
   RECOVERY_PENDING: 'tracking_recovery_pending',
   PENDING_SESSION: 'pending_session',
+  PENDING_FINALIZATION: 'pending_finalization',
   PENDING_METRICS: 'gps_pending_metrics',
 } as const;
 
@@ -54,6 +55,12 @@ export interface PendingSessionPayload {
   start_time: string;
   event_id?: number;
   created_at: number;
+  attempts: number;
+}
+
+export interface PendingFinalizationPayload {
+  activity_id: number;
+  distance_m: number;
   attempts: number;
 }
 
@@ -344,6 +351,26 @@ export function savePendingSession(
 
 export function clearPendingSession(storage: GpsStorageAdapter): void {
   storage.delete(GPS_STORAGE_KEYS.PENDING_SESSION);
+}
+
+export function loadPendingFinalization(
+  storage: GpsStorageAdapter,
+): PendingFinalizationPayload | null {
+  return parseJson<PendingFinalizationPayload | null>(
+    storage.getString(GPS_STORAGE_KEYS.PENDING_FINALIZATION),
+    null,
+  );
+}
+
+export function savePendingFinalization(
+  storage: GpsStorageAdapter,
+  payload: PendingFinalizationPayload,
+): void {
+  storage.set(GPS_STORAGE_KEYS.PENDING_FINALIZATION, JSON.stringify(payload));
+}
+
+export function clearPendingFinalization(storage: GpsStorageAdapter): void {
+  storage.delete(GPS_STORAGE_KEYS.PENDING_FINALIZATION);
 }
 
 export function isRecoveryPending(storage: GpsStorageAdapter): boolean {
