@@ -39,25 +39,25 @@ const _inflightByActivity = new Map<number, Promise<boolean>>();
 
 let _storage: MMKV | null = null;
 let _storageOverride: GpsStorageAdapter | null = null;
+let _storageInitFailed = false;
 
 /** Test-only: inject mock MMKV adapter without native module. */
 export function __setGpsStorageForTests(adapter: GpsStorageAdapter | null): void {
   _storageOverride = adapter;
   _storage = null;
+  _storageInitFailed = false;
 }
 
 export function getGpsStorage(): GpsStorageAdapter | null {
   if (_storageOverride) return _storageOverride;
+  if (_storageInitFailed) return null;
   if (!_storage) {
     try {
       _storage = new MMKV({ id: 'gps-buffer' });
     } catch (e) {
       warnMmkvUnavailable('GpsSyncManager', e);
-      _storage = {
-        getString: () => null,
-        set: () => {},
-        delete: () => {},
-      } as unknown as MMKV;
+      _storageInitFailed = true;
+      return null;
     }
   }
   return _storage as GpsStorageAdapter;
