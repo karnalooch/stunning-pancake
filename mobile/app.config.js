@@ -32,23 +32,33 @@ const e2eExtra = {
 const isPilotLocalBuild = () =>
   process.env.EAS_BUILD_PROFILE === 'pilot-local';
 
-// Firebase plugin gating: Google Services file must exist on disk AND the build
-// must not be the isolated pilot-local artifact. pilot-local sets
-// EXPO_PUBLIC_ENABLE_FIREBASE="false" so the dev-client APK does not pull
-// Firebase/Crashlytics into a build whose only consumer is the home lab. Default
-// resolution (no EAS profile) also disables Firebase unless the file is present
-// AND the env flag is not explicitly "false" — keeps local `expo start` free of
-// Firebase init in a sandbox without google-services.json. Evaluated per-call so
-// tests can mutate process.env between resolutions.
-const isFirebaseEnabled = () => {
-  if (process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'false') return false;
-  const hasAndroidGoogleServices = fs.existsSync(path.resolve(__dirname, './google-services.json'));
-  const hasIosGoogleServices = fs.existsSync(path.resolve(__dirname, './GoogleService-Info.plist'));
-  return hasAndroidGoogleServices || hasIosGoogleServices;
+// Firebase gating is shared for the plugins, but Google Services files are
+// platform-specific. A tracked Android google-services.json must never make the
+// iOS config point at a missing GoogleService-Info.plist (and vice versa).
+// EXPO_PUBLIC_ENABLE_FIREBASE="false" remains an explicit build-wide opt-out.
+const resolveFirebaseConfig = () => {
+  const firebaseAllowed = process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'false';
+  const hasAndroidGoogleServices = fs.existsSync(
+    path.resolve(__dirname, './google-services.json'),
+  );
+  const hasIosGoogleServices = fs.existsSync(
+    path.resolve(__dirname, './GoogleService-Info.plist'),
+  );
+
+  return {
+    enableFirebase:
+      firebaseAllowed && (hasAndroidGoogleServices || hasIosGoogleServices),
+    enableAndroidGoogleServices: firebaseAllowed && hasAndroidGoogleServices,
+    enableIosGoogleServices: firebaseAllowed && hasIosGoogleServices,
+  };
 };
 
 export default ({ config }) => {
-  const enableFirebase = isFirebaseEnabled();
+  const {
+    enableFirebase,
+    enableAndroidGoogleServices,
+    enableIosGoogleServices,
+  } = resolveFirebaseConfig();
 
   return {
     ...config,
@@ -75,7 +85,7 @@ export default ({ config }) => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sport.athlete",
-      "googleServicesFile": enableFirebase ? "./GoogleService-Info.plist" : undefined,
+      "googleServicesFile": enableIosGoogleServices ? "./GoogleService-Info.plist" : undefined,
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -85,7 +95,7 @@ export default ({ config }) => {
     },
     "android": {
       "package": "com.sport.athlete",
-      "googleServicesFile": enableFirebase ? "./google-services.json" : undefined,
+      "googleServicesFile": enableAndroidGoogleServices ? "./google-services.json" : undefined,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f8faf0"
