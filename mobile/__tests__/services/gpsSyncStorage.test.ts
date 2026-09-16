@@ -6,10 +6,12 @@
 import {
   appendToOutbox,
   appendToBuffer,
+  clearPendingFinalization,
   createClientBatchId,
   GPS_STORAGE_KEYS,
   GpsStorageAdapter,
   loadBuffer,
+  loadPendingFinalization,
   isRecoveryPending,
   loadOutbox,
   mergeRouteCoordinates,
@@ -17,6 +19,7 @@ import {
   pendingPointCount,
   removeOutboxEntry,
   saveBuffer,
+  savePendingFinalization,
   setRecoveryPending,
 } from '../../src/services/gpsSyncStorage';
 
@@ -81,6 +84,24 @@ describe('gpsSyncStorage', () => {
     expect(outbox[0]?.client_batch_id).toBe('batch-0');
     expect(outbox[74]?.client_batch_id).toBe('batch-74');
     expect(pendingPointCount(storage)).toBe(75);
+  });
+
+  test('pending finalization survives restart until explicitly cleared', () => {
+    const storage = mockStorage();
+    savePendingFinalization(storage, {
+      activity_id: 42,
+      distance_m: 1234,
+      attempts: 2,
+    });
+
+    expect(loadPendingFinalization(storage)).toEqual({
+      activity_id: 42,
+      distance_m: 1234,
+      attempts: 2,
+    });
+
+    clearPendingFinalization(storage);
+    expect(loadPendingFinalization(storage)).toBeNull();
   });
 
   test('buffer spills to overflow when exceeding MAX_BUFFER_SIZE', () => {
