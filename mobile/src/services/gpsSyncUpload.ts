@@ -28,6 +28,7 @@ import {
   parseIngestAck,
   type IngestAckResult,
 } from './gpsIngestAck';
+import { ActivitySerialQueue } from './gpsActivityQueue';
 
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
 import { measureAsync } from './performanceBudget';
@@ -41,7 +42,7 @@ export const MAX_UPLOAD_BATCH_POINTS = 500;
 
 let _ingestPauseUntil = 0;
 let _lastAckAt: number | null = null;
-const _inflightByActivity = new Map<number, Promise<boolean>>();
+const _activityUploadQueue = new ActivitySerialQueue();
 
 let _storage: MMKV | null = null;
 let _storageOverride: GpsStorageAdapter | null = null;
@@ -212,20 +213,9 @@ export async function uploadPointsWithRetry(
 
   const activityId = points[0]?.activity_id;
   if (activityId != null) {
-    const inflight = _inflightByActivity.get(activityId);
-    if (inflight) {
-      const ok = await inflight;
-      return ok
-        ? { acked: true, inserted: points.length }
-        : { acked: false, inserted: 0 };
-    }
-    const promise = uploadPointsWithRetryInner(points, clientBatchId, attempt);
-    _inflightByActivity.set(activityId, promise.then((r) => r.acked));
-    try {
-      return await promise;
-    } finally {
-      _inflightByActivity.delete(activityId);
-    }
+    return _activityUploadQueue.run(activityId, () =>
+      uploadPointsWithRetryInner(points, clientBatchId, attempt),
+    );
   }
   return uploadPointsWithRetryInner(points, clientBatchId, attempt);
 }
