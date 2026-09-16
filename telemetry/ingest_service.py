@@ -28,6 +28,32 @@ logger = logging.getLogger("telemetry")
 _ingest_redis = None
 
 
+class IngestRows(list[tuple]):
+    """Public DB rows plus proof metadata for the original client batch."""
+
+    point_count: int = 0
+    dropped_privacy: int = 0
+    activity_id: int | None = None
+    user_id: int | None = None
+    max_seq: int | None = None
+
+    def durable_receipt(self) -> dict[str, int] | None:
+        if (
+            self.point_count <= 0
+            or self.activity_id is None
+            or self.user_id is None
+            or self.max_seq is None
+        ):
+            return None
+        return {
+            "activity_id": self.activity_id,
+            "user_id": self.user_id,
+            "point_count": self.point_count,
+            "dropped_privacy": self.dropped_privacy,
+            "max_seq": self.max_seq,
+        }
+
+
 async def get_ingest_redis():
     global _ingest_redis
     if _ingest_redis is None:
@@ -140,6 +166,9 @@ async def persist_ingest_rows(
     guard,
     receipt: dict[str, int] | None = None,
 ) -> dict:
+    if receipt is None and isinstance(rows, IngestRows):
+        receipt = rows.durable_receipt()
+
     use_stream = False
     if guard.should_queue_active_sessions and activity_id and await is_active_activity(activity_id):
         use_stream = True
@@ -220,17 +249,20 @@ async def is_duplicate_batch(client_batch_id: str | None) -> bool:
 def filter_privacy_packets(
     packets: list[GpsPacket],
 ) -> tuple[list[tuple], int, int | None, int | None]:
-    rows: list[tuple] = []
-    dropped = 0
-    activity_id: int | None = None
-    max_seq: int | None = None
+    rows = IngestRows()
+    rows.point_count = len(packets)
+    user_ids = {p.user_id for p in packets if p.user_id is not None}
+    if len(user_ids) == 1:
+        rows.user_id = next(iter(user_ids))
+
     for p in packets:
         if p.activity_id is not None:
-            activity_id = p.activity_id
+            rows.activity_id = p.activity_id
         if p.seq is not None:
-            max_seq = p.seq if max_seq is None else max(max_seq, p.seq)
+            rows.max_seq = p.seq if rows.max_seq is None else max(rows.max_seq, p.seq)
         if is_in_privacy_zone(p.user_id, p.lat, p.lon):
-            dropped += 1
+            rows.dropped_privacy += 1
             continue
         rows.append(packet_to_row(p))
-    return rows, dropped, activity_id, max_seq
+
+    return rows, rows.dropped_privacy, rows.activity_id, rows.max_seq
