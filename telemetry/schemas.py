@@ -40,17 +40,15 @@ class BatchPacket(BaseModel):
         if self.point_count is not None and self.point_count != len(self.packets):
             raise ValueError("point_count must equal len(packets)")
 
-        packet_activity_ids = {
-            packet.activity_id for packet in self.packets if packet.activity_id is not None
-        }
+        packet_activity_values = [packet.activity_id for packet in self.packets]
+        packet_activity_ids = {value for value in packet_activity_values if value is not None}
         if len(packet_activity_ids) > 1:
             raise ValueError("all packets in a batch must belong to one activity")
-        if (
-            self.activity_id is not None
-            and packet_activity_ids
-            and packet_activity_ids != {self.activity_id}
-        ):
-            raise ValueError("activity_id must match packet activity_id")
+        if self.activity_id is not None:
+            if any(value != self.activity_id for value in packet_activity_values):
+                raise ValueError("activity_id must match every packet activity_id")
+        elif packet_activity_ids and any(value is None for value in packet_activity_values):
+            raise ValueError("packet activity_id must be consistently present or absent")
 
         packet_seqs = [packet.seq for packet in self.packets if packet.seq is not None]
         if self.max_seq is not None and packet_seqs and self.max_seq != max(packet_seqs):
