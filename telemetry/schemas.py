@@ -4,22 +4,51 @@ from __future__ import annotations
 
 import time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+MAX_INGEST_BATCH_POINTS = 500
 
 
 class GpsPacket(BaseModel):
-    device_id: str
-    user_id: int | None = None
-    lat: float
-    lon: float
-    speed_ms: float = 0.0
-    accuracy_m: float = 5.0
-    activity_id: int | None = None
-    timestamp: float = Field(default_factory=time.time)
-    seq: int | None = None
-    idempotency_key: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    device_id: str = Field(min_length=1, max_length=128)
+    user_id: int | None = Field(default=None, ge=1)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    altitude_m: float | None = None
+    speed_ms: float = Field(default=0.0, ge=0, le=100)
+    accuracy_m: float = Field(default=5.0, ge=0, le=10_000)
+    activity_id: int | None = Field(default=None, ge=1)
+    timestamp: float = Field(default_factory=time.time, gt=0)
+    seq: int | None = Field(default=None, ge=0)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    segment_break: bool | None = None
 
 
 class BatchPacket(BaseModel):
-    packets: list[GpsPacket]
-    client_batch_id: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    packets: list[GpsPacket] = Field(min_length=1, max_length=MAX_INGEST_BATCH_POINTS)
+    client_batch_id: str = Field(min_length=1, max_length=128)
+    point_count: int | None = Field(default=None, ge=1, le=MAX_INGEST_BATCH_POINTS)
+    max_seq: int | None = Field(default=None, ge=0)
+    activity_id: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_batch_contract(self) -> "BatchPacket":
+        if self.point_count is not None and self.point_count != len(self.packets):
+            raise ValueError("point_count must equal len(packets)")
+
+        packet_activity_ids = {
+            packet.activity_id for packet in self.packets if packet.activity_id is not None
+        }
+        if len(packet_activity_ids) > 1:
+            raise ValueError("all packets in a batch must belong to one activity")
+        if self.activity_id is not None and packet_activity_ids and packet_activity_ids != {self.activity_id}:
+            raise ValueError("activity_id must match packet activity_id")
+
+        packet_seqs = [packet.seq for packet in self.packets if packet.seq is not None]
+        if self.max_seq is not None and packet_seqs and self.max_seq != max(packet_seqs):
+            raise ValueError("max_seq must match the highest packet seq")
+        return self
