@@ -45,7 +45,11 @@ class BatchPacket(BaseModel):
         }
         if len(packet_activity_ids) > 1:
             raise ValueError("all packets in a batch must belong to one activity")
-        if self.activity_id is not None and packet_activity_ids and packet_activity_ids != {self.activity_id}:
+        if (
+            self.activity_id is not None
+            and packet_activity_ids
+            and packet_activity_ids != {self.activity_id}
+        ):
             raise ValueError("activity_id must match packet activity_id")
 
         packet_seqs = [packet.seq for packet in self.packets if packet.seq is not None]
