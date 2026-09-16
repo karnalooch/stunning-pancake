@@ -48,7 +48,10 @@ def audience_required() -> bool:
 
 
 def expected_audience() -> str:
-    return os.getenv("TELEMETRY_INGEST_AUDIENCE", DEFAULT_AUDIENCE).strip() or DEFAULT_AUDIENCE
+    return (
+        os.getenv("TELEMETRY_INGEST_AUDIENCE", DEFAULT_AUDIENCE).strip()
+        or DEFAULT_AUDIENCE
+    )
 
 
 def jwt_secret() -> str | None:
@@ -57,7 +60,9 @@ def jwt_secret() -> str | None:
 
 
 def _is_ingest_path(path: str) -> bool:
-    return any(path == prefix or path.startswith(f"{prefix}/") for prefix in INGEST_PREFIXES)
+    return any(
+        path == prefix or path.startswith(f"{prefix}/") for prefix in INGEST_PREFIXES
+    )
 
 
 def _decode_bearer(token: str, secret: str) -> dict | None:
@@ -122,7 +127,10 @@ def validate_ingest_claim_scope(
 ) -> tuple[bool, str | None]:
     """Validate per-activity/per-user claims against normalized packet metadata."""
     if claims is None:
-        return (not (require_scope if require_scope is not None else audience_required())), "claims"
+        return (
+            not (require_scope if require_scope is not None else audience_required()),
+            "claims",
+        )
 
     strict = audience_required() if require_scope is None else require_scope
     claim_activity = claims.get("activity_id")
@@ -165,7 +173,11 @@ def enforce_current_ingest_scope(
         user_ids=user_ids,
     )
     if not ok:
-        detail = "Telemetry token activity mismatch" if reason == "activity" else "Telemetry token user mismatch"
+        detail = (
+            "Telemetry token activity mismatch"
+            if reason == "activity"
+            else "Telemetry token user mismatch"
+        )
         raise HTTPException(status_code=403, detail=detail)
 
 
@@ -188,15 +200,21 @@ class IngestJwtMiddleware(BaseHTTPMiddleware):
 
         auth = request.headers.get("Authorization", "")
         if not auth.startswith("Bearer "):
-            return JSONResponse(status_code=401, content={"detail": "Authorization required"})
+            return JSONResponse(
+                status_code=401, content={"detail": "Authorization required"}
+            )
 
         token = auth[7:].strip()
         if not token:
-            return JSONResponse(status_code=401, content={"detail": "Invalid or expired token"})
+            return JSONResponse(
+                status_code=401, content={"detail": "Invalid or expired token"}
+            )
 
         claims, reason = _validated_bearer_claims(token, secret, expected_audience())
         if claims is None:
-            detail = "Invalid or expired token" if reason == "invalid" else "Audience mismatch"
+            detail = (
+                "Invalid or expired token" if reason == "invalid" else "Audience mismatch"
+            )
             return JSONResponse(status_code=401, content={"detail": detail})
 
         context_token = _request_ingest_claims.set(claims)
