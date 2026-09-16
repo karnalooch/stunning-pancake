@@ -20,6 +20,8 @@ interface ImageParallaxLayerProps {
 
 const LAYER_SOURCES: Record<EnvironmentLayerId, ImageSourcePropType> = {
   sky_day: ASSETS.environment.sky_day,
+  sky_sunset: ASSETS.environment.sky_sunset,
+  sky_night: ASSETS.environment.sky_night,
   hills_far: ASSETS.environment.hills_far,
   town_mid: ASSETS.environment.town_mid,
   road_near: ASSETS.environment.road_near,

@@ -1,3 +1,4 @@
+/* eslint-env node */
 const fs = require('fs');
 const path = require('path');
 
@@ -31,10 +32,23 @@ const e2eExtra = {
 const isPilotLocalBuild = () =>
   process.env.EAS_BUILD_PROFILE === 'pilot-local';
 
-export default ({ config }) => {
+// Firebase plugin gating: Google Services file must exist on disk AND the build
+// must not be the isolated pilot-local artifact. pilot-local sets
+// EXPO_PUBLIC_ENABLE_FIREBASE="false" so the dev-client APK does not pull
+// Firebase/Crashlytics into a build whose only consumer is the home lab. Default
+// resolution (no EAS profile) also disables Firebase unless the file is present
+// AND the env flag is not explicitly "false" — keeps local `expo start` free of
+// Firebase init in a sandbox without google-services.json. Evaluated per-call so
+// tests can mutate process.env between resolutions.
+const isFirebaseEnabled = () => {
+  if (process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'false') return false;
   const hasAndroidGoogleServices = fs.existsSync(path.resolve(__dirname, './google-services.json'));
   const hasIosGoogleServices = fs.existsSync(path.resolve(__dirname, './GoogleService-Info.plist'));
-  const enableFirebase = hasAndroidGoogleServices || hasIosGoogleServices;
+  return hasAndroidGoogleServices || hasIosGoogleServices;
+};
+
+export default ({ config }) => {
+  const enableFirebase = isFirebaseEnabled();
 
   return {
     ...config,
@@ -61,7 +75,7 @@ export default ({ config }) => {
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sport.athlete",
-      "googleServicesFile": hasIosGoogleServices ? "./GoogleService-Info.plist" : undefined,
+      "googleServicesFile": enableFirebase ? "./GoogleService-Info.plist" : undefined,
       "infoPlist": {
         "UIBackgroundModes": [
           "location",
@@ -71,7 +85,7 @@ export default ({ config }) => {
     },
     "android": {
       "package": "com.sport.athlete",
-      "googleServicesFile": hasAndroidGoogleServices ? "./google-services.json" : undefined,
+      "googleServicesFile": enableFirebase ? "./google-services.json" : undefined,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#f8faf0"

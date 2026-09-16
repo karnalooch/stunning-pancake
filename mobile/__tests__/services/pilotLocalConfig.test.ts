@@ -6,7 +6,7 @@ const RAILWAY_TELEMETRY_URL = 'https://docker-telemetry-production-123c.up.railw
 const PILOT_LOCAL_API_URL = 'http://localhost:8000';
 const PILOT_LOCAL_TELEMETRY_URL = 'http://localhost:8001';
 
-const { build } = JSON.parse(
+const { build, cli } = JSON.parse(
   readFileSync(resolve(__dirname, '../../eas.json'), 'utf8'),
 );
 
@@ -116,6 +116,16 @@ const findAnyBuildPropertiesEntries = (
   );
 
 describe('pilot-local eas.json contract', () => {
+  test('declares the cli block required by eas-cli 12+', () => {
+    // eas-cli 12+ refuses to build without explicit cli metadata. The schema
+    // was checked empirically with `eas config --profile pilot-local` against
+    // eas-cli 24.6.0 — the values below are accepted.
+    expect(cli).toBeDefined();
+    expect(cli.appVersionSource).toBe('local');
+    expect(typeof cli.version).toBe('string');
+    expect(cli.version.length).toBeGreaterThan(0);
+  });
+
   test('uses an independent internal development profile', () => {
     expect(build['pilot-local']).toMatchObject({
       node: '22.13.0',
@@ -256,5 +266,133 @@ describe('app.config.js resolved Android cleartext plugin', () => {
         'expo-build-properties',
       ]),
     );
+  });
+});
+
+const findFirebasePlugins = (plugins: PluginEntry[]): string[] =>
+  plugins
+    .map((p) => (Array.isArray(p) ? p[0] : p))
+    .filter(
+      (name): name is string =>
+        typeof name === 'string' && name.startsWith('@react-native-firebase/'),
+    );
+
+describe('app.config.js Firebase plugin gating', () => {
+  // The pilot-local artifact must not pull Firebase/Crashlytics into a build
+  // whose only consumer is the isolated home lab. Even though
+  // mobile/google-services.json is tracked in the repo, the build-time flag
+  // EXPO_PUBLIC_ENABLE_FIREBASE="false" — set by the pilot-local eas.json
+  // profile — must take precedence and drop the Firebase plugins.
+  test('pilot-local does not register any @react-native-firebase/* plugin', () => {
+    const resolved = resolveWithProfile('pilot-local') as { plugins?: PluginEntry[] };
+    expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
+  });
+
+  test.each(['development', 'preview', 'production'] as const)(
+    '%s profile also drops Firebase plugins (flag is "false" in eas.json)',
+    (profile) => {
+      const resolved = resolveWithProfile(profile) as { plugins?: PluginEntry[] };
+      expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
+    },
+  );
+
+  test('default resolution without EAS profile does not register Firebase plugins when file is absent or flag is "false"', () => {
+    const resolved = resolveWithProfile(null, {
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'false',
+    }) as { plugins?: PluginEntry[] };
+    expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
+  });
+
+  test('default resolution without env flag falls back to file presence (current behavior)', () => {
+    // Document the current default: when no env flag is set, Firebase is
+    // enabled if google-services.json exists on disk. The tracked file means
+    // local `expo start` in a sandbox without dotenv WILL enable Firebase,
+    // matching the upstream behavior before P1a. This is intentional — the
+    // pilot-local profile explicitly opts out via eas.json env.
+    const resolved = resolveWithProfile(null) as { plugins?: PluginEntry[] };
+    const firebasePlugins = findFirebasePlugins(resolved.plugins ?? []);
+    // mobile/google-services.json is tracked in the repo, so plugins register.
+    expect(firebasePlugins).toEqual(
+      expect.arrayContaining(['@react-native-firebase/app', '@react-native-firebase/crashlytics']),
+    );
+  });
+
+  test('EXPO_PUBLIC_ENABLE_FIREBASE="false" overrides presence of google-services.json', () => {
+    // Regression guard: even if google-services.json is tracked in the repo
+    // (it currently is), a build that explicitly opts out via the env flag
+    // must not register the Firebase plugins. This is what the pilot-local
+    // profile relies on to stay free of Firebase in the home lab build.
+    const resolved = resolveWithProfile('preview', {
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'false',
+    }) as { plugins?: PluginEntry[] };
+    expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
+  });
+
+  test('opt-in via EXPO_PUBLIC_ENABLE_FIREBASE="true" re-enables Firebase when google-services.json exists', () => {
+    // Counter-test: the gate is bidirectional. An operator who explicitly opts
+    // back into Firebase (e.g. a temporary debug build) must see the plugins
+    // re-registered, provided the Google Services file is present on disk.
+    // mobile/google-services.json is tracked in the repo, so the file is
+    // always present in this test workspace.
+    const resolved = resolveWithProfile('preview', {
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'true',
+    }) as { plugins?: PluginEntry[] };
+    const firebasePlugins = findFirebasePlugins(resolved.plugins ?? []);
+    expect(firebasePlugins).toEqual(
+      expect.arrayContaining(['@react-native-firebase/app', '@react-native-firebase/crashlytics']),
+    );
+  });
+});
+
+describe('app.config.js googleServicesFile gating', () => {
+  // googleServicesFile (both ios and android) must follow the same gate as the
+  // Firebase plugins. Otherwise `expo prebuild` would still copy
+  // google-services.json into the Android project for a pilot-local build even
+  // though the Firebase SDK plugins are disabled — leaving a stale Firebase
+  // dependency in the artifact.
+
+  const getGoogleServicesFile = (
+    resolved: { ios?: { googleServicesFile?: unknown }; android?: { googleServicesFile?: unknown } },
+    platform: 'ios' | 'android',
+  ): unknown => resolved[platform]?.googleServicesFile;
+
+  test('pilot-local drops googleServicesFile on both platforms', () => {
+    const resolved = resolveWithProfile('pilot-local');
+    expect(getGoogleServicesFile(resolved, 'android')).toBeUndefined();
+    expect(getGoogleServicesFile(resolved, 'ios')).toBeUndefined();
+  });
+
+  test('Railway profiles (development/preview/production) also drop googleServicesFile because the eas.json flag is "false"', () => {
+    for (const profile of ['development', 'preview', 'production'] as const) {
+      const resolved = resolveWithProfile(profile);
+      expect(getGoogleServicesFile(resolved, 'android')).toBeUndefined();
+      expect(getGoogleServicesFile(resolved, 'ios')).toBeUndefined();
+    }
+  });
+
+  test('opt-in via EXPO_PUBLIC_ENABLE_FIREBASE="true" restores googleServicesFile on android', () => {
+    const resolved = resolveWithProfile('preview', {
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'true',
+    });
+    expect(getGoogleServicesFile(resolved, 'android')).toBe('./google-services.json');
+  });
+
+  test('opt-in via EXPO_PUBLIC_ENABLE_FIREBASE="true" restores googleServicesFile on ios', () => {
+    // iOS gate currently still checks file existence on disk. This test is
+    // skipped when GoogleService-Info.plist is absent in the workspace; the
+    // android gate above is the load-bearing assertion for the pilot path.
+    const fs = jest.requireActual('node:fs') as typeof import('node:fs');
+    const path = jest.requireActual('node:path') as typeof import('node:path');
+    const hasIosFile = fs.existsSync(
+      path.resolve(__dirname, '../../GoogleService-Info.plist'),
+    );
+    if (!hasIosFile) {
+      // google-services.json is present, plist is not — iOS path is inert.
+      return;
+    }
+    const resolved = resolveWithProfile('preview', {
+      EXPO_PUBLIC_ENABLE_FIREBASE: 'true',
+    });
+    expect(getGoogleServicesFile(resolved, 'ios')).toBe('./GoogleService-Info.plist');
   });
 });

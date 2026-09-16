@@ -16,6 +16,7 @@ ENV_FILE = ROOT / ".env.home"
 ENV_TEMPLATE = ROOT / ".env.home.example"
 BACKUP_DIR = ROOT / "backups" / "home-lab"
 PROJECT = "4velo-home"
+HOME_COMPOSE_FILE = ROOT / "docker-compose.home.yml"
 CORE_SERVICES = (
     "db",
     "redis",
@@ -29,6 +30,12 @@ CORE_SERVICES = (
 
 def compose_command(*args: str, profiles: tuple[str, ...] = ()) -> list[str]:
     command = ["docker", "compose", "-p", PROJECT, "--env-file", str(ENV_FILE)]
+    # Layer the loopback-only home override on top of the shared compose file
+    # so the LAN-facing defaults stay untouched for Railway / production / CI.
+    # Compose merges files in order; -f override semantics let us narrow port
+    # bindings without rewriting the shared `docker-compose.yml`.
+    if HOME_COMPOSE_FILE.is_file():
+        command.extend(("-f", str(HOME_COMPOSE_FILE)))
     for profile in profiles:
         command.extend(("--profile", profile))
     return [*command, *args]

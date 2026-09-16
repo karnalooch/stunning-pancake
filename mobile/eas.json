@@ -1,4 +1,8 @@
 {
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "local"
+  },
   "build": {
     "pilot-local": {
       "node": "22.13.0",
