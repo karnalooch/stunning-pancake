@@ -140,8 +140,12 @@ def validate_ingest_claim_scope(
         except (TypeError, ValueError):
             return False, "activity"
 
+    raw_user_ids = tuple(user_ids)
+    if strict and any(uid is None for uid in raw_user_ids):
+        return False, "user"
+
     claim_sub = claims.get("sub")
-    concrete_user_ids = {int(uid) for uid in user_ids if uid is not None}
+    concrete_user_ids = {int(uid) for uid in raw_user_ids if uid is not None}
     if claim_sub is None:
         if strict:
             return False, "user"
