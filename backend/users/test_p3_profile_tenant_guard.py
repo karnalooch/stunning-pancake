@@ -1,4 +1,4 @@
-"""P3-E tenant-transfer guard for the authenticated profile endpoint."""
+"""P3-E tenant-transfer guard for registration and authenticated profile."""
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -31,6 +31,23 @@ class ProfileTenantGuardTest(TestCase):
             {"tenant_id": str(tenant_id)},
             format="json",
         )
+
+    def test_registration_cannot_prebind_tenant(self):
+        response = self.client.post(
+            "/api/users/register/",
+            {
+                "username": "registration-tenant-forgery",
+                "email": "registration@example.com",
+                "password": "testpass123",
+                "tenant_id": str(self.tenant_b.id),
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        athlete = User.objects.get(username="registration-tenant-forgery")
+        self.assertEqual(athlete.role, "ATHLETE")
+        self.assertIsNone(athlete.tenant_id)
 
     def test_tenantless_athlete_can_select_initial_active_tenant(self):
         athlete = User.objects.create_user(
