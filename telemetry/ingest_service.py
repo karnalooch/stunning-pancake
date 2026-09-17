@@ -36,13 +36,15 @@ class IngestRows(list[tuple]):
     activity_id: int | None = None
     user_id: int | None = None
     max_seq: int | None = None
+    payload_fingerprint: str | None = None
 
-    def durable_receipt(self) -> dict[str, int] | None:
+    def durable_receipt(self) -> dict[str, int | str] | None:
         if (
             self.point_count <= 0
             or self.activity_id is None
             or self.user_id is None
             or self.max_seq is None
+            or self.payload_fingerprint is None
         ):
             return None
         return {
@@ -51,6 +53,7 @@ class IngestRows(list[tuple]):
             "point_count": self.point_count,
             "dropped_privacy": self.dropped_privacy,
             "max_seq": self.max_seq,
+            "payload_fingerprint": self.payload_fingerprint,
         }
 
 
@@ -164,7 +167,7 @@ async def persist_ingest_rows(
     client_batch_id: str | None,
     activity_id: int | None,
     guard,
-    receipt: dict[str, int] | None = None,
+    receipt: dict[str, int | str] | None = None,
 ) -> dict:
     if receipt is None and isinstance(rows, IngestRows):
         receipt = rows.durable_receipt()
@@ -210,21 +213,27 @@ async def persist_ingest_rows(
     # Direct-mode ACK is emitted only after one PostgreSQL transaction commits
     # both the public GPS rows and the durable batch receipt used by P3 route
     # reconciliation. This makes the ACK independently auditable server-side.
+    deduped = False
     if not SKIP_DB:
         if receipt is not None and client_batch_id is not None:
-            await persist_direct_batch_with_receipt(
+            created = await persist_direct_batch_with_receipt(
                 rows,
                 client_batch_id=client_batch_id,
-                activity_id=receipt["activity_id"],
-                user_id=receipt["user_id"],
-                point_count=receipt["point_count"],
-                dropped_privacy=receipt["dropped_privacy"],
-                max_seq=receipt["max_seq"],
+                activity_id=int(receipt["activity_id"]),
+                user_id=int(receipt["user_id"]),
+                point_count=int(receipt["point_count"]),
+                dropped_privacy=int(receipt["dropped_privacy"]),
+                max_seq=int(receipt["max_seq"]),
+                payload_fingerprint=str(receipt["payload_fingerprint"]),
             )
+            deduped = not created
         elif rows:
             await flush_insert_buffer(rows)
     await mark_batch_acked(client_batch_id)
-    return {"inserted": len(rows), "queued": False, "ingest_mode": "direct"}
+    result = {"inserted": len(rows), "queued": False, "ingest_mode": "direct"}
+    if deduped:
+        result["deduped"] = True
+    return result
 
 
 async def get_batch_receipt(client_batch_id: str | None) -> dict[str, Any] | None:
