@@ -1,4 +1,10 @@
-import { REDACTED, redactError, redactString, redactValue } from '../redaction';
+import {
+  REDACTED,
+  redactConsoleArgs,
+  redactError,
+  redactString,
+  redactValue,
+} from '../redaction';
 
 describe('T71 mobile redaction', () => {
   it('removes token, identity and GPS canaries from strings', () => {
@@ -10,6 +16,8 @@ describe('T71 mobile redaction', () => {
       'device_id=pilot-phone',
       'lat=52.167123',
       'lon=22.290456',
+      'coordinates=[52.1, 22.2]',
+      'route_path=[[52.3, 22.4], [52.5, 22.6]]',
       'db=postgres://pilot:password@db:5432/fourvelo',
     ].join(' ');
 
@@ -23,6 +31,12 @@ describe('T71 mobile redaction', () => {
       'pilot-phone',
       '52.167123',
       '22.290456',
+      '52.1',
+      '22.2',
+      '52.3',
+      '22.4',
+      '52.5',
+      '22.6',
       'pilot:password',
     ]) {
       expect(output).not.toContain(canary);
@@ -67,6 +81,16 @@ describe('T71 mobile redaction', () => {
     expect(safe.stack).not.toContain('rider@example.invalid');
     expect(safe.stack).not.toContain('22.290456');
     expect(`${safe.message} ${safe.stack}`).toContain(REDACTED);
+  });
+
+  it('redacts every argument passed through the console bootstrap', () => {
+    const [message, payload] = redactConsoleArgs([
+      'authorization=Bearer console-token',
+      { coordinates: [52.1, 22.2], email: 'console@example.invalid', safe: 7 },
+    ]);
+
+    expect(String(message)).not.toContain('console-token');
+    expect(payload).toEqual({ coordinates: REDACTED, email: REDACTED, safe: 7 });
   });
 
   it('fails closed on cyclic objects', () => {
