@@ -61,12 +61,27 @@ def delete_user_export_artifacts(user) -> int:
     return removed
 
 
+def delete_user_activity_archives(user) -> int:
+    """Remove generated/imported GPX archives that live outside Django rows."""
+
+    removed = 0
+    for activity in user.activities.exclude(gpx_storage_key="").only("gpx_storage_key"):
+        delete_storage_uri_strict(activity.gpx_storage_key)
+        removed += 1
+    return removed
+
+
 def delete_user_personal_data(user) -> dict[str, int]:
     """Purge non-Django personal-data stores before deleting the account row."""
 
     export_count = delete_user_export_artifacts(user)
+    activity_archive_count = delete_user_activity_archives(user)
     telemetry = delete_user_telemetry(int(user.id))
-    return {"exports": export_count, **telemetry}
+    return {
+        "exports": export_count,
+        "activity_archives": activity_archive_count,
+        **telemetry,
+    }
 
 
 def retained_gps_rows_for_user(user_id: int) -> list[dict[str, object]]:
