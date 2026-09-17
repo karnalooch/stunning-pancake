@@ -8,7 +8,7 @@ from datetime import timedelta
 from django.db import connection
 from django.utils import timezone
 
-from activities.gpx_storage import delete_storage_uri
+from activities.gpx_storage import delete_storage_uri_strict
 
 logger = logging.getLogger(__name__)
 
@@ -47,17 +47,17 @@ def delete_user_telemetry(user_id: int) -> dict[str, int]:
 
 
 def delete_user_export_artifacts(user) -> int:
-    """Best-effort remove materialized export objects before DB cascade.
+    """Idempotently remove materialized export objects before DB cascade.
 
-    Missing/expired files are already absent and are therefore safe. Storage
-    driver errors are logged by ``delete_storage_uri``; the DB row then disappears
-    with the user cascade so stale application download links cannot survive.
+    Storage errors are allowed to abort account deletion. Removing the user row
+    while a private export archive is still materialized would make deletion
+    completeness unverifiable.
     """
 
     removed = 0
     for export in user.data_exports.exclude(storage_uri="").only("storage_uri"):
-        if delete_storage_uri(export.storage_uri):
-            removed += 1
+        delete_storage_uri_strict(export.storage_uri)
+        removed += 1
     return removed
 
 
