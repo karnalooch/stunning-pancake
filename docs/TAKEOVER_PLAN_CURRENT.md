@@ -124,16 +124,16 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T66 | Prevent public/profile self-service tenant rebinding | DONE | PR #101. |
 | T67 | Enforce club tenant isolation | DONE | PR #102. |
 | T68 | Signing-key rotation/revocation proof | BLOCKED | OWNER ACTION REQUIRED. Confirm external persistent key; prove old exposed value never active or rotate/revoke it. No secret value in evidence. |
-| T69 | Encrypt GPS data at rest on Android | PLANNED | MMKV key protected by Keystore/SecureStore or equivalent; must work with locked/background device. |
-| T70 | Audit log append-only/tamper-resistant contract + critical-action coverage | PLANNED | Enumerate critical mutations; block unauthorized update/delete; test retention/integrity. |
-| T71 | Central PII/token/GPS log redaction | PLANNED | Inventory sinks + canary tests; no secrets/coordinates leaking to logs/reports. |
-| T72 | Delete/export/retention contract | PLANNED | Cover Django, raw GPS, routes, caches, exports and backups; explicit 30-day GPS policy. |
-| T73 | Database runtime-role + worker tenant-context hardening | PLANNED | No SUPERUSER/BYPASSRLS runtime role; Celery/commands set and clear tenant context safely. |
-| T74 | Critical-write idempotency inventory | PLANNED | Create/finalize/membership/admin/delete/export/reward retries reviewed; add keys/constraints where ambiguous. |
-| T75 | TLS/transport + backup confidentiality verification | PLANNED | Pilot topology/TLS proven; backups encrypted, access-controlled, retained/disposed by policy. |
-| T76 | Android/home-lab chaos and restart matrix | BLOCKED | ENVIRONMENT REQUIRED. Screen-off/offline/kill/restart/commit-response cuts/backend/telemetry/Redis scenarios with zero silent loss or duplicate business effect. |
+| T69 | Encrypt GPS data at rest on Android | DONE | PR #106. MMKV key is protected through the SecureStore/Keystore path; physical locked/background behavior remains part of T76 evidence. |
+| T70 | Audit log append-only/tamper-resistant contract + critical-action coverage | DONE | PR #108. |
+| T71 | Central PII/token/GPS log redaction | DONE | PR #109. |
+| T72 | Delete/export/retention contract | DONE | PR #110. |
+| T73 | Database runtime-role + worker tenant-context hardening | DONE | PR #111. |
+| T74 | Critical-write idempotency inventory | DONE | PR #112. Critical retries use durable request identities/constraints where business effects could duplicate. |
+| T75 | TLS/transport + backup confidentiality verification | DONE | PR #113. Loopback-only pilot transport plus AES-256-GCM backup confidentiality/retention are repo-gated; no external TLS/provider claim is inferred. |
+| T76 | Android/home-lab chaos and restart matrix | PARTIAL | PR #114 prepares a fail-closed physical-device harness/evidence matrix. Final PASS still requires the real Android + home-lab screen-off/offline/kill/restart/commit-response scenarios. |
 
-**Data-safety exit:** T57 and T68–T76 must satisfy the owner-approved P3 audit contract; already-DONE T60–T67 are retained as evidence, not reopened mechanically.
+**Data-safety exit:** repo-side implementation is complete through T76. Final exit still requires external evidence for T57 (real recovery/RPO-RTO), T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T60–T75 are retained as evidence, not reopened mechanically.
 
 ## T77–T84 — mobile UI + UX polish
 
