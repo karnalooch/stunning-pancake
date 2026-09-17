@@ -8,6 +8,7 @@ on:
       - '.env.home.example'
       - 'scripts/home_lab.py'
       - 'scripts/test_home_lab.py'
+      - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
   push:
     branches: [main]
@@ -17,6 +18,7 @@ on:
       - '.env.home.example'
       - 'scripts/home_lab.py'
       - 'scripts/test_home_lab.py'
+      - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
 
 permissions:
