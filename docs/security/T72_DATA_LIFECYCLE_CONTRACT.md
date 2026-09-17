@@ -6,7 +6,7 @@ Status: implementation contract for takeover tranche T72 / DS-018, DS-019 and DS
 
 - Raw privacy-filtered telemetry in `gps_points`: **30 days** from point time.
 - Durable ingest receipts: **30 days** from `acked_at`; after that they are no longer needed to prove a ride that has already passed durable finalization.
-- `Activity.route_path`: retained with the activity as the derived canonical route. It is not raw telemetry and is deleted with the owning activity/account.
+- Finalized `Activity.route_path`: retained with the activity as the derived canonical route. It is not raw telemetry and is deleted with the owning activity/account.
 - User export archives: application access expires at the existing export TTL (24 hours by default); the daily retention task removes the materialized object and tracking row after expiry.
 - `AuditLog`: not shortened by T72. It remains governed by the append-only T70 security contract.
 - Backups: T72 does not pretend active-database deletion instantly rewrites historical backup media. Backup retention, encryption and disposal are a T75/P3-G operational contract. A restore must re-apply the active retention/deletion policy before restored data can become a live system.
@@ -32,9 +32,9 @@ The RODO ZIP contains:
 - `manifest.json` describing source/retention semantics;
 - `raw_gps.json` containing privacy-filtered `gps_points` still inside the 30-day retention window;
 - one metadata JSON file for every activity (no 200-activity truncation);
-- GPX for each activity that has a canonical `Activity.route_path`.
+- GPX only for finalized activities (`end_time` set) that have a canonical `Activity.route_path`.
 
-`Activity.route_path` is the canonical derived ride route established by T63 durable reconciliation/finalization. Raw retained telemetry is exported separately so the archive does not silently confuse raw retained GPS with the derived canonical route.
+T63 establishes the canonical derived ride route during durable finalization before `end_time` is set. A pending activity may have provisional route state, so T72 does not label or export that provisional path as canonical GPX. Raw retained telemetry is exported separately so the archive does not silently confuse retained GPS with the derived canonical route.
 
 ## Enforcement
 
@@ -50,4 +50,4 @@ for explicit/manual enforcement and recovery.
 
 ## Boundaries
 
-T72 does not change T70 audit immutability, define backup-media encryption/retention (T75), or prove physical Android/home-lab failure behavior (T76). Cache review found no durable account/GPS cache that extends the retention boundary; ephemeral authentication/reset and UI caches retain their existing short TTLs and are not canonical personal-data stores.
+T72 does not change T70 audit immutability, define backup-media encryption/retention (T75), or prove physical Android/home-lab failure behavior (T76). The scoped cache review found no durable account/GPS cache that extends the retention boundary; the telemetry active-session marker is keyed by activity and expires after five minutes, while authentication/reset and UI caches keep their existing short TTLs. None is treated as a canonical personal-data store.
