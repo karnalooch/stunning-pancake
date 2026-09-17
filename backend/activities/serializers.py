@@ -131,9 +131,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             or existing.start_time != validated_data.get("start_time")
             or existing.tenant_id != validated_data.get("tenant_id")
         ):
-            raise serializers.ValidationError(
-                {"client_request_id": "idempotency_conflict"}
-            )
+            raise serializers.ValidationError({"client_request_id": "idempotency_conflict"})
         return existing
 
     def create(self, validated_data):
