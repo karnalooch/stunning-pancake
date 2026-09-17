@@ -12,6 +12,8 @@ on:
       - 'scripts/requirements-home-lab.txt'
       - 'scripts/test_backup_crypto.py'
       - 'scripts/test_home_lab.py'
+      - 'scripts/t76_chaos.py'
+      - 'scripts/test_t76_chaos.py'
       - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
   push:
