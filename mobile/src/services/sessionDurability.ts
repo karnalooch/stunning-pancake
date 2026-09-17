@@ -19,6 +19,16 @@ export async function createSessionWithDurability(
     throw new Error('Durable encrypted GPS storage unavailable');
   }
 
+  const pending: PendingSessionPayload = {
+    ...payload,
+    created_at: Date.now(),
+    attempts: 0,
+  };
+  // Persist intent before the request. If the server commits but the app dies
+  // before receiving the response, launch recovery retries the same start_time;
+  // the backend uses that stable value as the idempotency identity.
+  savePendingSession(storage, pending);
+
   const body: Record<string, unknown> = {
     type: payload.type,
     start_time: payload.start_time,
@@ -32,11 +42,7 @@ export async function createSessionWithDurability(
     clearPendingSession(storage);
     return id;
   } catch (err) {
-    savePendingSession(storage, {
-      ...payload,
-      created_at: Date.now(),
-      attempts: 0,
-    });
+    // Keep the pre-request intent for launch/manual recovery.
     throw err;
   }
 }
