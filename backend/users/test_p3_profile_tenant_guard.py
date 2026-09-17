@@ -100,3 +100,16 @@ class ProfileTenantGuardTest(TestCase):
         self.assertEqual(response.status_code, 400)
         athlete.refresh_from_db()
         self.assertIsNone(athlete.tenant_id)
+
+    def test_initial_selection_rejects_malformed_tenant_id(self):
+        athlete = User.objects.create_user(
+            username="malformed-choice",
+            password="testpass123",
+            role="ATHLETE",
+        )
+
+        response = self.patch_tenant(athlete, "not-a-valid-tenant-id")
+
+        self.assertEqual(response.status_code, 400)
+        athlete.refresh_from_db()
+        self.assertIsNone(athlete.tenant_id)
