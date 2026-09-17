@@ -46,21 +46,65 @@ def _pending(code: str, detail: str) -> RouteReconciliationPending:
     return RouteReconciliationPending(code, detail)
 
 
+def _summarize_receipt_rows(rows: list[tuple]) -> tuple[int, int, int, int]:
+    """Prove receipts tile one exact sequence range beginning at 1.
+
+    Pilot ingest accepts only contiguous positive ``seq`` values inside each
+    activity batch. Therefore a receipt's immutable ``point_count`` and
+    ``max_seq`` identify that batch's complete sequence interval, including
+    coordinates deliberately omitted from ``gps_points`` by privacy filtering.
+    Sorting those intervals lets finalization detect both gaps and overlaps
+    without storing private payloads or coordinates in the receipt table.
+    """
+
+    if not rows:
+        return 0, 0, 0, 0
+
+    expected_next = 1
+    total_points = 0
+    total_dropped = 0
+    receipt_max_seq = 0
+
+    for point_count, dropped_privacy, max_seq, payload_fingerprint in rows:
+        count = int(point_count)
+        dropped = int(dropped_privacy)
+        batch_max = int(max_seq)
+        if not isinstance(payload_fingerprint, str) or not payload_fingerprint:
+            raise _pending(
+                "receipt_identity_unverifiable",
+                "Durable telemetry receipt identity cannot be verified.",
+            )
+
+        batch_min = batch_max - count + 1
+        if count <= 0 or batch_min != expected_next:
+            raise _pending(
+                "sequence_range_incomplete",
+                "Durable telemetry receipts do not cover one complete activity sequence.",
+            )
+
+        total_points += count
+        total_dropped += dropped
+        receipt_max_seq = batch_max
+        expected_next = batch_max + 1
+
+    return len(rows), total_points, total_dropped, receipt_max_seq
+
+
 def _load_receipt_summary(activity: Activity) -> tuple[int, int, int, int]:
-    """Return durable batch proof: batches, total points, dropped privacy, max seq."""
+    """Return verified durable batch proof for one user's activity."""
 
     try:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT COUNT(*), COALESCE(SUM(point_count), 0),
-                       COALESCE(SUM(dropped_privacy), 0), COALESCE(MAX(max_seq), 0)
+                SELECT point_count, dropped_privacy, max_seq, payload_fingerprint
                 FROM telemetry_ingest_receipts
                 WHERE activity_id = %s AND user_id = %s
+                ORDER BY max_seq ASC, client_batch_id ASC
                 """,
                 [activity.id, activity.user_id],
             )
-            row = cursor.fetchone()
+            rows = list(cursor.fetchall())
     except DatabaseError as exc:
         logger.warning(
             "route_reconciliation.receipts_unavailable activity_id=%s error_type=%s",
@@ -72,8 +116,7 @@ def _load_receipt_summary(activity: Activity) -> tuple[int, int, int, int]:
             "Durable telemetry receipts are not available for finalization yet.",
         ) from exc
 
-    assert row is not None
-    return int(row[0]), int(row[1]), int(row[2]), int(row[3])
+    return _summarize_receipt_rows(rows)
 
 
 def _load_durable_points(activity: Activity) -> list[tuple[int, float, float]]:
