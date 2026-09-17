@@ -66,6 +66,13 @@ function migrateLegacyGpsStorage(target: MMKV): void {
   for (const key of values.keys()) legacy.delete(key);
 }
 
+function markKeyProvisioned(bootstrap: MMKV): void {
+  bootstrap.set(GPS_KEY_PROVISIONED_MARKER, '1');
+  if (bootstrap.getString(GPS_KEY_PROVISIONED_MARKER) !== '1') {
+    throw new Error('GPS encryption provisioning marker persistence failed');
+  }
+}
+
 async function initializeEncryptedGpsStorage(): Promise<GpsStorageAdapter | null> {
   try {
     if (!(await SecureStore.isAvailableAsync())) {
@@ -94,12 +101,19 @@ async function initializeEncryptedGpsStorage(): Promise<GpsStorageAdapter | null
       }
     }
 
+    // Record successful key provisioning before opening/migrating the encrypted
+    // store. If the process dies during migration and SecureStore is later lost,
+    // the next launch must fail closed rather than generate a replacement key
+    // for an already-created encrypted store.
+    if (!wasProvisioned) {
+      markKeyProvisioned(bootstrap);
+    }
+
     const encrypted = new MMKV({
       id: GPS_ENCRYPTED_STORAGE_ID,
       encryptionKey,
     });
     migrateLegacyGpsStorage(encrypted);
-    bootstrap.set(GPS_KEY_PROVISIONED_MARKER, '1');
     storage = encrypted;
     return encrypted as GpsStorageAdapter;
   } catch (error) {
