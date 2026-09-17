@@ -76,33 +76,34 @@ jobs:
           pip install -r backend/requirements.txt
           pip install "ruff>=0.8,<0.16"
       - name: Ruff T73 implementation
+        working-directory: backend
         run: |
           ruff check \
-            backend/core/db_role_guard.py \
-            backend/core/task_rls.py \
-            backend/core/celery.py \
-            backend/core/checks.py \
-            backend/core/wsgi.py \
-            backend/core/test_db_role_guard_t73.py \
-            backend/core/test_task_rls_t73.py \
-            backend/core/test_checks_t73.py \
-            backend/core/test_celery_scope_t73.py \
-            backend/core/test_runtime_role_docs_t73.py \
-            backend/activities/signals.py \
-            backend/events/tasks.py
+            core/db_role_guard.py \
+            core/task_rls.py \
+            core/celery.py \
+            core/checks.py \
+            core/wsgi.py \
+            core/test_db_role_guard_t73.py \
+            core/test_task_rls_t73.py \
+            core/test_checks_t73.py \
+            core/test_celery_scope_t73.py \
+            core/test_runtime_role_docs_t73.py \
+            activities/signals.py \
+            events/tasks.py
           ruff format --check \
-            backend/core/db_role_guard.py \
-            backend/core/task_rls.py \
-            backend/core/celery.py \
-            backend/core/checks.py \
-            backend/core/wsgi.py \
-            backend/core/test_db_role_guard_t73.py \
-            backend/core/test_task_rls_t73.py \
-            backend/core/test_checks_t73.py \
-            backend/core/test_celery_scope_t73.py \
-            backend/core/test_runtime_role_docs_t73.py \
-            backend/activities/signals.py \
-            backend/events/tasks.py
+            core/db_role_guard.py \
+            core/task_rls.py \
+            core/celery.py \
+            core/checks.py \
+            core/wsgi.py \
+            core/test_db_role_guard_t73.py \
+            core/test_task_rls_t73.py \
+            core/test_checks_t73.py \
+            core/test_celery_scope_t73.py \
+            core/test_runtime_role_docs_t73.py \
+            activities/signals.py \
+            events/tasks.py
       - name: Focused T73 Django contract tests
         working-directory: backend
         run: |
