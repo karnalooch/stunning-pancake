@@ -100,10 +100,17 @@ def _activity_batch_identity(
             status_code=422,
             detail="Activity telemetry sequence values must be unique within a batch",
         )
+    seq_min = min(concrete_seqs)
+    seq_max = max(concrete_seqs)
+    if seq_max - seq_min + 1 != len(concrete_seqs):
+        raise HTTPException(
+            status_code=422,
+            detail="Activity telemetry sequence values must form one contiguous range",
+        )
 
     user_id = int(next(iter(user_ids)))
     point_count = len(batch.packets)
-    max_seq = max(concrete_seqs)
+    max_seq = seq_max
     return {
         "activity_id": int(scoped_activity_id),
         "user_id": user_id,
