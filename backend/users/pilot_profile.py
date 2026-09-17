@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -46,7 +47,15 @@ class PilotSafeUserProfileView(UserProfileView):
                 )
             return None
 
-        if not Tenant.objects.filter(pk=requested_tenant_id, is_active=True).exists():
+        try:
+            tenant_exists = Tenant.objects.filter(
+                pk=requested_tenant_id,
+                is_active=True,
+            ).exists()
+        except (DjangoValidationError, TypeError, ValueError):
+            tenant_exists = False
+
+        if not tenant_exists:
             return Response(
                 {"detail": "Selected tenant is not available."},
                 status=status.HTTP_400_BAD_REQUEST,
