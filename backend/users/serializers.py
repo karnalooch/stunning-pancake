@@ -10,7 +10,7 @@ class TenantSerializer(serializers.ModelSerializer):
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
-    """List/detail serializer — null-safe usernames for deleted or absent FK users."""
+    """List/detail serializer with immutable identity fallback after user deletion."""
 
     impersonator_username = serializers.SerializerMethodField()
     target_user_username = serializers.SerializerMethodField()
@@ -32,10 +32,14 @@ class AuditLogSerializer(serializers.ModelSerializer):
         )
 
     def get_impersonator_username(self, obj: AuditLog) -> str | None:
-        return obj.impersonator.username if obj.impersonator_id and obj.impersonator else None
+        if obj.impersonator_id and obj.impersonator:
+            return obj.impersonator.username
+        return obj.impersonator_username_snapshot
 
     def get_target_user_username(self, obj: AuditLog) -> str | None:
-        return obj.target_user.username if obj.target_user_id and obj.target_user else None
+        if obj.target_user_id and obj.target_user:
+            return obj.target_user.username
+        return obj.target_user_username_snapshot
 
 
 class UserSerializer(serializers.ModelSerializer):
