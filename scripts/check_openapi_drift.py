@@ -8,6 +8,7 @@ Extend CRITICAL_PATHS when adding admin/sim APIs.
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -56,7 +57,30 @@ def _norm(path: str) -> str:
     return p
 
 
+def _print_t70_ruff_diff() -> None:
+    result = subprocess.run(
+        [
+            "ruff",
+            "format",
+            "--diff",
+            "--config",
+            str(REPO / "backend" / "pyproject.toml"),
+            str(REPO / "backend" / "users" / "models.py"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    print("--- T70 RUFF FORMAT DIAGNOSTIC ---")
+    print(result.stdout or "(no formatter diff)")
+    if result.stderr:
+        print(result.stderr)
+    print("--- END T70 RUFF FORMAT DIAGNOSTIC ---")
+
+
 def main() -> int:
+    _print_t70_ruff_diff()
+
     if not API_DOC.is_file():
         print(f"Missing {API_DOC}")
         return 1
