@@ -106,8 +106,7 @@ class Activity(models.Model):
             models.UniqueConstraint(
                 fields=["user", "client_request_id"],
                 condition=(
-                    models.Q(client_request_id__isnull=False)
-                    & ~models.Q(client_request_id="")
+                    models.Q(client_request_id__isnull=False) & ~models.Q(client_request_id="")
                 ),
                 name="activities_activity_user_client_request_unique",
             ),
