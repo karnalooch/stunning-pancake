@@ -1,6 +1,6 @@
 """
 Rewards & Voucher Marketplace Models (Milestone 4)
-====================================================
+=====================================================
 Constitution §18: Financial and Social Ecosystem
 
 Models:
@@ -164,6 +164,14 @@ class PointsLedger(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user", "created_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "reason", "reference_id"],
+                condition=models.Q(reason__in=("ACTIVITY_VERIFIED", "VOUCHER_REDEEM"))
+                & ~models.Q(reference_id=""),
+                name="rewards_ledger_critical_effect_unique",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.user_id} {'+' if self.delta >= 0 else ''}{self.delta} ({self.reason})"
