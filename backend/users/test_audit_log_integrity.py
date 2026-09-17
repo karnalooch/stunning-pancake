@@ -61,6 +61,21 @@ class TestAuditLogImmutability:
 
         assert AuditLog.objects.filter(pk=audit_log.pk).exists()
 
+    def test_bulk_create_is_blocked_so_identity_snapshots_cannot_be_skipped(self, owner_user):
+        with pytest.raises(ValidationError, match="per-row"):
+            AuditLog.objects.bulk_create(
+                [
+                    AuditLog(
+                        impersonator=owner_user,
+                        target_user=owner_user,
+                        action="T70_BULK_EVENT",
+                        status_code=200,
+                    )
+                ]
+            )
+
+        assert not AuditLog.objects.filter(action="T70_BULK_EVENT").exists()
+
     def test_bulk_update_is_blocked(self, audit_log):
         audit_log.status_code = 500
 
