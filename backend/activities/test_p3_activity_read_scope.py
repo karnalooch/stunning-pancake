@@ -1,7 +1,6 @@
 """P3-E tenant/user isolation for activity detail and GPX direct IDs."""
 
 from django.contrib.auth import get_user_model
-from django.contrib.gis.geos import LineString
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
@@ -42,19 +41,20 @@ class ActivityReadIsolationTest(TestCase):
             password="testpass123",
             role="GLOBAL_OWNER",
         )
+        # These tests exercise object scoping only. Keep route_path NULL so the
+        # security contract is independent of the SQLite/PostGIS compatibility
+        # shim used by run_pytest.py in blocking CI.
         self.activity_a = Activity.objects.create(
             user=self.rider_a,
             tenant=self.tenant_a,
             type="BIKE",
             start_time=timezone.now(),
-            route_path=LineString([(21.0, 52.0), (21.01, 52.01)], srid=4326),
         )
         self.activity_b = Activity.objects.create(
             user=self.rider_b,
             tenant=self.tenant_b,
             type="BIKE",
             start_time=timezone.now(),
-            route_path=LineString([(22.0, 53.0), (22.01, 53.01)], srid=4326),
         )
         self.client = APIClient()
 
