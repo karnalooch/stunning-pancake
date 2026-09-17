@@ -28,6 +28,16 @@ def test_redact_text_removes_telemetry_canaries():
     assert REDACTED in redacted
 
 
+def test_redact_text_removes_coordinate_sequence_canaries():
+    redacted = redact_text(
+        "coordinates=[52.167123, 22.290456] route_path=[[52.1, 22.2], [52.3, 22.4]]"
+    )
+
+    for canary in ("52.167123", "22.290456", "52.1", "22.2", "52.3", "22.4"):
+        assert canary not in redacted
+    assert redacted.count(REDACTED) >= 2
+
+
 def test_log_record_factory_scrubs_formatted_runtime_values():
     install_log_redaction()
     stream = io.StringIO()
