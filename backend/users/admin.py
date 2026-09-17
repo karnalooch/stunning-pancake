@@ -53,10 +53,21 @@ class AuditLogAdmin(admin.ModelAdmin):
         "timestamp",
     )
     list_filter = ("action", "status_code", "timestamp")
-    search_fields = ("action", "impersonator__username", "target_user__username", "tenant_id")
+    search_fields = (
+        "action",
+        "impersonator__username",
+        "target_user__username",
+        "impersonator_username_snapshot",
+        "target_user_username_snapshot",
+        "tenant_id",
+    )
     readonly_fields = (
         "impersonator",
         "target_user",
+        "impersonator_id_snapshot",
+        "target_user_id_snapshot",
+        "impersonator_username_snapshot",
+        "target_user_username_snapshot",
         "action",
         "details",
         "ip_address",
