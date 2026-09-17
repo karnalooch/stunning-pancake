@@ -40,6 +40,7 @@ import {
   TrackingState,
   type TrackingStats,
 } from './gpsSyncStorage';
+import { initializeGpsStorage } from './gpsEncryptedStorage';
 import { saveLocalRideSnapshot } from './gpsLocalExport';
 import { finalizeActivityWithRetry } from './gpsFinalization';
 import {
@@ -166,7 +167,7 @@ async function finalizeActivity(activityId: number, distanceM: number): Promise<
 }
 
 export async function retryPendingSessionCreate(): Promise<number | null> {
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   if (!storage) return null;
   const pending = loadPendingSession(storage);
   if (!pending) return null;
@@ -208,7 +209,7 @@ export async function retryPendingSessionCreate(): Promise<number | null> {
 }
 
 export async function retryPendingFinalization(): Promise<boolean> {
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   if (!storage) return false;
   const pending = loadPendingFinalization(storage);
   if (!pending) return true;
@@ -242,7 +243,7 @@ export async function retryPendingFinalization(): Promise<boolean> {
 }
 
 export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   const empty: RecoveryResult = {
     needsResumeUi: false,
     pendingBuffer: 0,
@@ -298,7 +299,7 @@ export function isRideTrackingActive(): boolean {
 
 /** Restart Expo location task after app kill if MMKV still marks an active ride. */
 export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   if (!storage) return false;
   const state = loadTrackingState(storage);
   if (!state?.isTracking || !state.activityId) return false;
@@ -335,6 +336,7 @@ export function clearTrackingRecoveryPending(): void {
 }
 
 export async function runManualGpsRecovery(): Promise<boolean> {
+  if (!(await initializeGpsStorage())) return false;
   await retryPendingSessionCreate();
   await processGpsOutbox();
   await uploadBufferSnapshot();
@@ -413,9 +415,9 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
     return;
   }
 
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   if (!storage) {
-    firebaseCapture(new Error('Durable GPS storage unavailable'), 'GPS_STORAGE_UNAVAILABLE');
+    firebaseCapture(new Error('Durable encrypted GPS storage unavailable'), 'GPS_STORAGE_UNAVAILABLE');
     return;
   }
 
@@ -598,9 +600,9 @@ export class GpsSyncManager {
     activityId: number,
     resolution: PollingResolution = PollingResolution.BALANCED,
   ): Promise<void> {
-    const storage = getGpsStorage();
+    const storage = await initializeGpsStorage();
     if (!storage) {
-      throw new Error('Durable GPS storage unavailable');
+      throw new Error('Durable encrypted GPS storage unavailable');
     }
 
     const { status: foregroundStatus } = await Location.requestForegroundPermissionsAsync();
@@ -661,7 +663,7 @@ export class GpsSyncManager {
   }
 
   async setResolution(resolution: PollingResolution): Promise<void> {
-    const storage = getGpsStorage();
+    const storage = await initializeGpsStorage();
     if (!storage) return;
     const state = loadTrackingState(storage);
     if (!state?.isTracking) return;
@@ -689,9 +691,9 @@ export class GpsSyncManager {
       this._statsCheckTimer = null;
     }
 
-    const storage = getGpsStorage();
+    const storage = await initializeGpsStorage();
     if (!storage) {
-      throw new Error('Durable GPS storage unavailable while stopping ride');
+      throw new Error('Durable encrypted GPS storage unavailable while stopping ride');
     }
 
     const state = loadTrackingState(storage);
