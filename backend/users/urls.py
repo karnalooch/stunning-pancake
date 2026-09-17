@@ -8,6 +8,7 @@ from .mfa_views import (
     mfa_status_view,
     mfa_verify_session_view,
 )
+from .pilot_profile import PilotSafeUserProfileView
 from .views import (
     AuditLogListView,
     ImpersonateUserView,
@@ -29,13 +30,12 @@ from .views import (
     UserDetailView,
     UserListView,
     UserPreferencesView,
-    UserProfileView,
     UserUpdateView,
 )
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
-    path("profile/", UserProfileView.as_view(), name="profile"),
+    path("profile/", PilotSafeUserProfileView.as_view(), name="profile"),
     path("preferences/", UserPreferencesView.as_view(), name="user-preferences"),
     path("push/register/", PushTokenRegisterView.as_view(), name="user-push-register"),
     path("password/change/", PasswordChangeView.as_view(), name="password-change"),
