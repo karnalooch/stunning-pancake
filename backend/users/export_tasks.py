@@ -20,6 +20,7 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
     from activities.gpx_export import linestring_to_gpx
     from activities.gpx_forensics import is_simulated_activity
     from activities.gpx_storage import presigned_download_url, store_export
+    from users.data_lifecycle import RAW_GPS_RETENTION_DAYS, retained_gps_rows_for_user
     from users.export_models import UserDataExport
 
     User = get_user_model()
@@ -45,13 +46,40 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
         "exported_at": timezone.now().isoformat(),
     }
 
+    raw_gps = retained_gps_rows_for_user(user.id)
+    manifest = {
+        "raw_gps_retention_days": RAW_GPS_RETENTION_DAYS,
+        "raw_gps_points": len(raw_gps),
+        "route_source": "finalized Activity.route_path after durable reconciliation",
+        "raw_gps_source": "privacy-filtered gps_points still inside the retention window",
+    }
+
     buf = BytesIO()
     activity_count = 0
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("profile.json", json.dumps(profile, indent=2))
-        for activity in user.activities.filter(route_path__isnull=False).order_by("-start_time")[
-            :200
-        ]:
+        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+        zf.writestr("raw_gps.json", json.dumps(raw_gps, indent=2))
+
+        for activity in user.activities.order_by("-start_time").iterator():
+            activity_count += 1
+            has_canonical_route = activity.end_time is not None and activity.route_path is not None
+            metadata = {
+                "id": activity.id,
+                "type": activity.type,
+                "start_time": activity.start_time.isoformat(),
+                "end_time": activity.end_time.isoformat() if activity.end_time else None,
+                "distance": activity.distance,
+                "has_canonical_route": has_canonical_route,
+                "route_state": "canonical" if has_canonical_route else "pending_or_unavailable",
+            }
+            zf.writestr(
+                f"activities/{activity.id}.json",
+                json.dumps(metadata, indent=2),
+            )
+
+            if not has_canonical_route:
+                continue
             try:
                 gpx = linestring_to_gpx(
                     activity.route_path,
@@ -60,23 +88,8 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
                     simulated=is_simulated_activity(activity),
                 )
                 zf.writestr(f"activities/{activity.id}.gpx", gpx)
-                activity_count += 1
             except Exception as exc:
                 logger.warning("export.skip_gpx activity=%s err=%s", activity.id, exc)
-                zf.writestr(
-                    f"activities/{activity.id}.json",
-                    json.dumps(
-                        {
-                            "id": activity.id,
-                            "type": activity.type,
-                            "start_time": activity.start_time.isoformat(),
-                            "distance": activity.distance,
-                            "gpx_error": str(exc),
-                        },
-                        indent=2,
-                    ),
-                )
-                activity_count += 1
 
     key = f"exports/{user_id}/{job_id}.zip"
     uri = store_export(key, buf.getvalue())
@@ -94,6 +107,7 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
         "job_id": job_id,
         "user_id": user_id,
         "activity_count": activity_count,
+        "raw_gps_points": len(raw_gps),
         "storage_uri": uri,
         "presigned_url": presigned,
         "ttl_hours": 24,

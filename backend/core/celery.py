@@ -28,6 +28,7 @@ app.conf.task_routes = {
     "users.push_tasks.send_city_ranking_push": {"queue": "notifications"},
     "users.push_tasks.send_quest_push": {"queue": "notifications"},
     "users.push_tasks.send_season_end_push": {"queue": "notifications"},
+    "users.tasks.enforce_data_retention": {"queue": "default"},
     "activities.wipe_tasks.*": {"queue": "default"},
     "activities.simulator_tasks.route_live_ride_task": {"queue": "routing"},
     "activities.simulator_tasks.*": {"queue": "simulation"},
@@ -42,6 +43,14 @@ app.conf.task_default_priority = 5
 # ---------------------------------------------------------------------------
 
 app.conf.beat_scheduler = "django_celery_beat.schedulers:DatabaseScheduler"
+app.conf.beat_schedule = {
+    **(app.conf.beat_schedule or {}),
+    "privacy-data-retention-daily": {
+        "task": "users.tasks.enforce_data_retention",
+        "schedule": 86400.0,
+        "options": {"queue": "default"},
+    },
+}
 
 
 @app.task(bind=True, ignore_result=True)
