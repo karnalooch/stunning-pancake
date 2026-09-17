@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -21,6 +23,24 @@ def _ttl_hours() -> int:
         return int(os.getenv("RODO_EXPORT_TTL_HOURS", "24"))
     except ValueError:
         return 24
+
+
+def _export_response(job: UserDataExport, *, replayed: bool) -> Response:
+    ready = job.status == UserDataExport.STATUS_READY
+    return Response(
+        {
+            "status": "ready" if ready else "queued",
+            "job_id": job.job_id,
+            "message": "RODO export already available."
+            if ready
+            else "RODO export queued — poll GET /me/export/ or download when ready.",
+            "expires_at": job.expires_at.isoformat(),
+            "ttl_hours": _ttl_hours(),
+            "replayed": replayed,
+            "download_url": f"/api/users/me/export/{job.job_id}/download/" if ready else None,
+        },
+        status=status.HTTP_200_OK if ready else status.HTTP_202_ACCEPTED,
+    )
 
 
 @api_view(["GET", "POST"])
@@ -47,26 +67,41 @@ def user_data_export_view(request):
 
     from users.export_tasks import export_user_data_task
 
-    job_id = uuid.uuid4().hex[:12]
-    expires = timezone.now() + timezone.timedelta(hours=_ttl_hours())
-    UserDataExport.objects.create(
-        user=request.user,
-        job_id=job_id,
-        status=UserDataExport.STATUS_PENDING,
-        expires_at=expires,
-    )
-    export_user_data_task.delay(request.user.id, job_id)
+    now = timezone.now()
+    with transaction.atomic():
+        # Serialize export creation per user so concurrent retries cannot queue
+        # two expensive archives after the first response is lost.
+        get_user_model().objects.select_for_update().get(pk=request.user.pk)
+        existing = (
+            UserDataExport.objects.filter(
+                user=request.user,
+                expires_at__gt=now,
+                status__in=(
+                    UserDataExport.STATUS_PENDING,
+                    UserDataExport.STATUS_READY,
+                ),
+            )
+            .order_by("-created_at")
+            .first()
+        )
+        if existing:
+            return _export_response(existing, replayed=True)
 
-    return Response(
-        {
-            "status": "queued",
-            "job_id": job_id,
-            "message": "RODO export queued — poll GET /me/export/ or download when ready.",
-            "expires_at": expires.isoformat(),
-            "ttl_hours": _ttl_hours(),
-        },
-        status=status.HTTP_202_ACCEPTED,
-    )
+        job_id = uuid.uuid4().hex[:12]
+        expires = now + timezone.timedelta(hours=_ttl_hours())
+        job = UserDataExport.objects.create(
+            user=request.user,
+            job_id=job_id,
+            status=UserDataExport.STATUS_PENDING,
+            expires_at=expires,
+        )
+        transaction.on_commit(
+            lambda user_id=request.user.id, export_job_id=job_id: export_user_data_task.delay(
+                user_id, export_job_id
+            )
+        )
+
+    return _export_response(job, replayed=False)
 
 
 @api_view(["GET"])

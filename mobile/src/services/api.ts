@@ -206,11 +206,21 @@ export const PrivacyService = {
   deleteZone: (id: string) => api.delete(mobileActivityPaths.privacyZone(id)),
 };
 
+function createIdempotencyKey(prefix: string): string {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 export const RewardsService = {
   getBalance: () => api.get<{ points: number }>(API_PATHS_FULL.rewardsBalance).then((r) => r.data),
   getPools: () => api.get<RewardPool[]>(API_PATHS_FULL.rewardsPools).then((r) => r.data),
-  redeemVoucher: (poolId: number) =>
-    api.post(mobileActivityPaths.rewardsRedeem(poolId)).then((r) => r.data),
+  redeemVoucher: (poolId: number, idempotencyKey = createIdempotencyKey('redeem')) =>
+    api
+      .post(
+        mobileActivityPaths.rewardsRedeem(poolId),
+        {},
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+      )
+      .then((r) => r.data),
 };
 
 export const POIService = {

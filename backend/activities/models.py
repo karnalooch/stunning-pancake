@@ -41,6 +41,7 @@ class Activity(models.Model):
     end_time = models.DateTimeField(null=True, blank=True)
     distance = models.FloatField(help_text="Distance in meters", default=0.0)
     duration = models.DurationField(null=True, blank=True)
+    client_request_id = models.CharField(max_length=64, null=True, blank=True)
 
     # Anti-cheat status
     is_verified = models.BooleanField(default=False)
@@ -101,6 +102,13 @@ class Activity(models.Model):
                 fields=["user", "external_source", "external_id"],
                 condition=models.Q(external_id__isnull=False) & ~models.Q(external_id=""),
                 name="activities_activity_user_external_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "client_request_id"],
+                condition=(
+                    models.Q(client_request_id__isnull=False) & ~models.Q(client_request_id="")
+                ),
+                name="activities_activity_user_client_request_unique",
             ),
         ]
         indexes = [

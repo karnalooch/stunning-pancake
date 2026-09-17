@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
@@ -90,6 +91,12 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     user_info = serializers.SerializerMethodField()
     duration = serializers.SerializerMethodField()
+    client_request_id = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=64,
+        write_only=True,
+    )
 
     class Meta:
         model = Activity
@@ -105,6 +112,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "is_verified",
             "verification_score",
             "route_path",
+            "client_request_id",
         )
         read_only_fields = ("id", "user", "is_verified", "verification_score")
 
@@ -116,14 +124,25 @@ class ActivitySerializer(serializers.ModelSerializer):
             return obj.duration.total_seconds()
         return None
 
-    def create(self, validated_data):
-        """Bind every API-created activity to the authenticated user's tenant.
+    @staticmethod
+    def _validate_replay(existing: Activity, validated_data: dict) -> Activity:
+        if (
+            existing.type != validated_data.get("type")
+            or existing.start_time != validated_data.get("start_time")
+            or existing.tenant_id != validated_data.get("tenant_id")
+        ):
+            raise serializers.ValidationError({"client_request_id": "idempotency_conflict"})
+        return existing
 
-        ``ActivityViewSet.perform_create`` injects ``user=request.user`` into
-        ``serializer.save``.  The tenant is never accepted from the client and
-        a tenant-less user is rejected fail-closed: an ``Activity`` with
-        ``tenant_id=NULL`` would fall outside the canonical FORCE-RLS tenant
-        boundary and could disappear from tenant-scoped operational paths.
+    def create(self, validated_data):
+        """Bind every API-created activity to its tenant and dedupe create retries.
+
+        The mobile durability queue retries the same ``start_time`` after a lost
+        response. When a client does not send an explicit request id, that stable
+        timestamp becomes the request identity so a retry replays the original row.
+        A database constraint is the final race-proof boundary. Reusing a request
+        id for a different payload fails closed instead of silently returning an
+        unrelated activity.
         """
 
         user = validated_data.get("user")
@@ -131,7 +150,33 @@ class ActivitySerializer(serializers.ModelSerializer):
         if tenant_id is None:
             raise serializers.ValidationError({"tenant": "tenant_context_required"})
         validated_data["tenant_id"] = tenant_id
-        return super().create(validated_data)
+
+        client_request_id = validated_data.get("client_request_id")
+        if not client_request_id:
+            start_time = validated_data.get("start_time")
+            if start_time is not None:
+                client_request_id = f"start:{start_time.isoformat()}"
+                validated_data["client_request_id"] = client_request_id
+
+        if not client_request_id:
+            return super().create(validated_data)
+
+        existing = Activity.objects.filter(
+            user=user,
+            client_request_id=client_request_id,
+        ).first()
+        if existing:
+            return self._validate_replay(existing, validated_data)
+
+        try:
+            with transaction.atomic():
+                return super().create(validated_data)
+        except IntegrityError:
+            existing = Activity.objects.get(
+                user=user,
+                client_request_id=client_request_id,
+            )
+            return self._validate_replay(existing, validated_data)
 
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
@@ -140,10 +185,16 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
     """
 
     event_id = serializers.IntegerField(required=False, write_only=True)
+    client_request_id = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=64,
+        write_only=True,
+    )
 
     class Meta:
         model = Activity
-        fields = ("type", "start_time", "event_id")
+        fields = ("type", "start_time", "event_id", "client_request_id")
 
     def validate_type(self, value: str) -> str:
         normalized = normalize_activity_type(value)

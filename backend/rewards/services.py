@@ -16,6 +16,7 @@ import secrets
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
+from django.contrib.auth import get_user_model
 from django.db import transaction
 
 if TYPE_CHECKING:
@@ -50,19 +51,9 @@ class RewardsService:
         return total or 0
 
     @classmethod
+    @transaction.atomic
     def award_for_activity(cls, activity_id: int) -> int:
-        """
-        Awards points for a newly verified activity.
-        Points = floor(distance_km * POINTS_PER_KM).
-
-        Idempotent: will not award points twice for the same activity.
-
-        Args:
-            activity_id: Activity primary key.
-
-        Returns:
-            Points awarded (0 if already credited).
-        """
+        """Award points once for a verified activity, including concurrent retries."""
         from activities.models import Activity
         from rewards.models import PointsLedger
 
@@ -72,8 +63,15 @@ class RewardsService:
             logger.error("award_for_activity: activity_id=%d not found", activity_id)
             return 0
 
+        # Serialize ledger writes per user. The re-check below then makes the
+        # existing reference_id contract safe even if two workers run together.
+        get_user_model().objects.select_for_update().get(pk=activity.user_id)
         ref = f"activity:{activity_id}"
-        if PointsLedger.objects.filter(reference_id=ref).exists():
+        if PointsLedger.objects.filter(
+            user_id=activity.user_id,
+            reason="ACTIVITY_VERIFIED",
+            reference_id=ref,
+        ).exists():
             logger.debug("award_for_activity: already credited activity_id=%d", activity_id)
             return 0
 
@@ -98,20 +96,40 @@ class RewardsService:
 
     @classmethod
     @transaction.atomic
-    def redeem_voucher(cls, user_id: int, pool_id: int) -> Voucher | None:
-        """
-        Atomically redeems one voucher from a pool for the user.
+    def redeem_voucher(
+        cls,
+        user_id: int,
+        pool_id: int,
+        *,
+        idempotency_key: str,
+    ) -> Voucher | None:
+        """Redeem exactly once for one user/pool/idempotency key.
 
-        Uses SELECT FOR UPDATE to prevent double-redemption under load.
-
-        Args:
-            user_id: Django User primary key.
-            pool_id: VoucherPool primary key.
-
-        Returns:
-            The redeemed Voucher instance, or None on failure.
+        A repeated request with the same key returns the originally assigned
+        voucher and does not append a second spend ledger row. Locking the user
+        also prevents concurrent redemptions in different pools from spending
+        the same balance twice.
         """
         from rewards.models import PointsLedger, Voucher, VoucherPool
+
+        key = (idempotency_key or "").strip()
+        if not key or len(key) > 64:
+            logger.warning("redeem_voucher: invalid idempotency key user=%d", user_id)
+            return None
+
+        get_user_model().objects.select_for_update().get(pk=user_id)
+
+        existing = (
+            Voucher.objects.select_related("pool")
+            .filter(
+                pool_id=pool_id,
+                user_id=user_id,
+                redemption_request_id=key,
+            )
+            .first()
+        )
+        if existing:
+            return existing
 
         try:
             pool = VoucherPool.objects.get(pk=pool_id)
@@ -134,7 +152,6 @@ class RewardsService:
             )
             return None
 
-        # Claim an unassigned voucher — SELECT FOR UPDATE prevents race conditions
         voucher = (
             Voucher.objects.select_for_update(skip_locked=True)
             .filter(pool=pool, user__isnull=True)
@@ -146,7 +163,8 @@ class RewardsService:
 
         voucher.user_id = user_id
         voucher.redeemed_at = now
-        voucher.save(update_fields=["user_id", "redeemed_at"])
+        voucher.redemption_request_id = key
+        voucher.save(update_fields=["user_id", "redeemed_at", "redemption_request_id"])
 
         PointsLedger.objects.create(
             user_id=user_id,

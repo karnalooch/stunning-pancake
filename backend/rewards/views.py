@@ -196,13 +196,20 @@ def sponsor_stats_view(request: Request) -> Response:
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def redeem_view(request: Request, pool_id: int) -> Response:
-    """
-    Atomically redeems one voucher from the specified pool.
-    Deducts points from the user's balance.
-    """
+    """Atomically redeem one voucher with a retry-stable request identity."""
+    idempotency_key = (
+        request.headers.get("Idempotency-Key") or request.data.get("idempotency_key") or ""
+    ).strip()
+    if not idempotency_key or len(idempotency_key) > 64:
+        return Response(
+            {"detail": "Idempotency-Key header (1..64 chars) is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     voucher = RewardsService.redeem_voucher(
         user_id=request.user.pk,
         pool_id=pool_id,
+        idempotency_key=idempotency_key,
     )
     if voucher is None:
         return Response(

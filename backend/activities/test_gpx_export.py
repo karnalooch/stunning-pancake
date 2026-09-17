@@ -1,9 +1,16 @@
-"""GPX F1 — export from route_path."""
+"""GPX F1 plus T74 activity-create idempotency blocking coverage."""
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString
+from rest_framework import serializers
 
 from activities.gpx_export import linestring_to_gpx
+from activities.models import Activity
+from activities.serializers import ActivitySerializer
+from users.models import Tenant
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -46,3 +53,49 @@ def test_golden_gpx_fingerprint_stable():
     assert route_fingerprint(route) == route_fingerprint(route)
     assert gpx_a.count("<trkpt") == len(GOLDEN_COORDS)
     assert gpx_a.count("<trkpt") == gpx_b.count("<trkpt")
+
+
+@pytest.mark.django_db
+def test_t74_activity_create_retry_replays_original_row():
+    tenant = Tenant.objects.create(name="T74 Session City")
+    user = User.objects.create_user(username="t74-session", password="x", tenant=tenant)
+    payload = {"type": "BIKE", "start_time": "2026-09-17T20:00:00Z"}
+
+    first = ActivitySerializer(data=payload)
+    assert first.is_valid(), first.errors
+    activity_a = first.save(user=user)
+
+    retry = ActivitySerializer(data=payload)
+    assert retry.is_valid(), retry.errors
+    activity_b = retry.save(user=user)
+
+    assert activity_b.pk == activity_a.pk
+    assert Activity.objects.filter(user=user).count() == 1
+
+
+@pytest.mark.django_db
+def test_t74_activity_request_id_rejects_payload_conflict():
+    tenant = Tenant.objects.create(name="T74 Conflict City")
+    user = User.objects.create_user(username="t74-conflict", password="x", tenant=tenant)
+    first = ActivitySerializer(
+        data={
+            "type": "BIKE",
+            "start_time": "2026-09-17T20:00:00Z",
+            "client_request_id": "ride-intent-123",
+        }
+    )
+    assert first.is_valid(), first.errors
+    first.save(user=user)
+
+    conflicting = ActivitySerializer(
+        data={
+            "type": "RUN",
+            "start_time": "2026-09-17T20:05:00Z",
+            "client_request_id": "ride-intent-123",
+        }
+    )
+    assert conflicting.is_valid(), conflicting.errors
+
+    with pytest.raises(serializers.ValidationError):
+        conflicting.save(user=user)
+    assert Activity.objects.filter(user=user).count() == 1

@@ -1,6 +1,6 @@
 """
 Rewards & Voucher Marketplace Models (Milestone 4)
-====================================================
+=====================================================
 Constitution §18: Financial and Social Ecosystem
 
 Models:
@@ -115,6 +115,7 @@ class Voucher(models.Model):
         related_name="vouchers",
     )
     redeemed_at = models.DateTimeField(null=True, blank=True)
+    redemption_request_id = models.CharField(max_length=64, null=True, blank=True)
     is_used = models.BooleanField(default=False)  # Used at sponsor POS
 
     def __str__(self) -> str:
@@ -122,6 +123,14 @@ class Voucher(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["user", "is_used"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "pool", "redemption_request_id"],
+                condition=models.Q(redemption_request_id__isnull=False)
+                & ~models.Q(redemption_request_id=""),
+                name="rewards_voucher_user_pool_request_unique",
+            )
+        ]
 
 
 class PointsLedger(models.Model):
@@ -155,6 +164,14 @@ class PointsLedger(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user", "created_at"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "reason", "reference_id"],
+                condition=models.Q(reason__in=("ACTIVITY_VERIFIED", "VOUCHER_REDEEM"))
+                & ~models.Q(reference_id=""),
+                name="rewards_ledger_critical_effect_unique",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.user_id} {'+' if self.delta >= 0 else ''}{self.delta} ({self.reason})"

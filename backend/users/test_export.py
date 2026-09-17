@@ -1,4 +1,4 @@
-"""RODO export jobs and T72 privacy lifecycle blocking coverage."""
+"""RODO export jobs and T72/T74 privacy lifecycle blocking coverage."""
 
 from pathlib import Path
 
@@ -89,6 +89,44 @@ def test_export_download_requires_owner(api_client, tenant):
     url = reverse("user-data-export-download", kwargs={"job_id": job.job_id})
     res = api_client.get(url)
     assert res.status_code == 404
+
+
+def test_t74_export_post_replays_active_job(
+    monkeypatch,
+    api_client,
+    tenant,
+    django_capture_on_commit_callbacks,
+):
+    from django.contrib.auth import get_user_model
+
+    from users import export_tasks
+
+    user = get_user_model().objects.create_user(
+        username="export-retry",
+        email="export-retry@example.invalid",
+        password="x",
+        tenant=tenant,
+    )
+    delayed = []
+    monkeypatch.setattr(
+        export_tasks.export_user_data_task,
+        "delay",
+        lambda user_id, job_id: delayed.append((user_id, job_id)),
+    )
+    api_client.force_authenticate(user=user)
+    url = reverse("user-data-export")
+
+    with django_capture_on_commit_callbacks(execute=True):
+        first = api_client.post(url)
+    second = api_client.post(url)
+
+    assert first.status_code == 202
+    assert second.status_code == 202
+    assert first.data["replayed"] is False
+    assert second.data["replayed"] is True
+    assert second.data["job_id"] == first.data["job_id"]
+    assert UserDataExport.objects.filter(user=user).count() == 1
+    assert delayed == [(user.id, first.data["job_id"])]
 
 
 def test_t72_retention_task_is_scheduled_daily():
