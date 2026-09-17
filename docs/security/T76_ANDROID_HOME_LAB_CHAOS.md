@@ -44,17 +44,18 @@ Do not run T76 against a production database.
 From the repository root:
 
 ~~~bash
-python scripts/t76_chaos.py preflight
+python scripts/t76_chaos.py preflight --installed-sha <full-git-sha-used-for-the-installed-build>
 ~~~
 
 If more than one ADB device is attached:
 
 ~~~bash
-python scripts/t76_chaos.py preflight --serial <adb-serial>
+python scripts/t76_chaos.py preflight --serial <adb-serial> --installed-sha <full-git-sha-used-for-the-installed-build>
 ~~~
 
-Preflight verifies the installed package, creates these USB reverse mappings and checks
-the home lab:
+Preflight refuses to proceed unless the operator-supplied installed-build SHA exactly
+matches the checked-out repository SHA. It then verifies the installed package, creates
+these USB reverse mappings and checks the home lab:
 
 ~~~text
 tcp:8000 -> tcp:8000   Django API
