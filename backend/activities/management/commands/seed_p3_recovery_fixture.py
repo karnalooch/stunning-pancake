@@ -181,21 +181,25 @@ class Command(BaseCommand):
                 coordinates=coordinates_b,
             )
 
-            AuditLog.objects.filter(action__startswith="P3_RECOVERY_").delete()
+            # T70 makes audit history append-only.  The recovery fixture therefore
+            # reuses its two deterministic synthetic audit rows instead of
+            # deleting/re-writing them on every drill.  Their payload is stable;
+            # RPO measurement is derived from GPS timestamps, not audit timestamps.
             for admin, athlete, tenant, suffix in (
                 (admin_a, athlete_a, tenant_a, "A"),
                 (admin_b, athlete_b, tenant_b, "B"),
             ):
-                log = AuditLog.objects.create(
-                    impersonator=admin,
-                    target_user=athlete,
-                    tenant_id=str(tenant.id),
+                AuditLog.objects.get_or_create(
                     action=f"P3_RECOVERY_FIXTURE_{suffix}",
-                    details={"synthetic": True, "tenant": suffix},
-                    ip_address="127.0.0.1",
-                    status_code=200,
+                    defaults={
+                        "impersonator": admin,
+                        "target_user": athlete,
+                        "tenant_id": str(tenant.id),
+                        "details": {"synthetic": True, "tenant": suffix},
+                        "ip_address": "127.0.0.1",
+                        "status_code": 200,
+                    },
                 )
-                AuditLog.objects.filter(pk=log.pk).update(timestamp=anchor)
 
             gps_rows = []
             for activity, athlete, suffix, coordinates in (
