@@ -7,6 +7,7 @@ Status: implementation contract for takeover tranche T72 / DS-018, DS-019 and DS
 - Raw privacy-filtered telemetry in `gps_points`: **30 days** from point time.
 - Durable ingest receipts: **30 days** from `acked_at`; after that they are no longer needed to prove a ride that has already passed durable finalization.
 - Finalized `Activity.route_path`: retained with the activity as the derived canonical route. It is not raw telemetry and is deleted with the owning activity/account.
+- Materialized activity GPX archives referenced by `Activity.gpx_storage_key`: retained with the activity lifecycle and physically removed when the owning account is deleted.
 - User export archives: application access expires at the existing export TTL (24 hours by default); the daily retention task removes the materialized object and tracking row after expiry.
 - `AuditLog`: not shortened by T72. It remains governed by the append-only T70 security contract.
 - Backups: T72 does not pretend active-database deletion instantly rewrites historical backup media. Backup retention, encryption and disposal are a T75/P3-G operational contract. A restore must re-apply the active retention/deletion policy before restored data can become a live system.
@@ -15,12 +16,13 @@ Status: implementation contract for takeover tranche T72 / DS-018, DS-019 and DS
 
 Deleting a Django `User` must also remove personal data that Django foreign-key cascades cannot see:
 
-1. materialized RODO export objects are removed first;
-2. raw `gps_points` rows for the user are deleted;
-3. `telemetry_ingest_receipts` rows for the user are deleted;
-4. the normal Django user cascade then deletes owned application rows such as activities and export-job records.
+1. materialized RODO export objects are removed;
+2. materialized activity GPX archives referenced by the user's activities are removed;
+3. raw `gps_points` rows for the user are deleted;
+4. `telemetry_ingest_receipts` rows for the user are deleted;
+5. the normal Django user cascade then deletes owned application rows such as activities and export-job records.
 
-Storage deletion is fail-closed for account deletion: if an external export object cannot be removed, the user-row deletion aborts rather than claiming complete deletion while a private archive remains materialized.
+External storage deletion is fail-closed for account deletion: if an export or activity GPX object cannot be removed, the user-row deletion aborts rather than claiming complete deletion while a private archive remains materialized.
 
 The hook is registered on `pre_delete(User)`, so admin/API/programmatic user deletion follows the same lifecycle rather than relying only on one REST view.
 
