@@ -21,4 +21,13 @@ class Migration(migrations.Migration):
                 name="rewards_voucher_user_pool_request_unique",
             ),
         ),
+        migrations.AddConstraint(
+            model_name="pointsledger",
+            constraint=models.UniqueConstraint(
+                condition=models.Q(reason__in=("ACTIVITY_VERIFIED", "VOUCHER_REDEEM"))
+                & ~models.Q(reference_id=""),
+                fields=("user", "reason", "reference_id"),
+                name="rewards_ledger_critical_effect_unique",
+            ),
+        ),
     ]
