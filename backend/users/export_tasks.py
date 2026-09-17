@@ -50,7 +50,7 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
     manifest = {
         "raw_gps_retention_days": RAW_GPS_RETENTION_DAYS,
         "raw_gps_points": len(raw_gps),
-        "route_source": "Activity.route_path (canonical derived route after durable reconciliation)",
+        "route_source": "finalized Activity.route_path after durable reconciliation",
         "raw_gps_source": "privacy-filtered gps_points still inside the retention window",
     }
 
@@ -63,19 +63,22 @@ def export_user_data_task(user_id: int, job_id: str) -> dict:
 
         for activity in user.activities.order_by("-start_time").iterator():
             activity_count += 1
+            has_canonical_route = activity.end_time is not None and activity.route_path is not None
             metadata = {
                 "id": activity.id,
                 "type": activity.type,
                 "start_time": activity.start_time.isoformat(),
+                "end_time": activity.end_time.isoformat() if activity.end_time else None,
                 "distance": activity.distance,
-                "has_canonical_route": activity.route_path is not None,
+                "has_canonical_route": has_canonical_route,
+                "route_state": "canonical" if has_canonical_route else "pending_or_unavailable",
             }
             zf.writestr(
                 f"activities/{activity.id}.json",
                 json.dumps(metadata, indent=2),
             )
 
-            if activity.route_path is None:
+            if not has_canonical_route:
                 continue
             try:
                 gpx = linestring_to_gpx(
