@@ -108,7 +108,12 @@ def redact_text(value: str) -> str:
     return _KEY_VALUE_RE.sub(lambda match: f"{match.group('prefix')}{REDACTED}", text)
 
 
-def redact_value(value: Any, *, _depth: int = 0, _seen: set[int] | None = None) -> Any:
+def redact_value(
+    value: Any,
+    *,
+    _depth: int = 0,
+    _seen: set[int] | None = None,
+) -> Any:
     """Recursively redact structured values without mutating the caller's object."""
 
     if _depth >= _MAX_DEPTH:
@@ -135,7 +140,9 @@ def redact_value(value: Any, *, _depth: int = 0, _seen: set[int] | None = None) 
                     result[key] = redact_value(item, _depth=_depth + 1, _seen=_seen)
             return result
         if isinstance(value, tuple):
-            return tuple(redact_value(item, _depth=_depth + 1, _seen=_seen) for item in value)
+            return tuple(
+                redact_value(item, _depth=_depth + 1, _seen=_seen) for item in value
+            )
         if isinstance(value, list):
             return [redact_value(item, _depth=_depth + 1, _seen=_seen) for item in value]
         if isinstance(value, set):
@@ -175,7 +182,12 @@ def _redact_log_record(record: logging.LogRecord) -> logging.LogRecord:
         record.stack_info = redact_text(record.stack_info)
 
     for field, value in list(record.__dict__.items()):
-        if field in _STANDARD_LOG_FIELDS or field in {"msg", "args", "exc_info", "exc_text"}:
+        if field in _STANDARD_LOG_FIELDS or field in {
+            "msg",
+            "args",
+            "exc_info",
+            "exc_text",
+        }:
             continue
         if _normalise_key(field) in _REDACT_KEYS:
             record.__dict__[field] = REDACTED
