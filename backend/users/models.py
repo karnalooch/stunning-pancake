@@ -210,9 +210,13 @@ class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
         return models.QuerySet.delete(qs)
 
     def set_recovery_fixture_timestamp(self, *, pk, timestamp):
-        qs = super().get_queryset().filter(
-            pk=pk,
-            action__startswith=self.RECOVERY_FIXTURE_PREFIX,
+        qs = (
+            super()
+            .get_queryset()
+            .filter(
+                pk=pk,
+                action__startswith=self.RECOVERY_FIXTURE_PREFIX,
+            )
         )
         if not qs.exists():
             raise ValidationError("Audit-log maintenance is limited to P3 recovery fixtures.")
