@@ -198,9 +198,7 @@ def sponsor_stats_view(request: Request) -> Response:
 def redeem_view(request: Request, pool_id: int) -> Response:
     """Atomically redeem one voucher with a retry-stable request identity."""
     idempotency_key = (
-        request.headers.get("Idempotency-Key")
-        or request.data.get("idempotency_key")
-        or ""
+        request.headers.get("Idempotency-Key") or request.data.get("idempotency_key") or ""
     ).strip()
     if not idempotency_key or len(idempotency_key) > 64:
         return Response(
