@@ -42,6 +42,10 @@ class Activity(models.Model):
     distance = models.FloatField(help_text="Distance in meters", default=0.0)
     duration = models.DurationField(null=True, blank=True)
 
+    # Client-generated request identity for crash-safe/retry-safe first-party session starts.
+    # It is nullable so historical/wearable activities do not need a synthetic value.
+    client_request_id = models.CharField(max_length=64, null=True, blank=True)
+
     # Anti-cheat status
     is_verified = models.BooleanField(default=False)
     verification_score = models.FloatField(default=0.0)
@@ -101,6 +105,11 @@ class Activity(models.Model):
                 fields=["user", "external_source", "external_id"],
                 condition=models.Q(external_id__isnull=False) & ~models.Q(external_id=""),
                 name="activities_activity_user_external_unique",
+            ),
+            models.UniqueConstraint(
+                fields=["user", "client_request_id"],
+                condition=models.Q(client_request_id__isnull=False) & ~models.Q(client_request_id=""),
+                name="activities_activity_user_client_request_unique",
             ),
         ]
         indexes = [
@@ -169,192 +178,75 @@ class POI(models.Model):
 
 class Voucher(models.Model):
     """
-    Redeemable reward linked to a POI.
+    Legacy voucher model used by POI proximity reward flow.
     """
 
-    poi = models.ForeignKey(POI, on_delete=models.CASCADE, related_name="vouchers")
-    code = models.CharField(max_length=50, unique=True)
-    discount_value = models.CharField(max_length=100)
-    is_redeemed = models.BooleanField(default=False)
-    redeemed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True
-    )
-
-    expiry_date = models.DateTimeField()
+    sponsor = models.ForeignKey("rewards.Sponsor", on_delete=models.CASCADE)
+    code = models.CharField(max_length=100, unique=True)
+    description = models.CharField(max_length=255, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.code} - {self.poi.name}"
+        return self.code
 
 
 class WearableIntegration(models.Model):
-    """
-    Stores OAuth credentials for external wearable services (Milestone 4).
-    Tokens are encrypted at rest using Fernet (AES-128-CBC + HMAC-SHA256).
-    """
-
-    SERVICE_CHOICES = (
-        ("STRAVA", "Strava"),
-        ("GARMIN", "Garmin"),
-        ("APPLE", "Apple HealthKit"),
-    )
+    SERVICES = (("STRAVA", "Strava"), ("GARMIN", "Garmin"))
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wearables"
     )
-    service = models.CharField(max_length=20, choices=SERVICE_CHOICES)
-
-    # OAuth 2.0 — encrypted at rest via save() override
-    access_token = models.TextField()
-    refresh_token = models.TextField(null=True, blank=True)
+    service = models.CharField(max_length=20, choices=SERVICES)
+    access_token_encrypted = models.BinaryField()
+    refresh_token_encrypted = models.BinaryField(null=True, blank=True)
     expires_at = models.DateTimeField(null=True, blank=True)
-
-    # External ID
-    external_id = models.CharField(max_length=200, null=True, blank=True)
-
     is_active = models.BooleanField(default=True)
-    last_sync = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ("user", "service")
 
+    def set_access_token(self, token: str) -> None:
+        self.access_token_encrypted = _fernet.encrypt(token.encode())
+
+    def get_access_token(self) -> str:
+        try:
+            return _fernet.decrypt(bytes(self.access_token_encrypted)).decode()
+        except (InvalidToken, TypeError, ValueError) as exc:
+            logger.warning("Unable to decrypt wearable access token for integration %s", self.pk)
+            raise ValueError("Unable to decrypt wearable access token") from exc
+
+    def set_refresh_token(self, token: str | None) -> None:
+        self.refresh_token_encrypted = _fernet.encrypt(token.encode()) if token else None
+
+    def get_refresh_token(self) -> str | None:
+        if not self.refresh_token_encrypted:
+            return None
+        try:
+            return _fernet.decrypt(bytes(self.refresh_token_encrypted)).decode()
+        except (InvalidToken, TypeError, ValueError) as exc:
+            logger.warning("Unable to decrypt wearable refresh token for integration %s", self.pk)
+            raise ValueError("Unable to decrypt wearable refresh token") from exc
+
     def __str__(self):
-        return f"{self.user.username} - {self.service}"
-
-    def save(self, *args, **kwargs):
-        # Encrypt tokens at rest. Always attempt to decrypt first to avoid
-        # double-encrypting already encrypted tokens loaded from the DB.
-        if self.access_token:
-            try:
-                _fernet.decrypt(self.access_token.encode())
-            except (InvalidToken, UnicodeDecodeError):
-                self.access_token = _fernet.encrypt(self.access_token.encode()).decode()
-        if self.refresh_token:
-            try:
-                _fernet.decrypt(self.refresh_token.encode())
-            except (InvalidToken, UnicodeDecodeError):
-                self.refresh_token = _fernet.encrypt(self.refresh_token.encode()).decode()
-        super().save(*args, **kwargs)
-
-    @property
-    def decrypted_access_token(self):
-        if not self.access_token:
-            return None
-        try:
-            return _fernet.decrypt(self.access_token.encode()).decode()
-        except (InvalidToken, UnicodeDecodeError):
-            logger.error(f"Failed to decrypt access_token for WearableIntegration id={self.pk}")
-            return None
-
-    @property
-    def decrypted_refresh_token(self):
-        if not self.refresh_token:
-            return None
-        try:
-            return _fernet.decrypt(self.refresh_token.encode()).decode()
-        except (InvalidToken, UnicodeDecodeError):
-            logger.error(f"Failed to decrypt refresh_token for WearableIntegration id={self.pk}")
-            return None
+        return f"{self.user_id}:{self.service}"
 
 
-class GarminSimulatorCredential(models.Model):
-    """Stores Garmin Connect login+password for simulated users (Fernet-encrypted)."""
-
-    user = models.OneToOneField(
+class BetaFeedback(models.Model):
+    user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="garmin_sim_credential",
+        related_name="beta_feedback",
     )
-    garmin_email = models.TextField()
-    garmin_password = models.TextField()
-    is_active = models.BooleanField(default=True)
+    rating = models.PositiveSmallIntegerField()
+    comment = models.TextField(blank=True, default="")
+    context = models.CharField(max_length=80, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=["is_active", "created_at"])]
-
-    def __str__(self):
-        return f"GarminSimCred for {self.user.username}"
-
-    def save(self, *args, **kwargs):
-        if self.garmin_email:
-            try:
-                _fernet.decrypt(self.garmin_email.encode())
-            except (InvalidToken, UnicodeDecodeError):
-                self.garmin_email = _fernet.encrypt(self.garmin_email.encode()).decode()
-        if self.garmin_password:
-            try:
-                _fernet.decrypt(self.garmin_password.encode())
-            except (InvalidToken, UnicodeDecodeError):
-                self.garmin_password = _fernet.encrypt(self.garmin_password.encode()).decode()
-        super().save(*args, **kwargs)
-
-    @property
-    def decrypted_email(self) -> str | None:
-        if not self.garmin_email:
-            return None
-        try:
-            return _fernet.decrypt(self.garmin_email.encode()).decode()
-        except (InvalidToken, UnicodeDecodeError):
-            logger.error(
-                "Failed to decrypt garmin_email for GarminSimulatorCredential id=%s", self.pk
-            )
-            return None
-
-    @property
-    def decrypted_password(self) -> str | None:
-        if not self.garmin_password:
-            return None
-        try:
-            return _fernet.decrypt(self.garmin_password.encode()).decode()
-        except (InvalidToken, UnicodeDecodeError):
-            logger.error(
-                "Failed to decrypt garmin_password for GarminSimulatorCredential id=%s", self.pk
-            )
-            return None
-
-
-class DiskAuditEvent(models.Model):
-    """Append-only audit log for Postgres disk guard actions."""
-
-    EVENT_TYPES = (
-        ("ok", "OK"),
-        ("warn", "Warning"),
-        ("pause_sim", "Pause simulation"),
-        ("block_writes", "Block sim writes"),
-        ("cleared", "Safeguards cleared"),
-        ("retention_cleanup", "Retention cleanup"),
-        ("preflight", "Preflight"),
-        ("manual", "Manual"),
-    )
-    SOURCE_CHOICES = (
-        ("cron", "Celery beat"),
-        ("manual", "Management command"),
-        ("simulator", "Simulator task"),
-        ("preflight", "Preflight / admin"),
-        ("api", "Admin API"),
-    )
-
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
-    event_type = models.CharField(max_length=32, choices=EVENT_TYPES, db_index=True)
-    used_gb = models.FloatField(null=True, blank=True)
-    budget_gb = models.FloatField(null=True, blank=True)
-    pct = models.FloatField(null=True, blank=True, help_text="used_gb / budget_gb")
-    action_taken = models.CharField(max_length=500)
-    source = models.CharField(max_length=64, choices=SOURCE_CHOICES, default="cron")
-
-    class Meta:
         ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["-created_at", "event_type"]),
-        ]
-        verbose_name = "Disk audit event"
 
     def __str__(self):
-        pct = f"{self.pct * 100:.0f}%" if self.pct is not None else "—"
-        return f"{self.event_type} @ {self.created_at:%Y-%m-%d %H:%M} ({pct})"
-
-
-# Ensure BetaFeedback model is discovered by Django's model registry.
-# Defined in beta_feedback.py with app_label='activities'.
-from .beta_feedback import BetaFeedback  # noqa: E402, F401
-from .models_webhooks import LiveMapAlertWebhook  # noqa: E402, F401
+        return f"{self.user_id}:{self.rating}"
