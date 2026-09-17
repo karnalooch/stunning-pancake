@@ -18,14 +18,18 @@ class Command(BaseCommand):
             UserDataExport.objects.filter(expires_at__lte=now).only("id", "storage_uri")
         )
         removed_objects = 0
+        deletable_ids: list[int] = []
         for export in expired_exports:
-            if export.storage_uri and delete_storage_uri(export.storage_uri):
+            if not export.storage_uri:
+                deletable_ids.append(export.id)
+                continue
+            if delete_storage_uri(export.storage_uri):
                 removed_objects += 1
+                deletable_ids.append(export.id)
 
-        expired_ids = [export.id for export in expired_exports]
         deleted_export_rows = 0
-        if expired_ids:
-            deleted_export_rows, _ = UserDataExport.objects.filter(id__in=expired_ids).delete()
+        if deletable_ids:
+            deleted_export_rows, _ = UserDataExport.objects.filter(id__in=deletable_ids).delete()
 
         telemetry = purge_expired_raw_gps(now=now)
         self.stdout.write(
