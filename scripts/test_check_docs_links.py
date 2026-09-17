@@ -69,6 +69,7 @@ def test_t71_redaction_is_wired_before_external_log_sinks() -> None:
 
     backend_sentry = (REPO / "backend" / "core" / "sentry.py").read_text(encoding="utf-8")
     telemetry_main = (REPO / "telemetry" / "main.py").read_text(encoding="utf-8")
+    mobile_index = (REPO / "mobile" / "index.ts").read_text(encoding="utf-8")
     firebase = (REPO / "mobile" / "src" / "services" / "FirebaseService.ts").read_text(
         encoding="utf-8"
     )
@@ -79,6 +80,10 @@ def test_t71_redaction_is_wired_before_external_log_sinks() -> None:
     install_at = telemetry_main.index("install_log_redaction()")
     logging_at = telemetry_main.index("logging.basicConfig")
     assert install_at < logging_at
+
+    redaction_import_at = mobile_index.index("./src/security/installRedaction")
+    app_import_at = mobile_index.index("./App")
+    assert redaction_import_at < app_import_at
 
     assert "redactError" in firebase
     assert "redactValue" in firebase
