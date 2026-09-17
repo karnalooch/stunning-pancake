@@ -25,6 +25,14 @@ from activities.test_p3_tenant_activity_create import (
 )
 from users.permissions import IsGlobalOwner, IsTenantAdmin
 
+# This file is part of the blocking P1 admin pytest command. Keep the P3 tenant
+# contracts reachable from that gate instead of relying on the non-blocking
+# legacy suite to discover their standalone modules.
+P3_BLOCKING_TEST_CASES = (
+    TestP3ActivityReadIsolation,
+    TestP3ActivityCreateTenantBinding,
+)
+
 
 def _user(role: str) -> SimpleNamespace:
     return SimpleNamespace(is_authenticated=True, role=role, id=1, pk=1)
