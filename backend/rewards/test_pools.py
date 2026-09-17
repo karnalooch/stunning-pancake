@@ -129,7 +129,10 @@ class TestVoucherRedemptionIdempotency:
         assert retry.status_code == 201
         assert retry.data["id"] == first.data["id"]
         assert Voucher.objects.filter(user=athlete_user).count() == 1
-        assert PointsLedger.objects.filter(
-            user=athlete_user,
-            reason="VOUCHER_REDEEM",
-        ).count() == 1
+        assert (
+            PointsLedger.objects.filter(
+                user=athlete_user,
+                reason="VOUCHER_REDEEM",
+            ).count()
+            == 1
+        )
