@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.response import Response
 
-from .models import Role, Tenant
+from .models import Tenant
 from .views import UserProfileView
 
 
@@ -27,7 +27,7 @@ class PilotSafeUserProfileView(UserProfileView):
         requested_tenant_id = request.data.get("tenant_id")
         current_tenant_id = getattr(user, "tenant_id", None)
 
-        if getattr(user, "role", None) != Role.ATHLETE:
+        if getattr(user, "role", None) != "ATHLETE":
             return Response(
                 {"detail": "Tenant changes require an administrative flow."},
                 status=status.HTTP_403_FORBIDDEN,
