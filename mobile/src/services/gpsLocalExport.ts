@@ -1,10 +1,12 @@
 /**
- * Local GPX 1.1 / GeoJSON snapshot on ride stop (ADR 011 §16).
- * Optional artefact in app document directory before buffer clear.
+ * Ephemeral GPX 1.1 / GeoJSON serializers (ADR 011 §16).
+ *
+ * DS-014 forbids persisting raw GPS coordinates to plaintext files. These
+ * helpers may build export payloads in memory, but the pilot app must not write
+ * automatic GPX/GeoJSON snapshots under the app document directory.
  */
 
 import type { GpsPoint } from './gpsSyncStorage';
-import { Directory, File, Paths } from 'expo-file-system';
 
 export function buildGpx11(
   points: GpsPoint[],
@@ -82,27 +84,16 @@ export interface LocalRideSnapshotResult {
   geoJsonPath?: string;
 }
 
-/** Write GPX (+ optional GeoJSON) under documentDirectory/gps-snapshots/. */
+/**
+ * Automatic plaintext ride snapshots are intentionally disabled for DS-014.
+ *
+ * Keep this compatibility shim until the stop-flow call site is removed in a
+ * dedicated cleanup. Returning null preserves the existing optional-snapshot
+ * contract without ever materializing GPS coordinates on disk.
+ */
 export async function saveLocalRideSnapshot(
-  activityId: number,
-  points: GpsPoint[],
+  _activityId: number,
+  _points: GpsPoint[],
 ): Promise<LocalRideSnapshotResult | null> {
-  if (points.length < 2) return null;
-  try {
-    const dir = new Directory(Paths.document, 'gps-snapshots');
-    dir.create({ idempotent: true, intermediates: true });
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const gpxFile = new File(dir, `activity-${activityId}-${stamp}.gpx`);
-    gpxFile.create({ intermediates: true, overwrite: true });
-    gpxFile.write(buildGpx11(points), { encoding: 'utf8' });
-
-    const geoJsonFile = new File(dir, `activity-${activityId}-${stamp}.geojson`);
-    geoJsonFile.create({ intermediates: true, overwrite: true });
-    geoJsonFile.write(buildGeoJsonLineString(points), { encoding: 'utf8' });
-
-    return { gpxPath: gpxFile.uri, geoJsonPath: geoJsonFile.uri };
-  } catch (err) {
-    console.warn('[gpsLocalExport] snapshot skipped:', err);
-    return null;
-  }
+  return null;
 }
