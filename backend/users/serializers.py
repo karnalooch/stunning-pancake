@@ -27,8 +27,14 @@ class AuditLogSerializer(serializers.ModelSerializer):
             "details",
             "impersonator",
             "target_user",
+            "impersonator_id_snapshot",
+            "target_user_id_snapshot",
             "impersonator_username",
             "target_user_username",
+        )
+        read_only_fields = (
+            "impersonator_id_snapshot",
+            "target_user_id_snapshot",
         )
 
     def get_impersonator_username(self, obj: AuditLog) -> str | None:
