@@ -155,17 +155,30 @@ class UserPushToken(models.Model):
 
 
 AUDIT_LOG_IMMUTABLE_MESSAGE = "Audit logs are append-only and cannot be modified or deleted."
+_AUDIT_LOG_FK_NULL_FIELDS = {
+    "impersonator",
+    "impersonator_id",
+    "target_user",
+    "target_user_id",
+}
 
 
 class AuditLogQuerySet(models.QuerySet):
     """Default ORM surface for audit rows: insert/read only.
 
     QuerySet ``update``/``delete`` would otherwise bypass model ``save``/``delete``
-    hooks, so they are denied explicitly. Narrow synthetic recovery-fixture
-    maintenance is exposed only through ``AuditLogManager`` below.
+    hooks, so they are denied explicitly. The only ordinary lifecycle mutation
+    accepted here is Django's ``SET_NULL`` update when a referenced user is
+    deleted; immutable identity snapshots keep the original attribution.
+    Narrow synthetic recovery-fixture maintenance is exposed only through
+    ``AuditLogManager`` below.
     """
 
     def update(self, **kwargs):
+        if kwargs and set(kwargs).issubset(_AUDIT_LOG_FK_NULL_FIELDS) and all(
+            value is None for value in kwargs.values()
+        ):
+            return super().update(**kwargs)
         raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
 
     def delete(self):
@@ -205,6 +218,8 @@ class AuditLog(models.Model):
     and admin-level mutating operations.
 
     Uses ForeignKey to User for referential integrity and ORM join capabilities.
+    Immutable identity snapshots preserve attribution when a referenced user is
+    later deleted and the live ForeignKey is set to NULL.
     Includes tenant_id for multi-tenant audit log filtering.
 
     T70 contract: rows are append-only through the normal Django ORM/admin API.
@@ -230,6 +245,14 @@ class AuditLog(models.Model):
         related_name="audit_logs_as_target",
         help_text="The user who was impersonated (or the admin themself for non-impersonated actions)",
     )
+    impersonator_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
+    target_user_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
+    impersonator_username_snapshot = models.CharField(
+        max_length=150, null=True, blank=True, editable=False
+    )
+    target_user_username_snapshot = models.CharField(
+        max_length=150, null=True, blank=True, editable=False
+    )
     tenant_id = models.CharField(
         max_length=50,
         null=True,
@@ -252,14 +275,30 @@ class AuditLog(models.Model):
     def save(self, *args, **kwargs):
         if not self._state.adding:
             raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+        if self.impersonator_id is not None:
+            self.impersonator_id_snapshot = self.impersonator_id
+            if self.impersonator is not None:
+                self.impersonator_username_snapshot = self.impersonator.username
+        if self.target_user_id is not None:
+            self.target_user_id_snapshot = self.target_user_id
+            if self.target_user is not None:
+                self.target_user_username_snapshot = self.target_user.username
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
 
     def __str__(self):
-        impersonator_name = self.impersonator.username if self.impersonator else "N/A"
-        target_name = self.target_user.username if self.target_user else "N/A"
+        impersonator_name = (
+            self.impersonator.username
+            if self.impersonator
+            else self.impersonator_username_snapshot or "N/A"
+        )
+        target_name = (
+            self.target_user.username
+            if self.target_user
+            else self.target_user_username_snapshot or "N/A"
+        )
         return f"Audit: {impersonator_name} → {target_name} - {self.action}"
 
 
