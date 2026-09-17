@@ -90,6 +90,16 @@ DENIED1\tunauthorized
             self.assertTrue(item["server_observed"])
             self.assertTrue(item["observed_at_utc"])
 
+    def test_missing_scenario_is_rejected_as_malformed_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "evidence.json"
+            evidence = self._evidence()
+            evidence["scenarios"].pop("T76-08")
+            t76_chaos.write_evidence(path, evidence)
+
+            with self.assertRaises(t76_chaos.T76Error):
+                t76_chaos.load_evidence(path)
+
     def test_finalize_fails_closed_until_every_scenario_passes(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "evidence.json"
