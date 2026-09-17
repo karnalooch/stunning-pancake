@@ -154,9 +154,7 @@ class UserPushToken(models.Model):
         return f"{self.user.username}:{self.platform}:{self.token[:16]}"
 
 
-AUDIT_LOG_IMMUTABLE_MESSAGE = (
-    "Audit logs are append-only and cannot be modified or deleted."
-)
+AUDIT_LOG_IMMUTABLE_MESSAGE = "Audit logs are append-only and cannot be modified or deleted."
 _AUDIT_LOG_FK_NULL_FIELDS = {
     "impersonator",
     "impersonator_id",
@@ -206,9 +204,7 @@ class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
     RECOVERY_FIXTURE_PREFIX = "P3_RECOVERY_"
 
     def purge_recovery_fixture(self):
-        qs = super().get_queryset().filter(
-            action__startswith=self.RECOVERY_FIXTURE_PREFIX
-        )
+        qs = super().get_queryset().filter(action__startswith=self.RECOVERY_FIXTURE_PREFIX)
         return models.QuerySet.delete(qs)
 
     def set_recovery_fixture_timestamp(self, *, pk, timestamp):
@@ -256,12 +252,8 @@ class AuditLog(models.Model):
         related_name="audit_logs_as_target",
         help_text="The user who was impersonated (or the admin themself for non-impersonated actions)",
     )
-    impersonator_id_snapshot = models.BigIntegerField(
-        null=True, blank=True, editable=False
-    )
-    target_user_id_snapshot = models.BigIntegerField(
-        null=True, blank=True, editable=False
-    )
+    impersonator_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
+    target_user_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
     impersonator_username_snapshot = models.CharField(
         max_length=150, null=True, blank=True, editable=False
     )
