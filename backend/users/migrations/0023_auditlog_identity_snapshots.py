@@ -38,16 +38,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="auditlog",
             name="impersonator_username_snapshot",
-            field=models.CharField(
-                blank=True, editable=False, max_length=150, null=True
-            ),
+            field=models.CharField(blank=True, editable=False, max_length=150, null=True),
         ),
         migrations.AddField(
             model_name="auditlog",
             name="target_user_username_snapshot",
-            field=models.CharField(
-                blank=True, editable=False, max_length=150, null=True
-            ),
+            field=models.CharField(blank=True, editable=False, max_length=150, null=True),
         ),
         migrations.RunPython(backfill_audit_identity_snapshots, migrations.RunPython.noop),
     ]
