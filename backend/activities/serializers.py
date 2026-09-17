@@ -124,13 +124,27 @@ class ActivitySerializer(serializers.ModelSerializer):
             return obj.duration.total_seconds()
         return None
 
+    @staticmethod
+    def _validate_replay(existing: Activity, validated_data: dict) -> Activity:
+        if (
+            existing.type != validated_data.get("type")
+            or existing.start_time != validated_data.get("start_time")
+            or existing.tenant_id != validated_data.get("tenant_id")
+        ):
+            raise serializers.ValidationError(
+                {"client_request_id": "idempotency_conflict"}
+            )
+        return existing
+
     def create(self, validated_data):
         """Bind every API-created activity to its tenant and dedupe create retries.
 
         The mobile durability queue retries the same ``start_time`` after a lost
         response. When a client does not send an explicit request id, that stable
         timestamp becomes the request identity so a retry replays the original row.
-        A database constraint is the final race-proof boundary.
+        A database constraint is the final race-proof boundary. Reusing a request
+        id for a different payload fails closed instead of silently returning an
+        unrelated activity.
         """
 
         user = validated_data.get("user")
@@ -154,16 +168,17 @@ class ActivitySerializer(serializers.ModelSerializer):
             client_request_id=client_request_id,
         ).first()
         if existing:
-            return existing
+            return self._validate_replay(existing, validated_data)
 
         try:
             with transaction.atomic():
                 return super().create(validated_data)
         except IntegrityError:
-            return Activity.objects.get(
+            existing = Activity.objects.get(
                 user=user,
                 client_request_id=client_request_id,
             )
+            return self._validate_replay(existing, validated_data)
 
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
