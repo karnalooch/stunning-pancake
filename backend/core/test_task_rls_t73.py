@@ -2,9 +2,8 @@
 
 import uuid
 from types import SimpleNamespace
+from unittest import TestCase
 from unittest.mock import patch
-
-from django.test import SimpleTestCase
 
 from core.task_rls import (
     GLOBAL_OWNER_TASK_HEADER,
@@ -21,7 +20,7 @@ from core.task_rls import (
 TENANT_ID = uuid.UUID("11111111-2222-4333-8444-555555555555")
 
 
-class TaskHeaderBuilderTests(SimpleTestCase):
+class TaskHeaderBuilderTests(TestCase):
     def test_tenant_header_normalizes_uuid(self):
         self.assertEqual(
             tenant_task_headers(str(TENANT_ID)),
@@ -44,7 +43,7 @@ class TaskHeaderBuilderTests(SimpleTestCase):
             task_headers_for_user(SimpleNamespace(role="ATHLETE", tenant_id=None))
 
 
-class ApplyTaskScopeTests(SimpleTestCase):
+class ApplyTaskScopeTests(TestCase):
     @patch("core.task_rls.set_tenant_context")
     @patch("core.task_rls.clear_all_context")
     def test_applies_tenant_scope_after_clearing_stale_context(self, clear, set_tenant):
@@ -83,7 +82,7 @@ class ApplyTaskScopeTests(SimpleTestCase):
             apply_task_rls_scope({}, require_scope=True)
 
 
-class ConnectionScopePropagationTests(SimpleTestCase):
+class ConnectionScopePropagationTests(TestCase):
     def _mock_connection_row(self, row):
         patcher = patch("core.task_rls.connection")
         db = patcher.start()
