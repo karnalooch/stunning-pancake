@@ -1,14 +1,13 @@
 """Small repository contract checks for the T73 pilot wiring."""
 
 from pathlib import Path
-
-from django.test import SimpleTestCase
+from unittest import TestCase
 
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
-class T73PilotWiringTests(SimpleTestCase):
+class T73PilotWiringTests(TestCase):
     def test_backend_entrypoint_separates_migration_and_runtime_database_urls(self):
         content = (ROOT / "backend" / "docker-entrypoint.sh").read_text(encoding="utf-8")
         self.assertIn("MIGRATION_DATABASE_URL", content)
