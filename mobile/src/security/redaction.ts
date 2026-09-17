@@ -38,6 +38,9 @@ const REDACT_KEYS = new Set([
   'location',
   'position',
   'route_path',
+  'polyline',
+  'gpx',
+  'geojson',
 ]);
 
 const bearerPattern = /\bbearer\s+[A-Za-z0-9._~+/=-]+/gi;
@@ -45,10 +48,16 @@ const jwtPattern = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}
 const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const urlCredentialsPattern = /(\b[a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi;
 const geoUriPattern = /\bgeo:-?\d{1,3}(?:\.\d+)?,-?\d{1,3}(?:\.\d+)?(?:;[^\s]*)?/gi;
+const coordinateSequencePattern = new RegExp(
+  `(["']?(?:coordinates?|gps|location|position|route_path|polyline|gpx|geojson)["']?\\s*[:=]\\s*)\\[[^\\r\\n]*\\]`,
+  'gi',
+);
 const keyValuePattern = new RegExp(
   `(["']?(?:${Array.from(REDACT_KEYS).join('|')})["']?\\s*[:=]\\s*["']?)(?!\\[REDACTED\\])[^\\s,;}"']+`,
   'gi',
 );
+
+let consoleRedactionInstalled = false;
 
 function normalizeKey(key: string): string {
   return key.trim().toLowerCase().replace(/-/g, '_');
@@ -61,6 +70,7 @@ export function redactString(value: string): string {
     .replace(urlCredentialsPattern, '$1[REDACTED]@')
     .replace(emailPattern, REDACTED)
     .replace(geoUriPattern, 'geo:[REDACTED]')
+    .replace(coordinateSequencePattern, `$1${REDACTED}`)
     .replace(keyValuePattern, `$1${REDACTED}`);
 }
 
@@ -100,6 +110,22 @@ export function redactError(error: unknown): Error {
   safe.name = error.name;
   if (error.stack) safe.stack = redactString(error.stack);
   return safe;
+}
+
+export function redactConsoleArgs(args: unknown[]): unknown[] {
+  return args.map((arg) => redactValue(arg));
+}
+
+export function installConsoleRedaction(): void {
+  if (consoleRedactionInstalled) return;
+
+  const target = console as unknown as Record<string, (...args: unknown[]) => void>;
+  for (const method of ['log', 'info', 'warn', 'error', 'debug']) {
+    const original = target[method]?.bind(console);
+    if (!original) continue;
+    target[method] = (...args: unknown[]) => original(...redactConsoleArgs(args));
+  }
+  consoleRedactionInstalled = true;
 }
 
 export { REDACTED };
