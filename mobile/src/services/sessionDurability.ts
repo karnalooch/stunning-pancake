@@ -8,27 +8,17 @@ import {
   clearPendingSession,
   PendingSessionPayload,
   savePendingSession,
-  type GpsStorageAdapter,
 } from './gpsSyncStorage';
-import { MMKV } from 'react-native-mmkv';
-
-let _storage: MMKV | null = null;
-
-function getStorage(): GpsStorageAdapter | null {
-  if (!_storage) {
-    try {
-      _storage = new MMKV({ id: 'gps-buffer' });
-    } catch {
-      return null;
-    }
-  }
-  return _storage as GpsStorageAdapter;
-}
+import { initializeGpsStorage } from './gpsEncryptedStorage';
 
 export async function createSessionWithDurability(
   payload: Omit<PendingSessionPayload, 'created_at' | 'attempts'>,
 ): Promise<number> {
-  const storage = getStorage();
+  const storage = await initializeGpsStorage();
+  if (!storage) {
+    throw new Error('Durable encrypted GPS storage unavailable');
+  }
+
   const body: Record<string, unknown> = {
     type: payload.type,
     start_time: payload.start_time,
@@ -39,16 +29,14 @@ export async function createSessionWithDurability(
     const res = await api.post<{ id: number }>(API_PATHS_FULL.activitiesSessions, body);
     const id = res.data?.id;
     if (!id) throw new Error('Session create returned no id');
-    if (storage) clearPendingSession(storage);
+    clearPendingSession(storage);
     return id;
   } catch (err) {
-    if (storage) {
-      savePendingSession(storage, {
-        ...payload,
-        created_at: Date.now(),
-        attempts: 0,
-      });
-    }
+    savePendingSession(storage, {
+      ...payload,
+      created_at: Date.now(),
+      attempts: 0,
+    });
     throw err;
   }
 }
