@@ -3,7 +3,9 @@ from django.db import migrations, models
 
 def backfill_audit_identity_snapshots(apps, schema_editor):
     AuditLog = apps.get_model("users", "AuditLog")
-    for log in AuditLog.objects.select_related("impersonator", "target_user").iterator(chunk_size=1000):
+    for log in AuditLog.objects.select_related("impersonator", "target_user").iterator(
+        chunk_size=1000
+    ):
         updates = {}
         if log.impersonator_id is not None:
             updates["impersonator_id_snapshot"] = log.impersonator_id
@@ -36,12 +38,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="auditlog",
             name="impersonator_username_snapshot",
-            field=models.CharField(blank=True, editable=False, max_length=150, null=True),
+            field=models.CharField(
+                blank=True, editable=False, max_length=150, null=True
+            ),
         ),
         migrations.AddField(
             model_name="auditlog",
             name="target_user_username_snapshot",
-            field=models.CharField(blank=True, editable=False, max_length=150, null=True),
+            field=models.CharField(
+                blank=True, editable=False, max_length=150, null=True
+            ),
         ),
         migrations.RunPython(backfill_audit_identity_snapshots, migrations.RunPython.noop),
     ]
