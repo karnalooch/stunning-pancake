@@ -1,6 +1,7 @@
 import uuid
 
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -153,13 +154,90 @@ class UserPushToken(models.Model):
         return f"{self.user.username}:{self.platform}:{self.token[:16]}"
 
 
+AUDIT_LOG_IMMUTABLE_MESSAGE = "Audit logs are append-only and cannot be modified or deleted."
+_AUDIT_LOG_FK_NULL_FIELDS = {
+    "impersonator",
+    "impersonator_id",
+    "target_user",
+    "target_user_id",
+}
+
+
+class AuditLogQuerySet(models.QuerySet):
+    """Default ORM surface for audit rows: insert/read only.
+
+    QuerySet ``update``/``delete`` would otherwise bypass model ``save``/``delete``
+    hooks, so they are denied explicitly. The only ordinary lifecycle mutation
+    accepted here is Django's ``SET_NULL`` update when a referenced user is
+    deleted; immutable identity snapshots keep the original attribution.
+    Narrow synthetic recovery-fixture maintenance is exposed only through
+    ``AuditLogManager`` below.
+    """
+
+    def update(self, **kwargs):
+        if (
+            kwargs
+            and set(kwargs).issubset(_AUDIT_LOG_FK_NULL_FIELDS)
+            and all(value is None for value in kwargs.values())
+        ):
+            return super().update(**kwargs)
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+    def delete(self):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+    def bulk_create(self, objs, batch_size=None, ignore_conflicts=False, **kwargs):
+        # ``bulk_create`` skips model.save(), so it would also skip immutable
+        # actor/target snapshots. Audit events must be inserted row-by-row.
+        raise ValidationError("Audit logs must be created through per-row save().")
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+
+class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
+    """Append-only manager with a deliberately narrow synthetic-fixture bypass.
+
+    The P3 backup/restore drill has to reseed deterministic synthetic rows and
+    timestamps. Keep that exception scoped to ``P3_RECOVERY_`` rows instead of
+    exposing a general mutation escape hatch to runtime code.
+    """
+
+    RECOVERY_FIXTURE_PREFIX = "P3_RECOVERY_"
+
+    def purge_recovery_fixture(self):
+        qs = super().get_queryset().filter(action__startswith=self.RECOVERY_FIXTURE_PREFIX)
+        return models.QuerySet.delete(qs)
+
+    def set_recovery_fixture_timestamp(self, *, pk, timestamp):
+        qs = (
+            super()
+            .get_queryset()
+            .filter(
+                pk=pk,
+                action__startswith=self.RECOVERY_FIXTURE_PREFIX,
+            )
+        )
+        if not qs.exists():
+            raise ValidationError("Audit-log maintenance is limited to P3 recovery fixtures.")
+        return models.QuerySet.update(qs, timestamp=timestamp)
+
+
 class AuditLog(models.Model):
     """
     Logs sensitive actions, specifically those taken during impersonation sessions
     and admin-level mutating operations.
 
     Uses ForeignKey to User for referential integrity and ORM join capabilities.
+    Immutable identity snapshots preserve attribution when a referenced user is
+    later deleted and the live ForeignKey is set to NULL.
     Includes tenant_id for multi-tenant audit log filtering.
+
+    T70 contract: rows are append-only through the normal Django ORM/admin API.
+    The only ORM mutation bypass is the narrow P3 synthetic recovery-fixture
+    helper on ``AuditLog.objects``. Deliberate low-level maintenance paths such
+    as the owner-approved destructive simulator wipe remain explicit exceptions
+    and are not exposed through normal CRUD surfaces.
     """
 
     impersonator = models.ForeignKey(
@@ -178,6 +256,14 @@ class AuditLog(models.Model):
         related_name="audit_logs_as_target",
         help_text="The user who was impersonated (or the admin themself for non-impersonated actions)",
     )
+    impersonator_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
+    target_user_id_snapshot = models.BigIntegerField(null=True, blank=True, editable=False)
+    impersonator_username_snapshot = models.CharField(
+        max_length=150, null=True, blank=True, editable=False
+    )
+    target_user_username_snapshot = models.CharField(
+        max_length=150, null=True, blank=True, editable=False
+    )
     tenant_id = models.CharField(
         max_length=50,
         null=True,
@@ -190,14 +276,40 @@ class AuditLog(models.Model):
     status_code = models.IntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    objects = AuditLogManager()
+
     class Meta:
         ordering = ["-timestamp"]
         verbose_name = "Audit Log"
         verbose_name_plural = "Audit Logs"
 
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+        if self.impersonator_id is not None:
+            self.impersonator_id_snapshot = self.impersonator_id
+            if self.impersonator is not None:
+                self.impersonator_username_snapshot = self.impersonator.username
+        if self.target_user_id is not None:
+            self.target_user_id_snapshot = self.target_user_id
+            if self.target_user is not None:
+                self.target_user_username_snapshot = self.target_user.username
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
     def __str__(self):
-        impersonator_name = self.impersonator.username if self.impersonator else "N/A"
-        target_name = self.target_user.username if self.target_user else "N/A"
+        impersonator_name = (
+            self.impersonator.username
+            if self.impersonator
+            else self.impersonator_username_snapshot or "N/A"
+        )
+        target_name = (
+            self.target_user.username
+            if self.target_user
+            else self.target_user_username_snapshot or "N/A"
+        )
         return f"Audit: {impersonator_name} → {target_name} - {self.action}"
 
 

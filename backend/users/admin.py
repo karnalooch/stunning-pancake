@@ -53,11 +53,23 @@ class AuditLogAdmin(admin.ModelAdmin):
         "timestamp",
     )
     list_filter = ("action", "status_code", "timestamp")
-    search_fields = ("action", "impersonator__username", "target_user__username", "tenant_id")
+    search_fields = (
+        "action",
+        "impersonator__username",
+        "target_user__username",
+        "impersonator_username_snapshot",
+        "target_user_username_snapshot",
+        "tenant_id",
+    )
     readonly_fields = (
         "impersonator",
         "target_user",
+        "impersonator_id_snapshot",
+        "target_user_id_snapshot",
+        "impersonator_username_snapshot",
+        "target_user_username_snapshot",
         "action",
+        "details",
         "ip_address",
         "status_code",
         "timestamp",
@@ -65,9 +77,13 @@ class AuditLogAdmin(admin.ModelAdmin):
     )
     date_hierarchy = "timestamp"
     ordering = ("-timestamp",)
+    actions = None
 
     def has_add_permission(self, request):
-        return False  # Audit logs are read-only via admin
+        return False  # Audit logs are append-only via admin
 
     def has_change_permission(self, request, obj=None):
-        return False  # Audit logs are read-only via admin
+        return False  # Audit logs are append-only via admin
+
+    def has_delete_permission(self, request, obj=None):
+        return False  # No delete or bulk-delete surface in Django admin

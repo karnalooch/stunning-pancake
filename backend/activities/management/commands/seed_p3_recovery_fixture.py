@@ -181,7 +181,7 @@ class Command(BaseCommand):
                 coordinates=coordinates_b,
             )
 
-            AuditLog.objects.filter(action__startswith="P3_RECOVERY_").delete()
+            AuditLog.objects.purge_recovery_fixture()
             for admin, athlete, tenant, suffix in (
                 (admin_a, athlete_a, tenant_a, "A"),
                 (admin_b, athlete_b, tenant_b, "B"),
@@ -195,7 +195,7 @@ class Command(BaseCommand):
                     ip_address="127.0.0.1",
                     status_code=200,
                 )
-                AuditLog.objects.filter(pk=log.pk).update(timestamp=anchor)
+                AuditLog.objects.set_recovery_fixture_timestamp(pk=log.pk, timestamp=anchor)
 
             gps_rows = []
             for activity, athlete, suffix, coordinates in (
