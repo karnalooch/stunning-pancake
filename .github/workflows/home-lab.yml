@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'docker-compose.yml'
+      - 'docker-compose.home.yml'
       - 'docker-compose.override.yml'
       - '.env.home.example'
       - 'scripts/home_lab.py'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'docker-compose.yml'
+      - 'docker-compose.home.yml'
       - 'docker-compose.override.yml'
       - '.env.home.example'
       - 'scripts/home_lab.py'
@@ -35,8 +37,14 @@ jobs:
       - name: Test home-lab control script
         working-directory: scripts
         run: python -m unittest test_home_lab.py
-      - name: Validate core Compose model
-        run: docker compose --env-file .env.home.example config --quiet
-      - name: Validate optional Compose profiles
-        run: |
-          docker compose --env-file .env.home.example --profile routing --profile simulation --profile tracking --profile all-admin config --quiet
+      - name: Validate layered home-lab Compose model
+        run: >-
+          docker compose --env-file .env.home.example
+          -f docker-compose.yml -f docker-compose.home.yml
+          config --quiet
+      - name: Validate optional layered Compose profiles
+        run: >-
+          docker compose --env-file .env.home.example
+          -f docker-compose.yml -f docker-compose.home.yml
+          --profile routing --profile simulation --profile tracking --profile all-admin
+          config --quiet

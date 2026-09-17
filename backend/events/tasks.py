@@ -13,6 +13,7 @@ from celery import shared_task
 from django.utils import timezone
 
 from core.redis_cluster import get_redis
+from core.rls import tenant_context
 from users.push_tasks import send_season_end_push
 
 logger = logging.getLogger(__name__)
@@ -119,38 +120,51 @@ def start_event_session_async(
     except User.DoesNotExist:
         return None
 
-    event = resolve_event_for_session(user, event_id)
-    if not event:
+    tenant_id = getattr(user, "tenant_id", None)
+    if tenant_id is None:
+        logger.error(
+            "event.session_start_rejected user_id=%s event_id=%s reason=missing_tenant",
+            user_id,
+            event_id,
+        )
         return None
 
-    allowed, _, _ = session_start_rate_limit(event_id)
-    if not allowed:
-        from events.burst import queue_session_start
+    # T73: the queued task may be dispatched by another tenant-scoped task.
+    # Rebind from the persisted user before touching the RLS-protected Activity
+    # table; never trust an inherited tenant for a different queued user.
+    with tenant_context(tenant_id):
+        event = resolve_event_for_session(user, event_id)
+        if not event:
+            return None
 
-        queue_session_start(event_id, user_id, payload or {})
-        return None
+        allowed, _, _ = session_start_rate_limit(event_id)
+        if not allowed:
+            from events.burst import queue_session_start
 
-    existing_id = get_active_session_activity_id(event_id, user_id)
-    if existing_id:
-        if Activity.objects.filter(pk=existing_id, user=user, end_time__isnull=True).exists():
-            return existing_id
-        clear_active_session(event_id, user_id)
+            queue_session_start(event_id, user_id, payload or {})
+            return None
 
-    data = payload or {}
-    activity = Activity.objects.create(
-        user=user,
-        tenant=getattr(user, "tenant", None),
-        type=data.get("type", "RUN"),
-        start_time=data.get("start_time") or timezone.now(),
-    )
-    set_active_session(event_id, user_id, activity.id)
-    logger.info(
-        "event.session_started_async user_id=%s event_id=%s activity_id=%s",
-        user_id,
-        event_id,
-        activity.id,
-    )
-    return activity.id
+        existing_id = get_active_session_activity_id(event_id, user_id)
+        if existing_id:
+            if Activity.objects.filter(pk=existing_id, user=user, end_time__isnull=True).exists():
+                return existing_id
+            clear_active_session(event_id, user_id)
+
+        data = payload or {}
+        activity = Activity.objects.create(
+            user=user,
+            tenant=user.tenant,
+            type=data.get("type", "RUN"),
+            start_time=data.get("start_time") or timezone.now(),
+        )
+        set_active_session(event_id, user_id, activity.id)
+        logger.info(
+            "event.session_started_async user_id=%s event_id=%s activity_id=%s",
+            user_id,
+            event_id,
+            activity.id,
+        )
+        return activity.id
 
 
 @shared_task(queue="critical", name="events.tasks.process_event_start_queue", ignore_result=True)

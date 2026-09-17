@@ -6,6 +6,8 @@ import redis
 from django.db.models.signals import post_delete, post_save
 from django.dispatch import receiver
 
+from core.task_rls import tenant_task_headers
+
 from .models import Activity, PrivacyZone
 
 logger = logging.getLogger(__name__)
@@ -42,7 +44,16 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
 
     from .tasks import process_activity_async
 
-    process_activity_async.delay(instance.id)
+    if not instance.tenant_id:
+        logger.error(
+            "process_activity queue rejected activity_id=%s reason=missing_tenant",
+            instance.id,
+        )
+        return
+    process_activity_async.apply_async(
+        args=[instance.id],
+        headers=tenant_task_headers(instance.tenant_id),
+    )
 
 
 @receiver(post_save, sender=PrivacyZone)

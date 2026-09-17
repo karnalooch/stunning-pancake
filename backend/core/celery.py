@@ -11,9 +11,14 @@ import os
 
 from celery import Celery
 
+from core.task_rls import GLOBAL_OWNER_TASK_HEADER
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-app = Celery("sport")
+# T73: every worker task starts and ends with a cleared PostgreSQL RLS context.
+# Tasks that need protected tenant data opt into RequiredRLSScopedTask and must
+# receive an explicit trusted tenant/global-owner header from their producer.
+app = Celery("sport", task_cls="core.task_rls:RLSScopedTask")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
@@ -51,6 +56,29 @@ app.conf.beat_schedule = {
         "options": {"queue": "default"},
     },
 }
+
+# These periodic jobs intentionally inspect or maintain data across tenants.
+# Beat is trusted server-side code, so grant the narrow internal GLOBAL_OWNER
+# RLS context explicitly instead of relying on a privileged PostgreSQL role.
+_GLOBAL_OWNER_BEAT_JOBS = {
+    "ml-model-retrain-weekly",
+    "refresh-city-rankings-mv",
+    "city-leaderboard-recalculate",
+    "warm-dashboard-stats-cache",
+    "postgres-disk-monitor",
+    "live-map-alert-detector",
+}
+for _job_name in _GLOBAL_OWNER_BEAT_JOBS:
+    _entry = app.conf.beat_schedule.get(_job_name)
+    if not _entry:
+        continue
+    _entry = dict(_entry)
+    _options = dict(_entry.get("options") or {})
+    _headers = dict(_options.get("headers") or {})
+    _headers[GLOBAL_OWNER_TASK_HEADER] = True
+    _options["headers"] = _headers
+    _entry["options"] = _options
+    app.conf.beat_schedule[_job_name] = _entry
 
 
 @app.task(bind=True, ignore_result=True)

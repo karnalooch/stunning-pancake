@@ -32,10 +32,17 @@ class EntrypointTests(unittest.TestCase):
     def test_default_web_start_initializes_without_demo(self):
         code, calls = self.run_entrypoint()
         self.assertEqual(code, 0)
-        self.assertEqual(calls[:3], ["python manage.py migrate --no-input",
-                                    "python manage.py create_admin", "python manage.py collectstatic --no-input"])
-        self.assertTrue(calls[3].startswith("gunicorn "))
-        self.assertEqual(len(calls), 4)
+        self.assertEqual(
+            calls[:4],
+            [
+                "python manage.py migrate --no-input",
+                "python manage.py check --deploy",
+                "python manage.py create_admin",
+                "python manage.py collectstatic --no-input",
+            ],
+        )
+        self.assertTrue(calls[4].startswith("gunicorn "))
+        self.assertEqual(len(calls), 5)
 
     def test_demo_is_opt_in(self):
         code, calls = self.run_entrypoint(seed="1")
