@@ -7,3 +7,4 @@ class UsersConfig(AppConfig):
 
     def ready(self):
         import core.checks  # noqa: F401 — register deploy checks
+        import users.signals  # noqa: F401 — register privacy lifecycle hooks
