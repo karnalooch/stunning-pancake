@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -80,7 +80,7 @@ def test_same_request_id_is_scoped_per_user(tenant):
     user_b = User.objects.create_user(username="t74-b", password="pass", tenant=tenant)
     payload = {
         "type": "BIKE",
-        "start_time": datetime(2026, 9, 17, 20, 0, tzinfo=timezone.utc),
+        "start_time": datetime(2026, 9, 17, 20, 0, tzinfo=UTC),
         "client_request_id": "shared-device-intent",
     }
 
