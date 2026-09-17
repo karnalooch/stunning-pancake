@@ -90,6 +90,12 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     user_info = serializers.SerializerMethodField()
     duration = serializers.SerializerMethodField()
+    client_request_id = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=64,
+        write_only=True,
+    )
 
     class Meta:
         model = Activity
@@ -105,6 +111,7 @@ class ActivitySerializer(serializers.ModelSerializer):
             "is_verified",
             "verification_score",
             "route_path",
+            "client_request_id",
         )
         read_only_fields = ("id", "user", "is_verified", "verification_score")
 
@@ -140,10 +147,16 @@ class ActivityCreateSerializer(serializers.ModelSerializer):
     """
 
     event_id = serializers.IntegerField(required=False, write_only=True)
+    client_request_id = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        max_length=64,
+        write_only=True,
+    )
 
     class Meta:
         model = Activity
-        fields = ("type", "start_time", "event_id")
+        fields = ("type", "start_time", "event_id", "client_request_id")
 
     def validate_type(self, value: str) -> str:
         normalized = normalize_activity_type(value)
