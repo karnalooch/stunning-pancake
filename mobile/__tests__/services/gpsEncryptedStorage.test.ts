@@ -2,6 +2,7 @@
 
 const mockMmkvStores = new Map<string, Map<string, string>>();
 const mockMmkvConfigs: Array<{ id?: string; encryptionKey?: string }> = [];
+const mockMmkvSetFailures = new Set<string>();
 
 jest.mock('react-native-mmkv', () => ({
   MMKV: jest.fn().mockImplementation((config: { id?: string; encryptionKey?: string } = {}) => {
@@ -14,7 +15,10 @@ jest.mock('react-native-mmkv', () => ({
     }
     return {
       getString: jest.fn((key: string) => data!.get(key)),
-      set: jest.fn((key: string, value: string) => data!.set(key, value)),
+      set: jest.fn((key: string, value: string) => {
+        if (mockMmkvSetFailures.has(`${id}:${key}`)) return;
+        data!.set(key, value);
+      }),
       delete: jest.fn((key: string) => data!.delete(key)),
     };
   }),
@@ -53,6 +57,7 @@ describe('encrypted GPS MMKV', () => {
     jest.clearAllMocks();
     mockMmkvStores.clear();
     mockMmkvConfigs.length = 0;
+    mockMmkvSetFailures.clear();
     __resetEncryptedGpsStorageForTests();
     secureValue = null;
 
@@ -98,6 +103,7 @@ describe('encrypted GPS MMKV', () => {
     );
     expect(encryptedConfigs).toHaveLength(2);
     expect(encryptedConfigs.every((config) => config.encryptionKey === secureValue)).toBe(true);
+    expect(store(constants.bootstrapStorageId).get(constants.provisionedMarker)).toBe('1');
   });
 
   test('migrates pending GPS and outbox values before deleting plaintext legacy copies', async () => {
@@ -124,6 +130,22 @@ describe('encrypted GPS MMKV', () => {
     expect(legacy.has('ride_wall_start_ms')).toBe(false);
   });
 
+  test('keeps the legacy recovery copy when an encrypted write cannot be verified', async () => {
+    secureValue = 'ef'.repeat(32);
+    const legacy = store(constants.legacyStorageId);
+    const buffer = JSON.stringify([{ activity_id: 77, seq: 3, lat: 52.2, lon: 22.3 }]);
+    legacy.set(GPS_STORAGE_KEYS.BUFFER, buffer);
+    mockMmkvSetFailures.add(`${constants.encryptedStorageId}:${GPS_STORAGE_KEYS.BUFFER}`);
+
+    const storage = await initializeGpsStorage();
+
+    expect(storage).toBeNull();
+    expect(getGpsStorage()).toBeNull();
+    expect(legacy.get(GPS_STORAGE_KEYS.BUFFER)).toBe(buffer);
+    expect(store(constants.encryptedStorageId).has(GPS_STORAGE_KEYS.BUFFER)).toBe(false);
+    expect(store(constants.bootstrapStorageId).get(constants.provisionedMarker)).toBe('1');
+  });
+
   test('fails closed and keeps plaintext recovery copy when migration conflicts', async () => {
     secureValue = 'cd'.repeat(32);
     store(constants.legacyStorageId).set(GPS_STORAGE_KEYS.OUTBOX, 'legacy-pending');
@@ -145,6 +167,19 @@ describe('encrypted GPS MMKV', () => {
     expect(storage).toBeNull();
     expect(crypto.getRandomBytesAsync).not.toHaveBeenCalled();
     expect(secureStore.setItemAsync).not.toHaveBeenCalled();
+    expect(
+      mockMmkvConfigs.some((config) => config.id === constants.encryptedStorageId),
+    ).toBe(false);
+  });
+
+  test('SecureStore write failure fails closed before encrypted MMKV is opened', async () => {
+    secureStore.setItemAsync.mockRejectedValueOnce(new Error('keystore write failed'));
+
+    const storage = await initializeGpsStorage();
+
+    expect(storage).toBeNull();
+    expect(getGpsStorage()).toBeNull();
+    expect(store(constants.bootstrapStorageId).has(constants.provisionedMarker)).toBe(false);
     expect(
       mockMmkvConfigs.some((config) => config.id === constants.encryptedStorageId),
     ).toBe(false);
