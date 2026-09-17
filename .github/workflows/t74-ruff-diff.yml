@@ -1,0 +1,22 @@
+name: T74 Ruff format diff
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install 'ruff==0.15.22'
+      - name: Show formatter diff
+        run: |
+          cd backend
+          ruff format --diff activities/models.py rewards/test_pools.py rewards/tests/test_t74_idempotency.py
