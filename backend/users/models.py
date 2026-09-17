@@ -213,9 +213,7 @@ class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
             action__startswith=self.RECOVERY_FIXTURE_PREFIX,
         )
         if not qs.exists():
-            raise ValidationError(
-                "Audit-log maintenance is limited to P3 recovery fixtures."
-            )
+            raise ValidationError("Audit-log maintenance is limited to P3 recovery fixtures.")
         return models.QuerySet.update(qs, timestamp=timestamp)
 
 
