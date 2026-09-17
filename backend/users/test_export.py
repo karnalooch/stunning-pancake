@@ -100,7 +100,7 @@ def test_t72_retention_task_is_scheduled_daily():
     assert schedule["options"] == {"queue": "default"}
 
 
-def test_t72_user_delete_removes_materialized_export(monkeypatch, tmp_path, tenant):
+def test_t72_user_delete_removes_external_artifacts(monkeypatch, tmp_path, tenant):
     from django.contrib.auth import get_user_model
 
     monkeypatch.setenv("GPX_LOCAL_ROOT", str(tmp_path))
@@ -110,18 +110,31 @@ def test_t72_user_delete_removes_materialized_export(monkeypatch, tmp_path, tena
         password="x",
         tenant=tenant,
     )
-    storage_uri = store_export(f"exports/{user.id}/delete-me.zip", b"private export")
+    export_uri = store_export(f"exports/{user.id}/delete-me.zip", b"private export")
     UserDataExport.objects.create(
         user=user,
         job_id="deletegate01",
         status=UserDataExport.STATUS_READY,
-        storage_uri=storage_uri,
+        storage_uri=export_uri,
         expires_at=timezone.now() + timezone.timedelta(hours=1),
     )
-    archive_path = Path(tmp_path) / "exports" / str(user.id) / "delete-me.zip"
-    assert archive_path.exists()
+    activity_uri = store_export(f"activities/{user.id}/ride.gpx", b"private gpx")
+    Activity.objects.create(
+        user=user,
+        tenant=tenant,
+        type="BIKE",
+        start_time=timezone.now(),
+        distance=1000.0,
+        gpx_storage_key=activity_uri,
+    )
+
+    export_path = Path(tmp_path) / "exports" / str(user.id) / "delete-me.zip"
+    activity_path = Path(tmp_path) / "activities" / str(user.id) / "ride.gpx"
+    assert export_path.exists()
+    assert activity_path.exists()
 
     user.delete()
 
-    assert not archive_path.exists()
+    assert not export_path.exists()
+    assert not activity_path.exists()
     assert not get_user_model().objects.filter(username="delete-export-gate").exists()
