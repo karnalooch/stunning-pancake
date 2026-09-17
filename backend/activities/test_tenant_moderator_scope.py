@@ -17,6 +17,12 @@ from activities.leaderboard_views import (
     admin_leaderboard_list,
     admin_recalculate_leaderboards,
 )
+from activities.test_p3_activity_read_scope import (
+    ActivityReadIsolationTest as TestP3ActivityReadIsolation,
+)
+from activities.test_p3_tenant_activity_create import (
+    ActivityCreateTenantBindingTest as TestP3ActivityCreateTenantBinding,
+)
 from users.permissions import IsGlobalOwner, IsTenantAdmin
 
 
