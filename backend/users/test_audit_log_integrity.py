@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from users.admin import AuditLogAdmin
 from users.models import AuditLog, User
+from users.serializers import AuditLogSerializer
 
 
 @pytest.fixture
@@ -68,6 +69,36 @@ class TestAuditLogImmutability:
 
         audit_log.refresh_from_db()
         assert audit_log.status_code == 200
+
+    def test_user_deletion_nulls_live_fk_but_preserves_immutable_identity(self, owner_user):
+        target = User.objects.create_user(
+            username="audit-target",
+            email="audit-target@example.invalid",
+            password="password123",
+            role="ATHLETE",
+        )
+        target_id = target.pk
+        log = AuditLog.objects.create(
+            impersonator=owner_user,
+            target_user=target,
+            action="T70_USER_DELETE_LIFECYCLE",
+            status_code=200,
+        )
+
+        assert log.impersonator_id_snapshot == owner_user.pk
+        assert log.impersonator_username_snapshot == owner_user.username
+        assert log.target_user_id_snapshot == target_id
+        assert log.target_user_username_snapshot == "audit-target"
+
+        target.delete()
+
+        log.refresh_from_db()
+        assert log.target_user_id is None
+        assert log.target_user_id_snapshot == target_id
+        assert log.target_user_username_snapshot == "audit-target"
+        serialized = AuditLogSerializer(log).data
+        assert serialized["target_user"] is None
+        assert serialized["target_user_username"] == "audit-target"
 
 
 @pytest.mark.django_db
