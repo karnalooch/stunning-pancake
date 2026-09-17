@@ -68,6 +68,43 @@ def _trusted_parent_headers() -> dict[str, object]:
     return inherited
 
 
+def _trusted_connection_headers() -> dict[str, object]:
+    """Derive scope from the current request/command PostgreSQL GUCs.
+
+    This covers top-level task dispatch from authenticated Django requests and
+    explicitly-scoped management commands. Missing/invalid context produces no
+    header, which leaves the worker fail-closed.
+    """
+
+    if connection.vendor != "postgresql":
+        return {}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    NULLIF(current_setting('app.tenant_id', true), ''),
+                    NULLIF(current_setting('app.is_global_owner', true), '')
+                """
+            )
+            row = cursor.fetchone()
+    except Exception:
+        return {}
+
+    if not row:
+        return {}
+    tenant_id, global_owner = row
+    if tenant_id and global_owner:
+        raise InvalidTaskRLSContext("database connection carries ambiguous RLS scope")
+    if global_owner is not None:
+        if str(global_owner).lower() != "true":
+            raise InvalidTaskRLSContext("database global-owner GUC is not canonical true")
+        return global_owner_task_headers()
+    if tenant_id:
+        return tenant_task_headers(str(tenant_id))
+    return {}
+
+
 def _close_connection_after_scope_failure() -> None:
     """Discard a DB connection when its GUC cleanup cannot be trusted."""
 
@@ -120,10 +157,10 @@ class RLSScopedTask(Task):
 
     def apply_async(self, args=None, kwargs=None, **options):
         # Child tasks inherit only the validated RLS scope, never arbitrary
-        # parent headers. Top-level producers still have to attach scope from a
-        # trusted server-side object (authenticated user / persisted tenant).
+        # parent headers. Top-level web/command dispatch may inherit only the
+        # two server-controlled PostgreSQL GUCs.
         if "headers" not in options:
-            inherited = _trusted_parent_headers()
+            inherited = _trusted_parent_headers() or _trusted_connection_headers()
             if inherited:
                 options["headers"] = inherited
         return super().apply_async(args=args, kwargs=kwargs, **options)
