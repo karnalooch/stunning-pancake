@@ -8,6 +8,9 @@ privacy-dropped points.
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 from fastapi import APIRouter, HTTPException
 
 from db import ReceiptCollisionError
@@ -24,11 +27,48 @@ from schemas import BatchPacket
 
 router = APIRouter()
 
+_FINGERPRINT_VERSION = 1
+
+
+def _batch_payload_fingerprint(
+    batch: BatchPacket,
+    *,
+    activity_id: int,
+    user_id: int,
+    point_count: int,
+    max_seq: int,
+) -> str:
+    """Hash one validated activity batch without exposing its private payload.
+
+    Pydantic has already validated and normalized the models by the time this
+    function runs. ``model_dump(mode="json")`` therefore gives JSON-compatible
+    values for every declared GPS field, while the packet list preserves client
+    order. Stable key ordering and compact separators make the byte stream
+    deterministic across retries.
+    """
+
+    canonical = {
+        "version": _FINGERPRINT_VERSION,
+        "activity_id": int(activity_id),
+        "user_id": int(user_id),
+        "point_count": int(point_count),
+        "max_seq": int(max_seq),
+        "packets": [packet.model_dump(mode="json") for packet in batch.packets],
+    }
+    serialized = json.dumps(
+        canonical,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(serialized).hexdigest()
+
 
 def _activity_batch_identity(
     batch: BatchPacket,
     scoped_activity_id: int | None,
-) -> dict[str, int] | None:
+) -> dict[str, int | str] | None:
     """Return immutable receipt identity for an activity-bound batch.
 
     Legacy telemetry that is not attached to an activity keeps the historical
@@ -61,16 +101,39 @@ def _activity_batch_identity(
             detail="Activity telemetry sequence values must be unique within a batch",
         )
 
+    user_id = int(next(iter(user_ids)))
+    point_count = len(batch.packets)
+    max_seq = max(concrete_seqs)
     return {
         "activity_id": int(scoped_activity_id),
-        "user_id": int(next(iter(user_ids))),
-        "point_count": len(batch.packets),
-        "max_seq": max(concrete_seqs),
+        "user_id": user_id,
+        "point_count": point_count,
+        "max_seq": max_seq,
+        "payload_fingerprint": _batch_payload_fingerprint(
+            batch,
+            activity_id=int(scoped_activity_id),
+            user_id=user_id,
+            point_count=point_count,
+            max_seq=max_seq,
+        ),
     }
 
 
-def _durable_receipt_matches(existing: dict, identity: dict[str, int]) -> bool:
-    return all(int(existing.get(key, -1)) == value for key, value in identity.items())
+def _durable_receipt_matches(
+    existing: dict,
+    identity: dict[str, int | str],
+) -> bool:
+    fingerprint = existing.get("payload_fingerprint")
+    if not isinstance(fingerprint, str) or not fingerprint:
+        # Historical receipts pre-dating payload fingerprints cannot prove that
+        # the presented payload is the same immutable batch. Fail closed.
+        return False
+    if fingerprint != identity["payload_fingerprint"]:
+        return False
+    return all(
+        int(existing.get(key, -1)) == int(identity[key])
+        for key in ("activity_id", "user_id", "point_count", "max_seq")
+    )
 
 
 def _collision() -> HTTPException:
@@ -78,6 +141,20 @@ def _collision() -> HTTPException:
         status_code=409,
         detail="client_batch_id collision; local batch must be retained",
     )
+
+
+def _dedupe_response(existing: dict, client_batch_id: str) -> dict:
+    return {
+        "status": "accepted",
+        "inserted": int(existing["persisted_count"]),
+        "dropped_privacy": int(existing["dropped_privacy"]),
+        "deduped": True,
+        "client_batch_id": client_batch_id,
+        "point_count": int(existing["point_count"]),
+        "max_seq": int(existing["max_seq"]),
+        "activity_id": int(existing["activity_id"]),
+        "acked": True,
+    }
 
 
 @router.post("/api/telemetry/ingest/batch", status_code=202)
@@ -105,23 +182,12 @@ async def ingest_batch_durable(batch: BatchPacket) -> dict:
                     "client_batch_id": batch.client_batch_id,
                     "acked": True,
                 }
-            # Activity-bound batches need a PostgreSQL receipt. A historical
-            # Redis ACK alone is not enough proof, so safely re-run persistence;
-            # gps_points has an activity/time/seq conflict guard.
-        else:
-            if identity is None or not _durable_receipt_matches(existing, identity):
-                raise _collision()
-            return {
-                "status": "accepted",
-                "inserted": int(existing["persisted_count"]),
-                "dropped_privacy": int(existing["dropped_privacy"]),
-                "deduped": True,
-                "client_batch_id": batch.client_batch_id,
-                "point_count": int(existing["point_count"]),
-                "max_seq": int(existing["max_seq"]),
-                "activity_id": int(existing["activity_id"]),
-                "acked": True,
-            }
+            # A legacy Redis marker has no immutable payload proof. It cannot be
+            # upgraded into a new durable ACK for an activity-bound pilot batch.
+            raise _collision()
+        if identity is None or not _durable_receipt_matches(existing, identity):
+            raise _collision()
+        return _dedupe_response(existing, batch.client_batch_id)
 
     n = len(batch.packets)
     guard = await check_ingest_allowed(await get_ingest_redis(), max(1, n))
@@ -129,7 +195,7 @@ async def ingest_batch_durable(batch: BatchPacket) -> dict:
 
     receipt = None
     if identity is not None:
-        if activity_id != identity["activity_id"] or max_seq != identity["max_seq"]:
+        if activity_id != int(identity["activity_id"]) or max_seq != int(identity["max_seq"]):
             raise _collision()
         receipt = {
             **identity,
@@ -146,6 +212,16 @@ async def ingest_batch_durable(batch: BatchPacket) -> dict:
         )
     except ReceiptCollisionError as exc:
         raise _collision() from exc
+
+    if result.get("deduped"):
+        assert receipt is not None
+        return _dedupe_response(
+            {
+                **receipt,
+                "persisted_count": len(rows),
+            },
+            batch.client_batch_id,
+        )
 
     if len(rows) > 0:
         last_public_seq = rows[-1][8]

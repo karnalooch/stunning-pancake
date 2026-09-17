@@ -52,9 +52,17 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
                 persisted_count INTEGER NOT NULL CHECK (persisted_count >= 0),
                 dropped_privacy INTEGER NOT NULL CHECK (dropped_privacy >= 0),
                 max_seq BIGINT NOT NULL CHECK (max_seq > 0),
+                payload_fingerprint TEXT NOT NULL,
                 acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 CHECK (persisted_count + dropped_privacy = point_count)
             );
+        """)
+        # Existing P3-D databases already have the receipt table. CREATE TABLE
+        # IF NOT EXISTS does not add new columns, so evolve it explicitly and
+        # leave historical rows NULL; ingest treats those rows as unverifiable.
+        await conn.execute("""
+            ALTER TABLE telemetry_ingest_receipts
+            ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT;
         """)
         await conn.execute("""
             CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx

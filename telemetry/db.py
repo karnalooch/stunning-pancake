@@ -34,7 +34,7 @@ _insert_worker_task: asyncio.Task | None = None
 
 
 class ReceiptCollisionError(RuntimeError):
-    """Same client batch id was presented with different durable metadata."""
+    """Same client batch id was presented with different immutable identity."""
 
 
 async def get_pool() -> asyncpg.Pool:
@@ -113,20 +113,22 @@ async def persist_direct_batch_with_receipt(
     point_count: int,
     dropped_privacy: int,
     max_seq: int,
+    payload_fingerprint: str,
 ) -> bool:
     """Atomically persist public GPS rows and reserve the durable receipt.
 
     Returns ``True`` when this transaction created the receipt and GPS rows.
     A concurrent exact retry returns ``False`` after validating the already
-    committed receipt. Re-use of the same ``client_batch_id`` with different
-    metadata raises ``ReceiptCollisionError`` before any new GPS row is added.
+    committed immutable receipt, including the payload fingerprint. Re-use of
+    the same ``client_batch_id`` with a different fingerprint or metadata raises
+    ``ReceiptCollisionError`` before any new GPS row is added.
 
     The receipt reservation and GPS rows share one PostgreSQL transaction, so a
     rollback can never leave an ACK proof without its corresponding public GPS
     rows (or intentional privacy-drop count).
     """
 
-    expected = {
+    expected_numeric = {
         "activity_id": int(activity_id),
         "user_id": int(user_id),
         "point_count": int(point_count),
@@ -141,33 +143,40 @@ async def persist_direct_batch_with_receipt(
                 """
                 INSERT INTO telemetry_ingest_receipts (
                     client_batch_id, activity_id, user_id, point_count,
-                    persisted_count, dropped_privacy, max_seq
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                    persisted_count, dropped_privacy, max_seq, payload_fingerprint
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                 ON CONFLICT (client_batch_id) DO NOTHING
                 RETURNING client_batch_id
                 """,
                 client_batch_id,
-                expected["activity_id"],
-                expected["user_id"],
-                expected["point_count"],
-                expected["persisted_count"],
-                expected["dropped_privacy"],
-                expected["max_seq"],
+                expected_numeric["activity_id"],
+                expected_numeric["user_id"],
+                expected_numeric["point_count"],
+                expected_numeric["persisted_count"],
+                expected_numeric["dropped_privacy"],
+                expected_numeric["max_seq"],
+                payload_fingerprint,
             )
             if inserted is None:
                 existing = await conn.fetchrow(
                     """
                     SELECT activity_id, user_id, point_count, persisted_count,
-                           dropped_privacy, max_seq
+                           dropped_privacy, max_seq, payload_fingerprint
                     FROM telemetry_ingest_receipts
                     WHERE client_batch_id = $1
                     """,
                     client_batch_id,
                 )
-                if existing is None or any(
-                    int(existing[key]) != value for key, value in expected.items()
-                ):
-                    raise ReceiptCollisionError("client_batch_id metadata collision")
+                fingerprint_matches = (
+                    existing is not None
+                    and existing["payload_fingerprint"] is not None
+                    and str(existing["payload_fingerprint"]) == payload_fingerprint
+                )
+                metadata_matches = existing is not None and all(
+                    int(existing[key]) == value for key, value in expected_numeric.items()
+                )
+                if not fingerprint_matches or not metadata_matches:
+                    raise ReceiptCollisionError("client_batch_id immutable payload collision")
                 return False
 
             if rows:
@@ -183,7 +192,7 @@ async def fetch_ingest_receipt(client_batch_id: str) -> dict[str, Any] | None:
         row = await conn.fetchrow(
             """
             SELECT client_batch_id, activity_id, user_id, point_count,
-                   persisted_count, dropped_privacy, max_seq
+                   persisted_count, dropped_privacy, max_seq, payload_fingerprint
             FROM telemetry_ingest_receipts
             WHERE client_batch_id = $1
             """,
