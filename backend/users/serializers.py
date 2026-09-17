@@ -71,7 +71,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("username", "email", "password", "tenant_id")
+        # Registration is tenant-neutral. Tenant membership is selected only
+        # after authentication through the guarded onboarding/profile path.
+        fields = ("username", "email", "password")
 
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():
@@ -88,7 +90,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             username=validated_data["username"],
             email=validated_data.get("email", ""),
             password=validated_data.pop("password"),
-            tenant_id=validated_data.get("tenant_id"),
             role="ATHLETE",
         )
         return user
