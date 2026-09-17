@@ -45,7 +45,10 @@ def validate_activity_on_completion(sender, instance, created, **kwargs):
     from .tasks import process_activity_async
 
     if not instance.tenant_id:
-        logger.error("process_activity queue rejected activity_id=%s reason=missing_tenant", instance.id)
+        logger.error(
+            "process_activity queue rejected activity_id=%s reason=missing_tenant",
+            instance.id,
+        )
         return
     process_activity_async.apply_async(
         args=[instance.id],
