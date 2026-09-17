@@ -401,6 +401,12 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 60.0,
         "options": {"queue": "default"},
     },
+    # T72 privacy lifecycle enforcement — every 24 hours.
+    "privacy-data-retention-daily": {
+        "task": "users.tasks.enforce_data_retention",
+        "schedule": 86400.0,
+        "options": {"queue": "default"},
+    },
 }
 
 # Register drf-spectacular extensions (SafeGeoFeatureModelSerializerExtension).
