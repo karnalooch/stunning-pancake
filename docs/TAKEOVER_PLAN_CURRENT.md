@@ -185,8 +185,8 @@ Large Node/pnpm major upgrades are **not** automatic pilot blockers. Do them bef
 This is the only short sequence worth remembering:
 
 ```text
-finish data-safety:
-  T57 + T68–T76
+finish data-safety external evidence:
+  T57 + T68 + T76
 
 UI:
   T79–T84
