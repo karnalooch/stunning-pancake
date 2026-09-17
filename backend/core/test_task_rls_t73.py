@@ -1,8 +1,8 @@
 """T73 tests for Celery tenant/global-owner RLS scope propagation."""
 
+import unittest
 import uuid
 from types import SimpleNamespace
-from unittest import TestCase
 from unittest.mock import patch
 
 from core.task_rls import (
@@ -16,11 +16,10 @@ from core.task_rls import (
     tenant_task_headers,
 )
 
-
 TENANT_ID = uuid.UUID("11111111-2222-4333-8444-555555555555")
 
 
-class TaskHeaderBuilderTests(TestCase):
+class TaskHeaderBuilderTests(unittest.TestCase):
     def test_tenant_header_normalizes_uuid(self):
         self.assertEqual(
             tenant_task_headers(str(TENANT_ID)),
@@ -43,7 +42,7 @@ class TaskHeaderBuilderTests(TestCase):
             task_headers_for_user(SimpleNamespace(role="ATHLETE", tenant_id=None))
 
 
-class ApplyTaskScopeTests(TestCase):
+class ApplyTaskScopeTests(unittest.TestCase):
     @patch("core.task_rls.set_tenant_context")
     @patch("core.task_rls.clear_all_context")
     def test_applies_tenant_scope_after_clearing_stale_context(self, clear, set_tenant):
@@ -82,7 +81,7 @@ class ApplyTaskScopeTests(TestCase):
             apply_task_rls_scope({}, require_scope=True)
 
 
-class ConnectionScopePropagationTests(TestCase):
+class ConnectionScopePropagationTests(unittest.TestCase):
     def _mock_connection_row(self, row):
         patcher = patch("core.task_rls.connection")
         db = patcher.start()
