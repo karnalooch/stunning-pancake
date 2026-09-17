@@ -10,6 +10,7 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from .audit import record_audit_event
 from .department_serializers import (
     DepartmentSerializer,
     UserDepartmentSerializer,
@@ -174,7 +175,17 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         if str(user_tenant) != str(department.tenant_id):
             return Response({"error": "cross_tenant_join_denied"}, status=status.HTTP_403_FORBIDDEN)
 
-        UserDepartment.objects.get_or_create(user=user, department=department)
+        membership, created = UserDepartment.objects.get_or_create(user=user, department=department)
+        if created:
+            record_audit_event(
+                actor=user,
+                target_user=user,
+                tenant_id=department.tenant_id,
+                action="department_membership.self_joined",
+                status_code=200,
+                request=request,
+                details={"department_id": department.id, "membership_id": membership.id},
+            )
         return Response({"status": "joined", "department_id": department.id})
 
     @action(detail=True, methods=["post"])
