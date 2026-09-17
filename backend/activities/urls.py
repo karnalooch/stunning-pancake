@@ -37,9 +37,8 @@ from .leaderboard_views import (
 )
 from .moderation_views import ModerationAssignView, ModerationHistoryView, ModerationQueueView
 from .payments_views import CreateCheckoutSessionView, StripeWebhookView
+from .pilot_activity_access import PilotSafeActivityDetailView, PilotSafeActivityGpxExportView
 from .views import (
-    ActivityDetailView,
-    ActivityGpxExportView,
     ActivityViewSet,
     AIInsightsView,
     AnomalyListView,
@@ -70,8 +69,16 @@ router.register(r"pois", POIViewSet, basename="poi")
 
 
 urlpatterns = [
-    path("sessions/<int:pk>/detail/", ActivityDetailView.as_view(), name="activity-detail"),
-    path("sessions/<int:pk>/gpx/", ActivityGpxExportView.as_view(), name="activity-gpx"),
+    path(
+        "sessions/<int:pk>/detail/",
+        PilotSafeActivityDetailView.as_view(),
+        name="activity-detail",
+    ),
+    path(
+        "sessions/<int:pk>/gpx/",
+        PilotSafeActivityGpxExportView.as_view(),
+        name="activity-gpx",
+    ),
     path("", include(router.urls)),
     path("admin/all/", GlobalActivityListView.as_view(), name="global-activities"),
     path("admin/tenant/", TenantActivityListView.as_view(), name="tenant-activities"),

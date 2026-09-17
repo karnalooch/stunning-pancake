@@ -43,6 +43,31 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             ON gps_points (activity_id, time, seq)
             WHERE activity_id IS NOT NULL AND seq IS NOT NULL;
         """)
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS telemetry_ingest_receipts (
+                client_batch_id TEXT PRIMARY KEY,
+                activity_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                point_count INTEGER NOT NULL CHECK (point_count > 0),
+                persisted_count INTEGER NOT NULL CHECK (persisted_count >= 0),
+                dropped_privacy INTEGER NOT NULL CHECK (dropped_privacy >= 0),
+                max_seq BIGINT NOT NULL CHECK (max_seq > 0),
+                payload_fingerprint TEXT NOT NULL,
+                acked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                CHECK (persisted_count + dropped_privacy = point_count)
+            );
+        """)
+        # Existing P3-D databases already have the receipt table. CREATE TABLE
+        # IF NOT EXISTS does not add new columns, so evolve it explicitly and
+        # leave historical rows NULL; ingest treats those rows as unverifiable.
+        await conn.execute("""
+            ALTER TABLE telemetry_ingest_receipts
+            ADD COLUMN IF NOT EXISTS payload_fingerprint TEXT;
+        """)
+        await conn.execute("""
+            CREATE INDEX IF NOT EXISTS telemetry_ingest_receipts_activity_user_idx
+            ON telemetry_ingest_receipts (activity_id, user_id, max_seq);
+        """)
         try:
             await conn.execute(
                 "SELECT create_hypertable('gps_points', 'time', if_not_exists => TRUE);"

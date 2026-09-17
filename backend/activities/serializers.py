@@ -116,6 +116,23 @@ class ActivitySerializer(serializers.ModelSerializer):
             return obj.duration.total_seconds()
         return None
 
+    def create(self, validated_data):
+        """Bind every API-created activity to the authenticated user's tenant.
+
+        ``ActivityViewSet.perform_create`` injects ``user=request.user`` into
+        ``serializer.save``.  The tenant is never accepted from the client and
+        a tenant-less user is rejected fail-closed: an ``Activity`` with
+        ``tenant_id=NULL`` would fall outside the canonical FORCE-RLS tenant
+        boundary and could disappear from tenant-scoped operational paths.
+        """
+
+        user = validated_data.get("user")
+        tenant_id = getattr(user, "tenant_id", None)
+        if tenant_id is None:
+            raise serializers.ValidationError({"tenant": "tenant_context_required"})
+        validated_data["tenant_id"] = tenant_id
+        return super().create(validated_data)
+
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
     """

@@ -17,6 +17,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from durable_routes import ingest_batch_durable, router as durable_router
 from ingest_auth import IngestJwtMiddleware
 from lifecycle import lifespan
 from routes import router
@@ -41,12 +42,16 @@ app.add_middleware(
 )
 app.add_middleware(IngestJwtMiddleware)
 
+# P3 durable batch handler must be registered before the legacy telemetry
+# router so the pilot path receives transactional DB receipts for every ACK.
+app.include_router(durable_router)
 app.include_router(router)
 
 # Backward-compatible exports for tests and uvicorn (main:app)
 from ingest_service import is_duplicate_batch as _is_duplicate_batch  # noqa: E402
-from routes import ingest_batch  # noqa: E402
 from schemas import BatchPacket, GpsPacket  # noqa: E402
+
+ingest_batch = ingest_batch_durable
 
 __all__ = [
     "app",

@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 from datetime import UTC, datetime
+from typing import Any
 
 import asyncpg
 
@@ -30,6 +31,10 @@ logger = logging.getLogger("telemetry")
 _pool: asyncpg.Pool | None = None
 _insert_queue: asyncio.Queue[list[tuple]] | None = None
 _insert_worker_task: asyncio.Task | None = None
+
+
+class ReceiptCollisionError(RuntimeError):
+    """Same client batch id was presented with different immutable identity."""
 
 
 async def get_pool() -> asyncpg.Pool:
@@ -97,6 +102,103 @@ async def flush_insert_buffer(rows: list[tuple]) -> None:
             )
         else:
             await conn.executemany(INSERT_SQL, rows)
+
+
+async def persist_direct_batch_with_receipt(
+    rows: list[tuple],
+    *,
+    client_batch_id: str,
+    activity_id: int,
+    user_id: int,
+    point_count: int,
+    dropped_privacy: int,
+    max_seq: int,
+    payload_fingerprint: str,
+) -> bool:
+    """Atomically persist public GPS rows and reserve the durable receipt.
+
+    Returns ``True`` when this transaction created the receipt and GPS rows.
+    A concurrent exact retry returns ``False`` after validating the already
+    committed immutable receipt, including the payload fingerprint. Re-use of
+    the same ``client_batch_id`` with a different fingerprint or metadata raises
+    ``ReceiptCollisionError`` before any new GPS row is added.
+
+    The receipt reservation and GPS rows share one PostgreSQL transaction, so a
+    rollback can never leave an ACK proof without its corresponding public GPS
+    rows (or intentional privacy-drop count).
+    """
+
+    expected_numeric = {
+        "activity_id": int(activity_id),
+        "user_id": int(user_id),
+        "point_count": int(point_count),
+        "persisted_count": len(rows),
+        "dropped_privacy": int(dropped_privacy),
+        "max_seq": int(max_seq),
+    }
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        async with conn.transaction():
+            inserted = await conn.fetchrow(
+                """
+                INSERT INTO telemetry_ingest_receipts (
+                    client_batch_id, activity_id, user_id, point_count,
+                    persisted_count, dropped_privacy, max_seq, payload_fingerprint
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                ON CONFLICT (client_batch_id) DO NOTHING
+                RETURNING client_batch_id
+                """,
+                client_batch_id,
+                expected_numeric["activity_id"],
+                expected_numeric["user_id"],
+                expected_numeric["point_count"],
+                expected_numeric["persisted_count"],
+                expected_numeric["dropped_privacy"],
+                expected_numeric["max_seq"],
+                payload_fingerprint,
+            )
+            if inserted is None:
+                existing = await conn.fetchrow(
+                    """
+                    SELECT activity_id, user_id, point_count, persisted_count,
+                           dropped_privacy, max_seq, payload_fingerprint
+                    FROM telemetry_ingest_receipts
+                    WHERE client_batch_id = $1
+                    """,
+                    client_batch_id,
+                )
+                fingerprint_matches = (
+                    existing is not None
+                    and existing["payload_fingerprint"] is not None
+                    and str(existing["payload_fingerprint"]) == payload_fingerprint
+                )
+                metadata_matches = existing is not None and all(
+                    int(existing[key]) == value for key, value in expected_numeric.items()
+                )
+                if not fingerprint_matches or not metadata_matches:
+                    raise ReceiptCollisionError("client_batch_id immutable payload collision")
+                return False
+
+            if rows:
+                await conn.executemany(INSERT_SQL, _sort_rows(rows))
+            return True
+
+
+async def fetch_ingest_receipt(client_batch_id: str) -> dict[str, Any] | None:
+    if SKIP_DB:
+        return None
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT client_batch_id, activity_id, user_id, point_count,
+                   persisted_count, dropped_privacy, max_seq, payload_fingerprint
+            FROM telemetry_ingest_receipts
+            WHERE client_batch_id = $1
+            """,
+            client_batch_id,
+        )
+    return dict(row) if row is not None else None
 
 
 async def _insert_worker() -> None:
