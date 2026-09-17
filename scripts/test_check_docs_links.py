@@ -1,4 +1,4 @@
-"""Unit tests for scripts/check_docs_links.py link parser (Q-P1-5b)."""
+"""Unit tests for docs links plus small cross-component CI smoke contracts."""
 
 from __future__ import annotations
 
@@ -62,3 +62,27 @@ def test_check_file_accepts_github_line_range(fixture_dir: Path, monkeypatch: py
     sample = fixture_dir / "docs" / "quality" / "line-range.md"
     sample.write_text("[target](./target.md:10-12)\n", encoding="utf-8")
     assert check_file(sample) == []
+
+
+def test_t71_redaction_is_wired_before_external_log_sinks() -> None:
+    """DS-017 must not regress to raw Sentry/Crashlytics/telemetry payloads."""
+
+    backend_sentry = (REPO / "backend" / "core" / "sentry.py").read_text(encoding="utf-8")
+    telemetry_main = (REPO / "telemetry" / "main.py").read_text(encoding="utf-8")
+    firebase = (REPO / "mobile" / "src" / "services" / "FirebaseService.ts").read_text(
+        encoding="utf-8"
+    )
+
+    assert "install_log_redaction()" in backend_sentry
+    assert "before_send=redact_sentry_event" in backend_sentry
+
+    install_at = telemetry_main.index("install_log_redaction()")
+    logging_at = telemetry_main.index("logging.basicConfig")
+    assert install_at < logging_at
+
+    assert "redactError" in firebase
+    assert "redactValue" in firebase
+    assert "recordError(safeError)" in firebase
+    assert "analytics.logEvent(safeName, safeParams)" in firebase
+    assert "recordError(err" not in firebase
+    assert "analytics.logEvent(name, params)" not in firebase
