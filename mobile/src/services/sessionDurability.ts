@@ -6,6 +6,7 @@ import { API_PATHS_FULL } from '@4velo/api-client';
 import { api } from './apiClient';
 import {
   clearPendingSession,
+  loadPendingSession,
   PendingSessionPayload,
   savePendingSession,
 } from './gpsSyncStorage';
@@ -19,21 +20,35 @@ export async function createSessionWithDurability(
     throw new Error('Durable encrypted GPS storage unavailable');
   }
 
-  const pending: PendingSessionPayload = {
-    ...payload,
-    created_at: Date.now(),
-    attempts: 0,
-  };
-  // Persist intent before the request. If the server commits but the app dies
-  // before receiving the response, launch recovery retries the same start_time;
-  // the backend uses that stable value as the idempotency identity.
-  savePendingSession(storage, pending);
+  const existingPending = loadPendingSession(storage);
+  let pending: PendingSessionPayload;
+  if (existingPending) {
+    const sameIntent =
+      existingPending.type === payload.type &&
+      (existingPending.event_id ?? null) === (payload.event_id ?? null);
+    if (!sameIntent) {
+      throw new Error('Pending session recovery required before starting a different ride');
+    }
+    // Never overwrite the original request identity after an ambiguous failure.
+    // The original start_time may already have committed on the server.
+    pending = existingPending;
+  } else {
+    pending = {
+      ...payload,
+      created_at: Date.now(),
+      attempts: 0,
+    };
+    // Persist intent before the request. If the server commits but the app dies
+    // before receiving the response, launch recovery retries this same start_time;
+    // the backend maps it to the same database request identity.
+    savePendingSession(storage, pending);
+  }
 
   const body: Record<string, unknown> = {
-    type: payload.type,
-    start_time: payload.start_time,
+    type: pending.type,
+    start_time: pending.start_time,
   };
-  if (payload.event_id != null) body.event_id = payload.event_id;
+  if (pending.event_id != null) body.event_id = pending.event_id;
 
   try {
     const res = await api.post<{ id: number }>(API_PATHS_FULL.activitiesSessions, body);
