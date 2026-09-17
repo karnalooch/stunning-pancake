@@ -72,7 +72,8 @@ _EMAIL_RE = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _URL_CREDENTIALS_RE = re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@:]+:[^\s/@]+@")
 _COORDINATE_SEQUENCE_RE = re.compile(
     r"(?i)([\"']?(?:coordinates?|gps|location|position|route_path|polyline|gpx|geojson)"
-    r"[\"']?\s*[:=]\s*)\[[^\r\n]*\]"
+    r"[\"']?\s*[:=]\s*)"
+    r"\[(?:[^\[\]\r\n]|\[[^\[\]\r\n]*\])*\]"
 )
 _KEY_VALUE_RE = re.compile(
     r"(?ix)"
@@ -103,8 +104,14 @@ def redact_text(value: str) -> str:
     text = _URL_CREDENTIALS_RE.sub(r"\1[REDACTED]@", text)
     text = _EMAIL_RE.sub(REDACTED, text)
     text = _GEO_URI_RE.sub("geo:[REDACTED]", text)
-    text = _COORDINATE_SEQUENCE_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
-    return _KEY_VALUE_RE.sub(lambda match: f"{match.group('prefix')}{REDACTED}", text)
+    text = _COORDINATE_SEQUENCE_RE.sub(
+        lambda match: f"{match.group(1)}{REDACTED}",
+        text,
+    )
+    return _KEY_VALUE_RE.sub(
+        lambda match: f"{match.group('prefix')}{REDACTED}",
+        text,
+    )
 
 
 def redact_value(
