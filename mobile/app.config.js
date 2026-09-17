@@ -134,6 +134,12 @@ export default ({ config }) => {
           "isAndroidBackgroundLocationEnabled": true
         }
       ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
       "expo-font",
       "@maplibre/maplibre-react-native",
       ...(isPilotLocalBuild() ? [
