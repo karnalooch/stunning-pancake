@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { redactError, redactString, redactValue } from '../security/redaction';
+
 let _firebase: any = null;
 let _crashlytics: any = null;
 
@@ -21,39 +23,45 @@ export function initFirebase(): void {
         _crashlytics = crashlytics.default;
         console.log('[Firebase] Crashlytics ready');
       } catch (e) {
-        console.warn('[Firebase] Crashlytics not available:', e);
+        console.warn('[Firebase] Crashlytics not available:', redactError(e));
       }
-    }).catch((err: any) => {
-      console.warn('[Firebase] Init failed — falling back to console:', err?.message);
+    }).catch((err: unknown) => {
+      console.warn('[Firebase] Init failed — falling back to console:', redactError(err));
     });
   } catch (e) {
-    console.log('[Firebase] Not installed — using console fallback');
+    console.log('[Firebase] Not installed — using console fallback:', redactError(e));
   }
 }
 
 export function firebaseCapture(err: unknown, context: string): void {
-  const message = err instanceof Error ? err.message : String(err);
+  const safeContext = redactString(context);
+  const safeError = redactError(err);
 
   if (_crashlytics) {
-    // Record to Firebase Crashlytics with context as breadcrumb
-    _crashlytics().log(`[${context}] ${message}`);
-    _crashlytics().recordError(err instanceof Error ? err : new Error(message));
+    // Never pass the original exception/message to Crashlytics. Error messages can
+    // contain request URLs, bearer tokens or precise GPS context.
+    _crashlytics().log(`[${safeContext}] ${safeError.message}`);
+    _crashlytics().recordError(safeError);
   } else if (__DEV__) {
-    // console.warn avoids LogBox red overlay for non-fatal background failures
-    console.warn(`[Telemetry Dev] ${context}:`, message);
+    // console.warn avoids LogBox red overlay for non-fatal background failures.
+    console.warn(`[Telemetry Dev] ${safeContext}:`, safeError.message);
   }
 }
 
 export function setAnalyticsEvent(name: string, params?: Record<string, any>): void {
+  const safeName = redactString(name);
+  const safeParams = redactValue(params || {}) as Record<string, any>;
+
   try {
     if (_firebase) {
       const analytics = _firebase().analytics?.();
       if (analytics) {
-        analytics.logEvent(name, params);
+        analytics.logEvent(safeName, safeParams);
       }
     }
   } catch (e) {
-    // Ignore analytics errors in dev
+    // Keep analytics failures non-fatal, but do not leak the exception into logs.
+    if (__DEV__) console.warn('[Analytics] logEvent failed:', redactError(e).message);
   }
-  console.log(`[Analytics] ${name}:`, params || {});
+  console.log(`[Analytics] ${safeName}:`, safeParams);
 }

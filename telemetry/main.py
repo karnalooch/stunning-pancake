@@ -17,6 +17,11 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from log_redaction import install_log_redaction
+
+# Install T71 redaction before importing telemetry modules that can emit runtime logs.
+install_log_redaction()
+
 from durable_routes import ingest_batch_durable, router as durable_router
 from ingest_auth import IngestJwtMiddleware
 from lifecycle import lifespan
