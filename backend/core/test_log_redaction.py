@@ -90,6 +90,7 @@ def test_sentry_before_send_uses_same_redaction_policy():
 def test_installed_logging_factory_scrubs_rendered_message_and_extras():
     stream = io.StringIO()
     handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s %(coordinates)s %(context)s"))
     logger = logging.getLogger("t71.redaction.canary")
     logger.setLevel(logging.INFO)
     logger.propagate = False
@@ -118,6 +119,9 @@ def test_installed_logging_factory_scrubs_rendered_message_and_extras():
         "52.167123",
         "22.290456",
         "runtime-canary",
+        "52.111111",
+        "22.222222",
+        "structured-canary",
     ):
         assert canary not in output
     assert REDACTED in output
