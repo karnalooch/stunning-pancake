@@ -56,7 +56,9 @@ def test_redemption_requires_idempotency_key(athlete, reward_pool):
     client = APIClient()
     client.force_authenticate(user=athlete)
 
-    response = client.post(reverse("rewards:redeem", kwargs={"pool_id": reward_pool.pk}))
+    response = client.post(
+        reverse("rewards:redeem", kwargs={"pool_id": reward_pool.pk})
+    )
 
     assert response.status_code == 400
     assert "Idempotency-Key" in response.data["detail"]
