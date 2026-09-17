@@ -1,6 +1,7 @@
 import uuid
 
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -153,6 +154,51 @@ class UserPushToken(models.Model):
         return f"{self.user.username}:{self.platform}:{self.token[:16]}"
 
 
+AUDIT_LOG_IMMUTABLE_MESSAGE = "Audit logs are append-only and cannot be modified or deleted."
+
+
+class AuditLogQuerySet(models.QuerySet):
+    """Default ORM surface for audit rows: insert/read only.
+
+    QuerySet ``update``/``delete`` would otherwise bypass model ``save``/``delete``
+    hooks, so they are denied explicitly. Narrow synthetic recovery-fixture
+    maintenance is exposed only through ``AuditLogManager`` below.
+    """
+
+    def update(self, **kwargs):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+    def delete(self):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+    def bulk_update(self, objs, fields, batch_size=None):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+
+
+class AuditLogManager(models.Manager.from_queryset(AuditLogQuerySet)):
+    """Append-only manager with a deliberately narrow synthetic-fixture bypass.
+
+    The P3 backup/restore drill has to reseed deterministic synthetic rows and
+    timestamps. Keep that exception scoped to ``P3_RECOVERY_`` rows instead of
+    exposing a general mutation escape hatch to runtime code.
+    """
+
+    RECOVERY_FIXTURE_PREFIX = "P3_RECOVERY_"
+
+    def purge_recovery_fixture(self):
+        qs = super().get_queryset().filter(action__startswith=self.RECOVERY_FIXTURE_PREFIX)
+        return models.QuerySet.delete(qs)
+
+    def set_recovery_fixture_timestamp(self, *, pk, timestamp):
+        qs = super().get_queryset().filter(
+            pk=pk,
+            action__startswith=self.RECOVERY_FIXTURE_PREFIX,
+        )
+        if not qs.exists():
+            raise ValidationError("Audit-log maintenance is limited to P3 recovery fixtures.")
+        return models.QuerySet.update(qs, timestamp=timestamp)
+
+
 class AuditLog(models.Model):
     """
     Logs sensitive actions, specifically those taken during impersonation sessions
@@ -160,6 +206,12 @@ class AuditLog(models.Model):
 
     Uses ForeignKey to User for referential integrity and ORM join capabilities.
     Includes tenant_id for multi-tenant audit log filtering.
+
+    T70 contract: rows are append-only through the normal Django ORM/admin API.
+    The only ORM mutation bypass is the narrow P3 synthetic recovery-fixture
+    helper on ``AuditLog.objects``. Deliberate low-level maintenance paths such
+    as the owner-approved destructive simulator wipe remain explicit exceptions
+    and are not exposed through normal CRUD surfaces.
     """
 
     impersonator = models.ForeignKey(
@@ -190,10 +242,20 @@ class AuditLog(models.Model):
     status_code = models.IntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    objects = AuditLogManager()
+
     class Meta:
         ordering = ["-timestamp"]
         verbose_name = "Audit Log"
         verbose_name_plural = "Audit Logs"
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
 
     def __str__(self):
         impersonator_name = self.impersonator.username if self.impersonator else "N/A"
