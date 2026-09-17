@@ -257,6 +257,7 @@ def up(args: argparse.Namespace) -> None:
     run(compose_command("up", "-d", "--build", "--wait", profiles=profiles(args)))
     check_health()
 
+
 def parse_compose_ps(output: str) -> list[dict]:
     """Accept both JSON-array and newline-delimited Compose `ps` output."""
     output = output.strip()
@@ -516,6 +517,7 @@ def p3_recovery_drill() -> Path:
         drop_database(RECOVERY_DATABASE)
 
     report = {
+        "schema_version": 1,
         "drill": "p3-business-integrity-recovery",
         "synthetic_data_only": True,
         "source_database": primary_database,
