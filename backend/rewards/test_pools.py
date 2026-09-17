@@ -95,9 +95,7 @@ class TestVoucherPoolCreate:
 
 @pytest.mark.django_db
 class TestVoucherRedemptionIdempotency:
-    def test_redeem_requires_idempotency_key(
-        self, api_client, athlete_user, redemption_pool
-    ):
+    def test_redeem_requires_idempotency_key(self, api_client, athlete_user, redemption_pool):
         PointsLedger.objects.create(
             user=athlete_user,
             delta=100,
@@ -114,9 +112,7 @@ class TestVoucherRedemptionIdempotency:
         assert "Idempotency-Key" in response.data["detail"]
         assert Voucher.objects.filter(user=athlete_user).count() == 0
 
-    def test_same_key_replays_one_redemption(
-        self, api_client, athlete_user, redemption_pool
-    ):
+    def test_same_key_replays_one_redemption(self, api_client, athlete_user, redemption_pool):
         PointsLedger.objects.create(
             user=athlete_user,
             delta=100,
