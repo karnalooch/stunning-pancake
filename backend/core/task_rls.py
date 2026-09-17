@@ -12,7 +12,9 @@ import uuid
 from typing import Any
 
 from celery import Task
+from django.db import connection
 
+from core.db_role_guard import enforce_production_runtime_database_role
 from core.rls import clear_all_context, set_global_owner_context, set_tenant_context
 
 TENANT_TASK_HEADER = "4velo_tenant_id"
@@ -50,7 +52,20 @@ def task_headers_for_user(user: Any) -> dict[str, object]:
     return tenant_task_headers(tenant_id)
 
 
-def apply_task_rls_scope(headers: dict[str, object] | None) -> None:
+def _close_connection_after_scope_failure() -> None:
+    """Discard a DB connection when its GUC cleanup cannot be trusted."""
+
+    try:
+        connection.close()
+    except Exception:
+        pass
+
+
+def apply_task_rls_scope(
+    headers: dict[str, object] | None,
+    *,
+    require_scope: bool = False,
+) -> None:
     """Clear stale DB scope and apply one validated scope from trusted task headers."""
 
     clear_all_context()
@@ -75,23 +90,45 @@ def apply_task_rls_scope(headers: dict[str, object] | None) -> None:
         except Exception:
             clear_all_context()
             raise
+        return
+
+    if require_scope:
+        raise InvalidTaskRLSContext("task requires an explicit tenant or global-owner RLS scope")
 
 
 class RLSScopedTask(Task):
-    """Celery base task that prevents tenant GUC leakage between worker jobs."""
+    """Default Celery task base that prevents GUC leakage between worker jobs."""
 
     abstract = True
+    require_rls_scope = False
 
     def before_start(self, task_id, args, kwargs):
+        enforce_production_runtime_database_role()
         try:
-            apply_task_rls_scope(getattr(self.request, "headers", None))
+            apply_task_rls_scope(
+                getattr(self.request, "headers", None),
+                require_scope=bool(self.require_rls_scope),
+            )
         except Exception:
-            clear_all_context()
+            try:
+                clear_all_context()
+            except Exception:
+                _close_connection_after_scope_failure()
             raise
         return super().before_start(task_id, args, kwargs)
 
     def after_return(self, status, retval, task_id, args, kwargs, einfo):
         try:
-            clear_all_context()
-        finally:
             return super().after_return(status, retval, task_id, args, kwargs, einfo)
+        finally:
+            try:
+                clear_all_context()
+            except Exception:
+                _close_connection_after_scope_failure()
+
+
+class RequiredRLSScopedTask(RLSScopedTask):
+    """Task base for work that must never execute without an explicit RLS scope."""
+
+    abstract = True
+    require_rls_scope = True
