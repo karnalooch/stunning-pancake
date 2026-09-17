@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
@@ -127,10 +128,9 @@ class ActivitySerializer(serializers.ModelSerializer):
         """Bind every API-created activity to the authenticated user's tenant.
 
         ``ActivityViewSet.perform_create`` injects ``user=request.user`` into
-        ``serializer.save``.  The tenant is never accepted from the client and
-        a tenant-less user is rejected fail-closed: an ``Activity`` with
-        ``tenant_id=NULL`` would fall outside the canonical FORCE-RLS tenant
-        boundary and could disappear from tenant-scoped operational paths.
+        ``serializer.save``. The tenant is never accepted from the client.
+        A client request id makes first-party start retries replay the same row,
+        including the race where the first response is lost after DB commit.
         """
 
         user = validated_data.get("user")
@@ -138,7 +138,26 @@ class ActivitySerializer(serializers.ModelSerializer):
         if tenant_id is None:
             raise serializers.ValidationError({"tenant": "tenant_context_required"})
         validated_data["tenant_id"] = tenant_id
-        return super().create(validated_data)
+
+        client_request_id = validated_data.get("client_request_id")
+        if not client_request_id:
+            return super().create(validated_data)
+
+        existing = Activity.objects.filter(
+            user=user,
+            client_request_id=client_request_id,
+        ).first()
+        if existing:
+            return existing
+
+        try:
+            with transaction.atomic():
+                return super().create(validated_data)
+        except IntegrityError:
+            return Activity.objects.get(
+                user=user,
+                client_request_id=client_request_id,
+            )
 
 
 class ActivityCreateSerializer(serializers.ModelSerializer):
