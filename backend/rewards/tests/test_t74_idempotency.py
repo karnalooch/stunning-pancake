@@ -56,9 +56,7 @@ def test_redemption_requires_idempotency_key(athlete, reward_pool):
     client = APIClient()
     client.force_authenticate(user=athlete)
 
-    response = client.post(
-        reverse("rewards:redeem", kwargs={"pool_id": reward_pool.pk})
-    )
+    response = client.post(reverse("rewards:redeem", kwargs={"pool_id": reward_pool.pk}))
 
     assert response.status_code == 400
     assert "Idempotency-Key" in response.data["detail"]
@@ -84,10 +82,13 @@ def test_same_redemption_key_replays_one_business_effect(athlete, reward_pool):
     assert retry.status_code == 201
     assert retry.data["id"] == first.data["id"]
     assert Voucher.objects.filter(user=athlete).count() == 1
-    assert PointsLedger.objects.filter(
-        user=athlete,
-        reason="VOUCHER_REDEEM",
-    ).count() == 1
+    assert (
+        PointsLedger.objects.filter(
+            user=athlete,
+            reason="VOUCHER_REDEEM",
+        ).count()
+        == 1
+    )
     assert RewardsService.get_balance(athlete.pk) == 50
 
 
@@ -110,10 +111,13 @@ def test_different_redemption_keys_are_distinct_user_intents(athlete, reward_poo
     assert second.status_code == 201
     assert second.data["id"] != first.data["id"]
     assert Voucher.objects.filter(user=athlete).count() == 2
-    assert PointsLedger.objects.filter(
-        user=athlete,
-        reason="VOUCHER_REDEEM",
-    ).count() == 2
+    assert (
+        PointsLedger.objects.filter(
+            user=athlete,
+            reason="VOUCHER_REDEEM",
+        ).count()
+        == 2
+    )
     assert RewardsService.get_balance(athlete.pk) == 50
 
 
@@ -132,8 +136,11 @@ def test_activity_award_is_idempotent(athlete, tenant):
 
     assert first == 100
     assert retry == 0
-    assert PointsLedger.objects.filter(
-        user=athlete,
-        reason="ACTIVITY_VERIFIED",
-        reference_id=f"activity:{activity.pk}",
-    ).count() == 1
+    assert (
+        PointsLedger.objects.filter(
+            user=athlete,
+            reason="ACTIVITY_VERIFIED",
+            reference_id=f"activity:{activity.pk}",
+        ).count()
+        == 1
+    )
