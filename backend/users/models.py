@@ -175,8 +175,10 @@ class AuditLogQuerySet(models.QuerySet):
     """
 
     def update(self, **kwargs):
-        if kwargs and set(kwargs).issubset(_AUDIT_LOG_FK_NULL_FIELDS) and all(
-            value is None for value in kwargs.values()
+        if (
+            kwargs
+            and set(kwargs).issubset(_AUDIT_LOG_FK_NULL_FIELDS)
+            and all(value is None for value in kwargs.values())
         ):
             return super().update(**kwargs)
         raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
