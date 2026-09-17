@@ -1,9 +1,12 @@
+import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 import home_lab
+from backup_crypto import decode_key
 
 
 class HomeLabTests(unittest.TestCase):
@@ -35,6 +38,11 @@ class HomeLabTests(unittest.TestCase):
         )
         self.assertGreaterEqual(len(values["SECRET_KEY"]), 64)
         self.assertNotEqual(values["SECRET_KEY"], values["TELEMETRY_INGEST_JWT_SECRET"])
+        self.assertEqual(len(decode_key(values["BACKUP_ENCRYPTION_KEY"])), 32)
+        self.assertNotEqual(values["BACKUP_ENCRYPTION_KEY"], values["SECRET_KEY"])
+        self.assertNotEqual(
+            values["BACKUP_ENCRYPTION_KEY"], values["TELEMETRY_INGEST_JWT_SECRET"]
+        )
 
     def test_home_override_enforces_pilot_ack_shared_signing_key_and_runtime_db_role(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
@@ -51,6 +59,29 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
+    def test_pilot_core_ports_are_loopback_only(self):
+        content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        for port in (5432, 6379, 8000, 8001, 3001):
+            self.assertIn(f'127.0.0.1:{port}:', content)
+
+    def test_production_django_transport_hardening_is_fail_closed(self):
+        settings = (home_lab.ROOT / "backend" / "core" / "settings.py").read_text(encoding="utf-8")
+        self.assertIn('SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")', settings)
+        self.assertIn("SECURE_SSL_REDIRECT = not DEBUG", settings)
+        self.assertIn("SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG", settings)
+        self.assertIn("SESSION_COOKIE_SECURE = not DEBUG", settings)
+        self.assertIn("CSRF_COOKIE_SECURE = not DEBUG", settings)
+
+    def test_initialize_creates_private_environment_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            with patch.object(home_lab, "ENV_FILE", env):
+                home_lab.initialize()
+
+            self.assertTrue(env.is_file())
+            if os.name == "posix":
+                self.assertEqual(env.stat().st_mode & 0o777, 0o600)
+
     def test_initialize_refuses_to_overwrite_environment(self):
         with tempfile.TemporaryDirectory() as folder:
             env = Path(folder) / ".env.home"
@@ -59,14 +90,39 @@ class HomeLabTests(unittest.TestCase):
                 home_lab.initialize()
             self.assertEqual(env.read_text(), "existing")
 
-    def test_validate_backup_rejects_missing_or_wrong_extension(self):
+    def test_validate_backup_accepts_encrypted_artifact_only(self):
         with tempfile.TemporaryDirectory() as folder:
+            folder_path = Path(folder)
             with self.assertRaises(SystemExit):
-                home_lab.validate_backup(Path(folder) / "missing.dump")
-            text = Path(folder) / "backup.txt"
-            text.write_text("x")
+                home_lab.validate_backup(folder_path / "missing.dump.enc")
+
+            plaintext = folder_path / "backup.dump"
+            plaintext.write_bytes(b"plaintext")
             with self.assertRaises(SystemExit):
-                home_lab.validate_backup(text)
+                home_lab.validate_backup(plaintext)
+
+            encrypted = folder_path / "backup.dump.enc"
+            encrypted.write_bytes(b"encrypted")
+            self.assertEqual(home_lab.validate_backup(encrypted), encrypted.resolve())
+
+    def test_prune_backups_enforces_thirty_day_policy_for_canonical_artifacts(self):
+        with tempfile.TemporaryDirectory() as folder:
+            backup_dir = Path(folder)
+            old = backup_dir / "4velo-home-old.dump.enc"
+            recent = backup_dir / "4velo-home-recent.dump.enc"
+            unrelated = backup_dir / "manual.dump.enc"
+            for path in (old, recent, unrelated):
+                path.write_bytes(b"encrypted")
+            old_epoch = time.time() - 31 * 24 * 60 * 60
+            os.utime(old, (old_epoch, old_epoch))
+
+            with patch.object(home_lab, "BACKUP_DIR", backup_dir):
+                removed = home_lab.prune_backups()
+
+            self.assertEqual(removed, [old])
+            self.assertFalse(old.exists())
+            self.assertTrue(recent.exists())
+            self.assertTrue(unrelated.exists())
 
     def test_parse_compose_ps_accepts_json_array(self):
         output = '[{"Service":"db","State":"running"},{"Service":"redis","State":"running"}]'

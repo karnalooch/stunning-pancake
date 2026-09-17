@@ -13,6 +13,8 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
+from backup_crypto import decrypt_file_to_stream, encrypt_stream, generate_key
+
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env.home"
 ENV_TEMPLATE = ROOT / ".env.home.example"
@@ -22,6 +24,8 @@ PROJECT = "4velo-home"
 BASE_COMPOSE_FILE = ROOT / "docker-compose.yml"
 HOME_COMPOSE_FILE = ROOT / "docker-compose.home.yml"
 RECOVERY_DATABASE = "4velo_restore_check"
+BACKUP_RETENTION_DAYS = 30
+BACKUP_SUFFIX = ".dump.enc"
 CORE_SERVICES = (
     "db",
     "redis",
@@ -205,6 +209,7 @@ def render_environment(template: str) -> str:
         "DB_PASSWORD": secrets.token_urlsafe(32),
         "SECRET_KEY": secrets.token_urlsafe(64),
         "TELEMETRY_INGEST_JWT_SECRET": secrets.token_urlsafe(64),
+        "BACKUP_ENCRYPTION_KEY": generate_key(),
     }
     lines = []
     for line in template.splitlines():
@@ -218,7 +223,28 @@ def render_environment(template: str) -> str:
 def initialize() -> None:
     if ENV_FILE.exists():
         raise SystemExit(f"Refusing to overwrite existing {ENV_FILE.name}")
-    ENV_FILE.write_text(render_environment(ENV_TEMPLATE.read_text()), encoding="utf-8")
+
+    rendered = render_environment(ENV_TEMPLATE.read_text())
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    try:
+        descriptor = os.open(ENV_FILE, flags, 0o600)
+    except FileExistsError as exc:
+        raise SystemExit(f"Refusing to overwrite existing {ENV_FILE.name}") from exc
+
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(rendered)
+            handle.flush()
+            os.fsync(handle.fileno())
+        try:
+            ENV_FILE.chmod(0o600)
+        except OSError:
+            # Windows permissions are controlled by the user's filesystem ACL.
+            pass
+    except Exception:
+        ENV_FILE.unlink(missing_ok=True)
+        raise
+
     print(f"Created {ENV_FILE.name} with fresh local-only credentials")
 
 
@@ -305,41 +331,101 @@ def check_health() -> None:
     print("Home lab core services and HTTP health endpoints are ready")
 
 
-def backup() -> Path:
-    require_environment()
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
-    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
-    destination = BACKUP_DIR / f"4velo-home-{stamp}.dump"
-    remote = f"/tmp/{destination.name}"
-    dump = 'pg_dump --format=custom --no-owner --no-acl --username="$POSTGRES_USER" --file="$1" "$POSTGRES_DB"'
-    run(compose_command("exec", "-T", "db", "sh", "-c", dump, "sh", remote))
-    try:
-        run(compose_command("cp", f"db:{remote}", str(destination)))
-    finally:
-        run(compose_command("exec", "-T", "db", "rm", "-f", remote), check=False)
-    print(f"Backup created: {destination}")
-    return destination
-
-
 def validate_backup(path: Path) -> Path:
     resolved = path.expanduser().resolve()
-    if not resolved.is_file() or resolved.suffix != ".dump":
-        raise SystemExit("Backup must be an existing .dump file")
+    if not resolved.is_file() or not resolved.name.endswith(BACKUP_SUFFIX):
+        raise SystemExit("Backup must be an existing .dump.enc encrypted artifact")
     return resolved
 
 
+def prune_backups(retention_days: int = BACKUP_RETENTION_DAYS) -> list[Path]:
+    """Delete only canonical encrypted artifacts older than the retention policy."""
+    if retention_days < 1:
+        raise ValueError("backup retention must be at least one day")
+    if not BACKUP_DIR.exists():
+        return []
+
+    cutoff = time.time() - retention_days * 24 * 60 * 60
+    removed: list[Path] = []
+    for artifact in BACKUP_DIR.glob("4velo-home-*.dump.enc"):
+        if artifact.is_file() and artifact.stat().st_mtime < cutoff:
+            artifact.unlink()
+            removed.append(artifact)
+    return removed
+
+
+def backup() -> Path:
+    """Stream pg_dump directly into AES-256-GCM without plaintext staging."""
+    require_environment()
+    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    destination = BACKUP_DIR / f"4velo-home-{stamp}{BACKUP_SUFFIX}"
+    key = home_env_value("BACKUP_ENCRYPTION_KEY")
+    dump = (
+        'exec pg_dump --format=custom --no-owner --no-acl '
+        '--username="$POSTGRES_USER" "$POSTGRES_DB"'
+    )
+    command = compose_command("exec", "-T", "db", "sh", "-c", dump)
+    process = subprocess.Popen(command, cwd=ROOT, stdout=subprocess.PIPE)
+    if process.stdout is None:
+        process.kill()
+        process.wait()
+        raise RuntimeError("pg_dump stdout pipe was not created")
+
+    try:
+        encrypt_stream(process.stdout, destination, key)
+    except Exception:
+        destination.unlink(missing_ok=True)
+        if process.poll() is None:
+            process.terminate()
+        process.wait()
+        raise
+    finally:
+        process.stdout.close()
+
+    return_code = process.wait()
+    if return_code != 0:
+        destination.unlink(missing_ok=True)
+        raise subprocess.CalledProcessError(return_code, command)
+
+    removed = prune_backups()
+    print(f"Encrypted backup created: {destination}")
+    if removed:
+        print(f"Pruned {len(removed)} encrypted backup(s) older than {BACKUP_RETENTION_DAYS} days")
+    return destination
+
+
 def restore_backup(path: Path, database: str = RECOVERY_DATABASE) -> None:
+    """Authenticate and stream-decrypt an encrypted artifact into isolated pg_restore."""
     require_environment()
     source = validate_backup(path)
-    remote = "/tmp/4velo-restore-check.dump"
-    run(compose_command("cp", str(source), f"db:{remote}"))
+    key = home_env_value("BACKUP_ENCRYPTION_KEY")
     restore = '''dropdb --if-exists --force --username="$POSTGRES_USER" "$1"
 createdb --username="$POSTGRES_USER" "$1"
-pg_restore --exit-on-error --no-owner --no-acl --username="$POSTGRES_USER" --dbname="$1" "$2"'''
+exec pg_restore --exit-on-error --no-owner --no-acl --username="$POSTGRES_USER" --dbname="$1"'''
+    command = compose_command("exec", "-T", "db", "sh", "-c", restore, "sh", database)
+    process = subprocess.Popen(command, cwd=ROOT, stdin=subprocess.PIPE)
+    if process.stdin is None:
+        process.kill()
+        process.wait()
+        raise RuntimeError("pg_restore stdin pipe was not created")
+
     try:
-        run(compose_command("exec", "-T", "db", "sh", "-c", restore, "sh", database, remote))
-    finally:
-        run(compose_command("exec", "-T", "db", "rm", "-f", remote), check=False)
+        decrypt_file_to_stream(source, process.stdin, key)
+        process.stdin.close()
+        return_code = process.wait()
+        if return_code != 0:
+            raise subprocess.CalledProcessError(return_code, command)
+    except Exception:
+        try:
+            process.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
+        if process.poll() is None:
+            process.terminate()
+        process.wait()
+        drop_database(database)
+        raise
 
 
 def drop_database(database: str = RECOVERY_DATABASE) -> None:
@@ -526,6 +612,9 @@ def p3_recovery_drill() -> Path:
         "restored_snapshot_sha256": after_digest,
         "backup_file": backup_path.name,
         "backup_sha256": backup_digest,
+        "backup_encryption": "AES-256-GCM",
+        "backup_plaintext_staged": False,
+        "backup_retention_days": BACKUP_RETENTION_DAYS,
         "backup_started_at_utc": backup_started_at.isoformat(),
         "backup_completed_at_utc": backup_completed_at.isoformat(),
         "newest_recoverable_gps_epoch": newest_gps_epoch,
@@ -562,6 +651,8 @@ def parse_args() -> argparse.Namespace:
     sub.add_parser("status")
     sub.add_parser("down")
     sub.add_parser("backup")
+    prune = sub.add_parser("prune-backups")
+    prune.add_argument("--days", type=int, default=BACKUP_RETENTION_DAYS)
     restore = sub.add_parser("verify-restore")
     restore.add_argument("path", type=Path)
     sub.add_parser("p3-recovery-drill")
@@ -587,6 +678,9 @@ def main() -> None:
         run(compose_command("down"))
     elif args.action == "backup":
         backup()
+    elif args.action == "prune-backups":
+        removed = prune_backups(args.days)
+        print(f"Pruned {len(removed)} encrypted backup(s)")
     elif args.action == "verify-restore":
         verify_restore(args.path)
     elif args.action == "p3-recovery-drill":
