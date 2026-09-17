@@ -13,26 +13,131 @@ services:
   db:
     ports:
       - "127.0.0.1:5432:5432"
+
+  # T73 bootstrap: POSTGRES_USER remains the local migration/backup owner,
+  # while all application runtimes connect through a distinct role that is
+  # forcibly NOSUPERUSER/NOBYPASSRLS. The grants are idempotent and also cover
+  # existing volumes; ALTER DEFAULT PRIVILEGES covers later Django migrations.
+  db_runtime_role_init:
+    image: timescale/timescaledb-ha:pg15-latest
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      PGUSER: ${POSTGRES_USER:?err_POSTGRES_USER_not_set}
+      PGPASSWORD: ${DB_PASSWORD:?err_DB_PASSWORD_not_set}
+      APP_DB_USER: ${APP_DB_USER:-4velo_runtime}
+      APP_DB_PASSWORD: ${DB_PASSWORD:?err_DB_PASSWORD_not_set}
+    command:
+      - /bin/bash
+      - -euc
+      - |
+        psql -v ON_ERROR_STOP=1 \
+          --set=app_user="$$APP_DB_USER" \
+          --set=app_password="$$APP_DB_PASSWORD" \
+          --set=admin_user="$$PGUSER" <<'SQL'
+        SELECT format(
+          'CREATE ROLE %I LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOREPLICATION',
+          :'app_user', :'app_password'
+        )
+        WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = :'app_user')
+        \gexec
+        SELECT format(
+          'ALTER ROLE %I WITH LOGIN PASSWORD %L NOSUPERUSER NOBYPASSRLS NOREPLICATION',
+          :'app_user', :'app_password'
+        ) \gexec
+        SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'app_user') \gexec
+        SELECT format('GRANT USAGE, CREATE ON SCHEMA public TO %I', :'app_user') \gexec
+        SELECT format(
+          'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I',
+          :'app_user'
+        ) \gexec
+        SELECT format(
+          'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I',
+          :'app_user'
+        ) \gexec
+        SELECT format(
+          'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO %I',
+          :'app_user'
+        ) \gexec
+        SELECT format(
+          'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+          'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
+          :'admin_user', :'app_user'
+        ) \gexec
+        SELECT format(
+          'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+          'GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I',
+          :'admin_user', :'app_user'
+        ) \gexec
+        SELECT format(
+          'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+          'GRANT EXECUTE ON FUNCTIONS TO %I',
+          :'admin_user', :'app_user'
+        ) \gexec
+        SQL
+
   redis:
     ports:
       - "127.0.0.1:6379:6379"
+
   backend:
     # The backend issues the activity-scoped telemetry JWT, so it MUST use
     # the same signing key as the telemetry verifier in this isolated pilot.
     environment:
       TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}
+      DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      MIGRATION_DATABASE_URL: postgres://${POSTGRES_USER:?err_POSTGRES_USER_not_set}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      RLS_RUNTIME_ROLE_GUARD: "1"
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8000:8000"
+
   telemetry:
     # ADR 015 / P3: for the pilot an ACK must mean the batch reached the
     # durable database. Redis Stream queue admission is not an ACK boundary
     # until Redis persistence/replay/restart durability is separately proven.
     environment:
+      DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
       TELEMETRY_INGEST_JWT_REQUIRED: "1"
       TELEMETRY_INGEST_AUDIENCE_REQUIRED: "1"
       TELEMETRY_INGEST_QUEUE: "0"
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
     ports:
       - "127.0.0.1:8001:8001"
+
+  celery_worker:
+    environment:
+      DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      RLS_RUNTIME_ROLE_GUARD: "1"
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
+
+  celery_beat:
+    environment:
+      DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      RLS_RUNTIME_ROLE_GUARD: "1"
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
+
+  celery_worker_simulation:
+    environment:
+      DATABASE_URL: postgres://${APP_DB_USER:-4velo_runtime}:${DB_PASSWORD:?err_DB_PASSWORD_not_set}@db:5432/${POSTGRES_DB:?err_POSTGRES_DB_not_set}
+      RLS_RUNTIME_ROLE_GUARD: "1"
+    depends_on:
+      db_runtime_role_init:
+        condition: service_completed_successfully
+
   global_admin:
     ports:
       - "127.0.0.1:3001:80"
