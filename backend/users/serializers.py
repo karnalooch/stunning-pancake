@@ -39,6 +39,12 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    tenant_id = serializers.PrimaryKeyRelatedField(
+        source="tenant",
+        queryset=Tenant.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
     tenant_name = serializers.CharField(source="tenant.name", read_only=True, default="")
     tenant_flags = serializers.SerializerMethodField()
 
