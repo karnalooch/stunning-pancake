@@ -1,9 +1,9 @@
 import 'react-native-gesture-handler';
-// ─── CRITICAL: Unistyles must be configured before ANY other import ──────────
-// ES module `import` statements are hoisted. If configure() lives inline here,
-// App's dependency tree (RetroInput, PixelText, etc.) resolves first and their
-// module-level StyleSheet.create() calls fire BEFORE configure() — causing crash.
-// Isolating configure() in its own file forces Metro to execute it first.
+import './src/security/installRedaction';
+// ─── CRITICAL: Unistyles must be configured before ANY other UI import ───────
+// ES module dependencies are evaluated before App's dependency tree. Keep the
+// privacy redaction bootstrap and Unistyles setup ahead of App imports so both
+// contracts are active before services/screens initialise.
 import './src/theme/unistylesSetup';
 
 import { registerRootComponent } from 'expo';
