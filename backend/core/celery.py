@@ -13,7 +13,10 @@ from celery import Celery
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 
-app = Celery("sport")
+# T73: every worker task starts and ends with a cleared PostgreSQL RLS context.
+# Tasks that need protected tenant data opt into RequiredRLSScopedTask and must
+# receive an explicit trusted tenant/global-owner header from their producer.
+app = Celery("sport", task_cls="core.task_rls:RLSScopedTask")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
 
