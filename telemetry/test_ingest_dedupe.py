@@ -10,6 +10,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(__file__))
 os.environ.setdefault("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
 
+from durable_routes import _activity_batch_identity
 from ingest_service import is_duplicate_batch, persist_ingest_rows
 from main import BatchPacket, GpsPacket, ingest_batch
 
@@ -94,34 +95,32 @@ async def test_failed_persist_does_not_create_false_duplicate_ack():
 
 @pytest.mark.asyncio
 async def test_ingest_batch_returns_durable_receipt_when_deduped():
+    batch = BatchPacket(
+        client_batch_id="dup-id",
+        point_count=1,
+        activity_id=42,
+        max_seq=1,
+        packets=[
+            GpsPacket(
+                device_id="d1",
+                user_id=1,
+                activity_id=42,
+                lat=52.0,
+                lon=21.0,
+                seq=1,
+            ),
+        ],
+    )
+    identity = _activity_batch_identity(batch, 42)
+    assert identity is not None
     receipt = {
         "client_batch_id": "dup-id",
-        "activity_id": 42,
-        "user_id": 1,
-        "point_count": 1,
+        **identity,
         "persisted_count": 1,
         "dropped_privacy": 0,
-        "max_seq": 1,
     }
     with patch("durable_routes.get_batch_receipt", AsyncMock(return_value=receipt)):
-        result = await ingest_batch(
-            BatchPacket(
-                client_batch_id="dup-id",
-                point_count=1,
-                activity_id=42,
-                max_seq=1,
-                packets=[
-                    GpsPacket(
-                        device_id="d1",
-                        user_id=1,
-                        activity_id=42,
-                        lat=52.0,
-                        lon=21.0,
-                        seq=1,
-                    ),
-                ],
-            ),
-        )
+        result = await ingest_batch(batch)
     assert result["deduped"] is True
     assert result["inserted"] == 1
     assert result["point_count"] == 1
