@@ -5,7 +5,11 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.checks import Error, Warning, register
 
-from core.db_role_guard import UnsafeRuntimeDatabaseRole, assert_runtime_database_role_safe
+from core.db_role_guard import (
+    UnsafeRuntimeDatabaseRole,
+    assert_runtime_database_role_safe,
+    runtime_database_role_guard_required,
+)
 from core.production_guards import is_production_runtime
 
 
@@ -27,9 +31,9 @@ def check_allowed_hosts_not_wildcard(app_configs, **kwargs):
 
 @register(deploy=True)
 def check_runtime_database_role_cannot_bypass_rls(app_configs, **kwargs):
-    """Block production deploys that would make FORCE RLS meaningless."""
+    """Block guarded runtimes that would make FORCE RLS meaningless."""
 
-    if not is_production_runtime(debug=settings.DEBUG):
+    if not runtime_database_role_guard_required():
         return []
     try:
         assert_runtime_database_role_safe()
@@ -37,7 +41,7 @@ def check_runtime_database_role_cannot_bypass_rls(app_configs, **kwargs):
         detail = str(exc) if isinstance(exc, UnsafeRuntimeDatabaseRole) else type(exc).__name__
         return [
             Error(
-                f"Production database runtime role is not RLS-safe: {detail}",
+                f"Database runtime role is not RLS-safe: {detail}",
                 hint=(
                     "Use a dedicated PostgreSQL runtime role with NOSUPERUSER and "
                     "NOBYPASSRLS. Keep any privileged migration role separate from "
