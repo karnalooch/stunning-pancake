@@ -12,6 +12,8 @@ on:
       - 'scripts/requirements-home-lab.txt'
       - 'scripts/test_backup_crypto.py'
       - 'scripts/test_home_lab.py'
+      - 'scripts/t76_chaos.py'
+      - 'scripts/test_t76_chaos.py'
       - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
   push:
@@ -26,6 +28,8 @@ on:
       - 'scripts/requirements-home-lab.txt'
       - 'scripts/test_backup_crypto.py'
       - 'scripts/test_home_lab.py'
+      - 'scripts/t76_chaos.py'
+      - 'scripts/test_t76_chaos.py'
       - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
 
@@ -44,7 +48,7 @@ jobs:
         run: python -m pip install -r scripts/requirements-home-lab.txt
       - name: Test home-lab control and backup crypto
         working-directory: scripts
-        run: python -m unittest test_home_lab.py test_backup_crypto.py
+        run: python -m unittest test_home_lab.py test_backup_crypto.py test_t76_chaos.py
       - name: Validate layered home-lab Compose model
         run: >-
           docker compose --env-file .env.home.example
