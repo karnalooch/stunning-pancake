@@ -126,68 +126,73 @@ def test_raw_gps_retention_deletes_only_rows_older_than_30_days():
     old = now - timedelta(days=RAW_GPS_RETENTION_DAYS, seconds=1)
     fresh = now - timedelta(days=RAW_GPS_RETENTION_DAYS) + timedelta(seconds=1)
 
-    with connection.cursor() as cursor:
-        cursor.execute("DROP TABLE IF EXISTS telemetry_ingest_receipts")
-        cursor.execute("DROP TABLE IF EXISTS gps_points")
-        cursor.execute(
-            """
-            CREATE TABLE gps_points (
-                time TIMESTAMPTZ NOT NULL,
-                device_id TEXT NOT NULL,
-                user_id INTEGER,
-                lat DOUBLE PRECISION NOT NULL,
-                lon DOUBLE PRECISION NOT NULL,
-                activity_id INTEGER,
-                seq BIGINT
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS telemetry_ingest_receipts")
+            cursor.execute("DROP TABLE IF EXISTS gps_points")
+            cursor.execute(
+                """
+                CREATE TABLE gps_points (
+                    time TIMESTAMPTZ NOT NULL,
+                    device_id TEXT NOT NULL,
+                    user_id INTEGER,
+                    lat DOUBLE PRECISION NOT NULL,
+                    lon DOUBLE PRECISION NOT NULL,
+                    activity_id INTEGER,
+                    seq BIGINT
+                )
+                """
             )
-            """
-        )
-        cursor.execute(
-            """
-            CREATE TABLE telemetry_ingest_receipts (
-                client_batch_id TEXT PRIMARY KEY,
-                activity_id INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
-                point_count INTEGER NOT NULL,
-                persisted_count INTEGER NOT NULL,
-                dropped_privacy INTEGER NOT NULL,
-                max_seq BIGINT NOT NULL,
-                payload_fingerprint TEXT,
-                acked_at TIMESTAMPTZ NOT NULL
+            cursor.execute(
+                """
+                CREATE TABLE telemetry_ingest_receipts (
+                    client_batch_id TEXT PRIMARY KEY,
+                    activity_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    point_count INTEGER NOT NULL,
+                    persisted_count INTEGER NOT NULL,
+                    dropped_privacy INTEGER NOT NULL,
+                    max_seq BIGINT NOT NULL,
+                    payload_fingerprint TEXT,
+                    acked_at TIMESTAMPTZ NOT NULL
+                )
+                """
             )
-            """
-        )
-        cursor.executemany(
-            """
-            INSERT INTO gps_points (time, device_id, user_id, lat, lon, activity_id, seq)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            [
-                (old, "old", 1, 52.0, 22.0, 10, 1),
-                (fresh, "fresh", 1, 52.1, 22.1, 11, 1),
-            ],
-        )
-        cursor.executemany(
-            """
-            INSERT INTO telemetry_ingest_receipts (
-                client_batch_id, activity_id, user_id, point_count, persisted_count,
-                dropped_privacy, max_seq, payload_fingerprint, acked_at
-            ) VALUES (%s, %s, %s, 1, 1, 0, 1, %s, %s)
-            """,
-            [
-                ("old-batch", 10, 1, "old-fingerprint", old),
-                ("fresh-batch", 11, 1, "fresh-fingerprint", fresh),
-            ],
-        )
+            cursor.executemany(
+                """
+                INSERT INTO gps_points (time, device_id, user_id, lat, lon, activity_id, seq)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    (old, "old", 1, 52.0, 22.0, 10, 1),
+                    (fresh, "fresh", 1, 52.1, 22.1, 11, 1),
+                ],
+            )
+            cursor.executemany(
+                """
+                INSERT INTO telemetry_ingest_receipts (
+                    client_batch_id, activity_id, user_id, point_count, persisted_count,
+                    dropped_privacy, max_seq, payload_fingerprint, acked_at
+                ) VALUES (%s, %s, %s, 1, 1, 0, 1, %s, %s)
+                """,
+                [
+                    ("old-batch", 10, 1, "old-fingerprint", old),
+                    ("fresh-batch", 11, 1, "fresh-fingerprint", fresh),
+                ],
+            )
 
-    deleted = purge_expired_raw_gps(now=now)
+        deleted = purge_expired_raw_gps(now=now)
 
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT device_id FROM gps_points ORDER BY device_id")
-        gps_devices = [row[0] for row in cursor.fetchall()]
-        cursor.execute("SELECT client_batch_id FROM telemetry_ingest_receipts ORDER BY 1")
-        receipt_ids = [row[0] for row in cursor.fetchall()]
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT device_id FROM gps_points ORDER BY device_id")
+            gps_devices = [row[0] for row in cursor.fetchall()]
+            cursor.execute("SELECT client_batch_id FROM telemetry_ingest_receipts ORDER BY 1")
+            receipt_ids = [row[0] for row in cursor.fetchall()]
 
-    assert deleted == {"gps_points": 1, "telemetry_ingest_receipts": 1}
-    assert gps_devices == ["fresh"]
-    assert receipt_ids == ["fresh-batch"]
+        assert deleted == {"gps_points": 1, "telemetry_ingest_receipts": 1}
+        assert gps_devices == ["fresh"]
+        assert receipt_ids == ["fresh-batch"]
+    finally:
+        with connection.cursor() as cursor:
+            cursor.execute("DROP TABLE IF EXISTS telemetry_ingest_receipts")
+            cursor.execute("DROP TABLE IF EXISTS gps_points")
