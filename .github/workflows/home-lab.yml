@@ -7,7 +7,10 @@ on:
       - 'docker-compose.home.yml'
       - 'docker-compose.override.yml'
       - '.env.home.example'
+      - 'scripts/backup_crypto.py'
       - 'scripts/home_lab.py'
+      - 'scripts/requirements-home-lab.txt'
+      - 'scripts/test_backup_crypto.py'
       - 'scripts/test_home_lab.py'
       - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
@@ -18,7 +21,10 @@ on:
       - 'docker-compose.home.yml'
       - 'docker-compose.override.yml'
       - '.env.home.example'
+      - 'scripts/backup_crypto.py'
       - 'scripts/home_lab.py'
+      - 'scripts/requirements-home-lab.txt'
+      - 'scripts/test_backup_crypto.py'
       - 'scripts/test_home_lab.py'
       - 'backend/activities/management/commands/seed_p3_recovery_fixture.py'
       - '.github/workflows/home-lab.yml'
@@ -34,9 +40,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Test home-lab control script
+      - name: Install home-lab security dependencies
+        run: python -m pip install -r scripts/requirements-home-lab.txt
+      - name: Test home-lab control and backup crypto
         working-directory: scripts
-        run: python -m unittest test_home_lab.py
+        run: python -m unittest test_home_lab.py test_backup_crypto.py
       - name: Validate layered home-lab Compose model
         run: >-
           docker compose --env-file .env.home.example
