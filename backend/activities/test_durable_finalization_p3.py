@@ -12,6 +12,7 @@ from rest_framework.test import APIClient
 from activities.models import Activity
 from activities.route_reconciliation import (
     RouteReconciliationPending,
+    _summarize_receipt_rows,
     reconcile_activity_route,
 )
 
@@ -21,6 +22,36 @@ User = get_user_model()
 class RouteReconciliationContractTest(TestCase):
     def setUp(self):
         self.activity = SimpleNamespace(id=17, user_id=9, user=SimpleNamespace(id=9))
+
+    def test_receipt_ranges_prove_exact_sequence_including_privacy_drops(self):
+        summary = _summarize_receipt_rows(
+            [
+                (2, 1, 2, "a" * 64),
+                (2, 2, 4, "b" * 64),
+            ]
+        )
+
+        self.assertEqual(summary, (2, 4, 3, 4))
+
+    def test_receipt_ranges_reject_overlap_gap_even_when_count_equals_max_seq(self):
+        # Aggregate-only validation would see 4 points and max_seq=4 and pass.
+        # The actual ranges are [1,2], [2], [4]: seq=2 overlaps and seq=3 is absent.
+        with self.assertRaises(RouteReconciliationPending) as ctx:
+            _summarize_receipt_rows(
+                [
+                    (2, 0, 2, "a" * 64),
+                    (1, 1, 2, "b" * 64),
+                    (1, 1, 4, "c" * 64),
+                ]
+            )
+
+        self.assertEqual(ctx.exception.reconciliation_code, "sequence_range_incomplete")
+
+    def test_receipt_ranges_fail_closed_without_payload_fingerprint(self):
+        with self.assertRaises(RouteReconciliationPending) as ctx:
+            _summarize_receipt_rows([(1, 0, 1, None)])
+
+        self.assertEqual(ctx.exception.reconciliation_code, "receipt_identity_unverifiable")
 
     @patch("activities.route_reconciliation.PrivacyService.mask_track")
     @patch("activities.route_reconciliation._load_durable_points")
