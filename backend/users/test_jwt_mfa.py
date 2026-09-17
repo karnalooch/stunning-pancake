@@ -12,9 +12,17 @@ from core.social_auth import build_auth_redirect
 from users.jwt_views import restricted_token_pair_for_user
 from users.mfa import _totp_at, generate_totp_secret
 from users.models import User
+from users.test_p3_profile_tenant_guard import (
+    ProfileTenantGuardTest as TestP3ProfileTenantGuard,
+)
 
 pytestmark = pytest.mark.django_db
 ADMIN_ROLES = ("GLOBAL_OWNER", "TENANT_ADMIN", "TENANT_MODERATOR")
+
+# ``users/test_jwt_mfa.py`` is part of the blocking P1 admin pytest command.
+# Keep the P3 profile tenant-transfer contract in that gate instead of relying
+# on the non-blocking legacy suite to discover its standalone module.
+P3_BLOCKING_TEST_CASES = (TestP3ProfileTenantGuard,)
 
 
 @pytest.fixture
