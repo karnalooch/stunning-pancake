@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from celery import Task
+from celery import Task, current_task
 from django.db import connection
 
 from core.db_role_guard import enforce_production_runtime_database_role
@@ -50,6 +50,22 @@ def task_headers_for_user(user: Any) -> dict[str, object]:
     if tenant_id is None:
         raise InvalidTaskRLSContext("tenant-scoped task requires user.tenant_id")
     return tenant_task_headers(tenant_id)
+
+
+def _trusted_parent_headers() -> dict[str, object]:
+    """Copy only the RLS scope from the currently executing parent task."""
+
+    try:
+        parent_headers = getattr(current_task.request, "headers", None) or {}
+    except Exception:
+        return {}
+
+    inherited: dict[str, object] = {}
+    if TENANT_TASK_HEADER in parent_headers:
+        inherited[TENANT_TASK_HEADER] = parent_headers[TENANT_TASK_HEADER]
+    if GLOBAL_OWNER_TASK_HEADER in parent_headers:
+        inherited[GLOBAL_OWNER_TASK_HEADER] = parent_headers[GLOBAL_OWNER_TASK_HEADER]
+    return inherited
 
 
 def _close_connection_after_scope_failure() -> None:
@@ -101,6 +117,16 @@ class RLSScopedTask(Task):
 
     abstract = True
     require_rls_scope = False
+
+    def apply_async(self, args=None, kwargs=None, **options):
+        # Child tasks inherit only the validated RLS scope, never arbitrary
+        # parent headers. Top-level producers still have to attach scope from a
+        # trusted server-side object (authenticated user / persisted tenant).
+        if "headers" not in options:
+            inherited = _trusted_parent_headers()
+            if inherited:
+                options["headers"] = inherited
+        return super().apply_async(args=args, kwargs=kwargs, **options)
 
     def before_start(self, task_id, args, kwargs):
         enforce_production_runtime_database_role()
