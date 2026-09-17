@@ -125,12 +125,12 @@ class ActivitySerializer(serializers.ModelSerializer):
         return None
 
     def create(self, validated_data):
-        """Bind every API-created activity to the authenticated user's tenant.
+        """Bind every API-created activity to its tenant and dedupe create retries.
 
-        ``ActivityViewSet.perform_create`` injects ``user=request.user`` into
-        ``serializer.save``. The tenant is never accepted from the client.
-        A client request id makes first-party start retries replay the same row,
-        including the race where the first response is lost after DB commit.
+        The mobile durability queue retries the same ``start_time`` after a lost
+        response. When a client does not send an explicit request id, that stable
+        timestamp becomes the request identity so a retry replays the original row.
+        A database constraint is the final race-proof boundary.
         """
 
         user = validated_data.get("user")
@@ -140,6 +140,12 @@ class ActivitySerializer(serializers.ModelSerializer):
         validated_data["tenant_id"] = tenant_id
 
         client_request_id = validated_data.get("client_request_id")
+        if not client_request_id:
+            start_time = validated_data.get("start_time")
+            if start_time is not None:
+                client_request_id = f"start:{start_time.isoformat()}"
+                validated_data["client_request_id"] = client_request_id
+
         if not client_request_id:
             return super().create(validated_data)
 
