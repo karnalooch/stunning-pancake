@@ -193,6 +193,8 @@ def load_evidence(path: Path) -> dict:
         raise T76Error(f"Cannot read T76 evidence: {path}") from exc
     if evidence.get("tranche") != "T76" or not isinstance(evidence.get("scenarios"), dict):
         raise T76Error("Not a T76 evidence file")
+    if set(evidence["scenarios"]) != set(SCENARIOS):
+        raise T76Error("T76 evidence scenario set does not match the required matrix")
     return evidence
 
 
@@ -259,7 +261,14 @@ def finalize_evidence(path: Path) -> dict:
     return evidence
 
 
-def preflight(serial: str | None, output: Path | None) -> Path:
+def preflight(serial: str | None, output: Path | None, installed_sha: str) -> Path:
+    repo_sha = exact_git_sha()
+    if installed_sha.strip() != repo_sha:
+        raise T76Error(
+            "Installed-build SHA attestation does not match the checked-out candidate: "
+            f"installed={installed_sha.strip()} repo={repo_sha}"
+        )
+
     devices = parse_adb_devices(run_capture(["adb", "devices"]))
     selected = select_device(devices, serial)
     verify_package(selected)
@@ -336,6 +345,11 @@ def parse_args() -> argparse.Namespace:
     pre = sub.add_parser("preflight")
     pre.add_argument("--serial")
     pre.add_argument("--evidence", type=Path)
+    pre.add_argument(
+        "--installed-sha",
+        required=True,
+        help="Full Git SHA used to build the APK installed on the physical device",
+    )
 
     fault = sub.add_parser("restart-service")
     fault.add_argument("--service", choices=FAULT_SERVICES, required=True)
@@ -363,7 +377,7 @@ def main() -> None:
     args = parse_args()
     try:
         if args.action == "preflight":
-            preflight(args.serial, args.evidence)
+            preflight(args.serial, args.evidence, args.installed_sha)
         elif args.action == "restart-service":
             restart_service(args.service)
         elif args.action == "force-stop":
