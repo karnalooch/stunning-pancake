@@ -18,9 +18,9 @@ class PilotSafeUserProfileView(UserProfileView):
     Privileged roles may never alter their own tenant through the profile API.
     """
 
-    def patch(self, request, *args, **kwargs):
+    def _tenant_change_guard(self, request):
         if "tenant_id" not in request.data:
-            return super().patch(request, *args, **kwargs)
+            return None
 
         user = request.user
         requested_tenant_id = request.data.get("tenant_id")
@@ -44,7 +44,7 @@ class PilotSafeUserProfileView(UserProfileView):
                     {"detail": "Tenant transfer requires administrative approval."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
-            return super().patch(request, *args, **kwargs)
+            return None
 
         if not Tenant.objects.filter(pk=requested_tenant_id, is_active=True).exists():
             return Response(
@@ -52,4 +52,16 @@ class PilotSafeUserProfileView(UserProfileView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        return None
+
+    def patch(self, request, *args, **kwargs):
+        blocked = self._tenant_change_guard(request)
+        if blocked is not None:
+            return blocked
         return super().patch(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        blocked = self._tenant_change_guard(request)
+        if blocked is not None:
+            return blocked
+        return super().put(request, *args, **kwargs)
