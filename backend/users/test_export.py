@@ -98,6 +98,7 @@ def test_t74_export_post_replays_active_job(
     django_capture_on_commit_callbacks,
 ):
     from django.contrib.auth import get_user_model
+
     from users import export_tasks
 
     user = get_user_model().objects.create_user(
