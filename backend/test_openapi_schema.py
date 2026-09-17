@@ -3,7 +3,13 @@
 import pytest
 from django.test import Client
 
+from clubs.test_p3_tenant_scope import ClubTenantIsolationTest
+
 pytestmark = pytest.mark.django_db
+
+# This module is already part of the blocking backend admin pytest command.
+# A Test* alias makes pytest collect the P3 club isolation contract in that gate.
+TestP3ClubTenantIsolation = ClubTenantIsolationTest
 
 
 def test_openapi_schema_endpoint():
