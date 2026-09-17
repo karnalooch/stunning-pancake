@@ -59,6 +59,9 @@ _LOCATION_KEYS = frozenset(
         "location",
         "position",
         "route_path",
+        "polyline",
+        "gpx",
+        "geojson",
     }
 )
 _REDACT_KEYS = _SENSITIVE_KEYS | _LOCATION_KEYS
@@ -67,20 +70,25 @@ _BEARER_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+")
 _JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b")
 _EMAIL_RE = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _URL_CREDENTIALS_RE = re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@:]+:[^\s/@]+@")
+_COORDINATE_SEQUENCE_RE = re.compile(
+    r"(?i)([\"']?(?:coordinates?|gps|location|position|route_path|polyline|gpx|geojson)"
+    r"[\"']?\s*[:=]\s*)\[[^\r\n]*\]"
+)
 _KEY_VALUE_RE = re.compile(
     r"(?ix)"
     r"(?P<prefix>[\"']?(?:authorization|proxy_authorization|token|access_token|"
     r"refresh_token|id_token|password|passwd|secret|secret_key|api_key|apikey|"
     r"cookie|set_cookie|session|sessionid|csrfmiddlewaretoken|email|username|"
     r"user_id|userid|device_id|deviceid|ip|ip_address|lat|latitude|lon|lng|"
-    r"longitude|coordinates|coordinate|gps|location|position|route_path)"
+    r"longitude|coordinates|coordinate|gps|location|position|route_path|polyline|"
+    r"gpx|geojson)"
     r"[\"']?\s*[:=]\s*[\"']?)"
     r"(?P<value>(?!\[REDACTED\])[^\s,;}\"']+)"
 )
 _GEO_URI_RE = re.compile(r"(?i)\bgeo:-?\d{1,3}(?:\.\d+)?,-?\d{1,3}(?:\.\d+)?(?:;[^\s]*)?")
 
 _INSTALLED = False
-_ORIGINAL_FACTORY = logging.getLogRecordFactory()
+_STANDARD_LOG_FIELDS = frozenset(logging.makeLogRecord({}).__dict__)
 
 
 def _normalise_key(key: object) -> str:
@@ -95,6 +103,7 @@ def redact_text(value: str) -> str:
     text = _URL_CREDENTIALS_RE.sub(r"\1[REDACTED]@", text)
     text = _EMAIL_RE.sub(REDACTED, text)
     text = _GEO_URI_RE.sub("geo:[REDACTED]", text)
+    text = _COORDINATE_SEQUENCE_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
     return _KEY_VALUE_RE.sub(lambda match: f"{match.group('prefix')}{REDACTED}", text)
 
 
@@ -143,8 +152,36 @@ def redact_sentry_event(event: dict[str, Any], hint: dict[str, Any] | None = Non
     return redacted if isinstance(redacted, dict) else {}
 
 
+def _redact_log_record(record: logging.LogRecord) -> logging.LogRecord:
+    """Scrub rendered text, exception output and custom structured fields."""
+
+    try:
+        rendered = record.getMessage()
+    except Exception:
+        rendered = str(record.msg)
+    record.msg = redact_text(rendered)
+    record.args = ()
+
+    if record.exc_info:
+        try:
+            record.exc_text = redact_text("".join(traceback.format_exception(*record.exc_info)))
+        except Exception:
+            record.exc_text = REDACTED
+    if record.stack_info:
+        record.stack_info = redact_text(record.stack_info)
+
+    for field, value in list(record.__dict__.items()):
+        if field in _STANDARD_LOG_FIELDS or field in {"msg", "args", "exc_info", "exc_text"}:
+            continue
+        if _normalise_key(field) in _REDACT_KEYS:
+            record.__dict__[field] = REDACTED
+        else:
+            record.__dict__[field] = redact_value(value)
+    return record
+
+
 def install_log_redaction() -> None:
-    """Install one process-wide LogRecord factory that scrubs rendered messages."""
+    """Install one process-wide LogRecord factory before handlers see records."""
 
     global _INSTALLED
     if _INSTALLED:
@@ -153,22 +190,7 @@ def install_log_redaction() -> None:
     previous_factory = logging.getLogRecordFactory()
 
     def redacting_factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
-        record = previous_factory(*args, **kwargs)
-        try:
-            rendered = record.getMessage()
-        except Exception:
-            rendered = str(record.msg)
-        record.msg = redact_text(rendered)
-        record.args = ()
-
-        if record.exc_info:
-            try:
-                record.exc_text = redact_text("".join(traceback.format_exception(*record.exc_info)))
-            except Exception:
-                record.exc_text = REDACTED
-        if record.stack_info:
-            record.stack_info = redact_text(record.stack_info)
-        return record
+        return _redact_log_record(previous_factory(*args, **kwargs))
 
     logging.setLogRecordFactory(redacting_factory)
     _INSTALLED = True
