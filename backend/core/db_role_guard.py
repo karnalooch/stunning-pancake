@@ -1,6 +1,6 @@
-"""Runtime database-role safety guard for production RLS enforcement.
+"""Runtime database-role safety guard for RLS enforcement.
 
-T73 requires the application runtime to connect with a PostgreSQL role that
+T73 requires application runtimes to connect with a PostgreSQL role that
 cannot bypass row-level security. Schema/migration tooling may use a different
 privileged connection, but web and worker runtimes must not run as SUPERUSER
 or with BYPASSRLS.
@@ -8,6 +8,7 @@ or with BYPASSRLS.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -24,7 +25,7 @@ class RuntimeDatabaseRole:
 
 
 class UnsafeRuntimeDatabaseRole(RuntimeError):
-    """Raised when the production runtime role can bypass PostgreSQL RLS."""
+    """Raised when a guarded runtime role can bypass PostgreSQL RLS."""
 
 
 def get_runtime_database_role() -> RuntimeDatabaseRole:
@@ -32,7 +33,7 @@ def get_runtime_database_role() -> RuntimeDatabaseRole:
 
     if connection.vendor != "postgresql":
         raise UnsafeRuntimeDatabaseRole(
-            "4VELO production runtime requires PostgreSQL for row-level security"
+            "4VELO guarded runtime requires PostgreSQL for row-level security"
         )
 
     with connection.cursor() as cursor:
@@ -72,9 +73,26 @@ def assert_runtime_database_role_safe() -> RuntimeDatabaseRole:
     return role
 
 
-def enforce_production_runtime_database_role() -> RuntimeDatabaseRole | None:
-    """Enforce the role contract only in a detected production runtime."""
+def runtime_database_role_guard_required() -> bool:
+    """Return whether this runtime must prove a non-bypass PostgreSQL role.
 
-    if not is_production_runtime(debug=settings.DEBUG):
+    Production can never opt out. Pilot/home-lab environments can opt in even
+    with DEBUG=1 through ``RLS_RUNTIME_ROLE_GUARD=1`` so the release rehearsal
+    exercises the same fail-closed role contract as production.
+    """
+
+    explicit = os.getenv("RLS_RUNTIME_ROLE_GUARD", "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+    return explicit or is_production_runtime(debug=settings.DEBUG)
+
+
+def enforce_runtime_database_role_if_required() -> RuntimeDatabaseRole | None:
+    """Enforce the T73 role contract for production and opted-in pilot runtimes."""
+
+    if not runtime_database_role_guard_required():
         return None
     return assert_runtime_database_role_safe()
