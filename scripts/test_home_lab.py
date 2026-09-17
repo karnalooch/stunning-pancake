@@ -60,11 +60,93 @@ class HomeLabTests(unittest.TestCase):
 
     def test_parse_compose_ps_accepts_json_array(self):
         output = '[{"Service":"db","State":"running"},{"Service":"redis","State":"running"}]'
-        self.assertEqual([row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"])
+        self.assertEqual(
+            [row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"]
+        )
 
     def test_parse_compose_ps_accepts_json_lines(self):
         output = '{"Service":"db","State":"running"}\n{"Service":"redis","State":"running"}'
-        self.assertEqual([row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"])
+        self.assertEqual(
+            [row["Service"] for row in home_lab.parse_compose_ps(output)], ["db", "redis"]
+        )
+
+    @staticmethod
+    def _valid_recovery_snapshot():
+        return {
+            "tenants": [{"id": "a"}, {"id": "b"}],
+            "users": [
+                {"role": "TENANT_ADMIN"},
+                {"role": "ATHLETE"},
+                {"role": "TENANT_ADMIN"},
+                {"role": "ATHLETE"},
+            ],
+            "departments": [{"name": "a"}, {"name": "b"}],
+            "memberships": [{}, {}, {}, {}],
+            "activities": [
+                {"route_path": "SRID=4326;LINESTRING(1 1,2 2)", "route_fingerprint": "a" * 64},
+                {"route_path": "SRID=4326;LINESTRING(3 3,4 4)", "route_fingerprint": "b" * 64},
+            ],
+            "audit_logs": [{}, {}],
+            "gps_points": [
+                {"external_id": "P3-RECOVERY-A", "seq": 1},
+                {"external_id": "P3-RECOVERY-A", "seq": 2},
+                {"external_id": "P3-RECOVERY-A", "seq": 3},
+                {"external_id": "P3-RECOVERY-B", "seq": 1},
+                {"external_id": "P3-RECOVERY-B", "seq": 2},
+                {"external_id": "P3-RECOVERY-B", "seq": 3},
+            ],
+            "telemetry_receipts": [
+                {
+                    "point_count": 3,
+                    "persisted_count": 3,
+                    "dropped_privacy": 0,
+                    "max_seq": 3,
+                    "payload_fingerprint": "c" * 64,
+                },
+                {
+                    "point_count": 3,
+                    "persisted_count": 3,
+                    "dropped_privacy": 0,
+                    "max_seq": 3,
+                    "payload_fingerprint": "d" * 64,
+                },
+            ],
+            "newest_gps_epoch": 1_800_000_000.0,
+        }
+
+    def test_validate_recovery_snapshot_accepts_complete_fixture(self):
+        snapshot = self._valid_recovery_snapshot()
+        self.assertEqual(
+            home_lab.validate_recovery_snapshot(snapshot),
+            home_lab.P3_RECOVERY_EXPECTED_COUNTS,
+        )
+
+    def test_validate_recovery_snapshot_fails_closed_on_missing_business_data(self):
+        snapshot = self._valid_recovery_snapshot()
+        snapshot["gps_points"] = snapshot["gps_points"][:-1]
+        with self.assertRaises(SystemExit):
+            home_lab.validate_recovery_snapshot(snapshot)
+
+    def test_validate_recovery_snapshot_fails_closed_on_sequence_gap(self):
+        snapshot = self._valid_recovery_snapshot()
+        snapshot["gps_points"][2]["seq"] = 4
+        with self.assertRaises(SystemExit):
+            home_lab.validate_recovery_snapshot(snapshot)
+
+    def test_canonical_snapshot_digest_is_key_order_independent(self):
+        left = {"a": 1, "b": {"c": 2}}
+        right = {"b": {"c": 2}, "a": 1}
+        self.assertEqual(
+            home_lab.canonical_snapshot_digest(left),
+            home_lab.canonical_snapshot_digest(right),
+        )
+
+    def test_home_env_value_reads_requested_setting_only(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text("POSTGRES_DB=4velo_home\nSECRET_KEY=do-not-print\n", encoding="utf-8")
+            with patch.object(home_lab, "ENV_FILE", env):
+                self.assertEqual(home_lab.home_env_value("POSTGRES_DB"), "4velo_home")
 
 
 if __name__ == "__main__":
