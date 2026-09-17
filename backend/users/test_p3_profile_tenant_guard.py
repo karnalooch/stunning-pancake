@@ -24,6 +24,14 @@ class ProfileTenantGuardTest(TestCase):
             format="json",
         )
 
+    def put_tenant(self, user, tenant_id):
+        self.client.force_authenticate(user)
+        return self.client.put(
+            self.url,
+            {"tenant_id": str(tenant_id)},
+            format="json",
+        )
+
     def test_tenantless_athlete_can_select_initial_active_tenant(self):
         athlete = User.objects.create_user(
             username="new-athlete",
@@ -46,6 +54,20 @@ class ProfileTenantGuardTest(TestCase):
         )
 
         response = self.patch_tenant(athlete, self.tenant_b.id)
+
+        self.assertEqual(response.status_code, 403)
+        athlete.refresh_from_db()
+        self.assertEqual(athlete.tenant_id, self.tenant_a.id)
+
+    def test_existing_athlete_cannot_self_transfer_between_tenants_with_put(self):
+        athlete = User.objects.create_user(
+            username="bound-athlete-put",
+            password="testpass123",
+            role="ATHLETE",
+            tenant=self.tenant_a,
+        )
+
+        response = self.put_tenant(athlete, self.tenant_b.id)
 
         self.assertEqual(response.status_code, 403)
         athlete.refresh_from_db()
