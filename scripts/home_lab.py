@@ -19,6 +19,7 @@ ENV_TEMPLATE = ROOT / ".env.home.example"
 BACKUP_DIR = ROOT / "backups" / "home-lab"
 EVIDENCE_DIR = BACKUP_DIR / "evidence"
 PROJECT = "4velo-home"
+BASE_COMPOSE_FILE = ROOT / "docker-compose.yml"
 HOME_COMPOSE_FILE = ROOT / "docker-compose.home.yml"
 RECOVERY_DATABASE = "4velo_restore_check"
 CORE_SERVICES = (
@@ -173,10 +174,10 @@ print("P3 restored critical ORM/telemetry path OK")
 
 def compose_command(*args: str, profiles: tuple[str, ...] = ()) -> list[str]:
     command = ["docker", "compose", "-p", PROJECT, "--env-file", str(ENV_FILE)]
-    # Layer the loopback-only home override on top of the shared compose file
-    # so the LAN-facing defaults stay untouched for Railway / production / CI.
-    # Compose merges files in order; -f override semantics let us narrow port
-    # bindings without rewriting the shared `docker-compose.yml`.
+    # Home lab is an override fragment, so always name the canonical base first
+    # and then the loopback/pilot overlay. Passing only the override via -f
+    # would disable Compose's automatic default-file discovery.
+    command.extend(("-f", str(BASE_COMPOSE_FILE)))
     if HOME_COMPOSE_FILE.is_file():
         command.extend(("-f", str(HOME_COMPOSE_FILE)))
     for profile in profiles:
@@ -379,10 +380,7 @@ def recovery_snapshot(database: str) -> dict:
 
 
 def recovery_snapshot_counts(snapshot: dict) -> dict[str, int]:
-    return {
-        key: len(snapshot.get(key, []))
-        for key in P3_RECOVERY_EXPECTED_COUNTS
-    }
+    return {key: len(snapshot.get(key, [])) for key in P3_RECOVERY_EXPECTED_COUNTS}
 
 
 def validate_recovery_snapshot(snapshot: dict) -> dict[str, int]:
