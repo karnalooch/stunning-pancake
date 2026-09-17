@@ -14,7 +14,7 @@ from typing import Any
 from celery import Task, current_task
 from django.db import connection
 
-from core.db_role_guard import enforce_production_runtime_database_role
+from core.db_role_guard import enforce_runtime_database_role_if_required
 from core.rls import clear_all_context, set_global_owner_context, set_tenant_context
 
 TENANT_TASK_HEADER = "4velo_tenant_id"
@@ -155,7 +155,7 @@ class RLSScopedTask(Task):
     abstract = True
     require_rls_scope = False
 
-    def apply_async(self, args=None, kwargs=None, **options):
+    def apply_async(self, args=None, kwargs=None, *positional, **options):
         # Child tasks inherit only the validated RLS scope, never arbitrary
         # parent headers. Top-level web/command dispatch may inherit only the
         # two server-controlled PostgreSQL GUCs.
@@ -163,10 +163,10 @@ class RLSScopedTask(Task):
             inherited = _trusted_parent_headers() or _trusted_connection_headers()
             if inherited:
                 options["headers"] = inherited
-        return super().apply_async(args=args, kwargs=kwargs, **options)
+        return super().apply_async(args, kwargs, *positional, **options)
 
     def before_start(self, task_id, args, kwargs):
-        enforce_production_runtime_database_role()
+        enforce_runtime_database_role_if_required()
         try:
             apply_task_rls_scope(
                 getattr(self.request, "headers", None),
