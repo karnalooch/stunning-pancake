@@ -17,8 +17,12 @@ class ClubTenantIsolationTest(TestCase):
     def setUp(self):
         self.tenant_a = Tenant.objects.create(name="Tenant A")
         self.tenant_b = Tenant.objects.create(name="Tenant B")
-        self.user_a = User.objects.create_user(username="club-user-a", tenant=self.tenant_a)
-        self.user_b = User.objects.create_user(username="club-user-b", tenant=self.tenant_b)
+        self.user_a = User.objects.create_user(
+            username="club-user-a", tenant=self.tenant_a
+        )
+        self.user_b = User.objects.create_user(
+            username="club-user-b", tenant=self.tenant_b
+        )
         self.global_owner = User.objects.create_user(
             username="club-global-owner", role="GLOBAL_OWNER"
         )
@@ -37,8 +41,12 @@ class ClubTenantIsolationTest(TestCase):
             tenant_id=str(self.tenant_b.id),
             owner=self.user_b,
         )
-        ClubMembership.objects.create(club=self.club_a, user=self.user_a, status="ACTIVE")
-        ClubMembership.objects.create(club=self.club_b, user=self.user_b, status="ACTIVE")
+        ClubMembership.objects.create(
+            club=self.club_a, user=self.user_a, status="ACTIVE"
+        )
+        ClubMembership.objects.create(
+            club=self.club_b, user=self.user_b, status="ACTIVE"
+        )
         self.client = APIClient()
 
     def authenticate(self, user):
@@ -49,8 +57,14 @@ class ClubTenantIsolationTest(TestCase):
         response = self.client.get("/api/clubs/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual({row["id"] for row in response.data}, {self.club_a.id})
-        self.assertEqual(self.client.get(f"/api/clubs/{self.club_a.id}/").status_code, 200)
-        self.assertEqual(self.client.get(f"/api/clubs/{self.club_b.id}/").status_code, 404)
+        self.assertEqual(
+            self.client.get(f"/api/clubs/{self.club_a.id}/").status_code,
+            200,
+        )
+        self.assertEqual(
+            self.client.get(f"/api/clubs/{self.club_b.id}/").status_code,
+            404,
+        )
 
     def test_foreign_mutations_and_membership_endpoints_fail_closed(self):
         self.authenticate(self.user_a)
@@ -58,14 +72,24 @@ class ClubTenantIsolationTest(TestCase):
             f"/api/clubs/{self.club_b.id}/", {"description": "forged"}, format="json"
         )
         self.assertEqual(update.status_code, 404)
-        self.assertEqual(self.client.delete(f"/api/clubs/{self.club_b.id}/").status_code, 404)
+        self.assertEqual(
+            self.client.delete(f"/api/clubs/{self.club_b.id}/").status_code,
+            404,
+        )
         self.assertEqual(
             self.client.get(f"/api/clubs/{self.club_b.id}/members/").status_code, 404
         )
-        self.assertEqual(self.client.post(f"/api/clubs/{self.club_b.id}/join/").status_code, 404)
-        self.assertEqual(self.client.post(f"/api/clubs/{self.club_b.id}/leave/").status_code, 404)
         self.assertEqual(
-            self.client.get(f"/api/clubs/{self.club_b.id}/leaderboard/").status_code, 404
+            self.client.post(f"/api/clubs/{self.club_b.id}/join/").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.post(f"/api/clubs/{self.club_b.id}/leave/").status_code,
+            404,
+        )
+        self.assertEqual(
+            self.client.get(f"/api/clubs/{self.club_b.id}/leaderboard/").status_code,
+            404,
         )
         self.assertFalse(
             ClubMembership.objects.filter(club=self.club_b, user=self.user_a).exists()
@@ -102,7 +126,10 @@ class ClubTenantIsolationTest(TestCase):
         response = self.client.get("/api/clubs/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(list(response.data), [])
-        self.assertEqual(self.client.get(f"/api/clubs/{self.club_a.id}/").status_code, 404)
+        self.assertEqual(
+            self.client.get(f"/api/clubs/{self.club_a.id}/").status_code,
+            404,
+        )
         create = self.client.post(
             "/api/clubs/",
             {"name": "No Tenant", "slug": "no-tenant", "sport_type": "BIKE"},
@@ -111,11 +138,15 @@ class ClubTenantIsolationTest(TestCase):
         self.assertEqual(create.status_code, 400)
 
     def test_inconsistent_membership_is_not_disclosed(self):
-        ClubMembership.objects.create(club=self.club_a, user=self.user_b, status="ACTIVE")
+        ClubMembership.objects.create(
+            club=self.club_a, user=self.user_b, status="ACTIVE"
+        )
         self.authenticate(self.user_a)
         members = self.client.get(f"/api/clubs/{self.club_a.id}/members/")
         self.assertEqual(members.status_code, 200)
-        self.assertEqual({row["username"] for row in members.data}, {self.user_a.username})
+        self.assertEqual(
+            {row["username"] for row in members.data}, {self.user_a.username}
+        )
         detail = self.client.get(f"/api/clubs/{self.club_a.id}/")
         self.assertEqual(detail.data["member_count"], 1)
 
@@ -162,4 +193,6 @@ class ClubTenantIsolationTest(TestCase):
         self.authenticate(self.global_owner)
         response = self.client.get("/api/clubs/")
         self.assertEqual(response.status_code, 200)
-        self.assertEqual({row["id"] for row in response.data}, {self.club_a.id, self.club_b.id})
+        self.assertEqual(
+            {row["id"] for row in response.data}, {self.club_a.id, self.club_b.id}
+        )
