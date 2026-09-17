@@ -29,6 +29,15 @@ def _user(username: str = "privacy-user"):
     )
 
 
+def test_retention_is_scheduled_daily():
+    from core.celery import app
+
+    schedule = app.conf.beat_schedule["privacy-data-retention-daily"]
+    assert schedule["task"] == "users.tasks.enforce_data_retention"
+    assert schedule["schedule"] == 86400.0
+    assert schedule["options"] == {"queue": "default"}
+
+
 def test_user_delete_removes_materialized_export(monkeypatch, tmp_path):
     monkeypatch.setenv("GPX_LOCAL_ROOT", str(tmp_path))
     user = _user("delete-export")
@@ -126,10 +135,16 @@ def test_raw_gps_retention_deletes_only_rows_older_than_30_days():
     old = now - timedelta(days=RAW_GPS_RETENTION_DAYS, seconds=1)
     fresh = now - timedelta(days=RAW_GPS_RETENTION_DAYS) + timedelta(seconds=1)
 
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT to_regclass('public.gps_points'), to_regclass('public.telemetry_ingest_receipts')"
+        )
+        gps_table, receipt_table = cursor.fetchone()
+    if gps_table or receipt_table:
+        pytest.skip("shared telemetry tables already exist in this test database")
+
     try:
         with connection.cursor() as cursor:
-            cursor.execute("DROP TABLE IF EXISTS telemetry_ingest_receipts")
-            cursor.execute("DROP TABLE IF EXISTS gps_points")
             cursor.execute(
                 """
                 CREATE TABLE gps_points (
