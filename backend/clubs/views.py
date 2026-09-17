@@ -4,6 +4,8 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from users.audit import record_audit_event
+
 from .models import Club, ClubChallenge, ClubMembership
 from .serializers import (
     ClubChallengeSerializer,
@@ -93,9 +95,21 @@ def join_club(request, pk):
         user=request.user,
         defaults={"status": "ACTIVE"},
     )
+    state_changed = created
     if not created and membership.status != "ACTIVE":
         membership.status = "ACTIVE"
         membership.save(update_fields=["status"])
+        state_changed = True
+    if state_changed:
+        record_audit_event(
+            actor=request.user,
+            target_user=request.user,
+            tenant_id=club.tenant_id,
+            action="club_membership.joined",
+            status_code=200,
+            request=request,
+            details={"club_id": club.id, "membership_id": membership.id},
+        )
     return Response({"status": "joined", "club": club.name})
 
 
@@ -106,7 +120,17 @@ def leave_club(request, pk):
     club = get_object_or_404(scoped_clubs_for(request.user), pk=pk)
     try:
         membership = ClubMembership.objects.get(club=club, user=request.user)
+        membership_id = membership.id
         membership.delete()
+        record_audit_event(
+            actor=request.user,
+            target_user=request.user,
+            tenant_id=club.tenant_id,
+            action="club_membership.left",
+            status_code=200,
+            request=request,
+            details={"club_id": club.id, "membership_id": membership_id},
+        )
         return Response({"status": "left"})
     except ClubMembership.DoesNotExist:
         return Response({"error": "Not a member."}, status=status.HTTP_404_NOT_FOUND)
