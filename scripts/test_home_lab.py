@@ -7,12 +7,15 @@ import home_lab
 
 
 class HomeLabTests(unittest.TestCase):
-    def test_compose_command_is_pinned_to_local_project_and_env(self):
+    def test_compose_command_is_pinned_to_local_project_env_and_layered_files(self):
         command = home_lab.compose_command("config", "--quiet", profiles=("routing", "simulation"))
         self.assertEqual(
             command[:6],
             ["docker", "compose", "-p", "4velo-home", "--env-file", str(home_lab.ENV_FILE)],
         )
+        base_pair = ["-f", str(home_lab.BASE_COMPOSE_FILE)]
+        home_pair = ["-f", str(home_lab.HOME_COMPOSE_FILE)]
+        self.assertEqual(command[6:10], [*base_pair, *home_pair])
         self.assertEqual(
             command[-6:], ["--profile", "routing", "--profile", "simulation", "config", "--quiet"]
         )
@@ -23,6 +26,8 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("TELEMETRY_INGEST_JWT_REQUIRED=1", rendered)
         self.assertIn("TELEMETRY_INGEST_AUDIENCE_REQUIRED=1", rendered)
         self.assertIn("TELEMETRY_INGEST_QUEUE=0", rendered)
+        self.assertIn("APP_DB_USER=4velo_runtime", rendered)
+        self.assertIn("RLS_RUNTIME_ROLE_GUARD=1", rendered)
         values = dict(
             line.split("=", 1)
             for line in rendered.splitlines()
@@ -31,7 +36,7 @@ class HomeLabTests(unittest.TestCase):
         self.assertGreaterEqual(len(values["SECRET_KEY"]), 64)
         self.assertNotEqual(values["SECRET_KEY"], values["TELEMETRY_INGEST_JWT_SECRET"])
 
-    def test_home_override_enforces_pilot_ack_and_shared_telemetry_signing_key(self):
+    def test_home_override_enforces_pilot_ack_shared_signing_key_and_runtime_db_role(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
         self.assertIn('TELEMETRY_INGEST_QUEUE: "0"', content)
         self.assertIn('TELEMETRY_INGEST_AUDIENCE_REQUIRED: "1"', content)
@@ -40,6 +45,11 @@ class HomeLabTests(unittest.TestCase):
             "TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}",
             content,
         )
+        self.assertIn("db_runtime_role_init:", content)
+        self.assertIn("NOSUPERUSER NOBYPASSRLS", content)
+        self.assertIn('RLS_RUNTIME_ROLE_GUARD: "1"', content)
+        self.assertIn("MIGRATION_DATABASE_URL:", content)
+        self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
     def test_initialize_refuses_to_overwrite_environment(self):
         with tempfile.TemporaryDirectory() as folder:
