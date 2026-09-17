@@ -186,6 +186,11 @@ class AuditLogQuerySet(models.QuerySet):
     def delete(self):
         raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
 
+    def bulk_create(self, objs, batch_size=None, ignore_conflicts=False, **kwargs):
+        # ``bulk_create`` skips model.save(), so it would also skip immutable
+        # actor/target snapshots. Audit events must be inserted row-by-row.
+        raise ValidationError("Audit logs must be created through per-row save().")
+
     def bulk_update(self, objs, fields, batch_size=None):
         raise ValidationError(AUDIT_LOG_IMMUTABLE_MESSAGE)
 
