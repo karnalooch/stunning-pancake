@@ -18,13 +18,18 @@ _BEARER_RE = re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]+")
 _JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b")
 _EMAIL_RE = re.compile(r"(?i)\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b")
 _URL_CREDENTIALS_RE = re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^\s/@:]+:[^\s/@]+@")
+_COORDINATE_SEQUENCE_RE = re.compile(
+    r"(?i)([\"']?(?:coordinates?|gps|location|position|route_path|polyline|gpx|geojson)"
+    r"[\"']?\s*[:=]\s*)\[[^\r\n]*\]"
+)
 _KEY_VALUE_RE = re.compile(
     r"(?ix)"
     r"(?P<prefix>[\"']?(?:authorization|proxy_authorization|token|access_token|"
     r"refresh_token|id_token|password|passwd|secret|secret_key|api_key|apikey|"
     r"cookie|set_cookie|session|sessionid|csrfmiddlewaretoken|email|username|"
     r"user_id|userid|device_id|deviceid|ip|ip_address|lat|latitude|lon|lng|"
-    r"longitude|coordinates|coordinate|gps|location|position|route_path)"
+    r"longitude|coordinates|coordinate|gps|location|position|route_path|polyline|"
+    r"gpx|geojson)"
     r"[\"']?\s*[:=]\s*[\"']?)"
     r"(?P<value>(?!\[REDACTED\])[^\s,;}\"']+)"
 )
@@ -40,6 +45,7 @@ def redact_text(value: str) -> str:
     text = _URL_CREDENTIALS_RE.sub(r"\1[REDACTED]@", text)
     text = _EMAIL_RE.sub(REDACTED, text)
     text = _GEO_URI_RE.sub("geo:[REDACTED]", text)
+    text = _COORDINATE_SEQUENCE_RE.sub(lambda match: f"{match.group(1)}{REDACTED}", text)
     return _KEY_VALUE_RE.sub(lambda match: f"{match.group('prefix')}{REDACTED}", text)
 
 
