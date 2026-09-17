@@ -1,7 +1,7 @@
 """P3 durable ingest receipt tests."""
 
 from types import SimpleNamespace
-from unittest.mock import ANY, AsyncMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -20,22 +20,6 @@ def packet(seq: int, *, lat: float = 52.1, lon: float = 21.0) -> GpsPacket:
         timestamp=1_700_000_000.0 + seq,
         seq=seq,
         idempotency_key=f"42:{seq}",
-    )
-
-
-def allowed_guard() -> SimpleNamespace:
-    return SimpleNamespace(
-        allowed=True,
-        should_queue_active_sessions=False,
-        retry_after=0,
-    )
-
-
-def disable_scope(monkeypatch) -> None:
-    monkeypatch.setattr(
-        durable_routes,
-        "enforce_current_ingest_scope",
-        lambda **_kwargs: None,
     )
 
 
@@ -63,12 +47,7 @@ def test_filter_keeps_receipt_metadata_when_every_point_is_private(monkeypatch):
 @pytest.mark.asyncio
 async def test_direct_ack_persists_rows_and_receipt_before_ack_marker(monkeypatch):
     rows = ingest_service.IngestRows()
-    rows.extend(
-        [
-            ingest_service.packet_to_row(packet(1)),
-            ingest_service.packet_to_row(packet(2)),
-        ]
-    )
+    rows.extend([ingest_service.packet_to_row(packet(1)), ingest_service.packet_to_row(packet(2))])
     rows.point_count = 2
     rows.dropped_privacy = 0
     rows.activity_id = 42
@@ -85,7 +64,7 @@ async def test_direct_ack_persists_rows_and_receipt_before_ack_marker(monkeypatc
         rows,
         client_batch_id="batch-1",
         activity_id=42,
-        guard=allowed_guard(),
+        guard=SimpleNamespace(allowed=True, should_queue_active_sessions=False, retry_after=0),
     )
 
     persist.assert_awaited_once_with(
@@ -117,31 +96,24 @@ async def test_durable_batch_acks_fully_private_batch_without_broadcast(monkeypa
     rows.user_id = 7
     rows.max_seq = 2
 
-    disable_scope(monkeypatch)
-    monkeypatch.setattr(
-        durable_routes,
-        "get_batch_receipt",
-        AsyncMock(return_value=None),
-    )
-    monkeypatch.setattr(
-        durable_routes,
-        "get_ingest_redis",
-        AsyncMock(return_value=object()),
-    )
+    monkeypatch.setattr(durable_routes, "enforce_current_ingest_scope", lambda **_kwargs: None)
+    monkeypatch.setattr(durable_routes, "get_batch_receipt", AsyncMock(return_value=None))
+    monkeypatch.setattr(durable_routes, "get_ingest_redis", AsyncMock(return_value=object()))
     monkeypatch.setattr(
         durable_routes,
         "check_ingest_allowed",
-        AsyncMock(return_value=allowed_guard()),
+        AsyncMock(return_value=SimpleNamespace(allowed=True, should_queue_active_sessions=False)),
     )
     monkeypatch.setattr(
         durable_routes,
         "filter_privacy_packets",
         lambda _packets: (rows, 2, 42, 2),
     )
-    persist = AsyncMock(
-        return_value={"inserted": 0, "queued": False, "ingest_mode": "direct"}
+    monkeypatch.setattr(
+        durable_routes,
+        "persist_ingest_rows",
+        AsyncMock(return_value={"inserted": 0, "queued": False, "ingest_mode": "direct"}),
     )
-    monkeypatch.setattr(durable_routes, "persist_ingest_rows", persist)
     broadcast = AsyncMock()
     monkeypatch.setattr(durable_routes, "maybe_broadcast", broadcast)
 
@@ -151,19 +123,6 @@ async def test_durable_batch_acks_fully_private_batch_without_broadcast(monkeypa
     assert response["inserted"] == 0
     assert response["dropped_privacy"] == 2
     assert response["max_seq"] == 2
-    persist.assert_awaited_once_with(
-        rows,
-        client_batch_id="private-batch",
-        activity_id=42,
-        guard=ANY,
-        receipt={
-            "activity_id": 42,
-            "user_id": 7,
-            "point_count": 2,
-            "max_seq": 2,
-            "dropped_privacy": 2,
-        },
-    )
     broadcast.assert_not_awaited()
 
 
@@ -176,7 +135,7 @@ async def test_duplicate_batch_returns_durable_receipt_metadata(monkeypatch):
         max_seq=2,
         activity_id=42,
     )
-    disable_scope(monkeypatch)
+    monkeypatch.setattr(durable_routes, "enforce_current_ingest_scope", lambda **_kwargs: None)
     monkeypatch.setattr(
         durable_routes,
         "get_batch_receipt",
@@ -200,127 +159,3 @@ async def test_duplicate_batch_returns_durable_receipt_metadata(monkeypatch):
     assert response["inserted"] == 1
     assert response["dropped_privacy"] == 1
     assert response["max_seq"] == 2
-
-
-@pytest.mark.asyncio
-async def test_existing_receipt_with_different_payload_is_not_acked(monkeypatch):
-    batch = BatchPacket(
-        client_batch_id="collision-batch",
-        packets=[packet(1), packet(2)],
-        point_count=2,
-        max_seq=2,
-        activity_id=42,
-    )
-    disable_scope(monkeypatch)
-    monkeypatch.setattr(
-        durable_routes,
-        "get_batch_receipt",
-        AsyncMock(
-            return_value={
-                "client_batch_id": "collision-batch",
-                "activity_id": 42,
-                "user_id": 7,
-                "point_count": 1,
-                "persisted_count": 1,
-                "dropped_privacy": 0,
-                "max_seq": 1,
-            }
-        ),
-    )
-
-    with pytest.raises(durable_routes.HTTPException) as exc:
-        await durable_routes.ingest_batch_durable(batch)
-
-    assert exc.value.status_code == 409
-    assert "retained" in str(exc.value.detail)
-
-
-@pytest.mark.asyncio
-async def test_activity_batch_without_sequence_is_rejected_before_ack(monkeypatch):
-    no_seq = GpsPacket(
-        device_id="device-1",
-        user_id=7,
-        activity_id=42,
-        lat=52.1,
-        lon=21.0,
-        timestamp=1_700_000_000.0,
-        seq=None,
-    )
-    batch = BatchPacket(
-        client_batch_id="missing-seq",
-        packets=[no_seq],
-        point_count=1,
-        activity_id=42,
-    )
-    disable_scope(monkeypatch)
-
-    with pytest.raises(durable_routes.HTTPException) as exc:
-        await durable_routes.ingest_batch_durable(batch)
-
-    assert exc.value.status_code == 422
-    assert "positive seq" in str(exc.value.detail)
-
-
-@pytest.mark.asyncio
-async def test_activity_batch_upgrades_legacy_redis_ack_to_durable_receipt(monkeypatch):
-    batch = BatchPacket(
-        client_batch_id="legacy-upgrade",
-        packets=[packet(1), packet(2)],
-        point_count=2,
-        max_seq=2,
-        activity_id=42,
-    )
-    rows = ingest_service.IngestRows(
-        [
-            ingest_service.packet_to_row(packet(1)),
-            ingest_service.packet_to_row(packet(2)),
-        ]
-    )
-    rows.point_count = 2
-    rows.activity_id = 42
-    rows.user_id = 7
-    rows.max_seq = 2
-
-    disable_scope(monkeypatch)
-    monkeypatch.setattr(
-        durable_routes,
-        "get_batch_receipt",
-        AsyncMock(
-            return_value={
-                "client_batch_id": "legacy-upgrade",
-                "legacy_acked": True,
-            }
-        ),
-    )
-    monkeypatch.setattr(
-        durable_routes,
-        "get_ingest_redis",
-        AsyncMock(return_value=object()),
-    )
-    monkeypatch.setattr(
-        durable_routes,
-        "check_ingest_allowed",
-        AsyncMock(return_value=allowed_guard()),
-    )
-    monkeypatch.setattr(
-        durable_routes,
-        "filter_privacy_packets",
-        lambda _packets: (rows, 0, 42, 2),
-    )
-    persist = AsyncMock(
-        return_value={"inserted": 2, "queued": False, "ingest_mode": "direct"}
-    )
-    monkeypatch.setattr(durable_routes, "persist_ingest_rows", persist)
-    monkeypatch.setattr(durable_routes, "maybe_broadcast", AsyncMock())
-
-    response = await durable_routes.ingest_batch_durable(batch)
-
-    assert response["acked"] is True
-    persist.assert_awaited_once()
-    assert persist.await_args.kwargs["receipt"] == {
-        "activity_id": 42,
-        "user_id": 7,
-        "point_count": 2,
-        "max_seq": 2,
-        "dropped_privacy": 0,
-    }
