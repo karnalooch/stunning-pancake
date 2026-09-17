@@ -86,7 +86,7 @@ export const mobileActivityPaths = {
   sessionSyncPath: (activityId: number) =>
     `/api/activities/sessions/${activityId}/sync_path/` as const,
   sessionFinalize: (activityId: number) =>
-    `/api/activities/sessions/${activityId}/finalize/` as const,
+    `/api/activities/sessions/${activityId}/finalize-durable/` as const,
   sessionTelemetryToken: (activityId: number) =>
     `/api/activities/sessions/${activityId}/telemetry-token/` as const,
   leaderboard: (cityId: string) => `/api/activities/leaderboard/${cityId}/` as const,
