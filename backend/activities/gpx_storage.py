@@ -108,21 +108,32 @@ def presigned_download_url(storage_uri: str, expires_seconds: int = 86400) -> st
         return None
 
 
+def delete_storage_uri_strict(storage_uri: str) -> None:
+    """Idempotently remove a storage object, raising on backend failure."""
+
+    if not storage_uri:
+        return
+    if storage_uri.startswith("s3://"):
+        _, _, rest = storage_uri.partition("s3://")
+        bucket, _, key = rest.partition("/")
+        _s3_client().delete_object(Bucket=bucket, Key=key)
+        return
+
+    key = storage_uri.removeprefix("local:")
+    path = _local_root() / key.replace("/", os.sep)
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
+
+
 def delete_storage_uri(storage_uri: str) -> bool:
     """Remove archived object (local file or S3 key)."""
     if not storage_uri:
         return False
     try:
-        if storage_uri.startswith("s3://"):
-            _, _, rest = storage_uri.partition("s3://")
-            bucket, _, key = rest.partition("/")
-            _s3_client().delete_object(Bucket=bucket, Key=key)
-            return True
-        key = storage_uri.removeprefix("local:")
-        path = _local_root() / key.replace("/", os.sep)
-        if path.is_file():
-            path.unlink()
-            return True
+        delete_storage_uri_strict(storage_uri)
+        return True
     except Exception as exc:
         logger.warning("gpx.delete_failed uri=%s err=%s", storage_uri, exc)
     return False
