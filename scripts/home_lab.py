@@ -10,7 +10,7 @@ import secrets
 import subprocess
 import time
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -257,7 +257,6 @@ def up(args: argparse.Namespace) -> None:
     run(compose_command("up", "-d", "--build", "--wait", profiles=profiles(args)))
     check_health()
 
-
 def parse_compose_ps(output: str) -> list[dict]:
     """Accept both JSON-array and newline-delimited Compose `ps` output."""
     output = output.strip()
@@ -470,7 +469,7 @@ def p3_recovery_drill() -> Path:
     require_environment()
     check_health()
     primary_database = home_env_value("POSTGRES_DB")
-    anchor = datetime.now(timezone.utc).replace(microsecond=0)
+    anchor = datetime.now(UTC).replace(microsecond=0)
     anchor_iso = anchor.isoformat().replace("+00:00", "Z")
 
     run(
@@ -489,15 +488,15 @@ def p3_recovery_drill() -> Path:
     counts = validate_recovery_snapshot(before)
     before_digest = canonical_snapshot_digest(before)
 
-    backup_started_at = datetime.now(timezone.utc)
+    backup_started_at = datetime.now(UTC)
     backup_path = backup()
-    backup_completed_at = datetime.now(timezone.utc)
+    backup_completed_at = datetime.now(UTC)
     backup_digest = file_sha256(backup_path)
 
     newest_gps_epoch = float(before["newest_gps_epoch"])
     rpo_seconds = max(0.0, backup_completed_at.timestamp() - newest_gps_epoch)
 
-    restore_started_at = datetime.now(timezone.utc)
+    restore_started_at = datetime.now(UTC)
     restore_timer = time.monotonic()
     try:
         restore_backup(backup_path, RECOVERY_DATABASE)
@@ -511,13 +510,12 @@ def p3_recovery_drill() -> Path:
         if counts != restored_counts:
             raise SystemExit("P3 recovery integrity mismatch: restored counts differ from source")
         verify_restored_critical_path(RECOVERY_DATABASE)
-        restore_completed_at = datetime.now(timezone.utc)
+        restore_completed_at = datetime.now(UTC)
         rto_seconds = time.monotonic() - restore_timer
     finally:
         drop_database(RECOVERY_DATABASE)
 
     report = {
-        "schema_version": 1,
         "drill": "p3-business-integrity-recovery",
         "synthetic_data_only": True,
         "source_database": primary_database,
