@@ -6,7 +6,6 @@ import { MMKV } from 'react-native-mmkv';
 import { ActivityService, type ActivitySportType } from './api';
 import {
   GpsSyncManager,
-  isRideTrackingActive,
   PollingResolution,
   resumeTrackingAfterRelaunch,
 } from './GpsSyncManager';
@@ -67,10 +66,8 @@ export async function stopRideSession(
 export async function resumeActiveRideIfNeeded(
   userId: number | null,
 ): Promise<boolean> {
-  if (!isRideTrackingActive()) return false;
   getRideGpsManager(userId);
-  await resumeTrackingAfterRelaunch();
-  return true;
+  return resumeTrackingAfterRelaunch();
 }
 
 export { createSessionWithDurability } from './sessionDurability';

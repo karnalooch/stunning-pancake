@@ -2,7 +2,6 @@
  * GPS telemetry upload — HTTP batch ingest, outbox, Retry-After, single-flight per activity.
  */
 
-import { MMKV } from 'react-native-mmkv';
 import axios from 'axios';
 import { firebaseCapture } from './FirebaseService';
 import { getTelemetryIngestToken } from './apiClient';
@@ -13,7 +12,6 @@ import {
   ensureBufferSchema,
   getIngestPauseUntil,
   GpsPoint,
-  GpsStorageAdapter,
   isIngestPaused,
   loadBuffer,
   loadOutbox,
@@ -25,6 +23,11 @@ import {
   updateOutboxEntry,
 } from './gpsSyncStorage';
 import {
+  __setGpsStorageForTests,
+  getGpsStorage,
+  initializeGpsStorage,
+} from './gpsEncryptedStorage';
+import {
   parseIngestAck,
   type IngestAckResult,
 } from './gpsIngestAck';
@@ -32,9 +35,8 @@ import { ActivitySerialQueue } from './gpsActivityQueue';
 
 import { TELEMETRY_URL } from './gpsTelemetryUrl';
 import { measureAsync } from './performanceBudget';
-import { warnMmkvUnavailable } from './mmkvSupport';
 
-export { TELEMETRY_URL, parseIngestAck };
+export { TELEMETRY_URL, parseIngestAck, __setGpsStorageForTests, getGpsStorage };
 export type { IngestAckResult };
 
 export const MAX_RETRIES = 5;
@@ -43,32 +45,6 @@ export const MAX_UPLOAD_BATCH_POINTS = 500;
 let _ingestPauseUntil = 0;
 let _lastAckAt: number | null = null;
 const _activityUploadQueue = new ActivitySerialQueue();
-
-let _storage: MMKV | null = null;
-let _storageOverride: GpsStorageAdapter | null = null;
-let _storageInitFailed = false;
-
-/** Test-only: inject mock MMKV adapter without native module. */
-export function __setGpsStorageForTests(adapter: GpsStorageAdapter | null): void {
-  _storageOverride = adapter;
-  _storage = null;
-  _storageInitFailed = false;
-}
-
-export function getGpsStorage(): GpsStorageAdapter | null {
-  if (_storageOverride) return _storageOverride;
-  if (_storageInitFailed) return null;
-  if (!_storage) {
-    try {
-      _storage = new MMKV({ id: 'gps-buffer' });
-    } catch (e) {
-      warnMmkvUnavailable('GpsSyncManager', e);
-      _storageInitFailed = true;
-      return null;
-    }
-  }
-  return _storage as GpsStorageAdapter;
-}
 
 function applyGlobalIngestPause(headers: Record<string, unknown> | undefined): void {
   if (!headers) return;
@@ -245,7 +221,7 @@ async function flushOutboxEntry(entry: OutboxEntry): Promise<boolean> {
 
 export async function processGpsOutbox(): Promise<void> {
   await measureAsync('outboxFlushMs', async () => {
-    const storage = getGpsStorage();
+    const storage = await initializeGpsStorage();
     if (!storage) return;
     ensureBufferSchema(storage);
     const pending = loadOutbox(storage).filter(
@@ -258,7 +234,7 @@ export async function processGpsOutbox(): Promise<void> {
 }
 
 export async function uploadBufferSnapshot(): Promise<void> {
-  const storage = getGpsStorage();
+  const storage = await initializeGpsStorage();
   if (!storage) return;
   ensureBufferSchema(storage);
   const buffered = loadBuffer(storage);

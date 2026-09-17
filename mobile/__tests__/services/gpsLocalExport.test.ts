@@ -1,8 +1,12 @@
 /**
- * Local GPX export unit tests (ADR 011 §16).
+ * Local GPS export unit tests (ADR 011 §16 / DS-014).
  */
 
-import { buildGeoJsonLineString, buildGpx11 } from '../../src/services/gpsLocalExport';
+import {
+  buildGeoJsonLineString,
+  buildGpx11,
+  saveLocalRideSnapshot,
+} from '../../src/services/gpsLocalExport';
 import type { GpsPoint } from '../../src/services/gpsSyncStorage';
 
 const samplePoints = (): GpsPoint[] => [
@@ -60,5 +64,9 @@ describe('gpsLocalExport', () => {
     expect(geo.properties.point_count).toBe(2);
     expect(geo.geometry.coordinates[0]?.[0]).toBeCloseTo(21.0122, 4);
     expect(geo.geometry.coordinates[1]?.[0]).toBeCloseTo(21.0128, 4);
+  });
+
+  test('automatic local snapshot persistence is disabled for DS-014', async () => {
+    await expect(saveLocalRideSnapshot(99, samplePoints())).resolves.toBeNull();
   });
 });
