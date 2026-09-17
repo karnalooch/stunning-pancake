@@ -11,7 +11,6 @@ import * as SecureStore from 'expo-secure-store';
 import { MMKV } from 'react-native-mmkv';
 
 import { GPS_STORAGE_KEYS, type GpsStorageAdapter } from './gpsSyncStorage';
-import { warnMmkvUnavailable } from './mmkvSupport';
 
 const GPS_ENCRYPTION_KEY_ALIAS = '4velo.gps.mmkv.encryption-key-v1';
 const GPS_ENCRYPTED_STORAGE_ID = 'gps-buffer-encrypted-v1';
@@ -104,7 +103,9 @@ async function initializeEncryptedGpsStorage(): Promise<GpsStorageAdapter | null
     storage = encrypted;
     return encrypted as GpsStorageAdapter;
   } catch (error) {
-    warnMmkvUnavailable('EncryptedGpsStorage', error);
+    if (__DEV__) {
+      console.warn('[EncryptedGpsStorage] secure GPS storage unavailable; failing closed.', error);
+    }
     return null;
   }
 }
