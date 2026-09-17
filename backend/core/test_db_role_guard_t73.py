@@ -1,4 +1,4 @@
-"""T73 tests for production PostgreSQL runtime-role hardening."""
+"""T73 tests for PostgreSQL runtime-role hardening."""
 
 from unittest.mock import patch
 
@@ -7,8 +7,9 @@ from django.test import SimpleTestCase
 from core.db_role_guard import (
     UnsafeRuntimeDatabaseRole,
     assert_runtime_database_role_safe,
-    enforce_production_runtime_database_role,
+    enforce_runtime_database_role_if_required,
     get_runtime_database_role,
+    runtime_database_role_guard_required,
 )
 
 
@@ -50,17 +51,32 @@ class RuntimeDatabaseRoleGuardTests(SimpleTestCase):
         with self.assertRaisesRegex(UnsafeRuntimeDatabaseRole, "requires PostgreSQL"):
             get_runtime_database_role()
 
+    @patch.dict("os.environ", {"RLS_RUNTIME_ROLE_GUARD": "0"}, clear=False)
     @patch("core.db_role_guard.is_production_runtime", return_value=False)
+    def test_guard_not_required_in_ordinary_development(self, _production):
+        self.assertFalse(runtime_database_role_guard_required())
+
+    @patch.dict("os.environ", {"RLS_RUNTIME_ROLE_GUARD": "1"}, clear=False)
+    @patch("core.db_role_guard.is_production_runtime", return_value=False)
+    def test_pilot_can_require_guard_even_with_debug(self, _production):
+        self.assertTrue(runtime_database_role_guard_required())
+
+    @patch.dict("os.environ", {"RLS_RUNTIME_ROLE_GUARD": "0"}, clear=False)
+    @patch("core.db_role_guard.is_production_runtime", return_value=True)
+    def test_production_cannot_opt_out(self, _production):
+        self.assertTrue(runtime_database_role_guard_required())
+
+    @patch("core.db_role_guard.runtime_database_role_guard_required", return_value=False)
     @patch("core.db_role_guard.assert_runtime_database_role_safe")
-    def test_nonproduction_does_not_probe_runtime_role(self, safe, _production):
-        self.assertIsNone(enforce_production_runtime_database_role())
+    def test_unguarded_runtime_does_not_probe_role(self, safe, _required):
+        self.assertIsNone(enforce_runtime_database_role_if_required())
         safe.assert_not_called()
 
-    @patch("core.db_role_guard.is_production_runtime", return_value=True)
+    @patch("core.db_role_guard.runtime_database_role_guard_required", return_value=True)
     @patch("core.db_role_guard.assert_runtime_database_role_safe")
-    def test_production_enforces_runtime_role(self, safe, _production):
+    def test_guarded_runtime_enforces_role(self, safe, _required):
         sentinel = object()
         safe.return_value = sentinel
 
-        self.assertIs(enforce_production_runtime_database_role(), sentinel)
+        self.assertIs(enforce_runtime_database_role_if_required(), sentinel)
         safe.assert_called_once_with()
