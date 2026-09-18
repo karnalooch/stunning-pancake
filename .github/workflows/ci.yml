@@ -408,6 +408,9 @@ jobs:
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
 
+      - name: Test Trivy CI security contract
+        run: python -m unittest scripts/test_trivy_ci_contract.py -v
+
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
 
@@ -672,16 +675,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # Run all filesystem scans before SARIF upload so a failed upload cannot skip later scans.
+      # Generate uploadable SARIF first. Keep these scans non-blocking so results
+      # reach GitHub Security before the dedicated gate evaluates the same repo.
       - name: Trivy — Backend (Python)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
         uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
         with:
           scan-type: fs
           scan-ref: backend/
+          scanners: vuln
           format: sarif
           output: trivy-backend.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
           exit-code: '0'
 
       - name: Trivy — Admin Dashboard (JS/TS)
@@ -690,9 +696,11 @@ jobs:
         with:
           scan-type: fs
           scan-ref: admin/
+          scanners: vuln
           format: sarif
           output: trivy-admin.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
           exit-code: '0'
 
       - name: Trivy — Mobile (React Native)
@@ -701,9 +709,11 @@ jobs:
         with:
           scan-type: fs
           scan-ref: mobile/
+          scanners: vuln
           format: sarif
           output: trivy-mobile.sarif
           severity: CRITICAL,HIGH
+          limit-severities-for-sarif: true
           exit-code: '0'
 
       - name: Upload backend SARIF → GitHub Security
@@ -729,6 +739,20 @@ jobs:
         with:
           sarif_file: trivy-mobile.sarif
           category: trivy-mobile
+
+      # This final scan is the enforcement point. A HIGH/CRITICAL vulnerability
+      # fails the Trivy job (and therefore the aggregate merge gate) only after
+      # the SARIF uploads above have had a chance to publish their findings.
+      - name: Trivy — Blocking Critical/High gate
+        # v0.35.0 — same reviewed/pinned action as the reporting scans above.
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: table
+          severity: CRITICAL,HIGH
+          exit-code: '1'
 
   # ──────────────────────────────────────────
   # E2E: Playwright tests on built admin
