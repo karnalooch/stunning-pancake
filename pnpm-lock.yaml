@@ -28,6 +28,7 @@ overrides:
   baseline-browser-mapping: 2.11.0
   protobufjs@>=7.5.0 <8.0.0: 7.6.5
   esbuild@>=0.27.3 <0.28.1: 0.28.1
+  ts-jest>esbuild: 0.28.1
 
 importers:
 
