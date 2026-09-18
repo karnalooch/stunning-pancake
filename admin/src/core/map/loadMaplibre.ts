@@ -1,3 +1,5 @@
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
+
 /** Lazy-load maplibre-gl with CJS interop flattening (Vite/Rollup). */
 let _mlPromise: Promise<any> | null = null;
 
@@ -8,9 +10,9 @@ export function loadMaplibregl(): Promise<any> {
       while (m && m.default && typeof m.default === 'object' && !m.default.Map) {
         m = m.default;
       }
-      if (m.default?.Map) return m.default;
-      if (m.Map) return m;
-      return raw.default || raw;
+      const resolved = m.default?.Map ? m.default : (m.Map ? m : (raw.default || raw));
+      resolved.setWorkerUrl?.(maplibreWorkerUrl);
+      return resolved;
     });
   }
   return _mlPromise;
