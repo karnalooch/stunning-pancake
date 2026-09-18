@@ -76,7 +76,6 @@ def _full_command() -> list[str]:
         "--dir",
         "mobile",
         "test",
-        "--",
         "--ci",
         "--forceExit",
     ]
