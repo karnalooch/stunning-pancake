@@ -414,8 +414,8 @@ jobs:
       - name: Test security tooling workflows contract
         run: |
           python -m pip install --require-hashes -r /dev/stdin <<'PIPREQS'
-PyYAML==6.0.3 --hash=sha256:dbad07666e1656f0f4349c7d35b45406ffd57a289b6e0b49c3c9c2ca40fe5e3c
-PIPREQS
+          PyYAML==6.0.3 --hash=sha256:dbad07666e1656f0f4349c7d35b45406ffd57a289b6e0b49c3c9c2ca40fe5e3c
+          PIPREQS
           python -m unittest scripts/test_security_tooling_workflows.py -v
 
       - name: Test PR workflow concurrency policy
