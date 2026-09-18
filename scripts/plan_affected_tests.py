@@ -158,7 +158,10 @@ BENIGN_ROOT_FILES = {
 
 
 def _norm(path: str) -> str:
-    return path.strip().replace("\\", "/").lstrip("./")
+    value = path.strip().replace("\\", "/")
+    while value.startswith("./"):
+        value = value[2:]
+    return value
 
 
 def _matches(path: str, pattern: str) -> bool:
