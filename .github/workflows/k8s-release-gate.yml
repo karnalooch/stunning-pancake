@@ -26,7 +26,6 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.12"
-  NODE_VERSION: "20"
   REGISTRY: ghcr.io
   IMAGE_REPOSITORY: ghcr.io/${{ github.repository_owner }}/sport
 
@@ -45,8 +44,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Backend smoke checks
         env:
