@@ -6,6 +6,8 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { ASSETS } from '../assets/assetRegistry';
 
+type Waveform = 'sine' | 'square' | 'triangle' | 'sawtooth';
+
 export type SoundCategory =
   | 'ui_click'
   | 'ui_confirm'
@@ -19,7 +21,7 @@ export type SoundCategory =
 interface SoundDef {
   freq: number;
   durationMs: number;
-  waveform: OscillatorType;
+  waveform: Waveform;
   freq2?: number;
   sweepEndFreq?: number;
 }
@@ -59,7 +61,7 @@ const FALLBACK_DEFS: Record<SoundCategory, SoundDef> = {
 const SAMPLE_RATE = 44100;
 const AMPLITUDE = 0.3;
 
-function waveformFromParam(w: string): OscillatorType {
+function waveformFromParam(w: string): Waveform {
   if (w === 'sine') return 'sine';
   if (w === 'triangle') return 'triangle';
   if (w === 'noise' || w === 'sawtooth') return 'sawtooth';
@@ -125,7 +127,7 @@ function generateWavBase64(def: SoundDef): string {
   writeString(36, 'data');
   view.setUint32(40, dataSize, true);
 
-  const wave = (type: OscillatorType, freq: number, t: number) => {
+  const wave = (type: Waveform, freq: number, t: number) => {
     const phase = (freq * t) % 1;
     switch (type) {
       case 'square':
