@@ -44,6 +44,20 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         self.assertEqual(len(commands), 1)
         self.assertIn("--findRelatedTests", commands[0])
 
+    def test_auth_mandatory_suite_includes_onboarding(self):
+        commands = commands_for_plan(
+            {
+                "mobile": {
+                    "mode": "related",
+                    "relatedFiles": [],
+                    "directTests": [],
+                    "mandatorySuites": ["auth_security"],
+                }
+            }
+        )
+        self.assertEqual(len(commands), 1)
+        self.assertIn("__tests__/screens/OnboardingScreen.test.tsx", commands[0])
+
     def test_mandatory_suite_uses_run_tests_by_path(self):
         commands = commands_for_plan(
             {
