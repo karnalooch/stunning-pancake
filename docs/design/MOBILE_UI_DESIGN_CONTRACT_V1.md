@@ -528,3 +528,17 @@ The selected direction is specifically characterised by:
 Direction A (Performance Pixel) and Direction C (City Ride) remain useful references but are **not** the global visual direction. Performance-style clarity is a usability rule, not a competing aesthetic. City-local identity remains a domain motif within the Grand Prix Modern system.
 
 This decision supersedes any wording in the UI audit that recommends an A+B hybrid.
+
+## 20. Asset governance amendment — 2026-09-18
+
+This amendment is normative for all mobile work after the approved visual refinement.
+
+- The existing \`assets/generated/**\` artwork is **legacy/unapproved visual material**, not a visual reference for new UI. It may remain temporarily wired where removing it would create an unrelated functional change, but new screens must not treat it as the target style.
+- New brand artwork must follow \`MOBILE_ASSET_BIBLE_V1.md\` and the production queue in \`MOBILE_ASSET_PRODUCTION_LIST_V1.md\`.
+- Functional navigation/action icons should come from a consistent modern icon system or purpose-built vector set; they should not be bulk-generated as decorative pixel art.
+- Official municipal crests, club logos and other official marks must never be recreated or approximated by image generation. They require verified provenance. If a verified crest is unavailable, the product uses the canonical 4VELO Place Badge fallback.
+- No place requires a custom image asset in order to render correctly.
+- The accepted visual direction is navy + cream/parchment + orange/amber product chrome; green remains semantic for success/GPS/nature rather than a generic selected/active accent.
+- Asset approval is explicit. Presence in the repository, generation by an old pipeline, or wiring in \`visionAssets.ts\` does not imply approval.
+
+The machine-readable companion policy is \`assets/ASSET_GOVERNANCE_V1.json\`. CI validates it and treats unreviewed changes to the legacy generated inventory as asset-governance drift.

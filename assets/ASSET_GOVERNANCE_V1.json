@@ -1,0 +1,225 @@
+{
+  "schemaVersion": 1,
+  "visualFreezeVersion": "1.2.0",
+  "decisionDate": "2026-09-18",
+  "status": "approved",
+  "legacyGeneratedPolicy": {
+    "root": "assets/generated",
+    "defaultStatus": "legacy_unapproved",
+    "visualReferenceAllowedForNewUi": false,
+    "temporaryRuntimeUseAllowed": true,
+    "autoApprovalAllowed": false,
+    "expectedVisualFileCount": 61,
+    "manifestIsAuthoritative": false
+  },
+  "approval": {
+    "allowedStatuses": [
+      "planned",
+      "candidate",
+      "approved",
+      "rejected",
+      "legacy_unapproved",
+      "verify_provenance"
+    ],
+    "approvedRequiresProvenance": true,
+    "approvedRequiresImmutableDigest": true,
+    "replaceWithoutApprovalDefault": false
+  },
+  "provenance": {
+    "allowedSourceStrategies": [
+      "original_generated_and_curated",
+      "human_authored",
+      "licensed_vector_library",
+      "official_verified_source",
+      "code_generated"
+    ],
+    "officialMarksAllowedSourceStrategies": [
+      "official_verified_source"
+    ],
+    "generatedOfficialMarksAllowed": false
+  },
+  "placeIdentity": {
+    "customAssetRequired": false,
+    "fallbackRequired": true,
+    "fallbackType": "place_badge",
+    "randomFallbackColorsAllowed": false,
+    "fallbackPalette": [
+      "navy",
+      "cream",
+      "amber"
+    ],
+    "officialCrestOptional": true,
+    "officialCrestRequiresVerifiedSource": true,
+    "officialCrestMayBeAiGenerated": false,
+    "officialCrestDelivery": "remote_cacheable_or_verified_bundled",
+    "crestFitMode": "contain",
+    "crestRecolorAllowed": false,
+    "crestCropAllowed": false
+  },
+  "requiredPilotTargets": [
+    "rider_canonical_v1",
+    "home_hero_day_v1",
+    "place_badge_v1",
+    "ride_marker_rider_v1",
+    "summary_finish_v1",
+    "achievement_core_set_v1"
+  ],
+  "productionTargets": [
+    {
+      "id": "rider_canonical_v1",
+      "scope": "T79",
+      "category": "character_master",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "single canonical rider identity",
+        "consistent bike silhouette",
+        "transparent master variants",
+        "approved against Home hero before derivatives"
+      ]
+    },
+    {
+      "id": "home_hero_day_v1",
+      "scope": "T79",
+      "category": "hero_scene",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "navy/cream/orange-compatible composition",
+        "no embedded text",
+        "safe text zone",
+        "pixel-art identity without retro-game chrome"
+      ]
+    },
+    {
+      "id": "home_hero_evening_v1",
+      "scope": "T79",
+      "category": "hero_scene",
+      "priority": "P1",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "same rider and scene language as home_hero_day_v1",
+        "no embedded text"
+      ]
+    },
+    {
+      "id": "place_badge_v1",
+      "scope": "T79",
+      "category": "place_identity_fallback",
+      "priority": "P0",
+      "sourceStrategy": "code_generated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "works for every place name",
+        "no random colours",
+        "does not imitate an official crest",
+        "readable at 32/48/64 dp"
+      ]
+    },
+    {
+      "id": "functional_icon_set_v1",
+      "scope": "T79",
+      "category": "functional_icons",
+      "priority": "P0",
+      "sourceStrategy": "licensed_vector_library",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "consistent stroke/optical weight",
+        "modern product UI",
+        "no decorative pixel treatment for routine controls"
+      ]
+    },
+    {
+      "id": "ride_marker_rider_v1",
+      "scope": "T80",
+      "category": "map_marker",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "glance-readable",
+        "small pixel identity only",
+        "does not obscure route"
+      ]
+    },
+    {
+      "id": "ride_action_icons_v1",
+      "scope": "T80",
+      "category": "functional_icons",
+      "priority": "P1",
+      "sourceStrategy": "human_authored",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "stop/pause/resume semantics unambiguous",
+        "high contrast",
+        "not dependent on pixel font"
+      ]
+    },
+    {
+      "id": "summary_finish_v1",
+      "scope": "T81",
+      "category": "celebration_scene",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "uses canonical rider",
+        "celebratory but leaves stats readable",
+        "shown only for durable success"
+      ]
+    },
+    {
+      "id": "achievement_core_set_v1",
+      "scope": "T81",
+      "category": "achievement_set",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "coherent badge frame language",
+        "distinct silhouettes",
+        "readable at 32/48/64 dp",
+        "no text baked into icons"
+      ]
+    },
+    {
+      "id": "explore_pin_set_v1",
+      "scope": "T83",
+      "category": "map_pins",
+      "priority": "P1",
+      "sourceStrategy": "human_authored",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "route/event/segment/place/club distinguishable by shape",
+        "not colour-only",
+        "functional map remains primary"
+      ]
+    },
+    {
+      "id": "profile_scene_v1",
+      "scope": "T83",
+      "category": "hero_scene",
+      "priority": "P1",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "canonical rider identity",
+        "real ride stats remain visually dominant"
+      ]
+    }
+  ]
+}
