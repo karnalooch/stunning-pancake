@@ -1,15 +1,8 @@
 {
-  "extends": [
-    "expo/tsconfig.base",
-    "@4velo/tsconfig/base.json"
-  ],
+  "extends": ["expo/tsconfig.base", "@4velo/tsconfig/base.json"],
   "compilerOptions": {
     "strict": true,
     "moduleResolution": "bundler",
-    "skipLibCheck": true,
-    "types": [
-      "node",
-      "jest"
-    ]
+    "skipLibCheck": true
   }
 }
