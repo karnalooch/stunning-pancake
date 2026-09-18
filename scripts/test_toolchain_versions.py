@@ -27,11 +27,15 @@ class ToolchainVersionContractTests(unittest.TestCase):
         action = read(".github/actions/pnpm-setup/action.yml")
         self.assertRegex(action, rf'default:\s*"{re.escape(NODE_VERSION)}"')
         self.assertRegex(action, rf'version:\s*{re.escape(PNPM_VERSION)}')
+        self.assertIn("uses: pnpm/action-setup@v6", action)
 
     def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
         workspace = read("pnpm-workspace.yaml")
         lockfile = read("pnpm-lock.yaml")
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
+        self.assertRegex(workspace, r"(?m)^overrides:\s*$")
+        self.assertIn("react: 19.2.7", workspace)
+        self.assertIn("react-dom: 19.2.7", workspace)
         self.assertNotIn(
             "packageManagerDependencies:",
             lockfile,
