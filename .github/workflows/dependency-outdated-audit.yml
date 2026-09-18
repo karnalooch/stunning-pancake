@@ -1,0 +1,29 @@
+name: Temporary dependency outdated audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-outdated-audit-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: github.head_ref == 'chore/deps-latest-stable-2026-09'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+      - name: Verify frozen install
+        run: pnpm install --frozen-lockfile
+      - name: List outdated direct workspace dependencies
+        run: pnpm outdated --recursive --format json || true
