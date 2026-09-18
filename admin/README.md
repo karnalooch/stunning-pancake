@@ -17,7 +17,7 @@ pnpm install   # from repo root (required — admin uses workspace:* packages)
 pnpm --filter admin dev
 ```
 
-Bez globalnego `pnpm`: `npx pnpm@9.15.0 install` z katalogu root.
+Bez globalnego `pnpm`: `npx pnpm@12.4.2 install` z katalogu root.
 
 ### Unit tests (Vitest)
 ```bash
