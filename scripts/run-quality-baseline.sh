@@ -30,7 +30,7 @@ step "backend: pytest (light)" bash -c 'cd backend && python run_pytest.py core/
 step "docs: link check" python scripts/check_docs_links.py
 step "admin: eslint" bash -c 'cd admin && npm run lint'
 step "admin: tsc" bash -c 'cd admin && npx tsc --noEmit'
-step "mobile: jest" bash -c 'cd mobile && npm test -- --ci --passWithNoTests'
+step "mobile: jest" pnpm --dir mobile test -- --ci
 step "repo: tokens check" npm run tokens:check
 
 echo ""
