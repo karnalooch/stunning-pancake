@@ -1,5 +1,7 @@
 name: Temporary dependency security audit
 
+# Final confirmation workflow; remove before merge.
+
 on:
   pull_request:
     branches: [main]
