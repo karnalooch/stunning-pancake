@@ -92,8 +92,9 @@ def validate(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list[str]:
         errors.append("visual protection architecture is missing")
     else:
         text = architecture.read_text(encoding="utf-8")
+        normalized = text.casefold()
         for phrase in REQUIRED_ARCHITECTURE_PHRASES:
-            if phrase not in text:
+            if phrase.casefold() not in normalized:
                 errors.append(f"visual architecture missing required phrase: {phrase}")
 
     contract = repo_root / "docs" / "design" / "MOBILE_UI_DESIGN_CONTRACT_V1.md"
