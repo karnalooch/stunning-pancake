@@ -60,6 +60,7 @@ BASE_OUTPUT_KEYS = (
     "scripts",
     "docs",
     "visual",
+    "ci_core",
 )
 
 ROUTE_TABLE = {
@@ -76,6 +77,7 @@ ROUTE_TABLE = {
 PATH_OUTPUT_KEYS = tuple(ROUTE_TABLE.keys())
 
 FULL_JOB_NAMES = (
+    "affected-test-plan",
     "backend",
     "telemetry",
     "mobile",
@@ -181,7 +183,7 @@ def _realistic_partial_needs(active_outputs, overrides=None):
     """
     overrides = overrides or {}
     needs = {"changes": {"result": "success", "outputs": _base_outputs(active_outputs)}}
-    expected = set()
+    expected = {"affected-test-plan"}
     for key in active_outputs or {}:
         if active_outputs[key] == "true" and key in ROUTE_TABLE:
             expected.update(ROUTE_TABLE[key])
@@ -241,6 +243,7 @@ class WorkflowStructureTests(unittest.TestCase):
         needed = {x.strip() for x in m.group("v").split(",")}
         expected = {
             "changes",
+            "affected-test-plan",
             "backend",
             "telemetry",
             "mobile",
@@ -311,6 +314,18 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertNotIn("failure", cond)
         self.assertNotIn("cancelled", cond)
 
+    def test_ci_core_drives_full_mode(self):
+        workflow = _workflow_text()
+        self.assertIn("steps.filter.outputs.ci_core", workflow)
+        filters = _path_filter_patterns(workflow)
+        self.assertIn("ci_core", filters)
+        self.assertIn("scripts/plan_affected_tests.py", filters["ci_core"])
+        self.assertIn("turbo.json", filters["ci_core"])
+
+    def test_affected_plan_is_aggregate_required(self):
+        block = _aggregate_block(_workflow_text())
+        self.assertIn("affected-test-plan", block or "")
+
     def test_turbo_json_not_in_packages_path_filter(self):
         filters = _path_filter_patterns(_workflow_text())
         pkgs = filters.get("packages", [])
@@ -327,7 +342,7 @@ class AggregateScriptTests(unittest.TestCase):
         return agg.evaluate(needs, event_name)
 
     def _expected_for(self, active_outputs):
-        expected = set()
+        expected = {"affected-test-plan"}
         for key, val in active_outputs.items():
             if val == "true" and key in ROUTE_TABLE:
                 expected.update(ROUTE_TABLE[key])
@@ -454,7 +469,7 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"backend", "scripts-python", "docs-links"})
+        self.assertEqual(expected, {"affected-test-plan", "backend", "scripts-python", "docs-links"})
 
     def test_combined_mobile_and_admin_pass(self):
         outputs = _base_outputs({"mobile": "true", "admin": "true"})
@@ -462,7 +477,7 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"mobile", "security", "admin", "audit", "e2e"})
+        self.assertEqual(expected, {"affected-test-plan", "mobile", "security", "admin", "audit", "e2e"})
 
     def test_combined_packages_and_scripts_pass(self):
         outputs = _base_outputs({"packages": "true", "scripts": "true"})
@@ -472,7 +487,7 @@ class AggregateScriptTests(unittest.TestCase):
         expected = self._expected_for(outputs)
         self.assertEqual(
             expected,
-            {"mobile", "admin", "repo-assets", "scripts-python", "audit"},
+            {"affected-test-plan", "mobile", "admin", "repo-assets", "scripts-python", "audit"},
         )
 
     def test_combined_visual_and_docs_pass(self):
@@ -481,7 +496,7 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"mobile-visual-contract", "docs-links"})
+        self.assertEqual(expected, {"affected-test-plan", "mobile-visual-contract", "docs-links"})
 
     def test_combined_backend_telemetry_docs_pass(self):
         outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})
@@ -489,7 +504,7 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"backend", "scripts-python", "telemetry", "docs-links"})
+        self.assertEqual(expected, {"affected-test-plan", "backend", "scripts-python", "telemetry", "docs-links"})
 
     def test_combined_failure_in_union_fails(self):
         outputs = _base_outputs({"backend": "true", "docs": "true"})

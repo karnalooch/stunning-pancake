@@ -13,6 +13,7 @@
     "gate:simulator:smoke": "python scripts/simulator_operational_gate.py --once",
     "gate:p0-smoke": "pwsh -File scripts/run-p0-smoke.ps1",
     "gate:p1-closure": "pwsh -File scripts/run-p1-closure.ps1",
+    "ci:affected-plan": "python scripts/plan_affected_tests.py --summary",
     "audit:routes": "tsx scripts/audit-routes.ts",
     "audit:screens": "tsx scripts/audit-screens.ts",
     "audit:mobile": "tsx scripts/audit-mobile-routes.ts",

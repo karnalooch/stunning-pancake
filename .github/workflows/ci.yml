@@ -34,6 +34,7 @@ jobs:
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.filter.outputs.docs }}
       visual: ${{ steps.filter.outputs.visual }}
+      ci_core: ${{ steps.filter.outputs.ci_core }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
@@ -84,17 +85,65 @@ jobs:
               - 'scripts/check_ci_aggregate.py'
               - 'scripts/test_ci_aggregate.py'
               - '.github/workflows/**'
+            ci_core:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+              - 'scripts/plan_affected_tests.py'
+              - 'scripts/run_affected_mobile_tests.py'
+              - 'scripts/run_affected_backend_tests.py'
+              - 'scripts/test_plan_affected_tests.py'
+              - 'scripts/test_run_affected_mobile_tests.py'
+              - 'scripts/test_run_affected_backend_tests.py'
+              - 'scripts/check_ci_aggregate.py'
+              - 'scripts/test_ci_aggregate.py'
+              - 'scripts/test_ci_mobile_path_filter.py'
+              - 'scripts/test_ci_visual_path_filter.py'
+              - 'turbo.json'
             workflow:
               - '.github/workflows/**'
       - id: full
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ]; then
+          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
+
+  # ──────────────────────────────────────────
+  # T94: deterministic affected-test plan
+  # ──────────────────────────────────────────
+  affected-test-plan:
+    name: Affected Test Plan
+    runs-on: ubuntu-latest
+    needs: [changes]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Test affected-test planner and runners
+        run: |
+          python -m unittest scripts/test_plan_affected_tests.py -v
+          python -m unittest scripts/test_run_affected_mobile_tests.py -v
+          python -m unittest scripts/test_run_affected_backend_tests.py -v
+
+      - name: Build human-readable affected-test plan
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p .ci
+          python scripts/plan_affected_tests.py \
+            --output .ci/affected-plan.json \
+            --github-summary "$GITHUB_STEP_SUMMARY" \
+            --summary
 
   # ──────────────────────────────────────────
   # Backend: Lint + Type Check + Tests
@@ -102,7 +151,7 @@ jobs:
   backend:
     name: Backend (Django)
     runs-on: ubuntu-latest
-    needs: [changes]
+    needs: [changes, affected-test-plan]
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.backend == 'true'
 
     services:
@@ -120,12 +169,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
+
+      - name: Plan affected backend tests
+        id: affected
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p .ci
+          python scripts/plan_affected_tests.py \
+            --output .ci/affected-plan.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --summary
 
       - name: Install GDAL/GEOS (PostGIS deps)
         run: |
@@ -174,37 +238,14 @@ jobs:
           cd backend
           python manage.py migrate
 
-      - name: Simulator light tests (pytest)
+      - name: Run affected backend tests
         env:
           DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/15
           SECRET_KEY: ci-insecure-key
         run: |
-          cd backend
           pip install pytest pytest-django
-          python run_pytest.py activities/test_simulator_authority.py activities/test_simulator_backpressure.py activities/test_simulator_status_views.py activities/test_simulator_routing.py activities/test_simulator_operational_gate.py -m simulator_light -v
-
-      - name: T11 RLS integration test (PostgreSQL only)
-        env:
-          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
-          REDIS_URL: redis://localhost:6379/15
-          SECRET_KEY: ci-insecure-key
-        # T11 must run on the real PostGIS backend. Use pytest directly so the
-        # configured DATABASE_URL is preserved (avoid the SQLite-patched runner).
-        # pytest/pytest-django are already installed by the ``Simulator light
-        # tests`` step earlier in this job.
-        run: |
-          cd backend
-          python -m pytest test_rls.py -v
-
-      - name: P1 admin pytest (moderator scope, anomaly queue, sponsor pools)
-        env:
-          DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
-          REDIS_URL: redis://localhost:6379/15
-          SECRET_KEY: ci-insecure-key
-        run: |
-          cd backend
-          python run_pytest.py activities/test_tenant_moderator_scope.py activities/test_anomaly_queue.py activities/test_sim_lab_proxy.py activities/test_gpx_export.py activities/test_gpx_forensics.py activities/test_gpx_storage.py rewards/test_pools.py users/test_export.py users/test_jwt_mfa.py core/test_oauth_state.py test_openapi_schema.py activities/test_live_map_webhooks.py users/test_department_tenant_scope.py activities/test_moderation_tenant_scope.py activities/test_heatmap_tenant_scope.py -q
+          python scripts/run_affected_backend_tests.py --plan .ci/affected-plan.json
 
       - name: Backend coverage gate (phased P2, 40% on guarded modules)
         env:
@@ -227,6 +268,7 @@ jobs:
       # The legacy all-app suite still contains stale fixtures and mocks tracked as
       # takeover debt. Keep it visible while focused backend gates above remain blocking.
       - name: Full legacy suite (non-blocking baseline)
+        if: steps.affected.outputs.backend_mode == 'full'
         continue-on-error: true
         env:
           DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
@@ -276,15 +318,30 @@ jobs:
   mobile:
     name: Mobile (React Native)
     runs-on: ubuntu-latest
-    needs: [changes]
+    needs: [changes, affected-test-plan]
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Plan affected mobile tests
+        id: affected
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p .ci
+          python scripts/plan_affected_tests.py \
+            --output .ci/affected-plan.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --summary
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -306,8 +363,8 @@ jobs:
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
-      - name: Run unit tests
-        run: pnpm --dir mobile test -- --ci --forceExit
+      - name: Run affected mobile unit tests
+        run: python scripts/run_affected_mobile_tests.py --plan .ci/affected-plan.json
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -349,6 +406,12 @@ jobs:
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
+
+      - name: Test T94 affected-test planning
+        run: |
+          python -m unittest scripts/test_plan_affected_tests.py -v
+          python -m unittest scripts/test_run_affected_mobile_tests.py -v
+          python -m unittest scripts/test_run_affected_backend_tests.py -v
 
       - name: Validate mobile asset governance
         run: python scripts/validate_mobile_asset_governance.py
@@ -713,7 +776,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     timeout-minutes: 15
-    needs: [changes, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
+    needs: [changes, affected-test-plan, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
     env:
       CI_NEEDS_JSON: ${{ toJson(needs) }}
       CI_EVENT_NAME: ${{ github.event_name }}
