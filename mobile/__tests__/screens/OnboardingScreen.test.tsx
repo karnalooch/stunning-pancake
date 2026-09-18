@@ -183,7 +183,12 @@ const pressControl = async (testID: string) => {
   });
 };
 
-const flattenRenderedText = (node: ReturnType<TestRenderer.ReactTestRenderer['toJSON']>): string => {
+type RenderedNode =
+  | ReturnType<TestRenderer.ReactTestRenderer['toJSON']>
+  | ReactTestRenderer.ReactTestRendererNode
+  | number;
+
+const flattenRenderedText = (node: RenderedNode): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(flattenRenderedText).join('');
