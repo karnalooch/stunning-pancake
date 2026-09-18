@@ -29,6 +29,7 @@ jobs:
       packages: ${{ steps.filter.outputs.packages }}
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.filter.outputs.docs }}
+      visual: ${{ steps.filter.outputs.visual }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
@@ -58,6 +59,24 @@ jobs:
               - 'pyproject.toml'
             docs:
               - 'docs/**'
+            visual:
+              - 'mobile/**'
+              - 'assets/**'
+              - 'docs/design/**'
+              - 'docs/adr/**'
+              - 'docs/pl/design/**'
+              - 'docs/pl/adr/**'
+              - 'packages/tokens/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'scripts/audit-screen-tokens.ts'
+              - 'scripts/validate_mobile_asset_governance.py'
+              - 'scripts/test_validate_mobile_asset_governance.py'
+              - 'scripts/validate_mobile_visual_authority.py'
+              - 'scripts/test_validate_mobile_visual_authority.py'
+              - 'scripts/test_ci_visual_path_filter.py'
+              - '.github/workflows/**'
             workflow:
               - '.github/workflows/**'
       - id: full
@@ -322,6 +341,51 @@ jobs:
 
       - name: Test mobile visual authority validator
         run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
+
+  # ──────────────────────────────────────────
+  # Mobile Visual Contract — takeover-era UI/asset protection
+  # ──────────────────────────────────────────
+  mobile-visual-contract:
+    name: Mobile Visual Contract
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.visual == 'true'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Visual path-routing contract
+        run: python -m unittest scripts/test_ci_visual_path_filter.py -v
+
+      - name: Screen token guard
+        run: pnpm audit:screen-tokens
+
+      - name: Validate asset governance
+        run: python scripts/validate_mobile_asset_governance.py
+
+      - name: Test asset governance validator
+        run: python -m unittest scripts/test_validate_mobile_asset_governance.py -v
+
+      - name: Validate visual authority
+        run: python scripts/validate_mobile_visual_authority.py
+
+      - name: Test visual authority validator
+        run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
+
+      - name: Mobile visual contract TypeScript check
+        run: pnpm --filter mobile typecheck
+
+      - name: Mobile asset/place identity tests
+        run: pnpm --filter mobile test -- --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
 
   repo-assets:
     name: Shared tokens
@@ -629,7 +693,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     timeout-minutes: 15
-    needs: [changes, backend, telemetry, mobile, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
+    needs: [changes, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
     env:
       CI_NEEDS_JSON: ${{ toJson(needs) }}
       CI_EVENT_NAME: ${{ github.event_name }}
