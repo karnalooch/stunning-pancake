@@ -182,8 +182,8 @@ class LeaderboardService:
                 {"user_id": uid, "score_km": round(score, 3), "rank": i + 1}
                 for i, (uid, score) in enumerate(rows)
             ]
-        except Exception as exc:
-            logger.error("leaderboard.read_failed scope=%s entity=%s err=%s", scope, entity_id, exc)
+        except Exception:
+            logger.exception("leaderboard.read_failed")
             return []
 
     @classmethod
@@ -240,9 +240,9 @@ class LeaderboardService:
         key = cls._key(scope, entity_id)
         try:
             cls._get_redis().delete(key, f"{key}:ts")
-            logger.info("leaderboard.reset scope=%s entity=%s", scope, entity_id)
-        except Exception as exc:
-            logger.warning("leaderboard.reset_failed err=%s", exc)
+            logger.info("leaderboard.reset")
+        except Exception:
+            logger.warning("leaderboard.reset_failed", exc_info=True)
 
     @classmethod
     def clear_leaderboard(cls, entity_id: str | int, scope: str = "city") -> None:
