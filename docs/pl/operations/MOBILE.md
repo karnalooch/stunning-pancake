@@ -31,7 +31,7 @@
 
 | Wymaganie | Uwagi |
 |-----------|--------|
-| Node.js / npm | Zgodnie z `mobile/package.json` |
+| Node.js / pnpm | Node.js 24.21.0 LTS + pnpm 12.4.2 (toolchain root monorepo) |
 | EAS CLI | `npm i -g eas-cli` (release store) |
 | Konto Expo | Dostęp do projektu EAS |
 | Env | Tylko **publiczne** prefiksy `EXPO_PUBLIC_*` (bez sekretów w repo) |
@@ -54,9 +54,9 @@ Ustaw w EAS Secrets / `eas.json` profiles / lokalnie `.env` (gitignored). **Nie*
 ### 1. Development
 
 ```bash
-cd mobile
-npm install
-npx expo start
+# from the monorepo root
+pnpm install --frozen-lockfile
+pnpm --dir mobile exec expo start
 ```
 
 ### 2. Preview / internal (EAS)

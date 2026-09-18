@@ -135,7 +135,7 @@ docker compose build admin
 FROM python:3.11-slim  # Aktualizuj do najnowszej 3.11
 
 # admin/Dockerfile
-FROM node:20-slim AS build  # Aktualizuj do najnowszej 20
+FROM node:24.21.0-slim AS build  # Keep aligned with the root toolchain
 ```### Push images (if using registry)```bash
 # Tagowanie
 docker tag 4velo-backend registry.example.com/4velo-backend:v0.2.1

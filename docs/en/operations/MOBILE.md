@@ -30,7 +30,7 @@
 
 | Requirement | Notes |
 |-------------|-------|
-| Node.js/npm | Per `mobile/package.json` |
+| Node.js / pnpm | Node.js 24.21.0 LTS + pnpm 12.4.2 (root monorepo toolchain) |
 | EAS CLI | `npm i -g eas-cli` (store release) |
 | Expo account | Access to the EAS project |
 | Env | Only **public** `EXPO_PUBLIC_*` prefixes (no repo secrets) |
@@ -53,9 +53,9 @@ Set in EAS Secrets / `eas.json` profiles / local `.env` (gitignored). **Do not**
 ### 1. Development
 
 ```bash
-cd mobile
-npm install
-npx expo start
+# from the monorepo root
+pnpm install --frozen-lockfile
+pnpm --dir mobile exec expo start
 ```
 
 ### 2. Preview / internal (EAS)
@@ -112,7 +112,7 @@ MMKV diagram and keys: [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md).
 
 | Step | Command |
 |------|---------|
-| Install deps (monorepo root) | `npx pnpm@9.15.0 install` |
+| Install deps (monorepo root) | `npx pnpm@12.4.2 install` |
 | Install Maestro CLI (once) | `npm run mobile:install-maestro` (root) or `npm run install:maestro` (`mobile/`) |
 | Dev build on device/emulator | `cd mobile && npm run build:dev:android` (EAS development client) |
 | Run all flows | `npm run mobile:test:e2e` (root) or `npm run test:e2e` (`mobile/`) |

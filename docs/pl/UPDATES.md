@@ -191,7 +191,7 @@ docker compose build admin
 FROM python:3.11-slim  # Aktualizuj do najnowszej 3.11
 
 # admin/Dockerfile
-FROM node:20-slim AS build  # Aktualizuj do najnowszej 20
+FROM node:24.21.0-slim AS build  # Utrzymuj zgodnie z root toolchain
 ```
 
 ### Push obrazów (jeśli używasz registry)

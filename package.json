@@ -2,7 +2,10 @@
   "name": "4velo",
   "version": "0.3.3-dev",
   "private": true,
-  "packageManager": "pnpm@9.15.0",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": ">=24.21.0 <25"
+  },
   "scripts": {
     "tokens:build": "pnpm --filter @4velo/tokens build",
     "tokens:check": "pnpm --filter @4velo/tokens check",
@@ -48,11 +51,5 @@
   "devDependencies": {
     "tsx": "^4.19.0",
     "turbo": "^2.5.4"
-  },
-  "pnpm": {
-    "overrides": {
-      "react": "19.2.7",
-      "react-dom": "19.2.7"
-    }
   }
 }

@@ -40,7 +40,7 @@ Step "admin: tsc" {
     pnpm --filter admin typecheck
 }
 Step "mobile: jest" {
-    pnpm --dir mobile test -- --ci
+    pnpm --dir mobile test --ci
 }
 Step "repo: tokens check" {
     if (Test-Path package.json) { pnpm tokens:check }

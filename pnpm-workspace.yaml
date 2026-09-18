@@ -1,3 +1,29 @@
+pmOnFail: ignore
+
+# pnpm 11+ reads project settings from pnpm-workspace.yaml, not .npmrc.
+# Preserve the hoisted layout required by Expo/React Native and the admin Vite aliases.
+nodeLinker: hoisted
+publicHoistPattern:
+  - '*expo*'
+  - '*react-native*'
+  - react
+  - react-dom
+shamefullyHoist: true
+
+overrides:
+  react: 19.2.7
+  react-dom: 19.2.7
+
+# pnpm 12 blocks dependency lifecycle scripts unless each package is reviewed.
+# Keep approvals version-scoped so dependency upgrades require a fresh decision.
+allowBuilds:
+  '@shopify/react-native-skia@2.4.18': true
+  'electron@41.7.1': true
+  'electron-winstaller@5.4.0': true
+  'esbuild@0.25.12 || 0.28.0': false
+  'protobufjs@7.6.2': false
+  'unrs-resolver@1.12.2': false
+
 packages:
   - "admin"
   - "mobile"
