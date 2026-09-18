@@ -58,11 +58,28 @@ describe('ActivitySerialQueue', () => {
       return '43';
     });
 
-    await Promise.resolve();
     await expect(other).resolves.toBe('43');
     expect(events).toContain('43:start');
 
     releaseFirst?.();
     await expect(first).resolves.toBe('42');
+  });
+
+  test('continues the same-activity queue after a previous task rejects', async () => {
+    const queue = new ActivitySerialQueue();
+    const events: string[] = [];
+
+    const failed = queue.run(42, async () => {
+      events.push('failed:start');
+      throw new Error('upload failed');
+    });
+    const recovered = queue.run(42, async () => {
+      events.push('recovered:start');
+      return 'ack-recovered';
+    });
+
+    await expect(failed).rejects.toThrow('upload failed');
+    await expect(recovered).resolves.toBe('ack-recovered');
+    expect(events).toEqual(['failed:start', 'recovered:start']);
   });
 });
