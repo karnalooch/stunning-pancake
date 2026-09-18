@@ -220,6 +220,87 @@
         "canonical rider identity",
         "real ride stats remain visually dominant"
       ]
+    },
+    {
+      "id": "home_city_detail_siedlce_v1",
+      "scope": "T79",
+      "category": "city_detail",
+      "priority": "P2",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "optional local flavour",
+        "does not impersonate official city heraldry",
+        "works as removable enhancement"
+      ]
+    },
+    {
+      "id": "gps_state_icons_v1",
+      "scope": "T80",
+      "category": "functional_icons",
+      "priority": "P1",
+      "sourceStrategy": "human_authored",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "locked/degraded/recovery states distinguishable by icon/shape",
+        "not colour-only"
+      ]
+    },
+    {
+      "id": "summary_share_frame_v1",
+      "scope": "T81",
+      "category": "share_frame",
+      "priority": "P2",
+      "sourceStrategy": "human_authored",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "share data remains readable",
+        "brand treatment remains secondary to result"
+      ]
+    },
+    {
+      "id": "summary_particles_v1",
+      "scope": "T81",
+      "category": "celebration_effect",
+      "priority": "P2",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "durable-success only",
+        "reduced-motion safe",
+        "does not obscure stats"
+      ]
+    },
+    {
+      "id": "city_scene_siedlce_v1",
+      "scope": "T83",
+      "category": "city_scene",
+      "priority": "P2",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "recognisable local flavour without pretending to be official heraldry",
+        "compatible with canonical rider"
+      ]
+    },
+    {
+      "id": "city_scene_generic_v1",
+      "scope": "T83",
+      "category": "city_scene",
+      "priority": "P2",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "neutral locality enhancement",
+        "works without fake landmarks",
+        "compatible with canonical rider"
+      ]
     }
   ]
 }
