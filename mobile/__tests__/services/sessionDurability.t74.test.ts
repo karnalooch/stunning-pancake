@@ -40,9 +40,14 @@ describe('T74 durable session create intent', () => {
 
     expect(mockSavePendingSession).toHaveBeenCalledTimes(1);
     expect(mockPost).toHaveBeenCalledTimes(1);
-    expect(mockSavePendingSession.mock.invocationCallOrder[0]).toBeLessThan(
-      mockPost.mock.invocationCallOrder[0],
-    );
+    const saveOrder = mockSavePendingSession.mock.invocationCallOrder[0];
+    const postOrder = mockPost.mock.invocationCallOrder[0];
+    expect(saveOrder).toBeDefined();
+    expect(postOrder).toBeDefined();
+    if (saveOrder === undefined || postOrder === undefined) {
+      throw new Error('expected both persistence and network calls to be recorded');
+    }
+    expect(saveOrder).toBeLessThan(postOrder);
     expect(mockClearPendingSession).toHaveBeenCalledWith(storage);
   });
 
