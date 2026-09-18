@@ -66,6 +66,7 @@ jobs:
               - 'docs/adr/**'
               - 'docs/pl/design/**'
               - 'docs/pl/adr/**'
+              - 'docs/TAKEOVER_PLAN_CURRENT.md'
               - 'packages/tokens/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
@@ -76,6 +77,8 @@ jobs:
               - 'scripts/validate_mobile_visual_authority.py'
               - 'scripts/test_validate_mobile_visual_authority.py'
               - 'scripts/test_ci_visual_path_filter.py'
+              - 'scripts/check_ci_aggregate.py'
+              - 'scripts/test_ci_aggregate.py'
               - '.github/workflows/**'
             workflow:
               - '.github/workflows/**'
