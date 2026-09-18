@@ -293,7 +293,7 @@ jobs:
         run: pnpm audit:screen-tokens
 
       - name: Run unit tests
-        run: pnpm --dir mobile test -- --ci --forceExit --passWithNoTests
+        run: pnpm --dir mobile test -- --ci --forceExit
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
