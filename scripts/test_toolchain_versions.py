@@ -28,6 +28,21 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertRegex(action, rf'default:\s*"{re.escape(NODE_VERSION)}"')
         self.assertRegex(action, rf'version:\s*{re.escape(PNPM_VERSION)}')
 
+    def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
+        workspace = read("pnpm-workspace.yaml")
+        lockfile = read("pnpm-lock.yaml")
+        self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
+        self.assertNotIn(
+            "packageManagerDependencies:",
+            lockfile,
+            "GitHub Dependency Graph/Dependabot still mishandles pnpm's env lockfile document",
+        )
+        self.assertEqual(
+            lockfile.count("\n---\n"),
+            0,
+            "pnpm-lock.yaml must remain a single YAML document until GitHub supports pnpm 12 env lockfiles",
+        )
+
     def test_ci_workflows_use_node_24(self):
         ci = read(".github/workflows/ci.yml")
         release = read(".github/workflows/k8s-release-gate.yml")
