@@ -17,7 +17,7 @@ See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
 
 ## Tools
 
-- Git, Node 20 (CI version), pnpm 9.15.
+- Git, Node 22.23.2 (CI version), pnpm 12.4.2.
 - Docker with Compose 2 and resources for PostGIS, Redis and routing services.
 - Python 3.12 for CI-aligned local tools; service images use Python 3.11.
 
