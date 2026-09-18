@@ -79,6 +79,7 @@ class VisualPathRoutingTests(unittest.TestCase):
             "docs/adr/014-mobile-immersive-pixel-art-and-bike-computer.md",
             "docs/pl/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md",
             "docs/pl/adr/014-mobile-immersive-pixel-art-and-bike-computer.md",
+            "docs/TAKEOVER_PLAN_CURRENT.md",
             "packages/tokens/colors.json",
             "package.json",
             "pnpm-lock.yaml",
@@ -86,6 +87,8 @@ class VisualPathRoutingTests(unittest.TestCase):
             "scripts/audit-screen-tokens.ts",
             "scripts/validate_mobile_asset_governance.py",
             "scripts/validate_mobile_visual_authority.py",
+            "scripts/check_ci_aggregate.py",
+            "scripts/test_ci_aggregate.py",
             ".github/workflows/ci.yml",
         )
         for path in paths:
