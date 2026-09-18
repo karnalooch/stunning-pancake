@@ -100,7 +100,7 @@ def google_callback(request):
 
     if token_resp.status_code != 200:
         return JsonResponse(
-            {"error": "Token exchange failed", "detail": token_resp.text}, status=400
+            {"error": "Token exchange failed"}, status=400
         )
 
     access_token = token_resp.json().get("access_token")
@@ -129,7 +129,7 @@ def google_callback(request):
             provider_id=str(google_id),
             client=client,
         )
-    except ValueError as exc:
-        return JsonResponse({"error": str(exc)}, status=400)
+    except ValueError:
+        return JsonResponse({"error": "OAuth account could not be linked."}, status=400)
 
     return oauth_callback_redirect(user, client=client)
