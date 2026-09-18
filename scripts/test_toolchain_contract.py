@@ -38,6 +38,14 @@ class ToolchainContractTests(unittest.TestCase):
     def test_pnpm_12_lockfile_stays_single_document_for_dependency_graph(self):
         workspace = (ROOT / "pnpm-workspace.yaml").read_text(encoding="utf-8")
         self.assertIn("pmOnFail: ignore", workspace)
+        self.assertIn("nodeLinker: hoisted", workspace)
+        self.assertIn("shamefullyHoist: true", workspace)
+        self.assertIn("publicHoistPattern:", workspace)
+
+        npmrc = (ROOT / ".npmrc").read_text(encoding="utf-8")
+        self.assertNotIn("node-linker=", npmrc)
+        self.assertNotIn("shamefully-hoist=", npmrc)
+        self.assertNotIn("public-hoist-pattern", npmrc)
 
         lockfile = (ROOT / "pnpm-lock.yaml").read_text(encoding="utf-8")
         separators = [line for line in lockfile.splitlines() if line.strip() == "---"]
