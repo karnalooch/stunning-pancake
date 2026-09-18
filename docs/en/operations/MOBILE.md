@@ -112,7 +112,7 @@ MMKV diagram and keys: [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md).
 
 | Step | Command |
 |------|---------|
-| Install deps (monorepo root) | `npx pnpm@9.15.0 install` |
+| Install deps (monorepo root) | `npx pnpm@12.4.2 install --frozen-lockfile` |
 | Install Maestro CLI (once) | `npm run mobile:install-maestro` (root) or `npm run install:maestro` (`mobile/`) |
 | Dev build on device/emulator | `cd mobile && npm run build:dev:android` (EAS development client) |
 | Run all flows | `npm run mobile:test:e2e` (root) or `npm run test:e2e` (`mobile/`) |
