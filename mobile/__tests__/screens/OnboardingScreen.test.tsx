@@ -184,7 +184,9 @@ describe('OnboardingScreen', () => {
     const { AuthService } = jest.requireMock('../../src/services/api') as {
       AuthService: { updateProfile: jest.Mock };
     };
-    AuthService.updateProfile.mockRejectedValueOnce(new Error('network'));
+    AuthService.updateProfile
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error('network'));
 
     const onFinish = jest.fn();
     let tree!: TestRenderer.ReactTestRenderer;
@@ -194,29 +196,24 @@ describe('OnboardingScreen', () => {
       await Promise.resolve();
     });
 
-    const press = (label: string) => {
-      const node = tree.root.findAll(
-        (n: TestRenderer.ReactTestInstance) =>
-          typeof n.props?.children === 'string' && n.props.children === label,
-      )[0];
-      if (!node) {
-        throw new Error(`Button with label "${label}" not found`);
+    const pressByTestId = (testID: string) => {
+      const node = tree.root.findByProps({ testID });
+      if (typeof node.props.onPress !== 'function') {
+        throw new Error(`Control with testID "${testID}" has no onPress handler`);
       }
-      act(() => {
-        node.props.onPress();
-      });
+      node.props.onPress();
     };
 
     await act(async () => {
-      press('NEXT');
+      pressByTestId('onboarding-city-next');
       await Promise.resolve();
     });
     await act(async () => {
-      press('NEXT');
+      pressByTestId('onboarding-department-skip');
       await Promise.resolve();
     });
     await act(async () => {
-      press('JOIN COMPETITION');
+      pressByTestId('onboarding-finish-join');
       await Promise.resolve();
     });
 
