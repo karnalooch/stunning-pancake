@@ -148,11 +148,11 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 
 ## T94 — CI affected-test / risk-tiered selective execution
 
-**Execution position:** immediately after the takeover-era Visual Protection/Asset Governance foundation is merged, and **before T79**. The ID is late-added and therefore numerically higher; this placement is intentional and does not renumber existing tranches.
+**Execution position:** immediately after the takeover-era Visual Protection/Asset Governance foundation is merged, and **before T79**. Implementation is active in stacked PR #117. The ID is late-added and therefore numerically higher; this placement is intentional and does not renumber existing tranches.
 
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
-| T94 | CI affected-test planner + risk-tiered selective execution | PLANNED | PR CI computes a deterministic base→head change set and selects the smallest safe test set. Mobile uses dependency-aware related Jest tests for low-risk changes plus mandatory suites; backend uses an explicit domain/risk matrix; shared/config/security/navigation/tenant/telemetry/migration/unknown-impact changes fail safe to broader or FULL coverage. Turborepo dependency/cache information may reduce duplicate work but must not become a fail-open oracle. Main/nightly retain broader/full regression. Aggregate CI remains fail-closed. Planner/path/risk/fallback behavior must have table-driven tests, including proof that unknown classifications select FULL rather than SKIP. |
+| T94 | CI affected-test planner + risk-tiered selective execution | ACTIVE | PR CI computes a deterministic base→head change set and selects the smallest safe test set. Mobile uses dependency-aware related Jest tests for low-risk changes plus mandatory suites; backend uses an explicit domain/risk matrix; shared/config/security/navigation/tenant/telemetry/migration/unknown-impact changes fail safe to broader or FULL coverage. Turborepo dependency/cache information may reduce duplicate work but must not become a fail-open oracle. Main/nightly retain broader/full regression. Aggregate CI remains fail-closed. Planner/path/risk/fallback behavior must have table-driven tests, including proof that unknown classifications select FULL rather than SKIP. |
 
 ### T94 contract
 
