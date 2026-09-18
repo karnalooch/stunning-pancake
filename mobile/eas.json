@@ -1,7 +1,7 @@
 {
   "cli": {
     "version": ">= 12.0.0",
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "pilot-local": {
@@ -51,11 +51,11 @@
         "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
         "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
-      }
+      },
+      "autoIncrement": true
     }
   },
   "submit": {
     "production": {}
   }
 }
-
