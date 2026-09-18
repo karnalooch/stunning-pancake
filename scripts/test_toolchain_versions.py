@@ -47,8 +47,8 @@ class ToolchainVersionContractTests(unittest.TestCase):
             "'@shopify/react-native-skia@2.4.18': true",
             "'electron@44.4.1': true",
             "'electron-winstaller@5.4.0': true",
-            "'esbuild@0.25.12 || 0.28.0': false",
-            "'protobufjs@7.6.2': false",
+            "'esbuild@0.25.12 || 0.28.1': false",
+            "'protobufjs@7.6.5': false",
             "'unrs-resolver@1.12.2': false",
         )
         self.assertRegex(workspace, r"(?m)^allowBuilds:\s*$")
