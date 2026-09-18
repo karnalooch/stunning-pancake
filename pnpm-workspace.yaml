@@ -1,3 +1,5 @@
+pmOnFail: ignore
+
 packages:
   - "admin"
   - "mobile"
