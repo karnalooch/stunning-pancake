@@ -54,10 +54,46 @@ def _dedupe(items: list[str]) -> list[str]:
     return list(dict.fromkeys(items))
 
 
+def _is_related_command(command: list[str]) -> bool:
+    return "--findRelatedTests" in command
+
+
+def _full_command() -> list[str]:
+    return [
+        "pnpm",
+        "--filter",
+        "mobile",
+        "test",
+        "--",
+        "--ci",
+        "--forceExit",
+        "--passWithNoTests",
+    ]
+
+
+def _discover_related_tests(command: list[str]) -> tuple[bool, list[str]]:
+    probe = command + ["--listTests"]
+    proc = subprocess.run(
+        probe,
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return False, []
+    tests = [
+        line.strip()
+        for line in (proc.stdout or "").splitlines()
+        if ".test." in line and "__tests__" in line
+    ]
+    return True, tests
+
+
 def commands_for_plan(plan: dict[str, Any]) -> list[list[str]]:
     mobile = plan.get("mobile", {})
     mode = mobile.get("mode", "full")
-    base = ["pnpm", "--filter", "mobile", "test", "--", "--ci", "--forceExit", "--passWithNoTests"]
+    base = _full_command()
 
     if mode == "skip":
         return []
@@ -108,14 +144,35 @@ def main() -> int:
         print("affected-mobile: SKIP (no mobile runtime impact)")
         return 0
 
-    print(f"affected-mobile: executing {len(commands)} command(s)")
+    print(f"affected-mobile: executing {len(commands)} planned command(s)")
+    full_fallback_required = False
+
     for command in commands:
+        if _is_related_command(command) and not args.dry_run:
+            ok, discovered = _discover_related_tests(command)
+            if not ok:
+                print("affected-mobile: related-test discovery failed; FULL fallback")
+                full_fallback_required = True
+                continue
+            if not discovered:
+                print("affected-mobile: zero related tests discovered; FULL fallback")
+                full_fallback_required = True
+                continue
+            print(f"affected-mobile: related-test discovery found {len(discovered)} test file(s)")
+
         print("  + " + " ".join(command))
         if args.dry_run:
             continue
         proc = subprocess.run(command, cwd=REPO_ROOT, check=False)
         if proc.returncode != 0:
             return proc.returncode
+
+    if full_fallback_required:
+        command = _full_command()
+        print("  + " + " ".join(command))
+        proc = subprocess.run(command, cwd=REPO_ROOT, check=False)
+        return proc.returncode
+
     return 0
 
 
