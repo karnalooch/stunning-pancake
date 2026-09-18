@@ -7,7 +7,8 @@
 | **Selected direction** | **Adventure Grand Prix — Grand Prix Modern refinement / Frozen UI v1.2** |
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
-| **Runtime changes in this document** | None |\n| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+| **Runtime changes in this document** | None |
+| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
 
 ## 0. Visual authority
 
