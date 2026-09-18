@@ -183,6 +183,7 @@ const renderOnboarding = async (onFinish = jest.fn()) => {
     );
   });
   await waitForEnabledControl('onboarding-city-next');
+  if (!tree) throw new Error('onboarding renderer failed to mount');
   return { tree, onFinish };
 };
 
