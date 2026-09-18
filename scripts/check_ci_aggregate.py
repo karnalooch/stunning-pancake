@@ -26,6 +26,7 @@ REQUIRED_OUTPUT_KEYS = (
     "scripts",
     "docs",
     "visual",
+    "ci_core",
 )
 
 PATH_EXPECTED = {
@@ -40,6 +41,7 @@ PATH_EXPECTED = {
 }
 PATH_OUTPUT_KEYS = tuple(PATH_EXPECTED.keys())
 FULL_JOBS = (
+    "affected-test-plan",
     "backend",
     "telemetry",
     "mobile",
@@ -88,7 +90,7 @@ def _expected_set(outputs, event_name):
     if event_name == "pull_request":
         if outputs.get("full") == "true" or outputs.get("workflow") == "true":
             return set(FULL_JOBS)
-        expected = set()
+        expected = {"affected-test-plan"}
         for key in PATH_OUTPUT_KEYS:
             if outputs.get(key) == "true":
                 expected.update(PATH_EXPECTED[key])
