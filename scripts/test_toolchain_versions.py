@@ -31,7 +31,14 @@ class ToolchainVersionContractTests(unittest.TestCase):
 
     def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
         workspace = read("pnpm-workspace.yaml")
+        npmrc = read(".npmrc")
         lockfile = read("pnpm-lock.yaml")
+        self.assertRegex(workspace, r"(?m)^nodeLinker:\s*hoisted\s*$")
+        self.assertRegex(workspace, r"(?m)^shamefullyHoist:\s*true\s*$")
+        self.assertRegex(workspace, r"(?m)^publicHoistPattern:\s*$")
+        self.assertNotIn("node-linker", npmrc)
+        self.assertNotIn("shamefully-hoist", npmrc)
+        self.assertNotIn("public-hoist-pattern", npmrc)
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
         self.assertRegex(workspace, r"(?m)^overrides:\s*$")
         self.assertIn("react: 19.2.7", workspace)
