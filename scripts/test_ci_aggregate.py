@@ -254,6 +254,8 @@ class WorkflowStructureTests(unittest.TestCase):
             "admin",
             "audit",
             "security",
+            "codeql",
+            "dependency-review",
             "trivy",
             "e2e",
         }
