@@ -378,18 +378,8 @@ describe('app.config.js googleServicesFile gating', () => {
   });
 
   test('opt-in via EXPO_PUBLIC_ENABLE_FIREBASE="true" restores googleServicesFile on ios', () => {
-    // iOS gate currently still checks file existence on disk. This test is
-    // skipped when GoogleService-Info.plist is absent in the workspace; the
-    // android gate above is the load-bearing assertion for the pilot path.
-    const fs = jest.requireActual('node:fs') as typeof import('node:fs');
-    const path = jest.requireActual('node:path') as typeof import('node:path');
-    const hasIosFile = fs.existsSync(
-      path.resolve(__dirname, '../../GoogleService-Info.plist'),
-    );
-    if (!hasIosFile) {
-      // google-services.json is present, plist is not — iOS path is inert.
-      return;
-    }
+    // Repository artifact policy requires GoogleService-Info.plist to be tracked.
+    // The dedicated artifact contract test guards that repository invariant.
     const resolved = resolveWithProfile('preview', {
       EXPO_PUBLIC_ENABLE_FIREBASE: 'true',
     });

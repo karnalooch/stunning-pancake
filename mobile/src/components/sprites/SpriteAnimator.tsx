@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
 import React, { useEffect } from 'react';
 import { Image, View, StyleSheet, type ImageSourcePropType } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';

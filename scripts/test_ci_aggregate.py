@@ -59,6 +59,7 @@ BASE_OUTPUT_KEYS = (
     "packages",
     "scripts",
     "docs",
+    "visual",
 )
 
 ROUTE_TABLE = {
@@ -69,6 +70,7 @@ ROUTE_TABLE = {
     "packages": ("mobile", "admin", "repo-assets"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
+    "visual": ("mobile-visual-contract",),
 }
 
 PATH_OUTPUT_KEYS = tuple(ROUTE_TABLE.keys())
@@ -77,6 +79,7 @@ FULL_JOB_NAMES = (
     "backend",
     "telemetry",
     "mobile",
+    "mobile-visual-contract",
     "scripts-python",
     "repo-assets",
     "docs-links",
@@ -241,6 +244,7 @@ class WorkflowStructureTests(unittest.TestCase):
             "backend",
             "telemetry",
             "mobile",
+            "mobile-visual-contract",
             "scripts-python",
             "repo-assets",
             "docs-links",
@@ -470,6 +474,14 @@ class AggregateScriptTests(unittest.TestCase):
             expected,
             {"mobile", "admin", "repo-assets", "scripts-python", "audit"},
         )
+
+    def test_combined_visual_and_docs_pass(self):
+        outputs = _base_outputs({"visual": "true", "docs": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(expected, {"mobile-visual-contract", "docs-links"})
 
     def test_combined_backend_telemetry_docs_pass(self):
         outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})

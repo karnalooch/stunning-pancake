@@ -25,6 +25,7 @@ REQUIRED_OUTPUT_KEYS = (
     "packages",
     "scripts",
     "docs",
+    "visual",
 )
 
 PATH_EXPECTED = {
@@ -35,12 +36,14 @@ PATH_EXPECTED = {
     "packages": ("mobile", "admin", "repo-assets"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
+    "visual": ("mobile-visual-contract",),
 }
 PATH_OUTPUT_KEYS = tuple(PATH_EXPECTED.keys())
 FULL_JOBS = (
     "backend",
     "telemetry",
     "mobile",
+    "mobile-visual-contract",
     "scripts-python",
     "repo-assets",
     "docs-links",

@@ -1,5 +1,9 @@
 # Mobile Design System — 4VELO (Active SSOT)
 
+> **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
+> **Historical / non-normative for mobile visual decisions.** This document predates takeover T00 / PR #60. Current visual authority is `docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` + Frozen UI v1.2. Functional, safety, data and security facts survive only where retained by current code/current takeover contracts.
+
+
 | | |
 |--|--|
 | **Status** | ✅ Active (living spec) |

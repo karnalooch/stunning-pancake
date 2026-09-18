@@ -5,7 +5,13 @@ import re
 import unittest
 from pathlib import Path
 
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+QUALITY_BASELINE = ROOT / "scripts" / "run-quality-baseline.ps1"
+QUALITY_BASELINE_SH = ROOT / "scripts" / "run-quality-baseline.sh"
+AFFECTED_RUNNER = ROOT / "scripts" / "run_affected_mobile_tests.py"
+MOBILE_PACKAGE = ROOT / "mobile" / "package.json"
+MOBILE_JEST_CONFIG = ROOT / "mobile" / "jest.config.js"
 
 
 def _workflow_text():
@@ -80,6 +86,42 @@ class MobilePathRoutingTests(unittest.TestCase):
         for path in paths:
             with self.subTest(path=path):
                 self.assertTrue(mobile_job_runs_for(path), path)
+
+    def test_mobile_job_does_not_use_nonexistent_workspace_filter(self):
+        workflow = _workflow_text()
+        match = re.search(r"(?ms)^  mobile:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n)", workflow)
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertNotIn("pnpm --filter mobile", body)
+        self.assertIn("pnpm --dir mobile", body)
+
+    def test_quality_baseline_targets_real_mobile_workspace(self):
+        ps1 = QUALITY_BASELINE.read_text(encoding="utf-8")
+        sh = QUALITY_BASELINE_SH.read_text(encoding="utf-8")
+        self.assertNotIn("pnpm --filter mobile", ps1)
+        self.assertIn("pnpm --dir mobile", ps1)
+        self.assertIn("pnpm --dir mobile", sh)
+
+    def test_blocking_mobile_jest_cannot_pass_with_zero_tests(self):
+        workflow = _workflow_text()
+        match = re.search(r"(?ms)^  mobile:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n)", workflow)
+        self.assertIsNotNone(match)
+
+        sources = {
+            ".github/workflows/ci.yml::mobile": match.group("body"),
+            "scripts/run-quality-baseline.ps1": QUALITY_BASELINE.read_text(encoding="utf-8"),
+            "scripts/run-quality-baseline.sh": QUALITY_BASELINE_SH.read_text(encoding="utf-8"),
+            "mobile/package.json": MOBILE_PACKAGE.read_text(encoding="utf-8"),
+            "mobile/jest.config.js": MOBILE_JEST_CONFIG.read_text(encoding="utf-8"),
+        }
+        if AFFECTED_RUNNER.exists():
+            sources["scripts/run_affected_mobile_tests.py"] = AFFECTED_RUNNER.read_text(
+                encoding="utf-8"
+            )
+
+        for source, text in sources.items():
+            with self.subTest(source=source):
+                self.assertNotIn("--passWithNoTests", text)
 
     def test_unrelated_paths_do_not_run_mobile_job(self):
         paths = (

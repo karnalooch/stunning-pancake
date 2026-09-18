@@ -12,16 +12,38 @@ function readExtra(): Record<string, string | undefined> {
   return { ...fromManifest, ...fromManifest2, ...fromExpo };
 }
 
-function readEnv(key: string): string | undefined {
+type E2eEnvKey =
+  | 'EXPO_PUBLIC_E2E_AUTO_LOGIN'
+  | 'EXPO_PUBLIC_E2E_SKIP_ONBOARDING'
+  | 'EXPO_PUBLIC_E2E_EMAIL'
+  | 'EXPO_PUBLIC_E2E_PASSWORD'
+  | 'EXPO_PUBLIC_E2E_GPS_RECOVERY';
+
+function readProcessEnv(key: E2eEnvKey): string | undefined {
+  switch (key) {
+    case 'EXPO_PUBLIC_E2E_AUTO_LOGIN':
+      return process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN;
+    case 'EXPO_PUBLIC_E2E_SKIP_ONBOARDING':
+      return process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING;
+    case 'EXPO_PUBLIC_E2E_EMAIL':
+      return process.env.EXPO_PUBLIC_E2E_EMAIL;
+    case 'EXPO_PUBLIC_E2E_PASSWORD':
+      return process.env.EXPO_PUBLIC_E2E_PASSWORD;
+    case 'EXPO_PUBLIC_E2E_GPS_RECOVERY':
+      return process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
+  }
+}
+
+function readEnv(key: E2eEnvKey): string | undefined {
   const extra = readExtra();
-  const fromProcess = process.env[key];
+  const fromProcess = readProcessEnv(key);
   if (fromProcess != null && fromProcess !== '') return fromProcess;
   const fromExtra = extra[key];
   if (fromExtra != null && fromExtra !== '') return fromExtra;
   return undefined;
 }
 
-function readEnvFlag(key: string): boolean {
+function readEnvFlag(key: E2eEnvKey): boolean {
   return readEnv(key) === 'true';
 }
 

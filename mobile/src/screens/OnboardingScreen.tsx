@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -169,7 +170,8 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       const rows = await AuthService.getPublicTenants();
       setTenants(rows);
       setTenantState(rows.length > 0 ? 'ready' : 'empty');
-      if (rows.length === 1) setSelectedTenantId(rows[0].id);
+      const [onlyTenant] = rows;
+      if (rows.length === 1 && onlyTenant) setSelectedTenantId(onlyTenant.id);
     } catch {
       setTenants([]);
       setTenantState('error');

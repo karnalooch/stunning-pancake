@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "authorityVersion": "1.0.0",
+  "visualFreezeVersion": "1.2.0",
+  "decisionDate": "2026-09-18",
+  "scope": "mobile_visual_only",
+  "supersessionBoundary": {
+    "rule": "all mobile visual/design/art-direction/mockup decisions authored before takeover master plan T00 / PR #60 are non-normative",
+    "takeoverPlan": "docs/TAKEOVER_PLAN_CURRENT.md",
+    "originalMasterPlan": "docs/TAKEOVER_CLEANUP_PLAN.md",
+    "originalMasterPlanHistoricalBase": "1f6dfcb",
+    "t00PullRequest": 60
+  },
+  "currentAuthority": [
+    "docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md",
+    "docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md",
+    "docs/design/MOBILE_ASSET_BIBLE_V1.md",
+    "docs/design/MOBILE_ASSET_PRODUCTION_LIST_V1.md",
+    "docs/design/PLACE_IDENTITY_POLICY_V1.md",
+    "assets/ASSET_GOVERNANCE_V1.json",
+    "docs/TAKEOVER_PLAN_CURRENT.md"
+  ],
+  "legacyMarker": "VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2",
+  "legacyVisualSources": [
+    "docs/design/DESIGN_SYSTEM_MOBILE.md",
+    "docs/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md",
+    "docs/adr/014-mobile-immersive-pixel-art-and-bike-computer.md",
+    "docs/adr/006-design-system-stitch.md",
+    "docs/design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md",
+    "docs/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md",
+    "docs/pl/design/4VELO_MOBILE_FULL_VISION_IMPLEMENTATION.md",
+    "docs/pl/adr/014-mobile-immersive-pixel-art-and-bike-computer.md",
+    "docs/pl/adr/006-design-system-stitch.md",
+    "docs/pl/design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md",
+    "docs/pl/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md",
+    "docs/archive/designmobile.md",
+    "docs/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md",
+    "docs/pl/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md",
+    "docs/design/MOBILE_EMULATOR_UI_AUDIT_2026-06-14.md",
+    "docs/design/VISION_PARITY_GATE_2026-06-15.md",
+    "docs/design/VISION_PARITY_NEXT_STEPS_2026-06-15.md"
+  ],
+  "nonNormativeGlobs": [
+    "docs/archive/**",
+    "docs/mockups/**",
+    "docs/design/screenshots/**",
+    "assets/generated/**",
+    "mobile/assets/generated/**"
+  ],
+  "preservedOutsideVisualAuthority": [
+    "runtime behavior",
+    "data safety",
+    "security/privacy",
+    "ride safety",
+    "accessibility obligations",
+    "API/navigation behavior unless explicitly changed by current takeover work"
+  ],
+  "frozenAssertions": {
+    "shell": "navy",
+    "canvas": "cream",
+    "primaryAction": "orange",
+    "progressAccent": "amber",
+    "genericGreenSelectionAllowed": false,
+    "pixelFontRoutineUiAllowed": false,
+    "routineArcadeChromeAllowed": false,
+    "activeRideDecorativeSceneAllowed": false,
+    "summaryCelebrationRequiresDurableSuccess": true,
+    "legacyGeneratedAssetsAreVisualReference": false
+  }
+}

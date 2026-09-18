@@ -1,13 +1,18 @@
-# 4VELO Mobile UI Design Contract v1
+# 4VELO Mobile UI Design Contract v1.2
 
 | | |
 |---|---|
 | **Status** | **APPROVED / FROZEN for implementation** |
-| **Decision date** | 2026-09-16 |
-| **Selected direction** | **Direction B — Grand Prix Modern** |
+| **Decision date** | 2026-09-16; visual freeze refined 2026-09-18 |
+| **Selected direction** | **Adventure Grand Prix — Grand Prix Modern refinement / Frozen UI v1.2** |
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
 | **Runtime changes in this document** | None |
+| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+
+## 0. Visual authority
+
+This contract is subordinate to `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`. All pre-takeover mobile visual decisions, mockups, old generated assets and previous SSOT claims are historical/non-normative when they conflict with Frozen UI v1.2.
 
 ## 1. Product character
 
@@ -19,11 +24,13 @@ The product must not look like a generic fitness dashboard, but it also must not
 
 The visual signature is built from:
 
-- deep/dark green as the principal brand field;
+- deep navy/ink as the principal structural shell;
 - warm cream/parchment as the principal light surface;
-- restrained gold as the prestige/accent colour;
+- burnt orange/copper as the primary action colour;
+- warm amber/gold as progression, prestige and selected-state accent;
+- semantic forest green only for genuine success/GPS/nature contexts;
 - large pixel-art cycling scenes used as hero imagery;
-- city crests, club marks, achievement badges and race-like heraldry;
+- verified official crests or canonical 4VELO Place Badges, club marks and achievement badges;
 - calm, highly legible statistics and controls;
 - maps and charts that remain sharp and functional.
 
@@ -42,26 +49,29 @@ When visual character conflicts with usability, the priority order is:
 
 Pixel art may add identity. It may never make essential information harder to read.
 
-## 3. Colour contract
+## 3. Colour contract — Frozen UI v1.2
 
-The current Grand Prix palette remains the starting point. Exact token values remain controlled by the runtime theme; implementation should not introduce ad-hoc screen-specific hex values.
+The runtime theme must migrate toward semantic roles defined by the Visual Protection Architecture. Screens must not introduce ad-hoc colour literals.
 
-### Primary roles
+### Frozen core
 
-- **Deep green** — app shell, premium/dark surfaces, headers and selected high-identity areas.
-- **Cream / parchment** — readable cards, forms, light stat panels and editorial contrast.
-- **Gold** — primary prestige accent, selected states, event highlights, limited primary CTA treatment.
-- **Forest green** — positive/action state and cycling identity.
-- **Ink/navy/near-black** — text and high-contrast outline where required.
-- **Red** — error, destructive and live-recording semantics only; never decorative competition colour.
+- **Deep navy / ink — `#0B1D33`**: shell, structure, dark panels and primary text.
+- **Canvas cream — `#FBF3E2`** and **parchment — `#F5E6CC`**: principal light surfaces.
+- **Primary action orange — `#DD6B33`** with pressed/dark `#9E4318`.
+- **Warm amber/gold — `#D4A373`**: progress, prestige, selected/highlight accents.
+- **Secondary brown — `#5A4A38`** and supporting teal/slate `#1F4E5F`.
+- **Semantic positive green — `#3B6A24`**: genuine success/GPS/nature only.
+- **Red — `#BA1A1A`**: error, destructive and live-recording semantics.
 
-### Usage rules
+### Hard usage rules
 
-- Do not turn every card gold or every outline dark.
-- Gold should feel valuable because it is scarce.
-- Cream cards on dark green may be prominent; routine lists may instead use tonal dark surfaces.
-- Active Ride may use a distinct high-contrast HUD palette optimised for sunlight.
-- Existing theme tokens are preferred over new tokens; new tokens must have semantic names.
+- Green is not a generic action/selection/progression colour.
+- Primary CTA is orange, not green.
+- Active navigation, selected sport/filter, XP/progression and weekly-chart primary series must not use generic green.
+- Central Ride emphasis, where used, is warm orange/amber.
+- GPS locked and genuine success may use semantic green.
+- Maps/charts remain functional; navigation routes may use conventional blue/teal where clarity benefits.
+- Existing raw theme tokens are not permission to keep old semantic roles. New implementation consumes semantic roles.
 
 ## 4. Typography contract
 
@@ -97,7 +107,7 @@ Pixel art is a first-class brand element in:
 - cyclist and rider illustrations;
 - onboarding scenery;
 - city landmarks and silhouettes;
-- city crests and club identity;
+- city scenes, verified official crests / Place Badges and club identity;
 - achievements and collectible badges;
 - race/event banners;
 - quest art;
@@ -176,7 +186,7 @@ A normal screen should not make every container a special surface.
 - visually dominant;
 - minimum comfortable one-hand target;
 - clear label plus optional simple icon;
-- gold or strong green depending on context;
+- burnt orange as the default primary action treatment;
 - no tiny pixel-font labels.
 
 ### Secondary action
@@ -512,19 +522,36 @@ Auth/Onboarding is ready only when:
 
 ## 19. Decision log
 
-### 2026-09-16
+### 2026-09-16 — historical baseline
 
-**Selected:** Direction B — **Grand Prix Modern**.
+Direction B — **Grand Prix Modern** was selected as the takeover-era starting direction. Its high-level "sports product first, pixel identity second" principle remains useful, but its original green-led colour wording and assumptions about the legacy generated asset pack are superseded by the 2026-09-18 freeze below.
 
-The selected direction is specifically characterised by:
+### 2026-09-18 — Frozen UI v1.2 / Adventure Grand Prix
 
-- dark green + cream + restrained gold;
-- a **large pixel-art cycling scene** as a major visual signature;
-- crests, badges and heraldic/racing details;
-- a lightly prestigious Grand Prix atmosphere;
-- calmer decoration in routine product areas;
-- maximum clarity for statistics, maps and ride-critical controls.
+**Selected and frozen:**
 
-Direction A (Performance Pixel) and Direction C (City Ride) remain useful references but are **not** the global visual direction. Performance-style clarity is a usability rule, not a competing aesthetic. City-local identity remains a domain motif within the Grand Prix Modern system.
+- deep navy + cream/parchment product shell;
+- burnt orange primary action;
+- warm amber/gold selection/progression/prestige accent;
+- green only for genuine success/GPS/nature semantics;
+- large pixel-art cycling scenes only on emotional/identity surfaces;
+- modern readable typography, maps, charts and routine product chrome;
+- verified official crests or canonical Place Badge fallback;
+- Active Ride in performance mode with minimal decoration;
+- full Ride Summary celebration only after durable success.
 
-This decision supersedes any wording in the UI audit that recommends an A+B hybrid.
+This decision supersedes conflicting pre-takeover visual decisions, old mockups and legacy asset references. The governing source is `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`.
+
+## 20. Asset governance amendment — 2026-09-18
+
+This amendment is normative for all mobile work after the approved visual refinement.
+
+- The existing \`assets/generated/**\` artwork is **legacy/unapproved visual material**, not a visual reference for new UI. It may remain temporarily wired where removing it would create an unrelated functional change, but new screens must not treat it as the target style.
+- New brand artwork must follow \`MOBILE_ASSET_BIBLE_V1.md\` and the production queue in \`MOBILE_ASSET_PRODUCTION_LIST_V1.md\`.
+- Functional navigation/action icons should come from a consistent modern icon system or purpose-built vector set; they should not be bulk-generated as decorative pixel art.
+- Official municipal crests, club logos and other official marks must never be recreated or approximated by image generation. They require verified provenance. If a verified crest is unavailable, the product uses the canonical 4VELO Place Badge fallback.
+- No place requires a custom image asset in order to render correctly.
+- The accepted visual direction is navy + cream/parchment + orange/amber product chrome; green remains semantic for success/GPS/nature rather than a generic selected/active accent.
+- Asset approval is explicit. Presence in the repository, generation by an old pipeline, or wiring in \`visionAssets.ts\` does not imply approval.
+
+The machine-readable companion policy is \`assets/ASSET_GOVERNANCE_V1.json\`. CI validates it and treats unreviewed changes to the legacy generated inventory as asset-governance drift.

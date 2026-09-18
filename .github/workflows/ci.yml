@@ -1,4 +1,8 @@
 name: 4VELO CI/CD Pipeline
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 
 on:
   push:
@@ -29,6 +33,7 @@ jobs:
       packages: ${{ steps.filter.outputs.packages }}
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.filter.outputs.docs }}
+      visual: ${{ steps.filter.outputs.visual }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
@@ -54,9 +59,31 @@ jobs:
               - 'pnpm-workspace.yaml'
             scripts:
               - 'scripts/**'
+              - 'assets/**'
               - 'pyproject.toml'
             docs:
               - 'docs/**'
+            visual:
+              - 'mobile/**'
+              - 'assets/**'
+              - 'docs/design/**'
+              - 'docs/adr/**'
+              - 'docs/pl/design/**'
+              - 'docs/pl/adr/**'
+              - 'docs/TAKEOVER_PLAN_CURRENT.md'
+              - 'packages/tokens/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'scripts/audit-screen-tokens.ts'
+              - 'scripts/validate_mobile_asset_governance.py'
+              - 'scripts/test_validate_mobile_asset_governance.py'
+              - 'scripts/validate_mobile_visual_authority.py'
+              - 'scripts/test_validate_mobile_visual_authority.py'
+              - 'scripts/test_ci_visual_path_filter.py'
+              - 'scripts/check_ci_aggregate.py'
+              - 'scripts/test_ci_aggregate.py'
+              - '.github/workflows/**'
             workflow:
               - '.github/workflows/**'
       - id: full
@@ -255,22 +282,32 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Mobile test-runner integrity contract
+        run: python -m unittest scripts/test_ci_mobile_path_filter.py -v
+
+      - name: Test pnpm workspace selector integrity
+        run: python -m unittest scripts/test_ci_workspace_selectors.py -v
+
       - name: Lint with Expo ESLint
-        run: pnpm --filter mobile lint
+        run: pnpm --dir mobile lint
 
       - name: TypeScript type check
-        run: pnpm --filter mobile typecheck
+        run: pnpm --dir mobile typecheck
 
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
       - name: Run unit tests
-        run: pnpm --filter mobile test -- --ci --forceExit --passWithNoTests
+        run: pnpm --dir mobile test -- --ci --forceExit
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -309,6 +346,66 @@ jobs:
 
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
+
+      - name: Test PR workflow concurrency policy
+        run: python -m unittest scripts/test_ci_pr_concurrency.py -v
+
+      - name: Validate mobile asset governance
+        run: python scripts/validate_mobile_asset_governance.py
+
+      - name: Test mobile asset governance validator
+        run: python -m unittest scripts/test_validate_mobile_asset_governance.py -v
+
+      - name: Validate takeover-era mobile visual authority
+        run: python scripts/validate_mobile_visual_authority.py
+
+      - name: Test mobile visual authority validator
+        run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
+
+  # ──────────────────────────────────────────
+  # Mobile Visual Contract — takeover-era UI/asset protection
+  # ──────────────────────────────────────────
+  mobile-visual-contract:
+    name: Mobile Visual Contract
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.visual == 'true'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Visual path-routing contract
+        run: python -m unittest scripts/test_ci_visual_path_filter.py -v
+
+      - name: Screen token guard
+        run: pnpm audit:screen-tokens
+
+      - name: Validate asset governance
+        run: python scripts/validate_mobile_asset_governance.py
+
+      - name: Test asset governance validator
+        run: python -m unittest scripts/test_validate_mobile_asset_governance.py -v
+
+      - name: Validate visual authority
+        run: python scripts/validate_mobile_visual_authority.py
+
+      - name: Test visual authority validator
+        run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
+
+      - name: Mobile visual contract TypeScript check
+        run: pnpm --dir mobile typecheck
+
+      - name: Mobile asset/place identity tests
+        run: pnpm --dir mobile test -- --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
 
   repo-assets:
     name: Shared tokens
@@ -616,7 +713,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     timeout-minutes: 15
-    needs: [changes, backend, telemetry, mobile, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
+    needs: [changes, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
     env:
       CI_NEEDS_JSON: ${{ toJson(needs) }}
       CI_EVENT_NAME: ${{ github.event_name }}
