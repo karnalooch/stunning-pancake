@@ -46,8 +46,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: '20'
 
       - name: Install Playwright Chromium
         run: cd admin && npx playwright install --with-deps chromium
