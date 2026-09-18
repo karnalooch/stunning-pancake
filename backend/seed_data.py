@@ -2,7 +2,6 @@ import os
 
 import django
 from django.contrib.gis.geos import Point
-from django.utils.crypto import get_random_string
 
 # Setup Django environment
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
@@ -35,9 +34,7 @@ def _get_or_create_poi(*, name: str, tenant, defaults: dict | None = None):
 def seed():
     print("🌱 Seeding 4VELO demonstration data...")
 
-    configured_demo_password = os.getenv("DEMO_USER_PASSWORD")
-    demo_password = configured_demo_password or get_random_string(20)
-    generated_demo_password = not configured_demo_password
+    demo_password = os.getenv("DEMO_USER_PASSWORD")
 
     # 1. Create Global Owner
     owner, owner_created = User.objects.get_or_create(
@@ -73,7 +70,10 @@ def seed():
         username="siedlce_admin", defaults={"role": "TENANT_ADMIN", "tenant": siedlce}
     )
     if siedlce_admin_created:
-        siedlce_admin.set_password(demo_password)
+        if demo_password:
+            siedlce_admin.set_password(demo_password)
+        else:
+            siedlce_admin.set_unusable_password()
         siedlce_admin.save(update_fields=["password"])
 
     # 4. Create POIs & Vouchers
@@ -97,7 +97,10 @@ def seed():
         username="athlete_01", defaults={"role": "ATHLETE", "tenant": siedlce}
     )
     if athlete_created:
-        athlete.set_password(demo_password)
+        if demo_password:
+            athlete.set_password(demo_password)
+        else:
+            athlete.set_unusable_password()
         athlete.save(update_fields=["password"])
 
     for i in range(5):
@@ -119,7 +122,10 @@ def seed():
         username="athlete_warsaw", defaults={"role": "ATHLETE", "tenant": warsaw}
     )
     if athlete_w_created:
-        athlete_w.set_password(demo_password)
+        if demo_password:
+            athlete_w.set_password(demo_password)
+        else:
+            athlete_w.set_unusable_password()
         athlete_w.save(update_fields=["password"])
     Activity.objects.get_or_create(
         user=athlete_w,
@@ -141,8 +147,8 @@ def seed():
     print("✅ RBAC system seeded.")
 
     print("✅ Demonstration data seeding complete.")
-    if generated_demo_password:
-        print(f"⚠️ Generated one-time demo user password: {demo_password}")
+    if not demo_password:
+        print("⚠️ Demo users have unusable passwords; set DEMO_USER_PASSWORD to enable login.")
     print("Global owner credentials are managed separately by `python manage.py create_admin`.")
 
 
