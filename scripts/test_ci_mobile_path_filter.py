@@ -61,7 +61,7 @@ def mobile_job_runs_for(path):
         if any(_matches(path, pattern) for pattern in patterns)
     }
     dependencies = _mobile_dependencies(workflow)
-    full = "workflow" in changed
+    full = bool(changed & {"workflow", "ci_core"})
     return ("full" in dependencies and full) or bool(changed & dependencies)
 
 
@@ -76,6 +76,8 @@ class MobilePathRoutingTests(unittest.TestCase):
             ".npmrc",
             ".github/actions/pnpm-setup/action.yml",
             ".github/workflows/ci.yml",
+            "scripts/plan_affected_tests.py",
+            "turbo.json",
         )
         for path in paths:
             with self.subTest(path=path):
@@ -86,7 +88,6 @@ class MobilePathRoutingTests(unittest.TestCase):
             "backend/activities/views.py",
             "docs/PROJECT_TAKEOVER.md",
             "README.md",
-            "turbo.json",
         )
         for path in paths:
             with self.subTest(path=path):
