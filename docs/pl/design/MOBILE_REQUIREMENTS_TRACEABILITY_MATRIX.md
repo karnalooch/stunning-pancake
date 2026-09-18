@@ -1,5 +1,9 @@
 # Macierz traceability wymagań mobile — 4VELO
 
+> **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
+> **Historyczny / nienormatywny dla decyzji wizualnych mobile.** Wizualne ustalenia w tym dokumencie są starsze niż takeover T00 / PR #60 i nie mogą nadpisać Frozen UI v1.2. Funkcjonalne wymagania pozostają ważne tylko tam, gdzie utrzymuje je bieżący kod lub aktualny takeover.
+
+
 | | |
 |--|--|
 | **Status** | ✅ Active |
