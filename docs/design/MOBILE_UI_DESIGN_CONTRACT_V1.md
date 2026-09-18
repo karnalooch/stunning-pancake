@@ -107,7 +107,7 @@ Pixel art is a first-class brand element in:
 - cyclist and rider illustrations;
 - onboarding scenery;
 - city landmarks and silhouettes;
-- city crests and club identity;
+- city scenes, verified official crests / Place Badges and club identity;
 - achievements and collectible badges;
 - race/event banners;
 - quest art;
@@ -522,22 +522,25 @@ Auth/Onboarding is ready only when:
 
 ## 19. Decision log
 
-### 2026-09-16
+### 2026-09-16 — historical baseline
 
-**Selected:** Direction B — **Grand Prix Modern**.
+Direction B — **Grand Prix Modern** was selected as the takeover-era starting direction. Its high-level "sports product first, pixel identity second" principle remains useful, but its original green-led colour wording and assumptions about the legacy generated asset pack are superseded by the 2026-09-18 freeze below.
 
-The selected direction is specifically characterised by:
+### 2026-09-18 — Frozen UI v1.2 / Adventure Grand Prix
 
-- dark green + cream + restrained gold;
-- a **large pixel-art cycling scene** as a major visual signature;
-- crests, badges and heraldic/racing details;
-- a lightly prestigious Grand Prix atmosphere;
-- calmer decoration in routine product areas;
-- maximum clarity for statistics, maps and ride-critical controls.
+**Selected and frozen:**
 
-Direction A (Performance Pixel) and Direction C (City Ride) remain useful references but are **not** the global visual direction. Performance-style clarity is a usability rule, not a competing aesthetic. City-local identity remains a domain motif within the Grand Prix Modern system.
+- deep navy + cream/parchment product shell;
+- burnt orange primary action;
+- warm amber/gold selection/progression/prestige accent;
+- green only for genuine success/GPS/nature semantics;
+- large pixel-art cycling scenes only on emotional/identity surfaces;
+- modern readable typography, maps, charts and routine product chrome;
+- verified official crests or canonical Place Badge fallback;
+- Active Ride in performance mode with minimal decoration;
+- full Ride Summary celebration only after durable success.
 
-This decision supersedes any wording in the UI audit that recommends an A+B hybrid.
+This decision supersedes conflicting pre-takeover visual decisions, old mockups and legacy asset references. The governing source is `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`.
 
 ## 20. Asset governance amendment — 2026-09-18
 
