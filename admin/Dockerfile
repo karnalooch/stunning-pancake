@@ -2,9 +2,9 @@
 #   docker build -f admin/Dockerfile .
 # Railway: rootDirectory=/ , dockerfilePath=admin/Dockerfile (see admin/railway.json)
 
-FROM node:20-slim AS build
+FROM node:22.23.2-slim AS build
 
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
 
 WORKDIR /app
 
