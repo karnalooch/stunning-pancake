@@ -160,7 +160,10 @@ const waitForEnabledControl = async (testID: string) =>
   waitForResult(() => {
     if (!tree) throw new Error('onboarding renderer is not mounted');
     const controls = tree.root.findAll(
-      (node) => node.props?.testID === testID && typeof node.props?.onPress === 'function',
+      (node) =>
+        node.props?.testID === testID &&
+        node.props?.accessibilityRole === 'button' &&
+        typeof node.props?.onPress === 'function',
     );
     if (controls.length !== 1) {
       throw new Error(`expected exactly one pressable control "${testID}", found ${controls.length}`);
