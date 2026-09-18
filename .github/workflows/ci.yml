@@ -63,6 +63,14 @@ jobs:
               - 'assets/**'
               - 'pyproject.toml'
               - 'docker-compose.prod.yml'
+              - 'version.json'
+              - 'app.json'
+              - 'package.json'
+              - 'mobile/package.json'
+              - 'mobile/app.config.js'
+              - 'mobile/eas.json'
+              - 'admin/package.json'
+              - 'CHANGELOG.md'
             docs:
               - 'docs/**'
             visual:
@@ -420,6 +428,17 @@ jobs:
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
+
+      - name: Validate product version contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            python scripts/versioning.py check --tag "${GITHUB_REF#refs/tags/}"
+          else
+            python scripts/versioning.py check
+          fi
+          python -m unittest scripts/test_versioning.py -v
 
       - name: Test T94 affected-test planning
         run: |
