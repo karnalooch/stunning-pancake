@@ -95,3 +95,10 @@ The planner and both runners have unit tests. Unknown planner modes/suite IDs fa
 ## Relationship to visual CI
 
 T94 does not replace the independent `Mobile Visual Contract` gate. A low-risk mobile change may use related Jest tests while visual/asset/theme changes still run their dedicated governance checks. When the path is both runtime and visual, both protections apply.
+
+
+## Test-runner integrity
+
+Zero-test success is forbidden in blocking mobile CI. T94 does not use `--passWithNoTests`; if Jest cannot discover a related test, the runner falls back to the full mobile suite.
+
+Every file listed in a mandatory T94 mobile suite is checked against the repository filesystem. A missing/renamed mandatory test is a hard CI failure rather than a silent downgrade to narrower coverage.
