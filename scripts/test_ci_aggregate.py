@@ -64,11 +64,11 @@ BASE_OUTPUT_KEYS = (
 )
 
 ROUTE_TABLE = {
-    "backend": ("backend", "scripts-python"),
-    "telemetry": ("telemetry",),
-    "mobile": ("mobile", "security"),
-    "admin": ("admin", "audit", "security", "e2e"),
-    "packages": ("mobile", "admin", "repo-assets"),
+    "backend": ("backend", "scripts-python", "codeql"),
+    "telemetry": ("telemetry", "codeql"),
+    "mobile": ("mobile", "security", "codeql"),
+    "admin": ("admin", "audit", "security", "e2e", "codeql"),
+    "packages": ("mobile", "admin", "repo-assets", "codeql"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
     "visual": ("mobile-visual-contract",),
@@ -88,6 +88,7 @@ FULL_JOB_NAMES = (
     "admin",
     "audit",
     "security",
+    "codeql",
     "trivy",
     "e2e",
 )
@@ -190,6 +191,11 @@ def _realistic_partial_needs(active_outputs, overrides=None):
     for job in FULL_JOB_NAMES:
         result = overrides.get(job, "success" if job in expected else "skipped")
         needs[job] = {"result": result, "outputs": {}}
+    # Dependency Review is PR-only and always required by aggregate policy.
+    needs["dependency-review"] = {
+        "result": overrides.get("dependency-review", "success"),
+        "outputs": {},
+    }
     return needs
 
 
@@ -254,6 +260,8 @@ class WorkflowStructureTests(unittest.TestCase):
             "admin",
             "audit",
             "security",
+            "codeql",
+            "dependency-review",
             "trivy",
             "e2e",
         }
@@ -469,7 +477,10 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"affected-test-plan", "backend", "scripts-python", "docs-links"})
+        self.assertEqual(
+            expected,
+            {"affected-test-plan", "backend", "scripts-python", "codeql", "docs-links"},
+        )
 
     def test_combined_mobile_and_admin_pass(self):
         outputs = _base_outputs({"mobile": "true", "admin": "true"})
@@ -477,7 +488,10 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"affected-test-plan", "mobile", "security", "admin", "audit", "e2e"})
+        self.assertEqual(
+            expected,
+            {"affected-test-plan", "mobile", "security", "admin", "audit", "e2e", "codeql"},
+        )
 
     def test_combined_packages_and_scripts_pass(self):
         outputs = _base_outputs({"packages": "true", "scripts": "true"})
@@ -487,7 +501,7 @@ class AggregateScriptTests(unittest.TestCase):
         expected = self._expected_for(outputs)
         self.assertEqual(
             expected,
-            {"affected-test-plan", "mobile", "admin", "repo-assets", "scripts-python", "audit"},
+            {"affected-test-plan", "mobile", "admin", "repo-assets", "scripts-python", "audit", "codeql"},
         )
 
     def test_combined_visual_and_docs_pass(self):
@@ -504,7 +518,10 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"affected-test-plan", "backend", "scripts-python", "telemetry", "docs-links"})
+        self.assertEqual(
+            expected,
+            {"affected-test-plan", "backend", "scripts-python", "telemetry", "docs-links", "codeql"},
+        )
 
     def test_combined_failure_in_union_fails(self):
         outputs = _base_outputs({"backend": "true", "docs": "true"})
@@ -531,6 +548,7 @@ class AggregateScriptTests(unittest.TestCase):
         needs = {"changes": {"result": "success", "outputs": outputs}}
         for job in FULL_JOB_NAMES:
             needs[job] = {"result": "success", "outputs": {}}
+        needs["dependency-review"] = {"result": "success", "outputs": {}}
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
 
@@ -539,8 +557,15 @@ class AggregateScriptTests(unittest.TestCase):
         needs = {"changes": {"result": "success", "outputs": outputs}}
         for job in FULL_JOB_NAMES:
             needs[job] = {"result": "success", "outputs": {}}
+        needs["dependency-review"] = {"result": "success", "outputs": {}}
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
+
+    def test_dependency_review_skipped_fails_on_pull_request(self):
+        needs = _realistic_partial_needs({"docs": "true"}, overrides={"dependency-review": "skipped"})
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertFalse(ok)
+        self.assertTrue(any("dependency-review" in r for r in reasons), reasons)
 
     def test_full_mode_push_with_full_true_pass(self):
         needs = _realistic_full_needs()

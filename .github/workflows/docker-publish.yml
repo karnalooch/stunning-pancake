@@ -32,6 +32,10 @@ on:
         type: string
         required: false
         default: ''
+    outputs:
+      slsa_subjects:
+        description: Base64-encoded sha256sum-style subjects for SLSA provenance.
+        value: ${{ jobs.prepare-provenance-subjects.outputs.subjects }}
 
 env:
   REGISTRY: ghcr.io
@@ -58,6 +62,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build-backend.outputs.digest }}
 
     steps:
       - name: Checkout validated SHA
@@ -87,6 +93,7 @@ jobs:
             type=raw,value=${{ inputs.major_minor }},enable=${{ inputs.publish_kind == 'tag' }}
 
       - name: Build and push backend (single invocation, all tags at once)
+        id: build-backend
         uses: docker/build-push-action@v6
         with:
           context: ./backend
@@ -110,6 +117,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.build-admin.outputs.digest }}
 
     steps:
       - name: Checkout validated SHA
@@ -138,6 +147,7 @@ jobs:
             type=raw,value=${{ inputs.version }},enable=${{ inputs.publish_kind == 'tag' }}
 
       - name: Build and push admin (single invocation, all tags at once)
+        id: build-admin
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -147,6 +157,41 @@ jobs:
           labels: ${{ steps.meta-admin.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ──────────────────────────────────────────
+  # Supply chain: expose immutable image digests as SLSA Generic Generator
+  # subjects. The caller signs these after this reusable workflow succeeds.
+  # ──────────────────────────────────────────
+  prepare-provenance-subjects:
+    name: Prepare SLSA subjects
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-admin]
+    permissions:
+      contents: read
+    outputs:
+      subjects: ${{ steps.subjects.outputs.subjects }}
+    steps:
+      - name: Encode immutable image digests
+        id: subjects
+        shell: bash
+        env:
+          BACKEND_DIGEST: ${{ needs.build-backend.outputs.digest }}
+          ADMIN_DIGEST: ${{ needs.build-admin.outputs.digest }}
+          BACKEND_IMAGE_REF: ${{ env.BACKEND_IMAGE }}
+          ADMIN_IMAGE_REF: ${{ env.ADMIN_IMAGE }}
+        run: |
+          set -euo pipefail
+          for digest in "$BACKEND_DIGEST" "$ADMIN_DIGEST"; do
+            if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+              echo "Invalid image digest: $digest" >&2
+              exit 1
+            fi
+          done
+          {
+            printf '%s  %s@%s\n' "${BACKEND_DIGEST#sha256:}" "$BACKEND_IMAGE_REF" "$BACKEND_DIGEST"
+            printf '%s  %s@%s\n' "${ADMIN_DIGEST#sha256:}" "$ADMIN_IMAGE_REF" "$ADMIN_DIGEST"
+          } > slsa-subjects.txt
+          echo "subjects=$(base64 -w0 slsa-subjects.txt)" >> "$GITHUB_OUTPUT"
 
   # ──────────────────────────────────────────
   # Security: Trivy container vulnerability scan (always scans the SHA tag).

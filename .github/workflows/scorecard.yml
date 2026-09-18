@@ -1,0 +1,50 @@
+name: OpenSSF Scorecard
+
+on:
+  # Self-test once when this workflow definition lands on the default branch.
+  # Subsequent posture checks are weekly or explicitly dispatched.
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/scorecard.yml'
+  schedule:
+    - cron: '23 4 * * 3'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  scorecard:
+    name: Supply-chain posture audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run OpenSSF Scorecard
+        uses: ossf/scorecard-action@2d1146689b8cda280b9bc96326124645441f03bc # v2.4.4
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload Scorecard results to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
+          category: openssf-scorecard
+
+      - name: Preserve Scorecard SARIF
+        uses: actions/upload-artifact@v4
+        with:
+          name: openssf-scorecard-sarif
+          path: results.sarif
+          retention-days: 14

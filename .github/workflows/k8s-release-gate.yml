@@ -137,6 +137,41 @@ jobs:
             infrastructure/k8s/policy/pdb.yaml \
             infrastructure/k8s/optional/postgres.optional.yaml
 
+
+      - name: Install Kubesec v2.14.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSLO https://github.com/controlplaneio/kubesec/releases/download/v2.14.2/kubesec_linux_amd64.tar.gz
+          echo 'bc252e35f01bc4f133a49404315da3ccfed0209cc9baba33883eaeca0656f35c  kubesec_linux_amd64.tar.gz' | sha256sum -c -
+          tar -xzf kubesec_linux_amd64.tar.gz kubesec
+          sudo install -m 0755 kubesec /usr/local/bin/kubesec
+          kubesec version
+
+      - name: Kubesec workload posture audit (advisory)
+        continue-on-error: true
+        shell: bash
+        run: |
+          status=0
+          for manifest in \
+            infrastructure/k8s/workloads/api.yaml \
+            infrastructure/k8s/workloads/worker.yaml \
+            infrastructure/k8s/workloads/worker-simulation.yaml \
+            infrastructure/k8s/workloads/beat.yaml \
+            infrastructure/k8s/workloads/redis.yaml \
+            infrastructure/k8s/workloads/brouter.yaml \
+            infrastructure/k8s/workloads/admin.optional.yaml \
+            infrastructure/k8s/jobs/migrate-job.yaml \
+            infrastructure/k8s/optional/postgres.optional.yaml
+          do
+            echo "::group::Kubesec $manifest"
+            if ! kubesec scan --format table "$manifest"; then
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
+
   reliability_and_release_gate:
     name: Reliability + Release Gate
     runs-on: ubuntu-latest
