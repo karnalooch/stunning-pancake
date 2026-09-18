@@ -125,6 +125,7 @@ class HomeLabTests(unittest.TestCase):
             source = Path(folder) / "backup.dump.enc"
             source.write_bytes(b"encrypted")
             with (
+                patch.object(home_lab, "require_environment"),
                 patch.object(home_lab, "validate_backup", return_value=source),
                 patch.object(home_lab, "home_env_value", return_value="test-key"),
                 patch.object(home_lab.subprocess, "Popen", return_value=FakeProcess()),
