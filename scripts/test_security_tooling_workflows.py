@@ -116,8 +116,22 @@ class KubesecContractTests(unittest.TestCase):
         self.assertTrue(step["continue-on-error"])
         raw = text(K8S)
         self.assertIn("v2.14.2/kubesec_linux_amd64.tar.gz", raw)
-        self.assertIn("kubesec_checksums.txt", raw)
+        self.assertIn(
+            "bc252e35f01bc4f133a49404315da3ccfed0209cc9baba33883eaeca0656f35c",
+            raw,
+        )
+        self.assertNotIn("kubesec_checksums.txt", raw)
         self.assertIn("sha256sum -c -", raw)
+
+
+class WorkflowDependencyPinningTests(unittest.TestCase):
+    def test_security_contract_installs_pyyaml_with_hash_verification(self):
+        raw = text(CI)
+        self.assertIn("python -m pip install --require-hashes", raw)
+        self.assertIn(
+            "PyYAML==6.0.3 --hash=sha256:dbad07666e1656f0f4349c7d35b45406ffd57a289b6e0b49c3c9c2ca40fe5e3c",
+            raw,
+        )
 
 
 class MobSFContractTests(unittest.TestCase):
