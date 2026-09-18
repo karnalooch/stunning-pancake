@@ -1,6 +1,7 @@
 /* eslint-env node */
 const fs = require('fs');
 const path = require('path');
+const releaseVersion = require('../version.json');
 
 try {
   require('dotenv').config({ path: path.resolve(__dirname, '.env') });
@@ -65,7 +66,7 @@ export default ({ config }) => {
     "name": "4VELO",
     "slug": "mobile",
     "scheme": "fourvelo",
-    "version": "0.2.0-rc.1",
+    "version": releaseVersion.version,
     "updates": {
       "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
       "channel": "production"
