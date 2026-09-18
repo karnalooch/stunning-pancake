@@ -294,7 +294,9 @@ Visual regression outputs expected/actual/diff. Baseline updates are never autom
 
 A protected UI PR must provide deterministic before/after evidence.
 
-The mature `Mobile Visual Contract` check covers frozen-contract tests, visual-authority validator, asset-governance validator, UI lint, semantic import rules, Design Gallery regression, applicable screen golden regression and baseline-manifest integrity.
+The required `Mobile Visual Contract` CI job is part of the takeover foundation and runs for protected mobile, asset, design/ADR, token, validator and workflow paths. Its foundation gate covers path-routing tests, screen-token guard, visual-authority validation/tests, asset-governance validation/tests, mobile TypeScript and asset/place-identity Jest tests.
+
+T79 extends that same job with semantic UI lint, Design Gallery regression, applicable screen golden regression and baseline-manifest integrity. Golden screenshot regression is intentionally not claimed as complete until real T79 application baselines are approved.
 
 ## 16. Baseline manifest and checksums
 
