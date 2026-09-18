@@ -22,6 +22,8 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         self.assertEqual(command[:3], ["pnpm", "--dir", "mobile"])
         self.assertNotIn("--filter", command)
         self.assertNotIn("--passWithNoTests", command)
+        self.assertNotIn("--", command)
+        self.assertEqual(command[3:], ["test", "--ci", "--forceExit"])
 
     def test_every_mandatory_suite_test_file_exists(self):
         self.assertEqual(missing_mandatory_test_paths(), [])
@@ -83,7 +85,6 @@ class AffectedMobileRunnerTests(unittest.TestCase):
                 "--dir",
                 "mobile",
                 "test",
-                "--",
                 "--ci",
                 "--forceExit",
                 "--findRelatedTests",
@@ -104,7 +105,6 @@ class AffectedMobileRunnerTests(unittest.TestCase):
                 "--dir",
                 "mobile",
                 "test",
-                "--",
                 "--findRelatedTests",
                 "/repo/mobile/src/components/Foo.tsx",
             ]
