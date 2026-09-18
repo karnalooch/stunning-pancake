@@ -91,3 +91,7 @@ Every CI run prints a Markdown plan with:
 - reasons for narrowing or FULL fallback.
 
 The planner and both runners have unit tests. Unknown planner modes/suite IDs fail safe to full commands.
+
+## Relationship to visual CI
+
+T94 does not replace the independent `Mobile Visual Contract` gate. A low-risk mobile change may use related Jest tests while visual/asset/theme changes still run their dedicated governance checks. When the path is both runtime and visual, both protections apply.
