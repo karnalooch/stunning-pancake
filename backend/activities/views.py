@@ -574,7 +574,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                     sim.maybe_advance_live_simulation_from_poll()
                     req = parse_live_map_query_params(request.query_params, user=request.user)
                     body = build_live_map_payload(req)
-                except Exception as exc:
+                except Exception:
                     log.exception("telemetry/live local build failed")
                     body = {
                         "positions": [],
@@ -582,7 +582,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                             "positions_returned": 0,
                             "viewport_returned": 0,
                             "degraded": True,
-                            "error": str(exc)[:160],
+                            "error": "Live telemetry is temporarily unavailable.",
                         },
                     }
 
