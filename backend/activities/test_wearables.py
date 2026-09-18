@@ -6,6 +6,7 @@ RC v0.2: OAuth token exchange, activity sync, status, token refresh.
 
 from datetime import timedelta
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -208,7 +209,7 @@ class TestGarminService:
             patch("activities.wearables._store_oauth_state", return_value="mock_nonce_xyz"),
         ):
             url = GarminService.get_auth_url(user_id=7)
-            assert "connect.garmin.com" in url
+            assert urlparse(url).hostname == "connect.garmin.com"
             assert "client_id=garmin_client_456" in url
             assert "state=mock_nonce_xyz" in url
 
