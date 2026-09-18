@@ -9,8 +9,8 @@
 
 | Element | Stan |
 |---|---|
-| Node.js | `v24.14.1` (CI/rekomendacja: Node 20 LTS — `ci.yml NODE_VERSION='20'`) |
-| pnpm | brak globalnie; `corepack pnpm` → `9.15.0` (zgodny z `packageManager`) |
+| Node.js | pin repo/CI: `v24.21.0` (`.node-version`) |
+| pnpm | pin repo/CI: `12.4.2` (`package.json#packageManager`) |
 | Python | `3.14.2` global; `backend/venv` → `3.14.2` z Django `6.0.4` (requirements pinują `4.2.30`); global ma Django `4.2.30` |
 | Docker / Podman | brak (niedostępne w środowisku audytu) |
 | ruff / mypy / pytest | nie zainstalowane (ani w `backend/venv`, ani globalnie) |
