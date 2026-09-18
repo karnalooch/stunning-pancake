@@ -54,12 +54,16 @@ export function placeBadgeInitials(name: string): string {
   const parts = words(name);
   if (parts.length === 0) return '4V';
 
-  if (parts.length >= 2) {
-    const initials = (Array.from(parts[0])[0] ?? '') + (Array.from(parts[1])[0] ?? '');
+  const first = parts[0];
+  if (!first) return '4V';
+
+  const second = parts[1];
+  if (second) {
+    const initials = (Array.from(first)[0] ?? '') + (Array.from(second)[0] ?? '');
     return initials.toLocaleUpperCase('pl-PL');
   }
 
-  return Array.from(parts[0]).slice(0, 2).join('').toLocaleUpperCase('pl-PL') || '4V';
+  return Array.from(first).slice(0, 2).join('').toLocaleUpperCase('pl-PL') || '4V';
 }
 
 function isUsableVerifiedCrest(crest: OfficialCrest | null | undefined): crest is OfficialCrest {
