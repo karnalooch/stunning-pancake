@@ -284,16 +284,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Lint with Expo ESLint
-        run: pnpm --filter mobile lint
+        run: pnpm --dir mobile lint
 
       - name: TypeScript type check
-        run: pnpm --filter mobile typecheck
+        run: pnpm --dir mobile typecheck
 
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
       - name: Run unit tests
-        run: pnpm --filter mobile test -- --ci --forceExit --passWithNoTests
+        run: pnpm --dir mobile test -- --ci --forceExit --passWithNoTests
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -385,10 +385,10 @@ jobs:
         run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
 
       - name: Mobile visual contract TypeScript check
-        run: pnpm --filter mobile typecheck
+        run: pnpm --dir mobile typecheck
 
       - name: Mobile asset/place identity tests
-        run: pnpm --filter mobile test -- --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
+        run: pnpm --dir mobile test -- --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
 
   repo-assets:
     name: Shared tokens
