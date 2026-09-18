@@ -106,10 +106,10 @@ class StripeService:
                 cancel_url=cancel_url,
                 metadata={"tenant_id": tenant_id, "plan": "B2B_CORPORATE", "seats": str(seats)},
             )
-            logger.info("stripe.b2b_checkout_created tenant=%s seats=%d", tenant_id, seats)
+            logger.info("stripe.b2b_checkout_created seats=%d", seats)
             return session.url
-        except stripe.StripeError as exc:
-            logger.error("stripe.b2b_checkout_error tenant=%s err=%s", tenant_id, exc)
+        except stripe.StripeError:
+            logger.exception("stripe.b2b_checkout_error")
             return None
 
     @classmethod
