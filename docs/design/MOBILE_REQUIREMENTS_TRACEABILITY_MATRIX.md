@@ -1,5 +1,9 @@
 # Mobile Requirements Traceability Matrix — 4VELO
 
+> **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
+> **Historical / non-normative for mobile visual decisions.** Visual rules in this document predate takeover T00 / PR #60 and cannot override Frozen UI v1.2. Functional requirements remain valid only where retained by current code/current takeover contracts.
+
+
 | | |
 |--|--|
 | **Status** | ✅ Active |
