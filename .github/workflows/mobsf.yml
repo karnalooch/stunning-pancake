@@ -1,0 +1,170 @@
+name: MobSF Mobile Security
+
+on:
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobsf.yml'
+  push:
+    branches: [main, master]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobsf.yml'
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: HTTPS Expo/EAS artifact URL for the APK to scan.
+        required: true
+        type: string
+      apk_sha256:
+        description: Expected lowercase SHA-256 of the APK.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  mobsf-source:
+    name: MobSF source SAST
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scan native mobile source with MobSF rules
+        uses: MobSF/mobsfscan@a43635d92434e78b079ed7d860f022cf6c886b43 # 1.0.0
+        with:
+          args: 'mobile --sarif --output mobsfscan.sarif --no-fail'
+
+      - name: Upload MobSF source SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: hashFiles('mobsfscan.sarif') != ''
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsf-source
+
+  mobsf-apk:
+    name: MobSF APK static analysis
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      MOBSF_IMAGE: opensecurity/mobile-security-framework-mobsf:v4.5.2
+    steps:
+      - name: Validate APK input
+        id: apk
+        shell: bash
+        env:
+          APK_URL: ${{ inputs.apk_url }}
+          APK_SHA256: ${{ inputs.apk_sha256 }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$APK_URL" =~ ^https://expo\.dev/artifacts/eas/ ]]; then
+            echo "APK URL must be an Expo/EAS HTTPS artifact URL." >&2
+            exit 1
+          fi
+          if [[ ! "$APK_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "apk_sha256 must be exactly 64 lowercase hex characters." >&2
+            exit 1
+          fi
+          echo "url=$APK_URL" >> "$GITHUB_OUTPUT"
+          echo "sha256=$APK_SHA256" >> "$GITHUB_OUTPUT"
+
+      - name: Download and verify APK
+        shell: bash
+        env:
+          APK_URL: ${{ steps.apk.outputs.url }}
+          APK_SHA256: ${{ steps.apk.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          curl --fail --show-error --silent --location \
+            --proto '=https' --tlsv1.2 \
+            "$APK_URL" -o app-under-test.apk
+          echo "$APK_SHA256  app-under-test.apk" | sha256sum -c -
+
+      - name: Start ephemeral MobSF
+        shell: bash
+        run: |
+          set -euo pipefail
+          MOBSF_API_KEY="ci-mobsf-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "MOBSF_API_KEY=$MOBSF_API_KEY" >> "$GITHUB_ENV"
+          docker pull "$MOBSF_IMAGE"
+          docker run -d --rm --name mobsf-ci \
+            -e MOBSF_API_ONLY=1 \
+            -e MOBSF_API_KEY="$MOBSF_API_KEY" \
+            -p 8000:8000 \
+            "$MOBSF_IMAGE"
+          for _ in $(seq 1 90); do
+            if curl --silent --show-error --connect-timeout 2 \
+              -o /dev/null http://127.0.0.1:8000/; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs mobsf-ci
+          exit 1
+
+      - name: Scan APK with MobSF
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mobsf-report
+          upload="$(curl --fail --show-error --silent \
+            -H "Authorization: $MOBSF_API_KEY" \
+            -F "file=@app-under-test.apk" \
+            http://127.0.0.1:8000/api/v1/upload)"
+          printf '%s\n' "$upload" > mobsf-report/upload.json
+
+          hash="$(jq -er '.hash' <<<"$upload")"
+          file_name="$(jq -er '.file_name // "app-under-test.apk"' <<<"$upload")"
+          scan_type="$(jq -er '.scan_type // "apk"' <<<"$upload")"
+
+          curl --fail --show-error --silent \
+            -H "Authorization: $MOBSF_API_KEY" \
+            --data-urlencode "hash=$hash" \
+            --data-urlencode "file_name=$file_name" \
+            --data-urlencode "scan_type=$scan_type" \
+            http://127.0.0.1:8000/api/v1/scan \
+            > mobsf-report/scan.json
+
+          curl --fail --show-error --silent \
+            -H "Authorization: $MOBSF_API_KEY" \
+            --data-urlencode "hash=$hash" \
+            http://127.0.0.1:8000/api/v1/report_json \
+            > mobsf-report/report.json
+
+          curl --fail --show-error --silent \
+            -H "Authorization: $MOBSF_API_KEY" \
+            --data-urlencode "hash=$hash" \
+            http://127.0.0.1:8000/api/v1/download_pdf \
+            > mobsf-report/report.pdf
+
+      - name: Upload MobSF APK reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobsf-apk-report
+          path: mobsf-report/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Capture MobSF service logs
+        if: always()
+        shell: bash
+        run: docker logs mobsf-ci > mobsf-report-service.log 2>&1 || true
+
+      - name: Upload MobSF service logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobsf-service-log
+          path: mobsf-report-service.log
+          retention-days: 7
+          if-no-files-found: ignore
