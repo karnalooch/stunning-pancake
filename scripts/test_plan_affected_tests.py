@@ -30,6 +30,11 @@ class AffectedTestPlannerTests(unittest.TestCase):
         self.assertIn("ride_safety", plan["mobile"]["mandatorySuites"])
         self.assertEqual(plan["risk"], "R4")
 
+    def test_onboarding_change_adds_auth_mandatory_suite(self):
+        plan = plan_from_files(["mobile/src/screens/OnboardingScreen.tsx"])
+        self.assertEqual(plan["mobile"]["mode"], "related")
+        self.assertIn("auth_security", plan["mobile"]["mandatorySuites"])
+
     def test_changed_mobile_test_runs_directly(self):
         path = "mobile/__tests__/services/gpsQualityFilter.test.ts"
         plan = plan_from_files([path])
