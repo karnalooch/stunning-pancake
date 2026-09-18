@@ -30,11 +30,11 @@ REQUIRED_OUTPUT_KEYS = (
 )
 
 PATH_EXPECTED = {
-    "backend": ("backend", "scripts-python"),
-    "telemetry": ("telemetry",),
-    "mobile": ("mobile", "security"),
-    "admin": ("admin", "audit", "security", "e2e"),
-    "packages": ("mobile", "admin", "repo-assets"),
+    "backend": ("backend", "scripts-python", "codeql"),
+    "telemetry": ("telemetry", "codeql"),
+    "mobile": ("mobile", "security", "codeql"),
+    "admin": ("admin", "audit", "security", "e2e", "codeql"),
+    "packages": ("mobile", "admin", "repo-assets", "codeql"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
     "visual": ("mobile-visual-contract",),
@@ -52,6 +52,7 @@ FULL_JOBS = (
     "admin",
     "audit",
     "security",
+    "codeql",
     "trivy",
     "e2e",
 )
@@ -89,11 +90,14 @@ def _expected_set(outputs, event_name):
         return set(FULL_JOBS)
     if event_name == "pull_request":
         if outputs.get("full") == "true" or outputs.get("workflow") == "true":
-            return set(FULL_JOBS)
-        expected = {"affected-test-plan"}
-        for key in PATH_OUTPUT_KEYS:
-            if outputs.get(key) == "true":
-                expected.update(PATH_EXPECTED[key])
+            expected = set(FULL_JOBS)
+        else:
+            expected = {"affected-test-plan"}
+            for key in PATH_OUTPUT_KEYS:
+                if outputs.get(key) == "true":
+                    expected.update(PATH_EXPECTED[key])
+        # Dependency Review is a PR-only guard and must never silently skip.
+        expected.add("dependency-review")
         return expected
     return None
 
