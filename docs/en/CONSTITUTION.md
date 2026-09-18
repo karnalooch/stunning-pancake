@@ -480,8 +480,12 @@ MAJOR.MINOR.PATCH
 | **MINOR** | New functionality, backward compatible |
 | **PATCH** | Bug fixes, backwards compatible |
 
-- Current version: **v0.2.0-rc.1** (release candidate)
-- Version `0.y.z` means the development phase before v1.0.0
+- Current product line: **v0.3.3-dev**; the canonical state is repository-root `version.json`.
+- `version.json.version` is numeric `MAJOR.MINOR.PATCH`, used as the mobile user-visible version and by Expo's `appVersion` runtime policy.
+- `version.json.prerelease` forms repository/package labels (for example `0.3.3-dev` or `0.3.3-rc.1`) and is not written into the native store version.
+- Native build identifiers (`android.versionCode`, `ios.buildNumber`) are managed remotely by EAS and auto-incremented for production.
+- A stable release tag is `vMAJOR.MINOR.PATCH`, must match `version.json.version`, and requires an empty `prerelease`.
+- Version `0.y.z` means the development phase before v1.0.0.
 
 ### 10.2 API versioning
 
