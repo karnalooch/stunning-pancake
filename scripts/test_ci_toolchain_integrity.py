@@ -78,6 +78,21 @@ class ToolchainIntegrityTests(unittest.TestCase):
         self.assertRegex(workspace, r"(?m)^\s+react:\s*19\.2\.7\s*$")
         self.assertRegex(workspace, r"(?m)^\s+react-dom:\s*19\.2\.7\s*$")
 
+    def test_dependency_build_allowlist_is_exact_and_reviewed(self):
+        workspace = read("pnpm-workspace.yaml")
+        expected = (
+            "@shopify/react-native-skia@2.4.18",
+            "electron-winstaller@5.4.0",
+            "electron@41.7.1",
+            "esbuild@0.25.12",
+            "esbuild@0.28.0",
+            "protobufjs@7.6.2",
+            "unrs-resolver@1.12.2",
+        )
+        for package in expected:
+            with self.subTest(package=package):
+                self.assertIn(f"'{package}': true", workspace)
+
     def test_dependabot_compatibility_workaround_is_enabled(self):
         workspace = read("pnpm-workspace.yaml")
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
