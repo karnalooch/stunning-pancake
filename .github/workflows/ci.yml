@@ -317,6 +317,12 @@ jobs:
       - name: Test mobile asset governance validator
         run: python -m unittest scripts/test_validate_mobile_asset_governance.py -v
 
+      - name: Validate takeover-era mobile visual authority
+        run: python scripts/validate_mobile_visual_authority.py
+
+      - name: Test mobile visual authority validator
+        run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
+
   repo-assets:
     name: Shared tokens
     runs-on: ubuntu-latest
