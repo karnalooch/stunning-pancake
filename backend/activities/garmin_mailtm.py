@@ -22,16 +22,12 @@ import string
 import time
 
 import requests
-import urllib3
 
 logger = logging.getLogger(__name__)
 
 MAILTM_BASE_URL = os.getenv("MAILTM_BASE_URL", "https://api.mail.tm").rstrip("/")
 MAILTM_TIMEOUT = int(os.getenv("MAILTM_TIMEOUT", "10"))
 MAILTM_DOMAIN_OVERRIDE = os.getenv("MAILTM_DOMAIN", "").strip() or None
-
-# Disable insecure request warnings when SSL verification is disabled
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _MAILTM_SESSION: requests.Session | None = None
 
@@ -55,23 +51,10 @@ def _mailtm_request(method: str, path: str, **kwargs) -> requests.Response | Non
     url = f"{MAILTM_BASE_URL}{path}"
     kwargs.setdefault("timeout", MAILTM_TIMEOUT)
 
-    # Try with SSL verification first
     try:
-        return session.request(method, url, verify=True, **kwargs)
-    except (
-        requests.exceptions.SSLError,
-        requests.exceptions.ConnectionError,
-        OSError,
-        urllib3.exceptions.SSLError,
-    ) as exc:
-        logger.debug("Mail.tm SSL error on first attempt, retrying without verification: %s", exc)
-        try:
-            return session.request(method, url, verify=False, **kwargs)
-        except Exception as exc2:
-            logger.warning("Mail.tm request failed (no verify): %s", exc2)
-            return None
-    except Exception as exc:
-        logger.warning("Mail.tm request failed: %s", exc)
+        return session.request(method, url, **kwargs)
+    except (requests.RequestException, OSError):
+        logger.warning("Mail.tm request failed")
         return None
 
 
