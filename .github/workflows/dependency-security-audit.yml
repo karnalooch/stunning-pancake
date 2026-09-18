@@ -27,7 +27,34 @@ jobs:
         shell: bash
         run: |
           set +e
-          pnpm audit --json
+          pnpm audit --json > audit.json
           status=$?
+          set -e
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('audit.json', 'utf8'));
+          const advisories = Object.values(data.advisories || {});
+          advisories.sort((a, b) => {
+            const rank = {critical: 0, high: 1, moderate: 2, low: 3, info: 4};
+            return (rank[a.severity] ?? 9) - (rank[b.severity] ?? 9)
+              || String(a.module_name).localeCompare(String(b.module_name))
+              || Number(a.id) - Number(b.id);
+          });
+          console.log('AUDIT_SUMMARY_BEGIN');
+          for (const a of advisories) {
+            const versions = [...new Set((a.findings || []).map(f => f.version))].join(',');
+            console.log([
+              a.severity,
+              a.module_name,
+              versions,
+              a.vulnerable_versions,
+              a.patched_versions || 'NONE',
+              a.github_advisory_id || a.id,
+              a.title
+            ].join('\t'));
+          }
+          console.log('AUDIT_SUMMARY_END');
+          console.log('AUDIT_METADATA\t' + JSON.stringify(data.metadata || {}));
+          NODE
           echo "pnpm audit exit code: $status"
           exit 0
