@@ -13,7 +13,7 @@
     "codegen:check": "node scripts/check-openapi-paths.mjs"
   },
   "devDependencies": {
-    "orval": "^7.9.0",
-    "typescript": "~5.9.2"
+    "orval": "^8.33.0",
+    "typescript": "~7.0.2"
   }
 }
