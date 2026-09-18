@@ -73,6 +73,10 @@ describe('gpsWsIngest telemetry auth propagation', () => {
 
     const ws = FakeWebSocket.instances[0];
     expect(ws).toBeDefined();
+    if (!ws) {
+      throw new Error('Expected gpsWsIngest to open a WebSocket');
+    }
+
     expect(ws.url).toBe(
       'wss://telemetry.example/ws/telemetry/ingest?token=aud%20telemetry%2B%2F%3Dtoken',
     );
