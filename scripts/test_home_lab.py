@@ -252,6 +252,16 @@ class HomeLabTests(unittest.TestCase):
             home_lab.canonical_snapshot_digest(right),
         )
 
+    def test_home_env_value_can_use_explicit_default_for_legacy_env(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text("POSTGRES_DB=4velo_home\n", encoding="utf-8")
+            with patch.object(home_lab, "ENV_FILE", env):
+                self.assertEqual(
+                    home_lab.home_env_value("APP_DB_USER", "4velo_runtime"),
+                    "4velo_runtime",
+                )
+
     def test_home_env_value_reads_requested_setting_only(self):
         with tempfile.TemporaryDirectory() as folder:
             env = Path(folder) / ".env.home"
