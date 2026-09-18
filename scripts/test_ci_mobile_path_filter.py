@@ -5,7 +5,9 @@ import re
 import unittest
 from pathlib import Path
 
-WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+ROOT = Path(__file__).resolve().parents[1]
+WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+QUALITY_BASELINE = ROOT / "scripts" / "run-quality-baseline.ps1"
 
 
 def _workflow_text():
@@ -88,6 +90,11 @@ class MobilePathRoutingTests(unittest.TestCase):
         body = match.group("body")
         self.assertNotIn("pnpm --filter mobile", body)
         self.assertIn("pnpm --dir mobile", body)
+
+    def test_quality_baseline_targets_real_mobile_workspace(self):
+        text = QUALITY_BASELINE.read_text(encoding="utf-8")
+        self.assertNotIn("pnpm --filter mobile", text)
+        self.assertIn("pnpm --dir mobile", text)
 
     def test_unrelated_paths_do_not_run_mobile_job(self):
         paths = (
