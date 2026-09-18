@@ -53,9 +53,9 @@ Set in EAS Secrets / `eas.json` profiles / local `.env` (gitignored). **Do not**
 ### 1. Development
 
 ```bash
-cd mobile
-npm install
-npx expo start
+# from the monorepo root
+pnpm install --frozen-lockfile
+pnpm --dir mobile exec expo start
 ```
 
 ### 2. Preview / internal (EAS)
