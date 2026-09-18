@@ -5,12 +5,17 @@ describe('ActivitySerialQueue', () => {
     const queue = new ActivitySerialQueue();
     const events: string[] = [];
     let releaseFirst: (() => void) | undefined;
+    let markFirstStarted: (() => void) | undefined;
     const firstGate = new Promise<void>((resolve) => {
       releaseFirst = resolve;
+    });
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve;
     });
 
     const first = queue.run(42, async () => {
       events.push('first:start');
+      markFirstStarted?.();
       await firstGate;
       events.push('first:end');
       return 'ack-first';
@@ -21,7 +26,7 @@ describe('ActivitySerialQueue', () => {
       return 'ack-second';
     });
 
-    await Promise.resolve();
+    await firstStarted;
     expect(events).toEqual(['first:start']);
 
     releaseFirst?.();
