@@ -99,6 +99,7 @@ jobs:
               - 'scripts/test_ci_aggregate.py'
               - 'scripts/test_ci_mobile_path_filter.py'
               - 'scripts/test_ci_visual_path_filter.py'
+              - 'scripts/test_ci_toolchain_integrity.py'
               - 'turbo.json'
             workflow:
               - '.github/workflows/**'
@@ -133,6 +134,7 @@ jobs:
           python -m unittest scripts/test_plan_affected_tests.py -v
           python -m unittest scripts/test_run_affected_mobile_tests.py -v
           python -m unittest scripts/test_run_affected_backend_tests.py -v
+          python -m unittest scripts/test_ci_toolchain_integrity.py -v
 
       - name: Build human-readable affected-test plan
         env:
@@ -407,6 +409,9 @@ jobs:
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
+
+      - name: Test Node/pnpm toolchain integrity
+        run: python -m unittest scripts/test_ci_toolchain_integrity.py -v
 
       - name: Test T94 affected-test planning
         run: |
