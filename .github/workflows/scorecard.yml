@@ -1,6 +1,12 @@
 name: OpenSSF Scorecard
 
 on:
+  # Self-test once when this workflow definition lands on the default branch.
+  # Subsequent posture checks are weekly or explicitly dispatched.
+  push:
+    branches: [main, master]
+    paths:
+      - '.github/workflows/scorecard.yml'
   schedule:
     - cron: '23 4 * * 3'
   workflow_dispatch:
