@@ -462,7 +462,7 @@ class AggregateScriptTests(unittest.TestCase):
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
         expected = self._expected_for(outputs)
-        self.assertEqual(expected, {"mobile", "security", "mobile-visual-contract", "admin", "audit", "e2e"})
+        self.assertEqual(expected, {"mobile", "security", "admin", "audit", "e2e"})
 
     def test_combined_packages_and_scripts_pass(self):
         outputs = _base_outputs({"packages": "true", "scripts": "true"})
@@ -474,6 +474,14 @@ class AggregateScriptTests(unittest.TestCase):
             expected,
             {"mobile", "admin", "repo-assets", "scripts-python", "audit"},
         )
+
+    def test_combined_visual_and_docs_pass(self):
+        outputs = _base_outputs({"visual": "true", "docs": "true"})
+        needs = _realistic_partial_needs(outputs)
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+        expected = self._expected_for(outputs)
+        self.assertEqual(expected, {"mobile-visual-contract", "docs-links"})
 
     def test_combined_backend_telemetry_docs_pass(self):
         outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})
