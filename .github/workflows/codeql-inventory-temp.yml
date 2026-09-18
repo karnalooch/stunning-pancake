@@ -1,5 +1,9 @@
 name: Temporary CodeQL inventory
 
+concurrency:
+  group: codeql-inventory-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [security/codeql-remediation]
