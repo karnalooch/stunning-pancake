@@ -186,24 +186,10 @@ def health_check() -> dict:
                 "status": "ok",
                 "latency_ms": latency_ms,
             }
-    except Exception as exc:
-        logger.error("redis.health_check_failed err=%s", exc)
-        err_msg = str(exc)
-        # Sanitize leaked auth messages for public health dashboards
-        if "authentication required" in err_msg.lower() or "noauth" in err_msg.lower():
-            # Show the sanitized URL being used so the user can debug
-            sanitized = _sanitize_url(REDIS_URL) if REDIS_URL else "not set"
-            err_msg = f"Redis auth failed — URL: {sanitized}"
-            if os.getenv("REDIS_PASSWORD"):
-                err_msg += " (REDIS_PASSWORD is set)"
-            else:
-                err_msg += " (REDIS_PASSWORD not set — add it to .env or embed in REDIS_URL)"
-        elif "connection refused" in err_msg.lower():
-            err_msg = "Redis unreachable — service may be down"
-        elif "name or service not known" in err_msg.lower():
-            err_msg = "Redis host not found — check REDIS_URL hostname"
+    except Exception:
+        logger.exception("redis.health_check_failed")
         return {
             "mode": "cluster" if CLUSTER_MODE else "standalone",
             "status": "error",
-            "error": err_msg,
+            "error": "Redis health check failed.",
         }
