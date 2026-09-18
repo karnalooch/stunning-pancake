@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from scripts.run_affected_mobile_tests import commands_for_plan
+from scripts.run_affected_mobile_tests import _discover_related_tests, commands_for_plan
 
 
 class AffectedMobileRunnerTests(unittest.TestCase):
@@ -45,6 +45,46 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         self.assertEqual(len(commands), 1)
         self.assertIn("--runTestsByPath", commands[0])
         self.assertIn("__tests__/components/RideActionBar.test.tsx", commands[0])
+
+    @patch("scripts.run_affected_mobile_tests.subprocess.run")
+    def test_zero_related_discovery_requests_full_fallback(self, run):
+        run.return_value.returncode = 0
+        run.return_value.stdout = ""
+        ok, tests = _discover_related_tests(
+            [
+                "pnpm",
+                "--filter",
+                "mobile",
+                "test",
+                "--",
+                "--ci",
+                "--forceExit",
+                "--passWithNoTests",
+                "--findRelatedTests",
+                "/repo/mobile/src/components/Foo.tsx",
+            ]
+        )
+        self.assertTrue(ok)
+        self.assertEqual(tests, [])
+        self.assertIn("--listTests", run.call_args.args[0])
+
+    @patch("scripts.run_affected_mobile_tests.subprocess.run")
+    def test_related_discovery_failure_is_not_treated_as_safe(self, run):
+        run.return_value.returncode = 2
+        run.return_value.stdout = ""
+        ok, tests = _discover_related_tests(
+            [
+                "pnpm",
+                "--filter",
+                "mobile",
+                "test",
+                "--",
+                "--findRelatedTests",
+                "/repo/mobile/src/components/Foo.tsx",
+            ]
+        )
+        self.assertFalse(ok)
+        self.assertEqual(tests, [])
 
     def test_unknown_suite_fails_safe_to_full(self):
         commands = commands_for_plan(
