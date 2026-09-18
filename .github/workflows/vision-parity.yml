@@ -1,4 +1,8 @@
 name: Vision Parity (Optional)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 
 on:
   workflow_dispatch:

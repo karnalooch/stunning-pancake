@@ -1,4 +1,8 @@
 name: 4VELO CI/CD Pipeline
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 
 on:
   push:
@@ -396,6 +400,9 @@ jobs:
 
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
+
+      - name: Test PR workflow concurrency policy
+        run: python -m unittest scripts/test_ci_pr_concurrency.py -v
 
       - name: Test T94 affected-test planning
         run: |
