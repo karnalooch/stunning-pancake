@@ -169,7 +169,8 @@ export const OnboardingScreen: React.FC<OnboardingProps> = ({ user, onFinish }) 
       const rows = await AuthService.getPublicTenants();
       setTenants(rows);
       setTenantState(rows.length > 0 ? 'ready' : 'empty');
-      if (rows.length === 1) setSelectedTenantId(rows[0].id);
+      const [onlyTenant] = rows;
+      if (rows.length === 1 && onlyTenant) setSelectedTenantId(onlyTenant.id);
     } catch {
       setTenants([]);
       setTenantState('error');
