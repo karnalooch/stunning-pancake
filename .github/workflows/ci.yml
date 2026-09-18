@@ -62,6 +62,7 @@ jobs:
               - 'scripts/**'
               - 'assets/**'
               - 'pyproject.toml'
+              - 'docker-compose.prod.yml'
             docs:
               - 'docs/**'
             visual:
@@ -412,6 +413,14 @@ jobs:
           python -m unittest scripts/test_plan_affected_tests.py -v
           python -m unittest scripts/test_run_affected_mobile_tests.py -v
           python -m unittest scripts/test_run_affected_backend_tests.py -v
+
+      - name: Validate production Compose contract
+        env:
+          DB_PASSWORD: ci-only-compose-password
+          SECRET_KEY: ci-only-compose-secret-key
+        run: |
+          python -m unittest scripts/test_production_compose_contract.py -v
+          docker compose -f docker-compose.prod.yml config --quiet
 
       - name: Validate mobile asset governance
         run: python scripts/validate_mobile_asset_governance.py
