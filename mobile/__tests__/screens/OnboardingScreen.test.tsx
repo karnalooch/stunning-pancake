@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports */
 import React from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { stringsEn } from '../../src/i18n/strings.en';
 import { OnboardingScreen } from '../../src/screens/OnboardingScreen';
 
 jest.mock('react-native-unistyles', () => ({
@@ -9,9 +10,21 @@ jest.mock('react-native-unistyles', () => ({
       colors: {
         background: '#000',
         primary: '#f0f',
+        secondary: '#999',
         onBackground: '#fff',
+        onPrimary: '#fff',
         parchment: '#222',
         primaryContainer: '#333',
+        surfaceContainerLowest: '#111',
+        outlineVariant: '#555',
+        goldAmber: '#c90',
+        selection: '#444',
+        selectionBorder: '#c90',
+        onSelection: '#fff',
+        hudBackground: '#000',
+        hudText: '#fff',
+        hudSurface: '#222',
+        gpGoldLight: '#fd9',
       },
     },
   }),
@@ -23,7 +36,6 @@ jest.mock('react-native-safe-area-context', () => {
 });
 
 jest.mock('react-native-reanimated', () => {
-  const React = require('react');
   const { View } = require('react-native');
   const AnimatedView = ({ children }: { children: React.ReactNode }) => <View>{children}</View>;
   return {
@@ -39,184 +51,210 @@ jest.mock('react-native-reanimated', () => {
 });
 
 jest.mock('expo-location', () => ({
-  getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-  requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
-  requestBackgroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' }),
+  getForegroundPermissionsAsync: jest.fn(),
+  requestForegroundPermissionsAsync: jest.fn(),
+  requestBackgroundPermissionsAsync: jest.fn(),
 }));
 
 jest.mock('../../src/hooks/useImmersiveTheme', () => ({
   useImmersiveTheme: () => ({ enabled: false }),
 }));
 
-jest.mock('../../src/components/Column', () => {
-  const { View } = require('react-native');
-  return { Column: ({ children }: { children: React.ReactNode }) => <View>{children}</View> };
-});
-jest.mock('../../src/components/Row', () => {
-  const { View } = require('react-native');
-  return { Row: ({ children }: { children: React.ReactNode }) => <View>{children}</View> };
-});
-jest.mock('../../src/components/PixelText', () => {
-  const { Text } = require('react-native');
-  return { PixelText: ({ children }: { children: React.ReactNode }) => <Text>{children}</Text> };
-});
-jest.mock('../../src/components/ScrollContainer', () => {
-  const { View } = require('react-native');
-  return { ScrollContainer: ({ children }: { children: React.ReactNode }) => <View>{children}</View> };
-});
-jest.mock('../../src/components/ui/GameCard', () => {
-  const { View } = require('react-native');
-  return { GameCard: ({ children }: { children: React.ReactNode }) => <View>{children}</View> };
-});
-jest.mock('../../src/components/ArcadeButton', () => {
-  const { Text } = require('react-native');
-  return {
-    ArcadeButton: ({ label, onPress }: { label: string; onPress: () => void }) => (
-      <Text onPress={onPress}>{label}</Text>
-    ),
-  };
-});
 jest.mock('../../src/components/scene/SceneBackground', () => {
   const { View } = require('react-native');
   return { SceneBackground: () => <View /> };
 });
+
 jest.mock('../../src/components/sprites/CyclistSprite', () => {
   const { View } = require('react-native');
   return { CyclistSprite: () => <View /> };
 });
-jest.mock('../../src/components/narration/SpeechBubble', () => {
+
+jest.mock('../../src/components/ui/CrestIcon', () => {
   const { View } = require('react-native');
-  return { SpeechBubble: () => <View /> };
+  return { CrestIcon: () => <View /> };
+});
+
+jest.mock('../../src/components/ui/DepartmentIcon', () => {
+  const { View } = require('react-native');
+  return { DepartmentIcon: () => <View /> };
 });
 
 jest.mock('../../src/services/api', () => ({
   AuthService: {
-    getPublicTenants: jest.fn().mockResolvedValue([{ id: 'waw', name: 'Warszawa' }]),
-    updateProfile: jest.fn().mockResolvedValue({}),
+    getPublicTenants: jest.fn(),
+    updateProfile: jest.fn(),
   },
   DepartmentService: {
-    getTree: jest.fn().mockResolvedValue([{ id: 1, name: 'Team Alpha', children: [] }]),
-    selfJoin: jest.fn().mockResolvedValue({}),
+    getTree: jest.fn(),
+    selfJoin: jest.fn(),
   },
   EventService: {
-    list: jest.fn().mockResolvedValue([]),
-    join: jest.fn().mockResolvedValue({}),
+    list: jest.fn(),
+    join: jest.fn(),
   },
 }));
 
-jest.mock('../../src/i18n/useI18n', () => ({
-  useI18n: () => ({
-    t: {
-      common: {
-        loading: 'Loading…',
-        retry: 'Retry',
-        close: 'Close',
-      },
-      onboarding: {
-        characterInit: 'CHARACTER_INIT',
-        stagePrefix: 'STG_CITY',
-        osVersion: '4VELO_OS v1.0',
-        stepWord: 'Step',
-        ofWord: 'of',
-        city: {
-          bubble: 'Choose your city!',
-          eyebrow: 'Your city',
-          title: 'Select city',
-          step: 'Choose city',
-          description: 'Choose the city tenant you will compete in.',
-          search: 'Search city',
-          error: 'Could not load cities',
-          empty: 'No cities available',
-          noSearchResults: 'No matching cities',
-          next: 'NEXT',
-        },
-        department: {
-          bubble: 'Join your squad!',
-          eyebrow: 'Your team',
-          title: 'Select department',
-          step: 'Choose team',
-          description: 'Pick your department/team to join ranking cohorts.',
-          error: 'Could not load teams',
-          empty: 'No teams available',
-          skip: 'SKIP',
-          next: 'NEXT',
-        },
-        finish: {
-          bubble: 'Ready to race?',
-          eyebrow: 'Ready',
-          title: 'Ready to join',
-          step: 'Ready!',
-          description: 'Confirm city and department, then enable GPS and enter competition.',
-          user: 'User',
-          city: 'City',
-          department: 'Department',
-          teamSkipped: 'Skipped',
-          joining: 'JOINING…',
-          joinCompetition: 'JOIN COMPETITION',
-          gpsPermissionTitle: 'Permission required',
-          gpsPermissionBody: '4VELO requires GPS to track your performance.',
-          continueWithoutGps: 'Continue without GPS',
-        },
-      },
-    },
-  }),
-}));
+jest.mock('../../src/i18n/useI18n', () => {
+  const { stringsEn: realStringsEn } = jest.requireActual('../../src/i18n/strings.en') as {
+    stringsEn: typeof import('../../src/i18n/strings.en').stringsEn;
+  };
+  return {
+    useI18n: () => ({
+      locale: 'en',
+      t: realStringsEn,
+      setLocale: jest.fn(),
+      toggleLocale: jest.fn(),
+    }),
+  };
+});
 
-describe('OnboardingScreen', () => {
-  test('renders localized step copy and labels', async () => {
-    const onFinish = jest.fn();
-    let tree!: TestRenderer.ReactTestRenderer;
+type ApiMocks = {
+  AuthService: {
+    getPublicTenants: jest.Mock;
+    updateProfile: jest.Mock;
+  };
+  DepartmentService: {
+    getTree: jest.Mock;
+    selfJoin: jest.Mock;
+  };
+  EventService: {
+    list: jest.Mock;
+    join: jest.Mock;
+  };
+};
 
+type LocationMocks = {
+  getForegroundPermissionsAsync: jest.Mock;
+  requestForegroundPermissionsAsync: jest.Mock;
+  requestBackgroundPermissionsAsync: jest.Mock;
+};
+
+const apiMocks = (): ApiMocks => jest.requireMock('../../src/services/api') as ApiMocks;
+const locationMocks = (): LocationMocks => jest.requireMock('expo-location') as LocationMocks;
+
+let tree: TestRenderer.ReactTestRenderer | undefined;
+
+const waitForResult = async <T,>(
+  probe: () => T,
+  label: string,
+  maxAttempts = 40,
+): Promise<T> => {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      return probe();
+    } catch (error) {
+      lastError = error;
+    }
     await act(async () => {
-      tree = TestRenderer.create(<OnboardingScreen user={{ username: 'rider' }} onFinish={onFinish} />);
       await Promise.resolve();
     });
+  }
 
-    const json = JSON.stringify(tree.toJSON());
-    expect(json).toContain('Step 1 of 3');
-    expect(json).toContain('Choose city');
-    expect(json).toContain('Select city');
-    expect(json).toContain('Choose the city tenant you will compete in.');
-    expect(json).toContain('NEXT');
+  const detail = lastError instanceof Error ? lastError.message : String(lastError);
+  throw new Error(`Timed out waiting for ${label}: ${detail}`);
+};
+
+const waitForEnabledControl = async (testID: string) =>
+  waitForResult(() => {
+    if (!tree) throw new Error('onboarding renderer is not mounted');
+    const node = tree.root.findByProps({ testID });
+    if (typeof node.props.onPress !== 'function') {
+      throw new Error(`control "${testID}" has no onPress handler`);
+    }
+    if (node.props.disabled === true) {
+      throw new Error(`control "${testID}" is still disabled`);
+    }
+    return node;
+  }, `enabled control ${testID}`);
+
+const pressControl = async (testID: string) => {
+  const node = await waitForEnabledControl(testID);
+  await act(async () => {
+    node.props.onPress();
+  });
+};
+
+const renderOnboarding = async (onFinish = jest.fn()) => {
+  await act(async () => {
+    tree = TestRenderer.create(
+      <OnboardingScreen user={{ username: 'rider' }} onFinish={onFinish} />,
+    );
+  });
+  await waitForEnabledControl('onboarding-city-next');
+  return { tree, onFinish };
+};
+
+beforeEach(() => {
+  const api = apiMocks();
+  api.AuthService.getPublicTenants
+    .mockReset()
+    .mockResolvedValue([{ id: 'waw', name: 'Warszawa' }]);
+  api.AuthService.updateProfile.mockReset().mockResolvedValue({});
+  api.DepartmentService.getTree
+    .mockReset()
+    .mockResolvedValue([{ id: 1, name: 'Team Alpha', children: [] }]);
+  api.DepartmentService.selfJoin.mockReset().mockResolvedValue({});
+  api.EventService.list.mockReset().mockResolvedValue([]);
+  api.EventService.join.mockReset().mockResolvedValue({});
+
+  const location = locationMocks();
+  location.getForegroundPermissionsAsync
+    .mockReset()
+    .mockResolvedValue({ status: 'granted' });
+  location.requestForegroundPermissionsAsync
+    .mockReset()
+    .mockResolvedValue({ status: 'granted' });
+  location.requestBackgroundPermissionsAsync
+    .mockReset()
+    .mockResolvedValue({ status: 'granted' });
+});
+
+afterEach(() => {
+  if (tree) {
+    act(() => {
+      tree?.unmount();
+    });
+    tree = undefined;
+  }
+});
+
+describe('OnboardingScreen', () => {
+  test('renders copy from the real English catalog', async () => {
+    const rendered = await renderOnboarding();
+    const json = JSON.stringify(rendered.tree.toJSON());
+
+    expect(json).toContain(
+      `${stringsEn.onboarding.stepWord} 1 ${stringsEn.onboarding.ofWord} 3`,
+    );
+    expect(json).toContain(stringsEn.onboarding.city.step);
+    expect(json).toContain(stringsEn.onboarding.city.title);
+    expect(json).toContain(stringsEn.onboarding.city.description);
+    expect(json).toContain(stringsEn.onboarding.city.next);
   });
 
-  test('calls onFinish even when profile update fails on final step', async () => {
-    const { AuthService } = jest.requireMock('../../src/services/api') as {
-      AuthService: { updateProfile: jest.Mock };
-    };
-    AuthService.updateProfile
+  test('calls onFinish even when the final profile update fails', async () => {
+    const api = apiMocks();
+    api.AuthService.updateProfile
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error('network'));
 
     const onFinish = jest.fn();
-    let tree!: TestRenderer.ReactTestRenderer;
+    await renderOnboarding(onFinish);
 
-    await act(async () => {
-      tree = TestRenderer.create(<OnboardingScreen user={{ username: 'rider' }} onFinish={onFinish} />);
-      await Promise.resolve();
-    });
+    await pressControl('onboarding-city-next');
+    await waitForEnabledControl('onboarding-department-skip');
 
-    const pressByTestId = (testID: string) => {
-      const node = tree.root.findByProps({ testID });
-      if (typeof node.props.onPress !== 'function') {
-        throw new Error(`Control with testID "${testID}" has no onPress handler`);
-      }
-      node.props.onPress();
-    };
+    await pressControl('onboarding-department-skip');
+    await waitForEnabledControl('onboarding-finish-join');
 
-    await act(async () => {
-      pressByTestId('onboarding-city-next');
-      await Promise.resolve();
-    });
-    await act(async () => {
-      pressByTestId('onboarding-department-skip');
-      await Promise.resolve();
-    });
-    await act(async () => {
-      pressByTestId('onboarding-finish-join');
-      await Promise.resolve();
-    });
+    await pressControl('onboarding-finish-join');
+    await waitForResult(() => {
+      expect(onFinish).toHaveBeenCalledWith({ refreshProfile: true });
+      return true;
+    }, 'onboarding completion callback');
 
-    expect(onFinish).toHaveBeenCalledWith({ refreshProfile: true });
+    expect(api.AuthService.updateProfile).toHaveBeenCalledTimes(2);
   });
 });
