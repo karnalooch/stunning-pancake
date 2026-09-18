@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Release engineering
+- Added repository-root `version.json` as the product version source of truth.
+- Aligned root/mobile/admin package labels to the product SemVer label while Expo uses the numeric store version.
+- Switched EAS native build identifiers to remote ownership with production auto-increment.
+- Added CI checks that reject version drift, stale root Expo configuration, and release tags that do not match the stable product version.
+
 ### Takeover hardening
 - Made demo seeding opt-in (`RUN_DEMO_SEED=1`) instead of running it on every backend container start.
 - Removed built-in weak admin passwords and stopped seed data from resetting existing owner credentials.
