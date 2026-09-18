@@ -254,7 +254,7 @@ def require_environment() -> None:
         raise SystemExit("Run `python scripts/home_lab.py init` first")
 
 
-def home_env_value(name: str) -> str:
+def home_env_value(name: str, default: str | None = None) -> str:
     require_environment()
     prefix = f"{name}="
     for raw_line in ENV_FILE.read_text(encoding="utf-8").splitlines():
@@ -263,6 +263,8 @@ def home_env_value(name: str) -> str:
             value = line.split("=", 1)[1].strip()
             if value:
                 return value.strip('"').strip("'")
+    if default is not None:
+        return default
     raise SystemExit(f"Missing required {name} in {ENV_FILE.name}")
 
 
@@ -398,7 +400,7 @@ def backup() -> Path:
 
 def grant_runtime_role(database: str) -> None:
     """Reapply application-role grants omitted intentionally from ACL-free backups."""
-    app_user = home_env_value("APP_DB_USER")
+    app_user = home_env_value("APP_DB_USER", "4velo_runtime")
     grants = r'''psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 --set=app_user="$2" <<'SQL'
 SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'app_user') \gexec
 SELECT format('GRANT USAGE, CREATE ON SCHEMA public TO %I', :'app_user') \gexec
