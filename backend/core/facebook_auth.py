@@ -96,9 +96,7 @@ def facebook_callback(request):
     )
 
     if token_resp.status_code != 200:
-        return JsonResponse(
-            {"error": "Token exchange failed"}, status=400
-        )
+        return JsonResponse({"error": "Token exchange failed"}, status=400)
 
     access_token = token_resp.json().get("access_token")
     profile_resp = requests.get(
