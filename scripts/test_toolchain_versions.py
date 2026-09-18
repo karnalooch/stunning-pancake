@@ -36,6 +36,19 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertRegex(workspace, r"(?m)^overrides:\s*$")
         self.assertIn("react: 19.2.7", workspace)
         self.assertIn("react-dom: 19.2.7", workspace)
+        expected_build_policy = (
+            "'@shopify/react-native-skia@2.4.18': true",
+            "'electron@41.7.1': true",
+            "'electron-winstaller@5.4.0': true",
+            "'esbuild@0.25.12 || 0.28.0': false",
+            "'protobufjs@7.6.2': false",
+            "'unrs-resolver@1.12.2': false",
+        )
+        self.assertRegex(workspace, r"(?m)^allowBuilds:\s*$")
+        for rule in expected_build_policy:
+            with self.subTest(rule=rule):
+                self.assertIn(rule, workspace)
+        self.assertNotIn("dangerouslyAllowAllBuilds: true", workspace)
         self.assertNotIn(
             "packageManagerDependencies:",
             lockfile,
