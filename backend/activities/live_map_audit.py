@@ -80,6 +80,6 @@ def record_live_map_view(request, payload: dict[str, Any]) -> dict[str, Any]:
             status_code=200,
         )
         return {"recorded": True, "skipped": False}
-    except Exception as exc:
-        logger.warning("live_map.audit.failed err=%s", exc)
-        return {"recorded": False, "skipped": False, "error": str(exc)[:120]}
+    except Exception:
+        logger.exception("live_map.audit.failed")
+        return {"recorded": False, "skipped": False, "error": "audit_write_failed"}
