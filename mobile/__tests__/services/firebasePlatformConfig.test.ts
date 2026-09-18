@@ -26,18 +26,18 @@ afterEach(() => {
 });
 
 describe('platform-specific Google Services file gating', () => {
-  test('Android config never enables a missing iOS Google Services file', () => {
+  test('enables each tracked platform-specific Google Services file', () => {
     const androidFile = resolve(__dirname, '../../google-services.json');
     const iosFile = resolve(__dirname, '../../GoogleService-Info.plist');
 
     expect(existsSync(androidFile)).toBe(true);
-    expect(existsSync(iosFile)).toBe(false);
+    expect(existsSync(iosFile)).toBe(true);
 
     process.env.EXPO_PUBLIC_ENABLE_FIREBASE = 'true';
     const resolved = loadAppConfig()({ config: {} });
 
     expect(resolved.android?.googleServicesFile).toBe('./google-services.json');
-    expect(resolved.ios?.googleServicesFile).toBeUndefined();
+    expect(resolved.ios?.googleServicesFile).toBe('./GoogleService-Info.plist');
   });
 
   test('explicit Firebase opt-out clears Google Services files on both platforms', () => {
