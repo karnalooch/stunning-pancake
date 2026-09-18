@@ -17,7 +17,7 @@ weryfikacji; lista adresów poniżej nie oznacza działających usług.
 
 ## Narzędzia
 
-- Git, Node 20 (wersja w CI), pnpm 9.15.
+- Git, Node 22.23.2 (wersja w CI), pnpm 12.4.2.
 - Docker z Compose 2 i zasoby na PostGIS, Redis oraz routing.
 - Python 3.12 dla narzędzi lokalnych zgodnych z CI; obrazy usług używają 3.11.
 
