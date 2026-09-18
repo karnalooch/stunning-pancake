@@ -3,7 +3,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from scripts.run_affected_mobile_tests import _discover_related_tests, commands_for_plan
+from scripts.run_affected_mobile_tests import (
+    _discover_related_tests,
+    commands_for_plan,
+    missing_mandatory_test_paths,
+)
 
 
 class AffectedMobileRunnerTests(unittest.TestCase):
@@ -17,6 +21,10 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         command = commands_for_plan({"mobile": {"mode": "full"}})[0]
         self.assertEqual(command[:3], ["pnpm", "--dir", "mobile"])
         self.assertNotIn("--filter", command)
+        self.assertNotIn("--passWithNoTests", command)
+
+    def test_every_mandatory_suite_test_file_exists(self):
+        self.assertEqual(missing_mandatory_test_paths(), [])
 
     def test_skip_has_no_commands(self):
         self.assertEqual(commands_for_plan({"mobile": {"mode": "skip"}}), [])
@@ -64,7 +72,6 @@ class AffectedMobileRunnerTests(unittest.TestCase):
                 "--",
                 "--ci",
                 "--forceExit",
-                "--passWithNoTests",
                 "--findRelatedTests",
                 "/repo/mobile/src/components/Foo.tsx",
             ]
