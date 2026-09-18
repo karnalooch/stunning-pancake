@@ -11,7 +11,9 @@ services:
   # pilot-local phone path. To switch them to loopback too, add them here
   # under the same `services:` key.
   db:
-    ports:
+    # Compose merges port sequences; !override is required so the base
+    # 0.0.0.0 binding is replaced rather than retained alongside loopback.
+    ports: !override
       - "127.0.0.1:5432:5432"
 
   # T73 bootstrap: POSTGRES_USER remains the local migration/backup owner,
@@ -82,7 +84,7 @@ services:
         SQL
 
   redis:
-    ports:
+    ports: !override
       - "127.0.0.1:6379:6379"
 
   backend:
@@ -96,7 +98,7 @@ services:
     depends_on:
       db_runtime_role_init:
         condition: service_completed_successfully
-    ports:
+    ports: !override
       - "127.0.0.1:8000:8000"
 
   telemetry:
@@ -111,7 +113,7 @@ services:
     depends_on:
       db_runtime_role_init:
         condition: service_completed_successfully
-    ports:
+    ports: !override
       - "127.0.0.1:8001:8001"
 
   celery_worker:
@@ -139,5 +141,5 @@ services:
         condition: service_completed_successfully
 
   global_admin:
-    ports:
+    ports: !override
       - "127.0.0.1:3001:80"
