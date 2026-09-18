@@ -24,12 +24,12 @@ import stripe
 
 logger = logging.getLogger(__name__)
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY") or None
 WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 B2C_PRICE_ID = os.getenv("STRIPE_B2C_PRICE_ID", "")
 B2B_PRICE_ID = os.getenv("STRIPE_B2B_PRICE_ID", "")
 
-_IS_CONFIGURED = bool(stripe.api_key and not stripe.api_key.startswith("sk_test_placeholder"))
+_IS_CONFIGURED = bool(stripe.api_key)
 
 
 class StripeService:
