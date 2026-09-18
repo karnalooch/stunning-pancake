@@ -138,8 +138,8 @@ async def is_active_activity(activity_id: int | None) -> bool:
                     activity_id,
                 )
             active = row is not None and row["end_time"] is None
-        except Exception as exc:
-            logger.debug("active_session.lookup_failed id=%s err=%s", activity_id, exc)
+        except Exception:
+            logger.debug("active_session.lookup_failed", exc_info=True)
             return True
 
     if client is not None:
