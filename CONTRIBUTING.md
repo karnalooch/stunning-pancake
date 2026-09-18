@@ -8,7 +8,7 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 
 1. Zacznij od [indeksu dokumentacji](docs/README.md) i [przewodnika przejęcia](docs/PROJECT_TAKEOVER.md). Indeksy [PL](docs/pl/README.md) i [EN](docs/en/README.md) prowadzą do materiałów językowych.
 2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
-3. Zainstaluj zależności z **root** monorepo: `pnpm install --frozen-lockfile` (wymaga [pnpm](https://pnpm.io/) 9.x; bez globalnego pnpm: `npx pnpm@9.15.0 install --frozen-lockfile`). **Nie** używaj `npm install` w `admin/` — `workspace:*` wymaga pnpm.
+3. Zainstaluj zależności z **root** monorepo: `pnpm install --frozen-lockfile` (wymaga pnpm 12.4.2 i Node.js >=22.13; bez globalnego pnpm: `npx pnpm@12.4.2 install --frozen-lockfile`). **Nie** używaj `npm install` w `admin/` — `workspace:*` wymaga pnpm.
 4. Opcjonalnie hooki lokalne: `pip install pre-commit && pre-commit install` (Ruff, `pnpm tokens:check`, docs links).
 5. Uruchom środowisko: [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md) lub `.\dev.ps1` (legacy: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)).
 6. Dla zmian w symulatorze / Railway: [docs/pl/operations/](docs/pl/operations/) (EN: [docs/en/operations/](docs/en/operations/)).
