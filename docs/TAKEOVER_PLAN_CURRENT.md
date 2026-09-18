@@ -107,7 +107,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T54 | GTM ownership + claim labelling | PLANNED | Post-pilot. |
 | T55 | Documentation navigation + takeover updates | PLANNED | Final docs cleanup after current plan stabilizes. |
 | T56 | Orphan investigation | PLANNED | Post-pilot cleanup. |
-| T57 | Business-integrity backup/restore + measured RPO/RTO | PARTIAL | Recovery drill implementation merged in #104; actual home-lab drill/evidence must still be executed and reviewed. |
+| T57 | Business-integrity backup/restore + measured RPO/RTO | DONE | Real home-lab drill passed 2026-09-18: encrypted backup → isolated restore → business snapshot/invariant match → restricted-runtime critical-path smoke. Measured RPO 64.397 s / RTO 4.344 s against plan targets 24 h / 4 h. PR #115 contains blocker fixes discovered by the drill. |
 | T58 | Home-lab release gate | PLANNED | Must include data-safety evidence and fail closed on missing proof before T59. |
 | T59 | Release-candidate declaration | PLANNED | Final pre-pilot declaration after T92 + required gates. |
 
@@ -133,7 +133,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T75 | TLS/transport + backup confidentiality verification | DONE | PR #113. Loopback-only pilot transport plus AES-256-GCM backup confidentiality/retention are repo-gated; no external TLS/provider claim is inferred. |
 | T76 | Android/home-lab chaos and restart matrix | PARTIAL | PR #114 prepares a fail-closed physical-device harness/evidence matrix. Final PASS still requires the real Android + home-lab screen-off/offline/kill/restart/commit-response scenarios. |
 
-**Data-safety exit:** repo-side implementation is complete through T76. Final exit still requires external evidence for T57 (real recovery/RPO-RTO), T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T60–T75 are retained as evidence, not reopened mechanically.
+**Data-safety exit:** repo-side implementation is complete through T76 and T57 runtime recovery evidence is now accepted. Final exit still requires external evidence for T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T57 and T60–T75 are retained as evidence, not reopened mechanically.
 
 ## T77–T84 — mobile UI + UX polish
 
@@ -186,7 +186,7 @@ This is the only short sequence worth remembering:
 
 ```text
 finish data-safety external evidence:
-  T57 + T68 + T76
+  T68 + T76
 
 UI:
   T79–T84

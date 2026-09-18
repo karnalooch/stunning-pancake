@@ -1,3 +1,4 @@
+import io
 import os
 import tempfile
 import time
@@ -59,8 +60,9 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
-    def test_pilot_core_ports_are_loopback_only(self):
+    def test_pilot_core_ports_replace_base_bindings_with_loopback_only(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        self.assertEqual(content.count("ports: !override"), 5)
         for port in (5432, 6379, 8000, 8001, 3001):
             self.assertIn(f'127.0.0.1:{port}:', content)
 
@@ -89,6 +91,50 @@ class HomeLabTests(unittest.TestCase):
             with patch.object(home_lab, "ENV_FILE", env), self.assertRaises(SystemExit):
                 home_lab.initialize()
             self.assertEqual(env.read_text(), "existing")
+
+    def test_grant_runtime_role_reapplies_acl_free_restore_permissions(self):
+        with patch.object(home_lab, "home_env_value", return_value="4velo_runtime"), patch.object(
+            home_lab, "run"
+        ) as run_mock:
+            home_lab.grant_runtime_role("4velo_restore_check")
+
+        command = run_mock.call_args.args[0]
+        self.assertEqual(command[-2:], ["4velo_restore_check", "4velo_runtime"])
+        grant_script = command[-4]
+        self.assertIn("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES", grant_script)
+        self.assertIn("ALTER DEFAULT PRIVILEGES", grant_script)
+
+    def test_restore_backup_reapplies_runtime_grants_after_success(self):
+        class FakeProcess:
+            def __init__(self):
+                self.stdin = io.BytesIO()
+
+            def wait(self):
+                return 0
+
+            def poll(self):
+                return 0
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "backup.dump.enc"
+            source.write_bytes(b"encrypted")
+            with (
+                patch.object(home_lab, "require_environment"),
+                patch.object(home_lab, "validate_backup", return_value=source),
+                patch.object(home_lab, "home_env_value", return_value="test-key"),
+                patch.object(home_lab.subprocess, "Popen", return_value=FakeProcess()),
+                patch.object(home_lab, "decrypt_file_to_stream"),
+                patch.object(home_lab, "grant_runtime_role") as grant_mock,
+            ):
+                home_lab.restore_backup(source)
+
+        grant_mock.assert_called_once_with(home_lab.RECOVERY_DATABASE)
 
     def test_validate_backup_accepts_encrypted_artifact_only(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -206,6 +252,16 @@ class HomeLabTests(unittest.TestCase):
             home_lab.canonical_snapshot_digest(left),
             home_lab.canonical_snapshot_digest(right),
         )
+
+    def test_home_env_value_can_use_explicit_default_for_legacy_env(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text("POSTGRES_DB=4velo_home\n", encoding="utf-8")
+            with patch.object(home_lab, "ENV_FILE", env):
+                self.assertEqual(
+                    home_lab.home_env_value("APP_DB_USER", "4velo_runtime"),
+                    "4velo_runtime",
+                )
 
     def test_home_env_value_reads_requested_setting_only(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -254,7 +254,7 @@ def require_environment() -> None:
         raise SystemExit("Run `python scripts/home_lab.py init` first")
 
 
-def home_env_value(name: str) -> str:
+def home_env_value(name: str, default: str | None = None) -> str:
     require_environment()
     prefix = f"{name}="
     for raw_line in ENV_FILE.read_text(encoding="utf-8").splitlines():
@@ -263,6 +263,8 @@ def home_env_value(name: str) -> str:
             value = line.split("=", 1)[1].strip()
             if value:
                 return value.strip('"').strip("'")
+    if default is not None:
+        return default
     raise SystemExit(f"Missing required {name} in {ENV_FILE.name}")
 
 
@@ -396,6 +398,55 @@ def backup() -> Path:
     return destination
 
 
+def grant_runtime_role(database: str) -> None:
+    """Reapply application-role grants omitted intentionally from ACL-free backups."""
+    app_user = home_env_value("APP_DB_USER", "4velo_runtime")
+    grants = r'''psql --username="$POSTGRES_USER" --dbname="$1" --set=ON_ERROR_STOP=1 --set=app_user="$2" <<'SQL'
+SELECT format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), :'app_user') \gexec
+SELECT format('GRANT USAGE, CREATE ON SCHEMA public TO %I', :'app_user') \gexec
+SELECT format(
+  'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO %I',
+  :'app_user'
+) \gexec
+SELECT format(
+  'GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO %I',
+  :'app_user'
+) \gexec
+SELECT format(
+  'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO %I',
+  :'app_user'
+) \gexec
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+  'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO %I',
+  current_user, :'app_user'
+) \gexec
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+  'GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO %I',
+  current_user, :'app_user'
+) \gexec
+SELECT format(
+  'ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public '
+  'GRANT EXECUTE ON FUNCTIONS TO %I',
+  current_user, :'app_user'
+) \gexec
+SQL'''
+    run(
+        compose_command(
+            "exec",
+            "-T",
+            "db",
+            "sh",
+            "-c",
+            grants,
+            "sh",
+            database,
+            app_user,
+        )
+    )
+
+
 def restore_backup(path: Path, database: str = RECOVERY_DATABASE) -> None:
     """Authenticate and stream-decrypt an encrypted artifact into isolated pg_restore."""
     require_environment()
@@ -417,6 +468,7 @@ exec pg_restore --exit-on-error --no-owner --no-acl --username="$POSTGRES_USER" 
         return_code = process.wait()
         if return_code != 0:
             raise subprocess.CalledProcessError(return_code, command)
+        grant_runtime_role(database)
     except Exception:
         try:
             process.stdin.close()
