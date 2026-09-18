@@ -14,6 +14,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: deps-lock-refresh-chore-deps-latest-stable-2026-09
+  cancel-in-progress: true
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
@@ -35,6 +39,9 @@ jobs:
 
       - name: Refresh lockfile
         run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Verify frozen lockfile
+        run: pnpm install --lockfile-only --frozen-lockfile
 
       - name: Commit lockfile if changed
         run: |
