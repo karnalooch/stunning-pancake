@@ -179,7 +179,8 @@ def sponsor_stats_view(request: Request) -> Response:
                 ).count(),
             }
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("rewards.sponsor_stats_failed")
         return Response(
             {
                 "poi_count": 0,
@@ -188,7 +189,7 @@ def sponsor_stats_view(request: Request) -> Response:
                 "redemption_rate": 0,
                 "active_vouchers": 0,
                 "expired_vouchers": 0,
-                "error": str(e),
+                "error": "Sponsor statistics temporarily unavailable.",
             }
         )
 
