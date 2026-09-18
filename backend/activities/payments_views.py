@@ -33,13 +33,16 @@ class CreateCheckoutSessionView(APIView):
         price_id = PRICE_IDS.get(plan)
         if not price_id:
             return Response(
-                {"error": f"Unknown plan: {plan}"},
+                {"error": "Unknown subscription plan."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         url = PaymentService.create_checkout_session(request.user, price_id)
-        if url.startswith("http"):
+        if isinstance(url, str) and url.startswith("https://"):
             return Response({"checkout_url": url})
-        return Response({"error": url}, status=status.HTTP_502_BAD_GATEWAY)
+        return Response(
+            {"error": "Checkout session could not be created."},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
 
 @method_decorator(csrf_exempt, name="dispatch")
