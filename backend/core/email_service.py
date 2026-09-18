@@ -28,7 +28,7 @@ class EmailService:
     def send(to_email: str, subject: str, body_html: str) -> bool:
         """Sends a transactional email via SendGrid."""
         if not SENDGRID_API_KEY:
-            logger.warning(f"SendGrid API key not configured. Would send to {to_email}: {subject}")
+            logger.warning("SendGrid API key not configured; transactional email skipped")
             return False
 
         try:
@@ -40,10 +40,10 @@ class EmailService:
                 html_content=HtmlContent(body_html),
             )
             response = sg.send(message)
-            logger.info(f"Email sent to {to_email}: {subject} (status {response.status_code})")
+            logger.info("Transactional email sent status=%s", response.status_code)
             return response.status_code in (200, 201, 202)
-        except Exception as e:
-            logger.error(f"SendGrid error sending to {to_email}: {e}")
+        except Exception:
+            logger.exception("SendGrid transactional email failed")
             return False
 
     @classmethod
