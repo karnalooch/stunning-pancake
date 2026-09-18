@@ -105,7 +105,7 @@ describe('AuthScreen', () => {
           auth={auth}
           colors={{ background: '#fff', primary: '#0a0', secondary: '#666' }}
           onSubmit={jest.fn()}
-          onToggleMode={jest.fn()}
+          onModeChange={jest.fn()}
           onSocialLogin={jest.fn()}
         />,
       );
