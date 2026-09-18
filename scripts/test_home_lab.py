@@ -59,8 +59,9 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn("MIGRATION_DATABASE_URL:", content)
         self.assertIn("APP_DB_USER:-4velo_runtime", content)
 
-    def test_pilot_core_ports_are_loopback_only(self):
+    def test_pilot_core_ports_replace_base_bindings_with_loopback_only(self):
         content = home_lab.HOME_COMPOSE_FILE.read_text(encoding="utf-8")
+        self.assertEqual(content.count("ports: !override"), 5)
         for port in (5432, 6379, 8000, 8001, 3001):
             self.assertIn(f'127.0.0.1:{port}:', content)
 
