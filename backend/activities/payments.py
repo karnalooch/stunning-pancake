@@ -8,7 +8,7 @@ from users.models import User
 
 logger = logging.getLogger(__name__)
 
-stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_placeholder")
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY") or None
 
 
 class PaymentService:
