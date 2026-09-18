@@ -99,7 +99,7 @@ jobs:
           docker run -d --rm --name mobsf-ci \
             -e MOBSF_API_ONLY=1 \
             -e MOBSF_API_KEY="$MOBSF_API_KEY" \
-            -p 8000:8000 \
+            -p 127.0.0.1:8000:8000 \
             "$MOBSF_IMAGE"
           for _ in $(seq 1 90); do
             if curl --silent --show-error --connect-timeout 2 \
