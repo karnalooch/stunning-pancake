@@ -16,10 +16,12 @@ export type SoundCategory =
   | 'damage'
   | 'explosion';
 
+type WaveformType = 'sine' | 'square' | 'sawtooth' | 'triangle';
+
 interface SoundDef {
   freq: number;
   durationMs: number;
-  waveform: OscillatorType;
+  waveform: WaveformType;
   freq2?: number;
   sweepEndFreq?: number;
 }
@@ -59,7 +61,7 @@ const FALLBACK_DEFS: Record<SoundCategory, SoundDef> = {
 const SAMPLE_RATE = 44100;
 const AMPLITUDE = 0.3;
 
-function waveformFromParam(w: string): OscillatorType {
+function waveformFromParam(w: string): WaveformType {
   if (w === 'sine') return 'sine';
   if (w === 'triangle') return 'triangle';
   if (w === 'noise' || w === 'sawtooth') return 'sawtooth';
@@ -125,7 +127,7 @@ function generateWavBase64(def: SoundDef): string {
   writeString(36, 'data');
   view.setUint32(40, dataSize, true);
 
-  const wave = (type: OscillatorType, freq: number, t: number) => {
+  const wave = (type: WaveformType, freq: number, t: number) => {
     const phase = (freq * t) % 1;
     switch (type) {
       case 'square':
