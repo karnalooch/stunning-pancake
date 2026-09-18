@@ -27,3 +27,34 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: List outdated direct workspace dependencies
         run: pnpm outdated --recursive --format json || true
+
+      - name: Audit exact Python dependency pins against PyPI
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, re, urllib.request
+          from pathlib import Path
+
+          files = [
+              Path("backend/requirements.txt"),
+              Path("telemetry/requirements.txt"),
+              Path("telemetry/requirements-dev.txt"),
+              Path("scripts/requirements-home-lab.txt"),
+          ]
+          rows = []
+          for path in files:
+              for raw in path.read_text(encoding="utf-8").splitlines():
+                  line = raw.strip()
+                  if not line or line.startswith("#") or line.startswith("-r ") or "==" not in line:
+                      continue
+                  lhs, current = line.split("==", 1)
+                  name = lhs.split("[", 1)[0].strip()
+                  try:
+                      with urllib.request.urlopen(f"https://pypi.org/pypi/{name}/json", timeout=20) as res:
+                          latest = json.load(res)["info"]["version"]
+                  except Exception as exc:
+                      latest = f"ERROR:{type(exc).__name__}"
+                  if current.strip() != latest:
+                      rows.append({"file": str(path), "name": name, "current": current.strip(), "latest": latest})
+          print("PYPI_OUTDATED_JSON=" + json.dumps(rows, sort_keys=True))
+          PY
