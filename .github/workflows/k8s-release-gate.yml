@@ -143,8 +143,7 @@ jobs:
         run: |
           set -euo pipefail
           curl -fsSLO https://github.com/controlplaneio/kubesec/releases/download/v2.14.2/kubesec_linux_amd64.tar.gz
-          curl -fsSLO https://github.com/controlplaneio/kubesec/releases/download/v2.14.2/kubesec_checksums.txt
-          grep ' kubesec_linux_amd64.tar.gz$' kubesec_checksums.txt | sha256sum -c -
+          echo 'bc252e35f01bc4f133a49404315da3ccfed0209cc9baba33883eaeca0656f35c  kubesec_linux_amd64.tar.gz' | sha256sum -c -
           tar -xzf kubesec_linux_amd64.tar.gz kubesec
           sudo install -m 0755 kubesec /usr/local/bin/kubesec
           kubesec version
