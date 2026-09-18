@@ -1,0 +1,33 @@
+name: Temporary dependency security audit
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'security/dependabot-alerts-2026-09'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Verify lockfile
+        run: pnpm install --lockfile-only --frozen-lockfile
+      - name: Audit dependency graph
+        shell: bash
+        run: |
+          set +e
+          pnpm audit --json
+          status=$?
+          echo "pnpm audit exit code: $status"
+          exit 0
