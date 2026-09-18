@@ -45,7 +45,7 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertIn("react-dom: 19.2.7", workspace)
         expected_build_policy = (
             "'@shopify/react-native-skia@2.4.18': true",
-            "'electron@41.7.1': true",
+            "'electron@44.4.1': true",
             "'electron-winstaller@5.4.0': true",
             "'esbuild@0.25.12 || 0.28.0': false",
             "'protobufjs@7.6.2': false",
