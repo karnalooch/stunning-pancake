@@ -33,7 +33,12 @@
     "docs/pl/adr/006-design-system-stitch.md",
     "docs/pl/design/GRAND_PRIX_UI_CONSISTENCY_AUDIT.md",
     "docs/pl/design/MOBILE_ASSET_NANO_BANANA_PROMPTS.md",
-    "docs/archive/designmobile.md"
+    "docs/archive/designmobile.md",
+    "docs/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md",
+    "docs/pl/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md",
+    "docs/design/MOBILE_EMULATOR_UI_AUDIT_2026-06-14.md",
+    "docs/design/VISION_PARITY_GATE_2026-06-15.md",
+    "docs/design/VISION_PARITY_NEXT_STEPS_2026-06-15.md"
   ],
   "nonNormativeGlobs": [
     "docs/archive/**",
