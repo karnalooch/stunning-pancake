@@ -13,6 +13,7 @@ Access: Admin only (IsAdminUser permission).
 
 from __future__ import annotations
 
+import logging
 import time
 
 from rest_framework.decorators import api_view, permission_classes
@@ -22,6 +23,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.permissions import IsPlatformHealthViewer
+
+logger = logging.getLogger(__name__)
 
 START_TIME = time.time()
 
@@ -48,13 +51,13 @@ def citus_health_view(request: Request) -> Response:
                 "shards": citus_shard_status(),
             }
         )
-    except Exception as exc:
-        # Citus not installed — single node mode
+    except Exception:
+        logger.exception("infra.citus_health_failed")
         return Response(
             {
                 "mode": "standalone",
-                "note": "Citus extension not active. Run apply_citus_sharding() to enable.",
-                "error": str(exc),
+                "note": "Citus extension is not active.",
+                "error": "Citus health check failed.",
             }
         )
 
@@ -128,8 +131,9 @@ class SystemHealthView(APIView):
                 cursor.execute("SELECT 1")
             latency_ms = round((time.monotonic() - t0) * 1000, 2)
             pg_status = {"status": "ok", "latency_ms": latency_ms}
-        except Exception as exc:
-            pg_status = {"status": "error", "error": str(exc)}
+        except Exception:
+            logger.exception("infra.postgresql_health_failed")
+            pg_status = {"status": "error", "error": "PostgreSQL health check failed."}
 
         # -- Celery --
         try:
@@ -142,14 +146,9 @@ class SystemHealthView(APIView):
                 cel_status = {"status": "ok", "workers": worker_count}
             else:
                 cel_status = {"status": "error", "error": "No workers responded"}
-        except Exception as exc:
-            err_msg = str(exc)
-            # Sanitize leaked auth messages from broker (e.g. Redis password)
-            if "authentication required" in err_msg.lower() or "noauth" in err_msg.lower():
-                err_msg = "Broker requires authentication — check CELERY_BROKER_URL"
-            elif "connection refused" in err_msg.lower():
-                err_msg = "Broker unreachable — service may be down"
-            cel_status = {"status": "error", "error": err_msg}
+        except Exception:
+            logger.exception("infra.celery_health_failed")
+            cel_status = {"status": "error", "error": "Celery health check failed."}
 
         # -- Storage --
         try:
@@ -163,8 +162,9 @@ class SystemHealthView(APIView):
             }
         except ImportError:
             sto_status = {"status": "ok", "note": "psutil not installed"}
-        except Exception as exc:
-            sto_status = {"status": "error", "error": str(exc)}
+        except Exception:
+            logger.exception("infra.storage_health_failed")
+            sto_status = {"status": "error", "error": "Storage health check failed."}
 
         # -- Backend uptime --
         backend_status = {
