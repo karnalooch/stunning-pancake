@@ -13,6 +13,27 @@ shamefullyHoist: true
 overrides:
   react: 19.2.7
   react-dom: 19.2.7
+  shell-quote: 1.10.0
+  tar: 7.5.21
+  '@xmldom/xmldom@>=0.7.0 <0.9.0': 0.8.15
+  '@xmldom/xmldom@>=0.9.0 <0.10.0': 0.9.12
+  'brace-expansion@<2.0.0': 1.1.18
+  'brace-expansion@>=2.0.0 <3.0.0': 2.1.4
+  'brace-expansion@>=3.0.0 <6.0.0': 5.0.9
+  browserslist: 4.28.7
+  fast-uri: 3.1.6
+  form-data: 4.0.6
+  'js-yaml@<4.0.0': 3.15.2
+  'js-yaml@>=4.0.0 <5.0.0': 4.3.2
+  linkify-it: 5.0.2
+  nanoid: 3.3.18
+  postcss: 8.5.23
+  svgo: 3.3.5
+  'undici@>=6.0.0 <7.0.0': 6.28.0
+  'undici@>=7.0.0 <8.0.0': 7.29.0
+  baseline-browser-mapping: 2.11.0
+  'protobufjs@>=7.5.0 <8.0.0': 7.6.5
+  'esbuild@>=0.27.3 <0.28.1': 0.28.1
 
 # pnpm 12 blocks dependency lifecycle scripts unless each package is reviewed.
 # Keep approvals version-scoped so dependency upgrades require a fresh decision.
@@ -20,8 +41,8 @@ allowBuilds:
   '@shopify/react-native-skia@2.4.18': true
   'electron@44.4.1': true
   'electron-winstaller@5.4.0': true
-  'esbuild@0.25.12 || 0.28.0': false
-  'protobufjs@7.6.2': false
+  'esbuild@0.25.12 || 0.28.1': false
+  'protobufjs@7.6.5': false
   'unrs-resolver@1.12.2': false
 
 packages:
