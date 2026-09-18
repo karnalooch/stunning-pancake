@@ -159,10 +159,14 @@ const waitForResult = async <T,>(
 const waitForEnabledControl = async (testID: string) =>
   waitForResult(() => {
     if (!tree) throw new Error('onboarding renderer is not mounted');
-    const node = tree.root.findByProps({ testID });
-    if (typeof node.props.onPress !== 'function') {
-      throw new Error(`control "${testID}" has no onPress handler`);
+    const controls = tree.root.findAll(
+      (node) => node.props?.testID === testID && typeof node.props?.onPress === 'function',
+    );
+    if (controls.length !== 1) {
+      throw new Error(`expected exactly one pressable control "${testID}", found ${controls.length}`);
     }
+    const node = controls[0];
+    if (!node) throw new Error(`pressable control "${testID}" disappeared`);
     if (node.props.disabled === true) {
       throw new Error(`control "${testID}" is still disabled`);
     }
