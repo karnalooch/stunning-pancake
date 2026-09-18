@@ -76,8 +76,10 @@ class EventSerializer(serializers.ModelSerializer):
             if geom.geom_type != "Polygon":
                 raise serializers.ValidationError("Boundary geometry must be a Polygon.")
             return geom
-        except Exception as e:
-            raise serializers.ValidationError(f"Invalid GeoJSON Polygon: {str(e)}")
+        except serializers.ValidationError:
+            raise
+        except Exception:
+            raise serializers.ValidationError("Invalid GeoJSON Polygon.")
 
 
 class ParticipationSerializer(serializers.ModelSerializer):
