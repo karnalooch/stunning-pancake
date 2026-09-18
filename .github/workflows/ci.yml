@@ -134,6 +134,9 @@ jobs:
           python -m unittest scripts/test_run_affected_mobile_tests.py -v
           python -m unittest scripts/test_run_affected_backend_tests.py -v
 
+      - name: Test Node and pnpm toolchain contract
+        run: python -m unittest scripts/test_toolchain_versions.py -v
+
       - name: Build human-readable affected-test plan
         env:
           CI_EVENT_NAME: ${{ github.event_name }}
@@ -413,9 +416,6 @@ jobs:
           python -m unittest scripts/test_plan_affected_tests.py -v
           python -m unittest scripts/test_run_affected_mobile_tests.py -v
           python -m unittest scripts/test_run_affected_backend_tests.py -v
-
-      - name: Test Node and pnpm toolchain contract
-        run: python -m unittest scripts/test_toolchain_versions.py -v
 
       - name: Validate production Compose contract
         env:
