@@ -100,22 +100,26 @@ const AuthCallback: React.FC<{
     if (access && refresh) {
       const finalAccess = access;
       const finalRefresh = refresh;
-      try {
-        const encodedPayload = finalAccess.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        const paddedPayload = encodedPayload.padEnd(Math.ceil(encodedPayload.length / 4) * 4, '=');
-        const payload = JSON.parse(atob(paddedPayload));
-        if (payload.mfa_verification_required) {
+      const baseURL = apiClient.defaults.baseURL || '/api';
+
+      // Do not trust browser-decoded JWT claims for MFA routing. The backend
+      // validates the JWT signature and current user state before we choose
+      // whether to require MFA verification or continue login.
+      axios.get(`${baseURL}/users/mfa/status/`, {
+        headers: { Authorization: `Bearer ${finalAccess}` },
+      }).then((response) => {
+        const requiredForRole = Boolean(response.data?.required_for_role);
+        const mfaEnabled = Boolean(response.data?.mfa_enabled);
+        if (requiredForRole && mfaEnabled) {
           setPendingTokens({ access: finalAccess, refresh: finalRefresh });
           return;
         }
-        completeLogin(
+        return completeLogin(
           finalAccess,
           finalRefresh,
-          payload.mfa_setup_required ? '#/owner/settings' : '#/owner/dashboard',
+          requiredForRole ? '#/owner/settings' : '#/owner/dashboard',
         );
-      } catch {
-        setError(t.auth.callbackFailedComplete);
-      }
+      }).catch(() => setError(t.auth.callbackFailedComplete));
     } else {
       Promise.resolve().then(() => setError(t.auth.callbackNoToken));
     }
