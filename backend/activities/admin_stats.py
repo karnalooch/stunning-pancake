@@ -154,7 +154,7 @@ def _sim_kpi_from_sim_lab_api(live: dict, batch: dict) -> dict:
         "sim_on": live_running or batch_running,
         "live_running": live_running,
         "batch_running": batch_running,
-        "live_error": live.get("error"),
+        "live_error": "simulator_error" if live.get("error") else None,
         "batch_phase": batch.get("current_phase") or "idle",
         "currently_riding": int(
             live.get("currently_riding", 0) or live.get("active_rides", 0) or 0
