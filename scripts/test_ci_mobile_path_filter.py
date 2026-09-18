@@ -10,6 +10,8 @@ WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 QUALITY_BASELINE = ROOT / "scripts" / "run-quality-baseline.ps1"
 QUALITY_BASELINE_SH = ROOT / "scripts" / "run-quality-baseline.sh"
 AFFECTED_RUNNER = ROOT / "scripts" / "run_affected_mobile_tests.py"
+MOBILE_PACKAGE = ROOT / "mobile" / "package.json"
+MOBILE_JEST_CONFIG = ROOT / "mobile" / "jest.config.js"
 
 
 def _workflow_text():
@@ -109,6 +111,8 @@ class MobilePathRoutingTests(unittest.TestCase):
             ".github/workflows/ci.yml::mobile": match.group("body"),
             "scripts/run-quality-baseline.ps1": QUALITY_BASELINE.read_text(encoding="utf-8"),
             "scripts/run-quality-baseline.sh": QUALITY_BASELINE_SH.read_text(encoding="utf-8"),
+            "mobile/package.json": MOBILE_PACKAGE.read_text(encoding="utf-8"),
+            "mobile/jest.config.js": MOBILE_JEST_CONFIG.read_text(encoding="utf-8"),
         }
         if AFFECTED_RUNNER.exists():
             sources["scripts/run_affected_mobile_tests.py"] = AFFECTED_RUNNER.read_text(
