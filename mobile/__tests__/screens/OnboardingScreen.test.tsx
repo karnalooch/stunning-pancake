@@ -183,16 +183,15 @@ const pressControl = async (testID: string) => {
   });
 };
 
-type RenderedNode =
-  | ReturnType<TestRenderer.ReactTestRenderer['toJSON']>
-  | ReactTestRenderer.ReactTestRendererNode
-  | number;
-
-const flattenRenderedText = (node: RenderedNode): string => {
+const flattenRenderedText = (node: unknown): string => {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(flattenRenderedText).join('');
-  return (node.children ?? []).map((child) => flattenRenderedText(child)).join('');
+  if (typeof node === 'object' && 'children' in node) {
+    const children = (node as { children?: unknown[] | null }).children ?? [];
+    return children.map(flattenRenderedText).join('');
+  }
+  return '';
 };
 
 const renderOnboarding = async (onFinish = jest.fn()) => {
