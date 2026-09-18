@@ -33,6 +33,7 @@ MOBILE_SUITE_TESTS = {
     "auth_security": (
         "__tests__/bootstrap/authRegistration.test.ts",
         "__tests__/screens/AuthScreen.test.tsx",
+        "__tests__/screens/OnboardingScreen.test.tsx",
         "__tests__/services/apiClient.refresh.test.ts",
         "__tests__/services/apiClient.telemetry-token.test.ts",
         "__tests__/services/authTokenStorage.test.ts",
