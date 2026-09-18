@@ -26,7 +26,7 @@ The fail-safe invariant is absolute:
 
 ## Mobile
 
-Low-risk source changes use Jest `--findRelatedTests`.
+Low-risk source changes use Jest `--findRelatedTests`. CI first probes Jest with `--listTests`; discovery failure or zero discovered related tests forces a full mobile Jest fallback, so an untested leaf change cannot silently pass because `--passWithNoTests` returned success.
 
 Changed test files run directly.
 
