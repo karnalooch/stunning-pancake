@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from django.contrib.auth import get_user_model
@@ -14,6 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from users.export_models import UserDataExport
+
+logger = logging.getLogger(__name__)
 
 
 def _ttl_hours() -> int:
@@ -122,9 +125,10 @@ def user_data_export_download_view(request, job_id: str):
 
     try:
         body = read_gpx(job.storage_uri)
-    except Exception as exc:
+    except Exception:
+        logger.exception("user_data_export.download_failed")
         return Response(
-            {"detail": f"Download failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            {"detail": "Download failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
     response = HttpResponse(body, content_type="application/zip")

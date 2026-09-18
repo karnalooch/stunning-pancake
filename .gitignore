@@ -46,6 +46,7 @@ db.sqlite3
 # 🧪 Test artifacts (local / CI output)
 backend/.coverage
 .coverage
+mobile/coverage/
 admin/test-results/
 admin/e2e-results.xml
 admin/audit-screenshots/

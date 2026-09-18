@@ -3,7 +3,6 @@ from datetime import timedelta
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.utils.crypto import get_random_string
 
 from activities.models import Activity
 from users.models import Tenant, User
@@ -14,8 +13,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self.stdout.write("Seeding 4VELO demonstration data...")
-        configured_password = os.getenv("DEMO_USER_PASSWORD")
-        demo_password = configured_password or get_random_string(20)
+        demo_password = os.getenv("DEMO_USER_PASSWORD")
 
         # 1. Create Tenants
         siedlce, created = Tenant.objects.get_or_create(
@@ -46,7 +44,10 @@ class Command(BaseCommand):
             defaults={"role": "TENANT_ADMIN", "tenant": siedlce},
         )
         if created:
-            siedlce_admin.set_password(demo_password)
+            if demo_password:
+                siedlce_admin.set_password(demo_password)
+            else:
+                siedlce_admin.set_unusable_password()
             siedlce_admin.save(update_fields=["password"])
 
         # Create athletes
@@ -54,7 +55,7 @@ class Command(BaseCommand):
             username="athlete_01",
             defaults={"role": "ATHLETE", "tenant": siedlce},
         )
-        if not athlete.has_usable_password():
+        if not athlete.has_usable_password() and demo_password:
             athlete.set_password(demo_password)
             athlete.save(update_fields=["password"])
 
@@ -63,7 +64,10 @@ class Command(BaseCommand):
             defaults={"role": "ATHLETE", "tenant": warsaw},
         )
         if athlete_w_created:
-            athlete_w.set_password(demo_password)
+            if demo_password:
+                athlete_w.set_password(demo_password)
+            else:
+                athlete_w.set_unusable_password()
             athlete_w.save(update_fields=["password"])
         self.stdout.write(
             self.style.SUCCESS(
@@ -87,5 +91,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Created BIKE activity for athlete_warsaw"))
 
         self.stdout.write(self.style.SUCCESS("Seeding complete."))
-        if not configured_password:
-            self.stdout.write(self.style.WARNING(f"Generated demo user password: {demo_password}"))
+        if not demo_password:
+            self.stdout.write(
+                self.style.WARNING(
+                    "Demo users have unusable passwords; set DEMO_USER_PASSWORD to enable login."
+                )
+            )

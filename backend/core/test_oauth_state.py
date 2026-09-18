@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from typing import Any
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from django.test import RequestFactory
@@ -1023,7 +1024,7 @@ class TestLoginFlow:
         assert resp.status_code in (301, 302)
         url = resp.url
         assert "state=" in url
-        assert "accounts.google.com" in url
+        assert urlparse(url).hostname == "accounts.google.com"
 
     def test_facebook_login_redirects_to_provider(self, rf, _fresh_redis):
         from core.facebook_auth import facebook_login
@@ -1034,4 +1035,4 @@ class TestLoginFlow:
         assert resp.status_code in (301, 302)
         url = resp.url
         assert "state=" in url
-        assert "facebook.com" in url
+        assert urlparse(url).hostname == "www.facebook.com"

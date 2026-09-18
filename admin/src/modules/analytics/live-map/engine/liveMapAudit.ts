@@ -3,11 +3,22 @@ import { resolveLiveMapTier, type LiveApiDetail } from './liveMapZoom';
 
 let sessionId: string | null = null;
 
+function createSecureSessionId(): string {
+    const webCrypto = globalThis.crypto;
+    if (!webCrypto?.getRandomValues) {
+        throw new Error('Secure Web Crypto is required for Live Map audit sessions.');
+    }
+    if (typeof webCrypto.randomUUID === 'function') {
+        return webCrypto.randomUUID();
+    }
+    const bytes = new Uint8Array(16);
+    webCrypto.getRandomValues(bytes);
+    return `lm-${Array.from(bytes, (value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
 export function liveMapSessionId(): string {
     if (!sessionId) {
-        sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `lm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionId = createSecureSessionId();
     }
     return sessionId;
 }

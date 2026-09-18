@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import urlparse
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -64,7 +65,7 @@ class TestExternalIntegrations:
         mock_stripe.return_value.url = "https://checkout.stripe.com/test"
 
         url = StripeService.create_b2c_checkout("athlete-123", "success-url", "cancel-url")
-        assert "stripe.com" in url
+        assert urlparse(url).hostname == "checkout.stripe.com"
         assert mock_stripe.called
 
 

@@ -340,12 +340,8 @@ def heatmap_view(request: Request) -> Response:
     _set_cached(cache_key, payload, HEATMAP_CACHE_TTL)
 
     logger.info(
-        "heatmap.generated cells=%d bbox=%s zoom=%d sampled=%s scope=%s",
+        "heatmap.generated cells=%d",
         len(payload.get("features", [])),
-        bbox_raw,
-        zoom,
-        payload.get("meta", {}).get("sampled"),
-        scope,
     )
     return Response(payload)
 

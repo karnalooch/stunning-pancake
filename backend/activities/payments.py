@@ -41,9 +41,9 @@ class PaymentService:
                 tax_id_collection={"enabled": True},
             )
             return session.url
-        except Exception as e:
-            logger.error(f"Stripe checkout session creation failed for user {user.id}: {e}")
-            return str(e)
+        except Exception:
+            logger.exception("Stripe checkout session creation failed")
+            return None
 
     @classmethod
     def handle_webhook(cls, payload, sig_header):
@@ -56,11 +56,11 @@ class PaymentService:
             return False
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
-        except stripe.error.SignatureVerificationError as e:
-            logger.warning(f"Stripe webhook signature verification failed: {e}")
+        except stripe.error.SignatureVerificationError:
+            logger.warning("Stripe webhook signature verification failed")
             return False
-        except Exception as e:
-            logger.error(f"Stripe webhook processing error: {e}")
+        except Exception:
+            logger.exception("Stripe webhook processing failed")
             return False
 
         if event["type"] == "checkout.session.completed":

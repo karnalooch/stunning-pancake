@@ -212,10 +212,6 @@ def admin_clear_leaderboard(request: Request, city_id: str) -> Response:
     """
     LeaderboardService.clear_leaderboard(city_id, scope="city")
 
-    logger.info(
-        "admin_clear_leaderboard: cleared city_id=%s",
-        city_id,
-        extra={"user_id": request.user.id, "city_id": city_id},
-    )
+    logger.info("admin_clear_leaderboard: cleared")
 
     return Response({"status": "cleared", "city_id": city_id})

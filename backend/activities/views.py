@@ -339,8 +339,11 @@ class ActivityViewSet(viewsets.ModelViewSet):
 
         try:
             incoming = linestring_from_payload(path_data)
-        except ValueError as exc:
-            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response(
+                {"error": "Invalid route path."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         client_hash = request.data.get("path_hash")
         if client_hash:
@@ -571,7 +574,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                     sim.maybe_advance_live_simulation_from_poll()
                     req = parse_live_map_query_params(request.query_params, user=request.user)
                     body = build_live_map_payload(req)
-                except Exception as exc:
+                except Exception:
                     log.exception("telemetry/live local build failed")
                     body = {
                         "positions": [],
@@ -579,7 +582,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                             "positions_returned": 0,
                             "viewport_returned": 0,
                             "degraded": True,
-                            "error": str(exc)[:160],
+                            "error": "Live telemetry is temporarily unavailable.",
                         },
                     }
 
@@ -602,7 +605,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                 max_age = read_policy.cache_ttl_seconds
             resp["Cache-Control"] = f"private, max-age={max_age}"
             return resp
-        except Exception as exc:
+        except Exception:
             log.exception("telemetry/live failed")
             return Response(
                 {
@@ -611,7 +614,7 @@ class TelemetryLiveView(generics.GenericAPIView):
                         "positions_returned": 0,
                         "viewport_returned": 0,
                         "degraded": True,
-                        "error": str(exc)[:160],
+                        "error": "Live telemetry is temporarily unavailable.",
                     },
                 },
                 status=status.HTTP_200_OK,

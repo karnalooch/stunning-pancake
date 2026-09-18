@@ -208,12 +208,7 @@ def initiate_verification(request: Request) -> Response:
     except Exception:
         return Response({"error": "Failed to store verification state."}, status=500)
 
-    logger.info(
-        "matrix.sas.initiated initiator=%d target=%s txn=%s",
-        request.user.id,
-        target_user,
-        transaction_id,
-    )
+    logger.info("matrix.sas.initiated")
 
     return Response(
         {
@@ -263,7 +258,7 @@ def accept_verification(request: Request) -> Response:
         transaction_id=txn_id,
     )
 
-    logger.info("matrix.sas.accepted txn=%s", txn_id)
+    logger.info("matrix.sas.accepted")
     return Response({"transaction_id": txn_id, "emojis": emojis, "status": "ACCEPTED"})
 
 
@@ -290,10 +285,8 @@ def confirm_verification(request: Request) -> Response:
             r = _get_redis()
             r.setex(_sas_key(txn_id), 60, json.dumps(state))
         except Exception:
-            logger.warning(
-                "matrix.sas.cancelled txn=%s user=%d (redis unavailable)", txn_id, request.user.id
-            )
-        logger.warning("matrix.sas.cancelled txn=%s user=%d", txn_id, request.user.id)
+            logger.warning("matrix.sas.cancelled redis_unavailable")
+        logger.warning("matrix.sas.cancelled")
         return Response({"status": "CANCELLED"})
 
     # Track confirmations from both sides
@@ -311,13 +304,8 @@ def confirm_verification(request: Request) -> Response:
             r = _get_redis()
             r.setex(_sas_key(txn_id), 60, json.dumps(state))
         except Exception:
-            logger.warning("matrix.sas.verified txn=%s (redis unavailable)", txn_id)
-        logger.info(
-            "matrix.sas.verified txn=%s initiator=%s target=%s",
-            txn_id,
-            state["initiator_user_id"],
-            state["target_user_id"],
-        )
+            logger.warning("matrix.sas.verified redis_unavailable")
+        logger.info("matrix.sas.verified")
         return Response({"status": "VERIFIED", "transaction_id": txn_id})
 
     state["status"] = "CONFIRMING"

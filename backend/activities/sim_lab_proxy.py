@@ -139,21 +139,20 @@ def probe_sim_lab_health(*, timeout: float | None = None, force: bool = False) -
         upstream = requests.get(url, timeout=effective_timeout)
         latency_ms = round((time.time() - started) * 1000)
         reachable = upstream.status_code < 500
-        err_text = (upstream.text or "")[:160] or None
-        if not reachable and upstream.status_code in (502, 503, 504):
-            err_text = err_text or f"HTTP {upstream.status_code} (sim-lab restarting or overloaded)"
+        err_text = None if reachable else f"HTTP {int(upstream.status_code)}"
         result: dict[str, Any] = {
             "reachable": reachable,
             "latency_ms": latency_ms,
             "status_code": upstream.status_code,
             "error": None if reachable else err_text,
         }
-    except requests.RequestException as exc:
+    except requests.RequestException:
+        logger.warning("sim-lab health probe failed", exc_info=True)
         result = {
             "reachable": False,
             "latency_ms": round((time.time() - started) * 1000),
             "status_code": None,
-            "error": str(exc)[:160],
+            "error": "Sim-lab health check failed.",
         }
 
     _HEALTH_CACHE["probe"] = {
@@ -389,14 +388,14 @@ def _forward_upstream(
             data=body,
             timeout=timeout,
         )
-    except requests.RequestException as exc:
-        logger.warning("sim-lab proxy failed %s %s: %s", request.method, url, exc)
+    except requests.RequestException:
+        logger.warning("sim-lab proxy request failed", exc_info=True)
         if allow_local_fallback:
             return None
         return Response(
             {
                 "error": "Sim-lab proxy unreachable. Check SIM_LAB_PROXY_* on backend.",
-                "detail": str(exc),
+                "detail": "Upstream request failed.",
                 "sim_lab_proxy": True,
             },
             status=503,
@@ -415,12 +414,11 @@ def _forward_upstream(
     try:
         payload = upstream.json() if upstream.content else {}
     except (TypeError, ValueError, json.JSONDecodeError):
-        payload = {"error": upstream.text or "Non-JSON sim-lab response", "sim_lab_proxy": True}
+        payload = {"error": "Non-JSON sim-lab response", "sim_lab_proxy": True}
 
     if allow_local_fallback and _upstream_should_fallback(payload, upstream.status_code):
         logger.warning(
-            "sim-lab proxy %s returned %s — falling back to local handler",
-            url,
+            "sim-lab proxy upstream returned status=%s — falling back to local handler",
             upstream.status_code,
         )
         return None
