@@ -183,6 +183,13 @@ const pressControl = async (testID: string) => {
   });
 };
 
+const flattenRenderedText = (node: ReturnType<TestRenderer.ReactTestRenderer['toJSON']>): string => {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(flattenRenderedText).join('');
+  return (node.children ?? []).map((child) => flattenRenderedText(child)).join('');
+};
+
 const renderOnboarding = async (onFinish = jest.fn()) => {
   await act(async () => {
     tree = TestRenderer.create(
@@ -231,15 +238,15 @@ afterEach(() => {
 describe('OnboardingScreen', () => {
   test('renders copy from the real English catalog', async () => {
     const rendered = await renderOnboarding();
-    const json = JSON.stringify(rendered.tree.toJSON());
+    const text = flattenRenderedText(rendered.tree.toJSON());
 
-    expect(json).toContain(
+    expect(text).toContain(
       `${stringsEn.onboarding.stepWord} 1 ${stringsEn.onboarding.ofWord} 3`,
     );
-    expect(json).toContain(stringsEn.onboarding.city.step);
-    expect(json).toContain(stringsEn.onboarding.city.title);
-    expect(json).toContain(stringsEn.onboarding.city.description);
-    expect(json).toContain(stringsEn.onboarding.city.next);
+    expect(text).toContain(stringsEn.onboarding.city.step);
+    expect(text).toContain(stringsEn.onboarding.city.title);
+    expect(text).toContain(stringsEn.onboarding.city.description);
+    expect(text).toContain(stringsEn.onboarding.city.next);
   });
 
   test('calls onFinish even when the final profile update fails', async () => {
