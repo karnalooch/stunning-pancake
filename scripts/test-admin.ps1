@@ -9,7 +9,7 @@ Set-Location $Root
 $pnpm = "pnpm"
 if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
     $pnpm = "npx"
-    $pnpmArgs = @("pnpm@9.15.0")
+    $pnpmArgs = @("pnpm@12.4.2")
 } else {
     $pnpmArgs = @()
 }
