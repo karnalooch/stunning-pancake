@@ -1,3 +1,4 @@
+import io
 import os
 import tempfile
 import time
@@ -90,6 +91,49 @@ class HomeLabTests(unittest.TestCase):
             with patch.object(home_lab, "ENV_FILE", env), self.assertRaises(SystemExit):
                 home_lab.initialize()
             self.assertEqual(env.read_text(), "existing")
+
+    def test_grant_runtime_role_reapplies_acl_free_restore_permissions(self):
+        with patch.object(home_lab, "home_env_value", return_value="4velo_runtime"), patch.object(
+            home_lab, "run"
+        ) as run_mock:
+            home_lab.grant_runtime_role("4velo_restore_check")
+
+        command = run_mock.call_args.args[0]
+        self.assertEqual(command[-2:], ["4velo_restore_check", "4velo_runtime"])
+        grant_script = command[-4]
+        self.assertIn("GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES", grant_script)
+        self.assertIn("ALTER DEFAULT PRIVILEGES", grant_script)
+
+    def test_restore_backup_reapplies_runtime_grants_after_success(self):
+        class FakeProcess:
+            def __init__(self):
+                self.stdin = io.BytesIO()
+
+            def wait(self):
+                return 0
+
+            def poll(self):
+                return 0
+
+            def terminate(self):
+                pass
+
+            def kill(self):
+                pass
+
+        with tempfile.TemporaryDirectory() as folder:
+            source = Path(folder) / "backup.dump.enc"
+            source.write_bytes(b"encrypted")
+            with (
+                patch.object(home_lab, "validate_backup", return_value=source),
+                patch.object(home_lab, "home_env_value", return_value="test-key"),
+                patch.object(home_lab.subprocess, "Popen", return_value=FakeProcess()),
+                patch.object(home_lab, "decrypt_file_to_stream"),
+                patch.object(home_lab, "grant_runtime_role") as grant_mock,
+            ):
+                home_lab.restore_backup(source)
+
+        grant_mock.assert_called_once_with(home_lab.RECOVERY_DATABASE)
 
     def test_validate_backup_accepts_encrypted_artifact_only(self):
         with tempfile.TemporaryDirectory() as folder:
