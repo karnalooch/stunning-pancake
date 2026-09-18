@@ -2,7 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs.
+**Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
 
@@ -43,6 +43,7 @@ For mobile visual implementation, the takeover-era authority is:
 | Milestone label | Tranches used in the master plan |
 | --- | --- |
 | Data-safety gate (formerly P3) | existing `T01`, `T05`, `T13`, `T14`, `T16`, `T57` plus `T60–T76` |
+| CI affected-test execution foundation (late-added, pulled forward) | `T94` |
 | Mobile UI + UX polish (formerly P4) | `T77–T84` |
 | Panels & operations (formerly P5) | `T85–T87` |
 | Pre-pilot hardening & polish | existing `T28–T30`, `T58`, `T59` plus `T88–T92` |
@@ -145,6 +146,33 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 
 **Data-safety exit:** repo-side implementation is complete through T76 and T57 runtime recovery evidence is now accepted. Final exit still requires external evidence for T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T57 and T60–T75 are retained as evidence, not reopened mechanically.
 
+## T94 — CI affected-test / risk-tiered selective execution
+
+**Execution position:** immediately after the takeover-era Visual Protection/Asset Governance foundation is merged, and **before T79**. The ID is late-added and therefore numerically higher; this placement is intentional and does not renumber existing tranches.
+
+| ID | Tranche | Status | Evidence / acceptance |
+| --- | --- | --- | --- |
+| T94 | CI affected-test planner + risk-tiered selective execution | PLANNED | PR CI computes a deterministic base→head change set and selects the smallest safe test set. Mobile uses dependency-aware related Jest tests for low-risk changes plus mandatory suites; backend uses an explicit domain/risk matrix; shared/config/security/navigation/tenant/telemetry/migration/unknown-impact changes fail safe to broader or FULL coverage. Turborepo dependency/cache information may reduce duplicate work but must not become a fail-open oracle. Main/nightly retain broader/full regression. Aggregate CI remains fail-closed. Planner/path/risk/fallback behavior must have table-driven tests, including proof that unknown classifications select FULL rather than SKIP. |
+
+### T94 contract
+
+The goal is **faster PR feedback without reducing regression confidence**.
+
+Required behavior:
+
+1. compute changed files from the PR base SHA to the candidate head SHA;
+2. classify changes deterministically by package/domain and risk tier;
+3. use dependency/affected information where it is reliable;
+4. for safe mobile leaf changes, run Jest related tests (for example `--findRelatedTests`) plus mandatory safety/visual suites;
+5. for backend changes, use an explicit domain-to-test-suite map rather than speculative dynamic import analysis;
+6. always run mandatory suites for security/auth, tenant isolation, telemetry/ride lifecycle, GPS/offline durability, migrations/schema, navigation/shared contracts and visual governance when their protected area is touched;
+7. choose broader/FULL coverage for shared infrastructure, dependency manifests, CI/build configuration or any unknown/unclassified impact;
+8. emit a human-readable CI plan showing **why** each suite ran or why FULL was selected;
+9. never let an affected-test optimisation weaken `Aggregate CI gate`, release gates or T92 full regression;
+10. keep push-to-main/nightly regression broader than PR-selective execution until evidence justifies any later change.
+
+**Fail-safe invariant:** if the planner cannot prove that a narrower test set is safe, it must select **FULL**, never **SKIP**.
+
 ## T77–T84 — mobile UI + UX polish
 
 | ID | Tranche | Status | Evidence / acceptance |
@@ -178,7 +206,7 @@ Security inventory work keeps its original IDs `T28–T30`; release gate/RC keep
 | T89 | DX0: doctor/preflight + init/up + dev env/toolchain contract | PLANNED | Fresh machine reports actionable checks; local secrets generated safely; no undocumented magic steps. |
 | T90 | DX0: cold-start smoke → `DEV ENV READY` | PLANNED | Migrations, backend, telemetry, admin and required workers verified automatically after clean start. |
 | T91 | Final UI validation on exact pilot candidate | BLOCKED | ENVIRONMENT REQUIRED. Repeat critical mobile flow on exact release candidate, real Android and real failure states. |
-| T92 | Full pre-pilot regression on exact SHA | PLANNED | P3 failure matrix, core mobile journey, tenant negatives, admin/GLOBAL_OWNER, recovery invariants, security gate and required CI all green. |
+| T92 | Full pre-pilot regression on exact SHA | PLANNED | P3 failure matrix, core mobile journey, tenant negatives, admin/GLOBAL_OWNER, recovery invariants, security gate and required CI all green. T94 selective PR execution does not replace this full exact-SHA regression. |
 
 Large Node/pnpm major upgrades are **not** automatic pilot blockers. Do them before pilot only when T28–T30 or DX0 proves they are required for security/reproducibility; otherwise schedule after pilot in a dedicated PR with full CI.
 
@@ -197,6 +225,10 @@ This is the only short sequence worth remembering:
 ```text
 finish data-safety external evidence:
   T68 + T76
+
+CI efficiency foundation:
+  merge current Visual Protection / Asset Governance foundation
+  T94
 
 UI:
   T79–T84
