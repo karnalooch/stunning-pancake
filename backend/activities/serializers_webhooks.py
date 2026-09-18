@@ -14,11 +14,10 @@ def _validate_outbound_url(value: str) -> str:
     """
     try:
         return validate_outbound_url(value)
-    except UnsafeWebhookURL as exc:
-        # Flat field-level error: a list of messages under the ``url`` key.
-        # Do not nest a second ``url`` key inside the error dict — DRF expects
-        # ``errors[url]`` to be a list of strings.
-        raise serializers.ValidationError([str(exc)])
+    except UnsafeWebhookURL:
+        # Keep the public error fixed. Detailed SSRF rejection reasons remain
+        # internal so user-controlled URL material can never flow into API text.
+        raise serializers.ValidationError(["Webhook URL is not allowed."])
 
 
 class LiveMapAlertWebhookSerializer(serializers.ModelSerializer):
