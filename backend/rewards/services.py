@@ -134,12 +134,12 @@ class RewardsService:
         try:
             pool = VoucherPool.objects.get(pk=pool_id)
         except VoucherPool.DoesNotExist:
-            logger.error("redeem_voucher: pool_id=%d not found", pool_id)
+            logger.error("redeem_voucher: pool not found")
             return None
 
         now = timezone.now()
         if not (pool.valid_from <= now <= pool.valid_until):
-            logger.warning("redeem_voucher: pool_id=%d outside validity window", pool_id)
+            logger.warning("redeem_voucher: pool outside validity window")
             return None
 
         balance = cls.get_balance(user_id)
@@ -158,7 +158,7 @@ class RewardsService:
             .first()
         )
         if not voucher:
-            logger.warning("redeem_voucher: pool_id=%d exhausted", pool_id)
+            logger.warning("redeem_voucher: pool exhausted")
             return None
 
         voucher.user_id = user_id
@@ -173,13 +173,7 @@ class RewardsService:
             reference_id=voucher.code,
         )
 
-        logger.info(
-            "rewards.redeemed user=%d pool=%d code=%s points_spent=%d",
-            user_id,
-            pool_id,
-            voucher.code,
-            pool.points_required,
-        )
+        logger.info("rewards.redeemed")
         return voucher
 
     @classmethod
