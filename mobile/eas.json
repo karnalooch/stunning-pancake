@@ -5,7 +5,7 @@
   },
   "build": {
     "pilot-local": {
-      "node": "22.13.0",
+      "node": "24.21.0",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "pilot-local",
@@ -17,7 +17,7 @@
       }
     },
     "development": {
-      "node": "22.13.0",
+      "node": "24.21.0",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
@@ -28,7 +28,7 @@
       }
     },
     "preview": {
-      "node": "22.13.0",
+      "node": "24.21.0",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
@@ -41,7 +41,7 @@
       }
     },
     "production": {
-      "node": "22.13.0",
+      "node": "24.21.0",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
