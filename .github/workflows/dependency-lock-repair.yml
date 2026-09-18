@@ -29,6 +29,9 @@ jobs:
         with:
           node-version: 24.21.0
 
+      - name: Restore trusted base lockfile
+        run: git checkout origin/main -- pnpm-lock.yaml
+
       - name: Repair lockfile strictly from manifests
         run: pnpm install --lockfile-only --no-frozen-lockfile
 
