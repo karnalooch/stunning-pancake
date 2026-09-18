@@ -128,7 +128,7 @@ describe('pilot-local eas.json contract', () => {
 
   test('uses an independent internal development profile', () => {
     expect(build['pilot-local']).toMatchObject({
-      node: '22.13.0',
+      node: '24.21.0',
       developmentClient: true,
       distribution: 'internal',
       channel: 'pilot-local',
