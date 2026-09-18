@@ -255,7 +255,7 @@ class AdminDashboardStatsView(APIView):
                 else:
                     annotate_production_payload(out)
                 return Response(out)
-            empty = _empty_stats(stale=True, note=str(exc)[:120])
+            empty = _empty_stats(stale=True, note="stats_unavailable")
             if sim_lab_tenant() and not empty.get("integration_test_mode"):
                 annotate_federated_payload(empty)
             else:
@@ -558,7 +558,7 @@ class LiveSimulationView(APIView):
                     "batch_blocks_live": batch_blocked,
                     "batch_block_reason": batch_block_reason or None,
                     "elapsed_seconds": round(elapsed, 1),
-                    "error": state.get("error"),
+                    "error": "simulator_error" if state.get("error") else None,
                     "stuck": stuck,
                     "tick_stale": tick_stale,
                     "worker_recovered_at": state.get("worker_recovered_at"),
@@ -615,10 +615,11 @@ class LiveSimulationView(APIView):
                     "light": light,
                 }
             )
-        except Exception as exc:
+        except Exception:
+            logging.getLogger(__name__).exception("live simulator state unavailable")
             return Response(
                 {
-                    "error": f"Live simulator state unavailable: {exc}",
+                    "error": "Live simulator state unavailable.",
                     "running": False,
                     "log": [],
                 },
@@ -1145,18 +1146,18 @@ class WorkerStatusView(APIView):
 
             return Response(result)
 
-        except Exception as exc:
+        except Exception:
             import logging
 
             logger = logging.getLogger("activities")
-            logger.error(f"Worker status check failed: {exc}")
+            logger.exception("Worker status check failed")
             return Response(
                 {
                     "workers": [],
                     "total_workers": 0,
                     "active_tasks": 0,
                     "queues": [],
-                    "error": str(exc),
+                    "error": "Worker status unavailable.",
                 },
                 status=status.HTTP_200_OK,
             )  # Don't fail — show empty state
@@ -1221,11 +1222,12 @@ class SimTargetView(APIView):
     def get(self, request):
         try:
             return Response(sim_lab_proxy_target_info())
-        except Exception as exc:
+        except Exception:
+            logging.getLogger(__name__).exception("sim target lookup failed")
             return Response(
                 {
                     "mode": "error",
-                    "error": str(exc)[:200],
+                    "error": "Simulator target unavailable.",
                     "sim_lab_proxy": True,
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1456,9 +1458,10 @@ class RunSimulationView(APIView):
                     "log": log,
                 }
             )
-        except Exception as exc:
+        except Exception:
+            logging.getLogger(__name__).exception("simulator state unavailable")
             return Response(
-                {"error": f"Simulator state unavailable: {exc}", "running": False, "log": []},
+                {"error": "Simulator state unavailable.", "running": False, "log": []},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -1699,10 +1702,11 @@ class GarminSimulateView(APIView):
                     "summary": summary,
                 }
             )
-        except Exception as exc:
+        except Exception:
+            logging.getLogger(__name__).exception("Garmin simulator state unavailable")
             return Response(
                 {
-                    "error": f"Garmin simulator state unavailable: {exc}",
+                    "error": "Garmin simulator state unavailable.",
                     "running": False,
                     "log": [],
                 },
