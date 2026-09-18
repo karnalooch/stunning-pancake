@@ -30,6 +30,14 @@ def legacy_visual_files(repo_root: Path) -> list[Path]:
     )
 
 
+def production_doc_target_ids(repo_root: Path) -> set[str]:
+    path = repo_root / "docs" / "design" / "MOBILE_ASSET_PRODUCTION_LIST_V1.md"
+    if not path.exists():
+        return set()
+    text = path.read_text(encoding="utf-8")
+    return set(re.findall(r"\b[a-z0-9]+(?:_[a-z0-9]+)*_v[0-9]+\b", text))
+
+
 def validate_policy(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list[str]:
     errors: list[str] = []
 
@@ -137,6 +145,21 @@ def validate_policy(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     missing = sorted(required - seen)
     if missing:
         errors.append("missing required pilot targets: " + ", ".join(missing))
+
+    documented = production_doc_target_ids(repo_root)
+    if documented and documented != seen:
+        missing_from_policy = sorted(documented - seen)
+        missing_from_doc = sorted(seen - documented)
+        if missing_from_policy:
+            errors.append(
+                "production-list IDs missing from machine policy: "
+                + ", ".join(missing_from_policy)
+            )
+        if missing_from_doc:
+            errors.append(
+                "machine policy IDs missing from production list: "
+                + ", ".join(missing_from_doc)
+            )
 
     place_badge = next((t for t in targets if t.get("id") == "place_badge_v1"), None)
     if not place_badge or place_badge.get("sourceStrategy") != "code_generated":
