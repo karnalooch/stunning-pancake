@@ -294,6 +294,9 @@ jobs:
       - name: Mobile test-runner integrity contract
         run: python -m unittest scripts/test_ci_mobile_path_filter.py -v
 
+      - name: Test pnpm workspace selector integrity
+        run: python -m unittest scripts/test_ci_workspace_selectors.py -v
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
