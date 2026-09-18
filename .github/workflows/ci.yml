@@ -412,7 +412,9 @@ jobs:
         run: python -m unittest scripts/test_trivy_ci_contract.py -v
 
       - name: Test security tooling workflows contract
-        run: python -m unittest scripts/test_security_tooling_workflows.py -v
+        run: |
+          python -m pip install PyYAML==6.0.3
+          python -m unittest scripts/test_security_tooling_workflows.py -v
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
