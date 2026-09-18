@@ -6,10 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+MOBILE_ROOT = REPO_ROOT / "mobile"
 
 MOBILE_SUITE_TESTS = {
     "gps_durability": (
@@ -46,6 +48,15 @@ MOBILE_SUITE_TESTS = {
 }
 
 
+def missing_mandatory_test_paths(root: Path = MOBILE_ROOT) -> list[str]:
+    missing: list[str] = []
+    for suite, tests in MOBILE_SUITE_TESTS.items():
+        for test_path in tests:
+            if not (root / test_path).is_file():
+                missing.append(f"{suite}:{test_path}")
+    return missing
+
+
 def _mobile_relative(path: str) -> str:
     return path[len("mobile/") :] if path.startswith("mobile/") else path
 
@@ -67,7 +78,6 @@ def _full_command() -> list[str]:
         "--",
         "--ci",
         "--forceExit",
-        "--passWithNoTests",
     ]
 
 
@@ -136,6 +146,16 @@ def main() -> int:
     parser.add_argument("--plan", required=True)
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
+
+    missing = missing_mandatory_test_paths()
+    if missing:
+        print(
+            "affected-mobile: mandatory suite mapping contains missing test files:",
+            file=sys.stderr,
+        )
+        for entry in missing:
+            print(f"  - {entry}", file=sys.stderr)
+        return 2
 
     plan = json.loads(Path(args.plan).read_text(encoding="utf-8"))
     commands = commands_for_plan(plan)
