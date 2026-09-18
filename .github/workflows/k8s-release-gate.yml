@@ -151,8 +151,10 @@ jobs:
 
       - name: Kubesec workload posture audit (advisory)
         continue-on-error: true
+        shell: bash
         run: |
-          kubesec scan --format table \
+          status=0
+          for manifest in \
             infrastructure/k8s/workloads/api.yaml \
             infrastructure/k8s/workloads/worker.yaml \
             infrastructure/k8s/workloads/worker-simulation.yaml \
@@ -162,6 +164,14 @@ jobs:
             infrastructure/k8s/workloads/admin.optional.yaml \
             infrastructure/k8s/jobs/migrate-job.yaml \
             infrastructure/k8s/optional/postgres.optional.yaml
+          do
+            echo "::group::Kubesec $manifest"
+            if ! kubesec scan --format table "$manifest"; then
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
 
   reliability_and_release_gate:
     name: Reliability + Release Gate
