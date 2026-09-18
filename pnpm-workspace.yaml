@@ -1,5 +1,13 @@
 pmOnFail: ignore
 
+nodeLinker: hoisted
+shamefullyHoist: true
+publicHoistPattern:
+  - '*expo*'
+  - '*react-native*'
+  - react
+  - react-dom
+
 overrides:
   react: 19.2.7
   react-dom: 19.2.7
