@@ -26,8 +26,8 @@ EAS_CONFIG = REPO / "mobile" / "eas.json"
 ROOT_EXPO_CONFIG = REPO / "app.json"
 CHANGELOG = REPO / "CHANGELOG.md"
 
-VERSION_RE = re.compile(r"^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$")
-PRERELEASE_RE = re.compile(r"^[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*$")
+VERSION_RE = re.compile(r"^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$")
+PRERELEASE_RE = re.compile(r"^[0-9A-Za-z-]+(?:[.][0-9A-Za-z-]+)*$")
 
 
 def read_json(path: Path) -> dict:
@@ -125,12 +125,12 @@ def set_version(version: str, prerelease: str) -> None:
     if prerelease and not PRERELEASE_RE.fullmatch(prerelease):
         raise ValueError("invalid prerelease identifier")
 
-    VERSION_FILE.write_text(json.dumps(candidate, indent=2) + "\\n", encoding="utf-8")
+    VERSION_FILE.write_text(json.dumps(candidate, indent=2) + chr(10), encoding="utf-8")
     label = semver_label(candidate)
     for path in PACKAGE_FILES:
         data = read_json(path)
         data["version"] = label
-        path.write_text(json.dumps(data, indent=2) + "\\n", encoding="utf-8")
+        path.write_text(json.dumps(data, indent=2) + chr(10), encoding="utf-8")
 
 
 def main() -> int:
