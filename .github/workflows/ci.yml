@@ -19,7 +19,6 @@ permissions:
 
 env:
   PYTHON_VERSION: '3.12'
-  NODE_VERSION: '20'
 
 jobs:
   changes:
@@ -56,6 +55,7 @@ jobs:
               - '.github/actions/pnpm-setup/**'
               - '.npmrc'
               - 'package.json'
+              - '.node-version'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
             scripts:
@@ -100,6 +100,7 @@ jobs:
               - 'scripts/test_ci_mobile_path_filter.py'
               - 'scripts/test_ci_visual_path_filter.py'
               - 'turbo.json'
+              - '.node-version'
             workflow:
               - '.github/workflows/**'
       - id: full
@@ -346,8 +347,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Mobile test-runner integrity contract
         run: python -m unittest scripts/test_ci_mobile_path_filter.py -v
