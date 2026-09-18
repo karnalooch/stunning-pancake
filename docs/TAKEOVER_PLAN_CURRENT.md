@@ -20,6 +20,16 @@ Supporting documents remain useful as detailed contracts/evidence, but they do n
 
 If any stage label (`P3`, `P4`, `P5`, `PPH`, `P6`) conflicts with a tranche below, the tranche table in this document wins for execution order. Stage labels are only human-friendly milestones.
 
+### Mobile visual authority
+
+For mobile visual implementation, the takeover-era authority is:
+
+1. `docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`;
+2. `docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md` (Frozen UI v1.2);
+3. current asset-governance documents.
+
+**All mobile visual/design/art-direction/mockup decisions predating T00 / PR #60 are historical only and cannot override the current freeze.** Old documents may still contain useful functional/safety history, but they are not visual SSOT. T79–T84 must use the current visual authority and protection gates.
+
 ## Status vocabulary
 
 - `DONE` — merged to `main` and its repo-side contract is complete.
@@ -141,7 +151,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | --- | --- | --- | --- |
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
-| T79 | Home screen implementation/polish | PLANNED | Real data, first-use comprehension, loading/empty/error states, Grand Prix Modern. |
+| T79 | Home screen implementation/polish | PLANNED | Frozen UI v1.2. Start with Visual Protection foundation/semantic primitives, then Home; real data, first-use comprehension, loading/empty/error states. |
 | T80 | Active Ride screen implementation/polish | PLANNED | Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
 | T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
 | T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
