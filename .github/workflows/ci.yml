@@ -30,6 +30,7 @@ jobs:
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.filter.outputs.docs }}
       visual: ${{ steps.filter.outputs.visual }}
+      ci_core: ${{ steps.filter.outputs.ci_core }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
@@ -80,17 +81,65 @@ jobs:
               - 'scripts/check_ci_aggregate.py'
               - 'scripts/test_ci_aggregate.py'
               - '.github/workflows/**'
+            ci_core:
+              - '.github/workflows/**'
+              - '.github/actions/**'
+              - 'scripts/plan_affected_tests.py'
+              - 'scripts/run_affected_mobile_tests.py'
+              - 'scripts/run_affected_backend_tests.py'
+              - 'scripts/test_plan_affected_tests.py'
+              - 'scripts/test_run_affected_mobile_tests.py'
+              - 'scripts/test_run_affected_backend_tests.py'
+              - 'scripts/check_ci_aggregate.py'
+              - 'scripts/test_ci_aggregate.py'
+              - 'scripts/test_ci_mobile_path_filter.py'
+              - 'scripts/test_ci_visual_path_filter.py'
+              - 'turbo.json'
             workflow:
               - '.github/workflows/**'
       - id: full
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ]; then
+          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
           fi
+
+  # ──────────────────────────────────────────
+  # T94: deterministic affected-test plan
+  # ──────────────────────────────────────────
+  affected-test-plan:
+    name: Affected Test Plan
+    runs-on: ubuntu-latest
+    needs: [changes]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Test affected-test planner and runners
+        run: |
+          python -m unittest scripts/test_plan_affected_tests.py -v
+          python -m unittest scripts/test_run_affected_mobile_tests.py -v
+          python -m unittest scripts/test_run_affected_backend_tests.py -v
+
+      - name: Build human-readable affected-test plan
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p .ci
+          python scripts/plan_affected_tests.py \
+            --output .ci/affected-plan.json \
+            --github-summary "$GITHUB_STEP_SUMMARY" \
+            --summary
 
   # ──────────────────────────────────────────
   # Backend: Lint + Type Check + Tests
@@ -98,7 +147,7 @@ jobs:
   backend:
     name: Backend (Django)
     runs-on: ubuntu-latest
-    needs: [changes]
+    needs: [changes, affected-test-plan]
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.backend == 'true'
 
     services:
@@ -272,11 +321,30 @@ jobs:
   mobile:
     name: Mobile (React Native)
     runs-on: ubuntu-latest
-    needs: [changes]
+    needs: [changes, affected-test-plan]
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Plan affected mobile tests
+        id: affected
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          mkdir -p .ci
+          python scripts/plan_affected_tests.py \
+            --output .ci/affected-plan.json \
+            --github-output "$GITHUB_OUTPUT" \
+            --summary
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -292,8 +360,8 @@ jobs:
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
-      - name: Run unit tests
-        run: pnpm --filter mobile test -- --ci --forceExit --passWithNoTests
+      - name: Run affected mobile unit tests
+        run: python scripts/run_affected_mobile_tests.py --plan .ci/affected-plan.json
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -332,6 +400,12 @@ jobs:
 
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
+
+      - name: Test T94 affected-test planning
+        run: |
+          python -m unittest scripts/test_plan_affected_tests.py -v
+          python -m unittest scripts/test_run_affected_mobile_tests.py -v
+          python -m unittest scripts/test_run_affected_backend_tests.py -v
 
       - name: Validate mobile asset governance
         run: python scripts/validate_mobile_asset_governance.py
@@ -696,7 +770,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     timeout-minutes: 15
-    needs: [changes, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
+    needs: [changes, affected-test-plan, backend, telemetry, mobile, mobile-visual-contract, scripts-python, repo-assets, docs-links, admin, audit, security, trivy, e2e]
     env:
       CI_NEEDS_JSON: ${{ toJson(needs) }}
       CI_EVENT_NAME: ${{ github.event_name }}
