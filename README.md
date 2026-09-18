@@ -26,7 +26,7 @@ przejęcia i stabilizacji. Obecność funkcji w kodzie nie oznacza jej gotowośc
 
 ## Przygotowanie środowiska
 
-Bazą porównania jest istniejące CI: Node 20, pnpm 9.15 i Python 3.12.
+Bazą porównania jest istniejące CI: Node 22.23.2, pnpm 12.4.2 i Python 3.12.
 Obrazy usług używają Pythona 3.11. Pełne testy integracyjne wymagają
 PostgreSQL/PostGIS oraz Redis. Nie zastępuj ich SQLite.
 
