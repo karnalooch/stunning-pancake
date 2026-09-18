@@ -63,7 +63,7 @@ def visual_job_runs_for(path):
         if any(_matches(path, pattern) for pattern in patterns)
     }
     dependencies = _job_dependencies(workflow, "mobile-visual-contract")
-    full = "workflow" in changed
+    full = bool(changed & {"workflow", "ci_core"})
     return ("full" in dependencies and full) or bool(changed & dependencies)
 
 
@@ -90,6 +90,8 @@ class VisualPathRoutingTests(unittest.TestCase):
             "scripts/check_ci_aggregate.py",
             "scripts/test_ci_aggregate.py",
             ".github/workflows/ci.yml",
+            "scripts/plan_affected_tests.py",
+            "turbo.json",
         )
         for path in paths:
             with self.subTest(path=path):
@@ -102,7 +104,6 @@ class VisualPathRoutingTests(unittest.TestCase):
             "admin/src/App.tsx",
             "docs/backend/API.md",
             "README.md",
-            "turbo.json",
         )
         for path in paths:
             with self.subTest(path=path):
