@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
 import { useCallback, useEffect, useState } from 'react';
 import { MMKV } from 'react-native-mmkv';
 import type { PlatformNotice } from '../components/PlatformNoticeBanner';
