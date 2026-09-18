@@ -480,7 +480,7 @@ jobs:
         run: pnpm --dir mobile typecheck
 
       - name: Mobile asset/place identity tests
-        run: pnpm --dir mobile test -- --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
+        run: pnpm --dir mobile test --ci --forceExit --runTestsByPath __tests__/assets/assetGovernance.test.ts
 
   repo-assets:
     name: Shared tokens
