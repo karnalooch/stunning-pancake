@@ -67,6 +67,11 @@ function getClusters(
 }
 
 self.onmessage = (ev: MessageEvent<WorkerIn>) => {
+    // Dedicated workers normally receive same-origin messages with an empty
+    // origin. Reject any explicitly foreign origin before processing data.
+    if (ev.origin && ev.origin !== self.location.origin) {
+        return;
+    }
     const msg = ev.data;
     try {
         if (msg.type === 'build') {
