@@ -1,6 +1,7 @@
 name: Temporary dependency security audit
 
 # Final confirmation workflow; remove before merge.
+# Confirms the Metro-compatible image-size-next 1.2.2 alias after lock refresh.
 
 on:
   pull_request:
