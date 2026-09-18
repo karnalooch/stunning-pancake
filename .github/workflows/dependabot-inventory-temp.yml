@@ -1,0 +1,41 @@
+name: Temporary Dependabot inventory
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    if: github.head_ref == 'security/dependabot-sweep'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.4.2
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Verify lockfile install
+        run: pnpm install --frozen-lockfile
+      - name: Full pnpm audit inventory
+        shell: bash
+        run: |
+          set +e
+          pnpm audit --json > pnpm-audit.json
+          code=$?
+          cat pnpm-audit.json
+          echo "PNPM_AUDIT_EXIT=$code"
+          exit 0
+      - name: Why vulnerable packages
+        shell: bash
+        run: |
+          for pkg in tar form-data image-size react-router shell-quote @xmldom/xmldom; do
+            echo "===== pnpm why $pkg ====="
+            pnpm why -r "$pkg" || true
+          done
