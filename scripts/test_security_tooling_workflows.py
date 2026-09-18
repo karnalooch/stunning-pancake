@@ -127,9 +127,9 @@ class KubesecContractTests(unittest.TestCase):
 class WorkflowDependencyPinningTests(unittest.TestCase):
     def test_security_contract_installs_pyyaml_with_hash_verification(self):
         raw = text(CI)
-        self.assertIn("python -m pip install --require-hashes", raw)
+        self.assertIn("python -m pip install --only-binary=:all: --require-hashes", raw)
         self.assertIn(
-            "PyYAML==6.0.3 --hash=sha256:dbad07666e1656f0f4349c7d35b45406ffd57a289b6e0b49c3c9c2ca40fe5e3c",
+            "PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
             raw,
         )
 
