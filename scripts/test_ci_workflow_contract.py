@@ -250,15 +250,18 @@ class PublishContainersJobTests(unittest.TestCase):
             "aggregate must not depend on publish-containers (no cycle)",
         )
 
-    def test_no_job_depends_on_publish_containers(self):
+    def test_only_slsa_provenance_depends_on_publish_containers(self):
+        dependents = []
         for name, job in _ci()["jobs"].items():
             if name == "publish-containers":
                 continue
-            self.assertNotIn(
-                "publish-containers",
-                job.get("needs", []),
-                f"job {name} must not depend on publish-containers",
-            )
+            if "publish-containers" in job.get("needs", []):
+                dependents.append(name)
+        self.assertEqual(
+            dependents,
+            ["slsa-provenance"],
+            "only the post-publish SLSA provenance job may depend on publish-containers",
+        )
 
 
 class ReusableWorkflowContractTests(unittest.TestCase):
