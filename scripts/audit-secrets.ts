@@ -17,7 +17,7 @@ const PATTERNS: { name: string; regex: RegExp; severity: 'CRITICAL' | 'HIGH' | '
   { name: 'Private Key Header', regex: /-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY-----/, severity: 'CRITICAL' },
   { name: 'Hardcoded Password (literal)', regex: /['"]password['"]\s*[:=]\s*['"][^'"]{4,}['"]/, severity: 'HIGH' },
   { name: 'Stripe Key', regex: /[sr]k_(live|test)_[A-Za-z0-9]{24,}/, severity: 'CRITICAL' },
-  { name: 'Slack Webhook', regex: /(?:^|[\\s'"])https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9\/]+(?:$|[\\s'"])/, severity: 'HIGH' },
+  { name: 'Slack Webhook', regex: /(?:^|[\s'"])https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9\/]+(?:$|[\s'"])/, severity: 'HIGH' },
   { name: 'MongoDB URI', regex: /mongodb(\+srv)?:\/\/[^:]+:[^@]+@/, severity: 'HIGH' },
   { name: 'Postgres URI with creds', regex: /postgres(ql)?:\/\/[^:]+:[^@]+@/, severity: 'HIGH' },
 ];
