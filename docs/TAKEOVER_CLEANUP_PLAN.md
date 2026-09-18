@@ -30,7 +30,7 @@ Każda transza = jeden mały PR (jedna gałąź → jedna odpowiedzialność →
 - Telemetria ingest: osobny krótkotrwały token `aud=telemetry`, wydawany przez backend po sprawdzeniu user/activity/tenant; telemetry weryfikuje HTTP i WS.
 - Odbiorcy live/history GPS: zawodnik własnej aktywności; tenant admin/moderator w zakresie roli i tenanta; GLOBAL_OWNER globalnie; brak publicznego GPS.
 - Generowany klient API jako kanon: `packages/api-client/src/generated` commitowany + dryft CI.
-- EAS ownership: `mobile/app.config.js` i `mobile/eas.json` jako kanoniczne; root pliki są cienkimi shimami lub zostaną usunięte po potwierdzeniu.
+- EAS ownership: `mobile/app.config.js` i `mobile/eas.json` są kanoniczne; stary root `app.json` został usunięty, a wersja produktu pochodzi z repo-root `version.json`.
 - Firebase wyłączony w RC: `EXPO_PUBLIC_ENABLE_FIREBASE` konsumowane przez kod; produkcja wymaga `false`; iOS placeholder odrzucany przez CI.
 - Otwarte PR-y (szczególnie #44, #57) są kontynuowane, a nie duplikowane; #51 (squash `1c7e7840a580208affb7d74a0432d4dbe704a82e`) i #55 (squash `dc3e20e8a48b594a469b28c1a3e80ebceb527d82`) zostały scalone.
 - Status techniczny PR (`APPROVE` / `Draft` / `green CI`) i blokery właścicielskie/środowiskowe są rozróżnione: `STATUS` opisuje stan techniczny transzy; ewentualny bloker jest wypisany w `Zależności` jako `BLOCKED — OWNER ACTION REQUIRED` lub `BLOCKED — ENVIRONMENT REQUIRED`. `APPROVE` w Code Review ≠ gotowość do merge, gdy istnieje bloker właścicielski/środowiskowy.
