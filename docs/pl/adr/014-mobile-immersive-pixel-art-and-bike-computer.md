@@ -1,5 +1,9 @@
 # ADR 014: Immersyjna skóra pixel-art na rdzeniu komputera rowerowego / nawigacji (mobile)
 
+> **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
+> **Historyczny / nienormatywny dla decyzji wizualnych mobile.** Ten dokument powstał przed takeover T00 / PR #60. Aktualnym źródłem prawdy dla wyglądu jest `docs/design/MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` + Frozen UI v1.2. Fakty funkcjonalne, bezpieczeństwa, danych i security obowiązują tylko tam, gdzie utrzymuje je bieżący kod lub aktualne kontrakty takeover.
+
+
 | | |
 |--|--|
 | **Status** | ✅ Active |
