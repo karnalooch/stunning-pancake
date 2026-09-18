@@ -404,6 +404,9 @@ jobs:
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
 
+      - name: Test Node/pnpm toolchain contract
+        run: python -m unittest scripts/test_toolchain_contract.py -v
+
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
 
@@ -451,8 +454,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Visual path-routing contract
         run: python -m unittest scripts/test_ci_visual_path_filter.py -v
@@ -489,8 +490,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify design tokens build
         run: pnpm tokens:check
@@ -528,8 +527,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: ESLint
         run: pnpm --filter admin lint
@@ -576,8 +573,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Route Parity Check
         run: pnpm audit:routes
@@ -638,8 +633,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Audit Node workspace dependencies (pnpm audit)
         continue-on-error: true
@@ -745,8 +738,6 @@ jobs:
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
-        with:
-          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install Playwright browsers
         run: pnpm --filter admin exec playwright install --with-deps chromium
