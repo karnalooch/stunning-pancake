@@ -61,7 +61,7 @@ def _is_related_command(command: list[str]) -> bool:
 def _full_command() -> list[str]:
     return [
         "pnpm",
-        "--filter",
+        "--dir",
         "mobile",
         "test",
         "--",
