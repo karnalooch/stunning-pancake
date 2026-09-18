@@ -170,6 +170,7 @@ Required behavior:
 8. emit a human-readable CI plan showing **why** each suite ran or why FULL was selected;
 9. never let an affected-test optimisation weaken `Aggregate CI gate`, release gates or T92 full regression;
 10. keep push-to-main/nightly regression broader than PR-selective execution until evidence justifies any later change.
+11. reject zero-test mobile execution in blocking CI: no `--passWithNoTests` in CI/baseline/T94 entrypoints, and missing mandatory suite files are a hard failure.
 
 **Fail-safe invariant:** if the planner cannot prove that a narrower test set is safe, it must select **FULL**, never **SKIP**.
 
