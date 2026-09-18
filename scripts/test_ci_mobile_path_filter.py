@@ -81,6 +81,14 @@ class MobilePathRoutingTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertTrue(mobile_job_runs_for(path), path)
 
+    def test_mobile_job_does_not_use_nonexistent_workspace_filter(self):
+        workflow = _workflow_text()
+        match = re.search(r"(?ms)^  mobile:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n)", workflow)
+        self.assertIsNotNone(match)
+        body = match.group("body")
+        self.assertNotIn("pnpm --filter mobile", body)
+        self.assertIn("pnpm --dir mobile", body)
+
     def test_unrelated_paths_do_not_run_mobile_job(self):
         paths = (
             "backend/activities/views.py",
