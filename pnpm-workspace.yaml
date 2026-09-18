@@ -35,6 +35,8 @@ overrides:
   'protobufjs@>=7.5.0 <8.0.0': 7.6.5
   'esbuild@>=0.27.3 <0.28.1': 0.28.1
   'ts-jest>esbuild': 0.28.1
+  'xcode>uuid': 11.1.1
+  'query-string>decode-uri-component': 0.5.0
 
 # pnpm 12 blocks dependency lifecycle scripts unless each package is reviewed.
 # Keep approvals version-scoped so dependency upgrades require a fresh decision.
