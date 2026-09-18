@@ -15,7 +15,7 @@ This is the operational starting point for a new owner. Product documents descri
 
 ## Safe first startup
 
-1. Use Node 20 LTS, pnpm 9.15, Python 3.11/3.12 and Docker Compose 2.
+1. Use Node 22.23.2 LTS, pnpm 12.4.2, Python 3.11/3.12 and Docker Compose 2.
 2. Copy `.env.example` to `.env` and replace every `CHANGE_ME` used by the selected services.
 3. Keep `RUN_DEMO_SEED=0` outside an isolated demo environment.
 4. Start with `docker compose up -d` and inspect `docker compose ps` and service logs.
