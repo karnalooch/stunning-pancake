@@ -127,6 +127,8 @@ curl https://<domena>.up.railway.app/api/docs/
 
 ## 🐳 Docker Compose Production
 
+> **Stan repozytorium:** ten plik Compose ma zweryfikowaną ścieżkę budowania backendu, ale samodzielna topologia nadal ma udokumentowane braki nginx/TLS/workerów. Przed użyciem jako celu wdrożeniowego zobacz [status weryfikacji Production Compose](../operations/PRODUCTION_COMPOSE_VERIFICATION.md).
+
 ### Plik: `docker-compose.prod.yml`
 
 ```yaml
