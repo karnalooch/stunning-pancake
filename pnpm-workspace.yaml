@@ -2,3 +2,7 @@ packages:
   - "admin"
   - "mobile"
   - "packages/*"
+
+# Keep pnpm 12 lockfiles single-document until GitHub/Dependabot fully support
+# the environment lockfile document (dependabot/dependabot-core#15904).
+pmOnFail: ignore
