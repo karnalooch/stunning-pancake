@@ -77,6 +77,11 @@ class AffectedTestPlannerTests(unittest.TestCase):
         self.assertTrue(plan["visualContractRequired"])
         self.assertEqual(plan["mobile"]["mode"], "skip")
 
+    def test_dot_github_path_is_preserved_and_ci_core(self):
+        plan = plan_from_files([".github/workflows/ci.yml"])
+        self.assertTrue(plan["fullFallback"])
+        self.assertTrue(any("CI core: .github/workflows/ci.yml" == reason for reason in plan["reasons"]))
+
     def test_ci_core_change_fails_safe_repo_wide(self):
         plan = plan_from_files(["scripts/plan_affected_tests.py"])
         self.assertTrue(plan["fullFallback"])
