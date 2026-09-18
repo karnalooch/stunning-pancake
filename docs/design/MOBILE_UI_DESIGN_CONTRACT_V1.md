@@ -1,13 +1,17 @@
-# 4VELO Mobile UI Design Contract v1
+# 4VELO Mobile UI Design Contract v1.2
 
 | | |
 |---|---|
 | **Status** | **APPROVED / FROZEN for implementation** |
-| **Decision date** | 2026-09-16 |
-| **Selected direction** | **Direction B — Grand Prix Modern** |
+| **Decision date** | 2026-09-16; visual freeze refined 2026-09-18 |
+| **Selected direction** | **Adventure Grand Prix — Grand Prix Modern refinement / Frozen UI v1.2** |
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
-| **Runtime changes in this document** | None |
+| **Runtime changes in this document** | None |\n| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+
+## 0. Visual authority
+
+This contract is subordinate to `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`. All pre-takeover mobile visual decisions, mockups, old generated assets and previous SSOT claims are historical/non-normative when they conflict with Frozen UI v1.2.
 
 ## 1. Product character
 
@@ -19,11 +23,13 @@ The product must not look like a generic fitness dashboard, but it also must not
 
 The visual signature is built from:
 
-- deep/dark green as the principal brand field;
+- deep navy/ink as the principal structural shell;
 - warm cream/parchment as the principal light surface;
-- restrained gold as the prestige/accent colour;
+- burnt orange/copper as the primary action colour;
+- warm amber/gold as progression, prestige and selected-state accent;
+- semantic forest green only for genuine success/GPS/nature contexts;
 - large pixel-art cycling scenes used as hero imagery;
-- city crests, club marks, achievement badges and race-like heraldry;
+- verified official crests or canonical 4VELO Place Badges, club marks and achievement badges;
 - calm, highly legible statistics and controls;
 - maps and charts that remain sharp and functional.
 
@@ -42,26 +48,29 @@ When visual character conflicts with usability, the priority order is:
 
 Pixel art may add identity. It may never make essential information harder to read.
 
-## 3. Colour contract
+## 3. Colour contract — Frozen UI v1.2
 
-The current Grand Prix palette remains the starting point. Exact token values remain controlled by the runtime theme; implementation should not introduce ad-hoc screen-specific hex values.
+The runtime theme must migrate toward semantic roles defined by the Visual Protection Architecture. Screens must not introduce ad-hoc colour literals.
 
-### Primary roles
+### Frozen core
 
-- **Deep green** — app shell, premium/dark surfaces, headers and selected high-identity areas.
-- **Cream / parchment** — readable cards, forms, light stat panels and editorial contrast.
-- **Gold** — primary prestige accent, selected states, event highlights, limited primary CTA treatment.
-- **Forest green** — positive/action state and cycling identity.
-- **Ink/navy/near-black** — text and high-contrast outline where required.
-- **Red** — error, destructive and live-recording semantics only; never decorative competition colour.
+- **Deep navy / ink — `#0B1D33`**: shell, structure, dark panels and primary text.
+- **Canvas cream — `#FBF3E2`** and **parchment — `#F5E6CC`**: principal light surfaces.
+- **Primary action orange — `#DD6B33`** with pressed/dark `#9E4318`.
+- **Warm amber/gold — `#D4A373`**: progress, prestige, selected/highlight accents.
+- **Secondary brown — `#5A4A38`** and supporting teal/slate `#1F4E5F`.
+- **Semantic positive green — `#3B6A24`**: genuine success/GPS/nature only.
+- **Red — `#BA1A1A`**: error, destructive and live-recording semantics.
 
-### Usage rules
+### Hard usage rules
 
-- Do not turn every card gold or every outline dark.
-- Gold should feel valuable because it is scarce.
-- Cream cards on dark green may be prominent; routine lists may instead use tonal dark surfaces.
-- Active Ride may use a distinct high-contrast HUD palette optimised for sunlight.
-- Existing theme tokens are preferred over new tokens; new tokens must have semantic names.
+- Green is not a generic action/selection/progression colour.
+- Primary CTA is orange, not green.
+- Active navigation, selected sport/filter, XP/progression and weekly-chart primary series must not use generic green.
+- Central Ride emphasis, where used, is warm orange/amber.
+- GPS locked and genuine success may use semantic green.
+- Maps/charts remain functional; navigation routes may use conventional blue/teal where clarity benefits.
+- Existing raw theme tokens are not permission to keep old semantic roles. New implementation consumes semantic roles.
 
 ## 4. Typography contract
 
@@ -176,7 +185,7 @@ A normal screen should not make every container a special surface.
 - visually dominant;
 - minimum comfortable one-hand target;
 - clear label plus optional simple icon;
-- gold or strong green depending on context;
+- burnt orange as the default primary action treatment;
 - no tiny pixel-font labels.
 
 ### Secondary action
