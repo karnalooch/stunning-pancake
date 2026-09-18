@@ -1,0 +1,108 @@
+name: Temporary CodeQL inventory
+
+on:
+  push:
+    branches: [security/codeql-remediation]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql-inventory:
+    name: CodeQL inventory (\${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, python]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: \${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+
+      - name: Analyze without uploading
+        id: analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/inventory:\${{ matrix.language }}"
+          upload: never
+          output: codeql-raw
+          post-processed-sarif-path: codeql-sarif
+
+      - name: Summarize CodeQL findings
+        shell: python
+        run: |
+          import json
+          import pathlib
+          from collections import Counter
+
+          files = list(pathlib.Path("codeql-sarif").rglob("*.sarif"))
+          if not files:
+              raise SystemExit("No SARIF files found")
+
+          rows = []
+          rule_meta = {}
+          for path in files:
+              data = json.loads(path.read_text(encoding="utf-8"))
+              for run in data.get("runs", []):
+                  for rule in run.get("tool", {}).get("driver", {}).get("rules", []):
+                      rid = rule.get("id") or rule.get("name") or "<unknown>"
+                      props = rule.get("properties", {})
+                      rule_meta[rid] = {
+                          "name": rule.get("name", ""),
+                          "security_severity": props.get("security-severity", ""),
+                          "problem_severity": props.get("problem.severity", ""),
+                          "tags": props.get("tags", []),
+                      }
+                  for result in run.get("results", []):
+                      rid = result.get("ruleId", "<unknown>")
+                      locs = result.get("locations", [])
+                      loc = locs[0].get("physicalLocation", {}) if locs else {}
+                      artifact = loc.get("artifactLocation", {}).get("uri", "")
+                      region = loc.get("region", {})
+                      line = region.get("startLine", "")
+                      msg = result.get("message", {}).get("text", "").replace("\n", " ")
+                      rows.append({
+                          "rule": rid,
+                          "level": result.get("level", ""),
+                          "path": artifact,
+                          "line": line,
+                          "message": msg,
+                      })
+
+          print("CODEQL_TOTAL", len(rows))
+          counts = Counter(r["rule"] for r in rows)
+          print("CODEQL_RULE_SUMMARY_BEGIN")
+          for rid, count in counts.most_common():
+              meta = rule_meta.get(rid, {})
+              print(json.dumps({
+                  "rule": rid,
+                  "count": count,
+                  "security_severity": meta.get("security_severity", ""),
+                  "problem_severity": meta.get("problem_severity", ""),
+                  "name": meta.get("name", ""),
+                  "tags": meta.get("tags", []),
+              }, ensure_ascii=False))
+          print("CODEQL_RULE_SUMMARY_END")
+
+          print("CODEQL_FINDINGS_BEGIN")
+          for row in rows:
+              meta = rule_meta.get(row["rule"], {})
+              out = dict(row)
+              out["security_severity"] = meta.get("security_severity", "")
+              out["problem_severity"] = meta.get("problem_severity", "")
+              out["name"] = meta.get("name", "")
+              print(json.dumps(out, ensure_ascii=False))
+          print("CODEQL_FINDINGS_END")
