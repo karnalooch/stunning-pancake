@@ -71,6 +71,13 @@ class ToolchainIntegrityTests(unittest.TestCase):
         dockerfile = read("admin/Dockerfile")
         self.assertIn("FROM node:22.23.2-slim AS build", dockerfile)
 
+    def test_pnpm12_settings_live_in_workspace_config(self):
+        self.assertNotIn("pnpm", self.package)
+        workspace = read("pnpm-workspace.yaml")
+        self.assertRegex(workspace, r"(?m)^overrides:\s*$")
+        self.assertRegex(workspace, r"(?m)^\s+react:\s*19\.2\.7\s*$")
+        self.assertRegex(workspace, r"(?m)^\s+react-dom:\s*19\.2\.7\s*$")
+
     def test_dependabot_compatibility_workaround_is_enabled(self):
         workspace = read("pnpm-workspace.yaml")
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
