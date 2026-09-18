@@ -58,3 +58,48 @@ jobs:
           NODE
           echo "pnpm audit exit code: $status"
           exit 0
+
+      - name: Check security-fix release ages
+        shell: bash
+        run: |
+          node <<'NODE'
+          const { execFileSync } = require('child_process');
+          const targets = [
+            ['shell-quote','1.10.0'],
+            ['tar','7.5.21'],
+            ['@xmldom/xmldom','0.8.15'],
+            ['@xmldom/xmldom','0.9.12'],
+            ['brace-expansion','1.1.18'],
+            ['brace-expansion','2.1.4'],
+            ['brace-expansion','5.0.9'],
+            ['browserslist','4.28.7'],
+            ['fast-uri','3.1.6'],
+            ['form-data','4.0.6'],
+            ['js-yaml','3.15.2'],
+            ['js-yaml','4.3.2'],
+            ['linkify-it','5.0.2'],
+            ['nanoid','3.3.18'],
+            ['postcss','8.5.23'],
+            ['react-router-dom','7.18.2'],
+            ['svgo','3.3.5'],
+            ['undici','6.28.0'],
+            ['undici','7.29.0'],
+            ['vitest','4.1.11'],
+            ['baseline-browser-mapping','2.11.0'],
+            ['protobufjs','7.6.5'],
+            ['esbuild','0.28.1'],
+            ['image-size','2.0.3']
+          ];
+          console.log('RELEASE_AGES_BEGIN');
+          for (const [name, version] of targets) {
+            try {
+              const raw = execFileSync('pnpm', ['view', `${name}@${version}`, 'time', '--json'], {encoding:'utf8'});
+              const times = JSON.parse(raw);
+              const published = times[version] || 'UNKNOWN';
+              console.log([name, version, published].join('\t'));
+            } catch (e) {
+              console.log([name, version, 'LOOKUP_FAILED'].join('\t'));
+            }
+          }
+          console.log('RELEASE_AGES_END');
+          NODE
