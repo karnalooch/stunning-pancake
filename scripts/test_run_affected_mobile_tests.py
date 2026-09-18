@@ -13,6 +13,11 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         self.assertNotIn("--findRelatedTests", commands[0])
         self.assertNotIn("--runTestsByPath", commands[0])
 
+    def test_full_targets_mobile_directory(self):
+        command = commands_for_plan({"mobile": {"mode": "full"}})[0]
+        self.assertEqual(command[:3], ["pnpm", "--dir", "mobile"])
+        self.assertNotIn("--filter", command)
+
     def test_skip_has_no_commands(self):
         self.assertEqual(commands_for_plan({"mobile": {"mode": "skip"}}), [])
 
@@ -53,7 +58,7 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         ok, tests = _discover_related_tests(
             [
                 "pnpm",
-                "--filter",
+                "--dir",
                 "mobile",
                 "test",
                 "--",
@@ -75,7 +80,7 @@ class AffectedMobileRunnerTests(unittest.TestCase):
         ok, tests = _discover_related_tests(
             [
                 "pnpm",
-                "--filter",
+                "--dir",
                 "mobile",
                 "test",
                 "--",
