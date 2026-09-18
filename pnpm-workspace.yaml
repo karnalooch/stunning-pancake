@@ -6,3 +6,7 @@ packages:
 # Keep pnpm 12 lockfiles single-document until GitHub/Dependabot fully support
 # the environment lockfile document (dependabot/dependabot-core#15904).
 pmOnFail: ignore
+
+overrides:
+  react: 19.2.7
+  react-dom: 19.2.7
