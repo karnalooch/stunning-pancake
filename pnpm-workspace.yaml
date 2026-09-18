@@ -1,5 +1,15 @@
 pmOnFail: ignore
 
+# pnpm 11+ reads project settings from pnpm-workspace.yaml, not .npmrc.
+# Preserve the hoisted layout required by Expo/React Native and the admin Vite aliases.
+nodeLinker: hoisted
+publicHoistPattern:
+  - '*expo*'
+  - '*react-native*'
+  - react
+  - react-dom
+shamefullyHoist: true
+
 overrides:
   react: 19.2.7
   react-dom: 19.2.7
