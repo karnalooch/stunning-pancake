@@ -1,6 +1,6 @@
 {
   "name": "4velo",
-  "version": "1.0.0",
+  "version": "0.3.3-dev",
   "main": "index",
   "scripts": {
     "start": "expo start",
