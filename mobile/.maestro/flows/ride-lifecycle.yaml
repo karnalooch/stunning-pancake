@@ -1,11 +1,43 @@
 appId: com.sport.athlete
 ---
-# Authenticated user reaches Ride tab (E2E auto-login baked into local APK).
+# Critical Ride lifecycle smoke. Every transition is mandatory.
 - launchApp
 - extendedWaitUntil:
-    visible: "Ride"
+    visible: ".*(START JAZDY|START RIDE).*"
     timeout: 60000
-- tapOn: "Ride"
-- assertVisible:
-    text: ".*[Ss]tart.*"
-    optional: true
+
+- tapOn:
+    text: ".*(START JAZDY|START RIDE).*"
+- extendedWaitUntil:
+    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    timeout: 20000
+
+- tapOn:
+    text: ".*(PAUZA|PAUSE).*"
+- extendedWaitUntil:
+    visible: ".*(WZNÓW|RESUME).*"
+    timeout: 12000
+
+- tapOn:
+    text: ".*(WZNÓW|RESUME).*"
+- extendedWaitUntil:
+    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    timeout: 12000
+
+- tapOn:
+    text: ".*(PAUZA|PAUSE).*"
+- extendedWaitUntil:
+    visible: ".*(ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+    timeout: 12000
+
+- tapOn:
+    text: ".*(ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+- extendedWaitUntil:
+    visible: ".*(Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE).*"
+    timeout: 25000
+
+- tapOn:
+    text: ".*(POWRÓT|BACK TO HUB).*"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 15000
