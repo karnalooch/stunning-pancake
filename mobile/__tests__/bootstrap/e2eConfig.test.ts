@@ -25,10 +25,8 @@ describe('e2eConfig', () => {
     process.env = originalEnv;
   });
 
-  test('shouldSkipOnboardingForE2e defaults true when auto-login credentials are set', () => {
+  test('shouldSkipOnboardingForE2e defaults true when the E2E bypass flag is set', () => {
     process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN = 'true';
-    process.env.EXPO_PUBLIC_E2E_EMAIL = 'e2e@test.sport.ai';
-    process.env.EXPO_PUBLIC_E2E_PASSWORD = 'secret';
 
     // loadE2eConfig() resets modules, which makes jest-expo (@expo/env) reload a
     // local mobile/.env back into process.env. Blank the flag AFTER that reload
@@ -40,10 +38,17 @@ describe('e2eConfig', () => {
     expect(shouldSkipOnboardingForE2e()).toBe(true);
   });
 
+  test('does not expose credential fields in the mobile E2E config', () => {
+    process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN = 'true';
+
+    const { e2eConfig } = loadE2eConfig();
+
+    expect(e2eConfig).not.toHaveProperty('email');
+    expect(e2eConfig).not.toHaveProperty('password');
+  });
+
   test('shouldSkipOnboardingForE2e respects explicit false', () => {
     process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN = 'true';
-    process.env.EXPO_PUBLIC_E2E_EMAIL = 'e2e@test.sport.ai';
-    process.env.EXPO_PUBLIC_E2E_PASSWORD = 'secret';
     process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING = 'false';
 
     const { shouldSkipOnboardingForE2e } = loadE2eConfig();
