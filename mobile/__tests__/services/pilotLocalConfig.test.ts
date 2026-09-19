@@ -154,11 +154,18 @@ describe('pilot-local eas.json contract', () => {
     expect(build['pilot-local'].env.EXPO_PUBLIC_ENABLE_FIREBASE).toBe('false');
   });
 
-  test('Railway URLs in development/preview/production remain exactly unchanged in eas.json', () => {
+  test('remote profiles select EAS environments and do not inline backend endpoints', () => {
+    const expectedEnvironment = {
+      development: 'development',
+      preview: 'preview',
+      production: 'production',
+    } as const;
+
     for (const profile of ['development', 'preview', 'production'] as const) {
       expect(profile in build).toBe(true);
-      expect(build[profile].env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
-      expect(build[profile].env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
+      expect(build[profile].environment).toBe(expectedEnvironment[profile]);
+      expect(build[profile].env?.EXPO_PUBLIC_API_URL).toBeUndefined();
+      expect(build[profile].env?.EXPO_PUBLIC_TELEMETRY_URL).toBeUndefined();
     }
   });
 });
@@ -256,12 +263,11 @@ describe('app.config.js resolved Android cleartext plugin', () => {
     });
   });
 
-  test('Railway URLs in development/preview/production remain exactly unchanged in resolved app.config.js', () => {
+  test('environment-supplied remote URLs remain unchanged in resolved app.config.js', () => {
     for (const profile of ['development', 'preview', 'production'] as const) {
       const resolved = resolveWithProfile(profile) as { extra?: Record<string, unknown> };
-      // app.config.js does not source these from extra; the gates come from
-      // process.env. Confirm the resolved process.env-driven values reach the
-      // test unchanged and the documented Railway defaults are still exported.
+      // Remote EAS profiles source these from their selected EAS environment.
+      // Confirm process.env-driven values are propagated without hidden fallbacks.
       expect(process.env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
       expect(process.env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
       expect(resolved.extra?.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
@@ -305,7 +311,7 @@ describe('app.config.js Firebase plugin gating', () => {
   });
 
   test.each(['development', 'preview', 'production'] as const)(
-    '%s profile also drops Firebase plugins (flag is "false" in eas.json)',
+    '%s profile drops Firebase plugins when its EAS environment disables Firebase',
     (profile) => {
       const resolved = resolveWithProfile(profile) as { plugins?: PluginEntry[] };
       expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
@@ -378,7 +384,7 @@ describe('app.config.js googleServicesFile gating', () => {
     expect(getGoogleServicesFile(resolved, 'ios')).toBeUndefined();
   });
 
-  test('Railway profiles (development/preview/production) also drop googleServicesFile because the eas.json flag is "false"', () => {
+  test('remote profiles drop googleServicesFile when their EAS environment disables Firebase', () => {
     for (const profile of ['development', 'preview', 'production'] as const) {
       const resolved = resolveWithProfile(profile);
       expect(getGoogleServicesFile(resolved, 'android')).toBeUndefined();
