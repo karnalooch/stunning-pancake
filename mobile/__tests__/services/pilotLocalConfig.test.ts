@@ -323,18 +323,12 @@ describe('app.config.js Firebase plugin gating', () => {
     expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
   });
 
-  test('default resolution without env flag falls back to file presence (current behavior)', () => {
-    // Document the current default: when no env flag is set, Firebase is
-    // enabled if google-services.json exists on disk. The tracked file means
-    // local `expo start` in a sandbox without dotenv WILL enable Firebase,
-    // matching the upstream behavior before P1a. This is intentional — the
-    // pilot-local profile explicitly opts out via eas.json env.
+  test('default resolution without env flag keeps Firebase disabled', () => {
+    // Firebase must be an explicit opt-in. This keeps local bundles and EAS
+    // Update from silently diverging from builds when the environment omits
+    // EXPO_PUBLIC_ENABLE_FIREBASE.
     const resolved = resolveWithProfile(null) as { plugins?: PluginEntry[] };
-    const firebasePlugins = findFirebasePlugins(resolved.plugins ?? []);
-    // mobile/google-services.json is tracked in the repo, so plugins register.
-    expect(firebasePlugins).toEqual(
-      expect.arrayContaining(['@react-native-firebase/app', '@react-native-firebase/crashlytics']),
-    );
+    expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
   });
 
   test('EXPO_PUBLIC_ENABLE_FIREBASE="false" overrides presence of google-services.json', () => {
