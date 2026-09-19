@@ -1,0 +1,40 @@
+name: TEMP MMKV lock remediation
+
+on:
+  push:
+    branches:
+      - fix/t80-mmkv-v4
+
+permissions:
+  contents: read
+
+jobs:
+  regenerate-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.21.0
+
+      - name: Activate canonical pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@12.4.2 --activate
+          pnpm --version
+
+      - name: Regenerate lockfile only
+        run: pnpm install --lockfile-only --no-frozen-lockfile
+
+      - name: Emit exact lockfile for controlled commit
+        run: |
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+          data = base64.b64encode(Path("pnpm-lock.yaml").read_bytes()).decode("ascii")
+          print("MMKV_LOCK_B64_BEGIN")
+          for offset in range(0, len(data), 8000):
+              print(data[offset:offset + 8000])
+          print("MMKV_LOCK_B64_END")
+          PY
