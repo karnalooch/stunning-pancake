@@ -12,6 +12,7 @@ import { PixelText } from '../components/PixelText';
 import { ArcadeButton } from '../components/ArcadeButton';
 import { ScrollContainer } from '../components/ScrollContainer';
 import { LAYOUT } from '../theme/layout';
+import { VisualDesignGalleryScreen } from '../dev/VisualDesignGalleryScreen';
 
 export interface VisionGalleryEntry {
   label: string;
@@ -31,6 +32,10 @@ export const VisionGalleryScreen: React.FC<VisionGalleryScreenProps> = ({ entrie
         </PixelText>
         <PixelText size="xs" color="muted" style={{ marginBottom: 8 }}>
           Tryb przechwytywania — ekrany z danymi fixtures do porównań 1:1.
+        </PixelText>
+        <VisualDesignGalleryScreen />
+        <PixelText size="md" style={{ marginTop: 12, marginBottom: 4 }}>
+          SCREEN FIXTURES
         </PixelText>
         {entries.map((entry) => (
           <ArcadeButton
