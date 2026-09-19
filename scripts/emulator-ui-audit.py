@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 import re
 import subprocess
@@ -17,11 +18,13 @@ from pathlib import Path
 from PIL import Image
 
 REPO = Path(__file__).resolve().parents[1]
-ADB = ["adb", "-s", "emulator-5554"]
+ADB = ["adb"]
+DEVICE_ID = ""
+APP_ID = "com.sport.athlete"
 DATE = date.today().isoformat()
 OUT_DIR = REPO / "docs" / "design" / "screenshots" / f"{DATE}-emulator-audit"
 REPORT = REPO / "docs" / "design" / f"MOBILE_EMULATOR_UI_AUDIT_{DATE}.md"
-ACTIVITY = "com.sport.athlete/.MainActivity"
+ACTIVITY = f"{APP_ID}/.MainActivity"
 
 TABS = {
     "jazda": (170, 2282),
@@ -42,6 +45,47 @@ class Step:
 
 
 steps: list[Step] = []
+
+
+def resolve_device_serial(requested: str | None) -> str:
+    proc = subprocess.run(
+        ["adb", "devices"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "adb devices failed")
+
+    online: list[str] = []
+    for raw in proc.stdout.splitlines()[1:]:
+        fields = raw.split()
+        if len(fields) >= 2 and fields[1] == "device":
+            online.append(fields[0])
+
+    if requested:
+        if requested not in online:
+            raise RuntimeError(
+                f"Requested adb device {requested!r} is not online; online={online}"
+            )
+        return requested
+
+    if len(online) != 1:
+        raise RuntimeError(
+            "Exactly one authorized adb device is required when --serial is omitted; "
+            f"online={online}"
+        )
+    return online[0]
+
+
+def configure_runtime(serial: str, app_id: str) -> None:
+    global ADB, DEVICE_ID, APP_ID, ACTIVITY
+    DEVICE_ID = serial
+    APP_ID = app_id
+    ADB = ["adb", "-s", serial]
+    ACTIVITY = f"{app_id}/.MainActivity"
 
 
 def run(cmd: list[str], timeout: int = 45) -> subprocess.CompletedProcess:
@@ -88,7 +132,7 @@ def visible_texts(root: ET.Element | None, limit: int = 25) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
     for n in root.iter("node"):
-        if n.attrib.get("package") != "com.sport.athlete":
+        if n.attrib.get("package") != APP_ID:
             continue
         t = (n.attrib.get("text") or n.attrib.get("content-desc") or "").strip()
         if not t or t in seen or len(t) > 80:
@@ -105,7 +149,7 @@ def find_bounds(root: ET.Element | None, pattern: str) -> tuple[int, int] | None
         return None
     rx = re.compile(pattern, re.I)
     for n in root.iter("node"):
-        if n.attrib.get("package") != "com.sport.athlete":
+        if n.attrib.get("package") != APP_ID:
             continue
         t = (n.attrib.get("text") or n.attrib.get("content-desc") or "").strip()
         rid = n.attrib.get("resource-id") or ""
@@ -202,6 +246,38 @@ def tap_pattern(pattern: str, fallback: tuple[int, int] | None = None) -> bool:
         sleep()
         return True
     return False
+
+
+def ui_has_pattern(pattern: str) -> bool:
+    root = dump_ui()
+    if root is None:
+        return False
+    rx = re.compile(pattern, re.I)
+    for node in root.iter("node"):
+        if node.attrib.get("package") != APP_ID:
+            continue
+        haystack = " ".join(
+            filter(
+                None,
+                (
+                    node.attrib.get("text"),
+                    node.attrib.get("content-desc"),
+                    node.attrib.get("resource-id"),
+                ),
+            )
+        )
+        if rx.search(haystack):
+            return True
+    return False
+
+
+def wait_for_ui(pattern: str, timeout_s: float = 15.0) -> bool:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if ui_has_pattern(pattern):
+            return True
+        sleep(1.0)
+    return ui_has_pattern(pattern)
 
 
 def screencap_image() -> Image.Image | None:
@@ -343,14 +419,26 @@ def screen_signature(img: Image.Image | None) -> str:
 
 
 def main() -> int:
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
-    if "device" not in (run(ADB + ["get-state"]).stdout or ""):
-        print("Brak emulatora", file=sys.stderr)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--serial", default=None, help="adb device serial; required when multiple devices are online")
+    parser.add_argument("--app-id", default="com.sport.athlete", help="Android application id")
+    args = parser.parse_args()
+
+    try:
+        serial = resolve_device_serial(args.serial)
+    except (RuntimeError, subprocess.SubprocessError) as exc:
+        print(f"ADB preflight failed: {exc}", file=sys.stderr)
         return 1
 
-    adb("shell", "pm", "grant", "com.sport.athlete", "android.permission.ACCESS_FINE_LOCATION")
-    adb("shell", "pm", "grant", "com.sport.athlete", "android.permission.ACCESS_COARSE_LOCATION")
-    adb("shell", "pm", "grant", "com.sport.athlete", "android.permission.POST_NOTIFICATIONS")
+    configure_runtime(serial, args.app_id)
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    if "device" not in (run(ADB + ["get-state"]).stdout or ""):
+        print(f"Urządzenie {DEVICE_ID} nie jest online", file=sys.stderr)
+        return 1
+
+    adb("shell", "pm", "grant", APP_ID, "android.permission.ACCESS_FINE_LOCATION")
+    adb("shell", "pm", "grant", APP_ID, "android.permission.ACCESS_COARSE_LOCATION")
+    adb("shell", "pm", "grant", APP_ID, "android.permission.POST_NOTIFICATIONS")
     foreground_app()
 
     foreground_app()
@@ -401,21 +489,162 @@ def main() -> int:
 
     capture("01_ride_dashboard", "Jazda — dashboard (stan startowy)")
 
+    # Critical Ride smoke is fail-closed. No coordinate fallback and no optional
+    # continuation: a screenshot after a failed transition is not evidence.
     img = screencap_image()
-    if classify_capture(img) == "main" and tap_pattern(r"DO JAZDY", (540, 1050)):
-        capture("02_active_ride_hud", "Aktywny HUD jazdy")
-        if tap_pattern(r"PAUZA", (800, 2100)):
-            sleep(1.2)
-            capture("03_ride_paused", "Modal pauzy jazdy")
-            if tap_pattern(r"ZATRZYMAJ", (540, 1200)):
-                sleep(3)
-                capture("03b_ride_stopped", "Po zatrzymaniu jazdy")
-            else:
-                steps.append(Step(id="03b_ride_stopped", title="Zatrzymanie jazdy", status="warn", notes=["Brak przycisku ZATRZYMAJ JAZDĘ"]))
-        else:
-            steps.append(Step(id="03_ride_paused", title="Pauza jazdy", status="warn", notes=["Brak PAUZA — long-press STOP niewiarygodny przez adb"]))
-    else:
-        steps.append(Step(id="02_active_ride_hud", title="HUD jazdy", status="skip", notes=["Brak DO JAZDY — może już na HUD lub brak aktywnej sesji"]))
+    if classify_capture(img) != "main":
+        steps.append(
+            Step(
+                id="02_active_ride_hud",
+                title="HUD jazdy",
+                status="fail",
+                notes=["Dashboard nie jest w rozpoznanym stanie głównym przed START JAZDY"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not tap_pattern(r"ride-start-button|START JAZDY|START RIDE|DO JAZDY", None):
+        steps.append(
+            Step(
+                id="02_active_ride_hud",
+                title="HUD jazdy",
+                status="fail",
+                notes=["Nie znaleziono dostępnego przycisku START JAZDY"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 20):
+        capture_raw(
+            "02_active_ride_hud",
+            "Aktywny HUD jazdy — transition FAIL",
+            notes=["START JAZDY nie doprowadził do aktywnego HUD w 20 s"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("02_active_ride_hud", "Aktywny HUD jazdy")
+
+    if not tap_pattern(r"ride-pause-button|PAUZA|PAUSE", None):
+        steps.append(
+            Step(
+                id="03_ride_paused",
+                title="Pauza jazdy",
+                status="fail",
+                notes=["Aktywny HUD nie udostępnia przycisku PAUZA"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+        capture_raw(
+            "03_ride_paused",
+            "Modal pauzy jazdy — transition FAIL",
+            notes=["PAUZA nie doprowadziła do ekranu RidePaused"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03_ride_paused", "Modal pauzy jazdy")
+
+    if not tap_pattern(r"WZNÓW|RESUME", None):
+        steps.append(
+            Step(
+                id="03b_ride_resumed",
+                title="Wznowienie jazdy",
+                status="fail",
+                notes=["RidePaused nie udostępnia przycisku WZNÓW/RESUME"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 12):
+        capture_raw(
+            "03b_ride_resumed",
+            "Wznowiona jazda — transition FAIL",
+            notes=["WZNÓW nie wróciło do aktywnego HUD"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03b_ride_resumed", "Wznowiona jazda")
+
+    if not tap_pattern(r"ride-pause-button|PAUZA|PAUSE", None):
+        steps.append(
+            Step(
+                id="03c_ride_repaused",
+                title="Ponowna pauza przed STOP",
+                status="fail",
+                notes=["Brak PAUZA po wznowieniu jazdy"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+        capture_raw(
+            "03c_ride_repaused",
+            "Ponowna pauza — transition FAIL",
+            notes=["Nie osiągnięto ekranu zatrzymania po ponownej pauzie"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    if not tap_pattern(r"ZATRZYMAJ JAZDĘ|STOP RIDE", None):
+        steps.append(
+            Step(
+                id="03d_ride_summary",
+                title="Zakończenie jazdy",
+                status="fail",
+                notes=["Brak dostępnego przycisku ZATRZYMAJ JAZDĘ"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE|POWRÓT|BACK TO HUB", 25):
+        capture_raw(
+            "03d_ride_summary",
+            "Podsumowanie jazdy — transition FAIL",
+            notes=["STOP nie doprowadził do RideSummary w 25 s"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03d_ride_summary", "Podsumowanie jazdy")
+
+    if not tap_pattern(r"POWRÓT|BACK TO HUB", None):
+        steps.append(
+            Step(
+                id="03e_home_after_summary",
+                title="Powrót do Home po podsumowaniu",
+                status="fail",
+                notes=["RideSummary nie udostępnia POWRÓT/BACK TO HUB"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"START JAZDY|START RIDE|DO JAZDY|KREATOR GPS", 15):
+        capture_raw(
+            "03e_home_after_summary",
+            "Home po podsumowaniu — transition FAIL",
+            notes=["POWRÓT nie doprowadził do dashboardu Ride"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03e_home_after_summary", "Home po podsumowaniu")
 
     tap_tab("jazda")
     if tap_pattern(r"KREATOR GPS", (540, 280)):
@@ -546,8 +775,8 @@ def write_report() -> None:
         "| | |",
         "|--|--|",
         f"| **Data** | {DATE} |",
-        "| **Urządzenie** | `emulator-5554` (SportEmulator) |",
-        "| **Pakiet** | `com.sport.athlete` |",
+        f"| **Urządzenie** | `{DEVICE_ID}` |",
+        f"| **Pakiet** | `{APP_ID}` |",
         "| **Build** | lokalny `assembleRelease` + E2E auto-login |",
         f"| **Zrzuty** | [`screenshots/{DATE}-emulator-audit/`](screenshots/{DATE}-emulator-audit/) |",
         "| **Skrypt** | `python scripts/emulator-ui-audit.py` |",
