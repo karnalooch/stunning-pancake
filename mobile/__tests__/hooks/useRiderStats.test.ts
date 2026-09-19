@@ -1,5 +1,5 @@
 import type { ActivityItem } from '../../src/services/api';
-import { summarizeRiderHistory } from '../../src/hooks/useRiderStats';
+import { summarizeRiderHistory } from '../../src/home/riderStatsSummary';
 
 function activity(
   id: number,
