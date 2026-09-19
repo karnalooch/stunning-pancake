@@ -41,8 +41,16 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertNotIn("public-hoist-pattern", npmrc)
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
         self.assertRegex(workspace, r"(?m)^overrides:\s*$")
-        self.assertIn("react: 19.2.7", workspace)
-        self.assertIn("react-dom: 19.2.7", workspace)
+        self.assertNotRegex(
+            workspace,
+            r"(?m)^  react:\s*19[.]2[.]7\s*$",
+            "mobile's Expo React version must not be overridden repo-wide",
+        )
+        self.assertNotRegex(
+            workspace,
+            r"(?m)^  react-dom:\s*19[.]2[.]7\s*$",
+            "mobile's Expo React DOM version must not be overridden repo-wide",
+        )
         expected_build_policy = (
             "'@shopify/react-native-skia@2.4.18': true",
             "'electron@44.4.1': true",

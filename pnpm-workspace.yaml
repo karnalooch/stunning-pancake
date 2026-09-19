@@ -11,8 +11,6 @@ publicHoistPattern:
 shamefullyHoist: true
 
 overrides:
-  react: 19.2.7
-  react-dom: 19.2.7
   shell-quote: 1.10.0
   tar: 7.5.21
   '@xmldom/xmldom@>=0.7.0 <0.9.0': 0.8.15
