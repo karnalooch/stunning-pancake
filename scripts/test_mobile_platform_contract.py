@@ -26,6 +26,7 @@ class MobilePlatformContractTests(unittest.TestCase):
         cli = eas.get("cli", {})
         self.assertIs(cli.get("requireCommit"), True)
         self.assertEqual(cli.get("appVersionSource"), "remote")
+        self.assertEqual(cli.get("version"), "24.7.0")
 
         build = eas.get("build", {})
         expected_env = {
