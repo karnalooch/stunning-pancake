@@ -34,7 +34,8 @@ export function summarizeRiderHistory(list: ActivityItem[], now = new Date()) {
     if (startedAt < weekStart || startedAt >= nextWeek) continue;
 
     const dayIndex = (startedAt.getDay() + 6) % WEEK_DAY_COUNT;
-    weeklyDistanceByDayKm[dayIndex] +=
+    weeklyDistanceByDayKm[dayIndex] =
+      (weeklyDistanceByDayKm[dayIndex] ?? 0) +
       Math.max(0, activity.distance ?? 0) / 1000;
   }
 
