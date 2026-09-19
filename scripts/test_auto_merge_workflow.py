@@ -23,8 +23,8 @@ class AutoMergeWorkflowContractTests(unittest.TestCase):
         self.assertIn("contents: write", self.text)
         self.assertIn("pull-requests: write", self.text)
         self.assertIn("checks: read", self.text)
+        self.assertIn("issues: write", self.text)
         self.assertNotIn("actions: write", self.text)
-        self.assertNotIn("issues: write", self.text)
 
     def test_concurrency_tracks_pr_across_all_event_shapes(self):
         self.assertIn("github.event.pull_request.number", self.text)
