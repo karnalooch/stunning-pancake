@@ -223,16 +223,17 @@ export class LlmCoachService {
       // Reset circuit on success
       this._circuit.failures = 0;
 
-      // Monitor latency P95/P99 thresholds
-      if (latency > 450) {
-        firebaseCapture(
-          new Error(`LLM latency P95 breach: ${latency}ms for ${ctx.personality}/${ctx.category}`),
-          'LLM_LATENCY_HIGH',
-        );
-      } else if (latency > 1900) {
+      // Monitor latency P95/P99 thresholds. Check the critical threshold
+      // first so >1900 ms is not swallowed by the broader >450 ms branch.
+      if (latency > 1900) {
         firebaseCapture(
           new Error(`LLM latency P99 breach: ${latency}ms — approaching timeout`),
           'LLM_LATENCY_CRITICAL',
+        );
+      } else if (latency > 450) {
+        firebaseCapture(
+          new Error(`LLM latency P95 breach: ${latency}ms for ${ctx.personality}/${ctx.category}`),
+          'LLM_LATENCY_HIGH',
         );
       }
 
