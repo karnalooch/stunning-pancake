@@ -23,7 +23,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
-      "environment": "development"
+      "environment": "development",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
+      }
     },
     "preview": {
       "node": "24.21.0",
@@ -32,14 +35,20 @@
         "buildType": "apk"
       },
       "channel": "preview",
-      "environment": "preview"
+      "environment": "preview",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
+      }
     },
     "production": {
       "node": "24.21.0",
       "distribution": "store",
       "channel": "production",
       "autoIncrement": true,
-      "environment": "production"
+      "environment": "production",
+      "env": {
+        "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
+      }
     }
   },
   "submit": {
