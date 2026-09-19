@@ -396,10 +396,20 @@ jobs:
       - name: Preview canonical Expo dependency remediation
         if: steps.expo_deps.outcome != 'success'
         continue-on-error: true
-        working-directory: mobile
         run: |
-          pnpm exec expo install --fix
-          cd ..
+          # The repo-wide React override currently forces the admin's React patch
+          # into mobile as well. Preview the real Expo-compatible graph without
+          # mutating the committed tree or allowing this diagnostic to affect
+          # the baseline lint/typecheck/tests above.
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("pnpm-workspace.yaml")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("  react: 19.2.7\n", "")
+          text = text.replace("  react-dom: 19.2.7\n", "")
+          path.write_text(text, encoding="utf-8")
+          PY
+          pnpm --dir mobile exec expo install --fix
           echo "::group::Expo remediation diff"
           git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
           echo "::endgroup::"
