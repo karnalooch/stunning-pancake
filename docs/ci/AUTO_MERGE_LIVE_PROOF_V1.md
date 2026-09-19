@@ -17,3 +17,19 @@ all review threads are resolved.
 
 The resulting pull request and linked Issue are the audit evidence for this
 validation.
+
+
+## Hardened lifecycle proof
+
+A second production proof is executed after #144.
+
+This validation specifically requires all of the following to happen without a
+manual merge API call:
+
+- the eligible pull request is squash-merged by the fail-closed workflow;
+- its same-repository closing Issue is explicitly closed as `completed`;
+- the Project lifecycle can then advance the completed work to `Done`.
+
+The workflow must re-evaluate after the Kubernetes Release Gate and must keep
+its repository-wide auto-merge transaction serialized until linked-Issue
+closure is complete.
