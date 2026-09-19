@@ -36,6 +36,7 @@ describe('T79 Home visual contract', () => {
       'home-start-ride',
       'home-go-to-ride',
       'home-stats-error',
+      'home-stats-offline',
       'home-first-use-empty',
       'home-weekly-context',
       'home-week-distance',
