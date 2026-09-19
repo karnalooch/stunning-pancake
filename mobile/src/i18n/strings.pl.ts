@@ -94,7 +94,12 @@ export const stringsPl = {
     goToRide: 'DO JAZDY',
     lastRide: 'Ostatni przejazd',
     noRides: 'Brak zapisanych przejazdów.',
+    firstRideHint: 'Rozpocznij pierwszą jazdę, aby zbudować historię aktywności.',
     weeklyLoad: 'Obciążenie tygodnia',
+    weekDistance: 'Dystans w tym tygodniu',
+    noWeekRides: 'W tym tygodniu nie ma jeszcze zapisanych jazd.',
+    historyErrorTitle: 'Historia jazd niedostępna',
+    historyErrorBody: 'Nie udało się pobrać historii jazd. Nagrywanie jazdy nadal jest dostępne.',
     gpsWizard: 'Kreator GPS',
   },
   auth: {
