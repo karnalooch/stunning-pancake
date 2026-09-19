@@ -11,7 +11,6 @@ import { FONTS } from '../theme/fonts';
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(11, 29, 51, 0.72)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 16,
@@ -59,7 +58,7 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
   const c = theme.colors as Record<string, string>;
   const outline = c.hudOutline ?? '#111111';
   return (
-    <SafeAreaView style={styles.overlay} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.overlay, { backgroundColor: c.scrimStrong }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.modal,
