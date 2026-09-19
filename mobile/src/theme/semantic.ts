@@ -34,6 +34,7 @@ export interface SemanticColors {
     inactive: string;
   };
   selection: {
+    active: string;
     background: string;
     border: string;
     content: string;
@@ -92,6 +93,7 @@ export function getSemanticColors(colors: RawColors): SemanticColors {
       inactive: colors.gpGoldLight,
     },
     selection: {
+      active: colors.goldAmber,
       background: colors.surfaceContainerHigh,
       border: colors.goldAmber,
       content: colors.onBackground,
