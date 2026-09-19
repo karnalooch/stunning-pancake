@@ -6,6 +6,29 @@ import { OfflineCacheService } from '../services/OfflineCacheService';
 import { withRetry } from '../services/apiRetry';
 import { useGameProgress } from './useGameProgress';
 
+type RiderHistoryLoad = {
+  items: ActivityItem[];
+  offline: boolean;
+  error: boolean;
+};
+
+async function loadRiderHistory(): Promise<RiderHistoryLoad> {
+  try {
+    const data = await withRetry(() => ActivityService.getHistory());
+    const items = Array.isArray(data) ? data : [];
+    OfflineCacheService.setHistory(items);
+    return { items, offline: false, error: false };
+  } catch {
+    const cached = OfflineCacheService.getHistory();
+
+    if (Array.isArray(cached)) {
+      return { items: cached, offline: true, error: false };
+    }
+
+    return { items: [], offline: false, error: true };
+  }
+}
+
 /** Single SSOT for streak (progression) + rides/distance (API/cache). */
 export function useRiderStats() {
   const { progression } = useGameProgress();
@@ -16,39 +39,30 @@ export function useRiderStats() {
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
 
-  const loadHistory = useCallback(async () => {
-    try {
-      const data = await withRetry(() => ActivityService.getHistory());
-      const list = Array.isArray(data) ? data : [];
-      OfflineCacheService.setHistory(list);
-      setItems(list);
-      setOffline(false);
-      setError(false);
-    } catch {
-      const cached = OfflineCacheService.getHistory();
-
-      if (Array.isArray(cached)) {
-        setItems(cached);
-        setOffline(true);
-        setError(false);
-      } else {
-        setItems([]);
-        setOffline(false);
-        setError(true);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const refresh = useCallback(async () => {
     setLoading(true);
-    await loadHistory();
-  }, [loadHistory]);
+    const result = await loadRiderHistory();
+    setItems(result.items);
+    setOffline(result.offline);
+    setError(result.error);
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
+    let cancelled = false;
+
+    void loadRiderHistory().then((result) => {
+      if (cancelled) return;
+      setItems(result.items);
+      setOffline(result.offline);
+      setError(result.error);
+      setLoading(false);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const stats = useMemo(() => summarizeRiderHistory(items), [items]);
 
