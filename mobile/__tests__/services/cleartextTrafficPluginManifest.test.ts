@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 // Native proof: confirm the *real* `withAndroidCleartextTraffic` mod exported by
 // the installed `expo-build-properties` package writes
 // `application.$['android:usesCleartextTraffic'] = "true"` to the parsed
