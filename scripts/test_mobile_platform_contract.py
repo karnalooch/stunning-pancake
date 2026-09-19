@@ -58,11 +58,28 @@ class MobilePlatformContractTests(unittest.TestCase):
     def test_eas_commands_use_pinned_eas_cli_package(self):
         package = json.loads(read(MOBILE / "package.json"))
         scripts = package.get("scripts", {})
-        for name in ("android", "ios", "build:pilot-local:android", "deploy:mobile"):
+        for name in (
+            "android",
+            "ios",
+            "build:pilot-local:android",
+            "build:dev:android",
+            "build:dev:ios",
+            "build:preview:android",
+            "build:preview:ios",
+            "build:prod:android",
+            "build:prod:ios",
+            "deploy:mobile",
+        ):
             with self.subTest(script=name):
                 command = scripts.get(name, "")
                 self.assertIn("pnpm dlx eas-cli@24.7.0", command)
                 self.assertNotIn("npx eas ", command)
+
+        self.assertIn(
+            "pnpm exec expo prebuild --clean -p android",
+            scripts.get("build:local:preview:android", ""),
+        )
+        self.assertNotIn("npx expo ", scripts.get("build:local:preview:android", ""))
 
     def test_dev_server_script_is_explicitly_dev_client(self):
         package = json.loads(read(MOBILE / "package.json"))
