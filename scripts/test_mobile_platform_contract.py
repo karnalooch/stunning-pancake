@@ -46,6 +46,18 @@ class MobilePlatformContractTests(unittest.TestCase):
             "production must not silently be an installable preview APK",
         )
 
+    def test_remote_eas_profiles_do_not_inline_backend_endpoints(self):
+        eas = json.loads(read(MOBILE / "eas.json"))
+        for profile in ("development", "preview", "production"):
+            with self.subTest(profile=profile):
+                env = eas["build"][profile].get("env", {})
+                self.assertNotIn("EXPO_PUBLIC_API_URL", env)
+                self.assertNotIn("EXPO_PUBLIC_TELEMETRY_URL", env)
+
+        pilot = eas["build"]["pilot-local"].get("env", {})
+        self.assertEqual(pilot.get("EXPO_PUBLIC_API_URL"), "http://localhost:8000")
+        self.assertEqual(pilot.get("EXPO_PUBLIC_TELEMETRY_URL"), "http://localhost:8001")
+
     def test_sdk55_update_command_has_explicit_channel_and_environment(self):
         package = json.loads(read(MOBILE / "package.json"))
         deploy = package.get("scripts", {}).get("deploy:mobile", "")
