@@ -54,8 +54,17 @@ export function useRiderStats() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    const requestId = ++requestSequence.current;
+
+    void loadRiderHistory().then((result) => {
+      if (requestId !== requestSequence.current) return;
+
+      setItems(result.items);
+      setOffline(result.offline);
+      setError(result.error);
+      setLoading(false);
+    });
+  }, []);
 
   const stats = useMemo(() => summarizeRiderHistory(items), [items]);
 
