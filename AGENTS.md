@@ -26,15 +26,36 @@
 - Po dwóch kolejnych nieskutecznych poprawkach tego samego problemu przerwij zgadywanie. Przedstaw przyczynę lub brakujące dane, zmienione pliki i proponowany następny krok.
 - Po spełnieniu kryteriów i wymaganych kontroli zakończ. Nie uruchamiaj kolejnego audytu dla samego potwierdzenia.
 
+## Issue → Project → dostarczenie
+- Każde nowe zadanie, które ma zmienić repozytorium, zaczynaj od jednego głównego GitHub Issue, chyba że użytkownik wskazał już właściwe Issue lub istniejący PR. Nie twórz Issue dla samej analizy, planowania, odczytu lub odpowiedzi bez zmian w repo.
+- Issue jest kanonicznym elementem planowania. Zapisz w nim co najmniej: cel, zakres i non-scope, kryteria ukończenia, wymagane kontrole oraz odniesienie do właściwej transzy/takeover planu, jeśli zadanie do niej należy.
+- Upewnij się, że Issue jest widoczne w GitHub Project `4VELO — Product & Takeover`. Auto-add jest mechanizmem pomocniczym, nie dowodem wykonania; gdy narzędzia pozwalają, zweryfikuj obecność i ustaw właściwe pola Project, w szczególności `Status`, `Priority`, `Area`, `Phase`, `Work type` i `Effort` tam, gdzie mają zastosowanie.
+- Praca należąca do konkretnego wydania musi mieć przypisany właściwy Milestone przed rozpoczęciem implementacji. Dla zadania naprawdę release-neutral (np. czyste governance/docs) brak Milestone musi być świadomy i jawnie opisany w Issue lub raporcie.
+- Dopiero po ustaleniu Issue/Project/Milestone utwórz osobną gałąź z aktualnego `main`, chyba że zadanie jawnie wskazuje istniejącą gałąź.
+- Po pierwszym spójnym commicie utwórz Draft PR możliwie wcześnie. PR ma wskazywać główne Issue przez `Closes #<issue>` (lub równoważny wspierany keyword), opisywać zakres i walidację oraz zawierać wymagane dla danej transzy deklaracje/kontrakty.
+- Issue pozostaje kanonicznym trackingiem pracy, a PR jest artefaktem wykonawczym. Podczas implementacji ustaw odpowiednie elementy Project na `In progress`; po oznaczeniu PR jako Ready for review ustaw PR na `In review`, a Issue pozostaw jako aktywne do czasu merge.
+- Merge ręczny nadal wymaga wyraźnego polecenia użytkownika. Wyjątkiem jest bezpieczny auto-merge opisany w sekcji `Automatyczne mergowanie`; standardem pozostaje squash merge, jeśli repo lub konkretne zadanie nie wymagają innej metody.
+- Po merge zweryfikuj: PR jest merged, `Closes #...` zamknęło Issue, automatyzacje Project ustawiły zakończone elementy na `Done`, a `main` wskazuje oczekiwany commit. Nie zakładaj, że automatyzacja zadziałała bez odczytanego potwierdzenia.
+- Jeśli agent nie ma uprawnień do Projects/Milestones lub dostępne narzędzia nie pozwalają wykonać/zweryfikować kroku, nie obchodź tego innym mechanizmem i nie udawaj sukcesu. Wykonaj bezpieczną część procesu, a brakujący krok oznacz jako `BLOCKED` lub `MANUAL ACTION REQUIRED`.
+- Nie twórz dodatkowych Issue/PR tylko po to, by zadowolić proces. Jedna spójna transza powinna mieć jeden główny Issue i jeden odpowiadający mu PR, o ile zakres nie wymaga jawnego podziału.
+
 ## Git i ochrona pracy
 - Zachowaj istniejące zmiany użytkownika. Nie resetuj, nie czyść, nie nadpisuj ani nie stashuj ich automatycznie.
 - Brudne drzewo nie blokuje odczytów ani niezależnej pracy. Jeśli zmiany kolidują z zadaniem lub uniemożliwiają bezpieczną zmianę gałęzi, opisz konkretną kolizję.
 - Dla nowego zadania implementacyjnego pracuj na osobnej gałęzi, jeśli zadanie nie wskazuje istniejącej. Nie przenoś zmian między gałęziami bez ustalenia ich pochodzenia.
-- Commit, push i PR wykonuj, gdy obejmuje je zlecenie; nie proś ponownie o już udzieloną zgodę. Merge, wdrożenie, force-push i operacje destrukcyjne wymagają wyraźnego zlecenia obejmującego tę czynność.
-- Dla aktywnego zadania implementacyjnego utwórz draft PR możliwie wcześnie, gdy tylko istnieje sensowna gałąź i pierwszy spójny commit, aby praca była widoczna w GitHub Project. Nie twórz PR dla samej analizy, planowania lub odczytu.
-- Status GitHub Project ma odzwierciedlać rzeczywisty etap pracy: aktywna implementacja = `In progress`, PR oznaczony jako Ready for review = `In review`, merge = `Done`. `Done` po merge obsługuje automatyzacja Project; nie ustawiaj go wcześniej ręcznie. Jeśli agent nie ma uprawnień do zmiany statusu Project, zgłoś to w raporcie zamiast udawać wykonanie.
+- Commit, push i PR wykonuj, gdy obejmuje je zlecenie; nie proś ponownie o już udzieloną zgodę. Wdrożenie, force-push i operacje destrukcyjne wymagają wyraźnego zlecenia obejmującego tę czynność. Merge może być automatyczny wyłącznie dla niskiego ryzyka zgodnie z sekcją `Automatyczne mergowanie`; pozostałe PR-y wymagają wyraźnego polecenia merge.
+- Widoczność pracy w GitHub Project i statusy Issue/PR prowadź zgodnie z sekcją `Issue → Project → dostarczenie`; nie duplikuj alternatywnego workflow w zadaniu.
 - Dodawaj do stage konkretne pliki zadania. Przed commitem sprawdź staged diff i jego zgodność z zakresem.
 - Nie ujawniaj sekretów, tokenów, prywatnych kluczy ani danych produkcyjnych w odpowiedzi lub logach.
+
+## Automatyczne mergowanie
+- Domyślnie traktuj merge jako `manual`. Agent może oznaczyć PR dokładną linią `Auto-merge: eligible` tylko po sprawdzeniu pełnej listy zmienionych plików i wyłącznie dla rutynowej zmiany niskiego ryzyka.
+- Nie oznaczaj jako eligible zmian obejmujących workflowy/actions, skrypty automatyzacji repo, `AGENTS.md`, CI/merge policy, deployment/Kubernetes/Docker/infra, sekrety, auth/OAuth/security, migracje baz danych, dependency manifests/lockfiles/requirements ani materiał kluczy/certyfikatów. Przy niepewności użyj `Auto-merge: manual`.
+- Sam marker nie upoważnia do merge. Repozytoryjna automatyzacja musi niezależnie potwierdzić: PR z tego samego repo i od właściciela, target `main`, non-draft, co najmniej jedno same-repo Issue wskazane przez GitHub `closingIssuesReferences`, brak ryzykownych ścieżek, `Aggregate CI gate = success`, `Kilo Code Review = success`, brak aktywnego `CHANGES_REQUESTED`, brak nierozwiązanych review threads i mergeability względem aktualnego `main`.
+- Jeśli bezpieczny PR jest tylko behind względem `main`, automatyzacja może wykonać zwykłe GitHub update-branch i musi poczekać na świeże kontrole. Nie używaj force-push do przygotowania auto-merge.
+- Automatyczny merge zawsze jest squash. Branch protection pozostaje nadrzędną bramką; nie twórz obejść ani tokenów z prawem bypassu.
+- Zmiany polityki auto-merge oraz samej implementacji automatyzacji zawsze są `Auto-merge: manual` i wymagają jawnego polecenia użytkownika do merge.
+- Po udanym auto-merge workflow ma jawnie zamknąć powiązane same-repo closing Issues jako `completed`. Nadal zweryfikuj wynik: PR merged, Issue zamknięte, Project `Done` i oczekiwany HEAD `main`.
 
 ## Implementacja w monorepo
 - Korzystaj z istniejących wzorców i zależności. Nie dodawaj bibliotek ani abstrakcji bez potrzeby wynikającej z zadania.

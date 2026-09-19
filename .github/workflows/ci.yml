@@ -434,6 +434,11 @@ jobs:
           python -m unittest scripts/test_project_status_automation.py -v
           python -m unittest scripts/test_project_status_workflow.py -v
 
+      - name: Test fail-closed auto-merge policy
+        run: |
+          python -m unittest scripts/test_auto_merge.py -v
+          python -m unittest scripts/test_auto_merge_workflow.py -v
+
       - name: Validate product version contract
         shell: bash
         run: |
