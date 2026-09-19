@@ -1,49 +1,41 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-  Vision Parity Full Harness — build, capture, diff, report.
-  Pojedyncze polecenie do pełnej pętli wizja-vs-kod.
+  4VELO local visual verification harness.
 
 .DESCRIPTION
-  Kolejność:
-    1. Konfiguruje .env (EXPO_PUBLIC_VISION_FIXTURES=true)
-    2. Instaluje/aktualizuje Android SDK (jeśli brak)
-    3. Buduje APK (lokalnie lub przez EAS)
-    4. Instaluje APK na emulatorze/devicu
-    5. Uruchamia emulator-ui-audit.py → screenshoty 19 ekranów
-    6. Odpala vision_parity_harness.py → SSIM + checklist + composite diffy
-    7. Zapisuje raport w docs/design/screenshots/<DATE>-parity-progress/
+  Fail-closed pipeline for local Android visual verification:
+    1. Resolve Android SDK/JDK without machine-specific paths.
+    2. Select exactly one authorized device (or require -DeviceId).
+    3. Build a fresh local pilot-style APK, unless -SkipBuild is supplied.
+    4. Install that exact APK.
+    5. Run emulator-ui-audit.py against the selected device.
+    6. Run the directional vision parity report.
+
+  The EAS cloud mode intentionally does NOT capture screenshots after a cloud
+  build because the artifact is not installed by this script. This prevents
+  accidental screenshots from a stale APK.
 
 .PARAMETER DeviceId
-  ADB device ID (domyślnie: emulator-5554)
+  Optional adb serial. If omitted, exactly one authorized device must exist.
 
 .PARAMETER SkipBuild
-  Pomiń budowanie APK (użyj istniejącego)
+  Do not rebuild/reinstall. Intended only when artifact provenance is already
+  recorded separately.
 
 .PARAMETER SkipCapture
-  Pomiń przechwytywanie screenshotów (użyj istniejących)
+  Skip device screenshots and only run the parity report on existing captures.
 
 .PARAMETER BuildMode
-  "local" (gradle) lub "eas" (Expo Application Services cloud)
+  local = clean Expo prebuild + Gradle release APK.
+  eas   = EAS cloud preview build only; no stale-device capture is allowed.
 
 .PARAMETER Threshold
-  Próg SSIM (domyślnie 0.6, kierunkowy)
-
-.EXAMPLE
-  .\scripts\vision-parity-full-harness.ps1
-  Pełna pętla: build → capture → SSIM → raport
-
-.EXAMPLE
-  .\scripts\vision-parity-full-harness.ps1 -SkipBuild -DeviceId emulator-5556
-  Tylko capture + SSIM na drugim emulatorze, bez rebuildowania
-
-.EXAMPLE
-  .\scripts\vision-parity-full-harness.ps1 -BuildMode eas
-  Build przez EAS cloud zamiast lokalnego gradle
+  Directional SSIM threshold. Human checklist remains authoritative.
 #>
 
 param(
-  [string]$DeviceId = "emulator-5554",
+  [string]$DeviceId = "",
   [switch]$SkipBuild,
   [switch]$SkipCapture,
   [ValidateSet("local", "eas")]
@@ -51,207 +43,215 @@ param(
   [float]$Threshold = 0.6
 )
 
-$ErrorActionPreference = "Continue"
+$ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$mobileDir = Join-Path $repoRoot "mobile"
 $dateTag = Get-Date -Format "yyyy-MM-dd"
 $outputDir = Join-Path $repoRoot "docs\design\screenshots\$dateTag-parity-progress"
 $captureDir = Join-Path $repoRoot "docs\design\screenshots\$dateTag-emulator-audit"
 $visionDir = Join-Path $repoRoot "docs\design\screenshots\2026-06-14-emulator-audit\vision"
-$mobileDir = Join-Path $repoRoot "mobile"
 $apkPath = Join-Path $mobileDir "android\app\build\outputs\apk\release\app-release.apk"
 
-# ─── Android SDK config (G: drive) ─────────────────────────────────────
-$configScript = Join-Path $PSScriptRoot "android-sdk-gdrive.ps1"
-if (Test-Path $configScript) {
-    . $configScript
-    Write-Host ""
-} else {
-    Write-Host "[harness] WARN: android-sdk-gdrive.ps1 not found; SDK may not be configured" -ForegroundColor Yellow
-}
-
-# ─── helpers ────────────────────────────────────────────────────────────
-
 function Write-Step { param([string]$Text) Write-Host "`n=== $Text ===" -ForegroundColor Cyan }
-function Write-OK { param([string]$Text) Write-Host "  OK  $Text" -ForegroundColor Green }
+function Write-OK { param([string]$Text) Write-Host "  OK   $Text" -ForegroundColor Green }
 function Write-WARN { param([string]$Text) Write-Host "  WARN $Text" -ForegroundColor Yellow }
-function Write-FAIL { param([string]$Text) Write-Host "  FAIL $Text" -ForegroundColor Red }
 
 function Invoke-Cmd {
-  param([string]$Exe, [string[]]$Args, [string]$WorkDir = $repoRoot)
-  $psi = New-Object System.Diagnostics.ProcessStartInfo
-  $psi.FileName = $Exe
-  $psi.Arguments = $Args -join " "
-  $psi.WorkingDirectory = $WorkDir
-  $psi.UseShellExecute = $false
-  $psi.RedirectStandardOutput = $true
-  $psi.RedirectStandardError = $true
-  $proc = [System.Diagnostics.Process]::Start($psi)
-  $stdout = $proc.StandardOutput.ReadToEnd()
-  $stderr = $proc.StandardError.ReadToEnd()
-  $proc.WaitForExit()
-  if ($stdout) { Write-Host $stdout }
-  if ($stderr) { Write-Host $stderr -ForegroundColor DarkYellow }
-  if ($proc.ExitCode -ne 0) { throw "Exit code $($proc.ExitCode): $Exe $($Args -join ' ')" }
+  param(
+    [Parameter(Mandatory=$true)][string]$Exe,
+    [string[]]$Args = @(),
+    [string]$WorkDir = $repoRoot
+  )
+  Write-Host "  + $Exe $($Args -join ' ')" -ForegroundColor DarkGray
+  Push-Location $WorkDir
+  try {
+    & $Exe @Args
+    if ($LASTEXITCODE -ne 0) {
+      throw "Exit code $LASTEXITCODE: $Exe $($Args -join ' ')"
+    }
+  } finally {
+    Pop-Location
+  }
 }
 
-# ─── Step 0: preflight ──────────────────────────────────────────────────
+function Resolve-Device {
+  param([string]$Requested)
 
-Write-Step "0. Preflight"
-if (-not (Test-Path $mobileDir)) { throw "mobile/ not found at $mobileDir" }
-if (-not (Test-Path $visionDir)) { Write-WARN "Vision references missing: $visionDir (SSIM won't run)" }
+  $rows = @(& $adbPath devices | Select-Object -Skip 1 | Where-Object { $_ -match "\S" })
+  $online = @()
+  foreach ($row in $rows) {
+    if ($row -match "^(\S+)\s+device(?:\s|$)") {
+      $online += $Matches[1]
+    }
+  }
+
+  if ($Requested) {
+    if ($online -notcontains $Requested) {
+      throw "Requested adb device '$Requested' is not online. Online devices: $($online -join ', ')"
+    }
+    return $Requested
+  }
+
+  if ($online.Count -eq 0) {
+    throw "No authorized Android device/emulator is online."
+  }
+  if ($online.Count -gt 1) {
+    throw "Multiple Android devices are online ($($online -join ', ')). Re-run with -DeviceId <serial>."
+  }
+  return $online[0]
+}
+
+Write-Step "0. Resolve host Android environment"
+$androidEnv = Join-Path $PSScriptRoot "android-env.ps1"
+if (-not (Test-Path $androidEnv -PathType Leaf)) {
+  throw "Missing environment resolver: $androidEnv"
+}
+. $androidEnv
+
+$sdkRoot = $env:ANDROID_SDK_ROOT
+if (-not $sdkRoot) { throw "ANDROID_SDK_ROOT was not resolved." }
+$adbPath = Join-Path $sdkRoot "platform-tools\adb.exe"
+if (-not (Test-Path $adbPath -PathType Leaf)) {
+  throw "adb not found at $adbPath"
+}
+
+if (-not (Test-Path $mobileDir -PathType Container)) {
+  throw "mobile/ not found at $mobileDir"
+}
+
+$gitSha = (& git -C $repoRoot rev-parse HEAD).Trim()
+$gitStatus = (& git -C $repoRoot status --porcelain)
+Write-OK "Git SHA: $gitSha"
+if ($gitStatus) {
+  Write-WARN "Worktree is dirty. Captures are not exact-commit provenance."
+} else {
+  Write-OK "Worktree clean"
+}
+
+$selectedDevice = $null
+if (-not $SkipCapture -or (-not $SkipBuild -and $BuildMode -eq "local")) {
+  $selectedDevice = Resolve-Device -Requested $DeviceId
+  Write-OK "ADB device: $selectedDevice"
+}
+
 New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
 New-Item -ItemType Directory -Force -Path $captureDir | Out-Null
-Write-OK "Output: $outputDir"
-Write-OK "Captures: $captureDir"
 
-# ─── Step 1: verify SDK ─────────────────────────────────────────────────
+Write-Step "1. Configure local visual runtime"
+# Local visual verification is deliberately isolated from production.
+$env:EAS_BUILD_PROFILE = "pilot-local"
+$env:EXPO_PUBLIC_VISION_FIXTURES = "true"
+$env:EXPO_PUBLIC_API_URL = "http://localhost:8000"
+$env:EXPO_PUBLIC_TELEMETRY_URL = "http://localhost:8001"
+$env:EXPO_PUBLIC_TELEMETRY_WS_INGEST = "false"
+$env:EXPO_PUBLIC_ENABLE_FIREBASE = "false"
 
-Write-Step "1. Verify Android SDK (G:\android-sdk)"
-$adbPath = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
-if ($env:ANDROID_HOME -and (Test-Path $adbPath)) {
-    Write-OK "ADB ready: $adbPath"
-} else {
-    Write-WARN "ADB not found. Run: .\scripts\android-sdk-gdrive.ps1"
-    Write-WARN "If SDK missing, harness will auto-download on first run."
-}
-
-# ─── Step 2: build APK ──────────────────────────────────────────────────
+Write-Host "  EAS_BUILD_PROFILE=$env:EAS_BUILD_PROFILE"
+Write-Host "  EXPO_PUBLIC_API_URL=$env:EXPO_PUBLIC_API_URL"
+Write-Host "  EXPO_PUBLIC_TELEMETRY_URL=$env:EXPO_PUBLIC_TELEMETRY_URL"
+Write-Host "  EXPO_PUBLIC_VISION_FIXTURES=$env:EXPO_PUBLIC_VISION_FIXTURES"
 
 if (-not $SkipBuild) {
-  Write-Step "3. Build APK ($BuildMode)"
-  $localProperties = Join-Path $mobileDir "android\local.properties"
-  @"
-sdk.dir=$($sdkRoot -replace '\\','\\')
-"@ | Set-Content -Path $localProperties -Encoding UTF8
+  Write-Step "2. Build fresh Android artifact ($BuildMode)"
 
   if ($BuildMode -eq "local") {
-    Write-Host "  Building via gradle (this may take 5-15 minutes)..."
-    Push-Location $mobileDir
-    try {
-      Invoke-Cmd "npx" @("expo", "prebuild", "--clean", "-p", "android") -WorkDir $mobileDir
-      Invoke-Cmd "cmd" @("/c", "gradlew.bat", "assembleRelease") -WorkDir "$mobileDir\android"
-      Write-OK "APK built: $apkPath"
-    } finally {
-      Pop-Location
+    Invoke-Cmd "pnpm" @("exec", "expo", "prebuild", "--clean", "-p", "android") $mobileDir
+
+    # expo prebuild --clean recreates android/, so local.properties must be
+    # written AFTER prebuild, never before it.
+    $androidDir = Join-Path $mobileDir "android"
+    if (-not (Test-Path $androidDir -PathType Container)) {
+      throw "Expo prebuild did not create $androidDir"
     }
+
+    $localProperties = Join-Path $androidDir "local.properties"
+    $escapedSdk = $sdkRoot -replace "\\", "\\"
+    "sdk.dir=$escapedSdk" | Set-Content -Path $localProperties -Encoding ASCII
+
+    Invoke-Cmd "cmd" @("/c", "gradlew.bat", "assembleRelease") $androidDir
+
+    if (-not (Test-Path $apkPath -PathType Leaf)) {
+      throw "Gradle completed but APK is missing: $apkPath"
+    }
+    $apkHash = (Get-FileHash -Algorithm SHA256 $apkPath).Hash.ToLowerInvariant()
+    Write-OK "APK: $apkPath"
+    Write-OK "APK SHA-256: $apkHash"
+
+    Write-Step "3. Install exact APK"
+    & $adbPath -s $selectedDevice install -r $apkPath
+    if ($LASTEXITCODE -ne 0) { throw "APK install failed on $selectedDevice" }
+
+    $packageDump = & $adbPath -s $selectedDevice shell dumpsys package com.sport.athlete
+    $versionName = ($packageDump | Select-String "versionName=" | Select-Object -First 1).Line.Trim()
+    $versionCode = ($packageDump | Select-String "versionCode=" | Select-Object -First 1).Line.Trim()
+    Write-OK "Installed com.sport.athlete: $versionName; $versionCode"
   } else {
-    Write-Host "  Building via EAS cloud (requires EAS CLI login)..."
-    Push-Location $mobileDir
-    try {
-      Invoke-Cmd "npx" @("eas", "build", "--platform", "android", "--profile", "preview", "--non-interactive") -WorkDir $mobileDir
-      Write-OK "EAS build queued. Check https://expo.dev/ for download link."
-      Write-WARN "EAS builds download as artifact — set `$apkPath manually after download."
-    } finally {
-      Pop-Location
+    Invoke-Cmd "pnpm" @(
+      "dlx", "eas-cli@24.7.0", "build",
+      "--platform", "android",
+      "--profile", "preview",
+      "--non-interactive"
+    ) $mobileDir
+
+    if (-not $SkipCapture) {
+      throw @"
+EAS cloud build completed/queued, but this harness did not install that artifact.
+Refusing screenshot capture from an unproven/stale device build.
+Install and record the EAS artifact first, then re-run with -SkipBuild.
+"@
     }
   }
 } else {
-  Write-Step "3. Build SKIPPED (using existing APK)"
+  Write-Step "2. Build SKIPPED"
+  Write-WARN "Artifact provenance must be recorded separately when -SkipBuild is used."
 }
-
-# ─── Step 4: install APK ────────────────────────────────────────────────
-
-if (-not $SkipBuild -and $BuildMode -eq "local") {
-  Write-Step "4. Install APK on device"
-  Write-Host "  Looking for devices..."
-  $devices = & $adbPath devices 2>&1 | Select-String -Pattern "\w+\s+device$"
-  if (-not $devices) {
-    Write-FAIL "No ADB devices found. Start an emulator or connect a device."
-    Write-Host "  To start an emulator: `$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe -avd SportEmulator"
-    Write-Host "  To list AVDs: `$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe -list-avds"
-    throw "No ADB devices"
-  }
-  Write-Host "  Devices found:`n  $($devices -join "`n  ")"
-  if (Test-Path $apkPath) {
-    Write-Host "  Installing $apkPath ..."
-    & $adbPath -s $DeviceId install -r $apkPath 2>&1 | Out-Host
-    if ($LASTEXITCODE -ne 0) { Write-FAIL "APK install failed"; throw }
-    Write-OK "APK installed on $DeviceId"
-  } else {
-    Write-FAIL "APK not found: $apkPath"
-    throw "Build step must produce APK first"
-  }
-}
-
-# ─── Step 5: capture screenshots ────────────────────────────────────────
 
 if (-not $SkipCapture) {
-  Write-Step "5. Capture screenshots"
+  Write-Step "4. Capture emulator walkthrough"
   $auditScript = Join-Path $repoRoot "scripts\emulator-ui-audit.py"
-
-  if (Test-Path $auditScript) {
-    Write-Host "  Running emulator-ui-audit.py ..."
-    Push-Location $repoRoot
-    try {
-      # The audit script uses adb internally; ensure it's on PATH
-      $env:PATH = "$sdkRoot\platform-tools;$env:PATH"
-      Invoke-Cmd "python" @($auditScript) -WorkDir $repoRoot
-      Write-OK "Screenshots captured to $captureDir"
-    } catch {
-      Write-WARN "Python audit failed: $_"
-      Write-Host "  Trying Maestro fallback..."
-      $maestroYaml = Join-Path $mobileDir ".maestro\flows\emulator-full-audit.yaml"
-      if (Test-Path $maestroYaml) {
-        Invoke-Cmd "maestro" @("test", $maestroYaml) -WorkDir $mobileDir
-        Write-OK "Maestro capture complete"
-      } else {
-        Write-FAIL "Neither Python audit nor Maestro flow available"
-      }
-    } finally {
-      Pop-Location
-    }
-  } else {
-    Write-FAIL "Audit script not found: $auditScript"
-    throw "Cannot capture screenshots"
+  if (-not (Test-Path $auditScript -PathType Leaf)) {
+    throw "Audit script not found: $auditScript"
   }
+
+  Invoke-Cmd "python" @(
+    $auditScript,
+    "--serial", $selectedDevice,
+    "--app-id", "com.sport.athlete"
+  ) $repoRoot
+  Write-OK "Screenshots captured from $selectedDevice"
 } else {
-  Write-Step "5. Capture SKIPPED (using existing screenshots)"
+  Write-Step "4. Capture SKIPPED"
 }
 
-# ─── Step 6: run vision parity harness ───────────────────────────────────
-
-Write-Step "6. Vision parity SSIM + checklist"
-$harnessScript = Join-Path $repoRoot "scripts\vision_parity_harness.py"
-
-if (-not (Test-Path $harnessScript)) {
-  Write-FAIL "Harness script not found: $harnessScript"
-  throw
+Write-Step "5. Directional vision parity report"
+$parityScript = Join-Path $repoRoot "scripts\vision_parity_harness.py"
+if (-not (Test-Path $parityScript -PathType Leaf)) {
+  throw "Parity script not found: $parityScript"
 }
-
-$actualDir = if (Test-Path $captureDir) { $captureDir } else { $captureDir }
-Write-Host "  Actual screenshots: $actualDir"
-Write-Host "  Vision references:  $visionDir"
-Write-Host "  Output:             $outputDir"
+if (-not (Test-Path $visionDir -PathType Container)) {
+  throw "Vision reference directory missing: $visionDir"
+}
+if (-not (Test-Path $captureDir -PathType Container)) {
+  throw "Capture directory missing: $captureDir"
+}
 
 Invoke-Cmd "python" @(
-  $harnessScript,
-  "--actual", $actualDir,
+  $parityScript,
+  "--actual", $captureDir,
   "--vision", $visionDir,
   "--out", $outputDir,
   "--threshold", [string]$Threshold,
   "--composite",
   "--report-only"
-) -WorkDir $repoRoot
+) $repoRoot
 
-# ─── Step 7: summary ─────────────────────────────────────────────────────
-
-Write-Step "7. Summary"
-$reportJson = Join-Path $outputDir "report.json"
-$reportMd = Join-Path $outputDir "report.md"
-$checklistMd = Join-Path $outputDir "checklist.md"
-
-@("$reportJson", "$reportMd", "$checklistMd") | ForEach-Object {
-  if (Test-Path $_) {
-    $size = (Get-Item $_).Length
-    Write-OK "$_ ($size bytes)"
-  } else {
-    Write-WARN "$_ MISSING"
-  }
-}
-
-Write-Host "`n=== Pipeline complete ===" -ForegroundColor Cyan
-Write-Host "Checklist (human gate): $checklistMd"
-Write-Host "SSIM report:            $reportMd"
-Write-Host "Composite diff PNGs:    $outputDir\diff_*.png"
-Write-Host "`nTo iterate: fix code → rebuild → rerun this script."
-Write-Host "Threshold is directional ($Threshold) — the real gate is checklist.md."
+Write-Step "6. Summary"
+Write-Host "  Git SHA:             $gitSha"
+Write-Host "  Device:              $selectedDevice"
+Write-Host "  Android SDK:         $sdkRoot"
+Write-Host "  JAVA_HOME:           $env:JAVA_HOME"
+Write-Host "  Captures:            $captureDir"
+Write-Host "  Parity report:       $outputDir\report.md"
+Write-Host "  Human checklist:     $outputDir\checklist.md"
+Write-Host ""
+Write-WARN "SSIM is directional only. Runtime/visual PASS requires the human checklist and exact-artifact provenance."

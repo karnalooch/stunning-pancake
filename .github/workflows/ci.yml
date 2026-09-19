@@ -464,6 +464,9 @@ jobs:
       - name: Test CI mobile path routing
         run: python -m unittest scripts/test_ci_mobile_path_filter.py
 
+      - name: Test mobile Android harness contract
+        run: python -m unittest scripts/test_mobile_harness_contract.py -v
+
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
 
