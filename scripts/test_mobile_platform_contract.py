@@ -56,6 +56,7 @@ class MobilePlatformContractTests(unittest.TestCase):
                 env = eas["build"][profile].get("env", {})
                 self.assertNotIn("EXPO_PUBLIC_API_URL", env)
                 self.assertNotIn("EXPO_PUBLIC_TELEMETRY_URL", env)
+                self.assertEqual(env.get("EXPO_PUBLIC_ENABLE_FIREBASE"), "false")
 
         pilot = eas["build"]["pilot-local"].get("env", {})
         self.assertEqual(pilot.get("EXPO_PUBLIC_API_URL"), "http://localhost:8000")
