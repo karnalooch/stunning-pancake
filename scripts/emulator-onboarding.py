@@ -3,14 +3,53 @@
 
 from __future__ import annotations
 
+import argparse
 import subprocess
 import time
 from io import BytesIO
 
 from PIL import Image
 
-ADB = ["adb", "-s", "emulator-5554"]
-ACTIVITY = "com.sport.athlete/.MainActivity"
+ADB = ["adb"]
+APP_ID = "com.sport.athlete"
+ACTIVITY = f"{APP_ID}/.MainActivity"
+
+
+def resolve_device_serial(requested: str | None) -> str:
+    result = subprocess.run(
+        ["adb", "devices"],
+        capture_output=True,
+        text=True,
+        timeout=20,
+        encoding="utf-8",
+        errors="replace",
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "adb devices failed")
+
+    online: list[str] = []
+    for raw in result.stdout.splitlines()[1:]:
+        fields = raw.split()
+        if len(fields) >= 2 and fields[1] == "device":
+            online.append(fields[0])
+
+    if requested:
+        if requested not in online:
+            raise RuntimeError(f"Requested device {requested!r} is not online; online={online}")
+        return requested
+    if len(online) != 1:
+        raise RuntimeError(
+            "Exactly one authorized adb device is required when --serial is omitted; "
+            f"online={online}"
+        )
+    return online[0]
+
+
+def configure_runtime(serial: str, app_id: str) -> None:
+    global ADB, APP_ID, ACTIVITY
+    ADB = ["adb", "-s", serial]
+    APP_ID = app_id
+    ACTIVITY = f"{app_id}/.MainActivity"
 
 
 def run(*args: str) -> None:
@@ -100,7 +139,7 @@ def grant_permissions() -> None:
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.POST_NOTIFICATIONS",
     ):
-        run("shell", "pm", "grant", "com.sport.athlete", perm)
+        run("shell", "pm", "grant", APP_ID, perm)
 
 
 def complete_onboarding(max_attempts: int = 12) -> bool:
@@ -132,6 +171,16 @@ def complete_onboarding(max_attempts: int = 12) -> bool:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--serial", default=None)
+    parser.add_argument("--app-id", default="com.sport.athlete")
+    args = parser.parse_args()
+    try:
+        configure_runtime(resolve_device_serial(args.serial), args.app_id)
+    except (RuntimeError, subprocess.SubprocessError) as exc:
+        print(f"adb preflight failed: {exc}")
+        raise SystemExit(1)
+
     ok = complete_onboarding()
     print("onboarding_complete" if ok else "onboarding_failed")
     raise SystemExit(0 if ok else 1)
