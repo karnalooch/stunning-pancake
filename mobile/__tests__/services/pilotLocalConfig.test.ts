@@ -164,6 +164,7 @@ describe('pilot-local eas.json contract', () => {
       expect(build[profile].environment).toBe(expectedEnvironment[profile]);
       expect(build[profile].env?.EXPO_PUBLIC_API_URL).toBeUndefined();
       expect(build[profile].env?.EXPO_PUBLIC_TELEMETRY_URL).toBeUndefined();
+      expect(build[profile].env?.EXPO_PUBLIC_ENABLE_FIREBASE).toBe('false');
     }
   });
 });
