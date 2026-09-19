@@ -381,6 +381,17 @@ jobs:
         working-directory: mobile
         run: pnpm dlx expo-doctor@1.20.4 .
 
+      - name: Preview canonical Expo dependency remediation
+        if: steps.expo_deps.outcome != 'success'
+        continue-on-error: true
+        working-directory: mobile
+        run: |
+          pnpm exec expo install --fix
+          cd ..
+          echo "::group::Expo remediation diff"
+          git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
+          echo "::endgroup::"
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
