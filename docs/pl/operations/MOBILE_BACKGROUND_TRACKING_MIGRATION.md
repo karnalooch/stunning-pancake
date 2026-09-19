@@ -35,7 +35,7 @@ Decyzja właściciela:
 | Uprawnienia | [app.config.js](../../../mobile/app.config.js) | `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, iOS `UIBackgroundModes: location, fetch` |
 | Persystencja | MMKV buffer + outbox | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
 | Recovery | `recoverGpsDataOnLaunch()` | Baner po relaunchu |
-| New Architecture | `app.config.js` `newArchEnabled: true`, RN 0.83.6 | Tryb Bridgeless |
+| New Architecture | Expo SDK 55 / React Native 0.83; w SDK 55 New Architecture jest obowiązkowa | Brak przełącznika wyłączającego na poziomie aplikacji |
 
 **Wniosek:** fundament jest dobry (profile, foreground service, outbox), ale persystencja stanu i wybudzanie zależą od warstwy JS, co na Bridgeless + agresywnym OEM/Doze bywa zawodne (Headless JS, "Runtime not ready", batchowanie aktualizacji do kilku minut).
 
