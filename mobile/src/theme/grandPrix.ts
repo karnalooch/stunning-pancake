@@ -1,13 +1,10 @@
 /**
- * Grand Prix Theme — single runtime visual contract for mobile.
+ * Grand Prix compatibility palette for mobile.
  *
- * AUTHORITATIVE RUNTIME SSOT. Every screen/component must read colors from
- * `theme.colors.*` (via Unistyles), never inline hex. The design-time mirror
- * in `packages/tokens/colors.json` documents intent only and is not imported
- * at runtime; when they diverge, this file wins.
- *
- * Palette is anchored to the `vision/` mocks: warm parchment surfaces, forest
- * green selection, and an orange CTA (DALEJ / DOŁĄCZ / DO JAZDY).
+ * Frozen UI v1.2 visual authority lives in the takeover-era design contract.
+ * New product UI must consume semantic roles from `theme/semantic.ts` rather
+ * than choosing raw palette entries directly. Legacy screens may continue to
+ * use these compatibility names while they migrate slice-by-slice.
  */
 
 import type { GrandPrixTheme } from './unistyles';
@@ -20,7 +17,7 @@ export const grandPrixTheme: GrandPrixTheme = {
         onBackground: '#0B1D33',
         onSurface: '#0B1D33',
 
-        // ── Primary (Forest Green) ─────────────────────────────────
+        // ── Legacy primary / semantic success-GPS green ─────────────
         primary: '#3b6a24',
         primaryContainer: '#76a95b',
         primaryFixed: '#bbf29b',
@@ -63,7 +60,7 @@ export const grandPrixTheme: GrandPrixTheme = {
         parchment: '#F5E6CC',
         goldAmber: '#D4A373',
 
-        // ── Vision CTA / selection / disabled (warm palette) ───────
+        // ── Compatibility CTA / legacy selection / disabled ────────
         cta: '#DD6B33',
         ctaDark: '#9E4318',
         onCta: '#FFFFFF',
@@ -90,6 +87,7 @@ export const grandPrixTheme: GrandPrixTheme = {
 
         // ── Scene / scrim (ADR 014) ───────────────────────────────
         scrimStrong: 'rgba(11, 29, 51, 0.55)',
+        ridePausedScrim: 'rgba(11, 29, 51, 0.72)',
         scrimSoft: 'rgba(11, 29, 51, 0.28)',
         sceneOverlay: 'rgba(251, 243, 226, 0.72)',
         sceneSky: '#B8D4E8',

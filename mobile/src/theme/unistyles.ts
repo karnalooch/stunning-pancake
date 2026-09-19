@@ -63,6 +63,7 @@ export interface GrandPrixTheme {
         hudOutline: string;
         hudShadow: string;
         scrimStrong: string;
+        ridePausedScrim: string;
         scrimSoft: string;
         sceneOverlay: string;
         sceneSky: string;

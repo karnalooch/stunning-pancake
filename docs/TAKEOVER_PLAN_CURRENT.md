@@ -180,7 +180,7 @@ Required behavior:
 | --- | --- | --- | --- |
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
-| T79 | Home screen implementation/polish | PLANNED | Frozen UI v1.2. Start with Visual Protection foundation/semantic primitives, then Home; real data, first-use comprehension, loading/empty/error states. |
+| T79 | Home screen implementation/polish | ACTIVE | PR #132 establishes the Frozen UI v1.2 semantic/product foundation first; Home follows as a separate reviewable T79 slice. Real data, first-use comprehension, loading/empty/error states remain required. |
 | T80 | Active Ride screen implementation/polish | PLANNED | Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
 | T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
 | T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
