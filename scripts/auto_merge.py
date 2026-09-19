@@ -154,7 +154,7 @@ def auto_merge_mode(body: str | None) -> str | None:
 
 
 def is_risky_path(path: str) -> bool:
-    normalized = path.strip().lstrip("./")
+    normalized = path.strip().removeprefix("./")
     lowered = normalized.lower()
     pure = PurePosixPath(normalized)
     parts_lower = {part.lower() for part in pure.parts}
