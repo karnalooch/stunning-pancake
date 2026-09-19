@@ -179,7 +179,7 @@ if __name__ == "__main__":
         configure_runtime(resolve_device_serial(args.serial), args.app_id)
     except (RuntimeError, subprocess.SubprocessError) as exc:
         print(f"adb preflight failed: {exc}")
-        raise SystemExit(1)
+        raise SystemExit(1) from exc
 
     ok = complete_onboarding()
     print("onboarding_complete" if ok else "onboarding_failed")
