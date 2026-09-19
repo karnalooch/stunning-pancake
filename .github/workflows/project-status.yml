@@ -1,0 +1,44 @@
+name: GitHub Project status
+
+on:
+  pull_request:
+    types: [opened, reopened, converted_to_draft, ready_for_review]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  sync-project-status:
+    name: Sync Project status
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Require Projects token
+        shell: bash
+        env:
+          PROJECTS_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PROJECTS_TOKEN}" ]]; then
+            echo "::error::PROJECTS_TOKEN is required. Store a classic PAT with the project scope as a repository Actions secret."
+            exit 1
+          fi
+
+      - name: Synchronize PR and linked Issue status
+        env:
+          GH_TOKEN: ${{ secrets.PROJECTS_TOKEN }}
+          PROJECT_OWNER: ${{ github.repository_owner }}
+          PROJECT_TITLE: 4VELO — Product & Takeover
+        run: python scripts/project_status_automation.py
