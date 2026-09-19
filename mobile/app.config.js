@@ -19,6 +19,34 @@ const e2eExtra = {
   EXPO_PUBLIC_VISION_FIXTURES: process.env.EXPO_PUBLIC_VISION_FIXTURES,
 };
 
+const publicRuntimeExtra = {
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_TELEMETRY_URL: process.env.EXPO_PUBLIC_TELEMETRY_URL,
+};
+
+const assertReleaseSafePublicEnv = () => {
+  if (process.env.EAS_BUILD_PROFILE !== 'production') return;
+
+  const forbidden = [
+    'EXPO_PUBLIC_E2E_AUTO_LOGIN',
+    'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
+    'EXPO_PUBLIC_E2E_EMAIL',
+    'EXPO_PUBLIC_E2E_PASSWORD',
+    'EXPO_PUBLIC_E2E_GPS_RECOVERY',
+    'EXPO_PUBLIC_VISION_FIXTURES',
+    'EXPO_PUBLIC_LLM_API_KEY',
+  ].filter((key) => {
+    const value = process.env[key];
+    return value != null && value !== '' && value !== 'false';
+  });
+
+  if (forbidden.length > 0) {
+    throw new Error(
+      `Production mobile config contains forbidden public test/secret variables: ${forbidden.join(', ')}`,
+    );
+  }
+};
+
 // Security boundary: EAS_BUILD_PROFILE is the authoritative signal for enabling
 // Android cleartext. EAS CLI sets it to the selected profile name (matching a key
 // in eas.json "build") before this module is evaluated. We register the
@@ -55,6 +83,8 @@ const resolveFirebaseConfig = () => {
 };
 
 export default ({ config }) => {
+  assertReleaseSafePublicEnv();
+
   const {
     enableFirebase,
     enableAndroidGoogleServices,
@@ -68,8 +98,7 @@ export default ({ config }) => {
     "scheme": "fourvelo",
     "version": releaseVersion.version,
     "updates": {
-      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
-      "channel": "production"
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -77,7 +106,6 @@ export default ({ config }) => {
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -117,10 +145,10 @@ export default ({ config }) => {
       "eas": {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
       },
-      "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-      "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
       ...Object.fromEntries(
-        Object.entries(e2eExtra).filter(([, value]) => value != null && value !== ''),
+        Object.entries({ ...publicRuntimeExtra, ...e2eExtra }).filter(
+          ([, value]) => value != null && value !== '',
+        ),
       ),
     },
     "plugins": [
