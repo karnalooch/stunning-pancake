@@ -37,7 +37,10 @@ class AutoMergeWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("github.event_name == 'pull_request' }}", self.text)
 
     def test_workflow_reacts_to_ci_and_review_completion(self):
-        self.assertIn('workflows: ["4VELO CI/CD Pipeline"]', self.text)
+        self.assertIn(
+            'workflows: ["4VELO CI/CD Pipeline", "Kubernetes Release Gate"]',
+            self.text,
+        )
         self.assertIn("check_run:", self.text)
         self.assertIn("Kilo Code Review", self.text)
         self.assertIn("Aggregate CI gate", self.text)
