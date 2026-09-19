@@ -123,8 +123,7 @@ describe('pilot-local eas.json contract', () => {
     // eas-cli 24.6.0 — the values below are accepted.
     expect(cli).toBeDefined();
     expect(cli.appVersionSource).toBe('remote');
-    expect(typeof cli.version).toBe('string');
-    expect(cli.version.length).toBeGreaterThan(0);
+    expect(cli.version).toBe('24.7.0');
   });
 
   test('production build numbers are managed remotely and auto-incremented', () => {
