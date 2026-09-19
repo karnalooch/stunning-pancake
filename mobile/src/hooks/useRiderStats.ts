@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { summarizeRiderHistory } from '../home/riderStatsSummary';
 import { ActivityService, type ActivityItem } from '../services/api';
@@ -38,10 +38,15 @@ export function useRiderStats() {
   const [loading, setLoading] = useState(true);
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
+  const requestSequence = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++requestSequence.current;
     setLoading(true);
     const result = await loadRiderHistory();
+
+    if (requestId !== requestSequence.current) return;
+
     setItems(result.items);
     setOffline(result.offline);
     setError(result.error);
@@ -49,20 +54,8 @@ export function useRiderStats() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    void loadRiderHistory().then((result) => {
-      if (cancelled) return;
-      setItems(result.items);
-      setOffline(result.offline);
-      setError(result.error);
-      setLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void refresh();
+  }, [refresh]);
 
   const stats = useMemo(() => summarizeRiderHistory(items), [items]);
 
