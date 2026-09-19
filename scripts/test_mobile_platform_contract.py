@@ -118,6 +118,11 @@ class MobilePlatformContractTests(unittest.TestCase):
         self.assertNotIn("extraNodeModules", metro)
         self.assertNotIn("disableHierarchicalLookup", metro)
 
+    def test_firebase_is_explicit_opt_in(self):
+        config = read(MOBILE / "app.config.js")
+        self.assertIn("process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true'", config)
+        self.assertNotIn("process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'false'", config)
+
     def test_app_config_does_not_claim_channel_or_legacy_new_arch_toggle(self):
         config = read(MOBILE / "app.config.js")
         self.assertNotIn('"channel": "production"', config)
