@@ -66,6 +66,7 @@ class MobilePlatformContractTests(unittest.TestCase):
         package = json.loads(read(MOBILE / "package.json"))
         deploy = package.get("scripts", {}).get("deploy:mobile", "")
         self.assertIn("eas-cli@24.7.0 update", deploy)
+        self.assertIn("cross-env@7.0.3 EAS_BUILD_PROFILE=production", deploy)
         self.assertIn("--channel production", deploy)
         self.assertIn("--environment production", deploy)
         self.assertIn("--clear-cache", deploy)
