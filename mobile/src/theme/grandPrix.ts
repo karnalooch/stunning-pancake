@@ -87,6 +87,7 @@ export const grandPrixTheme: GrandPrixTheme = {
 
         // ── Scene / scrim (ADR 014) ───────────────────────────────
         scrimStrong: 'rgba(11, 29, 51, 0.55)',
+        ridePausedScrim: 'rgba(11, 29, 51, 0.72)',
         scrimSoft: 'rgba(11, 29, 51, 0.28)',
         sceneOverlay: 'rgba(251, 243, 226, 0.72)',
         sceneSky: '#B8D4E8',
