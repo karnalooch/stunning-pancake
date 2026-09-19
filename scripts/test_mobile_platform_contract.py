@@ -49,11 +49,20 @@ class MobilePlatformContractTests(unittest.TestCase):
     def test_sdk55_update_command_has_explicit_channel_and_environment(self):
         package = json.loads(read(MOBILE / "package.json"))
         deploy = package.get("scripts", {}).get("deploy:mobile", "")
-        self.assertIn("eas update", deploy)
+        self.assertIn("eas-cli@24.7.0 update", deploy)
         self.assertIn("--channel production", deploy)
         self.assertIn("--environment production", deploy)
         self.assertIn("--clear-cache", deploy)
         self.assertNotIn("--branch production", deploy)
+
+    def test_eas_commands_use_pinned_eas_cli_package(self):
+        package = json.loads(read(MOBILE / "package.json"))
+        scripts = package.get("scripts", {})
+        for name in ("android", "ios", "build:pilot-local:android", "deploy:mobile"):
+            with self.subTest(script=name):
+                command = scripts.get(name, "")
+                self.assertIn("pnpm dlx eas-cli@24.7.0", command)
+                self.assertNotIn("npx eas ", command)
 
     def test_dev_server_script_is_explicitly_dev_client(self):
         package = json.loads(read(MOBILE / "package.json"))
