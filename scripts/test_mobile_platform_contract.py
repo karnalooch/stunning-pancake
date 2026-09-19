@@ -95,6 +95,12 @@ class MobilePlatformContractTests(unittest.TestCase):
         )
         self.assertNotIn("npx expo ", scripts.get("build:local:preview:android", ""))
 
+    def test_eas_uses_default_monorepo_install_without_duplicate_hook(self):
+        package = json.loads(read(MOBILE / "package.json"))
+        scripts = package.get("scripts", {})
+        self.assertNotIn("eas-build-pre-install", scripts)
+        self.assertFalse((MOBILE / "eas-build-pre-install.sh").exists())
+
     def test_dev_server_script_is_explicitly_dev_client(self):
         package = json.loads(read(MOBILE / "package.json"))
         scripts = package.get("scripts", {})
