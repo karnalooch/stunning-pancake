@@ -9,7 +9,7 @@ export type ProductTypographyRole =
   | 'metric'
   | 'metricLabel';
 
-export const PRODUCT_TYPOGRAPHY: Record<ProductTypographyRole, TextStyle> = {
+export const PRODUCT_TYPOGRAPHY = {
   body: {
     fontSize: 16,
     lineHeight: 22,
@@ -41,7 +41,7 @@ export const PRODUCT_TYPOGRAPHY: Record<ProductTypographyRole, TextStyle> = {
     lineHeight: 18,
     fontWeight: '600',
   },
-};
+} satisfies Record<ProductTypographyRole, TextStyle>;
 
 export const BRAND_TYPOGRAPHY = {
   displayPixel: {
