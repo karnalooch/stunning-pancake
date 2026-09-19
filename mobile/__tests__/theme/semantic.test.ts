@@ -23,6 +23,14 @@ describe('Frozen UI v1.2 semantic colours', () => {
     expect(semantic.navigation.active).not.toBe(semantic.status.success);
   });
 
+  test('Ride Paused keeps its legacy strong overlay while scene scrims remain independent', () => {
+    expect(grandPrixTheme.colors.ridePausedScrim).toBe('rgba(11, 29, 51, 0.72)');
+    expect(grandPrixTheme.colors.ridePausedScrim).not.toBe(grandPrixTheme.colors.scrimStrong);
+    expect(grandPrixNightTheme.colors.ridePausedScrim).toBe(
+      grandPrixTheme.colors.ridePausedScrim,
+    );
+  });
+
   test('selected product surface ignores the legacy green selection token', () => {
     const semantic = getSemanticColors(grandPrixTheme.colors);
 
