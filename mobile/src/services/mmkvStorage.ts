@@ -11,7 +11,7 @@ import { createMMKV } from 'react-native-mmkv';
 export type AppMmkvValue = string | number | boolean | ArrayBuffer;
 
 export interface AppMmkvConfig {
-  id?: string;
+  id: string;
   encryptionKey?: string;
 }
 
@@ -24,8 +24,10 @@ export interface AppMmkvStorage {
   contains(key: string): boolean;
 }
 
+export function createAppMmkv(): AppMmkvStorage;
+export function createAppMmkv(config: AppMmkvConfig): AppMmkvStorage;
 export function createAppMmkv(config?: AppMmkvConfig): AppMmkvStorage {
-  const native = createMMKV(config);
+  const native = config ? createMMKV(config) : createMMKV();
 
   return {
     getString: (key) => native.getString(key),
