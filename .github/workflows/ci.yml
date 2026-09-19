@@ -366,6 +366,9 @@ jobs:
       - name: Test pnpm workspace selector integrity
         run: python -m unittest scripts/test_ci_workspace_selectors.py -v
 
+      - name: Mobile platform configuration contract
+        run: python -m unittest scripts/test_mobile_platform_contract.py -v
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
