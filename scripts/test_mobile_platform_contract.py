@@ -107,6 +107,14 @@ class MobilePlatformContractTests(unittest.TestCase):
         self.assertIn("--dev-client", scripts.get("start", ""))
         self.assertIn("--dev-client", scripts.get("start:dev-client", ""))
 
+    def test_metro_uses_expo_sdk55_automatic_monorepo_resolution(self):
+        metro = read(MOBILE / "metro.config.js")
+        self.assertIn("expo/metro-config", metro)
+        self.assertNotIn("watchFolders", metro)
+        self.assertNotIn("nodeModulesPaths", metro)
+        self.assertNotIn("extraNodeModules", metro)
+        self.assertNotIn("disableHierarchicalLookup", metro)
+
     def test_app_config_does_not_claim_channel_or_legacy_new_arch_toggle(self):
         config = read(MOBILE / "app.config.js")
         self.assertNotIn('"channel": "production"', config)
