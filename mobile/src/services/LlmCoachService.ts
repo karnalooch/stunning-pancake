@@ -30,7 +30,10 @@ const BACKEND_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 const PROXY_URL = BACKEND_URL ? `${BACKEND_URL}${API_PATHS_FULL.llmProxy}` : '';
 
 const DEFAULT_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
+  // Never source an API secret from EXPO_PUBLIC_* or a mobile process env.
+  // Release clients use the authenticated backend proxy; apiKey remains only
+  // as an explicit constructor option for isolated tests/dev experiments.
+  apiKey: '',
   apiUrl: process.env.EXPO_PUBLIC_LLM_API_URL ?? 'https://api.openai.com/v1',
   model: process.env.EXPO_PUBLIC_LLM_MODEL ?? 'gpt-4o-mini',
   timeoutMs: 5_000,
@@ -144,7 +147,8 @@ export class LlmCoachService {
   constructor(config?: LlmCoachConfig) {
     this._config = { ...DEFAULT_CONFIG, ...config } as Required<LlmCoachConfig>;
 
-    // Use backend proxy when available (hides API key from mobile bundle)
+    // Release/default path is always the backend proxy when the backend URL is configured.
+    // A direct API key is only accepted when explicitly supplied to this constructor.
     this._useProxy = !!PROXY_URL && !this._config.apiKey;
 
     const baseURL = this._useProxy ? BACKEND_URL : this._config.apiUrl;
@@ -171,6 +175,13 @@ export class LlmCoachService {
    */
   async generateMessage(ctx: CoachPromptContext): Promise<string | null> {
     const startTs = Date.now();
+
+    if (!this._useProxy && !this._config.apiKey) {
+      if (__DEV__) {
+        console.warn('[LlmCoach] No backend proxy or explicit test key configured — using fallback.');
+      }
+      return null;
+    }
 
     // Circuit breaker check
     if (this._isCircuitOpen()) {
