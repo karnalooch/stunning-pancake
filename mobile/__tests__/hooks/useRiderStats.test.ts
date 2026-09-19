@@ -10,7 +10,7 @@ function activity(
     id,
     type: 'BIKE',
     start_time: startedAt.toISOString(),
-    end_time: null,
+    end_time: new Date(startedAt.getTime() + 30 * 60 * 1000).toISOString(),
     distance: distanceMeters,
     duration: '00:30:00',
     is_verified: true,
@@ -45,6 +45,18 @@ describe('summarizeRiderHistory', () => {
     expect(stats.weeklyBars).toEqual([0.75, 1, 0, 0, 0, 0, 0]);
   });
 
+  test('latest ride is the newest completed ride regardless of API order', () => {
+    const now = new Date(2026, 8, 16, 12);
+    const older = activity(1, new Date(2026, 8, 14, 8), 10_000);
+    const newest = activity(2, new Date(2026, 8, 16, 9), 25_000);
+    const active = activity(3, new Date(2026, 8, 16, 10), 5_000);
+    active.end_time = null;
+
+    const stats = summarizeRiderHistory([older, active, newest], now);
+
+    expect(stats.latest?.id).toBe(2);
+  });
+
   test('future rides and invalid dates do not pollute the current week', () => {
     const now = new Date(2026, 8, 16, 12);
     const invalid = activity(1, new Date(2026, 8, 14, 8), 12_000);
@@ -53,7 +65,7 @@ describe('summarizeRiderHistory', () => {
     const stats = summarizeRiderHistory(
       [
         invalid,
-        activity(2, new Date(2026, 8, 21, 8), 30_000),
+        activity(2, new Date(2026, 8, 17, 8), 30_000),
       ],
       now,
     );
