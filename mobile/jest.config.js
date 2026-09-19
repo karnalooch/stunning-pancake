@@ -1,5 +1,5 @@
 /**
- * Jest configuration for SPORT Mobile App
+ * Jest configuration for 4VELO mobile
  * Uses jest-expo preset for React Native / Expo compatibility.
  * 
  * Run: npm test
@@ -8,9 +8,9 @@
  */
 module.exports = {
   preset: 'jest-expo',
-  transformIgnorePatterns: [
-    'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|react-native-reanimated|@legendapp/state)',
-  ],
+  // Do not override jest-expo's transformIgnorePatterns. SDK 55's preset owns
+  // React Native/Expo transformation and is pnpm-aware; the historical custom
+  // node_modules regex broke as soon as workspaces moved to isolated linking.
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
   moduleNameMapper: {
