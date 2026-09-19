@@ -31,6 +31,8 @@
 - Brudne drzewo nie blokuje odczytów ani niezależnej pracy. Jeśli zmiany kolidują z zadaniem lub uniemożliwiają bezpieczną zmianę gałęzi, opisz konkretną kolizję.
 - Dla nowego zadania implementacyjnego pracuj na osobnej gałęzi, jeśli zadanie nie wskazuje istniejącej. Nie przenoś zmian między gałęziami bez ustalenia ich pochodzenia.
 - Commit, push i PR wykonuj, gdy obejmuje je zlecenie; nie proś ponownie o już udzieloną zgodę. Merge, wdrożenie, force-push i operacje destrukcyjne wymagają wyraźnego zlecenia obejmującego tę czynność.
+- Dla aktywnego zadania implementacyjnego utwórz draft PR możliwie wcześnie, gdy tylko istnieje sensowna gałąź i pierwszy spójny commit, aby praca była widoczna w GitHub Project. Nie twórz PR dla samej analizy, planowania lub odczytu.
+- Status GitHub Project ma odzwierciedlać rzeczywisty etap pracy: aktywna implementacja = `In progress`, PR oznaczony jako Ready for review = `In review`, merge = `Done`. `Done` po merge obsługuje automatyzacja Project; nie ustawiaj go wcześniej ręcznie. Jeśli agent nie ma uprawnień do zmiany statusu Project, zgłoś to w raporcie zamiast udawać wykonanie.
 - Dodawaj do stage konkretne pliki zadania. Przed commitem sprawdź staged diff i jego zgodność z zakresem.
 - Nie ujawniaj sekretów, tokenów, prywatnych kluczy ani danych produkcyjnych w odpowiedzi lub logach.
 
