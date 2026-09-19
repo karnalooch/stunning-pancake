@@ -264,10 +264,11 @@ export class LlmCoachService {
   }
 
   /**
-   * Check if the service is healthy (circuit is closed, API key is set).
+   * Check if the service can currently reach either the authenticated backend
+   * proxy (release/default path) or an explicitly configured direct test client.
    */
   isHealthy(): boolean {
-    return !this._isCircuitOpen() && this._config.apiKey.length > 0;
+    return !this._isCircuitOpen() && (this._useProxy || this._config.apiKey.length > 0);
   }
 
   // ─── Private ─────────────────────────────
@@ -346,7 +347,7 @@ export class LlmCoachService {
             temperature: this._config.temperature,
           });
         } else {
-          // Direct API call (development with EXPO_PUBLIC_LLM_API_KEY)
+          // Direct API call is test/dev-only and requires an explicit constructor key.
           response = await this._client.post('/chat/completions', {
             model: this._config.model,
             messages: [
