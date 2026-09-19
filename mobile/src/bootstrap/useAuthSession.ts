@@ -108,23 +108,6 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
         return;
       }
 
-      if (isE2eAutoLoginEnabled()) {
-        auth.isSubmitting.set(true);
-        try {
-          const user = await loginAndLoadProfile(e2eConfig.email, e2eConfig.password);
-          if (shouldSkipOnboardingForE2e()) {
-            setOnboardingCompleteForUser(user.id);
-          }
-          await applyUserSession(user);
-        } catch {
-          auth.isOnboarded.set(false);
-        } finally {
-          auth.isSubmitting.set(false);
-          auth.isLoading.set(false);
-        }
-        return;
-      }
-
       auth.isLoading.set(false);
     })();
 
