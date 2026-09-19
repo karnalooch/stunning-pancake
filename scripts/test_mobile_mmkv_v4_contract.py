@@ -67,6 +67,13 @@ class MobileMmkvV4ContractTests(unittest.TestCase):
         self.assertIn("SecureStore.AFTER_FIRST_UNLOCK", source)
         self.assertIn("createAppMmkv({", source)
 
+    def test_native_runtime_version_boundary_is_bumped(self):
+        release = json.loads(read(ROOT / "version.json"))
+        version = tuple(int(part) for part in release["version"].split("."))
+        self.assertGreaterEqual(version, (0, 3, 4))
+        app_config = read(MOBILE / "app.config.js")
+        self.assertIn('"policy": "appVersion"', app_config)
+
 
 if __name__ == "__main__":
     unittest.main()
