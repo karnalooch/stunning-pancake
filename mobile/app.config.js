@@ -95,7 +95,7 @@ const isPilotLocalBuild = () =>
 // iOS config point at a missing GoogleService-Info.plist (and vice versa).
 // EXPO_PUBLIC_ENABLE_FIREBASE="false" remains an explicit build-wide opt-out.
 const resolveFirebaseConfig = () => {
-  const firebaseAllowed = process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'false';
+  const firebaseAllowed = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true';
   const hasAndroidGoogleServices = fs.existsSync(
     path.resolve(__dirname, './google-services.json'),
   );
