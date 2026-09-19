@@ -20,7 +20,7 @@ from PIL import Image
 REPO = Path(__file__).resolve().parents[1]
 ADB = ["adb"]
 DEVICE_ID = ""
-APP_ID = APP_ID
+APP_ID = "com.sport.athlete"
 DATE = date.today().isoformat()
 OUT_DIR = REPO / "docs" / "design" / "screenshots" / f"{DATE}-emulator-audit"
 REPORT = REPO / "docs" / "design" / f"MOBILE_EMULATOR_UI_AUDIT_{DATE}.md"
