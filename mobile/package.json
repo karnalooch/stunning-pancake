@@ -4,10 +4,10 @@
   "main": "index",
   "scripts": {
     "start": "expo start --dev-client",
-    "android": "eas build --platform android --profile development",
-    "ios": "eas build --platform ios --profile development",
+    "android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile development",
+    "ios": "pnpm dlx eas-cli@24.7.0 build --platform ios --profile development",
     "web": "expo start --web",
-    "deploy:mobile": "npx eas update --channel production --environment production --clear-cache --message \"Update via 4VELO release tooling\"",
+    "deploy:mobile": "pnpm dlx eas-cli@24.7.0 update --channel production --environment production --clear-cache --message \"Update via 4VELO release tooling\"",
     "build:dev:android": "npx eas build --platform android --profile development",
     "build:dev:ios": "npx eas build --platform ios --profile development",
     "build:preview:android": "npx eas build --platform android --profile preview",
@@ -25,7 +25,7 @@
     "install:maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/install-maestro.ps1",
     "eas-build-pre-install": "bash eas-build-pre-install.sh",
     "start:dev-client": "expo start --dev-client",
-    "build:pilot-local:android": "npx eas build --platform android --profile pilot-local",
+    "build:pilot-local:android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile pilot-local",
     "doctor": "pnpm dlx expo-doctor@1.20.4 .",
     "deps:check": "expo install --check"
   },
