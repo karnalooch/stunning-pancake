@@ -1,4 +1,4 @@
-/** Baked at build time — enable only for local/preview E2E APKs, never production store. */
+/** Build-time E2E flags only. Credentials must never be baked into the mobile bundle. */
 import Constants from 'expo-constants';
 
 function readExtra(): Record<string, string | undefined> {
