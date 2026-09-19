@@ -11,12 +11,14 @@ describe('Frozen UI v1.2 semantic colours', () => {
 
     expect(semantic.action.primary).toBe(theme.colors.cta);
     expect(semantic.action.primaryPressed).toBe(theme.colors.ctaDark);
+    expect(semantic.selection.active).toBe(theme.colors.goldAmber);
     expect(semantic.selection.border).toBe(theme.colors.goldAmber);
     expect(semantic.progress.primary).toBe(theme.colors.goldAmber);
     expect(semantic.status.success).toBe(theme.colors.primary);
     expect(semantic.ride.gpsLocked).toBe(theme.colors.primary);
 
     expect(semantic.action.primary).not.toBe(semantic.status.success);
+    expect(semantic.selection.active).not.toBe(semantic.status.success);
     expect(semantic.selection.border).not.toBe(semantic.status.success);
     expect(semantic.navigation.active).not.toBe(semantic.status.success);
   });
