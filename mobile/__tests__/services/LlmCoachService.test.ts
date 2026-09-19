@@ -283,11 +283,11 @@ describe('LlmCoachService', () => {
     expect(msg!.length).toBeGreaterThan(0);
   });
 
-  // ── 9. Empty API key → healthy check ──────────────
+  // ── 9. Direct-client health check ─────────────────
 
-  test('should report unhealthy when API key is empty', () => {
-    const svc = new LlmCoachService({ apiKey: '' });
-    expect(svc.isHealthy()).toBe(false);
+  test('should report healthy when an explicit direct test key is configured', () => {
+    const svc = new LlmCoachService({ apiKey: 'test-key' });
+    expect(svc.isHealthy()).toBe(true);
     svc.destroy();
   });
 
