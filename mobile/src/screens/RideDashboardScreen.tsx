@@ -25,9 +25,11 @@ import {
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import {
+  getVisionHomePreviewState,
   getVisionProfileFixture,
   getVisionRideDashboardFixture,
   isVisionFixtures,
+  type VisionHomePreviewState,
 } from '../bootstrap/visionFixtures';
 import { useGameProgress } from '../hooks/useGameProgress';
 import { usePlatformNotices } from '../hooks/usePlatformNotices';
@@ -258,7 +260,7 @@ const stylesheet = StyleSheet.create((theme) => {
   };
 });
 
-export type HomePreviewState = 'default' | 'loading' | 'empty' | 'offline' | 'error';
+export type HomePreviewState = VisionHomePreviewState;
 
 interface RideDashboardScreenProps {
   user: { username: string; tenant_name?: string; tenant_id?: string } | null;
@@ -321,7 +323,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   const weekDays = locale === 'pl' ? WEEK_DAYS_PL : WEEK_DAYS_EN;
 
   const effectivePreviewState = fixturesEnabled
-    ? (previewState ?? 'default')
+    ? (previewState ?? getVisionHomePreviewState(true) ?? 'default')
     : null;
   const forceEmpty = effectivePreviewState === 'empty';
 
