@@ -5,7 +5,7 @@ on:
     types: [opened, reopened, converted_to_draft, ready_for_review]
 
 concurrency:
-  group: project-status-${{ github.event.pull_request.number }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 permissions:
