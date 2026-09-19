@@ -248,6 +248,38 @@ def tap_pattern(pattern: str, fallback: tuple[int, int] | None = None) -> bool:
     return False
 
 
+def ui_has_pattern(pattern: str) -> bool:
+    root = dump_ui()
+    if root is None:
+        return False
+    rx = re.compile(pattern, re.I)
+    for node in root.iter("node"):
+        if node.attrib.get("package") != APP_ID:
+            continue
+        haystack = " ".join(
+            filter(
+                None,
+                (
+                    node.attrib.get("text"),
+                    node.attrib.get("content-desc"),
+                    node.attrib.get("resource-id"),
+                ),
+            )
+        )
+        if rx.search(haystack):
+            return True
+    return False
+
+
+def wait_for_ui(pattern: str, timeout_s: float = 15.0) -> bool:
+    deadline = time.time() + timeout_s
+    while time.time() < deadline:
+        if ui_has_pattern(pattern):
+            return True
+        sleep(1.0)
+    return ui_has_pattern(pattern)
+
+
 def screencap_image() -> Image.Image | None:
     r = subprocess.run(ADB + ["exec-out", "screencap", "-p"], capture_output=True, timeout=30)
     if r.returncode != 0 or not r.stdout:
@@ -457,21 +489,162 @@ def main() -> int:
 
     capture("01_ride_dashboard", "Jazda — dashboard (stan startowy)")
 
+    # Critical Ride smoke is fail-closed. No coordinate fallback and no optional
+    # continuation: a screenshot after a failed transition is not evidence.
     img = screencap_image()
-    if classify_capture(img) == "main" and tap_pattern(r"DO JAZDY", (540, 1050)):
-        capture("02_active_ride_hud", "Aktywny HUD jazdy")
-        if tap_pattern(r"PAUZA", (800, 2100)):
-            sleep(1.2)
-            capture("03_ride_paused", "Modal pauzy jazdy")
-            if tap_pattern(r"ZATRZYMAJ", (540, 1200)):
-                sleep(3)
-                capture("03b_ride_stopped", "Po zatrzymaniu jazdy")
-            else:
-                steps.append(Step(id="03b_ride_stopped", title="Zatrzymanie jazdy", status="warn", notes=["Brak przycisku ZATRZYMAJ JAZDĘ"]))
-        else:
-            steps.append(Step(id="03_ride_paused", title="Pauza jazdy", status="warn", notes=["Brak PAUZA — long-press STOP niewiarygodny przez adb"]))
-    else:
-        steps.append(Step(id="02_active_ride_hud", title="HUD jazdy", status="skip", notes=["Brak DO JAZDY — może już na HUD lub brak aktywnej sesji"]))
+    if classify_capture(img) != "main":
+        steps.append(
+            Step(
+                id="02_active_ride_hud",
+                title="HUD jazdy",
+                status="fail",
+                notes=["Dashboard nie jest w rozpoznanym stanie głównym przed START JAZDY"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not tap_pattern(r"ride-start-button|START JAZDY|START RIDE|DO JAZDY", None):
+        steps.append(
+            Step(
+                id="02_active_ride_hud",
+                title="HUD jazdy",
+                status="fail",
+                notes=["Nie znaleziono dostępnego przycisku START JAZDY"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 20):
+        capture_raw(
+            "02_active_ride_hud",
+            "Aktywny HUD jazdy — transition FAIL",
+            notes=["START JAZDY nie doprowadził do aktywnego HUD w 20 s"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("02_active_ride_hud", "Aktywny HUD jazdy")
+
+    if not tap_pattern(r"ride-pause-button|PAUZA|PAUSE", None):
+        steps.append(
+            Step(
+                id="03_ride_paused",
+                title="Pauza jazdy",
+                status="fail",
+                notes=["Aktywny HUD nie udostępnia przycisku PAUZA"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+        capture_raw(
+            "03_ride_paused",
+            "Modal pauzy jazdy — transition FAIL",
+            notes=["PAUZA nie doprowadziła do ekranu RidePaused"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03_ride_paused", "Modal pauzy jazdy")
+
+    if not tap_pattern(r"WZNÓW|RESUME", None):
+        steps.append(
+            Step(
+                id="03b_ride_resumed",
+                title="Wznowienie jazdy",
+                status="fail",
+                notes=["RidePaused nie udostępnia przycisku WZNÓW/RESUME"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 12):
+        capture_raw(
+            "03b_ride_resumed",
+            "Wznowiona jazda — transition FAIL",
+            notes=["WZNÓW nie wróciło do aktywnego HUD"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03b_ride_resumed", "Wznowiona jazda")
+
+    if not tap_pattern(r"ride-pause-button|PAUZA|PAUSE", None):
+        steps.append(
+            Step(
+                id="03c_ride_repaused",
+                title="Ponowna pauza przed STOP",
+                status="fail",
+                notes=["Brak PAUZA po wznowieniu jazdy"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+        capture_raw(
+            "03c_ride_repaused",
+            "Ponowna pauza — transition FAIL",
+            notes=["Nie osiągnięto ekranu zatrzymania po ponownej pauzie"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    if not tap_pattern(r"ZATRZYMAJ JAZDĘ|STOP RIDE", None):
+        steps.append(
+            Step(
+                id="03d_ride_summary",
+                title="Zakończenie jazdy",
+                status="fail",
+                notes=["Brak dostępnego przycisku ZATRZYMAJ JAZDĘ"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE|POWRÓT|BACK TO HUB", 25):
+        capture_raw(
+            "03d_ride_summary",
+            "Podsumowanie jazdy — transition FAIL",
+            notes=["STOP nie doprowadził do RideSummary w 25 s"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03d_ride_summary", "Podsumowanie jazdy")
+
+    if not tap_pattern(r"POWRÓT|BACK TO HUB", None):
+        steps.append(
+            Step(
+                id="03e_home_after_summary",
+                title="Powrót do Home po podsumowaniu",
+                status="fail",
+                notes=["RideSummary nie udostępnia POWRÓT/BACK TO HUB"],
+            )
+        )
+        write_report()
+        return 2
+
+    if not wait_for_ui(r"START JAZDY|START RIDE|DO JAZDY|KREATOR GPS", 15):
+        capture_raw(
+            "03e_home_after_summary",
+            "Home po podsumowaniu — transition FAIL",
+            notes=["POWRÓT nie doprowadził do dashboardu Ride"],
+            status="fail",
+        )
+        write_report()
+        return 2
+
+    capture("03e_home_after_summary", "Home po podsumowaniu")
 
     tap_tab("jazda")
     if tap_pattern(r"KREATOR GPS", (540, 280)):
