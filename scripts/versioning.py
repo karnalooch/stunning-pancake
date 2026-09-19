@@ -26,6 +26,7 @@ PACKAGE_FILES = (
 MOBILE_APP_CONFIG = REPO / "mobile" / "app.config.js"
 EAS_CONFIG = REPO / "mobile" / "eas.json"
 ROOT_EXPO_CONFIG = REPO / "app.json"
+ROOT_EAS_CONFIG = REPO / "eas.json"
 CHANGELOG = REPO / "CHANGELOG.md"
 
 VERSION_RE = re.compile(r"^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$")
@@ -100,6 +101,8 @@ def check_contract(*, tag: str | None = None) -> list[str]:
 
     if ROOT_EXPO_CONFIG.exists():
         errors.append("root app.json is forbidden; mobile/app.config.js is the Expo SSOT")
+    if ROOT_EAS_CONFIG.exists():
+        errors.append("root eas.json is forbidden; mobile/eas.json is the EAS SSOT")
 
     try:
         changelog = CHANGELOG.read_text(encoding="utf-8")

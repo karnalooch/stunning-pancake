@@ -9,14 +9,71 @@ try {
   // dotenv optional — E2E vars may come from the shell environment
 }
 
-const e2eExtra = {
+const resolvePublicRuntimeExtra = () => ({
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_TELEMETRY_URL: process.env.EXPO_PUBLIC_TELEMETRY_URL,
+});
+
+const resolveE2eExtra = () => ({
   EXPO_PUBLIC_E2E_AUTO_LOGIN: process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN,
   EXPO_PUBLIC_E2E_SKIP_ONBOARDING: process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING,
-  EXPO_PUBLIC_E2E_EMAIL: process.env.EXPO_PUBLIC_E2E_EMAIL,
-  EXPO_PUBLIC_E2E_PASSWORD: process.env.EXPO_PUBLIC_E2E_PASSWORD,
   EXPO_PUBLIC_E2E_GPS_RECOVERY: process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY,
   // Vision parity harness — render deterministic mock data for screenshot diff.
   EXPO_PUBLIC_VISION_FIXTURES: process.env.EXPO_PUBLIC_VISION_FIXTURES,
+});
+
+const assertReleaseSafePublicEnv = () => {
+  if (process.env.EAS_BUILD_PROFILE !== 'production') return;
+
+  const mustBeAbsent = [
+    'EXPO_PUBLIC_E2E_EMAIL',
+    'EXPO_PUBLIC_E2E_PASSWORD',
+    'EXPO_PUBLIC_LLM_API_KEY',
+  ].filter((key) => {
+    const value = process.env[key];
+    return value != null && value !== '';
+  });
+
+  const mustBeDisabled = [
+    'EXPO_PUBLIC_E2E_AUTO_LOGIN',
+    'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
+    'EXPO_PUBLIC_E2E_GPS_RECOVERY',
+    'EXPO_PUBLIC_VISION_FIXTURES',
+  ].filter((key) => {
+    const value = String(process.env[key] ?? '').toLowerCase();
+    return value !== '' && value !== 'false' && value !== '0';
+  });
+
+  const forbidden = [...mustBeAbsent, ...mustBeDisabled];
+
+  if (forbidden.length > 0) {
+    throw new Error(
+      `Production mobile config contains forbidden public test/secret variables: ${forbidden.join(', ')}`,
+    );
+  }
+
+  const requiredHttpsEndpoints = [
+    'EXPO_PUBLIC_API_URL',
+    'EXPO_PUBLIC_TELEMETRY_URL',
+  ];
+
+  for (const key of requiredHttpsEndpoints) {
+    const raw = process.env[key];
+    if (!raw) {
+      throw new Error(`Production mobile config is missing required ${key}`);
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      throw new Error(`Production mobile config has invalid ${key}`);
+    }
+
+    if (parsed.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
+      throw new Error(`Production mobile config requires an HTTPS non-local ${key}`);
+    }
+  }
 };
 
 // Security boundary: EAS_BUILD_PROFILE is the authoritative signal for enabling
@@ -38,7 +95,7 @@ const isPilotLocalBuild = () =>
 // iOS config point at a missing GoogleService-Info.plist (and vice versa).
 // EXPO_PUBLIC_ENABLE_FIREBASE="false" remains an explicit build-wide opt-out.
 const resolveFirebaseConfig = () => {
-  const firebaseAllowed = process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'false';
+  const firebaseAllowed = process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true';
   const hasAndroidGoogleServices = fs.existsSync(
     path.resolve(__dirname, './google-services.json'),
   );
@@ -55,6 +112,8 @@ const resolveFirebaseConfig = () => {
 };
 
 export default ({ config }) => {
+  assertReleaseSafePublicEnv();
+
   const {
     enableFirebase,
     enableAndroidGoogleServices,
@@ -68,8 +127,7 @@ export default ({ config }) => {
     "scheme": "fourvelo",
     "version": releaseVersion.version,
     "updates": {
-      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
-      "channel": "production"
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -77,7 +135,6 @@ export default ({ config }) => {
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -117,10 +174,10 @@ export default ({ config }) => {
       "eas": {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
       },
-      "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-      "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
       ...Object.fromEntries(
-        Object.entries(e2eExtra).filter(([, value]) => value != null && value !== ''),
+        Object.entries({ ...resolvePublicRuntimeExtra(), ...resolveE2eExtra() }).filter(
+          ([, value]) => value != null && value !== '',
+        ),
       ),
     },
     "plugins": [
@@ -128,6 +185,8 @@ export default ({ config }) => {
         "@react-native-firebase/app",
         "@react-native-firebase/crashlytics"
       ] : []),
+      "expo-audio",
+      "expo-sharing",
       [
         "expo-location",
         {
