@@ -201,6 +201,7 @@ class FakeApi:
         ]
         self.reviews = reviews or []
         self.unresolved = unresolved
+        self.closing_issues = [141]
         self.mergeable_state = mergeable_state
         self.author = author
         self.head_repo = head_repo
@@ -240,6 +241,8 @@ class FakeApi:
             return ({"message": "Updating pull request branch."}, {})
         if method == "PUT" and path.endswith("/pulls/42/merge"):
             return ({"merged": True, "sha": "merged-sha"}, {})
+        if method == "PATCH" and path.endswith("/issues/141"):
+            return ({"number": 141, "state": "closed", "state_reason": "completed"}, {})
         raise AssertionError(f"unexpected REST call: {method} {path}")
 
     def graphql(self, query, variables):
@@ -252,7 +255,19 @@ class FakeApi:
                         "nodes": [
                             {"isResolved": False} for _ in range(self.unresolved)
                         ],
-                    }
+                    },
+                    "closingIssuesReferences": {
+                        "pageInfo": {"hasNextPage": False},
+                        "nodes": [
+                            {
+                                "number": issue_number,
+                                "repository": {
+                                    "nameWithOwner": "karnalooch/stunning-pancake"
+                                },
+                            }
+                            for issue_number in self.closing_issues
+                        ],
+                    },
                 }
             }
         }
@@ -279,7 +294,34 @@ class AutoMergeDecisionTests(unittest.TestCase):
         self.assertEqual(self._evaluate(api), "merged")
         self.assertEqual(
             api.put_paths(),
-            ["/repos/karnalooch/stunning-pancake/pulls/42/merge"],
+            [
+                "/repos/karnalooch/stunning-pancake/pulls/42/merge",
+                "/repos/karnalooch/stunning-pancake/issues/141",
+            ],
+        )
+
+    def test_missing_same_repo_closing_issue_blocks(self):
+        api = FakeApi()
+        api.closing_issues = []
+        self.assertEqual(self._evaluate(api), "blocked")
+        self.assertEqual(api.put_paths(), [])
+
+    def test_successful_merge_closes_linked_issue(self):
+        api = FakeApi()
+        self.assertEqual(self._evaluate(api), "merged")
+        patch_calls = [
+            (path, payload)
+            for method, path, payload, _query in api.calls
+            if method == "PATCH"
+        ]
+        self.assertEqual(
+            patch_calls,
+            [
+                (
+                    "/repos/karnalooch/stunning-pancake/issues/141",
+                    {"state": "closed", "state_reason": "completed"},
+                )
+            ],
         )
 
     def test_high_risk_path_never_reaches_merge(self):
