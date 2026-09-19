@@ -294,10 +294,7 @@ class AutoMergeDecisionTests(unittest.TestCase):
         self.assertEqual(self._evaluate(api), "merged")
         self.assertEqual(
             api.put_paths(),
-            [
-                "/repos/karnalooch/stunning-pancake/pulls/42/merge",
-                "/repos/karnalooch/stunning-pancake/issues/141",
-            ],
+            ["/repos/karnalooch/stunning-pancake/pulls/42/merge"],
         )
 
     def test_missing_same_repo_closing_issue_blocks(self):
