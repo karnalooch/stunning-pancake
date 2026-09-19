@@ -37,6 +37,12 @@ class MobileHarnessContractTests(unittest.TestCase):
             "local.properties must be written after clean prebuild",
         )
 
+    def test_visual_harness_uses_pinned_cli_entrypoints(self):
+        source = read("scripts/vision-parity-full-harness.ps1")
+        self.assertIn('"pnpm" @("exec", "expo", "prebuild"', source)
+        self.assertIn('"dlx", "eas-cli@24.7.0", "build"', source)
+        self.assertNotIn('"npx" @("eas"', source)
+
     def test_python_android_helpers_parse_and_have_no_hardcoded_serial(self):
         for path in ("scripts/emulator-ui-audit.py", "scripts/emulator-onboarding.py"):
             with self.subTest(path=path):
