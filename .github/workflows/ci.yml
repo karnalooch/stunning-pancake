@@ -369,6 +369,14 @@ jobs:
       - name: Mobile platform configuration contract
         run: python -m unittest scripts/test_mobile_platform_contract.py -v
 
+      - name: Expo dependency compatibility
+        working-directory: mobile
+        run: pnpm exec expo install --check
+
+      - name: Expo Doctor
+        working-directory: mobile
+        run: pnpm dlx expo-doctor@1.20.4 .
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
