@@ -77,10 +77,14 @@ class ToolchainVersionContractTests(unittest.TestCase):
 
     def test_runtime_build_entrypoints_use_canonical_toolchain(self):
         dockerfile = read("admin/Dockerfile")
-        eas_preinstall = read("mobile/eas-build-pre-install.sh")
+        mobile_package = json.loads(read("mobile/package.json"))
         self.assertIn(f"FROM node:{NODE_VERSION}-slim AS build", dockerfile)
         self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", dockerfile)
-        self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", eas_preinstall)
+        self.assertNotIn("eas-build-pre-install", mobile_package.get("scripts", {}))
+        self.assertFalse(
+            (ROOT / "mobile" / "eas-build-pre-install.sh").exists(),
+            "EAS should own the monorepo dependency install lifecycle",
+        )
 
     def test_mobile_eas_profiles_use_node_24(self):
         payload = json.loads(read("mobile/eas.json"))
@@ -92,7 +96,9 @@ class ToolchainVersionContractTests(unittest.TestCase):
 
     def test_mobile_is_the_only_eas_config_root(self):
         self.assertFalse((ROOT / "eas.json").exists(), "root eas.json is forbidden")
+        self.assertFalse((ROOT / ".easignore").exists(), "root .easignore is forbidden")
         self.assertTrue((ROOT / "mobile" / "eas.json").is_file())
+        self.assertTrue((ROOT / "mobile" / ".easignore").is_file())
 
     def test_known_operational_helpers_do_not_reintroduce_old_pnpm(self):
         sources = (
@@ -105,7 +111,11 @@ class ToolchainVersionContractTests(unittest.TestCase):
             with self.subTest(path=path):
                 source = read(path)
                 self.assertNotIn("pnpm@9.15.0", source)
-                self.assertIn(f"pnpm@{PNPM_VERSION}", source)
+                self.assertRegex(
+                    source,
+                    rf"pnpm(?:@|\s+){re.escape(PNPM_VERSION)}",
+                    f"{path} must mention the canonical pnpm {PNPM_VERSION} toolchain",
+                )
 
 
 if __name__ == "__main__":
