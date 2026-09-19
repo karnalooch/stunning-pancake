@@ -66,10 +66,15 @@ pnpm --dir mobile exec expo start
 
 ### 3. Production store
 
-1. Bump version in `app.json` / `app.config.*` (version + buildNumber/versionCode).
-2. `eas build --profile production --platform all`
-3. `eas submit` per store profile (after QA).
-4. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
+1. The product version has one source of truth: repository-root `version.json`.
+2. Change it with `pnpm version:set -- <MAJOR.MINOR.PATCH> --prerelease <id>` (for example `dev` or `rc.1`), or omit `--prerelease` for a stable release.
+3. Verify the contract with `pnpm version:check`. `mobile/app.config.js` reads only numeric `MAJOR.MINOR.PATCH` from the SSOT as the user-visible application version.
+4. Run `eas build --profile production --platform all`. EAS owns native build identifiers (`android.versionCode` / `ios.buildNumber`) and auto-increments them for production builds.
+5. Run `eas submit` per store profile after QA.
+6. A stable Git tag must be exactly `vMAJOR.MINOR.PATCH`, must match `version.json`, and is rejected while `prerelease` is non-empty.
+7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
+
+Do not manually edit `versionCode`, `buildNumber`, `mobile/package.json`, `admin/package.json`, or the Expo version in `app.config.js`. The versioning contract owns those values; root `app.json` is no longer an Expo configuration source.
 
 ### Verification after build
 

@@ -9,6 +9,9 @@ const PILOT_LOCAL_TELEMETRY_URL = 'http://localhost:8001';
 const { build, cli } = JSON.parse(
   readFileSync(resolve(__dirname, '../../eas.json'), 'utf8'),
 );
+const releaseVersion = JSON.parse(
+  readFileSync(resolve(__dirname, '../../../version.json'), 'utf8'),
+) as { version: string; prerelease: string };
 
 jest.mock('dotenv', () => ({ config: () => undefined }));
 
@@ -121,9 +124,13 @@ describe('pilot-local eas.json contract', () => {
     // was checked empirically with `eas config --profile pilot-local` against
     // eas-cli 24.6.0 — the values below are accepted.
     expect(cli).toBeDefined();
-    expect(cli.appVersionSource).toBe('local');
+    expect(cli.appVersionSource).toBe('remote');
     expect(typeof cli.version).toBe('string');
     expect(cli.version.length).toBeGreaterThan(0);
+  });
+
+  test('production build numbers are managed remotely and auto-incremented', () => {
+    expect(build.production.autoIncrement).toBe(true);
   });
 
   test('uses an independent internal development profile', () => {
@@ -153,6 +160,15 @@ describe('pilot-local eas.json contract', () => {
       expect(build[profile].env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
       expect(build[profile].env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
     }
+  });
+});
+
+describe('app.config.js product version contract', () => {
+  test('uses the numeric product version from the repository SSOT', () => {
+    const resolved = resolveWithProfile('production') as { version?: string; runtimeVersion?: unknown };
+    expect(releaseVersion.version).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(resolved.version).toBe(releaseVersion.version);
+    expect(resolved.runtimeVersion).toEqual({ policy: 'appVersion' });
   });
 });
 

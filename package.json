@@ -46,7 +46,10 @@
     "test:admin": "pnpm --filter admin test:run",
     "mobile:install-maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/install-maestro.ps1",
     "mobile:test:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-mobile-e2e.ps1",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "version:check": "python scripts/versioning.py check",
+    "version:show": "python scripts/versioning.py show",
+    "version:set": "python scripts/versioning.py set"
   },
   "devDependencies": {
     "tsx": "^4.19.0",
