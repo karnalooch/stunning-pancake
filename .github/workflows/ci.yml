@@ -418,6 +418,18 @@ jobs:
           echo "::group::Expo remediation diff"
           git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
           echo "::endgroup::"
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+
+          for filename in ("mobile/package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml"):
+              marker = filename.upper().replace("/", "_").replace(".", "_").replace("-", "_")
+              encoded = base64.b64encode(Path(filename).read_bytes()).decode("ascii")
+              print(f"REMEDIATION_{marker}_B64_BEGIN")
+              for offset in range(0, len(encoded), 8000):
+                  print(encoded[offset:offset + 8000])
+              print(f"REMEDIATION_{marker}_B64_END")
+          PY
 
       - name: Expo compatibility gate
         if: always() && (steps.expo_deps.outcome != 'success' || steps.expo_doctor.outcome != 'success')
