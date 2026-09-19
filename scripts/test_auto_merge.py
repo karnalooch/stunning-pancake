@@ -4,6 +4,7 @@ import unittest
 
 from scripts.auto_merge import (
     auto_merge_mode,
+    evaluate_pull_request,
     has_changes_requested,
     is_risky_path,
     latest_check_conclusions,
@@ -136,6 +137,156 @@ class AutoMergePolicyTests(unittest.TestCase):
                 ]
             )
         )
+
+
+class FakeApi:
+    def __init__(
+        self,
+        *,
+        paths=None,
+        checks=None,
+        reviews=None,
+        unresolved=0,
+        mergeable_state="clean",
+        author="karnalooch",
+        head_repo="karnalooch/stunning-pancake",
+    ):
+        self.paths = paths or ["mobile/src/screens/HomeScreen.tsx"]
+        self.checks = checks or [
+            {"id": 10, "name": "Aggregate CI gate", "conclusion": "success"},
+            {"id": 11, "name": "Kilo Code Review", "conclusion": "success"},
+        ]
+        self.reviews = reviews or []
+        self.unresolved = unresolved
+        self.mergeable_state = mergeable_state
+        self.author = author
+        self.head_repo = head_repo
+        self.calls = []
+
+    def rest(self, method, path, payload=None, *, query=None):
+        self.calls.append((method, path, payload, query))
+        if method == "GET" and path.endswith("/pulls/42"):
+            return (
+                {
+                    "number": 42,
+                    "body": "Auto-merge: eligible",
+                    "state": "open",
+                    "draft": False,
+                    "base": {"ref": "main"},
+                    "head": {
+                        "sha": "abc123",
+                        "repo": {"full_name": self.head_repo},
+                    },
+                    "user": {"login": self.author},
+                    "mergeable": True,
+                    "mergeable_state": self.mergeable_state,
+                    "title": "safe change",
+                },
+                {},
+            )
+        if method == "GET" and path.endswith("/pulls/42/files"):
+            return ([{"filename": value} for value in self.paths], {})
+        if method == "GET" and path.endswith("/commits/abc123/check-runs"):
+            return (
+                {"total_count": len(self.checks), "check_runs": self.checks},
+                {},
+            )
+        if method == "GET" and path.endswith("/pulls/42/reviews"):
+            return (self.reviews, {})
+        if method == "PUT" and path.endswith("/pulls/42/update-branch"):
+            return ({"message": "Updating pull request branch."}, {})
+        if method == "PUT" and path.endswith("/pulls/42/merge"):
+            return ({"merged": True, "sha": "merged-sha"}, {})
+        raise AssertionError(f"unexpected REST call: {method} {path}")
+
+    def graphql(self, query, variables):
+        del query, variables
+        return {
+            "repository": {
+                "pullRequest": {
+                    "reviewThreads": {
+                        "pageInfo": {"hasNextPage": False},
+                        "nodes": [
+                            {"isResolved": False} for _ in range(self.unresolved)
+                        ],
+                    }
+                }
+            }
+        }
+
+    def put_paths(self):
+        return [
+            path
+            for method, path, _payload, _query in self.calls
+            if method == "PUT"
+        ]
+
+
+class AutoMergeDecisionTests(unittest.TestCase):
+    def _evaluate(self, api):
+        return evaluate_pull_request(
+            api,
+            repository="karnalooch/stunning-pancake",
+            repository_owner="karnalooch",
+            pr_summary={"number": 42, "body": "Auto-merge: eligible"},
+        )
+
+    def test_safe_green_pr_is_squash_merged(self):
+        api = FakeApi()
+        self.assertEqual(self._evaluate(api), "merged")
+        self.assertEqual(
+            api.put_paths(),
+            ["/repos/karnalooch/stunning-pancake/pulls/42/merge"],
+        )
+
+    def test_high_risk_path_never_reaches_merge(self):
+        api = FakeApi(paths=[".github/workflows/ci.yml"])
+        self.assertEqual(self._evaluate(api), "blocked")
+        self.assertEqual(api.put_paths(), [])
+
+    def test_missing_review_check_never_reaches_merge(self):
+        api = FakeApi(
+            checks=[
+                {"id": 10, "name": "Aggregate CI gate", "conclusion": "success"}
+            ]
+        )
+        self.assertEqual(self._evaluate(api), "blocked")
+        self.assertEqual(api.put_paths(), [])
+
+    def test_unresolved_thread_never_reaches_merge(self):
+        api = FakeApi(unresolved=1)
+        self.assertEqual(self._evaluate(api), "blocked")
+        self.assertEqual(api.put_paths(), [])
+
+    def test_changes_requested_never_reaches_merge(self):
+        api = FakeApi(
+            reviews=[
+                {
+                    "id": 20,
+                    "state": "CHANGES_REQUESTED",
+                    "user": {"login": "human-reviewer"},
+                }
+            ]
+        )
+        self.assertEqual(self._evaluate(api), "blocked")
+        self.assertEqual(api.put_paths(), [])
+
+    def test_behind_pr_updates_branch_but_does_not_merge(self):
+        api = FakeApi(mergeable_state="behind")
+        self.assertEqual(self._evaluate(api), "updated")
+        self.assertEqual(
+            api.put_paths(),
+            ["/repos/karnalooch/stunning-pancake/pulls/42/update-branch"],
+        )
+
+    def test_fork_or_non_owner_author_never_reaches_merge(self):
+        for api in (
+            FakeApi(head_repo="someone/fork"),
+            FakeApi(author="someone-else"),
+        ):
+            with self.subTest(author=api.author, head_repo=api.head_repo):
+                self.assertEqual(self._evaluate(api), "blocked")
+                self.assertEqual(api.put_paths(), [])
 
 
 if __name__ == "__main__":
