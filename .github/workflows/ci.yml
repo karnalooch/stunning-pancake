@@ -429,6 +429,11 @@ jobs:
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
 
+      - name: Test GitHub Project status automation
+        run: |
+          python -m unittest scripts/test_project_status_automation.py -v
+          python -m unittest scripts/test_project_status_workflow.py -v
+
       - name: Validate product version contract
         shell: bash
         run: |
