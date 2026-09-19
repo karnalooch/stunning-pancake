@@ -37,6 +37,15 @@ describe('release-grade public env guard', () => {
     );
   });
 
+  test('production rejects credential fields even when their literal value is false', () => {
+    process.env.EAS_BUILD_PROFILE = 'production';
+    process.env.EXPO_PUBLIC_E2E_PASSWORD = 'false';
+
+    const config = loadConfig();
+
+    expect(() => config({ config: {} })).toThrow(/EXPO_PUBLIC_E2E_PASSWORD/);
+  });
+
   test('production rejects public LLM key material', () => {
     process.env.EAS_BUILD_PROFILE = 'production';
     process.env.EXPO_PUBLIC_LLM_API_KEY = 'sk-should-never-be-public';
