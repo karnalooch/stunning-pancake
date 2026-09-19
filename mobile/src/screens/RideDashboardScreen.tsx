@@ -258,6 +258,8 @@ const stylesheet = StyleSheet.create((theme) => {
   };
 });
 
+export type HomePreviewState = 'default' | 'loading' | 'empty' | 'offline' | 'error';
+
 interface RideDashboardScreenProps {
   user: { username: string; tenant_name?: string; tenant_id?: string } | null;
   onStartRide?: (sport: ActivitySportType) => void;
@@ -274,6 +276,7 @@ interface RideDashboardScreenProps {
   onDismissStartRideError?: () => void;
   rideEdgeMessage?: RideEdgeMessage | null;
   onDismissRideEdgeMessage?: () => void;
+  previewState?: HomePreviewState;
 }
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
@@ -292,6 +295,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   onDismissStartRideError,
   rideEdgeMessage,
   onDismissRideEdgeMessage,
+  previewState,
 }) => {
   const s = stylesheet;
   const { t, locale } = useI18n();
@@ -316,21 +320,42 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   const riderPlace = user?.tenant_name?.trim() || '4VELO';
   const weekDays = locale === 'pl' ? WEEK_DAYS_PL : WEEK_DAYS_EN;
 
-  const displayStatsLoading = fixturesEnabled ? false : statsLoading;
-  const displayStatsOffline = fixturesEnabled ? false : statsOffline;
-  const displayStatsError = fixturesEnabled ? false : statsError;
-  const displayWeeklyBars = fixturesEnabled
-    ? [0.52, 0.64, 0.47, 0.88, 0.72, 0.58, 0.41]
-    : weeklyBars;
-  const displayWeeklyDistanceKm = fixturesEnabled
-    ? (rideFixture?.weekDistanceKm ?? 128.7)
-    : weeklyDistanceKm;
-  const lastRideDistanceKm = fixturesEnabled
-    ? 42.3
-    : latestRide
-      ? Math.max(0, latestRide.distance ?? 0) / 1000
-      : null;
-  const lastRideDuration = fixturesEnabled ? '01:42:00' : latestRide?.duration ?? null;
+  const effectivePreviewState = fixturesEnabled
+    ? (previewState ?? 'default')
+    : null;
+  const forceEmpty = effectivePreviewState === 'empty';
+
+  const displayStatsLoading = effectivePreviewState
+    ? effectivePreviewState === 'loading'
+    : statsLoading;
+  const displayStatsOffline = effectivePreviewState
+    ? effectivePreviewState === 'offline'
+    : statsOffline;
+  const displayStatsError = effectivePreviewState
+    ? effectivePreviewState === 'error'
+    : statsError;
+  const displayWeeklyBars = forceEmpty
+    ? [0, 0, 0, 0, 0, 0, 0]
+    : fixturesEnabled
+      ? [0.52, 0.64, 0.47, 0.88, 0.72, 0.58, 0.41]
+      : weeklyBars;
+  const displayWeeklyDistanceKm = forceEmpty
+    ? 0
+    : fixturesEnabled
+      ? (rideFixture?.weekDistanceKm ?? 128.7)
+      : weeklyDistanceKm;
+  const lastRideDistanceKm = forceEmpty
+    ? null
+    : fixturesEnabled
+      ? 42.3
+      : latestRide
+        ? Math.max(0, latestRide.distance ?? 0) / 1000
+        : null;
+  const lastRideDuration = forceEmpty
+    ? null
+    : fixturesEnabled
+      ? '01:42:00'
+      : latestRide?.duration ?? null;
 
   const handleStartRide = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
