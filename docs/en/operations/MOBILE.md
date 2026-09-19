@@ -55,21 +55,21 @@ Set in EAS Secrets / `eas.json` profiles / local `.env` (gitignored). **Do not**
 ```bash
 # from the monorepo root
 pnpm install --frozen-lockfile
-pnpm --dir mobile exec expo start
+pnpm --dir mobile start
 ```
 
 ### 2. Preview / internal (EAS)
 
 1. Log in: `eas login`
 2. Profile from `eas.json` (e.g. preview)
-3. `eas build --profile preview --platform android` (or ios)
+3. `pnpm --dir mobile build:preview:android` (or `pnpm --dir mobile build:preview:ios`)
 
 ### 3. Production store
 
 1. The product version has one source of truth: repository-root `version.json`.
 2. Change it with `pnpm version:set -- <MAJOR.MINOR.PATCH> --prerelease <id>` (for example `dev` or `rc.1`), or omit `--prerelease` for a stable release.
 3. Verify the contract with `pnpm version:check`. `mobile/app.config.js` reads only numeric `MAJOR.MINOR.PATCH` from the SSOT as the user-visible application version.
-4. Run `eas build --profile production --platform all`. EAS owns native build identifiers (`android.versionCode` / `ios.buildNumber`) and auto-increments them for production builds.
+4. Run the platform-specific pinned scripts `pnpm --dir mobile build:prod:android` / `pnpm --dir mobile build:prod:ios`. EAS owns native build identifiers (`android.versionCode` / `ios.buildNumber`) and auto-increments them for production builds.
 5. Run `eas submit` per store profile after QA.
 6. A stable Git tag must be exactly `vMAJOR.MINOR.PATCH`, must match `version.json`, and is rejected while `prerelease` is non-empty.
 7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
@@ -145,14 +145,14 @@ For `ride-lifecycle.yaml`, set env vars `E2E_EMAIL` and `E2E_PASSWORD` before ru
 | Session does not start | API down / auth | `EXPO_PUBLIC_API_URL`, token |
 | Recovery banner persists | Large outbox | Dev: clear MMKV; prod: wait for flush + network |
 | `gps_buffer_overflow` | >2000 points in buffer | Restore network + flush; shorten offline ride |
-| EAS build fail | Credentials / profiles | `eas credentials`, build log |
+| EAS build fail | Credentials / profiles | `pnpm --dir mobile dlx eas-cli@24.7.0 credentials`, build log |
 
 ---
 
 ## Rollback release (Release Manager)
 
 1. Store: pause rollout % or rollback in store console.
-2. EAS: rebuild previous git tag with `eas build`.
+2. EAS: rebuild previous git tag with the pinned `pnpm --dir mobile build:prod:*` scripts.
 3. API: if breaking change — rollback backend per [DEPLOYMENT.md](../DEPLOYMENT.md).
 
 ---
