@@ -409,7 +409,12 @@ jobs:
           text = text.replace("  react-dom: 19.2.7\n", "")
           path.write_text(text, encoding="utf-8")
           PY
-          pnpm --dir mobile exec expo install --fix
+          # This is an ephemeral diagnostic workspace. The committed baseline
+          # stays frozen above; here we deliberately regenerate the lock after
+          # changing the override set, then let Expo write its SDK-compatible
+          # package versions so the exact remediation diff is observable.
+          pnpm install --no-frozen-lockfile
+          CI=false pnpm --dir mobile exec expo install --fix
           echo "::group::Expo remediation diff"
           git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
           echo "::endgroup::"
