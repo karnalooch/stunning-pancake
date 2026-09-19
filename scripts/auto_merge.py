@@ -478,9 +478,13 @@ def evaluate_pull_request(
             f"/repos/{repository}/issues/{issue_number}",
             {"state": "closed", "state_reason": "completed"},
         )
-        if not isinstance(issue, dict) or issue.get("state") != "closed":
+        if (
+            not isinstance(issue, dict)
+            or issue.get("state") != "closed"
+            or issue.get("state_reason") != "completed"
+        ):
             raise AutomationError(
-                f"PR #{number} merged but Issue #{issue_number} did not close"
+                f"PR #{number} merged but Issue #{issue_number} did not close as completed"
             )
         print(f"auto-merge: issue #{issue_number} CLOSED as completed")
 
