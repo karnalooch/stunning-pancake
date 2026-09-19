@@ -27,18 +27,26 @@ const resolveE2eExtra = () => ({
 const assertReleaseSafePublicEnv = () => {
   if (process.env.EAS_BUILD_PROFILE !== 'production') return;
 
-  const forbidden = [
-    'EXPO_PUBLIC_E2E_AUTO_LOGIN',
-    'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
+  const mustBeAbsent = [
     'EXPO_PUBLIC_E2E_EMAIL',
     'EXPO_PUBLIC_E2E_PASSWORD',
-    'EXPO_PUBLIC_E2E_GPS_RECOVERY',
-    'EXPO_PUBLIC_VISION_FIXTURES',
     'EXPO_PUBLIC_LLM_API_KEY',
   ].filter((key) => {
     const value = process.env[key];
-    return value != null && value !== '' && value !== 'false';
+    return value != null && value !== '';
   });
+
+  const mustBeDisabled = [
+    'EXPO_PUBLIC_E2E_AUTO_LOGIN',
+    'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
+    'EXPO_PUBLIC_E2E_GPS_RECOVERY',
+    'EXPO_PUBLIC_VISION_FIXTURES',
+  ].filter((key) => {
+    const value = String(process.env[key] ?? '').toLowerCase();
+    return value !== '' && value !== 'false' && value !== '0';
+  });
+
+  const forbidden = [...mustBeAbsent, ...mustBeDisabled];
 
   if (forbidden.length > 0) {
     throw new Error(
