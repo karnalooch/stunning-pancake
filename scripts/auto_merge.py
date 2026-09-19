@@ -52,7 +52,7 @@ RISKY_BASENAMES = {
     "Pipfile.lock",
 }
 RISKY_SEGMENTS = {"migrations", "security", "secrets", "auth", "oauth"}
-RISKY_NAME_PREFIXES = ("requirements", "dependabot")
+REQUIREMENTS_SUFFIXES = {".txt", ".in"}
 
 
 class AutomationError(RuntimeError):
@@ -159,14 +159,20 @@ def is_risky_path(path: str) -> bool:
     pure = PurePosixPath(normalized)
     parts_lower = {part.lower() for part in pure.parts}
     basename = pure.name
+    basename_lower = basename.lower()
 
     if normalized in RISKY_EXACT or basename in RISKY_BASENAMES:
+        return True
+    if basename_lower in {"package.json", "pyproject.toml"}:
         return True
     if any(normalized.startswith(prefix) for prefix in RISKY_PREFIXES):
         return True
     if parts_lower.intersection(RISKY_SEGMENTS):
         return True
-    if any(basename.lower().startswith(prefix) for prefix in RISKY_NAME_PREFIXES):
+    if (
+        basename_lower.startswith("requirements")
+        and pure.suffix.lower() in REQUIREMENTS_SUFFIXES
+    ):
         return True
     if lowered.endswith((".lock", ".pem", ".key", ".p12", ".pfx")):
         return True
@@ -183,7 +189,13 @@ def latest_check_conclusions(check_runs: Iterable[dict[str, Any]]) -> dict[str, 
     latest: dict[str, tuple[int, str | None]] = {}
     for run in check_runs:
         name = str(run.get("name", ""))
-        run_id = int(run.get("id", 0))
+        raw_run_id = run.get("id")
+        if raw_run_id is None:
+            raise AutomationError(f"check run {name!r} is missing id")
+        try:
+            run_id = int(raw_run_id)
+        except (TypeError, ValueError) as exc:
+            raise AutomationError(f"check run {name!r} has invalid id") from exc
         conclusion = run.get("conclusion")
         previous = latest.get(name)
         if previous is None or run_id > previous[0]:
@@ -436,6 +448,29 @@ def evaluate_pull_request(
     return "merged"
 
 
+def evaluate_eligible_pull_requests(
+    api: GitHubApi,
+    *,
+    repository: str,
+    repository_owner: str,
+    pull_requests: Iterable[dict[str, Any]],
+) -> int:
+    had_errors = False
+    for pr in pull_requests:
+        number = pr.get("number", "?")
+        try:
+            evaluate_pull_request(
+                api,
+                repository=repository,
+                repository_owner=repository_owner,
+                pr_summary=pr,
+            )
+        except (AutomationError, KeyError, TypeError, ValueError) as exc:
+            print(f"auto-merge: PR #{number} FAIL: {exc}", file=sys.stderr)
+            had_errors = True
+    return 1 if had_errors else 0
+
+
 def main() -> int:
     try:
         repository = os.environ.get("GITHUB_REPOSITORY", "")
@@ -452,14 +487,12 @@ def main() -> int:
             pr for pr in pulls if auto_merge_mode(pr.get("body")) == "eligible"
         ]
         print(f"auto-merge: evaluating {len(eligible)} eligible open PR(s)")
-        for pr in eligible:
-            evaluate_pull_request(
-                api,
-                repository=repository,
-                repository_owner=repository_owner,
-                pr_summary=pr,
-            )
-        return 0
+        return evaluate_eligible_pull_requests(
+            api,
+            repository=repository,
+            repository_owner=repository_owner,
+            pull_requests=eligible,
+        )
     except (AutomationError, KeyError, TypeError, ValueError) as exc:
         print(f"auto-merge: FAIL: {exc}", file=sys.stderr)
         return 1
