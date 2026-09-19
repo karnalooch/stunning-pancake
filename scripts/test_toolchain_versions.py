@@ -82,14 +82,17 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", dockerfile)
         self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", eas_preinstall)
 
-    def test_all_eas_profiles_use_node_24(self):
-        for path in ("eas.json", "mobile/eas.json"):
-            payload = json.loads(read(path))
-            build = payload.get("build", {})
-            self.assertGreater(len(build), 0, path)
-            for profile, config in build.items():
-                with self.subTest(path=path, profile=profile):
-                    self.assertEqual(config.get("node"), NODE_VERSION)
+    def test_mobile_eas_profiles_use_node_24(self):
+        payload = json.loads(read("mobile/eas.json"))
+        build = payload.get("build", {})
+        self.assertGreater(len(build), 0, "mobile/eas.json")
+        for profile, config in build.items():
+            with self.subTest(profile=profile):
+                self.assertEqual(config.get("node"), NODE_VERSION)
+
+    def test_mobile_is_the_only_eas_config_root(self):
+        self.assertFalse((ROOT / "eas.json").exists(), "root eas.json is forbidden")
+        self.assertTrue((ROOT / "mobile" / "eas.json").is_file())
 
     def test_known_operational_helpers_do_not_reintroduce_old_pnpm(self):
         sources = (
