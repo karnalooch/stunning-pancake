@@ -27,7 +27,11 @@ import { GlobalLeaderboardScreen } from '../screens/GlobalLeaderboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
 import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
 import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
-import { isVisionFixtures } from './visionFixtures';
+import {
+  isVisionFixtures,
+  setVisionHomePreviewState,
+  VISION_HOME_PREVIEW_STATES,
+} from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
@@ -465,7 +469,22 @@ export function NavigationShell(props: NavigationShellProps) {
                   <StackScreenHeader title="Vision Gallery" onBack={() => navigation.goBack()} />
                   <VisionGalleryScreen
                     entries={[
-                      { label: 'Ride', onPress: () => navigation.navigate('MainTabs', { screen: 'Ride' }) },
+                      {
+                        label: 'Ride',
+                        onPress: () => {
+                          setVisionHomePreviewState('default');
+                          navigation.navigate('MainTabs', { screen: 'Ride' });
+                        },
+                      },
+                      ...(isVisionFixtures()
+                        ? VISION_HOME_PREVIEW_STATES.map((state) => ({
+                            label: `Home — ${state}`,
+                            onPress: () => {
+                              setVisionHomePreviewState(state);
+                              navigation.navigate('MainTabs', { screen: 'Ride' });
+                            },
+                          }))
+                        : []),
                       { label: 'Compete', onPress: () => navigation.navigate('MainTabs', { screen: 'Compete' }) },
                       { label: 'Explore', onPress: () => navigation.navigate('MainTabs', { screen: 'Explore' }) },
                       { label: 'Profile', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
