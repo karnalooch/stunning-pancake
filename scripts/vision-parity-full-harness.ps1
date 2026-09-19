@@ -155,7 +155,7 @@ if (-not $SkipBuild) {
   Write-Step "2. Build fresh Android artifact ($BuildMode)"
 
   if ($BuildMode -eq "local") {
-    Invoke-Cmd "npx" @("expo", "prebuild", "--clean", "-p", "android") $mobileDir
+    Invoke-Cmd "pnpm" @("exec", "expo", "prebuild", "--clean", "-p", "android") $mobileDir
 
     # expo prebuild --clean recreates android/, so local.properties must be
     # written AFTER prebuild, never before it.
@@ -186,8 +186,8 @@ if (-not $SkipBuild) {
     $versionCode = ($packageDump | Select-String "versionCode=" | Select-Object -First 1).Line.Trim()
     Write-OK "Installed com.sport.athlete: $versionName; $versionCode"
   } else {
-    Invoke-Cmd "npx" @(
-      "eas", "build",
+    Invoke-Cmd "pnpm" @(
+      "dlx", "eas-cli@24.7.0", "build",
       "--platform", "android",
       "--profile", "preview",
       "--non-interactive"
