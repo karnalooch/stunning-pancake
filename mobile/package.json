@@ -26,7 +26,7 @@
     "eas-build-pre-install": "bash eas-build-pre-install.sh",
     "start:dev-client": "expo start --dev-client",
     "build:pilot-local:android": "npx eas build --platform android --profile pilot-local",
-    "doctor": "npx expo-doctor@latest .",
+    "doctor": "pnpm dlx expo-doctor@1.20.4 .",
     "deps:check": "expo install --check"
   },
   "dependencies": {
