@@ -55,6 +55,26 @@ describe('release-grade public env guard', () => {
     expect(() => config({ config: {} })).toThrow(/EXPO_PUBLIC_LLM_API_KEY/);
   });
 
+  test('production rejects missing runtime endpoints', () => {
+    process.env.EAS_BUILD_PROFILE = 'production';
+    delete process.env.EXPO_PUBLIC_API_URL;
+    delete process.env.EXPO_PUBLIC_TELEMETRY_URL;
+
+    const config = loadConfig();
+
+    expect(() => config({ config: {} })).toThrow(/missing required EXPO_PUBLIC_API_URL/);
+  });
+
+  test('production rejects local or insecure runtime endpoints', () => {
+    process.env.EAS_BUILD_PROFILE = 'production';
+    process.env.EXPO_PUBLIC_API_URL = 'http://localhost:8000';
+    process.env.EXPO_PUBLIC_TELEMETRY_URL = 'https://telemetry.example.test';
+
+    const config = loadConfig();
+
+    expect(() => config({ config: {} })).toThrow(/HTTPS non-local EXPO_PUBLIC_API_URL/);
+  });
+
   test('production accepts clean runtime endpoints', () => {
     process.env.EAS_BUILD_PROFILE = 'production';
     process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test';
