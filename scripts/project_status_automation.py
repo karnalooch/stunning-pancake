@@ -76,13 +76,12 @@ def target_status(action: str, is_draft: bool) -> str:
 
 
 def choose_project(owner_data: dict[str, Any], title: str) -> dict[str, Any]:
-    matches: list[dict[str, Any]] = []
-    for owner_kind in ("user", "organization"):
-        owner = owner_data.get(owner_kind)
-        if not owner:
-            continue
-        nodes = owner.get("projectsV2", {}).get("nodes", [])
-        matches.extend(project for project in nodes if project.get("title") == title)
+    owner = owner_data.get("user")
+    if not owner:
+        raise AutomationError("project owner user could not be resolved")
+
+    nodes = owner.get("projectsV2", {}).get("nodes", [])
+    matches = [project for project in nodes if project.get("title") == title]
 
     if not matches:
         raise AutomationError(f"project not found: {title}")
@@ -156,11 +155,6 @@ def same_repo_closing_issues(
 PROJECT_QUERY = """
 query($login: String!) {
   user(login: $login) {
-    projectsV2(first: 100) {
-      nodes { id number title }
-    }
-  }
-  organization(login: $login) {
     projectsV2(first: 100) {
       nodes { id number title }
     }
