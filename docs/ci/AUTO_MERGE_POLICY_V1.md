@@ -1,6 +1,6 @@
 # Fail-closed auto-merge policy
 
-Status: **PROPOSED / MANUAL BOOTSTRAP REQUIRED**  
+Status: **ACTIVE / LIVE HARDENING**  
 Scope: routine pull requests targeting `main`
 
 ## Goal
@@ -36,7 +36,8 @@ All conditions must hold:
 7. Latest `Kilo Code Review` is `success`.
 8. No reviewer's latest review is `CHANGES_REQUESTED`.
 9. No unresolved review threads exist.
-10. GitHub reports the PR mergeable against current `main`.
+10. The PR links at least one same-repository closing Issue through GitHub closing references.
+11. GitHub reports the PR mergeable against current `main`.
 
 If the PR is only behind `main`, the workflow uses GitHub's normal update-branch operation and waits for fresh checks. It never force-pushes.
 
@@ -61,7 +62,7 @@ The implementation is deliberately conservative. A false positive means a manual
 
 The privileged workflow uses `pull_request_target` only as a metadata trigger. It **never checks out or executes PR-head code**.
 
-It checks out the repository default branch explicitly with persisted checkout credentials disabled and executes only the already-merged `scripts/auto_merge.py`.
+It checks out the repository default branch explicitly with persisted checkout credentials disabled and executes only the already-merged `scripts/auto_merge.py`. The token grants `issues: write` only so the workflow can close same-repository Issues already discovered through `closingIssuesReferences` after a successful merge.
 
 The workflow also re-evaluates on completion of the normal CI pipeline, the Kubernetes Release Gate, and relevant external check runs. Listening to both pipeline completions avoids a race where Aggregate CI and Kilo are green while release-gate checks still leave GitHub mergeability temporarily `unstable`. GitHub branch protection remains the final authority; the workflow contains no bypass path.
 
@@ -75,7 +76,7 @@ Auto-merge policy changes themselves are always manual.
 
 The PR that introduces this policy must be merged manually because the policy does not yet exist on `main` and its changed paths are high-risk.
 
-After bootstrap, validate on a separate low-risk PR:
+Bootstrap #139 is merged. The first live proof (#142) demonstrated a real automatic squash merge but also exposed two lifecycle races: re-evaluation after the release gate and linked-Issue closure. After the hardening PR, validate again on a separate low-risk PR:
 
 1. mark it `Auto-merge: eligible`;
 2. make it Ready for review;
