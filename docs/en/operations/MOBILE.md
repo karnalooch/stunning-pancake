@@ -31,7 +31,7 @@
 | Requirement | Notes |
 |-------------|-------|
 | Node.js / pnpm | Node.js 24.21.0 LTS + pnpm 12.4.2 (root monorepo toolchain) |
-| EAS CLI | `npm i -g eas-cli` (store release) |
+| EAS CLI | Use the repository-pinned `eas-cli@24.7.0` through `pnpm --dir mobile ...` scripts; no global install required. |
 | Expo account | Access to the EAS project |
 | Env | Only **public** `EXPO_PUBLIC_*` prefixes (no repo secrets) |
 
@@ -44,7 +44,7 @@
 | `EXPO_PUBLIC_API_URL` | Django REST API (prod/staging) |
 | `EXPO_PUBLIC_TELEMETRY_URL` | FastAPI telemetry (Railway default) |
 
-Set in EAS Secrets / `eas.json` profiles / local `.env` (gitignored). **Do not** document production URL values in tables — use variable names only.
+Remote profiles read these from their selected EAS Environment (`development` / `preview` / `production`); local development may use a gitignored `.env`. `pilot-local` is the only profile that intentionally pins localhost endpoints in `eas.json`. **Do not** document production URL values in tables — use variable names only.
 
 ---
 
@@ -60,7 +60,7 @@ pnpm --dir mobile start
 
 ### 2. Preview / internal (EAS)
 
-1. Log in: `eas login`
+1. Log in with the pinned CLI: `pnpm --dir mobile dlx eas-cli@24.7.0 login`
 2. Profile from `eas.json` (e.g. preview)
 3. `pnpm --dir mobile build:preview:android` (or `pnpm --dir mobile build:preview:ios`)
 
@@ -70,7 +70,7 @@ pnpm --dir mobile start
 2. Change it with `pnpm version:set -- <MAJOR.MINOR.PATCH> --prerelease <id>` (for example `dev` or `rc.1`), or omit `--prerelease` for a stable release.
 3. Verify the contract with `pnpm version:check`. `mobile/app.config.js` reads only numeric `MAJOR.MINOR.PATCH` from the SSOT as the user-visible application version.
 4. Run the platform-specific pinned scripts `pnpm --dir mobile build:prod:android` / `pnpm --dir mobile build:prod:ios`. EAS owns native build identifiers (`android.versionCode` / `ios.buildNumber`) and auto-increments them for production builds.
-5. Run `eas submit` per store profile after QA.
+5. Submit with the pinned CLI after QA, for example `pnpm --dir mobile dlx eas-cli@24.7.0 submit --platform android --profile production`.
 6. A stable Git tag must be exactly `vMAJOR.MINOR.PATCH`, must match `version.json`, and is rejected while `prerelease` is non-empty.
 7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
 
@@ -117,11 +117,11 @@ MMKV diagram and keys: [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md).
 
 | Step | Command |
 |------|---------|
-| Install deps (monorepo root) | `npx pnpm@12.4.2 install` |
-| Install Maestro CLI (once) | `npm run mobile:install-maestro` (root) or `npm run install:maestro` (`mobile/`) |
-| Dev build on device/emulator | `cd mobile && npm run build:dev:android` (EAS development client) |
-| Run all flows | `npm run mobile:test:e2e` (root) or `npm run test:e2e` (`mobile/`) |
-| Single flow | `npm run test:e2e:auth` (`mobile/`) |
+| Install deps (monorepo root) | `pnpm install --frozen-lockfile` |
+| Install Maestro CLI (once) | `pnpm mobile:install-maestro` (root) or `pnpm --dir mobile install:maestro` |
+| Dev build on device/emulator | `pnpm --dir mobile build:dev:android` (EAS development client) |
+| Run all flows | `pnpm mobile:test:e2e` (root) or `pnpm --dir mobile test:e2e` |
+| Single flow | `pnpm --dir mobile test:e2e:auth` |
 
 Flows live in `mobile/.maestro/flows/`. Requires **Java 17+**, **adb** (Android SDK platform-tools), and an online emulator/device with `com.sport.athlete` installed.
 
