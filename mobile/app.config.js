@@ -185,6 +185,8 @@ export default ({ config }) => {
         "@react-native-firebase/app",
         "@react-native-firebase/crashlytics"
       ] : []),
+      "expo-audio",
+      "expo-sharing",
       [
         "expo-location",
         {
