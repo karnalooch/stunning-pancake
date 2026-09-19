@@ -7,7 +7,7 @@
     "android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile development",
     "ios": "pnpm dlx eas-cli@24.7.0 build --platform ios --profile development",
     "web": "expo start --web",
-    "deploy:mobile": "pnpm dlx eas-cli@24.7.0 update --channel production --environment production --clear-cache --message \"Update via 4VELO release tooling\"",
+    "deploy:mobile": "pnpm dlx cross-env@7.0.3 EAS_BUILD_PROFILE=production pnpm dlx eas-cli@24.7.0 update --channel production --environment production --clear-cache --message \"Update via 4VELO release tooling\"",
     "build:dev:android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile development",
     "build:dev:ios": "pnpm dlx eas-cli@24.7.0 build --platform ios --profile development",
     "build:preview:android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile preview",
