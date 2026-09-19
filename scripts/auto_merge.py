@@ -227,7 +227,7 @@ def has_changes_requested(reviews: Iterable[dict[str, Any]]) -> bool:
     return any(state == "CHANGES_REQUESTED" for _review_id, state in latest_by_reviewer.values())
 
 
-REVIEW_THREADS_QUERY = """
+PULL_REQUEST_RELATIONS_QUERY = """
 query($owner: String!, $name: String!, $number: Int!) {
   repository(owner: $owner, name: $name) {
     pullRequest(number: $number) {
@@ -235,37 +235,60 @@ query($owner: String!, $name: String!, $number: Int!) {
         pageInfo { hasNextPage }
         nodes { isResolved }
       }
+      closingIssuesReferences(first: 100) {
+        pageInfo { hasNextPage }
+        nodes {
+          number
+          repository { nameWithOwner }
+        }
+      }
     }
   }
 }
 """
 
 
-def unresolved_review_threads(
+def pull_request_relations(
     api: GitHubApi,
     *,
     owner: str,
     name: str,
     number: int,
-) -> int:
+    repository: str,
+) -> tuple[int, list[int]]:
     data = api.graphql(
-        REVIEW_THREADS_QUERY,
+        PULL_REQUEST_RELATIONS_QUERY,
         {"owner": owner, "name": name, "number": number},
     )
-    repository = data.get("repository")
-    pull_request = repository.get("pullRequest") if repository else None
+    repository_data = data.get("repository")
+    pull_request = repository_data.get("pullRequest") if repository_data else None
     if not pull_request:
         raise AutomationError(f"pull request #{number} could not be resolved")
+
     threads = pull_request.get("reviewThreads", {})
     if threads.get("pageInfo", {}).get("hasNextPage"):
         raise AutomationError(
             f"pull request #{number} has more than 100 review threads; refusing partial review"
         )
-    return sum(
+    unresolved = sum(
         1
         for node in threads.get("nodes", [])
         if not bool(node.get("isResolved"))
     )
+
+    closing = pull_request.get("closingIssuesReferences", {})
+    if closing.get("pageInfo", {}).get("hasNextPage"):
+        raise AutomationError(
+            f"pull request #{number} closes more than 100 issues; refusing partial issue closure"
+        )
+    issue_numbers = sorted(
+        {
+            int(node["number"])
+            for node in closing.get("nodes", [])
+            if node.get("repository", {}).get("nameWithOwner") == repository
+        }
+    )
+    return unresolved, issue_numbers
 
 
 def list_open_pull_requests(api: GitHubApi, repository: str) -> list[dict[str, Any]]:
@@ -402,14 +425,18 @@ def evaluate_pull_request(
         return "blocked"
 
     repo_owner, repo_name = repository.split("/", 1)
-    unresolved = unresolved_review_threads(
+    unresolved, closing_issues = pull_request_relations(
         api,
         owner=repo_owner,
         name=repo_name,
         number=number,
+        repository=repository,
     )
     if unresolved:
         print_block(number, f"{unresolved} unresolved review thread(s)")
+        return "blocked"
+    if not closing_issues:
+        print_block(number, "no same-repository closing Issue is linked")
         return "blocked"
 
     mergeable = pr.get("mergeable")
@@ -445,6 +472,22 @@ def evaluate_pull_request(
         raise AutomationError(f"PR #{number} merge was rejected: {message}")
 
     print(f"auto-merge: PR #{number} MERGED via squash")
+    for issue_number in closing_issues:
+        issue, _headers = api.rest(
+            "PATCH",
+            f"/repos/{repository}/issues/{issue_number}",
+            {"state": "closed", "state_reason": "completed"},
+        )
+        if (
+            not isinstance(issue, dict)
+            or issue.get("state") != "closed"
+            or issue.get("state_reason") != "completed"
+        ):
+            raise AutomationError(
+                f"PR #{number} merged but Issue #{issue_number} did not close as completed"
+            )
+        print(f"auto-merge: issue #{issue_number} CLOSED as completed")
+
     return "merged"
 
 

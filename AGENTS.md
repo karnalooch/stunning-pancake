@@ -51,11 +51,11 @@
 ## Automatyczne mergowanie
 - Domyślnie traktuj merge jako `manual`. Agent może oznaczyć PR dokładną linią `Auto-merge: eligible` tylko po sprawdzeniu pełnej listy zmienionych plików i wyłącznie dla rutynowej zmiany niskiego ryzyka.
 - Nie oznaczaj jako eligible zmian obejmujących workflowy/actions, skrypty automatyzacji repo, `AGENTS.md`, CI/merge policy, deployment/Kubernetes/Docker/infra, sekrety, auth/OAuth/security, migracje baz danych, dependency manifests/lockfiles/requirements ani materiał kluczy/certyfikatów. Przy niepewności użyj `Auto-merge: manual`.
-- Sam marker nie upoważnia do merge. Repozytoryjna automatyzacja musi niezależnie potwierdzić: PR z tego samego repo i od właściciela, target `main`, non-draft, brak ryzykownych ścieżek, `Aggregate CI gate = success`, `Kilo Code Review = success`, brak aktywnego `CHANGES_REQUESTED`, brak nierozwiązanych review threads i mergeability względem aktualnego `main`.
+- Sam marker nie upoważnia do merge. Repozytoryjna automatyzacja musi niezależnie potwierdzić: PR z tego samego repo i od właściciela, target `main`, non-draft, co najmniej jedno same-repo Issue wskazane przez GitHub `closingIssuesReferences`, brak ryzykownych ścieżek, `Aggregate CI gate = success`, `Kilo Code Review = success`, brak aktywnego `CHANGES_REQUESTED`, brak nierozwiązanych review threads i mergeability względem aktualnego `main`.
 - Jeśli bezpieczny PR jest tylko behind względem `main`, automatyzacja może wykonać zwykłe GitHub update-branch i musi poczekać na świeże kontrole. Nie używaj force-push do przygotowania auto-merge.
 - Automatyczny merge zawsze jest squash. Branch protection pozostaje nadrzędną bramką; nie twórz obejść ani tokenów z prawem bypassu.
 - Zmiany polityki auto-merge oraz samej implementacji automatyzacji zawsze są `Auto-merge: manual` i wymagają jawnego polecenia użytkownika do merge.
-- Po auto-merge nadal zweryfikuj wynik: PR merged, powiązane Issue zamknięte, Project `Done` i oczekiwany HEAD `main`.
+- Po udanym auto-merge workflow ma jawnie zamknąć powiązane same-repo closing Issues jako `completed`. Nadal zweryfikuj wynik: PR merged, Issue zamknięte, Project `Done` i oczekiwany HEAD `main`.
 
 ## Implementacja w monorepo
 - Korzystaj z istniejących wzorców i zależności. Nie dodawaj bibliotek ani abstrakcji bez potrzeby wynikającej z zadania.

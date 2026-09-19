@@ -4,19 +4,20 @@ on:
   pull_request_target:
     types: [ready_for_review, reopened, synchronize, edited]
   workflow_run:
-    workflows: ["4VELO CI/CD Pipeline"]
+    workflows: ["4VELO CI/CD Pipeline", "Kubernetes Release Gate"]
     types: [completed]
   check_run:
     types: [completed]
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || github.event.check_run.pull_requests[0].number || github.run_id }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request_target' || github.event_name == 'workflow_run' || github.event_name == 'check_run' }}
+  group: fail-closed-auto-merge-${{ github.repository }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
   checks: read
 
 jobs:
