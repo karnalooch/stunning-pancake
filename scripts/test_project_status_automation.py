@@ -54,8 +54,7 @@ class ProjectStatusAutomationTests(unittest.TestCase):
                         },
                     ]
                 }
-            },
-            "organization": None,
+            }
         }
         project = choose_project(data, "4VELO — Product & Takeover")
         self.assertEqual(project["id"], "P2")
