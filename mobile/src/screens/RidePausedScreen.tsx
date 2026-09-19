@@ -58,7 +58,7 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
   const c = theme.colors as Record<string, string>;
   const outline = c.hudOutline ?? '#111111';
   return (
-    <SafeAreaView style={[styles.overlay, { backgroundColor: c.scrimStrong }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.modal,
