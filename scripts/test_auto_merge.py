@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 from scripts.auto_merge import (
+    AutomationError,
     auto_merge_mode,
+    evaluate_eligible_pull_requests,
     evaluate_pull_request,
     has_changes_requested,
     is_risky_path,
@@ -32,8 +35,10 @@ class AutoMergePolicyTests(unittest.TestCase):
             "backend/users/migrations/0001_initial.py",
             "backend/auth/service.py",
             "package.json",
+            "backend/package.json",
             "pnpm-lock.yaml",
             "backend/requirements.txt",
+            "backend/requirements-dev.in",
             "AGENTS.md",
         ]
         for path in paths:
@@ -47,6 +52,9 @@ class AutoMergePolicyTests(unittest.TestCase):
             "backend/activities/services.py",
             "admin/src/features/map/MapView.tsx",
             "docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md",
+            "docs/requirements-overview.md",
+            "backend/requirements-helper.py",
+            "notes/dependabot-config.md",
         ]
         for path in paths:
             with self.subTest(path=path):
@@ -104,6 +112,22 @@ class AutoMergePolicyTests(unittest.TestCase):
             ["Kilo Code Review"],
         )
 
+    def test_check_run_without_id_fails_closed(self):
+        with self.assertRaisesRegex(AutomationError, "missing id"):
+            missing_required_checks(
+                [
+                    {
+                        "name": "Aggregate CI gate",
+                        "conclusion": "success",
+                    },
+                    {
+                        "id": 2,
+                        "name": "Kilo Code Review",
+                        "conclusion": "success",
+                    },
+                ]
+            )
+
     def test_latest_changes_requested_review_blocks(self):
         self.assertTrue(
             has_changes_requested(
@@ -137,6 +161,25 @@ class AutoMergePolicyTests(unittest.TestCase):
                 ]
             )
         )
+
+
+class AutoMergeBatchTests(unittest.TestCase):
+    @patch("scripts.auto_merge.evaluate_pull_request")
+    def test_one_pr_error_does_not_starve_later_prs(self, evaluate):
+        evaluate.side_effect = [AutomationError("transient failure"), "merged"]
+
+        result = evaluate_eligible_pull_requests(
+            object(),
+            repository="karnalooch/stunning-pancake",
+            repository_owner="karnalooch",
+            pull_requests=[
+                {"number": 41, "body": "Auto-merge: eligible"},
+                {"number": 42, "body": "Auto-merge: eligible"},
+            ],
+        )
+
+        self.assertEqual(result, 1)
+        self.assertEqual(evaluate.call_count, 2)
 
 
 class FakeApi:
