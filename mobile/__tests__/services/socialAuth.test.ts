@@ -42,7 +42,7 @@ describe('SocialAuthService env policy', () => {
     );
   });
 
-  test('uses dev fallback URL when __DEV__ is true', () => {
+  test('fails closed in dev when EXPO_PUBLIC_API_URL is unset', () => {
     delete process.env.EXPO_PUBLIC_API_URL;
     Object.defineProperty(globalThis, '__DEV__', {
       value: true,
@@ -50,9 +50,13 @@ describe('SocialAuthService env policy', () => {
       configurable: true,
     });
 
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
     const { SocialAuthService } = loadSocialAuth();
 
-    expect(SocialAuthService.googleLoginUrl()).toContain('backend-production-55c7.up.railway.app');
-    expect(SocialAuthService.facebookLoginUrl()).toContain('backend-production-55c7.up.railway.app');
+    expect(SocialAuthService.googleLoginUrl()).toBeNull();
+    expect(SocialAuthService.facebookLoginUrl()).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      '[OAuth] Missing EXPO_PUBLIC_API_URL. Configure runtime env before release builds.',
+    );
   });
 });
