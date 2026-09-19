@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -118,6 +120,30 @@ def check_contract(*, tag: str | None = None) -> list[str]:
     return errors
 
 
+def _json_bytes(data: dict) -> bytes:
+    return (json.dumps(data, indent=2) + chr(10)).encode("utf-8")
+
+
+def _write_temp(path: Path, payload: bytes) -> Path:
+    """Write a durable sibling temp file suitable for atomic replacement."""
+
+    fd, temp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=path.parent,
+    )
+    temp_path = Path(temp_name)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        temp_path.unlink(missing_ok=True)
+        raise
+    return temp_path
+
+
 def set_version(version: str, prerelease: str) -> None:
     candidate = {"schemaVersion": 1, "version": version, "prerelease": prerelease}
     if not VERSION_RE.fullmatch(version):
@@ -125,12 +151,54 @@ def set_version(version: str, prerelease: str) -> None:
     if prerelease and not PRERELEASE_RE.fullmatch(prerelease):
         raise ValueError("invalid prerelease identifier")
 
-    VERSION_FILE.write_text(json.dumps(candidate, indent=2) + chr(10), encoding="utf-8")
+    # Build and validate the complete update before touching the repository.
+    # This prevents a missing or malformed package.json from leaving the SSOT
+    # and package labels at different versions.
     label = semver_label(candidate)
+    payloads: dict[Path, bytes] = {}
+    originals: dict[Path, bytes] = {}
+
     for path in PACKAGE_FILES:
         data = read_json(path)
+        if not isinstance(data, dict):
+            raise ValueError(f"{path.relative_to(REPO)} must contain a JSON object")
         data["version"] = label
-        path.write_text(json.dumps(data, indent=2) + chr(10), encoding="utf-8")
+        payloads[path] = _json_bytes(data)
+        originals[path] = path.read_bytes()
+
+    originals[VERSION_FILE] = VERSION_FILE.read_bytes()
+    payloads[VERSION_FILE] = _json_bytes(candidate)
+
+    # Stage every target first. Replacements are same-filesystem atomic.
+    # version.json is committed last so readers never observe a new SSOT
+    # while package labels are still on the previous version.
+    staged: dict[Path, Path] = {}
+    replaced: list[Path] = []
+    try:
+        for path, payload in payloads.items():
+            staged[path] = _write_temp(path, payload)
+
+        ordered_targets = [*PACKAGE_FILES, VERSION_FILE]
+        for path in ordered_targets:
+            os.replace(staged[path], path)
+            staged.pop(path, None)
+            replaced.append(path)
+    except Exception:
+        # Best-effort rollback for a rare filesystem failure after one or more
+        # replacements. Common parse/missing-file failures happen before any
+        # mutation at all.
+        for path in reversed(replaced):
+            rollback = None
+            try:
+                rollback = _write_temp(path, originals[path])
+                os.replace(rollback, path)
+            finally:
+                if rollback is not None:
+                    rollback.unlink(missing_ok=True)
+        raise
+    finally:
+        for temp_path in staged.values():
+            temp_path.unlink(missing_ok=True)
 
 
 def main() -> int:
