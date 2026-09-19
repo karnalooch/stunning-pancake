@@ -202,6 +202,7 @@ class FakeApi:
         self.reviews = reviews or []
         self.unresolved = unresolved
         self.closing_issues = [141]
+        self.issue_state_reason = "completed"
         self.mergeable_state = mergeable_state
         self.author = author
         self.head_repo = head_repo
@@ -242,7 +243,14 @@ class FakeApi:
         if method == "PUT" and path.endswith("/pulls/42/merge"):
             return ({"merged": True, "sha": "merged-sha"}, {})
         if method == "PATCH" and path.endswith("/issues/141"):
-            return ({"number": 141, "state": "closed", "state_reason": "completed"}, {})
+            return (
+                {
+                    "number": 141,
+                    "state": "closed",
+                    "state_reason": self.issue_state_reason,
+                },
+                {},
+            )
         raise AssertionError(f"unexpected REST call: {method} {path}")
 
     def graphql(self, query, variables):
@@ -320,6 +328,12 @@ class AutoMergeDecisionTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_wrong_issue_state_reason_fails_visibly_after_merge(self):
+        api = FakeApi()
+        api.issue_state_reason = "not_planned"
+        with self.assertRaisesRegex(AutomationError, "did not close as completed"):
+            self._evaluate(api)
 
     def test_high_risk_path_never_reaches_merge(self):
         api = FakeApi(paths=[".github/workflows/ci.yml"])
