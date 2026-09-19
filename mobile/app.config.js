@@ -9,7 +9,12 @@ try {
   // dotenv optional — E2E vars may come from the shell environment
 }
 
-const e2eExtra = {
+const resolvePublicRuntimeExtra = () => ({
+  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_TELEMETRY_URL: process.env.EXPO_PUBLIC_TELEMETRY_URL,
+});
+
+const resolveE2eExtra = () => ({
   EXPO_PUBLIC_E2E_AUTO_LOGIN: process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN,
   EXPO_PUBLIC_E2E_SKIP_ONBOARDING: process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING,
   EXPO_PUBLIC_E2E_EMAIL: process.env.EXPO_PUBLIC_E2E_EMAIL,
@@ -17,12 +22,7 @@ const e2eExtra = {
   EXPO_PUBLIC_E2E_GPS_RECOVERY: process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY,
   // Vision parity harness — render deterministic mock data for screenshot diff.
   EXPO_PUBLIC_VISION_FIXTURES: process.env.EXPO_PUBLIC_VISION_FIXTURES,
-};
-
-const publicRuntimeExtra = {
-  EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
-  EXPO_PUBLIC_TELEMETRY_URL: process.env.EXPO_PUBLIC_TELEMETRY_URL,
-};
+});
 
 const assertReleaseSafePublicEnv = () => {
   if (process.env.EAS_BUILD_PROFILE !== 'production') return;
@@ -146,7 +146,7 @@ export default ({ config }) => {
         "projectId": "e25228a6-071c-4421-a75f-7939ba464c8a"
       },
       ...Object.fromEntries(
-        Object.entries({ ...publicRuntimeExtra, ...e2eExtra }).filter(
+        Object.entries({ ...resolvePublicRuntimeExtra(), ...resolveE2eExtra() }).filter(
           ([, value]) => value != null && value !== '',
         ),
       ),
