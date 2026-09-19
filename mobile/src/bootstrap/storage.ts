@@ -3,10 +3,10 @@
  * Auth tokens live in authTokenStorage (SecureStore).
  */
 
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from '../services/mmkvStorage';
 import { warnMmkvUnavailable } from '../services/mmkvSupport';
 
-let storage: MMKV | null | undefined;
+let storage: AppMmkvStorage | null | undefined;
 
 const fallbackStorage = {
   getString: (_key: string) => undefined as string | undefined,
@@ -17,12 +17,12 @@ const fallbackStorage = {
   contains: (_key: string) => false,
 };
 
-export type AppStorage = MMKV | typeof fallbackStorage;
+export type AppStorage = AppMmkvStorage | typeof fallbackStorage;
 
 export function getAppStorage(): AppStorage {
   if (storage !== undefined) return storage ?? fallbackStorage;
   try {
-    storage = new MMKV();
+    storage = createAppMmkv();
     return storage;
   } catch (e) {
     warnMmkvUnavailable('Storage', e);

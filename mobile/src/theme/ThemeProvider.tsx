@@ -17,7 +17,7 @@ import React, {
     useState,
     type PropsWithChildren,
 } from 'react';
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from '../services/mmkvStorage';
 import { StyleSheet, UnistylesRuntime } from './unistyles';
 import { grandPrixTheme } from './grandPrix';
 import { grandPrixNightTheme } from './grandPrixNight';
@@ -32,11 +32,11 @@ export type ThemeMode = 'grandPrix' | 'grandPrixNight';
 
 // ─── MMKV (lazy, crash-safe) ──────────────────────────────────────
 
-let _storage: MMKV | null = null;
-function getStorage(): MMKV | null {
+let _storage: AppMmkvStorage | null = null;
+function getStorage(): AppMmkvStorage | null {
     if (_storage) return _storage;
     try {
-        _storage = new MMKV();
+        _storage = createAppMmkv();
         return _storage;
     } catch (e) {
         warnMmkvUnavailable('ThemeProvider', e);

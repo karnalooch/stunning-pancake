@@ -1,4 +1,4 @@
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from './mmkvStorage';
 
 const HELMET_KEY = 'hero_helmet_color';
 const CITY_KEY = 'hero_city_text';
@@ -6,9 +6,9 @@ const CITY_KEY = 'hero_city_text';
 export const DEFAULT_HELMET_COLOR = '#CC4444';
 export const DEFAULT_CITY_TEXT = 'SIEDLCE';
 
-let storage: MMKV | null = null;
+let storage: AppMmkvStorage | null = null;
 try {
-  storage = new MMKV();
+  storage = createAppMmkv();
 } catch {
   storage = null;
 }

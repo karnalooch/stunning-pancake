@@ -8,7 +8,7 @@
 
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from './mmkvStorage';
 
 import { GPS_STORAGE_KEYS, type GpsStorageAdapter } from './gpsSyncStorage';
 
@@ -24,7 +24,7 @@ const MIGRATED_KEYS = [
   RIDE_WALL_START_KEY,
 ] as const;
 
-let storage: MMKV | null = null;
+let storage: AppMmkvStorage | null = null;
 let storageOverride: GpsStorageAdapter | null = null;
 let initialization: Promise<GpsStorageAdapter | null> | null = null;
 
@@ -36,8 +36,8 @@ async function generateEncryptionKey(): Promise<string> {
   return bytesToHex(await Crypto.getRandomBytesAsync(32));
 }
 
-function migrateLegacyGpsStorage(target: MMKV): void {
-  const legacy = new MMKV({ id: GPS_LEGACY_STORAGE_ID });
+function migrateLegacyGpsStorage(target: AppMmkvStorage): void {
+  const legacy = createAppMmkv({ id: GPS_LEGACY_STORAGE_ID });
   const values = new Map<string, string>();
 
   for (const key of MIGRATED_KEYS) {
@@ -66,7 +66,7 @@ function migrateLegacyGpsStorage(target: MMKV): void {
   for (const key of values.keys()) legacy.delete(key);
 }
 
-function markKeyProvisioned(bootstrap: MMKV): void {
+function markKeyProvisioned(bootstrap: AppMmkvStorage): void {
   bootstrap.set(GPS_KEY_PROVISIONED_MARKER, '1');
   if (bootstrap.getString(GPS_KEY_PROVISIONED_MARKER) !== '1') {
     throw new Error('GPS encryption provisioning marker persistence failed');
@@ -79,7 +79,7 @@ async function initializeEncryptedGpsStorage(): Promise<GpsStorageAdapter | null
       throw new Error('SecureStore is unavailable for GPS encryption');
     }
 
-    const bootstrap = new MMKV({ id: GPS_BOOTSTRAP_STORAGE_ID });
+    const bootstrap = createAppMmkv({ id: GPS_BOOTSTRAP_STORAGE_ID });
     const wasProvisioned = bootstrap.getString(GPS_KEY_PROVISIONED_MARKER) === '1';
     let encryptionKey = await SecureStore.getItemAsync(GPS_ENCRYPTION_KEY_ALIAS);
 
@@ -109,7 +109,7 @@ async function initializeEncryptedGpsStorage(): Promise<GpsStorageAdapter | null
       markKeyProvisioned(bootstrap);
     }
 
-    const encrypted = new MMKV({
+    const encrypted = createAppMmkv({
       id: GPS_ENCRYPTED_STORAGE_ID,
       encryptionKey,
     });
