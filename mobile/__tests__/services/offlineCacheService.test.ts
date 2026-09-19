@@ -1,20 +1,20 @@
 import type { ActivityItem } from '../../src/services/api';
 import { OfflineCacheService } from '../../src/services/OfflineCacheService';
 
-const mem = new Map<string, string>();
+const mockMem = new Map<string, string>();
 
 jest.mock('../../src/bootstrap/storage', () => ({
   getAppStorage: () => ({
-    getString: (key: string) => mem.get(key),
+    getString: (key: string) => mockMem.get(key),
     set: (key: string, value: string) => {
-      mem.set(key, value);
+      mockMem.set(key, value);
     },
     delete: (key: string) => {
-      mem.delete(key);
+      mockMem.delete(key);
     },
-    clearAll: () => mem.clear(),
-    getAllKeys: () => [...mem.keys()],
-    contains: (key: string) => mem.has(key),
+    clearAll: () => mockMem.clear(),
+    getAllKeys: () => [...mockMem.keys()],
+    contains: (key: string) => mockMem.has(key),
   }),
 }));
 
@@ -33,7 +33,7 @@ function ride(id: number): ActivityItem {
 
 describe('OfflineCacheService ride history', () => {
   beforeEach(() => {
-    mem.clear();
+    mockMem.clear();
   });
 
   test('clearHistory removes cached activity history', () => {
