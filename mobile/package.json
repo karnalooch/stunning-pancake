@@ -3,11 +3,11 @@
   "version": "0.3.3-dev",
   "main": "index",
   "scripts": {
-    "start": "expo start",
+    "start": "expo start --dev-client",
     "android": "eas build --platform android --profile development",
     "ios": "eas build --platform ios --profile development",
     "web": "expo start --web",
-    "deploy:mobile": "npx eas update --branch production --message \"Update via Antigravity\"",
+    "deploy:mobile": "npx eas update --channel production --environment production --clear-cache --message \"Update via 4VELO release tooling\"",
     "build:dev:android": "npx eas build --platform android --profile development",
     "build:dev:ios": "npx eas build --platform ios --profile development",
     "build:preview:android": "npx eas build --platform android --profile preview",
@@ -23,7 +23,11 @@
     "test:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1",
     "test:e2e:auth": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1 -Flow auth-login.yaml",
     "install:maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/install-maestro.ps1",
-    "eas-build-pre-install": "bash eas-build-pre-install.sh"
+    "eas-build-pre-install": "bash eas-build-pre-install.sh",
+    "start:dev-client": "expo start --dev-client",
+    "build:pilot-local:android": "npx eas build --platform android --profile pilot-local",
+    "doctor": "npx expo-doctor@latest .",
+    "deps:check": "expo install --check"
   },
   "dependencies": {
     "@4velo/api-client": "workspace:*",
