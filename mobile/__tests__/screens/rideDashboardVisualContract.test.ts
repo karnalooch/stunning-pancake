@@ -44,6 +44,14 @@ describe('T79 Home visual contract', () => {
     }
   });
 
+  test('supports the five deterministic Home review states', () => {
+    expect(source).toContain('getVisionHomePreviewState');
+    expect(source).toContain("effectivePreviewState === 'loading'");
+    expect(source).toContain("effectivePreviewState === 'empty'");
+    expect(source).toContain("effectivePreviewState === 'offline'");
+    expect(source).toContain("effectivePreviewState === 'error'");
+  });
+
   test('distinguishes hard history failure from a legitimate empty history', () => {
     expect(source).toContain('error: statsError');
     expect(source).toContain('refresh: refreshStats');
