@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { summarizeRiderHistory } from '../home/riderStatsSummary';
 import { ActivityService, type ActivityItem } from '../services/api';
 import { OfflineCacheService } from '../services/OfflineCacheService';
 import { withRetry } from '../services/apiRetry';
 import { useGameProgress } from './useGameProgress';
-
-import { summarizeRiderHistory } from '../home/riderStatsSummary';
 
 /** Single SSOT for streak (progression) + rides/distance (API/cache). */
 export function useRiderStats() {
@@ -16,9 +16,7 @@ export function useRiderStats() {
   const [offline, setOffline] = useState(false);
   const [error, setError] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-
+  const loadHistory = useCallback(async () => {
     try {
       const data = await withRetry(() => ActivityService.getHistory());
       const list = Array.isArray(data) ? data : [];
@@ -43,9 +41,14 @@ export function useRiderStats() {
     }
   }, []);
 
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    await loadHistory();
+  }, [loadHistory]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void loadHistory();
+  }, [loadHistory]);
 
   const stats = useMemo(() => summarizeRiderHistory(items), [items]);
 
