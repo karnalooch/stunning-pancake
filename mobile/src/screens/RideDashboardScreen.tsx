@@ -6,8 +6,9 @@
  * until asset governance approves rider_canonical_v1 + home_hero_day_v1.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
@@ -320,6 +321,17 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     error: statsError,
     refresh: refreshStats,
   } = useRiderStats();
+  const hasFocusedHome = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedHome.current) {
+        hasFocusedHome.current = true;
+        return;
+      }
+      void refreshStats();
+    }, [refreshStats]),
+  );
 
   const displayName = formatRiderDisplayName(profileFixture?.username ?? user?.username);
   const riderInitial = displayName.trim().charAt(0).toUpperCase() || '4';
@@ -493,6 +505,11 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
               </>
             ) : (
               <>
+                <PrimaryButton
+                  label={t.dashboard.startRide}
+                  onPress={handleStartRide}
+                  testID="home-start-ride"
+                />
                 <View style={s.sportRow}>
                   {ACTIVITY_SPORT_OPTIONS.map((option) => (
                     <SportChip
@@ -503,19 +520,6 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                       testID={`home-sport-${option.type.toLowerCase()}`}
                     />
                   ))}
-                </View>
-                <View style={s.actionStack}>
-                  <PrimaryButton
-                    label={t.dashboard.startRide}
-                    onPress={handleStartRide}
-                    testID="home-start-ride"
-                  />
-                  <PrimaryButton
-                    label={t.dashboard.gpsWizard}
-                    onPress={() => onOpenGpsWizard?.()}
-                    variant="secondary"
-                    testID="home-gps-check"
-                  />
                 </View>
               </>
             )}
@@ -541,39 +545,6 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
 
         {!displayStatsError ? (
           <>
-            <View style={s.section}>
-              <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
-              {displayStatsLoading ? (
-                <SkeletonBlock height={104} />
-              ) : lastRideDistanceKm == null ? (
-                <ProductCard testID="home-first-use-empty">
-                  <View style={s.cardContent}>
-                    <Text style={s.emptyTitle}>{t.dashboard.noRides}</Text>
-                    <Text style={s.emptyBody}>{t.dashboard.firstRideHint}</Text>
-                  </View>
-                </ProductCard>
-              ) : (
-                <ProductCard>
-                  <View style={s.metricRow}>
-                    <View style={s.metricCell}>
-                      <Metric
-                        value={`${lastRideDistanceKm.toFixed(1)} km`}
-                        label={t.ride.fields.distance}
-                        testID="home-last-ride-distance"
-                      />
-                    </View>
-                    <View style={s.metricCell}>
-                      <Metric
-                        value={lastRideDuration ?? '—'}
-                        label={t.ride.fields.time}
-                        testID="home-last-ride-duration"
-                      />
-                    </View>
-                  </View>
-                </ProductCard>
-              )}
-            </View>
-
             <View style={s.section}>
               <Text style={s.sectionHeader}>{t.dashboard.weeklyLoad}</Text>
               {displayStatsLoading ? (
@@ -615,6 +586,48 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 </ProductCard>
               )}
             </View>
+            <View style={s.section}>
+              <PrimaryButton
+                label={t.dashboard.gpsWizard}
+                onPress={() => onOpenGpsWizard?.()}
+                variant="secondary"
+                testID="home-gps-check"
+              />
+            </View>
+
+            <View style={s.section}>
+              <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
+              {displayStatsLoading ? (
+                <SkeletonBlock height={104} />
+              ) : lastRideDistanceKm == null ? (
+                <ProductCard testID="home-first-use-empty">
+                  <View style={s.cardContent}>
+                    <Text style={s.emptyTitle}>{t.dashboard.noRides}</Text>
+                    <Text style={s.emptyBody}>{t.dashboard.firstRideHint}</Text>
+                  </View>
+                </ProductCard>
+              ) : (
+                <ProductCard>
+                  <View style={s.metricRow}>
+                    <View style={s.metricCell}>
+                      <Metric
+                        value={`${lastRideDistanceKm.toFixed(1)} km`}
+                        label={t.ride.fields.distance}
+                        testID="home-last-ride-distance"
+                      />
+                    </View>
+                    <View style={s.metricCell}>
+                      <Metric
+                        value={lastRideDuration ?? '—'}
+                        label={t.ride.fields.time}
+                        testID="home-last-ride-duration"
+                      />
+                    </View>
+                  </View>
+                </ProductCard>
+              )}
+            </View>
+
           </>
         ) : null}
 
