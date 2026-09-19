@@ -11,7 +11,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
 import { DevEnvironmentBanner } from '../components/DevEnvironmentBanner';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
@@ -294,8 +294,6 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   onDismissRideEdgeMessage,
 }) => {
   const s = stylesheet;
-  const { theme } = useUnistyles();
-  const semantic = getSemanticColors(theme.colors);
   const { t, locale } = useI18n();
   const fixturesEnabled = isVisionFixtures();
   const rideFixture = getVisionRideDashboardFixture(fixturesEnabled);
