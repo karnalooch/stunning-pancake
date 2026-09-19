@@ -53,6 +53,29 @@ describe('T79 Home visual contract', () => {
     expect(source).toContain("effectivePreviewState === 'error'");
   });
 
+  test('keeps the Frozen UI T79 above-fold hierarchy in source order', () => {
+    const startRide = source.indexOf('testID="home-start-ride"');
+    const sportSelector = source.indexOf('testID={`home-sport-${option.type.toLowerCase()}`}');
+    const weeklyPreview = source.indexOf('testID="home-weekly-context"');
+    const gpsCheck = source.indexOf('testID="home-gps-check"');
+    const lastRide = source.indexOf('testID="home-last-ride-distance"');
+
+    for (const position of [startRide, sportSelector, weeklyPreview, gpsCheck, lastRide]) {
+      expect(position).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(startRide).toBeLessThan(sportSelector);
+    expect(sportSelector).toBeLessThan(weeklyPreview);
+    expect(weeklyPreview).toBeLessThan(gpsCheck);
+    expect(gpsCheck).toBeLessThan(lastRide);
+  });
+
+  test('refreshes rider history when Home regains focus', () => {
+    expect(source).toContain('useFocusEffect');
+    expect(source).toContain('hasFocusedHome');
+    expect(source).toContain('void refreshStats()');
+  });
+
   test('distinguishes hard history failure from a legitimate empty history', () => {
     expect(source).toContain('error: statsError');
     expect(source).toContain('refresh: refreshStats');
