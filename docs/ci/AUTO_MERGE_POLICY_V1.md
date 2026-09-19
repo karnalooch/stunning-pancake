@@ -63,7 +63,7 @@ The privileged workflow uses `pull_request_target` only as a metadata trigger. I
 
 It checks out the repository default branch explicitly with persisted checkout credentials disabled and executes only the already-merged `scripts/auto_merge.py`.
 
-The workflow also re-evaluates on completion of the normal CI pipeline and relevant external check runs. GitHub branch protection remains the final authority; the workflow contains no bypass path.
+The workflow also re-evaluates on completion of the normal CI pipeline, the Kubernetes Release Gate, and relevant external check runs. Listening to both pipeline completions avoids a race where Aggregate CI and Kilo are green while release-gate checks still leave GitHub mergeability temporarily `unstable`. GitHub branch protection remains the final authority; the workflow contains no bypass path.
 
 ## Agent behavior
 
