@@ -17,7 +17,9 @@ def read(path: Path) -> str:
 class MobilePlatformContractTests(unittest.TestCase):
     def test_mobile_is_the_only_eas_root(self):
         self.assertFalse((ROOT / "eas.json").exists(), "root eas.json is forbidden")
+        self.assertFalse((ROOT / ".easignore").exists(), "root .easignore is forbidden")
         self.assertTrue((MOBILE / "eas.json").is_file())
+        self.assertTrue((MOBILE / ".easignore").is_file())
 
     def test_eas_profiles_have_explicit_environment_and_release_provenance(self):
         eas = json.loads(read(MOBILE / "eas.json"))
@@ -120,6 +122,19 @@ class MobilePlatformContractTests(unittest.TestCase):
             for token in forbidden:
                 with self.subTest(source=name, token=token):
                     self.assertNotIn(token, source)
+
+    def test_mobile_does_not_bake_or_read_public_e2e_credentials(self):
+        app_config = read(MOBILE / "app.config.js")
+        e2e_config = read(MOBILE / "src/bootstrap/e2eConfig.ts")
+        auth_session = read(MOBILE / "src/bootstrap/useAuthSession.ts")
+
+        for key in ("EXPO_PUBLIC_E2E_EMAIL", "EXPO_PUBLIC_E2E_PASSWORD"):
+            with self.subTest(key=key):
+                self.assertNotIn(f"{key}: process.env", app_config)
+                self.assertNotIn(key, e2e_config)
+
+        self.assertNotIn("e2eConfig.email", auth_session)
+        self.assertNotIn("e2eConfig.password", auth_session)
 
     def test_mobile_does_not_document_or_read_public_llm_secret(self):
         env_example = read(ROOT / ".env.example")
