@@ -53,6 +53,29 @@ const assertReleaseSafePublicEnv = () => {
       `Production mobile config contains forbidden public test/secret variables: ${forbidden.join(', ')}`,
     );
   }
+
+  const requiredHttpsEndpoints = [
+    'EXPO_PUBLIC_API_URL',
+    'EXPO_PUBLIC_TELEMETRY_URL',
+  ];
+
+  for (const key of requiredHttpsEndpoints) {
+    const raw = process.env[key];
+    if (!raw) {
+      throw new Error(`Production mobile config is missing required ${key}`);
+    }
+
+    let parsed;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      throw new Error(`Production mobile config has invalid ${key}`);
+    }
+
+    if (parsed.protocol !== 'https:' || ['localhost', '127.0.0.1', '::1'].includes(parsed.hostname)) {
+      throw new Error(`Production mobile config requires an HTTPS non-local ${key}`);
+    }
+  }
 };
 
 // Security boundary: EAS_BUILD_PROFILE is the authoritative signal for enabling
