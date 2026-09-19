@@ -106,7 +106,11 @@ function MainTabs({
   rideEdgeMessage,
   clearRideEdgeMessage,
 }: MainTabsProps) {
-  const shellUser = user as { username?: string; tenant_id?: string | null } | null;
+  const shellUser = user as {
+    username?: string;
+    tenant_id?: string | null;
+    tenant_name?: string | null;
+  } | null;
 
   const gpsRecoveryProps = {
     gpsRecoveryVisible,
@@ -136,7 +140,11 @@ function MainTabs({
           <RideDashboardScreen
             user={
               shellUser
-                ? { username: shellUser.username ?? 'RIDER', tenant_id: shellUser.tenant_id ?? undefined }
+                ? {
+                    username: shellUser.username ?? 'RIDER',
+                    tenant_id: shellUser.tenant_id ?? undefined,
+                    tenant_name: shellUser.tenant_name ?? undefined,
+                  }
                 : null
             }
             isRecording={isRecording}
