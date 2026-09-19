@@ -370,10 +370,14 @@ jobs:
         run: python -m unittest scripts/test_mobile_platform_contract.py -v
 
       - name: Expo dependency compatibility
+        id: expo_deps
+        continue-on-error: true
         working-directory: mobile
         run: pnpm exec expo install --check
 
       - name: Expo Doctor
+        id: expo_doctor
+        continue-on-error: true
         working-directory: mobile
         run: pnpm dlx expo-doctor@1.20.4 .
 
@@ -388,6 +392,13 @@ jobs:
 
       - name: Run affected mobile unit tests
         run: python scripts/run_affected_mobile_tests.py --plan .ci/affected-plan.json
+
+      - name: Expo compatibility gate
+        if: always() && (steps.expo_deps.outcome != 'success' || steps.expo_doctor.outcome != 'success')
+        run: |
+          echo "Expo dependency check: ${{ steps.expo_deps.outcome }}"
+          echo "Expo Doctor: ${{ steps.expo_doctor.outcome }}"
+          exit 1
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
