@@ -7,6 +7,13 @@ let _crashlytics: any = null;
 
 export function initFirebase(): void {
   try {
+    if (process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'true') {
+      if (__DEV__) {
+        console.log('[Firebase] Disabled by EXPO_PUBLIC_ENABLE_FIREBASE');
+      }
+      return;
+    }
+
     // Attempt to initialize Firebase only on native platforms
     if (Platform.OS === 'web') {
       console.log('[Firebase] Skipped on web — using console fallback');
