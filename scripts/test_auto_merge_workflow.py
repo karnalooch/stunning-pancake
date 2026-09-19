@@ -26,15 +26,13 @@ class AutoMergeWorkflowContractTests(unittest.TestCase):
         self.assertIn("issues: write", self.text)
         self.assertNotIn("actions: write", self.text)
 
-    def test_concurrency_tracks_pr_across_all_event_shapes(self):
-        self.assertIn("github.event.pull_request.number", self.text)
-        self.assertIn("github.event.workflow_run.pull_requests[0].number", self.text)
-        self.assertIn("github.event.check_run.pull_requests[0].number", self.text)
-        self.assertIn("github.run_id", self.text)
-        self.assertIn("github.event_name == 'pull_request_target'", self.text)
-        self.assertIn("github.event_name == 'workflow_run'", self.text)
-        self.assertIn("github.event_name == 'check_run'", self.text)
-        self.assertNotIn("github.event_name == 'pull_request' }}", self.text)
+    def test_concurrency_serializes_repository_wide_without_cancellation(self):
+        self.assertIn(
+            "group: fail-closed-auto-merge-${{ github.repository }}",
+            self.text,
+        )
+        self.assertIn("cancel-in-progress: false", self.text)
+        self.assertNotIn("github.run_id", self.text)
 
     def test_workflow_reacts_to_ci_and_review_completion(self):
         self.assertIn(
