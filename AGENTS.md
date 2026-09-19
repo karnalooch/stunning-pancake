@@ -30,11 +30,20 @@
 - Zachowaj istniejące zmiany użytkownika. Nie resetuj, nie czyść, nie nadpisuj ani nie stashuj ich automatycznie.
 - Brudne drzewo nie blokuje odczytów ani niezależnej pracy. Jeśli zmiany kolidują z zadaniem lub uniemożliwiają bezpieczną zmianę gałęzi, opisz konkretną kolizję.
 - Dla nowego zadania implementacyjnego pracuj na osobnej gałęzi, jeśli zadanie nie wskazuje istniejącej. Nie przenoś zmian między gałęziami bez ustalenia ich pochodzenia.
-- Commit, push i PR wykonuj, gdy obejmuje je zlecenie; nie proś ponownie o już udzieloną zgodę. Merge, wdrożenie, force-push i operacje destrukcyjne wymagają wyraźnego zlecenia obejmującego tę czynność.
+- Commit, push i PR wykonuj, gdy obejmuje je zlecenie; nie proś ponownie o już udzieloną zgodę. Wdrożenie, force-push i operacje destrukcyjne wymagają wyraźnego zlecenia obejmującego tę czynność. Merge może być automatyczny wyłącznie dla niskiego ryzyka zgodnie z sekcją `Automatyczne mergowanie`; pozostałe PR-y wymagają wyraźnego polecenia merge.
 - Dla aktywnego zadania implementacyjnego utwórz draft PR możliwie wcześnie, gdy tylko istnieje sensowna gałąź i pierwszy spójny commit, aby praca była widoczna w GitHub Project. Nie twórz PR dla samej analizy, planowania lub odczytu.
 - Status GitHub Project ma odzwierciedlać rzeczywisty etap pracy: aktywna implementacja = `In progress`, PR oznaczony jako Ready for review = `In review`, merge = `Done`. `Done` po merge obsługuje automatyzacja Project; nie ustawiaj go wcześniej ręcznie. Jeśli agent nie ma uprawnień do zmiany statusu Project, zgłoś to w raporcie zamiast udawać wykonanie.
 - Dodawaj do stage konkretne pliki zadania. Przed commitem sprawdź staged diff i jego zgodność z zakresem.
 - Nie ujawniaj sekretów, tokenów, prywatnych kluczy ani danych produkcyjnych w odpowiedzi lub logach.
+
+## Automatyczne mergowanie
+- Domyślnie traktuj merge jako `manual`. Agent może oznaczyć PR dokładną linią `Auto-merge: eligible` tylko po sprawdzeniu pełnej listy zmienionych plików i wyłącznie dla rutynowej zmiany niskiego ryzyka.
+- Nie oznaczaj jako eligible zmian obejmujących workflowy/actions, skrypty automatyzacji repo, `AGENTS.md`, CI/merge policy, deployment/Kubernetes/Docker/infra, sekrety, auth/OAuth/security, migracje baz danych, dependency manifests/lockfiles/requirements ani materiał kluczy/certyfikatów. Przy niepewności użyj `Auto-merge: manual`.
+- Sam marker nie upoważnia do merge. Repozytoryjna automatyzacja musi niezależnie potwierdzić: PR z tego samego repo i od właściciela, target `main`, non-draft, brak ryzykownych ścieżek, `Aggregate CI gate = success`, `Kilo Code Review = success`, brak aktywnego `CHANGES_REQUESTED`, brak nierozwiązanych review threads i mergeability względem aktualnego `main`.
+- Jeśli bezpieczny PR jest tylko behind względem `main`, automatyzacja może wykonać zwykłe GitHub update-branch i musi poczekać na świeże kontrole. Nie używaj force-push do przygotowania auto-merge.
+- Automatyczny merge zawsze jest squash. Branch protection pozostaje nadrzędną bramką; nie twórz obejść ani tokenów z prawem bypassu.
+- Zmiany polityki auto-merge oraz samej implementacji automatyzacji zawsze są `Auto-merge: manual` i wymagają jawnego polecenia użytkownika do merge.
+- Po auto-merge nadal zweryfikuj wynik: PR merged, powiązane Issue zamknięte, Project `Done` i oczekiwany HEAD `main`.
 
 ## Implementacja w monorepo
 - Korzystaj z istniejących wzorców i zależności. Nie dodawaj bibliotek ani abstrakcji bez potrzeby wynikającej z zadania.

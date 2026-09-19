@@ -1,0 +1,47 @@
+name: Fail-closed auto merge
+
+on:
+  pull_request_target:
+    types: [ready_for_review, reopened, synchronize, edited]
+  workflow_run:
+    workflows: ["4VELO CI/CD Pipeline"]
+    types: [completed]
+  check_run:
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  evaluate:
+    name: Evaluate safe auto merge
+    if: >-
+      github.event_name != 'check_run' ||
+      github.event.check_run.name == 'Kilo Code Review' ||
+      github.event.check_run.name == 'Aggregate CI gate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout trusted default branch only
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Evaluate eligible pull requests
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        run: python scripts/auto_merge.py
