@@ -23,7 +23,6 @@
     "test:e2e": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1",
     "test:e2e:auth": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/run-mobile-e2e.ps1 -Flow auth-login.yaml",
     "install:maestro": "powershell -NoProfile -ExecutionPolicy Bypass -File ../scripts/install-maestro.ps1",
-    "eas-build-pre-install": "bash eas-build-pre-install.sh",
     "start:dev-client": "expo start --dev-client",
     "build:pilot-local:android": "pnpm dlx eas-cli@24.7.0 build --platform android --profile pilot-local",
     "doctor": "pnpm dlx expo-doctor@1.20.4 .",
