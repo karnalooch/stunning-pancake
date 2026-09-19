@@ -214,6 +214,10 @@ const stylesheet = StyleSheet.create((theme) => {
       ...PRODUCT_TYPOGRAPHY.bodyMedium,
       color: semantic.status.error,
     },
+    offlineTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.offline,
+    },
     errorBody: {
       ...PRODUCT_TYPOGRAPHY.body,
       color: semantic.text.secondary,
@@ -405,11 +409,12 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
         <DevEnvironmentBanner />
 
         {displayStatsOffline ? (
-          <EdgeStateBanner
-            title={t.errors.network}
-            message={t.errors.offlineCache}
-            variant="offline"
-          />
+          <ProductCard testID="home-stats-offline">
+            <View style={s.cardContent}>
+              <Text style={s.offlineTitle}>{t.errors.network}</Text>
+              <Text style={s.errorBody}>{t.errors.offlineCache}</Text>
+            </View>
+          </ProductCard>
         ) : null}
 
         {rideEdgeMessage ? (
