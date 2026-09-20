@@ -15,6 +15,7 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.test.[jt]s?(x)'],
   moduleNameMapper: {
     '^expo-secure-store$': '<rootDir>/__tests__/__mocks__/expo-secure-store.js',
+    '^react-native-mmkv$': '<rootDir>/__tests__/__mocks__/react-native-mmkv.js',
     '^@4velo/api-client$': '<rootDir>/../packages/api-client/src/index.ts',
     '\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$':
       '<rootDir>/__tests__/__mocks__/fileMock.js',

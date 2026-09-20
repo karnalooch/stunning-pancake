@@ -368,6 +368,9 @@ jobs:
       - name: Mobile platform configuration contract
         run: python -m unittest scripts/test_mobile_platform_contract.py -v
 
+      - name: MMKV v4 migration contract
+        run: python -m unittest scripts/test_mobile_mmkv_v4_contract.py -v
+
       - name: Expo dependency compatibility
         id: expo_deps
         continue-on-error: true

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## v0.3.4-dev (2026-09-20) — Mobile native runtime boundary
+
+### Mobile platform
+- Bumped the numeric product/app version from `0.3.3` to `0.3.4` before adopting the MMKV v4 + Nitro native runtime, so Expo `runtimeVersion.policy = appVersion` cannot target existing 0.3.3 native binaries with incompatible OTA JavaScript.
+- MMKV v4 migration keeps the existing storage IDs and encrypted GPS key semantics behind the centralized storage adapter.
+
 ### Release engineering
 - Added repository-root `version.json` as the product version source of truth.
 - Aligned root/mobile/admin package labels to the product SemVer label while Expo uses the numeric store version.

@@ -2,7 +2,7 @@
  * Ride session lifecycle — durable session create + GpsSyncManager tracking.
  */
 
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from './mmkvStorage';
 import { ActivityService, type ActivitySportType } from './api';
 import {
   GpsSyncManager,
@@ -14,9 +14,9 @@ const DEVICE_ID_KEY = 'gps_device_id';
 
 let _gpsManager: GpsSyncManager | null = null;
 
-function appStorage(): MMKV | null {
+function appStorage(): AppMmkvStorage | null {
   try {
-    return new MMKV();
+    return createAppMmkv();
   } catch {
     return null;
   }
