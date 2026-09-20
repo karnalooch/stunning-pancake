@@ -13,7 +13,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 GRAPHQL_URL = "https://api.github.com/graphql"
-SUPPORTED_ACTIONS = {"opened", "reopened", "converted_to_draft", "ready_for_review"}
+SUPPORTED_ACTIONS = {"opened", "reopened", "converted_to_draft", "ready_for_review", "closed"}
 
 
 class AutomationError(RuntimeError):
@@ -66,9 +66,11 @@ class GraphQLClient:
         return data
 
 
-def target_status(action: str, is_draft: bool) -> str:
+def target_status(action: str, is_draft: bool, merged: bool = False) -> str | None:
     if action not in SUPPORTED_ACTIONS:
         raise AutomationError(f"unsupported pull_request action: {action}")
+    if action == "closed":
+        return "Done" if merged else None
     if action == "ready_for_review":
         return "In review"
     if action == "converted_to_draft":
@@ -290,8 +292,18 @@ def main() -> int:
             raise AutomationError("workflow event does not contain pull_request")
 
         action = str(event.get("action", ""))
-        desired_status = target_status(action, bool(pull_request_event.get("draft")))
+        desired_status = target_status(
+            action,
+            bool(pull_request_event.get("draft")),
+            bool(pull_request_event.get("merged")),
+        )
         pr_number = int(pull_request_event["number"])
+        if desired_status is None:
+            print(
+                f"project-status: action={action} merged=false; "
+                f"PR #{pr_number} status unchanged"
+            )
+            return 0
         repo_owner, repo_name = repository.split("/", 1)
 
         client = GraphQLClient(token)
