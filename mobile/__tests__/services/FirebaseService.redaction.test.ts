@@ -34,7 +34,10 @@ import {
 } from '../../src/services/FirebaseService';
 
 describe('FirebaseService redaction boundary', () => {
+  const originalFirebaseFlag = process.env.EXPO_PUBLIC_ENABLE_FIREBASE;
+
   beforeEach(() => {
+    process.env.EXPO_PUBLIC_ENABLE_FIREBASE = 'true';
     mockCrashLog.mockReset();
     mockRecordError.mockReset();
     mockAnalyticsLogEvent.mockReset();
@@ -46,7 +49,21 @@ describe('FirebaseService redaction boundary', () => {
   });
 
   afterEach(() => {
+    if (originalFirebaseFlag === undefined) {
+      delete process.env.EXPO_PUBLIC_ENABLE_FIREBASE;
+    } else {
+      process.env.EXPO_PUBLIC_ENABLE_FIREBASE = originalFirebaseFlag;
+    }
     jest.restoreAllMocks();
+  });
+
+  test('does not initialize Firebase unless explicitly enabled', () => {
+    process.env.EXPO_PUBLIC_ENABLE_FIREBASE = 'false';
+    mockFirebaseFactory.mockClear();
+
+    initFirebase();
+
+    expect(mockFirebaseFactory).not.toHaveBeenCalled();
   });
 
   test('redacts secrets, identity and GPS before Crashlytics receives an error', () => {

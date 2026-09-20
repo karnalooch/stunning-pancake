@@ -8,8 +8,7 @@ on:
   push:
     branches: [master, main, develop]
     tags: ['v*.*.*']
-  pull_request:
-    branches: [master, main, develop]
+  pull_request: {}
   schedule:
     - cron: '0 2 * * *'
 
@@ -366,17 +365,71 @@ jobs:
       - name: Test pnpm workspace selector integrity
         run: python -m unittest scripts/test_ci_workspace_selectors.py -v
 
+      - name: Mobile platform configuration contract
+        run: python -m unittest scripts/test_mobile_platform_contract.py -v
+
+      - name: Expo dependency compatibility
+        id: expo_deps
+        continue-on-error: true
+        working-directory: mobile
+        run: pnpm exec expo install --check
+
+      - name: Expo Doctor
+        id: expo_doctor
+        continue-on-error: true
+        working-directory: mobile
+        run: pnpm dlx expo-doctor@1.20.4 .
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
       - name: TypeScript type check
         run: pnpm --dir mobile typecheck
 
+      - name: Metro bundle smoke (Android)
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_ENABLE_FIREBASE: 'false'
+        run: pnpm exec expo export --platform android --output-dir ../.ci/mobile-bundle-smoke
+
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
       - name: Run affected mobile unit tests
         run: python scripts/run_affected_mobile_tests.py --plan .ci/affected-plan.json
+
+      - name: Preview canonical Expo dependency remediation
+        if: steps.expo_deps.outcome != 'success'
+        continue-on-error: true
+        run: |
+          # The repo-wide React override currently forces the admin's React patch
+          # into mobile as well. Preview the real Expo-compatible graph without
+          # mutating the committed tree or allowing this diagnostic to affect
+          # the baseline lint/typecheck/tests above.
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("pnpm-workspace.yaml")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("  react: 19.2.7\n", "")
+          text = text.replace("  react-dom: 19.2.7\n", "")
+          path.write_text(text, encoding="utf-8")
+          PY
+          # This is an ephemeral diagnostic workspace. The committed baseline
+          # stays frozen above; here we deliberately regenerate the lock after
+          # changing the override set, then let Expo write its SDK-compatible
+          # package versions so the exact remediation diff is observable.
+          pnpm install --no-frozen-lockfile
+          CI=false pnpm --dir mobile exec expo install --fix
+          echo "::group::Expo remediation diff"
+          git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
+          echo "::endgroup::"
+
+      - name: Expo compatibility gate
+        if: always() && (steps.expo_deps.outcome != 'success' || steps.expo_doctor.outcome != 'success')
+        run: |
+          echo "Expo dependency check: ${{ steps.expo_deps.outcome }}"
+          echo "Expo Doctor: ${{ steps.expo_doctor.outcome }}"
+          exit 1
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -428,6 +481,9 @@ jobs:
           PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
           PIPREQS
           python -m unittest scripts/test_security_tooling_workflows.py -v
+
+      - name: Test CI workflow contract
+        run: python -m unittest scripts/test_ci_pr_base_coverage.py -v
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v

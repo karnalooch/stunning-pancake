@@ -1,4 +1,4 @@
-/** Baked at build time — enable only for local/preview E2E APKs, never production store. */
+/** Build-time E2E flags only. Credentials must never be baked into the mobile bundle. */
 import Constants from 'expo-constants';
 
 function readExtra(): Record<string, string | undefined> {
@@ -15,8 +15,6 @@ function readExtra(): Record<string, string | undefined> {
 type E2eEnvKey =
   | 'EXPO_PUBLIC_E2E_AUTO_LOGIN'
   | 'EXPO_PUBLIC_E2E_SKIP_ONBOARDING'
-  | 'EXPO_PUBLIC_E2E_EMAIL'
-  | 'EXPO_PUBLIC_E2E_PASSWORD'
   | 'EXPO_PUBLIC_E2E_GPS_RECOVERY';
 
 function readProcessEnv(key: E2eEnvKey): string | undefined {
@@ -25,10 +23,6 @@ function readProcessEnv(key: E2eEnvKey): string | undefined {
       return process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN;
     case 'EXPO_PUBLIC_E2E_SKIP_ONBOARDING':
       return process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING;
-    case 'EXPO_PUBLIC_E2E_EMAIL':
-      return process.env.EXPO_PUBLIC_E2E_EMAIL;
-    case 'EXPO_PUBLIC_E2E_PASSWORD':
-      return process.env.EXPO_PUBLIC_E2E_PASSWORD;
     case 'EXPO_PUBLIC_E2E_GPS_RECOVERY':
       return process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
   }
@@ -50,13 +44,11 @@ function readEnvFlag(key: E2eEnvKey): boolean {
 export const e2eConfig = {
   autoLogin: readEnvFlag('EXPO_PUBLIC_E2E_AUTO_LOGIN'),
   skipOnboarding: readEnvFlag('EXPO_PUBLIC_E2E_SKIP_ONBOARDING'),
-  email: readEnv('EXPO_PUBLIC_E2E_EMAIL') ?? '',
-  password: readEnv('EXPO_PUBLIC_E2E_PASSWORD') ?? '',
   gpsRecoverySeed: readEnvFlag('EXPO_PUBLIC_E2E_GPS_RECOVERY'),
 };
 
 export function isE2eAutoLoginEnabled(): boolean {
-  return e2eConfig.autoLogin && Boolean(e2eConfig.email && e2eConfig.password);
+  return e2eConfig.autoLogin;
 }
 
 /** When E2E auto-login is active, skip onboarding unless explicitly disabled. */

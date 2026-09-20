@@ -35,7 +35,7 @@ Owner decision:
 | Permissions | [app.config.js](../../../mobile/app.config.js) | `ACCESS_BACKGROUND_LOCATION`, `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, iOS `UIBackgroundModes: location, fetch` |
 | Persistence | MMKV buffer + outbox | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
 | Recovery | `recoverGpsDataOnLaunch()` | Banner after relaunch |
-| New Architecture | `app.config.js` `newArchEnabled: true`, RN 0.83.6 | Bridgeless mode |
+| New Architecture | Expo SDK 55 / React Native 0.83; New Architecture is mandatory in SDK 55 | No app-level disable toggle |
 
 **Conclusion:** the foundation is good (profiles, foreground service, outbox), but state persistence and wake-ups depend on the JS layer, which on Bridgeless + aggressive OEM/Doze can be unreliable (Headless JS, "Runtime not ready", update batching up to several minutes).
 

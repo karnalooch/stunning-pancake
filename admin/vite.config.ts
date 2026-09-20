@@ -3,8 +3,8 @@ import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-const repoReact = path.resolve(__dirname, '../node_modules/react')
-const repoReactDom = path.resolve(__dirname, '../node_modules/react-dom')
+const adminReact = path.resolve(__dirname, 'node_modules/react')
+const adminReactDom = path.resolve(__dirname, 'node_modules/react-dom')
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -33,11 +33,11 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       '@tokens': path.resolve(__dirname, '../packages/tokens'),
-      react: repoReact,
-      'react-dom': repoReactDom,
-      'react-dom/client': path.resolve(repoReactDom, 'client'),
-      'react/jsx-runtime': path.resolve(repoReact, 'jsx-runtime.js'),
-      'react/jsx-dev-runtime': path.resolve(repoReact, 'jsx-dev-runtime.js'),
+      react: adminReact,
+      'react-dom': adminReactDom,
+      'react-dom/client': path.resolve(adminReactDom, 'client'),
+      'react/jsx-runtime': path.resolve(adminReact, 'jsx-runtime.js'),
+      'react/jsx-dev-runtime': path.resolve(adminReact, 'jsx-dev-runtime.js'),
     },
     dedupe: ['react', 'react-dom'],
   },

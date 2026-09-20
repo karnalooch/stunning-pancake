@@ -32,7 +32,7 @@
 | Wymaganie | Uwagi |
 |-----------|--------|
 | Node.js / pnpm | Node.js 24.21.0 LTS + pnpm 12.4.2 (toolchain root monorepo) |
-| EAS CLI | `npm i -g eas-cli` (release store) |
+| EAS CLI | Używaj przypiętego w repo `eas-cli@24.7.0` przez skrypty `pnpm --dir mobile ...`; instalacja globalna nie jest potrzebna. |
 | Konto Expo | Dostęp do projektu EAS |
 | Env | Tylko **publiczne** prefiksy `EXPO_PUBLIC_*` (bez sekretów w repo) |
 
@@ -45,7 +45,7 @@
 | `EXPO_PUBLIC_API_URL` | Django REST API (prod/staging) |
 | `EXPO_PUBLIC_TELEMETRY_URL` | FastAPI telemetry (domyślnie Railway) |
 
-Ustaw w EAS Secrets / `eas.json` profiles / lokalnie `.env` (gitignored). **Nie** dokumentuj wartości URL prod w tabelach — użyj nazw zmiennych.
+Profile zdalne pobierają te wartości z wybranego EAS Environment (`development` / `preview` / `production`); lokalny development może używać ignorowanego przez Git `.env`. Tylko `pilot-local` celowo trzyma endpointy localhost w `eas.json`. **Nie** dokumentuj wartości URL prod w tabelach — użyj nazw zmiennych.
 
 ---
 
@@ -56,22 +56,22 @@ Ustaw w EAS Secrets / `eas.json` profiles / lokalnie `.env` (gitignored). **Nie*
 ```bash
 # from the monorepo root
 pnpm install --frozen-lockfile
-pnpm --dir mobile exec expo start
+pnpm --dir mobile start
 ```
 
 ### 2. Preview / internal (EAS)
 
-1. Zaloguj: `eas login`
+1. Zaloguj się przypiętym CLI: `pnpm --dir mobile dlx eas-cli@24.7.0 login`
 2. Profil z `eas.json` (np. preview)
-3. `eas build --profile preview --platform android` (lub ios)
+3. `pnpm --dir mobile build:preview:android` (lub `pnpm --dir mobile build:preview:ios`)
 
 ### 3. Production store
 
 1. Wersja produktu ma jedno źródło prawdy: repo-root `version.json`.
 2. Zmień ją poleceniem `pnpm version:set -- <MAJOR.MINOR.PATCH> --prerelease <id>` (np. `dev`, `rc.1`) albo bez `--prerelease` dla stabilnego release.
 3. Sprawdź kontrakt: `pnpm version:check`. `mobile/app.config.js` pobiera z SSOT wyłącznie numeryczne `MAJOR.MINOR.PATCH` jako wersję widoczną dla użytkownika.
-4. `eas build --profile production --platform all`. EAS jest właścicielem natywnych numerów buildów (`android.versionCode` / `ios.buildNumber`) i dla profilu production zwiększa je automatycznie.
-5. `eas submit` wg profilu store (po przejściu QA).
+4. Uruchom przypięte skrypty `pnpm --dir mobile build:prod:android` / `pnpm --dir mobile build:prod:ios`. EAS jest właścicielem natywnych numerów buildów (`android.versionCode` / `ios.buildNumber`) i dla profilu production zwiększa je automatycznie.
+5. Po QA użyj przypiętego CLI do submitu, np. `pnpm --dir mobile dlx eas-cli@24.7.0 submit --platform android --profile production`.
 6. Stabilny tag Git musi mieć dokładnie postać `vMAJOR.MINOR.PATCH`, zgadzać się z `version.json` i jest blokowany, dopóki `prerelease` nie jest puste.
 7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
 
@@ -130,14 +130,14 @@ Diagram i klucze MMKV: [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md).
 | Sesja nie startuje | API down / auth | `EXPO_PUBLIC_API_URL`, token |
 | Baner recovery stale | Duży outbox | Dev: wyczyść MMKV testowo; prod: poczekaj na flush + sieć |
 | `gps_buffer_overflow` | >2000 punktów w buforze | Sieć + flush; rozważ krótszą jazdę offline |
-| Build EAS fail | Credentials / profile | `eas credentials`, log buildu |
+| Build EAS fail | Credentials / profile | `pnpm --dir mobile dlx eas-cli@24.7.0 credentials`, log buildu |
 
 ---
 
 ## Rollback release (Release Manager)
 
 1. Store: wstrzymaj rollout % lub cofnij do poprzedniej wersji w konsoli sklepu.
-2. EAS: przebuduj poprzedni git tag z `eas build`.
+2. EAS: przebuduj poprzedni git tag przypiętymi skryptami `pnpm --dir mobile build:prod:*`.
 3. API: jeśli breaking change — rollback backend według [DEPLOYMENT.md](../../DEPLOYMENT.md).
 
 ---

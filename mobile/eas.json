@@ -1,7 +1,8 @@
 {
   "cli": {
-    "version": ">= 12.0.0",
-    "appVersionSource": "remote"
+    "version": "24.7.0",
+    "appVersionSource": "remote",
+    "requireCommit": true
   },
   "build": {
     "pilot-local": {
@@ -14,16 +15,16 @@
         "EXPO_PUBLIC_TELEMETRY_URL": "http://localhost:8001",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false",
         "EXPO_PUBLIC_TELEMETRY_WS_INGEST": "false"
-      }
+      },
+      "environment": "development"
     },
     "development": {
       "node": "24.21.0",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
+      "environment": "development",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-        "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
       }
     },
@@ -34,25 +35,20 @@
         "buildType": "apk"
       },
       "channel": "preview",
+      "environment": "preview",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-        "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
       }
     },
     "production": {
       "node": "24.21.0",
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
+      "distribution": "store",
       "channel": "production",
+      "autoIncrement": true,
+      "environment": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://backend-production-55c7.up.railway.app",
-        "EXPO_PUBLIC_TELEMETRY_URL": "https://docker-telemetry-production-123c.up.railway.app",
         "EXPO_PUBLIC_ENABLE_FIREBASE": "false"
-      },
-      "autoIncrement": true
+      }
     }
   },
   "submit": {

@@ -1,6 +1,4 @@
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
-
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname);
 
@@ -20,11 +18,5 @@ config.resolver = {
     /.*\.native-test.*/,
   ],
 };
-
-config.watchFolders = [
-  ...(config.watchFolders || []),
-  path.resolve(__dirname, '..'),
-  path.resolve(__dirname, '../packages/api-client'),
-];
 
 module.exports = config;
