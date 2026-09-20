@@ -78,6 +78,21 @@ class CITriggerTests(unittest.TestCase):
         self.assertEqual(set(push.get("branches", [])), {"master", "main", "develop"})
 
 
+    def test_pull_request_trigger_covers_stacked_branches(self):
+        on = _on(_ci())
+        pull_request = on.get("pull_request")
+        self.assertIsInstance(
+            pull_request,
+            dict,
+            "pull_request trigger must be a mapping so its scope is explicit",
+        )
+        self.assertNotIn(
+            "branches",
+            pull_request,
+            "CI must run for stacked PRs whose base is another feature branch",
+        )
+
+
 class PreparePublishJobTests(unittest.TestCase):
     def _job(self):
         return _ci()["jobs"]["prepare-publish"]
