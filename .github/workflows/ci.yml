@@ -483,7 +483,7 @@ jobs:
           python -m unittest scripts/test_security_tooling_workflows.py -v
 
       - name: Test CI workflow contract
-        run: python -m unittest scripts/test_ci_workflow_contract.py -v
+        run: python -m unittest scripts/test_ci_pr_base_coverage.py -v
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
