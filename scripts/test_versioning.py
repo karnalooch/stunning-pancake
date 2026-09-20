@@ -18,19 +18,31 @@ class VersioningContractTests(unittest.TestCase):
     def test_repository_version_contract_is_consistent(self):
         self.assertEqual(versioning.check_contract(), [])
 
-    def test_current_product_label(self):
-        release = versioning.load_release()
-        self.assertEqual(release["version"], "0.3.3")
-        self.assertEqual(release["prerelease"], "dev")
-        self.assertEqual(versioning.semver_label(release), "0.3.3-dev")
+    def test_semver_label_formats_prerelease_and_stable_versions(self):
+        self.assertEqual(
+            versioning.semver_label({"version": "1.2.3", "prerelease": "dev"}),
+            "1.2.3-dev",
+        )
+        self.assertEqual(
+            versioning.semver_label({"version": "1.2.3", "prerelease": ""}),
+            "1.2.3",
+        )
 
     def test_stable_tag_is_rejected_during_prerelease_cycle(self):
-        errors = versioning.check_contract(tag="v0.3.3")
+        release = versioning.load_release()
+        self.assertTrue(release["prerelease"])
+        errors = versioning.check_contract(tag=f'v{release["version"]}')
         self.assertTrue(any("forbidden while prerelease" in error for error in errors))
 
     def test_bad_tag_is_rejected(self):
-        errors = versioning.check_contract(tag="v0.3.4")
-        self.assertTrue(any("expected \'v0.3.3\'" in error for error in errors))
+        release = versioning.load_release()
+        major, minor, patch = (int(part) for part in release["version"].split("."))
+        wrong_tag = f"v{major}.{minor}.{patch + 1}"
+        expected_tag = f'v{release["version"]}'
+
+        errors = versioning.check_contract(tag=wrong_tag)
+
+        self.assertTrue(any(f"expected {expected_tag!r}" in error for error in errors))
 
     def test_set_version_validates_all_package_json_before_mutating(self):
         with tempfile.TemporaryDirectory() as temp_dir:
