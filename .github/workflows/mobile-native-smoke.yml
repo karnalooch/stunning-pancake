@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: mobile-native-smoke-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
