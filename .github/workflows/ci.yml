@@ -390,6 +390,12 @@ jobs:
       - name: TypeScript type check
         run: pnpm --dir mobile typecheck
 
+      - name: Metro bundle smoke (Android)
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_ENABLE_FIREBASE: 'false'
+        run: pnpm exec expo export --platform android --output-dir ../.ci/mobile-bundle-smoke
+
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 

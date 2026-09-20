@@ -189,6 +189,9 @@ importers:
       '@4velo/api-client':
         specifier: workspace:*
         version: link:../packages/api-client
+      '@babel/runtime':
+        specifier: 7.29.7
+        version: 7.29.7
       '@expo-google-fonts/press-start-2p':
         specifier: ^0.4.1
         version: 0.4.1

@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@4velo/api-client": "workspace:*",
+    "@babel/runtime": "7.29.7",
     "@expo-google-fonts/press-start-2p": "^0.4.1",
     "@expo-google-fonts/silkscreen": "^0.4.2",
     "@expo-google-fonts/vt323": "^0.4.1",
