@@ -19,6 +19,7 @@ class ProjectStatusWorkflowTests(unittest.TestCase):
         self.assertIn("reopened", self.text)
         self.assertIn("converted_to_draft", self.text)
         self.assertIn("ready_for_review", self.text)
+        self.assertIn("closed", self.text)
 
     def test_fork_prs_do_not_receive_project_secret(self):
         self.assertIn(

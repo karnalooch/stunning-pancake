@@ -2,7 +2,7 @@ name: GitHub Project status
 
 on:
   pull_request:
-    types: [opened, reopened, converted_to_draft, ready_for_review]
+    types: [opened, reopened, converted_to_draft, ready_for_review, closed]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
