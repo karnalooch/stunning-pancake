@@ -35,10 +35,12 @@ class ProjectStatusAutomationTests(unittest.TestCase):
         self.assertEqual(target_status("reopened", False), "In review")
         self.assertEqual(target_status("converted_to_draft", False), "In progress")
         self.assertEqual(target_status("ready_for_review", True), "In review")
+        self.assertEqual(target_status("closed", False, merged=True), "Done")
+        self.assertIsNone(target_status("closed", False, merged=False))
 
     def test_unsupported_action_fails_closed(self):
         with self.assertRaisesRegex(AutomationError, "unsupported"):
-            target_status("closed", False)
+            target_status("synchronize", False)
 
     def test_choose_project_requires_exact_unique_title(self):
         data = {
