@@ -76,6 +76,7 @@ class ProjectStatusAutomationTests(unittest.TestCase):
                                 {"id": "BACKLOG", "name": "Backlog"},
                                 {"id": "PROGRESS", "name": "In progress"},
                                 {"id": "REVIEW", "name": "In review"},
+                                {"id": "DONE", "name": "Done"},
                             ],
                         }
                     ]
@@ -85,6 +86,10 @@ class ProjectStatusAutomationTests(unittest.TestCase):
         self.assertEqual(
             choose_status_field(data, "In review"),
             ("STATUS", "REVIEW"),
+        )
+        self.assertEqual(
+            choose_status_field(data, "Done"),
+            ("STATUS", "DONE"),
         )
 
     def test_closing_issues_are_limited_to_same_repository_and_deduplicated(self):
