@@ -17,24 +17,37 @@
 .PARAMETER OutputPath
   Optional JSON output path. Defaults to %TEMP%\4velo-mobile-zero-baseline-<timestamp>.json
 
+.PARAMETER RepoRootPath
+  Optional repository root to inspect. This lets the collector live in an
+  isolated worktree while capturing evidence from the exact checkout under test.
+
 .PARAMETER RunNetworkChecks
   Opt-in only. Runs ecosystem checks that may access the network/cache:
-  expo-doctor and expo install --check. Disabled by default.
+  pinned expo-doctor and expo install --check. Disabled by default.
 
 .EXAMPLE
   pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RunNetworkChecks
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath D:\gem\stunning-pancake
+
+.EXAMPLE
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath D:\gem\stunning-pancake -RunNetworkChecks
 #>
 
 param(
   [string]$OutputPath = "",
+  [string]$RepoRootPath = "",
   [switch]$RunNetworkChecks
 )
 
 $ErrorActionPreference = "Continue"
-$RepoRoot = Split-Path -Parent $PSScriptRoot
+$CollectorRepoRoot = Split-Path -Parent $PSScriptRoot
+$RepoRoot = if ($RepoRootPath) {
+  (Resolve-Path $RepoRootPath -ErrorAction Stop).Path
+} else {
+  $CollectorRepoRoot
+}
 $MobileDir = Join-Path $RepoRoot "mobile"
 $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
@@ -305,9 +318,13 @@ function Get-NodeResolutionEvidence {
     "expo-task-manager",
     "expo-updates",
     "expo-dev-client",
+    "expo-asset",
+    "expo-constants",
+    "@babel/runtime",
     "react",
     "react-native",
     "react-native-mmkv",
+    "react-native-nitro-modules",
     "react-native-reanimated",
     "@maplibre/maplibre-react-native"
   )
@@ -336,6 +353,7 @@ $report = [ordered]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
   purpose = "4VELO mobile absolute-zero baseline"
   mutationPolicy = "read-only"
+  collectorRepoRoot = $CollectorRepoRoot
   repoRoot = $RepoRoot
 }
 
@@ -405,12 +423,14 @@ $report.toolchain = [ordered]@{
 $git = $commandMap["git"]
 if ($git.found) {
   $report.git = [ordered]@{
-    toplevel = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--show-toplevel")).stdout
-    branch = (Invoke-ReadOnly -FilePath $git.path -Arguments @("branch","--show-current")).stdout
-    head = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","HEAD")).stdout
-    status = (Invoke-ReadOnly -FilePath $git.path -Arguments @("status","--short","--branch")).stdout
-    diffStat = (Invoke-ReadOnly -FilePath $git.path -Arguments @("diff","--stat")).stdout
-    worktrees = (Invoke-ReadOnly -FilePath $git.path -Arguments @("worktree","list","--porcelain")).stdout
+    toplevel = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--show-toplevel") -WorkingDirectory $RepoRoot).stdout
+    origin = (Invoke-ReadOnly -FilePath $git.path -Arguments @("remote","get-url","origin") -WorkingDirectory $RepoRoot).stdout
+    branch = (Invoke-ReadOnly -FilePath $git.path -Arguments @("branch","--show-current") -WorkingDirectory $RepoRoot).stdout
+    head = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","HEAD") -WorkingDirectory $RepoRoot).stdout
+    originMain = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--verify","origin/main") -WorkingDirectory $RepoRoot).stdout
+    status = (Invoke-ReadOnly -FilePath $git.path -Arguments @("status","--short","--branch") -WorkingDirectory $RepoRoot).stdout
+    diffStat = (Invoke-ReadOnly -FilePath $git.path -Arguments @("diff","--stat") -WorkingDirectory $RepoRoot).stdout
+    worktrees = (Invoke-ReadOnly -FilePath $git.path -Arguments @("worktree","list","--porcelain") -WorkingDirectory $RepoRoot).stdout
   }
 } else {
   $report.git = [ordered]@{ error = "git not found" }
@@ -507,10 +527,28 @@ if ($pnpmInfo.found) {
   $report.expoConfig = [ordered]@{ ok = $false; stderr = "pnpm not found" }
 }
 
+# Canonical EAS configuration summary from the inspected checkout.
+$easConfigPath = Join-Path $MobileDir "eas.json"
+if (Test-Path $easConfigPath -PathType Leaf) {
+  try {
+    $easConfig = Get-Content $easConfigPath -Raw | ConvertFrom-Json
+    $report.eas = [ordered]@{
+      cliVersion = $easConfig.cli.version
+      requireCommit = $easConfig.cli.requireCommit
+      appVersionSource = $easConfig.cli.appVersionSource
+      profiles = @($easConfig.build.PSObject.Properties.Name)
+    }
+  } catch {
+    $report.eas = [ordered]@{ error = $_.Exception.Message }
+  }
+} else {
+  $report.eas = [ordered]@{ error = "mobile/eas.json not found" }
+}
+
 # Optional network/cache checks. Never implicit.
 if ($RunNetworkChecks -and $pnpmInfo.found) {
   $report.networkChecks = [ordered]@{
-    expoDoctor = Invoke-ReadOnly -FilePath $pnpmInfo.path -Arguments @("dlx","expo-doctor@latest",".") -WorkingDirectory $MobileDir -TimeoutSeconds 180
+    expoDoctor = Invoke-ReadOnly -FilePath $pnpmInfo.path -Arguments @("dlx","expo-doctor@1.20.4",".") -WorkingDirectory $MobileDir -TimeoutSeconds 180
     expoInstallCheck = Invoke-ReadOnly -FilePath $pnpmInfo.path -Arguments @("--dir","mobile","exec","expo","install","--check") -WorkingDirectory $RepoRoot -TimeoutSeconds 180
   }
 } else {
@@ -524,8 +562,8 @@ if ($RunNetworkChecks -and $pnpmInfo.found) {
 $report.observations = [ordered]@{
   rootEasJsonExists = Test-Path (Join-Path $RepoRoot "eas.json")
   mobileEasJsonExists = Test-Path (Join-Path $MobileDir "eas.json")
-  generatedAndroidTracked = Test-Path (Join-Path $MobileDir "android")
-  generatedIosTracked = Test-Path (Join-Path $MobileDir "ios")
+  generatedAndroidExists = Test-Path (Join-Path $MobileDir "android")
+  generatedIosExists = Test-Path (Join-Path $MobileDir "ios")
   note = "This collector records evidence only. Interpretation belongs to T80-Z."
 }
 
