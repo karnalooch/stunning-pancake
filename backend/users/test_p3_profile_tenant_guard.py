@@ -1,7 +1,7 @@
 """P3-E tenant-transfer guard for registration and authenticated profile."""
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from users.models import Tenant
@@ -9,6 +9,7 @@ from users.models import Tenant
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ProfileTenantGuardTest(TestCase):
     def setUp(self):
         self.tenant_a = Tenant.objects.create(name="Tenant A")
