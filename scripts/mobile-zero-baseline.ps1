@@ -29,10 +29,10 @@
   pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath D:\gem\stunning-pancake
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath D:\gem\stunning-pancake -RunNetworkChecks
+  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake -RunNetworkChecks
 #>
 
 param(
@@ -53,6 +53,58 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
 if (-not $OutputPath) {
   $OutputPath = Join-Path $env:TEMP "4velo-mobile-zero-baseline-$Timestamp.json"
+}
+
+function Protect-EvidenceText {
+  param([AllowNull()][string]$Value)
+
+  if ([string]::IsNullOrEmpty($Value)) { return $Value }
+
+  $safe = $Value
+
+  if ($env:USERPROFILE) {
+    $profilePattern = [regex]::Escape($env:USERPROFILE.TrimEnd('\\'))
+    $safe = [regex]::Replace(
+      $safe,
+      $profilePattern,
+      '%USERPROFILE%',
+      [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+    )
+  }
+
+  $safe = [regex]::Replace(
+    $safe,
+    '(?i)(https?://)([^/@\\s]+)@',
+    '$1<REDACTED>@'
+  )
+  $safe = [regex]::Replace(
+    $safe,
+    '(?i)((?:token|password|secret|api[_-]?key|credential)=)([^\\s&]+)',
+    '$1<REDACTED>'
+  )
+  $safe = [regex]::Replace(
+    $safe,
+    '(?i)(--(?:token|password|secret|api-key|credential)\\s+)(?:"[^"]*"|\\S+)',
+    '$1<REDACTED>'
+  )
+
+  return $safe
+}
+
+function Get-EvidenceId {
+  param([AllowNull()][string]$Value)
+
+  if ([string]::IsNullOrEmpty($Value)) { return $null }
+
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($Value)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $hash = $sha.ComputeHash($bytes)
+  } finally {
+    $sha.Dispose()
+  }
+
+  return ([System.BitConverter]::ToString($hash).Replace('-', '').ToLowerInvariant()).Substring(0, 12)
 }
 
 function Get-CommandInfo {
@@ -91,28 +143,35 @@ function Invoke-ReadOnly {
     $proc.StartInfo = $psi
     [void]$proc.Start()
 
+    $stdoutTask = $proc.StandardOutput.ReadToEndAsync()
+    $stderrTask = $proc.StandardError.ReadToEndAsync()
+
     if (-not $proc.WaitForExit($TimeoutSeconds * 1000)) {
       try { $proc.Kill() } catch {}
+      try { $proc.WaitForExit() } catch {}
       return [ordered]@{
         ok = $false
         exitCode = $null
-        stdout = ""
-        stderr = "TIMEOUT after $TimeoutSeconds seconds"
+        stdout = Protect-EvidenceText $stdoutTask.GetAwaiter().GetResult().Trim()
+        stderr = "TIMEOUT after $TimeoutSeconds seconds; " + (Protect-EvidenceText $stderrTask.GetAwaiter().GetResult().Trim())
       }
     }
+
+    $stdout = $stdoutTask.GetAwaiter().GetResult().Trim()
+    $stderr = $stderrTask.GetAwaiter().GetResult().Trim()
 
     return [ordered]@{
       ok = ($proc.ExitCode -eq 0)
       exitCode = $proc.ExitCode
-      stdout = $proc.StandardOutput.ReadToEnd().Trim()
-      stderr = $proc.StandardError.ReadToEnd().Trim()
+      stdout = Protect-EvidenceText $stdout
+      stderr = Protect-EvidenceText $stderr
     }
   } catch {
     return [ordered]@{
       ok = $false
       exitCode = $null
       stdout = ""
-      stderr = $_.Exception.Message
+      stderr = Protect-EvidenceText $_.Exception.Message
     }
   }
 }
@@ -125,7 +184,7 @@ function Get-SafeEnv {
     return [ordered]@{ set = $false; value = $null }
   }
 
-  $sensitive = $Name -match '(PASSWORD|TOKEN|SECRET|KEY|CREDENTIAL)'
+  $sensitive = $Name -match '(PASSWORD|TOKEN|SECRET|KEY|CREDENTIAL|E2E_EMAIL)'
   if ($sensitive) {
     return [ordered]@{
       set = $true
@@ -134,7 +193,7 @@ function Get-SafeEnv {
     }
   }
 
-  return [ordered]@{ set = $true; value = $value }
+  return [ordered]@{ set = $true; value = (Protect-EvidenceText $value) }
 }
 
 function Get-FileSha256 {
@@ -148,7 +207,7 @@ function Get-RelevantPathEntries {
   if (-not $raw) { return @() }
   return @($raw -split ';' | Where-Object {
     $_ -match '(Android|Sdk|platform-tools|emulator|cmdline-tools|Java|jdk|node|pnpm|corepack|Python)'
-  } | Select-Object -Unique)
+  } | ForEach-Object { Protect-EvidenceText $_ } | Select-Object -Unique)
 }
 
 function Get-PortEvidence {
@@ -170,7 +229,7 @@ function Get-PortEvidence {
             $p = Get-CimInstance Win32_Process -Filter "ProcessId=$($conn.OwningProcess)" -ErrorAction SilentlyContinue
             if ($p) {
               $procName = $p.Name
-              $cmdLine = $p.CommandLine
+              $cmdLine = Protect-EvidenceText $p.CommandLine
             }
           } catch {}
         }
@@ -185,7 +244,7 @@ function Get-PortEvidence {
       }
       $items += [ordered]@{ port = $port; listening = $true; entries = $rows }
     } catch {
-      $items += [ordered]@{ port = $port; listening = $null; error = $_.Exception.Message }
+      $items += [ordered]@{ port = $port; listening = $null; error = Protect-EvidenceText $_.Exception.Message }
     }
   }
   return $items
@@ -201,24 +260,24 @@ function Get-MetroProcesses {
         [ordered]@{
           pid = $_.ProcessId
           name = $_.Name
-          executablePath = $_.ExecutablePath
-          commandLine = $_.CommandLine
+          executablePath = Protect-EvidenceText $_.ExecutablePath
+          commandLine = Protect-EvidenceText $_.CommandLine
         }
       })
   } catch {
-    return @([ordered]@{ error = $_.Exception.Message })
+    return @([ordered]@{ error = Protect-EvidenceText $_.Exception.Message })
   }
 }
 
 function Parse-MobilePackageId {
   $configPath = Join-Path $MobileDir "app.config.js"
-  if (-not (Test-Path $configPath)) { return "com.sport.athlete" }
+  if (-not (Test-Path $configPath)) { return $null }
   try {
     $text = Get-Content $configPath -Raw
     $m = [regex]::Match($text, '"package"\s*:\s*"([^"]+)"')
     if ($m.Success) { return $m.Groups[1].Value }
   } catch {}
-  return "com.sport.athlete"
+  return $null
 }
 
 function Get-AdbDevices {
@@ -242,9 +301,16 @@ function Get-AdbDevices {
         $wmDensity = Invoke-ReadOnly -FilePath $adb.Source -Arguments @("-s",$serial,"shell","wm","density")
         $fontScale = Invoke-ReadOnly -FilePath $adb.Source -Arguments @("-s",$serial,"shell","settings","get","system","font_scale")
         $reverse = Invoke-ReadOnly -FilePath $adb.Source -Arguments @("-s",$serial,"reverse","--list")
+        $serialHash = Get-EvidenceId $serial
+        $reverseEvidence = if ($reverse.stdout) {
+          $reverse.stdout -replace [regex]::Escape($serial), "<DEVICE:$serialHash>"
+        } else {
+          $reverse.stdout
+        }
 
         $devices += [ordered]@{
           serial = $serial
+          serialHash = $serialHash
           descriptor = $props
           model = $getpropModel.stdout
           androidRelease = $androidRelease.stdout
@@ -252,7 +318,7 @@ function Get-AdbDevices {
           wmSize = $wmSize.stdout
           wmDensity = $wmDensity.stdout
           fontScale = $fontScale.stdout
-          reverse = $reverse.stdout
+          reverse = $reverseEvidence
         }
       }
     }
@@ -297,7 +363,7 @@ function Get-InstalledAppEvidence {
     }
 
     $items += [ordered]@{
-      serial = $serial
+      serialHash = $device.serialHash
       package = $PackageId
       installed = $path.ok -and $path.stdout.StartsWith("package:")
       packagePath = $path.stdout
@@ -353,8 +419,39 @@ $report = [ordered]@{
   generatedAt = (Get-Date).ToUniversalTime().ToString("o")
   purpose = "4VELO mobile absolute-zero baseline"
   mutationPolicy = "read-only"
-  collectorRepoRoot = $CollectorRepoRoot
-  repoRoot = $RepoRoot
+  collectorRepoRoot = Protect-EvidenceText $CollectorRepoRoot
+  repoRoot = Protect-EvidenceText $RepoRoot
+}
+
+# Repository-declared runtime/toolchain contract.
+$rootPackagePath = Join-Path $RepoRoot "package.json"
+$mobilePackagePath = Join-Path $MobileDir "package.json"
+$easConfigPath = Join-Path $MobileDir "eas.json"
+$versionPath = Join-Path $RepoRoot "version.json"
+
+$report.repoContract = [ordered]@{}
+try {
+  $rootPackage = Get-Content $rootPackagePath -Raw | ConvertFrom-Json
+  $report.repoContract.packageManager = $rootPackage.packageManager
+  $report.repoContract.nodeEngine = $rootPackage.engines.node
+} catch {
+  $report.repoContract.rootPackageError = Protect-EvidenceText $_.Exception.Message
+}
+try {
+  $mobilePackage = Get-Content $mobilePackagePath -Raw | ConvertFrom-Json
+  $report.repoContract.mobileManifestVersion = $mobilePackage.version
+  $report.repoContract.mobileExpo = $mobilePackage.dependencies.expo
+  $report.repoContract.mobileReactNative = $mobilePackage.dependencies.'react-native'
+  $report.repoContract.mobileMmkv = $mobilePackage.dependencies.'react-native-mmkv'
+  $report.repoContract.mobileNitro = $mobilePackage.dependencies.'react-native-nitro-modules'
+} catch {
+  $report.repoContract.mobilePackageError = Protect-EvidenceText $_.Exception.Message
+}
+try {
+  $releaseVersion = Get-Content $versionPath -Raw | ConvertFrom-Json
+  $report.repoContract.releaseVersion = $releaseVersion.version
+} catch {
+  $report.repoContract.versionError = Protect-EvidenceText $_.Exception.Message
 }
 
 # Host
@@ -410,8 +507,18 @@ foreach ($spec in @(
   }
 }
 
+$commandEvidence = [ordered]@{}
+foreach ($name in $commands) {
+  $info = $commandMap[$name]
+  $commandEvidence[$name] = [ordered]@{
+    found = $info.found
+    path = Protect-EvidenceText $info.path
+    commandType = $info.commandType
+  }
+}
+
 $report.toolchain = [ordered]@{
-  commands = $commandMap
+  commands = $commandEvidence
   versions = $versionProbes
   javaHome = Get-SafeEnv "JAVA_HOME"
   androidHome = Get-SafeEnv "ANDROID_HOME"
@@ -423,14 +530,14 @@ $report.toolchain = [ordered]@{
 $git = $commandMap["git"]
 if ($git.found) {
   $report.git = [ordered]@{
-    toplevel = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--show-toplevel") -WorkingDirectory $RepoRoot).stdout
-    origin = (Invoke-ReadOnly -FilePath $git.path -Arguments @("remote","get-url","origin") -WorkingDirectory $RepoRoot).stdout
+    toplevel = Protect-EvidenceText (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--show-toplevel") -WorkingDirectory $RepoRoot).stdout
+    origin = Protect-EvidenceText (Invoke-ReadOnly -FilePath $git.path -Arguments @("remote","get-url","origin") -WorkingDirectory $RepoRoot).stdout
     branch = (Invoke-ReadOnly -FilePath $git.path -Arguments @("branch","--show-current") -WorkingDirectory $RepoRoot).stdout
     head = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","HEAD") -WorkingDirectory $RepoRoot).stdout
     originMain = (Invoke-ReadOnly -FilePath $git.path -Arguments @("rev-parse","--verify","origin/main") -WorkingDirectory $RepoRoot).stdout
     status = (Invoke-ReadOnly -FilePath $git.path -Arguments @("status","--short","--branch") -WorkingDirectory $RepoRoot).stdout
     diffStat = (Invoke-ReadOnly -FilePath $git.path -Arguments @("diff","--stat") -WorkingDirectory $RepoRoot).stdout
-    worktrees = (Invoke-ReadOnly -FilePath $git.path -Arguments @("worktree","list","--porcelain") -WorkingDirectory $RepoRoot).stdout
+    worktrees = Protect-EvidenceText (Invoke-ReadOnly -FilePath $git.path -Arguments @("worktree","list","--porcelain") -WorkingDirectory $RepoRoot).stdout
   }
 } else {
   $report.git = [ordered]@{ error = "git not found" }
@@ -508,14 +615,33 @@ if ($commandMap["emulator"].found) {
   $androidInventory.avds = Invoke-ReadOnly -FilePath $commandMap["emulator"].path -Arguments @("-list-avds")
 }
 $adbInfo = Get-AdbDevices
-$androidInventory.adb = $adbInfo
+$adbEvidenceDevices = @(
+  $adbInfo.devices | ForEach-Object {
+    [ordered]@{
+      serialHash = $_.serialHash
+      descriptor = $_.descriptor
+      model = $_.model
+      androidRelease = $_.androidRelease
+      sdk = $_.sdk
+      wmSize = $_.wmSize
+      wmDensity = $_.wmDensity
+      fontScale = $_.fontScale
+      reverse = $_.reverse
+    }
+  }
+)
+$androidInventory.adb = [ordered]@{
+  available = $adbInfo.available
+  devices = $adbEvidenceDevices
+}
 $report.android = $androidInventory
 
 # Runtime/process evidence
 $packageId = Parse-MobilePackageId
 $report.runtime = [ordered]@{
   packageIdFromAppConfig = $packageId
-  installedApps = Get-InstalledAppEvidence -PackageId $packageId -AdbInfo $adbInfo
+  packageIdParseOk = -not [string]::IsNullOrEmpty($packageId)
+  installedApps = if ($packageId) { Get-InstalledAppEvidence -PackageId $packageId -AdbInfo $adbInfo } else { @() }
   ports = Get-PortEvidence -Ports @(8000,8001,8081,8083)
   metroProcesses = Get-MetroProcesses
 }
@@ -528,7 +654,6 @@ if ($pnpmInfo.found) {
 }
 
 # Canonical EAS configuration summary from the inspected checkout.
-$easConfigPath = Join-Path $MobileDir "eas.json"
 if (Test-Path $easConfigPath -PathType Leaf) {
   try {
     $easConfig = Get-Content $easConfigPath -Raw | ConvertFrom-Json
@@ -539,7 +664,7 @@ if (Test-Path $easConfigPath -PathType Leaf) {
       profiles = @($easConfig.build.PSObject.Properties.Name)
     }
   } catch {
-    $report.eas = [ordered]@{ error = $_.Exception.Message }
+    $report.eas = [ordered]@{ error = Protect-EvidenceText $_.Exception.Message }
   }
 } else {
   $report.eas = [ordered]@{ error = "mobile/eas.json not found" }
@@ -579,6 +704,6 @@ Write-Host "Key identity:"
 Write-Host "  Branch: $($report.git.branch)"
 Write-Host "  HEAD:   $($report.git.head)"
 Write-Host "  Status: $($report.git.status)"
-Write-Host "  APK id: $packageId"
+Write-Host "  APK id: $(if ($packageId) { $packageId } else { '<UNRESOLVED>' })"
 Write-Host ""
 Write-Output $OutputPath
