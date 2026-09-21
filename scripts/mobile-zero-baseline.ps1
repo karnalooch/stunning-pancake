@@ -74,17 +74,17 @@ function Protect-EvidenceText {
 
   $safe = [regex]::Replace(
     $safe,
-    '(?i)(https?://)([^/@\\s]+)@',
+    '(?i)(https?://)([^/@\s]+)@',
     '$1<REDACTED>@'
   )
   $safe = [regex]::Replace(
     $safe,
-    '(?i)((?:token|password|secret|api[_-]?key|credential)=)([^\\s&]+)',
+    '(?i)((?:token|password|secret|api[_-]?key|credential)=)([^\s&]+)',
     '$1<REDACTED>'
   )
   $safe = [regex]::Replace(
     $safe,
-    '(?i)(--(?:token|password|secret|api-key|credential)\\s+)(?:"[^"]*"|\\S+)',
+    '(?i)(--(?:token|password|secret|api-key|credential)\s+)(?:"[^"]*"|\S+)',
     '$1<REDACTED>'
   )
 
