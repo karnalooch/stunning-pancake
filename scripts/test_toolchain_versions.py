@@ -32,6 +32,14 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertIn(f"uses: pnpm/action-setup@{PNPM_ACTION_SETUP_SHA}", action)
         self.assertIn(f"uses: actions/setup-node@{SETUP_NODE_ACTION_SHA}", action)
 
+    def test_shared_pnpm_install_retry_is_bounded_and_fail_closed(self):
+        action = read(".github/actions/pnpm-setup/action.yml")
+        self.assertIn("max_attempts=3", action)
+        self.assertEqual(action.count("pnpm install --frozen-lockfile"), 1)
+        self.assertIn('if [ "$attempt" -eq "$max_attempts" ]; then', action)
+        self.assertIn('exit "$status"', action)
+        self.assertNotIn("continue-on-error", action)
+
     def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
         workspace = read("pnpm-workspace.yaml")
         npmrc = read(".npmrc")
