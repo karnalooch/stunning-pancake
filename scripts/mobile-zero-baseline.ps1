@@ -109,10 +109,28 @@ function Get-EvidenceId {
 
 function Get-CommandInfo {
   param([Parameter(Mandatory=$true)][string]$Name)
-  $cmd = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1
-  if (-not $cmd) {
-    return [ordered]@{ found = $false; path = $null }
+
+  # Prefer Windows-native executable wrappers over PowerShell shims. Corepack/npm/
+  # pnpm/EAS commonly expose both *.cmd and *.ps1; ProcessStartInfo cannot execute
+  # script shims directly when UseShellExecute=false.
+  $candidates = @(
+    "$Name.exe",
+    "$Name.cmd",
+    "$Name.bat",
+    "$Name.ps1",
+    $Name
+  )
+
+  $cmd = $null
+  foreach ($candidate in $candidates) {
+    $cmd = Get-Command $candidate -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd) { break }
   }
+
+  if (-not $cmd) {
+    return [ordered]@{ found = $false; path = $null; commandType = $null }
+  }
+
   return [ordered]@{
     found = $true
     path = $cmd.Source
@@ -129,10 +147,25 @@ function Invoke-ReadOnly {
   )
   try {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = $FilePath
-    $psi.Arguments = ($Arguments | ForEach-Object {
+    $extension = [System.IO.Path]::GetExtension($FilePath).ToLowerInvariant()
+    $quotedArgs = ($Arguments | ForEach-Object {
       if ($_ -match '[\s"]') { '"' + ($_ -replace '"','\"') + '"' } else { $_ }
     }) -join ' '
+
+    if ($extension -eq ".cmd" -or $extension -eq ".bat") {
+      $psi.FileName = $env:ComSpec
+      $escapedFile = '"' + ($FilePath -replace '"','""') + '"'
+      $psi.Arguments = '/d /s /c "' + $escapedFile + $(if ($quotedArgs) { ' ' + $quotedArgs } else { '' }) + '"'
+    } elseif ($extension -eq ".ps1") {
+      $powershellExe = Join-Path $PSHOME "powershell.exe"
+      $escapedFile = '"' + ($FilePath -replace '"','\"') + '"'
+      $psi.FileName = $powershellExe
+      $psi.Arguments = '-NoProfile -ExecutionPolicy Bypass -File ' + $escapedFile + $(if ($quotedArgs) { ' ' + $quotedArgs } else { '' })
+    } else {
+      $psi.FileName = $FilePath
+      $psi.Arguments = $quotedArgs
+    }
+
     $psi.WorkingDirectory = $WorkingDirectory
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
@@ -386,7 +419,9 @@ function Get-NodeResolutionEvidence {
     "expo-dev-client",
     "expo-asset",
     "expo-constants",
-    "@babel/runtime",
+    "@babel/runtime/helpers/asyncToGenerator",
+    "@babel/runtime/helpers/defineProperty",
+    "@babel/runtime/helpers/objectSpread2",
     "react",
     "react-native",
     "react-native-mmkv",
