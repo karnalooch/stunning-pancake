@@ -1,6 +1,6 @@
 from django.test import TestCase
 
-from .models import User
+from .models import Tenant, User
 
 
 class UserTest(TestCase):
@@ -9,19 +9,20 @@ class UserTest(TestCase):
     """
 
     def setUp(self):
+        self.tenant = Tenant.objects.create(name="London")
         self.user = User.objects.create_user(
             username="testathlete",
             email="test@sport.com",
             password="testpassword123",
             role="ATHLETE",
-            tenant_id="CITY_LDN",
+            tenant=self.tenant,
         )
 
     def test_user_creation(self):
         self.assertEqual(self.user.username, "testathlete")
         self.assertEqual(self.user.role, "ATHLETE")
-        self.assertEqual(self.user.tenant_id, "CITY_LDN")
+        self.assertEqual(self.user.tenant_id, self.tenant.id)
         self.assertTrue(self.user.check_password("testpassword123"))
 
     def test_user_str(self):
-        self.assertEqual(str(self.user), "testathlete (End User / Athlete)")
+        self.assertEqual(str(self.user), "testathlete (Athlete)")

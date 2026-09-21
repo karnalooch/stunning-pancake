@@ -136,7 +136,7 @@ class GuardChecksTest(SimpleTestCase):
 
 class DiskAuditModelTest(TestCase):
     @patch("activities.scale_disk_monitor.get_database_size_gb", return_value=4.0)
-    @patch("activities.scale_disk_guard.resolve_disk_budget_gb", return_value=(10.0, "env"))
+    @patch("activities.scale_disk_monitor.resolve_disk_budget_gb", return_value=(10.0, "env"))
     def test_snapshot_pct(self, _b, _db):
         snap = get_disk_usage_snapshot()
         self.assertTrue(snap["available"])
@@ -148,7 +148,7 @@ class DiskAuditModelTest(TestCase):
     @patch("activities.scale_disk_monitor.is_simulation_paused", return_value=False)
     @patch("activities.scale_disk_monitor.are_sim_writes_blocked", return_value=False)
     @patch("activities.scale_disk_monitor.get_disk_usage_snapshot")
-    def test_audit_persisted_on_warn(self, mock_snap, _r, mock_set, mock_audit):
+    def test_audit_persisted_on_warn(self, mock_snap, _wb, _ps, mock_redis, mock_set, mock_audit):
         from activities.models import DiskAuditEvent
 
         mock_snap.return_value = {
