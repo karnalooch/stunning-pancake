@@ -112,7 +112,7 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
         positions, meta = TelemetryService.get_live_positions(
             bbox=(20.5, 51.8, 21.5, 52.7),
             limit=100,
-        skip_cache=True,
+            skip_cache=True,
         )
         self.assertEqual(len(positions), 10)
         self.assertEqual(meta["telemetry_positions"], 10)
@@ -125,7 +125,7 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
         positions, meta = TelemetryService.get_live_positions(
             bbox=(20.5, 51.8, 21.5, 52.8),
             limit=100,
-        skip_cache=True,
+            skip_cache=True,
         )
         device_ids = {p.get("deviceId") for p in positions}
         self.assertEqual(len(device_ids), 20)
@@ -150,7 +150,7 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
         positions, meta = TelemetryService.get_live_positions(
             bbox=(20.5, 51.8, 21.5, 52.8),
             limit=100,
-        skip_cache=True,
+            skip_cache=True,
         )
         self.assertEqual(meta["telemetry_positions"], 15)
         self.assertEqual(len(positions), 15)
@@ -211,7 +211,7 @@ class TelemetryServiceShardRoundTripTest(SimpleTestCase):
         positions, meta = TelemetryService.get_live_positions(
             bbox=(20.0, 51.0, 22.0, 53.0),
             limit=100,
-        skip_cache=True,
+            skip_cache=True,
         )
         self.assertEqual(len(positions), 4)
         self.assertEqual(meta["telemetry_positions"], 4)
