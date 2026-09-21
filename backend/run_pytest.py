@@ -5,6 +5,7 @@ Runs pytest.
 Usage: python run_pytest.py [pytest args...]
 """
 
+import json
 import os
 import sys
 from types import ModuleType
@@ -88,6 +89,16 @@ class _MockGEOSGeometry(metaclass=_MockMeta):
     @property
     def coords(self):
         return getattr(self, "_coords", [(0, 0), (0.001, 0)])
+
+    @property
+    def geojson(self):
+        """Minimal GeoJSON contract used by rest_framework_gis serializers in SQLite tests."""
+        geometry_type = self.__class__.__name__
+        coordinates = self.coords
+        if geometry_type == "Point" and isinstance(coordinates, (list, tuple)):
+            if coordinates and isinstance(coordinates[0], (list, tuple)):
+                coordinates = coordinates[0]
+        return json.dumps({"type": geometry_type, "coordinates": coordinates})
 
 
 # Mock django.contrib.gis.geos (native GEOS library wrapper)

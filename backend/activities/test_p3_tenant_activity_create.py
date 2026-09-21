@@ -1,7 +1,7 @@
 """P3-E1 tenant binding contract for activity creation."""
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -11,6 +11,7 @@ from users.models import Tenant
 User = get_user_model()
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class ActivityCreateTenantBindingTest(TestCase):
     def setUp(self):
         self.tenant_a = Tenant.objects.create(name="Tenant A")
