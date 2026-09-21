@@ -4,6 +4,7 @@ import json
 from django.contrib.auth import update_session_auth_hash
 from django.db.models import Q, Value
 from django.db.models.functions import Coalesce
+from django.utils.crypto import get_random_string
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status
@@ -761,7 +762,7 @@ class InvitationTokenView(generics.GenericAPIView):
         if not email:
             return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
 
-        temp_password = User.objects.make_random_password(length=12)
+        temp_password = get_random_string(length=12)
         username = email.split("@")[0]
         base_username = username
         counter = 1
