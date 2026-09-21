@@ -22,9 +22,16 @@ class LiveMapCoordTest(SimpleTestCase):
             (52.23, 21.01),
         )
 
-    def test_live_coords_rejects_null_and_zero(self):
+    def test_live_coords_rejects_null_missing_invalid_and_zero_sentinel(self):
         self.assertIsNone(_live_coords({"latitude": None, "longitude": 21.0}))
+        self.assertIsNone(_live_coords({"latitude": 52.0}))
+        self.assertIsNone(_live_coords({"latitude": "bad", "longitude": 21.0}))
+        self.assertIsNone(_live_coords({"latitude": float("nan"), "longitude": 21.0}))
         self.assertIsNone(_live_coords({"lat": 0.0, "lng": 0.0}))
+
+    def test_live_coords_preserves_valid_geographic_zero(self):
+        self.assertEqual(_live_coords({"latitude": 0.0, "longitude": 21.0}), (0.0, 21.0))
+        self.assertEqual(_live_coords({"latitude": 52.0, "longitude": 0.0}), (52.0, 0.0))
 
 
 class LiveMapApiTimingTest(SimpleTestCase):
