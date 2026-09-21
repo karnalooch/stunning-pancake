@@ -44,26 +44,25 @@ class RouteLiveRideTaskTest(SimpleTestCase):
     @patch("activities.simulator_tasks.sim.delete_live_ride")
     @patch("activities.simulator_tasks._route_pending_ride")
     @patch("activities.simulator_tasks.sim.set_live_ride")
-    @patch("activities.simulator_tasks.sim.get_live_rides")
+    @patch("activities.simulator_tasks.sim.get_live_ride")
     @patch("activities.simulator_tasks.sim.get_live_state", return_value={"running": True})
     def test_dispatches_routing_from_pending(
         self,
         _state,
-        mock_rides,
+        mock_ride,
         mock_set,
         mock_route,
         _del,
     ):
         from activities.simulator_tasks import route_live_ride_task
 
-        mock_rides.return_value = {
-            42: {"ride_state": ride_fsm.PENDING_ROUTE, "act_type": "BIKE"},
-        }
+        pending = {"ride_state": ride_fsm.PENDING_ROUTE, "act_type": "BIKE"}
+        mock_ride.return_value = pending
         route_live_ride_task.run(42)
         mock_set.assert_called()
         first_call_state = mock_set.call_args_list[0][0][1].get("ride_state")
         self.assertEqual(first_call_state, ride_fsm.ROUTING)
-        mock_route.assert_called_once_with(42, mock_rides.return_value[42])
+        mock_route.assert_called_once_with(42, pending)
 
     @patch("activities.simulator_tasks.route_live_ride_task.delay")
     @patch.dict("os.environ", {"SCALE_SIM_ASYNC_ROUTING": "1"}, clear=False)
