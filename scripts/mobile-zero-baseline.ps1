@@ -26,13 +26,13 @@
   pinned expo-doctor and expo install --check. Disabled by default.
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake
 
 .EXAMPLE
-  pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake -RunNetworkChecks
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/mobile-zero-baseline.ps1 -RepoRootPath C:\path\to\stunning-pancake -RunNetworkChecks
 #>
 
 param(
