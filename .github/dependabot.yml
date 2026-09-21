@@ -40,10 +40,7 @@ updates:
 
   # Node.js pnpm workspace (shared root lockfile)
   - package-ecosystem: npm
-    directories:
-      - "/"
-      - "/admin"
-      - "/mobile"
+    directory: /
     schedule:
       interval: weekly
       day: tuesday
