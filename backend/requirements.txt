@@ -20,7 +20,7 @@ django-allauth==65.19.4
 celery==5.4.0
 django-celery-results==2.5.1
 django-celery-beat==2.9.0
-pluggy==1.5.0
+pluggy==1.6.0
 firebase-admin>=6.5.0
 # Phase 10: Observability
 sentry-sdk[django,celery]==2.69.2
