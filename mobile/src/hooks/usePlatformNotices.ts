@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
 import { useCallback, useEffect, useState } from 'react';
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv } from '../services/mmkvStorage';
 import type { PlatformNotice } from '../components/PlatformNoticeBanner';
 import { NoticeService } from '../services/api';
 
@@ -8,7 +8,7 @@ const DISMISSED_KEY = 'platform_notice_dismissed_ids';
 
 function getDismissedIds(): Set<number> {
   try {
-    const store = new MMKV();
+    const store = createAppMmkv();
     const raw = store.getString(DISMISSED_KEY);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as number[];
@@ -20,7 +20,7 @@ function getDismissedIds(): Set<number> {
 
 function saveDismissedIds(ids: Set<number>) {
   try {
-    const store = new MMKV();
+    const store = createAppMmkv();
     store.set(DISMISSED_KEY, JSON.stringify([...ids]));
   } catch {
     /* ignore */

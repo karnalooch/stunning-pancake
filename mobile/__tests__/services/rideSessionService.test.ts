@@ -8,9 +8,13 @@ const mockStopTracking = jest.fn();
 const mockSetUserId = jest.fn();
 
 jest.mock('react-native-mmkv', () => ({
-  MMKV: jest.fn().mockImplementation(() => ({
+  createMMKV: jest.fn().mockImplementation(() => ({
     getString: jest.fn(() => 'device-test-1'),
     set: jest.fn(),
+    remove: jest.fn(),
+    clearAll: jest.fn(),
+    getAllKeys: jest.fn(() => []),
+    contains: jest.fn(() => false),
   })),
 }));
 

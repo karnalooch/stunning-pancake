@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -110,6 +110,7 @@ class RouteReconciliationContractTest(TestCase):
         self.assertIsNone(reconcile_activity_route(self.activity))
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class DurableFinalizeEndpointTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(

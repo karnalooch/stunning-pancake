@@ -9,8 +9,7 @@ import { AuthAppError, NetworkAppError, telemetryContext, toAppError } from './a
 import { firebaseCapture } from './FirebaseService';
 import { isMmkvFallbackActive } from './mmkvSupport';
 
-const DEV_FALLBACK_API_URL = 'https://backend-production-55c7.up.railway.app';
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? DEV_FALLBACK_API_URL : '');
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 if (!BASE_URL) {
   console.warn(

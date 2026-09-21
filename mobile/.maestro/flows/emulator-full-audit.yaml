@@ -1,35 +1,50 @@
 appId: com.sport.athlete
 ---
+# Critical Ride flow is mandatory; secondary gallery screens below may remain optional.
 - launchApp
 - extendedWaitUntil:
-    visible: ".*(JAZDA|4VELO|TRWA JAZD|START|KREATOR|STOP).*"
-    timeout: 45000
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 60000
 - takeScreenshot: 01_ride_dashboard
 
 - tapOn:
-    text: "DO JAZDY"
-    optional: true
+    text: ".*(START JAZDY|START RIDE).*"
 - extendedWaitUntil:
-    visible: ".*(STOP|PAUZA|SZUKAM GPS).*"
-    timeout: 8000
-    optional: true
+    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    timeout: 20000
 - takeScreenshot: 02_active_ride_hud
 
 - tapOn:
-    text: "PAUZA"
-    optional: true
+    text: ".*(PAUZA|PAUSE).*"
 - extendedWaitUntil:
-    visible: ".*(wstrzymana|ZATRZYMAJ).*"
-    timeout: 8000
-    optional: true
+    visible: ".*(WZNÓW|RESUME).*"
+    timeout: 12000
 - takeScreenshot: 03_ride_paused
+
 - tapOn:
-    text: "ZATRZYMAJ"
-    optional: true
+    text: ".*(WZNÓW|RESUME).*"
 - extendedWaitUntil:
-    visible: ".*(TRWA JAZD|START JAZD|KREATOR).*"
+    visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
+    timeout: 12000
+- takeScreenshot: 03b_ride_resumed
+
+- tapOn:
+    text: ".*(PAUZA|PAUSE).*"
+- extendedWaitUntil:
+    visible: ".*(ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+    timeout: 12000
+- tapOn:
+    text: ".*(ZATRZYMAJ JAZDĘ|STOP RIDE).*"
+- extendedWaitUntil:
+    visible: ".*(Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE).*"
+    timeout: 25000
+- takeScreenshot: 03c_ride_summary
+
+- tapOn:
+    text: ".*(POWRÓT|BACK TO HUB).*"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE|KREATOR GPS).*"
     timeout: 15000
-    optional: true
 
 - tapOn:
     text: "KREATOR GPS"

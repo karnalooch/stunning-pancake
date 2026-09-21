@@ -5,7 +5,7 @@ const mockMmkvConfigs: Array<{ id?: string; encryptionKey?: string }> = [];
 const mockMmkvSetFailures = new Set<string>();
 
 jest.mock('react-native-mmkv', () => ({
-  MMKV: jest.fn().mockImplementation((config: { id?: string; encryptionKey?: string } = {}) => {
+  createMMKV: jest.fn().mockImplementation((config: { id?: string; encryptionKey?: string } = {}) => {
     mockMmkvConfigs.push(config);
     const id = config.id ?? 'mmkv.default';
     let data = mockMmkvStores.get(id);
@@ -19,7 +19,10 @@ jest.mock('react-native-mmkv', () => ({
         if (mockMmkvSetFailures.has(`${id}:${key}`)) return;
         data!.set(key, value);
       }),
-      delete: jest.fn((key: string) => data!.delete(key)),
+      remove: jest.fn((key: string) => data!.delete(key)),
+      clearAll: jest.fn(() => data!.clear()),
+      getAllKeys: jest.fn(() => [...data!.keys()]),
+      contains: jest.fn((key: string) => data!.has(key)),
     };
   }),
 }));

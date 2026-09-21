@@ -1,8 +1,7 @@
 import * as Linking from 'expo-linking';
 import { API_PATHS_FULL } from '@4velo/api-client';
 
-const DEV_FALLBACK_API_URL = 'https://backend-production-55c7.up.railway.app';
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? (__DEV__ ? DEV_FALLBACK_API_URL : '');
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
 
 if (!BASE_URL) {
   console.warn(

@@ -35,10 +35,12 @@ class ProjectStatusAutomationTests(unittest.TestCase):
         self.assertEqual(target_status("reopened", False), "In review")
         self.assertEqual(target_status("converted_to_draft", False), "In progress")
         self.assertEqual(target_status("ready_for_review", True), "In review")
+        self.assertEqual(target_status("closed", False, merged=True), "Done")
+        self.assertIsNone(target_status("closed", False, merged=False))
 
     def test_unsupported_action_fails_closed(self):
         with self.assertRaisesRegex(AutomationError, "unsupported"):
-            target_status("closed", False)
+            target_status("synchronize", False)
 
     def test_choose_project_requires_exact_unique_title(self):
         data = {
@@ -74,6 +76,7 @@ class ProjectStatusAutomationTests(unittest.TestCase):
                                 {"id": "BACKLOG", "name": "Backlog"},
                                 {"id": "PROGRESS", "name": "In progress"},
                                 {"id": "REVIEW", "name": "In review"},
+                                {"id": "DONE", "name": "Done"},
                             ],
                         }
                     ]
@@ -83,6 +86,10 @@ class ProjectStatusAutomationTests(unittest.TestCase):
         self.assertEqual(
             choose_status_field(data, "In review"),
             ("STATUS", "REVIEW"),
+        )
+        self.assertEqual(
+            choose_status_field(data, "Done"),
+            ("STATUS", "DONE"),
         )
 
     def test_closing_issues_are_limited_to_same_repository_and_deduplicated(self):

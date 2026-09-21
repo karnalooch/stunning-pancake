@@ -200,6 +200,20 @@ def _usage_ratio(
     return projected / budget, budget, source
 
 
+def _estimated_batch_growth_gb(
+    target_users: int,
+    athlete_count: int,
+    *,
+    skip_activities: bool,
+) -> float:
+    """Estimate only the rows this batch will actually add unless it re-seeds."""
+    target = max(0, int(target_users))
+    existing = max(0, int(athlete_count))
+    delta_users = max(0, target - existing)
+    batch_users = delta_users if 0 < existing < target else target
+    return estimate_batch_disk_gb(batch_users, skip_activities=skip_activities)
+
+
 def adjust_batch_plan_for_disk_pressure(
     plan: dict,
     *,
@@ -259,22 +273,21 @@ def _should_auto_wipe(
     if clear and athlete_count > 0:
         return True, "clear=true — automatyczny wipe przed batch"
 
-    # Growing pool (50k → 100k → 300k): top-up only — no auto-wipe.
-    delta_users = max(0, target_users - athlete_count)
-    estimated = estimate_batch_disk_gb(
-        delta_users if athlete_count > 0 and delta_users > 0 else target_users,
+    # Growing pool (50k → 100k → 300k): top-up only — never destroy
+    # the existing pool to make room. Disk pressure is handled below by
+    # prepare_batch_disk_guard(), which can throttle or fail closed.
+    if 0 < athlete_count < target_users:
+        return False, ""
+
+    estimated = _estimated_batch_growth_gb(
+        target_users,
+        athlete_count,
         skip_activities=skip_activities,
     )
     ratio, _budget, _src = _usage_ratio(db_gb, estimated)
 
-    if target_users >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count > 0:
-        if athlete_count >= target_users:
-            return True, (f"re-seed: {athlete_count:,} athlete w bazie, cel {target_users:,}")
-        if ratio is not None and ratio >= 0.75:
-            return True, (
-                f"dysk: szac. {ratio * 100:.0f}% budżetu po batchu "
-                f"({db_gb:.1f} + ~{estimated:.1f} GB)"
-            )
+    if target_users >= BATCH_WARN_WITHOUT_WIPE_ABOVE and athlete_count >= target_users:
+        return True, (f"re-seed: {athlete_count:,} athlete w bazie, cel {target_users:,}")
 
     if ratio is not None and ratio >= 0.9:
         return True, f"dysk krytyczny ({ratio * 100:.0f}% budżetu)"
@@ -308,7 +321,11 @@ def prepare_batch_disk_guard(
     User = get_user_model()
     athlete_count = User.objects.filter(role="ATHLETE").count()
     db_gb = get_database_size_gb()
-    estimated = estimate_batch_disk_gb(target, skip_activities=skip_activities)
+    estimated = _estimated_batch_growth_gb(
+        target,
+        athlete_count,
+        skip_activities=skip_activities,
+    )
     plan = compute_batch_scaling(target)
 
     do_wipe, wipe_reason = _should_auto_wipe(
@@ -356,6 +373,11 @@ def prepare_batch_disk_guard(
             actions.append("Wipe zakończony.")
             db_gb = get_database_size_gb()
             athlete_count = 0
+            estimated = _estimated_batch_growth_gb(
+                target,
+                athlete_count,
+                skip_activities=skip_activities,
+            )
 
     ratio, budget_gb, budget_source = _usage_ratio(db_gb, estimated)
     plan = adjust_batch_plan_for_disk_pressure(plan, usage_ratio=ratio)

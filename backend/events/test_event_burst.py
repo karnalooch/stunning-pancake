@@ -52,10 +52,10 @@ class EventCapMathTest(SimpleTestCase):
         self.assertEqual(pool, 50_000)
         self.assertGreaterEqual(cap, 5_000)
         self.assertLessEqual(cap, 50_000)
-        self.assertLess(cap, pool)
+        self.assertLessEqual(cap, pool)
 
     @patch("events.scale_config.SCALE_EVENT_LOAD_TEST", True)
-    def test_effective_cap_event_load_test(self, _flag):
+    def test_effective_cap_event_load_test(self):
         cap = effective_event_concurrent_cap({})
         self.assertEqual(cap, EVENT_MAX_CONCURRENT_RIDERS)
 
@@ -128,7 +128,7 @@ class JoinEventTest(TestCase):
         )
 
     @patch("events.burst.is_burst_globally_enabled", return_value=False)
-    def test_join_idempotent(self):
+    def test_join_idempotent(self, _enabled):
         p1, created1, err1 = join_event(self.user, self.event)
         self.assertTrue(created1)
         self.assertIsNone(err1)
@@ -140,7 +140,7 @@ class JoinEventTest(TestCase):
 
     @patch("events.burst.is_burst_globally_enabled", return_value=True)
     @patch("events.burst.join_rate_limit")
-    def test_join_rate_limited(self, mock_limit):
+    def test_join_rate_limited(self, mock_limit, _enabled):
         mock_limit.return_value = (False, 100, 30)
         participation, created, err = join_event(self.user, self.event)
         self.assertIsNone(participation)

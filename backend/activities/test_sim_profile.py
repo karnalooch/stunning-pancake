@@ -79,7 +79,7 @@ class RampStartDelayTest(SimpleTestCase):
 
     def test_motion_respects_ramp_cap(self):
         with patch(
-            "activities.simulator_tasks.random.randint",
+            "activities.simulator_route_waypoints.random.randint",
             return_value=15,
         ):
             motion = _sample_athlete_motion_profile("RUN", start_delay_max=20)

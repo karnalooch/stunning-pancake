@@ -8,8 +8,7 @@ on:
   push:
     branches: [master, main, develop]
     tags: ['v*.*.*']
-  pull_request:
-    branches: [master, main, develop]
+  pull_request: {}
   schedule:
     - cron: '0 2 * * *'
 
@@ -38,8 +37,8 @@ jobs:
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
-      - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
         id: filter
         with:
           filters: |
@@ -128,11 +127,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -180,12 +179,12 @@ jobs:
         ports: ['6379:6379']
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -277,11 +276,9 @@ jobs:
             activities/test_simulator_operational_gate.py \
             -m simulator_light -q
 
-      # The legacy all-app suite still contains stale fixtures and mocks tracked as
-      # takeover debt. Keep it visible while focused backend gates above remain blocking.
-      - name: Full legacy suite (non-blocking baseline)
+      # The legacy all-app suite is green and blocks full backend CI runs.
+      - name: Full legacy suite
         if: steps.affected.outputs.backend_mode == 'full'
-        continue-on-error: true
         env:
           DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/0
@@ -300,10 +297,10 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.telemetry == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -334,11 +331,11 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.mobile == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -366,17 +363,74 @@ jobs:
       - name: Test pnpm workspace selector integrity
         run: python -m unittest scripts/test_ci_workspace_selectors.py -v
 
+      - name: Mobile platform configuration contract
+        run: python -m unittest scripts/test_mobile_platform_contract.py -v
+
+      - name: MMKV v4 migration contract
+        run: python -m unittest scripts/test_mobile_mmkv_v4_contract.py -v
+
+      - name: Expo dependency compatibility
+        id: expo_deps
+        continue-on-error: true
+        working-directory: mobile
+        run: pnpm exec expo install --check
+
+      - name: Expo Doctor
+        id: expo_doctor
+        continue-on-error: true
+        working-directory: mobile
+        run: pnpm dlx expo-doctor@1.20.4 .
+
       - name: Lint with Expo ESLint
         run: pnpm --dir mobile lint
 
       - name: TypeScript type check
         run: pnpm --dir mobile typecheck
 
+      - name: Metro bundle smoke (Android)
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_ENABLE_FIREBASE: 'false'
+        run: pnpm exec expo export --platform android --output-dir ../.ci/mobile-bundle-smoke
+
       - name: Design token guard (no inline hex in screens)
         run: pnpm audit:screen-tokens
 
       - name: Run affected mobile unit tests
         run: python scripts/run_affected_mobile_tests.py --plan .ci/affected-plan.json
+
+      - name: Preview canonical Expo dependency remediation
+        if: steps.expo_deps.outcome != 'success'
+        continue-on-error: true
+        run: |
+          # The repo-wide React override currently forces the admin's React patch
+          # into mobile as well. Preview the real Expo-compatible graph without
+          # mutating the committed tree or allowing this diagnostic to affect
+          # the baseline lint/typecheck/tests above.
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("pnpm-workspace.yaml")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace("  react: 19.2.7\n", "")
+          text = text.replace("  react-dom: 19.2.7\n", "")
+          path.write_text(text, encoding="utf-8")
+          PY
+          # This is an ephemeral diagnostic workspace. The committed baseline
+          # stays frozen above; here we deliberately regenerate the lock after
+          # changing the override set, then let Expo write its SDK-compatible
+          # package versions so the exact remediation diff is observable.
+          pnpm install --no-frozen-lockfile
+          CI=false pnpm --dir mobile exec expo install --fix
+          echo "::group::Expo remediation diff"
+          git diff -- mobile/package.json pnpm-lock.yaml pnpm-workspace.yaml
+          echo "::endgroup::"
+
+      - name: Expo compatibility gate
+        if: always() && (steps.expo_deps.outcome != 'success' || steps.expo_doctor.outcome != 'success')
+        run: |
+          echo "Expo dependency check: ${{ steps.expo_deps.outcome }}"
+          echo "Expo Doctor: ${{ steps.expo_doctor.outcome }}"
+          exit 1
 
   # ──────────────────────────────────────────
   # Repo scripts (Python) + design tokens
@@ -388,9 +442,9 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.scripts == 'true' || needs.changes.outputs.backend == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -413,6 +467,9 @@ jobs:
       - name: Test CI mobile path routing
         run: python -m unittest scripts/test_ci_mobile_path_filter.py
 
+      - name: Test mobile Android harness contract
+        run: python -m unittest scripts/test_mobile_harness_contract.py -v
+
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
 
@@ -425,6 +482,9 @@ jobs:
           PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
           PIPREQS
           python -m unittest scripts/test_security_tooling_workflows.py -v
+
+      - name: Test CI workflow contract
+        run: python -m unittest scripts/test_ci_pr_base_coverage.py -v
 
       - name: Test PR workflow concurrency policy
         run: python -m unittest scripts/test_ci_pr_concurrency.py -v
@@ -486,9 +546,9 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.visual == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -531,7 +591,7 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -551,9 +611,9 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.docs == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -570,7 +630,7 @@ jobs:
     if: needs.changes.outputs.full == 'true' || needs.changes.outputs.admin == 'true' || needs.changes.outputs.packages == 'true'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -590,12 +650,12 @@ jobs:
         run: pnpm --filter admin build
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Validate Admin Docker build (no push, blocks PR on context repair)
         # Build from the monorepo root and persist BuildKit layers independently
         # of the post-gate publishing cache. No registry login and no push.
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: .
           file: admin/Dockerfile
@@ -618,7 +678,7 @@ jobs:
       )
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -669,10 +729,10 @@ jobs:
       )
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -728,17 +788,17 @@ jobs:
         language: [javascript-typescript, python]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
           queries: security-extended
 
       - name: Analyze with CodeQL
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -755,7 +815,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
       - name: Review dependency changes
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
@@ -772,7 +832,7 @@ jobs:
       actions: read
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       # Generate uploadable SARIF first. Keep these scans non-blocking so results
       # reach GitHub Security before the dedicated gate evaluates the same repo.
@@ -816,7 +876,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload backend SARIF → GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         if: hashFiles('trivy-backend.sarif') != ''
         continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
@@ -824,7 +884,7 @@ jobs:
           category: trivy-backend
 
       - name: Upload admin SARIF → GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         if: hashFiles('trivy-admin.sarif') != ''
         continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
@@ -832,7 +892,7 @@ jobs:
           category: trivy-admin
 
       - name: Upload mobile SARIF → GitHub Security
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         if: hashFiles('trivy-mobile.sarif') != ''
         continue-on-error: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
         with:
@@ -868,7 +928,7 @@ jobs:
       )
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up pnpm workspace
         uses: ./.github/actions/pnpm-setup
@@ -896,7 +956,7 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: failure()
         with:
           name: playwright-report
@@ -916,10 +976,10 @@ jobs:
       CI_NEEDS_JSON: ${{ toJson(needs) }}
       CI_EVENT_NAME: ${{ github.event_name }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
@@ -1048,7 +1108,7 @@ jobs:
       actions: read
       id-token: write
       contents: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a # v2.1.0
     with:
       base64-subjects: ${{ needs.publish-containers.outputs.slsa_subjects }}
       upload-assets: ${{ startsWith(github.ref, 'refs/tags/v') }}

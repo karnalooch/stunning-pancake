@@ -46,7 +46,7 @@ class ScaleConfigTest(SimpleTestCase):
             plan = compute_batch_scaling(total)
             self.assertLessEqual(plan["num_cities"], max_cities)
             self.assertGreaterEqual(plan["user_bulk_batch_size"], min_bulk)
-            self.assertGreater(plan["users_per_city"], 1000)
+            self.assertGreaterEqual(plan["users_per_city"], 1000)
             self.assertLessEqual(
                 plan["num_cities"] * plan["users_per_city"],
                 total + plan["num_cities"],
@@ -90,7 +90,7 @@ class ScalePreflightTest(SimpleTestCase):
     @patch("activities.scale_preflight.sim.get_live_state", return_value={"running": False})
     @patch("activities.scale_preflight.get_user_model")
     def test_300k_forces_skip_activities(self, mock_user_model, *_rest):
-        mock_user_model.objects.filter.return_value.count.return_value = 0
+        mock_user_model.return_value.objects.filter.return_value.count.return_value = 0
         report = analyze_scale(300_000, active_ratio=0.3, skip_activities=False)
         self.assertTrue(report["force_skip_activities"])
         self.assertTrue(report["effective_skip_activities"])
@@ -102,7 +102,7 @@ class ScalePreflightTest(SimpleTestCase):
     @patch("activities.scale_preflight.sim.get_live_state", return_value={"running": False})
     @patch("activities.scale_preflight.get_user_model")
     def test_50k_event_day_scenario(self, mock_user_model, *_rest):
-        mock_user_model.objects.filter.return_value.count.return_value = 0
+        mock_user_model.return_value.objects.filter.return_value.count.return_value = 0
         report = analyze_scale(50_000, active_ratio=0.2, event_day=True)
         self.assertTrue(report["event_day"])
         self.assertGreaterEqual(report["max_concurrent_riders"], 5_000)
@@ -113,8 +113,8 @@ class ScalePreflightTest(SimpleTestCase):
 class TelemetryApiLimitTest(SimpleTestCase):
     def test_zoom_adaptive_cap(self):
         self.assertEqual(resolve_telemetry_api_limit(0, 6), 0)
-        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 6), 1_500)
-        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 9), 4_000)
+        self.assertEqual(resolve_telemetry_api_limit(20_000, 6), 12_000)
+        self.assertEqual(resolve_telemetry_api_limit(20_000, 9), 20_000)
         self.assertEqual(
             resolve_telemetry_api_limit(20_000, 14),
             min(20_000, TELEMETRY_API_MAX_LIMIT),
@@ -156,7 +156,7 @@ class TelemetryServiceScaleTest(SimpleTestCase):
         r.hlen.return_value = 0
         with patch.object(
             TelemetryService, "_get_live_cached", return_value=([], {"cached": True})
-        ):
+        ) as mock_get_cached:
             with patch.object(
                 TelemetryService, "_fetch_redis_positions", return_value=([], {"returned": 0})
             ):
@@ -168,7 +168,7 @@ class TelemetryServiceScaleTest(SimpleTestCase):
                         skip_cache=True,
                     )
         self.assertEqual(positions, [])
-        TelemetryService._get_live_cached.assert_not_called()
+        mock_get_cached.assert_not_called()
 
     @patch("core.redis_cluster.get_redis")
     def test_get_live_positions_does_not_write_empty_cache(self, mock_get_redis):

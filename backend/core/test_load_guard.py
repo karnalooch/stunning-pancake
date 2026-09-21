@@ -13,6 +13,7 @@ pytestmark = pytest.mark.simulator_light
 from django.test import SimpleTestCase
 
 from core import load_guard as lg
+from core.fake_redis import FakeRedis
 
 
 class EvaluateSignalPureTest(SimpleTestCase):
@@ -89,7 +90,14 @@ class ConfigTest(SimpleTestCase):
 
 
 class CheckSignalRedisTest(SimpleTestCase):
-    """Integration with FakeRedis sliding window (installed by simulator_light)."""
+    """Integration with an isolated FakeRedis sliding window."""
+
+    def setUp(self):
+        super().setUp()
+        self.redis = FakeRedis()
+        self.redis_patcher = patch.object(lg, "get_redis", return_value=self.redis)
+        self.redis_patcher.start()
+        self.addCleanup(self.redis_patcher.stop)
 
     @patch.dict(
         "os.environ",
@@ -101,16 +109,16 @@ class CheckSignalRedisTest(SimpleTestCase):
             d = lg.check_join()
         self.assertTrue(d.allowed)
 
-    @patch.dict(
-        "os.environ",
-        {"GLOBAL_PROTECTION_MODE": "on", "GLOBAL_MAX_JOIN_PER_MINUTE": "5"},
-        clear=False,
-    )
-    def test_on_mode_throttles_after_limit(self):
-        results = [lg.check_join().allowed for _ in range(8)]
-        # First 5 allowed, the rest rejected.
-        self.assertTrue(all(results[:5]))
-        self.assertFalse(results[-1])
+    @patch.object(lg, "global_protection_mode", return_value="on")
+    @patch.object(lg, "signal_limit", return_value=5)
+    def test_on_mode_throttles_after_limit(self, _limit, _mode):
+        decisions = [lg.check_join() for _ in range(8)]
+
+        self.assertEqual([decision.count for decision in decisions], list(range(1, 9)))
+        self.assertEqual(
+            [decision.allowed for decision in decisions],
+            [True, True, True, True, True, False, False, False],
+        )
 
     @patch.dict(
         "os.environ",

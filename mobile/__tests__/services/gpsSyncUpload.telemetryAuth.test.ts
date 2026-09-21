@@ -20,6 +20,10 @@ jest.mock('../../src/services/gpsWsIngest', () => ({
   postTelemetryBatchViaWs: jest.fn(),
 }));
 
+jest.mock('../../src/services/gpsTelemetryUrl', () => ({
+  TELEMETRY_URL: 'https://telemetry.example.test',
+}));
+
 jest.mock('../../src/services/FirebaseService', () => ({
   firebaseCapture: jest.fn(),
 }));

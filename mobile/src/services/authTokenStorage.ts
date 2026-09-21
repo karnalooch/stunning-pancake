@@ -4,14 +4,14 @@
  */
 
 import * as SecureStore from 'expo-secure-store';
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from './mmkvStorage';
 
 const ACCESS_KEY = '4velo.auth.access';
 const REFRESH_KEY = '4velo.auth.refresh';
 const LEGACY_ACCESS = 'auth_token';
 const LEGACY_REFRESH = 'refresh_token';
 
-let legacyMmkv: MMKV | null | undefined;
+let legacyMmkv: AppMmkvStorage | null | undefined;
 let migrationDone = false;
 
 /** In-memory fallback when SecureStore is unavailable (tests / web). */
@@ -29,10 +29,10 @@ async function ensureAvailability(): Promise<void> {
   }
 }
 
-function getLegacyMmkv(): MMKV | null {
+function getLegacyMmkv(): AppMmkvStorage | null {
   if (legacyMmkv !== undefined) return legacyMmkv;
   try {
-    legacyMmkv = new MMKV();
+    legacyMmkv = createAppMmkv();
   } catch {
     legacyMmkv = null;
   }

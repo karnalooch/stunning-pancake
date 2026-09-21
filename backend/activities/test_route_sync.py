@@ -2,7 +2,7 @@
 
 from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import LineString
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -20,6 +20,7 @@ class RouteSyncHelpersTest(TestCase):
         self.assertEqual(merged.num_coords, 3)
 
 
+@override_settings(SECURE_SSL_REDIRECT=False)
 class SyncPathIdempotentTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(

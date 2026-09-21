@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { MMKV } from 'react-native-mmkv';
+import { createAppMmkv, type AppMmkvStorage } from '../services/mmkvStorage';
 import { stringsPl } from './strings.pl';
 import { stringsEn } from './strings.en';
 
@@ -7,9 +7,9 @@ export type MobileLocale = 'pl' | 'en';
 export type MobileCatalog = typeof stringsPl | typeof stringsEn;
 
 const STORAGE_KEY = 'mobile-locale';
-let storage: MMKV | null = null;
+let storage: AppMmkvStorage | null = null;
 try {
-  storage = new MMKV();
+  storage = createAppMmkv();
 } catch {
   storage = null;
 }

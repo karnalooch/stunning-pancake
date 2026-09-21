@@ -1,6 +1,6 @@
 {
   "name": "4velo",
-  "version": "0.3.3-dev",
+  "version": "0.3.4-dev",
   "private": true,
   "packageManager": "pnpm@12.4.2",
   "engines": {

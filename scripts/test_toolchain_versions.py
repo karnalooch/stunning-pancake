@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NODE_VERSION = "24.21.0"
 PNPM_VERSION = "12.4.2"
+PNPM_ACTION_SETUP_SHA = "0977fd99725f1db4007ccb2928dbb4e90d06cc86"
+SETUP_NODE_ACTION_SHA = "249970729cb0ef3589644e2896645e5dc5ba9c38"
 
 
 def read(path: str) -> str:
@@ -27,22 +29,31 @@ class ToolchainVersionContractTests(unittest.TestCase):
         action = read(".github/actions/pnpm-setup/action.yml")
         self.assertRegex(action, rf'default:\s*"{re.escape(NODE_VERSION)}"')
         self.assertRegex(action, rf'version:\s*{re.escape(PNPM_VERSION)}')
-        self.assertIn("uses: pnpm/action-setup@v6", action)
+        self.assertIn(f"uses: pnpm/action-setup@{PNPM_ACTION_SETUP_SHA}", action)
+        self.assertIn(f"uses: actions/setup-node@{SETUP_NODE_ACTION_SHA}", action)
 
     def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
         workspace = read("pnpm-workspace.yaml")
         npmrc = read(".npmrc")
         lockfile = read("pnpm-lock.yaml")
-        self.assertRegex(workspace, r"(?m)^nodeLinker:\s*hoisted\s*$")
-        self.assertRegex(workspace, r"(?m)^shamefullyHoist:\s*true\s*$")
-        self.assertRegex(workspace, r"(?m)^publicHoistPattern:\s*$")
+        self.assertRegex(workspace, r"(?m)^nodeLinker:\s*isolated\s*$")
+        self.assertNotRegex(workspace, r"(?m)^shamefullyHoist:")
+        self.assertNotRegex(workspace, r"(?m)^publicHoistPattern:")
         self.assertNotIn("node-linker", npmrc)
         self.assertNotIn("shamefully-hoist", npmrc)
         self.assertNotIn("public-hoist-pattern", npmrc)
         self.assertRegex(workspace, r"(?m)^pmOnFail:\s*ignore\s*$")
         self.assertRegex(workspace, r"(?m)^overrides:\s*$")
-        self.assertIn("react: 19.2.7", workspace)
-        self.assertIn("react-dom: 19.2.7", workspace)
+        self.assertNotRegex(
+            workspace,
+            r"(?m)^  react:\s*19[.]2[.]7\s*$",
+            "mobile's Expo React version must not be overridden repo-wide",
+        )
+        self.assertNotRegex(
+            workspace,
+            r"(?m)^  react-dom:\s*19[.]2[.]7\s*$",
+            "mobile's Expo React DOM version must not be overridden repo-wide",
+        )
         expected_build_policy = (
             "'@shopify/react-native-skia@2.4.18': true",
             "'electron@44.4.1': true",
@@ -77,19 +88,28 @@ class ToolchainVersionContractTests(unittest.TestCase):
 
     def test_runtime_build_entrypoints_use_canonical_toolchain(self):
         dockerfile = read("admin/Dockerfile")
-        eas_preinstall = read("mobile/eas-build-pre-install.sh")
+        mobile_package = json.loads(read("mobile/package.json"))
         self.assertIn(f"FROM node:{NODE_VERSION}-slim AS build", dockerfile)
         self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", dockerfile)
-        self.assertIn(f"corepack prepare pnpm@{PNPM_VERSION} --activate", eas_preinstall)
+        self.assertNotIn("eas-build-pre-install", mobile_package.get("scripts", {}))
+        self.assertFalse(
+            (ROOT / "mobile" / "eas-build-pre-install.sh").exists(),
+            "EAS should own the monorepo dependency install lifecycle",
+        )
 
-    def test_all_eas_profiles_use_node_24(self):
-        for path in ("eas.json", "mobile/eas.json"):
-            payload = json.loads(read(path))
-            build = payload.get("build", {})
-            self.assertGreater(len(build), 0, path)
-            for profile, config in build.items():
-                with self.subTest(path=path, profile=profile):
-                    self.assertEqual(config.get("node"), NODE_VERSION)
+    def test_mobile_eas_profiles_use_node_24(self):
+        payload = json.loads(read("mobile/eas.json"))
+        build = payload.get("build", {})
+        self.assertGreater(len(build), 0, "mobile/eas.json")
+        for profile, config in build.items():
+            with self.subTest(profile=profile):
+                self.assertEqual(config.get("node"), NODE_VERSION)
+
+    def test_mobile_is_the_only_eas_config_root(self):
+        self.assertFalse((ROOT / "eas.json").exists(), "root eas.json is forbidden")
+        self.assertFalse((ROOT / ".easignore").exists(), "root .easignore is forbidden")
+        self.assertTrue((ROOT / "mobile" / "eas.json").is_file())
+        self.assertTrue((ROOT / "mobile" / ".easignore").is_file())
 
     def test_known_operational_helpers_do_not_reintroduce_old_pnpm(self):
         sources = (
@@ -102,7 +122,11 @@ class ToolchainVersionContractTests(unittest.TestCase):
             with self.subTest(path=path):
                 source = read(path)
                 self.assertNotIn("pnpm@9.15.0", source)
-                self.assertIn(f"pnpm@{PNPM_VERSION}", source)
+                self.assertRegex(
+                    source,
+                    rf"pnpm(?:@|\s+){re.escape(PNPM_VERSION)}",
+                    f"{path} must mention the canonical pnpm {PNPM_VERSION} toolchain",
+                )
 
 
 if __name__ == "__main__":

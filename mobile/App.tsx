@@ -27,7 +27,7 @@ const AppContent = observer(function AppContent() {
     Silkscreen: Silkscreen_700Bold,
     VT323: VT323_400Regular,
   });
-  const { isDownloading, isUpdateAvailable } = Updates.useUpdates();
+  const { isDownloading, isUpdatePending } = Updates.useUpdates();
   const { theme } = useUnistyles();
 
   const [startRideError, setStartRideError] = useState<string | null>(null);
@@ -47,10 +47,10 @@ const AppContent = observer(function AppContent() {
 
   React.useEffect(() => {
     if (__DEV__) return;
-    if (isUpdateAvailable) {
+    if (isUpdatePending) {
       void Updates.reloadAsync();
     }
-  }, [isUpdateAvailable]);
+  }, [isUpdatePending]);
 
   React.useEffect(() => {
     void SoundService.init();

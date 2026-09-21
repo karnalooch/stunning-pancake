@@ -30,7 +30,10 @@ const BACKEND_URL = (process.env.EXPO_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 const PROXY_URL = BACKEND_URL ? `${BACKEND_URL}${API_PATHS_FULL.llmProxy}` : '';
 
 const DEFAULT_CONFIG = {
-  apiKey: process.env.EXPO_PUBLIC_LLM_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
+  // Never source an API secret from EXPO_PUBLIC_* or a mobile process env.
+  // Release clients use the authenticated backend proxy; apiKey remains only
+  // as an explicit constructor option for isolated tests/dev experiments.
+  apiKey: '',
   apiUrl: process.env.EXPO_PUBLIC_LLM_API_URL ?? 'https://api.openai.com/v1',
   model: process.env.EXPO_PUBLIC_LLM_MODEL ?? 'gpt-4o-mini',
   timeoutMs: 5_000,
@@ -144,7 +147,8 @@ export class LlmCoachService {
   constructor(config?: LlmCoachConfig) {
     this._config = { ...DEFAULT_CONFIG, ...config } as Required<LlmCoachConfig>;
 
-    // Use backend proxy when available (hides API key from mobile bundle)
+    // Release/default path is always the backend proxy when the backend URL is configured.
+    // A direct API key is only accepted when explicitly supplied to this constructor.
     this._useProxy = !!PROXY_URL && !this._config.apiKey;
 
     const baseURL = this._useProxy ? BACKEND_URL : this._config.apiUrl;
@@ -171,6 +175,13 @@ export class LlmCoachService {
    */
   async generateMessage(ctx: CoachPromptContext): Promise<string | null> {
     const startTs = Date.now();
+
+    if (!this._useProxy && !this._config.apiKey) {
+      if (__DEV__) {
+        console.warn('[LlmCoach] No backend proxy or explicit test key configured — using fallback.');
+      }
+      return null;
+    }
 
     // Circuit breaker check
     if (this._isCircuitOpen()) {
@@ -212,16 +223,17 @@ export class LlmCoachService {
       // Reset circuit on success
       this._circuit.failures = 0;
 
-      // Monitor latency P95/P99 thresholds
-      if (latency > 450) {
-        firebaseCapture(
-          new Error(`LLM latency P95 breach: ${latency}ms for ${ctx.personality}/${ctx.category}`),
-          'LLM_LATENCY_HIGH',
-        );
-      } else if (latency > 1900) {
+      // Monitor latency P95/P99 thresholds. Check the critical threshold
+      // first so >1900 ms is not swallowed by the broader >450 ms branch.
+      if (latency > 1900) {
         firebaseCapture(
           new Error(`LLM latency P99 breach: ${latency}ms — approaching timeout`),
           'LLM_LATENCY_CRITICAL',
+        );
+      } else if (latency > 450) {
+        firebaseCapture(
+          new Error(`LLM latency P95 breach: ${latency}ms for ${ctx.personality}/${ctx.category}`),
+          'LLM_LATENCY_HIGH',
         );
       }
 
@@ -253,10 +265,11 @@ export class LlmCoachService {
   }
 
   /**
-   * Check if the service is healthy (circuit is closed, API key is set).
+   * Check if the service can currently reach either the authenticated backend
+   * proxy (release/default path) or an explicitly configured direct test client.
    */
   isHealthy(): boolean {
-    return !this._isCircuitOpen() && this._config.apiKey.length > 0;
+    return !this._isCircuitOpen() && (this._useProxy || this._config.apiKey.length > 0);
   }
 
   // ─── Private ─────────────────────────────
@@ -335,7 +348,7 @@ export class LlmCoachService {
             temperature: this._config.temperature,
           });
         } else {
-          // Direct API call (development with EXPO_PUBLIC_LLM_API_KEY)
+          // Direct API call is test/dev-only and requires an explicit constructor key.
           response = await this._client.post('/chat/completions', {
             model: this._config.model,
             messages: [

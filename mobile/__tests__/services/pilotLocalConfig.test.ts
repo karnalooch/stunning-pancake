@@ -27,8 +27,6 @@ const envKeysToRestore = [
   'EXPO_PUBLIC_ENABLE_FIREBASE',
   'EXPO_PUBLIC_E2E_AUTO_LOGIN',
   'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
-  'EXPO_PUBLIC_E2E_EMAIL',
-  'EXPO_PUBLIC_E2E_PASSWORD',
   'EXPO_PUBLIC_E2E_GPS_RECOVERY',
   'EXPO_PUBLIC_VISION_FIXTURES',
 ] as const;
@@ -125,8 +123,7 @@ describe('pilot-local eas.json contract', () => {
     // eas-cli 24.6.0 — the values below are accepted.
     expect(cli).toBeDefined();
     expect(cli.appVersionSource).toBe('remote');
-    expect(typeof cli.version).toBe('string');
-    expect(cli.version.length).toBeGreaterThan(0);
+    expect(cli.version).toBe('24.7.0');
   });
 
   test('production build numbers are managed remotely and auto-incremented', () => {
@@ -154,11 +151,19 @@ describe('pilot-local eas.json contract', () => {
     expect(build['pilot-local'].env.EXPO_PUBLIC_ENABLE_FIREBASE).toBe('false');
   });
 
-  test('Railway URLs in development/preview/production remain exactly unchanged in eas.json', () => {
+  test('remote profiles select EAS environments and do not inline backend endpoints', () => {
+    const expectedEnvironment = {
+      development: 'development',
+      preview: 'preview',
+      production: 'production',
+    } as const;
+
     for (const profile of ['development', 'preview', 'production'] as const) {
       expect(profile in build).toBe(true);
-      expect(build[profile].env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
-      expect(build[profile].env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
+      expect(build[profile].environment).toBe(expectedEnvironment[profile]);
+      expect(build[profile].env?.EXPO_PUBLIC_API_URL).toBeUndefined();
+      expect(build[profile].env?.EXPO_PUBLIC_TELEMETRY_URL).toBeUndefined();
+      expect(build[profile].env?.EXPO_PUBLIC_ENABLE_FIREBASE).toBe('false');
     }
   });
 });
@@ -256,12 +261,11 @@ describe('app.config.js resolved Android cleartext plugin', () => {
     });
   });
 
-  test('Railway URLs in development/preview/production remain exactly unchanged in resolved app.config.js', () => {
+  test('environment-supplied remote URLs remain unchanged in resolved app.config.js', () => {
     for (const profile of ['development', 'preview', 'production'] as const) {
       const resolved = resolveWithProfile(profile) as { extra?: Record<string, unknown> };
-      // app.config.js does not source these from extra; the gates come from
-      // process.env. Confirm the resolved process.env-driven values reach the
-      // test unchanged and the documented Railway defaults are still exported.
+      // Remote EAS profiles source these from their selected EAS environment.
+      // Confirm process.env-driven values are propagated without hidden fallbacks.
       expect(process.env.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
       expect(process.env.EXPO_PUBLIC_TELEMETRY_URL).toBe(RAILWAY_TELEMETRY_URL);
       expect(resolved.extra?.EXPO_PUBLIC_API_URL).toBe(RAILWAY_API_URL);
@@ -305,7 +309,7 @@ describe('app.config.js Firebase plugin gating', () => {
   });
 
   test.each(['development', 'preview', 'production'] as const)(
-    '%s profile also drops Firebase plugins (flag is "false" in eas.json)',
+    '%s profile drops Firebase plugins when its EAS environment disables Firebase',
     (profile) => {
       const resolved = resolveWithProfile(profile) as { plugins?: PluginEntry[] };
       expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
@@ -319,18 +323,12 @@ describe('app.config.js Firebase plugin gating', () => {
     expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
   });
 
-  test('default resolution without env flag falls back to file presence (current behavior)', () => {
-    // Document the current default: when no env flag is set, Firebase is
-    // enabled if google-services.json exists on disk. The tracked file means
-    // local `expo start` in a sandbox without dotenv WILL enable Firebase,
-    // matching the upstream behavior before P1a. This is intentional — the
-    // pilot-local profile explicitly opts out via eas.json env.
+  test('default resolution without env flag keeps Firebase disabled', () => {
+    // Firebase must be an explicit opt-in. This keeps local bundles and EAS
+    // Update from silently diverging from builds when the environment omits
+    // EXPO_PUBLIC_ENABLE_FIREBASE.
     const resolved = resolveWithProfile(null) as { plugins?: PluginEntry[] };
-    const firebasePlugins = findFirebasePlugins(resolved.plugins ?? []);
-    // mobile/google-services.json is tracked in the repo, so plugins register.
-    expect(firebasePlugins).toEqual(
-      expect.arrayContaining(['@react-native-firebase/app', '@react-native-firebase/crashlytics']),
-    );
+    expect(findFirebasePlugins(resolved.plugins ?? [])).toEqual([]);
   });
 
   test('EXPO_PUBLIC_ENABLE_FIREBASE="false" overrides presence of google-services.json', () => {
@@ -378,7 +376,7 @@ describe('app.config.js googleServicesFile gating', () => {
     expect(getGoogleServicesFile(resolved, 'ios')).toBeUndefined();
   });
 
-  test('Railway profiles (development/preview/production) also drop googleServicesFile because the eas.json flag is "false"', () => {
+  test('remote profiles drop googleServicesFile when their EAS environment disables Firebase', () => {
     for (const profile of ['development', 'preview', 'production'] as const) {
       const resolved = resolveWithProfile(profile);
       expect(getGoogleServicesFile(resolved, 'android')).toBeUndefined();

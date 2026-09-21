@@ -9,7 +9,11 @@ from activities import simulator_state as sim, simulator_tasks as tasks
 
 
 class BrouterTickBudgetTest(SimpleTestCase):
-    @patch("activities.scale_config.BROUTER_MAX_CALLS_PER_TICK", 3)
+    @patch.dict(
+        "os.environ",
+        {"SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK": "3"},
+        clear=False,
+    )
     def test_budget_caps_http_calls(self):
         tasks._reset_brouter_tick_budget()
         self.assertTrue(tasks._consume_brouter_tick_budget())
@@ -17,7 +21,11 @@ class BrouterTickBudgetTest(SimpleTestCase):
         self.assertTrue(tasks._consume_brouter_tick_budget())
         self.assertFalse(tasks._consume_brouter_tick_budget())
 
-    @patch("activities.scale_config.BROUTER_MAX_CALLS_PER_TICK", 0)
+    @patch.dict(
+        "os.environ",
+        {"SCALE_SIM_BROUTER_MAX_CALLS_PER_TICK": "0"},
+        clear=False,
+    )
     def test_zero_budget_means_unlimited(self):
         tasks._reset_brouter_tick_budget()
         for _ in range(10):

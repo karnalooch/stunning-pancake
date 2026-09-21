@@ -12,7 +12,6 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
-      - "backend"
     commit-message:
       prefix: "chore(deps)"
     ignore:
@@ -39,40 +38,29 @@ updates:
     commit-message:
       prefix: "chore(deps)"
 
-  # Node.js admin dashboard
+  # Node.js pnpm workspace (shared root lockfile)
   - package-ecosystem: npm
-    directory: /admin
+    directory: /
     schedule:
       interval: weekly
       day: tuesday
       time: "06:00"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
-      - "admin"
     commit-message:
       prefix: "chore(deps)"
-    # Security-only updates for dev tools with known CVEs
-    groups:
-      security-patches:
-        update-types:
-          - "security"
-
-  # Node.js mobile app (React Native)
-  - package-ecosystem: npm
-    directory: /mobile
-    schedule:
-      interval: weekly
-      day: tuesday
-      time: "06:30"
-      timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "mobile"
-    commit-message:
-      prefix: "chore(deps)"
+    ignore:
+      # Expo packages must move with the SDK as one controlled migration.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jest-expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-expo"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions (monthly — stability focused)
   - package-ecosystem: github-actions
