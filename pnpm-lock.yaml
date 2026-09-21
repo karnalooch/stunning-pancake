@@ -202,8 +202,8 @@ importers:
         specifier: ^0.4.1
         version: 0.4.1
       '@legendapp/state':
-        specifier: 3.0.0-beta.46
-        version: 3.0.0-beta.46(react@19.2.0)
+        specifier: 3.0.0-beta.48
+        version: 3.0.0-beta.48(react@19.2.0)
       '@maplibre/maplibre-react-native':
         specifier: ^11.3.4
         version: 11.3.4(@types/geojson@7946.0.16)(@types/react@19.2.17)(expo@55.0.31)(react-native@0.83.10(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.85.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.0)(supports-color@8.1.1))(react@19.2.0)
@@ -2027,8 +2027,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@legendapp/state@3.0.0-beta.46':
-    resolution: {integrity: sha512-TcCabsE9jPW2r0sKQbUet46L0hbWiupKoun9UUkcHyF/6Jec1RyJCmLrdgFPnYZ9HwupJKIRxJVlxNrg2tG3SQ==}
+  '@legendapp/state@3.0.0-beta.48':
+    resolution: {integrity: sha512-aa7vpUSoBHnXQhYf2x/10C0w1EiesegRhR7LuxnIcEPyZzZyuSF2mevf1jphlh0zzqwIJm9QxnsayDNn8/kwcA==}
     peerDependencies:
       expo-sqlite: ^15.0.0
     peerDependenciesMeta:
@@ -10366,7 +10366,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@legendapp/state@3.0.0-beta.46(react@19.2.0)':
+  '@legendapp/state@3.0.0-beta.48(react@19.2.0)':
     dependencies:
       use-sync-external-store: 1.6.0(react@19.2.0)
     transitivePeerDependencies:
