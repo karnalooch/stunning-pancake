@@ -46,7 +46,7 @@
     "axios": "^1.20.0",
     "expo": "~55.0.31",
     "expo-audio": "~55.0.18",
-    "expo-battery": "~55.0.17",
+    "expo-battery": "~57.0.3",
     "expo-build-properties": "~55.0.18",
     "expo-crypto": "~55.0.19",
     "expo-dev-client": "~55.0.40",
