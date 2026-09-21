@@ -20,7 +20,7 @@ class TestLeaderboardService:
     def setup_method(self):
         LeaderboardService._redis = None  # reset singleton
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_update_score_calls_zincrby(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_redis_factory.return_value = mock_r
@@ -29,7 +29,7 @@ class TestLeaderboardService:
 
         mock_r.zincrby.assert_called_once_with("leaderboard:city:siedlce", 5.5, "42")
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_update_score_event_scope(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_redis_factory.return_value = mock_r
@@ -38,7 +38,7 @@ class TestLeaderboardService:
 
         mock_r.zincrby.assert_called_once_with("leaderboard:event:99", 10.0, "1")
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_get_top_users_returns_list(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_r.zrevrange.return_value = [(b"42", 100.0), (b"7", 80.5)]
@@ -48,9 +48,9 @@ class TestLeaderboardService:
 
         assert len(result) == 2
         assert result[0]["user_id"] == "42"
-        assert result[0]["score"] == 100.0
+        assert result[0]["score_km"] == 100.0
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_get_user_rank_returns_1indexed(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_r.zrevrank.return_value = 0  # 0-indexed = rank 1
@@ -60,7 +60,7 @@ class TestLeaderboardService:
 
         assert rank == 1
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_get_user_rank_none_when_missing(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_r.zrevrank.return_value = None
@@ -69,7 +69,7 @@ class TestLeaderboardService:
         rank = LeaderboardService.get_user_rank("siedlce", 999)
         assert rank is None
 
-    @patch("activities.leaderboards.redis.from_url")
+    @patch("activities.leaderboards.get_redis")
     def test_redis_error_returns_empty(self, mock_redis_factory):
         mock_r = MagicMock()
         mock_r.zrevrange.side_effect = Exception("connection refused")
@@ -119,15 +119,15 @@ class TestEventNormalizationService:
 
 
 # ---------------------------------------------------------------------------
-# Plugin Registry tests
+# Plugin Registry tests — Plugin System v2 (pluggy-backed)
 # ---------------------------------------------------------------------------
 
 
 class TestPluginRegistry:
     def test_register_and_list(self):
-        from core.plugin_registry import PluginManifest, PluginRegistry
+        from core.plugin_registry import PluginManifest, SportPluginManager
 
-        reg = PluginRegistry()
+        reg = SportPluginManager()
         manifest = PluginManifest(
             name="test_plugin",
             version="1.0.0",
@@ -140,9 +140,9 @@ class TestPluginRegistry:
         assert any(p["name"] == "test_plugin" for p in plugins)
 
     def test_double_register_raises(self):
-        from core.plugin_registry import PluginManifest, PluginRegistry
+        from core.plugin_registry import PluginManifest, SportPluginManager
 
-        reg = PluginRegistry()
+        reg = SportPluginManager()
         manifest = PluginManifest(
             name="dup_plugin",
             version="1.0.0",
@@ -154,51 +154,77 @@ class TestPluginRegistry:
         with pytest.raises(ValueError, match="already registered"):
             reg.register(manifest)
 
-    def test_fire_calls_handler(self):
-        from core.plugin_registry import PluginRegistry
+    def test_native_pluggy_plugin_fires(self):
+        from core.plugin_registry import PluginManifest, SportPluginManager, hookimpl
 
-        reg = PluginRegistry()
+        reg = SportPluginManager()
         called_with = {}
 
-        @reg.hook("test.event")
-        def handler(**kwargs):
-            called_with.update(kwargs)
+        class TestPlugin:
+            @hookimpl
+            def activity_verified(self, activity):
+                called_with["activity"] = activity
+                return "ok"
+
+        manifest = PluginManifest(
+            name="native_plugin",
+            version="1.0.0",
+            author="test",
+            description="Native pluggy test plugin",
+            hooks=["activity.verified"],
+        )
+        reg.register(manifest, TestPlugin())
+
+        activity = object()
+        results = reg.fire("activity.verified", activity=activity)
+
+        assert results == ["ok"]
+        assert called_with["activity"] is activity
+
+    def test_compat_hook_decorator_fires(self):
+        from core.plugin_registry import SportPluginManager
+
+        reg = SportPluginManager()
+        called_with = {}
+
+        @reg.hook("activity.verified")
+        def handler(activity):
+            called_with["activity"] = activity
             return "ok"
 
-        results = reg.fire("test.event", activity="fake_activity")
+        activity = object()
+        results = reg.fire("activity.verified", activity=activity)
+
         assert results == ["ok"]
-        assert called_with.get("activity") == "fake_activity"
+        assert called_with["activity"] is activity
 
-    def test_fire_catches_exceptions(self):
-        from core.plugin_registry import PluginRegistry
+    def test_fire_catches_plugin_exceptions(self):
+        from core.plugin_registry import SportPluginManager
 
-        reg = PluginRegistry()
+        reg = SportPluginManager()
 
-        @reg.hook("error.event")
-        def broken_handler(**kwargs):
+        @reg.hook("activity.verified")
+        def broken_handler(activity):
             raise RuntimeError("boom")
 
-        # Should not raise; returns None for failed handler
-        results = reg.fire("error.event")
-        assert results == [None]
+        assert reg.fire("activity.verified", activity=object()) == []
 
     def test_fire_unknown_hook_returns_empty(self):
-        from core.plugin_registry import PluginRegistry
+        from core.plugin_registry import SportPluginManager
 
-        reg = PluginRegistry()
-        results = reg.fire("no.such.hook")
-        assert results == []
+        reg = SportPluginManager()
+        assert reg.fire("no.such.hook") == []
 
     def test_unregister_removes_plugin(self):
-        from core.plugin_registry import PluginManifest, PluginRegistry
+        from core.plugin_registry import PluginManifest, SportPluginManager
 
-        reg = PluginRegistry()
+        reg = SportPluginManager()
         manifest = PluginManifest(
             name="removable",
             version="1.0.0",
             author="test",
             description="Will be removed",
-            hooks=["x.event"],
+            hooks=[],
         )
         reg.register(manifest)
         reg.unregister("removable")
