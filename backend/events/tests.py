@@ -41,7 +41,7 @@ class TestLeaderboardService:
     @patch("activities.leaderboards.get_redis")
     def test_get_top_users_returns_list(self, mock_redis_factory):
         mock_r = MagicMock()
-        mock_r.zrevrange.return_value = [(b"42", 100.0), (b"7", 80.5)]
+        mock_r.zrevrange.return_value = [("42", 100.0), ("7", 80.5)]
         mock_redis_factory.return_value = mock_r
 
         result = LeaderboardService.get_top_users("siedlce", limit=2)
