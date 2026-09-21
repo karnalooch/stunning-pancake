@@ -5,6 +5,8 @@ Tests feature extraction and inference for the Isolation Forest
 anomaly detector (Layer 1.5 anti-cheat).
 """
 
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase, TestCase
@@ -150,7 +152,12 @@ class TestMLRetrainFromSim(TestCase):
 
         mock_filter.side_effect = [mock_qs_clean, mock_qs_anomaly]
 
-        res = calibrate_ml_from_sim()
+        with TemporaryDirectory() as tmpdir:
+            with patch(
+                "activities.ml_retrain.MODEL_PATH",
+                Path(tmpdir) / "anomaly_detector.pkl",
+            ):
+                res = calibrate_ml_from_sim()
         assert res["status"] == "ok"
         assert res["clean_samples_used"] == 15
         assert res["anomalous_samples_validated"] == 5
