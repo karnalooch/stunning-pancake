@@ -63,6 +63,23 @@ class UserRoleViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(tenant_id=self.request.user.tenant_id)
 
+    def get_serializer(self, *args, **kwargs):
+        """Inject a tenant admin's tenant before model-level serializer validators run."""
+        data = kwargs.get("data")
+        actor = getattr(self.request, "user", None)
+        if (
+            data is not None
+            and getattr(self, "action", None) == "create"
+            and getattr(actor, "role", None) != "GLOBAL_OWNER"
+        ):
+            tenant_id = getattr(actor, "tenant_id", None)
+            if not tenant_id:
+                raise serializers.ValidationError("Tenant admin has no tenant.")
+            scoped_data = data.copy()
+            scoped_data["tenant_id"] = str(tenant_id)
+            kwargs["data"] = scoped_data
+        return super().get_serializer(*args, **kwargs)
+
     def _tenant_admin_values(self, serializer):
         """Return tenant-safe assignment values for a legacy tenant admin."""
         actor = self.request.user
@@ -84,7 +101,7 @@ class UserRoleViewSet(viewsets.ModelViewSet):
         if target_role is None or target_role.slug not in self.TENANT_ADMIN_ASSIGNABLE_ROLES:
             raise serializers.ValidationError("Role cannot be assigned by a tenant admin.")
 
-        return {"tenant_id": actor.tenant_id, "tenant_scoped": True}
+        return {"tenant": actor.tenant, "tenant_scoped": True}
 
     def perform_create(self, serializer):
         serializer.save(granted_by=self.request.user, **self._tenant_admin_values(serializer))
