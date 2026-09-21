@@ -83,7 +83,7 @@ class ScaleDiskGuardTest(SimpleTestCase):
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=5.0)
     @patch("activities.scale_disk_guard.get_user_model")
     def test_prepare_top_up_uses_incremental_growth_estimate(self, mock_user, _db):
-        mock_user.objects.filter.return_value.count.return_value = 50_000
+        mock_user.return_value.objects.filter.return_value.count.return_value = 50_000
 
         result = prepare_batch_disk_guard(100_000, skip_activities=True, clear=False)
 
@@ -97,7 +97,7 @@ class ScaleDiskGuardTest(SimpleTestCase):
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=8.0)
     @patch("activities.scale_disk_guard.get_user_model")
     def test_prepare_unsafe_top_up_blocks_without_wiping(self, mock_user, _db):
-        mock_user.objects.filter.return_value.count.return_value = 50_000
+        mock_user.return_value.objects.filter.return_value.count.return_value = 50_000
 
         result = prepare_batch_disk_guard(100_000, skip_activities=True, clear=False)
 
