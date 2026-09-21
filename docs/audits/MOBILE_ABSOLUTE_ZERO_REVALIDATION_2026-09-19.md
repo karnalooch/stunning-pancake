@@ -2,21 +2,31 @@
 
 Tracker: #157.
 
-This runbook intentionally assumes nothing about the previous Android/Metro/EAS state.
+This runbook intentionally assumes nothing about the previous Android/Metro/EAS runtime state. Repo-side platform normalization (#159), Android harness hardening (#161), and MMKV v4/Nitro migration (#163) are already on `main`; this collector is for the remaining owner-machine/runtime proof.
 
-## First command
+## First capture
 
-The collector may live in its isolated PR #158 worktree while inspecting the exact checkout under test. Prefer this form until the collector itself is merged:
+Keep the checkout being inspected untouched. Run the collector from an isolated worktree so the evidence script itself does not need to be copied into the checkout under test.
+
+From the current 4VELO checkout:
 
 ```powershell
+$RepoRoot = (git rev-parse --show-toplevel).Trim()
+$AuditRoot = Join-Path (Split-Path $RepoRoot -Parent) "stunning-pancake-mobile-audit"
+
+git fetch origin audit/mobile-zero-baseline
+git worktree add $AuditRoot origin/audit/mobile-zero-baseline
+
 pwsh -NoProfile -ExecutionPolicy Bypass `
-  -File D:\gem\stunning-pancake-mobile-audit\scripts\mobile-zero-baseline.ps1 `
-  -RepoRootPath D:\gem\stunning-pancake
+  -File (Join-Path $AuditRoot "scripts/mobile-zero-baseline.ps1") `
+  -RepoRootPath $RepoRoot
 ```
 
-If the collector is later present in the exact checkout being tested, `-RepoRootPath` may be omitted.
+If `$AuditRoot` already exists as a worktree, do not add it again; verify that worktree points at the current `audit/mobile-zero-baseline` head and run the collector from there.
 
-The command is read-only with respect to the inspected repository and local toolchain. It does not install, repair, build, start, stop or reconfigure anything. The JSON report is written under `%TEMP%` and the path is printed at the end. The report records both the collector worktree and the inspected repository root so provenance is explicit.
+The collector is read-only with respect to the inspected repository and toolchain. It does not install, repair, build, start, stop, kill, or reconfigure anything. The JSON report is written under `%TEMP%` by default.
+
+The report sanitizes likely credentials in Git remotes/process arguments, replaces the current user-profile prefix with `%USERPROFILE%`, redacts test credentials, and stores only a short SHA-256-derived identifier for each ADB serial. Do not post-process the report to add secrets or raw device identifiers.
 
 Do **not** run dependency repair before preserving this first report.
 
@@ -26,39 +36,39 @@ Only after the initial offline/read-only capture:
 
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass `
-  -File D:\gem\stunning-pancake-mobile-audit\scripts\mobile-zero-baseline.ps1 `
-  -RepoRootPath D:\gem\stunning-pancake `
+  -File (Join-Path $AuditRoot "scripts/mobile-zero-baseline.ps1") `
+  -RepoRootPath $RepoRoot `
   -RunNetworkChecks
 ```
 
-This opt-in mode may use network/cache access for Expo Doctor / Expo dependency checks. It uses the repository-pinned Expo Doctor version (`1.20.4`), not `latest`. Record its output separately.
+This opt-in mode may use network/cache access for the repository-pinned Expo Doctor (`1.20.4`) and `expo install --check`. Record its output separately.
 
 ## Evidence policy
 
 A mobile claim is PASS only when it is tied to:
 
-- exact Git SHA;
-- worktree status;
+- exact Git SHA and worktree status;
+- repository-declared Node/pnpm/Expo/RN/MMKV/Nitro versions;
 - exact host/tool versions;
 - exact app/build identity;
 - exact profile/environment/channel where applicable;
 - reproducible command;
 - captured output.
 
-Old screenshots, cached APK behavior and green static CI are supporting evidence only, not runtime proof.
+Old screenshots, cached APK behavior, and green static CI are supporting evidence only, not runtime proof.
 
 ## Order after first capture
 
-1. Review host/toolchain drift and exact `main`/worktree provenance.
-2. Review physical `node_modules` resolution, including MMKV v4/Nitro and the explicit Babel/Expo runtime dependencies.
-3. Run frozen root install and capture a second report.
-4. Review the pinned Expo Doctor / dependency compatibility results.
-5. Verify the normalized single `mobile/eas.json` authority.
-6. Generate/inspect native config.
-7. Prove clean Metro bundle from `mobile/`.
-8. Prove exact emulator/dev-client connection and artifact/SHA identity.
-9. Prove force-stop/relaunch storage persistence and locked/background GPS durability.
-10. Execute the mandatory Ride smoke: Start -> Active -> Pause -> Resume -> Finish -> Summary -> Home.
+1. Review Z0/Z1 host/toolchain and exact checkout provenance.
+2. Run root `pnpm install --frozen-lockfile`; prove manifests/lockfile remain unchanged.
+3. Capture a second baseline and compare module resolution.
+4. Run/review the pinned Expo Doctor and dependency compatibility checks.
+5. Start Metro freshly **from `mobile/`**, using the canonical dev-client command.
+6. Install/launch the exact dev-client artifact and prove it requests that fresh bundle.
+7. Record exact Git SHA, app version/runtime boundary, package id, device/emulator identity, and artifact identity.
+8. Prove MMKV persistence across force-stop -> relaunch, including SecureStore-backed GPS key recovery and relevant auth/session/preferences state.
+9. Prove locked/background GPS durability.
+10. Execute the fail-closed Ride smoke: Start -> Active -> Pause -> Resume -> Finish -> Summary -> Home.
 11. Only then resume visual review.
 
 Do not skip directly to UI.
