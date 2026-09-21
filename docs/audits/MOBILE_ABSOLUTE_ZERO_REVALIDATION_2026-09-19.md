@@ -17,7 +17,7 @@ $AuditRoot = Join-Path (Split-Path $RepoRoot -Parent) "stunning-pancake-mobile-a
 git fetch origin audit/mobile-zero-baseline
 git worktree add $AuditRoot origin/audit/mobile-zero-baseline
 
-pwsh -NoProfile -ExecutionPolicy Bypass `
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File (Join-Path $AuditRoot "scripts/mobile-zero-baseline.ps1") `
   -RepoRootPath $RepoRoot
 ```
@@ -35,7 +35,7 @@ Do **not** run dependency repair before preserving this first report.
 Only after the initial offline/read-only capture:
 
 ```powershell
-pwsh -NoProfile -ExecutionPolicy Bypass `
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File (Join-Path $AuditRoot "scripts/mobile-zero-baseline.ps1") `
   -RepoRootPath $RepoRoot `
   -RunNetworkChecks
