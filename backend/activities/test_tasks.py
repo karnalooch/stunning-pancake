@@ -23,7 +23,7 @@ User = get_user_model()
 @pytest.fixture
 def user(db):
     """Create a basic ATHLETE user with a tenant."""
-    tenant = Tenant.objects.create(id="test-tasks", name="Tasks City", is_active=True)
+    tenant = Tenant.objects.create(name="Tasks City", is_active=True)
     return User.objects.create_user(
         username="tasker",
         email="tasker@test.com",
