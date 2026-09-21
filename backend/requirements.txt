@@ -36,4 +36,4 @@ cryptography>=50.0.1
 h3>=3.7.0
 django-stubs==5.1.1
 # Garmin Connect activity upload (unofficial library)
-garminconnect>=0.2.20
+garminconnect>=0.3.2
