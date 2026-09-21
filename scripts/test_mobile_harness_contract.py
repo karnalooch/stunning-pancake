@@ -55,8 +55,8 @@ class MobileHarnessContractTests(unittest.TestCase):
         source = read("scripts/mobile-zero-baseline.ps1")
         runbook = read("docs/audits/MOBILE_ABSOLUTE_ZERO_REVALIDATION_2026-09-19.md")
 
-        self.assertNotIn(r"D:\\gem\\stunning-pancake", source)
-        self.assertNotIn(r"D:\\gem\\stunning-pancake", runbook)
+        self.assertNotIn("D:\\gem\\stunning-pancake", source)
+        self.assertNotIn("D:\\gem\\stunning-pancake", runbook)
         self.assertNotIn('return "com.sport.athlete"', source)
 
         for token in (
