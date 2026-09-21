@@ -13,6 +13,7 @@ pytestmark = pytest.mark.simulator_light
 from django.test import SimpleTestCase
 
 from core import load_guard as lg
+from core.fake_redis import FakeRedis
 
 
 class EvaluateSignalPureTest(SimpleTestCase):
@@ -89,7 +90,14 @@ class ConfigTest(SimpleTestCase):
 
 
 class CheckSignalRedisTest(SimpleTestCase):
-    """Integration with FakeRedis sliding window (installed by simulator_light)."""
+    """Integration with an isolated FakeRedis sliding window."""
+
+    def setUp(self):
+        super().setUp()
+        self.redis = FakeRedis()
+        self.redis_patcher = patch.object(lg, "get_redis", return_value=self.redis)
+        self.redis_patcher.start()
+        self.addCleanup(self.redis_patcher.stop)
 
     @patch.dict(
         "os.environ",
