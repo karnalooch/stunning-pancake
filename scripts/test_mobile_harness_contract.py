@@ -74,6 +74,8 @@ class MobileHarnessContractTests(unittest.TestCase):
                 self.assertIn(token, source)
 
         self.assertNotIn("$androidInventory.adb = $adbInfo", source)
+        self.assertIn(r"([^/@\s]+)@", source)
+        self.assertNotIn(r"([^/@\\s]+)@", source)
         self.assertIn("$RepoRoot = (git rev-parse --show-toplevel).Trim()", runbook)
 
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
