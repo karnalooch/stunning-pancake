@@ -83,7 +83,7 @@
   "devDependencies": {
     "@4velo/tsconfig": "workspace:*",
     "@react-native/metro-config": "0.85.2",
-    "@types/jest": "^29.5.14",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.6.0",
     "@types/react": "~19.2.10",
     "@types/react-test-renderer": "^19.1.0",
@@ -91,7 +91,7 @@
     "esbuild": "0.28.1",
     "eslint": "^8.57.1",
     "eslint-config-expo": "~55.0.1",
-    "jest": "^29.7.0",
+    "jest": "^30.5.1",
     "jest-expo": "~55.0.22",
     "react-native-svg-transformer": "^1.5.3",
     "ts-jest": "^29.2.5",
