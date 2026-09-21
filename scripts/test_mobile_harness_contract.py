@@ -51,6 +51,31 @@ class MobileHarnessContractTests(unittest.TestCase):
                 self.assertNotIn('["adb", "-s", "emulator-5554"]', source)
                 self.assertIn("--serial", source)
 
+    def test_zero_baseline_collector_is_machine_neutral_and_privacy_safe(self):
+        source = read("scripts/mobile-zero-baseline.ps1")
+        runbook = read("docs/audits/MOBILE_ABSOLUTE_ZERO_REVALIDATION_2026-09-19.md")
+
+        self.assertNotIn(r"D:\\gem\\stunning-pancake", source)
+        self.assertNotIn(r"D:\\gem\\stunning-pancake", runbook)
+        self.assertNotIn('return "com.sport.athlete"', source)
+
+        for token in (
+            "function Protect-EvidenceText",
+            "function Get-EvidenceId",
+            "%USERPROFILE%",
+            "E2E_EMAIL",
+            "serialHash",
+            "commands = $commandEvidence",
+            "ReadToEndAsync",
+            "mobileMmkv",
+            "mobileNitro",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+        self.assertNotIn("$androidInventory.adb = $adbInfo", source)
+        self.assertIn("$RepoRoot = (git rev-parse --show-toplevel).Trim()", runbook)
+
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
         self.assertFalse((ROOT / "mobile" / "scripts" / "register_pilot.sh").exists())
