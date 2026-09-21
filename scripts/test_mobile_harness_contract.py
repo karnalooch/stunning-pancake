@@ -78,6 +78,32 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn(r"([^/@\\s]+)@", source)
         self.assertIn("$RepoRoot = (git rev-parse --show-toplevel).Trim()", runbook)
 
+        # Windows package-manager/tool shims must be executable by the collector
+        # even when Corepack exposes .cmd/.bat/.ps1 wrappers instead of PE files.
+        for token in (
+            '"$Name.cmd"',
+            '"$Name.bat"',
+            '"$Name.ps1"',
+            '$extension -eq ".cmd"',
+            '$extension -eq ".bat"',
+            '$extension -eq ".ps1"',
+            '$env:ComSpec',
+            'powershell.exe',
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+        # @babel/runtime intentionally exposes helper subpaths rather than a
+        # resolvable package root in the pinned version.
+        self.assertNotIn('    "@babel/runtime",', source)
+        for helper in (
+            "@babel/runtime/helpers/asyncToGenerator",
+            "@babel/runtime/helpers/defineProperty",
+            "@babel/runtime/helpers/objectSpread2",
+        ):
+            with self.subTest(helper=helper):
+                self.assertIn(helper, source)
+
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
         self.assertFalse((ROOT / "mobile" / "scripts" / "register_pilot.sh").exists())
