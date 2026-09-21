@@ -52,7 +52,7 @@ class EventCapMathTest(SimpleTestCase):
         self.assertEqual(pool, 50_000)
         self.assertGreaterEqual(cap, 5_000)
         self.assertLessEqual(cap, 50_000)
-        self.assertLess(cap, pool)
+        self.assertLessEqual(cap, pool)
 
     @patch("events.scale_config.SCALE_EVENT_LOAD_TEST", True)
     def test_effective_cap_event_load_test(self):

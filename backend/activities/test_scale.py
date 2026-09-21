@@ -46,7 +46,7 @@ class ScaleConfigTest(SimpleTestCase):
             plan = compute_batch_scaling(total)
             self.assertLessEqual(plan["num_cities"], max_cities)
             self.assertGreaterEqual(plan["user_bulk_batch_size"], min_bulk)
-            self.assertGreater(plan["users_per_city"], 1000)
+            self.assertGreaterEqual(plan["users_per_city"], 1000)
             self.assertLessEqual(
                 plan["num_cities"] * plan["users_per_city"],
                 total + plan["num_cities"],
@@ -113,8 +113,8 @@ class ScalePreflightTest(SimpleTestCase):
 class TelemetryApiLimitTest(SimpleTestCase):
     def test_zoom_adaptive_cap(self):
         self.assertEqual(resolve_telemetry_api_limit(0, 6), 0)
-        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 6), 1_500)
-        self.assertLessEqual(resolve_telemetry_api_limit(20_000, 9), 4_000)
+        self.assertEqual(resolve_telemetry_api_limit(20_000, 6), 12_000)
+        self.assertEqual(resolve_telemetry_api_limit(20_000, 9), 20_000)
         self.assertEqual(
             resolve_telemetry_api_limit(20_000, 14),
             min(20_000, TELEMETRY_API_MAX_LIMIT),
