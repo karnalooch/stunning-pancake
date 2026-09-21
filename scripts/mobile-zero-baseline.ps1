@@ -152,8 +152,8 @@ function Invoke-ReadOnly {
       return [ordered]@{
         ok = $false
         exitCode = $null
-        stdout = Protect-EvidenceText $stdoutTask.GetAwaiter().GetResult().Trim()
-        stderr = "TIMEOUT after $TimeoutSeconds seconds; " + (Protect-EvidenceText $stderrTask.GetAwaiter().GetResult().Trim())
+        stdout = Protect-EvidenceText ($stdoutTask.GetAwaiter().GetResult().Trim())
+        stderr = "TIMEOUT after $TimeoutSeconds seconds; " + (Protect-EvidenceText ($stderrTask.GetAwaiter().GetResult().Trim()))
       }
     }
 
