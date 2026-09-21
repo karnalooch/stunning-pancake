@@ -5,6 +5,10 @@ inputs:
     description: Node.js version
     required: false
     default: "24.21.0"
+  skip-skia-download:
+    description: Skip React Native Skia native-binary downloads for JS/static CI jobs
+    required: false
+    default: "true"
 runs:
   using: composite
   steps:
@@ -18,6 +22,12 @@ runs:
         cache-dependency-path: pnpm-lock.yaml
     - name: Install workspace dependencies with bounded retry
       shell: bash
+      env:
+        # RN Skia 2.4.18 (the Expo SDK 55-supported version) otherwise downloads
+        # Android + Apple native binaries during postinstall. Shared CI consumers
+        # are JS/static jobs; native Android compile workflows do not use this
+        # action. Future native consumers must explicitly pass "false".
+        SKIP_SKIA_DOWNLOAD: ${{ inputs.skip-skia-download }}
       run: |
         set -euo pipefail
         max_attempts=3
