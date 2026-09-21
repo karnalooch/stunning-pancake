@@ -428,9 +428,7 @@ class TestAuditLogList:
         assert by_action["Admin Action: POST /api/users/create/"]["impersonator_username"] is None
         assert by_action["Admin Action: GET /api/test/"]["impersonator_username"] == "owner"
 
-    def test_tenant_admin_lists_only_own_tenant(
-        self, api_client, admin_user, tenant, other_tenant
-    ):
+    def test_tenant_admin_lists_only_own_tenant(self, api_client, admin_user, tenant, other_tenant):
         AuditLog.objects.create(
             impersonator=admin_user,
             target_user=None,
