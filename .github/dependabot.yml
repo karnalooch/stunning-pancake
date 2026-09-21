@@ -46,7 +46,7 @@ updates:
       day: tuesday
       time: "06:00"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
     labels:
       - "dependencies"
     commit-message:
@@ -56,6 +56,10 @@ updates:
       - dependency-name: "expo"
         update-types: ["version-update:semver-major"]
       - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "jest-expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint-config-expo"
         update-types: ["version-update:semver-major"]
 
   # GitHub Actions versions (monthly — stability focused)
