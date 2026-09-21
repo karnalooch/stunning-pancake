@@ -79,6 +79,7 @@ class ScaleDiskGuardTest(SimpleTestCase):
         self.assertEqual(reason, "")
 
     @patch.dict("os.environ", {"SCALE_POSTGRES_DISK_BUDGET_GB": "20"}, clear=False)
+    @patch("activities.scale_disk_guard.DISK_HEADROOM_GB", 2.0)
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=5.0)
     @patch("activities.scale_disk_guard.get_user_model")
     def test_prepare_top_up_uses_incremental_growth_estimate(self, mock_user, _db):
@@ -92,6 +93,7 @@ class ScaleDiskGuardTest(SimpleTestCase):
         self.assertFalse(any("Automatyczny wipe" in action for action in result["actions"]))
 
     @patch.dict("os.environ", {"SCALE_POSTGRES_DISK_BUDGET_GB": "10"}, clear=False)
+    @patch("activities.scale_disk_guard.DISK_HEADROOM_GB", 2.0)
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=8.0)
     @patch("activities.scale_disk_guard.get_user_model")
     def test_prepare_unsafe_top_up_blocks_without_wiping(self, mock_user, _db):
@@ -102,6 +104,17 @@ class ScaleDiskGuardTest(SimpleTestCase):
         self.assertFalse(result["ok"])
         self.assertIn("Za mało miejsca na Postgres", result["error"])
         self.assertFalse(any("Automatyczny wipe" in action for action in result["actions"]))
+
+    def test_auto_wipe_explicit_clear_still_wipes_top_up_pool(self):
+        do, reason = _should_auto_wipe(
+            100_000,
+            50_000,
+            skip_activities=True,
+            db_gb=5.0,
+            clear=True,
+        )
+        self.assertTrue(do)
+        self.assertIn("clear=true", reason)
 
     @patch("activities.scale_disk_guard.get_database_size_gb", return_value=8.0)
     @patch("activities.scale_disk_guard.get_user_model")
