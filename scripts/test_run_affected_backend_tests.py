@@ -12,6 +12,10 @@ class AffectedBackendRunnerTests(unittest.TestCase):
         self.assertTrue(any("simulator_light" in command for command in commands))
         self.assertTrue(any("test_rls.py" in command for command in commands))
         self.assertTrue(any("activities/test_tenant_moderator_scope.py" in command for command in commands))
+        self.assertTrue(
+            any("events/tests.py" in command for command in commands),
+            "full backend mode must exercise PluginRegistry compatibility",
+        )
 
     def test_skip_has_no_commands(self):
         self.assertEqual(commands_for_plan({"backend": {"mode": "skip"}}), [])

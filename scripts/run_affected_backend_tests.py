@@ -36,6 +36,7 @@ P1_CRITICAL = (
     "users/test_department_tenant_scope.py",
     "activities/test_moderation_tenant_scope.py",
     "activities/test_heatmap_tenant_scope.py",
+    "events/tests.py",
 )
 
 BACKEND_SUITE_TESTS = {
