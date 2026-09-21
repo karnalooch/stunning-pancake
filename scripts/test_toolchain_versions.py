@@ -10,6 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NODE_VERSION = "24.21.0"
 PNPM_VERSION = "12.4.2"
+PNPM_ACTION_SETUP_SHA = "0977fd99725f1db4007ccb2928dbb4e90d06cc86"
+SETUP_NODE_ACTION_SHA = "249970729cb0ef3589644e2896645e5dc5ba9c38"
 
 
 def read(path: str) -> str:
@@ -27,7 +29,8 @@ class ToolchainVersionContractTests(unittest.TestCase):
         action = read(".github/actions/pnpm-setup/action.yml")
         self.assertRegex(action, rf'default:\s*"{re.escape(NODE_VERSION)}"')
         self.assertRegex(action, rf'version:\s*{re.escape(PNPM_VERSION)}')
-        self.assertIn("uses: pnpm/action-setup@v6", action)
+        self.assertIn(f"uses: pnpm/action-setup@{PNPM_ACTION_SETUP_SHA}", action)
+        self.assertIn(f"uses: actions/setup-node@{SETUP_NODE_ACTION_SHA}", action)
 
     def test_pnpm_version_management_is_external_and_lockfile_stays_single_document(self):
         workspace = read("pnpm-workspace.yaml")

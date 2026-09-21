@@ -408,7 +408,7 @@ class DockerPublishStepContractTests(unittest.TestCase):
 
     def test_metadata_action_present_and_pinned(self):
         text = _docker_publish_text()
-        self.assertIn("docker/metadata-action@v6", text)
+        self.assertIn("docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302", text)
         # No semver inference
         self.assertNotIn("type=semver", text)
 
@@ -507,7 +507,7 @@ class AdminDockerBuildValidationTests(unittest.TestCase):
     def test_admin_build_push_action_present(self):
         self.assertEqual(
             self._build_step()["uses"],
-            "docker/build-push-action@v6",
+            "docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8",
         )
 
     def test_admin_docker_build_step_uses_repo_root_context(self):
