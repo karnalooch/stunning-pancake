@@ -6,7 +6,7 @@ from io import BytesIO
 
 import pytest
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import connection, transaction
 from django.utils import timezone
 
 from activities.gpx_storage import read_gpx, store_export
@@ -20,7 +20,7 @@ pytestmark = pytest.mark.django_db
 
 
 def _user(username: str = "privacy-user"):
-    tenant = Tenant.objects.create(id=f"tenant-{username}", name=username, is_active=True)
+    tenant = Tenant.objects.create(name=username, is_active=True)
     return get_user_model().objects.create_user(
         username=username,
         email=f"{username}@example.invalid",
@@ -73,11 +73,13 @@ def test_user_delete_fails_closed_when_export_storage_delete_fails(monkeypatch):
         raise RuntimeError("storage unavailable")
 
     monkeypatch.setattr("users.data_lifecycle.delete_storage_uri_strict", fail_delete)
+    user_pk = user.pk
 
     with pytest.raises(RuntimeError, match="storage unavailable"):
-        user.delete()
+        with transaction.atomic():
+            user.delete()
 
-    assert get_user_model().objects.filter(pk=user.pk).exists()
+    assert get_user_model().objects.filter(pk=user_pk).exists()
 
 
 def test_export_contains_all_activity_metadata_and_retained_raw_gps(monkeypatch, tmp_path):
