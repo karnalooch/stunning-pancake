@@ -21,7 +21,7 @@ def api_client():
 
 @pytest.fixture
 def tenant(db):
-    return Tenant.objects.create(id="test-city", name="Test City", is_active=True)
+    return Tenant.objects.create(name="Test City", is_active=True)
 
 
 @pytest.fixture
@@ -47,7 +47,7 @@ def admin_user(db, tenant):
 
 @pytest.fixture
 def other_tenant(db):
-    return Tenant.objects.create(id="other-city", name="Other City", is_active=True)
+    return Tenant.objects.create(name="Other City", is_active=True)
 
 
 @pytest.fixture
@@ -425,10 +425,30 @@ class TestAuditLogList:
         assert by_action["Admin Action: POST /api/users/create/"]["impersonator_username"] is None
         assert by_action["Admin Action: GET /api/test/"]["impersonator_username"] == "owner"
 
-    def test_tenant_admin_denied(self, api_client, admin_user):
+    def test_tenant_admin_lists_only_own_tenant(
+        self, api_client, admin_user, tenant, other_tenant
+    ):
+        AuditLog.objects.create(
+            impersonator=admin_user,
+            target_user=None,
+            tenant_id=str(tenant.id),
+            action="tenant-own",
+            status_code=200,
+        )
+        AuditLog.objects.create(
+            impersonator=None,
+            target_user=None,
+            tenant_id=str(other_tenant.id),
+            action="tenant-other",
+            status_code=200,
+        )
+
         api_client.force_authenticate(user=admin_user)
-        response = api_client.get(reverse("audit-log-list"))
-        assert response.status_code == 403
+        response = api_client.get(reverse("audit-log-list"), {"limit": 200})
+
+        assert response.status_code == 200
+        actions = {row["action"] for row in response.data}
+        assert actions == {"tenant-own"}
 
 
 @pytest.mark.django_db
