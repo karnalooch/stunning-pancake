@@ -237,8 +237,11 @@ class TestInvitation:
         assert data["email"] == "invitee@test.com"
         assert data["role"] == "TENANT_MODERATOR"
         assert "temporary_password" in data
+        temporary_password = data["temporary_password"]
+        assert len(temporary_password) == 12
         user = User.objects.get(email="invitee@test.com")
         assert user.role == "TENANT_MODERATOR"
+        assert user.check_password(temporary_password)
 
     def test_invitation_creates_audit_log(self, api_client, admin_user):
         api_client.force_authenticate(user=admin_user)
