@@ -43,6 +43,22 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 
 This opt-in mode may use network/cache access for the repository-pinned Expo Doctor (`1.20.4`) and `expo install --check`. Record its output separately.
 
+## Windows toolchain fallback: portable exact Node
+
+If the host Node does not satisfy the repository engine range and there is no already-working version manager, do not weaken the repository constraint and do not install another global Node manager just for the proof.
+
+Use the official Node.js Windows x64 ZIP for the exact proof version (`24.21.0`) as a user-local, session-scoped toolchain:
+
+1. Download `node-v24.21.0-win-x64.zip` and the matching official `SHASUMS256.txt` from the Node.js v24.21.0 release directory.
+2. Verify the ZIP SHA-256 against the `node-v24.21.0-win-x64.zip` line in that file before extracting.
+3. Extract under a user-writable directory such as `%LOCALAPPDATA%\\4velo-toolchains\\node-v24.21.0-win-x64`.
+4. Prepend that extracted directory to the **current PowerShell process** `PATH` only. Do not persist PATH changes and do not uninstall the machine-global Node.
+5. Verify `node --version` resolves to `v24.21.0` and `where.exe node` lists the portable path first.
+6. Use the Corepack distributed with that Node installation and activate exactly `pnpm@12.4.2`.
+7. Verify `pnpm --version` returns `12.4.2` before any install.
+
+This fallback is deliberately host-independent so the same proof procedure can be reproduced on both owner Windows machines without depending on NVM/Volta/Scoop state.
+
 ## Evidence policy
 
 A mobile claim is PASS only when it is tied to:
