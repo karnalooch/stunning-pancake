@@ -82,7 +82,7 @@ class ScorecardContractTests(unittest.TestCase):
         )
         self.assertTrue(run["with"]["publish_results"])
         self.assertEqual(run["with"]["results_format"], "sarif")
-        self.assertIn("github/codeql-action/upload-sarif@v4", text(SCORECARD))
+        self.assertIn("github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd", text(SCORECARD))
 
 
 class SLSAContractTests(unittest.TestCase):
@@ -103,7 +103,7 @@ class SLSAContractTests(unittest.TestCase):
         self.assertEqual(job["permissions"]["id-token"], "write")
         self.assertEqual(
             job["uses"],
-            "slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0",
+            "slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@f7dd8c54c2067bafc12ca7a55595d5ee9b75204a",
         )
         self.assertIn("publish-containers.outputs.slsa_subjects", job["with"]["base64-subjects"])
 
