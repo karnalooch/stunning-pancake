@@ -276,11 +276,9 @@ jobs:
             activities/test_simulator_operational_gate.py \
             -m simulator_light -q
 
-      # The legacy all-app suite still contains stale fixtures and mocks tracked as
-      # takeover debt. Keep it visible while focused backend gates above remain blocking.
-      - name: Full legacy suite (non-blocking baseline)
+      # The legacy all-app suite is green and blocks full backend CI runs.
+      - name: Full legacy suite
         if: steps.affected.outputs.backend_mode == 'full'
-        continue-on-error: true
         env:
           DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
           REDIS_URL: redis://localhost:6379/0
