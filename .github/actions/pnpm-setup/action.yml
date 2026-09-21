@@ -16,5 +16,29 @@ runs:
         node-version: ${{ inputs.node-version }}
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
-    - run: pnpm install --frozen-lockfile
+    - name: Install workspace dependencies with bounded retry
       shell: bash
+      run: |
+        set -euo pipefail
+        max_attempts=3
+        for attempt in $(seq 1 "$max_attempts"); do
+          echo "::group::pnpm install attempt ${attempt}/${max_attempts}"
+          set +e
+          pnpm install --frozen-lockfile
+          status=$?
+          set -e
+          echo "::endgroup::"
+
+          if [ "$status" -eq 0 ]; then
+            exit 0
+          fi
+
+          if [ "$attempt" -eq "$max_attempts" ]; then
+            echo "::error::pnpm install failed after ${max_attempts} attempts"
+            exit "$status"
+          fi
+
+          delay=$((attempt * 10))
+          echo "::warning::pnpm install failed with exit code ${status}; retrying in ${delay}s"
+          sleep "$delay"
+        done
