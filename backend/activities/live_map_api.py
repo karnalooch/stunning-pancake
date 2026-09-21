@@ -19,7 +19,11 @@ H3_AGGREGATE_VIEWPORT_ESTIMATE_MIN = 8000
 H3_AGGREGATE_MESO_CAPPED_MIN = 800
 
 
-def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:
+def _live_float(
+    pos: dict,
+    *keys: str,
+    default: float | None = 0.0,
+) -> float | None:
     for key in keys:
         raw = pos.get(key)
         if raw is None:
@@ -34,8 +38,10 @@ def _live_float(pos: dict, *keys: str, default: float = 0.0) -> float:
 
 
 def _live_coords(pos: dict) -> tuple[float, float] | None:
-    lat = _live_float(pos, "latitude", "lat")
-    lng = _live_float(pos, "longitude", "lng", "lon")
+    lat = _live_float(pos, "latitude", "lat", default=None)
+    lng = _live_float(pos, "longitude", "lng", "lon", default=None)
+    if lat is None or lng is None:
+        return None
     if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
         return None
     if lat == 0.0 and lng == 0.0:
