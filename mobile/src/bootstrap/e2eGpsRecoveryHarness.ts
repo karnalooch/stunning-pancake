@@ -1,7 +1,7 @@
 /**
  * E2E harness for the existing `EXPO_PUBLIC_E2E_GPS_RECOVERY` flag.
  *
- * Phyiscal proof flow on the real encrypted MMKV (`gps-buffer-encrypted-v1`):
+ * Physical proof flow on the real encrypted MMKV (`gps-buffer-encrypted-v1`):
  *
  *   SEEDED   -> `adb shell am force-stop`   -> new process   -> RECOVERED
  *

@@ -167,21 +167,37 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
     void (async () => {
 
-      await runE2eGpsRecoveryHarnessIfEnabled();
+      try {
 
-      const result = await recoverGpsDataOnLaunch();
+        await runE2eGpsRecoveryHarnessIfEnabled();
 
-      if (result.needsResumeUi || isTrackingRecoveryPending()) {
+      } catch (e) {
 
-        setGpsRecoveryVisible(true);
+        console.warn('[E2E GPS RECOVERY] FAILED', e);
 
       }
 
-      const resumed = await resumeActiveRideIfNeeded(null);
+      try {
 
-      if (resumed) setIsRecording(true);
+        const result = await recoverGpsDataOnLaunch();
 
-    })().catch((e) => console.warn('[GPS] launch recovery failed', e));
+        if (result.needsResumeUi || isTrackingRecoveryPending()) {
+
+          setGpsRecoveryVisible(true);
+
+        }
+
+        const resumed = await resumeActiveRideIfNeeded(null);
+
+        if (resumed) setIsRecording(true);
+
+      } catch (e) {
+
+        console.warn('[GPS] launch recovery failed', e);
+
+      }
+
+    })();
 
     startGpsBackgroundSync();
 
