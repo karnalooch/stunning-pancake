@@ -8,6 +8,8 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - "scripts/validate_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_provenance.py"
       - ".github/workflows/mobile-native-smoke.yml"
   workflow_dispatch:
 
@@ -63,6 +65,9 @@ jobs:
       - name: MMKV migration contract
         run: python -m unittest scripts/test_mobile_mmkv_v4_contract.py -v
 
+      - name: Native provenance validator tests
+        run: python -m unittest scripts/test_mobile_native_provenance.py -v
+
       - name: Mobile lint + typecheck
         run: |
           pnpm --dir mobile lint
@@ -74,9 +79,21 @@ jobs:
             __tests__/services/gpsEncryptedStorage.test.ts \
             __tests__/services/rideSessionService.test.ts
 
+      - name: Resolve Expo provenance
+        working-directory: mobile
+        run: pnpm exec expo config --type public --json > "$RUNNER_TEMP/4velo-expo-public.json"
+
       - name: Clean Android prebuild
         working-directory: mobile
         run: pnpm exec expo prebuild --clean --platform android --no-install
+
+      - name: Validate generated Android provenance
+        run: |
+          python scripts/validate_mobile_native_provenance.py \
+            --expo-config "$RUNNER_TEMP/4velo-expo-public.json" \
+            --version-file version.json \
+            --android-dir mobile/android \
+            --git-sha "$(git rev-parse HEAD)"
 
       - name: Compile Android debug APK
         working-directory: mobile/android
