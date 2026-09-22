@@ -35,6 +35,7 @@ import { syncRideQuestProgress } from '../game/quests';
 import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
+import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 
 
 
@@ -164,23 +165,23 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
   useEffect(() => {
 
-    recoverGpsDataOnLaunch()
+    void (async () => {
 
-      .then(async (result) => {
+      await runE2eGpsRecoveryHarnessIfEnabled();
 
-        if (result.needsResumeUi || isTrackingRecoveryPending()) {
+      const result = await recoverGpsDataOnLaunch();
 
-          setGpsRecoveryVisible(true);
+      if (result.needsResumeUi || isTrackingRecoveryPending()) {
 
-        }
+        setGpsRecoveryVisible(true);
 
-        const resumed = await resumeActiveRideIfNeeded(null);
+      }
 
-        if (resumed) setIsRecording(true);
+      const resumed = await resumeActiveRideIfNeeded(null);
 
-      })
+      if (resumed) setIsRecording(true);
 
-      .catch((e) => console.warn('[GPS] launch recovery failed', e));
+    })().catch((e) => console.warn('[GPS] launch recovery failed', e));
 
     startGpsBackgroundSync();
 
