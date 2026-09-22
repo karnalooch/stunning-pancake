@@ -168,7 +168,16 @@ describe('pilot-local eas.json contract', () => {
   });
 });
 
-describe('app.config.js product version contract', () => {
+describe('app.config.js product identity/version contract', () => {
+  test('uses the canonical native application identity', () => {
+    const resolved = resolveWithProfile('pilot-local') as {
+      android?: { package?: string };
+      ios?: { bundleIdentifier?: string };
+    };
+    expect(resolved.android?.package).toBe('com.sport.athlete');
+    expect(resolved.ios?.bundleIdentifier).toBe('com.sport.athlete');
+  });
+
   test('uses the numeric product version from the repository SSOT', () => {
     const resolved = resolveWithProfile('production') as { version?: string; runtimeVersion?: unknown };
     expect(releaseVersion.version).toMatch(/^\d+\.\d+\.\d+$/);
