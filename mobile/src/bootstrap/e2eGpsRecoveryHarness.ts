@@ -30,6 +30,12 @@ export async function runE2eGpsRecoveryHarnessIfEnabled(): Promise<void> {
   if (!__DEV__) return;
   if (!e2eConfig.gpsRecoverySeed) return;
 
+  if (e2eConfig.gpsLostKeyDestructive || e2eConfig.gpsBackgroundProof) {
+    throw new Error(
+      '[E2E GPS RECOVERY] recovery proof is mutually exclusive with other GPS E2E harnesses',
+    );
+  }
+
   const storage = await initializeGpsStorage();
   if (storage == null) {
     throw new Error(
