@@ -36,6 +36,7 @@ import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
+import { e2eConfig } from './e2eConfig';
 
 
 
@@ -164,6 +165,11 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
 
   useEffect(() => {
+
+    // The destructive lost-key proof owns GPS storage exclusively. Running
+    // normal launch recovery/background sync in parallel would invalidate the
+    // physical acceptance test and could race key deletion.
+    if (e2eConfig.gpsLostKeyDestructive) return;
 
     void (async () => {
 
