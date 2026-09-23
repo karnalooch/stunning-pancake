@@ -52,6 +52,10 @@ import {
   processGpsOutbox,
   uploadBufferSnapshot,
 } from './gpsSyncUpload';
+import {
+  isGpsBackgroundProofEnabled,
+  logGpsBackgroundProof,
+} from './gpsBackgroundProofLogging';
 
 const BATCH_INTERVAL_MS = 30_000;
 const LOCATION_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
@@ -310,23 +314,39 @@ export async function resumeTrackingAfterRelaunch(): Promise<boolean> {
   } catch {
     started = false;
   }
-  if (started) {
-    startGpsBackgroundSync();
-    return true;
+
+  let restarted = false;
+  if (!started) {
+    const resolution =
+      (state.resolution as PollingResolution) ?? PollingResolution.BALANCED;
+    const config = RESOLUTION_CONFIG[resolution];
+    await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
+      ...config,
+      foregroundService: {
+        notificationTitle: '4VELO — Tracking Active',
+        notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
+        notificationColor: '#00FFFF',
+      },
+    });
+    restarted = true;
   }
 
-  const resolution =
-    (state.resolution as PollingResolution) ?? PollingResolution.BALANCED;
-  const config = RESOLUTION_CONFIG[resolution];
-  await Location.startLocationUpdatesAsync(LOCATION_TASK_NAME, {
-    ...config,
-    foregroundService: {
-      notificationTitle: '4VELO — Tracking Active',
-      notificationBody: `Your route is being recorded (${resolution.toLowerCase()})`,
-      notificationColor: '#00FFFF',
-    },
-  });
   startGpsBackgroundSync();
+
+  if (isGpsBackgroundProofEnabled()) {
+    let taskActive = false;
+    try {
+      taskActive = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+    } catch {
+      taskActive = false;
+    }
+    logGpsBackgroundProof('RESUMED', {
+      activityId: state.activityId,
+      taskActive,
+      restarted,
+    });
+  }
+
   return true;
 }
 
@@ -506,6 +526,12 @@ TaskManager.defineTask(LOCATION_TASK_NAME, async ({ data, error }) => {
       };
       storage.set(GPS_STORAGE_KEYS.CURRENT_STATS, JSON.stringify(newStats));
       storage.set(GPS_STORAGE_KEYS.TRACKING_STATE, JSON.stringify(state));
+
+      logGpsBackgroundProof('POINT_ACCEPTED', {
+        activityId,
+        seq,
+        pendingPoints: pendingPointCount(storage),
+      });
     }
   }
 });
@@ -656,6 +682,20 @@ export class GpsSyncManager {
     } catch (error) {
       await this._closeUnstartedActivity(storage, activityId);
       throw error;
+    }
+
+    if (isGpsBackgroundProofEnabled()) {
+      let taskActive = false;
+      try {
+        taskActive = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK_NAME);
+      } catch {
+        taskActive = false;
+      }
+      logGpsBackgroundProof('STARTED', {
+        activityId,
+        taskActive,
+        resolution,
+      });
     }
 
     startGpsBackgroundSync();
