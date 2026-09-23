@@ -18,6 +18,7 @@ describe('release-grade public env guard', () => {
     delete process.env.EXPO_PUBLIC_E2E_EMAIL;
     delete process.env.EXPO_PUBLIC_E2E_PASSWORD;
     delete process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
+    delete process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY;
     delete process.env.EXPO_PUBLIC_VISION_FIXTURES;
     delete process.env.EXPO_PUBLIC_LLM_API_KEY;
   });
@@ -53,6 +54,17 @@ describe('release-grade public env guard', () => {
     const config = loadConfig();
 
     expect(() => config({ config: {} })).toThrow(/EXPO_PUBLIC_LLM_API_KEY/);
+  });
+
+  test('production rejects the destructive lost-key E2E harness', () => {
+    process.env.EAS_BUILD_PROFILE = 'production';
+    process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY = 'DELETE_GPS_ENCRYPTION_KEY';
+    process.env.EXPO_PUBLIC_API_URL = 'https://api.example.test';
+    process.env.EXPO_PUBLIC_TELEMETRY_URL = 'https://telemetry.example.test';
+
+    const config = loadConfig();
+
+    expect(() => config({ config: {} })).toThrow(/EXPO_PUBLIC_E2E_GPS_LOST_KEY/);
   });
 
   test('production rejects missing runtime endpoints', () => {
