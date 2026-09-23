@@ -36,6 +36,7 @@ import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
+import { runE2eGpsLostKeyHarnessIfEnabled } from './e2eGpsLostKeyHarness';
 
 
 
@@ -166,6 +167,16 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
   useEffect(() => {
 
     void (async () => {
+
+      try {
+
+        await runE2eGpsLostKeyHarnessIfEnabled();
+
+      } catch (e) {
+
+        console.warn('[E2E GPS LOST KEY] FAILED', e);
+
+      }
 
       try {
 
