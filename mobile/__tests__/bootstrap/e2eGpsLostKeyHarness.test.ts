@@ -5,15 +5,19 @@ const mockCreateAppMmkv = jest.fn();
 const mockSecureStoreGetItemAsync = jest.fn();
 const mockSecureStoreDeleteItemAsync = jest.fn();
 
-const mockGpsConstants = {
+const TEST_GPS_CONSTANTS = {
   keyAlias: '4velo.gps.mmkv.encryption-key-v1',
   bootstrapStorageId: 'gps-storage-bootstrap',
   provisionedMarker: 'encryption-key-provisioned-v1',
-};
+} as const;
 
 jest.mock('../../src/services/gpsEncryptedStorage', () => ({
   initializeGpsStorage: (...args: unknown[]) => mockInitializeGpsStorage(...args),
-  __GPS_ENCRYPTED_STORAGE_TEST_CONSTANTS: mockGpsConstants,
+  __GPS_ENCRYPTED_STORAGE_TEST_CONSTANTS: {
+    keyAlias: '4velo.gps.mmkv.encryption-key-v1',
+    bootstrapStorageId: 'gps-storage-bootstrap',
+    provisionedMarker: 'encryption-key-provisioned-v1',
+  },
 }));
 
 jest.mock('../../src/services/mmkvStorage', () => ({
@@ -77,7 +81,7 @@ describe('e2eGpsLostKeyHarness', () => {
     mutableE2eConfig.gpsLostKeyDestructive = false;
 
     secureKey = 'ab'.repeat(32);
-    bootstrapValues.set(mockGpsConstants.provisionedMarker, '1');
+    bootstrapValues.set(TEST_GPS_CONSTANTS.provisionedMarker, '1');
 
     mockCreateAppMmkv.mockReturnValue(bootstrapStorage);
     mockInitializeGpsStorage.mockResolvedValue(encryptedStorage);
@@ -120,7 +124,7 @@ describe('e2eGpsLostKeyHarness', () => {
     await runE2eGpsLostKeyHarnessIfEnabled();
 
     expect(mockCreateAppMmkv).toHaveBeenCalledWith({
-      id: mockGpsConstants.bootstrapStorageId,
+      id: TEST_GPS_CONSTANTS.bootstrapStorageId,
     });
     expect(mockInitializeGpsStorage).toHaveBeenCalledTimes(1);
 
@@ -131,7 +135,7 @@ describe('e2eGpsLostKeyHarness', () => {
       E2E_GPS_LOST_KEY_PHASE_ARMED,
     );
 
-    expect(mockSecureStoreDeleteItemAsync).toHaveBeenCalledWith(mockGpsConstants.keyAlias);
+    expect(mockSecureStoreDeleteItemAsync).toHaveBeenCalledWith(TEST_GPS_CONSTANTS.keyAlias);
     expect(secureKey).toBeNull();
     expect(logSpy).toHaveBeenCalledWith('[E2E GPS LOST KEY] KEY_DELETED');
   });
