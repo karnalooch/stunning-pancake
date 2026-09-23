@@ -51,9 +51,9 @@ export async function runE2eGpsLostKeyHarnessIfEnabled(): Promise<void> {
   if (!__DEV__) return;
   if (!e2eConfig.gpsLostKeyDestructive) return;
 
-  if (e2eConfig.gpsRecoverySeed) {
+  if (e2eConfig.gpsRecoverySeed || e2eConfig.gpsBackgroundProof) {
     throw new Error(
-      '[E2E GPS LOST KEY] destructive lost-key and recovery harnesses are mutually exclusive',
+      '[E2E GPS LOST KEY] destructive lost-key and other GPS harnesses are mutually exclusive',
     );
   }
 
