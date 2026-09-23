@@ -10,6 +10,7 @@ import { registerRootComponent } from 'expo';
 
 import App from './App';
 import { runE2eGpsLostKeyHarnessIfEnabled } from './src/bootstrap/e2eGpsLostKeyHarness';
+import { runE2eGpsBackgroundHarnessIfEnabled } from './src/bootstrap/e2eGpsBackgroundHarness';
 
 // Runtime-proof harnesses must not depend on a React commit. A render-time
 // failure elsewhere in AppContent would otherwise prevent a storage-only E2E
@@ -17,6 +18,10 @@ import { runE2eGpsLostKeyHarnessIfEnabled } from './src/bootstrap/e2eGpsLostKeyH
 // production-blocked destructive confirmation token is present.
 void runE2eGpsLostKeyHarnessIfEnabled().catch((error) => {
   console.warn('[E2E GPS LOST KEY] FAILED', error);
+});
+
+void runE2eGpsBackgroundHarnessIfEnabled().catch((error) => {
+  console.warn('[E2E GPS BG] FAILED', error);
 });
 
 registerRootComponent(App);
