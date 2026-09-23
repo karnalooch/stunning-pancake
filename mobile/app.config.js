@@ -18,6 +18,7 @@ const resolveE2eExtra = () => ({
   EXPO_PUBLIC_E2E_AUTO_LOGIN: process.env.EXPO_PUBLIC_E2E_AUTO_LOGIN,
   EXPO_PUBLIC_E2E_SKIP_ONBOARDING: process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING,
   EXPO_PUBLIC_E2E_GPS_RECOVERY: process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY,
+  EXPO_PUBLIC_E2E_GPS_LOST_KEY: process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY,
   // Vision parity harness — render deterministic mock data for screenshot diff.
   EXPO_PUBLIC_VISION_FIXTURES: process.env.EXPO_PUBLIC_VISION_FIXTURES,
 });
@@ -38,6 +39,7 @@ const assertReleaseSafePublicEnv = () => {
     'EXPO_PUBLIC_E2E_AUTO_LOGIN',
     'EXPO_PUBLIC_E2E_SKIP_ONBOARDING',
     'EXPO_PUBLIC_E2E_GPS_RECOVERY',
+    'EXPO_PUBLIC_E2E_GPS_LOST_KEY',
     'EXPO_PUBLIC_VISION_FIXTURES',
   ].filter((key) => {
     const value = String(process.env[key] ?? '').toLowerCase();
