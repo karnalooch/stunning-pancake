@@ -9,4 +9,14 @@ import './src/theme/unistylesSetup';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
+import { runE2eGpsLostKeyHarnessIfEnabled } from './src/bootstrap/e2eGpsLostKeyHarness';
+
+// Runtime-proof harnesses must not depend on a React commit. A render-time
+// failure elsewhere in AppContent would otherwise prevent a storage-only E2E
+// proof from running at all. The harness is a no-op unless the DEV-only,
+// production-blocked destructive confirmation token is present.
+void runE2eGpsLostKeyHarnessIfEnabled().catch((error) => {
+  console.warn('[E2E GPS LOST KEY] FAILED', error);
+});
+
 registerRootComponent(App);

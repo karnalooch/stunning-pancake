@@ -18,6 +18,8 @@ describe('e2eConfig', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
+    delete process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY;
+    delete process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
     (Constants as { expoConfig?: { extra?: Record<string, string> } }).expoConfig = { extra: {} };
   });
 
@@ -53,5 +55,22 @@ describe('e2eConfig', () => {
 
     const { shouldSkipOnboardingForE2e } = loadE2eConfig();
     expect(shouldSkipOnboardingForE2e()).toBe(false);
+  });
+
+  test('does not arm destructive GPS lost-key proof for a generic true flag', () => {
+    process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY = 'true';
+
+    const { e2eConfig } = loadE2eConfig();
+
+    expect(e2eConfig.gpsLostKeyDestructive).toBe(false);
+  });
+
+  test('arms destructive GPS lost-key proof only for the explicit confirmation token', () => {
+    process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY = 'DELETE_GPS_ENCRYPTION_KEY';
+
+    const { e2eConfig, E2E_GPS_LOST_KEY_CONFIRMATION } = loadE2eConfig();
+
+    expect(E2E_GPS_LOST_KEY_CONFIRMATION).toBe('DELETE_GPS_ENCRYPTION_KEY');
+    expect(e2eConfig.gpsLostKeyDestructive).toBe(true);
   });
 });

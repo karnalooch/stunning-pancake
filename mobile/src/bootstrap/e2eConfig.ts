@@ -12,10 +12,13 @@ function readExtra(): Record<string, string | undefined> {
   return { ...fromManifest, ...fromManifest2, ...fromExpo };
 }
 
+export const E2E_GPS_LOST_KEY_CONFIRMATION = 'DELETE_GPS_ENCRYPTION_KEY';
+
 type E2eEnvKey =
   | 'EXPO_PUBLIC_E2E_AUTO_LOGIN'
   | 'EXPO_PUBLIC_E2E_SKIP_ONBOARDING'
-  | 'EXPO_PUBLIC_E2E_GPS_RECOVERY';
+  | 'EXPO_PUBLIC_E2E_GPS_RECOVERY'
+  | 'EXPO_PUBLIC_E2E_GPS_LOST_KEY';
 
 function readProcessEnv(key: E2eEnvKey): string | undefined {
   switch (key) {
@@ -25,6 +28,8 @@ function readProcessEnv(key: E2eEnvKey): string | undefined {
       return process.env.EXPO_PUBLIC_E2E_SKIP_ONBOARDING;
     case 'EXPO_PUBLIC_E2E_GPS_RECOVERY':
       return process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
+    case 'EXPO_PUBLIC_E2E_GPS_LOST_KEY':
+      return process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY;
   }
 }
 
@@ -45,6 +50,8 @@ export const e2eConfig = {
   autoLogin: readEnvFlag('EXPO_PUBLIC_E2E_AUTO_LOGIN'),
   skipOnboarding: readEnvFlag('EXPO_PUBLIC_E2E_SKIP_ONBOARDING'),
   gpsRecoverySeed: readEnvFlag('EXPO_PUBLIC_E2E_GPS_RECOVERY'),
+  gpsLostKeyDestructive:
+    readEnv('EXPO_PUBLIC_E2E_GPS_LOST_KEY') === E2E_GPS_LOST_KEY_CONFIRMATION,
 };
 
 export function isE2eAutoLoginEnabled(): boolean {
