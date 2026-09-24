@@ -205,7 +205,7 @@ Runtime reconciliation as of 2026-09-24:
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
 | T79 | Home screen implementation/polish | ACTIVE | PR #132 establishes the Frozen UI v1.2 semantic/product foundation first; Home follows as a separate reviewable T79 slice. Real data, first-use comprehension, loading/empty/error states remain required. |
-| T80 | Active Ride screen implementation/polish (**UI-T80 / Active Ride**) | PLANNED | Legacy tranche ID T80. Do not use bare \`T80\` because Recovery epic #149 historically reused that label. Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
+| T80 | Active Ride screen implementation/polish (**UI-T80 / Active Ride**) | PLANNED | Legacy tranche ID T80. Do not use bare `T80` because Recovery epic #149 historically reused that label. Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
 | T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
 | T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
 | T83 | Profile + remaining pilot mobile surfaces | PLANNED | Consistent typography/tokens/visual language; no developer placeholders. |
