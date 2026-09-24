@@ -42,6 +42,24 @@ The repository has several strong foundations: required aggregate CI, activity-s
 
 The blockers are finite and concrete. The highest priority is not more UI work; it is closing the durable ACK boundary, making the canonical ride route reconstructable from persisted telemetry, proving full backup/restore integrity with measured RPO/RTO, and proving tenant isolation for every pilot-scope data path.
 
+## 3A. Post-audit runtime update — 2026-09-24
+
+This section is a dated addendum. It does **not** rewrite the historical 2026-09-16 gate matrix below.
+
+Subsequent Android work materially improved the mobile GPS/encrypted-storage evidence:
+
+- the MMKV v4/Nitro migration and encrypted GPS storage path are on `main`;
+- PR #258 physically proved missing/lost GPS encryption-key behavior fails closed after process death, with no silent replacement key and no plaintext fallback: https://github.com/karnalooch/stunning-pancake/pull/258#issuecomment-5802377295;
+- PR #259 physically proved the production GPS producer can accept a real emulator location while the app is backgrounded with the display locked, then recover the same activity after force-stop/relaunch and accept a new point: https://github.com/karnalooch/stunning-pancake/pull/259#issuecomment-5809822966;
+- protected `main` after #259 is `30c0d4cb9502f6d92f75a5fd633e7624c213f809`.
+
+Interpretation of the historical rows:
+
+- DS-014's 2026-09-16 `FAIL` describes the old repository state and is superseded for the encrypted GPS storage/key-management path by the later implementation plus #258 physical proof.
+- DS-012's 2026-09-16 `NOT RUN` must remain as historical audit text. The locked/background + force-stop/relaunch GPS subcases are now physically proven by #259, but that does **not** by itself claim completion of every broader offline/chaos/commit-response scenario represented by the original row or T76.
+
+Remaining mobile release-trust work is tracked outside this historical audit: #156 for canonical clean-build/package/version/runtimeVersion provenance and #157 for deterministic full Ride smoke plus final exact-artifact re-proof.
+
 ## 4. Gate matrix
 
 | ID | Area | Status | Sev | Evidence / finding | Required before P6 |
