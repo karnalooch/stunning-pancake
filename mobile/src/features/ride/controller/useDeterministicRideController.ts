@@ -42,9 +42,12 @@ export function useDeterministicRideController(
   );
 
   const handleStopRide = useCallback(async () => {
+    const hasSummary = state.liveDistanceKm > 0;
     dispatch({ type: 'finish' });
-    return { navigated: false };
-  }, []);
+    return hasSummary
+      ? { navigated: false }
+      : { navigated: true, target: 'Ride' as const };
+  }, [state.liveDistanceKm]);
 
   const clearEdgeMessage = useCallback(() => {
     options.onEdgeMessage?.(null);
