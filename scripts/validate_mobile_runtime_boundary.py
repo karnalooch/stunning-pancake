@@ -104,9 +104,13 @@ def _git(*args: str) -> str:
 
 
 def _resolve_base(base_sha: str, head_sha: str) -> str:
-    if base_sha and base_sha != ZERO_SHA:
-        return base_sha
-    return _git("rev-parse", f"{head_sha}^").strip()
+    del head_sha  # The trusted base must come from CI, never from HEAD ancestry.
+    if not base_sha or base_sha == ZERO_SHA:
+        raise ValueError(
+            "base SHA is missing or zero; cannot compute the runtime boundary "
+            "without a trusted base commit"
+        )
+    return base_sha
 
 
 def _json_at(sha: str, path: str) -> dict:
