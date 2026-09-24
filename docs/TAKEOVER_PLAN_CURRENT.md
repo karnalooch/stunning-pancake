@@ -135,14 +135,14 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T66 | Prevent public/profile self-service tenant rebinding | DONE | PR #101. |
 | T67 | Enforce club tenant isolation | DONE | PR #102. |
 | T68 | Signing-key rotation/revocation proof | BLOCKED | OWNER ACTION REQUIRED. Confirm external persistent key; prove old exposed value never active or rotate/revoke it. No secret value in evidence. |
-| T69 | Encrypt GPS data at rest on Android | DONE | PR #106. MMKV key is protected through the SecureStore/Keystore path; physical locked/background behavior remains part of T76 evidence. |
+| T69 | Encrypt GPS data at rest on Android | DONE | PR #106. MMKV key is protected through the SecureStore/Keystore path; lost-key fail-closed is physically proven by #258 and locked/background GPS storage/producer behavior by #259. Broader T76 chaos/offline scenarios remain separate. |
 | T70 | Audit log append-only/tamper-resistant contract + critical-action coverage | DONE | PR #108. |
 | T71 | Central PII/token/GPS log redaction | DONE | PR #109. |
 | T72 | Delete/export/retention contract | DONE | PR #110. |
 | T73 | Database runtime-role + worker tenant-context hardening | DONE | PR #111. |
 | T74 | Critical-write idempotency inventory | DONE | PR #112. Critical retries use durable request identities/constraints where business effects could duplicate. |
 | T75 | TLS/transport + backup confidentiality verification | DONE | PR #113. Loopback-only pilot transport plus AES-256-GCM backup confidentiality/retention are repo-gated; no external TLS/provider claim is inferred. |
-| T76 | Android/home-lab chaos and restart matrix | PARTIAL | PR #114 prepares a fail-closed physical-device harness/evidence matrix. Final PASS still requires the real Android + home-lab screen-off/offline/kill/restart/commit-response scenarios. |
+| T76 | Android/home-lab chaos and restart matrix | PARTIAL | PR #114 prepares the broader fail-closed physical-device/home-lab matrix. #259 now proves the locked/background + force-stop/relaunch GPS subcase on real Android runtime; offline/backend/commit-response and any other matrix rows still require their own evidence. |
 
 **Data-safety exit:** repo-side implementation is complete through T76 and T57 runtime recovery evidence is now accepted. Final exit still requires external evidence for T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T57 and T60–T75 are retained as evidence, not reopened mechanically.
 
@@ -174,6 +174,30 @@ Required behavior:
 
 **Fail-safe invariant:** if the planner cannot prove that a narrower test set is safe, it must select **FULL**, never **SKIP**.
 
+## Mobile recovery/UI naming reconciliation — 2026-09-24
+
+There are two historical uses of `T80`:
+
+- GitHub recovery parent #149 was named `T80: recover mobile runtime and rebuild app shell...`;
+- the master tranche register already used `T80` for the Active Ride UI tranche.
+
+To prevent further ambiguity:
+
+- refer to GitHub #149 as **Recovery epic #149** (never bare `T80`);
+- refer to the tranche-table item below as **UI-T80 / Active Ride** (legacy tranche ID `T80`);
+- current architecture/Ride work should prefer explicit issue numbers (#151/#152/#153/#154/#156/#157) over a bare T80 label.
+
+Runtime reconciliation as of 2026-09-24:
+
+- #258 lost-key fail-closed physical proof — PASS and merged;
+- #259 locked/background GPS durability physical proof — PASS and merged;
+- #162 MMKV/GPS durability child — completed/closed;
+- #156 remains open for canonical prebuild/package/version/runtimeVersion and Windows/provenance work;
+- #157 remains open for deterministic full Ride smoke and final exact-artifact proof;
+- #147 Home UI must be refreshed against current `main` and revalidated before merge;
+- #151 / Draft PR #155 should be refreshed/finalized after Home/UI and before #152 begins;
+- Q-P1-9 is tracked as #260 and is intentionally scheduled after the UI lane.
+
 ## T77–T84 — mobile UI + UX polish
 
 | ID | Tranche | Status | Evidence / acceptance |
@@ -181,7 +205,7 @@ Required behavior:
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
 | T79 | Home screen implementation/polish | ACTIVE | PR #132 establishes the Frozen UI v1.2 semantic/product foundation first; Home follows as a separate reviewable T79 slice. Real data, first-use comprehension, loading/empty/error states remain required. |
-| T80 | Active Ride screen implementation/polish | PLANNED | Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
+| T80 | Active Ride screen implementation/polish (**UI-T80 / Active Ride**) | PLANNED | Legacy tranche ID T80. Do not use bare \`T80\` because Recovery epic #149 historically reused that label. Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
 | T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
 | T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
 | T83 | Profile + remaining pilot mobile surfaces | PLANNED | Consistent typography/tokens/visual language; no developer placeholders. |
@@ -218,6 +242,10 @@ Large Node/pnpm major upgrades are **not** automatic pilot blockers. Do them bef
 | T93 | Android pilot with small approved tester group | PLANNED | Starts only after T59 declares the exact candidate and no known pilot blocker remains. Collect real ride, sync, usability and operational evidence; decide expand / fix-and-repeat / stop-and-redesign. |
 
 ---
+
+## Post-UI local Android workflow cleanup
+
+Q-P1-9 is tracked as #260: one SDK/ADB authority, bounded timeouts, deterministic preflight, Fast Refresh vs Apply Changes vs rebuild guidance, and a reproducible new-PC runbook. It is intentionally scheduled **after the current Home/UI lane**, not as a reason to postpone #147.
 
 # Current pilot execution order
 
