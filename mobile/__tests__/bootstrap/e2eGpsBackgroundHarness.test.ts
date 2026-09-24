@@ -4,6 +4,22 @@ const mockInitializeGpsStorage = jest.fn();
 const mockLoadTrackingState = jest.fn();
 const mockStartTracking = jest.fn();
 const mockResumeTrackingAfterRelaunch = jest.fn();
+const mockGetCurrentAppState = jest.fn();
+const mockRemoveAppStateListener = jest.fn();
+const mockAddAppStateListener = jest.fn();
+let mockAppStateChangeListener: ((state: string) => void) | undefined;
+let mockNativeAppState = 'active';
+
+jest.mock('react-native', () => ({
+  AppState: {
+    addEventListener: (...args: unknown[]) => mockAddAppStateListener(...args),
+  },
+  NativeModules: {
+    AppState: {
+      getCurrentAppState: (...args: unknown[]) => mockGetCurrentAppState(...args),
+    },
+  },
+}));
 
 jest.mock('../../src/services/gpsEncryptedStorage', () => ({
   initializeGpsStorage: (...args: unknown[]) => mockInitializeGpsStorage(...args),
@@ -57,7 +73,23 @@ describe('e2eGpsBackgroundHarness', () => {
     mockLoadTrackingState.mockReturnValue(null);
     mockStartTracking.mockResolvedValue(undefined);
     mockResumeTrackingAfterRelaunch.mockResolvedValue(true);
+    mockNativeAppState = 'active';
+    mockAppStateChangeListener = undefined;
+    mockAddAppStateListener.mockImplementation(
+      (_event: string, listener: (state: string) => void) => {
+        mockAppStateChangeListener = listener;
+        return { remove: mockRemoveAppStateListener };
+      },
+    );
+    mockGetCurrentAppState.mockImplementation((success: (state: object) => void) => {
+      success({ app_state: mockNativeAppState });
+    });
     (globalThis as { __DEV__?: boolean }).__DEV__ = true;
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   afterAll(() => {
@@ -69,16 +101,63 @@ describe('e2eGpsBackgroundHarness', () => {
     expect(mockInitializeGpsStorage).not.toHaveBeenCalled();
   });
 
-  test('starts the real GPS manager with deterministic proof identity', async () => {
+  test('starts immediately when the app is already active', async () => {
     mutableConfig.gpsBackgroundProof = true;
 
     await runE2eGpsBackgroundHarnessIfEnabled();
 
+    expect(mockGetCurrentAppState).toHaveBeenCalledTimes(1);
+    expect(mockRemoveAppStateListener).toHaveBeenCalledTimes(1);
     expect(GpsSyncManager).toHaveBeenCalledWith(E2E_GPS_BACKGROUND_DEVICE_ID, null);
     expect(mockStartTracking).toHaveBeenCalledWith(
       E2E_GPS_BACKGROUND_ACTIVITY_ID,
       'BALANCED',
     );
+  });
+
+  test('waits through a delayed dev-client handoff before starting GPS', async () => {
+    mutableConfig.gpsBackgroundProof = true;
+    mockNativeAppState = 'background';
+
+    const harnessPromise = runE2eGpsBackgroundHarnessIfEnabled();
+    await Promise.resolve();
+
+    expect(mockStartTracking).not.toHaveBeenCalled();
+    mockAppStateChangeListener?.('active');
+    await harnessPromise;
+
+    expect(mockStartTracking).toHaveBeenCalledWith(
+      E2E_GPS_BACKGROUND_ACTIVITY_ID,
+      'BALANCED',
+    );
+  });
+
+  test('fails closed when the app never becomes active before the timeout', async () => {
+    mutableConfig.gpsBackgroundProof = true;
+    mockNativeAppState = 'background';
+
+    const harnessPromise = runE2eGpsBackgroundHarnessIfEnabled();
+    const rejection = expect(harnessPromise).rejects.toThrow(
+      /app did not become active within 15000ms/,
+    );
+
+    await jest.advanceTimersByTimeAsync(15_000);
+    await rejection;
+
+    expect(mockInitializeGpsStorage).not.toHaveBeenCalled();
+    expect(mockStartTracking).not.toHaveBeenCalled();
+  });
+
+  test('removes the AppState listener after the wait settles', async () => {
+    mutableConfig.gpsBackgroundProof = true;
+    mockNativeAppState = 'background';
+
+    const harnessPromise = runE2eGpsBackgroundHarnessIfEnabled();
+    await Promise.resolve();
+    mockAppStateChangeListener?.('active');
+    await harnessPromise;
+
+    expect(mockRemoveAppStateListener).toHaveBeenCalledTimes(1);
   });
 
   test('resumes the same proof activity after relaunch', async () => {
