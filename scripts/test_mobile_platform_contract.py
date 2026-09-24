@@ -92,11 +92,15 @@ class MobilePlatformContractTests(unittest.TestCase):
                 self.assertIn("pnpm dlx eas-cli@24.7.0", command)
                 self.assertNotIn("npx eas ", command)
 
-        self.assertIn(
-            "pnpm exec expo prebuild --clean -p android",
-            scripts.get("build:local:preview:android", ""),
-        )
-        self.assertNotIn("npx expo ", scripts.get("build:local:preview:android", ""))
+        diagnostic = scripts.get("build:diagnostic:android:windows", "")
+        self.assertIn("pnpm exec expo prebuild --clean -p android", diagnostic)
+        self.assertIn("gradlew.bat assembleDebug --no-daemon", diagnostic)
+        self.assertNotIn("reactNativeArchitectures", diagnostic)
+        self.assertNotIn("assembleRelease", diagnostic)
+        self.assertNotIn("npx expo ", diagnostic)
+
+        legacy_alias = scripts.get("build:local:preview:android", "")
+        self.assertIn("build:diagnostic:android:windows", legacy_alias)
 
     def test_eas_uses_default_monorepo_install_without_duplicate_hook(self):
         package = json.loads(read(MOBILE / "package.json"))
