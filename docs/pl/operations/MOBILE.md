@@ -5,12 +5,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-24 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-24 |
 | **canonical_path** | docs/pl/operations/MOBILE.md |
 
 ---
@@ -19,7 +19,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-24 |
 | **Cel** | Zbudować i wydać aplikację React Native/Expo oraz obsłużyć awarie GPS/telemetrii w polu. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **Architektura warstw GPS** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -76,6 +76,20 @@ pnpm --dir mobile start
 7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
 
 Nie edytuj ręcznie `versionCode`, `buildNumber`, `mobile/package.json`, `admin/package.json` ani wersji w `app.config.js`. Robi to kontrakt wersjonowania; root `app.json` nie jest już źródłem konfiguracji Expo.
+
+### Granica native runtime / appVersion
+
+Expo używa `runtimeVersion.policy = appVersion`. CI zatrzymuje więc zmianę, która może zmienić natywny runtime bez przesunięcia numerycznej granicy `version.json.version`.
+
+Zmiana numerycznego appVersion jest wymagana, gdy PR zmienia:
+
+- bezpośrednią natywną zależność mobile, np. moduł Expo, React Native, Firebase, MapLibre lub Skia;
+- `mobile/app.config.js`;
+- committed ścieżki `mobile/plugins/**`, `mobile/android/**` lub `mobile/ios/**`.
+
+Czyste zmiany JS/UI nie wymagają bumpa runtime tylko dlatego, że zmieniają kod aplikacji. Sama zmiana `version.json.prerelease` również nie przesuwa granicy Expo runtime — musi zmienić się numeryczne `version`.
+
+Blokującą implementacją jest `scripts/validate_mobile_runtime_boundary.py` uruchamiany w mobile CI.
 
 ### Weryfikacja po buildzie
 

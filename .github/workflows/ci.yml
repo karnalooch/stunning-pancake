@@ -366,6 +366,15 @@ jobs:
       - name: Mobile platform configuration contract
         run: python -m unittest scripts/test_mobile_platform_contract.py -v
 
+      - name: Mobile runtime/appVersion boundary
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/validate_mobile_runtime_boundary.py \
+            --base-sha "$CI_BASE_SHA" \
+            --head-sha "$CI_HEAD_SHA"
+
       - name: MMKV v4 migration contract
         run: python -m unittest scripts/test_mobile_mmkv_v4_contract.py -v
 
@@ -469,6 +478,9 @@ jobs:
 
       - name: Test mobile Android harness contract
         run: python -m unittest scripts/test_mobile_harness_contract.py -v
+
+      - name: Test mobile runtime/appVersion boundary
+        run: python -m unittest scripts/test_mobile_runtime_boundary.py -v
 
       - name: Test CI aggregate policy
         run: python -m unittest scripts/test_ci_aggregate.py -v
