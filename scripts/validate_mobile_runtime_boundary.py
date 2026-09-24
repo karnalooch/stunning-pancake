@@ -12,7 +12,6 @@ import json
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import Path
 
 ZERO_SHA = "0" * 40
 
@@ -99,8 +98,7 @@ def _git(*args: str) -> str:
         ["git", *args],
         check=True,
         text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
     return completed.stdout
 
