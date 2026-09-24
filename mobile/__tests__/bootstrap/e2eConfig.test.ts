@@ -20,6 +20,7 @@ describe('e2eConfig', () => {
     process.env = { ...originalEnv };
     delete process.env.EXPO_PUBLIC_E2E_GPS_LOST_KEY;
     delete process.env.EXPO_PUBLIC_E2E_GPS_RECOVERY;
+    delete process.env.EXPO_PUBLIC_E2E_GPS_BACKGROUND_PROOF;
     (Constants as { expoConfig?: { extra?: Record<string, string> } }).expoConfig = { extra: {} };
   });
 
@@ -72,5 +73,22 @@ describe('e2eConfig', () => {
 
     expect(E2E_GPS_LOST_KEY_CONFIRMATION).toBe('DELETE_GPS_ENCRYPTION_KEY');
     expect(e2eConfig.gpsLostKeyDestructive).toBe(true);
+  });
+
+  test('does not arm background GPS proof for generic true', () => {
+    process.env.EXPO_PUBLIC_E2E_GPS_BACKGROUND_PROOF = 'true';
+
+    const { e2eConfig } = loadE2eConfig();
+
+    expect(e2eConfig.gpsBackgroundProof).toBe(false);
+  });
+
+  test('arms background GPS proof only for the explicit confirmation token', () => {
+    process.env.EXPO_PUBLIC_E2E_GPS_BACKGROUND_PROOF = 'PROVE_BACKGROUND_GPS';
+
+    const { e2eConfig, E2E_GPS_BACKGROUND_PROOF_CONFIRMATION } = loadE2eConfig();
+
+    expect(E2E_GPS_BACKGROUND_PROOF_CONFIRMATION).toBe('PROVE_BACKGROUND_GPS');
+    expect(e2eConfig.gpsBackgroundProof).toBe(true);
   });
 });
