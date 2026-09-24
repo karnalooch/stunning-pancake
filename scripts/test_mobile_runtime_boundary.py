@@ -3,6 +3,8 @@ from __future__ import annotations
 import unittest
 
 from scripts.validate_mobile_runtime_boundary import (
+    ZERO_SHA,
+    _resolve_base,
     evaluate_boundary,
     is_native_runtime_dependency,
     native_dependency_changes,
@@ -10,6 +12,16 @@ from scripts.validate_mobile_runtime_boundary import (
 
 
 class MobileRuntimeBoundaryTests(unittest.TestCase):
+
+    def test_missing_or_zero_base_fails_closed(self):
+        for base in ("", ZERO_SHA):
+            with self.subTest(base=base), self.assertRaises(ValueError):
+                _resolve_base(base, "a" * 40)
+
+    def test_trusted_base_is_used_verbatim(self):
+        base = "b" * 40
+        self.assertEqual(_resolve_base(base, "a" * 40), base)
+
     def test_classifies_native_runtime_dependencies(self):
         for name in (
             "expo",
