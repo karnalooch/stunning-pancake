@@ -4,6 +4,18 @@ Tracker: #157.
 
 This runbook intentionally assumes nothing about the previous Android/Metro/EAS runtime state. Repo-side platform normalization (#159), Android harness hardening (#161), and MMKV v4/Nitro migration (#163) are already on `main`; this collector is for the remaining owner-machine/runtime proof.
 
+## Status update — 2026-09-24
+
+The physical GPS/MMKV durability items that were still open when this runbook was written are now accepted:
+
+- encrypted GPS payload recovery across process death — PASS via PR #256;
+- lost encryption-key fail-closed behavior — PASS via PR #258: https://github.com/karnalooch/stunning-pancake/pull/258#issuecomment-5802377295;
+- locked/background GPS durability, including a real accepted point while locked/backgrounded and same-activity recovery after force-stop/relaunch — PASS via PR #259: https://github.com/karnalooch/stunning-pancake/pull/259#issuecomment-5809822966.
+
+Protected `main` after #259 is `30c0d4cb9502f6d92f75a5fd633e7624c213f809`.
+
+These proofs do **not** close the full absolute-zero tracker. Remaining release-trust work stays in #156/#157: canonical clean prebuild/package/version/runtimeVersion provenance, deterministic full Ride lifecycle smoke, and final exact-artifact re-proof.
+
 ## First capture
 
 Keep the checkout being inspected untouched. Run the collector from an isolated worktree so the evidence script itself does not need to be copied into the checkout under test.
@@ -82,9 +94,10 @@ Old screenshots, cached APK behavior, and green static CI are supporting evidenc
 5. Start Metro freshly **from `mobile/`**, using the canonical dev-client command.
 6. Install/launch the exact dev-client artifact and prove it requests that fresh bundle.
 7. Record exact Git SHA, app version/runtime boundary, package id, device/emulator identity, and artifact identity.
-8. Prove MMKV persistence across force-stop -> relaunch, including SecureStore-backed GPS key recovery and relevant auth/session/preferences state.
-9. Prove locked/background GPS durability.
-10. Execute the fail-closed Ride smoke: Start -> Active -> Pause -> Resume -> Finish -> Summary -> Home.
-11. Only then resume visual review.
+8. Treat the accepted #256/#258/#259 MMKV/GPS physical proofs as completed evidence; do not re-open them mechanically.
+9. Complete #156 canonical native-generation/package/version/runtimeVersion and exact-artifact provenance.
+10. Execute the deterministic Ride smoke: Start -> Active -> Pause -> Resume -> Finish -> Summary -> Home.
+11. Re-run the final exact-artifact proof on the corrected canonical build path.
+12. UI review may now resume on a refreshed #147 branch, but final mobile release sign-off still waits for the remaining #156/#157 gates.
 
 Do not skip directly to UI.
