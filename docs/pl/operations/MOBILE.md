@@ -10,7 +10,7 @@
 | **lang** | pl |
 | **translation** | [English](../../en/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-24 |
 | **canonical_path** | docs/pl/operations/MOBILE.md |
 
 ---
