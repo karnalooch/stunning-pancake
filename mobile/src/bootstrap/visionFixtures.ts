@@ -31,6 +31,26 @@ export function getVisionHomePreviewState(
   return enabled ? visionHomePreviewState : null;
 }
 
+export const VISION_RIDE_FINISH_KINDS = [
+  'durable-success',
+  'pending-finalization',
+  'recovery-required',
+] as const;
+
+export type VisionRideFinishKind = (typeof VISION_RIDE_FINISH_KINDS)[number];
+
+let visionRideFinishKind: VisionRideFinishKind = 'durable-success';
+
+export function setVisionRideFinishKind(kind: VisionRideFinishKind): void {
+  visionRideFinishKind = kind;
+}
+
+export function getVisionRideFinishKind(
+  enabled: boolean,
+): VisionRideFinishKind | undefined {
+  return enabled ? visionRideFinishKind : undefined;
+}
+
 
 /** True when the build should render vision fixture data instead of live data. */
 export function isVisionFixtures(): boolean {
