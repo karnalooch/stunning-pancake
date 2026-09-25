@@ -2,6 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
+**Last reconciled with `main`:** 2026-09-25 (`d31d039a`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
@@ -19,6 +20,19 @@ Supporting documents remain useful as detailed contracts/evidence, but they do n
 - design/audit documents — detailed UI contracts.
 
 If any stage label (`P3`, `P4`, `P5`, `PPH`, `P6`) conflicts with a tranche below, the tranche table in this document wins for execution order. Stage labels are only human-friendly milestones.
+
+### Reconciliation snapshot — 2026-09-25
+
+This snapshot records the actual repository/runtime state after the September cleanup so older issue text does not reopen already-proven work:
+
+- **Repository hygiene:** PR #266 merged. Historical/stale non-Dependabot branch refs were pruned; unique unmerged tips were preserved with archive tags before deletion. At cleanup completion the branch set was `main` plus five retained Dependabot branches.
+- **Dependabot policy:** ordinary version-update PR generation is disabled; new Dependabot PRs are security-only and grouped per ecosystem. Existing useful PRs may remain open for deliberate review.
+- **Operational notifications:** PR #267 merged Slack routing for selected 4VELO operational signals.
+- **T94 selective CI:** PR #117 is merged and T94 is **DONE**. Unknown impact still fails safe to FULL coverage; exact-candidate T92 regression remains broader.
+- **Android runtime durability:** #256, #258 and #259 are merged/accepted evidence for encrypted GPS recovery, lost-key fail-closed behavior and locked/background GPS durability.
+- **Native provenance/build policy:** #257 is merged; #264 is merged and makes raw Windows native builds diagnostic-only while EAS remains pilot/release artifact authority.
+- **Runtime boundary:** #265 was closed unmerged during repository cleanup. Its exact head `16ce877b62934b97677961018361bc55acc1eb05` was preserved in the branch-cleanup archive and remains candidate work for #156.
+- **T79 Home:** #262 was closed unmerged during repository cleanup. Its exact head `44a66163dfe16e28450eaf4783c3cc562ffbb00d` was preserved in the branch-cleanup archive and can be restored/rebased for final T79 sign-off. Do not describe T79 as currently ACTIVE until that work is reopened.
 
 ### Mobile visual authority
 
@@ -88,13 +102,13 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T24 | Docker publish gated by CI | DONE | PR #63 |
 | T25 | Quality baseline scripts unified | PLANNED | Full takeover quality cleanup. |
 | T26 | Audit scripts truthful | PLANNED | Full takeover quality cleanup. |
-| T27 | Dependency manifest ownership + Dependabot | PLANNED | May be pulled forward if T28 remediation needs it. |
+| T27 | Dependency manifest ownership + Dependabot | PARTIAL | PR #266 normalizes Dependabot to security-only grouped updates and removes routine version-update PR noise. Broader dependency-manifest ownership remains for later cleanup. |
 | T28 | Security/dependency inventory, commit-bound | PLANNED | Pre-pilot: classify GitHub vulnerability/code-scanning inventory by runtime/dev/test, severity, duplicates, reachability and false positives. |
 | T29 | Backend Python runtime remediation | PLANNED | Before pilot only for confirmed runtime HIGH/CRITICAL or another concrete blocker. |
 | T30 | Node dependency remediation | PLANNED | Before pilot for confirmed runtime HIGH/CRITICAL; dev-only debt can remain scheduled. |
 | T31 | DRF/GIS direction decision + prototype | PLANNED | Post-pilot unless concrete blocker. |
 | T32 | Mobile overrides → pnpm root overrides | PLANNED | Post-pilot unless required by dependency remediation. |
-| T33 | Expo/EAS canonical configuration + E2E secrets | PARTIAL | Pilot-local profile/build prerequisites landed across #85/#86/#88; broader canonicalization remains. |
+| T33 | Expo/EAS canonical configuration + E2E secrets | PARTIAL | Pilot-local/profile prerequisites landed across #85/#86/#88; #257 adds generated-native provenance validation; #264 makes Windows raw native builds diagnostic-only and keeps EAS as artifact authority. Remaining canonical runtime/appVersion closure is tracked by #156/#157. |
 | T34 | Firebase gate + platform config safety | PARTIAL | Pilot Firebase-off/platform gating landed across #88/#90; broader release contract remains. |
 | T35 | Conservative admin dead-code/export cleanup | PLANNED | Post-pilot cleanup. |
 | T36 | Admin MapLibre loader consolidation | PLANNED | Post-pilot cleanup. |
@@ -135,24 +149,24 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T66 | Prevent public/profile self-service tenant rebinding | DONE | PR #101. |
 | T67 | Enforce club tenant isolation | DONE | PR #102. |
 | T68 | Signing-key rotation/revocation proof | BLOCKED | OWNER ACTION REQUIRED. Confirm external persistent key; prove old exposed value never active or rotate/revoke it. No secret value in evidence. |
-| T69 | Encrypt GPS data at rest on Android | DONE | PR #106. MMKV key is protected through the SecureStore/Keystore path; physical locked/background behavior remains part of T76 evidence. |
+| T69 | Encrypt GPS data at rest on Android | DONE | PR #106 implements the protected storage boundary. Runtime evidence is strengthened by #256 encrypted GPS recovery, #258 lost-key fail-closed behavior and #259 locked/background durability/process-death recovery. |
 | T70 | Audit log append-only/tamper-resistant contract + critical-action coverage | DONE | PR #108. |
 | T71 | Central PII/token/GPS log redaction | DONE | PR #109. |
 | T72 | Delete/export/retention contract | DONE | PR #110. |
 | T73 | Database runtime-role + worker tenant-context hardening | DONE | PR #111. |
 | T74 | Critical-write idempotency inventory | DONE | PR #112. Critical retries use durable request identities/constraints where business effects could duplicate. |
 | T75 | TLS/transport + backup confidentiality verification | DONE | PR #113. Loopback-only pilot transport plus AES-256-GCM backup confidentiality/retention are repo-gated; no external TLS/provider claim is inferred. |
-| T76 | Android/home-lab chaos and restart matrix | PARTIAL | PR #114 prepares a fail-closed physical-device harness/evidence matrix. Final PASS still requires the real Android + home-lab screen-off/offline/kill/restart/commit-response scenarios. |
+| T76 | Android/home-lab chaos and restart matrix | PARTIAL | Harness foundation exists and #259 accepts locked/background GPS durability plus activity-identity recovery after process death. Remaining PASS evidence is the residual real-device/home-lab matrix: offline, screen-off, kill/restart, finish/finalization/commit-response and exact pilot-artifact scenarios not already proven by #256/#258/#259. |
 
 **Data-safety exit:** repo-side implementation is complete through T76 and T57 runtime recovery evidence is now accepted. Final exit still requires external evidence for T68 (owner signing-key rotation/revocation proof) and T76 (physical Android/home-lab matrix). Already-DONE T57 and T60–T75 are retained as evidence, not reopened mechanically.
 
 ## T94 — CI affected-test / risk-tiered selective execution
 
-**Execution position:** immediately after the takeover-era Visual Protection/Asset Governance foundation is merged, and **before T79**. Implementation is active in stacked PR #117. The ID is late-added and therefore numerically higher; this placement is intentional and does not renumber existing tranches.
+**Execution position:** completed before T79. PR #117 merged on 2026-09-18. The ID is late-added and therefore numerically higher; this placement is intentional and does not renumber existing tranches.
 
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
-| T94 | CI affected-test planner + risk-tiered selective execution | ACTIVE | PR CI computes a deterministic base→head change set and selects the smallest safe test set. Mobile uses dependency-aware related Jest tests for low-risk changes plus mandatory suites; backend uses an explicit domain/risk matrix; shared/config/security/navigation/tenant/telemetry/migration/unknown-impact changes fail safe to broader or FULL coverage. Turborepo dependency/cache information may reduce duplicate work but must not become a fail-open oracle. Main/nightly retain broader/full regression. Aggregate CI remains fail-closed. Planner/path/risk/fallback behavior must have table-driven tests, including proof that unknown classifications select FULL rather than SKIP. |
+| T94 | CI affected-test planner + risk-tiered selective execution | DONE | PR #117 merged. PR CI computes a deterministic base→head change set and selects the smallest safe test set; unknown/shared/high-risk impact fails safe to broader/FULL coverage. Aggregate CI remains fail-closed and T92 exact-SHA full regression is not replaced by selective execution. |
 
 ### T94 contract
 
@@ -180,7 +194,7 @@ Required behavior:
 | --- | --- | --- | --- |
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
-| T79 | Home screen implementation/polish | ACTIVE | PR #132 establishes the Frozen UI v1.2 semantic/product foundation first; Home follows as a separate reviewable T79 slice. Real data, first-use comprehension, loading/empty/error states remain required. |
+| T79 | Home screen implementation/polish | PLANNED | PR #132 merged the Frozen UI v1.2 visual foundation. Home refresh #262 was closed unmerged during branch cleanup; exact head `44a66163dfe16e28450eaf4783c3cc562ffbb00d` is archived for restoration/rebase. Final T79 still requires real-data/loading/empty/error behavior plus runtime/UI sign-off before merge. |
 | T80 | Active Ride screen implementation/polish | PLANNED | Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
 | T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
 | T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
@@ -224,31 +238,42 @@ Large Node/pnpm major upgrades are **not** automatic pilot blockers. Do them bef
 This is the only short sequence worth remembering:
 
 ```text
-finish data-safety external evidence:
-  T68 + T76
+0. keep the source of truth current:
+   this reconciliation + issue/tracker status cleanup
 
-CI efficiency foundation:
-  merge current Visual Protection / Asset Governance foundation
-  T94
+1. close the remaining external/runtime proof:
+   T68
+   T76 residual physical Android/home-lab scenarios
 
-UI:
-  T79–T84
+2. close mobile release trust:
+   #156 T80-E canonical toolchain/provenance
+   restore/review archived #265 runtimeVersion/appVersion gate
+   #157 exact-artifact absolute-zero proof
 
-panels/operations:
-  T85–T87
+3. finish Home:
+   restore archived #262 work
+   rebase on current main
+   runtime + visual sign-off
+   merge T79
 
-pre-pilot:
-  T28 -> T29/T30 only where findings require them
-  T88 -> T89 -> T90
-  T58
-  T91 -> T92
-  T59
+4. finish pilot mobile UI:
+   T80 -> T81 -> T82 -> T83 -> T84
 
-pilot:
-  T93
+5. panels/operations:
+   T85 -> T86 -> T87
+
+6. pre-pilot:
+   T28 -> T29/T30 only where findings require them
+   T88 -> T89 -> T90
+   T58
+   T91 -> T92
+   T59
+
+7. pilot:
+   T93
 ```
 
-Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T77`, `T78`) is not repeated unless a concrete regression invalidates it.
+Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T69–T75`, `T77`, `T78`, `T94`) is not repeated unless a concrete regression invalidates it.
 
 # Full takeover after the pilot
 
