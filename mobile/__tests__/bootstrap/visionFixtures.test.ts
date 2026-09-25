@@ -15,6 +15,9 @@ import {
   VISION_RIDE_DASHBOARD,
   VISION_LEADERBOARD,
   VISION_ACTIVITY_HISTORY,
+  VISION_HOME_PREVIEW_STATES,
+  getVisionHomePreviewState,
+  setVisionHomePreviewState,
 } from '../../src/bootstrap/visionFixtures';
 
 describe('visionFixtures', () => {
@@ -55,6 +58,23 @@ describe('visionFixtures', () => {
     expect(VISION_LEADERBOARD.some((e) => e.is_me)).toBe(true);
     expect(VISION_ACTIVITY_HISTORY).toHaveLength(3);
     expect(VISION_ACTIVITY_HISTORY[0]).toMatchObject({ type: 'BIKE', distance: 42300 });
+  });
+
+  test('Home preview states are deterministic and vision-only', () => {
+    expect(VISION_HOME_PREVIEW_STATES).toEqual([
+      'default',
+      'loading',
+      'empty',
+      'offline',
+      'error',
+    ]);
+
+    setVisionHomePreviewState('error');
+    expect(getVisionHomePreviewState(true)).toBe('error');
+    expect(getVisionHomePreviewState(false)).toBeNull();
+
+    setVisionHomePreviewState('default');
+    expect(getVisionHomePreviewState(true)).toBe('default');
   });
 
   test('screen adapters expose fixtures only when flag is enabled', () => {
