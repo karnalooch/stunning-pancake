@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'README.md'
@@ -18,7 +18,7 @@ on:
       - 'docs/en/**'
       - 'docs/pl/**'
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'docs/**'
       - 'README.md'
