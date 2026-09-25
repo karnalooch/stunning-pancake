@@ -146,6 +146,7 @@ For `ride-lifecycle.yaml`, set env vars `E2E_EMAIL` and `E2E_PASSWORD` before ru
 | Recovery banner persists | Large outbox | Dev: clear MMKV; prod: wait for flush + network |
 | `gps_buffer_overflow` | >2000 points in buffer | Restore network + flush; shorten offline ride |
 | EAS build fail | Credentials / profiles | `pnpm --dir mobile dlx eas-cli@24.7.0 credentials`, build log |
+| `manifest 'build.ninja' still dirty after 100 tries` during local Android build (Windows) | Android SDK ships `cmake\3.22.1\bin\ninja.exe` v1.10.2 in our environment — see the T83 spike. | Run the Windows isolated toolchain bootstrap: [MOBILE_ANDROID_NATIVE_TOOLCHAIN.md](./MOBILE_ANDROID_NATIVE_TOOLCHAIN.md) |
 
 ---
 

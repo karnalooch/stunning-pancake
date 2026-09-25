@@ -53,6 +53,21 @@ jobs:
           pnpm --version
           java -version
 
+      - name: Install PowerShell for T83 bootstrap contract check
+        if: always()
+        run: |
+          if command -v pwsh >/dev/null 2>&1; then
+            echo "pwsh already present: $(pwsh --version)"
+          else
+            sudo apt-get update
+            sudo apt-get install -y wget apt-transport-https software-properties-common
+            wget -q https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+            sudo dpkg -i packages-microsoft-prod.deb
+            sudo apt-get update
+            sudo apt-get install -y powershell
+            pwsh --version
+          fi
+
       - name: Frozen workspace install
         run: pnpm install --frozen-lockfile
 
@@ -64,6 +79,9 @@ jobs:
 
       - name: MMKV migration contract
         run: python -m unittest scripts/test_mobile_mmkv_v4_contract.py -v
+
+      - name: T83 Android native toolchain contract
+        run: python -m unittest scripts/test_android_ninja_bootstrap.py -v
 
       - name: Native provenance validator tests
         run: python -m unittest scripts/test_mobile_native_provenance.py -v
