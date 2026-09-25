@@ -35,9 +35,11 @@ import { syncRideQuestProgress } from '../game/quests';
 import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
-import type {
-  RideFinishState,
-  RideSummaryPayload,
+import {
+  classifyRideFinishState,
+  isDurableRideSuccess,
+  type RideFinishState,
+  type RideSummaryPayload,
 } from '../features/ride/model/RideFinishState';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 import { e2eConfig } from './e2eConfig';
@@ -315,53 +317,33 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
     const summary: RideSummaryPayload | null =
       distanceKm > 0 ? { distanceKm, elapsedS, elevationGainM } : null;
 
-    let finishState: RideFinishState | null = null;
+    let stopResult: { finalized: boolean; pendingUpload: number } | null = null;
+    let errorReason: string | undefined;
 
     try {
-      const { finalized, pendingUpload } = await stopRideSession(userId);
+      stopResult = await stopRideSession(userId);
 
-      if (pendingUpload > 0 || !finalized) {
+      if (stopResult.pendingUpload > 0 || !stopResult.finalized) {
         pushEdge({
           title: t.rideMessages.stopPending,
           message: t.rideMessages.stopPendingBody,
           variant: 'offline',
         });
-        if (summary) {
-          finishState = {
-            kind: 'pending-finalization',
-            summary,
-            pendingUpload,
-          };
-        }
       } else {
         pushEdge({
           title: t.rideMessages.stopSaved,
           message: t.rideMessages.stopSavedBody,
           variant: 'success',
         });
-        if (summary) {
-          recordRideComplete(distanceKm, elapsedS / 60);
-          syncRideQuestProgress(distanceKm, elapsedS / 60);
-          finishState = {
-            kind: 'durable-success',
-            summary,
-          };
-        }
       }
     } catch (e) {
       console.warn('[GPS] stop ride failed', e);
+      errorReason = e instanceof Error ? e.message : t.rideMessages.stopErrorBody;
       pushEdge({
         title: t.rideMessages.stopError,
         message: t.rideMessages.stopErrorBody,
         variant: 'error',
       });
-      if (summary) {
-        finishState = {
-          kind: 'recovery-required',
-          summary,
-          reason: e instanceof Error ? e.message : t.rideMessages.stopErrorBody,
-        };
-      }
     } finally {
       setIsRecording(false);
       setRidePaused(false);
@@ -371,6 +353,13 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
       setLiveElapsedS(0);
       setLiveCoord(null);
       refreshGpsRecoveryFlag();
+    }
+
+    const finishState = classifyRideFinishState(summary, stopResult, errorReason);
+
+    if (isDurableRideSuccess(finishState)) {
+      recordRideComplete(distanceKm, elapsedS / 60);
+      syncRideQuestProgress(distanceKm, elapsedS / 60);
     }
 
     setRideFinishState(finishState);
