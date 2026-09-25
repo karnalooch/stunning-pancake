@@ -12,13 +12,13 @@ on:
         required: false
         default: ""
   push:
-    branches: [main, master, develop]
+    branches: [main]
     paths:
       - "docs/design/screenshots/**"
       - "scripts/vision_parity_harness.py"
       - ".github/workflows/vision-parity.yml"
   pull_request:
-    branches: [main, master, develop]
+    branches: [main]
     paths:
       - "docs/design/screenshots/**"
       - "scripts/vision_parity_harness.py"
