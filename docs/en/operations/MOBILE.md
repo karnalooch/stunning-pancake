@@ -4,12 +4,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-09-24 |
+| **Last reviewed** | 2026-09-25 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-09-24 |
+| **translation_reviewed** | 2026-09-25 |
 | **canonical_path** | docs/en/operations/MOBILE.md |
 
 ---
@@ -18,7 +18,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-09-24 |
+| **Last reviewed** | 2026-09-25 |
 | **Target** | Build and release the React Native/Expo app; handle GPS/telemetry failures in the field. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **GPS architecture** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -99,6 +99,20 @@ The historical `build:local:preview:android` script is a compatibility alias to 
 7. **Gate:** [PRE_RELEASE_VERIFICATION.md](./PRE_RELEASE_VERIFICATION.md) + smoke API (`EXPO_PUBLIC_API_URL`).
 
 Do not manually edit `versionCode`, `buildNumber`, `mobile/package.json`, `admin/package.json`, or the Expo version in `app.config.js`. The versioning contract owns those values; root `app.json` is no longer an Expo configuration source.
+
+### Native runtime / appVersion boundary
+
+Expo uses `runtimeVersion.policy = appVersion`. CI therefore fails closed when a change can alter the native runtime without moving the numeric `version.json.version` boundary.
+
+A numeric appVersion bump is required when a PR changes:
+
+- a direct native-sensitive mobile dependency such as Expo modules, React Native modules, Firebase native modules, MapLibre or Skia;
+- `mobile/app.config.js`;
+- committed `mobile/plugins/**`, `mobile/android/**` or `mobile/ios/**` paths.
+
+Pure JS/UI changes do not require a runtime bump merely because they change application code. Changing only `version.json.prerelease` also does not move the Expo runtime boundary; the numeric `version` must change.
+
+The blocking implementation is `scripts/validate_mobile_runtime_boundary.py` in the Mobile CI lane. It runs on pull requests and pushes, where a trusted base SHA exists; scheduled CI still exercises the unit contract without inventing a comparison base.
 
 ### Verification after build
 
