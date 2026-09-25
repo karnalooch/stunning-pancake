@@ -1,26 +1,7 @@
 import type { ActivitySportType } from '../../../types/activitySport';
+import type { RideFinishState } from '../model/RideFinishState';
 
-export type RideSummaryPayload = {
-  distanceKm: number;
-  elapsedS: number;
-  elevationGainM: number;
-};
-
-export type RideFinishState =
-  | {
-      kind: 'durable-success';
-      summary: RideSummaryPayload;
-    }
-  | {
-      kind: 'pending-finalization';
-      summary: RideSummaryPayload;
-      pendingUpload: number;
-    }
-  | {
-      kind: 'recovery-required';
-      summary?: RideSummaryPayload;
-      reason: string;
-    };
+export type { RideFinishState, RideSummaryPayload } from '../model/RideFinishState';
 
 export type RideControllerNotice = {
   title: string;
