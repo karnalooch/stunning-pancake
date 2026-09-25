@@ -1,4 +1,4 @@
-name: One-shot merged branch cleanup
+name: Branch hygiene
 
 on:
   push:
@@ -6,17 +6,20 @@ on:
     paths:
       - '.github/workflows/branch-hygiene.yml'
   workflow_dispatch:
+  pull_request:
+    types: [closed]
 
 permissions:
   contents: write
 
 concurrency:
-  group: one-shot-merged-branch-cleanup
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   prune:
     name: Prune verified stale branches
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -230,4 +233,64 @@ jobs:
               for branch, reason in blocked:
                   print(f"BLOCKED {branch}: {reason}")
               raise SystemExit(f"Refused to delete {len(blocked)} branches that failed safety checks.")
+          PY
+
+
+  prune-merged-head:
+    name: Delete merged PR branch
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete branch only when ref still matches merged head SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          MERGED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          branch = os.environ["BRANCH"]
+          merged_head_sha = os.environ["MERGED_HEAD_SHA"]
+          token = os.environ["GH_TOKEN"]
+          encoded_ref = urllib.parse.quote(branch, safe="/")
+          url = f"https://api.github.com/repos/{repository}/git/ref/heads/{encoded_ref}"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "4velo-merged-branch-cleanup",
+          }
+
+          get_request = urllib.request.Request(url, headers=headers, method="GET")
+          try:
+              with urllib.request.urlopen(get_request) as response:
+                  ref = json.loads(response.read())
+          except urllib.error.HTTPError as exc:
+              if exc.code == 404:
+                  print(f"Branch {branch!r} is already absent.")
+                  raise SystemExit(0)
+              raise
+
+          current_sha = ref["object"]["sha"]
+          if current_sha != merged_head_sha:
+              raise SystemExit(
+                  f"Refused to delete {branch!r}: current SHA {current_sha} "
+                  f"does not match merged head SHA {merged_head_sha}."
+              )
+
+          delete_request = urllib.request.Request(url, headers=headers, method="DELETE")
+          with urllib.request.urlopen(delete_request):
+              pass
+          print(f"Deleted merged branch {branch!r} at {merged_head_sha}.")
           PY
