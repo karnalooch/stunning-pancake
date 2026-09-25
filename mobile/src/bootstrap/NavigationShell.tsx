@@ -30,7 +30,9 @@ import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
 import {
   isVisionFixtures,
   setVisionHomePreviewState,
+  setVisionRideFinishKind,
   VISION_HOME_PREVIEW_STATES,
+  VISION_RIDE_FINISH_KINDS,
 } from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
@@ -504,15 +506,38 @@ export function NavigationShell(props: NavigationShellProps) {
                       { label: 'Explore Map', onPress: () => navigation.navigate('ExploreMap') },
                       { label: 'GPS Diagnostics', onPress: () => navigation.navigate('GpsDiagnostics') },
                       { label: 'Settings', onPress: () => navigation.navigate('Settings') },
-                      {
-                        label: 'Ride Summary',
-                        onPress: () =>
-                          navigation.navigate('RideSummary', {
-                            distanceKm: 12.4,
-                            elapsedS: 2730,
-                            elevationGainM: 145,
-                          }),
-                      },
+                      ...(isVisionFixtures()
+                        ? VISION_RIDE_FINISH_KINDS.flatMap((kind) => {
+                            const summary = {
+                              distanceKm: 12.4,
+                              elapsedS: 2730,
+                              elevationGainM: 145,
+                            };
+                            const finishState =
+                              kind === 'durable-success'
+                                ? { kind, summary }
+                                : kind === 'pending-finalization'
+                                  ? { kind, summary, pendingUpload: 1 }
+                                  : {
+                                      kind,
+                                      summary,
+                                      reason: 'Vision recovery-required finish',
+                                    };
+                            return [
+                              {
+                                label: `Ride flow finish — ${kind}`,
+                                onPress: () => {
+                                  setVisionRideFinishKind(kind);
+                                  navigation.navigate('MainTabs', { screen: 'Ride' });
+                                },
+                              },
+                              {
+                                label: `Summary — ${kind}`,
+                                onPress: () => navigation.navigate('RideSummary', finishState),
+                              },
+                            ];
+                          })
+                        : []),
                       { label: 'Ride Paused', onPress: () => navigation.navigate('RidePaused') },
                     ]}
                   />
