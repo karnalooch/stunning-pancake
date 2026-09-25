@@ -4,12 +4,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-24 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-24 |
 | **canonical_path** | docs/en/operations/MOBILE.md |
 
 ---
@@ -18,7 +18,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-24 |
 | **Target** | Build and release the React Native/Expo app; handle GPS/telemetry failures in the field. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **GPS architecture** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -63,6 +63,30 @@ pnpm --dir mobile start
 1. Log in with the pinned CLI: `pnpm --dir mobile dlx eas-cli@24.7.0 login`
 2. Profile from `eas.json` (e.g. preview)
 3. `pnpm --dir mobile build:preview:android` (or `pnpm --dir mobile build:preview:ios`)
+
+### 2a. Windows local native diagnostic — not a release artifact
+
+The canonical pilot/preview/production artifacts are the pinned **EAS profiles** above. A raw local Expo prebuild + Gradle compile is diagnostic only.
+
+For Windows diagnosis:
+
+```powershell
+# monorepo root
+. .\scripts\android-env.ps1
+pnpm install --frozen-lockfile
+pnpm --dir mobile build:diagnostic:android:windows
+```
+
+Policy:
+
+- use a short workspace path when Windows/CMake/Ninja path pressure is observed;
+- do not switch the monorepo to hoisted linking as a path-length workaround;
+- do not treat a local Gradle APK as preview/production provenance;
+- do not use ad-hoc `reactNativeArchitectures` overrides in release-grade instructions;
+- an ABI-limited build is allowed only as an explicitly recorded emulator diagnostic;
+- package/version/runtimeVersion release authority remains the repository SSOT + EAS profile + native provenance gate.
+
+The historical `build:local:preview:android` script is a compatibility alias to the diagnostic command and must not be interpreted as an EAS preview build. New documentation and automation must use `build:diagnostic:android:windows`.
 
 ### 3. Production store
 
