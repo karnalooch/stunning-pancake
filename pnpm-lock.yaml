@@ -99,8 +99,8 @@ importers:
         specifier: ^3.8.1
         version: 3.8.1(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react-is@19.2.7)(react@19.2.7)(redux@5.0.1)
       supercluster:
-        specifier: ^8.0.1
-        version: 8.0.1
+        specifier: ^9.1.0
+        version: 9.1.0
       zustand:
         specifier: ^5.0.12
         version: 5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
@@ -7578,8 +7578,8 @@ packages:
     resolution: {integrity: sha512-MvjXzkz/BOfyVDkG0oFOtBxHX2u3gKbMHIF/dXblZsgD3BWOFLmHovIpZY7BykJdAjcqRCBi1WYBNdEC9yI7vg==}
     engines: {node: '>= 8.0'}
 
-  supercluster@8.0.1:
-    resolution: {integrity: sha512-IiOea5kJ9iqzD2t7QJq/cREyLHTtSmUT6gQsweojg9WH2sYJqZK9SswTu6jrscO6D1G5v5vYZ9ru/eq85lXeZQ==}
+  supercluster@9.1.0:
+    resolution: {integrity: sha512-WMhsJPm8Tf9f5mKxJ1D0mB5tbCMOFi8wTrm/LGnsJHGg8xkeNT/TWDZuFauOGRISnclbYgnxD7g3xJAfQO3FLg==}
 
   supports-color@5.5.0:
     resolution: {integrity: sha512-QjVjwdXIt408MIiAqCX4oUKsgU2EqAGzs2Ppkm4aQYbjm+ZEWEcW4SfFNTr4uMNZma0ey4f5lgLrkB0aX0QMow==}
@@ -17130,8 +17130,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  supercluster@8.0.1:
+  supercluster@9.1.0:
     dependencies:
+      '@types/geojson': 7946.0.16
       kdbush: 4.1.0
 
   supports-color@5.5.0:
