@@ -51,3 +51,14 @@ export function isDurableRideSuccess(
 ): state is Extract<RideFinishState, { kind: 'durable-success' }> {
   return state?.kind === 'durable-success';
 }
+
+
+export function classifyRideRecoveryAfterLaunch(
+  pendingFinalization: boolean,
+): RideFinishState | null {
+  if (!pendingFinalization) return null;
+  return {
+    kind: 'recovery-required',
+    reason: 'pending-finalization-after-relaunch',
+  };
+}
