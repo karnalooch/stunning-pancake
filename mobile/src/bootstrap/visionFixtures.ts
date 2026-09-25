@@ -8,6 +8,30 @@
  */
 import Constants from 'expo-constants';
 
+
+export const VISION_HOME_PREVIEW_STATES = [
+  'default',
+  'loading',
+  'empty',
+  'offline',
+  'error',
+] as const;
+
+export type VisionHomePreviewState = (typeof VISION_HOME_PREVIEW_STATES)[number];
+
+let visionHomePreviewState: VisionHomePreviewState = 'default';
+
+export function setVisionHomePreviewState(state: VisionHomePreviewState): void {
+  visionHomePreviewState = state;
+}
+
+export function getVisionHomePreviewState(
+  enabled: boolean,
+): VisionHomePreviewState | null {
+  return enabled ? visionHomePreviewState : null;
+}
+
+
 /** True when the build should render vision fixture data instead of live data. */
 export function isVisionFixtures(): boolean {
   const fromProcess = process.env.EXPO_PUBLIC_VISION_FIXTURES;
