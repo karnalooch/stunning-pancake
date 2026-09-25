@@ -48,7 +48,7 @@ jobs:
             local channel="$1"
             local text="$2"
             local payload response ok error
-            payload="$(jq -nc --arg channel "$channel" --arg text "$text" '{channel:$channel,text:$text,unfurl_links:false,unfurl_media:false}')"
+            payload="$(jq -nc --arg channel "$channel" --arg text "$text" '{channel:$channel,text:$text,mrkdwn:false,unfurl_links:false,unfurl_media:false}')"
             response="$(curl -sS -X POST https://slack.com/api/chat.postMessage               -H "Authorization: Bearer ${SLACK_BOT_TOKEN}"               -H "Content-type: application/json; charset=utf-8"               --data "$payload")"
             ok="$(jq -r '.ok // false' <<<"$response")"
             if [ "$ok" != "true" ]; then
