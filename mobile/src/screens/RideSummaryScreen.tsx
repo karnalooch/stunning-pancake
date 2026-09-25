@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { ParticleSystem } from '../components/effects/ParticleSystem';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
