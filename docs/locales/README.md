@@ -67,7 +67,7 @@ W modelu enterprise jest **jedno źródło merytoryczne** i **dwa języki** (zwy
 - Link integrity: `python scripts/check_docs_links.py`
 - Locale pairs (registry): `python scripts/check_docs_i18n.py`
 
-Both run in [`.github/workflows/docs.yml`](../../.github/workflows/docs.yml).
+Both run in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) when documentation changes.
 
 ### Bulk translate (mirrors with stub marker)
 
