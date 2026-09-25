@@ -24,7 +24,7 @@ on:
   workflow_run:
     workflows: ['SPORT Container Registry — Build & Push']
     types: [completed]
-    branches: [main, master]
+    branches: [main]
 
 permissions:
   contents: read
