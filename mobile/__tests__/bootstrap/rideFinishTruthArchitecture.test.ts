@@ -33,6 +33,16 @@ describe('ride finish truth architecture', () => {
     expect(summary).toContain('ride-summary-${finishState.kind}');
   });
 
+  test('relaunch recovery cannot drop pending finalization truth', () => {
+    const lifecycle = source('bootstrap/useRideLifecycle.ts');
+    const gps = source('services/GpsSyncManager.ts');
+
+    expect(gps).toContain('pendingFinalization: boolean;');
+    expect(gps).toContain('pendingFinalization,');
+    expect(lifecycle).toContain('result.pendingFinalization');
+    expect(lifecycle).toContain('classifyRideRecoveryAfterLaunch(');
+  });
+
   test('navigation routes terminal truth instead of a non-null summary payload', () => {
     const navigation = source('bootstrap/NavigationShell.tsx');
 
