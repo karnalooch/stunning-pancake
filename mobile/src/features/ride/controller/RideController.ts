@@ -6,6 +6,22 @@ export type RideSummaryPayload = {
   elevationGainM: number;
 };
 
+export type RideFinishState =
+  | {
+      kind: 'durable-success';
+      summary: RideSummaryPayload;
+    }
+  | {
+      kind: 'pending-finalization';
+      summary: RideSummaryPayload;
+      pendingUpload: number;
+    }
+  | {
+      kind: 'recovery-required';
+      summary?: RideSummaryPayload;
+      reason: string;
+    };
+
 export type RideControllerNotice = {
   title: string;
   message: string;
@@ -34,8 +50,8 @@ export interface RideController {
   liveCoord: [number, number] | null;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
-  rideSummary: RideSummaryPayload | null;
-  setRideSummary: (value: RideSummaryPayload | null) => void;
+  rideFinishState: RideFinishState | null;
+  setRideFinishState: (value: RideFinishState | null) => void;
   onUserSessionReady: (userId: number | null) => Promise<void>;
   handleGpsRecoveryPress: () => Promise<void>;
   handleStartRide: (activityType?: ActivitySportType, eventId?: number) => Promise<boolean>;
