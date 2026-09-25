@@ -170,9 +170,14 @@ class MobilePlatformContractTests(unittest.TestCase):
         self.assertNotIn("process.env.OPENAI_API_KEY", llm)
 
     def test_updates_reload_only_after_download_is_pending(self):
-        app = read(MOBILE / "App.tsx")
-        self.assertIn("isUpdatePending", app)
-        self.assertNotIn("isUpdateAvailable", app)
+        app_shell = "\n".join(
+            (
+                read(MOBILE / "App.tsx"),
+                read(MOBILE / "src/app/AppRoot.tsx"),
+            )
+        )
+        self.assertIn("isUpdatePending", app_shell)
+        self.assertNotIn("isUpdateAvailable", app_shell)
 
 
 if __name__ == "__main__":
