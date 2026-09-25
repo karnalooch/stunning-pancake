@@ -37,6 +37,7 @@ export type RideControllerOptions = {
   onStartRideError?: (message: string | null) => void;
   onStartRideSuccess?: () => void;
   onEdgeMessage?: (message: RideControllerNotice | null) => void;
+  deterministicFinishKind?: RideFinishState['kind'];
 };
 
 export interface RideController {
