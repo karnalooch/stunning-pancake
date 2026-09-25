@@ -51,7 +51,6 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
   const { t } = useI18n();
   const c = theme.colors as Record<string, string>;
   const semantic = getSemanticColors(theme.colors);
-  const outline = semantic.border.strong;
   return (
     <SafeAreaView testID="ride-paused-screen" style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
       <View
