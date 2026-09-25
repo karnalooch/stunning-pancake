@@ -1,5 +1,6 @@
 import {
   classifyRideFinishState,
+  classifyRideRecoveryAfterLaunch,
   isDurableRideSuccess,
   type RideSummaryPayload,
 } from '../../../src/features/ride/model/RideFinishState';
@@ -45,6 +46,14 @@ describe('RideFinishState truth classification', () => {
       reason: 'network finalization failed',
     });
     expect(isDurableRideSuccess(state)).toBe(false);
+  });
+
+  test('relaunch preserves pending finalization as recovery-required truth', () => {
+    expect(classifyRideRecoveryAfterLaunch(true)).toEqual({
+      kind: 'recovery-required',
+      reason: 'pending-finalization-after-relaunch',
+    });
+    expect(classifyRideRecoveryAfterLaunch(false)).toBeNull();
   });
 
   test('zero-distance stop has no Summary terminal state', () => {
