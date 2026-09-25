@@ -43,8 +43,8 @@ export function LegacyNavigationBridge({
       liveCoord={ride.liveCoord}
       gpsRecoveryVisible={ride.gpsRecoveryVisible}
       gpsRecoveryBusy={ride.gpsRecoveryBusy}
-      rideSummary={ride.rideSummary}
-      setRideSummary={ride.setRideSummary}
+      rideFinishState={ride.rideFinishState}
+      setRideFinishState={ride.setRideFinishState}
       startRideError={startRideError}
       clearStartRideError={clearStartRideError}
       rideEdgeMessage={rideEdgeMessage}
