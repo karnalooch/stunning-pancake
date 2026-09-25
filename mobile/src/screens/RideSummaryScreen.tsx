@@ -140,7 +140,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   }, [durableSuccess]);
 
   return (
-    <SafeAreaView style={s.container} edges={['top']}>
+    <SafeAreaView testID="ride-summary-screen" style={s.container} edges={['top']}>
       {immersiveEnabled && <SceneBackground sceneId="ride_summary" scrim="soft" />}
       <ParticleSystem trigger={immersiveEnabled && durableSuccess} />
       <View style={[s.header, s.shadow]}>
@@ -169,6 +169,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
             />
             <Pressable
               style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
+              testID="ride-summary-share"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                 onShare?.();
@@ -199,6 +200,7 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
         )}
         <Pressable
           style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
+          testID="ride-summary-back-home"
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
             onBackToHub?.();
