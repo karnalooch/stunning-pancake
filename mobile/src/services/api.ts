@@ -7,9 +7,11 @@ import {
 } from '@4velo/api-client';
 import { api, setAuthToken } from './apiClient';
 import { createSessionWithDurability } from './sessionDurability';
+import type { ActivitySportType } from '../types/activitySport';
 
 export { api, setAuthToken };
 export type { UserProfile };
+export type { ActivitySportType } from '../types/activitySport';
 
 // ─── Typed services ────────────────────────────────────────────
 
@@ -134,7 +136,6 @@ export interface POI {
   description: string;
 }
 
-export type ActivitySportType = 'RUN' | 'BIKE' | 'WALK';
 
 export const ActivityService = {
   createSession: (body: { type: ActivitySportType | string; start_time: string; event_id?: number }) =>
