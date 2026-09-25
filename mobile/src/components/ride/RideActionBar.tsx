@@ -4,7 +4,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
-import { FONTS } from '../../theme/fonts';
+import { getSemanticColors } from '../../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 import { HUD_ACTION_ICONS } from '../../assets/visionAssets';
 
 interface RideActionBarProps {
@@ -54,9 +55,10 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
   const { theme } = useUnistyles();
   const { t } = useI18n();
   const c = theme.colors as Record<string, string>;
-  const onError = c.onError ?? '#FFFFFF';
-  const onBackground = c.onBackground ?? '#0B1D33';
-  const hudOutline = c.hudOutline ?? '#0B1D33';
+  const semantic = getSemanticColors(theme.colors);
+  const onError = semantic.text.onDestructive;
+  const onBackground = semantic.text.primary;
+  const hudOutline = c.hudOutline;
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stopArmed, setStopArmed] = useState(false);
 
@@ -80,26 +82,17 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
     }, STOP_HOLD_MS);
   };
 
-  const pixelShadow = {
-    shadowColor: c.hudOutline,
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 6,
-  };
-
   return (
     <View style={styles.row}>
       <Pressable
         style={({ pressed }) => [
           styles.btn,
           {
-            backgroundColor: c.error,
-            borderColor: c.hudOutline,
+            backgroundColor: semantic.ride.stopAction,
+            borderColor: semantic.ride.stopAction,
             flex: 1,
-            ...pixelShadow,
           },
-          stopArmed && { backgroundColor: c.tertiaryContainer },
+          stopArmed && { opacity: 0.72 },
           pressed && { opacity: 0.9 },
         ]}
         onPressIn={startStopHold}
@@ -109,7 +102,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
         accessibilityLabel={t.ride.actions.stopConfirm}
       >
         <RideActionIcon type="stop" color={onError} />
-        <Text style={[styles.label, { color: onError, fontFamily: FONTS.display }]} allowFontScaling>
+        <Text style={[styles.label, { color: onError, }]} allowFontScaling>
           {stopArmed ? '…' : t.ride.actions.stop}
         </Text>
       </Pressable>
@@ -119,10 +112,9 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           style={({ pressed }) => [
             styles.btn,
             {
-              backgroundColor: c.primaryContainer,
-              borderColor: c.hudOutline,
+              backgroundColor: semantic.action.primary,
+              borderColor: semantic.action.primary,
               flex: 1,
-              ...pixelShadow,
             },
             pressed && { opacity: 0.9 },
           ]}
@@ -133,7 +125,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           }}
         >
           <RideActionIcon type="play" color={onBackground} />
-          <Text style={[styles.label, { color: onBackground, fontFamily: FONTS.display }]}>
+          <Text style={[styles.label, { color: onBackground, }]}>
             {t.ride.actions.resume}
           </Text>
         </Pressable>
@@ -142,10 +134,9 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           style={({ pressed }) => [
             styles.btn,
             {
-              backgroundColor: c.goldAmber,
-              borderColor: c.hudOutline,
+              backgroundColor: semantic.selection.background,
+              borderColor: semantic.selection.border,
               flex: 1,
-              ...pixelShadow,
             },
             pressed && { opacity: 0.9 },
           ]}
@@ -159,7 +150,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
           accessibilityLabel={t.ride.actions.pause}
         >
           <RideActionIcon type="pause" color={hudOutline} />
-          <Text style={[styles.label, { color: hudOutline, fontFamily: FONTS.display }]}>
+          <Text style={[styles.label, { color: hudOutline, }]}>
             {t.ride.actions.pause}
           </Text>
         </Pressable>
@@ -174,17 +165,17 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   btn: {
-    borderWidth: 2,
-    borderRadius: 0,
-    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 14,
+    minHeight: 56,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   label: {
-    fontSize: 9,
+    ...PRODUCT_TYPOGRAPHY.bodyMedium,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
 });
