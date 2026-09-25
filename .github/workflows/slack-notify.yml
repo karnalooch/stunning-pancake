@@ -1,0 +1,112 @@
+name: Slack notifications
+
+on:
+  workflow_run:
+    workflows:
+      - "4VELO CI/CD Pipeline"
+      - "Mobile Native Smoke"
+      - "MobSF Mobile Security"
+      - "Home lab configuration"
+      - "Live Map Prod Smoke"
+      - "Kubernetes Release Gate"
+      - "OpenSSF Scorecard"
+    types: [completed]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: slack-notify-4velo-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    name: Route high-signal events to Slack
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      CHANNEL_CI: C0C4C6TQABF
+      CHANNEL_COMMAND: C0C4C6R6XFF
+      CHANNEL_DEV: C0C41TEKDDM
+      CHANNEL_MOBILE: C0C4K764UGH
+      CHANNEL_SECURITY: C0C4FAASX4N
+    steps:
+      - name: Slack integration not configured
+        if: ${{ env.SLACK_BOT_TOKEN == '' }}
+        run: echo "::notice::SLACK_BOT_TOKEN is not configured; Slack notifications are skipped."
+
+      - name: Notify Slack
+        if: ${{ env.SLACK_BOT_TOKEN != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          post() {
+            local channel="$1"
+            local text="$2"
+            local payload response ok error
+            payload="$(jq -nc --arg channel "$channel" --arg text "$text" '{channel:$channel,text:$text,unfurl_links:false,unfurl_media:false}')"
+            response="$(curl -sS -X POST https://slack.com/api/chat.postMessage               -H "Authorization: Bearer ${SLACK_BOT_TOKEN}"               -H "Content-type: application/json; charset=utf-8"               --data "$payload")"
+            ok="$(jq -r '.ok // false' <<<"$response")"
+            if [ "$ok" != "true" ]; then
+              error="$(jq -r '.error // "unknown_error"' <<<"$response")"
+              echo "::error::Slack API failed: $error"
+              return 1
+            fi
+          }
+
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            post "$CHANNEL_CI" "🧪 4VELO Slack integration smoke test from GitHub Actions."
+            exit 0
+          fi
+
+          if [ "$GITHUB_EVENT_NAME" = "release" ]; then
+            tag="$(jq -r '.release.tag_name // "unknown"' "$GITHUB_EVENT_PATH")"
+            url="$(jq -r '.release.html_url // ""' "$GITHUB_EVENT_PATH")"
+            post "$CHANNEL_COMMAND" "🚀 4VELO release published: $tag $url"
+            post "$CHANNEL_DEV" "🚀 4VELO release published: $tag $url"
+            exit 0
+          fi
+
+          workflow="$(jq -r '.workflow_run.name // "unknown"' "$GITHUB_EVENT_PATH")"
+          conclusion="$(jq -r '.workflow_run.conclusion // "unknown"' "$GITHUB_EVENT_PATH")"
+          source_event="$(jq -r '.workflow_run.event // "unknown"' "$GITHUB_EVENT_PATH")"
+          branch="$(jq -r '.workflow_run.head_branch // "unknown"' "$GITHUB_EVENT_PATH")"
+          url="$(jq -r '.workflow_run.html_url // ""' "$GITHUB_EVENT_PATH")"
+          run_number="$(jq -r '.workflow_run.run_number // "?"' "$GITHUB_EVENT_PATH")"
+          pr_number="$(jq -r '.workflow_run.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")"
+
+          case "$conclusion" in
+            success) status="✅" ;;
+            failure|timed_out|action_required|startup_failure) status="❌" ;;
+            cancelled) status="⚪" ;;
+            *) status="🟡" ;;
+          esac
+
+          post "$CHANNEL_CI" "$status 4VELO · $workflow · $conclusion · $source_event/$branch · run #$run_number · $url"
+
+          if [ "$source_event" = "push" ] && [ "$branch" = "main" ] && [ "$conclusion" != "success" ]; then
+            post "$CHANNEL_COMMAND" "🔴 4VELO main: $workflow = $conclusion · $url"
+          fi
+
+          case "$workflow" in
+            "Mobile Native Smoke")
+              post "$CHANNEL_MOBILE" "$status 4VELO Mobile Native Smoke: $conclusion on $branch · $url"
+              ;;
+            "MobSF Mobile Security"|"OpenSSF Scorecard")
+              post "$CHANNEL_SECURITY" "$status 4VELO security: $workflow = $conclusion on $branch · $url"
+              ;;
+            "Home lab configuration"|"Live Map Prod Smoke"|"Kubernetes Release Gate")
+              post "$CHANNEL_DEV" "$status 4VELO runtime/release gate: $workflow = $conclusion on $branch · $url"
+              ;;
+            "4VELO CI/CD Pipeline")
+              if [ "$source_event" = "pull_request" ] && [ "$conclusion" = "success" ] && [ -n "$pr_number" ]; then
+                post "$CHANNEL_DEV" "🟢 4VELO PR #$pr_number: Aggregate CI gate green · $url"
+              elif [ "$conclusion" != "success" ]; then
+                post "$CHANNEL_DEV" "🔴 4VELO CI issue: $conclusion on $branch · $url"
+              fi
+              ;;
+          esac
