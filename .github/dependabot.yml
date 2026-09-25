@@ -9,7 +9,15 @@ updates:
       day: monday
       time: "06:00"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      backend-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
     labels:
       - "dependencies"
     commit-message:
@@ -31,7 +39,15 @@ updates:
       day: monday
       time: "06:30"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 2
+    groups:
+      telemetry-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
     labels:
       - "dependencies"
       - "telemetry"
@@ -47,6 +63,14 @@ updates:
       time: "06:00"
       timezone: "Europe/Warsaw"
     open-pull-requests-limit: 3
+    groups:
+      workspace-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
     labels:
       - "dependencies"
     commit-message:
@@ -67,6 +91,15 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      actions-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
     labels:
       - "dependencies"
       - "ci"
