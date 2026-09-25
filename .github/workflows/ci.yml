@@ -73,6 +73,11 @@ jobs:
               - 'CHANGELOG.md'
             docs:
               - 'docs/**'
+              - 'README.md'
+              - 'CHANGELOG.md'
+              - 'CONTRIBUTING.md'
+              - 'scripts/check_docs_links.py'
+              - 'scripts/check_docs_i18n.py'
             visual:
               - 'mobile/**'
               - 'assets/**'
@@ -630,6 +635,9 @@ jobs:
 
       - name: Check relative links in docs/
         run: python scripts/check_docs_links.py
+
+      - name: Check EN/PL paired docs
+        run: python scripts/check_docs_i18n.py
 
   # ──────────────────────────────────────────
   # Admin Dashboard: Lint + Type Check + Build
