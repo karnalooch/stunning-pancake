@@ -513,7 +513,7 @@ export function NavigationShell(props: NavigationShellProps) {
                               elapsedS: 2730,
                               elevationGainM: 145,
                             };
-                            const finishState =
+                            const finishState: RideFinishState =
                               kind === 'durable-success'
                                 ? { kind, summary }
                                 : kind === 'pending-finalization'
