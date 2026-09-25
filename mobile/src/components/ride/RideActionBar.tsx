@@ -54,11 +54,10 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
 }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
-  const c = theme.colors as Record<string, string>;
   const semantic = getSemanticColors(theme.colors);
   const onError = semantic.text.onDestructive;
   const onBackground = semantic.text.primary;
-  const hudOutline = c.hudOutline;
+  const hudOutline = semantic.text.primary;
   const stopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stopArmed, setStopArmed] = useState(false);
 
