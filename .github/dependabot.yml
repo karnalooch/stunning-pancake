@@ -1,6 +1,12 @@
 version: 2
 
 updates:
+  # Security-only policy:
+  # - ordinary Dependabot version-update PRs are disabled with
+  #   open-pull-requests-limit: 0;
+  # - Dependabot security updates remain enabled and are grouped per ecosystem;
+  # - feature-driven upgrades are reviewed manually when they are useful to 4VELO.
+
   # Python backend (Django/FastAPI)
   - package-ecosystem: pip
     directory: /backend
@@ -9,27 +15,16 @@ updates:
       day: monday
       time: "06:00"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     groups:
-      backend-minor-patch:
-        applies-to: version-updates
+      backend-security:
+        applies-to: security-updates
         patterns:
           - "*"
-        update-types:
-          - minor
-          - patch
     labels:
       - "dependencies"
     commit-message:
-      prefix: "chore(deps)"
-    ignore:
-      # Stable LTS versions — update manually with migration review
-      - dependency-name: "django"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "djangorestframework"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "celery"
-        update-types: ["version-update:semver-major"]
+      prefix: "fix(deps)"
 
   # Python telemetry service (FastAPI)
   - package-ecosystem: pip
@@ -39,20 +34,17 @@ updates:
       day: monday
       time: "06:30"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 2
+    open-pull-requests-limit: 0
     groups:
-      telemetry-minor-patch:
-        applies-to: version-updates
+      telemetry-security:
+        applies-to: security-updates
         patterns:
           - "*"
-        update-types:
-          - minor
-          - patch
     labels:
       - "dependencies"
       - "telemetry"
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "fix(deps)"
 
   # Node.js pnpm workspace (shared root lockfile)
   - package-ecosystem: npm
@@ -62,46 +54,30 @@ updates:
       day: tuesday
       time: "06:00"
       timezone: "Europe/Warsaw"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     groups:
-      workspace-minor-patch:
-        applies-to: version-updates
+      workspace-security:
+        applies-to: security-updates
         patterns:
           - "*"
-        update-types:
-          - minor
-          - patch
     labels:
       - "dependencies"
     commit-message:
-      prefix: "chore(deps)"
-    ignore:
-      # Expo packages must move with the SDK as one controlled migration.
-      - dependency-name: "expo"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "expo-*"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "jest-expo"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "eslint-config-expo"
-        update-types: ["version-update:semver-major"]
+      prefix: "fix(deps)"
 
-  # GitHub Actions versions (monthly — stability focused)
+  # GitHub Actions
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
     groups:
-      actions-minor-patch:
-        applies-to: version-updates
+      actions-security:
+        applies-to: security-updates
         patterns:
           - "*"
-        update-types:
-          - minor
-          - patch
     labels:
       - "dependencies"
       - "ci"
     commit-message:
-      prefix: "chore(ci)"
+      prefix: "fix(ci)"
