@@ -1,0 +1,443 @@
+name: Branch hygiene
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/branch-hygiene.yml'
+  workflow_dispatch:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  prune:
+    name: Prune verified stale branches
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete only verified merged or fully-contained branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          owner = repository.split("/", 1)[0]
+          token = os.environ["GH_TOKEN"]
+
+          candidates = [
+            "audit/mobile-zero-baseline",
+            "audit/quality-command-matrix",
+            "audit/repository-map",
+            "audit/risk-and-ownership-map",
+            "audit/t80-mobile-recovery",
+            "chore/deps-latest-stable-2026-09",
+            "chore/repo-hygiene-2026-09-25",
+            "chore/toolchain-node24-pnpm12",
+            "chore/versioning-ssot",
+            "ci/admin-build-cache",
+            "ci/aggregate-test-hardening",
+            "ci/docker-publish-gated",
+            "ci/mobile-path-filter-integrity",
+            "ci/promote-legacy-suite-blocking",
+            "ci/required-aggregate-check",
+            "ci/security-audit-visibility",
+            "ci/t94-affected-test-execution",
+            "ci/trivy-critical-high-gate",
+            "codex/architecture-cleanup",
+            "codex/onboarding-docs",
+            "design/mobile-asset-governance-v1",
+            "docs/agent-workflow-rules",
+            "docs/agents-project-visibility",
+            "docs/auto-merge-live-proof",
+            "docs/auto-merge-live-proof-v2",
+            "docs/issue-project-delivery-workflow",
+            "docs/mobile-ui-audit-2026-09-16",
+            "docs/p3-pilot-data-safety",
+            "docs/p3-pilot-data-safety-audit",
+            "docs/partial-takeover-pilot",
+            "docs/pilot-roadmap-cleanup",
+            "docs/takeover-cleanup-plan",
+            "docs/takeover-navigation",
+            "docs/update-takeover-progress",
+            "feat/home-lab",
+            "feat/mobile-pilot-local-profile",
+            "feat/p1-android-adb-reverse-config",
+            "feat/p2a-telemetry-aud",
+            "fix/auto-merge-release-gate-trigger",
+            "fix/batch-topup-disk-guard",
+            "fix/dependabot-expo-major-policy",
+            "fix/dependabot-node-throttle",
+            "fix/dependabot-pnpm-workspace-lockfile",
+            "fix/dependabot-single-root-workspace",
+            "fix/e2e-preview-lifecycle",
+            "fix/firebase-platform-google-services-gating",
+            "fix/live-map-invalid-coordinates",
+            "fix/p2-gps-durability-contract",
+            "fix/p2-telemetry-batch-ack-contract",
+            "fix/p3-business-recovery-drill",
+            "fix/p3-club-tenant-isolation",
+            "fix/p3-durable-route-finalization",
+            "fix/p3-encrypted-gps-mmkv",
+            "fix/p3-encrypted-gps-storage",
+            "fix/p3-pilot-db-backed-ack",
+            "fix/p3-profile-tenant-transfer-guard",
+            "fix/p3-tenant-bound-activity-create",
+            "fix/p3-tenant-safe-activity-read",
+            "fix/production-compose-contract",
+            "fix/project-status-merge-done",
+            "fix/t57-home-compose-port-override",
+            "fix/t80-mmkv-v4",
+            "fix/t80-mobile-harness-foundation",
+            "fix/t80-mobile-platform-foundation",
+            "fix/t80-native-provenance-gate",
+            "fix/telemetry-required-jwt",
+            "fix/users-domain-legacy-burn-down",
+            "ops/fail-closed-auto-merge",
+            "ops/project-status-automation",
+            "refactor/admin-unused-code",
+            "refactor/simulator-hook-stability",
+            "security/close-code-scanning-alerts",
+            "security/codeql-remediation",
+            "security/dependabot-alerts-2026-09",
+            "security/django-5-2",
+            "security/llm-proxy-readonly",
+            "security/mfa-mandatory-admins",
+            "security/oauth-state-and-binding",
+            "security/pillow-12-3",
+            "security/pin-github-actions-sha",
+            "security/pyjwt-2-13",
+            "security/rls-real-enforcement",
+            "security/security-tooling-suite",
+            "security/simulator-global-owner",
+            "security/t01-signing-key-guard-v2",
+            "security/t70-audit-log-integrity",
+            "security/t71-log-redaction",
+            "security/t72-data-lifecycle",
+            "security/t72-delete-export-retention",
+            "security/t73-runtime-role-worker-context",
+            "security/t74-critical-write-idempotency",
+            "security/t75-transport-backup-confidentiality",
+            "security/tenant-admin-user-scope",
+            "security/tenant-moderator-scope",
+            "security/tenant-orm-gap-fix",
+            "security/webhook-admin-and-ssrf",
+            "test/activities-task-uuid-tenant",
+            "test/backend-plugin-registry-gate",
+            "test/legacy-baseline-fixtures",
+            "test/legacy-baseline-https",
+            "test/legacy-runtime-contract-mocks",
+            "test/legacy-telemetry-shard-cache-isolation",
+            "test/load-guard-redis-isolation",
+            "test/load-guard-sliding-window-determinism",
+            "test/mobile-historical-ci-revalidation",
+            "test/t76-android-home-lab-chaos",
+            "test/t80-background-gps-durability-proof",
+            "test/t80-encrypted-gps-recovery-harness",
+            "test/t80-gps-lost-key-fail-closed",
+            "ui/auth-onboarding-grand-prix-modern",
+            "ui/t79-visual-foundation",
+          ]
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "4velo-one-shot-branch-cleanup",
+          }
+
+          def api(method, path):
+              request = urllib.request.Request(
+                  f"https://api.github.com/{path}",
+                  headers=headers,
+                  method=method,
+              )
+              try:
+                  with urllib.request.urlopen(request) as response:
+                      body = response.read()
+                      return json.loads(body) if body else None
+              except urllib.error.HTTPError as exc:
+                  if exc.code == 404:
+                      return None
+                  detail = exc.read().decode("utf-8", errors="replace")
+                  raise RuntimeError(f"{method} {path} failed: {exc.code} {detail}") from exc
+
+          blocked = []
+          deleted = []
+          missing = []
+
+          for branch in candidates:
+              encoded_ref = urllib.parse.quote(branch, safe="/")
+              ref = api("GET", f"repos/{repository}/git/ref/heads/{encoded_ref}")
+              if ref is None:
+                  missing.append(branch)
+                  continue
+
+              current_sha = ref["object"]["sha"]
+              head_query = urllib.parse.quote(f"{owner}:{branch}", safe="")
+              pulls = api(
+                  "GET",
+                  f"repos/{repository}/pulls?state=all&head={head_query}&per_page=100",
+              ) or []
+
+              if any(pr.get("state") == "open" for pr in pulls):
+                  blocked.append((branch, "open pull request"))
+                  continue
+
+              merged_head_shas = {
+                  pr.get("head", {}).get("sha")
+                  for pr in pulls
+                  if pr.get("merged_at")
+              }
+              safe_to_delete = current_sha in merged_head_shas
+
+              if not safe_to_delete:
+                  encoded_branch = urllib.parse.quote(branch, safe="/")
+                  comparison = api(
+                      "GET",
+                      f"repos/{repository}/compare/main...{encoded_branch}",
+                  )
+                  safe_to_delete = (
+                      comparison is not None
+                      and int(comparison.get("ahead_by", -1)) == 0
+                  )
+
+              if not safe_to_delete:
+                  blocked.append((branch, "branch contains unmerged commits"))
+                  continue
+
+              api("DELETE", f"repos/{repository}/git/refs/heads/{encoded_ref}")
+              deleted.append(branch)
+
+          print(f"Deleted {len(deleted)} branches.")
+          for branch in deleted:
+              print(f"DELETE {branch}")
+          for branch in missing:
+              print(f"ALREADY_MISSING {branch}")
+
+          if blocked:
+              for branch, reason in blocked:
+                  print(f"BLOCKED {branch}: {reason}")
+              raise SystemExit(f"Refused to delete {len(blocked)} branches that failed safety checks.")
+          PY
+
+
+  prune-merged-head:
+    name: Delete merged PR branch
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Delete branch only when ref still matches merged head SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          MERGED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          branch = os.environ["BRANCH"]
+          merged_head_sha = os.environ["MERGED_HEAD_SHA"]
+          token = os.environ["GH_TOKEN"]
+          encoded_ref = urllib.parse.quote(branch, safe="/")
+          url = f"https://api.github.com/repos/{repository}/git/ref/heads/{encoded_ref}"
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "4velo-merged-branch-cleanup",
+          }
+
+          get_request = urllib.request.Request(url, headers=headers, method="GET")
+          try:
+              with urllib.request.urlopen(get_request) as response:
+                  ref = json.loads(response.read())
+          except urllib.error.HTTPError as exc:
+              if exc.code == 404:
+                  print(f"Branch {branch!r} is already absent.")
+                  raise SystemExit(0)
+              raise
+
+          current_sha = ref["object"]["sha"]
+          if current_sha != merged_head_sha:
+              raise SystemExit(
+                  f"Refused to delete {branch!r}: current SHA {current_sha} "
+                  f"does not match merged head SHA {merged_head_sha}."
+              )
+
+          delete_request = urllib.request.Request(url, headers=headers, method="DELETE")
+          with urllib.request.urlopen(delete_request):
+              pass
+          print(f"Deleted merged branch {branch!r} at {merged_head_sha}.")
+          PY
+
+
+  prune-all-nondependabot:
+    name: Archive and prune non-Dependabot branches
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 266
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Preserve unique tips as tags, then delete branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          KEEP_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          repository = os.environ["REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          keep_branch = os.environ["KEEP_BRANCH"]
+          archive_prefix = "archive/branch-cleanup-2026-09-25"
+
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "4velo-aggressive-branch-cleanup",
+          }
+
+          def api(method, path, payload=None, allow_404=False, allow_422=False):
+              data = None
+              request_headers = dict(headers)
+              if payload is not None:
+                  data = json.dumps(payload).encode("utf-8")
+                  request_headers["Content-Type"] = "application/json"
+              request = urllib.request.Request(
+                  f"https://api.github.com/{path}",
+                  headers=request_headers,
+                  data=data,
+                  method=method,
+              )
+              try:
+                  with urllib.request.urlopen(request) as response:
+                      body = response.read()
+                      return response.status, (json.loads(body) if body else None)
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  if exc.code == 404 and allow_404:
+                      return exc.code, None
+                  if exc.code == 422 and allow_422:
+                      return exc.code, json.loads(body) if body else None
+                  raise RuntimeError(
+                      f"{method} {path} failed: {exc.code} {body}"
+                  ) from exc
+
+          branches = []
+          page = 1
+          while True:
+              _, batch = api(
+                  "GET",
+                  f"repos/{repository}/branches?per_page=100&page={page}",
+              )
+              batch = batch or []
+              branches.extend(batch)
+              if len(batch) < 100:
+                  break
+              page += 1
+
+          deleted = []
+          archived = []
+          skipped = []
+
+          for item in branches:
+              name = item["name"]
+              sha = item["commit"]["sha"]
+
+              if name == "main" or name == keep_branch or name.startswith("dependabot/"):
+                  skipped.append(name)
+                  continue
+              if item.get("protected"):
+                  raise SystemExit(f"Refused to delete protected branch {name!r}")
+
+              encoded_name = urllib.parse.quote(name, safe="")
+              _, comparison = api(
+                  "GET",
+                  f"repos/{repository}/compare/main...{encoded_name}",
+              )
+              ahead_by = int((comparison or {}).get("ahead_by", -1))
+              if ahead_by < 0:
+                  raise SystemExit(f"Could not verify comparison for {name!r}")
+
+              if ahead_by > 0:
+                  slug = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
+                  tag_name = f"{archive_prefix}/{slug}-{sha[:8]}"
+                  encoded_tag = urllib.parse.quote(tag_name, safe="")
+                  status, existing = api(
+                      "GET",
+                      f"repos/{repository}/git/ref/tags/{encoded_tag}",
+                      allow_404=True,
+                  )
+                  if status == 404:
+                      status, created = api(
+                          "POST",
+                          f"repos/{repository}/git/refs",
+                          {
+                              "ref": f"refs/tags/{tag_name}",
+                              "sha": sha,
+                          },
+                          allow_422=True,
+                      )
+                      if status == 422:
+                          _, existing = api(
+                              "GET",
+                              f"repos/{repository}/git/ref/tags/{encoded_tag}",
+                          )
+                          if existing["object"]["sha"] != sha:
+                              raise SystemExit(
+                                  f"Archive tag collision for {name!r}: {tag_name}"
+                              )
+                      else:
+                          archived.append((name, tag_name, sha))
+                  else:
+                      if existing["object"]["sha"] != sha:
+                          raise SystemExit(
+                              f"Archive tag {tag_name!r} points at unexpected SHA"
+                          )
+
+              api(
+                  "DELETE",
+                  f"repos/{repository}/git/refs/heads/{encoded_name}",
+              )
+              deleted.append((name, sha, ahead_by))
+
+          print(f"Deleted {len(deleted)} non-Dependabot branches.")
+          print(f"Created {len(archived)} archive tags.")
+          for name, sha, ahead_by in deleted:
+              print(f"DELETE {name} {sha} ahead_by={ahead_by}")
+          for name, tag_name, sha in archived:
+              print(f"ARCHIVE {name} -> {tag_name} ({sha})")
+          print("Kept:", ", ".join(sorted(skipped)))
+          PY

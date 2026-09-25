@@ -36,7 +36,7 @@ class AutoMergeWorkflowContractTests(unittest.TestCase):
 
     def test_workflow_reacts_to_ci_and_review_completion(self):
         self.assertIn(
-            'workflows: ["4VELO CI/CD Pipeline", "Kubernetes Release Gate"]',
+            'workflows: ["4VELO CI/CD Pipeline"]',
             self.text,
         )
         self.assertIn("check_run:", self.text)

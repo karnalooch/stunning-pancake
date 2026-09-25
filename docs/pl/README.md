@@ -64,7 +64,7 @@ Szczegóły: [DOCUMENTATION_STANDARDS.md § Język](./DOCUMENTATION_STANDARDS.md
 | [SECURITY.md](../../SECURITY.md) | Zgłaszanie luk, wersje wspierane, zależności |
 | [DOCUMENTATION_STANDARDS.md](./DOCUMENTATION_STANDARDS.md) | Szablon sekcji, SSOT, bezpieczeństwo |
 | [MAINTENANCE.md](./MAINTENANCE.md) | Inwentarz świeżości, checklista po release |
-| CI link check | `.github/workflows/docs.yml` · `scripts/check_docs_links.py` |
+| CI link check | `.github/workflows/ci.yml` · `scripts/check_docs_links.py` |
 
 ---
 
