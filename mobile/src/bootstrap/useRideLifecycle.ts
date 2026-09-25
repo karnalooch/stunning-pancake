@@ -35,20 +35,12 @@ import { syncRideQuestProgress } from '../game/quests';
 import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
+import type {
+  RideFinishState,
+  RideSummaryPayload,
+} from '../features/ride/model/RideFinishState';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 import { e2eConfig } from './e2eConfig';
-
-
-
-export type RideSummaryPayload = {
-
-  distanceKm: number;
-
-  elapsedS: number;
-
-  elevationGainM: number;
-
-};
 
 
 
@@ -88,7 +80,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
 
-  const [rideSummary, setRideSummary] = useState<RideSummaryPayload | null>(null);
+  const [rideFinishState, setRideFinishState] = useState<RideFinishState | null>(null);
 
 
 
@@ -316,110 +308,86 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
 
   const handleStopRide = useCallback(async () => {
-
     const userId = userIdRef.current;
-
     const distanceKm = liveDistanceKm;
-
     const elapsedS = liveElapsedS;
-
     const elevationGainM = liveElevationGainM;
+    const summary: RideSummaryPayload | null =
+      distanceKm > 0 ? { distanceKm, elapsedS, elevationGainM } : null;
+
+    let finishState: RideFinishState | null = null;
 
     try {
-
       const { finalized, pendingUpload } = await stopRideSession(userId);
 
       if (pendingUpload > 0 || !finalized) {
-
         pushEdge({
-
           title: t.rideMessages.stopPending,
-
           message: t.rideMessages.stopPendingBody,
-
           variant: 'offline',
-
         });
-
+        if (summary) {
+          finishState = {
+            kind: 'pending-finalization',
+            summary,
+            pendingUpload,
+          };
+        }
       } else {
-
         pushEdge({
-
           title: t.rideMessages.stopSaved,
-
           message: t.rideMessages.stopSavedBody,
-
           variant: 'success',
-
         });
-
+        if (summary) {
+          recordRideComplete(distanceKm, elapsedS / 60);
+          syncRideQuestProgress(distanceKm, elapsedS / 60);
+          finishState = {
+            kind: 'durable-success',
+            summary,
+          };
+        }
       }
-
     } catch (e) {
-
       console.warn('[GPS] stop ride failed', e);
-
       pushEdge({
-
         title: t.rideMessages.stopError,
-
         message: t.rideMessages.stopErrorBody,
-
         variant: 'error',
-
       });
-
-    } finally {
-
-      setIsRecording(false);
-
-      setRidePaused(false);
-
-      setLiveSpeed(0);
-
-      setLiveDistanceKm(0);
-
-      setLiveElevationGainM(0);
-
-      setLiveElapsedS(0);
-
-      setLiveCoord(null);
-
-      refreshGpsRecoveryFlag();
-
-      if (distanceKm > 0) {
-
-        recordRideComplete(distanceKm, elapsedS / 60);
-
-        syncRideQuestProgress(distanceKm, elapsedS / 60);
-
-        setRideSummary({ distanceKm, elapsedS, elevationGainM });
-
-        return { navigated: false };
-
+      if (summary) {
+        finishState = {
+          kind: 'recovery-required',
+          summary,
+          reason: e instanceof Error ? e.message : t.rideMessages.stopErrorBody,
+        };
       }
-
-      return { navigated: true, target: 'Ride' as const };
-
+    } finally {
+      setIsRecording(false);
+      setRidePaused(false);
+      setLiveSpeed(0);
+      setLiveDistanceKm(0);
+      setLiveElevationGainM(0);
+      setLiveElapsedS(0);
+      setLiveCoord(null);
+      refreshGpsRecoveryFlag();
     }
 
+    setRideFinishState(finishState);
+
+    if (finishState) {
+      return { navigated: false };
+    }
+
+    return { navigated: true, target: 'Ride' as const };
   }, [
-
     liveDistanceKm,
-
     liveElapsedS,
-
     liveElevationGainM,
-
     pushEdge,
-
     refreshGpsRecoveryFlag,
-
     t,
-
   ]);
-
-
 
   return {
 
@@ -442,12 +410,9 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
     gpsRecoveryVisible,
 
     gpsRecoveryBusy,
-
-    rideSummary,
-
-    setRideSummary,
-
-    onUserSessionReady,
+    rideFinishState,
+    setRideFinishState,
+onUserSessionReady,
 
     handleGpsRecoveryPress,
 
