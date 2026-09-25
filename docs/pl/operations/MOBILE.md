@@ -5,12 +5,12 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-24 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/MOBILE.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-24 |
 | **canonical_path** | docs/pl/operations/MOBILE.md |
 
 ---
@@ -19,7 +19,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-24 |
 | **Cel** | Zbudować i wydać aplikację React Native/Expo oraz obsłużyć awarie GPS/telemetrii w polu. |
 | **Audience** | Mobile Lead, Platform Operator (env), QA |
 | **Architektura warstw GPS** | [DATA_RESILIENCE.md](../../DATA_RESILIENCE.md) |
@@ -64,6 +64,30 @@ pnpm --dir mobile start
 1. Zaloguj się przypiętym CLI: `pnpm --dir mobile dlx eas-cli@24.7.0 login`
 2. Profil z `eas.json` (np. preview)
 3. `pnpm --dir mobile build:preview:android` (lub `pnpm --dir mobile build:preview:ios`)
+
+### 2a. Lokalny build natywny Windows — wyłącznie diagnostyczny
+
+Kanoniczne artefakty pilot/preview/production powstają z przypiętych profili **EAS**. Surowy lokalny `expo prebuild + Gradle` służy wyłącznie do diagnostyki.
+
+Diagnostyka na Windows:
+
+```powershell
+# root monorepo
+. .\scripts\android-env.ps1
+pnpm install --frozen-lockfile
+pnpm --dir mobile build:diagnostic:android:windows
+```
+
+Zasady:
+
+- przy problemach CMake/Ninja z długością ścieżek używaj krótkiej ścieżki worktree;
+- nie przełączaj monorepo na hoisted linking tylko po to, żeby maskować problem długości ścieżek;
+- lokalnego APK z Gradle nie traktuj jako artefaktu preview/production;
+- nie używaj doraźnego `reactNativeArchitectures` w instrukcjach release-grade;
+- build ograniczony do jednego ABI jest dozwolony wyłącznie jako jawnie opisana diagnostyka emulatora;
+- autorytet package/version/runtimeVersion dla wydania pozostaje w repo SSOT + profilu EAS + bramce native provenance.
+
+Historyczny skrypt `build:local:preview:android` pozostaje tylko aliasem kompatybilności do polecenia diagnostycznego i nie oznacza buildu profilu EAS preview. Nowa dokumentacja i automatyzacja używają `build:diagnostic:android:windows`.
 
 ### 3. Production store
 
