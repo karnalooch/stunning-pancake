@@ -37,10 +37,10 @@ import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 import {
   classifyRideFinishState,
-  isDurableRideSuccess,
   type RideFinishState,
   type RideSummaryPayload,
 } from '../features/ride/model/RideFinishState';
+import { applyDurableRideCompletionEffects } from '../features/ride/controller/applyRideCompletionEffects';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 import { e2eConfig } from './e2eConfig';
 
@@ -357,10 +357,10 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
     const finishState = classifyRideFinishState(summary, stopResult, errorReason);
 
-    if (isDurableRideSuccess(finishState)) {
-      recordRideComplete(distanceKm, elapsedS / 60);
-      syncRideQuestProgress(distanceKm, elapsedS / 60);
-    }
+    applyDurableRideCompletionEffects(finishState, {
+      recordRideComplete,
+      syncRideQuestProgress,
+    });
 
     setRideFinishState(finishState);
 
