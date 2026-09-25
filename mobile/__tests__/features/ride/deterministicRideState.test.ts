@@ -11,7 +11,7 @@ describe('deterministicRideReducer', () => {
     expect(state).toMatchObject({
       isRecording: true,
       ridePaused: false,
-      rideSummary: null,
+      rideFinishState: null,
       ...DETERMINISTIC_RIDE_METRICS,
     });
   });
@@ -39,10 +39,26 @@ describe('deterministicRideReducer', () => {
     expect(finished.ridePaused).toBe(false);
     expect(finished.liveSpeed).toBe(0);
     expect(finished.liveDistanceKm).toBe(0);
-    expect(finished.rideSummary).toEqual({
-      distanceKm: DETERMINISTIC_RIDE_METRICS.liveDistanceKm,
-      elapsedS: DETERMINISTIC_RIDE_METRICS.liveElapsedS,
-      elevationGainM: DETERMINISTIC_RIDE_METRICS.liveElevationGainM,
+    expect(finished.rideFinishState).toEqual({
+      kind: 'durable-success',
+      summary: {
+        distanceKm: DETERMINISTIC_RIDE_METRICS.liveDistanceKm,
+        elapsedS: DETERMINISTIC_RIDE_METRICS.liveElapsedS,
+        elevationGainM: DETERMINISTIC_RIDE_METRICS.liveElevationGainM,
+      },
     });
+  });
+
+  test.each([
+    ['pending-finalization', 'pending-finalization'],
+    ['recovery-required', 'recovery-required'],
+  ] as const)('can force %s terminal truth', (_label, kind) => {
+    const active = deterministicRideReducer(initialDeterministicRideState, { type: 'start' });
+    const finished = deterministicRideReducer(active, { type: 'finish', kind });
+
+    expect(finished.rideFinishState?.kind).toBe(kind);
+    expect(finished.rideFinishState?.summary?.distanceKm).toBe(
+      DETERMINISTIC_RIDE_METRICS.liveDistanceKm,
+    );
   });
 });
