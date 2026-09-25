@@ -4,7 +4,7 @@ on:
   # Self-test once when this workflow definition lands on the default branch.
   # Subsequent posture checks are weekly or explicitly dispatched.
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - '.github/workflows/scorecard.yml'
   schedule:
