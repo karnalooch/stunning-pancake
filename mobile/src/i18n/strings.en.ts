@@ -94,7 +94,12 @@ export const stringsEn = {
     goToRide: 'GO TO RIDE',
     lastRide: 'Last ride',
     noRides: 'No saved rides yet.',
+    firstRideHint: 'Start your first ride to build your activity history.',
     weeklyLoad: 'Weekly load',
+    weekDistance: 'Distance this week',
+    noWeekRides: 'No rides recorded this week yet.',
+    historyErrorTitle: 'Ride history unavailable',
+    historyErrorBody: 'We could not load your ride history. Ride recording is still available.',
     gpsWizard: 'GPS check wizard',
   },
   auth: {
