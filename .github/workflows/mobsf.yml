@@ -6,12 +6,12 @@ concurrency:
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main]
     paths:
       - 'mobile/**'
       - '.github/workflows/mobsf.yml'
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
       - 'mobile/**'
       - '.github/workflows/mobsf.yml'
