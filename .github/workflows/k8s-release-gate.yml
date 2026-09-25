@@ -7,8 +7,38 @@ concurrency:
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - 'admin/**'
+      - 'packages/**'
+      - 'infrastructure/k8s/**'
+      - 'scripts/release/**'
+      - 'docker-compose.prod.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/actions/pnpm-setup/**'
+      - '.github/workflows/k8s-release-gate.yml'
+      - 'docs/operations/PRE_RELEASE_VERIFICATION.md'
+      - 'docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md'
+      - 'docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md'
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
+      - 'admin/**'
+      - 'packages/**'
+      - 'infrastructure/k8s/**'
+      - 'scripts/release/**'
+      - 'docker-compose.prod.yml'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/actions/pnpm-setup/**'
+      - '.github/workflows/k8s-release-gate.yml'
+      - 'docs/operations/PRE_RELEASE_VERIFICATION.md'
+      - 'docs/reports/RELIABILITY_AUDIT_PLAYBOOK.md'
+      - 'docs/compliance/RELEASE_LEGAL_COMPLIANCE_PACKAGE.md'
   workflow_dispatch:
     inputs:
       deploy_target:
