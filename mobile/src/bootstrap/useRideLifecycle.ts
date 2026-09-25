@@ -37,6 +37,7 @@ import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 import {
   classifyRideFinishState,
+  classifyRideRecoveryAfterLaunch,
   type RideFinishState,
   type RideSummaryPayload,
 } from '../features/ride/model/RideFinishState';
@@ -189,7 +190,16 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
         const resumed = await resumeActiveRideIfNeeded(null);
 
-        if (resumed) setIsRecording(true);
+        if (resumed) {
+          setIsRecording(true);
+        } else {
+          const recoveredFinishState = classifyRideRecoveryAfterLaunch(
+            result.pendingFinalization,
+          );
+          if (recoveredFinishState) {
+            setRideFinishState(recoveredFinishState);
+          }
+        }
 
       } catch (e) {
 
