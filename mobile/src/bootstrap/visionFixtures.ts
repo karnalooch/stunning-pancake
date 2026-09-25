@@ -40,15 +40,23 @@ export const VISION_RIDE_FINISH_KINDS = [
 export type VisionRideFinishKind = (typeof VISION_RIDE_FINISH_KINDS)[number];
 
 let visionRideFinishKind: VisionRideFinishKind = 'durable-success';
+const visionRideFinishListeners = new Set<() => void>();
 
 export function setVisionRideFinishKind(kind: VisionRideFinishKind): void {
+  if (visionRideFinishKind === kind) return;
   visionRideFinishKind = kind;
+  for (const listener of visionRideFinishListeners) listener();
 }
 
 export function getVisionRideFinishKind(
   enabled: boolean,
 ): VisionRideFinishKind | undefined {
   return enabled ? visionRideFinishKind : undefined;
+}
+
+export function subscribeVisionRideFinishKind(listener: () => void): () => void {
+  visionRideFinishListeners.add(listener);
+  return () => visionRideFinishListeners.delete(listener);
 }
 
 
