@@ -8,20 +8,16 @@ function source(relative: string): string {
 }
 
 describe('ride finish truth architecture', () => {
-  test('progression effects are gated by durable success outside finally cleanup', () => {
+  test('progression effects run only after terminal truth classification and cleanup', () => {
     const lifecycle = source('bootstrap/useRideLifecycle.ts');
 
     const finallyIndex = lifecycle.indexOf('} finally {');
     const classifyIndex = lifecycle.indexOf('classifyRideFinishState(');
-    const durableIndex = lifecycle.indexOf('if (isDurableRideSuccess(finishState))');
-    const progressIndex = lifecycle.indexOf('recordRideComplete(');
-    const questIndex = lifecycle.indexOf('syncRideQuestProgress(');
+    const effectsIndex = lifecycle.indexOf('applyDurableRideCompletionEffects(');
 
     expect(finallyIndex).toBeGreaterThan(-1);
     expect(classifyIndex).toBeGreaterThan(finallyIndex);
-    expect(durableIndex).toBeGreaterThan(classifyIndex);
-    expect(progressIndex).toBeGreaterThan(durableIndex);
-    expect(questIndex).toBeGreaterThan(durableIndex);
+    expect(effectsIndex).toBeGreaterThan(classifyIndex);
   });
 
   test('Summary celebration and success haptic are gated by durable truth', () => {
