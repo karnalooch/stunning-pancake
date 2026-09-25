@@ -4,9 +4,8 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../i18n/useI18n';
-import { ChromeIcon } from '../components/ui/ChromeIcon';
-import { pixelShadow } from '../theme/pixelShadow';
-import { FONTS } from '../theme/fonts';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
 const styles = StyleSheet.create({
   overlay: {
@@ -16,34 +15,29 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   modal: {
-    borderWidth: 4,
-    borderRadius: 12,
+    borderWidth: 1,
+    borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
   },
   title: {
-    fontSize: 20,
-    textTransform: 'uppercase',
-    marginTop: 12,
+    ...PRODUCT_TYPOGRAPHY.title,
     marginBottom: 24,
-    fontFamily: FONTS.display,
   },
   btn: {
     width: '100%',
     minHeight: 48,
     paddingVertical: 14,
-    borderRadius: 8,
-    borderWidth: 3,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
   },
   btnText: {
-    fontSize: 12,
-    textTransform: 'uppercase',
-    fontFamily: FONTS.display,
+    ...PRODUCT_TYPOGRAPHY.bodyMedium,
   },
 });
 
@@ -56,27 +50,26 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
   const c = theme.colors as Record<string, string>;
-  const outline = c.hudOutline ?? '#111111';
+  const semantic = getSemanticColors(theme.colors);
+  const outline = semantic.border.strong;
   return (
     <SafeAreaView testID="ride-paused-screen" style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.modal,
           {
-            backgroundColor: c.surface,
-            borderColor: outline,
-            ...pixelShadow(outline, 'md'),
+            backgroundColor: semantic.surface.raised,
+            borderColor: semantic.border.subtle,
           },
         ]}
       >
-        <ChromeIcon id="quests" size={32} />
-        <Text style={[styles.title, { color: c.onBackground }]} allowFontScaling>
+        <Text style={[styles.title, { color: semantic.text.primary }]} allowFontScaling>
           {t.ride.paused.title}
         </Text>
         <Pressable
           style={({ pressed }) => [
             styles.btn,
-            { borderColor: outline, backgroundColor: c.primaryContainer },
+            { borderColor: semantic.action.primary, backgroundColor: semantic.action.primary },
             pressed && { opacity: 0.85 },
           ]}
           onPress={onResume}
@@ -84,14 +77,14 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
           accessibilityRole="button"
           accessibilityLabel={t.ride.paused.resume}
         >
-          <Text style={[styles.btnText, { color: c.onPrimaryContainer }]} allowFontScaling>
-            ▶ {t.ride.paused.resume}
+          <Text style={[styles.btnText, { color: semantic.text.onAction }]} allowFontScaling>
+            {t.ride.paused.resume}
           </Text>
         </Pressable>
         <Pressable
           style={({ pressed }) => [
             styles.btn,
-            { borderColor: outline, backgroundColor: c.error },
+            { borderColor: semantic.action.destructive, backgroundColor: semantic.action.destructive },
             pressed && { opacity: 0.85 },
           ]}
           onPress={onStop}
@@ -99,8 +92,8 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
           accessibilityRole="button"
           accessibilityLabel={t.ride.paused.stop}
         >
-          <Text style={[styles.btnText, { color: c.onError }]} allowFontScaling>
-            ■ {t.ride.paused.stop}
+          <Text style={[styles.btnText, { color: semantic.text.onDestructive }]} allowFontScaling>
+            {t.ride.paused.stop}
           </Text>
         </Pressable>
       </View>
