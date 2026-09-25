@@ -16,6 +16,7 @@ import {
   getVisionRideFinishKind,
   isVisionFixtures,
   subscribeVisionRideFinishKind,
+  type VisionRideFinishKind,
 } from '../bootstrap/visionFixtures';
 import type {
   RideController,
@@ -60,7 +61,7 @@ function ProductionRideRoot() {
 
 function DeterministicRideRoot() {
   const presentation = useRidePresentationState();
-  const finishKind = useSyncExternalStore(
+  const finishKind = useSyncExternalStore<VisionRideFinishKind>(
     subscribeVisionRideFinishKind,
     () => getVisionRideFinishKind(true) ?? 'durable-success',
     () => 'durable-success',
