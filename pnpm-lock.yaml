@@ -102,8 +102,8 @@ importers:
         specifier: ^8.0.1
         version: 8.0.1
       zustand:
-        specifier: ^5.0.12
-        version: 5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
+        specifier: ^5.0.15
+        version: 5.0.15(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7))
     devDependencies:
       '@4velo/eslint-config':
         specifier: workspace:*
@@ -334,8 +334,8 @@ importers:
         specifier: 0.7.4
         version: 0.7.4(@babel/core@7.29.7(supports-color@8.1.1))(react-native@0.83.10(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.85.2(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.0)(supports-color@8.1.1))(react@19.2.0)(supports-color@8.1.1)
       zustand:
-        specifier: ^5.0.12
-        version: 5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
+        specifier: ^5.0.15
+        version: 5.0.15(@types/react@19.2.17)(immer@11.1.8)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
       '@4velo/tsconfig':
         specifier: workspace:*
@@ -8328,8 +8328,8 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
-  zustand@5.0.14:
-    resolution: {integrity: sha512-/8tAspM5LMPr28b3fwLYrtdj77ECpfZviaP75CMTnwO8ISyaE4GDIG/9rDDYq/cH9D2Xw2A2RXglLInmVBQB/g==}
+  zustand@5.0.15:
+    resolution: {integrity: sha512-MpSEjRiBkA9crSYeOUH32rJC7SVqAbm0Fqcqge/bUi2PPoLcBWKOsG+C8mevmpr8TwXHBVkChbbJiyvkE+i/3A==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -17849,14 +17849,14 @@ snapshots:
 
   zod@4.4.3: {}
 
-  zustand@5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0)):
+  zustand@5.0.15(@types/react@19.2.17)(immer@11.1.8)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0)):
     optionalDependencies:
       '@types/react': 19.2.17
       immer: 11.1.8
       react: 19.2.0
       use-sync-external-store: 1.6.0(react@19.2.0)
 
-  zustand@5.0.14(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)):
+  zustand@5.0.15(@types/react@19.2.17)(immer@11.1.8)(react@19.2.7)(use-sync-external-store@1.6.0(react@19.2.7)):
     optionalDependencies:
       '@types/react': 19.2.17
       immer: 11.1.8
