@@ -21,6 +21,7 @@ import type {
 import { useProductionRideController } from '../features/ride/controller/useProductionRideController';
 import { useDeterministicRideController } from '../features/ride/controller/useDeterministicRideController';
 import { LegacyNavigationBridge } from './navigation/LegacyNavigationBridge';
+import type { RideFinishState } from '../features/ride/model/RideFinishState';
 
 type RidePresentationState = {
   startRideError: string | null;
@@ -54,9 +55,24 @@ function ProductionRideRoot() {
   return <AppContent ride={ride} presentation={presentation} />;
 }
 
+function deterministicFinishKind(): RideFinishState['kind'] | undefined {
+  const value = process.env.EXPO_PUBLIC_VISION_RIDE_FINISH_KIND;
+  if (
+    value === 'durable-success' ||
+    value === 'pending-finalization' ||
+    value === 'recovery-required'
+  ) {
+    return value;
+  }
+  return undefined;
+}
+
 function DeterministicRideRoot() {
   const presentation = useRidePresentationState();
-  const ride = useDeterministicRideController(controllerOptions(presentation));
+  const ride = useDeterministicRideController({
+    ...controllerOptions(presentation),
+    deterministicFinishKind: deterministicFinishKind(),
+  });
   return <AppContent ride={ride} presentation={presentation} />;
 }
 
