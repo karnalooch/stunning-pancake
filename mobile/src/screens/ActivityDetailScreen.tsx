@@ -290,7 +290,8 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             </View>
           </View>
 
-          <ProductCard>\n            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
+          <ProductCard>
+            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
             {routeCoordinates.length >= 2 && viewport.center ? (
               <View style={s.mapWrap} testID="activity-detail-route-map">
                 <RideMapView
