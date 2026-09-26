@@ -1,7 +1,8 @@
 import React from 'react';
 import { Text, View } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { FONTS } from '../../theme/fonts';
+import { StyleSheet } from 'react-native-unistyles';
+import { getSemanticColors } from '../../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 
 interface RideNavigationHintProps {
   text?: string | null;
@@ -10,31 +11,25 @@ interface RideNavigationHintProps {
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   return {
     container: {
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: c.hudOutline,
       backgroundColor: c.hudPanel,
-      borderRadius: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      shadowColor: c.hudOutline,
-      shadowOffset: { width: 2, height: 2 },
-      shadowOpacity: 1,
-      shadowRadius: 0,
-      elevation: 3,
-      gap: 2,
+      borderRadius: 12,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      gap: 3,
     },
     title: {
-      color: c.secondary,
-      fontSize: 9,
-      fontFamily: FONTS.display,
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
       textTransform: 'uppercase',
     },
     body: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
       color: c.hudOutline,
-      fontSize: 11,
-      fontFamily: 'VT323',
     },
   };
 });
@@ -43,9 +38,7 @@ export const RideNavigationHint: React.FC<RideNavigationHintProps> = ({
   text,
   distanceM,
 }) => {
-  const { theme } = useUnistyles();
   const s = stylesheet;
-  const c = theme.colors as Record<string, string>;
   if (!text) return null;
 
   const distanceLabel =
@@ -56,7 +49,7 @@ export const RideNavigationHint: React.FC<RideNavigationHintProps> = ({
   return (
     <View style={s.container}>
       <Text style={s.title}>Navigation</Text>
-      <Text style={[s.body, { color: c.hudOutline }]}>{text}</Text>
+      <Text style={s.body}>{text}</Text>
       <Text style={s.body}>Next in {distanceLabel}</Text>
     </View>
   );
