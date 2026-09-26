@@ -86,9 +86,36 @@ jobs:
         shell: pwsh
         run: |
           Set-Location "$env:SHORT_WORKSPACE\"
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $virtualStore = "C:\v"
+          if (Test-Path $virtualStore) {
+            Remove-Item -Recurse -Force $virtualStore
+          }
 
+          $workspaceConfig = Join-Path $env:SHORT_WORKSPACE "pnpm-workspace.yaml"
+          $originalWorkspaceConfig = Get-Content -Raw $workspaceConfig
+          if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+            throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+          }
+
+          try {
+            $replacement = "virtualStoreDir: `"C:/v`"`nvirtualStoreDirMaxLength: 16"
+            $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+            if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+              throw "Could not inject short Windows virtual-store configuration."
+            }
+            Set-Content -Path $workspaceConfig -Value $shortStoreConfig -Encoding utf8 -NoNewline
+
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            if (-not (Test-Path $virtualStore -PathType Container)) {
+              throw "pnpm did not materialize the expected C:\v virtual store."
+            }
+
+            "EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV
+          } finally {
+            Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig -Encoding utf8 -NoNewline
+          }
       - name: Resolve Expo provenance
         shell: pwsh
         run: |
