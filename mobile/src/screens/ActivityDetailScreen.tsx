@@ -323,7 +323,11 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 />
               </View>
             ) : (
-              <Text style={s.body}>{t.activityDetail.noRouteData}</Text>
+              <Text style={s.body}>
+                {detail
+                  ? t.activityDetail.noRouteData
+                  : t.activityDetail.routeUnavailableOffline}
+              </Text>
             )}
           </ProductCard>
 
