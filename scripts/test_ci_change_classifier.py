@@ -93,6 +93,12 @@ class ChangeClassifierWorkflowTests(unittest.TestCase):
         self.assertIn("'mobile/src/**'", mobile)
         self.assertNotIn("'mobile/assets/**'", mobile)
 
+    def test_asset_only_does_not_enter_scripts_lane(self):
+        raw = text()
+        filters = raw[raw.index("          filters: |") : raw.index("      - name: Classify CI lanes")]
+        scripts = filters[filters.index("            scripts:") : filters.index("            docs:")]
+        self.assertNotIn("'assets/**'", scripts)
+
 
 if __name__ == "__main__":
     unittest.main()
