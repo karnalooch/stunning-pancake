@@ -5,7 +5,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
 import { ParticleSystem } from '../components/effects/ParticleSystem';
 import { CyclistSprite } from '../components/sprites/CyclistSprite';
@@ -21,6 +21,10 @@ import {
 } from '../game/ranks';
 import { useI18n } from '../i18n/useI18n';
 import { FONTS } from '../theme/fonts';
+import {
+  isDurableRideSuccess,
+  type RideFinishState,
+} from '../features/ride/model/RideFinishState';
 
 const stylesheet = StyleSheet.create((theme) => {
   const C = theme.colors as Record<string, string>;
@@ -106,18 +110,14 @@ const stylesheet = StyleSheet.create((theme) => {
 });
 
 interface RideSummaryScreenProps {
-  distance?: number;
-  elapsedSeconds?: number;
-  elevation?: number;
+  finishState: RideFinishState;
   username?: string;
   onShare?: () => void;
   onBackToHub?: () => void;
 }
 
 export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
-  distance = 0,
-  elapsedSeconds = 0,
-  elevation = 0,
+  finishState,
   username = 'RIDER',
   onShare,
   onBackToHub,
@@ -125,49 +125,78 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
   const s = stylesheet;
   const { t } = useI18n();
   const { enabled: immersiveEnabled } = useImmersiveTheme();
+  const summary = finishState.summary;
+  const distance = summary?.distanceKm ?? 0;
+  const elapsedSeconds = summary?.elapsedS ?? 0;
+  const elevation = summary?.elevationGainM ?? 0;
+  const durableSuccess = isDurableRideSuccess(finishState);
   const rank = useMemo(() => computeRideRank(distance, elevation), [distance, elevation]);
   const timeLabel = formatElapsed(elapsedSeconds);
   const xpGained = estimateXpGain(distance, elapsedSeconds / 60);
 
   useEffect(() => {
+    if (!durableSuccess) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-  }, []);
+  }, [durableSuccess]);
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       {immersiveEnabled && <SceneBackground sceneId="ride_summary" scrim="soft" />}
-      <ParticleSystem trigger={immersiveEnabled} />
+      <ParticleSystem trigger={immersiveEnabled && durableSuccess} />
       <View style={[s.header, s.shadow]}>
         <View style={{ width: 40 }} />
         <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>
         <View style={{ width: 40 }} />
       </View>
-      <FinishCelebration />
+      {durableSuccess ? <FinishCelebration /> : null}
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        <View style={s.titleSection}>
-          <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
-          <View style={[s.gradeBadge, s.shadow]}>
-            <Text style={s.gradeText}>{rank}</Text>
+        {durableSuccess ? (
+          <>
+            <View style={s.titleSection} testID="ride-summary-durable-success">
+              <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
+              <View style={[s.gradeBadge, s.shadow]}>
+                <Text style={s.gradeText}>{rank}</Text>
+              </View>
+            </View>
+            {immersiveEnabled && <CyclistSprite size={72} state="victory" expressionMode />}
+            <ShareResultCard
+              distanceKm={distance}
+              timeLabel={timeLabel}
+              elevationM={elevation}
+              rank={rank}
+              xpGained={xpGained}
+              username={username}
+            />
+            <Pressable
+              style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                onShare?.();
+              }}
+            >
+              <Text style={s.ctaText}>{t.summary.share}</Text>
+            </Pressable>
+          </>
+        ) : (
+          <View
+            style={s.titleSection}
+            testID={`ride-summary-${finishState.kind}`}
+          >
+            <Text style={s.subtitle}>
+              {finishState.kind === 'pending-finalization'
+                ? t.rideMessages.stopPending
+                : t.rideMessages.stopError}
+            </Text>
+            <Text style={s.subtitle}>
+              {finishState.kind === 'pending-finalization'
+                ? t.rideMessages.stopPendingBody
+                : t.rideMessages.stopErrorBody}
+            </Text>
+            <Text style={s.subtitle}>
+              {distance.toFixed(1)} km · {timeLabel} · {elevation.toFixed(0)} m
+            </Text>
           </View>
-        </View>
-        {immersiveEnabled && <CyclistSprite size={72} state="victory" expressionMode />}
-        <ShareResultCard
-          distanceKm={distance}
-          timeLabel={timeLabel}
-          elevationM={elevation}
-          rank={rank}
-          xpGained={xpGained}
-          username={username}
-        />
-        <Pressable
-          style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            onShare?.();
-          }}
-        >
-          <Text style={s.ctaText}>{t.summary.share}</Text>
-        </Pressable>
+        )}
         <Pressable
           style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
           onPress={() => {

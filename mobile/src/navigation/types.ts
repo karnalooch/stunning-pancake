@@ -1,3 +1,4 @@
+import type { RideFinishState } from '../features/ride/model/RideFinishState';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 
 export type MainTabParamList = {
@@ -21,12 +22,7 @@ export type RootStackParamList = {
   PerformanceTrends: undefined;
   GlobalLeaderboard: undefined;
   RidePaused: undefined;
-  RideSummary: {
-    distanceKm: number;
-    elapsedS: number;
-    elevationGainM: number;
-    activityId?: number;
-  };
+  RideSummary: RideFinishState;
   VisionGallery: undefined;
 };
 

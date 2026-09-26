@@ -35,20 +35,15 @@ import { syncRideQuestProgress } from '../game/quests';
 import type { RideEdgeMessage } from '../services/apiRetry';
 
 import { useI18n } from '../i18n/useI18n';
+import {
+  classifyRideFinishState,
+  classifyRideRecoveryAfterLaunch,
+  type RideFinishState,
+  type RideSummaryPayload,
+} from '../features/ride/model/RideFinishState';
+import { applyDurableRideCompletionEffects } from '../features/ride/controller/applyRideCompletionEffects';
 import { runE2eGpsRecoveryHarnessIfEnabled } from './e2eGpsRecoveryHarness';
 import { e2eConfig } from './e2eConfig';
-
-
-
-export type RideSummaryPayload = {
-
-  distanceKm: number;
-
-  elapsedS: number;
-
-  elevationGainM: number;
-
-};
 
 
 
@@ -88,7 +83,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
   const [gpsRecoveryBusy, setGpsRecoveryBusy] = useState(false);
 
-  const [rideSummary, setRideSummary] = useState<RideSummaryPayload | null>(null);
+  const [rideFinishState, setRideFinishState] = useState<RideFinishState | null>(null);
 
 
 
@@ -195,7 +190,16 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
         const resumed = await resumeActiveRideIfNeeded(null);
 
-        if (resumed) setIsRecording(true);
+        if (resumed) {
+          setIsRecording(true);
+        } else {
+          const recoveredFinishState = classifyRideRecoveryAfterLaunch(
+            result.pendingFinalization,
+          );
+          if (recoveredFinishState) {
+            setRideFinishState(recoveredFinishState);
+          }
+        }
 
       } catch (e) {
 
@@ -316,110 +320,73 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
 
 
   const handleStopRide = useCallback(async () => {
-
     const userId = userIdRef.current;
-
     const distanceKm = liveDistanceKm;
-
     const elapsedS = liveElapsedS;
-
     const elevationGainM = liveElevationGainM;
+    const summary: RideSummaryPayload | null =
+      distanceKm > 0 ? { distanceKm, elapsedS, elevationGainM } : null;
+
+    let stopResult: { finalized: boolean; pendingUpload: number } | null = null;
+    let errorReason: string | undefined;
 
     try {
+      stopResult = await stopRideSession(userId);
 
-      const { finalized, pendingUpload } = await stopRideSession(userId);
-
-      if (pendingUpload > 0 || !finalized) {
-
+      if (stopResult.pendingUpload > 0 || !stopResult.finalized) {
         pushEdge({
-
           title: t.rideMessages.stopPending,
-
           message: t.rideMessages.stopPendingBody,
-
           variant: 'offline',
-
         });
-
       } else {
-
         pushEdge({
-
           title: t.rideMessages.stopSaved,
-
           message: t.rideMessages.stopSavedBody,
-
           variant: 'success',
-
         });
-
       }
-
     } catch (e) {
-
       console.warn('[GPS] stop ride failed', e);
-
+      errorReason = e instanceof Error ? e.message : t.rideMessages.stopErrorBody;
       pushEdge({
-
         title: t.rideMessages.stopError,
-
         message: t.rideMessages.stopErrorBody,
-
         variant: 'error',
-
       });
-
     } finally {
-
       setIsRecording(false);
-
       setRidePaused(false);
-
       setLiveSpeed(0);
-
       setLiveDistanceKm(0);
-
       setLiveElevationGainM(0);
-
       setLiveElapsedS(0);
-
       setLiveCoord(null);
-
       refreshGpsRecoveryFlag();
-
-      if (distanceKm > 0) {
-
-        recordRideComplete(distanceKm, elapsedS / 60);
-
-        syncRideQuestProgress(distanceKm, elapsedS / 60);
-
-        setRideSummary({ distanceKm, elapsedS, elevationGainM });
-
-        return { navigated: false };
-
-      }
-
-      return { navigated: true, target: 'Ride' as const };
-
     }
 
+    const finishState = classifyRideFinishState(summary, stopResult, errorReason);
+
+    applyDurableRideCompletionEffects(finishState, {
+      recordRideComplete,
+      syncRideQuestProgress,
+    });
+
+    setRideFinishState(finishState);
+
+    if (finishState) {
+      return { navigated: false };
+    }
+
+    return { navigated: true, target: 'Ride' as const };
   }, [
-
     liveDistanceKm,
-
     liveElapsedS,
-
     liveElevationGainM,
-
     pushEdge,
-
     refreshGpsRecoveryFlag,
-
     t,
-
   ]);
-
-
 
   return {
 
@@ -442,12 +409,9 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
     gpsRecoveryVisible,
 
     gpsRecoveryBusy,
-
-    rideSummary,
-
-    setRideSummary,
-
-    onUserSessionReady,
+    rideFinishState,
+    setRideFinishState,
+onUserSessionReady,
 
     handleGpsRecoveryPress,
 

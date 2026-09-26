@@ -1,10 +1,7 @@
 import type { ActivitySportType } from '../../../types/activitySport';
+import type { RideFinishState } from '../model/RideFinishState';
 
-export type RideSummaryPayload = {
-  distanceKm: number;
-  elapsedS: number;
-  elevationGainM: number;
-};
+export type { RideFinishState, RideSummaryPayload } from '../model/RideFinishState';
 
 export type RideControllerNotice = {
   title: string;
@@ -21,6 +18,7 @@ export type RideControllerOptions = {
   onStartRideError?: (message: string | null) => void;
   onStartRideSuccess?: () => void;
   onEdgeMessage?: (message: RideControllerNotice | null) => void;
+  deterministicFinishKind?: RideFinishState['kind'];
 };
 
 export interface RideController {
@@ -34,8 +32,8 @@ export interface RideController {
   liveCoord: [number, number] | null;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
-  rideSummary: RideSummaryPayload | null;
-  setRideSummary: (value: RideSummaryPayload | null) => void;
+  rideFinishState: RideFinishState | null;
+  setRideFinishState: (value: RideFinishState | null) => void;
   onUserSessionReady: (userId: number | null) => Promise<void>;
   handleGpsRecoveryPress: () => Promise<void>;
   handleStartRide: (activityType?: ActivitySportType, eventId?: number) => Promise<boolean>;

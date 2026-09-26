@@ -20,7 +20,6 @@ export const ROUTE_PATHS = {
   performanceTrends: 'profile/trends',
   globalLeaderboard: 'compete/global-leaderboard',
   ridePaused: 'ride/paused',
-  rideSummary: 'ride/summary/:activityId?',
   visionGallery: 'vision-gallery',
 } as const;
 
@@ -30,11 +29,3 @@ export function buildActivityDetailRoute(
   return { name: 'ActivityDetail', params: { activityId } };
 }
 
-export function buildRideSummaryRoute(params: {
-  distanceKm: number;
-  elapsedS: number;
-  elevationGainM: number;
-  activityId?: number;
-}): { name: 'RideSummary'; params: RootStackParamList['RideSummary'] } {
-  return { name: 'RideSummary', params };
-}

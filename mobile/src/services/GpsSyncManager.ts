@@ -124,6 +124,7 @@ export interface RecoveryResult {
   pendingBuffer: number;
   outboxCount: number;
   pendingSession: boolean;
+  pendingFinalization: boolean;
 }
 
 function routePathHash(coords: [number, number][]): string {
@@ -253,6 +254,7 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
     pendingBuffer: 0,
     outboxCount: 0,
     pendingSession: false,
+    pendingFinalization: false,
   };
   if (!storage) return empty;
 
@@ -286,6 +288,7 @@ export async function recoverGpsDataOnLaunch(): Promise<RecoveryResult> {
     pendingBuffer: buffer.length,
     outboxCount: outbox.length,
     pendingSession,
+    pendingFinalization,
   };
 }
 
