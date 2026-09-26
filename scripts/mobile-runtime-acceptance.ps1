@@ -140,6 +140,8 @@ $deviceModel = (& $adbPath -s $selectedDevice shell getprop ro.product.model).Tr
 $mobileDir = Join-Path $repoRoot "mobile"
 $androidDir = Join-Path $mobileDir "android"
 $apkPath = Join-Path $androidDir "app\build\outputs\apk\release\app-release.apk"
+$repoDriveRoot = [System.IO.Path]::GetPathRoot($repoRoot)
+$shortVirtualStore = Join-Path $repoDriveRoot ("4v\" + $gitShort)
 
 $env:EAS_BUILD_PROFILE = "pilot-local"
 $env:EXPO_PUBLIC_VISION_FIXTURES = "true"
@@ -165,7 +167,15 @@ try {
 
   Write-Host ""
   Write-Host "=== Install exact workspace dependencies ===" -ForegroundColor Cyan
-  Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+  if (Test-Path $shortVirtualStore) {
+    Remove-Item -Recurse -Force $shortVirtualStore
+  }
+  Invoke-Checked "pnpm" @(
+    "install",
+    "--frozen-lockfile",
+    "--virtual-store-dir", $shortVirtualStore,
+    "--virtual-store-dir-max-length", "16"
+  ) $repoRoot
 
   Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
@@ -264,6 +274,7 @@ try {
     toolchain = [ordered]@{
       node = $nodeVersion
       pnpm = $pnpmVersion
+      pnpmVirtualStore = $shortVirtualStore
       java = $javaVersion
       androidSdkRoot = $env:ANDROID_SDK_ROOT
       adb = $adbVersion
