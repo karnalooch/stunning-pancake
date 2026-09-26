@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
-import { FONTS } from '../../theme/fonts';
+import { getSemanticColors } from '../../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 
 interface RideStatusBarProps {
   gpsLocked: boolean;
@@ -29,6 +30,7 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
   const { theme } = useUnistyles();
   const { t } = useI18n();
   const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   const [clock, setClock] = useState(() => formatClock(new Date()));
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
   }, []);
 
   const gpsLabel = gpsLocked ? t.ride.status.gpsLocked : t.ride.status.gpsSearching;
-  const gpsColor = gpsLocked ? (c.gpForestGreen ?? '#2E7D32') : (c.goldAmber ?? '#F5A623');
+  const gpsColor = gpsLocked ? semantic.ride.gpsLocked : semantic.status.warning;
   const batteryLabel = formatBatteryPct(batteryPct);
 
   return (
@@ -47,24 +49,24 @@ export const RideStatusBar: React.FC<RideStatusBarProps> = ({
         {
           backgroundColor: c.hudPanel,
           borderColor: c.hudOutline,
-          shadowColor: c.hudOutline,
+
         },
       ]}
     >
       <View style={styles.segment}>
         <View style={[styles.gpsDot, { backgroundColor: gpsColor, borderColor: c.hudOutline }]} />
         <Text
-          style={[styles.text, styles.gpsText, { color: c.hudOutline, fontFamily: FONTS.display }]}
+          style={[styles.text, styles.gpsText, { color: c.hudOutline }]}
           allowFontScaling
           numberOfLines={1}
         >
           {gpsLabel}
         </Text>
       </View>
-      <Text style={[styles.text, styles.batteryText, { color: c.hudOutline, fontFamily: FONTS.display }]} numberOfLines={1}>
+      <Text style={[styles.text, styles.batteryText, { color: c.hudOutline }]} numberOfLines={1}>
         {t.ride.status.battery} {batteryLabel}
       </Text>
-      <Text style={[styles.text, { color: c.hudOutline, fontFamily: 'VT323', fontSize: 18 }]}>
+      <Text style={[styles.clock, { color: c.hudOutline }]}>
         {clock}
       </Text>
     </View>
@@ -76,14 +78,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 2,
-    borderRadius: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 4,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   segment: {
     flexDirection: 'row',
@@ -95,10 +93,15 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderWidth: 1,
+    borderRadius: 5,
   },
   text: {
-    fontSize: 9,
-    letterSpacing: 0.5,
+    ...PRODUCT_TYPOGRAPHY.metricLabel,
+    letterSpacing: 0.2,
+  },
+  clock: {
+    ...PRODUCT_TYPOGRAPHY.bodyMedium,
+    fontVariant: ['tabular-nums'],
   },
   gpsText: {
     flexShrink: 1,
