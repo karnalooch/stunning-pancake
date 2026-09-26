@@ -250,7 +250,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             {data?.rejection_reason ? (
               <Text style={s.errorText}>
                 {data.rejection_reason}
-                {data.rejection_notes ? ` — ${data.rejection_notes}` : ''}
+                {detail?.rejection_notes ? ` — ${detail.rejection_notes}` : ''}
               </Text>
             ) : null}
           </ProductCard>
