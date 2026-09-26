@@ -11,12 +11,62 @@ class AffectedTestPlannerTests(unittest.TestCase):
         self.assertEqual(plan["risk"], "R0")
         self.assertEqual(plan["mobile"]["mode"], "skip")
         self.assertEqual(plan["backend"]["mode"], "skip")
+        self.assertTrue(plan["lanes"]["docs_policy"])
+        self.assertFalse(plan["lanes"]["python"])
+        self.assertFalse(plan["lanes"]["javascript"])
+        self.assertFalse(plan["lanes"]["mobile_native"])
 
     def test_mobile_leaf_uses_related_tests(self):
         plan = plan_from_files(["mobile/src/components/MetricStrip.tsx"])
         self.assertEqual(plan["mobile"]["mode"], "related")
         self.assertIn("mobile/src/components/MetricStrip.tsx", plan["mobile"]["relatedFiles"])
         self.assertFalse(plan["fullFallback"])
+
+    def test_mobile_service_code_uses_js_lane_without_visual_lane(self):
+        plan = plan_from_files(["mobile/src/services/gpsActivityQueue.ts"])
+        self.assertTrue(plan["lanes"]["javascript"])
+        self.assertTrue(plan["lanes"]["mobile_runtime"])
+        self.assertFalse(plan["lanes"]["visual"])
+        self.assertFalse(plan["lanes"]["mobile_assets"])
+
+    def test_mobile_ui_code_uses_js_and_visual_lanes(self):
+        plan = plan_from_files(["mobile/src/screens/HomeScreen.tsx"])
+        self.assertTrue(plan["lanes"]["javascript"])
+        self.assertTrue(plan["lanes"]["visual"])
+        self.assertTrue(plan["lanes"]["mobile_runtime"])
+
+    def test_mobile_asset_only_avoids_runtime_lane(self):
+        plan = plan_from_files(["mobile/assets/approved/home_hero_day_v1.jpg"])
+        self.assertTrue(plan["lanes"]["mobile_assets"])
+        self.assertTrue(plan["lanes"]["visual"])
+        self.assertTrue(plan["lanes"]["mobile_asset_only"])
+        self.assertFalse(plan["lanes"]["mobile_runtime"])
+        self.assertFalse(plan["lanes"]["javascript"])
+        self.assertFalse(plan["lanes"]["mobile_native"])
+
+    def test_code_plus_assets_activates_both_runtime_and_visual_lanes(self):
+        plan = plan_from_files(
+            [
+                "mobile/src/screens/HomeScreen.tsx",
+                "mobile/assets/approved/home_hero_day_v1.jpg",
+            ]
+        )
+        self.assertTrue(plan["lanes"]["javascript"])
+        self.assertTrue(plan["lanes"]["visual"])
+        self.assertTrue(plan["lanes"]["mobile_assets"])
+        self.assertTrue(plan["lanes"]["mobile_runtime"])
+        self.assertFalse(plan["lanes"]["mobile_asset_only"])
+
+    def test_native_config_activates_native_and_runtime_lanes(self):
+        plan = plan_from_files(["mobile/app.config.js"])
+        self.assertTrue(plan["lanes"]["mobile_native"])
+        self.assertTrue(plan["lanes"]["javascript"])
+        self.assertTrue(plan["lanes"]["mobile_runtime"])
+
+    def test_python_backend_activates_only_python_language_lane(self):
+        plan = plan_from_files(["backend/activities/gpx_export.py"])
+        self.assertTrue(plan["lanes"]["python"])
+        self.assertFalse(plan["lanes"]["javascript"])
 
     def test_mobile_navigation_is_full(self):
         plan = plan_from_files(["mobile/src/navigation/GameTabBar.tsx"])
@@ -103,6 +153,10 @@ class AffectedTestPlannerTests(unittest.TestCase):
     def test_push_is_full_even_with_no_diff(self):
         plan = plan_from_files([], event_name="push")
         self.assertTrue(plan["fullFallback"])
+        self.assertTrue(plan["lanes"]["full_release"])
+        self.assertTrue(plan["lanes"]["python"])
+        self.assertTrue(plan["lanes"]["javascript"])
+        self.assertTrue(plan["lanes"]["mobile_native"])
         for component in ("mobile", "backend", "telemetry", "admin"):
             self.assertEqual(plan[component]["mode"], "full")
 
