@@ -140,6 +140,8 @@ $deviceModel = (& $adbPath -s $selectedDevice shell getprop ro.product.model).Tr
 $mobileDir = Join-Path $repoRoot "mobile"
 $androidDir = Join-Path $mobileDir "android"
 $apkPath = Join-Path $androidDir "app\build\outputs\apk\release\app-release.apk"
+$repoDriveRoot = [System.IO.Path]::GetPathRoot($repoRoot)
+$shortVirtualStore = Join-Path $repoDriveRoot ("4v\" + $gitShort)
 
 $env:EAS_BUILD_PROFILE = "pilot-local"
 $env:EXPO_PUBLIC_VISION_FIXTURES = "true"
@@ -165,7 +167,36 @@ try {
 
   Write-Host ""
   Write-Host "=== Install exact workspace dependencies ===" -ForegroundColor Cyan
-  Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+  if (Test-Path $shortVirtualStore) {
+    Remove-Item -Recurse -Force $shortVirtualStore
+  }
+
+  $workspaceConfig = Join-Path $repoRoot "pnpm-workspace.yaml"
+  $originalWorkspaceBytes = [System.IO.File]::ReadAllBytes($workspaceConfig)
+  $originalWorkspaceConfig = [System.Text.Encoding]::UTF8.GetString($originalWorkspaceBytes)
+  if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+    throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+  }
+
+  $shortVirtualStoreYaml = $shortVirtualStore -replace "\\", "/"
+  try {
+    $replacement = "virtualStoreDir: `"$shortVirtualStoreYaml`"`nvirtualStoreDirMaxLength: 16"
+    $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+    if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+      throw "Could not inject short Windows virtual-store configuration."
+    }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($workspaceConfig, $shortStoreConfig, $utf8NoBom)
+
+    Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+    if (-not (Test-Path $shortVirtualStore -PathType Container)) {
+      throw "pnpm short virtual store was not materialized: $shortVirtualStore"
+    }
+  } finally {
+    [System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)
+  }
+
+  $env:EXPO_METRO_PNPM_VIRTUAL_STORE = $shortVirtualStore
 
   Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
@@ -264,6 +295,7 @@ try {
     toolchain = [ordered]@{
       node = $nodeVersion
       pnpm = $pnpmVersion
+      pnpmVirtualStore = $shortVirtualStore
       java = $javaVersion
       androidSdkRoot = $env:ANDROID_SDK_ROOT
       adb = $adbVersion
