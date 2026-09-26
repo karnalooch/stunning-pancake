@@ -212,6 +212,16 @@ try {
   Write-Host "=== Clean native generation ===" -ForegroundColor Cyan
   Invoke-Checked "pnpm" @("exec", "expo", "prebuild", "--clean", "--platform", "android", "--no-install") $mobileDir
 
+  $gradleProperties = Join-Path $androidDir "gradle.properties"
+  $gradleText = [System.IO.File]::ReadAllText($gradleProperties)
+  $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+  if (-not $gradleText.Contains($metaspaceBaseline)) {
+    throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
+  }
+  $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
+  $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+  [System.IO.File]::WriteAllText($gradleProperties, $gradleText, $utf8NoBom)
+
   $localProperties = Join-Path $androidDir "local.properties"
   $escapedSdk = $env:ANDROID_SDK_ROOT -replace "\\", "\\"
   "sdk.dir=$escapedSdk" | Set-Content -Path $localProperties -Encoding ASCII
