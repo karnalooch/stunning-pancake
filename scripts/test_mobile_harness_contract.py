@@ -156,6 +156,20 @@ class MobileHarnessContractTests(unittest.TestCase):
             "frozen workspace install must precede Expo/native generation",
         )
 
+
+    def test_mobile_native_smoke_requires_debug_and_release_parity(self):
+        workflow = read(".github/workflows/mobile-native-smoke.yml")
+
+        self.assertIn("./gradlew assembleDebug --no-daemon --stacktrace", workflow)
+        self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace", workflow)
+        self.assertIn("mobile/android/app/build/outputs/apk/debug/app-debug.apk", workflow)
+        self.assertIn("mobile/android/app/build/outputs/apk/release/app-release.apk", workflow)
+        self.assertLess(
+            workflow.index("./gradlew assembleDebug --no-daemon --stacktrace"),
+            workflow.index("./gradlew assembleRelease --no-daemon --stacktrace"),
+            "release parity must run after the debug native compile",
+        )
+
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
