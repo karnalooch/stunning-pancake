@@ -5,9 +5,9 @@ pmOnFail: ignore
 # admin React cannot leak into the mobile dependency graph / Metro / Jest.
 nodeLinker: isolated
 
-# Keep pnpm's isolated linker, but shorten native dependency paths on Windows.
-# React Native CMake/Ninja builds otherwise exceed safe object-path limits.
-virtualStoreDir: .pnpm
+# Keep pnpm's isolated linker and the standard node_modules/.pnpm virtual-store
+# location that Expo/Metro expects, while shortening generated package paths on
+# Windows so React Native CMake/Ninja object paths stay within safe limits.
 virtualStoreDirMaxLength: 40
 
 overrides:
