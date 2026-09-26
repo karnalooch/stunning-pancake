@@ -7,6 +7,7 @@ import * as Haptics from 'expo-haptics';
 
 import { ActivityService, type ActivityDetail, type ActivityItem } from '../services/api';
 import { OfflineCacheService } from '../services/OfflineCacheService';
+import { isOfflineTransportError } from '../services/apiRetry';
 import { APP_BRAND_NAME } from '../theme/brand';
 import { useI18n } from '../i18n/useI18n';
 import { ProductCard } from '../components/product/ProductCard';
@@ -162,10 +163,18 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
       const data = await ActivityService.getDetail(activityId);
       setDetail(data);
       setOffline(false);
-    } catch {
+    } catch (error) {
+      const canUseCachedFallback = Boolean(cached) && isOfflineTransportError(error);
       setDetail(null);
-      setOffline(Boolean(cached));
-      setLoadError(!cached);
+      if (canUseCachedFallback) {
+        setFallback(cached);
+        setOffline(true);
+        setLoadError(false);
+      } else {
+        setFallback(null);
+        setOffline(false);
+        setLoadError(true);
+      }
     } finally {
       setLoading(false);
     }
