@@ -144,6 +144,12 @@ class MobileHarnessContractTests(unittest.TestCase):
         mobile_package = json.loads(read("mobile/package.json"))
         self.assertEqual(mobile_package["devDependencies"]["babel-preset-expo"], "55.0.25")
 
+        workspace = read("pnpm-workspace.yaml")
+        self.assertIn("nodeLinker: isolated", workspace)
+        self.assertIn("virtualStoreDir: .pnpm", workspace)
+        self.assertIn("virtualStoreDirMaxLength: 40", workspace)
+        self.assertIn(".pnpm/", gitignore)
+
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
