@@ -833,42 +833,92 @@ jobs:
   # Findings are uploaded to GitHub Code Scanning; execution failures block
   # the aggregate gate.
   # ──────────────────────────────────────────
-  codeql:
-    name: CodeQL SAST
+  codeql-python:
+    name: CodeQL Python
     runs-on: ubuntu-latest
     needs: [changes]
-    if: |
-      needs.changes.outputs.full == 'true' ||
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.telemetry == 'true' ||
-      needs.changes.outputs.mobile == 'true' ||
-      needs.changes.outputs.admin == 'true' ||
-      needs.changes.outputs.packages == 'true'
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.lane_python == 'true'
     permissions:
       contents: read
       security-events: write
       actions: read
       packages: read
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [javascript-typescript, python]
-
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Initialize CodeQL
+      - name: Initialize CodeQL Python
         uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
-          languages: ${{ matrix.language }}
+          languages: python
           build-mode: none
           queries: security-extended
-
-      - name: Analyze with CodeQL
+      - name: Analyze Python with CodeQL
         uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: /language:python
 
+  codeql-javascript:
+    name: CodeQL JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.lane_javascript == 'true'
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Initialize CodeQL JavaScript/TypeScript
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+      - name: Analyze JavaScript/TypeScript with CodeQL
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: /language:javascript-typescript
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    needs: [changes, codeql-python, codeql-javascript]
+    if: |
+      always() && (
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.lane_python == 'true' ||
+        needs.changes.outputs.lane_javascript == 'true'
+      )
+    steps:
+      - name: Enforce language-specific CodeQL lanes
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          PYTHON_EXPECTED: ${{ needs.changes.outputs.lane_python }}
+          JAVASCRIPT_EXPECTED: ${{ needs.changes.outputs.lane_javascript }}
+          PYTHON_RESULT: ${{ needs.codeql-python.result }}
+          JAVASCRIPT_RESULT: ${{ needs.codeql-javascript.result }}
+        run: |
+          set -euo pipefail
+          if [ "$FULL" = "true" ]; then
+            PYTHON_EXPECTED=true
+            JAVASCRIPT_EXPECTED=true
+          fi
+          check_lane() {
+            expected="$1"
+            result="$2"
+            label="$3"
+            if [ "$expected" = "true" ]; then
+              if [ "$result" != "success" ]; then
+                echo "$label expected success, got $result" >&2
+                exit 1
+              fi
+            elif [ "$result" != "skipped" ] && [ "$result" != "success" ]; then
+              echo "$label unexpected result: $result" >&2
+              exit 1
+            fi
+          }
+          check_lane "$PYTHON_EXPECTED" "$PYTHON_RESULT" "CodeQL Python"
+          check_lane "$JAVASCRIPT_EXPECTED" "$JAVASCRIPT_RESULT" "CodeQL JavaScript/TypeScript"
   # ──────────────────────────────────────────
   # Dependency Review: block PRs that introduce HIGH/CRITICAL vulnerable
   # dependencies. Dependabot remains the post-merge monitor.
