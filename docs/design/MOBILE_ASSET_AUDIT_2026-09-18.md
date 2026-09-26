@@ -6,6 +6,20 @@
 
 The June generated pack is now **DELETE**, not temporary-runtime, because it is legacy/unapproved production input under the current Frozen UI v1.2 governance. It was physically removed from both `assets/generated/**` and `mobile/assets/generated/**` on the Mobile UI Assets v1 branch. Governed v1 assets live under `mobile/assets/approved/v1/**`; CI rejects resurrection of the retired visual roots and validates provenance/digests, but does not expire approved assets by age.
 
+## 2026-09-26 production coverage follow-up
+
+The production cut-over intentionally reduced the runtime visual family from the old 61-file legacy pack to a small governed v1 core. That was correct for provenance, but it also exposed a real product gap: the number of **approved** assets is not yet sufficient for final visual sign-off of every primary surface.
+
+The follow-up policy now tracks asset coverage **per screen**, not by raw file count:
+
+- Home / Active Ride / Ride Summary are covered by approved v1 production targets.
+- Welcome may temporarily reuse the approved Home hero while a dedicated Welcome hero is produced.
+- History and Activity Detail are explicitly **data-first**: no static art may hide missing route/history data or contract mismatches.
+- Profile / Compete / Explore remain planned visual families and cannot be declared visually complete merely because procedural fallbacks render.
+- The old June pack remains deleted and must not be resurrected to make screens look richer.
+
+This keeps the roadmap aligned with the runtime-acceptance harness and with T82: fix truthful contracts first, then finish T83 asset-rich surfaces with approved production art.
+
 ## Inventory
 
 Repository scan of \`assets/generated/**\` on the audit base:
