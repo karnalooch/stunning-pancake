@@ -148,7 +148,13 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("nodeLinker: isolated", workspace)
         self.assertNotIn("virtualStoreDir: .pnpm", workspace)
         self.assertIn("virtualStoreDirMaxLength: 40", workspace)
-        self.assertNotIn("\n.pnpm/\n", f"\n{gitignore}\n")
+        self.assertIn(".pnpm/", gitignore)
+        self.assertIn('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot', source)
+        self.assertLess(
+            source.index('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot'),
+            source.index('pnpm exec expo config --type public --json'),
+            "frozen workspace install must precede Expo/native generation",
+        )
 
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
