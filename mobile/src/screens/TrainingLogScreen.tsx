@@ -62,6 +62,9 @@ const stylesheet = StyleSheet.create((theme) => {
     status: {
       ...PRODUCT_TYPOGRAPHY.bodyMedium,
     },
+    statusVerified: { color: semantic.status.success },
+    statusRejected: { color: semantic.status.error },
+    statusPending: { color: semantic.status.warning },
     metrics: {
       flexDirection: 'row',
       gap: 20,
@@ -198,13 +201,11 @@ export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack, on
                   <Text
                     style={[
                       s.status,
-                      {
-                        color: item.is_verified
-                          ? '#15803d'
-                          : item.rejection_reason
-                            ? '#b42318'
-                            : '#9a6700',
-                      },
+                      item.is_verified
+                        ? s.statusVerified
+                        : item.rejection_reason
+                          ? s.statusRejected
+                          : s.statusPending,
                     ]}
                   >
                     {statusLabel(item, t)}
