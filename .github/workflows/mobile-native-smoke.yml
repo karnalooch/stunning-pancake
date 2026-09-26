@@ -49,7 +49,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
@@ -67,41 +66,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect native-affecting PR paths
-        id: filter
+      - name: Classify native-affecting changes
+        id: classifier
         if: github.event_name == 'pull_request'
-        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
-        with:
-          filters: |
-            native:
-              - 'mobile/app.config.js'
-              - 'mobile/app.json'
-              - 'mobile/eas.json'
-              - 'mobile/package.json'
-              - 'mobile/android/**'
-              - 'mobile/ios/**'
-              - 'mobile/plugins/**'
-              - 'mobile/google-services.json'
-              - 'mobile/GoogleService-Info.plist'
-              - 'mobile/assets/icon.png'
-              - 'mobile/assets/splash-icon.png'
-              - 'mobile/assets/adaptive-icon.png'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-              - '.npmrc'
-              - '.github/actions/pnpm-setup/**'
-              - 'version.json'
-              - 'scripts/validate_mobile_native_provenance.py'
-              - 'scripts/test_mobile_native_provenance.py'
-              - 'scripts/test_mobile_native_smoke_workflow.py'
-              - '.github/workflows/mobile-native-smoke.yml'
-
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT"
       - name: Decide whether Gradle is required
         id: decision
         env:
           EVENT_NAME: ${{ github.event_name }}
-          NATIVE_CHANGED: ${{ steps.filter.outputs.native }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
         run: |
           set -euo pipefail
           if [ "$EVENT_NAME" != "pull_request" ]; then
