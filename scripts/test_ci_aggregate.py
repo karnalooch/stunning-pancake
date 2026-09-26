@@ -476,7 +476,11 @@ class AggregateScriptTests(unittest.TestCase):
     # ---- combined outputs ---------------------------------------------------
 
     def test_combined_backend_and_docs_pass(self):
-        outputs = _base_outputs({"backend": "true", "docs": "true"})
+        outputs = _base_outputs({
+            "backend": "true",
+            "docs": "true",
+            "lane_python": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -487,7 +491,11 @@ class AggregateScriptTests(unittest.TestCase):
         )
 
     def test_combined_mobile_and_admin_pass(self):
-        outputs = _base_outputs({"mobile": "true", "admin": "true"})
+        outputs = _base_outputs({
+            "mobile": "true",
+            "admin": "true",
+            "lane_javascript": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -498,7 +506,11 @@ class AggregateScriptTests(unittest.TestCase):
         )
 
     def test_combined_packages_and_scripts_pass(self):
-        outputs = _base_outputs({"packages": "true", "scripts": "true"})
+        outputs = _base_outputs({
+            "packages": "true",
+            "scripts": "true",
+            "lane_javascript": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -517,7 +529,12 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertEqual(expected, {"affected-test-plan", "mobile-visual-contract", "docs-links"})
 
     def test_combined_backend_telemetry_docs_pass(self):
-        outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})
+        outputs = _base_outputs({
+            "backend": "true",
+            "telemetry": "true",
+            "docs": "true",
+            "lane_python": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
