@@ -34,6 +34,43 @@ class ActivityDetailSerializer(serializers.ModelSerializer):
         return None
 
 
+class RiderActivityDetailSerializer(serializers.ModelSerializer):
+    """Public detail contract for the activity owner in the mobile app.
+
+    Keep this allow-list intentionally small. Moderation, integration, storage
+    and GPX-forensics fields belong to elevated operational surfaces.
+    """
+
+    route_coords = serializers.SerializerMethodField()
+    duration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Activity
+        fields = (
+            "id",
+            "type",
+            "start_time",
+            "end_time",
+            "distance",
+            "duration",
+            "is_verified",
+            "verification_score",
+            "rejection_reason",
+            "route_coords",
+            "created_at",
+        )
+
+    def get_route_coords(self, obj):
+        if obj.route_path:
+            return list(obj.route_path.coords)
+        return None
+
+    def get_duration(self, obj):
+        if obj.duration:
+            return obj.duration.total_seconds()
+        return None
+
+
 class POISerializer(serializers.ModelSerializer):
     # write_only: the model stores coordinates in `location` (PointField), so these
     # input fields have no matching attribute on the instance. Without write_only,
