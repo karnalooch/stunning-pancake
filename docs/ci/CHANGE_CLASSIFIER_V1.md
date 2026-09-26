@@ -67,19 +67,17 @@ enter the regular Mobile runtime job.
 
 ## Full / release validation
 
-During the initial rollout, push-to-`main` and scheduled CI retain the existing
-broad/full regression as a safety net. After the classifier has accumulated
-clean evidence, the target architecture is to move expensive full validation
-into an explicit `full/release` lane triggered by:
+Heavy periodic/release evidence is owned by the explicit
+`.github/workflows/full-release.yml` lane. It runs manually, nightly and for
+release tags. The ordinary CI workflow no longer owns a nightly schedule,
+while pushes to `main` retain broad/full regression during staged rollout.
 
-- manual dispatch;
-- nightly schedule;
-- release/tag preparation.
+The Full / Release lane composes the canonical monorepo regression, Android
+native smoke, Home Lab validation and Kubernetes/release proof, then exposes
+one fail-closed `Full Release Gate`. Production deploy and post-deploy smoke
+remain separate explicit operations.
 
-That lane is the 4VELO equivalent of a game project's full asset/map/cook
-validation: full backend/telemetry/admin/mobile regression, E2E, native build,
-security scans and release/home-lab evidence. It should not be charged to every
-routine pull request.
+See `docs/ci/FULL_RELEASE_LANE_V1.md`.
 
 ## Fail-closed rules
 

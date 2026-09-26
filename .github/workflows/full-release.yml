@@ -1,0 +1,135 @@
+name: Full / Release Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Optional operator note for this full validation run"
+        required: false
+        type: string
+  schedule:
+    - cron: "15 2 * * *"
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "24.21.0"
+
+jobs:
+  repo-regression:
+    name: Full monorepo regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_DB: fourvelo_ci
+          POSTGRES_USER: fourvelo_ci
+          POSTGRES_PASSWORD: fourvelo_ci_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: full-release-ci-only-key
+      DJANGO_SETTINGS_MODULE: core.settings
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install system and Python dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev
+          python -m pip install "ruff>=0.8,<0.16" pytest pytest-django
+          python -m pip install -r backend/requirements.txt
+          python -m pip install -r telemetry/requirements.txt -r telemetry/requirements-dev.txt
+
+      - name: Release tag/version contract
+        if: startsWith(github.ref, 'refs/tags/')
+        run: python scripts/versioning.py check --tag "${GITHUB_REF_NAME}"
+
+      - name: Canonical full quality baseline
+        run: bash scripts/run-quality-baseline.sh
+
+  android-native:
+    name: Full Android native smoke
+    uses: ./.github/workflows/mobile-native-smoke.yml
+
+  home-lab:
+    name: Home Lab configuration proof
+    uses: ./.github/workflows/home-lab.yml
+
+  k8s-release:
+    name: Kubernetes + release proof
+    uses: ./.github/workflows/k8s-release-gate.yml
+    with:
+      deploy_target: none
+
+  full-release-gate:
+    name: Full Release Gate
+    if: always()
+    needs:
+      - repo-regression
+      - android-native
+      - home-lab
+      - k8s-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Enforce heavyweight validation matrix
+        env:
+          REPO_REGRESSION: ${{ needs.repo-regression.result }}
+          ANDROID_NATIVE: ${{ needs.android-native.result }}
+          HOME_LAB: ${{ needs.home-lab.result }}
+          K8S_RELEASE: ${{ needs.k8s-release.result }}
+        run: |
+          set -euo pipefail
+          failed=0
+          check() {
+            name="$1"
+            result="$2"
+            if [ "$result" != "success" ]; then
+              echo "::error::$name expected success, got $result"
+              failed=1
+            else
+              echo "$name: success"
+            fi
+          }
+          check "Full monorepo regression" "$REPO_REGRESSION"
+          check "Full Android native smoke" "$ANDROID_NATIVE"
+          check "Home Lab configuration proof" "$HOME_LAB"
+          check "Kubernetes + release proof" "$K8S_RELEASE"
+          exit "$failed"

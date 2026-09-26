@@ -37,11 +37,12 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         self.assertIn("pnpm exec expo prebuild --clean --platform android --no-install", text)
         self.assertIn("./gradlew assembleDebug --no-daemon --stacktrace", text)
 
-    def test_non_pr_runs_force_native_smoke_and_weekly_drift_check_exists(self):
+    def test_non_pr_runs_force_native_smoke_and_workflow_is_reusable(self):
         text = workflow_text()
         self.assertIn('if [ "$EVENT_NAME" != "pull_request" ]; then', text)
         self.assertIn('echo "run=true" >> "$GITHUB_OUTPUT"', text)
-        self.assertIn('cron: "30 3 * * 1"', text)
+        self.assertIn("  workflow_call:", text)
+        self.assertNotIn('cron: "30 3 * * 1"', text)
         self.assertIn("    branches: [main]", text)
 
     def test_scope_detection_uses_read_only_contents_permission(self):

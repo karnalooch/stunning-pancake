@@ -9,6 +9,7 @@ on:
       - "Home lab configuration"
       - "Live Map Prod Smoke"
       - "Kubernetes Release Gate"
+      - "Full / Release Validation"
       - "OpenSSF Scorecard"
     types: [completed]
   release:
@@ -101,6 +102,12 @@ jobs:
               ;;
             "Home lab configuration"|"Live Map Prod Smoke"|"Kubernetes Release Gate")
               post "$CHANNEL_DEV" "$status 4VELO runtime/release gate: $workflow = $conclusion on $branch · $url"
+              ;;
+            "Full / Release Validation")
+              post "$CHANNEL_DEV" "$status 4VELO Full Release Gate: $conclusion on $branch · $url"
+              if [ "$conclusion" != "success" ]; then
+                post "$CHANNEL_COMMAND" "🔴 4VELO Full Release Gate: $conclusion · $url"
+              fi
               ;;
             "4VELO CI/CD Pipeline")
               if [ "$source_event" = "pull_request" ] && [ "$conclusion" = "success" ] && [ -n "$pr_number" ]; then
