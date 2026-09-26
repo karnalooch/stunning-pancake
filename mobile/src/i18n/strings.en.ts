@@ -247,6 +247,9 @@ export const stringsEn = {
     verified: 'OK',
     pending: 'Pending',
     rejected: 'Rejected',
+    bike: 'Cycling',
+    run: 'Running',
+    walk: 'Walking',
   },
   activityDetail: {
     completed: 'Completed',
