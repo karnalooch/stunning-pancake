@@ -92,7 +92,8 @@ if (-not $repoRoot) {
 
 $gitSha = (& git -C $repoRoot rev-parse HEAD).Trim()
 $gitShort = (& git -C $repoRoot rev-parse --short=12 HEAD).Trim()
-$gitBranch = (& git -C $repoRoot branch --show-current).Trim()
+$gitBranch = ((& git -C $repoRoot branch --show-current) | Out-String).Trim()
+if (-not $gitBranch) { $gitBranch = "DETACHED" }
 $gitStatus = @(& git -C $repoRoot status --porcelain --untracked-files=all)
 if ($gitStatus.Count -gt 0) {
   throw @"
