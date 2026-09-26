@@ -196,6 +196,8 @@ try {
     [System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)
   }
 
+  $env:EXPO_METRO_PNPM_VIRTUAL_STORE = $shortVirtualStore
+
   Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
   Push-Location $mobileDir
