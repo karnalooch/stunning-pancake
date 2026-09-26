@@ -77,7 +77,6 @@ jobs:
             scripts:
               - 'scripts/**'
               - '**/*railway.json'
-              - 'assets/**'
               - 'pyproject.toml'
               - 'docker-compose.prod.yml'
               - 'version.json'
