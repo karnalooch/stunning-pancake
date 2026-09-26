@@ -86,7 +86,6 @@ jobs:
               - 'mobile/app.config.js'
               - 'mobile/eas.json'
               - 'admin/package.json'
-              - 'CHANGELOG.md'
             docs:
               - 'docs/**'
               - 'README.md'
