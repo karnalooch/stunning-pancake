@@ -176,8 +176,8 @@ class MobileHarnessContractTests(unittest.TestCase):
 
         for token in (
             "runs-on: windows-latest",
-            'subst W: "$env:GITHUB_WORKSPACE"',
-            '"SHORT_WORKSPACE=W:" >> $env:GITHUB_ENV',
+            'git worktree add --detach "C:\\w" "$env:GITHUB_SHA"',
+            '"SHORT_WORKSPACE=C:\\w" >> $env:GITHUB_ENV',
             'Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"',
             ". .\\scripts\\android-env.ps1",
             "pnpm install --frozen-lockfile",
