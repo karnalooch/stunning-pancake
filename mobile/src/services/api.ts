@@ -29,13 +29,7 @@ export interface ActivityItem {
 
 export interface ActivityDetail extends ActivityItem {
   route_coords: [number, number][] | null;
-  user_info: { id: number; username: string; role: string };
   created_at: string;
-  moderated_at?: string | null;
-  rejection_reason?: string;
-  rejection_notes?: string;
-  gpx_sha256?: string;
-  gpx_forensics_flags?: string[];
 }
 
 export interface LeaderboardEntry {
