@@ -257,10 +257,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
               {statusLabel}
             </Text>
             {data?.rejection_reason ? (
-              <Text style={s.errorText}>
-                {data.rejection_reason}
-                {detail?.rejection_notes ? ` — ${detail.rejection_notes}` : ''}
-              </Text>
+              <Text style={s.errorText}>{data.rejection_reason}</Text>
             ) : null}
           </ProductCard>
 
