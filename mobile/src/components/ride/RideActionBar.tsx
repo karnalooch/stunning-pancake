@@ -104,6 +104,7 @@ export const RideActionBar: React.FC<RideActionBarProps> = ({
         ]}
         onPressIn={startStopHold}
         onPressOut={clearStopTimer}
+        testID="ride-stop-button"
         accessibilityRole="button"
         accessibilityLabel={t.ride.actions.stopConfirm}
       >

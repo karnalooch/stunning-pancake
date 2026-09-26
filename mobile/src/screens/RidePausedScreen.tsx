@@ -58,7 +58,7 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
   const c = theme.colors as Record<string, string>;
   const outline = c.hudOutline ?? '#111111';
   return (
-    <SafeAreaView style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
+    <SafeAreaView testID="ride-paused-screen" style={[styles.overlay, { backgroundColor: c.ridePausedScrim }]} edges={['top', 'bottom']}>
       <View
         style={[
           styles.modal,
@@ -80,6 +80,7 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
             pressed && { opacity: 0.85 },
           ]}
           onPress={onResume}
+          testID="ride-paused-resume"
           accessibilityRole="button"
           accessibilityLabel={t.ride.paused.resume}
         >
@@ -94,6 +95,7 @@ export const RidePausedScreen: React.FC<Props> = ({ onResume, onStop }) => {
             pressed && { opacity: 0.85 },
           ]}
           onPress={onStop}
+          testID="ride-paused-stop"
           accessibilityRole="button"
           accessibilityLabel={t.ride.paused.stop}
         >
