@@ -39,6 +39,7 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
     def test_approved_asset_requires_provenance_and_digest(self):
         policy = copy.deepcopy(self.policy)
         policy["productionTargets"][0]["status"] = "approved"
+        policy["productionTargets"][0].pop("provenance", None)
         errors = validate_policy(policy, ROOT)
         self.assertTrue(any("approved asset requires provenance" in error for error in errors))
 
@@ -47,6 +48,7 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
             "sourceReference": "asset-ticket-1",
             "rightsStatus": "owned",
             "sha256": "not-a-digest",
+            "createdAt": "2026-09-25",
         }
         errors = validate_policy(policy, ROOT)
         self.assertTrue(any("sha256 must be 64 lowercase hex chars" in error for error in errors))
@@ -58,9 +60,15 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
             generated = root / "assets" / "generated"
             generated.mkdir(parents=True)
             (generated / "one.png").write_bytes(b"x")
-            policy["legacyGeneratedPolicy"]["expectedVisualFileCount"] = 2
+            policy["legacyGeneratedPolicy"]["expectedVisualFileCount"] = 0
             errors = validate_policy(policy, root)
         self.assertTrue(any("legacy visual inventory drift" in error for error in errors))
+
+    def test_legacy_runtime_use_must_be_forbidden(self):
+        policy = copy.deepcopy(self.policy)
+        policy["legacyGeneratedPolicy"]["temporaryRuntimeUseAllowed"] = True
+        errors = validate_policy(policy, ROOT)
+        self.assertIn("legacy generated assets must not be allowed at runtime", errors)
 
 
 if __name__ == "__main__":

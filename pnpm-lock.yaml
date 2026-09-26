@@ -358,6 +358,9 @@ importers:
       babel-plugin-transform-inline-environment-variables:
         specifier: ^0.4.4
         version: 0.4.4
+      babel-preset-expo:
+        specifier: 55.0.25
+        version: 55.0.25(@babel/core@7.29.7(supports-color@8.1.1))(@babel/runtime@7.29.7)(expo@55.0.31)(react-refresh@0.14.2)(supports-color@8.1.1)
       esbuild:
         specifier: 0.28.1
         version: 0.28.1

@@ -1,36 +1,24 @@
 import React from 'react';
-import { ImageBackground, View, type ViewProps } from 'react-native';
-import { ASSETS, type TextureId } from '../../assets/assetRegistry';
+import { View, type ViewProps } from 'react-native';
+
+export type TextureId = 'parchment_grain' | 'metal_plate' | 'wood_grain';
 
 interface TextureBackgroundProps extends ViewProps {
   texture: TextureId;
-  /** 0–1 opacity of grain overlay (spec: 5–8%) */
   opacity?: number;
   children?: React.ReactNode;
 }
 
-const TEXTURE_SOURCES: Record<TextureId, number> = {
-  parchment_grain: ASSETS.textures.parchment_grain,
-  metal_plate: ASSETS.textures.metal_plate,
-  wood_grain: ASSETS.textures.wood_grain,
-};
-
-/** Subtle pixel-art grain behind cards / HUD frames. */
+/**
+ * Fresh-v1 texture shell. Old raster textures were retired during the
+ * governed v1 cut-over; subtle surface treatment now comes from product chrome.
+ */
 export const TextureBackground: React.FC<TextureBackgroundProps> = ({
-  texture,
-  opacity = 0.07,
   style,
   children,
   ...rest
 }) => (
   <View style={[{ overflow: 'hidden' }, style]} {...rest}>
-    <ImageBackground
-      source={TEXTURE_SOURCES[texture]}
-      resizeMode="repeat"
-      imageStyle={{ opacity }}
-      style={{ flex: 1 }}
-    >
-      {children}
-    </ImageBackground>
+    {children}
   </View>
 );

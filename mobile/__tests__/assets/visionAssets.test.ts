@@ -1,27 +1,38 @@
+import fs from 'fs';
+import path from 'path';
 import {
   crestForTenant,
   deptIconFor,
   crestInitials,
 } from '../../src/assets/visionAssets';
 
-describe('visionAssets resolvers', () => {
-  test('crestForTenant matches by id/name regardless of diacritics or suffix', () => {
-    // Assets are wired -> known cities resolve to a source; unknown/empty stay undefined.
-    expect(crestForTenant('lublin')).toBeDefined();
-    expect(crestForTenant('Gdańsk')).toBeDefined();
-    expect(crestForTenant('siedlce-city')).toBeDefined();
+const SOURCE = fs.readFileSync(
+  path.resolve(__dirname, '../../src/assets/visionAssets.ts'),
+  'utf8',
+);
+
+describe('visionAssets resolvers after legacy asset purge', () => {
+  test('legacy optional crest lookup fails closed until a verified crest is approved', () => {
+    expect(crestForTenant('lublin')).toBeUndefined();
+    expect(crestForTenant('Gdańsk')).toBeUndefined();
+    expect(crestForTenant('siedlce-city')).toBeUndefined();
     expect(crestForTenant(null)).toBeUndefined();
     expect(crestForTenant('Atlantis')).toBeUndefined();
   });
 
-  test('deptIconFor matches Polish and English team names', () => {
-    expect(deptIconFor('IT Rowery')).toBeDefined();
-    expect(deptIconFor('Marketing')).toBeDefined();
-    expect(deptIconFor('Sprzedaż')).toBeDefined();
+  test('legacy department PNG lookup fails closed instead of restoring generated assets', () => {
+    expect(deptIconFor('IT Rowery')).toBeUndefined();
+    expect(deptIconFor('Marketing')).toBeUndefined();
+    expect(deptIconFor('Sprzedaż')).toBeUndefined();
     expect(deptIconFor('')).toBeUndefined();
   });
 
-  test('crestInitials returns two uppercase letters', () => {
+  test('resolver module does not reference retired generated roots', () => {
+    expect(SOURCE).not.toContain('assets/generated');
+    expect(SOURCE).not.toContain('mobile/assets/generated');
+  });
+
+  test('crestInitials remains available for deterministic Place Badge fallback', () => {
     expect(crestInitials('Lublin')).toBe('LU');
     expect(crestInitials('warszawa')).toBe('WA');
   });

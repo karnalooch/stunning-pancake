@@ -97,7 +97,8 @@
     "react-native-svg-transformer": "^1.5.3",
     "ts-jest": "^29.2.5",
     "tsx": "^4.21.0",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "babel-preset-expo": "55.0.25"
   },
   "overrides": {
     "node-forge": "1.4.0",

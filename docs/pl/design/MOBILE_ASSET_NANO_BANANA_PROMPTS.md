@@ -206,11 +206,11 @@ Używane przez `mobile/app.config.js`: `app_icon` (1024×1024), `splash_icon` (1
 
 - [`scripts/postprocess_assets.py`](../../../scripts/postprocess_assets.py) — skalowanie nearest-neighbor i trymowanie.
 - **Palette-quant jest opcjonalny i tylko dla chrome UI** (ikony, odznaki, waluty). **Nie** kwantyzuj scen/portretów/sprite sheetów — spłaszcza to bogatą paletę Grand Prix.
-- Bundle przez [`scripts/bundle_mobile_assets.py`](../../../scripts/bundle_mobile_assets.py) → `mobile/assets/generated/` + typowany [`mobile/src/assets/manifest.ts`](../../../mobile/src/assets/manifest.ts).
+- Bundle przez [`scripts/bundle_mobile_assets.py`](../../../scripts/bundle_mobile_assets.py) → `mobile/assets/approved/v1/` + governed registry [`mobile/src/assets/approvedAssets.ts`](../../../mobile/src/assets/approvedAssets.ts).
 
 ## 19. Spięcie z pipeline (follow-up, śledzone osobno)
 
-Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), zastąpienie historycznego generatora Grand Prix oraz import PNG zamiast SVG w [`mobile/src/assets/tabIcons.ts`](../../../mobile/src/assets/tabIcons.ts).
+Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), zastąpienie historycznego generatora Grand Prix oraz import PNG zamiast SVG w [`mobile/src/components/navigation/PixelTabIcon.tsx`](../../../mobile/src/components/navigation/PixelTabIcon.tsx).
 
 ## 20. Sun-readability spec (chrome HUD — normatywne)
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { PixelIcon } from '../ui/PixelIcon';
-import { PIXEL_TAB_ICONS, type TabRouteName } from '../../assets/tabIcons';
+import { Text } from 'react-native';
+import { useUnistyles } from 'react-native-unistyles';
 
 interface PixelTabIconProps {
   routeName: string;
@@ -10,12 +10,33 @@ interface PixelTabIconProps {
   inactiveColor?: string;
 }
 
+const GLYPHS: Record<string, string> = {
+  Ride: '◉',
+  Compete: '◇',
+  Explore: '⌖',
+  Profile: '●',
+};
+
 export const PixelTabIcon: React.FC<PixelTabIconProps> = ({
   routeName,
+  focused,
   size = 24,
+  activeColor,
+  inactiveColor,
 }) => {
-  const name = routeName as TabRouteName;
-  const source = PIXEL_TAB_ICONS[name] ?? PIXEL_TAB_ICONS.Ride;
+  const { theme } = useUnistyles();
+  const c = theme.colors as Record<string, string>;
+  const color = focused
+    ? (activeColor ?? c.primary ?? '#ff8a1f')
+    : (inactiveColor ?? c.outline ?? '#8797a3');
 
-  return <PixelIcon source={source} size={size} baseSize={24} />;
+  return (
+    <Text
+      allowFontScaling={false}
+      accessibilityElementsHidden
+      style={{ fontSize: size, lineHeight: size + 2, color }}
+    >
+      {GLYPHS[routeName] ?? GLYPHS.Ride}
+    </Text>
+  );
 };

@@ -2,10 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import type { DailyQuest } from '../../game/quests';
-import { PixelIcon } from '../ui/PixelIcon';
-import { CURRENCY_ICONS } from '../../assets/tabIcons';
 import { TextureBackground } from '../ui/TextureBackground';
-import { FONTS } from '../../theme/fonts';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 
 interface DailyQuestCardProps {
   quests: DailyQuest[];
@@ -18,34 +16,26 @@ export const DailyQuestCard: React.FC<DailyQuestCardProps> = ({ quests }) => {
   return (
     <TextureBackground
       texture="parchment_grain"
-      opacity={0.07}
+      opacity={0.04}
       style={[styles.card, { borderColor: c.hudOutline, backgroundColor: c.parchment }]}
     >
-      <Text style={[styles.header, { color: c.primary, fontFamily: FONTS.display }]}>Daily Quests</Text>
+      <Text style={[styles.header, { color: c.primary }]}>Daily Quests</Text>
       {quests.map((q) => {
         const pct = q.completed ? 100 : Math.min(100, (q.progress / q.target) * 100);
         return (
           <View key={q.id} style={styles.row}>
             <View style={styles.rowTop}>
-              <Text style={[styles.title, { color: c.onBackground, fontFamily: FONTS.display }]}>
+              <Text style={[styles.title, { color: c.onBackground }]}>
                 {q.completed ? '✓ ' : ''}{q.title}
               </Text>
-              <View style={styles.rewardRow}>
-                <PixelIcon source={CURRENCY_ICONS.xp} size={12} baseSize={16} />
-                <Text style={[styles.reward, { color: c.secondary, fontFamily: 'VT323', fontSize: 14 }]}>
-                  +{q.xpReward}
-                </Text>
-              </View>
+              <Text style={[styles.reward, { color: c.secondary }]}>+{q.xpReward} XP</Text>
             </View>
             <Text style={[styles.desc, { color: c.outline }]}>{q.description}</Text>
             <View style={[styles.track, { borderColor: c.hudOutline, backgroundColor: c.surfaceContainerHigh }]}>
               <View
                 style={[
                   styles.fill,
-                  {
-                    width: `${pct}%`,
-                    backgroundColor: q.completed ? c.primary : c.primaryFixed,
-                  },
+                  { width: `${pct}%`, backgroundColor: q.completed ? c.primary : c.primaryFixed },
                 ]}
               />
             </View>
@@ -57,28 +47,13 @@ export const DailyQuestCard: React.FC<DailyQuestCardProps> = ({ quests }) => {
 };
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: 2,
-    borderRadius: 8,
-    padding: 12,
-    gap: 12,
-  },
-  header: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-  },
-  row: { gap: 4 },
+  card: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 12 },
+  header: { ...PRODUCT_TYPOGRAPHY.bodyMedium, textTransform: 'uppercase' },
+  row: { gap: 5 },
   rowTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 8, flex: 1 },
-  rewardRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  reward: { textTransform: 'uppercase' },
-  desc: { fontSize: 11 },
-  track: {
-    height: 8,
-    borderWidth: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginTop: 2,
-  },
+  title: { ...PRODUCT_TYPOGRAPHY.metricLabel, flex: 1 },
+  reward: { ...PRODUCT_TYPOGRAPHY.metricLabel },
+  desc: { ...PRODUCT_TYPOGRAPHY.body, fontSize: 11 },
+  track: { height: 8, borderWidth: 1, borderRadius: 5, overflow: 'hidden', marginTop: 2 },
   fill: { height: '100%' },
 });

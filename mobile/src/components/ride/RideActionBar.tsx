@@ -1,13 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useI18n } from '../../i18n/useI18n';
 import { HapticService } from '../../services/HapticService';
 import { SoundService } from '../../services/SoundService';
 import { getSemanticColors } from '../../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
-import { HUD_ACTION_ICONS } from '../../assets/visionAssets';
-
 interface RideActionBarProps {
   isPaused: boolean;
   onPause: () => void;
@@ -20,28 +18,35 @@ const STOP_HOLD_MS = 900;
 type ActionIcon = 'stop' | 'play' | 'pause';
 
 const RideActionIcon: React.FC<{ type: ActionIcon; color: string }> = ({ type, color }) => {
-  const source = HUD_ACTION_ICONS[type];
-  if (source) {
-    return <Image source={source} style={{ width: 18, height: 18 }} resizeMode="contain" />;
-  }
-  // Pixel glif fallback — replaced by PNG asset once generated
   if (type === 'stop') {
-    return <View style={{ width: 12, height: 12, backgroundColor: color, borderWidth: 1, borderColor: color }} />;
-  }
-  if (type === 'pause') {
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-        <View style={{ width: 4, height: 12, backgroundColor: color }} />
-        <View style={{ width: 4, height: 12, backgroundColor: color }} />
+      <View testID="ride-action-icon-stop-v1" style={styles.iconBox}>
+        <View style={[styles.stopSquare, { backgroundColor: color }]} />
       </View>
     );
   }
+
+  if (type === 'pause') {
+    return (
+      <View testID="ride-action-icon-pause-v1" style={[styles.iconBox, styles.pauseRow]}>
+        <View style={[styles.pauseBar, { backgroundColor: color }]} />
+        <View style={[styles.pauseBar, { backgroundColor: color }]} />
+      </View>
+    );
+  }
+
   return (
-    <View style={{ justifyContent: 'center', gap: 1 }}>
-      <View style={{ width: 4, height: 2, backgroundColor: color }} />
-      <View style={{ width: 6, height: 2, backgroundColor: color }} />
-      <View style={{ width: 8, height: 2, backgroundColor: color }} />
-      <View style={{ width: 10, height: 2, backgroundColor: color }} />
+    <View testID="ride-action-icon-resume-v1" style={styles.iconBox}>
+      <View
+        style={[
+          styles.playTriangle,
+          {
+            borderLeftColor: color,
+            borderTopColor: 'transparent',
+            borderBottomColor: 'transparent',
+          },
+        ]}
+      />
     </View>
   );
 };
@@ -171,6 +176,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
+  },
+  iconBox: {
+    width: 22,
+    height: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pauseRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  pauseBar: {
+    width: 5,
+    height: 16,
+    borderRadius: 2,
+  },
+  stopSquare: {
+    width: 14,
+    height: 14,
+    borderRadius: 3,
+  },
+  playTriangle: {
+    width: 0,
+    height: 0,
+    borderTopWidth: 8,
+    borderBottomWidth: 8,
+    borderLeftWidth: 13,
   },
   label: {
     ...PRODUCT_TYPOGRAPHY.bodyMedium,

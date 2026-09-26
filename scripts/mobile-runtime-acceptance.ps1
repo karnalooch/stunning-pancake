@@ -37,7 +37,7 @@ function Invoke-Checked {
   try {
     & $Exe @Args
     if ($LASTEXITCODE -ne 0) {
-      throw "Exit code $LASTEXITCODE: $Exe $($Args -join ' ')"
+      throw "Exit code ${LASTEXITCODE}: $Exe $($Args -join ' ')"
     }
   } finally {
     Pop-Location
@@ -92,7 +92,8 @@ if (-not $repoRoot) {
 
 $gitSha = (& git -C $repoRoot rev-parse HEAD).Trim()
 $gitShort = (& git -C $repoRoot rev-parse --short=12 HEAD).Trim()
-$gitBranch = (& git -C $repoRoot branch --show-current).Trim()
+$gitBranch = ((& git -C $repoRoot branch --show-current) | Out-String).Trim()
+if (-not $gitBranch) { $gitBranch = "DETACHED" }
 $gitStatus = @(& git -C $repoRoot status --porcelain --untracked-files=all)
 if ($gitStatus.Count -gt 0) {
   throw @"
@@ -161,6 +162,10 @@ try {
   Write-Host "  Branch:      $gitBranch"
   Write-Host "  Device hash: $deviceHash"
   Write-Host "  Evidence:    $runDir"
+
+  Write-Host ""
+  Write-Host "=== Install exact workspace dependencies ===" -ForegroundColor Cyan
+  Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
 
   Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
