@@ -15,6 +15,9 @@ describe('T82 History + Activity Detail data contract', () => {
     expect(api).toContain('duration: number | null');
     expect(api).toContain('getDetail: (activityId: number)');
     expect(api).toContain('mobileActivityPaths.sessionDetail(activityId)');
+    expect(api).not.toContain('rejection_notes?: string');
+    expect(api).not.toContain('gpx_forensics_flags?: string[]');
+    expect(api).not.toContain('gpx_sha256?: string');
     expect(paths).toContain('sessionDetail: (activityId: number)');
     expect(paths).toContain('/detail/');
   });
@@ -28,6 +31,7 @@ describe('T82 History + Activity Detail data contract', () => {
     expect(detail).toContain('routeCoordinates={routeCoordinates}');
     expect(detail).toContain('showRiderMarker={false}');
     expect(detail).toContain('t.activityDetail.routeUnavailableOffline');
+    expect(detail).not.toContain('rejection_notes');
     expect(detail).not.toContain('achievementKomName');
     expect(detail).not.toContain('achievementPrName');
     expect(detail).not.toContain('routePreview');
