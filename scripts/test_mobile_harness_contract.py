@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import unittest
 from pathlib import Path
 
@@ -138,6 +139,10 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("emulator-5554", source)
         self.assertNotIn("$LASTEXITCODE:", source)
         self.assertIn("${LASTEXITCODE}:", source)
+        self.assertIn('$gitBranch = "DETACHED"', source)
+
+        mobile_package = json.loads(read("mobile/package.json"))
+        self.assertEqual(mobile_package["devDependencies"]["babel-preset-expo"], "55.0.25")
 
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
