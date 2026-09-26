@@ -44,6 +44,20 @@ class AffectedTestPlannerTests(unittest.TestCase):
         self.assertFalse(plan["lanes"]["javascript"])
         self.assertFalse(plan["lanes"]["mobile_native"])
 
+    def test_global_asset_only_is_also_lightweight(self):
+        plan = plan_from_files(["assets/ASSET_GOVERNANCE_V1.json"])
+        self.assertTrue(plan["lanes"]["mobile_assets"])
+        self.assertTrue(plan["lanes"]["visual"])
+        self.assertTrue(plan["lanes"]["mobile_asset_only"])
+        self.assertFalse(plan["lanes"]["mobile_runtime"])
+
+    def test_root_policy_doc_does_not_force_runtime_full(self):
+        plan = plan_from_files(["AGENTS.md"])
+        self.assertTrue(plan["lanes"]["docs_policy"])
+        self.assertFalse(plan["fullFallback"])
+        for component in ("mobile", "backend", "telemetry", "admin"):
+            self.assertEqual(plan[component]["mode"], "skip")
+
     def test_code_plus_assets_activates_both_runtime_and_visual_lanes(self):
         plan = plan_from_files(
             [
