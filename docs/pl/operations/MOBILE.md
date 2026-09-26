@@ -113,6 +113,14 @@ Zmiana numerycznego appVersion jest wymagana, gdy PR zmienia:
 
 Czyste zmiany JS/UI nie wymagają bumpa runtime tylko dlatego, że zmieniają kod aplikacji. Sama zmiana `version.json.prerelease` również nie przesuwa granicy Expo runtime — musi zmienić się numeryczne `version`.
 
+### Oszczędna bramka Android Native Smoke
+
+`.github/workflows/mobile-native-smoke.yml` uruchamia dla PR-ów szybkie rozpoznanie zakresu, ale kosztowne `expo prebuild --clean` + `gradlew assembleDebug` wykonuje tylko wtedy, gdy diff może zmienić artefakt natywny. Do takich wejść należą konfiguracja Expo/EAS, `mobile/package.json`, commitowane ścieżki native/config-plugin, pliki Google Services, buildowe ikony/splash, wersjonowanie produktu, manifesty workspace/toolchain, skrypty native provenance oraz sam workflow Native Smoke.
+
+Czyste zmiany JS/UI w `mobile/src/**`, testy mobile, zwykłe zatwierdzone assety JPG/PNG, dokumentacja/design oraz współdzielone pakiety bez wpływu native nie wymagają pełnego Gradle. Nadal przechodzą standardowy Mobile lane, Metro bundle smoke, testy jednostkowe, Mobile Visual Contract i asset governance.
+
+Polityka pozostaje fail-closed dla niejednoznacznych zmian zależności/toolchainu: root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` i `.npmrc` nadal wymuszają pełny native smoke. Raz w tygodniu pełny build uruchamia się także harmonogramowo, żeby wykrywać drift runnera/toolchainu.
+
 Blokującą implementacją jest `scripts/validate_mobile_runtime_boundary.py` uruchamiany w mobile CI. Gate działa dla pull requestów i pushy, gdzie istnieje zaufany base SHA; nocny schedule nadal testuje sam kontrakt jednostkowo bez wymyślania bazy porównania.
 
 ### Weryfikacja po buildzie
