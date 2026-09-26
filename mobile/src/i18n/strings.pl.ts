@@ -261,6 +261,7 @@ export const stringsPl = {
     loadingHint: 'Sprawdź połączenie i spróbuj ponownie.',
     route: 'Trasa',
     noRouteData: 'Ta aktywność nie ma zapisanej trasy GPS.',
+    routeUnavailableOffline: 'Przebieg trasy nie jest zapisany w pamięci. Połącz się, aby pobrać trasę GPS.',
     dataIntegrity: 'Źródło danych',
     detailSource: 'Pełne dane z kanonicznego endpointu szczegółów aktywności.',
     cachedSummaryOnly: 'Pokazuję zapisane podsumowanie. Szczegółowa trasa wymaga połączenia.',
