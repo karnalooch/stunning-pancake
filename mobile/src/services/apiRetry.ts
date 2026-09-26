@@ -1,8 +1,14 @@
+import axios from 'axios';
+
 export type RideEdgeMessage = {
   title: string;
   message: string;
   variant?: 'error' | 'warning' | 'offline' | 'success';
 };
+
+export function isOfflineTransportError(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response == null;
+}
 
 export async function withRetry<T>(
   fn: () => Promise<T>,

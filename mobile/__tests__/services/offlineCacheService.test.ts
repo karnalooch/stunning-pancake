@@ -25,7 +25,7 @@ function ride(id: number): ActivityItem {
     start_time: '2026-09-19T08:00:00.000Z',
     end_time: '2026-09-19T09:00:00.000Z',
     distance: 30_000,
-    duration: '01:00:00',
+    duration: 3600,
     is_verified: true,
     verification_score: 1,
   };

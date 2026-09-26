@@ -19,6 +19,8 @@ export interface RideMapViewProps {
   cyclistState?: 'idle' | 'cruise' | 'attack' | 'victory';
   /** Optional route polyline for turn-by-turn phase 1. */
   routeCoordinates?: [number, number][];
+  /** Hide the rider marker for historical route inspection. */
+  showRiderMarker?: boolean;
 }
 
 const FALLBACK_CENTER: [number, number] = [21.01, 52.23];
@@ -28,6 +30,7 @@ export const RideMapView: React.FC<RideMapViewProps> = ({
   zoomLevel = DEFAULT_RIDE_MAP_ZOOM,
   cyclistState = 'cruise',
   routeCoordinates = [],
+  showRiderMarker = true,
 }) => {
   const { enabled: immersiveEnabled } = useImmersiveTheme();
   const cameraRef = useRef<CameraRef>(null);
@@ -92,7 +95,7 @@ export const RideMapView: React.FC<RideMapViewProps> = ({
           </GeoJSONSource>
         ) : null}
       </Map>
-      {userCoordinate && (
+      {userCoordinate && showRiderMarker && (
         <View style={styles.markerWrap} pointerEvents="none">
           <View style={styles.markerOffset}>
             <Image

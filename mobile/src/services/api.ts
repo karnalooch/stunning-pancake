@@ -21,11 +21,15 @@ export interface ActivityItem {
   start_time: string;
   end_time: string | null;
   distance: number;
-  duration: string | null;
+  duration: number | null;
   is_verified: boolean;
   verification_score: number;
   rejection_reason?: string;
-  rejection_notes?: string;
+}
+
+export interface ActivityDetail extends ActivityItem {
+  route_coords: [number, number][] | null;
+  created_at: string;
 }
 
 export interface LeaderboardEntry {
@@ -152,6 +156,8 @@ export const ActivityService = {
       .post(mobileActivityPaths.sessionFinalize(activityId), body)
       .then((r) => r.data),
   getHistory: () => api.get<ActivityItem[]>(API_PATHS_FULL.activitiesSessions).then((r) => r.data),
+  getDetail: (activityId: number) =>
+    api.get<ActivityDetail>(mobileActivityPaths.sessionDetail(activityId)).then((r) => r.data),
   getLeaderboard: (cityId: string) =>
     api.get<any>(mobileActivityPaths.leaderboard(cityId)).then((r) => {
       const data = r.data;
