@@ -149,9 +149,11 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("virtualStoreDir: .pnpm", workspace)
         self.assertIn("virtualStoreDirMaxLength: 40", workspace)
         self.assertIn(".pnpm/", gitignore)
-        self.assertIn('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot', source)
+        self.assertIn('"--virtual-store-dir", $shortVirtualStore', source)
+        self.assertIn('"--virtual-store-dir-max-length", "16"', source)
+        self.assertIn('pnpmVirtualStore = $shortVirtualStore', source)
         self.assertLess(
-            source.index('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot'),
+            source.index('"--virtual-store-dir", $shortVirtualStore'),
             source.index('pnpm exec expo config --type public --json'),
             "frozen workspace install must precede Expo/native generation",
         )
@@ -180,7 +182,7 @@ class MobileHarnessContractTests(unittest.TestCase):
             '"SHORT_WORKSPACE=C:\\w" >> $env:GITHUB_ENV',
             'Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"',
             ". .\\scripts\\android-env.ps1",
-            "pnpm install --frozen-lockfile",
+            'pnpm install --frozen-lockfile --virtual-store-dir "$virtualStore" --virtual-store-dir-max-length 16',
             "expo prebuild --clean --platform android --no-install",
             "android\\local.properties",
             "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace",
