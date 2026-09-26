@@ -27,17 +27,21 @@ REQUIRED_OUTPUT_KEYS = (
     "docs",
     "visual",
     "ci_core",
+    "lane_python",
+    "lane_javascript",
 )
 
 PATH_EXPECTED = {
-    "backend": ("backend", "scripts-python", "codeql"),
-    "telemetry": ("telemetry", "codeql"),
-    "mobile": ("mobile", "security", "codeql"),
-    "admin": ("admin", "audit", "security", "e2e", "codeql"),
-    "packages": ("mobile", "admin", "repo-assets", "codeql"),
+    "backend": ("backend", "scripts-python"),
+    "telemetry": ("telemetry",),
+    "mobile": ("mobile", "security"),
+    "admin": ("admin", "audit", "security", "e2e"),
+    "packages": ("mobile", "admin", "repo-assets"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
     "visual": ("mobile-visual-contract",),
+    "lane_python": ("codeql",),
+    "lane_javascript": ("codeql",),
 }
 PATH_OUTPUT_KEYS = tuple(PATH_EXPECTED.keys())
 FULL_JOBS = (
