@@ -112,7 +112,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             "is_verified",
             "verification_score",
             "rejection_reason",
-            "rejection_notes",
             "route_path",
             "client_request_id",
         )
@@ -122,7 +121,6 @@ class ActivitySerializer(serializers.ModelSerializer):
             "is_verified",
             "verification_score",
             "rejection_reason",
-            "rejection_notes",
         )
 
     def get_user_info(self, obj):
