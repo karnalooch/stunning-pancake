@@ -137,11 +137,21 @@ jobs:
               - 'turbo.json'
             workflow:
               - '.github/workflows/**'
+      - name: Classify CI lanes
+        id: classifier
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT" \
+            --github-summary "$GITHUB_STEP_SUMMARY"
       - id: full
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ]; then
+          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ] || [ "${{ steps.classifier.outputs.full_fallback }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
