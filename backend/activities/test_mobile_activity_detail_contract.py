@@ -63,14 +63,13 @@ def test_activity_history_exposes_moderation_state_read_only():
     payload = ActivitySerializer(activity).data
 
     assert payload["rejection_reason"] == "GPS_SPOOF"
-    assert payload["rejection_notes"] == "reviewed"
+    assert "rejection_notes" not in payload
 
     serializer = ActivitySerializer(
         activity,
-        data={"rejection_reason": "OTHER", "rejection_notes": "client overwrite"},
+        data={"rejection_reason": "OTHER"},
         partial=True,
     )
     assert serializer.is_valid(), serializer.errors
     updated = serializer.save()
     assert updated.rejection_reason == "GPS_SPOOF"
-    assert updated.rejection_notes == "reviewed"
