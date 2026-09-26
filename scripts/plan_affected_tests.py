@@ -668,6 +668,7 @@ def build_plan(
             plan = plan_from_files([], event_name)
             _set_all_full(plan, f"planner could not prove a safe diff; FULL fallback: {type(exc).__name__}")
             plan["reasons"].append("diff resolution failed; fail-safe FULL")
+            _finalize_lanes(plan)
     plan["baseSha"] = base_sha
     plan["headSha"] = head_sha
     return plan
