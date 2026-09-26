@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import copy
 import hashlib
 import struct
@@ -23,69 +22,68 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
         self.assertEqual(validate_policy(self.policy, ROOT), [])
 
 
-    def test_ride_marker_png_stream_is_recoverable_losslessly(self):
+    def test_ride_marker_png_is_valid_rgba_and_matches_governance_digest(self):
         path = ROOT / "mobile" / "assets" / "approved" / "v1" / "ride_marker_rider_v1.png"
         data = path.read_bytes()
 
+        target = next(
+            target
+            for target in self.policy["productionTargets"]
+            if target["id"] == "ride_marker_rider_v1"
+        )
+        self.assertEqual(
+            hashlib.sha256(data).hexdigest(),
+            target["provenance"]["sha256"],
+            "ride marker bytes must match the governed immutable digest",
+        )
+
         signature = b"\x89PNG\r\n\x1a\n"
         self.assertTrue(data.startswith(signature))
-        ihdr_length = struct.unpack(">I", data[8:12])[0]
-        self.assertEqual(ihdr_length, 13)
-        self.assertEqual(data[12:16], b"IHDR")
-        ihdr_payload = data[16:29]
+
+        offset = len(signature)
+        chunks: list[tuple[bytes, bytes]] = []
+        while offset < len(data):
+            self.assertGreaterEqual(
+                len(data) - offset,
+                12,
+                "truncated PNG chunk header",
+            )
+            length = struct.unpack(">I", data[offset : offset + 4])[0]
+            kind = data[offset + 4 : offset + 8]
+            payload_start = offset + 8
+            payload_end = payload_start + length
+            crc_end = payload_end + 4
+            self.assertLessEqual(crc_end, len(data), f"truncated PNG chunk {kind!r}")
+
+            payload = data[payload_start:payload_end]
+            expected_crc = struct.unpack(">I", data[payload_end:crc_end])[0]
+            actual_crc = zlib.crc32(kind + payload) & 0xFFFFFFFF
+            self.assertEqual(expected_crc, actual_crc, f"CRC mismatch in PNG chunk {kind!r}")
+            chunks.append((kind, payload))
+            offset = crc_end
+
+            if kind == b"IEND":
+                break
+
+        self.assertEqual(offset, len(data), "unexpected bytes after IEND")
+        self.assertTrue(chunks)
+        self.assertEqual(chunks[0][0], b"IHDR")
+        self.assertEqual(chunks[-1][0], b"IEND")
+        self.assertEqual(chunks[-1][1], b"")
+
+        ihdr = chunks[0][1]
+        self.assertEqual(len(ihdr), 13)
         width, height, bit_depth, color_type, compression, filter_method, interlace = struct.unpack(
-            ">IIBBBBB", ihdr_payload
+            ">IIBBBBB", ihdr
         )
         self.assertEqual((width, height), (64, 64))
         self.assertEqual((bit_depth, color_type, compression, filter_method, interlace), (8, 6, 0, 0, 0))
 
-        declared_idat_length = struct.unpack(">I", data[33:37])[0]
-        self.assertEqual(data[37:41], b"IDAT")
-        payload_start = 41
-        declared_payload_end = payload_start + declared_idat_length
-        declared_payload = data[payload_start:declared_payload_end]
-        stale_crc = data[declared_payload_end:declared_payload_end + 4]
-        continuation = data[declared_payload_end + 4:]
+        idat = b"".join(payload for kind, payload in chunks if kind == b"IDAT")
+        self.assertTrue(idat, "PNG must contain IDAT data")
+        decoded = zlib.decompress(idat)
+        self.assertEqual(len(decoded), height * (1 + width * 4))
 
-        # The corrupt runtime derivative appears to contain a valid zlib prefix,
-        # followed by four stale CRC bytes, then the continuation of the same
-        # compressed stream. Prove that stitching only the compressed payload
-        # recovers the full 64x64 RGBA scanline stream.
-        prefix_decoder = zlib.decompressobj()
-        prefix_decoded = prefix_decoder.decompress(declared_payload)
-        self.assertFalse(prefix_decoder.eof, "declared IDAT unexpectedly already contains a complete stream")
-
-        decoded = prefix_decoded + prefix_decoder.decompress(continuation) + prefix_decoder.flush()
-        self.assertTrue(prefix_decoder.eof, "stitched IDAT continuation is still truncated/corrupt")
-        self.assertEqual(prefix_decoder.unused_data, b"", "unexpected bytes after recovered zlib stream")
-
-        expected_decoded = height * (1 + width * 4)
-        self.assertEqual(len(decoded), expected_decoded)
-
-        compressed = declared_payload + continuation
-
-        def chunk(kind: bytes, payload: bytes) -> bytes:
-            crc = zlib.crc32(kind + payload) & 0xFFFFFFFF
-            return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", crc)
-
-        repaired = signature + chunk(b"IHDR", ihdr_payload) + chunk(b"IDAT", compressed) + chunk(b"IEND", b"")
-        repaired_sha = hashlib.sha256(repaired).hexdigest()
-        decoded_sha = hashlib.sha256(decoded).hexdigest()
-
-        print(
-            "ride_marker_rider_v1.png recovery:",
-            {
-                "originalBytes": len(data),
-                "declaredIdatBytes": declared_idat_length,
-                "staleCrcHex": stale_crc.hex(),
-                "continuationBytes": len(continuation),
-                "decodedBytes": len(decoded),
-                "decodedSha256": decoded_sha,
-                "repairedBytes": len(repaired),
-                "repairedSha256": repaired_sha,
-            },
-        )
-        print("REPAIRED_RIDE_MARKER_BASE64=" + base64.b64encode(repaired).decode("ascii"))
 
     def test_duplicate_target_id_fails(self):
         policy = copy.deepcopy(self.policy)
