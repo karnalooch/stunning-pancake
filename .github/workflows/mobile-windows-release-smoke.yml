@@ -90,19 +90,35 @@ jobs:
           if (Test-Path $virtualStore) {
             Remove-Item -Recurse -Force $virtualStore
           }
-          $pnpmUserConfig = Join-Path $env:RUNNER_TEMP "4velo-pnpmrc"
-          @(
-            "virtual-store-dir=$virtualStore",
-            "virtual-store-dir-max-length=16"
-          ) | Set-Content -Path $pnpmUserConfig -Encoding ascii
-          $env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig
-          $resolvedVirtualStore = (pnpm config get virtual-store-dir).Trim()
-          if ($resolvedVirtualStore -ne $virtualStore) {
-            throw "pnpm short virtual store was not applied: $resolvedVirtualStore"
-          }
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+          $workspaceConfig = Join-Path $env:SHORT_WORKSPACE "pnpm-workspace.yaml"
+          $originalWorkspaceConfig = Get-Content -Raw $workspaceConfig
+          if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+            throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+          }
+
+          try {
+            $replacement = "virtualStoreDir: `"C:/v`"`nvirtualStoreDirMaxLength: 16"
+            $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+            if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+              throw "Could not inject short Windows virtual-store configuration."
+            }
+            Set-Content -Path $workspaceConfig -Value $shortStoreConfig -Encoding utf8 -NoNewline
+
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            $modulesFile = Join-Path $env:SHORT_WORKSPACE "node_modules\.modules.yaml"
+            if (-not (Test-Path $modulesFile -PathType Leaf)) {
+              throw "pnpm modules metadata missing: $modulesFile"
+            }
+            $modules = Get-Content -Raw $modulesFile
+            if ($modules -notmatch "C:\\v") {
+              throw "pnpm did not materialize the expected C:\v virtual store."
+            }
+          } finally {
+            Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig -Encoding utf8 -NoNewline
+          }
       - name: Resolve Expo provenance
         shell: pwsh
         run: |
