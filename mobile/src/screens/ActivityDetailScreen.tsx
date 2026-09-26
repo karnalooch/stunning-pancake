@@ -182,7 +182,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
   const verificationScore = detail?.verification_score ?? data?.verification_score ?? null;
   const statusLabel = data?.is_verified
     ? t.activityDetail.verified
-    : detail?.rejection_reason
+    : data?.rejection_reason
       ? t.activityDetail.rejected
       : t.activityDetail.pending;
 
@@ -239,7 +239,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 {
                   color: data.is_verified
                     ? semantic.status.success
-                    : detail?.rejection_reason
+                    : data?.rejection_reason
                       ? semantic.status.error
                       : semantic.status.warning,
                 },
@@ -247,10 +247,10 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
             >
               {statusLabel}
             </Text>
-            {detail?.rejection_reason ? (
+            {data?.rejection_reason ? (
               <Text style={s.errorText}>
-                {detail.rejection_reason}
-                {detail.rejection_notes ? ` — ${detail.rejection_notes}` : ''}
+                {data.rejection_reason}
+                {data.rejection_notes ? ` — ${data.rejection_notes}` : ''}
               </Text>
             ) : null}
           </ProductCard>
