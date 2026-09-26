@@ -111,6 +111,16 @@ function formatActivityDate(value: string | undefined, localeTag: string): strin
   return date.toLocaleString(localeTag);
 }
 
+function activityLabel(
+  type: string,
+  t: ReturnType<typeof useI18n.getState>['t'],
+): string {
+  if (type === 'BIKE') return t.training.bike;
+  if (type === 'RUN') return t.training.run;
+  if (type === 'WALK') return t.training.walk;
+  return type;
+}
+
 function cacheFallback(activityId: number): ActivityItem | null {
   return OfflineCacheService.getHistory()?.find((item) => item.id === activityId) ?? null;
 }
@@ -221,7 +231,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
           <ProductCard variant="raised">
-            <Text style={s.title}>{data.type}</Text>
+            <Text style={s.title}>{activityLabel(data.type, t)}</Text>
             <Text style={s.date}>{formatActivityDate(data.start_time, localeTag)}</Text>
             <Text
               style={[
