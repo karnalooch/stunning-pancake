@@ -247,6 +247,9 @@ export const stringsPl = {
     verified: 'OK',
     pending: 'Czeka',
     rejected: 'Odrzucono',
+    bike: 'Rower',
+    run: 'Bieg',
+    walk: 'Marsz',
   },
   activityDetail: {
     completed: 'Ukończono',
