@@ -41,6 +41,7 @@ import type { RideEdgeMessage } from '../services/apiRetry';
 import type { ActivitySportType } from '../services/api';
 import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
 import { formatRiderDisplayName } from '../utils/displayName';
+import { formatDurationSeconds } from '../utils/activityMetrics';
 import { LAYOUT } from '../theme/layout';
 import { getSemanticColors } from '../theme/semantic';
 import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
@@ -380,7 +381,9 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     ? null
     : fixturesEnabled
       ? '01:42:00'
-      : latestRide?.duration ?? null;
+      : latestRide?.duration != null
+        ? formatDurationSeconds(latestRide.duration)
+        : null;
 
   const handleStartRide = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
