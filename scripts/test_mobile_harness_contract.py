@@ -104,6 +104,50 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(helper=helper):
                 self.assertIn(helper, source)
 
+    def test_exact_sha_acceptance_harness_is_fail_closed_and_provenanced(self):
+        source = read("scripts/mobile-runtime-acceptance.ps1")
+        gitignore = read(".gitignore")
+
+        for token in (
+            "Worktree must be clean for exact-SHA runtime acceptance",
+            "scripts\\android-env.ps1",
+            "validate_mobile_native_provenance.py",
+            "Get-FileHash -Algorithm SHA256",
+            "EXPO_PUBLIC_VISION_FIXTURES",
+            "EXPO_PUBLIC_E2E_SKIP_ONBOARDING",
+            "--output-dir",
+            "--report",
+            "01_ride_dashboard.png",
+            "02_active_ride_hud.png",
+            "03_ride_paused.png",
+            "03b_ride_resumed.png",
+            "03d_ride_summary.png",
+            "03e_home_after_summary.png",
+            "AUTOMATION_PASS",
+            "provenance.json",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+        self.assertLess(
+            source.index('expo", "prebuild", "--clean"'),
+            source.index('"sdk.dir=$escapedSdk"'),
+            "local.properties must be written only after clean prebuild",
+        )
+        self.assertIn("artifacts/mobile-runtime-acceptance/", gitignore)
+        self.assertNotIn("emulator-5554", source)
+
+    def test_emulator_audit_supports_external_evidence_bundle_paths(self):
+        source = read("scripts/emulator-ui-audit.py")
+        for token in (
+            '"--output-dir"',
+            '"--report"',
+            "REPORT.parent.mkdir(parents=True, exist_ok=True)",
+            "os.path.relpath",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
         self.assertFalse((ROOT / "mobile" / "scripts" / "register_pilot.sh").exists())

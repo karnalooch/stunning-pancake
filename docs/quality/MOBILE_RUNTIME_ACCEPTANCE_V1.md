@@ -133,7 +133,38 @@ from repository sources of truth without proof-only generated-tree edits.
 
 Until #156 closes, UI development may continue, but release sign-off remains open.
 
-## 10. Failure classification
+## 10. Canonical exact-SHA evidence command
+
+For major mobile visual/runtime slices, the canonical local technical proof is:
+
+```powershell
+pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1
+```
+
+When more than one Android device is online, select the intended target explicitly:
+
+```powershell
+pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1 -DeviceId <adb-serial>
+```
+
+The command fails closed unless the worktree is clean. It performs clean native
+generation, validates repository/native provenance, builds and installs the
+exact local release APK, records its SHA-256 and installed package identity,
+runs the deterministic emulator interaction audit and verifies the mandatory
+Ride screenshot sequence.
+
+Evidence is written under the ignored local directory
+`artifacts/mobile-runtime-acceptance/<sha>-<timestamp>/` and contains:
+
+- `provenance.json` with Git/toolchain/device/artifact identity;
+- `emulator-audit.md`;
+- exact-runtime screenshots;
+- `acceptance-summary.md` with the manual visual review checklist.
+
+`AUTOMATION_PASS` means the technical/runtime evidence is complete. It does
+**not** replace the manual visual sign-off required by major visual slices.
+
+## 11. Failure classification
 
 Runtime results use only:
 
@@ -143,7 +174,7 @@ Runtime results use only:
 
 A BLOCKED result must state what was proven before the block and the smallest next action.
 
-## 11. Merge rule
+## 12. Merge rule
 
 A major visual slice merges only when its issue-specific required gates are green and manual visual sign-off is recorded.
 
