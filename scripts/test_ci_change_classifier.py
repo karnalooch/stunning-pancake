@@ -17,7 +17,7 @@ def text() -> str:
 def job_block(name: str) -> str:
     raw = text()
     match = re.search(
-        rf"(?ms)^  {re.escape(name)}:\\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\\n)",
+        rf"(?ms)^  {re.escape(name)}:\n(?P<body>.*?)(?=^  [a-zA-Z0-9_-]+:\n)",
         raw,
     )
     if not match:
