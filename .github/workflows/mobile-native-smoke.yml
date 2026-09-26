@@ -42,9 +42,7 @@ on:
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
       - ".github/workflows/mobile-native-smoke.yml"
-  # Catch toolchain/runner drift without charging every JS/UI PR for Gradle.
-  schedule:
-    - cron: "30 3 * * 1"
+  workflow_call:
   workflow_dispatch:
 
 permissions:
