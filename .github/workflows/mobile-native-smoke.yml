@@ -24,7 +24,7 @@ jobs:
   android-debug:
     name: Android clean prebuild + debug compile
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
       EAS_BUILD_PROFILE: pilot-local
       EXPO_PUBLIC_API_URL: http://localhost:8000
@@ -99,9 +99,16 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Record native artifact
+      - name: Compile Android release APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Record native artifacts
         run: |
-          APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$APK"
-          sha256sum "$APK"
-          ls -lh "$APK"
+          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+          RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          test -f "$DEBUG_APK"
+          test -f "$RELEASE_APK"
+          sha256sum "$DEBUG_APK"
+          sha256sum "$RELEASE_APK"
+          ls -lh "$DEBUG_APK" "$RELEASE_APK"
