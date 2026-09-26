@@ -305,7 +305,7 @@ def _finalize_lanes(plan: dict[str, Any]) -> None:
         or lanes["infra"]
     )
     lanes["mobile_asset_only"] = bool(
-        lanes["mobile_assets"] and mobile_changed and not non_asset_runtime
+        lanes["mobile_assets"] and not non_asset_runtime
     )
     lanes["mobile_runtime"] = bool(
         mobile_changed and not lanes["mobile_asset_only"]
@@ -612,8 +612,12 @@ def plan_from_files(changed_files: Iterable[str], event_name: str = "pull_reques
             plan["risk"] = _risk_max(plan["risk"], "R2")
             continue
 
-        if path.startswith(("assets/", "docs/")) or path in BENIGN_ROOT_FILES:
-            # Governed independently by docs/visual/asset checks.
+        if (
+            path.startswith("assets/")
+            or path in BENIGN_ROOT_FILES
+            or _matches_any(path, DOC_POLICY_PATTERNS)
+        ):
+            # Governed independently by docs/policy/visual/asset checks.
             continue
 
         if path.startswith("scripts/"):
