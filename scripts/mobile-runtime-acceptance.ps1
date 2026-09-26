@@ -170,24 +170,30 @@ try {
   if (Test-Path $shortVirtualStore) {
     Remove-Item -Recurse -Force $shortVirtualStore
   }
-  $pnpmUserConfig = Join-Path $runDir "pnpm-userconfig.ini"
-  @(
-    "virtual-store-dir=$shortVirtualStore",
-    "virtual-store-dir-max-length=16"
-  ) | Set-Content -Path $pnpmUserConfig -Encoding ASCII
-  $previousUserConfig = $env:NPM_CONFIG_USERCONFIG
+
+  $workspaceConfig = Join-Path $repoRoot "pnpm-workspace.yaml"
+  $originalWorkspaceBytes = [System.IO.File]::ReadAllBytes($workspaceConfig)
+  $originalWorkspaceConfig = [System.Text.Encoding]::UTF8.GetString($originalWorkspaceBytes)
+  if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+    throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+  }
+
+  $shortVirtualStoreYaml = $shortVirtualStore -replace "\\", "/"
   try {
-    $env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig
-    $resolvedVirtualStore = ((& pnpm config get virtual-store-dir) | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0) {
-      throw "pnpm config get virtual-store-dir failed"
+    $replacement = "virtualStoreDir: `"$shortVirtualStoreYaml`"`nvirtualStoreDirMaxLength: 16"
+    $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+    if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+      throw "Could not inject short Windows virtual-store configuration."
     }
-    if ($resolvedVirtualStore -ne $shortVirtualStore) {
-      throw "pnpm short virtual store was not applied: $resolvedVirtualStore"
-    }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($workspaceConfig, $shortStoreConfig, $utf8NoBom)
+
     Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+    if (-not (Test-Path $shortVirtualStore -PathType Container)) {
+      throw "pnpm short virtual store was not materialized: $shortVirtualStore"
+    }
   } finally {
-    $env:NPM_CONFIG_USERCONFIG = $previousUserConfig
+    [System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)
   }
 
   Write-Host ""
