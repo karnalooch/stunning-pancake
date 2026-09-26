@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { ActivityService, type ActivityItem } from '../services/api';
 import { OfflineCacheService } from '../services/OfflineCacheService';
+import { isOfflineTransportError } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -121,12 +122,15 @@ export const TrainingLogScreen: React.FC<TrainingLogScreenProps> = ({ onBack, on
       OfflineCacheService.setHistory(list);
       setItems(list);
       setOffline(false);
-    } catch {
-      if (!cached?.length) {
+    } catch (error) {
+      const canUseCachedFallback = Boolean(cached?.length) && isOfflineTransportError(error);
+      if (canUseCachedFallback) {
+        setOffline(true);
+      } else {
         setItems([]);
+        setOffline(false);
         setLoadError(true);
       }
-      setOffline(Boolean(cached?.length));
     } finally {
       setLoading(false);
     }
