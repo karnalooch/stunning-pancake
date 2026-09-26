@@ -2,15 +2,49 @@ name: Mobile Native Smoke
 
 on:
   pull_request:
+    # Keep the workflow visible for mobile/workspace PRs, but let the cheap
+    # native-scope job decide whether a full Android rebuild is warranted.
     paths:
       - "mobile/**"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
+      - "scripts/validate_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_smoke_workflow.py"
+      - ".github/workflows/mobile-native-smoke.yml"
+  push:
+    branches: [main]
+    # On main, run the expensive smoke only when native inputs changed.
+    paths:
+      - "mobile/app.config.js"
+      - "mobile/app.json"
+      - "mobile/eas.json"
+      - "mobile/package.json"
+      - "mobile/android/**"
+      - "mobile/ios/**"
+      - "mobile/plugins/**"
+      - "mobile/google-services.json"
+      - "mobile/GoogleService-Info.plist"
+      - "mobile/assets/icon.png"
+      - "mobile/assets/splash-icon.png"
+      - "mobile/assets/adaptive-icon.png"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
       - ".github/workflows/mobile-native-smoke.yml"
+  # Catch toolchain/runner drift without charging every JS/UI PR for Gradle.
+  schedule:
+    - cron: "30 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -21,8 +55,56 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  native-scope:
+    name: Native scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.decision.outputs.run }}
+      reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Classify native-affecting changes
+        id: classifier
+        if: github.event_name == 'pull_request'
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Decide whether Gradle is required
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=$EVENT_NAME forces a native smoke" >> "$GITHUB_OUTPUT"
+          elif [ "$NATIVE_CHANGED" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=JS/UI/assets-only PR; covered by Mobile + Visual Contract" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report native scope
+        run: |
+          echo "### Mobile Native Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run Android build:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
   android-debug:
     name: Android clean prebuild + debug compile
+    needs: [native-scope]
+    if: needs.native-scope.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

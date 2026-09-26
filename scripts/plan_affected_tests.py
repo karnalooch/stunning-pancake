@@ -40,6 +40,7 @@ CI_CORE_PATTERNS = (
     "scripts/test_ci_aggregate.py",
     "scripts/test_ci_mobile_path_filter.py",
     "scripts/test_ci_visual_path_filter.py",
+    "scripts/test_ci_change_classifier.py",
     "turbo.json",
 )
 
@@ -60,7 +61,12 @@ INFRA_FULL_PATTERNS = (
 )
 
 VISUAL_PATTERNS = (
-    "mobile/**",
+    "mobile/assets/**",
+    "mobile/src/assets/**",
+    "mobile/src/screens/**",
+    "mobile/src/components/**",
+    "mobile/src/theme/**",
+    "mobile/src/design-contract/**",
     "assets/**",
     "docs/design/**",
     "docs/adr/**",
@@ -157,6 +163,73 @@ BENIGN_ROOT_FILES = {
     "LICENSE.md",
 }
 
+DOC_POLICY_PATTERNS = (
+    "docs/**",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "AGENTS.md",
+    ".github/ISSUE_TEMPLATE/**",
+    ".github/PULL_REQUEST_TEMPLATE/**",
+    "scripts/check_docs_links.py",
+    "scripts/check_docs_i18n.py",
+)
+
+MOBILE_ASSET_PATTERNS = (
+    "mobile/assets/**",
+    "mobile/src/assets/**",
+    "assets/**",
+)
+
+VISUAL_UI_PATTERNS = (
+    "mobile/src/screens/**",
+    "mobile/src/components/**",
+    "mobile/src/theme/**",
+    "mobile/src/design-contract/**",
+    "packages/tokens/**",
+    "docs/design/**",
+    "docs/adr/**",
+    "docs/pl/design/**",
+    "docs/pl/adr/**",
+    "docs/TAKEOVER_PLAN_CURRENT.md",
+    "scripts/audit-screen-tokens.ts",
+    "scripts/validate_mobile_asset_governance.py",
+    "scripts/test_validate_mobile_asset_governance.py",
+    "scripts/validate_mobile_visual_authority.py",
+    "scripts/test_validate_mobile_visual_authority.py",
+)
+
+MOBILE_NATIVE_EXACT = {
+    ".npmrc",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "version.json",
+    "mobile/app.config.js",
+    "mobile/app.json",
+    "mobile/eas.json",
+    "mobile/package.json",
+    "mobile/google-services.json",
+    "mobile/GoogleService-Info.plist",
+    "mobile/assets/icon.png",
+    "mobile/assets/splash-icon.png",
+    "mobile/assets/adaptive-icon.png",
+    "scripts/validate_mobile_native_provenance.py",
+    "scripts/test_mobile_native_provenance.py",
+    "scripts/test_mobile_native_smoke_workflow.py",
+    ".github/workflows/mobile-native-smoke.yml",
+}
+
+MOBILE_NATIVE_PREFIXES = (
+    ".github/actions/pnpm-setup/",
+    "mobile/android/",
+    "mobile/ios/",
+    "mobile/plugins/",
+)
+
+JS_TS_SUFFIXES = {".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs"}
+
 
 def _norm(path: str) -> str:
     value = path.strip().replace("\\", "/")
@@ -174,6 +247,76 @@ def _matches(path: str, pattern: str) -> bool:
 
 def _matches_any(path: str, patterns: Iterable[str]) -> bool:
     return any(_matches(path, pattern) for pattern in patterns)
+
+
+def _lanes() -> dict[str, bool]:
+    return {
+        "docs_policy": False,
+        "python": False,
+        "javascript": False,
+        "visual": False,
+        "mobile_assets": False,
+        "mobile_native": False,
+        "infra": False,
+        "full_release": False,
+        "mobile_asset_only": False,
+        "mobile_runtime": False,
+    }
+
+
+def is_mobile_native_affecting_path(path: str) -> bool:
+    normalized = _norm(path)
+    return normalized in MOBILE_NATIVE_EXACT or any(
+        normalized.startswith(prefix) for prefix in MOBILE_NATIVE_PREFIXES
+    )
+
+
+def _mark_lane_inputs(plan: dict[str, Any], path: str) -> None:
+    lanes = plan["lanes"]
+
+    if _matches_any(path, DOC_POLICY_PATTERNS):
+        lanes["docs_policy"] = True
+
+    if path.endswith(".py") and path.startswith(("backend/", "telemetry/", "scripts/")):
+        lanes["python"] = True
+
+    if Path(path).suffix.lower() in JS_TS_SUFFIXES and path.startswith(
+        ("mobile/", "admin/", "packages/", "scripts/")
+    ):
+        lanes["javascript"] = True
+
+    if _matches_any(path, MOBILE_ASSET_PATTERNS):
+        lanes["mobile_assets"] = True
+        lanes["visual"] = True
+
+    if _matches_any(path, VISUAL_UI_PATTERNS):
+        lanes["visual"] = True
+
+    if is_mobile_native_affecting_path(path):
+        lanes["mobile_native"] = True
+        if Path(path).suffix.lower() in JS_TS_SUFFIXES:
+            lanes["javascript"] = True
+
+    if _matches_any(path, INFRA_FULL_PATTERNS):
+        lanes["infra"] = True
+
+
+def _finalize_lanes(plan: dict[str, Any]) -> None:
+    lanes = plan["lanes"]
+    mobile_changed = plan["mobile"]["mode"] != "skip"
+
+    non_asset_runtime = (
+        lanes["python"]
+        or lanes["javascript"]
+        or lanes["mobile_native"]
+        or lanes["infra"]
+    )
+    lanes["mobile_asset_only"] = bool(
+        lanes["mobile_assets"] and not non_asset_runtime
+    )
+    lanes["mobile_runtime"] = bool(
+        mobile_changed and not lanes["mobile_asset_only"]
+    )
 
 
 def _is_mobile_source(path: str) -> bool:
@@ -221,6 +364,8 @@ def _set_mode(component: dict[str, Any], mode: str, reason: str) -> None:
 def _set_all_full(plan: dict[str, Any], reason: str) -> None:
     for name in ("mobile", "backend", "telemetry", "admin"):
         _set_mode(plan[name], "full", reason)
+    for lane in ("python", "javascript", "visual", "mobile_native", "infra"):
+        plan["lanes"][lane] = True
     plan["risk"] = "R5"
     plan["fullFallback"] = True
 
@@ -406,13 +551,14 @@ def plan_from_files(changed_files: Iterable[str], event_name: str = "pull_reques
     event = event_name or "pull_request"
     files = sorted({_norm(path) for path in changed_files if _norm(path)})
     plan: dict[str, Any] = {
-        "schemaVersion": 1,
-        "policy": "T94_FAIL_SAFE_AFFECTED_TESTS",
+        "schemaVersion": 2,
+        "policy": "T94_LANE_CLASSIFIER_V2",
         "event": event,
         "risk": "R0",
         "fullFallback": False,
         "changedFiles": files,
         "visualContractRequired": False,
+        "lanes": _lanes(),
         "mobile": _component(),
         "backend": _component(),
         "telemetry": _component(),
@@ -423,14 +569,19 @@ def plan_from_files(changed_files: Iterable[str], event_name: str = "pull_reques
     if event not in VALID_EVENTS:
         _set_all_full(plan, f"unsupported CI event {event!r} fails safe to FULL")
         plan["reasons"].append("unsupported event")
+        _finalize_lanes(plan)
         return plan
 
     if event in {"push", "schedule"}:
         _set_all_full(plan, f"{event} uses broad/full regression by policy")
+        plan["lanes"]["full_release"] = True
         plan["reasons"].append("main/nightly policy requires broad/full regression")
+        _finalize_lanes(plan)
         return plan
 
     for path in files:
+        _mark_lane_inputs(plan, path)
+
         if _matches_any(path, VISUAL_PATTERNS):
             plan["visualContractRequired"] = True
 
@@ -468,8 +619,12 @@ def plan_from_files(changed_files: Iterable[str], event_name: str = "pull_reques
             plan["risk"] = _risk_max(plan["risk"], "R2")
             continue
 
-        if path.startswith(("assets/", "docs/")) or path in BENIGN_ROOT_FILES:
-            # Governed independently by docs/visual/asset checks.
+        if (
+            path.startswith("assets/")
+            or path in BENIGN_ROOT_FILES
+            or _matches_any(path, DOC_POLICY_PATTERNS)
+        ):
+            # Governed independently by docs/policy/visual/asset checks.
             continue
 
         if path.startswith("scripts/"):
@@ -487,6 +642,7 @@ def plan_from_files(changed_files: Iterable[str], event_name: str = "pull_reques
         plan["reasons"].append(f"unknown path: {path}")
 
     _finalize_component_safety(plan)
+    _finalize_lanes(plan)
     return plan
 
 
@@ -524,6 +680,7 @@ def build_plan(
             plan = plan_from_files([], event_name)
             _set_all_full(plan, f"planner could not prove a safe diff; FULL fallback: {type(exc).__name__}")
             plan["reasons"].append("diff resolution failed; fail-safe FULL")
+            _finalize_lanes(plan)
     plan["baseSha"] = base_sha
     plan["headSha"] = head_sha
     return plan
@@ -539,9 +696,19 @@ def markdown_summary(plan: dict[str, Any]) -> str:
         f"- Visual contract required: **{'YES' if plan['visualContractRequired'] else 'NO'}**",
         f"- Changed files: **{len(plan['changedFiles'])}**",
         "",
+        "### CI lanes",
+        "",
+        "| Lane | Active |",
+        "| --- | --- |",
+    ]
+    for lane, active in plan["lanes"].items():
+        lines.append(f"| {lane} | **{'YES' if active else 'NO'}** |")
+
+    lines.extend([
+        "",
         "| Component | Mode | Mandatory suites |",
         "| --- | --- | --- |",
-    ]
+    ])
     for name in ("mobile", "backend", "telemetry", "admin"):
         component = plan[name]
         suites = ", ".join(component["mandatorySuites"]) or "—"
@@ -573,6 +740,8 @@ def _write_github_outputs(plan: dict[str, Any], path: Path) -> None:
         )
         for name in ("mobile", "backend", "telemetry", "admin"):
             fh.write(f"{name}_mode={plan[name]['mode']}\n")
+        for lane, active in plan["lanes"].items():
+            fh.write(f"lane_{lane}={'true' if active else 'false'}\n")
 
 
 def main() -> int:

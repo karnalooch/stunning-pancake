@@ -1,4 +1,4 @@
-name: Vision Parity (Optional)
+name: Vision Parity Report
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -17,19 +17,12 @@ on:
       - "docs/design/screenshots/**"
       - "scripts/vision_parity_harness.py"
       - ".github/workflows/vision-parity.yml"
-  pull_request:
-    branches: [main]
-    paths:
-      - "docs/design/screenshots/**"
-      - "scripts/vision_parity_harness.py"
-      - ".github/workflows/vision-parity.yml"
-
 permissions:
   contents: read
 
 jobs:
   vision-parity:
-    name: Vision parity gate (SSIM)
+    name: Vision parity report (SSIM)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -55,12 +48,12 @@ jobs:
           fi
           if [[ -z "${ACTUAL_DIR}" ]]; then
             echo "has_actual=false" >> "$GITHUB_OUTPUT"
-            echo "No screenshots directory found; skipping vision parity gate."
+            echo "No screenshots directory found; skipping vision parity report."
             exit 0
           fi
           if ! compgen -G "${ACTUAL_DIR}/*.png" > /dev/null; then
             echo "has_actual=false" >> "$GITHUB_OUTPUT"
-            echo "Directory '${ACTUAL_DIR}' has no PNG files; skipping vision parity gate."
+            echo "Directory '${ACTUAL_DIR}' has no PNG files; skipping vision parity report."
             exit 0
           fi
           echo "has_actual=true" >> "$GITHUB_OUTPUT"

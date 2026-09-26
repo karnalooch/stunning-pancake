@@ -114,6 +114,14 @@ Pure JS/UI changes do not require a runtime bump merely because they change appl
 
 The blocking implementation is `scripts/validate_mobile_runtime_boundary.py` in the Mobile CI lane. It runs on pull requests and pushes, where a trusted base SHA exists; scheduled CI still exercises the unit contract without inventing a comparison base.
 
+### Cost-aware Android native smoke
+
+`.github/workflows/mobile-native-smoke.yml` keeps a cheap PR-level scope check for mobile/workspace changes, but runs the expensive `expo prebuild --clean` + `gradlew assembleDebug` only when the diff can affect the native artifact. Native-affecting inputs include Expo/EAS config, `mobile/package.json`, committed native/config-plugin paths, Google Services files, build-time app icons/splash assets, product versioning, workspace/toolchain manifests, the native provenance scripts, and the Native Smoke workflow itself.
+
+Pure JS/UI changes under `mobile/src/**`, mobile tests, ordinary approved production JPG/PNG assets, design/docs, and shared non-native packages do not require a full Gradle rebuild. They remain covered by the normal Mobile lane, Metro bundle smoke, unit tests, Mobile Visual Contract and asset-governance checks.
+
+The policy is fail-closed for ambiguous dependency/toolchain changes: root `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml` and `.npmrc` still force the full native smoke. A weekly scheduled build catches runner/toolchain drift even when no native PR lands.
+
 ### Verification after build
 
 | Check | Expected |
