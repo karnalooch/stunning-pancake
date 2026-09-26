@@ -115,7 +115,7 @@ jobs:
       - name: Compile Android release APK on Windows
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\mobile\\android"
+          Set-Location "$env:SHORT_WORKSPACE\mobile\android"
           cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
