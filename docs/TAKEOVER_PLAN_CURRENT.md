@@ -194,11 +194,11 @@ Required behavior:
 | --- | --- | --- | --- |
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
-| T79 | Home screen implementation/polish | PLANNED | PR #132 merged the Frozen UI v1.2 visual foundation. Home refresh #262 was closed unmerged during branch cleanup; exact head `44a66163dfe16e28450eaf4783c3cc562ffbb00d` is archived for restoration/rebase. Final T79 still requires real-data/loading/empty/error behavior plus runtime/UI sign-off before merge. |
-| T80 | Active Ride screen implementation/polish | PLANNED | Sunlight readability, one-handed controls, truthful GPS/offline/sync state. |
-| T81 | Ride Summary implementation/polish | PLANNED | Never present pending/failed finalization as durable success. |
-| T82 | History + Activity Detail implementation/polish | PLANNED | Real canonical route/data, sharp functional maps/charts, loading/error states. |
-| T83 | Profile + remaining pilot mobile surfaces | PLANNED | Consistent typography/tokens/visual language; no developer placeholders. |
+| T79 | Home screen implementation/polish | ACTIVE | #271 restored the Home dashboard on current main. #277 carries the governed production hero/Place Badge cut-over; final acceptance still requires reconciliation onto current main plus #284 exact-SHA runtime screenshots/manual visual sign-off. |
+| T80 | Active Ride screen implementation/polish | ACTIVE | #275 is merged with Frozen UI v1.2 live HUD chrome and preserved ride semantics. #277 supplies the governed rider marker; final exact-SHA/outdoor acceptance remains open. |
+| T81 | Ride Summary implementation/polish | ACTIVE | #286 is the current visual slice: product typography/cards/actions with durable-success vs pending/recovery separation preserved. Main CI is green; Android clean debug compile is the remaining heavy gate before stack reconciliation. |
+| T82 | History + Activity Detail implementation/polish | PLANNED | Data-first: consume the existing detail endpoint and real `route_coords`; fix duration typing, compute truthful average speed, replace route placeholder with the functional map, remove static achievement claims, and distinguish API failure from a genuine empty history. |
+| T83 | Profile + remaining pilot mobile surfaces | PLANNED | Consistent typography/tokens/visual language plus governed production art. Screen-level asset coverage is machine-tracked: Profile/Compete/Explore cannot be visually signed off on procedural fallbacks alone. |
 | T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check, 2–3 person dry run if useful. |
 
 UI is not considered complete because screenshots look good. It must be truthful under real error/offline/synchronization states.

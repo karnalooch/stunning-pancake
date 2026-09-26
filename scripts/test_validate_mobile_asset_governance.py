@@ -70,6 +70,33 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
         errors = validate_policy(policy, ROOT)
         self.assertIn("legacy generated assets must not be allowed at runtime", errors)
 
+    def test_screen_coverage_unknown_target_fails(self):
+        policy = copy.deepcopy(self.policy)
+        policy["screenAssetCoverage"]["profile"]["requiredTargets"].append("missing_asset_v1")
+        errors = validate_policy(policy, ROOT)
+        self.assertTrue(any("unknown target missing_asset_v1" in error for error in errors))
+
+    def test_covered_screen_requires_approved_targets(self):
+        policy = copy.deepcopy(self.policy)
+        home = next(target for target in policy["productionTargets"] if target["id"] == "home_hero_day_v1")
+        home["status"] = "planned"
+        home.pop("provenance", None)
+        errors = validate_policy(policy, ROOT)
+        self.assertTrue(
+            any(
+                "covered surface requires approved target home_hero_day_v1" in error
+                for error in errors
+            )
+        )
+
+    def test_data_first_screen_cannot_require_decorative_target(self):
+        policy = copy.deepcopy(self.policy)
+        policy["screenAssetCoverage"]["activity_detail"]["requiredTargets"] = ["summary_finish_v1"]
+        errors = validate_policy(policy, ROOT)
+        self.assertTrue(
+            any("data_first surfaces must not require decorative asset targets" in error for error in errors)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,6 +32,20 @@ describe('Mobile UI Assets v1 production contract', () => {
     expect(home).not.toContain('.svg');
   });
 
+  test('Welcome uses the explicit approved hero bridge instead of ungoverned art', () => {
+    const auth = read('bootstrap/AuthScreen.tsx');
+    const policy = JSON.parse(fs.readFileSync(POLICY, 'utf8')) as {
+      screenAssetCoverage?: Record<string, { temporaryApprovedFallback?: string[] }>;
+    };
+
+    expect(auth).toContain('APPROVED_ASSETS.homeHeroDay');
+    expect(auth).toContain('auth-welcome-hero-approved');
+    expect(auth).not.toContain('assets/generated');
+    expect(policy.screenAssetCoverage?.auth_welcome?.temporaryApprovedFallback).toContain(
+      'home_hero_day_v1',
+    );
+  });
+
   test('canonical rider is raster-backed where rider artwork is needed', () => {
     const cyclist = read('components/sprites/CyclistSprite.tsx');
     const share = read('components/game/ShareResultCard.tsx');

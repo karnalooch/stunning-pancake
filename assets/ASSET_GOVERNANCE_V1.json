@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "visualFreezeVersion": "1.2.0",
-  "decisionDate": "2026-09-25",
+  "decisionDate": "2026-09-26",
   "status": "approved",
   "legacyGeneratedPolicy": {
     "roots": [
@@ -363,6 +363,182 @@
         "works without fake landmarks",
         "compatible with canonical rider"
       ]
+    },
+    {
+      "id": "auth_welcome_hero_v1",
+      "scope": "Auth/Onboarding",
+      "category": "hero_scene",
+      "priority": "P0",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "large cycling scene with canonical rider identity",
+        "no embedded text or fake sponsor marks",
+        "safe composition for Welcome headline and primary CTA",
+        "Grand Prix Modern atmosphere without arcade chrome"
+      ]
+    },
+    {
+      "id": "onboarding_city_scene_v1",
+      "scope": "Auth/Onboarding",
+      "category": "hero_scene",
+      "priority": "P1",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "supports choose-city onboarding without pretending to be official heraldry",
+        "works with Place Badge for every tenant",
+        "no embedded city name or fake landmark claims",
+        "does not reduce form/list readability"
+      ]
+    },
+    {
+      "id": "explore_hero_v1",
+      "scope": "T83",
+      "category": "hero_scene",
+      "priority": "P1",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "outdoor cycling exploration scene using canonical visual family",
+        "no fake POI or route data baked into artwork",
+        "map and real discovery data remain primary",
+        "crop-safe for compact mobile hero use"
+      ]
+    },
+    {
+      "id": "event_banner_set_v1",
+      "scope": "T83",
+      "category": "event_banner_set",
+      "priority": "P1",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "coherent event/race banner family",
+        "no baked-in live scores or dates",
+        "real event data is rendered as UI text",
+        "recognisable at compact card sizes"
+      ]
+    },
+    {
+      "id": "quest_art_set_v1",
+      "scope": "T83",
+      "category": "quest_art_set",
+      "priority": "P2",
+      "sourceStrategy": "original_generated_and_curated",
+      "status": "planned",
+      "replaceWithoutApproval": false,
+      "acceptance": [
+        "small decorative quest scenes with consistent rider/world language",
+        "no fake GPS coordinates or rewards baked into art",
+        "does not replace truthful quest status/data",
+        "works with reduced-motion and low-end devices"
+      ]
     }
-  ]
+  ],
+  "screenAssetCoverage": {
+    "auth_welcome": {
+      "status": "planned",
+      "requiredTargets": [
+        "auth_welcome_hero_v1"
+      ],
+      "temporaryApprovedFallback": [
+        "home_hero_day_v1"
+      ],
+      "rule": "Welcome requires a real cycling hero. Home hero may be reused only as an explicit bridge until the dedicated asset is approved."
+    },
+    "onboarding_city": {
+      "status": "planned",
+      "requiredTargets": [
+        "onboarding_city_scene_v1"
+      ],
+      "functionalFallback": [
+        "place_badge_v1"
+      ],
+      "rule": "Tenant identity must stay truthful; never invent or AI-generate an official crest."
+    },
+    "onboarding_ready": {
+      "status": "covered",
+      "requiredTargets": [
+        "rider_canonical_v1",
+        "place_badge_v1"
+      ],
+      "rule": "Canonical rider and truthful place identity are sufficient; no extra decorative scene is required."
+    },
+    "home": {
+      "status": "covered",
+      "requiredTargets": [
+        "rider_canonical_v1",
+        "home_hero_day_v1",
+        "place_badge_v1"
+      ],
+      "rule": "Home uses approved hero art plus truthful place identity."
+    },
+    "active_ride": {
+      "status": "covered",
+      "requiredTargets": [
+        "ride_marker_rider_v1",
+        "ride_action_icons_v1"
+      ],
+      "decorativeArtAllowed": false,
+      "rule": "Active Ride remains map-first. No scenic background behind live ride metrics."
+    },
+    "ride_summary": {
+      "status": "covered",
+      "requiredTargets": [
+        "summary_finish_v1"
+      ],
+      "optionalTargets": [
+        "achievement_core_set_v1",
+        "summary_share_frame_v1",
+        "summary_particles_v1"
+      ],
+      "rule": "Celebration art is durable-success only."
+    },
+    "history": {
+      "status": "data_first",
+      "requiredTargets": [],
+      "decorativeArtAllowed": false,
+      "rule": "T82 History uses real activity data and honest empty/error states; decorative assets must not mask missing API data."
+    },
+    "activity_detail": {
+      "status": "data_first",
+      "requiredTargets": [],
+      "decorativeArtAllowed": false,
+      "rule": "T82 Activity Detail must use the real detail endpoint and route coordinates. The route map is data, not a placeholder image."
+    },
+    "compete": {
+      "status": "planned",
+      "requiredTargets": [
+        "city_scene_generic_v1",
+        "event_banner_set_v1"
+      ],
+      "optionalTargets": [
+        "city_scene_siedlce_v1",
+        "quest_art_set_v1"
+      ],
+      "rule": "Competition art decorates truthful city/event/quest data; scores and event state remain live UI data."
+    },
+    "explore": {
+      "status": "planned",
+      "requiredTargets": [
+        "explore_pin_set_v1",
+        "explore_hero_v1"
+      ],
+      "rule": "Explore uses real POI/map data; hero art never substitutes for map content."
+    },
+    "profile": {
+      "status": "planned",
+      "requiredTargets": [
+        "rider_canonical_v1",
+        "profile_scene_v1",
+        "achievement_core_set_v1"
+      ],
+      "rule": "Profile scene may add identity, but real rider stats and achievements remain dominant."
+    }
+  }
 }
