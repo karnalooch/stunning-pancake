@@ -25,7 +25,6 @@ export interface ActivityItem {
   is_verified: boolean;
   verification_score: number;
   rejection_reason?: string;
-  rejection_notes?: string;
 }
 
 export interface ActivityDetail extends ActivityItem {
