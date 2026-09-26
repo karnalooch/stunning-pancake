@@ -262,6 +262,13 @@ def _lanes() -> dict[str, bool]:
     }
 
 
+def is_mobile_native_affecting_path(path: str) -> bool:
+    normalized = _norm(path)
+    return normalized in MOBILE_NATIVE_EXACT or any(
+        normalized.startswith(prefix) for prefix in MOBILE_NATIVE_PREFIXES
+    )
+
+
 def _mark_lane_inputs(plan: dict[str, Any], path: str) -> None:
     lanes = plan["lanes"]
 
@@ -283,9 +290,7 @@ def _mark_lane_inputs(plan: dict[str, Any], path: str) -> None:
     if _matches_any(path, VISUAL_UI_PATTERNS):
         lanes["visual"] = True
 
-    if path in MOBILE_NATIVE_EXACT or any(
-        path.startswith(prefix) for prefix in MOBILE_NATIVE_PREFIXES
-    ):
+    if is_mobile_native_affecting_path(path):
         lanes["mobile_native"] = True
         if Path(path).suffix.lower() in JS_TS_SUFFIXES:
             lanes["javascript"] = True
