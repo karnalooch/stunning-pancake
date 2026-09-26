@@ -170,6 +170,23 @@ class MobileHarnessContractTests(unittest.TestCase):
             "release parity must run after the debug native compile",
         )
 
+
+    def test_windows_release_smoke_matches_local_release_path(self):
+        workflow = read(".github/workflows/mobile-windows-release-smoke.yml")
+
+        for token in (
+            "runs-on: windows-latest",
+            ". .\\scripts\\android-env.ps1",
+            "pnpm install --frozen-lockfile",
+            "expo prebuild --clean --platform android --no-install",
+            "android\\local.properties",
+            "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace",
+            "mobile\\android\\app\\build\\outputs\\apk\\release\\app-release.apk",
+            "Get-FileHash -Algorithm SHA256",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, workflow)
+
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
