@@ -904,8 +904,8 @@ jobs:
           FULL: ${{ needs.changes.outputs.full }}
           PYTHON_EXPECTED: ${{ needs.changes.outputs.lane_python }}
           JAVASCRIPT_EXPECTED: ${{ needs.changes.outputs.lane_javascript }}
-          PYTHON_RESULT: ${{ needs.codeql-python.result }}
-          JAVASCRIPT_RESULT: ${{ needs.codeql-javascript.result }}
+          PYTHON_RESULT: ${{ needs['codeql-python'].result }}
+          JAVASCRIPT_RESULT: ${{ needs['codeql-javascript'].result }}
         run: |
           set -euo pipefail
           if [ "$FULL" = "true" ]; then
