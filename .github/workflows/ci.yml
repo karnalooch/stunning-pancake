@@ -31,7 +31,7 @@ jobs:
       admin: ${{ steps.filter.outputs.admin }}
       packages: ${{ steps.filter.outputs.packages }}
       scripts: ${{ steps.filter.outputs.scripts }}
-      docs: ${{ steps.filter.outputs.docs }}
+      docs: ${{ steps.classifier.outputs.lane_docs_policy }}
       visual: ${{ steps.classifier.outputs.visual_contract_required }}
       mobile_assets: ${{ steps.classifier.outputs.lane_mobile_assets }}
       mobile_asset_only: ${{ steps.classifier.outputs.lane_mobile_asset_only }}
@@ -93,6 +93,8 @@ jobs:
               - 'README.md'
               - 'CHANGELOG.md'
               - 'CONTRIBUTING.md'
+              - 'SECURITY.md'
+              - 'AGENTS.md'
               - 'scripts/check_docs_links.py'
               - 'scripts/check_docs_i18n.py'
             visual:
