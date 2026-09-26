@@ -149,13 +149,13 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("virtualStoreDir: .pnpm", workspace)
         self.assertIn("virtualStoreDirMaxLength: 40", workspace)
         self.assertIn(".pnpm/", gitignore)
-        self.assertIn('"virtual-store-dir=$shortVirtualStore"', source)
-        self.assertIn('"virtual-store-dir-max-length=16"', source)
-        self.assertIn('$env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig', source)
-        self.assertIn('pnpm config get virtual-store-dir', source)
+        self.assertIn('$originalWorkspaceBytes = [System.IO.File]::ReadAllBytes($workspaceConfig)', source)
+        self.assertIn('virtualStoreDir: `"$shortVirtualStoreYaml`"', source)
+        self.assertIn('virtualStoreDirMaxLength: 16', source)
+        self.assertIn('[System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)', source)
         self.assertIn('pnpmVirtualStore = $shortVirtualStore', source)
         self.assertLess(
-            source.index('pnpm config get virtual-store-dir'),
+            source.index('virtualStoreDirMaxLength: 16'),
             source.index('pnpm exec expo config --type public --json'),
             "short-store frozen workspace install must precede Expo/native generation",
         )
@@ -184,11 +184,11 @@ class MobileHarnessContractTests(unittest.TestCase):
             '"SHORT_WORKSPACE=C:\\w" >> $env:GITHUB_ENV',
             'Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"',
             ". .\\scripts\\android-env.ps1",
-            '"virtual-store-dir=$virtualStore"',
-            '"virtual-store-dir-max-length=16"',
-            '$env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig',
-            'pnpm config get virtual-store-dir',
+            '$originalWorkspaceConfig = Get-Content -Raw $workspaceConfig',
+            'virtualStoreDir: `"C:/v`"',
+            'virtualStoreDirMaxLength: 16',
             'pnpm install --frozen-lockfile',
+            'Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig',
             "expo prebuild --clean --platform android --no-install",
             "android\\local.properties",
             "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace",
