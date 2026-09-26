@@ -52,22 +52,21 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Map short Windows workspace path
+      - name: Create short Windows worktree
         shell: pwsh
         run: |
-          if (Test-Path "W:\\") {
-            throw "W: is already in use; cannot create deterministic short workspace mapping."
+          if (Test-Path "C:\w") {
+            Remove-Item -Recurse -Force "C:\w"
           }
-          subst W: "$env:GITHUB_WORKSPACE"
+          git worktree add --detach "C:\w" "$env:GITHUB_SHA"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "SHORT_WORKSPACE=W:" >> $env:GITHUB_ENV
-          Set-Location "W:\\"
-          Write-Host "Short workspace: $(Get-Location)"
+          "SHORT_WORKSPACE=C:\w" >> $env:GITHUB_ENV
+          git -C "C:\w" rev-parse HEAD
 
       - name: Activate canonical pnpm
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\"
+          Set-Location "$env:SHORT_WORKSPACE\"
           corepack enable
           corepack prepare pnpm@12.4.2 --activate
           node --version
@@ -77,7 +76,7 @@ jobs:
       - name: Resolve Windows Android environment
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\"
+          Set-Location "$env:SHORT_WORKSPACE\"
           . .\scripts\android-env.ps1
           "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
           "ANDROID_SDK_ROOT=$env:ANDROID_SDK_ROOT" >> $env:GITHUB_ENV
@@ -86,21 +85,21 @@ jobs:
       - name: Frozen workspace install
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\"
+          Set-Location "$env:SHORT_WORKSPACE\"
           pnpm install --frozen-lockfile
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Resolve Expo provenance
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\mobile"
+          Set-Location "$env:SHORT_WORKSPACE\mobile"
           pnpm exec expo config --type public --json | Set-Content -Path "$env:RUNNER_TEMP\4velo-expo-public.json" -Encoding utf8
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Clean Android prebuild
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\mobile"
+          Set-Location "$env:SHORT_WORKSPACE\mobile"
           pnpm exec expo prebuild --clean --platform android --no-install
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $sdkForGradle = $env:ANDROID_SDK_ROOT -replace '\\', '/'
@@ -109,24 +108,34 @@ jobs:
       - name: Validate generated Android provenance
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\"
+          Set-Location "$env:SHORT_WORKSPACE\"
           python scripts/validate_mobile_native_provenance.py --expo-config "$env:RUNNER_TEMP\4velo-expo-public.json" --version-file version.json --android-dir mobile/android --git-sha "$(git rev-parse HEAD)"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Compile Android release APK on Windows
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"
+          Set-Location "$env:SHORT_WORKSPACE\mobile\\android"
           cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Record Windows release artifact
         shell: pwsh
         run: |
-          Set-Location "$env:SHORT_WORKSPACE\\"
+          Set-Location "$env:SHORT_WORKSPACE\"
           $apk = "mobile\android\app\build\outputs\apk\release\app-release.apk"
           if (-not (Test-Path $apk -PathType Leaf)) {
             throw "Release APK missing: $apk"
           }
           Get-FileHash -Algorithm SHA256 $apk
           Get-Item $apk | Select-Object FullName, Length, LastWriteTime
+
+      - name: Remove short Windows worktree
+        if: always()
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          git worktree remove --force "C:\w"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Could not remove short Windows worktree cleanly."
+          }
