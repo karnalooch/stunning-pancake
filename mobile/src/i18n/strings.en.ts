@@ -261,6 +261,7 @@ export const stringsEn = {
     loadingHint: 'Check your connection and try again.',
     route: 'Route',
     noRouteData: 'This activity has no saved GPS route.',
+    routeUnavailableOffline: 'Route geometry is not cached. Reconnect to load the saved GPS route.',
     dataIntegrity: 'Data source',
     detailSource: 'Full data from the canonical activity-detail endpoint.',
     cachedSummaryOnly: 'Showing a cached summary. The detailed route requires a connection.',
