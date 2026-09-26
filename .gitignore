@@ -14,6 +14,7 @@ mobile/.env
 
 # 📦 Dependencies
 node_modules/
+.pnpm/
 mobile/node_modules/
 admin/node_modules/
 .kilo/node_modules/
