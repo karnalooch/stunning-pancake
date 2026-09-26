@@ -132,6 +132,19 @@ jobs:
           $sdkForGradle = $env:ANDROID_SDK_ROOT -replace '\\', '/'
           "sdk.dir=$sdkForGradle" | Set-Content -Path "android\local.properties" -Encoding ascii
 
+          # Expo/RN currently generates a 512m metaspace cap. On Windows release
+          # compilation that can exhaust the Kotlin/Gradle JVM and leave RMI threads
+          # repeatedly reporting OutOfMemoryError: Metaspace. Raise only metaspace;
+          # keep the generated heap limit unchanged.
+          $gradleProperties = "android\gradle.properties"
+          $gradleText = Get-Content -Raw $gradleProperties
+          $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+          if (-not $gradleText.Contains($metaspaceBaseline)) {
+            throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
+          }
+          $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
+          Set-Content -Path $gradleProperties -Value $gradleText -Encoding utf8 -NoNewline
+
       - name: Validate generated Android provenance
         shell: pwsh
         run: |
