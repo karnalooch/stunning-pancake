@@ -5,6 +5,7 @@ concurrency:
 
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - 'docker-compose.yml'
