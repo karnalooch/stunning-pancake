@@ -26,12 +26,9 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
     def test_ride_marker_png_stream_is_recoverable_losslessly(self):
         path = ROOT / "mobile" / "assets" / "approved" / "v1" / "ride_marker_rider_v1.png"
         data = path.read_bytes()
-        print("ORIGINAL_RIDE_MARKER_BASE64=" + base64.b64encode(data).decode("ascii"))
 
         signature = b"\x89PNG\r\n\x1a\n"
         self.assertTrue(data.startswith(signature))
-        self.assertGreaterEqual(len(data), 41)
-
         ihdr_length = struct.unpack(">I", data[8:12])[0]
         self.assertEqual(ihdr_length, 13)
         self.assertEqual(data[12:16], b"IHDR")
@@ -40,43 +37,48 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
             ">IIBBBBB", ihdr_payload
         )
         self.assertEqual((width, height), (64, 64))
-        self.assertEqual(bit_depth, 8)
-        self.assertEqual(color_type, 6)
-        self.assertEqual(compression, 0)
-        self.assertEqual(filter_method, 0)
-        self.assertEqual(interlace, 0)
+        self.assertEqual((bit_depth, color_type, compression, filter_method, interlace), (8, 6, 0, 0, 0))
 
+        declared_idat_length = struct.unpack(">I", data[33:37])[0]
         self.assertEqual(data[37:41], b"IDAT")
-        compressed_tail = data[41:]
-        decompressor = zlib.decompressobj()
-        decoded = decompressor.decompress(compressed_tail)
-        decoded += decompressor.flush()
-        self.assertTrue(decompressor.eof, "PNG IDAT zlib stream is truncated")
-        consumed = len(compressed_tail) - len(decompressor.unused_data)
-        compressed = compressed_tail[:consumed]
+        payload_start = 41
+        declared_payload_end = payload_start + declared_idat_length
+        declared_payload = data[payload_start:declared_payload_end]
+        stale_crc = data[declared_payload_end:declared_payload_end + 4]
+        continuation = data[declared_payload_end + 4:]
+
+        # The corrupt runtime derivative appears to contain a valid zlib prefix,
+        # followed by four stale CRC bytes, then the continuation of the same
+        # compressed stream. Prove that stitching only the compressed payload
+        # recovers the full 64x64 RGBA scanline stream.
+        prefix_decoder = zlib.decompressobj()
+        prefix_decoded = prefix_decoder.decompress(declared_payload)
+        self.assertFalse(prefix_decoder.eof, "declared IDAT unexpectedly already contains a complete stream")
+
+        decoded = prefix_decoded + prefix_decoder.decompress(continuation) + prefix_decoder.flush()
+        self.assertTrue(prefix_decoder.eof, "stitched IDAT continuation is still truncated/corrupt")
+        self.assertEqual(prefix_decoder.unused_data, b"", "unexpected bytes after recovered zlib stream")
 
         expected_decoded = height * (1 + width * 4)
         self.assertEqual(len(decoded), expected_decoded)
+
+        compressed = declared_payload + continuation
 
         def chunk(kind: bytes, payload: bytes) -> bytes:
             crc = zlib.crc32(kind + payload) & 0xFFFFFFFF
             return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", crc)
 
-        repaired = (
-            signature
-            + chunk(b"IHDR", ihdr_payload)
-            + chunk(b"IDAT", compressed)
-            + chunk(b"IEND", b"")
-        )
-
+        repaired = signature + chunk(b"IHDR", ihdr_payload) + chunk(b"IDAT", compressed) + chunk(b"IEND", b"")
         repaired_sha = hashlib.sha256(repaired).hexdigest()
         decoded_sha = hashlib.sha256(decoded).hexdigest()
+
         print(
             "ride_marker_rider_v1.png recovery:",
             {
                 "originalBytes": len(data),
-                "compressedStreamBytes": consumed,
-                "unusedTrailingBytes": len(decompressor.unused_data),
+                "declaredIdatBytes": declared_idat_length,
+                "staleCrcHex": stale_crc.hex(),
+                "continuationBytes": len(continuation),
                 "decodedBytes": len(decoded),
                 "decodedSha256": decoded_sha,
                 "repairedBytes": len(repaired),
