@@ -27,17 +27,27 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       telemetry: ${{ steps.filter.outputs.telemetry }}
-      mobile: ${{ steps.filter.outputs.mobile }}
+      mobile: ${{ steps.classifier.outputs.lane_mobile_runtime }}
       admin: ${{ steps.filter.outputs.admin }}
       packages: ${{ steps.filter.outputs.packages }}
       scripts: ${{ steps.filter.outputs.scripts }}
       docs: ${{ steps.filter.outputs.docs }}
-      visual: ${{ steps.filter.outputs.visual }}
+      visual: ${{ steps.classifier.outputs.visual_contract_required }}
+      mobile_assets: ${{ steps.classifier.outputs.lane_mobile_assets }}
+      mobile_asset_only: ${{ steps.classifier.outputs.lane_mobile_asset_only }}
+      mobile_native: ${{ steps.classifier.outputs.lane_mobile_native }}
+      lane_python: ${{ steps.classifier.outputs.lane_python }}
+      lane_javascript: ${{ steps.classifier.outputs.lane_javascript }}
+      lane_docs_policy: ${{ steps.classifier.outputs.lane_docs_policy }}
+      lane_infra: ${{ steps.classifier.outputs.lane_infra }}
+      full_release: ${{ steps.classifier.outputs.lane_full_release }}
       ci_core: ${{ steps.filter.outputs.ci_core }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
         id: filter
         with:
@@ -47,7 +57,14 @@ jobs:
             telemetry:
               - 'telemetry/**'
             mobile:
-              - 'mobile/**'
+              - 'mobile/src/**'
+              - 'mobile/__tests__/**'
+              - 'mobile/.maestro/**'
+              - 'mobile/locales/**'
+              - 'mobile/*.js'
+              - 'mobile/*.ts'
+              - 'mobile/*.tsx'
+              - 'mobile/*.json'
             admin:
               - 'admin/**'
             packages:
@@ -79,7 +96,12 @@ jobs:
               - 'scripts/check_docs_links.py'
               - 'scripts/check_docs_i18n.py'
             visual:
-              - 'mobile/**'
+              - 'mobile/assets/**'
+              - 'mobile/src/assets/**'
+              - 'mobile/src/screens/**'
+              - 'mobile/src/components/**'
+              - 'mobile/src/theme/**'
+              - 'mobile/src/design-contract/**'
               - 'assets/**'
               - 'docs/design/**'
               - 'docs/adr/**'
