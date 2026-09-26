@@ -142,7 +142,9 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
     }
 
     const cached = cacheFallback(activityId);
+    setDetail(null);
     setFallback(cached);
+    setOffline(Boolean(cached));
     setLoading(true);
     setLoadError(false);
 
