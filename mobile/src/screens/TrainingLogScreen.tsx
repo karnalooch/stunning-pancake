@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { ActivityService, type ActivityItem } from '../services/api';
 import { OfflineCacheService } from '../services/OfflineCacheService';
 import { useI18n } from '../i18n/useI18n';
