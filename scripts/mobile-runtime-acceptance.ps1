@@ -170,12 +170,25 @@ try {
   if (Test-Path $shortVirtualStore) {
     Remove-Item -Recurse -Force $shortVirtualStore
   }
-  Invoke-Checked "pnpm" @(
-    "install",
-    "--frozen-lockfile",
-    "--virtual-store-dir", $shortVirtualStore,
-    "--virtual-store-dir-max-length", "16"
-  ) $repoRoot
+  $pnpmUserConfig = Join-Path $runDir "pnpm-userconfig.ini"
+  @(
+    "virtual-store-dir=$shortVirtualStore",
+    "virtual-store-dir-max-length=16"
+  ) | Set-Content -Path $pnpmUserConfig -Encoding ASCII
+  $previousUserConfig = $env:NPM_CONFIG_USERCONFIG
+  try {
+    $env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig
+    $resolvedVirtualStore = ((& pnpm config get virtual-store-dir) | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0) {
+      throw "pnpm config get virtual-store-dir failed"
+    }
+    if ($resolvedVirtualStore -ne $shortVirtualStore) {
+      throw "pnpm short virtual store was not applied: $resolvedVirtualStore"
+    }
+    Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+  } finally {
+    $env:NPM_CONFIG_USERCONFIG = $previousUserConfig
+  }
 
   Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
