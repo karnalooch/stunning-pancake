@@ -40,7 +40,7 @@ def test_mobile_activity_detail_exposes_numeric_duration_and_route_coords():
 
     assert response.status_code == 200
     assert response.data["duration"] == 3600.0
-    assert response.data["route_coords"] == [
+    assert [list(pair) for pair in response.data["route_coords"]] == [
         [22.24, 52.16],
         [22.25, 52.17],
         [22.26, 52.18],
