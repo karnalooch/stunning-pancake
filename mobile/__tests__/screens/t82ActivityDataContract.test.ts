@@ -41,5 +41,9 @@ describe('T82 History + Activity Detail data contract', () => {
     expect(history).toContain('training-log-retry');
     expect(history).toContain('OfflineCacheService.getHistory()');
     expect(history).toContain('OfflineCacheService.setHistory(list)');
+    expect(history).toContain('<ProductCard');
+    expect(history).toContain('<Metric');
+    expect(history).not.toContain('OrnateFrame');
+    expect(history).not.toContain('PixelText');
   });
 });
