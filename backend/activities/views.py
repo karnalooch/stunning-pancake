@@ -15,9 +15,9 @@ from .serializers import (
     ActivityCreateSerializer,
     ActivityDetailSerializer,
     ActivitySerializer,
-    RiderActivityDetailSerializer,
     POISerializer,
     PrivacyZoneSerializer,
+    RiderActivityDetailSerializer,
 )
 from .social import SocialSharingService
 from .wearables import GarminService, StravaService, _resolve_oauth_state
