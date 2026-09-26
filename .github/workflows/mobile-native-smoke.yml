@@ -112,3 +112,41 @@ jobs:
           sha256sum "$DEBUG_APK"
           sha256sum "$RELEASE_APK"
           ls -lh "$DEBUG_APK" "$RELEASE_APK"
+
+      - name: Prepare exact-SHA runtime artifact
+        env:
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          ARTIFACT_DIR="artifacts/mobile-runtime"
+          BUILT_GIT_SHA="$(git rev-parse HEAD)"
+          APK_SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
+          mkdir -p "$ARTIFACT_DIR"
+          cp "$RELEASE_APK" "$ARTIFACT_DIR/app-release.apk"
+          export BUILT_GIT_SHA APK_SHA256
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = {
+              "sourceHeadSha": os.environ["SOURCE_HEAD_SHA"],
+              "builtGitSha": os.environ["BUILT_GIT_SHA"],
+              "workflowRunId": os.environ["GITHUB_RUN_ID"],
+              "apkSha256": os.environ["APK_SHA256"],
+              "packageId": "com.sport.athlete",
+              "buildProfile": os.environ["EAS_BUILD_PROFILE"],
+          }
+          Path("artifacts/mobile-runtime/manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload exact-SHA runtime artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobile-runtime-${{ github.run_id }}
+          path: artifacts/mobile-runtime
+          if-no-files-found: error
+          retention-days: 7
