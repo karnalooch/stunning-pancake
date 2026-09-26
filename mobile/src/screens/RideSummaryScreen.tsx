@@ -1,13 +1,22 @@
 /**
- * RideSummaryScreen — post-ride celebration (ADR 014 engagement zone).
+ * RideSummaryScreen — post-ride result surface (ADR 014 engagement zone).
+ *
+ * Frozen UI v1.2 keeps the Grand Prix celebration in durable-success only;
+ * routine result data and actions use modern product chrome.
  */
 
-import React, { useEffect, useMemo } from 'react';
-import { Image, View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useMemo } from 'react';
+import { Image, View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
+
 import { ShareResultCard } from '../components/game/ShareResultCard';
+import {
+  Metric,
+  PrimaryButton,
+  ProductCard,
+} from '../components/product';
 import {
   computeRideRank,
   formatElapsed,
@@ -15,99 +24,132 @@ import {
   estimateXpGain,
 } from '../game/ranks';
 import { useI18n } from '../i18n/useI18n';
-import { FONTS } from '../theme/fonts';
 import { APPROVED_ASSETS } from '../assets/approvedAssets';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 import {
   isDurableRideSuccess,
   type RideFinishState,
 } from '../features/ride/model/RideFinishState';
 
 const stylesheet = StyleSheet.create((theme) => {
-  const C = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
+
   return {
-    container: { flex: 1, backgroundColor: C.background, position: 'relative' as const },
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
     header: {
-      flexDirection: 'row' as const,
-      justifyContent: 'space-between' as const,
-      alignItems: 'center' as const,
+      minHeight: 56,
+      justifyContent: 'center' as const,
       paddingHorizontal: 16,
-      paddingVertical: 12,
-      backgroundColor: C.background,
-      borderBottomWidth: 4,
-      borderBottomColor: C.onBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border.subtle,
+      backgroundColor: semantic.surface.default,
     },
     headerTitle: {
-      fontSize: 18,
-      fontFamily: FONTS.display,
-      color: C.primary,
-      textTransform: 'uppercase' as const,
+      ...PRODUCT_TYPOGRAPHY.title,
+      fontSize: 20,
+      lineHeight: 26,
+      color: semantic.text.primary,
+      textAlign: 'center' as const,
     },
-    scroll: { flex: 1 },
-    content: { padding: 16, gap: 16, alignItems: 'center' as const },
+    scroll: {
+      flex: 1,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 32,
+      gap: 16,
+    },
     finishArt: {
       width: '100%',
       height: 156,
       borderRadius: 18,
-      overflow: 'hidden',
-      marginTop: 4,
+      overflow: 'hidden' as const,
+      backgroundColor: semantic.surface.raised,
     },
-    titleSection: { alignItems: 'center' as const, paddingTop: 8, paddingBottom: 8, gap: 8 },
-    title: {
-      fontSize: 36,
-      fontFamily: FONTS.display,
-      color: C.onBackground,
-      textTransform: 'uppercase' as const,
-      letterSpacing: 2,
-      textAlign: 'center' as const,
-    },
-    subtitle: { fontSize: 14, fontFamily: FONTS.display, color: C.outline, marginTop: 4 },
-    gradeBadge: {
-      minWidth: 88,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderWidth: 3,
-      borderColor: C.hudOutline,
-      backgroundColor: C.goldAmber,
-      alignItems: 'center' as const,
-    },
-    gradeText: {
-      fontSize: 28,
-      fontFamily: FONTS.display,
-      color: C.hudOutline,
-      textTransform: 'uppercase' as const,
-    },
-    xpBanner: {
-      backgroundColor: C.primaryContainer,
-      borderWidth: 3,
-      borderColor: C.onBackground,
-      borderRadius: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-    },
-    xpText: { fontSize: 14, fontFamily: FONTS.display, color: C.onPrimaryContainer, textTransform: 'uppercase' as const },
-    ctaBtn: {
-      backgroundColor: C.goldAmber,
-      borderRadius: 8,
-      borderWidth: 4,
-      borderColor: C.onBackground,
-      paddingVertical: 16,
-      paddingHorizontal: 24,
-      alignItems: 'center' as const,
-      marginTop: 8,
+    finishImage: {
       width: '100%',
+      height: '100%',
     },
-    ctaText: {
-      fontSize: 18,
-      fontFamily: FONTS.display,
-      color: C.onBackground,
+    successIntro: {
+      gap: 4,
+    },
+    successEyebrow: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.status.success,
       textTransform: 'uppercase' as const,
+      letterSpacing: 0.8,
     },
-    shadow: {
-      shadowColor: C.onBackground,
-      shadowOffset: { width: 4, height: 4 },
-      shadowOpacity: 1,
-      shadowRadius: 0,
-      elevation: 8,
+    successTitle: {
+      ...PRODUCT_TYPOGRAPHY.displayEditorial,
+      color: semantic.text.primary,
+    },
+    rankRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: 16,
+    },
+    rankCopy: {
+      flex: 1,
+      gap: 4,
+    },
+    rankLabel: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.5,
+    },
+    rankName: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    rankBadge: {
+      minWidth: 64,
+      minHeight: 64,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: semantic.selection.border,
+      backgroundColor: semantic.selection.background,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+    },
+    rankLetter: {
+      ...PRODUCT_TYPOGRAPHY.displayEditorial,
+      color: semantic.selection.content,
+    },
+    metricsRow: {
+      flexDirection: 'row' as const,
+      justifyContent: 'space-between' as const,
+      gap: 12,
+    },
+    metricCell: {
+      flex: 1,
+    },
+    statusCard: {
+      gap: 12,
+    },
+    statusLabelPending: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.status.warning,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.6,
+    },
+    statusLabelRecovery: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.status.error,
+      textTransform: 'uppercase' as const,
+      letterSpacing: 0.6,
+    },
+    statusTitle: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    actions: {
+      gap: 12,
     },
   };
 });
@@ -141,13 +183,22 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
   }, [durableSuccess]);
 
+  const handleShare = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onShare?.();
+  }, [onShare]);
+
+  const handleBackToHub = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    onBackToHub?.();
+  }, [onBackToHub]);
+
   return (
     <SafeAreaView testID="ride-summary-screen" style={s.container} edges={['top']}>
-      <View style={[s.header, s.shadow]}>
-        <View style={{ width: 40 }} />
-        <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>
-        <View style={{ width: 40 }} />
+      <View style={s.header}>
+        <Text style={s.headerTitle}>{t.summary.title}</Text>
       </View>
+
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
         {durableSuccess ? (
           <>
@@ -155,16 +206,53 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
               <Image
                 source={APPROVED_ASSETS.summaryFinish}
                 resizeMode="cover"
-                style={{ width: '100%', height: '100%' }}
+                style={s.finishImage}
               />
             </View>
-            <View style={s.titleSection} testID="ride-summary-durable-success">
-              <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
-              <View style={[s.gradeBadge, s.shadow]}>
-                <Text style={s.gradeText}>{rank}</Text>
-              </View>
 
+            <View style={s.successIntro} testID="ride-summary-durable-success">
+              <Text style={s.successEyebrow}>{t.summary.subtitle}</Text>
+              <Text style={s.successTitle}>{distance.toFixed(1)} km</Text>
             </View>
+
+            <ProductCard variant="raised" testID="ride-summary-rank-card">
+              <View style={s.rankRow}>
+                <View style={s.rankCopy}>
+                  <Text style={s.rankLabel}>{t.share.rank}</Text>
+                  <Text style={s.rankName}>{rankDisplayName(rank)}</Text>
+                </View>
+                <View style={s.rankBadge}>
+                  <Text style={s.rankLetter}>{rank}</Text>
+                </View>
+              </View>
+            </ProductCard>
+
+            <ProductCard testID="ride-summary-metrics">
+              <View style={s.metricsRow}>
+                <View style={s.metricCell}>
+                  <Metric
+                    value={`${distance.toFixed(1)} km`}
+                    label={t.share.distance}
+                    testID="ride-summary-distance"
+                  />
+                </View>
+                <View style={s.metricCell}>
+                  <Metric
+                    value={timeLabel}
+                    label={t.share.time}
+                    testID="ride-summary-time"
+                  />
+                </View>
+                <View style={s.metricCell}>
+                  <Metric
+                    value={`${Math.round(elevation)} m`}
+                    label={t.share.elev}
+                    testID="ride-summary-elevation"
+                  />
+                </View>
+              </View>
+            </ProductCard>
+
             <ShareResultCard
               distanceKm={distance}
               timeLabel={timeLabel}
@@ -173,48 +261,66 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
               xpGained={xpGained}
               username={username}
             />
-            <Pressable
-              style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
-              testID="ride-summary-share"
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                onShare?.();
-              }}
-            >
-              <Text style={s.ctaText}>{t.summary.share}</Text>
-            </Pressable>
+
+            <View style={s.actions}>
+              <PrimaryButton
+                label={t.summary.share}
+                variant="secondary"
+                testID="ride-summary-share"
+                onPress={handleShare}
+              />
+            </View>
           </>
         ) : (
-          <View
-            style={s.titleSection}
+          <ProductCard
+            variant="raised"
             testID={`ride-summary-${finishState.kind}`}
           >
-            <Text style={s.subtitle}>
-              {finishState.kind === 'pending-finalization'
-                ? t.rideMessages.stopPending
-                : t.rideMessages.stopError}
-            </Text>
-            <Text style={s.subtitle}>
-              {finishState.kind === 'pending-finalization'
-                ? t.rideMessages.stopPendingBody
-                : t.rideMessages.stopErrorBody}
-            </Text>
-            <Text style={s.subtitle}>
-              {distance.toFixed(1)} km · {timeLabel} · {elevation.toFixed(0)} m
-            </Text>
-          </View>
+            <View style={s.statusCard}>
+              <Text
+                style={
+                  finishState.kind === 'pending-finalization'
+                    ? s.statusLabelPending
+                    : s.statusLabelRecovery
+                }
+              >
+                {finishState.kind === 'pending-finalization'
+                  ? t.rideMessages.stopPending
+                  : t.rideMessages.stopError}
+              </Text>
+              <Text style={s.statusTitle}>
+                {finishState.kind === 'pending-finalization'
+                  ? t.rideMessages.stopPendingBody
+                  : t.rideMessages.stopErrorBody}
+              </Text>
+              <View style={s.metricsRow}>
+                <View style={s.metricCell}>
+                  <Metric
+                    value={`${distance.toFixed(1)} km`}
+                    label={t.share.distance}
+                  />
+                </View>
+                <View style={s.metricCell}>
+                  <Metric value={timeLabel} label={t.share.time} />
+                </View>
+                <View style={s.metricCell}>
+                  <Metric
+                    value={`${Math.round(elevation)} m`}
+                    label={t.share.elev}
+                  />
+                </View>
+              </View>
+            </View>
+          </ProductCard>
         )}
-        <Pressable
-          style={({ pressed }) => [s.ctaBtn, s.shadow, pressed && { transform: [{ translateY: 2 }], opacity: 0.85 }]}
-          testID="ride-summary-back-home"
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-            onBackToHub?.();
-          }}
-        >
-          <Text style={s.ctaText}>{t.summary.backToHub}</Text>
-        </Pressable>
-        <View style={{ height: 80 }} />
+
+        <View style={s.actions}>
+          <PrimaryButton
+            label={t.summary.backToHub}
+            testID="ride-summary-back-home"
+            onPress={handleBackToHub}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
