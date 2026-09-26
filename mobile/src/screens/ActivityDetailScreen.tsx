@@ -244,37 +244,53 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           </ProductCard>
 
           <View style={s.metricGrid}>
-            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
-                label={t.activityDetail.stats.distance}
-                value={`${Math.max(0, data.distance) / 1000 < 0.01 ? '0.00' : (Math.max(0, data.distance) / 1000).toFixed(2)} ${t.activityDetail.stats.distanceUnit}`}
-                testID="activity-detail-distance"
-              />
-            </ProductCard>
-            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
-                label={t.activityDetail.stats.time}
-                value={formatDurationSeconds(data.duration)}
-                testID="activity-detail-duration"
-              />
-            </ProductCard>
-            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
-                label={t.activityDetail.stats.avgSpeed}
-                value={
-                  avgSpeed == null
-                    ? '—'
-                    : `${avgSpeed.toFixed(1)} ${t.activityDetail.stats.speedUnit}`
-                }
-                testID="activity-detail-avg-speed"
-              />
-            </ProductCard>
-            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
-                label={t.activityDetail.verification}
-                value={
-                  verificationScore == null
-                    ? '—'
-                    : `${Math.round(Math.max(0, Math.min(1, verificationScore)) * 100)}%`
-                }
-                testID="activity-detail-verification"
-              />\n              </ProductCard>\n            </View>\n          </View>\n\n          <ProductCard>\n            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
+            <View style={s.metricCell}>
+              <ProductCard>
+                <Metric
+                  label={t.activityDetail.stats.distance}
+                  value={`${(Math.max(0, data.distance) / 1000).toFixed(2)} ${t.activityDetail.stats.distanceUnit}`}
+                  testID="activity-detail-distance"
+                />
+              </ProductCard>
+            </View>
+            <View style={s.metricCell}>
+              <ProductCard>
+                <Metric
+                  label={t.activityDetail.stats.time}
+                  value={formatDurationSeconds(data.duration)}
+                  testID="activity-detail-duration"
+                />
+              </ProductCard>
+            </View>
+            <View style={s.metricCell}>
+              <ProductCard>
+                <Metric
+                  label={t.activityDetail.stats.avgSpeed}
+                  value={
+                    avgSpeed == null
+                      ? '—'
+                      : `${avgSpeed.toFixed(1)} ${t.activityDetail.stats.speedUnit}`
+                  }
+                  testID="activity-detail-avg-speed"
+                />
+              </ProductCard>
+            </View>
+            <View style={s.metricCell}>
+              <ProductCard>
+                <Metric
+                  label={t.activityDetail.verification}
+                  value={
+                    verificationScore == null
+                      ? '—'
+                      : `${Math.round(Math.max(0, Math.min(1, verificationScore)) * 100)}%`
+                  }
+                  testID="activity-detail-verification"
+                />
+              </ProductCard>
+            </View>
+          </View>
+
+          <ProductCard>\n            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
             {routeCoordinates.length >= 2 && viewport.center ? (
               <View style={s.mapWrap} testID="activity-detail-route-map">
                 <RideMapView
