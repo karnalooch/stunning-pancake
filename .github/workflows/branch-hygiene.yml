@@ -293,6 +293,21 @@ jobs:
                   f"does not match merged head SHA {merged_head_sha}."
               )
 
+          base_query = urllib.parse.urlencode(
+              {"state": "open", "base": branch, "per_page": 1}
+          )
+          base_url = f"https://api.github.com/repos/{repository}/pulls?{base_query}"
+          base_request = urllib.request.Request(base_url, headers=headers, method="GET")
+          with urllib.request.urlopen(base_request) as response:
+              dependents = json.loads(response.read())
+
+          if dependents:
+              print(
+                  f"Keeping merged branch {branch!r}: it is still the base of "
+                  f"open PR #{dependents[0]['number']}."
+              )
+              raise SystemExit(0)
+
           delete_request = urllib.request.Request(delete_url, headers=headers, method="DELETE")
           with urllib.request.urlopen(delete_request):
               pass
