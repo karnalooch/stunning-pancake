@@ -216,7 +216,7 @@ jobs:
 
       - name: Scan backend image (SHA tag, never :latest)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ${{ env.BACKEND_IMAGE }}:sha-${{ inputs.validated_sha }}
           format: sarif
@@ -232,7 +232,7 @@ jobs:
 
       - name: Scan admin image (SHA tag, never :latest)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           image-ref: ${{ env.ADMIN_IMAGE }}:sha-${{ inputs.validated_sha }}
           format: sarif

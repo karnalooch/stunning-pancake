@@ -870,7 +870,7 @@ jobs:
       # reach GitHub Security before the dedicated gate evaluates the same repo.
       - name: Trivy — Backend (Python)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: fs
           scan-ref: backend/
@@ -883,7 +883,7 @@ jobs:
 
       - name: Trivy — Admin Dashboard (JS/TS)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: fs
           scan-ref: admin/
@@ -896,7 +896,7 @@ jobs:
 
       - name: Trivy — Mobile (React Native)
         # v0.35.0 — GHSA-69fq-xp46-6x23 (supply chain), GHSA-9p44-j4g5-cfx5 (script injection)
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: fs
           scan-ref: mobile/
@@ -936,7 +936,7 @@ jobs:
       # the SARIF uploads above have had a chance to publish their findings.
       - name: Trivy — Blocking Critical/High gate
         # v0.35.0 — same reviewed/pinned action as the reporting scans above.
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
         with:
           scan-type: fs
           scan-ref: .
