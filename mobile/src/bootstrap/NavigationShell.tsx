@@ -27,7 +27,11 @@ import { GlobalLeaderboardScreen } from '../screens/GlobalLeaderboardScreen';
 import { MarketplaceScreen } from '../screens/MarketplaceScreen';
 import { StackScreenHeader } from '../components/navigation/StackScreenHeader';
 import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
-import { isVisionFixtures } from './visionFixtures';
+import {
+  isVisionFixtures,
+  setVisionHomePreviewState,
+  VISION_HOME_PREVIEW_STATES,
+} from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
 import { useMotionDegradeMonitor } from '../hooks/useMotionDegrade';
@@ -102,7 +106,11 @@ function MainTabs({
   rideEdgeMessage,
   clearRideEdgeMessage,
 }: MainTabsProps) {
-  const shellUser = user as { username?: string; tenant_id?: string | null } | null;
+  const shellUser = user as {
+    username?: string;
+    tenant_id?: string | null;
+    tenant_name?: string | null;
+  } | null;
 
   const gpsRecoveryProps = {
     gpsRecoveryVisible,
@@ -132,7 +140,11 @@ function MainTabs({
           <RideDashboardScreen
             user={
               shellUser
-                ? { username: shellUser.username ?? 'RIDER', tenant_id: shellUser.tenant_id ?? undefined }
+                ? {
+                    username: shellUser.username ?? 'RIDER',
+                    tenant_id: shellUser.tenant_id ?? undefined,
+                    tenant_name: shellUser.tenant_name ?? undefined,
+                  }
                 : null
             }
             isRecording={isRecording}
@@ -465,7 +477,22 @@ export function NavigationShell(props: NavigationShellProps) {
                   <StackScreenHeader title="Vision Gallery" onBack={() => navigation.goBack()} />
                   <VisionGalleryScreen
                     entries={[
-                      { label: 'Ride', onPress: () => navigation.navigate('MainTabs', { screen: 'Ride' }) },
+                      {
+                        label: 'Ride',
+                        onPress: () => {
+                          setVisionHomePreviewState('default');
+                          navigation.navigate('MainTabs', { screen: 'Ride' });
+                        },
+                      },
+                      ...(isVisionFixtures()
+                        ? VISION_HOME_PREVIEW_STATES.map((state) => ({
+                            label: `Home — ${state}`,
+                            onPress: () => {
+                              setVisionHomePreviewState(state);
+                              navigation.navigate('MainTabs', { screen: 'Ride' });
+                            },
+                          }))
+                        : []),
                       { label: 'Compete', onPress: () => navigation.navigate('MainTabs', { screen: 'Compete' }) },
                       { label: 'Explore', onPress: () => navigation.navigate('MainTabs', { screen: 'Explore' }) },
                       { label: 'Profile', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },

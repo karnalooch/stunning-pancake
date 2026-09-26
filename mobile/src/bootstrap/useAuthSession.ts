@@ -13,6 +13,7 @@ import {
   restoreSessionFromStorage,
 } from '../services/authSession';
 import { AuthService } from '../services/api';
+import { OfflineCacheService } from '../services/OfflineCacheService';
 import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
 import {
@@ -76,6 +77,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
   );
 
   const handleSessionExpired = useCallback(() => {
+    OfflineCacheService.clearHistory();
     auth.user.set(null);
     auth.isAuthenticated.set(false);
     auth.email.set('');
@@ -102,6 +104,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
           await applyUserSession(user);
         } catch {
           await clearSession();
+          OfflineCacheService.clearHistory();
         } finally {
           auth.isLoading.set(false);
         }
@@ -253,6 +256,7 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
 
   const handleLogout = async () => {
     await clearSession();
+    OfflineCacheService.clearHistory();
     auth.user.set(null);
     auth.isAuthenticated.set(false);
     auth.email.set('');
