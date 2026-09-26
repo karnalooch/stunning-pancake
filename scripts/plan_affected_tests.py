@@ -172,6 +172,8 @@ DOC_POLICY_PATTERNS = (
     "AGENTS.md",
     ".github/ISSUE_TEMPLATE/**",
     ".github/PULL_REQUEST_TEMPLATE/**",
+    "scripts/check_docs_links.py",
+    "scripts/check_docs_i18n.py",
 )
 
 MOBILE_ASSET_PATTERNS = (
