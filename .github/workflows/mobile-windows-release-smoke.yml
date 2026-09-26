@@ -86,9 +86,36 @@ jobs:
         shell: pwsh
         run: |
           Set-Location "$env:SHORT_WORKSPACE\"
-          pnpm install --frozen-lockfile
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $virtualStore = "C:\v"
+          if (Test-Path $virtualStore) {
+            Remove-Item -Recurse -Force $virtualStore
+          }
 
+          $workspaceConfig = Join-Path $env:SHORT_WORKSPACE "pnpm-workspace.yaml"
+          $originalWorkspaceConfig = Get-Content -Raw $workspaceConfig
+          if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+            throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+          }
+
+          try {
+            $replacement = "virtualStoreDir: `"C:/v`"`nvirtualStoreDirMaxLength: 16"
+            $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+            if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+              throw "Could not inject short Windows virtual-store configuration."
+            }
+            Set-Content -Path $workspaceConfig -Value $shortStoreConfig -Encoding utf8 -NoNewline
+
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            if (-not (Test-Path $virtualStore -PathType Container)) {
+              throw "pnpm did not materialize the expected C:\v virtual store."
+            }
+
+            "EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV
+          } finally {
+            Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig -Encoding utf8 -NoNewline
+          }
       - name: Resolve Expo provenance
         shell: pwsh
         run: |
@@ -104,6 +131,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $sdkForGradle = $env:ANDROID_SDK_ROOT -replace '\\', '/'
           "sdk.dir=$sdkForGradle" | Set-Content -Path "android\local.properties" -Encoding ascii
+
+          # Expo/RN currently generates a 512m metaspace cap. On Windows release
+          # compilation that can exhaust the Kotlin/Gradle JVM and leave RMI threads
+          # repeatedly reporting OutOfMemoryError: Metaspace. Raise only metaspace;
+          # keep the generated heap limit unchanged.
+          $gradleProperties = "android\gradle.properties"
+          $gradleText = Get-Content -Raw $gradleProperties
+          $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+          if (-not $gradleText.Contains($metaspaceBaseline)) {
+            throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
+          }
+          $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
+          Set-Content -Path $gradleProperties -Value $gradleText -Encoding utf8 -NoNewline
 
       - name: Validate generated Android provenance
         shell: pwsh

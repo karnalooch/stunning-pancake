@@ -117,10 +117,18 @@ class MobilePlatformContractTests(unittest.TestCase):
     def test_metro_uses_expo_sdk55_automatic_monorepo_resolution(self):
         metro = read(MOBILE / "metro.config.js")
         self.assertIn("expo/metro-config", metro)
-        self.assertNotIn("watchFolders", metro)
         self.assertNotIn("nodeModulesPaths", metro)
         self.assertNotIn("extraNodeModules", metro)
         self.assertNotIn("disableHierarchicalLookup", metro)
+
+        # Normal SDK 55 monorepo resolution stays automatic. The only explicit
+        # watch-folder extension is a fail-closed, environment-gated exception
+        # for the deliberately external short pnpm store used by Windows
+        # release acceptance to avoid CMake/Ninja path limits.
+        self.assertIn("process.env.EXPO_METRO_PNPM_VIRTUAL_STORE", metro)
+        self.assertIn("if (externalPnpmVirtualStore)", metro)
+        self.assertIn("fs.existsSync(resolvedVirtualStore)", metro)
+        self.assertIn("config.watchFolders = Array.from(", metro)
 
     def test_firebase_is_explicit_opt_in(self):
         config = read(MOBILE / "app.config.js")

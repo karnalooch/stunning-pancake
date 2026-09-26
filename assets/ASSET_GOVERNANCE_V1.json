@@ -186,12 +186,12 @@
         "sourceType": "original_generated_and_curated",
         "sourceReference": "mobile/assets/approved/v1/ride_marker_rider_v1.png",
         "rightsStatus": "owned for 4VELO project",
-        "sha256": "707bf4c6868e18234d08cd3992c23a3479abcda23e9f795a5b23d382a4455dd9",
+        "sha256": "6e47fb27e8980de20be8230503bd5b26d6aa5aca64f6afe0b36168ad7f8e0f1f",
         "createdAt": "2026-09-25"
       },
       "dimensions": "64x64",
       "alphaExpectation": "transparent",
-      "approvalNote": "Production raster cut-over approved on 2026-09-25; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
+      "approvalNote": "Recovered from the approved v1 asset-board source on 2026-09-26 after a malformed repository PNG was detected; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "ride_action_icons_v1",

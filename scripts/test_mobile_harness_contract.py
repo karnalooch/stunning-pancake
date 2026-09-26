@@ -107,6 +107,7 @@ class MobileHarnessContractTests(unittest.TestCase):
 
     def test_exact_sha_acceptance_harness_is_fail_closed_and_provenanced(self):
         source = read("scripts/mobile-runtime-acceptance.ps1")
+        metro_config = read("mobile/metro.config.js")
         gitignore = read(".gitignore")
 
         for token in (
@@ -149,11 +150,22 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("virtualStoreDir: .pnpm", workspace)
         self.assertIn("virtualStoreDirMaxLength: 40", workspace)
         self.assertIn(".pnpm/", gitignore)
-        self.assertIn('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot', source)
+        self.assertIn('$originalWorkspaceBytes = [System.IO.File]::ReadAllBytes($workspaceConfig)', source)
+        self.assertIn('virtualStoreDir: `"$shortVirtualStoreYaml`"', source)
+        self.assertIn('virtualStoreDirMaxLength: 16', source)
+        self.assertIn('[System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)', source)
+        self.assertIn('pnpmVirtualStore = $shortVirtualStore', source)
+        self.assertIn('$env:EXPO_METRO_PNPM_VIRTUAL_STORE = $shortVirtualStore', source)
+        self.assertIn('$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"', source)
+        self.assertIn('"-XX:MaxMetaspaceSize=1g"', source)
+        self.assertIn('Generated gradle.properties no longer contains the expected 512m metaspace baseline.', source)
+        self.assertIn('process.env.EXPO_METRO_PNPM_VIRTUAL_STORE', metro_config)
+        self.assertIn('config.watchFolders = Array.from(', metro_config)
+        self.assertIn('fs.existsSync(resolvedVirtualStore)', metro_config)
         self.assertLess(
-            source.index('Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot'),
+            source.index('virtualStoreDirMaxLength: 16'),
             source.index('pnpm exec expo config --type public --json'),
-            "frozen workspace install must precede Expo/native generation",
+            "short-store frozen workspace install must precede Expo/native generation",
         )
 
 
@@ -180,9 +192,17 @@ class MobileHarnessContractTests(unittest.TestCase):
             '"SHORT_WORKSPACE=C:\\w" >> $env:GITHUB_ENV',
             'Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"',
             ". .\\scripts\\android-env.ps1",
-            "pnpm install --frozen-lockfile",
+            '$originalWorkspaceConfig = Get-Content -Raw $workspaceConfig',
+            'virtualStoreDir: `"C:/v`"',
+            'virtualStoreDirMaxLength: 16',
+            'pnpm install --frozen-lockfile',
+            '"EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV',
+            'Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig',
             "expo prebuild --clean --platform android --no-install",
             "android\\local.properties",
+            '$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"',
+            '"-XX:MaxMetaspaceSize=1g"',
+            "Generated gradle.properties no longer contains the expected 512m metaspace baseline.",
             "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace",
             "mobile\\android\\app\\build\\outputs\\apk\\release\\app-release.apk",
             "Get-FileHash -Algorithm SHA256",
