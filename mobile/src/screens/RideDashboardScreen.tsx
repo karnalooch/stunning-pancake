@@ -1,597 +1,638 @@
 /**
- * RideDashboardScreen — STITCH Phase 1 (P0)
- * 
- * Pre-ride landing screen. Shows live metrics if recording,
- * or a START RIDE CTA when idle. Part of the RIDE tab.
- * 
- * Design: Solar White + Forest Green palette, parchment cards,
- * pixel-border pixel-shadow retro aesthetic.
+ * Authenticated 4VELO Home / pre-ride dashboard.
+ *
+ * Frozen UI v1.2: product-first chrome, truthful activity history and a
+ * dominant ride action. Approved Home artwork is intentionally not wired
+ * until asset governance approves rider_canonical_v1 + home_hero_day_v1.
  */
 
-import React, { useCallback, useMemo, useState } from 'react';
-import {
-    View,
-    Text,
-    ScrollView,
-    Pressable,
-} from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
 import * as Haptics from 'expo-haptics';
+import { StyleSheet } from 'react-native-unistyles';
 
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { FONTS } from '../theme/fonts';
-import { ArcadeButton } from '../components/ArcadeButton';
+import { DevEnvironmentBanner } from '../components/DevEnvironmentBanner';
 import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
+import {
+  Metric,
+  PrimaryButton,
+  ProductCard,
+  SportChip,
+} from '../components/product';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import {
+  getVisionHomePreviewState,
+  getVisionProfileFixture,
+  getVisionRideDashboardFixture,
+  isVisionFixtures,
+  type VisionHomePreviewState,
+} from '../bootstrap/visionFixtures';
+import { useGameProgress } from '../hooks/useGameProgress';
 import { usePlatformNotices } from '../hooks/usePlatformNotices';
+import { useRiderStats } from '../hooks/useRiderStats';
+import { useI18n } from '../i18n/useI18n';
+import type { RideEdgeMessage } from '../services/apiRetry';
 import type { ActivitySportType } from '../services/api';
 import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
-import { useGameProgress } from '../hooks/useGameProgress';
-import { SceneBackground } from '../components/scene/SceneBackground';
-import { LevelXpBar } from '../components/game/LevelXpBar';
-import { StreakBadge } from '../components/game/StreakBadge';
-import { DailyQuestCard } from '../components/game/DailyQuestCard';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
-import { DevEnvironmentBanner } from '../components/DevEnvironmentBanner';
 import { formatRiderDisplayName } from '../utils/displayName';
-import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
-import { AppHeader } from '../components/ui/AppHeader';
-import { GameCard } from '../components/ui/GameCard';
-import { EmptyState } from '../components/ui/EmptyState';
-import { RiderAvatar } from '../components/ui/RiderAvatar';
-import { SkeletonBlock } from '../components/ui/SkeletonBlock';
-import { useI18n } from '../i18n/useI18n';
-import { useRiderStats } from '../hooks/useRiderStats';
-import type { RideEdgeMessage } from '../services/apiRetry';
 import { LAYOUT } from '../theme/layout';
-import type { DailyQuest } from '../game/quests';
-import {
-    getVisionProfileFixture,
-    getVisionRideDashboardFixture,
-    isVisionFixtures,
-} from '../bootstrap/visionFixtures';
+import { getSemanticColors } from '../theme/semantic';
+import { BRAND_TYPOGRAPHY, PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
-// ─── Styles ────────────────────────────────────────────────────────
+const WEEK_DAYS_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEK_DAYS_PL = ['P', 'W', 'Ś', 'C', 'P', 'S', 'N'];
 
-const stylesheet = StyleSheet.create(theme => {
-    const C = theme.colors as Record<string, string>;
-    return {
+const stylesheet = StyleSheet.create((theme) => {
+  const semantic = getSemanticColors(theme.colors);
+
+  return {
     container: {
-        flex: 1,
-        backgroundColor: C.background,
-        position: 'relative',
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
     },
     header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: C.surface,
-        borderBottomWidth: 4,
-        borderBottomColor: C.onBackground,
+      minHeight: 68,
+      paddingHorizontal: LAYOUT.gutter,
+      paddingVertical: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
+      backgroundColor: semantic.surface.raised,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border.subtle,
     },
-    headerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+    riderContext: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     avatar: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        borderWidth: 4,
-        borderColor: C.onBackground,
-        backgroundColor: C.primaryContainer,
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: semantic.selection.background,
+      borderWidth: 1,
+      borderColor: semantic.selection.border,
     },
-    headerTitle: {
-        fontSize: 20,
-        fontFamily: FONTS.display,
-        color: C.primary,
-        textTransform: 'uppercase',
-        letterSpacing: -0.5,
+    avatarText: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.selection.content,
     },
-    settingsBtn: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 4,
-        borderColor: C.onBackground,
-        borderRadius: 4,
-        backgroundColor: C.surface,
+    riderCopy: {
+      flex: 1,
+      gap: 1,
     },
-    settingsText: {
-        fontSize: 16,
-        fontFamily: FONTS.display,
-        color: C.primary,
+    riderName: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
     },
-    sportRow: {
-        flexDirection: 'row',
-        gap: 8,
-        marginBottom: 12,
-        flexWrap: 'wrap',
+    riderPlace: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
     },
-    sportChip: {
-        paddingHorizontal: 10,
-        paddingVertical: 8,
-        borderWidth: 3,
-        borderColor: C.onBackground,
-        borderRadius: 6,
-        backgroundColor: C.surface,
+    settingsButton: {
+      minHeight: 44,
+      minWidth: 76,
+      paddingHorizontal: 12,
+      borderRadius: 22,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: semantic.surface.default,
+      borderWidth: 1,
+      borderColor: semantic.border.subtle,
     },
-    sportChipActive: {
-        backgroundColor: C.primaryContainer,
+    settingsPressed: {
+      backgroundColor: semantic.surface.interactive,
+      borderColor: semantic.border.strong,
     },
-    sportChipText: {
-        fontSize: 10,
-        fontFamily: FONTS.display,
-        color: C.onBackground,
-        textTransform: 'uppercase',
+    settingsLabel: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
     },
     scroll: {
-        flex: 1,
+      flex: 1,
     },
     content: {
-        padding: LAYOUT.gutter,
-        gap: LAYOUT.sectionGap,
+      padding: LAYOUT.gutter,
+      gap: LAYOUT.sectionGap,
     },
-    // ── Hero Card ──
-    heroCard: {
-        backgroundColor: C.parchment,
-        borderWidth: 4,
-        borderColor: C.onBackground,
-        borderRadius: 8,
-        padding: 16,
+    heroContent: {
+      gap: 16,
     },
-    heroTop: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
+    heroArtSlot: {
+      height: 104,
+      borderRadius: 14,
+      overflow: 'hidden',
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: semantic.navigation.shell,
+      borderWidth: 1,
+      borderColor: semantic.border.strong,
     },
-    heroGreeting: {
-        fontSize: 12,
-        fontFamily: FONTS.display,
-        color: C.secondary,
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+    heroBrand: {
+      ...BRAND_TYPOGRAPHY.displayPixel,
+      fontSize: 28,
+      lineHeight: 34,
+      color: semantic.navigation.active,
+      letterSpacing: 2,
     },
-    heroName: {
-        fontSize: 28,
-        fontFamily: FONTS.display,
-        color: C.onBackground,
+    heroAccent: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: 6,
+      backgroundColor: semantic.progress.primary,
     },
-    lvlBadge: {
-        backgroundColor: C.primaryContainer,
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderWidth: 2,
-        borderColor: C.onBackground,
-        borderRadius: 4,
+    heroCopy: {
+      gap: 4,
     },
-    lvlText: {
-        fontSize: 12,
-        fontFamily: FONTS.display,
-        color: C.onBackground,
+    heroEyebrow: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
     },
-    heroStats: {
-        flexDirection: 'row',
-        gap: 8,
-        marginTop: 12,
+    heroTitle: {
+      ...PRODUCT_TYPOGRAPHY.displayEditorial,
+      color: semantic.text.primary,
     },
-    heroStatTile: {
-        flex: 1,
-        backgroundColor: C.surfaceContainerLow,
-        borderWidth: 2,
-        borderColor: C.onBackground,
-        borderRadius: 4,
-        padding: 10,
-        alignItems: 'center',
+    heroBody: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
     },
-    heroStatLabel: {
-        fontSize: 8,
-        fontFamily: FONTS.display,
-        color: C.secondary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+    sportRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
     },
-    heroStatValue: {
-        fontSize: 18,
-        fontFamily: FONTS.display,
-        color: C.primary,
-        marginTop: 4,
+    actionStack: {
+      gap: 8,
     },
-    // ── Section ──
+    activeMetricRow: {
+      flexDirection: 'row',
+      gap: 20,
+      paddingVertical: 4,
+    },
+    activeMetricCell: {
+      flex: 1,
+    },
     section: {
-        gap: 8,
+      gap: 8,
     },
     sectionHeader: {
-        fontSize: 16,
-        fontFamily: FONTS.display,
-        color: C.onBackground,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      fontSize: 18,
+      lineHeight: 24,
+      color: semantic.text.primary,
     },
-    // ── Metric Tiles Grid ──
-    metricGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 4,
+    cardContent: {
+      gap: 12,
     },
-    metricTile: {
-        width: '48%',
-        flexGrow: 1,
-        flexBasis: '48%',
-        backgroundColor: C.parchment,
-        borderWidth: 2,
-        borderColor: C.onBackground,
-        borderRadius: 4,
-        padding: 12,
+    metricRow: {
+      flexDirection: 'row',
+      gap: 20,
     },
-    metricLabel: {
-        fontSize: 8,
-        fontFamily: FONTS.display,
-        color: C.secondary,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+    metricCell: {
+      flex: 1,
     },
-    metricValue: {
-        fontSize: 22,
-        fontFamily: FONTS.display,
-        color: C.onBackground,
-        marginTop: 8,
+    emptyTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
     },
-    metricUnit: {
-        fontSize: 12,
-        fontFamily: FONTS.display,
-        color: C.outline,
+    emptyBody: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
     },
-    // ── Weekly Load ──
-    weeklyCard: {
-        backgroundColor: C.parchment,
-        borderWidth: 4,
-        borderColor: C.onBackground,
-        borderRadius: 8,
-        padding: 16,
-        gap: 12,
+    errorTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.error,
     },
-    chartContainer: {
-        height: 40,
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        gap: 4,
+    offlineTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.offline,
     },
-    chartBar: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: C.onBackground,
-        borderTopLeftRadius: 2,
-        borderTopRightRadius: 2,
+    errorBody: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
     },
-    chartLabels: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 2,
+    weeklyHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: 16,
     },
-    chartLabel: {
-        fontSize: 8,
-        fontFamily: FONTS.display,
-        color: C.secondary,
-        textTransform: 'uppercase',
+    weeklyChart: {
+      height: 72,
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 6,
     },
-    // ── CTA ──
-    ctaContainer: {
-        paddingBottom: 24,
+    weeklyDay: {
+      flex: 1,
+      gap: 4,
+      alignItems: 'center',
     },
-    // ── Helper: Pixel Shadow ──
-    pixelShadow: {
-    shadowColor: C.onBackground,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
-},
-    };
+    weeklyTrack: {
+      flex: 1,
+      width: '100%',
+      borderRadius: 5,
+      overflow: 'hidden',
+      justifyContent: 'flex-end',
+      backgroundColor: semantic.surface.interactive,
+    },
+    weeklyFill: {
+      width: '100%',
+      borderRadius: 5,
+      backgroundColor: semantic.progress.primary,
+    },
+    weeklyLabel: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      fontSize: 11,
+      lineHeight: 14,
+      color: semantic.text.secondary,
+    },
+    bottomInset: {
+      height: LAYOUT.tabBarBottomInset,
+    },
+  };
 });
 
-// ─── Helper: Pixel Shadow ──────────────────────────────────────────
-
-// ─── Constants ─────────────────────────────────────────────────────
-
-const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-// ─── Component ─────────────────────────────────────────────────────
+export type HomePreviewState = VisionHomePreviewState;
 
 interface RideDashboardScreenProps {
-    user: { username: string; tenant_name?: string; tenant_id?: string } | null;
-    onStartRide?: (sport: ActivitySportType) => void;
-    onGoToRide?: () => void;
-    isRecording?: boolean;
-    liveSpeed?: number;
-    liveDistance?: number;
-    gpsRecoveryVisible?: boolean;
-    gpsRecoveryBusy?: boolean;
-    onGpsRecoveryPress?: () => void;
-    onOpenGpsWizard?: () => void;
-    onOpenSettings?: () => void;
-    startRideError?: string | null;
-    onDismissStartRideError?: () => void;
-    rideEdgeMessage?: RideEdgeMessage | null;
-    onDismissRideEdgeMessage?: () => void;
+  user: { username: string; tenant_name?: string; tenant_id?: string } | null;
+  onStartRide?: (sport: ActivitySportType) => void;
+  onGoToRide?: () => void;
+  isRecording?: boolean;
+  liveSpeed?: number;
+  liveDistance?: number;
+  gpsRecoveryVisible?: boolean;
+  gpsRecoveryBusy?: boolean;
+  onGpsRecoveryPress?: () => void;
+  onOpenGpsWizard?: () => void;
+  onOpenSettings?: () => void;
+  startRideError?: string | null;
+  onDismissStartRideError?: () => void;
+  rideEdgeMessage?: RideEdgeMessage | null;
+  onDismissRideEdgeMessage?: () => void;
+  previewState?: HomePreviewState;
 }
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
-    user,
-    onStartRide,
-    onGoToRide,
-    isRecording = false,
-    liveSpeed = 0,
-    liveDistance = 0,
-    gpsRecoveryVisible = false,
-    gpsRecoveryBusy = false,
-    onGpsRecoveryPress,
-    onOpenGpsWizard,
-    onOpenSettings,
-    startRideError,
-    onDismissStartRideError,
-    rideEdgeMessage,
-    onDismissRideEdgeMessage,
+  user,
+  onStartRide,
+  onGoToRide,
+  isRecording = false,
+  liveSpeed = 0,
+  liveDistance = 0,
+  gpsRecoveryVisible = false,
+  gpsRecoveryBusy = false,
+  onGpsRecoveryPress,
+  onOpenGpsWizard,
+  onOpenSettings,
+  startRideError,
+  onDismissStartRideError,
+  rideEdgeMessage,
+  onDismissRideEdgeMessage,
+  previewState,
 }) => {
-    const { theme } = useUnistyles(); const s = stylesheet;
-    const { t, locale } = useI18n();
-    const C = theme.colors as Record<string, string>;
-    const fixturesEnabled = isVisionFixtures();
-    const rideFixture = getVisionRideDashboardFixture(fixturesEnabled);
-    const profileFixture = getVisionProfileFixture(fixturesEnabled);
-    const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
-    const { notice, dismiss } = usePlatformNotices(
-        (user as { tenant_id?: string } | null)?.tenant_id ?? null,
-    );
-    const { enabled: immersiveEnabled } = useImmersiveTheme();
-    const { level, xpBar, quests, onStartRide: trackQuestStart } = useGameProgress();
-    const {
-        latest: latestRide,
-        weeklyBars,
-        loading: statsLoading,
-        offline: statsOffline,
-        streakDays,
-    } = useRiderStats();
+  const s = stylesheet;
+  const { t, locale } = useI18n();
+  const fixturesEnabled = isVisionFixtures();
+  const rideFixture = getVisionRideDashboardFixture(fixturesEnabled);
+  const profileFixture = getVisionProfileFixture(fixturesEnabled);
+  const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
+  const { notice, dismiss } = usePlatformNotices(user?.tenant_id ?? null);
+  const { onStartRide: trackQuestStart } = useGameProgress();
+  const {
+    latest: latestRide,
+    weeklyBars,
+    weeklyDistanceKm,
+    loading: statsLoading,
+    offline: statsOffline,
+    error: statsError,
+    refresh: refreshStats,
+  } = useRiderStats();
+  const hasFocusedHome = useRef(false);
 
-    const fixtureDailyQuests = useMemo<DailyQuest[]>(
-        () => [
-            {
-                id: 'vision_daily_quest',
-                title: rideFixture?.dailyQuest.title ?? 'Przejedź 5 km',
-                description: `${rideFixture?.dailyQuest.current ?? 3.2}/${rideFixture?.dailyQuest.target ?? 5} km`,
-                metric: 'distance_km',
-                target: rideFixture?.dailyQuest.target ?? 5,
-                progress: rideFixture?.dailyQuest.current ?? 3.2,
-                xpReward: rideFixture?.dailyQuest.reward ?? 50,
-                completed: (rideFixture?.dailyQuest.current ?? 3.2) >= (rideFixture?.dailyQuest.target ?? 5),
-            },
-        ],
-        [rideFixture],
-    );
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedHome.current) {
+        hasFocusedHome.current = true;
+        return;
+      }
+      void refreshStats();
+    }, [refreshStats]),
+  );
 
-    const displayLevel = rideFixture?.level ?? level;
-    const displayXpCurrent = rideFixture?.xpCurrent ?? xpBar.current;
-    const displayXpMax = rideFixture?.xpMax ?? xpBar.max;
-    const displayXpPct = Math.max(0, Math.min(1, displayXpCurrent / Math.max(1, displayXpMax)));
-    const displayStreakDays = rideFixture?.streakDays ?? streakDays;
-    const displayQuests = fixturesEnabled ? fixtureDailyQuests : quests.quests;
-    const displayWeeklyBars = fixturesEnabled ? [0.52, 0.64, 0.47, 0.88, 0.72, 0.58, 0.41] : weeklyBars;
-    const displayStatsLoading = fixturesEnabled ? false : statsLoading;
-    const displayStatsOffline = fixturesEnabled ? false : statsOffline;
-    const lastRideDistanceKm = fixturesEnabled ? (rideFixture?.weekDistanceKm ?? 128.7) : (latestRide ? (latestRide.distance ?? 0) / 1000 : null);
-    const lastRideDuration = fixturesEnabled ? '1h 42m' : (latestRide?.duration ?? null);
-    const displayName = formatRiderDisplayName(profileFixture?.username ?? user?.username);
+  const displayName = formatRiderDisplayName(profileFixture?.username ?? user?.username);
+  const riderInitial = displayName.trim().charAt(0).toUpperCase() || '4';
+  const riderPlace = user?.tenant_name?.trim() || '4VELO';
+  const weekDays = locale === 'pl' ? WEEK_DAYS_PL : WEEK_DAYS_EN;
 
-    const handleStartRide = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => { });
-        trackQuestStart();
-        onStartRide?.(selectedSport);
-    }, [onStartRide, selectedSport, trackQuestStart]);
+  const effectivePreviewState = fixturesEnabled
+    ? (previewState ?? getVisionHomePreviewState(true) ?? 'default')
+    : null;
+  const forceEmpty = effectivePreviewState === 'empty';
 
-    const handleGoToRide = useCallback(() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { });
-        onGoToRide?.();
-    }, [onGoToRide]);
+  const displayStatsLoading = effectivePreviewState
+    ? effectivePreviewState === 'loading'
+    : statsLoading;
+  const displayStatsOffline = effectivePreviewState
+    ? effectivePreviewState === 'offline'
+    : statsOffline;
+  const displayStatsError = effectivePreviewState
+    ? effectivePreviewState === 'error'
+    : statsError;
+  const displayWeeklyBars = forceEmpty
+    ? [0, 0, 0, 0, 0, 0, 0]
+    : fixturesEnabled
+      ? [0.52, 0.64, 0.47, 0.88, 0.72, 0.58, 0.41]
+      : weeklyBars;
+  const displayWeeklyDistanceKm = forceEmpty
+    ? 0
+    : fixturesEnabled
+      ? (rideFixture?.weekDistanceKm ?? 128.7)
+      : weeklyDistanceKm;
+  const lastRideDistanceKm = forceEmpty
+    ? null
+    : fixturesEnabled
+      ? 42.3
+      : latestRide
+        ? Math.max(0, latestRide.distance ?? 0) / 1000
+        : null;
+  const lastRideDuration = forceEmpty
+    ? null
+    : fixturesEnabled
+      ? '01:42:00'
+      : latestRide?.duration ?? null;
 
-    // ── Render ──
-    return (
-        <SafeAreaView style={s.container} edges={[]}>
-            {immersiveEnabled && (
-                <SceneBackground sceneId="ride_dashboard" scrim="soft" />
-            )}
-            <AppHeader
-                rightSlot={
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <StreakBadge days={displayStreakDays} />
-                    </View>
-                }
-                rightAction={{
-                    icon: 'settings',
-                    onPress: () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
-                        onOpenSettings?.();
-                    },
-                    accessibilityLabel: t.settings.title,
-                }}
-            >
-                <RiderAvatar size={40} />
-            </AppHeader>
+  const handleStartRide = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
+    trackQuestStart();
+    onStartRide?.(selectedSport);
+  }, [onStartRide, selectedSport, trackQuestStart]);
 
-            {/* Content */}
-            <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-                <DevEnvironmentBanner />
-                {displayStatsOffline ? (
-                    <EdgeStateBanner
-                        title={t.errors.network}
-                        message={t.errors.offlineCache}
-                        variant="offline"
+  const handleGoToRide = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onGoToRide?.();
+  }, [onGoToRide]);
+
+  const handleOpenSettings = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onOpenSettings?.();
+  }, [onOpenSettings]);
+
+  return (
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
+        <View style={s.riderContext}>
+          <View style={s.avatar} accessibilityElementsHidden>
+            <Text style={s.avatarText}>{riderInitial}</Text>
+          </View>
+          <View style={s.riderCopy}>
+            <Text style={s.riderName} numberOfLines={1}>{displayName}</Text>
+            <Text style={s.riderPlace} numberOfLines={1}>{riderPlace}</Text>
+          </View>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t.settings.title}
+          onPress={handleOpenSettings}
+          hitSlop={8}
+          style={({ pressed }) => [
+            s.settingsButton,
+            pressed && s.settingsPressed,
+          ]}
+        >
+          <Text style={s.settingsLabel}>{t.settings.title}</Text>
+        </Pressable>
+      </View>
+
+      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+        <DevEnvironmentBanner />
+
+        {displayStatsOffline ? (
+          <ProductCard testID="home-stats-offline">
+            <View style={s.cardContent}>
+              <Text style={s.offlineTitle}>{t.errors.network}</Text>
+              <Text style={s.errorBody}>{t.errors.offlineCache}</Text>
+            </View>
+          </ProductCard>
+        ) : null}
+
+        {rideEdgeMessage ? (
+          <EdgeStateBanner
+            title={rideEdgeMessage.title}
+            message={rideEdgeMessage.message}
+            variant={rideEdgeMessage.variant}
+            onDismiss={onDismissRideEdgeMessage}
+          />
+        ) : null}
+
+        {startRideError ? (
+          <EdgeStateBanner
+            title={t.errors.startRide}
+            message={startRideError}
+            onDismiss={onDismissStartRideError}
+          />
+        ) : null}
+
+        <PlatformNoticeBanner notice={notice} onDismiss={dismiss} />
+        <GpsRecoveryBanner
+          visible={gpsRecoveryVisible}
+          busy={gpsRecoveryBusy}
+          onPress={() => onGpsRecoveryPress?.()}
+        />
+
+        <ProductCard variant="raised">
+          <View style={s.heroContent}>
+            {!isRecording ? (
+              <View
+                style={s.heroArtSlot}
+                accessible={false}
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+              >
+                <Text style={s.heroBrand}>4VELO</Text>
+                <View style={s.heroAccent} />
+              </View>
+            ) : null}
+
+            <View style={s.heroCopy}>
+              <Text style={s.heroEyebrow}>
+                {isRecording ? t.dashboard.currentRide : riderPlace}
+              </Text>
+              <Text style={s.heroTitle}>
+                {isRecording ? t.dashboard.inProgress : t.dashboard.ready}
+              </Text>
+              {!isRecording ? (
+                <Text style={s.heroBody}>{displayName}</Text>
+              ) : null}
+            </View>
+
+            {isRecording ? (
+              <>
+                <View style={s.activeMetricRow}>
+                  <View style={s.activeMetricCell}>
+                    <Metric
+                      value={`${liveSpeed.toFixed(1)} km/h`}
+                      label={t.ride.fields.speed}
+                      testID="home-live-speed"
                     />
-                ) : null}
-                {rideEdgeMessage ? (
-                    <EdgeStateBanner
-                        title={rideEdgeMessage.title}
-                        message={rideEdgeMessage.message}
-                        variant={rideEdgeMessage.variant}
-                        onDismiss={onDismissRideEdgeMessage}
+                  </View>
+                  <View style={s.activeMetricCell}>
+                    <Metric
+                      value={`${liveDistance.toFixed(1)} km`}
+                      label={t.ride.fields.distance}
+                      testID="home-live-distance"
                     />
-                ) : null}
-                {startRideError ? (
-                    <EdgeStateBanner
-                        title={t.errors.startRide}
-                        message={startRideError}
-                        onDismiss={onDismissStartRideError}
-                    />
-                ) : null}
-                <PlatformNoticeBanner notice={notice} onDismiss={dismiss} />
-                <GpsRecoveryBanner
-                    visible={gpsRecoveryVisible}
-                    busy={gpsRecoveryBusy}
-                    onPress={() => onGpsRecoveryPress?.()}
+                  </View>
+                </View>
+                <PrimaryButton
+                  label={t.dashboard.goToRide}
+                  onPress={handleGoToRide}
+                  testID="home-go-to-ride"
                 />
-                <View style={{ marginTop: -4 }}>
-                    <ArcadeButton
-                        variant="ghost"
-                        label={t.dashboard.gpsWizard.toUpperCase()}
-                        onPress={() => onOpenGpsWizard?.()}
-                        size="md"
+              </>
+            ) : (
+              <>
+                <PrimaryButton
+                  label={t.dashboard.startRide}
+                  onPress={handleStartRide}
+                  testID="home-start-ride"
+                />
+                <View style={s.sportRow}>
+                  {ACTIVITY_SPORT_OPTIONS.map((option) => (
+                    <SportChip
+                      key={option.type}
+                      label={locale === 'pl' ? option.labelPl : option.labelEn}
+                      selected={selectedSport === option.type}
+                      onPress={() => setSelectedSport(option.type)}
+                      testID={`home-sport-${option.type.toLowerCase()}`}
                     />
+                  ))}
                 </View>
-                {/* Hero Card — Active Ride or Idle */}
-                <GameCard texture="parchment_grain">
-                    {isRecording ? (
-                        <>
-                            <Text style={s.heroGreeting}>{t.dashboard.currentRide.toUpperCase()}</Text>
-                            <Text style={[s.heroName, { fontSize: 28 }]}>{t.dashboard.inProgress}</Text>
-                            <View style={s.heroStats}>
-                                <View style={s.heroStatTile}>
-                                    <Text style={s.heroStatLabel}>{t.ride.fields.speed}</Text>
-                                    <Text style={s.heroStatValue}>{liveSpeed.toFixed(1)}<Text style={s.metricUnit}> km/h</Text></Text>
-                                </View>
-                                <View style={s.heroStatTile}>
-                                    <Text style={s.heroStatLabel}>{t.ride.fields.distance}</Text>
-                                    <Text style={s.heroStatValue}>{liveDistance.toFixed(1)}<Text style={s.metricUnit}> km</Text></Text>
-                                </View>
-                            </View>
-                            <View style={{ marginTop: LAYOUT.gutter }}>
-                                <ArcadeButton
-                                    variant="success"
-                                    label={t.dashboard.goToRide}
-                                    onPress={handleGoToRide}
-                                    size="lg"
-                                />
-                            </View>
-                        </>
+              </>
+            )}
+          </View>
+        </ProductCard>
+
+        {displayStatsError ? (
+          <ProductCard testID="home-stats-error">
+            <View style={s.cardContent}>
+              <Text style={s.errorTitle}>{t.dashboard.historyErrorTitle}</Text>
+              <Text style={s.errorBody}>{t.dashboard.historyErrorBody}</Text>
+              <PrimaryButton
+                label={t.common.retry}
+                onPress={() => {
+                  void refreshStats();
+                }}
+                variant="secondary"
+                testID="home-stats-retry"
+              />
+            </View>
+          </ProductCard>
+        ) : null}
+
+        {!displayStatsError ? (
+          <>
+            <View style={s.section}>
+              <Text style={s.sectionHeader}>{t.dashboard.weeklyLoad}</Text>
+              {displayStatsLoading ? (
+                <SkeletonBlock height={132} />
+              ) : (
+                <ProductCard testID="home-weekly-context">
+                  <View style={s.cardContent}>
+                    <View style={s.weeklyHeader}>
+                      <Metric
+                        value={`${displayWeeklyDistanceKm.toFixed(1)} km`}
+                        label={t.dashboard.weekDistance}
+                        testID="home-week-distance"
+                      />
+                    </View>
+
+                    {displayWeeklyDistanceKm <= 0 ? (
+                      <Text style={s.emptyBody}>{t.dashboard.noWeekRides}</Text>
                     ) : (
-                        <>
-                            <View style={s.heroTop}>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={s.heroGreeting}>{t.dashboard.ready}</Text>
-                                    <Text style={s.heroName} numberOfLines={1}>{displayName}</Text>
-                                </View>
-                                {immersiveEnabled && (
-                                    <CyclistSprite size={48} state="idle" />
-                                )}
-                                <LevelXpBar
-                                    level={displayLevel}
-                                    xpCurrent={displayXpCurrent}
-                                    xpMax={displayXpMax}
-                                    pct={displayXpPct}
+                      <View style={s.weeklyChart} accessibilityLabel={t.dashboard.weeklyLoad}>
+                        {displayWeeklyBars.map((height, index) => {
+                          const pct = Math.max(0, Math.min(1, height));
+                          return (
+                            <View key={`${weekDays[index]}-${index}`} style={s.weeklyDay}>
+                              <View style={s.weeklyTrack}>
+                                <View
+                                  style={[
+                                    s.weeklyFill,
+                                    { height: `${Math.round(pct * 100)}%` },
+                                  ]}
                                 />
+                              </View>
+                              <Text style={s.weeklyLabel}>{weekDays[index]}</Text>
                             </View>
-                            <View style={s.sportRow}>
-                                {ACTIVITY_SPORT_OPTIONS.map((opt) => (
-                                    <Pressable
-                                        key={opt.type}
-                                        style={[
-                                            s.sportChip,
-                                            selectedSport === opt.type && s.sportChipActive,
-                                        ]}
-                                        onPress={() => setSelectedSport(opt.type)}
-                                    >
-                                        <Text style={s.sportChipText}>
-                                            {locale === 'pl' ? opt.labelPl : opt.labelEn}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
-                            <View style={{ marginTop: 8 }}>
-                                <ArcadeButton
-                                    variant="success"
-                                    label={t.dashboard.startRide}
-                                    onPress={handleStartRide}
-                                    size="lg"
-                                />
-                            </View>
-                        </>
+                          );
+                        })}
+                      </View>
                     )}
-                </GameCard>
+                  </View>
+                </ProductCard>
+              )}
+            </View>
+            <View style={s.section}>
+              <PrimaryButton
+                label={t.dashboard.gpsWizard}
+                onPress={() => onOpenGpsWizard?.()}
+                variant="secondary"
+                testID="home-gps-check"
+              />
+            </View>
 
-                {!isRecording && (
-                    <View style={s.section}>
-                        <DailyQuestCard quests={displayQuests} />
+            <View style={s.section}>
+              <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
+              {displayStatsLoading ? (
+                <SkeletonBlock height={104} />
+              ) : lastRideDistanceKm == null ? (
+                <ProductCard testID="home-first-use-empty">
+                  <View style={s.cardContent}>
+                    <Text style={s.emptyTitle}>{t.dashboard.noRides}</Text>
+                    <Text style={s.emptyBody}>{t.dashboard.firstRideHint}</Text>
+                  </View>
+                </ProductCard>
+              ) : (
+                <ProductCard>
+                  <View style={s.metricRow}>
+                    <View style={s.metricCell}>
+                      <Metric
+                        value={`${lastRideDistanceKm.toFixed(1)} km`}
+                        label={t.ride.fields.distance}
+                        testID="home-last-ride-distance"
+                      />
                     </View>
-                )}
-
-                {/* Last ride from API */}
-                <View style={s.section}>
-                    <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
-                    {displayStatsLoading ? (
-                        <SkeletonBlock height={88} />
-                    ) : lastRideDistanceKm == null ? (
-                        <EmptyState message={t.dashboard.noRides} icon="training" />
-                    ) : (
-                        <View style={s.metricGrid}>
-                            <View style={[s.metricTile, s.pixelShadow]}>
-                                <Text style={s.metricLabel}>{t.ride.fields.distance}</Text>
-                                <Text style={s.metricValue}>
-                                    {lastRideDistanceKm.toFixed(1)}
-                                    <Text style={s.metricUnit}> km</Text>
-                                </Text>
-                            </View>
-                            <View style={[s.metricTile, s.pixelShadow]}>
-                                <Text style={s.metricLabel}>{t.ride.fields.time}</Text>
-                                <Text style={s.metricValue}>
-                                    {lastRideDuration ?? '—'}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                </View>
-
-                {/* Weekly Load */}
-                <View style={[s.weeklyCard, s.pixelShadow]}>
-                    <Text style={s.sectionHeader}>{t.dashboard.weeklyLoad}</Text>
-                    <View style={s.chartContainer}>
-                        {displayWeeklyBars.map((h, i) => (
-                            <View
-                                key={i}
-                                style={[
-                                    s.chartBar,
-                                    {
-                                        height: `${h * 100}%`,
-                                        backgroundColor: i === 3 ? C.primary : C.primaryFixed,
-                                    },
-                                ]}
-                            />
-                        ))}
+                    <View style={s.metricCell}>
+                      <Metric
+                        value={lastRideDuration ?? '—'}
+                        label={t.ride.fields.time}
+                        testID="home-last-ride-duration"
+                      />
                     </View>
-                    <View style={s.chartLabels}>
-                        {WEEK_DAYS.map((d, i) => (
-                            <Text key={i} style={s.chartLabel}>{d}</Text>
-                        ))}
-                    </View>
-                </View>
+                  </View>
+                </ProductCard>
+              )}
+            </View>
 
-                {/* Bottom Spacing for Tab Bar */}
-                <View style={{ height: LAYOUT.tabBarBottomInset }} />
-            </ScrollView>
-        </SafeAreaView>
-    );
+          </>
+        ) : null}
+
+        <View style={s.bottomInset} />
+      </ScrollView>
+    </SafeAreaView>
+  );
 });

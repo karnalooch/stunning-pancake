@@ -31,6 +31,9 @@ export const OfflineCacheService = {
   setHistory(items: ActivityItem[]): void {
     write(HISTORY_KEY, items);
   },
+  clearHistory(): void {
+    getAppStorage().delete(HISTORY_KEY);
+  },
   getCityHub(): CityHubSummary | null {
     return read<CityHubSummary>(CITY_HUB_KEY);
   },
