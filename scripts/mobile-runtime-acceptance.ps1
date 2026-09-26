@@ -37,7 +37,7 @@ function Invoke-Checked {
   try {
     & $Exe @Args
     if ($LASTEXITCODE -ne 0) {
-      throw "Exit code $LASTEXITCODE: $Exe $($Args -join ' ')"
+      throw "Exit code ${LASTEXITCODE}: $Exe $($Args -join ' ')"
     }
   } finally {
     Pop-Location
