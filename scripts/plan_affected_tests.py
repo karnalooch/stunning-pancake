@@ -40,6 +40,7 @@ CI_CORE_PATTERNS = (
     "scripts/test_ci_aggregate.py",
     "scripts/test_ci_mobile_path_filter.py",
     "scripts/test_ci_visual_path_filter.py",
+    "scripts/test_ci_change_classifier.py",
     "turbo.json",
 )
 
