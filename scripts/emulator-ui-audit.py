@@ -419,10 +419,27 @@ def screen_signature(img: Image.Image | None) -> str:
 
 
 def main() -> int:
+    global OUT_DIR, REPORT
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--serial", default=None, help="adb device serial; required when multiple devices are online")
     parser.add_argument("--app-id", default="com.sport.athlete", help="Android application id")
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        help="override screenshot output directory (useful for exact-SHA evidence bundles)",
+    )
+    parser.add_argument(
+        "--report",
+        default=None,
+        help="override markdown report path",
+    )
     args = parser.parse_args()
+
+    if args.output_dir:
+        OUT_DIR = Path(args.output_dir).expanduser().resolve()
+    if args.report:
+        REPORT = Path(args.report).expanduser().resolve()
 
     try:
         serial = resolve_device_serial(args.serial)
@@ -815,7 +832,7 @@ def write_report() -> None:
         lines.append(f"### {icon} {s.id} — {s.title}")
         lines.append("")
         if s.screenshot and (OUT_DIR / s.screenshot).exists():
-            rel = f"screenshots/{DATE}-emulator-audit/{s.screenshot}"
+            rel = Path(os.path.relpath(OUT_DIR / s.screenshot, REPORT.parent)).as_posix()
             lines.append(f"![{s.title}]({rel})")
             lines.append("")
         if s.visible:
@@ -845,6 +862,7 @@ def write_report() -> None:
         "",
     ])
 
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text("\n".join(lines), encoding="utf-8")
 
 
