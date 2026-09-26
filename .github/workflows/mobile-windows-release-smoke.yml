@@ -90,7 +90,17 @@ jobs:
           if (Test-Path $virtualStore) {
             Remove-Item -Recurse -Force $virtualStore
           }
-          pnpm install --frozen-lockfile --virtual-store-dir "$virtualStore" --virtual-store-dir-max-length 16
+          $pnpmUserConfig = Join-Path $env:RUNNER_TEMP "4velo-pnpmrc"
+          @(
+            "virtual-store-dir=$virtualStore",
+            "virtual-store-dir-max-length=16"
+          ) | Set-Content -Path $pnpmUserConfig -Encoding ascii
+          $env:NPM_CONFIG_USERCONFIG = $pnpmUserConfig
+          $resolvedVirtualStore = (pnpm config get virtual-store-dir).Trim()
+          if ($resolvedVirtualStore -ne $virtualStore) {
+            throw "pnpm short virtual store was not applied: $resolvedVirtualStore"
+          }
+          pnpm install --frozen-lockfile
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Resolve Expo provenance
