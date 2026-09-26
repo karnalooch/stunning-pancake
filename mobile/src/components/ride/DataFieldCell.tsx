@@ -8,7 +8,8 @@ import {
 } from '../../ride/dataFields';
 import type { FieldEmphasis, RideMetricsSnapshot } from '../../ride/types';
 import { useI18n } from '../../i18n/useI18n';
-import { FONTS } from '../../theme/fonts';
+import { getSemanticColors } from '../../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../../theme/typography';
 
 interface DataFieldCellProps {
   fieldId: DataFieldId;
@@ -22,25 +23,20 @@ interface DataFieldCellProps {
 
 const stylesheet = StyleSheet.create((theme) => {
   const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   return {
     cell: {
-      backgroundColor: c.parchment,
-      borderWidth: 2,
-      borderColor: c.onBackground,
-      borderRadius: 6,
-      padding: 10,
-      shadowColor: c.hudOutline,
-      shadowOffset: { width: 3, height: 3 },
-      shadowOpacity: 1,
-      shadowRadius: 0,
-      elevation: 6,
+      backgroundColor: semantic.surface.default,
+      borderWidth: 1,
+      borderColor: semantic.border.subtle,
+      borderRadius: 14,
+      padding: 12,
     },
     cellHud: {
       backgroundColor: c.hudPanel,
       borderColor: c.hudOutline,
-      // Sun-readable bike-computer panel: sharp pixel corners + heavier frame.
-      borderWidth: 3,
-      borderRadius: 0,
+      borderWidth: 1,
+      borderRadius: 14,
     },
     cellHero: {
       paddingVertical: 14,
@@ -54,38 +50,37 @@ const stylesheet = StyleSheet.create((theme) => {
       borderStyle: 'dashed' as const,
     },
     label: {
-      fontSize: 8,
-      fontFamily: FONTS.display,
-      color: c.secondary,
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 0.3,
     },
     labelHud: {
       color: c.hudOutline,
     },
     value: {
-      fontSize: 22,
-      fontFamily: 'VT323',
-      color: c.onBackground,
-      marginTop: 4,
+      ...PRODUCT_TYPOGRAPHY.metric,
+      color: semantic.text.primary,
+      marginTop: 2,
     },
     valueHud: {
       color: c.hudOutline,
     },
     valueHero: {
-      fontSize: 44,
-      marginTop: 6,
+      fontSize: 48,
+      lineHeight: 54,
+      marginTop: 4,
     },
     unit: {
-      fontSize: 14,
-      fontFamily: 'VT323',
-      color: c.outline,
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.secondary,
     },
     unitHud: {
       color: c.hudOutline,
     },
     unitHero: {
-      fontSize: 20,
+      fontSize: 16,
+      lineHeight: 20,
     },
   };
 });
