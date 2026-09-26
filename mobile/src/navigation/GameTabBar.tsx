@@ -2,7 +2,7 @@
  * GameTabBar — STITCH BottomNavBar (Unistyles-integrated)
  *
  * 4-tab navigation: RIDE, COMPETE, EXPLORE, PROFILE.
- * PNG tab icons via assetRegistry (Grand Prix pack).
+ * Fresh product glyphs; no legacy PNG registry dependency.
  */
 
 import React from 'react';

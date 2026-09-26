@@ -1,17 +1,17 @@
 # 4VELO Mobile Asset Production List v1
 
-**Status:** approved queue; no bulk generation  
+**Status:** fresh v1 pilot family active; legacy generated pack purged  
 **Visual freeze:** 1.2.0
 
 ## Phase A — calibration
 
-### A1 — rider_canonical_v1 — P0
+### A1 — rider_canonical_v1 — P0 — APPROVED 2026-09-25
 
 Approve one rider/bicycle master: consistent silhouette, helmet/kit/bike language, transparent reusable subject, clean crop and no embedded text.
 
 **Do not create derivative rider poses before A1 is approved.**
 
-### A2 — home_hero_day_v1 — P0
+### A2 — home_hero_day_v1 — P0 — APPROVED 2026-09-25
 
 Use A1 rider. This scene calibrates environment pixel density, scenery treatment, rider/environment scale and text-safe composition.
 
@@ -77,3 +77,17 @@ Never generate a missing crest. Use Place Badge.
 Every approved production asset records ID/version, screens, source strategy/reference, rights status, dimensions, alpha expectation, SHA-256, intended-size screenshot and explicit approval note.
 
 The machine queue is \`assets/ASSET_GOVERNANCE_V1.json\`.
+
+
+## Asset lifecycle policy
+
+- approved assets record provenance, rights status, `createdAt` and an immutable SHA-256;
+- there is **no rolling age limit** that fails CI merely because an approved asset is older;
+- replacement/removal happens through explicit review, provenance problems, visual changes or a newer approved version;
+- legacy generated assets are deleted, not kept as runtime fallbacks;
+- `assets/generated/**` and `mobile/assets/generated/**` are retired paths and must contain zero visual files;
+- new or regenerated work targets the governed `mobile/assets/approved/v1/**` family or a newer explicitly approved version.
+
+## 2026-09-25 cut-over
+
+The June Grand Prix / vision-parity pack was retired as legacy/unapproved production input during the v1 cut-over. Runtime dependencies on its scenes, textures, sprite sheet, expressions, particle atlas, optional crests/achievements, HUD PNGs and SFX manifest were removed or replaced with approved v1/procedural equivalents.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,11 +21,14 @@ def load_policy(path: Path = DEFAULT_POLICY) -> dict[str, Any]:
 
 
 def legacy_visual_files(repo_root: Path) -> list[Path]:
-    root = repo_root / "assets" / "generated"
-    if not root.exists():
-        return []
+    roots = [
+        repo_root / "assets" / "generated",
+        repo_root / "mobile" / "assets" / "generated",
+    ]
     return sorted(
         path
+        for root in roots
+        if root.exists()
         for path in root.rglob("*")
         if path.is_file() and path.suffix.lower() in VISUAL_EXTENSIONS
     )
@@ -50,13 +54,14 @@ def validate_policy(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     if not isinstance(legacy, dict):
         return errors + ["legacyGeneratedPolicy must be an object"]
 
-    if legacy.get("defaultStatus") != "legacy_unapproved":
-        errors.append("legacy generated assets must default to legacy_unapproved")
+    if legacy.get("defaultStatus") != "deleted":
+        errors.append("legacy generated assets must default to deleted")
     if legacy.get("visualReferenceAllowedForNewUi") is not False:
         errors.append("legacy generated assets must not be visual references for new UI")
+    if legacy.get("temporaryRuntimeUseAllowed") is not False:
+        errors.append("legacy generated assets must not be allowed at runtime")
     if legacy.get("autoApprovalAllowed") is not False:
         errors.append("legacy generated assets must not be auto-approved")
-
     actual_visual_count = len(legacy_visual_files(repo_root))
     expected_visual_count = legacy.get("expectedVisualFileCount")
     if expected_visual_count != actual_visual_count:
@@ -134,12 +139,18 @@ def validate_policy(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
             if not isinstance(prov, dict):
                 errors.append(f"{asset_id}: approved asset requires provenance")
             else:
-                for key in ("sourceType", "sourceReference", "rightsStatus", "sha256"):
+                for key in ("sourceType", "sourceReference", "rightsStatus", "sha256", "createdAt"):
                     if not prov.get(key):
                         errors.append(f"{asset_id}: approved provenance missing {key}")
                 digest = prov.get("sha256", "")
                 if digest and not re.fullmatch(r"[0-9a-f]{64}", str(digest)):
                     errors.append(f"{asset_id}: sha256 must be 64 lowercase hex chars")
+                created_at = prov.get("createdAt")
+                if created_at:
+                    try:
+                        datetime.strptime(str(created_at), "%Y-%m-%d")
+                    except ValueError:
+                        errors.append(f"{asset_id}: createdAt must be YYYY-MM-DD")
 
     required = set(policy.get("requiredPilotTargets", []))
     missing = sorted(required - seen)

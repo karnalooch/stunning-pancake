@@ -1,15 +1,18 @@
 {
   "schemaVersion": 1,
   "visualFreezeVersion": "1.2.0",
-  "decisionDate": "2026-09-18",
+  "decisionDate": "2026-09-25",
   "status": "approved",
   "legacyGeneratedPolicy": {
-    "root": "assets/generated",
-    "defaultStatus": "legacy_unapproved",
+    "roots": [
+      "assets/generated",
+      "mobile/assets/generated"
+    ],
+    "defaultStatus": "deleted",
     "visualReferenceAllowedForNewUi": false,
-    "temporaryRuntimeUseAllowed": true,
+    "temporaryRuntimeUseAllowed": false,
     "autoApprovalAllowed": false,
-    "expectedVisualFileCount": 61,
+    "expectedVisualFileCount": 0,
     "manifestIsAuthoritative": false
   },
   "approval": {
@@ -61,24 +64,33 @@
     "home_hero_day_v1",
     "place_badge_v1",
     "ride_marker_rider_v1",
-    "summary_finish_v1",
-    "achievement_core_set_v1"
+    "summary_finish_v1"
   ],
   "productionTargets": [
     {
       "id": "rider_canonical_v1",
       "scope": "T79",
-      "category": "character_master",
+      "category": "character_portrait_master",
       "priority": "P0",
       "sourceStrategy": "original_generated_and_curated",
-      "status": "planned",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "single canonical rider identity",
-        "consistent bike silhouette",
-        "transparent master variants",
-        "approved against Home hero before derivatives"
-      ]
+        "consistent kit/helmet silhouette",
+        "raster master suitable for compact rider portrait use",
+        "not used as scenic Active Ride art"
+      ],
+      "provenance": {
+        "sourceType": "original_generated_and_curated",
+        "sourceReference": "mobile/assets/approved/v1/rider_canonical_v1.jpg",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "796a6bc70f43bb601fbe192aab5b74e230bbfe4aca22f3357cf6aa49b3c46e12",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "384x384",
+      "alphaExpectation": "opaque",
+      "approvalNote": "Production runtime raster sized for its actual UI slot; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "home_hero_day_v1",
@@ -86,14 +98,24 @@
       "category": "hero_scene",
       "priority": "P0",
       "sourceStrategy": "original_generated_and_curated",
-      "status": "planned",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "navy/cream/orange-compatible composition",
         "no embedded text",
         "safe text zone",
         "pixel-art identity without retro-game chrome"
-      ]
+      ],
+      "provenance": {
+        "sourceType": "original_generated_and_curated",
+        "sourceReference": "mobile/assets/approved/v1/home_hero_day_v1.jpg",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "492dc62c86d56e3dcc4a4b36ba9a7fa49b76b148931d989a3f5017eb2b8252b8",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "640x264",
+      "alphaExpectation": "opaque",
+      "approvalNote": "Production runtime raster sized for its actual UI slot; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "home_hero_evening_v1",
@@ -114,14 +136,24 @@
       "category": "place_identity_fallback",
       "priority": "P0",
       "sourceStrategy": "code_generated",
-      "status": "planned",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "works for every place name",
         "no random colours",
         "does not imitate an official crest",
         "readable at 32/48/64 dp"
-      ]
+      ],
+      "provenance": {
+        "sourceType": "code_generated",
+        "sourceReference": "mobile/src/components/product/PlaceBadge.tsx",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "dbb4c5fad142d9d13cd6c35a41e4d71bb039a255059c049479839d9db854bd89",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "responsive 32/48/64dp",
+      "alphaExpectation": "runtime component",
+      "approvalNote": "Visual direction previewed in-chat on 2026-09-25 and user instructed continuation to completion; final exact-SHA emulator screenshots remain a merge gate."
     },
     {
       "id": "functional_icon_set_v1",
@@ -143,27 +175,47 @@
       "category": "map_marker",
       "priority": "P0",
       "sourceStrategy": "original_generated_and_curated",
-      "status": "planned",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "glance-readable",
         "small pixel identity only",
         "does not obscure route"
-      ]
+      ],
+      "provenance": {
+        "sourceType": "original_generated_and_curated",
+        "sourceReference": "mobile/assets/approved/v1/ride_marker_rider_v1.png",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "707bf4c6868e18234d08cd3992c23a3479abcda23e9f795a5b23d382a4455dd9",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "64x64",
+      "alphaExpectation": "transparent",
+      "approvalNote": "Production raster cut-over approved on 2026-09-25; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "ride_action_icons_v1",
       "scope": "T80",
       "category": "functional_icons",
       "priority": "P1",
-      "sourceStrategy": "human_authored",
-      "status": "planned",
+      "sourceStrategy": "code_generated",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "stop/pause/resume semantics unambiguous",
         "high contrast",
         "not dependent on pixel font"
-      ]
+      ],
+      "provenance": {
+        "sourceType": "code_generated",
+        "sourceReference": "mobile/src/components/ride/RideActionBar.tsx",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "d2d8df19af5acb18fb24e9505a5c979398fd1dd80c0253c50d84abde569d970a",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "22dp runtime geometry",
+      "alphaExpectation": "runtime component",
+      "approvalNote": "Production raster cut-over approved on 2026-09-25; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "summary_finish_v1",
@@ -171,13 +223,23 @@
       "category": "celebration_scene",
       "priority": "P0",
       "sourceStrategy": "original_generated_and_curated",
-      "status": "planned",
+      "status": "approved",
       "replaceWithoutApproval": false,
       "acceptance": [
         "uses canonical rider",
         "celebratory but leaves stats readable",
         "shown only for durable success"
-      ]
+      ],
+      "provenance": {
+        "sourceType": "original_generated_and_curated",
+        "sourceReference": "mobile/assets/approved/v1/summary_finish_v1.jpg",
+        "rightsStatus": "owned for 4VELO project",
+        "sha256": "18b5eba6cccbe0770e9e5c4f11228f608675a870c2f8bc530f9cda7f7a2ccd96",
+        "createdAt": "2026-09-25"
+      },
+      "dimensions": "640x312",
+      "alphaExpectation": "opaque",
+      "approvalNote": "Production runtime raster sized for its actual UI slot; exact-SHA emulator screenshots and manual visual sign-off remain merge gates."
     },
     {
       "id": "achievement_core_set_v1",

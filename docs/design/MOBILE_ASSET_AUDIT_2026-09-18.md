@@ -2,6 +2,10 @@
 
 **Verdict:** existing generated artwork is **LEGACY / NOT APPROVED AS NEW VISUAL REFERENCE**.
 
+## 2026-09-25 superseding decision
+
+The June generated pack is now **DELETE**, not temporary-runtime, because it is legacy/unapproved production input under the current Frozen UI v1.2 governance. It was physically removed from both `assets/generated/**` and `mobile/assets/generated/**` on the Mobile UI Assets v1 branch. Governed v1 assets live under `mobile/assets/approved/v1/**`; CI rejects resurrection of the retired visual roots and validates provenance/digests, but does not expire approved assets by age.
+
 ## Inventory
 
 Repository scan of \`assets/generated/**\` on the audit base:

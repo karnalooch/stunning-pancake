@@ -133,10 +133,10 @@ Keep Gemini for raw PNG; add a deterministic post-process chain (see [ADR 014](.
 1. palette-quant → limited palette, nearest-neighbor scale, trim/align.
 2. sprite packing (free-tex-packer CLI) → atlases + frame JSON for `drawAtlas`.
 3. lossless compression (`pngquant`/`oxipng`).
-4. manifest with prompt-hash + seed for reproducibility ([assets/generated/ASSET_MANIFEST.json](../../assets/generated/ASSET_MANIFEST.json)).
+4. governed provenance with immutable digest and creation date in [ASSET_GOVERNANCE_V1.json](../../assets/ASSET_GOVERNANCE_V1.json).
 5. reference-locked character frame generation (seed/img2img) for animation coherence; optional Aseprite touch-up.
 
-New categories: `environment/` (parallax layers), `sprites/` (cyclist sheets), `particles/`, `map/` (retro tiles/markers), `marketing/` (`active_ride_hud_mockup` — store/onboarding hero + HUD layout reference, [§16b](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md)). Bundle to `mobile/assets/generated/` + typed manifest `mobile/src/assets/manifest.ts` (static `require()` for Metro). The manifest stores prompt + seed + reference hash so any asset is deterministically regenerable.
+New categories: `environment/` (parallax layers), `sprites/` (cyclist sheets), `particles/`, `map/` (retro tiles/markers), `marketing/` (`active_ride_hud_mockup` — store/onboarding hero + HUD layout reference, [§16b](./MOBILE_ASSET_NANO_BANANA_PROMPTS.md)). Approved production assets now live under `mobile/assets/approved/v1/` and are wired through `mobile/src/assets/approvedAssets.ts`. The governance policy stores provenance, immutable digest and freshness metadata; retired `assets/generated/**` roots must remain empty.
 
 ## 10. Backlog (P2/P3) and edge states
 

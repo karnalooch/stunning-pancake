@@ -3,16 +3,11 @@
  */
 
 import React, { useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import { Image, View, Text, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
-import { ParticleSystem } from '../components/effects/ParticleSystem';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
 import { ShareResultCard } from '../components/game/ShareResultCard';
-import { FinishCelebration } from '../components/game/FinishCelebration';
-import { SceneBackground } from '../components/scene/SceneBackground';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 import {
   computeRideRank,
   formatElapsed,
@@ -21,6 +16,7 @@ import {
 } from '../game/ranks';
 import { useI18n } from '../i18n/useI18n';
 import { FONTS } from '../theme/fonts';
+import { APPROVED_ASSETS } from '../assets/approvedAssets';
 import {
   isDurableRideSuccess,
   type RideFinishState,
@@ -48,7 +44,14 @@ const stylesheet = StyleSheet.create((theme) => {
     },
     scroll: { flex: 1 },
     content: { padding: 16, gap: 16, alignItems: 'center' as const },
-    titleSection: { alignItems: 'center' as const, paddingTop: 16, paddingBottom: 8 },
+    finishArt: {
+      width: '100%',
+      height: 156,
+      borderRadius: 18,
+      overflow: 'hidden',
+      marginTop: 4,
+    },
+    titleSection: { alignItems: 'center' as const, paddingTop: 8, paddingBottom: 8, gap: 8 },
     title: {
       fontSize: 36,
       fontFamily: FONTS.display,
@@ -124,7 +127,6 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
 }) => {
   const s = stylesheet;
   const { t } = useI18n();
-  const { enabled: immersiveEnabled } = useImmersiveTheme();
   const summary = finishState.summary;
   const distance = summary?.distanceKm ?? 0;
   const elapsedSeconds = summary?.elapsedS ?? 0;
@@ -141,24 +143,28 @@ export const RideSummaryScreen: React.FC<RideSummaryScreenProps> = ({
 
   return (
     <SafeAreaView testID="ride-summary-screen" style={s.container} edges={['top']}>
-      {immersiveEnabled && <SceneBackground sceneId="ride_summary" scrim="soft" />}
-      <ParticleSystem trigger={immersiveEnabled && durableSuccess} />
       <View style={[s.header, s.shadow]}>
         <View style={{ width: 40 }} />
         <Text style={s.headerTitle}>{t.summary.title.toUpperCase()}</Text>
         <View style={{ width: 40 }} />
       </View>
-      {durableSuccess ? <FinishCelebration /> : null}
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
         {durableSuccess ? (
           <>
+            <View style={s.finishArt} testID="summary-finish-v1">
+              <Image
+                source={APPROVED_ASSETS.summaryFinish}
+                resizeMode="cover"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </View>
             <View style={s.titleSection} testID="ride-summary-durable-success">
               <Text style={s.subtitle}>{rankDisplayName(rank)} {t.summary.subtitle} · {distance.toFixed(1)} km</Text>
               <View style={[s.gradeBadge, s.shadow]}>
                 <Text style={s.gradeText}>{rank}</Text>
               </View>
+
             </View>
-            {immersiveEnabled && <CyclistSprite size={72} state="victory" expressionMode />}
             <ShareResultCard
               distanceKm={distance}
               timeLabel={timeLabel}

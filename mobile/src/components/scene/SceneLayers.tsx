@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Image, StyleSheet, View, type ImageSourcePropType } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useUnistyles } from 'react-native-unistyles';
-import { ASSETS, type EnvironmentLayerId } from '../../assets/assetRegistry';
+import type { EnvironmentLayerId } from '../../theme/scenes';
 
 interface ImageParallaxLayerProps {
   layerId: EnvironmentLayerId;
@@ -18,13 +18,13 @@ interface ImageParallaxLayerProps {
   enabled?: boolean;
 }
 
-const LAYER_SOURCES: Record<EnvironmentLayerId, ImageSourcePropType> = {
-  sky_day: ASSETS.environment.sky_day,
-  sky_sunset: ASSETS.environment.sky_sunset,
-  sky_night: ASSETS.environment.sky_night,
-  hills_far: ASSETS.environment.hills_far,
-  town_mid: ASSETS.environment.town_mid,
-  road_near: ASSETS.environment.road_near,
+const LAYER_COLORS: Record<EnvironmentLayerId, string> = {
+  sky_day: '#31546b',
+  sky_sunset: '#7b4f42',
+  sky_night: '#0b1620',
+  hills_far: '#27423f',
+  town_mid: '#1f3438',
+  road_near: '#25313a',
 };
 
 export const ImageParallaxLayer: React.FC<ImageParallaxLayerProps> = ({
@@ -42,7 +42,7 @@ export const ImageParallaxLayer: React.FC<ImageParallaxLayerProps> = ({
       return;
     }
     offset.value = withRepeat(
-      withTiming(-48, { duration: 12000 / Math.max(0.2, parallaxSpeed), easing: Easing.linear }),
+      withTiming(-28, { duration: 12000 / Math.max(0.2, parallaxSpeed), easing: Easing.linear }),
       -1,
       false,
     );
@@ -53,19 +53,11 @@ export const ImageParallaxLayer: React.FC<ImageParallaxLayerProps> = ({
   }));
 
   return (
-    <View
-      style={{
-        position: 'absolute',
-        left: 0,
-        right: 0,
-        bottom,
-        height: `${heightPercent}%`,
-        overflow: 'hidden',
-      }}
-    >
-      <Animated.View style={[{ flexDirection: 'row', width: '200%', height: '100%' }, animStyle]}>
-        <Image source={LAYER_SOURCES[layerId]} style={styles.tile} resizeMode="cover" />
-        <Image source={LAYER_SOURCES[layerId]} style={styles.tile} resizeMode="cover" />
+    <View style={[styles.layer, { bottom, height: `${heightPercent}%` }]}>
+      <Animated.View style={[styles.proceduralBand, { backgroundColor: LAYER_COLORS[layerId] }, animStyle]}>
+        <View style={styles.shapeA} />
+        <View style={styles.shapeB} />
+        <View style={styles.shapeC} />
       </Animated.View>
     </View>
   );
@@ -80,31 +72,14 @@ export const AmbientLayer: React.FC<AmbientLayerProps> = ({ variant = 'day' }) =
   const c = theme.colors as Record<string, string>;
   const tint =
     variant === 'sunset'
-      ? 'rgba(212, 163, 115, 0.15)'
+      ? 'rgba(255,138,31,0.14)'
       : variant === 'night'
-        ? 'rgba(11, 29, 51, 0.4)'
+        ? 'rgba(3,10,18,0.46)'
         : 'transparent';
+
   return (
-    <View
-      pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { backgroundColor: tint }]}
-    >
-      {variant === 'day' && (
-        <View
-          style={{
-            position: 'absolute',
-            top: 48,
-            right: 32,
-            width: 48,
-            height: 48,
-            borderRadius: 24,
-            backgroundColor: c.goldAmber,
-            opacity: 0.85,
-            borderWidth: 2,
-            borderColor: c.hudOutline,
-          }}
-        />
-      )}
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: tint }]}>
+      {variant !== 'night' ? <View style={[styles.sun, { backgroundColor: c.goldAmber ?? '#f4b942' }]} /> : null}
     </View>
   );
 };
@@ -121,17 +96,36 @@ export const Scrim: React.FC<ScrimProps> = ({ strength = 'soft' }) => {
       pointerEvents="none"
       style={[
         StyleSheet.absoluteFill,
-        {
-          backgroundColor: strength === 'strong' ? c.scrimStrong : c.scrimSoft,
-        },
+        { backgroundColor: strength === 'strong' ? c.scrimStrong : c.scrimSoft },
       ]}
     />
   );
 };
 
 const styles = StyleSheet.create({
-  tile: {
-    flex: 1,
+  layer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+  },
+  proceduralBand: {
+    width: '120%',
     height: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+  },
+  shapeA: { width: 90, height: 70, backgroundColor: 'rgba(255,255,255,0.035)', transform: [{ rotate: '45deg' }] },
+  shapeB: { width: 130, height: 90, backgroundColor: 'rgba(0,0,0,0.07)', transform: [{ rotate: '45deg' }] },
+  shapeC: { width: 80, height: 60, backgroundColor: 'rgba(255,255,255,0.025)', transform: [{ rotate: '45deg' }] },
+  sun: {
+    position: 'absolute',
+    top: 46,
+    right: 30,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    opacity: 0.78,
   },
 });
