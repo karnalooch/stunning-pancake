@@ -129,7 +129,7 @@ class MobileHarnessContractTests(unittest.TestCase):
             "provenance.json",
             "[switch]$UseCiArtifact",
             "gh run list",
-            "gh run download",
+            'Invoke-Checked "gh" @("run", "download"',
             "mobile-runtime-$CiRunId",
             "CI artifact source SHA mismatch",
             "CI artifact APK SHA-256 mismatch",
