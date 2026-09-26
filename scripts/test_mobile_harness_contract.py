@@ -136,6 +136,8 @@ class MobileHarnessContractTests(unittest.TestCase):
         )
         self.assertIn("artifacts/mobile-runtime-acceptance/", gitignore)
         self.assertNotIn("emulator-5554", source)
+        self.assertNotIn("$LASTEXITCODE:", source)
+        self.assertIn("${LASTEXITCODE}:", source)
 
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
