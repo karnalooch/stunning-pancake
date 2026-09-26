@@ -23,87 +23,67 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
         self.assertEqual(validate_policy(self.policy, ROOT), [])
 
 
-    def test_ride_marker_png_crc_repair_is_lossless(self):
+    def test_ride_marker_png_stream_is_recoverable_losslessly(self):
         path = ROOT / "mobile" / "assets" / "approved" / "v1" / "ride_marker_rider_v1.png"
         data = path.read_bytes()
         print("ORIGINAL_RIDE_MARKER_BASE64=" + base64.b64encode(data).decode("ascii"))
+
         signature = b"\x89PNG\r\n\x1a\n"
         self.assertTrue(data.startswith(signature))
+        self.assertGreaterEqual(len(data), 41)
 
-        offset = len(signature)
-        chunks: list[str] = []
-        idat = bytearray()
-        ihdr = None
-        crc_mismatches: list[str] = []
-        repaired = bytearray(signature)
-
-        while offset < len(data):
-            self.assertGreaterEqual(len(data) - offset, 12)
-            length = struct.unpack(">I", data[offset : offset + 4])[0]
-            kind = data[offset + 4 : offset + 8]
-            payload_start = offset + 8
-            payload_end = payload_start + length
-            crc_end = payload_end + 4
-            self.assertLessEqual(crc_end, len(data), f"truncated PNG chunk {kind!r}")
-
-            payload = data[payload_start:payload_end]
-            expected_crc = struct.unpack(">I", data[payload_end:crc_end])[0]
-            actual_crc = zlib.crc32(kind + payload) & 0xFFFFFFFF
-            name = kind.decode("ascii")
-            if expected_crc != actual_crc:
-                crc_mismatches.append(name)
-
-            repaired.extend(struct.pack(">I", length))
-            repaired.extend(kind)
-            repaired.extend(payload)
-            repaired.extend(struct.pack(">I", actual_crc))
-
-            chunks.append(name)
-            if name == "IHDR":
-                self.assertEqual(length, 13)
-                ihdr = struct.unpack(">IIBBBBB", payload)
-            elif name == "IDAT":
-                idat.extend(payload)
-
-            offset = crc_end
-            if name == "IEND":
-                break
-
-        self.assertEqual(crc_mismatches, ["IDAT"])
-        self.assertIsNotNone(ihdr)
-        width, height, bit_depth, color_type, compression, filter_method, interlace = ihdr
+        ihdr_length = struct.unpack(">I", data[8:12])[0]
+        self.assertEqual(ihdr_length, 13)
+        self.assertEqual(data[12:16], b"IHDR")
+        ihdr_payload = data[16:29]
+        width, height, bit_depth, color_type, compression, filter_method, interlace = struct.unpack(
+            ">IIBBBBB", ihdr_payload
+        )
         self.assertEqual((width, height), (64, 64))
         self.assertEqual(bit_depth, 8)
-        self.assertIn(color_type, (2, 6))
+        self.assertEqual(color_type, 6)
         self.assertEqual(compression, 0)
         self.assertEqual(filter_method, 0)
         self.assertEqual(interlace, 0)
 
-        decoded = zlib.decompress(bytes(idat))
-        channels = 4 if color_type == 6 else 3
-        self.assertEqual(len(decoded), height * (1 + width * channels))
+        self.assertEqual(data[37:41], b"IDAT")
+        compressed_tail = data[41:]
+        decompressor = zlib.decompressobj()
+        decoded = decompressor.decompress(compressed_tail)
+        decoded += decompressor.flush()
+        self.assertTrue(decompressor.eof, "PNG IDAT zlib stream is truncated")
+        consumed = len(compressed_tail) - len(decompressor.unused_data)
+        compressed = compressed_tail[:consumed]
 
-        repaired_bytes = bytes(repaired)
-        original_sha = hashlib.sha256(data).hexdigest()
-        repaired_sha = hashlib.sha256(repaired_bytes).hexdigest()
-        self.assertNotEqual(original_sha, repaired_sha)
+        expected_decoded = height * (1 + width * 4)
+        self.assertEqual(len(decoded), expected_decoded)
 
+        def chunk(kind: bytes, payload: bytes) -> bytes:
+            crc = zlib.crc32(kind + payload) & 0xFFFFFFFF
+            return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", crc)
+
+        repaired = (
+            signature
+            + chunk(b"IHDR", ihdr_payload)
+            + chunk(b"IDAT", compressed)
+            + chunk(b"IEND", b"")
+        )
+
+        repaired_sha = hashlib.sha256(repaired).hexdigest()
+        decoded_sha = hashlib.sha256(decoded).hexdigest()
         print(
-            "ride_marker_rider_v1.png repair:",
+            "ride_marker_rider_v1.png recovery:",
             {
-                "bytes": len(data),
-                "width": width,
-                "height": height,
-                "bitDepth": bit_depth,
-                "colorType": color_type,
-                "interlace": interlace,
-                "chunks": chunks,
-                "crcMismatches": crc_mismatches,
-                "originalSha256": original_sha,
+                "originalBytes": len(data),
+                "compressedStreamBytes": consumed,
+                "unusedTrailingBytes": len(decompressor.unused_data),
+                "decodedBytes": len(decoded),
+                "decodedSha256": decoded_sha,
+                "repairedBytes": len(repaired),
                 "repairedSha256": repaired_sha,
             },
         )
-        print("REPAIRED_RIDE_MARKER_BASE64=" + base64.b64encode(repaired_bytes).decode("ascii"))
+        print("REPAIRED_RIDE_MARKER_BASE64=" + base64.b64encode(repaired).decode("ascii"))
 
     def test_duplicate_target_id_fails(self):
         policy = copy.deepcopy(self.policy)
