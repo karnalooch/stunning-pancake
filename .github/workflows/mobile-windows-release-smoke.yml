@@ -111,6 +111,8 @@ jobs:
             if (-not (Test-Path $virtualStore -PathType Container)) {
               throw "pnpm did not materialize the expected C:\v virtual store."
             }
+
+            "EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV
           } finally {
             Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig -Encoding utf8 -NoNewline
           }
