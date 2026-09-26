@@ -111,10 +111,19 @@ class ActivitySerializer(serializers.ModelSerializer):
             "duration",
             "is_verified",
             "verification_score",
+            "rejection_reason",
+            "rejection_notes",
             "route_path",
             "client_request_id",
         )
-        read_only_fields = ("id", "user", "is_verified", "verification_score")
+        read_only_fields = (
+            "id",
+            "user",
+            "is_verified",
+            "verification_score",
+            "rejection_reason",
+            "rejection_notes",
+        )
 
     def get_user_info(self, obj):
         return {"id": obj.user.id, "username": obj.user.username}
