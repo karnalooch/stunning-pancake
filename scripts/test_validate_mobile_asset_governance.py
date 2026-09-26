@@ -26,6 +26,7 @@ class AssetGovernanceValidatorTests(unittest.TestCase):
     def test_ride_marker_png_crc_repair_is_lossless(self):
         path = ROOT / "mobile" / "assets" / "approved" / "v1" / "ride_marker_rider_v1.png"
         data = path.read_bytes()
+        print("ORIGINAL_RIDE_MARKER_BASE64=" + base64.b64encode(data).decode("ascii"))
         signature = b"\x89PNG\r\n\x1a\n"
         self.assertTrue(data.startswith(signature))
 
