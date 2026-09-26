@@ -27,6 +27,7 @@ describe('T82 History + Activity Detail data contract', () => {
     expect(detail).toContain('<RideMapView');
     expect(detail).toContain('routeCoordinates={routeCoordinates}');
     expect(detail).toContain('showRiderMarker={false}');
+    expect(detail).toContain('t.activityDetail.routeUnavailableOffline');
     expect(detail).not.toContain('achievementKomName');
     expect(detail).not.toContain('achievementPrName');
     expect(detail).not.toContain('routePreview');
