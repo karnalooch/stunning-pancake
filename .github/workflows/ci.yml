@@ -639,10 +639,18 @@ jobs:
       - name: Test visual authority validator
         run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
 
+      - name: Asset-only governance test
+        if: needs.changes.outputs.mobile_asset_only == 'true'
+        run: |
+          pnpm --dir mobile test --ci --forceExit --runTestsByPath \
+            __tests__/assets/assetGovernance.test.ts
+
       - name: Mobile visual contract TypeScript check
+        if: needs.changes.outputs.mobile_asset_only != 'true'
         run: pnpm --dir mobile typecheck
 
       - name: Mobile visual foundation tests
+        if: needs.changes.outputs.mobile_asset_only != 'true'
         run: |
           pnpm --dir mobile test --ci --forceExit --runTestsByPath \
             __tests__/assets/assetGovernance.test.ts \
