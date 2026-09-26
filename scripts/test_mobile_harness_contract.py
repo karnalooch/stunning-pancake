@@ -123,6 +123,46 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, critical)
 
+    def test_python_ride_audit_accepts_stable_transition_ids(self):
+        source = read("scripts/emulator-ui-audit.py")
+        for token in (
+            "home-start-ride",
+            "active-ride-screen",
+            "ride-pause-button",
+            "ride-paused-screen",
+            "ride-paused-resume",
+            "ride-paused-stop",
+            "ride-summary-screen",
+            "ride-summary-durable-success",
+            "ride-summary-back-home",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+    def test_ride_screens_expose_stable_transition_ids(self):
+        expectations = {
+            "mobile/src/screens/RideDashboardScreen.tsx": ("home-start-ride",),
+            "mobile/src/screens/ActiveRideHUDScreen.tsx": ("active-ride-screen",),
+            "mobile/src/components/ride/RideActionBar.tsx": (
+                "ride-pause-button",
+                "ride-stop-button",
+            ),
+            "mobile/src/screens/RidePausedScreen.tsx": (
+                "ride-paused-screen",
+                "ride-paused-resume",
+                "ride-paused-stop",
+            ),
+            "mobile/src/screens/RideSummaryScreen.tsx": (
+                "ride-summary-screen",
+                "ride-summary-back-home",
+            ),
+        }
+        for path, tokens in expectations.items():
+            source = read(path)
+            for token in tokens:
+                with self.subTest(path=path, token=token):
+                    self.assertIn(token, source)
+
 
 if __name__ == "__main__":
     unittest.main()

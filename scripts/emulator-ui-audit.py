@@ -504,7 +504,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not tap_pattern(r"ride-start-button|START JAZDY|START RIDE|DO JAZDY", None):
+    if not tap_pattern(r"home-start-ride|ride-start-button|START JAZDY|START RIDE|DO JAZDY", None):
         steps.append(
             Step(
                 id="02_active_ride_hud",
@@ -516,7 +516,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 20):
+    if not wait_for_ui(r"active-ride-screen|ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 20):
         capture_raw(
             "02_active_ride_hud",
             "Aktywny HUD jazdy — transition FAIL",
@@ -540,7 +540,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+    if not wait_for_ui(r"ride-paused-screen|ride-paused-resume|ride-paused-stop|Jazda wstrzymana|Ride paused|WZNÓW|RESUME|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
         capture_raw(
             "03_ride_paused",
             "Modal pauzy jazdy — transition FAIL",
@@ -552,7 +552,7 @@ def main() -> int:
 
     capture("03_ride_paused", "Modal pauzy jazdy")
 
-    if not tap_pattern(r"WZNÓW|RESUME", None):
+    if not tap_pattern(r"ride-paused-resume|WZNÓW|RESUME", None):
         steps.append(
             Step(
                 id="03b_ride_resumed",
@@ -564,7 +564,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 12):
+    if not wait_for_ui(r"active-ride-screen|ride-pause-button|PAUZA|PAUSE|SZUKAM GPS|STOP", 12):
         capture_raw(
             "03b_ride_resumed",
             "Wznowiona jazda — transition FAIL",
@@ -588,7 +588,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
+    if not wait_for_ui(r"ride-paused-stop|ZATRZYMAJ JAZDĘ|STOP RIDE", 12):
         capture_raw(
             "03c_ride_repaused",
             "Ponowna pauza — transition FAIL",
@@ -598,7 +598,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not tap_pattern(r"ZATRZYMAJ JAZDĘ|STOP RIDE", None):
+    if not tap_pattern(r"ride-paused-stop|ZATRZYMAJ JAZDĘ|STOP RIDE", None):
         steps.append(
             Step(
                 id="03d_ride_summary",
@@ -610,7 +610,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE|POWRÓT|BACK TO HUB", 25):
+    if not wait_for_ui(r"ride-summary-screen|ride-summary-durable-success|Jazda ukończona|Ride complete|UDOSTĘPNIJ|SHARE|POWRÓT|BACK TO HUB", 25):
         capture_raw(
             "03d_ride_summary",
             "Podsumowanie jazdy — transition FAIL",
@@ -622,7 +622,7 @@ def main() -> int:
 
     capture("03d_ride_summary", "Podsumowanie jazdy")
 
-    if not tap_pattern(r"POWRÓT|BACK TO HUB", None):
+    if not tap_pattern(r"ride-summary-back-home|POWRÓT|BACK TO HUB", None):
         steps.append(
             Step(
                 id="03e_home_after_summary",
@@ -634,7 +634,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not wait_for_ui(r"START JAZDY|START RIDE|DO JAZDY|KREATOR GPS", 15):
+    if not wait_for_ui(r"home-start-ride|START JAZDY|START RIDE|DO JAZDY|KREATOR GPS", 15):
         capture_raw(
             "03e_home_after_summary",
             "Home po podsumowaniu — transition FAIL",

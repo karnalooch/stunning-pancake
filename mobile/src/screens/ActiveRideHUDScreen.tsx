@@ -119,7 +119,7 @@ export const ActiveRideHUDScreen: React.FC<Props> = ({
   ]);
 
   return (
-    <View style={s.container}>
+    <View testID="active-ride-screen" style={s.container}>
       <View style={s.mapLayer}>
         <RideMapView
           userCoordinate={liveCoord}
