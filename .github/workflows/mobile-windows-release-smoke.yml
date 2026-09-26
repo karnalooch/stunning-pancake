@@ -86,7 +86,11 @@ jobs:
         shell: pwsh
         run: |
           Set-Location "$env:SHORT_WORKSPACE\"
-          pnpm install --frozen-lockfile
+          $virtualStore = "C:\v"
+          if (Test-Path $virtualStore) {
+            Remove-Item -Recurse -Force $virtualStore
+          }
+          pnpm install --frozen-lockfile --virtual-store-dir "$virtualStore" --virtual-store-dir-max-length 16
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Resolve Expo provenance
