@@ -496,6 +496,9 @@ jobs:
       - name: Test mobile Android harness contract
         run: python -m unittest scripts/test_mobile_harness_contract.py -v
 
+      - name: Test cost-aware Mobile Native Smoke routing
+        run: python -m unittest scripts/test_mobile_native_smoke_workflow.py -v
+
       - name: Test mobile runtime/appVersion boundary
         run: python -m unittest scripts/test_mobile_runtime_boundary.py -v
 
