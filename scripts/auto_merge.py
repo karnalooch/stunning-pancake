@@ -14,39 +14,17 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+if __package__:
+    from .plan_affected_tests import is_mobile_native_affecting_path
+else:
+    from plan_affected_tests import is_mobile_native_affecting_path
+
 API_ROOT = "https://api.github.com"
 GRAPHQL_URL = "https://api.github.com/graphql"
 ELIGIBLE_MARKER = re.compile(r"(?mi)^Auto-merge:\s*eligible\s*$")
 MANUAL_MARKER = re.compile(r"(?mi)^Auto-merge:\s*manual\s*$")
 REQUIRED_CHECKS = ("Aggregate CI gate", "Kilo Code Review")
 NATIVE_BUILD_CHECK = "Android clean prebuild + debug compile"
-
-NATIVE_AFFECTING_EXACT = {
-    ".npmrc",
-    ".github/workflows/mobile-native-smoke.yml",
-    "package.json",
-    "pnpm-lock.yaml",
-    "pnpm-workspace.yaml",
-    "version.json",
-    "mobile/app.config.js",
-    "mobile/app.json",
-    "mobile/eas.json",
-    "mobile/package.json",
-    "mobile/google-services.json",
-    "mobile/GoogleService-Info.plist",
-    "mobile/assets/icon.png",
-    "mobile/assets/splash-icon.png",
-    "mobile/assets/adaptive-icon.png",
-    "scripts/validate_mobile_native_provenance.py",
-    "scripts/test_mobile_native_provenance.py",
-    "scripts/test_mobile_native_smoke_workflow.py",
-}
-NATIVE_AFFECTING_PREFIXES = (
-    ".github/actions/pnpm-setup/",
-    "mobile/android/",
-    "mobile/ios/",
-    "mobile/plugins/",
-)
 
 RISKY_PREFIXES = (
     ".github/",
@@ -220,10 +198,7 @@ def risky_paths(paths: Iterable[str]) -> list[str]:
 
 
 def is_native_affecting_path(path: str) -> bool:
-    normalized = path.strip().removeprefix("./")
-    return normalized in NATIVE_AFFECTING_EXACT or any(
-        normalized.startswith(prefix) for prefix in NATIVE_AFFECTING_PREFIXES
-    )
+    return is_mobile_native_affecting_path(path)
 
 
 def required_checks_for_paths(paths: Iterable[str]) -> tuple[str, ...]:
