@@ -148,7 +148,7 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("nodeLinker: isolated", workspace)
         self.assertNotIn("virtualStoreDir: .pnpm", workspace)
         self.assertIn("virtualStoreDirMaxLength: 40", workspace)
-        self.assertNotIn("\n.pnpm/\n", `\n${gitignore}\n`)
+        self.assertNotIn("\n.pnpm/\n", f"\n{gitignore}\n")
 
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
