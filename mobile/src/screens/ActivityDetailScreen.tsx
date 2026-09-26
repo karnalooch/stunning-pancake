@@ -244,22 +244,19 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
           </ProductCard>
 
           <View style={s.metricGrid}>
-            <ProductCard style={s.metricCell}>
-              <Metric
+            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
                 label={t.activityDetail.stats.distance}
                 value={`${Math.max(0, data.distance) / 1000 < 0.01 ? '0.00' : (Math.max(0, data.distance) / 1000).toFixed(2)} ${t.activityDetail.stats.distanceUnit}`}
                 testID="activity-detail-distance"
               />
             </ProductCard>
-            <ProductCard style={s.metricCell}>
-              <Metric
+            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
                 label={t.activityDetail.stats.time}
                 value={formatDurationSeconds(data.duration)}
                 testID="activity-detail-duration"
               />
             </ProductCard>
-            <ProductCard style={s.metricCell}>
-              <Metric
+            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
                 label={t.activityDetail.stats.avgSpeed}
                 value={
                   avgSpeed == null
@@ -269,8 +266,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                 testID="activity-detail-avg-speed"
               />
             </ProductCard>
-            <ProductCard style={s.metricCell}>
-              <Metric
+            <View style={s.metricCell}>\n              <ProductCard>\n                <Metric
                 label={t.activityDetail.verification}
                 value={
                   verificationScore == null
@@ -278,12 +274,7 @@ export const ActivityDetailScreen: React.FC<ActivityDetailScreenProps> = ({
                     : `${Math.round(Math.max(0, Math.min(1, verificationScore)) * 100)}%`
                 }
                 testID="activity-detail-verification"
-              />
-            </ProductCard>
-          </View>
-
-          <ProductCard>
-            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
+              />\n              </ProductCard>\n            </View>\n          </View>\n\n          <ProductCard>\n            <Text style={s.sectionTitle}>{t.activityDetail.route}</Text>
             {routeCoordinates.length >= 2 && viewport.center ? (
               <View style={s.mapWrap} testID="activity-detail-route-map">
                 <RideMapView
