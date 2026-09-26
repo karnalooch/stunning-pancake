@@ -108,12 +108,7 @@ jobs:
             pnpm install --frozen-lockfile
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-            $modulesFile = Join-Path $env:SHORT_WORKSPACE "node_modules\.modules.yaml"
-            if (-not (Test-Path $modulesFile -PathType Leaf)) {
-              throw "pnpm modules metadata missing: $modulesFile"
-            }
-            $modules = Get-Content -Raw $modulesFile
-            if ($modules -notmatch "C:\\v") {
+            if (-not (Test-Path $virtualStore -PathType Container)) {
               throw "pnpm did not materialize the expected C:\v virtual store."
             }
           } finally {
