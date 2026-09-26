@@ -127,6 +127,12 @@ class MobileHarnessContractTests(unittest.TestCase):
             "03e_home_after_summary.png",
             "AUTOMATION_PASS",
             "provenance.json",
+            "[switch]$UseCiArtifact",
+            "gh run list",
+            "gh run download",
+            "mobile-runtime-$CiRunId",
+            "CI artifact source SHA mismatch",
+            "CI artifact APK SHA-256 mismatch",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
@@ -176,6 +182,13 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace", workflow)
         self.assertIn("mobile/android/app/build/outputs/apk/debug/app-debug.apk", workflow)
         self.assertIn("mobile/android/app/build/outputs/apk/release/app-release.apk", workflow)
+        self.assertIn("Prepare exact-SHA runtime artifact", workflow)
+        self.assertIn("Upload exact-SHA runtime artifact", workflow)
+        self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", workflow)
+        self.assertIn('name: mobile-runtime-${{ github.run_id }}', workflow)
+        self.assertIn('"sourceHeadSha"', workflow)
+        self.assertIn('"apkSha256"', workflow)
+        self.assertIn('"workflowRunId"', workflow)
         self.assertLess(
             workflow.index("./gradlew assembleDebug --no-daemon --stacktrace"),
             workflow.index("./gradlew assembleRelease --no-daemon --stacktrace"),
