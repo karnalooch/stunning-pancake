@@ -164,6 +164,10 @@ try {
   Write-Host "  Evidence:    $runDir"
 
   Write-Host ""
+  Write-Host "=== Install exact workspace dependencies ===" -ForegroundColor Cyan
+  Invoke-Checked "pnpm" @("install", "--frozen-lockfile") $repoRoot
+
+  Write-Host ""
   Write-Host "=== Resolve Expo/native provenance ===" -ForegroundColor Cyan
   Push-Location $mobileDir
   try {
