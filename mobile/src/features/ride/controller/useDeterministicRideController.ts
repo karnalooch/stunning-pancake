@@ -1,7 +1,7 @@
 import { useCallback, useReducer } from 'react';
 
 import type { ActivitySportType } from '../../../types/activitySport';
-import type { RideController, RideControllerOptions, RideSummaryPayload } from './RideController';
+import type { RideController, RideControllerOptions, RideFinishState } from './RideController';
 import {
   deterministicRideReducer,
   initialDeterministicRideState,
@@ -19,8 +19,8 @@ export function useDeterministicRideController(
     dispatch({ type: 'set-paused', value });
   }, []);
 
-  const setRideSummary = useCallback((value: RideSummaryPayload | null) => {
-    dispatch({ type: 'set-summary', value });
+  const setRideFinishState = useCallback((value: RideFinishState | null) => {
+    dispatch({ type: 'set-finish-state', value });
   }, []);
 
   const onUserSessionReady = useCallback(async (_userId: number | null) => {
@@ -43,11 +43,11 @@ export function useDeterministicRideController(
 
   const handleStopRide = useCallback(async () => {
     const hasSummary = state.liveDistanceKm > 0;
-    dispatch({ type: 'finish' });
+    dispatch({ type: 'finish', kind: options.deterministicFinishKind });
     return hasSummary
       ? { navigated: false }
       : { navigated: true, target: 'Ride' as const };
-  }, [state.liveDistanceKm]);
+  }, [options.deterministicFinishKind, state.liveDistanceKm]);
 
   const clearEdgeMessage = useCallback(() => {
     options.onEdgeMessage?.(null);
@@ -58,7 +58,7 @@ export function useDeterministicRideController(
     gpsRecoveryVisible: false,
     gpsRecoveryBusy: false,
     setRidePaused,
-    setRideSummary,
+    setRideFinishState,
     onUserSessionReady,
     handleGpsRecoveryPress,
     handleStartRide,

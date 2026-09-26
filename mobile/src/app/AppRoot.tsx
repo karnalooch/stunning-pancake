@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import * as Updates from 'expo-updates';
 import { useFonts, PressStart2P_400Regular } from '@expo-google-fonts/press-start-2p';
 import { Silkscreen_700Bold } from '@expo-google-fonts/silkscreen';
@@ -12,7 +12,12 @@ import { useAuthSession } from '../bootstrap/useAuthSession';
 import { AuthScreen } from '../bootstrap/AuthScreen';
 import { SoundService } from '../services/SoundService';
 import { useChromeNight } from '../hooks/useChromeNight';
-import { isVisionFixtures } from '../bootstrap/visionFixtures';
+import {
+  getVisionRideFinishKind,
+  isVisionFixtures,
+  subscribeVisionRideFinishKind,
+  type VisionRideFinishKind,
+} from '../bootstrap/visionFixtures';
 import type {
   RideController,
   RideControllerNotice,
@@ -56,7 +61,15 @@ function ProductionRideRoot() {
 
 function DeterministicRideRoot() {
   const presentation = useRidePresentationState();
-  const ride = useDeterministicRideController(controllerOptions(presentation));
+  const finishKind = useSyncExternalStore<VisionRideFinishKind>(
+    subscribeVisionRideFinishKind,
+    () => getVisionRideFinishKind(true) ?? 'durable-success',
+    () => 'durable-success',
+  );
+  const ride = useDeterministicRideController({
+    ...controllerOptions(presentation),
+    deterministicFinishKind: finishKind,
+  });
   return <AppContent ride={ride} presentation={presentation} />;
 }
 

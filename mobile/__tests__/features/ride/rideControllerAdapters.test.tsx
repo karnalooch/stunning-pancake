@@ -81,7 +81,35 @@ describe('ride controller adapters', () => {
       expect(await captured.handleStopRide()).toEqual({ navigated: false });
     });
     expect(captured.isRecording).toBe(false);
-    expect(captured.rideSummary?.distanceKm).toBeGreaterThan(0);
+    expect(captured.rideFinishState?.kind).toBe('durable-success');
+    expect(captured.rideFinishState?.summary?.distanceKm).toBeGreaterThan(0);
+
+    act(() => tree.unmount());
+  });
+
+  test.each([
+    'pending-finalization',
+    'recovery-required',
+  ] as const)('deterministic adapter can force %s without production lifecycle', async (kind) => {
+    let captured!: RideController;
+
+    function Harness() {
+      captured = useDeterministicRideController({ deterministicFinishKind: kind });
+      return null;
+    }
+
+    let tree!: TestRenderer.ReactTestRenderer;
+    act(() => {
+      tree = TestRenderer.create(<Harness />);
+    });
+
+    await act(async () => {
+      await captured.handleStartRide('BIKE');
+      await captured.handleStopRide();
+    });
+
+    expect(mockUseRideLifecycle).not.toHaveBeenCalled();
+    expect(captured.rideFinishState?.kind).toBe(kind);
 
     act(() => tree.unmount());
   });

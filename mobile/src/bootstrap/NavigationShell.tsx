@@ -30,7 +30,9 @@ import { VisionGalleryScreen } from '../screens/VisionGalleryScreen';
 import {
   isVisionFixtures,
   setVisionHomePreviewState,
+  setVisionRideFinishKind,
   VISION_HOME_PREVIEW_STATES,
+  VISION_RIDE_FINISH_KINDS,
 } from './visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { useFrameBudgetMonitor } from '../hooks/useFrameBudgetMonitor';
@@ -43,6 +45,7 @@ import { trackEngagement } from '../services/EngagementAnalytics';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import { mobileLinking } from '../navigation/linking';
+import type { RideFinishState } from '../features/ride/model/RideFinishState';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -59,8 +62,8 @@ export type NavigationShellProps = {
   liveCoord: [number, number] | null;
   gpsRecoveryVisible: boolean;
   gpsRecoveryBusy: boolean;
-  rideSummary: { distanceKm: number; elapsedS: number; elevationGainM: number } | null;
-  setRideSummary: (v: { distanceKm: number; elapsedS: number; elevationGainM: number } | null) => void;
+  rideFinishState: RideFinishState | null;
+  setRideFinishState: (v: RideFinishState | null) => void;
   startRideError: string | null;
   clearStartRideError: () => void;
   rideEdgeMessage: RideEdgeMessage | null;
@@ -74,7 +77,7 @@ export type NavigationShellProps = {
 
 type MainTabsProps = Omit<
   NavigationShellProps,
-  'rideSummary' | 'setRideSummary' | 'setRideEdgeMessage'
+  'rideFinishState' | 'setRideFinishState' | 'setRideEdgeMessage'
 > & {
   navRef: React.RefObject<NavigationContainerRef<RootStackParamList> | null>;
 };
@@ -229,8 +232,8 @@ export function NavigationShell(props: NavigationShellProps) {
     liveCoord,
     gpsRecoveryVisible,
     gpsRecoveryBusy,
-    rideSummary,
-    setRideSummary,
+    rideFinishState,
+    setRideFinishState,
     startRideError,
     clearStartRideError,
     rideEdgeMessage,
@@ -250,9 +253,9 @@ export function NavigationShell(props: NavigationShellProps) {
   useMotionDegradeMonitor(isRecording && !ridePaused);
 
   useEffect(() => {
-    if (!rideSummary) return;
-    navRef.current?.navigate('RideSummary', rideSummary);
-  }, [rideSummary]);
+    if (!rideFinishState) return;
+    navRef.current?.navigate('RideSummary', rideFinishState);
+  }, [rideFinishState]);
 
   const handleShareSummary = async () => {
     try {
@@ -447,13 +450,11 @@ export function NavigationShell(props: NavigationShellProps) {
             {({ navigation, route }: RootScreenProps<'RideSummary'>) => (
               <View ref={shareCardRef} style={{ flex: 1 }}>
                 <RideSummaryScreen
-                  distance={route.params.distanceKm}
-                  elapsedSeconds={route.params.elapsedS}
-                  elevation={route.params.elevationGainM}
+                  finishState={route.params}
                   username={shellUser?.username ?? 'RIDER'}
                   onShare={() => void handleShareSummary()}
                   onBackToHub={() => {
-                    setRideSummary(null);
+                    setRideFinishState(null);
                     navigation.navigate('MainTabs', { screen: 'Ride' });
                   }}
                 />
@@ -505,15 +506,38 @@ export function NavigationShell(props: NavigationShellProps) {
                       { label: 'Explore Map', onPress: () => navigation.navigate('ExploreMap') },
                       { label: 'GPS Diagnostics', onPress: () => navigation.navigate('GpsDiagnostics') },
                       { label: 'Settings', onPress: () => navigation.navigate('Settings') },
-                      {
-                        label: 'Ride Summary',
-                        onPress: () =>
-                          navigation.navigate('RideSummary', {
-                            distanceKm: 12.4,
-                            elapsedS: 2730,
-                            elevationGainM: 145,
-                          }),
-                      },
+                      ...(isVisionFixtures()
+                        ? VISION_RIDE_FINISH_KINDS.flatMap((kind) => {
+                            const summary = {
+                              distanceKm: 12.4,
+                              elapsedS: 2730,
+                              elevationGainM: 145,
+                            };
+                            const finishState: RideFinishState =
+                              kind === 'durable-success'
+                                ? { kind, summary }
+                                : kind === 'pending-finalization'
+                                  ? { kind, summary, pendingUpload: 1 }
+                                  : {
+                                      kind,
+                                      summary,
+                                      reason: 'Vision recovery-required finish',
+                                    };
+                            return [
+                              {
+                                label: `Ride flow finish — ${kind}`,
+                                onPress: () => {
+                                  setVisionRideFinishKind(kind);
+                                  navigation.navigate('MainTabs', { screen: 'Ride' });
+                                },
+                              },
+                              {
+                                label: `Summary — ${kind}`,
+                                onPress: () => navigation.navigate('RideSummary', finishState),
+                              },
+                            ];
+                          })
+                        : []),
                       { label: 'Ride Paused', onPress: () => navigation.navigate('RidePaused') },
                     ]}
                   />
