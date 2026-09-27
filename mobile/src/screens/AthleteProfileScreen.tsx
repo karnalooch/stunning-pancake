@@ -1,100 +1,146 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
-import { AuthService } from '../services/api';
-import { useI18n } from '../i18n/useI18n';
-import { FONTS } from '../theme/fonts';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+
+import { Metric, PrimaryButton, ProductCard } from '../components/product';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { getVisionProfileFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 import { useGameProgress } from '../hooks/useGameProgress';
 import { useRiderStats } from '../hooks/useRiderStats';
-import { SceneBackground } from '../components/scene/SceneBackground';
-import { LevelXpBar } from '../components/game/LevelXpBar';
-import { formatRiderDisplayName } from '../utils/displayName';
-import { AppHeader } from '../components/ui/AppHeader';
-import { RiderAvatar } from '../components/ui/RiderAvatar';
-import { SkeletonBlock } from '../components/ui/SkeletonBlock';
-import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { useI18n } from '../i18n/useI18n';
+import { AuthService, type UserProfile } from '../services/api';
 import { LAYOUT } from '../theme/layout';
-import { AvatarFramed } from '../components/ui/AvatarFramed';
-import { LaurelHeader } from '../components/ui/LaurelHeader';
-import { OrnateFrame } from '../components/ui/OrnateFrame';
-import { AchievementGrid } from '../components/game/AchievementGrid';
-import { PixelText } from '../components/PixelText';
-import { getVisionProfileFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
+import { formatRiderDisplayName } from '../utils/displayName';
 
 const stylesheet = StyleSheet.create((theme) => {
-  const c = theme.colors as Record<string, string>;
-  const sh = {
-    shadowColor: c.onBackground,
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 8,
-  };
+  const semantic = getSemanticColors(theme.colors);
+
   return {
-    sh,
-    ct: { flex: 1, backgroundColor: c.background },
-    h: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: LAYOUT.gutter,
-      borderBottomWidth: 4,
-      borderBottomColor: c.onBackground,
-      backgroundColor: c.surface,
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
     },
-    hl: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    av: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      backgroundColor: c.primaryContainer,
+    header: {
+      minHeight: 72,
+      paddingHorizontal: LAYOUT.gutter,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      backgroundColor: semantic.surface.raised,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border.subtle,
     },
-    ht: { fontSize: 16, fontFamily: FONTS.display, color: c.primary, textTransform: 'uppercase' },
-    hero: {
-      backgroundColor: c.parchment,
-      margin: LAYOUT.gutter,
+    headerTitle: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    content: {
       padding: LAYOUT.gutter,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      borderRadius: 8,
-      flexDirection: 'row',
-      alignItems: 'center',
       gap: LAYOUT.sectionGap,
-      ...sh,
+      paddingBottom: 112,
     },
-    hi: {
+    section: {
+      gap: 8,
+    },
+    sectionTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      fontSize: 18,
+      lineHeight: 24,
+      color: semantic.text.primary,
+    },
+    identityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 16,
+    },
+    avatar: {
       width: 64,
       height: 64,
       borderRadius: 32,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      backgroundColor: c.primaryContainer,
-    },
-    hn: { color: c.onBackground },
-    hs: { fontSize: 12, color: c.secondary },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', padding: LAYOUT.gutter, gap: LAYOUT.compactGap },
-    tile: {
-      width: '47%',
-      padding: 0,
-    },
-    tl: { fontSize: 10, color: c.secondary, textTransform: 'uppercase' },
-    tv: { fontSize: 20, color: c.onBackground, marginTop: 4 },
-    btn: {
-      backgroundColor: c.primaryContainer,
-      padding: LAYOUT.gutter,
-      borderRadius: 8,
-      borderWidth: 4,
-      borderColor: c.onBackground,
-      marginHorizontal: LAYOUT.gutter,
-      marginBottom: LAYOUT.compactGap,
       alignItems: 'center',
-      ...sh,
+      justifyContent: 'center',
+      backgroundColor: semantic.selection.background,
+      borderWidth: 1,
+      borderColor: semantic.selection.border,
     },
-    btnT: { fontSize: 16, fontFamily: FONTS.display, color: c.onPrimaryContainer },
+    avatarText: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.selection.content,
+    },
+    identityCopy: {
+      flex: 1,
+      gap: 3,
+    },
+    riderName: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    secondaryText: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    label: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
+      textTransform: 'uppercase',
+    },
+    stateContent: {
+      gap: 8,
+    },
+    errorTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.error,
+    },
+    offlineTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.offline,
+    },
+    stateBody: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    metricsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 12,
+    },
+    metricCell: {
+      flexBasis: '47%',
+      flexGrow: 1,
+    },
+    communityName: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      fontSize: 20,
+      lineHeight: 26,
+      color: semantic.text.primary,
+    },
+    progressHeader: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    progressValue: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
+    },
+    progressTrack: {
+      height: 8,
+      overflow: 'hidden',
+      borderRadius: 4,
+      backgroundColor: semantic.surface.interactive,
+    },
+    progressFill: {
+      height: '100%',
+      borderRadius: 4,
+      backgroundColor: semantic.progress.primary,
+    },
+    actionStack: {
+      gap: 8,
+    },
   };
 });
 
@@ -107,6 +153,18 @@ interface Props {
   onLeaderboard?: () => void;
 }
 
+function initialsFor(name: string): string {
+  const initials = name
+    .split(/\s+/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+
+  return initials || '4V';
+}
+
 export const AthleteProfileScreen: React.FC<Props> = ({
   user,
   onLogout,
@@ -115,154 +173,261 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   onTrends,
   onLeaderboard,
 }) => {
-  const { theme } = useUnistyles();
   const { t } = useI18n();
   const s = stylesheet;
-  const c = theme.colors as Record<string, string>;
-  const { enabled: immersiveEnabled } = useImmersiveTheme();
   const fixturesEnabled = isVisionFixtures();
   const profileFixture = getVisionProfileFixture(fixturesEnabled);
   const { level, xpBar } = useGameProgress();
-  const { rides, distanceKm, verified, streakDays, loading: statsLoading, offline } = useRiderStats();
-  const [username, setUsername] = useState(profileFixture?.username ?? user?.username ?? 'RIDER');
+  const {
+    rides,
+    distanceKm,
+    verified,
+    streakDays,
+    loading: statsLoading,
+    offline: statsOffline,
+    error: statsError,
+    refresh: refreshStats,
+  } = useRiderStats();
 
-  useEffect(() => {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(!fixturesEnabled);
+  const [profileError, setProfileError] = useState(false);
+
+  const loadProfile = useCallback(async () => {
     if (fixturesEnabled) return;
-    AuthService.getProfile()
-      .then((profile) => {
-        if (profile?.username) setUsername(profile.username);
-      })
-      .catch(() => {});
+
+    setProfileLoading(true);
+    setProfileError(false);
+    try {
+      setProfile(await AuthService.getProfile());
+    } catch {
+      setProfileError(true);
+    } finally {
+      setProfileLoading(false);
+    }
   }, [fixturesEnabled]);
 
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
+
+  const displayName = formatRiderDisplayName(
+    profileFixture?.username ?? profile?.username ?? user?.username,
+    t.profile.athlete,
+  );
+  const displayEmail = fixturesEnabled ? null : profile?.email?.trim() || null;
+  const displayCommunity = fixturesEnabled ? null : profile?.tenant_name?.trim() || null;
+  const displayDistanceKm = profileFixture?.stats.km ?? distanceKm;
+  const displayRides = profileFixture?.stats.rides ?? rides;
+  const displayVerified = profileFixture?.stats.verified ?? verified;
+  const displayStreakDays = profileFixture?.streakDays ?? streakDays;
   const displayLevel = profileFixture?.level ?? level;
   const displayXpCurrent = profileFixture?.xpCurrent ?? xpBar.current;
   const displayXpMax = profileFixture?.xpMax ?? xpBar.max;
-  const displayDistanceKm = profileFixture?.stats.km ?? distanceKm;
-  const displayRides = profileFixture?.stats.rides ?? rides;
-  const displayVerified = profileFixture?.stats.kom ?? verified;
-  const displayName = formatRiderDisplayName(profileFixture?.username ?? username);
   const displayStatsLoading = fixturesEnabled ? false : statsLoading;
-  const displayOffline = fixturesEnabled ? false : offline;
+  const displayStatsOffline = fixturesEnabled ? false : statsOffline;
+  const displayStatsError = fixturesEnabled ? false : statsError;
   const displayXpPct = Math.max(0, Math.min(1, displayXpCurrent / Math.max(1, displayXpMax)));
+  const avatarInitials = useMemo(() => initialsFor(displayName), [displayName]);
 
-  const achievements = fixturesEnabled
-    ? [...(profileFixture?.achievements ?? [])]
-    : [
-        { id: 'ach_100km', label: '100 KM', unlocked: distanceKm >= 100 },
-        { id: 'ach_10rides', label: '10 JAZD', unlocked: rides >= 10 },
-        { id: 'ach_500m', label: '500 M', unlocked: distanceKm >= 0.5 },
-        { id: 'ach_kom', label: 'KOM', unlocked: verified >= 1 },
-        { id: 'ach_5h', label: '5H CZAS', unlocked: rides >= 5 },
-        { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: streakDays >= 7 },
-        { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: rides >= 8 },
-        { id: 'ach_7days', label: '7 DNI', unlocked: streakDays >= 7 },
-        { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: distanceKm >= 200 },
-        { id: 'ach_passion', label: 'PASJA', unlocked: rides >= 25 },
-      ];
+  const runAction = (action?: () => void) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    action?.();
+  };
 
   return (
-    <View style={s.ct}>
-      {immersiveEnabled && <SceneBackground sceneId="profile" scrim="soft" />}
-      <AppHeader
-        rightAction={{
-          icon: 'settings',
-          onPress: () => onSettings?.(),
-          accessibilityLabel: t.settings.title,
-          testID: 'profile-settings-button',
-        }}
-      >
-        <RiderAvatar size={40} />
-      </AppHeader>
-      <ScrollView>
-        {displayOffline ? (
-          <EdgeStateBanner
-            title={t.errors.network}
-            message={t.errors.offlineCache}
-            variant="offline"
-          />
-        ) : null}
-        <OrnateFrame style={{ margin: LAYOUT.gutter }} tone="parchment">
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: LAYOUT.sectionGap }}>
-            <AvatarFramed size={88} />
-            <View style={{ flex: 1, gap: 8 }}>
-              <PixelText size="xl" style={s.hn} numberOfLines={1}>
-                {displayName}
-              </PixelText>
-              <PixelText size="sm" style={s.hs}>
-                {t.profile.warrior.toUpperCase()}
-              </PixelText>
-              {immersiveEnabled && (
-                <LevelXpBar
-                  level={displayLevel}
-                  xpCurrent={displayXpCurrent}
-                  xpMax={displayXpMax}
-                  pct={displayXpPct}
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>{t.tabs.profile}</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={s.content}>
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.profile.identity}</Text>
+          {profileLoading && !user?.username ? (
+            <SkeletonBlock height={112} />
+          ) : (
+            <ProductCard variant="raised" testID="profile-identity-card">
+              <View style={s.identityRow}>
+                <View style={s.avatar} accessibilityElementsHidden>
+                  <Text style={s.avatarText}>{avatarInitials}</Text>
+                </View>
+                <View style={s.identityCopy}>
+                  <Text style={s.riderName} numberOfLines={1}>
+                    {displayName}
+                  </Text>
+                  {displayEmail ? (
+                    <Text style={s.secondaryText} numberOfLines={1}>
+                      {displayEmail}
+                    </Text>
+                  ) : null}
+                  {profileLoading ? (
+                    <Text style={s.secondaryText}>{t.profile.profileLoading}</Text>
+                  ) : null}
+                </View>
+              </View>
+            </ProductCard>
+          )}
+
+          {profileError ? (
+            <ProductCard testID="profile-load-error">
+              <View style={s.stateContent}>
+                <Text style={s.errorTitle}>{t.profile.profileLoadErrorTitle}</Text>
+                <Text style={s.stateBody}>{t.profile.profileLoadErrorBody}</Text>
+                <PrimaryButton
+                  label={t.common.retry}
+                  onPress={() => void loadProfile()}
+                  variant="secondary"
+                  testID="profile-retry"
                 />
-              )}
-              {immersiveEnabled && (
-                <PixelText size="sm" style={[s.hs, { color: c.primary }]}>
-                  {streakDays} {t.profile.streakLabel} · {displayRides} {t.profile.rides.toLowerCase()}
-                </PixelText>
-              )}
-            </View>
-          </View>
-        </OrnateFrame>
-        {displayStatsLoading ? (
-          <SkeletonBlock height={120} style={{ marginHorizontal: LAYOUT.gutter }} />
-        ) : (
-        <View style={s.grid}>
-          {[
-            { l: t.profile.distance, v: `${displayDistanceKm.toLocaleString()} km` },
-            { l: t.profile.rides, v: String(displayRides) },
-            { l: t.profile.verified, v: String(displayVerified) },
-            { l: t.profile.pending, v: String(Math.max(0, displayRides - displayVerified)) },
-          ].map((m, i) => (
-            <OrnateFrame key={i} style={s.tile} padding={12}>
-              <PixelText size="xs" style={s.tl}>{m.l}</PixelText>
-              <PixelText size="xl" style={s.tv}>{m.v}</PixelText>
-            </OrnateFrame>
-          ))}
+              </View>
+            </ProductCard>
+          ) : null}
         </View>
-        )}
-        <OrnateFrame style={{ marginHorizontal: LAYOUT.gutter, marginBottom: LAYOUT.gutter }} tone="surface">
-          <LaurelHeader title={t.settings.achievements} />
-          <AchievementGrid items={achievements} />
-        </OrnateFrame>
-        <Pressable
-          style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            onTrends?.();
-          }}
-        >
-          <Text style={s.btnT}>{t.settings.trends.toUpperCase()}</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            onLeaderboard?.();
-          }}
-        >
-          <Text style={s.btnT}>{t.settings.globalLb.toUpperCase()}</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [s.btn, pressed && { opacity: 0.8 }]}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-            onTraining?.();
-          }}
-        >
-          <Text style={s.btnT}>{t.profile.trainingLog}</Text>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => [s.btn, { backgroundColor: c.error }, pressed && { opacity: 0.8 }]}
-          onPress={onLogout}
-        >
-          <Text style={[s.btnT, { color: c.onError }]}>{t.common.logout.toUpperCase()}</Text>
-        </Pressable>
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.profile.statistics}</Text>
+
+          {displayStatsOffline ? (
+            <ProductCard testID="profile-stats-offline">
+              <View style={s.stateContent}>
+                <Text style={s.offlineTitle}>{t.errors.network}</Text>
+                <Text style={s.stateBody}>{t.errors.offlineCache}</Text>
+              </View>
+            </ProductCard>
+          ) : null}
+
+          {displayStatsLoading ? (
+            <SkeletonBlock height={168} />
+          ) : displayStatsError ? (
+            <ProductCard testID="profile-stats-error">
+              <View style={s.stateContent}>
+                <Text style={s.errorTitle}>{t.profile.statsLoadErrorTitle}</Text>
+                <Text style={s.stateBody}>{t.profile.statsLoadErrorBody}</Text>
+                <PrimaryButton
+                  label={t.common.retry}
+                  onPress={() => void refreshStats()}
+                  variant="secondary"
+                  testID="profile-stats-retry"
+                />
+              </View>
+            </ProductCard>
+          ) : (
+            <View style={s.metricsGrid}>
+              <View style={s.metricCell}>
+                <ProductCard>
+                  <Metric
+                    label={t.profile.distance}
+                    value={`${displayDistanceKm.toLocaleString()} km`}
+                    testID="profile-distance"
+                  />
+                </ProductCard>
+              </View>
+              <View style={s.metricCell}>
+                <ProductCard>
+                  <Metric
+                    label={t.profile.rides}
+                    value={String(displayRides)}
+                    testID="profile-rides"
+                  />
+                </ProductCard>
+              </View>
+              <View style={s.metricCell}>
+                <ProductCard>
+                  <Metric
+                    label={t.profile.verified}
+                    value={String(displayVerified)}
+                    testID="profile-verified"
+                  />
+                </ProductCard>
+              </View>
+              <View style={s.metricCell}>
+                <ProductCard>
+                  <Metric
+                    label={t.profile.streak}
+                    value={String(displayStreakDays)}
+                    testID="profile-streak"
+                  />
+                </ProductCard>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {displayCommunity ? (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{t.profile.community}</Text>
+            <ProductCard testID="profile-community-card">
+              <Text style={s.label}>{t.profile.community}</Text>
+              <Text style={s.communityName}>{displayCommunity}</Text>
+            </ProductCard>
+          </View>
+        ) : null}
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.settings.achievements}</Text>
+          <ProductCard testID="profile-achievements-unavailable">
+            <Text style={s.stateBody}>{t.profile.achievementsUnavailable}</Text>
+          </ProductCard>
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.profile.progression}</Text>
+          <ProductCard>
+            <View style={s.stateContent}>
+              <View style={s.progressHeader}>
+                <Text style={s.progressValue}>
+                  {t.profile.level} {displayLevel}
+                </Text>
+                <Text style={s.secondaryText}>
+                  {displayXpCurrent.toLocaleString()} / {displayXpMax.toLocaleString()} XP
+                </Text>
+              </View>
+              <View
+                style={s.progressTrack}
+                accessibilityRole="progressbar"
+                accessibilityValue={{
+                  min: 0,
+                  max: displayXpMax,
+                  now: Math.min(displayXpCurrent, displayXpMax),
+                }}
+              >
+                <View style={[s.progressFill, { width: `${displayXpPct * 100}%` }]} />
+              </View>
+            </View>
+          </ProductCard>
+        </View>
+
+        <View style={s.actionStack}>
+          <PrimaryButton
+            label={t.settings.title}
+            onPress={() => runAction(onSettings)}
+            variant="secondary"
+            testID="profile-settings-button"
+          />
+          <PrimaryButton
+            label={t.settings.trends}
+            onPress={() => runAction(onTrends)}
+            variant="secondary"
+          />
+          <PrimaryButton
+            label={t.settings.globalLb}
+            onPress={() => runAction(onLeaderboard)}
+            variant="secondary"
+          />
+          <PrimaryButton
+            label={t.profile.trainingLog}
+            onPress={() => runAction(onTraining)}
+            variant="secondary"
+          />
+          <PrimaryButton
+            label={t.common.logout}
+            onPress={() => runAction(onLogout)}
+            variant="destructive"
+            testID="profile-logout-button"
+          />
+        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
