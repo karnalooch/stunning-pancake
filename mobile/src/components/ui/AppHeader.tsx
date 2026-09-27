@@ -6,7 +6,7 @@ import { APP_BRAND_NAME } from '../../theme/brand';
 import { FONTS } from '../../theme/fonts';
 import { pixelShadow } from '../../theme/pixelShadow';
 import { ChromeIcon } from './ChromeIcon';
-import type { ChromeIconId } from '../../assets/chromeIcons';
+import type { ChromeIconId } from './ChromeIcon';
 import { TextureBackground } from './TextureBackground';
 
 export type AppHeaderAction = {

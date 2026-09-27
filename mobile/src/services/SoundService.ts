@@ -1,10 +1,4 @@
-/**
- * SoundService — 8-bit arcade SFX via expo-audio (ADR 014).
- * Primary source: bundled `sfx_params.json`; procedural WAV fallback offline.
- */
-
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
-import { ASSETS } from '../assets/assetRegistry';
 
 export type SoundCategory =
   | 'ui_click'
@@ -26,81 +20,19 @@ interface SoundDef {
   sweepEndFreq?: number;
 }
 
-interface SfxParamEntry {
-  waveform: string;
-  pitch: number;
-  pitchEnd: number;
-  attack: number;
-  sustain: number;
-  decay: number;
-  frequency: number;
-}
-
-const SFX_PARAM_KEY: Partial<Record<SoundCategory, string>> = {
-  ui_click: 'ui_click',
-  ui_confirm: 'mission_start',
-  ui_cancel: 'error',
-  achievement: 'achievement',
-  level_up: 'level_up',
-  coin_pickup: 'coin',
-  damage: 'error',
-  explosion: 'explosion',
-};
-
-const FALLBACK_DEFS: Record<SoundCategory, SoundDef> = {
-  ui_click: { freq: 800, durationMs: 60, waveform: 'square' },
-  ui_confirm: { freq: 523, durationMs: 150, waveform: 'square', freq2: 659 },
-  ui_cancel: { freq: 440, durationMs: 120, waveform: 'square', sweepEndFreq: 330 },
-  achievement: { freq: 523, durationMs: 400, waveform: 'square', freq2: 784 },
-  level_up: { freq: 330, durationMs: 300, waveform: 'square', sweepEndFreq: 880 },
-  coin_pickup: { freq: 1760, durationMs: 80, waveform: 'triangle' },
-  damage: { freq: 110, durationMs: 150, waveform: 'sawtooth' },
-  explosion: { freq: 150, durationMs: 350, waveform: 'sawtooth', freq2: 60 },
+const FRESH_DEFS: Record<SoundCategory, SoundDef> = {
+  ui_click: { freq: 760, durationMs: 45, waveform: 'sine' },
+  ui_confirm: { freq: 520, durationMs: 130, waveform: 'triangle', freq2: 660 },
+  ui_cancel: { freq: 390, durationMs: 100, waveform: 'triangle', sweepEndFreq: 300 },
+  achievement: { freq: 540, durationMs: 320, waveform: 'triangle', freq2: 810 },
+  level_up: { freq: 350, durationMs: 260, waveform: 'triangle', sweepEndFreq: 900 },
+  coin_pickup: { freq: 1320, durationMs: 65, waveform: 'sine' },
+  damage: { freq: 140, durationMs: 120, waveform: 'sawtooth' },
+  explosion: { freq: 120, durationMs: 280, waveform: 'sawtooth', freq2: 55 },
 };
 
 const SAMPLE_RATE = 44100;
-const AMPLITUDE = 0.3;
-
-function waveformFromParam(w: string): SynthWaveform {
-  if (w === 'sine') return 'sine';
-  if (w === 'triangle') return 'triangle';
-  if (w === 'noise' || w === 'sawtooth') return 'sawtooth';
-  return 'square';
-}
-
-function paramToDef(entry: SfxParamEntry): SoundDef {
-  const durationMs = Math.max(
-    40,
-    Math.round((entry.attack + entry.sustain + entry.decay) * 1000),
-  );
-  const freq = entry.frequency * Math.max(0.05, entry.pitch);
-  const sweepEndFreq =
-    entry.pitchEnd !== entry.pitch
-      ? entry.frequency * Math.max(0.05, entry.pitchEnd)
-      : undefined;
-  return {
-    freq,
-    durationMs,
-    waveform: waveformFromParam(entry.waveform),
-    sweepEndFreq,
-  };
-}
-
-function loadSfxDefs(): Record<SoundCategory, SoundDef> {
-  const defs = { ...FALLBACK_DEFS };
-  try {
-    const params = ASSETS.sounds.sfx_params as Record<string, SfxParamEntry>;
-    for (const [category, key] of Object.entries(SFX_PARAM_KEY) as [SoundCategory, string][]) {
-      const entry = params[key];
-      if (entry) {
-        defs[category] = paramToDef(entry);
-      }
-    }
-  } catch {
-    /* keep fallback defs */
-  }
-  return defs;
-}
+const AMPLITUDE = 0.24;
 
 function generateWavBase64(def: SoundDef): string {
   const numSamples = Math.floor(SAMPLE_RATE * (def.durationMs / 1000));
@@ -133,7 +65,7 @@ function generateWavBase64(def: SoundDef): string {
       case 'square':
         return phase < 0.5 ? 1 : -1;
       case 'triangle':
-        return 4 * Math.abs(phase - 0.5) * 2 - 1;
+        return 1 - 4 * Math.abs(Math.round(phase) - phase);
       case 'sawtooth':
         return 2 * phase - 1;
       default:
@@ -145,16 +77,15 @@ function generateWavBase64(def: SoundDef): string {
   for (let i = 0; i < numSamples; i++) {
     const t = i / SAMPLE_RATE;
     const progress = i / numSamples;
-    let freq = def.freq;
-    if (def.sweepEndFreq !== undefined) {
-      freq = def.freq + (def.sweepEndFreq - def.freq) * progress;
-    }
+    const freq =
+      def.sweepEndFreq === undefined
+        ? def.freq
+        : def.freq + (def.sweepEndFreq - def.freq) * progress;
+
     let sample = wave(def.waveform, freq, t);
-    if (def.freq2 !== undefined) {
-      sample += wave(def.waveform, def.freq2, t) * 0.5;
-    }
-    const fadeProgress = Math.min(1, (1 - progress) / 0.1);
-    const envelope = Math.min(1, progress / 0.02) * fadeProgress;
+    if (def.freq2 !== undefined) sample += wave(def.waveform, def.freq2, t) * 0.4;
+
+    const envelope = Math.min(1, progress / 0.025) * Math.min(1, (1 - progress) / 0.12);
     sample *= envelope * AMPLITUDE;
     view.setInt16(offset, Math.floor(Math.max(-1, Math.min(1, sample)) * 32767), true);
     offset += 2;
@@ -162,9 +93,7 @@ function generateWavBase64(def: SoundDef): string {
 
   const bytes = new Uint8Array(buffer);
   let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i] ?? 0);
-  }
+  for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i] ?? 0);
   return `data:audio/wav;base64,${btoa(binary)}`;
 }
 
@@ -173,7 +102,6 @@ class SoundServiceImpl {
   private isMuted = false;
   private volume = 0.7;
   private initialized = false;
-  private defs = loadSfxDefs();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -184,17 +112,15 @@ class SoundServiceImpl {
         interruptionMode: 'mixWithOthers',
       });
 
-      const categories = Object.keys(this.defs) as SoundCategory[];
-      for (const cat of categories) {
-        const uri = generateWavBase64(this.defs[cat]);
-        const player = createAudioPlayer({ uri });
+      for (const [category, def] of Object.entries(FRESH_DEFS) as [SoundCategory, SoundDef][]) {
+        const player = createAudioPlayer({ uri: generateWavBase64(def) });
         player.volume = this.volume;
         player.muted = this.isMuted;
-        this.players.set(cat, player);
+        this.players.set(category, player);
       }
       this.initialized = true;
-    } catch (e) {
-      console.warn('[SoundService] Init failed:', e);
+    } catch (error) {
+      console.warn('[SoundService] Init failed:', error);
     }
   }
 
@@ -205,8 +131,8 @@ class SoundServiceImpl {
     try {
       player.seekTo(0);
       player.play();
-    } catch (e) {
-      console.warn(`[SoundService] Play failed for "${category}":`, e);
+    } catch (error) {
+      console.warn(`[SoundService] Play failed for "${category}":`, error);
     }
   }
 
@@ -221,8 +147,8 @@ class SoundServiceImpl {
     return this.isMuted;
   }
 
-  setVolume(vol: number): void {
-    this.volume = Math.max(0, Math.min(1, vol));
+  setVolume(volume: number): void {
+    this.volume = Math.max(0, Math.min(1, volume));
     this.players.forEach((player) => {
       player.volume = this.volume;
     });
@@ -237,7 +163,7 @@ class SoundServiceImpl {
       try {
         player.release();
       } catch {
-        /* ignore */
+        // no-op
       }
     }
     this.players.clear();

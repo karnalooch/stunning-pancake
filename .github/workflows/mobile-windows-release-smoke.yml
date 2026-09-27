@@ -1,0 +1,186 @@
+name: Mobile Windows Release Smoke
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - "packages/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "scripts/android-env.ps1"
+      - "scripts/mobile-runtime-acceptance.ps1"
+      - "scripts/validate_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_provenance.py"
+      - "scripts/test_mobile_harness_contract.py"
+      - ".github/workflows/mobile-windows-release-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  android-release-windows:
+    name: Android release compile (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 75
+    env:
+      EAS_BUILD_PROFILE: pilot-local
+      EXPO_PUBLIC_API_URL: http://localhost:8000
+      EXPO_PUBLIC_TELEMETRY_URL: http://localhost:8001
+      EXPO_PUBLIC_TELEMETRY_WS_INGEST: "false"
+      EXPO_PUBLIC_ENABLE_FIREBASE: "false"
+      EXPO_PUBLIC_VISION_FIXTURES: "true"
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.21.0
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Create short Windows worktree
+        shell: pwsh
+        run: |
+          if (Test-Path "C:\w") {
+            Remove-Item -Recurse -Force "C:\w"
+          }
+          git worktree add --detach "C:\w" "$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "SHORT_WORKSPACE=C:\w" >> $env:GITHUB_ENV
+          git -C "C:\w" rev-parse HEAD
+
+      - name: Activate canonical pnpm
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\"
+          corepack enable
+          corepack prepare pnpm@12.4.2 --activate
+          node --version
+          pnpm --version
+          java -version
+
+      - name: Resolve Windows Android environment
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\"
+          . .\scripts\android-env.ps1
+          "ANDROID_HOME=$env:ANDROID_HOME" >> $env:GITHUB_ENV
+          "ANDROID_SDK_ROOT=$env:ANDROID_SDK_ROOT" >> $env:GITHUB_ENV
+          "JAVA_HOME=$env:JAVA_HOME" >> $env:GITHUB_ENV
+
+      - name: Frozen workspace install
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\"
+          $virtualStore = "C:\v"
+          if (Test-Path $virtualStore) {
+            Remove-Item -Recurse -Force $virtualStore
+          }
+
+          $workspaceConfig = Join-Path $env:SHORT_WORKSPACE "pnpm-workspace.yaml"
+          $originalWorkspaceConfig = Get-Content -Raw $workspaceConfig
+          if ($originalWorkspaceConfig -match "(?m)^virtualStoreDir:") {
+            throw "Tracked workspace config unexpectedly defines virtualStoreDir."
+          }
+
+          try {
+            $replacement = "virtualStoreDir: `"C:/v`"`nvirtualStoreDirMaxLength: 16"
+            $shortStoreConfig = $originalWorkspaceConfig -replace "(?m)^virtualStoreDirMaxLength:\s*40\s*$", $replacement
+            if ($shortStoreConfig -eq $originalWorkspaceConfig) {
+              throw "Could not inject short Windows virtual-store configuration."
+            }
+            Set-Content -Path $workspaceConfig -Value $shortStoreConfig -Encoding utf8 -NoNewline
+
+            pnpm install --frozen-lockfile
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+            if (-not (Test-Path $virtualStore -PathType Container)) {
+              throw "pnpm did not materialize the expected C:\v virtual store."
+            }
+
+            "EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV
+          } finally {
+            Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig -Encoding utf8 -NoNewline
+          }
+      - name: Resolve Expo provenance
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\mobile"
+          pnpm exec expo config --type public --json | Set-Content -Path "$env:RUNNER_TEMP\4velo-expo-public.json" -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Clean Android prebuild
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\mobile"
+          pnpm exec expo prebuild --clean --platform android --no-install
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $sdkForGradle = $env:ANDROID_SDK_ROOT -replace '\\', '/'
+          "sdk.dir=$sdkForGradle" | Set-Content -Path "android\local.properties" -Encoding ascii
+
+          # Expo/RN currently generates a 2g heap and 512m metaspace cap.
+          # Windows release packaging can exhaust the Gradle JVM in ApkFlinger.
+          # Give this one-shot release build more heap headroom and pair it with
+          # a worker cap so the hosted runner does not trade JVM OOM for host OOM.
+          $gradleProperties = "android\gradle.properties"
+          $gradleText = Get-Content -Raw $gradleProperties
+          $heapBaseline = "-Xmx2048m"
+          $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+          if (-not $gradleText.Contains($heapBaseline)) {
+            throw "Generated gradle.properties no longer contains the expected 2048m heap baseline."
+          }
+          if (-not $gradleText.Contains($metaspaceBaseline)) {
+            throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
+          }
+          $gradleText = $gradleText.Replace($heapBaseline, "-Xmx4096m")
+          $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
+          Set-Content -Path $gradleProperties -Value $gradleText -Encoding utf8 -NoNewline
+
+      - name: Validate generated Android provenance
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\"
+          python scripts/validate_mobile_native_provenance.py --expo-config "$env:RUNNER_TEMP\4velo-expo-public.json" --version-file version.json --android-dir mobile/android --git-sha "$(git rev-parse HEAD)"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Compile Android release APK on Windows
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\mobile\android"
+          cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Record Windows release artifact
+        shell: pwsh
+        run: |
+          Set-Location "$env:SHORT_WORKSPACE\"
+          $apk = "mobile\android\app\build\outputs\apk\release\app-release.apk"
+          if (-not (Test-Path $apk -PathType Leaf)) {
+            throw "Release APK missing: $apk"
+          }
+          Get-FileHash -Algorithm SHA256 $apk
+          Get-Item $apk | Select-Object FullName, Length, LastWriteTime
+
+      - name: Remove short Windows worktree
+        if: always()
+        shell: pwsh
+        run: |
+          Set-Location "$env:GITHUB_WORKSPACE"
+          git worktree remove --force "C:\w"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Could not remove short Windows worktree cleanly."
+          }

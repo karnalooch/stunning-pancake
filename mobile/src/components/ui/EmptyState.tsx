@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { ChromeIcon } from './ChromeIcon';
-import type { ChromeIconId } from '../../assets/chromeIcons';
+import type { ChromeIconId } from './ChromeIcon';
 
 interface EmptyStateProps {
   message: string;

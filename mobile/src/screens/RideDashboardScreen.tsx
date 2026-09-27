@@ -2,12 +2,12 @@
  * Authenticated 4VELO Home / pre-ride dashboard.
  *
  * Frozen UI v1.2: product-first chrome, truthful activity history and a
- * dominant ride action. Approved Home artwork is intentionally not wired
- * until asset governance approves rider_canonical_v1 + home_hero_day_v1.
+ * dominant ride action. Approved Home artwork uses the governed raster
+ * day-hero family from ASSET_GOVERNANCE_V1.
  */
 
 import React, { useCallback, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { observer } from '@legendapp/state/react';
@@ -23,6 +23,7 @@ import {
   ProductCard,
   SportChip,
 } from '../components/product';
+import { PlaceBadge } from '../components/product/PlaceBadge';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import { SkeletonBlock } from '../components/ui/SkeletonBlock';
 import {
@@ -42,7 +43,8 @@ import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
 import { formatRiderDisplayName } from '../utils/displayName';
 import { LAYOUT } from '../theme/layout';
 import { getSemanticColors } from '../theme/semantic';
-import { BRAND_TYPOGRAPHY, PRODUCT_TYPOGRAPHY } from '../theme/typography';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
+import { APPROVED_ASSETS } from '../assets/approvedAssets';
 
 const WEEK_DAYS_EN = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const WEEK_DAYS_PL = ['P', 'W', 'Ś', 'C', 'P', 'S', 'N'];
@@ -129,28 +131,34 @@ const stylesheet = StyleSheet.create((theme) => {
       gap: 16,
     },
     heroArtSlot: {
-      height: 104,
-      borderRadius: 14,
+      height: 132,
+      borderRadius: 16,
       overflow: 'hidden',
-      justifyContent: 'center',
-      alignItems: 'center',
       backgroundColor: semantic.navigation.shell,
       borderWidth: 1,
       borderColor: semantic.border.strong,
     },
-    heroBrand: {
-      ...BRAND_TYPOGRAPHY.displayPixel,
-      fontSize: 28,
-      lineHeight: 34,
-      color: semantic.navigation.active,
-      letterSpacing: 2,
+    heroScene: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    },
+    heroShade: {
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: '48%',
+      backgroundColor: theme.colors.scrimSoft,
     },
     heroAccent: {
       position: 'absolute',
       left: 0,
       right: 0,
       bottom: 0,
-      height: 6,
+      height: 5,
       backgroundColor: semantic.progress.primary,
     },
     heroCopy: {
@@ -334,7 +342,6 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   );
 
   const displayName = formatRiderDisplayName(profileFixture?.username ?? user?.username);
-  const riderInitial = displayName.trim().charAt(0).toUpperCase() || '4';
   const riderPlace = user?.tenant_name?.trim() || '4VELO';
   const weekDays = locale === 'pl' ? WEEK_DAYS_PL : WEEK_DAYS_EN;
 
@@ -395,9 +402,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
         <View style={s.riderContext}>
-          <View style={s.avatar} accessibilityElementsHidden>
-            <Text style={s.avatarText}>{riderInitial}</Text>
-          </View>
+          <PlaceBadge name={riderPlace} size={44} />
           <View style={s.riderCopy}>
             <Text style={s.riderName} numberOfLines={1}>{displayName}</Text>
             <Text style={s.riderPlace} numberOfLines={1}>{riderPlace}</Text>
@@ -462,7 +467,13 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 accessibilityElementsHidden
                 importantForAccessibility="no-hide-descendants"
               >
-                <Text style={s.heroBrand}>4VELO</Text>
+                <Image
+                  source={APPROVED_ASSETS.homeHeroDay}
+                  resizeMode="cover"
+                  style={s.heroScene}
+                  testID="home-hero-day-v1"
+                />
+                <View style={s.heroShade} />
                 <View style={s.heroAccent} />
               </View>
             ) : null}

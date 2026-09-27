@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import {
   Camera,
   GeoJSONSource,
@@ -9,7 +9,7 @@ import {
   type StyleSpecification,
 } from '@maplibre/maplibre-react-native';
 import { DEFAULT_RIDE_MAP_ZOOM, resolveRideMapStyle } from '../map/mapStyle';
-import { CyclistSprite } from './sprites/CyclistSprite';
+import { APPROVED_ASSETS } from '../assets/approvedAssets';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
 
 export interface RideMapViewProps {
@@ -95,7 +95,12 @@ export const RideMapView: React.FC<RideMapViewProps> = ({
       {userCoordinate && (
         <View style={styles.markerWrap} pointerEvents="none">
           <View style={styles.markerOffset}>
-            <CyclistSprite size={44} state={cyclistState} />
+            <Image
+              source={APPROVED_ASSETS.rideMarkerRider}
+              resizeMode="contain"
+              style={[styles.riderMarker, { opacity: cyclistState === 'attack' ? 1 : 0.96 }]}
+              testID="ride-marker-rider-v1"
+            />
           </View>
         </View>
       )}
@@ -111,4 +116,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   markerOffset: { marginBottom: 24 },
+  riderMarker: { width: 44, height: 44 },
 });

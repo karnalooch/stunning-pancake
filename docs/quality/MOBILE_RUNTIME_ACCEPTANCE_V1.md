@@ -135,7 +135,21 @@ Until #156 closes, UI development may continue, but release sign-off remains ope
 
 ## 10. Canonical exact-SHA evidence command
 
-For major mobile visual/runtime slices, the canonical local technical proof is:
+For major mobile visual/runtime slices, prefer the already-validated release APK
+published by the successful **Mobile Native Smoke** run for the exact local SHA:
+
+```powershell
+pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1 -UseCiArtifact
+```
+
+This mode requires an authenticated GitHub CLI (`gh auth status`). It locates a
+successful Native Smoke run whose `headSha` equals the clean local `HEAD`,
+downloads `mobile-runtime-<run-id>`, verifies the manifest source SHA, workflow
+run id and APK SHA-256, then skips dependency installation/native generation/
+Gradle compilation. Only install + deterministic runtime interaction +
+screenshots are performed locally.
+
+The previous full local rebuild remains an explicit fallback:
 
 ```powershell
 pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1
@@ -147,11 +161,12 @@ When more than one Android device is online, select the intended target explicit
 pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1 -DeviceId <adb-serial>
 ```
 
-The command fails closed unless the worktree is clean. It performs clean native
-generation, validates repository/native provenance, builds and installs the
-exact local release APK, records its SHA-256 and installed package identity,
-runs the deterministic emulator interaction audit and verifies the mandatory
-Ride screenshot sequence.
+The command fails closed unless the worktree is clean. In `-UseCiArtifact`
+mode it consumes the exact successful CI release artifact and verifies its
+manifest/hash before installation. In fallback mode it performs clean native
+generation, validates repository/native provenance and builds the release APK
+locally. Both paths record artifact/package identity, run the deterministic
+emulator interaction audit and verify the mandatory Ride screenshot sequence.
 
 Evidence is written under the ignored local directory
 `artifacts/mobile-runtime-acceptance/<sha>-<timestamp>/` and contains:

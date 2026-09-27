@@ -24,12 +24,19 @@ describe('ride finish truth architecture', () => {
     const summary = source('screens/RideSummaryScreen.tsx');
 
     expect(summary).toContain('if (!durableSuccess) return;');
-    expect(summary).toContain(
-      '<ParticleSystem trigger={immersiveEnabled && durableSuccess} />',
-    );
-    expect(summary).toContain(
-      '{durableSuccess ? <FinishCelebration /> : null}',
-    );
+
+    const durableStart = summary.indexOf('{durableSuccess ? (');
+    const fallbackStart = summary.indexOf(') : (', durableStart);
+    const finishArt = summary.indexOf('APPROVED_ASSETS.summaryFinish', durableStart);
+
+    expect(durableStart).toBeGreaterThan(-1);
+    expect(fallbackStart).toBeGreaterThan(durableStart);
+    expect(finishArt).toBeGreaterThan(durableStart);
+    expect(finishArt).toBeLessThan(fallbackStart);
+    expect(summary).not.toContain('SummaryFinishV1');
+    expect(summary).not.toContain('AchievementCoreSetV1');
+    expect(summary).not.toContain('FinishCelebration');
+    expect(summary).not.toContain('ParticleSystem');
     expect(summary).toContain('ride-summary-${finishState.kind}');
   });
 

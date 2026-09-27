@@ -33,6 +33,8 @@ TABS = {
     "profil": (915, 2282),
 }
 
+MAIN_SHELL_PATTERN = r"home-start-ride|ride-start-button|START JAZDY|START RIDE|DO JAZDY"
+
 
 @dataclass
 class Step:
@@ -361,6 +363,12 @@ def ensure_app_foreground() -> None:
 def wait_for_main_shell(timeout_s: float = 30) -> bool:
     deadline = time.time() + timeout_s
     while time.time() < deadline:
+        # Runtime state is identified by stable accessibility/test IDs first.
+        # Pixel-color heuristics are only a visual fallback and must not make
+        # acceptance depend on one emulator resolution/theme.
+        if ui_has_pattern(MAIN_SHELL_PATTERN):
+            return True
+
         img = screencap_image()
         if classify_capture(img) == "main":
             return True
@@ -368,16 +376,32 @@ def wait_for_main_shell(timeout_s: float = 30) -> bool:
             break
         sleep(2)
         foreground_app()
-    return classify_capture(screencap_image()) == "main"
+
+    return ui_has_pattern(MAIN_SHELL_PATTERN) or classify_capture(screencap_image()) == "main"
 
 
 def complete_onboarding_flow() -> tuple[list[str], bool]:
     notes: list[str] = []
+    vision_mode = os.getenv("EXPO_PUBLIC_VISION_FIXTURES") == "true"
+
     if wait_for_main_shell(20):
-        notes.append("E2E skip — główna aplikacja bez ręcznego onboardingu")
+        if vision_mode:
+            notes.append("Vision fixtures — onboarding intentionally bypassed by AppRoot")
+        else:
+            notes.append("Główna aplikacja dostępna bez ręcznego onboardingu")
         capture_raw("00_main_after_onboarding", "Po onboardingu — shell główny", notes=notes)
         capture_raw("00_onboarding_complete", "Po ukończeniu onboardingu", notes=notes)
         return notes, True
+
+    if vision_mode:
+        capture_raw(
+            "00_unexpected_onboarding",
+            "Vision fixtures — nieoczekiwany onboarding",
+            notes=["Build z EXPO_PUBLIC_VISION_FIXTURES=true powinien wejść bezpośrednio do shella głównego."],
+            status="fail",
+        )
+        notes.append("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot")
+        return notes, False
 
     capture_raw("00_onboarding_city", "Onboarding — wybór miasta")
     if not tap_pattern(r"onboarding-city-next|DALEJ|NEXT", (540, 1860)):
@@ -461,24 +485,9 @@ def main() -> int:
     foreground_app()
     onboard_notes, onboarding_ok = complete_onboarding_flow()
 
-    # Vision parity runs require onboarding screens to be reachable.
-    # If E2E auto-login skipped onboarding, the capture set is not comparable
-    # to vision references and should fail fast.
-    if os.getenv("EXPO_PUBLIC_VISION_FIXTURES") == "true" and any("E2E skip" in n for n in onboard_notes):
-        steps.append(
-            Step(
-                id="00_invalid_run",
-                title="Nieważny run parity (onboarding pominięty)",
-                status="fail",
-                notes=[
-                    "EXPO_PUBLIC_E2E_SKIP_ONBOARDING jest aktywne dla buildu uruchomionego na emulatorze.",
-                    "Przebuduj APK z EXPO_PUBLIC_E2E_SKIP_ONBOARDING=false i uruchom audit ponownie.",
-                ],
-            )
-        )
-        write_report()
-        print(f"Report: {REPORT}")
-        return 2
+    # Runtime acceptance validates the Ride lifecycle. In deterministic vision
+    # mode AppRoot intentionally bypasses onboarding, so reaching the stable
+    # main-shell identity is a valid start state rather than an invalid run.
 
     if not onboarding_ok:
         steps.append(
@@ -493,8 +502,7 @@ def main() -> int:
         print(f"Report: {REPORT}")
         return 2
 
-    img = screencap_image()
-    if classify_capture(img) != "main":
+    if not ui_has_pattern(MAIN_SHELL_PATTERN):
         steps.append(
             Step(
                 id="00_blocker",
@@ -508,8 +516,7 @@ def main() -> int:
 
     # Critical Ride smoke is fail-closed. No coordinate fallback and no optional
     # continuation: a screenshot after a failed transition is not evidence.
-    img = screencap_image()
-    if classify_capture(img) != "main":
+    if not ui_has_pattern(MAIN_SHELL_PATTERN):
         steps.append(
             Step(
                 id="02_active_ride_hud",

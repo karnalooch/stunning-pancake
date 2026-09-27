@@ -94,6 +94,12 @@ const assertReleaseSafePublicEnv = () => {
 const isPilotLocalBuild = () =>
   process.env.EAS_BUILD_PROFILE === 'pilot-local';
 
+// Runtime acceptance must execute the JS bundle embedded in the exact APK.
+// Disable Expo OTA updates only for this dedicated acceptance build so a
+// compatible remote update cannot replace the code under test.
+const isRuntimeAcceptanceBuild = () =>
+  process.env.MOBILE_RUNTIME_ACCEPTANCE === 'true';
+
 // Firebase gating is shared for the plugins, but Google Services files are
 // platform-specific. A tracked Android google-services.json must never make the
 // iOS config point at a missing GoogleService-Info.plist (and vice versa).
@@ -131,7 +137,8 @@ export default ({ config }) => {
     "scheme": "fourvelo",
     "version": releaseVersion.version,
     "updates": {
-      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a"
+      "url": "https://u.expo.dev/e25228a6-071c-4421-a75f-7939ba464c8a",
+      "enabled": !isRuntimeAcceptanceBuild()
     },
     "runtimeVersion": {
       "policy": "appVersion"

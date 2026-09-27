@@ -10,6 +10,8 @@ on:
       - "pnpm-workspace.yaml"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
+      - "scripts/mobile-runtime-acceptance.ps1"
+      - "scripts/test_mobile_harness_contract.py"
       - ".github/workflows/mobile-native-smoke.yml"
   workflow_dispatch:
 
@@ -24,8 +26,10 @@ jobs:
   android-debug:
     name: Android clean prebuild + debug compile
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     env:
+      NODE_ENV: production
+      MOBILE_RUNTIME_ACCEPTANCE: "true"
       EAS_BUILD_PROFILE: pilot-local
       EXPO_PUBLIC_API_URL: http://localhost:8000
       EXPO_PUBLIC_TELEMETRY_URL: http://localhost:8001
@@ -35,6 +39,18 @@ jobs:
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Assert exact source checkout
+        env:
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          BUILT_GIT_SHA="$(git rev-parse HEAD)"
+          if [ "$BUILT_GIT_SHA" != "$EXPECTED_HEAD_SHA" ]; then
+            echo "Exact source checkout mismatch: expected $EXPECTED_HEAD_SHA, got $BUILT_GIT_SHA" >&2
+            exit 1
+          fi
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -68,6 +84,9 @@ jobs:
       - name: Native provenance validator tests
         run: python -m unittest scripts/test_mobile_native_provenance.py -v
 
+      - name: Mobile runtime acceptance harness contract
+        run: python -m unittest scripts/test_mobile_harness_contract.py -v
+
       - name: Mobile lint + typecheck
         run: |
           pnpm --dir mobile lint
@@ -81,7 +100,21 @@ jobs:
 
       - name: Resolve Expo provenance
         working-directory: mobile
-        run: pnpm exec expo config --type public --json > "$RUNNER_TEMP/4velo-expo-public.json"
+        run: |
+          pnpm exec expo config --type public --json > "$RUNNER_TEMP/4velo-expo-public.json"
+          python - "$RUNNER_TEMP/4velo-expo-public.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          updates = config.get("updates") or {}
+          if updates.get("enabled") is not False:
+              raise SystemExit("runtime acceptance requires Expo updates.enabled=false")
+          extra = config.get("extra") or {}
+          if extra.get("EXPO_PUBLIC_VISION_FIXTURES") != "true":
+              raise SystemExit("runtime acceptance requires EXPO_PUBLIC_VISION_FIXTURES=true")
+          PY
 
       - name: Clean Android prebuild
         working-directory: mobile
@@ -99,9 +132,73 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Record native artifact
+      - name: Harden Gradle release memory
+        working-directory: mobile/android
         run: |
-          APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$APK"
-          sha256sum "$APK"
-          ls -lh "$APK"
+          GRADLE_PROPERTIES="gradle.properties"
+          grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"
+          grep -F -- "-XX:MaxMetaspaceSize=512m" "$GRADLE_PROPERTIES"
+          sed -i 's/-Xmx2048m/-Xmx4096m/' "$GRADLE_PROPERTIES"
+          sed -i 's/-XX:MaxMetaspaceSize=512m/-XX:MaxMetaspaceSize=1g/' "$GRADLE_PROPERTIES"
+          grep -F -- "-Xmx4096m" "$GRADLE_PROPERTIES"
+          grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
+
+      - name: Compile Android release APK
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
+
+      - name: Record native artifacts
+        run: |
+          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+          RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          test -f "$DEBUG_APK"
+          test -f "$RELEASE_APK"
+          sha256sum "$DEBUG_APK"
+          sha256sum "$RELEASE_APK"
+          ls -lh "$DEBUG_APK" "$RELEASE_APK"
+
+      - name: Prepare exact-SHA runtime artifact
+        env:
+          SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
+          ARTIFACT_DIR="artifacts/mobile-runtime"
+          BUILT_GIT_SHA="$(git rev-parse HEAD)"
+          if [ "$BUILT_GIT_SHA" != "$SOURCE_HEAD_SHA" ]; then
+            echo "Built Git SHA mismatch: expected $SOURCE_HEAD_SHA, got $BUILT_GIT_SHA" >&2
+            exit 1
+          fi
+          APK_SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
+          mkdir -p "$ARTIFACT_DIR"
+          cp "$RELEASE_APK" "$ARTIFACT_DIR/app-release.apk"
+          export BUILT_GIT_SHA APK_SHA256
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = {
+              "sourceHeadSha": os.environ["SOURCE_HEAD_SHA"],
+              "builtGitSha": os.environ["BUILT_GIT_SHA"],
+              "workflowRunId": os.environ["GITHUB_RUN_ID"],
+              "apkSha256": os.environ["APK_SHA256"],
+              "packageId": "com.sport.athlete",
+              "buildProfile": os.environ["EAS_BUILD_PROFILE"],
+              "updatesEnabled": False,
+              "visionFixtures": os.environ["EXPO_PUBLIC_VISION_FIXTURES"],
+              "runtimeAcceptance": os.environ["MOBILE_RUNTIME_ACCEPTANCE"],
+              "nodeEnv": os.environ["NODE_ENV"],
+          }
+          Path("artifacts/mobile-runtime/manifest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Upload exact-SHA runtime artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: mobile-runtime-${{ github.run_id }}
+          path: artifacts/mobile-runtime
+          if-no-files-found: error
+          retention-days: 7

@@ -1,9 +1,8 @@
 import React from 'react';
 import { type ViewStyle } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
-import { TextureBackground } from './TextureBackground';
+import { TextureBackground, type TextureId } from './TextureBackground';
 import { pixelShadow } from '../../theme/pixelShadow';
-import type { TextureId } from '../../assets/assetRegistry';
 
 interface GameCardProps {
   texture?: TextureId;

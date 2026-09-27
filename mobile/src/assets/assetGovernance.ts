@@ -11,7 +11,7 @@ export const ASSET_VISUAL_FREEZE_VERSION = '1.2.0' as const;
 export const LEGACY_GENERATED_ASSET_POLICY = {
   visualReferenceAllowedForNewUi: false,
   autoApprovalAllowed: false,
-  temporaryRuntimeUseAllowed: true,
+  temporaryRuntimeUseAllowed: false,
 } as const;
 
 export type OfficialCrest = {

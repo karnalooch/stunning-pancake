@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import unittest
 from pathlib import Path
 
@@ -106,6 +107,7 @@ class MobileHarnessContractTests(unittest.TestCase):
 
     def test_exact_sha_acceptance_harness_is_fail_closed_and_provenanced(self):
         source = read("scripts/mobile-runtime-acceptance.ps1")
+        metro_config = read("mobile/metro.config.js")
         gitignore = read(".gitignore")
 
         for token in (
@@ -125,6 +127,16 @@ class MobileHarnessContractTests(unittest.TestCase):
             "03e_home_after_summary.png",
             "AUTOMATION_PASS",
             "provenance.json",
+            "[switch]$UseCiArtifact",
+            "gh run list",
+            'Invoke-Checked "gh" @("run", "download"',
+            "mobile-runtime-$CiRunId",
+            "CI artifact source SHA mismatch",
+            "CI artifact built SHA mismatch",
+            "CI artifact APK SHA-256 mismatch",
+            "MOBILE_RUNTIME_ACCEPTANCE",
+            '$env:NODE_ENV = "production"',
+            '"pm", "clear", "com.sport.athlete"',
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
@@ -136,6 +148,107 @@ class MobileHarnessContractTests(unittest.TestCase):
         )
         self.assertIn("artifacts/mobile-runtime-acceptance/", gitignore)
         self.assertNotIn("emulator-5554", source)
+        self.assertNotIn("$LASTEXITCODE:", source)
+        self.assertIn("${LASTEXITCODE}:", source)
+        self.assertNotIn("$gitSha:", source)
+        self.assertIn("${gitSha}:", source)
+        self.assertIn('$gitBranch = "DETACHED"', source)
+
+        mobile_package = json.loads(read("mobile/package.json"))
+        self.assertEqual(mobile_package["devDependencies"]["babel-preset-expo"], "55.0.25")
+
+        workspace = read("pnpm-workspace.yaml")
+        self.assertIn("nodeLinker: isolated", workspace)
+        self.assertNotIn("virtualStoreDir: .pnpm", workspace)
+        self.assertIn("virtualStoreDirMaxLength: 40", workspace)
+        self.assertIn(".pnpm/", gitignore)
+        self.assertIn('$originalWorkspaceBytes = [System.IO.File]::ReadAllBytes($workspaceConfig)', source)
+        self.assertIn('virtualStoreDir: `"$shortVirtualStoreYaml`"', source)
+        self.assertIn('virtualStoreDirMaxLength: 16', source)
+        self.assertIn('[System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)', source)
+        self.assertIn('pnpmVirtualStore = $shortVirtualStore', source)
+        self.assertIn('$env:EXPO_METRO_PNPM_VIRTUAL_STORE = $shortVirtualStore', source)
+        self.assertIn('$heapBaseline = "-Xmx2048m"', source)
+        self.assertIn('"-Xmx4096m"', source)
+        self.assertIn('Generated gradle.properties no longer contains the expected 2048m heap baseline.', source)
+        self.assertIn('$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"', source)
+        self.assertIn('"-XX:MaxMetaspaceSize=1g"', source)
+        self.assertIn('Generated gradle.properties no longer contains the expected 512m metaspace baseline.', source)
+        self.assertIn('"--max-workers=2"', source)
+        self.assertIn('process.env.EXPO_METRO_PNPM_VIRTUAL_STORE', metro_config)
+        self.assertIn('config.watchFolders = Array.from(', metro_config)
+        self.assertIn('fs.existsSync(resolvedVirtualStore)', metro_config)
+        self.assertLess(
+            source.index('virtualStoreDirMaxLength: 16'),
+            source.index('pnpm exec expo config --type public --json'),
+            "short-store frozen workspace install must precede Expo/native generation",
+        )
+
+
+    def test_mobile_native_smoke_requires_debug_and_release_parity(self):
+        workflow = read(".github/workflows/mobile-native-smoke.yml")
+
+        self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', workflow)
+        self.assertIn("Assert exact source checkout", workflow)
+        self.assertIn("Exact source checkout mismatch", workflow)
+        self.assertIn("NODE_ENV: production", workflow)
+        self.assertIn('MOBILE_RUNTIME_ACCEPTANCE: "true"', workflow)
+        self.assertIn("runtime acceptance requires Expo updates.enabled=false", workflow)
+        self.assertIn("Built Git SHA mismatch", workflow)
+        self.assertIn('"updatesEnabled": False', workflow)
+        self.assertIn('"runtimeAcceptance": os.environ["MOBILE_RUNTIME_ACCEPTANCE"]', workflow)
+        self.assertIn("./gradlew assembleDebug --no-daemon --stacktrace", workflow)
+        self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace", workflow)
+        self.assertIn('grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"', workflow)
+        self.assertIn("sed -i 's/-Xmx2048m/-Xmx4096m/'", workflow)
+        self.assertIn('grep -F -- "-XX:MaxMetaspaceSize=512m" "$GRADLE_PROPERTIES"', workflow)
+        self.assertIn("sed -i 's/-XX:MaxMetaspaceSize=512m/-XX:MaxMetaspaceSize=1g/'", workflow)
+        self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2", workflow)
+        self.assertIn("mobile/android/app/build/outputs/apk/debug/app-debug.apk", workflow)
+        self.assertIn("mobile/android/app/build/outputs/apk/release/app-release.apk", workflow)
+        self.assertIn("Prepare exact-SHA runtime artifact", workflow)
+        self.assertIn("Upload exact-SHA runtime artifact", workflow)
+        self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", workflow)
+        self.assertIn('name: mobile-runtime-${{ github.run_id }}', workflow)
+        self.assertIn('"sourceHeadSha"', workflow)
+        self.assertIn('"apkSha256"', workflow)
+        self.assertIn('"workflowRunId"', workflow)
+        self.assertLess(
+            workflow.index("./gradlew assembleDebug --no-daemon --stacktrace"),
+            workflow.index("./gradlew assembleRelease --no-daemon --stacktrace"),
+            "release parity must run after the debug native compile",
+        )
+
+
+    def test_windows_release_smoke_matches_local_release_path(self):
+        workflow = read(".github/workflows/mobile-windows-release-smoke.yml")
+
+        for token in (
+            "runs-on: windows-latest",
+            'git worktree add --detach "C:\\w" "$env:GITHUB_SHA"',
+            '"SHORT_WORKSPACE=C:\\w" >> $env:GITHUB_ENV',
+            'Set-Location "$env:SHORT_WORKSPACE\\mobile\\android"',
+            ". .\\scripts\\android-env.ps1",
+            '$originalWorkspaceConfig = Get-Content -Raw $workspaceConfig',
+            'virtualStoreDir: `"C:/v`"',
+            'virtualStoreDirMaxLength: 16',
+            'pnpm install --frozen-lockfile',
+            '"EXPO_METRO_PNPM_VIRTUAL_STORE=$virtualStore" >> $env:GITHUB_ENV',
+            'Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig',
+            "expo prebuild --clean --platform android --no-install",
+            "android\\local.properties",
+            '$heapBaseline = "-Xmx2048m"',
+            '"-Xmx4096m"',
+            "Generated gradle.properties no longer contains the expected 2048m heap baseline.",
+            '$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"',
+            '"-XX:MaxMetaspaceSize=1g"',
+            "Generated gradle.properties no longer contains the expected 512m metaspace baseline.",
+            "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2",
+            "mobile\\android\\app\\build\\outputs\\apk\\release\\app-release.apk",
+            "Get-FileHash -Algorithm SHA256",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, workflow)
 
     def test_emulator_audit_supports_external_evidence_bundle_paths(self):
         source = read("scripts/emulator-ui-audit.py")
@@ -147,6 +260,15 @@ class MobileHarnessContractTests(unittest.TestCase):
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
+
+    def test_runtime_audit_accepts_vision_fixture_bypass_and_uses_ui_identity(self):
+        source = read("scripts/emulator-ui-audit.py")
+        self.assertIn("MAIN_SHELL_PATTERN", source)
+        self.assertIn("ui_has_pattern(MAIN_SHELL_PATTERN)", source)
+        self.assertIn("Vision fixtures — onboarding intentionally bypassed by AppRoot", source)
+        self.assertIn("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot", source)
+        self.assertNotIn('any("E2E skip" in n for n in onboard_notes)', source)
+        self.assertNotIn("Nieważny run parity (onboarding pominięty)", source)
 
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())

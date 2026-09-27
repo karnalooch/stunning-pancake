@@ -433,7 +433,7 @@ names cross.
 
 - Run [`scripts/postprocess_assets.py`](../../scripts/postprocess_assets.py) for nearest-neighbor scaling and trimming.
 - **Palette-quant is optional and only for UI chrome** (icons, badges, currency). Do **not** hard-quantize scenes/portraits/sprite sheets — it flattens the rich Grand Prix palette this document is meant to preserve.
-- Bundle with [`scripts/bundle_mobile_assets.py`](../../scripts/bundle_mobile_assets.py) → `mobile/assets/generated/` + typed [`mobile/src/assets/manifest.ts`](../../mobile/src/assets/manifest.ts).
+- Fresh production output goes to `mobile/assets/approved/v1/` and is wired through [`mobile/src/assets/approvedAssets.ts`](../../mobile/src/assets/approvedAssets.ts). Retired generated roots must remain empty.
 
 ## 19. Pipeline wiring (follow-up, tracked separately)
 
@@ -457,7 +457,7 @@ After this doc is accepted:
 
 - Update [`scripts/asset_definitions.py`](../../scripts/asset_definitions.py): icons become `format: png`, `model: gemini`; descriptions point at these prompts.
 - [`scripts/generators/gemini_client.py`](../../scripts/generators/gemini_client.py): attach the reference image on every call and source prompt text from this SSOT.
-- [`mobile/src/assets/tabIcons.ts`](../../mobile/src/assets/tabIcons.ts): import PNG icons instead of SVG.
+- [`mobile/src/components/navigation/PixelTabIcon.tsx`](../../mobile/src/components/navigation/PixelTabIcon.tsx): keep tab chrome independent from retired legacy PNG registries.
 - **UI integration roadmap:** [GRAND_PRIX_UI_CONSISTENCY_AUDIT.md](./GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) — full audit of wired vs unwired assets, tokens, fonts, HUD, scenes (2026-06-13).
 
 ## 20. Sun-readability spec (HUD chrome — normative)
