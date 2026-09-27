@@ -16,6 +16,15 @@ describe('T85 tenant-admin pilot UI contract', () => {
     expect(source).toContain('data={bulkRoleOptions}');
   });
 
+  it('keeps TENANT_ADMIN tenant scope authoritative over URL filters', () => {
+    const source = readUsers();
+
+    const tenantScopeCheck = source.indexOf("user?.role === 'TENANT_ADMIN' && user.tenantId");
+    const urlTenantFallback = source.indexOf("else if (tid)");
+    expect(tenantScopeCheck).toBeGreaterThan(-1);
+    expect(urlTenantFallback).toBeGreaterThan(tenantScopeCheck);
+  });
+
   it('does not treat the role filter as an assignment policy', () => {
     const source = readUsers();
 
