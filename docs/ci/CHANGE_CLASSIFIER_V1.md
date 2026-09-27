@@ -21,7 +21,7 @@ and compatibility helpers.
 | JavaScript / TypeScript | relevant Admin/Mobile/Packages tests + CodeQL JavaScript/TypeScript |
 | Mobile UI code | Mobile runtime lane + Visual Contract + CodeQL JavaScript/TypeScript |
 | Mobile asset-only | asset governance / visual authority + asset contract test; no full Mobile runtime lane, Metro bundle, or Android Gradle build |
-| Mobile native-affecting | Mobile runtime lane + cost-aware Mobile Native Smoke; full Android compile remains fail-closed |
+| Mobile native-affecting | Mobile runtime lane + cost-aware Native Smoke: clean prebuild + debug APK on PRs; release packaging is deferred to full/release validation |
 | Code + assets | union of the runtime and visual/asset lanes |
 | CI core / unknown runtime / infrastructure | broad/full fallback |
 
@@ -40,6 +40,13 @@ The classifier treats the following as native-affecting:
 
 These changes keep the full `expo prebuild --clean` + `gradlew assembleDebug`
 gate. Ordinary JS/UI, test, and approved raster asset changes do not.
+
+A pull request native smoke deliberately stops after the debug APK. Release APK
+packaging and the exact-SHA runtime artifact run only on non-PR validation
+(main/native push, scheduled drift check, manual dispatch, or the reusable
+Full / Release lane). The Windows release workflow uses the same native-scope
+decision, so ordinary mobile JS/UI/assets/backend-only pull requests do not pay
+for a hosted Windows Gradle release build.
 
 ## CodeQL routing
 
@@ -74,7 +81,8 @@ into an explicit `full/release` lane triggered by:
 
 - manual dispatch;
 - nightly schedule;
-- release/tag preparation.
+- release/tag preparation;
+- an explicitly selected final stacked-PR tip when a physical/runtime proof is required.
 
 That lane is the 4VELO equivalent of a game project's full asset/map/cook
 validation: full backend/telemetry/admin/mobile regression, E2E, native build,
