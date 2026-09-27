@@ -115,9 +115,7 @@ class UserRoleViewSet(viewsets.ModelViewSet):
         if actor.role == "GLOBAL_OWNER":
             return
         if assignment.role.slug not in self.TENANT_ADMIN_ASSIGNABLE_ROLES:
-            raise serializers.ValidationError(
-                "Role cannot be managed by a tenant admin."
-            )
+            raise serializers.ValidationError("Role cannot be managed by a tenant admin.")
 
     def perform_destroy(self, instance):
         self._assert_assignment_role_manageable(instance)
