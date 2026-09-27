@@ -200,7 +200,7 @@ Required behavior:
 | T81 | Ride Summary implementation/polish | DONE | #286 is merged on `main`: product typography/cards/actions with durable-success vs pending/recovery separation preserved. The old stacked implementation is reconciled and no further native release build is required merely because later JS/UI work touches adjacent screens. |
 | T82 | History + Activity Detail implementation/polish | DONE | #288 is merged on `main`: numeric duration contract, canonical detail endpoint, real `route_coords` map, truthful average speed, no static achievement/route placeholders, and explicit empty/error/offline behavior. |
 | T83 | Profile + remaining pilot mobile surfaces | DONE | #292 Profile, #294 Explore, #296 Compete/City Hub and #298 final secondary-surface sweep are merged. Production screens are repo-complete for Frozen UI v1.2; fake segment/KOM production fixtures are removed; shared edge-state feedback and error/offline/empty semantics are reconciled. Evidence: `design/FROZEN_UI_V1_2_PRODUCTION_SCREEN_AUDIT_2026-09-27.md`. Physical Android acceptance remains T84. |
-| T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check, 2–3 person dry run if useful. |
+| T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. #300 owns the physical validation. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check and truthful offline/GPS/sync/summary states are required. `scripts/mobile-runtime-acceptance.ps1` prepares exact-artifact evidence and `physical-signoff.md`; automation alone cannot close T84. |
 
 UI is not considered complete because screenshots look good. It must be truthful under real error/offline/synchronization states.
 
@@ -257,7 +257,7 @@ This is the only short sequence worth remembering:
    reopen implementation only for a concrete regression
 
 4. finish pilot mobile UI:
-   T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation
+   T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation (#300)
 
 5. panels/operations:
    T85 -> T86 -> T87
