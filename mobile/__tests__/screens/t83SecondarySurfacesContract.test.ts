@@ -43,6 +43,15 @@ describe('T83-D Frozen UI secondary-surface contract', () => {
     expect(source).not.toContain("from '../theme/fonts'");
   });
 
+  test('shared edge-state feedback also uses Frozen UI product semantics', () => {
+    const source = read('components/ui/EdgeStateBanner.tsx');
+
+    expect(source).toContain('PRODUCT_TYPOGRAPHY');
+    expect(source).toContain('getSemanticColors');
+    expect(source).not.toContain('FONTS.display');
+    expect(source).not.toContain("from '../../theme/fonts'");
+  });
+
   test('GPS diagnostics uses product actions instead of ArcadeButton', () => {
     const source = read('screens/GpsDiagnosticsScreen.tsx');
 
