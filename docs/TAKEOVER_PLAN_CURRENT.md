@@ -2,7 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Last reconciled with `main`:** 2026-09-27 (`a80e284`)  
+**Last reconciled with `main`:** 2026-09-27 (`48d70199`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
@@ -25,7 +25,7 @@ If any stage label (`P3`, `P4`, `P5`, `PPH`, `P6`) conflicts with a tranche belo
 
 This snapshot records the actual repository/runtime state after the September cleanup so older issue text does not reopen already-proven work:
 
-- **2026-09-27 mobile/CI reconciliation:** #278, #282, #286, #287 and #288 are merged on `main`. Ordinary PR validation is lane-classified; pure JS/UI work does not pay for Android Gradle/release proof, native-affecting work retains clean debug proof, and heavyweight full/release validation is explicit through the Full Release lane. T81 and T82 repo-side slices are landed. T83-A Profile merged in #292; T83-B Explore merged in #294; T83-C Compete/City Hub merged in #296. T83-D is tracked by #297 and closes the remaining production-screen Frozen UI migration gap across Settings, GPS Diagnostics, Segments, Marketplace, Performance Trends and Global Leaderboard.
+- **2026-09-27 mobile/CI reconciliation:** #278, #282, #286, #287 and #288 are merged on `main`. Ordinary PR validation is lane-classified; pure JS/UI work does not pay for Android Gradle/release proof, native-affecting work retains clean debug proof, and heavyweight full/release validation is explicit through the Full Release lane. T81 and T82 repo-side slices are landed. T83-A Profile merged in #292; T83-B Explore merged in #294; T83-C Compete/City Hub merged in #296; T83-D merged in #298 and closes the remaining production-screen Frozen UI migration gap across Settings, GPS Diagnostics, Segments, Marketplace, Performance Trends and Global Leaderboard. Repo-side production-screen Frozen UI v1.2 implementation is complete; physical acceptance remains T84. See `design/FROZEN_UI_V1_2_PRODUCTION_SCREEN_AUDIT_2026-09-27.md`.
 - **Repository hygiene:** PR #266 merged. Historical/stale non-Dependabot branch refs were pruned; unique unmerged tips were preserved with archive tags before deletion. At cleanup completion the branch set was `main` plus five retained Dependabot branches.
 - **Dependabot policy:** ordinary version-update PR generation is disabled; new Dependabot PRs are security-only and grouped per ecosystem. Existing useful PRs may remain open for deliberate review.
 - **Operational notifications:** PR #267 merged Slack routing for selected 4VELO operational signals.
@@ -199,7 +199,7 @@ Required behavior:
 | T80 | Active Ride screen implementation/polish | PARTIAL | #275 and #277 are merged with Frozen UI v1.2 live HUD chrome, preserved ride semantics and governed rider marker. Residual exact-SHA/outdoor acceptance remains a validation item; there is no open implementation PR. |
 | T81 | Ride Summary implementation/polish | DONE | #286 is merged on `main`: product typography/cards/actions with durable-success vs pending/recovery separation preserved. The old stacked implementation is reconciled and no further native release build is required merely because later JS/UI work touches adjacent screens. |
 | T82 | History + Activity Detail implementation/polish | DONE | #288 is merged on `main`: numeric duration contract, canonical detail endpoint, real `route_coords` map, truthful average speed, no static achievement/route placeholders, and explicit empty/error/offline behavior. |
-| T83 | Profile + remaining pilot mobile surfaces | ACTIVE | T83-A Profile #292, T83-B Explore #294 and T83-C Compete/City Hub #296 are merged. T83-D #297 is the final production-screen sweep: Settings, GPS Diagnostics, Segments, Marketplace, Performance Trends and Global Leaderboard migrate to Frozen UI v1.2; fake segment fixtures are removed from production UI; error/offline/empty states remain truthful. Final physical acceptance remains T84. |
+| T83 | Profile + remaining pilot mobile surfaces | DONE | #292 Profile, #294 Explore, #296 Compete/City Hub and #298 final secondary-surface sweep are merged. Production screens are repo-complete for Frozen UI v1.2; fake segment/KOM production fixtures are removed; shared edge-state feedback and error/offline/empty semantics are reconciled. Evidence: `design/FROZEN_UI_V1_2_PRODUCTION_SCREEN_AUDIT_2026-09-27.md`. Physical Android acceptance remains T84. |
 | T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check, 2–3 person dry run if useful. |
 
 UI is not considered complete because screenshots look good. It must be truthful under real error/offline/synchronization states.
@@ -257,7 +257,7 @@ This is the only short sequence worth remembering:
    reopen implementation only for a concrete regression
 
 4. finish pilot mobile UI:
-   T81 DONE -> T82 DONE -> T83 ACTIVE (#297 final Frozen UI sweep) -> T84
+   T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation
 
 5. panels/operations:
    T85 -> T86 -> T87
@@ -273,7 +273,7 @@ This is the only short sequence worth remembering:
    T93
 ```
 
-Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T69–T75`, `T77`, `T78`, `T81`, `T82`, `T94`) is not repeated unless a concrete regression invalidates it.
+Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T69–T75`, `T77`, `T78`, `T81`, `T82`, `T83`, `T94`) is not repeated unless a concrete regression invalidates it.
 
 # Full takeover after the pilot
 
