@@ -627,9 +627,7 @@ class TestTenantAdminIsolation:
         athlete_user.refresh_from_db()
         assert athlete_user.role == "ATHLETE"
 
-    def test_update_allows_assignable_tenant_role(
-        self, api_client, admin_user, athlete_user
-    ):
+    def test_update_allows_assignable_tenant_role(self, api_client, admin_user, athlete_user):
         api_client.force_authenticate(user=admin_user)
         response = api_client.patch(
             reverse("user-update", kwargs={"pk": athlete_user.id}),
