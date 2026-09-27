@@ -1,17 +1,19 @@
 /* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 
-import { ArcadeButton } from '../components/ArcadeButton';
-import { FONTS } from '../theme/fonts';
+import { PrimaryButton } from '../components/product/PrimaryButton';
+import { ProductCard } from '../components/product/ProductCard';
 import {
   getGpsSyncStatus,
   isRideTrackingActive,
   runManualGpsRecovery,
 } from '../services/GpsSyncManager';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
 type CheckItem = {
   key: string;
@@ -21,55 +23,88 @@ type CheckItem = {
 };
 
 const stylesheet = StyleSheet.create((theme) => {
-  const C = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   return {
-    container: { flex: 1, backgroundColor: C.background },
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
     header: {
-      padding: 16,
-      borderBottomWidth: 4,
-      borderBottomColor: C.onBackground,
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 12,
+      gap: 4,
+    },
+    title: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    subtitle: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 48,
+      gap: 10,
+    },
+    cardContent: {
+      gap: 8,
+    },
+    row: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
+      gap: 12,
     },
-    title: { fontSize: 16, fontFamily: FONTS.display, color: C.primary, textTransform: 'uppercase' },
-    subtitle: { color: C.secondary, marginTop: 4, fontFamily: FONTS.display },
-    card: {
-      borderWidth: 3,
-      borderColor: C.onBackground,
-      backgroundColor: C.parchment,
-      borderRadius: 8,
-      padding: 12,
-      marginBottom: 10,
+    label: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
+      flexShrink: 1,
     },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    label: { fontSize: 14, fontFamily: FONTS.display, color: C.onBackground },
-    details: { fontSize: 12, color: C.secondary, marginTop: 6 },
+    details: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    badge: {
+      minWidth: 72,
+      minHeight: 32,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderRadius: 999,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     badgeOk: {
-      backgroundColor: C.primaryContainer,
-      borderWidth: 2,
-      borderColor: C.onBackground,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      borderColor: semantic.status.success,
     },
     badgeFail: {
-      backgroundColor: C.errorContainer,
-      borderWidth: 2,
-      borderColor: C.onBackground,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      borderColor: semantic.status.error,
     },
-    content: { padding: 16, paddingBottom: 48 },
-    faqHint: { marginTop: 8, color: C.secondary, fontSize: 12, fontFamily: FONTS.display },
+    badgeText: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+    },
+    badgeTextOk: {
+      color: semantic.status.success,
+    },
+    badgeTextFail: {
+      color: semantic.status.error,
+    },
+    help: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    actions: {
+      gap: 10,
+      marginTop: 6,
+    },
   };
 });
 
 export const GpsDiagnosticsScreen: React.FC<{
   onClose?: () => void;
 }> = ({ onClose }) => {
-  const { theme } = useUnistyles();
   const s = stylesheet;
-  const C = theme.colors as Record<string, string>;
   const [checks, setChecks] = useState<CheckItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [recovering, setRecovering] = useState(false);
@@ -131,64 +166,60 @@ export const GpsDiagnosticsScreen: React.FC<{
     void refresh();
   }, [refresh]);
 
-  const needsHelp = checks.some((c) => !c.ok);
+  const needsHelp = checks.some((check) => !check.ok);
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <View>
-          <Text style={s.title}>GPS Diagnostics</Text>
-          <Text style={s.subtitle}>Green = healthy, Red = action required</Text>
-        </View>
+        <Text style={s.title}>GPS Diagnostics</Text>
+        <Text style={s.subtitle}>Green = healthy, red = action required</Text>
       </View>
       <ScrollView contentContainerStyle={s.content}>
         {checks.map((check) => (
-          <View key={check.key} style={s.card}>
-            <View style={s.row}>
-              <Text style={s.label}>{check.label}</Text>
-              <Text style={check.ok ? s.badgeOk : s.badgeFail}>
-                {check.ok ? 'GREEN' : 'RED'}
-              </Text>
+          <ProductCard key={check.key}>
+            <View style={s.cardContent}>
+              <View style={s.row}>
+                <Text style={s.label}>{check.label}</Text>
+                <View style={[s.badge, check.ok ? s.badgeOk : s.badgeFail]}>
+                  <Text style={[s.badgeText, check.ok ? s.badgeTextOk : s.badgeTextFail]}>
+                    {check.ok ? 'HEALTHY' : 'ACTION'}
+                  </Text>
+                </View>
+              </View>
+              <Text style={s.details}>{check.details}</Text>
             </View>
-            <Text style={s.details}>{check.details}</Text>
-          </View>
+          </ProductCard>
         ))}
 
-        {needsHelp && (
-          <Text style={s.faqHint}>
-            If checks stay RED, open campaign FAQ (GPS/battery) from GTM materials and retry diagnostics.
-          </Text>
-        )}
+        {needsHelp ? (
+          <ProductCard variant="raised">
+            <Text style={s.help}>
+              If checks stay red, open the GPS/battery help material and retry diagnostics.
+            </Text>
+          </ProductCard>
+        ) : null}
 
-        <View style={{ marginTop: 16, gap: 10 }}>
-          <ArcadeButton
-            label={loading ? 'CHECKING...' : 'REFRESH CHECKS'}
+        <View style={s.actions}>
+          <PrimaryButton
+            label={loading ? 'CHECKING…' : 'REFRESH CHECKS'}
             onPress={() => void refresh()}
-            variant="primary"
+            disabled={loading || recovering}
           />
-          <ArcadeButton
-            label={recovering ? 'RECOVERING...' : 'RUN GPS RECOVERY'}
+          <PrimaryButton
+            label={recovering ? 'RECOVERING…' : 'RUN GPS RECOVERY'}
             onPress={() => {
               setRecovering(true);
-              runManualGpsRecovery()
-                .finally(() => setRecovering(false))
-                .then(() => void refresh());
+              void runManualGpsRecovery().finally(() => {
+                setRecovering(false);
+                void refresh();
+              });
             }}
-            variant="success"
+            variant="secondary"
+            disabled={loading || recovering}
           />
-          <Pressable
-            onPress={onClose}
-            style={{
-              borderWidth: 3,
-              borderColor: C.onBackground,
-              backgroundColor: C.surface,
-              borderRadius: 8,
-              paddingVertical: 12,
-              alignItems: 'center',
-            }}
-          >
-            <Text style={{ fontFamily: FONTS.display, color: C.onBackground }}>CLOSE</Text>
-          </Pressable>
+          {onClose ? (
+            <PrimaryButton label="CLOSE" onPress={onClose} variant="secondary" />
+          ) : null}
         </View>
       </ScrollView>
     </SafeAreaView>
