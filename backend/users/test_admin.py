@@ -545,10 +545,19 @@ class TestTenantAdminIsolation:
         assert response.status_code == 403
         assert not User.objects.filter(username="owner2").exists()
 
-    def test_delete_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
+    def test_delete_is_forbidden_for_tenant_admin(
+        self, api_client, admin_user, athlete_user, other_tenant_admin
+    ):
         api_client.force_authenticate(user=admin_user)
-        response = api_client.delete(reverse("user-delete", kwargs={"pk": other_tenant_admin.id}))
-        assert response.status_code == 404
+
+        own_tenant = api_client.delete(reverse("user-delete", kwargs={"pk": athlete_user.id}))
+        assert own_tenant.status_code == 403
+        assert User.objects.filter(pk=athlete_user.id).exists()
+
+        foreign_tenant = api_client.delete(
+            reverse("user-delete", kwargs={"pk": other_tenant_admin.id})
+        )
+        assert foreign_tenant.status_code == 403
         assert User.objects.filter(pk=other_tenant_admin.id).exists()
 
     def test_update_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
@@ -579,3 +588,73 @@ class TestTenantAdminIsolation:
         )
         assert response.status_code == 403
         assert not User.objects.filter(email="owner-invite@test.com").exists()
+
+    def test_create_rejects_tenant_admin_role(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("user-create"),
+            {
+                "username": "admin-peer",
+                "email": "admin-peer@test.com",
+                "password": "securepass123",
+                "role": "TENANT_ADMIN",
+            },
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(username="admin-peer").exists()
+
+    def test_invitation_rejects_tenant_admin_role(self, api_client, admin_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.post(
+            reverse("invitation"),
+            {"email": "admin-invite@test.com", "role": "TENANT_ADMIN"},
+            format="json",
+        )
+        assert response.status_code == 403
+        assert not User.objects.filter(email="admin-invite@test.com").exists()
+
+    def test_update_rejects_tenant_admin_role_assignment(
+        self, api_client, admin_user, athlete_user
+    ):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            reverse("user-update", kwargs={"pk": athlete_user.id}),
+            {"role": "TENANT_ADMIN"},
+            format="json",
+        )
+        assert response.status_code == 403
+        athlete_user.refresh_from_db()
+        assert athlete_user.role == "ATHLETE"
+
+    def test_update_allows_assignable_tenant_role(self, api_client, admin_user, athlete_user):
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            reverse("user-update", kwargs={"pk": athlete_user.id}),
+            {"role": "TENANT_MODERATOR"},
+            format="json",
+        )
+        assert response.status_code == 200
+        athlete_user.refresh_from_db()
+        assert athlete_user.role == "TENANT_MODERATOR"
+
+    def test_update_existing_tenant_admin_without_role_reassignment(
+        self, api_client, admin_user, tenant
+    ):
+        peer = User.objects.create_user(
+            username="peer-admin",
+            email="peer-admin@test.com",
+            password="password123",
+            role="TENANT_ADMIN",
+            tenant=tenant,
+        )
+        api_client.force_authenticate(user=admin_user)
+        response = api_client.patch(
+            reverse("user-update", kwargs={"pk": peer.id}),
+            {"bio": "Updated without role reassignment"},
+            format="json",
+        )
+        assert response.status_code == 200
+        peer.refresh_from_db()
+        assert peer.role == "TENANT_ADMIN"
+        assert peer.bio == "Updated without role reassignment"

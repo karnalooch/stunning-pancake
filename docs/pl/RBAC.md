@@ -94,6 +94,8 @@ class Role(models.TextChoices):
 | `users.create` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `users.edit` | ✅ | ✅ | ❌ | ❌ | ❌ |
 | `users.delete` | ✅ | ❌ | ❌ | ❌ | ❌ |
+
+> `users.delete` is platform-owner only. `TENANT_ADMIN` may edit/lock permitted users inside its own tenant, but cannot delete accounts.
 | `users.view_all` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `users.impersonate` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | `tenants.view` | ✅ | ✅ | ✅ | ❌ | ❌ |
@@ -153,7 +155,7 @@ W wersji v3.0 rozszerzono i doprecyzowano uprawnienia dla administratorów (`GLO
 
 ### 1. Edycja profili użytkowników (`users.edit`)
 * **Zakres edycji**: Administratorzy posiadający uprawnienie `users.edit` (`GLOBAL_OWNER` oraz `TENANT_ADMIN` dla swojego tenantu) mogą edytować nie tylko dane tożsamości (nickname/username, email, rola, tenant, status `is_active`, hasło), ale również przypisywać i modyfikować **customowe awatary** (poprzez URL) oraz **opisy biograficzne (pole `bio`)** w formularzu Drawer.
-* **Ograniczenia RLS**: `TENANT_ADMIN` może edytować wyłącznie użytkowników należących do jego `tenant_id`. Nie może zmieniać przypisania tenantu użytkownika ani promować go na rolę `GLOBAL_OWNER`.
+* **Ograniczenia RLS / ról**: `TENANT_ADMIN` może edytować wyłącznie użytkowników należących do jego `tenant_id`. Nie może zmieniać przypisania tenantu użytkownika. Przy zmianie roli może przypisać wyłącznie `ATHLETE`, `TENANT_MODERATOR` albo `SPONSOR`; nie może nadawać `TENANT_ADMIN` ani `GLOBAL_OWNER`. Ta sama lista obowiązuje create/invite/bulk oraz legacy update; endpoint `rbac/user-roles` egzekwuje równoważny zestaw slugów (`athlete`, `tenant_moderator`, `sponsor`). TENANT_ADMIN może też usuwać/revoke tylko przypisania z tego samego dozwolonego zestawu; uprzywilejowane przypisania `tenant_admin` / `global_owner` może zmieniać lub zdejmować wyłącznie GLOBAL_OWNER.
 
 ### 2. Widok tenantów dla matchmakingu (`tenants.view`)
 * **Dynamiczna lista przeciwników**: Dla wydarzeń typu `INTER_TENANT` (Pojedynek Miast), selektor przeciwnika pobiera listę aktywnych tenantów dynamicznie z bazy danych.

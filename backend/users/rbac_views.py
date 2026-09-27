@@ -109,10 +109,23 @@ class UserRoleViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         serializer.save(**self._tenant_admin_values(serializer))
 
+    def _assert_assignment_role_manageable(self, assignment):
+        """Tenant admins may only mutate/revoke roles they are allowed to assign."""
+        actor = self.request.user
+        if actor.role == "GLOBAL_OWNER":
+            return
+        if assignment.role.slug not in self.TENANT_ADMIN_ASSIGNABLE_ROLES:
+            raise serializers.ValidationError("Role cannot be managed by a tenant admin.")
+
+    def perform_destroy(self, instance):
+        self._assert_assignment_role_manageable(instance)
+        super().perform_destroy(instance)
+
     @action(detail=True, methods=["post"])
     def revoke(self, request, pk=None):
-        """Revoke a role assignment."""
+        """Revoke a role assignment without bypassing tenant-admin role hierarchy."""
         assignment = self.get_object()
+        self._assert_assignment_role_manageable(assignment)
         assignment.delete()
         return Response({"status": "revoked"})
 

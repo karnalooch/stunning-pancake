@@ -667,13 +667,16 @@ class UserUpdateView(generics.UpdateAPIView):
                     status_code=status.HTTP_403_FORBIDDEN,
                 )
 
-            # TENANT_ADMIN cannot promote any user to GLOBAL_OWNER
-            role = request.data.get("role")
-            if role == "GLOBAL_OWNER":
-                return error(
-                    "You cannot promote a user to Global Owner.",
-                    status_code=status.HTTP_403_FORBIDDEN,
-                )
+            # Keep update semantics aligned with create/invite/bulk assignment policy.
+            # Unrelated edits to an existing TENANT_ADMIN remain possible when
+            # the request does not attempt to reassign the role.
+            if "role" in request.data:
+                role = request.data.get("role")
+                if role not in TENANT_ADMIN_ASSIGNABLE_ROLES:
+                    return error(
+                        "You cannot assign this role.",
+                        status_code=status.HTTP_403_FORBIDDEN,
+                    )
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         if not serializer.is_valid():
@@ -706,16 +709,12 @@ class UserUpdateView(generics.UpdateAPIView):
 
 
 class UserDeleteView(generics.DestroyAPIView):
-    """Admin deletes a user."""
+    """GLOBAL_OWNER deletes a user. TENANT_ADMIN has users.edit, not users.delete."""
 
     queryset = User.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
 
     def delete(self, request, *args, **kwargs):
-        user_role = getattr(request.user, "role", None)
-        if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
-            return error("Only admins can delete users.", status_code=status.HTTP_403_FORBIDDEN)
-
         try:
             target = _scoped_user_queryset(request).get(pk=kwargs["pk"])
             # In SQLite-based test runs, FK "SET NULL" enforcement can be flaky
@@ -907,8 +906,7 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
 
         requesting_role = getattr(request.user, "role", None)
         if requesting_role == "TENANT_ADMIN":
-            allowed_roles = {"ATHLETE", "TENANT_MODERATOR", "SPONSOR"}
-            if role not in allowed_roles:
+            if role not in TENANT_ADMIN_ASSIGNABLE_ROLES:
                 return error("You cannot assign this role.", status_code=status.HTTP_403_FORBIDDEN)
 
             # Tenant admins cannot move users across tenants.
