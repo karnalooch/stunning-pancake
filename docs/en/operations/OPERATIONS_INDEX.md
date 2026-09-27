@@ -4,18 +4,18 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../../pl/operations/OPERATIONS_INDEX.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-28 |
 | **canonical_path** | docs/en/operations/OPERATIONS_INDEX.md |
 
 ---
 
 **Status:** ✅ Active  
-**Last update:** 2026-06-03  
+**Last update:** 2026-09-28  
 **Goal:** One table — which document, who maintains it, how often to verify.  
 **Standard:** [DOCUMENTATION_STANDARDS.md](../DOCUMENTATION_STANDARDS.md)
 
@@ -32,6 +32,7 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 | [RAILWAY_CELERY_SIMULATION.md](../../RAILWAY_CELERY_SIMULATION.md) | `celery-worker-simulation` service | Platform Operator | When simulation `railway.json` changes |
 | [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) | Railway vs K8s decision, mapping | Tech Lead / DevOps | Quarterly or before migration |
 | [KUBERNETES.md](./KUBERNETES.md) | `kubectl`, manifests, HPA | DevOps | When `infrastructure/k8s/` changes |
+| [HOME_LAB.md](./HOME_LAB.md) | Isolated pilot operator flow: config, health, migrations, encrypted backup/restore evidence | Platform Operator | Before pilot sign-off and after pilot config/runtime changes |
 | [SIMULATOR.md](./SIMULATOR.md) | Batch → live, wizard, FSM | Platform Operator + Admin Owner | After simulator API changes |
 | [LIVE_MAP.md](./LIVE_MAP.md) | Live Map: SSE, LOD, ingest ADR 011 | Admin Owner + Platform Operator | After `telemetry/live` or admin Live Map changes |
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | After preset / volume changes |
@@ -65,6 +66,7 @@ Polish canonical index: [../../pl/operations/OPERATIONS_INDEX.md](../../pl/opera
 | [infrastructure/sim-lab/README.md](../../../infrastructure/sim-lab/README.md) | Isolated sim-lab: Docker / Railway load test | Platform Operator | Before 300k ramp (not prod) |
 | [`scripts/load/run-suite.ps1`](../../../scripts/load/run-suite.ps1) | Suite smoke/baseline/stress-50k (local Docker) | Platform Operator | After ingest / live-map changes |
 | [`scripts/railway-verify-production.ps1`](../../../scripts/railway-verify-production.ps1) | Verify routing + simulation (CLI + optional GraphQL build config) | Platform Operator | After Celery worker deploy |
+| [`python scripts/home_lab.py operator-gate`](../../../scripts/home_lab.py) | T87 commit-bound pilot config/health/migrations/encrypted backup/isolated restore gate | Platform Operator | Before pilot sign-off and after changing the exact pilot checkout/config |
 | [`.env.railway.local.example`](../../../.env.railway.local.example) | Local template (no Git secrets) | Developer | Onboarding Railway CLI |
 
 **Required env (names only):** `RAILWAY_API_TOKEN` (Windows user env); **do not** use legacy `RAILWAY_TOKEN`.
