@@ -910,8 +910,7 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
 
         requesting_role = getattr(request.user, "role", None)
         if requesting_role == "TENANT_ADMIN":
-            allowed_roles = {"ATHLETE", "TENANT_MODERATOR", "SPONSOR"}
-            if role not in allowed_roles:
+            if role not in TENANT_ADMIN_ASSIGNABLE_ROLES:
                 return error("You cannot assign this role.", status_code=status.HTTP_403_FORBIDDEN)
 
             # Tenant admins cannot move users across tenants.
