@@ -69,7 +69,9 @@ class TestGlobalOwnerSelfProtection:
         assert owner_user.role == "GLOBAL_OWNER"
         assert owner_user.is_active is True
 
-    def test_bulk_self_deactivation_is_rejected_before_queueing(self, api_client, owner_user):
+    def test_bulk_self_deactivation_is_rejected_before_queueing(
+        self, api_client, owner_user
+    ):
         api_client.force_authenticate(user=owner_user)
 
         response = api_client.post(
@@ -82,7 +84,9 @@ class TestGlobalOwnerSelfProtection:
         owner_user.refresh_from_db()
         assert owner_user.is_active is True
 
-    def test_bulk_self_demotion_is_rejected_before_queueing(self, api_client, owner_user):
+    def test_bulk_self_demotion_is_rejected_before_queueing(
+        self, api_client, owner_user
+    ):
         api_client.force_authenticate(user=owner_user)
 
         response = api_client.post(
@@ -98,7 +102,9 @@ class TestGlobalOwnerSelfProtection:
 
 @pytest.mark.django_db
 class TestGlobalOwnerTenantNeutrality:
-    def test_create_global_owner_ignores_tenant_assignment(self, api_client, owner_user, tenant):
+    def test_create_global_owner_ignores_tenant_assignment(
+        self, api_client, owner_user, tenant
+    ):
         api_client.force_authenticate(user=owner_user)
 
         response = api_client.post(
@@ -118,7 +124,9 @@ class TestGlobalOwnerTenantNeutrality:
         assert created.role == "GLOBAL_OWNER"
         assert created.tenant_id is None
 
-    def test_update_to_global_owner_clears_tenant(self, api_client, owner_user, tenant_user, tenant):
+    def test_update_to_global_owner_clears_tenant(
+        self, api_client, owner_user, tenant_user, tenant
+    ):
         api_client.force_authenticate(user=owner_user)
 
         response = api_client.patch(
