@@ -24,18 +24,38 @@ def text(path: Path) -> str:
 
 
 class CodeQLContractTests(unittest.TestCase):
-    def test_codeql_scans_python_and_javascript_typescript(self):
-        job = load(CI)["jobs"]["codeql"]
+    def test_codeql_scans_python_and_javascript_typescript_in_separate_lanes(self):
+        jobs = load(CI)["jobs"]
+        expected = {
+            "codeql-python": ("python", "lane_python"),
+            "codeql-javascript": ("javascript-typescript", "lane_javascript"),
+        }
+
+        for job_name, (language, lane) in expected.items():
+            with self.subTest(job=job_name):
+                job = jobs[job_name]
+                self.assertEqual(job["permissions"]["security-events"], "write")
+                self.assertIn(lane, job["if"])
+                init = next(
+                    step
+                    for step in job["steps"]
+                    if str(step.get("uses", "")).startswith("github/codeql-action/init")
+                )
+                self.assertEqual(init["with"]["languages"], language)
+                self.assertEqual(init["with"]["build-mode"], "none")
+                self.assertEqual(init["with"]["queries"], "security-extended")
+
+        gate = jobs["codeql"]
         self.assertEqual(
-            set(job["strategy"]["matrix"]["language"]),
-            {"python", "javascript-typescript"},
+            set(gate["needs"]),
+            {"changes", "codeql-python", "codeql-javascript"},
         )
-        self.assertEqual(job["permissions"]["security-events"], "write")
-        init = next(
-            s for s in job["steps"] if str(s.get("uses", "")).startswith("github/codeql-action/init")
+        self.assertTrue(
+            any(
+                step.get("name") == "Enforce language-specific CodeQL lanes"
+                for step in gate["steps"]
+            )
         )
-        self.assertEqual(init["with"]["build-mode"], "none")
-        self.assertEqual(init["with"]["queries"], "security-extended")
 
     def test_codeql_failure_reaches_aggregate(self):
         needs = load(CI)["jobs"]["aggregate"]["needs"]

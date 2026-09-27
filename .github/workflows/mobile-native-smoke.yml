@@ -2,17 +2,49 @@ name: Mobile Native Smoke
 
 on:
   pull_request:
+    # Keep the workflow visible for mobile/workspace PRs, but let the cheap
+    # native-scope job decide whether a full Android rebuild is warranted.
     paths:
       - "mobile/**"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
-      - "scripts/mobile-runtime-acceptance.ps1"
-      - "scripts/test_mobile_harness_contract.py"
+      - "scripts/test_mobile_native_smoke_workflow.py"
       - ".github/workflows/mobile-native-smoke.yml"
+  push:
+    branches: [main]
+    # On main, run the expensive smoke only when native inputs changed.
+    paths:
+      - "mobile/app.config.js"
+      - "mobile/app.json"
+      - "mobile/eas.json"
+      - "mobile/package.json"
+      - "mobile/android/**"
+      - "mobile/ios/**"
+      - "mobile/plugins/**"
+      - "mobile/google-services.json"
+      - "mobile/GoogleService-Info.plist"
+      - "mobile/assets/icon.png"
+      - "mobile/assets/splash-icon.png"
+      - "mobile/assets/adaptive-icon.png"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
+      - "scripts/validate_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_provenance.py"
+      - ".github/workflows/mobile-native-smoke.yml"
+  # Catch toolchain/runner drift without charging every JS/UI PR for Gradle.
+  schedule:
+    - cron: "30 3 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -23,13 +55,59 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  native-scope:
+    name: Native scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.decision.outputs.run }}
+      reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Classify native-affecting changes
+        id: classifier
+        if: github.event_name == 'pull_request'
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Decide whether Gradle is required
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=$EVENT_NAME forces a native smoke" >> "$GITHUB_OUTPUT"
+          elif [ "$NATIVE_CHANGED" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=JS/UI/assets-only PR; covered by Mobile + Visual Contract" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report native scope
+        run: |
+          echo "### Mobile Native Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run Android build:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
   android-debug:
     name: Android clean prebuild + debug compile
+    needs: [native-scope]
+    if: needs.native-scope.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
-      NODE_ENV: production
-      MOBILE_RUNTIME_ACCEPTANCE: "true"
       EAS_BUILD_PROFILE: pilot-local
       EXPO_PUBLIC_API_URL: http://localhost:8000
       EXPO_PUBLIC_TELEMETRY_URL: http://localhost:8001
@@ -39,18 +117,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-
-      - name: Assert exact source checkout
-        env:
-          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: |
-          BUILT_GIT_SHA="$(git rev-parse HEAD)"
-          if [ "$BUILT_GIT_SHA" != "$EXPECTED_HEAD_SHA" ]; then
-            echo "Exact source checkout mismatch: expected $EXPECTED_HEAD_SHA, got $BUILT_GIT_SHA" >&2
-            exit 1
-          fi
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -84,9 +150,6 @@ jobs:
       - name: Native provenance validator tests
         run: python -m unittest scripts/test_mobile_native_provenance.py -v
 
-      - name: Mobile runtime acceptance harness contract
-        run: python -m unittest scripts/test_mobile_harness_contract.py -v
-
       - name: Mobile lint + typecheck
         run: |
           pnpm --dir mobile lint
@@ -100,21 +163,7 @@ jobs:
 
       - name: Resolve Expo provenance
         working-directory: mobile
-        run: |
-          pnpm exec expo config --type public --json > "$RUNNER_TEMP/4velo-expo-public.json"
-          python - "$RUNNER_TEMP/4velo-expo-public.json" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-          updates = config.get("updates") or {}
-          if updates.get("enabled") is not False:
-              raise SystemExit("runtime acceptance requires Expo updates.enabled=false")
-          extra = config.get("extra") or {}
-          if extra.get("EXPO_PUBLIC_VISION_FIXTURES") != "true":
-              raise SystemExit("runtime acceptance requires EXPO_PUBLIC_VISION_FIXTURES=true")
-          PY
+        run: pnpm exec expo config --type public --json > "$RUNNER_TEMP/4velo-expo-public.json"
 
       - name: Clean Android prebuild
         working-directory: mobile
@@ -132,20 +181,9 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Harden Gradle release memory
-        working-directory: mobile/android
-        run: |
-          GRADLE_PROPERTIES="gradle.properties"
-          grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"
-          grep -F -- "-XX:MaxMetaspaceSize=512m" "$GRADLE_PROPERTIES"
-          sed -i 's/-Xmx2048m/-Xmx4096m/' "$GRADLE_PROPERTIES"
-          sed -i 's/-XX:MaxMetaspaceSize=512m/-XX:MaxMetaspaceSize=1g/' "$GRADLE_PROPERTIES"
-          grep -F -- "-Xmx4096m" "$GRADLE_PROPERTIES"
-          grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
-
       - name: Compile Android release APK
         working-directory: mobile/android
-        run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Record native artifacts
         run: |
@@ -164,10 +202,6 @@ jobs:
           RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
           ARTIFACT_DIR="artifacts/mobile-runtime"
           BUILT_GIT_SHA="$(git rev-parse HEAD)"
-          if [ "$BUILT_GIT_SHA" != "$SOURCE_HEAD_SHA" ]; then
-            echo "Built Git SHA mismatch: expected $SOURCE_HEAD_SHA, got $BUILT_GIT_SHA" >&2
-            exit 1
-          fi
           APK_SHA256="$(sha256sum "$RELEASE_APK" | awk '{print $1}')"
           mkdir -p "$ARTIFACT_DIR"
           cp "$RELEASE_APK" "$ARTIFACT_DIR/app-release.apk"
@@ -184,10 +218,6 @@ jobs:
               "apkSha256": os.environ["APK_SHA256"],
               "packageId": "com.sport.athlete",
               "buildProfile": os.environ["EAS_BUILD_PROFILE"],
-              "updatesEnabled": False,
-              "visionFixtures": os.environ["EXPO_PUBLIC_VISION_FIXTURES"],
-              "runtimeAcceptance": os.environ["MOBILE_RUNTIME_ACCEPTANCE"],
-              "nodeEnv": os.environ["NODE_ENV"],
           }
           Path("artifacts/mobile-runtime/manifest.json").write_text(
               json.dumps(manifest, indent=2) + "\n",

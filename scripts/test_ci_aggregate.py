@@ -61,17 +61,21 @@ BASE_OUTPUT_KEYS = (
     "docs",
     "visual",
     "ci_core",
+    "lane_python",
+    "lane_javascript",
 )
 
 ROUTE_TABLE = {
-    "backend": ("backend", "scripts-python", "codeql"),
-    "telemetry": ("telemetry", "codeql"),
-    "mobile": ("mobile", "security", "codeql"),
-    "admin": ("admin", "audit", "security", "e2e", "codeql"),
-    "packages": ("mobile", "admin", "repo-assets", "codeql"),
+    "backend": ("backend", "scripts-python"),
+    "telemetry": ("telemetry",),
+    "mobile": ("mobile", "security"),
+    "admin": ("admin", "audit", "security", "e2e"),
+    "packages": ("mobile", "admin", "repo-assets"),
     "scripts": ("scripts-python", "audit"),
     "docs": ("docs-links",),
     "visual": ("mobile-visual-contract",),
+    "lane_python": ("codeql",),
+    "lane_javascript": ("codeql",),
 }
 
 PATH_OUTPUT_KEYS = tuple(ROUTE_TABLE.keys())
@@ -472,7 +476,11 @@ class AggregateScriptTests(unittest.TestCase):
     # ---- combined outputs ---------------------------------------------------
 
     def test_combined_backend_and_docs_pass(self):
-        outputs = _base_outputs({"backend": "true", "docs": "true"})
+        outputs = _base_outputs({
+            "backend": "true",
+            "docs": "true",
+            "lane_python": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -483,7 +491,11 @@ class AggregateScriptTests(unittest.TestCase):
         )
 
     def test_combined_mobile_and_admin_pass(self):
-        outputs = _base_outputs({"mobile": "true", "admin": "true"})
+        outputs = _base_outputs({
+            "mobile": "true",
+            "admin": "true",
+            "lane_javascript": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -494,7 +506,11 @@ class AggregateScriptTests(unittest.TestCase):
         )
 
     def test_combined_packages_and_scripts_pass(self):
-        outputs = _base_outputs({"packages": "true", "scripts": "true"})
+        outputs = _base_outputs({
+            "packages": "true",
+            "scripts": "true",
+            "lane_javascript": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -513,7 +529,12 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertEqual(expected, {"affected-test-plan", "mobile-visual-contract", "docs-links"})
 
     def test_combined_backend_telemetry_docs_pass(self):
-        outputs = _base_outputs({"backend": "true", "telemetry": "true", "docs": "true"})
+        outputs = _base_outputs({
+            "backend": "true",
+            "telemetry": "true",
+            "docs": "true",
+            "lane_python": "true",
+        })
         needs = _realistic_partial_needs(outputs)
         ok, reasons = self._eval(needs, "pull_request")
         self.assertTrue(ok, reasons)
@@ -656,6 +677,28 @@ class AggregateScriptTests(unittest.TestCase):
         self.assertTrue(any("backend" in r or "missing" in r.lower() for r in reasons), reasons)
 
     # ---- scripts-only regression (audit routing fix) ----------------------
+
+    def test_python_lane_requires_codeql_without_javascript_lane(self):
+        needs = _realistic_partial_needs(
+            {"backend": "true", "lane_python": "true"}
+        )
+        self.assertEqual(needs["codeql"]["result"], "success")
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_non_language_package_change_does_not_require_codeql(self):
+        needs = _realistic_partial_needs({"packages": "true"})
+        self.assertEqual(needs["codeql"]["result"], "skipped")
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
+
+    def test_javascript_lane_requires_codeql(self):
+        needs = _realistic_partial_needs(
+            {"admin": "true", "lane_javascript": "true"}
+        )
+        self.assertEqual(needs["codeql"]["result"], "success")
+        ok, reasons = self._eval(needs, "pull_request")
+        self.assertTrue(ok, reasons)
 
     def test_scripts_only_admin_skipped_audit_success_pass(self):
         needs = _realistic_partial_needs({"scripts": "true"})

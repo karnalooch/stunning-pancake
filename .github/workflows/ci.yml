@@ -27,17 +27,27 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       telemetry: ${{ steps.filter.outputs.telemetry }}
-      mobile: ${{ steps.filter.outputs.mobile }}
+      mobile: ${{ steps.classifier.outputs.lane_mobile_runtime }}
       admin: ${{ steps.filter.outputs.admin }}
       packages: ${{ steps.filter.outputs.packages }}
       scripts: ${{ steps.filter.outputs.scripts }}
-      docs: ${{ steps.filter.outputs.docs }}
-      visual: ${{ steps.filter.outputs.visual }}
+      docs: ${{ steps.classifier.outputs.lane_docs_policy }}
+      visual: ${{ steps.classifier.outputs.visual_contract_required }}
+      mobile_assets: ${{ steps.classifier.outputs.lane_mobile_assets }}
+      mobile_asset_only: ${{ steps.classifier.outputs.lane_mobile_asset_only }}
+      mobile_native: ${{ steps.classifier.outputs.lane_mobile_native }}
+      lane_python: ${{ steps.classifier.outputs.lane_python }}
+      lane_javascript: ${{ steps.classifier.outputs.lane_javascript }}
+      lane_docs_policy: ${{ steps.classifier.outputs.lane_docs_policy }}
+      lane_infra: ${{ steps.classifier.outputs.lane_infra }}
+      full_release: ${{ steps.classifier.outputs.lane_full_release }}
       ci_core: ${{ steps.filter.outputs.ci_core }}
       workflow: ${{ steps.filter.outputs.workflow }}
       full: ${{ steps.full.outputs.run }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
       - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3
         id: filter
         with:
@@ -47,7 +57,14 @@ jobs:
             telemetry:
               - 'telemetry/**'
             mobile:
-              - 'mobile/**'
+              - 'mobile/src/**'
+              - 'mobile/__tests__/**'
+              - 'mobile/.maestro/**'
+              - 'mobile/locales/**'
+              - 'mobile/*.js'
+              - 'mobile/*.ts'
+              - 'mobile/*.tsx'
+              - 'mobile/*.json'
             admin:
               - 'admin/**'
             packages:
@@ -60,7 +77,6 @@ jobs:
             scripts:
               - 'scripts/**'
               - '**/*railway.json'
-              - 'assets/**'
               - 'pyproject.toml'
               - 'docker-compose.prod.yml'
               - 'version.json'
@@ -70,16 +86,22 @@ jobs:
               - 'mobile/app.config.js'
               - 'mobile/eas.json'
               - 'admin/package.json'
-              - 'CHANGELOG.md'
             docs:
               - 'docs/**'
               - 'README.md'
               - 'CHANGELOG.md'
               - 'CONTRIBUTING.md'
+              - 'SECURITY.md'
+              - 'AGENTS.md'
               - 'scripts/check_docs_links.py'
               - 'scripts/check_docs_i18n.py'
             visual:
-              - 'mobile/**'
+              - 'mobile/assets/**'
+              - 'mobile/src/assets/**'
+              - 'mobile/src/screens/**'
+              - 'mobile/src/components/**'
+              - 'mobile/src/theme/**'
+              - 'mobile/src/design-contract/**'
               - 'assets/**'
               - 'docs/design/**'
               - 'docs/adr/**'
@@ -87,9 +109,6 @@ jobs:
               - 'docs/pl/adr/**'
               - 'docs/TAKEOVER_PLAN_CURRENT.md'
               - 'packages/tokens/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
               - 'scripts/audit-screen-tokens.ts'
               - 'scripts/validate_mobile_asset_governance.py'
               - 'scripts/test_validate_mobile_asset_governance.py'
@@ -112,14 +131,25 @@ jobs:
               - 'scripts/test_ci_aggregate.py'
               - 'scripts/test_ci_mobile_path_filter.py'
               - 'scripts/test_ci_visual_path_filter.py'
+              - 'scripts/test_ci_change_classifier.py'
               - 'turbo.json'
             workflow:
               - '.github/workflows/**'
+      - name: Classify CI lanes
+        id: classifier
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT" \
+            --github-summary "$GITHUB_STEP_SUMMARY"
       - id: full
         run: |
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "push" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ]; then
+          elif [ "${{ steps.filter.outputs.workflow }}" = "true" ] || [ "${{ steps.filter.outputs.ci_core }}" = "true" ] || [ "${{ steps.classifier.outputs.full_fallback }}" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -493,8 +523,14 @@ jobs:
       - name: Test CI mobile path routing
         run: python -m unittest scripts/test_ci_mobile_path_filter.py
 
+      - name: Test lane-based change classifier wiring
+        run: python -m unittest scripts/test_ci_change_classifier.py -v
+
       - name: Test mobile Android harness contract
         run: python -m unittest scripts/test_mobile_harness_contract.py -v
+
+      - name: Test cost-aware Mobile Native Smoke routing
+        run: python -m unittest scripts/test_mobile_native_smoke_workflow.py -v
 
       - name: Test mobile runtime/appVersion boundary
         run: python -m unittest scripts/test_mobile_runtime_boundary.py -v
@@ -604,10 +640,18 @@ jobs:
       - name: Test visual authority validator
         run: python -m unittest scripts/test_validate_mobile_visual_authority.py -v
 
+      - name: Asset-only governance test
+        if: needs.changes.outputs.mobile_asset_only == 'true'
+        run: |
+          pnpm --dir mobile test --ci --forceExit --runTestsByPath \
+            __tests__/assets/assetGovernance.test.ts
+
       - name: Mobile visual contract TypeScript check
+        if: needs.changes.outputs.mobile_asset_only != 'true'
         run: pnpm --dir mobile typecheck
 
       - name: Mobile visual foundation tests
+        if: needs.changes.outputs.mobile_asset_only != 'true'
         run: |
           pnpm --dir mobile test --ci --forceExit --runTestsByPath \
             __tests__/assets/assetGovernance.test.ts \
@@ -798,42 +842,92 @@ jobs:
   # Findings are uploaded to GitHub Code Scanning; execution failures block
   # the aggregate gate.
   # ──────────────────────────────────────────
-  codeql:
-    name: CodeQL SAST
+  codeql-python:
+    name: CodeQL Python
     runs-on: ubuntu-latest
     needs: [changes]
-    if: |
-      needs.changes.outputs.full == 'true' ||
-      needs.changes.outputs.backend == 'true' ||
-      needs.changes.outputs.telemetry == 'true' ||
-      needs.changes.outputs.mobile == 'true' ||
-      needs.changes.outputs.admin == 'true' ||
-      needs.changes.outputs.packages == 'true'
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.lane_python == 'true'
     permissions:
       contents: read
       security-events: write
       actions: read
       packages: read
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [javascript-typescript, python]
-
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-
-      - name: Initialize CodeQL
+      - name: Initialize CodeQL Python
         uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
-          languages: ${{ matrix.language }}
+          languages: python
           build-mode: none
           queries: security-extended
-
-      - name: Analyze with CodeQL
+      - name: Analyze Python with CodeQL
         uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
         with:
-          category: "/language:${{ matrix.language }}"
+          category: /language:python
 
+  codeql-javascript:
+    name: CodeQL JavaScript/TypeScript
+    runs-on: ubuntu-latest
+    needs: [changes]
+    if: needs.changes.outputs.full == 'true' || needs.changes.outputs.lane_javascript == 'true'
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - name: Initialize CodeQL JavaScript/TypeScript
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+          queries: security-extended
+      - name: Analyze JavaScript/TypeScript with CodeQL
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: /language:javascript-typescript
+
+  codeql:
+    name: CodeQL SAST
+    runs-on: ubuntu-latest
+    needs: [changes, codeql-python, codeql-javascript]
+    if: |
+      always() && (
+        needs.changes.outputs.full == 'true' ||
+        needs.changes.outputs.lane_python == 'true' ||
+        needs.changes.outputs.lane_javascript == 'true'
+      )
+    steps:
+      - name: Enforce language-specific CodeQL lanes
+        env:
+          FULL: ${{ needs.changes.outputs.full }}
+          PYTHON_EXPECTED: ${{ needs.changes.outputs.lane_python }}
+          JAVASCRIPT_EXPECTED: ${{ needs.changes.outputs.lane_javascript }}
+          PYTHON_RESULT: ${{ needs['codeql-python'].result }}
+          JAVASCRIPT_RESULT: ${{ needs['codeql-javascript'].result }}
+        run: |
+          set -euo pipefail
+          if [ "$FULL" = "true" ]; then
+            PYTHON_EXPECTED=true
+            JAVASCRIPT_EXPECTED=true
+          fi
+          check_lane() {
+            expected="$1"
+            result="$2"
+            label="$3"
+            if [ "$expected" = "true" ]; then
+              if [ "$result" != "success" ]; then
+                echo "$label expected success, got $result" >&2
+                exit 1
+              fi
+            elif [ "$result" != "skipped" ] && [ "$result" != "success" ]; then
+              echo "$label unexpected result: $result" >&2
+              exit 1
+            fi
+          }
+          check_lane "$PYTHON_EXPECTED" "$PYTHON_RESULT" "CodeQL Python"
+          check_lane "$JAVASCRIPT_EXPECTED" "$JAVASCRIPT_RESULT" "CodeQL JavaScript/TypeScript"
   # ──────────────────────────────────────────
   # Dependency Review: block PRs that introduce HIGH/CRITICAL vulnerable
   # dependencies. Dependabot remains the post-merge monitor.
@@ -994,150 +1088,6 @@ jobs:
           name: playwright-report
           path: admin/playwright-report/
           retention-days: 7
-
-  # ──────────────────────────────────────────
-  # One-shot repository branch cleanup for PR #266.
-  # Preserves every unique unmerged tip as a lightweight archive tag first.
-  # ──────────────────────────────────────────
-  prune-non-dependabot-branches:
-    name: Archive and prune non-Dependabot branches
-    if: github.event_name == 'pull_request' && github.event.pull_request.number == 266
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-    steps:
-      - name: Preserve unique tips as tags, then delete branches
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          KEEP_BRANCH: ${{ github.event.pull_request.head.ref }}
-        run: |
-          python - <<'PY'
-          import json
-          import os
-          import re
-          import urllib.error
-          import urllib.parse
-          import urllib.request
-
-          repository = os.environ["REPOSITORY"]
-          token = os.environ["GH_TOKEN"]
-          keep_branch = os.environ["KEEP_BRANCH"]
-          archive_prefix = "archive/branch-cleanup-2026-09-25"
-
-          headers = {
-              "Accept": "application/vnd.github+json",
-              "Authorization": f"Bearer {token}",
-              "X-GitHub-Api-Version": "2022-11-28",
-              "User-Agent": "4velo-aggressive-branch-cleanup",
-          }
-
-          def api(method, path, payload=None, allow_404=False, allow_422=False):
-              data = None
-              request_headers = dict(headers)
-              if payload is not None:
-                  data = json.dumps(payload).encode("utf-8")
-                  request_headers["Content-Type"] = "application/json"
-              request = urllib.request.Request(
-                  f"https://api.github.com/{path}",
-                  headers=request_headers,
-                  data=data,
-                  method=method,
-              )
-              try:
-                  with urllib.request.urlopen(request) as response:
-                      body = response.read()
-                      return response.status, (json.loads(body) if body else None)
-              except urllib.error.HTTPError as exc:
-                  body = exc.read().decode("utf-8", errors="replace")
-                  if exc.code == 404 and allow_404:
-                      return exc.code, None
-                  if exc.code == 422 and allow_422:
-                      return exc.code, json.loads(body) if body else None
-                  raise RuntimeError(
-                      f"{method} {path} failed: {exc.code} {body}"
-                  ) from exc
-
-          branches = []
-          page = 1
-          while True:
-              _, batch = api(
-                  "GET",
-                  f"repos/{repository}/branches?per_page=100&page={page}",
-              )
-              batch = batch or []
-              branches.extend(batch)
-              if len(batch) < 100:
-                  break
-              page += 1
-
-          deleted = []
-          archived = []
-          skipped = []
-
-          for item in branches:
-              name = item["name"]
-              sha = item["commit"]["sha"]
-
-              if name == "main" or name == keep_branch or name.startswith("dependabot/"):
-                  skipped.append(name)
-                  continue
-              if item.get("protected"):
-                  raise SystemExit(f"Refused to delete protected branch {name!r}")
-
-              encoded_name = urllib.parse.quote(name, safe="")
-              _, comparison = api(
-                  "GET",
-                  f"repos/{repository}/compare/main...{encoded_name}",
-              )
-              ahead_by = int((comparison or {}).get("ahead_by", -1))
-              if ahead_by < 0:
-                  raise SystemExit(f"Could not verify comparison for {name!r}")
-
-              if ahead_by > 0:
-                  slug = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-")
-                  tag_name = f"{archive_prefix}/{slug}-{sha[:8]}"
-                  encoded_tag = urllib.parse.quote(tag_name, safe="")
-                  status, existing = api(
-                      "GET",
-                      f"repos/{repository}/git/ref/tags/{encoded_tag}",
-                      allow_404=True,
-                  )
-                  if status == 404:
-                      status, created = api(
-                          "POST",
-                          f"repos/{repository}/git/refs",
-                          {"ref": f"refs/tags/{tag_name}", "sha": sha},
-                          allow_422=True,
-                      )
-                      if status == 422:
-                          _, existing = api(
-                              "GET",
-                              f"repos/{repository}/git/ref/tags/{encoded_tag}",
-                          )
-                          if existing["object"]["sha"] != sha:
-                              raise SystemExit(
-                                  f"Archive tag collision for {name!r}: {tag_name}"
-                              )
-                      else:
-                          archived.append((name, tag_name, sha))
-                  elif existing["object"]["sha"] != sha:
-                      raise SystemExit(
-                          f"Archive tag {tag_name!r} points at unexpected SHA"
-                      )
-
-              api("DELETE", f"repos/{repository}/git/refs/heads/{encoded_name}")
-              deleted.append((name, sha, ahead_by))
-
-          print(f"Deleted {len(deleted)} non-Dependabot branches.")
-          print(f"Created {len(archived)} archive tags.")
-          for name, sha, ahead_by in deleted:
-              print(f"DELETE {name} {sha} ahead_by={ahead_by}")
-          for name, tag_name, sha in archived:
-              print(f"ARCHIVE {name} -> {tag_name} ({sha})")
-          print("Kept:", ", ".join(sorted(skipped)))
-          PY
 
   # ──────────────────────────────────────────
   # Aggregate gate: single required CI signal (T22)

@@ -14,11 +14,17 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+if __package__:
+    from .plan_affected_tests import is_mobile_native_affecting_path
+else:
+    from plan_affected_tests import is_mobile_native_affecting_path
+
 API_ROOT = "https://api.github.com"
 GRAPHQL_URL = "https://api.github.com/graphql"
 ELIGIBLE_MARKER = re.compile(r"(?mi)^Auto-merge:\s*eligible\s*$")
 MANUAL_MARKER = re.compile(r"(?mi)^Auto-merge:\s*manual\s*$")
 REQUIRED_CHECKS = ("Aggregate CI gate", "Kilo Code Review")
+NATIVE_BUILD_CHECK = "Android clean prebuild + debug compile"
 
 RISKY_PREFIXES = (
     ".github/",
@@ -28,6 +34,9 @@ RISKY_PREFIXES = (
     "deploy/",
     "deployment/",
     "helm/",
+    "mobile/android/",
+    "mobile/ios/",
+    "mobile/plugins/",
 )
 RISKY_EXACT = {
     "AGENTS.md",
@@ -42,6 +51,9 @@ RISKY_EXACT = {
     "mobile/package.json",
     "mobile/eas.json",
     "mobile/app.config.js",
+    "mobile/app.json",
+    "mobile/google-services.json",
+    "mobile/GoogleService-Info.plist",
     "admin/package.json",
 }
 RISKY_BASENAMES = {
@@ -185,6 +197,17 @@ def risky_paths(paths: Iterable[str]) -> list[str]:
     return sorted(path for path in paths if is_risky_path(path))
 
 
+def is_native_affecting_path(path: str) -> bool:
+    return is_mobile_native_affecting_path(path)
+
+
+def required_checks_for_paths(paths: Iterable[str]) -> tuple[str, ...]:
+    values = tuple(paths)
+    if any(is_native_affecting_path(path) for path in values):
+        return (*REQUIRED_CHECKS, NATIVE_BUILD_CHECK)
+    return REQUIRED_CHECKS
+
+
 def latest_check_conclusions(check_runs: Iterable[dict[str, Any]]) -> dict[str, str | None]:
     latest: dict[str, tuple[int, str | None]] = {}
     for run in check_runs:
@@ -203,11 +226,14 @@ def latest_check_conclusions(check_runs: Iterable[dict[str, Any]]) -> dict[str, 
     return {name: value[1] for name, value in latest.items()}
 
 
-def missing_required_checks(check_runs: Iterable[dict[str, Any]]) -> list[str]:
+def missing_required_checks(
+    check_runs: Iterable[dict[str, Any]],
+    required_checks: Iterable[str] = REQUIRED_CHECKS,
+) -> list[str]:
     conclusions = latest_check_conclusions(check_runs)
     return [
         name
-        for name in REQUIRED_CHECKS
+        for name in required_checks
         if conclusions.get(name) != "success"
     ]
 
@@ -302,6 +328,61 @@ def list_open_pull_requests(api: GitHubApi, repository: str) -> list[dict[str, A
     if len(pulls) >= 100:
         raise AutomationError("100 open pull requests returned; refusing incomplete scan")
     return pulls
+
+
+def retarget_stacked_children(
+    api: GitHubApi,
+    *,
+    repository: str,
+    repository_owner: str,
+    pull_requests: Iterable[dict[str, Any]],
+    merged_parent_number: str,
+    merged_head_ref: str,
+    merged_base_ref: str,
+) -> int:
+    """Retarget direct stacked children after their parent is merged.
+
+    This only changes PR metadata (base branch). It never rewrites a child
+    branch, never force-pushes, and deliberately returns control to GitHub so
+    fresh CI can run against the new base before any merge evaluation.
+    """
+    if not merged_head_ref or merged_base_ref != "main":
+        return 0
+
+    retargeted = 0
+    for pr in pull_requests:
+        if pr.get("base", {}).get("ref") != merged_head_ref:
+            continue
+
+        number = int(pr["number"])
+        if pr.get("head", {}).get("repo", {}).get("full_name") != repository:
+            print_block(number, "stack child is from a fork; refusing automatic retarget")
+            continue
+        if pr.get("user", {}).get("login") != repository_owner:
+            print_block(number, "stack child author is not repository owner")
+            continue
+
+        updated, _headers = api.rest(
+            "PATCH",
+            f"/repos/{repository}/pulls/{number}",
+            {"base": merged_base_ref},
+        )
+        if (
+            not isinstance(updated, dict)
+            or updated.get("base", {}).get("ref") != merged_base_ref
+        ):
+            raise AutomationError(
+                f"PR #{number} retarget did not confirm base={merged_base_ref!r}"
+            )
+
+        print(
+            f"auto-merge: PR #{number} RETARGETED "
+            f"{merged_head_ref} -> {merged_base_ref} after parent "
+            f"#{merged_parent_number or '?'} merged; waiting for fresh checks"
+        )
+        retargeted += 1
+
+    return retargeted
 
 
 def list_changed_files(
@@ -412,8 +493,10 @@ def evaluate_pull_request(
     if not head_sha:
         raise AutomationError(f"PR #{number} has no head SHA")
 
+    required_checks = required_checks_for_paths(paths)
     missing_checks = missing_required_checks(
-        list_check_runs(api, repository, head_sha)
+        list_check_runs(api, repository, head_sha),
+        required_checks,
     )
     if missing_checks:
         print_block(number, "required checks not green: " + ", ".join(missing_checks))
@@ -526,6 +609,27 @@ def main() -> int:
 
         api = GitHubApi(token)
         pulls = list_open_pull_requests(api, repository)
+
+        event_name = os.environ.get("AUTOMATION_EVENT_NAME", "")
+        event_action = os.environ.get("AUTOMATION_EVENT_ACTION", "")
+        merged = os.environ.get("AUTOMATION_PR_MERGED", "").lower() == "true"
+        if event_name == "pull_request_target" and event_action == "closed" and merged:
+            retargeted = retarget_stacked_children(
+                api,
+                repository=repository,
+                repository_owner=repository_owner,
+                pull_requests=pulls,
+                merged_parent_number=os.environ.get("AUTOMATION_PR_NUMBER", ""),
+                merged_head_ref=os.environ.get("AUTOMATION_PR_HEAD_REF", ""),
+                merged_base_ref=os.environ.get("AUTOMATION_PR_BASE_REF", ""),
+            )
+            if retargeted:
+                print(
+                    f"auto-merge: retargeted {retargeted} stacked child PR(s); "
+                    "fresh checks must complete before further evaluation"
+                )
+                return 0
+
         eligible = [
             pr for pr in pulls if auto_merge_mode(pr.get("body")) == "eligible"
         ]
