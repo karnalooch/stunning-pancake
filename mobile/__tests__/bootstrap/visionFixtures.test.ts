@@ -28,13 +28,14 @@ describe('visionFixtures', () => {
     expect(isVisionFixtures()).toBe(false);
   });
 
-  test('profile fixture matches vision/12_profile.png', () => {
+  test('profile fixture provides deterministic truthful ride metrics', () => {
     expect(VISION_PROFILE.username).toBe('Anna K.');
     expect(VISION_PROFILE.level).toBe(12);
     expect(VISION_PROFILE.xpCurrent).toBe(3850);
     expect(VISION_PROFILE.xpMax).toBe(5000);
-    expect(VISION_PROFILE.stats).toEqual({ km: 342, rides: 28, kom: 12 });
-    expect(VISION_PROFILE.achievements).toHaveLength(10);
+    expect(VISION_PROFILE.streakDays).toBe(6);
+    expect(VISION_PROFILE.stats).toEqual({ km: 342, rides: 28, verified: 12 });
+    expect('achievements' in VISION_PROFILE).toBe(false);
   });
 
   test('city hub fixture matches vision/05_compete_hub.png', () => {
