@@ -8,11 +8,25 @@
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
 | **Runtime changes in this document** | None |
-| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |\n| **Repo implementation** | **COMPLETE across production mobile screens as of 2026-09-27 / PR #298; physical T84 validation still pending** |
+| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+| **Repo implementation** | **COMPLETE across production mobile screens as of 2026-09-27 / PR #298; physical T84 validation still pending** |
 
 ## 0. Visual authority
 
 This contract is subordinate to `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md`. All pre-takeover mobile visual decisions, mockups, old generated assets and previous SSOT claims are historical/non-normative when they conflict with Frozen UI v1.2.
+
+## 0.1 Implementation checkpoint — 2026-09-27
+
+Repository implementation across production mobile screens is complete after T83-D / PR #298.
+
+Evidence: [Frozen UI v1.2 production screen implementation audit](./FROZEN_UI_V1_2_PRODUCTION_SCREEN_AUDIT_2026-09-27.md).
+
+The checkpoint is intentionally narrower than pilot acceptance:
+
+- production screens no longer use routine legacy arcade/RPG chrome in conflict with this contract;
+- `SceneBackground` remains intentionally valid in Onboarding because this contract explicitly permits pixel-art onboarding scenery and identity moments;
+- `VisionGalleryScreen` remains a developer/visual inspection surface and is not classified as ordinary production product UI;
+- physical Android usability, outdoor readability, first-use and one-handed validation remain T84 and are **not** implied by repo completion.
 
 ## 1. Product character
 
