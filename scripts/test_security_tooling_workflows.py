@@ -168,7 +168,8 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         self.assertIn("workflow_dispatch", trigger)
         self.assertIn("schedule", trigger)
         self.assertIn("push", trigger)
-        self.assertNotIn("pull_request", trigger)
+        self.assertIn("pull_request", trigger)
+        self.assertIn(".github/workflows/full-release.yml", trigger["pull_request"]["paths"])
         self.assertEqual(trigger["schedule"][0]["cron"], "15 2 * * *")
         self.assertEqual(trigger["push"]["tags"], ["v*.*.*"])
 
@@ -182,6 +183,7 @@ class FullReleaseLaneContractTests(unittest.TestCase):
             jobs["android-native"]["uses"],
             "./.github/workflows/mobile-native-smoke.yml",
         )
+        self.assertIs(jobs["android-native"]["with"]["release"], True)
         self.assertEqual(
             jobs["home-lab"]["uses"],
             "./.github/workflows/home-lab.yml",
