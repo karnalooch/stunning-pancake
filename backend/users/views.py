@@ -709,16 +709,12 @@ class UserUpdateView(generics.UpdateAPIView):
 
 
 class UserDeleteView(generics.DestroyAPIView):
-    """Admin deletes a user."""
+    """GLOBAL_OWNER deletes a user. TENANT_ADMIN has users.edit, not users.delete."""
 
     queryset = User.objects.all()
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated, IsGlobalOwner)
 
     def delete(self, request, *args, **kwargs):
-        user_role = getattr(request.user, "role", None)
-        if user_role not in ("GLOBAL_OWNER", "TENANT_ADMIN"):
-            return error("Only admins can delete users.", status_code=status.HTTP_403_FORBIDDEN)
-
         try:
             target = _scoped_user_queryset(request).get(pk=kwargs["pk"])
             # In SQLite-based test runs, FK "SET NULL" enforcement can be flaky
