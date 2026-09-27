@@ -1,23 +1,38 @@
 /* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+
+import { Metric } from '../components/product/Metric';
+import { PrimaryButton } from '../components/product/PrimaryButton';
+import { ProductCard } from '../components/product/ProductCard';
+import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
+import { EmptyState } from '../components/ui/EmptyState';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { getVisionActivityHistoryFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
 import { useI18n } from '../i18n/useI18n';
 import { ActivityService, type ActivityItem } from '../services/api';
 import { OfflineCacheService } from '../services/OfflineCacheService';
-import { EmptyState } from '../components/ui/EmptyState';
-import { SkeletonBlock } from '../components/ui/SkeletonBlock';
-import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
-import { OrnateFrame } from '../components/ui/OrnateFrame';
-import { PixelText } from '../components/PixelText';
-import { getVisionActivityHistoryFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
+import { getSemanticColors } from '../theme/semantic';
 
-const stylesheet = StyleSheet.create(theme => {
-  const c = theme.colors as Record<string, string>;
+const stylesheet = StyleSheet.create((theme) => {
+  const semantic = getSemanticColors(theme.colors);
   return {
-    container: { flex: 1, backgroundColor: c.background },
-    content: { padding: 16, gap: 10 },
-    label: { fontSize: 10, color: c.secondary, textTransform: 'uppercase' },
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
+    content: {
+      padding: 16,
+      paddingBottom: 40,
+      gap: 10,
+    },
+    metricGrid: {
+      gap: 10,
+    },
+    retry: {
+      marginTop: 2,
+    },
   };
 });
 
@@ -26,32 +41,50 @@ export const PerformanceTrendsScreen: React.FC = () => {
   const s = stylesheet;
   const [history, setHistory] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [offline, setOffline] = useState(false);
+  const [usingCached, setUsingCached] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     const fixture = getVisionActivityHistoryFixture(isVisionFixtures());
     if (fixture) {
       setHistory(fixture as unknown as ActivityItem[]);
-      setOffline(false);
+      setUsingCached(false);
+      setLoadError(false);
       setLoading(false);
       return;
     }
+
     const cached = OfflineCacheService.getHistory();
-    if (cached?.length) {
+    const hasCachedHistory = Boolean(cached?.length);
+    if (hasCachedHistory && cached) {
       setHistory(cached);
-      setOffline(true);
+      setUsingCached(true);
     }
+
+    setLoadError(false);
     setLoading(true);
     ActivityService.getHistory()
       .then((rows) => {
         const list = Array.isArray(rows) ? rows : [];
         OfflineCacheService.setHistory(list);
         setHistory(list);
-        setOffline(false);
+        setUsingCached(false);
+        setLoadError(false);
       })
-      .catch(() => setOffline(true))
+      .catch(() => {
+        if (hasCachedHistory) {
+          setUsingCached(true);
+        } else {
+          setHistory([]);
+          setLoadError(true);
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const stats = useMemo(() => {
     const recent = history.slice(0, 8);
@@ -60,8 +93,8 @@ export const PerformanceTrendsScreen: React.FC = () => {
       (acc, item) => acc + (item.duration != null && Number.isFinite(item.duration) ? item.duration : 0),
       0,
     );
-    const avgSpeedKmh =
-      totalSeconds > 0 ? (totalDistanceKm / totalSeconds) * 3600 : 0;
+    const avgSpeedKmh = totalSeconds > 0 ? (totalDistanceKm / totalSeconds) * 3600 : 0;
+
     return {
       rides: recent.length,
       distanceKm: totalDistanceKm,
@@ -72,35 +105,46 @@ export const PerformanceTrendsScreen: React.FC = () => {
   return (
     <View style={s.container}>
       <ScrollView contentContainerStyle={s.content}>
-        {offline ? (
+        {usingCached ? (
           <EdgeStateBanner
             title={t.errors.network}
             message={t.errors.offlineCache}
             variant="offline"
           />
         ) : null}
-        {loading ? (
+
+        {loading && history.length === 0 ? (
           <SkeletonBlock height={220} />
+        ) : loadError && history.length === 0 ? (
+          <View style={s.metricGrid}>
+            <EdgeStateBanner
+              title={t.errors.network}
+              message={t.training.loadErrorHint}
+              variant="error"
+            />
+            <View style={s.retry}>
+              <PrimaryButton label={t.common.retry} onPress={load} />
+            </View>
+          </View>
         ) : stats.rides === 0 ? (
-          <EmptyState message={t.demo.trendsEmpty} icon="training" hint={t.settings.trends} />
+          <ProductCard>
+            <EmptyState message={t.demo.trendsEmpty} hint={t.settings.trends} icon="training" />
+          </ProductCard>
         ) : (
-          <>
-             <OrnateFrame>
-              <PixelText style={s.label}>{t.profile.rides}</PixelText>
-              <PixelText size="2xl" color="text">{stats.rides}</PixelText>
-              <PixelText size="sm" color="secondary">{t.trends.lastActivities}</PixelText>
-            </OrnateFrame>
-            <OrnateFrame>
-              <PixelText style={s.label}>{t.profile.distance}</PixelText>
-              <PixelText size="2xl" color="text">{stats.distanceKm.toFixed(1)} km</PixelText>
-              <PixelText size="sm" color="secondary">{t.trends.rollingLoad}</PixelText>
-            </OrnateFrame>
-            <OrnateFrame>
-              <PixelText style={s.label}>{t.profile.avgSpeed}</PixelText>
-              <PixelText size="2xl" color="text">{stats.avgSpeedKmh.toFixed(1)} km/h</PixelText>
-              <PixelText size="sm" color="secondary">{t.trends.computedFromRideTime}</PixelText>
-            </OrnateFrame>
-          </>
+          <View style={s.metricGrid}>
+            <ProductCard>
+              <Metric value={String(stats.rides)} label={t.trends.lastActivities} />
+            </ProductCard>
+            <ProductCard>
+              <Metric value={`${stats.distanceKm.toFixed(1)} km`} label={t.trends.rollingLoad} />
+            </ProductCard>
+            <ProductCard>
+              <Metric
+                value={`${stats.avgSpeedKmh.toFixed(1)} km/h`}
+                label={t.trends.computedFromRideTime}
+              />
+            </ProductCard>
+          </View>
         )}
       </ScrollView>
     </View>
