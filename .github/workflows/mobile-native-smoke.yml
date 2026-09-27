@@ -45,6 +45,12 @@ on:
       - "scripts/test_mobile_native_provenance.py"
       - ".github/workflows/mobile-native-smoke.yml"
   workflow_call:
+    inputs:
+      release:
+        description: "Build release APK and publish exact-SHA runtime artifact"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -81,9 +87,13 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+          FORCE_RELEASE: ${{ inputs.release || false }}
         run: |
           set -euo pipefail
-          if [ "$EVENT_NAME" != "pull_request" ]; then
+          if [ "$FORCE_RELEASE" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=full-release caller forces native + release validation" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" != "pull_request" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "reason=$EVENT_NAME forces a native smoke" >> "$GITHUB_OUTPUT"
           elif [ "$NATIVE_CHANGED" = "true" ]; then
@@ -222,7 +232,7 @@ jobs:
       # Pull requests prove native/prebuild compatibility with a debug APK only.
       # Release packaging is reserved for main/scheduled/manual/full-release runs.
       - name: Harden Gradle release memory
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.release == true
         working-directory: mobile/android
         run: |
           GRADLE_PROPERTIES="gradle.properties"
@@ -234,12 +244,12 @@ jobs:
           grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
 
       - name: Compile Android release APK
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.release == true
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
 
       - name: Record release artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.release == true
         run: |
           RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
           test -f "$RELEASE_APK"
@@ -247,7 +257,7 @@ jobs:
           ls -lh "$RELEASE_APK"
 
       - name: Prepare exact-SHA runtime artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.release == true
         env:
           SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -286,7 +296,7 @@ jobs:
           PY
 
       - name: Upload exact-SHA runtime artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' || inputs.release == true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mobile-runtime-${{ github.run_id }}
