@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import tempfile
 import time
@@ -38,6 +39,8 @@ class HomeLabTests(unittest.TestCase):
             if line and not line.startswith("#")
         )
         self.assertGreaterEqual(len(values["SECRET_KEY"]), 64)
+        self.assertGreaterEqual(len(values["ADMIN_PASSWORD"]), 20)
+        self.assertNotEqual(values["ADMIN_PASSWORD"], values["DB_PASSWORD"])
         self.assertNotEqual(values["SECRET_KEY"], values["TELEMETRY_INGEST_JWT_SECRET"])
         self.assertEqual(len(decode_key(values["BACKUP_ENCRYPTION_KEY"])), 32)
         self.assertNotEqual(values["BACKUP_ENCRYPTION_KEY"], values["SECRET_KEY"])
@@ -52,6 +55,10 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn('TELEMETRY_INGEST_JWT_REQUIRED: "1"', content)
         self.assertIn(
             "TELEMETRY_INGEST_JWT_SECRET: ${TELEMETRY_INGEST_JWT_SECRET:?err_TELEMETRY_INGEST_JWT_SECRET_not_set}",
+            content,
+        )
+        self.assertIn(
+            "ADMIN_PASSWORD: ${ADMIN_PASSWORD:?err_ADMIN_PASSWORD_not_set}",
             content,
         )
         self.assertIn("db_runtime_role_init:", content)
@@ -91,6 +98,106 @@ class HomeLabTests(unittest.TestCase):
             with patch.object(home_lab, "ENV_FILE", env), self.assertRaises(SystemExit):
                 home_lab.initialize()
             self.assertEqual(env.read_text(), "existing")
+
+    def test_validate_pilot_configuration_accepts_initialized_fail_closed_env(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text(
+                home_lab.render_environment(home_lab.ENV_TEMPLATE.read_text()),
+                encoding="utf-8",
+            )
+            with patch.object(home_lab, "ENV_FILE", env):
+                result = home_lab.validate_pilot_configuration()
+
+        self.assertTrue(result["telemetry_jwt_required"])
+        self.assertTrue(result["telemetry_audience_required"])
+        self.assertEqual(result["telemetry_ack_mode"], "direct-db")
+        self.assertTrue(result["runtime_db_role_separated"])
+        self.assertTrue(result["admin_password_configured"])
+        self.assertTrue(result["backup_encryption_key_valid"])
+
+    def test_validate_pilot_configuration_rejects_unsafe_queue_mode(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            rendered = home_lab.render_environment(home_lab.ENV_TEMPLATE.read_text())
+            env.write_text(
+                rendered.replace("TELEMETRY_INGEST_QUEUE=0", "TELEMETRY_INGEST_QUEUE=1"),
+                encoding="utf-8",
+            )
+            with patch.object(home_lab, "ENV_FILE", env), self.assertRaises(SystemExit):
+                home_lab.validate_pilot_configuration()
+
+    def test_validate_pilot_configuration_rejects_uninitialized_secrets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text(home_lab.ENV_TEMPLATE.read_text(), encoding="utf-8")
+            with patch.object(home_lab, "ENV_FILE", env), self.assertRaises(SystemExit):
+                home_lab.validate_pilot_configuration()
+
+    def test_checked_out_commit_rejects_dirty_checkout(self):
+        with patch.object(
+            home_lab,
+            "run_capture",
+            side_effect=["a" * 40 + "\n", " M scripts/home_lab.py\n"],
+        ), self.assertRaises(SystemExit):
+            home_lab.checked_out_commit()
+
+    def test_check_migrations_uses_django_non_mutating_check(self):
+        with patch.object(home_lab, "require_environment"), patch.object(
+            home_lab, "run"
+        ) as run_mock:
+            home_lab.check_migrations()
+
+        self.assertEqual(
+            run_mock.call_args.args[0][-5:],
+            ["python", "manage.py", "migrate", "--check", "--no-input"],
+        )
+
+    def test_health_contract_includes_global_admin_http_surface(self):
+        self.assertIn(
+            ("global_admin", "http://127.0.0.1:3001/"),
+            home_lab.HEALTH_ENDPOINTS,
+        )
+
+    def test_operator_gate_writes_commit_bound_secret_free_evidence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            backup_path = root / "4velo-home-test.dump.enc"
+            backup_path.write_bytes(b"encrypted")
+            evidence_dir = root / "evidence"
+            configuration = {
+                "telemetry_jwt_required": True,
+                "telemetry_audience_required": True,
+                "telemetry_ack_mode": "direct-db",
+                "rls_runtime_role_guard": True,
+                "demo_seed": False,
+                "runtime_db_role_separated": True,
+                "admin_password_configured": True,
+                "backup_encryption_key_valid": True,
+            }
+            with (
+                patch.object(home_lab, "require_environment"),
+                patch.object(home_lab, "checked_out_commit", return_value="b" * 40),
+                patch.object(home_lab, "validate_pilot_configuration", return_value=configuration),
+                patch.object(home_lab, "run"),
+                patch.object(home_lab, "check_health"),
+                patch.object(home_lab, "check_migrations"),
+                patch.object(home_lab, "backup", return_value=backup_path),
+                patch.object(home_lab, "file_sha256", return_value="c" * 64),
+                patch.object(home_lab, "verify_restore"),
+                patch.object(home_lab, "EVIDENCE_DIR", evidence_dir),
+            ):
+                report_path = home_lab.operator_gate()
+
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(report["overall_status"], "PASS")
+            self.assertEqual(report["git_commit"], "b" * 40)
+            self.assertEqual(report["backup_sha256"], "c" * 64)
+            self.assertTrue(report["isolated_restore_verified"])
+            serialized = report_path.read_text(encoding="utf-8")
+            self.assertNotIn("SECRET_KEY", serialized)
+            self.assertNotIn("ADMIN_PASSWORD", serialized)
+            self.assertNotIn("TELEMETRY_INGEST_JWT_SECRET", serialized)
 
     def test_grant_runtime_role_reapplies_acl_free_restore_permissions(self):
         with patch.object(home_lab, "home_env_value", return_value="4velo_runtime"), patch.object(
