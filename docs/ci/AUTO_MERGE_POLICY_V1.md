@@ -34,12 +34,19 @@ All conditions must hold:
 5. No changed path is classified high-risk.
 6. Latest `Aggregate CI gate` is `success`.
 7. Latest `Kilo Code Review` is `success`.
-8. No reviewer's latest review is `CHANGES_REQUESTED`.
-9. No unresolved review threads exist.
-10. The PR links at least one same-repository closing Issue through GitHub closing references.
-11. GitHub reports the PR mergeable against current `main`.
+8. If the diff can affect the native Android artifact, latest `Android clean prebuild + debug compile` is also `success`.
+9. No reviewer's latest review is `CHANGES_REQUESTED`.
+10. No unresolved review threads exist.
+11. The PR links at least one same-repository closing Issue through GitHub closing references.
+12. GitHub reports the PR mergeable against current `main`.
 
 If the PR is only behind `main`, the workflow uses GitHub's normal update-branch operation and waits for fresh checks. It never force-pushes.
+
+## Stack lifecycle supervision
+
+When a PR targeting `main` is merged, the supervisor inspects open same-repository PRs whose base branch exactly matches the merged PR's head branch. Direct children owned by the repository owner are automatically retargeted to the merged parent's base (`main`). The supervisor then stops that evaluation cycle and waits for GitHub to run fresh CI against the new base before any merge decision is made.
+
+The retarget step changes only PR metadata. It never rebases, cherry-picks, force-pushes, or rewrites the child's branch. Fork children and children authored by another account are never retargeted automatically.
 
 Merge method is squash.
 
@@ -54,6 +61,8 @@ Manual merge remains mandatory for at least:
 - secrets, auth, OAuth and security paths;
 - database migrations;
 - dependency manifests, lockfiles and requirements;
+- committed `mobile/android/**`, `mobile/ios/**` and `mobile/plugins/**` changes;
+- Google Services configuration files;
 - private-key/certificate material.
 
 The implementation is deliberately conservative. A false positive means a manual merge, not a risky automatic merge.
@@ -64,7 +73,7 @@ The privileged workflow uses `pull_request_target` only as a metadata trigger. I
 
 It checks out the repository default branch explicitly with persisted checkout credentials disabled and executes only the already-merged `scripts/auto_merge.py`. The token grants `issues: write` only so the workflow can close same-repository Issues already discovered through `closingIssuesReferences` after a successful merge.
 
-The workflow also re-evaluates on completion of the normal CI pipeline, the Kubernetes Release Gate, and relevant external check runs. Listening to both pipeline completions avoids a race where Aggregate CI and Kilo are green while release-gate checks still leave GitHub mergeability temporarily `unstable`. All privileged evaluations share one repository-wide concurrency group with cancellation disabled, so a newer event cannot interrupt an in-flight merge/Issue-close transaction. GitHub branch protection remains the final authority; the workflow contains no bypass path.
+The workflow re-evaluates on completion of the normal CI pipeline, Mobile Native Smoke, and relevant external check runs. Native-affecting low-risk PRs therefore cannot merge while the Android compile is still running. A 30-minute scheduled watchdog also reconciles eligible PRs in case an event-driven evaluation was missed or raced with GitHub state propagation. All privileged evaluations share one repository-wide concurrency group with cancellation disabled, so a newer event cannot interrupt an in-flight retarget/merge/Issue-close transaction. GitHub branch protection remains the final authority; the workflow contains no bypass path.
 
 ## Agent behavior
 

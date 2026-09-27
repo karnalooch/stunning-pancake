@@ -34,14 +34,32 @@ class AutoMergeWorkflowContractTests(unittest.TestCase):
         self.assertIn("cancel-in-progress: false", self.text)
         self.assertNotIn("github.run_id", self.text)
 
-    def test_workflow_reacts_to_ci_and_review_completion(self):
+    def test_workflow_reacts_to_ci_native_and_review_completion(self):
         self.assertIn(
-            'workflows: ["4VELO CI/CD Pipeline"]',
+            'workflows: ["4VELO CI/CD Pipeline", "Mobile Native Smoke"]',
             self.text,
         )
         self.assertIn("check_run:", self.text)
         self.assertIn("Kilo Code Review", self.text)
         self.assertIn("Aggregate CI gate", self.text)
+        self.assertIn("Android clean prebuild + debug compile", self.text)
+
+    def test_workflow_supervises_stack_handoff_and_has_watchdog(self):
+        self.assertIn(
+            "types: [ready_for_review, reopened, synchronize, edited, closed]",
+            self.text,
+        )
+        self.assertIn('cron: "*/30 * * * *"', self.text)
+        for key in (
+            "AUTOMATION_EVENT_NAME",
+            "AUTOMATION_EVENT_ACTION",
+            "AUTOMATION_PR_MERGED",
+            "AUTOMATION_PR_NUMBER",
+            "AUTOMATION_PR_HEAD_REF",
+            "AUTOMATION_PR_BASE_REF",
+        ):
+            with self.subTest(key=key):
+                self.assertIn(key, self.text)
 
     def test_workflow_executes_checked_in_policy(self):
         self.assertIn("python scripts/auto_merge.py", self.text)

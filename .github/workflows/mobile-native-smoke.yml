@@ -2,17 +2,55 @@ name: Mobile Native Smoke
 
 on:
   pull_request:
+    # Keep the workflow visible for mobile/workspace PRs, but let the cheap
+    # native-scope job decide whether a full Android rebuild is warranted.
     paths:
       - "mobile/**"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
       - "scripts/mobile-runtime-acceptance.ps1"
       - "scripts/test_mobile_harness_contract.py"
+      - "scripts/test_mobile_native_smoke_workflow.py"
       - ".github/workflows/mobile-native-smoke.yml"
+  push:
+    branches: [main]
+    # On main, run the expensive smoke only when native inputs changed.
+    paths:
+      - "mobile/app.config.js"
+      - "mobile/app.json"
+      - "mobile/eas.json"
+      - "mobile/package.json"
+      - "mobile/android/**"
+      - "mobile/ios/**"
+      - "mobile/plugins/**"
+      - "mobile/google-services.json"
+      - "mobile/GoogleService-Info.plist"
+      - "mobile/assets/icon.png"
+      - "mobile/assets/splash-icon.png"
+      - "mobile/assets/adaptive-icon.png"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
+      - "scripts/validate_mobile_native_provenance.py"
+      - "scripts/test_mobile_native_provenance.py"
+      - ".github/workflows/mobile-native-smoke.yml"
+  workflow_call:
+    inputs:
+      release:
+        description: "Build release APK and publish exact-SHA runtime artifact"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -23,8 +61,60 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  native-scope:
+    name: Native scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.decision.outputs.run }}
+      reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Classify native-affecting changes
+        id: classifier
+        if: github.event_name == 'pull_request'
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT"
+      - name: Decide whether Gradle is required
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+          FORCE_RELEASE: ${{ inputs.release || false }}
+        run: |
+          set -euo pipefail
+          if [ "$FORCE_RELEASE" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=full-release caller forces native + release validation" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=$EVENT_NAME forces a native smoke" >> "$GITHUB_OUTPUT"
+          elif [ "$NATIVE_CHANGED" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=JS/UI/assets-only PR; covered by Mobile + Visual Contract" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report native scope
+        run: |
+          echo "### Mobile Native Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run Android build:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
   android-debug:
     name: Android clean prebuild + debug compile
+    needs: [native-scope]
+    if: needs.native-scope.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -132,7 +222,17 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Record debug artifact
+        run: |
+          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$DEBUG_APK"
+          sha256sum "$DEBUG_APK"
+          ls -lh "$DEBUG_APK"
+
+      # Pull requests prove native/prebuild compatibility with a debug APK only.
+      # Release packaging is reserved for main/scheduled/manual/full-release runs.
       - name: Harden Gradle release memory
+        if: github.event_name != 'pull_request' || inputs.release == true
         working-directory: mobile/android
         run: |
           GRADLE_PROPERTIES="gradle.properties"
@@ -144,20 +244,20 @@ jobs:
           grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
 
       - name: Compile Android release APK
+        if: github.event_name != 'pull_request' || inputs.release == true
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
 
-      - name: Record native artifacts
+      - name: Record release artifact
+        if: github.event_name != 'pull_request' || inputs.release == true
         run: |
-          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
           RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
-          test -f "$DEBUG_APK"
           test -f "$RELEASE_APK"
-          sha256sum "$DEBUG_APK"
           sha256sum "$RELEASE_APK"
-          ls -lh "$DEBUG_APK" "$RELEASE_APK"
+          ls -lh "$RELEASE_APK"
 
       - name: Prepare exact-SHA runtime artifact
+        if: github.event_name != 'pull_request' || inputs.release == true
         env:
           SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -196,6 +296,7 @@ jobs:
           PY
 
       - name: Upload exact-SHA runtime artifact
+        if: github.event_name != 'pull_request' || inputs.release == true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mobile-runtime-${{ github.run_id }}

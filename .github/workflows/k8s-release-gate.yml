@@ -5,6 +5,13 @@ concurrency:
 
 
 on:
+  workflow_call:
+    inputs:
+      deploy_target:
+        description: "Deployment target; reusable callers must keep this at none"
+        required: false
+        default: "none"
+        type: string
   pull_request:
     branches: [main]
     paths:
@@ -52,7 +59,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 env:
   PYTHON_VERSION: "3.12"
