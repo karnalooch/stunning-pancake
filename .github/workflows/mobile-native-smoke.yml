@@ -10,6 +10,8 @@ on:
       - "pnpm-workspace.yaml"
       - "scripts/validate_mobile_native_provenance.py"
       - "scripts/test_mobile_native_provenance.py"
+      - "scripts/mobile-runtime-acceptance.ps1"
+      - "scripts/test_mobile_harness_contract.py"
       - ".github/workflows/mobile-native-smoke.yml"
   workflow_dispatch:
 
@@ -67,6 +69,9 @@ jobs:
 
       - name: Native provenance validator tests
         run: python -m unittest scripts/test_mobile_native_provenance.py -v
+
+      - name: Mobile runtime acceptance harness contract
+        run: python -m unittest scripts/test_mobile_harness_contract.py -v
 
       - name: Mobile lint + typecheck
         run: |
