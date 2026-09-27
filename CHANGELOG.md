@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## v0.3.5-dev (2026-09-27) — Exact-SHA mobile runtime acceptance
+
+### Mobile release engineering
+- Hardened the Android runtime-acceptance artifact so GitHub Actions checks out and builds the exact pull-request HEAD instead of the synthetic merge ref.
+- Disabled Expo OTA updates only for the dedicated runtime-acceptance build, ensuring emulator evidence executes the JavaScript bundle embedded in the APK.
+- Added fail-closed provenance checks for built/source SHA parity, deterministic vision fixtures, runtime-acceptance mode, production bundling, and clean app state before screenshots.
+
 ## v0.3.4-dev (2026-09-20) — Mobile native runtime boundary
 
 ### Mobile platform
