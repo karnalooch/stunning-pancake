@@ -93,10 +93,12 @@ export const Users = () => {
 
   useEffect(() => {
     const tid = searchParams.get('tenant_id');
-    if (tid) {
-      setSelectedTenant(tid);
-    } else if (user?.role === 'TENANT_ADMIN' && user.tenantId) {
+    if (user?.role === 'TENANT_ADMIN' && user.tenantId) {
+      // Tenant scope is authoritative for TENANT_ADMIN; a crafted URL filter
+      // must not make the UI/query state claim a different tenant.
       setSelectedTenant(user.tenantId);
+    } else if (tid) {
+      setSelectedTenant(tid);
     }
   }, [searchParams, user?.role, user?.tenantId]);
 
