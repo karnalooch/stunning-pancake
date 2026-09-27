@@ -12,7 +12,7 @@ function activity(
     start_time: startedAt.toISOString(),
     end_time: new Date(startedAt.getTime() + 30 * 60 * 1000).toISOString(),
     distance: distanceMeters,
-    duration: '00:30:00',
+    duration: 1800,
     is_verified: true,
     verification_score: 1,
   };
