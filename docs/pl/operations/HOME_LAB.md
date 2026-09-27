@@ -33,6 +33,8 @@ python scripts/home_lab.py up
 
 `up` waliduje warstwowy model Compose, buduje obrazy, czeka na healthchecki usług, a następnie sprawdza HTTP backendu, telemetrii i panelu GLOBAL_OWNER.
 
+Dla home-labu utworzonego przed T87 **nie** usuwaj i nie generuj ponownie `.env.home` tylko po to, aby dodać to pole — obróciłoby to również hasło bazy i klucze podpisujące. Przed kolejnym `up` dopisz silny lokalny `ADMIN_PASSWORD` do istniejącego prywatnego pliku. Jeżeli konto GLOBAL_OWNER już istnieje, nie zmienia to jego dotychczasowego hasła; akceptacja logowania roli nadal należy do osobnego runtime smoke T86.
+
 Domyślny rdzeń obejmuje PostGIS/TimescaleDB, Redis, Django, telemetry, global admin, podstawowy worker Celery i beat. Dodatki włączaj świadomie:
 
 ```powershell
