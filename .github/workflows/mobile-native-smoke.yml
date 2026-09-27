@@ -214,7 +214,17 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Record debug artifact
+        run: |
+          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$DEBUG_APK"
+          sha256sum "$DEBUG_APK"
+          ls -lh "$DEBUG_APK"
+
+      # Pull requests prove native/prebuild compatibility with a debug APK only.
+      # Release packaging is reserved for main/scheduled/manual/full-release runs.
       - name: Harden Gradle release memory
+        if: github.event_name != 'pull_request'
         working-directory: mobile/android
         run: |
           GRADLE_PROPERTIES="gradle.properties"
@@ -226,20 +236,20 @@ jobs:
           grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
 
       - name: Compile Android release APK
+        if: github.event_name != 'pull_request'
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
 
-      - name: Record native artifacts
+      - name: Record release artifact
+        if: github.event_name != 'pull_request'
         run: |
-          DEBUG_APK="mobile/android/app/build/outputs/apk/debug/app-debug.apk"
           RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
-          test -f "$DEBUG_APK"
           test -f "$RELEASE_APK"
-          sha256sum "$DEBUG_APK"
           sha256sum "$RELEASE_APK"
-          ls -lh "$DEBUG_APK" "$RELEASE_APK"
+          ls -lh "$RELEASE_APK"
 
       - name: Prepare exact-SHA runtime artifact
+        if: github.event_name != 'pull_request'
         env:
           SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -278,6 +288,7 @@ jobs:
           PY
 
       - name: Upload exact-SHA runtime artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mobile-runtime-${{ github.run_id }}
