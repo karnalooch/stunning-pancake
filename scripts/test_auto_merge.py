@@ -9,9 +9,12 @@ from scripts.auto_merge import (
     evaluate_eligible_pull_requests,
     evaluate_pull_request,
     has_changes_requested,
+    is_native_affecting_path,
     is_risky_path,
     latest_check_conclusions,
     missing_required_checks,
+    required_checks_for_paths,
+    retarget_stacked_children,
     risky_paths,
 )
 
@@ -74,6 +77,46 @@ class AutoMergePolicyTests(unittest.TestCase):
                 "backend/users/migrations/0002.py",
             ],
         )
+
+    def test_native_paths_are_classified_conservatively(self):
+        native_paths = (
+            "mobile/app.config.js",
+            "mobile/assets/icon.png",
+            "mobile/android/app/src/main/AndroidManifest.xml",
+            "mobile/plugins/withSomething.js",
+            "pnpm-lock.yaml",
+        )
+        for path in native_paths:
+            with self.subTest(path=path):
+                self.assertTrue(is_native_affecting_path(path))
+
+        for path in (
+            "mobile/src/screens/HomeScreen.tsx",
+            "mobile/__tests__/screens/HomeScreen.test.tsx",
+            "mobile/assets/approved/home_hero_day_v1.jpg",
+            "docs/design/MOBILE_UI_DESIGN_CONTRACT_V1.md",
+        ):
+            with self.subTest(path=path):
+                self.assertFalse(is_native_affecting_path(path))
+
+    def test_native_affecting_low_risk_change_requires_android_compile(self):
+        required = required_checks_for_paths(["mobile/assets/icon.png"])
+        self.assertIn("Aggregate CI gate", required)
+        self.assertIn("Kilo Code Review", required)
+        self.assertIn("Android clean prebuild + debug compile", required)
+
+        missing = missing_required_checks(
+            [
+                {"id": 1, "name": "Aggregate CI gate", "conclusion": "success"},
+                {"id": 2, "name": "Kilo Code Review", "conclusion": "success"},
+            ],
+            required,
+        )
+        self.assertEqual(missing, ["Android clean prebuild + debug compile"])
+
+    def test_js_ui_change_does_not_require_android_compile(self):
+        required = required_checks_for_paths(["mobile/src/screens/HomeScreen.tsx"])
+        self.assertNotIn("Android clean prebuild + debug compile", required)
 
     def test_latest_check_run_wins_by_id(self):
         conclusions = latest_check_conclusions(
@@ -180,6 +223,94 @@ class AutoMergeBatchTests(unittest.TestCase):
 
         self.assertEqual(result, 1)
         self.assertEqual(evaluate.call_count, 2)
+
+
+class StackRetargetApi:
+    def __init__(self):
+        self.calls = []
+
+    def rest(self, method, path, payload=None, *, query=None):
+        self.calls.append((method, path, payload, query))
+        if method == "PATCH" and path.endswith("/pulls/278"):
+            return (
+                {
+                    "number": 278,
+                    "base": {"ref": payload["base"]},
+                },
+                {},
+            )
+        raise AssertionError(f"unexpected REST call: {method} {path}")
+
+
+class AutoMergeStackLifecycleTests(unittest.TestCase):
+    def test_merged_parent_retargets_direct_child_to_main(self):
+        api = StackRetargetApi()
+        result = retarget_stacked_children(
+            api,
+            repository="karnalooch/stunning-pancake",
+            repository_owner="karnalooch",
+            pull_requests=[
+                {
+                    "number": 278,
+                    "base": {"ref": "assets/mobile-ui-v1"},
+                    "head": {
+                        "repo": {"full_name": "karnalooch/stunning-pancake"},
+                    },
+                    "user": {"login": "karnalooch"},
+                    "body": "Auto-merge: manual",
+                }
+            ],
+            merged_parent_number="277",
+            merged_head_ref="assets/mobile-ui-v1",
+            merged_base_ref="main",
+        )
+        self.assertEqual(result, 1)
+        self.assertEqual(
+            api.calls,
+            [
+                (
+                    "PATCH",
+                    "/repos/karnalooch/stunning-pancake/pulls/278",
+                    {"base": "main"},
+                    None,
+                )
+            ],
+        )
+
+    def test_retarget_skips_fork_or_non_owner_child(self):
+        api = StackRetargetApi()
+        result = retarget_stacked_children(
+            api,
+            repository="karnalooch/stunning-pancake",
+            repository_owner="karnalooch",
+            pull_requests=[
+                {
+                    "number": 278,
+                    "base": {"ref": "assets/mobile-ui-v1"},
+                    "head": {"repo": {"full_name": "someone/fork"}},
+                    "user": {"login": "someone"},
+                }
+            ],
+            merged_parent_number="277",
+            merged_head_ref="assets/mobile-ui-v1",
+            merged_base_ref="main",
+        )
+        self.assertEqual(result, 0)
+        self.assertEqual(api.calls, [])
+
+    def test_non_main_parent_merge_is_not_retargeted(self):
+        api = StackRetargetApi()
+        result = retarget_stacked_children(
+            api,
+            repository="karnalooch/stunning-pancake",
+            repository_owner="karnalooch",
+            pull_requests=[],
+            merged_parent_number="277",
+            merged_head_ref="assets/mobile-ui-v1",
+            merged_base_ref="release",
+        )
+        self.assertEqual(result, 0)
+        self.assertEqual(api.calls, [])
 
 
 class FakeApi:

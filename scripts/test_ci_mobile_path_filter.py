@@ -128,6 +128,8 @@ class MobilePathRoutingTests(unittest.TestCase):
     def test_unrelated_paths_do_not_run_mobile_job(self):
         paths = (
             "backend/activities/views.py",
+            "mobile/assets/approved/home_hero_day_v1.jpg",
+            "assets/ASSET_GOVERNANCE_V1.json",
             "docs/PROJECT_TAKEOVER.md",
             "README.md",
         )

@@ -2,12 +2,14 @@ name: Fail-closed auto merge
 
 on:
   pull_request_target:
-    types: [ready_for_review, reopened, synchronize, edited]
+    types: [ready_for_review, reopened, synchronize, edited, closed]
   workflow_run:
-    workflows: ["4VELO CI/CD Pipeline"]
+    workflows: ["4VELO CI/CD Pipeline", "Mobile Native Smoke"]
     types: [completed]
   check_run:
     types: [completed]
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 concurrency:
@@ -26,7 +28,8 @@ jobs:
     if: >-
       github.event_name != 'check_run' ||
       github.event.check_run.name == 'Kilo Code Review' ||
-      github.event.check_run.name == 'Aggregate CI gate'
+      github.event.check_run.name == 'Aggregate CI gate' ||
+      github.event.check_run.name == 'Android clean prebuild + debug compile'
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -45,4 +48,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
+          AUTOMATION_EVENT_NAME: ${{ github.event_name }}
+          AUTOMATION_EVENT_ACTION: ${{ github.event.action || '' }}
+          AUTOMATION_PR_MERGED: ${{ github.event.pull_request.merged || false }}
+          AUTOMATION_PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+          AUTOMATION_PR_HEAD_REF: ${{ github.event.pull_request.head.ref || '' }}
+          AUTOMATION_PR_BASE_REF: ${{ github.event.pull_request.base.ref || '' }}
         run: python scripts/auto_merge.py
