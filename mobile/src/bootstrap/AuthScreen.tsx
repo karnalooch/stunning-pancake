@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Observable } from '@legendapp/state';
 import {
+  ImageBackground,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SceneBackground } from '../components/scene/SceneBackground';
-import { CyclistSprite } from '../components/sprites/CyclistSprite';
+import { APPROVED_ASSETS } from '../assets/approvedAssets';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
 import type { RideEdgeMessage } from '../services/apiRetry';
 import { useI18n } from '../i18n/useI18n';
@@ -110,9 +111,15 @@ export function AuthScreen({
             <Text style={[styles.brandTag, { color: C.hudText }]}>{t.auth.brandTagline}</Text>
           </View>
 
-          <View style={[styles.heroBadge, { borderColor: C.gpGoldLight, backgroundColor: C.hudSurface }]}>
-            <CyclistSprite size={112} state="idle" expressionMode />
-          </View>
+          <ImageBackground
+            source={APPROVED_ASSETS.homeHeroDay}
+            resizeMode="cover"
+            style={[styles.welcomeHero, { borderColor: C.gpGoldLight }]}
+            imageStyle={styles.welcomeHeroImage}
+            testID="auth-welcome-hero-approved"
+          >
+            <View style={[styles.welcomeHeroShade, { backgroundColor: C.scrimSoft }]} />
+          </ImageBackground>
 
           <View style={[styles.welcomePanel, { backgroundColor: C.parchment, borderColor: C.goldAmber }]}>
             <Text style={[styles.eyebrow, { color: C.secondary }]}>{t.auth.welcomeEyebrow}</Text>
@@ -362,13 +369,18 @@ const styles = StyleSheet.create({
   brandBlock: { alignItems: 'center', gap: 4 },
   brand: { fontSize: 38, fontWeight: '900', letterSpacing: 1.5 },
   brandTag: { fontSize: 12, fontWeight: '700', letterSpacing: 2, textTransform: 'uppercase' },
-  heroBadge: {
-    width: 152,
-    height: 152,
+  welcomeHero: {
+    width: '100%',
+    height: 176,
     borderWidth: 1,
-    borderRadius: 76,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  welcomeHeroImage: {
+    borderRadius: 20,
+  },
+  welcomeHeroShade: {
+    ...StyleSheet.absoluteFillObject,
   },
   welcomePanel: {
     width: '100%',
