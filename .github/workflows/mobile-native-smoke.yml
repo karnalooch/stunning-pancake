@@ -99,9 +99,20 @@ jobs:
         working-directory: mobile/android
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
+      - name: Harden Gradle release memory
+        working-directory: mobile/android
+        run: |
+          GRADLE_PROPERTIES="gradle.properties"
+          grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"
+          grep -F -- "-XX:MaxMetaspaceSize=512m" "$GRADLE_PROPERTIES"
+          sed -i 's/-Xmx2048m/-Xmx4096m/' "$GRADLE_PROPERTIES"
+          sed -i 's/-XX:MaxMetaspaceSize=512m/-XX:MaxMetaspaceSize=1g/' "$GRADLE_PROPERTIES"
+          grep -F -- "-Xmx4096m" "$GRADLE_PROPERTIES"
+          grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
+
       - name: Compile Android release APK
         working-directory: mobile/android
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
 
       - name: Record native artifacts
         run: |

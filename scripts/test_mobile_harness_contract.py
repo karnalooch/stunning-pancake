@@ -184,6 +184,11 @@ class MobileHarnessContractTests(unittest.TestCase):
 
         self.assertIn("./gradlew assembleDebug --no-daemon --stacktrace", workflow)
         self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace", workflow)
+        self.assertIn('grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"', workflow)
+        self.assertIn("sed -i 's/-Xmx2048m/-Xmx4096m/'", workflow)
+        self.assertIn('grep -F -- "-XX:MaxMetaspaceSize=512m" "$GRADLE_PROPERTIES"', workflow)
+        self.assertIn("sed -i 's/-XX:MaxMetaspaceSize=512m/-XX:MaxMetaspaceSize=1g/'", workflow)
+        self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2", workflow)
         self.assertIn("mobile/android/app/build/outputs/apk/debug/app-debug.apk", workflow)
         self.assertIn("mobile/android/app/build/outputs/apk/release/app-release.apk", workflow)
         self.assertIn("Prepare exact-SHA runtime artifact", workflow)
