@@ -33,6 +33,8 @@ python scripts/home_lab.py up
 
 `up` validates the layered Compose model, builds images, waits for service health, then probes the backend, telemetry, and GLOBAL_OWNER admin HTTP surfaces.
 
+For a home lab created before T87, do **not** delete/regenerate `.env.home` just to add this field because that would also rotate database/signing keys. Add a strong local `ADMIN_PASSWORD` entry to the existing private file before the next `up`. If the GLOBAL_OWNER account already exists, this does not rotate that account's existing password; role-login acceptance remains the separate T86 runtime smoke.
+
 The default core contains PostGIS/TimescaleDB, Redis, Django, telemetry, global admin, the main Celery worker, and beat. Enable optional services explicitly:
 
 ```powershell
