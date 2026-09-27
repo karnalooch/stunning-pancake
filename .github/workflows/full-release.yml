@@ -1,6 +1,13 @@
 name: Full / Release Validation
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/full-release.yml"
+      - ".github/workflows/mobile-native-smoke.yml"
+      - ".github/workflows/home-lab.yml"
+      - ".github/workflows/k8s-release-gate.yml"
+      - "scripts/test_security_tooling_workflows.py"
   workflow_dispatch:
     inputs:
       reason:
@@ -87,6 +94,8 @@ jobs:
   android-native:
     name: Full Android native smoke
     uses: ./.github/workflows/mobile-native-smoke.yml
+    with:
+      release: true
 
   home-lab:
     name: Home Lab configuration proof
