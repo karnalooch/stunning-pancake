@@ -210,8 +210,8 @@ class TestUserDelete:
         api_client.force_authenticate(user=owner_user)
         url = reverse("user-delete", kwargs={"pk": owner_user.id})
         response = api_client.delete(url)
-        # Should still work (owner can delete self) but check behaviour
-        assert response.status_code in (200, 204)
+        assert response.status_code == 403
+        assert User.objects.filter(pk=owner_user.id, role="GLOBAL_OWNER", is_active=True).exists()
 
 
 # ---------------------------------------------------------------------------
