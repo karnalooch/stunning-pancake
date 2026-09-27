@@ -16,6 +16,7 @@ import { useAuth } from '../../core/auth/useAuth';
 import {
   TENANT_ADMIN_ASSIGNABLE_ROLES,
   canActorAssignRole,
+  canActorDeleteUsers,
   canActorReassignTenant,
   canTenantAdminAssignRole,
 } from './rolePolicy';
@@ -334,6 +335,7 @@ export const Users = () => {
 
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
   const isTenantAdmin = user?.role === 'TENANT_ADMIN';
+  const canDeleteUsers = canActorDeleteUsers(user?.role);
   const tenantScope = useTenantScope();
 
   const handleImpersonate = async (targetUserId: number) => {
@@ -845,7 +847,7 @@ export const Users = () => {
                             <Tooltip label={t.users.editProfile}>
                               <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
                             </Tooltip>
-                            {isGlobalOwner && (
+                            {canDeleteUsers && (
                               <Tooltip label={t.users.deleteUser}>
                                 <ActionIcon
                                   variant="subtle"
