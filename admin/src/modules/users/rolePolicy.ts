@@ -24,3 +24,7 @@ export function canActorAssignRole(
 export function canActorReassignTenant(actorRole: Role | null | undefined): boolean {
   return actorRole === 'GLOBAL_OWNER';
 }
+
+export function canActorDeleteUsers(actorRole: Role | null | undefined): boolean {
+  return actorRole === 'GLOBAL_OWNER';
+}
