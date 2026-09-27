@@ -5,18 +5,18 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../../en/operations/OPERATIONS_INDEX.md) |
 | **translation_status** | reviewed |
-| **translation_reviewed** | 2026-06-04 |
+| **translation_reviewed** | 2026-09-28 |
 | **canonical_path** | docs/pl/operations/OPERATIONS_INDEX.md |
 
 ---
 
 **Status:** ✅ Active  
-**Ostatnia aktualizacja:** 2026-06-03  
+**Ostatnia aktualizacja:** 2026-09-28  
 **Cel:** Jedna tabela: który dokument, kto go utrzymuje, jak często weryfikować.  
 **Standard:** [DOCUMENTATION_STANDARDS.md](../../DOCUMENTATION_STANDARDS.md)
 
@@ -32,6 +32,7 @@
 | [../RAILWAY_CELERY_SIMULATION.md](../../RAILWAY_CELERY_SIMULATION.md) | Serwis `celery-worker-simulation` | Platform Operator | Przy nowym `railway.json` simulation |
 | [RAILWAY_KUBERNETES.md](./RAILWAY_KUBERNETES.md) | Decyzja Railway vs K8s, mapowanie | Tech Lead / DevOps | Kwartalnie lub przed migracją |
 | [KUBERNETES.md](./KUBERNETES.md) | `kubectl`, manifesty, HPA | DevOps | Przy zmianie `infrastructure/k8s/` |
+| [HOME_LAB.md](./HOME_LAB.md) | Izolowana ścieżka operatora pilota: config, health, migracje, zaszyfrowany backup/restore evidence | Platform Operator | Przed sign-off pilota i po zmianach config/runtime pilota |
 | [SIMULATOR.md](./SIMULATOR.md) | Batch → live, wizard, FSM | Platform Operator + Admin Owner | Po zmianie API symulatora |
 | [LIVE_MAP.md](./LIVE_MAP.md) · [EN](../../en/operations/LIVE_MAP.md) | Live Map: SSE, LOD, ingest ADR 011 | Admin Owner + Platform Operator | Po zmianie `telemetry/live` lub admin Live Map |
 | [BROUTER.md](./BROUTER.md) | BRouter, island, `pass=0` | Platform Operator | Po zmianie presetów / volume |
@@ -65,6 +66,7 @@
 | [infrastructure/sim-lab/README.md](../../../infrastructure/sim-lab/README.md) | Izolowany sim-lab: Docker / Railway load test | Platform Operator | Przed ramp 300k (nie prod) |
 | [`scripts/load/run-suite.ps1`](../../../scripts/load/run-suite.ps1) | Suite smoke/baseline/stress-50k (lokalny Docker) | Platform Operator | Po zmianie ingest / live-map |
 | [`scripts/railway-verify-production.ps1`](../../../scripts/railway-verify-production.ps1) | Weryfikacja routing + simulation (CLI + opcjonalnie GraphQL build config) | Platform Operator | Po deploy workerów Celery |
+| [`python scripts/home_lab.py operator-gate`](../../../scripts/home_lab.py) | T87: brama powiązana z commitem — config/health/migracje/zaszyfrowany backup/izolowany restore | Platform Operator | Przed sign-off pilota i po zmianie dokładnego checkoutu/config pilota |
 | [`scripts/railway-set-prod-sim-capacity.ps1`](../../../scripts/railway-set-prod-sim-capacity.ps1) | Prod peak/off-peak: routing, osrm, brouter-2 | Platform Operator | Po symulacji / przed oszczędzaniem RAM |
 | [`scripts/railway-audit-prod-simlab.ps1`](../../../scripts/railway-audit-prod-simlab.ps1) | Audyt prod vs sim-lab repliki i proxy | Platform Operator | Przed/po zmianie profilu |
 | [`.env.railway.local.example`](../../../.env.railway.local.example) | Szablon lokalny (bez sekretów w Git) | Deweloper | Przy onboardingu Railway CLI |
