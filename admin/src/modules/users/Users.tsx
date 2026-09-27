@@ -13,6 +13,12 @@ import {
   Trash2, Send, Lock, Unlock, Mail, Shield, Building
 } from 'lucide-react';
 import { useAuth } from '../../core/auth/useAuth';
+import {
+  TENANT_ADMIN_ASSIGNABLE_ROLES,
+  canActorAssignRole,
+  canActorReassignTenant,
+  canTenantAdminAssignRole,
+} from './rolePolicy';
 import { AdminApi } from '../../api/client';
 import { notifications } from '@mantine/notifications';
 import { TenantScopeBanner } from '../../core/components/TenantScopeBanner';
@@ -389,13 +395,15 @@ export const Users = () => {
       const updatePayload: any = {
         username: editForm.username,
         email: editForm.email,
-        role: editForm.role,
         is_active: editForm.is_active,
         bio: editForm.bio,
         avatar: editForm.avatar || null,
       };
 
-      if (editForm.tenant_id) {
+      if (canActorAssignRole(user?.role, editForm.role)) {
+        updatePayload.role = editForm.role;
+      }
+      if (canActorReassignTenant(user?.role) && editForm.tenant_id) {
         updatePayload.tenant_id = editForm.tenant_id;
       }
       if (editForm.password) {
@@ -498,6 +506,54 @@ export const Users = () => {
         { value: 'SPONSOR', label: t.roles.SPONSOR },
         { value: 'GLOBAL_OWNER', label: t.roles.GLOBAL_OWNER },
       ];
+
+  const tenantAssignmentRoleOptions = TENANT_ADMIN_ASSIGNABLE_ROLES.map((role) => ({
+    value: role,
+    label: t.roles[role],
+  }));
+
+  const createRoleOptions = isTenantAdmin
+    ? tenantAssignmentRoleOptions
+    : [
+        { value: 'ATHLETE', label: t.roles.ATHLETE },
+        { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+        { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+        { value: 'SPONSOR', label: t.roles.SPONSOR },
+      ];
+
+  const inviteRoleOptions = isTenantAdmin
+    ? tenantAssignmentRoleOptions
+    : [
+        { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+        { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+      ];
+
+  const globalAssignmentRoleOptions = [
+    { value: 'ATHLETE', label: t.roles.ATHLETE },
+    { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
+    { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
+    { value: 'SPONSOR', label: t.roles.SPONSOR },
+    { value: 'GLOBAL_OWNER', label: t.roles.GLOBAL_OWNER },
+  ];
+
+  const bulkRoleOptions = isTenantAdmin
+    ? tenantAssignmentRoleOptions
+    : globalAssignmentRoleOptions;
+
+  const selectedRoleIsLockedForTenantAdmin =
+    isTenantAdmin && selectedUser != null && !canTenantAdminAssignRole(selectedUser.role);
+  const editRoleOptions = selectedRoleIsLockedForTenantAdmin && selectedUser
+    ? [
+        {
+          value: selectedUser.role,
+          label: t.roles[selectedUser.role as keyof typeof t.roles] ?? selectedUser.role,
+          disabled: true,
+        },
+        ...tenantAssignmentRoleOptions,
+      ]
+    : isTenantAdmin
+      ? tenantAssignmentRoleOptions
+      : globalAssignmentRoleOptions;
 
   return (
     <Box style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
@@ -938,14 +994,8 @@ export const Users = () => {
                     label={t.users.systemRole}
                     value={editForm.role}
                     onChange={(v) => setEditForm({ ...editForm, role: v || 'ATHLETE' })}
-                    data={[
-                      { value: 'ATHLETE', label: 'Athlete' },
-                      { value: 'TENANT_MODERATOR', label: 'Moderator' },
-                      { value: 'TENANT_ADMIN', label: 'Tenant Admin' },
-                      { value: 'SPONSOR', label: 'Sponsor' },
-                      { value: 'GLOBAL_OWNER', label: 'Global Owner' },
-                    ]}
-                    disabled={!isGlobalOwner && editForm.role === 'GLOBAL_OWNER'}
+                    data={editRoleOptions}
+                    disabled={selectedRoleIsLockedForTenantAdmin}
                   />
                   {isGlobalOwner && (
                     <Select
@@ -1054,12 +1104,12 @@ export const Users = () => {
           <TextInput label={t.users.username} value={createForm.username} onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })} required />
           <TextInput label={t.users.emailAddress} value={createForm.email} onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })} required />
           <PasswordInput label={t.users.password} value={createForm.password} onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })} required />
-          <Select label={t.users.newRole} value={createForm.role} onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })} data={[
-            { value: 'ATHLETE', label: t.roles.ATHLETE },
-            { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
-            { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
-            { value: 'SPONSOR', label: t.roles.SPONSOR },
-          ]} />
+          <Select
+            label={t.users.newRole}
+            value={createForm.role}
+            onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })}
+            data={createRoleOptions}
+          />
           {isGlobalOwner && (
             <Select label={t.users.tenant} value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))} clearable />
           )}
@@ -1072,10 +1122,12 @@ export const Users = () => {
         <Stack gap="md">
           <TextInput label={t.users.emailAddress} value={inviteForm.email} onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })} placeholder="moderator@city.gov" required />
           <TextInput label={t.users.fullName} value={inviteForm.name} onChange={(e) => setInviteForm({ ...inviteForm, name: e.target.value })} placeholder={t.users.fullNamePlaceholder} />
-          <Select label={t.users.newRole} value={inviteForm.role} onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })} data={[
-            { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
-            { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
-          ]} />
+          <Select
+            label={t.users.newRole}
+            value={inviteForm.role}
+            onChange={(v) => setInviteForm({ ...inviteForm, role: v || 'TENANT_MODERATOR' })}
+            data={inviteRoleOptions}
+          />
           {inviteResult ? (
             <Stack gap="xs" p="sm" style={{ background: 'rgba(0,255,0,0.08)', borderRadius: '6px' }}>
               <Text size="sm" c="green">{t.users.invitationCreated}</Text>
@@ -1117,16 +1169,10 @@ export const Users = () => {
                 tenant_id: role === 'GLOBAL_OWNER' ? '' : prev.tenant_id,
               }));
             }}
-            data={[
-              { value: 'ATHLETE', label: t.roles.ATHLETE },
-              { value: 'TENANT_MODERATOR', label: t.roles.TENANT_MODERATOR },
-              { value: 'TENANT_ADMIN', label: t.roles.TENANT_ADMIN },
-              { value: 'SPONSOR', label: t.roles.SPONSOR },
-              { value: 'GLOBAL_OWNER', label: t.roles.GLOBAL_OWNER },
-            ]}
+            data={bulkRoleOptions}
           />
 
-          {bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && (
+          {isGlobalOwner && bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && (
             <>
               <Checkbox
                 checked={bulkChangeRoleForm.update_tenant}
@@ -1163,7 +1209,7 @@ export const Users = () => {
               color="cyan"
               onClick={async () => {
                 if (selectedUserIds.length === 0) return;
-                if (bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && bulkChangeRoleForm.update_tenant) {
+                if (isGlobalOwner && bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && bulkChangeRoleForm.update_tenant) {
                   if (!bulkChangeRoleForm.tenant_id) {
                     notifications.show({ title: t.users.tenantRequired, message: t.users.tenantRequiredMsg, color: 'red' });
                     return;
@@ -1173,8 +1219,14 @@ export const Users = () => {
                   const res = await AdminApi.bulkChangeRole({
                     user_ids: selectedUserIds,
                     role: bulkChangeRoleForm.role,
-                    update_tenant: bulkChangeRoleForm.role !== 'GLOBAL_OWNER' ? bulkChangeRoleForm.update_tenant : false,
-                    tenant_id: bulkChangeRoleForm.update_tenant ? bulkChangeRoleForm.tenant_id : null,
+                    update_tenant:
+                      isGlobalOwner && bulkChangeRoleForm.role !== 'GLOBAL_OWNER'
+                        ? bulkChangeRoleForm.update_tenant
+                        : false,
+                    tenant_id:
+                      isGlobalOwner && bulkChangeRoleForm.update_tenant
+                        ? bulkChangeRoleForm.tenant_id
+                        : null,
                   });
                   setBulkJob({ ...res, job_id: res.job_id, status: res.status });
                   setBulkRoleModalOpened(false);
