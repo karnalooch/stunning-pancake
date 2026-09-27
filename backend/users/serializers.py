@@ -125,6 +125,12 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 class UserAdminUpdateSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, min_length=8)
+    tenant_id = serializers.PrimaryKeyRelatedField(
+        source="tenant",
+        queryset=Tenant.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = User

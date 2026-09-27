@@ -39,7 +39,8 @@ describe('T85 tenant-admin pilot UI contract', () => {
     const source = readUsers();
 
     expect(source).toContain('if (canActorAssignRole(user?.role, editForm.role))');
-    expect(source).toContain('if (canActorReassignTenant(user?.role) && editForm.tenant_id)');
+    expect(source).toContain('canActorReassignTenant(user?.role)');
+    expect(source).toContain("editForm.role !== 'GLOBAL_OWNER'");
     expect(source).toContain(
       "isGlobalOwner && bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && bulkChangeRoleForm.update_tenant",
     );
@@ -50,7 +51,9 @@ describe('T85 tenant-admin pilot UI contract', () => {
 
     expect(source).toContain('selectedRoleIsLockedForTenantAdmin');
     expect(source).toContain('!canTenantAdminAssignRole(selectedUser.role)');
-    expect(source).toContain('disabled={selectedRoleIsLockedForTenantAdmin}');
+    expect(source).toContain(
+      'disabled={selectedRoleIsLockedForTenantAdmin || selectedUserIsCurrentGlobalOwner}',
+    );
   });
 
   it('hides bulk tenant reassignment controls from TENANT_ADMIN', () => {
@@ -65,6 +68,6 @@ describe('T85 tenant-admin pilot UI contract', () => {
     const source = readUsers();
 
     expect(source).toContain('const canDeleteUsers = canActorDeleteUsers(user?.role)');
-    expect(source).toContain('{canDeleteUsers && (');
+    expect(source).toContain('{canDeleteUsers && !isCurrentGlobalOwner(u.id) && (');
   });
 });

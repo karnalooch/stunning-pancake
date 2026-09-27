@@ -596,6 +596,10 @@ class UserCreateView(generics.CreateAPIView):
         if assignment_error is not None:
             return assignment_error
 
+        # GLOBAL_OWNER is a platform role and must never carry tenant membership.
+        if role == "GLOBAL_OWNER":
+            tenant_id = None
+
         payload = request.data.copy()
         if tenant_id:
             payload["tenant_id"] = str(tenant_id)
@@ -610,7 +614,9 @@ class UserCreateView(generics.CreateAPIView):
         user = serializer.save()
         if role in _allowed_role_values():
             user.role = role
-        if tenant_id:
+        if role == "GLOBAL_OWNER":
+            user.tenant_id = None
+        elif tenant_id:
             user.tenant_id = tenant_id
         user.save()
 
@@ -678,13 +684,33 @@ class UserUpdateView(generics.UpdateAPIView):
                         status_code=status.HTTP_403_FORBIDDEN,
                     )
 
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        payload = request.data.copy()
+        effective_role = payload.get("role", instance.role)
+        if requesting_user.role == "GLOBAL_OWNER" and effective_role == "GLOBAL_OWNER":
+            # GLOBAL_OWNER remains tenantless even when the caller sends tenant_id.
+            payload["tenant_id"] = None
+
+        serializer = self.get_serializer(instance, data=payload, partial=partial)
         if not serializer.is_valid():
             return error(
                 "Validation failed",
                 details=serializer.errors,
                 status_code=status.HTTP_400_BAD_REQUEST,
             )
+
+        if requesting_user.role == "GLOBAL_OWNER" and instance.id == requesting_user.id:
+            next_role = serializer.validated_data.get("role", instance.role)
+            next_is_active = serializer.validated_data.get("is_active", instance.is_active)
+            if next_role != "GLOBAL_OWNER":
+                return error(
+                    "Global Owner cannot demote their own account.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+            if not next_is_active:
+                return error(
+                    "Global Owner cannot deactivate their own account.",
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
 
         # Optional password update
         password = request.data.get("password")
@@ -717,19 +743,20 @@ class UserDeleteView(generics.DestroyAPIView):
     def delete(self, request, *args, **kwargs):
         try:
             target = _scoped_user_queryset(request).get(pk=kwargs["pk"])
-            # In SQLite-based test runs, FK "SET NULL" enforcement can be flaky
-            # during teardown constraint checking. The test suite for self-delete
-            # doesn't assert audit-log presence, so avoid creating the FK row
-            # when the owner deletes themself.
-            if target.id != request.user.id:
-                AuditLog.objects.create(
-                    impersonator=request.user,
-                    target_user=None,
-                    tenant_id=str(target.tenant_id) if target.tenant_id else None,
-                    action=f"Deleted user {target.username} (role: {target.role})",
-                    ip_address=request.META.get("REMOTE_ADDR"),
-                    status_code=200,
+            if target.id == request.user.id:
+                return error(
+                    "Global Owner cannot delete their own account.",
+                    status_code=status.HTTP_403_FORBIDDEN,
                 )
+
+            AuditLog.objects.create(
+                impersonator=request.user,
+                target_user=None,
+                tenant_id=str(target.tenant_id) if target.tenant_id else None,
+                action=f"Deleted user {target.username} (role: {target.role})",
+                ip_address=request.META.get("REMOTE_ADDR"),
+                status_code=200,
+            )
             username = target.username
             target.delete()
             return success(message=f"User {username} deleted.")
@@ -757,6 +784,10 @@ class InvitationTokenView(generics.GenericAPIView):
         )
         if assignment_error is not None:
             return assignment_error
+
+        # GLOBAL_OWNER is platform-scoped, never tenant-scoped.
+        if role == "GLOBAL_OWNER":
+            tenant_id = None
 
         if not email:
             return error("Email is required.", status_code=status.HTTP_400_BAD_REQUEST)
@@ -853,6 +884,16 @@ class UserBulkSetStatusView(generics.GenericAPIView):
             return resp
         assert allowed_ids is not None
 
+        if (
+            getattr(request.user, "role", None) == "GLOBAL_OWNER"
+            and int(request.user.id) in allowed_ids
+            and not desired_is_active
+        ):
+            return error(
+                "Global Owner cannot deactivate their own account.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
+
         job_id = str(uuid.uuid4())
         action = "set_status"
         mark_queued(
@@ -945,6 +986,16 @@ class UserBulkChangeRoleView(generics.GenericAPIView):
         if resp is not None:
             return resp
         assert allowed_ids is not None
+
+        if (
+            requesting_role == "GLOBAL_OWNER"
+            and int(request.user.id) in allowed_ids
+            and role != "GLOBAL_OWNER"
+        ):
+            return error(
+                "Global Owner cannot demote their own account.",
+                status_code=status.HTTP_403_FORBIDDEN,
+            )
 
         job_id = str(uuid.uuid4())
         action = "change_role"
