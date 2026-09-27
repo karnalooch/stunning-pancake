@@ -42,6 +42,22 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
             text.index("./gradlew assembleRelease --no-daemon --stacktrace"),
         )
 
+    def test_pull_request_smoke_builds_debug_only(self):
+        text = workflow_text()
+        self.assertIn(
+            "- name: Compile Android release APK\n        if: github.event_name != 'pull_request'",
+            text,
+        )
+        self.assertIn(
+            "- name: Prepare exact-SHA runtime artifact\n        if: github.event_name != 'pull_request'",
+            text,
+        )
+        self.assertIn(
+            "- name: Upload exact-SHA runtime artifact\n        if: github.event_name != 'pull_request'",
+            text,
+        )
+        self.assertIn("Release packaging is reserved for main/scheduled/manual/full-release runs.", text)
+
     def test_full_build_publishes_exact_sha_release_artifact(self):
         text = workflow_text()
         for token in (
