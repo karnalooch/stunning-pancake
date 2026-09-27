@@ -45,18 +45,20 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
     def test_pull_request_smoke_builds_debug_only(self):
         text = workflow_text()
         self.assertIn(
-            "- name: Compile Android release APK\n        if: github.event_name != 'pull_request'",
+            "- name: Compile Android release APK\n        if: github.event_name != 'pull_request' || inputs.release == true",
             text,
         )
         self.assertIn(
-            "- name: Prepare exact-SHA runtime artifact\n        if: github.event_name != 'pull_request'",
+            "- name: Prepare exact-SHA runtime artifact\n        if: github.event_name != 'pull_request' || inputs.release == true",
             text,
         )
         self.assertIn(
-            "- name: Upload exact-SHA runtime artifact\n        if: github.event_name != 'pull_request'",
+            "- name: Upload exact-SHA runtime artifact\n        if: github.event_name != 'pull_request' || inputs.release == true",
             text,
         )
         self.assertIn("Release packaging is reserved for main/scheduled/manual/full-release runs.", text)
+        self.assertIn("FORCE_RELEASE: ${{ inputs.release || false }}", text)
+        self.assertIn("full-release caller forces native + release validation", text)
 
     def test_full_build_publishes_exact_sha_release_artifact(self):
         text = workflow_text()
@@ -79,6 +81,7 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         self.assertIn('if [ "$EVENT_NAME" != "pull_request" ]; then', text)
         self.assertIn('echo "run=true" >> "$GITHUB_OUTPUT"', text)
         self.assertIn("  workflow_call:", text)
+        self.assertIn("release:", text)
         self.assertNotIn('cron: "30 3 * * 1"', text)
         self.assertIn("    branches: [main]", text)
 
