@@ -1,6 +1,6 @@
 # T85 — TENANT_ADMIN pilot-path validation
 
-**Status:** repo-side hardening ACTIVE in PR #303; runtime role smoke still required  
+**Status:** PARTIAL — repo-side hardening merged in PR #303 (`4989f139`); real pilot-environment TENANT_ADMIN role smoke still required before DONE  
 **Starting main:** `000dc264359e1d6cf92937c12d06a8ff2c8dde4f`  
 **Issue:** #302
 
