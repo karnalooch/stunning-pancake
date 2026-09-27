@@ -282,7 +282,7 @@ export const CityHubScreen: React.FC<{
               <Text style={s.offlineTitle}>
                 {loadError ? t.compete.cachedOfflineTitle : t.compete.refreshingCached}
               </Text>
-              <Text style={s.stateBody}>{t.compete.cachedOfflineBody}</Text>
+              <Text style={s.stateBody}>{loadError ? t.compete.cachedOfflineBody : t.compete.refreshingCachedBody}</Text>
             </View>
           </ProductCard>
         ) : null}
@@ -311,7 +311,7 @@ export const CityHubScreen: React.FC<{
                   <View style={s.stateContent}>
                     <Text style={s.cityName}>{cityOfWeek.name}</Text>
                     <Metric
-                      label={t.profile.distance}
+                      label={t.compete.distance}
                       value={`${cityOfWeek.score_km.toFixed(1)} km`}
                     />
                   </View>
