@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-const USERS = path.resolve(__dirname, '../modules/users/Users.tsx');
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const USERS = path.resolve(TEST_DIR, '../modules/users/Users.tsx');
 const readUsers = () => fs.readFileSync(USERS, 'utf8');
 
 describe('T85 tenant-admin pilot UI contract', () => {
