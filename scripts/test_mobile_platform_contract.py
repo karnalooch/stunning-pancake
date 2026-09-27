@@ -135,6 +135,11 @@ class MobilePlatformContractTests(unittest.TestCase):
         self.assertIn("process.env.EXPO_PUBLIC_ENABLE_FIREBASE === 'true'", config)
         self.assertNotIn("process.env.EXPO_PUBLIC_ENABLE_FIREBASE !== 'false'", config)
 
+    def test_runtime_acceptance_disables_ota_updates_without_changing_normal_builds(self):
+        config = read(MOBILE / "app.config.js")
+        self.assertIn("process.env.MOBILE_RUNTIME_ACCEPTANCE === 'true'", config)
+        self.assertIn('"enabled": !isRuntimeAcceptanceBuild()', config)
+
     def test_app_config_does_not_claim_channel_or_legacy_new_arch_toggle(self):
         config = read(MOBILE / "app.config.js")
         self.assertNotIn('"channel": "production"', config)

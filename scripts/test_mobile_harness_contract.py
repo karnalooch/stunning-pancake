@@ -132,7 +132,11 @@ class MobileHarnessContractTests(unittest.TestCase):
             'Invoke-Checked "gh" @("run", "download"',
             "mobile-runtime-$CiRunId",
             "CI artifact source SHA mismatch",
+            "CI artifact built SHA mismatch",
             "CI artifact APK SHA-256 mismatch",
+            "MOBILE_RUNTIME_ACCEPTANCE",
+            '$env:NODE_ENV = "production"',
+            '"pm", "clear", "com.sport.athlete"',
         ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
@@ -184,6 +188,15 @@ class MobileHarnessContractTests(unittest.TestCase):
     def test_mobile_native_smoke_requires_debug_and_release_parity(self):
         workflow = read(".github/workflows/mobile-native-smoke.yml")
 
+        self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', workflow)
+        self.assertIn("Assert exact source checkout", workflow)
+        self.assertIn("Exact source checkout mismatch", workflow)
+        self.assertIn("NODE_ENV: production", workflow)
+        self.assertIn('MOBILE_RUNTIME_ACCEPTANCE: "true"', workflow)
+        self.assertIn("runtime acceptance requires Expo updates.enabled=false", workflow)
+        self.assertIn("Built Git SHA mismatch", workflow)
+        self.assertIn('"updatesEnabled": False', workflow)
+        self.assertIn('"runtimeAcceptance": os.environ["MOBILE_RUNTIME_ACCEPTANCE"]', workflow)
         self.assertIn("./gradlew assembleDebug --no-daemon --stacktrace", workflow)
         self.assertIn("./gradlew assembleRelease --no-daemon --stacktrace", workflow)
         self.assertIn('grep -F -- "-Xmx2048m" "$GRADLE_PROPERTIES"', workflow)

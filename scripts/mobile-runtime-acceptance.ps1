@@ -150,6 +150,8 @@ $apkPath = Join-Path $androidDir "app\build\outputs\apk\release\app-release.apk"
 $repoDriveRoot = [System.IO.Path]::GetPathRoot($repoRoot)
 $shortVirtualStore = Join-Path $repoDriveRoot ("4v\" + $gitShort)
 
+$env:NODE_ENV = "production"
+$env:MOBILE_RUNTIME_ACCEPTANCE = "true"
 $env:EAS_BUILD_PROFILE = "pilot-local"
 $env:EXPO_PUBLIC_VISION_FIXTURES = "true"
 $env:EXPO_PUBLIC_E2E_SKIP_ONBOARDING = "false"
@@ -225,6 +227,22 @@ try {
     if ([string]$manifest.sourceHeadSha -ne $gitSha) {
       throw "CI artifact source SHA mismatch. Expected $gitSha, got $($manifest.sourceHeadSha)."
     }
+    $ciBuiltGitSha = [string]$manifest.builtGitSha
+    if (-not $ciBuiltGitSha -or $ciBuiltGitSha -ne $gitSha) {
+      throw "CI artifact built SHA mismatch. Expected $gitSha, got $ciBuiltGitSha."
+    }
+    if ($null -eq $manifest.updatesEnabled -or [bool]$manifest.updatesEnabled) {
+      throw "CI artifact is not runtime-isolated: Expo OTA updates must be disabled."
+    }
+    if ([string]$manifest.visionFixtures -ne "true") {
+      throw "CI artifact is not deterministic: vision fixtures are not enabled."
+    }
+    if ([string]$manifest.runtimeAcceptance -ne "true") {
+      throw "CI artifact was not built in runtime-acceptance mode."
+    }
+    if ([string]$manifest.nodeEnv -ne "production") {
+      throw "CI artifact was not bundled with NODE_ENV=production."
+    }
     if ([string]$manifest.workflowRunId -ne [string]$CiRunId) {
       throw "CI artifact run-id mismatch. Expected $CiRunId, got $($manifest.workflowRunId)."
     }
@@ -234,8 +252,6 @@ try {
     if ($apkHash -ne $expectedApkHash) {
       throw "CI artifact APK SHA-256 mismatch. Expected $expectedApkHash, got $apkHash."
     }
-    $ciBuiltGitSha = [string]$manifest.builtGitSha
-
     Write-Host "  CI run:      $CiRunId"
     Write-Host "  Built SHA:   $ciBuiltGitSha"
     Write-Host "  APK SHA-256: $apkHash"
@@ -279,6 +295,13 @@ try {
     try {
       pnpm exec expo config --type public --json | Set-Content -Path $expoConfigPath -Encoding UTF8
       if ($LASTEXITCODE -ne 0) { throw "expo config failed" }
+      $expoConfig = Get-Content -Raw $expoConfigPath | ConvertFrom-Json
+      if ($null -eq $expoConfig.updates.enabled -or [bool]$expoConfig.updates.enabled) {
+        throw "Runtime acceptance local build must disable Expo OTA updates."
+      }
+      if ([string]$expoConfig.extra.EXPO_PUBLIC_VISION_FIXTURES -ne "true") {
+        throw "Runtime acceptance local build must enable vision fixtures."
+      }
     } finally {
       Pop-Location
     }
@@ -326,6 +349,7 @@ try {
   Write-Host ""
   Write-Host "=== Install exact APK ===" -ForegroundColor Cyan
   Invoke-Checked $adbPath @("-s", $selectedDevice, "install", "-r", $apkPath) $repoRoot
+  Invoke-Checked $adbPath @("-s", $selectedDevice, "shell", "pm", "clear", "com.sport.athlete") $repoRoot
 
   $packageDump = @(& $adbPath -s $selectedDevice shell dumpsys package com.sport.athlete)
   $packageVersionName = (($packageDump | Select-String "versionName=" | Select-Object -First 1).Line).Trim()
