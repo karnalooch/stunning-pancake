@@ -1,110 +1,120 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, Linking } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import * as Haptics from 'expo-haptics';
+
+import { PrimaryButton } from '../components/product/PrimaryButton';
+import { ProductCard } from '../components/product/ProductCard';
 import { useI18n } from '../i18n/useI18n';
-import { FONTS } from '../theme/fonts';
-import { PrivacyService, WearableService } from '../services/api';
 import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
+import { PrivacyService, WearableService } from '../services/api';
 import { RiderPreferencesService } from '../services/RiderPreferencesService';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
 type SettingsSection = 'general' | 'sensors' | 'privacy' | 'garage';
 
 const stylesheet = StyleSheet.create((theme) => {
-  const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   return {
-    ct: { flex: 1, backgroundColor: c.background },
-    h: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground },
-    t: { fontSize: 16, fontFamily: FONTS.display, color: c.primary, textTransform: 'uppercase' },
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 12,
+    },
+    title: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
     nav: {
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderBottomWidth: 2,
-      borderBottomColor: c.hudOutline,
-      flexDirection: 'row',
+      paddingHorizontal: 16,
+      paddingBottom: 12,
+    },
+    navContent: {
       gap: 8,
     },
-    navBtn: {
-      borderWidth: 2,
-      borderColor: c.hudOutline,
-      borderRadius: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      backgroundColor: c.surface,
-    },
-    navBtnActive: {
-      backgroundColor: c.primaryContainer,
-      transform: [{ translateY: -1 }],
-    },
-    navBtnText: {
-      fontSize: 10,
-      fontFamily: FONTS.display,
-      textTransform: 'uppercase',
-      color: c.onBackground,
-    },
-    cd: {
-      backgroundColor: c.parchment,
-      margin: 12,
-      padding: 16,
-      borderWidth: 2,
-      borderColor: c.onBackground,
-      borderRadius: 8,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    l: { fontSize: 14, fontFamily: FONTS.display, color: c.onBackground },
-    v: { fontSize: 14, color: c.secondary },
-    sectionTitle: {
-      marginHorizontal: 12,
-      marginTop: 12,
-      fontSize: 11,
-      fontFamily: FONTS.display,
-      color: c.secondary,
-      textTransform: 'uppercase',
-    },
-    stepRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-    stepBtn: {
-      width: 32,
-      height: 32,
-      borderWidth: 2,
-      borderColor: c.onBackground,
-      borderRadius: 4,
+    navButton: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: semantic.border.subtle,
+      borderRadius: 12,
+      paddingHorizontal: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: c.surface,
+      backgroundColor: semantic.surface.default,
     },
-    stepBtnText: { fontSize: 18, fontFamily: FONTS.display, color: c.onBackground },
-    input: {
-      minWidth: 72,
-      borderWidth: 2,
-      borderColor: c.hudOutline,
-      borderRadius: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-      fontSize: 16,
-      fontFamily: FONTS.display,
-      color: c.onBackground,
-      textAlign: 'center',
-      backgroundColor: c.surface,
+    navButtonActive: {
+      borderColor: semantic.selection.border,
+      backgroundColor: semantic.selection.background,
     },
-    actionBtn: {
-      marginHorizontal: 12,
-      marginBottom: 8,
-      borderWidth: 2,
-      borderColor: c.hudOutline,
-      borderRadius: 6,
-      backgroundColor: c.primaryContainer,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
+    navButtonText: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.secondary,
+    },
+    navButtonTextActive: {
+      color: semantic.selection.content,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+      gap: 12,
+    },
+    sectionTitle: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
+      marginTop: 4,
+    },
+    row: {
+      flexDirection: 'row',
       alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
     },
-    actionBtnText: {
-      fontSize: 12,
-      fontFamily: FONTS.display,
-      color: c.onPrimaryContainer,
-      textTransform: 'uppercase',
+    rowStack: {
+      gap: 10,
+    },
+    label: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
+      flexShrink: 1,
+    },
+    value: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+      textAlign: 'right',
+      flexShrink: 1,
+    },
+    valueActive: {
+      color: semantic.selection.active,
+    },
+    statusSuccess: {
+      color: semantic.status.success,
+    },
+    inputGroup: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    input: {
+      minWidth: 76,
+      minHeight: 44,
+      borderWidth: 1,
+      borderColor: semantic.border.subtle,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
+      textAlign: 'center',
+      backgroundColor: semantic.surface.interactive,
+    },
+    actionStack: {
+      gap: 10,
+      marginTop: 2,
     },
   };
 });
@@ -115,9 +125,7 @@ interface SettingsScreenProps {
 }
 
 export const SettingsScreen: React.FC<SettingsScreenProps> = ({ embedded = false }) => {
-  const { theme } = useUnistyles();
   const s = stylesheet;
-  const c = theme.colors as Record<string, string>;
   const { t, locale, toggleLocale } = useI18n();
   const { enabled: immersiveEnabled, toggle: toggleImmersive } = useImmersiveTheme();
   const [section, setSection] = useState<SettingsSection>('general');
@@ -161,175 +169,212 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({ embedded = false
   };
 
   const renderGeneral = () => (
-    <>
+    <View style={s.rowStack}>
       <Text style={s.sectionTitle}>{t.settings.general}</Text>
-      <Pressable style={s.cd} onPress={toggleLocale}>
-        <Text style={s.l}>{t.common.language}</Text>
-        <Text style={[s.v, { color: c.primary }]}>{locale === 'pl' ? t.common.polish : t.common.english}</Text>
-      </Pressable>
-      <Pressable style={s.cd} onPress={toggleImmersive}>
-        <Text style={s.l}>{t.settings.immersive}</Text>
-        <Text style={[s.v, { color: c.primary }]}>{immersiveEnabled ? t.settings.on : t.settings.off}</Text>
-      </Pressable>
-      <Pressable
-        style={s.cd}
+      <ProductCard variant="interactive" onPress={toggleLocale} accessibilityLabel={t.common.language}>
+        <View style={s.row}>
+          <Text style={s.label}>{t.common.language}</Text>
+          <Text style={[s.value, s.valueActive]}>
+            {locale === 'pl' ? t.common.polish : t.common.english}
+          </Text>
+        </View>
+      </ProductCard>
+      <ProductCard variant="interactive" onPress={toggleImmersive} accessibilityLabel={t.settings.immersive}>
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.immersive}</Text>
+          <Text style={[s.value, s.valueActive]}>
+            {immersiveEnabled ? t.settings.on : t.settings.off}
+          </Text>
+        </View>
+      </ProductCard>
+      <ProductCard
+        variant="interactive"
         onPress={() => {
           const next = !haptics;
           setHaptics(next);
           RiderPreferencesService.setHapticsEnabled(next);
           if (next) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
         }}
+        accessibilityLabel={t.settings.haptics}
       >
-        <Text style={s.l}>{t.settings.haptics}</Text>
-        <Text style={[s.v, { color: c.primary }]}>{haptics ? t.settings.on : t.settings.off}</Text>
-      </Pressable>
-      <Pressable
-        style={s.cd}
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.haptics}</Text>
+          <Text style={[s.value, s.valueActive]}>{haptics ? t.settings.on : t.settings.off}</Text>
+        </View>
+      </ProductCard>
+      <ProductCard
+        variant="interactive"
         onPress={() => {
           const next = !voiceCues;
           setVoiceCues(next);
           RiderPreferencesService.setVoiceCuesEnabled(next);
         }}
+        accessibilityLabel={t.settings.voiceCues}
       >
-        <Text style={s.l}>{t.settings.voiceCues}</Text>
-        <Text style={[s.v, { color: c.primary }]}>{voiceCues ? t.settings.on : t.settings.off}</Text>
-      </Pressable>
-    </>
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.voiceCues}</Text>
+          <Text style={[s.value, s.valueActive]}>{voiceCues ? t.settings.on : t.settings.off}</Text>
+        </View>
+      </ProductCard>
+    </View>
   );
 
   const renderSensors = () => (
-    <>
+    <View style={s.rowStack}>
       <Text style={s.sectionTitle}>{t.settings.sensors}</Text>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.riderWeight}</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="numeric"
-          value={String(weightKg)}
-          onChangeText={(v) => {
-            const n = Number(v.replace(/[^0-9]/g, ''));
-            if (!Number.isFinite(n)) return;
-            const clamped = Math.max(30, Math.min(200, n));
-            setWeightKg(clamped);
-            RiderPreferencesService.setWeightKg(clamped);
-          }}
-          accessibilityLabel={t.settings.riderWeight}
-        />
-        <Text style={s.v}>{t.settings.kg}</Text>
-      </View>
+      <ProductCard>
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.riderWeight}</Text>
+          <View style={s.inputGroup}>
+            <TextInput
+              style={s.input}
+              keyboardType="numeric"
+              value={String(weightKg)}
+              onChangeText={(v) => {
+                const n = Number(v.replace(/[^0-9]/g, ''));
+                if (!Number.isFinite(n)) return;
+                const clamped = Math.max(30, Math.min(200, n));
+                setWeightKg(clamped);
+                RiderPreferencesService.setWeightKg(clamped);
+              }}
+              accessibilityLabel={t.settings.riderWeight}
+            />
+            <Text style={s.value}>{t.settings.kg}</Text>
+          </View>
+        </View>
+      </ProductCard>
+      <ProductCard>
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.maxHr}</Text>
+          <View style={s.inputGroup}>
+            <TextInput
+              style={s.input}
+              keyboardType="numeric"
+              value={String(maxHr)}
+              onChangeText={(v) => {
+                const n = Number(v.replace(/[^0-9]/g, ''));
+                if (!Number.isFinite(n)) return;
+                const clamped = Math.max(100, Math.min(230, n));
+                setMaxHr(clamped);
+                RiderPreferencesService.setMaxHr(clamped);
+              }}
+              accessibilityLabel={t.settings.maxHr}
+            />
+            <Text style={s.value}>{t.settings.bpm}</Text>
+          </View>
+        </View>
+      </ProductCard>
 
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.maxHr}</Text>
-        <TextInput
-          style={s.input}
-          keyboardType="numeric"
-          value={String(maxHr)}
-          onChangeText={(v) => {
-            const n = Number(v.replace(/[^0-9]/g, ''));
-            if (!Number.isFinite(n)) return;
-            const clamped = Math.max(100, Math.min(230, n));
-            setMaxHr(clamped);
-            RiderPreferencesService.setMaxHr(clamped);
-          }}
-          accessibilityLabel={t.settings.maxHr}
-        />
-        <Text style={s.v}>{t.settings.bpm}</Text>
-      </View>
       {[
         {
-          l: t.settings.strava,
-          v: fmtWearable(wearables?.strava?.connected ?? false, wearables?.strava?.last_sync),
-          dot: wearables?.strava?.connected,
+          key: 'strava',
+          label: t.settings.strava,
+          status: wearables?.strava,
           onConnect: () => void openWearableAuth('strava'),
         },
         {
-          l: t.settings.garmin,
-          v: fmtWearable(wearables?.garmin?.connected ?? false, wearables?.garmin?.last_sync),
-          dot: wearables?.garmin?.connected,
+          key: 'garmin',
+          label: t.settings.garmin,
+          status: wearables?.garmin,
           onConnect: () => void openWearableAuth('garmin'),
         },
-      ].map((r, i) => (
-        <View key={i} style={s.cd}>
-          <Text style={s.l}>{r.l}</Text>
-          <Text style={[s.v, r.dot && { color: c.primary }]}>{r.v}{r.dot ? ' ●' : ''}</Text>
-          <Pressable style={s.actionBtn} onPress={r.onConnect}>
-            <Text style={s.actionBtnText}>{t.settings.connect}</Text>
-          </Pressable>
-        </View>
+      ].map((item) => (
+        <ProductCard key={item.key}>
+          <View style={s.rowStack}>
+            <View style={s.row}>
+              <Text style={s.label}>{item.label}</Text>
+              <Text style={[s.value, item.status?.connected && s.statusSuccess]}>
+                {fmtWearable(item.status?.connected ?? false, item.status?.last_sync)}
+              </Text>
+            </View>
+            <PrimaryButton label={t.settings.connect} onPress={item.onConnect} variant="secondary" />
+          </View>
+        </ProductCard>
       ))}
-      <Pressable
-        style={s.actionBtn}
-        onPress={() => {
-          WearableService.sync().catch(() => {});
-        }}
-      >
-        <Text style={s.actionBtnText}>{t.settings.syncNow}</Text>
-      </Pressable>
-    </>
+
+      <View style={s.actionStack}>
+        <PrimaryButton
+          label={t.settings.syncNow}
+          onPress={() => {
+            WearableService.sync().catch(() => {});
+          }}
+        />
+      </View>
+    </View>
   );
 
   const renderPrivacy = () => (
-    <>
+    <View style={s.rowStack}>
       <Text style={s.sectionTitle}>{t.settings.privacy}</Text>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.privacyZones}</Text>
-        <Text style={[s.v, { color: c.primary }]}>
-          {privacyZoneCount == null ? t.common.loading : String(privacyZoneCount)}
-        </Text>
-      </View>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.privacyHintTitle}</Text>
-        <Text style={s.v}>{t.settings.privacyHintBody}</Text>
-      </View>
-    </>
+      <ProductCard>
+        <View style={s.row}>
+          <Text style={s.label}>{t.settings.privacyZones}</Text>
+          <Text style={[s.value, s.valueActive]}>
+            {privacyZoneCount == null ? t.common.loading : String(privacyZoneCount)}
+          </Text>
+        </View>
+      </ProductCard>
+      <ProductCard>
+        <View style={s.rowStack}>
+          <Text style={s.label}>{t.settings.privacyHintTitle}</Text>
+          <Text style={s.value}>{t.settings.privacyHintBody}</Text>
+        </View>
+      </ProductCard>
+    </View>
   );
 
   const renderGarage = () => (
-    <>
+    <View style={s.rowStack}>
       <Text style={s.sectionTitle}>{t.settings.garage}</Text>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.powerZones}</Text>
-        <Text style={s.v}>{t.settings.comingSoon}</Text>
-      </View>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.gearGarage}</Text>
-        <Text style={s.v}>{t.settings.comingSoon}</Text>
-      </View>
-      <View style={s.cd}>
-        <Text style={s.l}>{t.settings.achievements}</Text>
-        <Text style={s.v}>{t.settings.comingSoon}</Text>
-      </View>
-    </>
+      {[t.settings.powerZones, t.settings.gearGarage, t.settings.achievements].map((label) => (
+        <ProductCard key={label}>
+          <View style={s.row}>
+            <Text style={s.label}>{label}</Text>
+            <Text style={s.value}>{t.settings.comingSoon}</Text>
+          </View>
+        </ProductCard>
+      ))}
+    </View>
   );
 
   return (
-    <SafeAreaView style={s.ct} edges={embedded ? [] : ['top']}>
+    <SafeAreaView style={s.container} edges={embedded ? [] : ['top']}>
       {!embedded && (
-        <View style={s.h}>
-          <Text style={s.t}>{t.settings.title}</Text>
+        <View style={s.header}>
+          <Text style={s.title}>{t.settings.title}</Text>
         </View>
       )}
-      <ScrollView horizontal style={s.nav} showsHorizontalScrollIndicator={false}>
+      <ScrollView
+        horizontal
+        style={s.nav}
+        contentContainerStyle={s.navContent}
+        showsHorizontalScrollIndicator={false}
+      >
         {[
           { key: 'general', label: t.settings.general },
           { key: 'sensors', label: t.settings.sensors },
           { key: 'privacy', label: t.settings.privacy },
           { key: 'garage', label: t.settings.garage },
-        ].map((item) => (
-          <Pressable
-            key={item.key}
-            style={({ pressed }) => [
-              s.navBtn,
-              section === item.key && s.navBtnActive,
-              pressed && { opacity: 0.8 },
-            ]}
-            onPress={() => setSection(item.key as SettingsSection)}
-          >
-            <Text style={s.navBtnText}>{item.label}</Text>
-          </Pressable>
-        ))}
+        ].map((item) => {
+          const active = section === item.key;
+          return (
+            <Pressable
+              key={item.key}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              style={({ pressed }) => [
+                s.navButton,
+                active && s.navButtonActive,
+                pressed && { opacity: 0.82 },
+              ]}
+              onPress={() => setSection(item.key as SettingsSection)}
+            >
+              <Text style={[s.navButtonText, active && s.navButtonTextActive]}>{item.label}</Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
-      <ScrollView>
+      <ScrollView contentContainerStyle={s.content}>
         {section === 'general' && renderGeneral()}
         {section === 'sensors' && renderSensors()}
         {section === 'privacy' && renderPrivacy()}

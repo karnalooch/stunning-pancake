@@ -1,48 +1,59 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
+
+import { ProductCard } from '../components/product/ProductCard';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useI18n } from '../i18n/useI18n';
-import { OrnateFrame } from '../components/ui/OrnateFrame';
-import { PixelText } from '../components/PixelText';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
 
 const stylesheet = StyleSheet.create((theme) => {
-  const c = theme.colors as Record<string, string>;
+  const semantic = getSemanticColors(theme.colors);
   return {
-    ct: { flex: 1, backgroundColor: c.background },
-    h: { padding: 16, borderBottomWidth: 4, borderBottomColor: c.onBackground },
-    t: { fontSize: 18, color: c.primary, textTransform: 'uppercase' },
-    cardWrap: { margin: 12, marginBottom: 0 },
-    l: { fontSize: 10, color: c.secondary, textTransform: 'uppercase' },
-    n: { fontSize: 14, color: c.onBackground, marginTop: 4 },
-    m: { fontSize: 14, fontFamily: 'VT323', color: c.primary, marginTop: 4 },
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
+    header: {
+      paddingHorizontal: 20,
+      paddingTop: 18,
+      paddingBottom: 12,
+      gap: 4,
+    },
+    title: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
+    },
+    subtitle: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    content: {
+      paddingHorizontal: 16,
+      paddingBottom: 40,
+    },
   };
 });
 
 export const SegmentsScreen: React.FC = () => {
-  const { theme } = useUnistyles();
   const { t } = useI18n();
   const s = stylesheet;
-  const rows = [
-    { l: 'Sprint', n: 'Riverside Dash', d: '1.2 km', g: '0%', kom: 'ShadowRider', time: '01:42' },
-    { l: 'Climb', n: 'Lookout Peak', d: '4.5 km', g: '8.5%', kom: 'AeroQueen', time: '14:28' },
-    { l: 'Rolling', n: 'Valley Loop', d: '12.0 km', g: '2%', kom: 'Unclaimed', time: '--:--' },
-  ];
+
   return (
-    <SafeAreaView style={s.ct} edges={['top']}>
-      <View style={s.h}>
-        <PixelText style={s.t}>{t.segments.title}</PixelText>
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
+        <Text style={s.title}>{t.segments.title}</Text>
+        <Text style={s.subtitle}>{t.segments.subtitle}</Text>
       </View>
-      <ScrollView>
-        {rows.map((r, i) => (
-          <View key={i} style={s.cardWrap}>
-            <OrnateFrame padding={12}>
-              <PixelText style={s.l}>{r.l}</PixelText>
-              <PixelText style={s.n}>{r.n}</PixelText>
-              <Text style={s.m}>{r.d} | {r.g} | KOM: {r.kom} {r.time}</Text>
-            </OrnateFrame>
-          </View>
-        ))}
+      <ScrollView contentContainerStyle={s.content}>
+        <ProductCard>
+          <EmptyState
+            message={t.settings.comingSoon}
+            hint={t.segments.subtitle}
+          />
+        </ProductCard>
       </ScrollView>
     </SafeAreaView>
   );
