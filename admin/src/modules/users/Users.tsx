@@ -845,11 +845,20 @@ export const Users = () => {
                             <Tooltip label={t.users.editProfile}>
                               <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
                             </Tooltip>
-                            <Tooltip label={t.users.deleteUser}>
-                              <ActionIcon variant="subtle" color="red" onClick={() => { setDeleteTarget(u); setDeleteConfirmOpened(true); }}>
-                                <Trash2 size={14} />
-                              </ActionIcon>
-                            </Tooltip>
+                            {isGlobalOwner && (
+                              <Tooltip label={t.users.deleteUser}>
+                                <ActionIcon
+                                  variant="subtle"
+                                  color="red"
+                                  onClick={() => {
+                                    setDeleteTarget(u);
+                                    setDeleteConfirmOpened(true);
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
                           </Group>
                         </Table.Td>
                       </Table.Tr>
