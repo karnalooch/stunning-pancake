@@ -289,10 +289,15 @@ try {
   
     $gradleProperties = Join-Path $androidDir "gradle.properties"
     $gradleText = [System.IO.File]::ReadAllText($gradleProperties)
+    $heapBaseline = "-Xmx2048m"
     $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+    if (-not $gradleText.Contains($heapBaseline)) {
+      throw "Generated gradle.properties no longer contains the expected 2048m heap baseline."
+    }
     if (-not $gradleText.Contains($metaspaceBaseline)) {
       throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
     }
+    $gradleText = $gradleText.Replace($heapBaseline, "-Xmx4096m")
     $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
     $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     [System.IO.File]::WriteAllText($gradleProperties, $gradleText, $utf8NoBom)
@@ -311,7 +316,7 @@ try {
   
     Write-Host ""
     Write-Host "=== Build exact release APK ===" -ForegroundColor Cyan
-    Invoke-Checked "cmd" @("/c", "gradlew.bat", "assembleRelease", "--no-daemon", "--stacktrace") $androidDir
+    Invoke-Checked "cmd" @("/c", "gradlew.bat", "assembleRelease", "--no-daemon", "--stacktrace", "--max-workers=2") $androidDir
     if (-not (Test-Path $apkPath -PathType Leaf)) {
       throw "Gradle completed but APK is missing: $apkPath"
     }

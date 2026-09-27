@@ -162,9 +162,13 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertIn('[System.IO.File]::WriteAllBytes($workspaceConfig, $originalWorkspaceBytes)', source)
         self.assertIn('pnpmVirtualStore = $shortVirtualStore', source)
         self.assertIn('$env:EXPO_METRO_PNPM_VIRTUAL_STORE = $shortVirtualStore', source)
+        self.assertIn('$heapBaseline = "-Xmx2048m"', source)
+        self.assertIn('"-Xmx4096m"', source)
+        self.assertIn('Generated gradle.properties no longer contains the expected 2048m heap baseline.', source)
         self.assertIn('$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"', source)
         self.assertIn('"-XX:MaxMetaspaceSize=1g"', source)
         self.assertIn('Generated gradle.properties no longer contains the expected 512m metaspace baseline.', source)
+        self.assertIn('"--max-workers=2"', source)
         self.assertIn('process.env.EXPO_METRO_PNPM_VIRTUAL_STORE', metro_config)
         self.assertIn('config.watchFolders = Array.from(', metro_config)
         self.assertIn('fs.existsSync(resolvedVirtualStore)', metro_config)
@@ -213,10 +217,13 @@ class MobileHarnessContractTests(unittest.TestCase):
             'Set-Content -Path $workspaceConfig -Value $originalWorkspaceConfig',
             "expo prebuild --clean --platform android --no-install",
             "android\\local.properties",
+            '$heapBaseline = "-Xmx2048m"',
+            '"-Xmx4096m"',
+            "Generated gradle.properties no longer contains the expected 2048m heap baseline.",
             '$metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"',
             '"-XX:MaxMetaspaceSize=1g"',
             "Generated gradle.properties no longer contains the expected 512m metaspace baseline.",
-            "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace",
+            "cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2",
             "mobile\\android\\app\\build\\outputs\\apk\\release\\app-release.apk",
             "Get-FileHash -Algorithm SHA256",
         ):

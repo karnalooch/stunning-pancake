@@ -132,16 +132,21 @@ jobs:
           $sdkForGradle = $env:ANDROID_SDK_ROOT -replace '\\', '/'
           "sdk.dir=$sdkForGradle" | Set-Content -Path "android\local.properties" -Encoding ascii
 
-          # Expo/RN currently generates a 512m metaspace cap. On Windows release
-          # compilation that can exhaust the Kotlin/Gradle JVM and leave RMI threads
-          # repeatedly reporting OutOfMemoryError: Metaspace. Raise only metaspace;
-          # keep the generated heap limit unchanged.
+          # Expo/RN currently generates a 2g heap and 512m metaspace cap.
+          # Windows release packaging can exhaust the Gradle JVM in ApkFlinger.
+          # Give this one-shot release build more heap headroom and pair it with
+          # a worker cap so the hosted runner does not trade JVM OOM for host OOM.
           $gradleProperties = "android\gradle.properties"
           $gradleText = Get-Content -Raw $gradleProperties
+          $heapBaseline = "-Xmx2048m"
           $metaspaceBaseline = "-XX:MaxMetaspaceSize=512m"
+          if (-not $gradleText.Contains($heapBaseline)) {
+            throw "Generated gradle.properties no longer contains the expected 2048m heap baseline."
+          }
           if (-not $gradleText.Contains($metaspaceBaseline)) {
             throw "Generated gradle.properties no longer contains the expected 512m metaspace baseline."
           }
+          $gradleText = $gradleText.Replace($heapBaseline, "-Xmx4096m")
           $gradleText = $gradleText.Replace($metaspaceBaseline, "-XX:MaxMetaspaceSize=1g")
           Set-Content -Path $gradleProperties -Value $gradleText -Encoding utf8 -NoNewline
 
@@ -156,7 +161,7 @@ jobs:
         shell: pwsh
         run: |
           Set-Location "$env:SHORT_WORKSPACE\mobile\android"
-          cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace
+          cmd /c gradlew.bat assembleRelease --no-daemon --stacktrace --max-workers=2
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Record Windows release artifact
