@@ -112,8 +112,6 @@ curl https://<domena>.up.railway.app/api/docs/
 > **Repository status:** this Compose file has a verified backend build reference, but the standalone topology still has documented nginx/TLS/worker gaps. See [Production Compose verification status](../operations/PRODUCTION_COMPOSE_VERIFICATION.md) before using it as a deployment target.
 
 ### Plik: `docker-compose.prod.yml````yaml
-version: '3.8'
-
 services:
   backend:
     build: ./backend
