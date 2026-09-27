@@ -8,6 +8,12 @@ on:
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".github/actions/pnpm-setup/**"
+      - "version.json"
+      - "scripts/plan_affected_tests.py"
+      - "scripts/test_plan_affected_tests.py"
+      - "scripts/test_mobile_windows_release_smoke_workflow.py"
       - "scripts/android-env.ps1"
       - "scripts/mobile-runtime-acceptance.ps1"
       - "scripts/validate_mobile_native_provenance.py"
@@ -24,8 +30,57 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  native-scope:
+    name: Windows native scope
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.decision.outputs.run }}
+      reason: ${{ steps.decision.outputs.reason }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Classify native-affecting changes
+        id: classifier
+        if: github.event_name == 'pull_request'
+        env:
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python scripts/plan_affected_tests.py \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Decide whether Windows release compile is required
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=$EVENT_NAME explicitly requests release validation" >> "$GITHUB_OUTPUT"
+          elif [ "$NATIVE_CHANGED" = "true" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "reason=JS/UI/assets/backend-only PR; Windows release compile is redundant" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report Windows release scope
+        run: |
+          echo "### Mobile Windows Release Smoke" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Run Windows release compile:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
+
   android-release-windows:
     name: Android release compile (Windows)
+    needs: [native-scope]
+    if: needs.native-scope.outputs.run == 'true'
     runs-on: windows-latest
     timeout-minutes: 75
     env:
