@@ -261,6 +261,15 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, source)
 
+    def test_runtime_audit_accepts_vision_fixture_bypass_and_uses_ui_identity(self):
+        source = read("scripts/emulator-ui-audit.py")
+        self.assertIn("MAIN_SHELL_PATTERN", source)
+        self.assertIn("ui_has_pattern(MAIN_SHELL_PATTERN)", source)
+        self.assertIn("Vision fixtures — onboarding intentionally bypassed by AppRoot", source)
+        self.assertIn("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot", source)
+        self.assertNotIn('any("E2E skip" in n for n in onboard_notes)', source)
+        self.assertNotIn("Nieważny run parity (onboarding pominięty)", source)
+
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
         self.assertFalse((ROOT / "mobile" / "scripts" / "register_pilot.sh").exists())
