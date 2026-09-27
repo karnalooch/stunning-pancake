@@ -166,10 +166,10 @@ export const ExploreMapScreen: React.FC = () => {
     };
   }, []);
 
-  const mapCenter = useMemo<[number, number] | null>(
-    () => (pois.length ? [pois[0].longitude, pois[0].latitude] : null),
-    [pois],
-  );
+  const mapCenter = useMemo<[number, number] | null>(() => {
+    const firstPoi = pois[0];
+    return firstPoi ? [firstPoi.longitude, firstPoi.latitude] : null;
+  }, [pois]);
 
   const poiGeoJson = useMemo<GeoJSON.FeatureCollection | null>(() => {
     if (!pois.length) return null;
