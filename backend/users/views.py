@@ -667,13 +667,16 @@ class UserUpdateView(generics.UpdateAPIView):
                     status_code=status.HTTP_403_FORBIDDEN,
                 )
 
-            # TENANT_ADMIN cannot promote any user to GLOBAL_OWNER
-            role = request.data.get("role")
-            if role == "GLOBAL_OWNER":
-                return error(
-                    "You cannot promote a user to Global Owner.",
-                    status_code=status.HTTP_403_FORBIDDEN,
-                )
+            # Keep update semantics aligned with create/invite/bulk assignment policy.
+            # Unrelated edits to an existing TENANT_ADMIN remain possible when
+            # the request does not attempt to reassign the role.
+            if "role" in request.data:
+                role = request.data.get("role")
+                if role not in TENANT_ADMIN_ASSIGNABLE_ROLES:
+                    return error(
+                        "You cannot assign this role.",
+                        status_code=status.HTTP_403_FORBIDDEN,
+                    )
 
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         if not serializer.is_valid():
