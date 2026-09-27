@@ -193,7 +193,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   const [profileLoading, setProfileLoading] = useState(!fixturesEnabled);
   const [profileError, setProfileError] = useState(false);
 
-  const loadProfile = useCallback(async () => {
+  const retryProfile = useCallback(async () => {
     if (fixturesEnabled) return;
 
     setProfileLoading(true);
@@ -208,8 +208,24 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   }, [fixturesEnabled]);
 
   useEffect(() => {
-    void loadProfile();
-  }, [loadProfile]);
+    if (fixturesEnabled) return;
+
+    let active = true;
+    void AuthService.getProfile()
+      .then((nextProfile) => {
+        if (active) setProfile(nextProfile);
+      })
+      .catch(() => {
+        if (active) setProfileError(true);
+      })
+      .finally(() => {
+        if (active) setProfileLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [fixturesEnabled]);
 
   const displayName = formatRiderDisplayName(
     profileFixture?.username ?? profile?.username ?? user?.username,
@@ -276,7 +292,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
                 <Text style={s.stateBody}>{t.profile.profileLoadErrorBody}</Text>
                 <PrimaryButton
                   label={t.common.retry}
-                  onPress={() => void loadProfile()}
+                  onPress={() => void retryProfile()}
                   variant="secondary"
                   testID="profile-retry"
                 />
