@@ -13,6 +13,9 @@ DOCKER = ROOT / ".github" / "workflows" / "docker-publish.yml"
 K8S = ROOT / ".github" / "workflows" / "k8s-release-gate.yml"
 SCORECARD = ROOT / ".github" / "workflows" / "scorecard.yml"
 MOBSF = ROOT / ".github" / "workflows" / "mobsf.yml"
+FULL_RELEASE = ROOT / ".github" / "workflows" / "full-release.yml"
+HOME_LAB = ROOT / ".github" / "workflows" / "home-lab.yml"
+NATIVE_SMOKE = ROOT / ".github" / "workflows" / "mobile-native-smoke.yml"
 
 
 def load(path: Path) -> dict:
@@ -152,6 +155,80 @@ class WorkflowDependencyPinningTests(unittest.TestCase):
             "PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
             raw,
         )
+
+
+class FullReleaseLaneContractTests(unittest.TestCase):
+    @staticmethod
+    def _trigger(path: Path) -> dict:
+        wf = load(path)
+        return wf.get(True, wf.get("on", {}))
+
+    def test_full_release_owns_manual_nightly_and_release_tag_triggers(self):
+        trigger = self._trigger(FULL_RELEASE)
+        self.assertIn("workflow_dispatch", trigger)
+        self.assertIn("schedule", trigger)
+        self.assertIn("push", trigger)
+        self.assertNotIn("pull_request", trigger)
+        self.assertEqual(trigger["schedule"][0]["cron"], "15 2 * * *")
+        self.assertEqual(trigger["push"]["tags"], ["v*.*.*"])
+
+        ci_trigger = self._trigger(CI)
+        self.assertNotIn("schedule", ci_trigger)
+
+    def test_heavy_proofs_reuse_canonical_workflows(self):
+        wf = load(FULL_RELEASE)
+        jobs = wf["jobs"]
+        self.assertEqual(
+            jobs["android-native"]["uses"],
+            "./.github/workflows/mobile-native-smoke.yml",
+        )
+        self.assertEqual(
+            jobs["home-lab"]["uses"],
+            "./.github/workflows/home-lab.yml",
+        )
+        self.assertEqual(
+            jobs["k8s-release"]["uses"],
+            "./.github/workflows/k8s-release-gate.yml",
+        )
+        self.assertEqual(jobs["k8s-release"]["with"]["deploy_target"], "none")
+        self.assertIn("bash scripts/run-quality-baseline.sh", text(FULL_RELEASE))
+
+    def test_full_release_gate_is_fail_closed_and_stable(self):
+        jobs = load(FULL_RELEASE)["jobs"]
+        gate = jobs["full-release-gate"]
+        self.assertEqual(gate["name"], "Full Release Gate")
+        self.assertIn("always()", gate["if"])
+        self.assertEqual(
+            set(gate["needs"]),
+            {"repo-regression", "android-native", "home-lab", "k8s-release"},
+        )
+        raw = text(FULL_RELEASE)
+        for label in (
+            "Full monorepo regression",
+            "Full Android native smoke",
+            "Home Lab configuration proof",
+            "Kubernetes + release proof",
+        ):
+            with self.subTest(label=label):
+                self.assertIn(label, raw)
+        self.assertIn('if [ "$result" != "success" ]', raw)
+
+    def test_reused_workflows_expose_workflow_call(self):
+        for path in (NATIVE_SMOKE, HOME_LAB, K8S):
+            with self.subTest(path=path.name):
+                self.assertIn("workflow_call", self._trigger(path))
+
+    def test_release_orchestrator_is_read_only_and_cannot_deploy(self):
+        release = load(FULL_RELEASE)
+        self.assertEqual(release["permissions"], {"contents": "read"})
+        self.assertNotIn("secrets:", text(FULL_RELEASE))
+        self.assertNotIn("environment:\n      name: production", text(FULL_RELEASE))
+
+        k8s = load(K8S)
+        self.assertEqual(k8s["permissions"], {"contents": "read"})
+        self.assertNotIn("packages: write", text(K8S))
+        deploy = k8s["jobs"]["deploy_placeholder"]
+        self.assertIn("workflow_dispatch", deploy["if"])
 
 
 class MobSFContractTests(unittest.TestCase):
