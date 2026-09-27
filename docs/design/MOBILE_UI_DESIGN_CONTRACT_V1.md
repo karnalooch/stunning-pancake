@@ -8,7 +8,7 @@
 | **Applies to** | 4VELO mobile application |
 | **Implementation order** | Auth/Onboarding → Home → Active Ride → Ride Summary → Profile/Compete/Explore |
 | **Runtime changes in this document** | None |
-| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |
+| **Visual authority** | [UI Visual Protection Architecture v1](./MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md) |\n| **Repo implementation** | **COMPLETE across production mobile screens as of 2026-09-27 / PR #298; physical T84 validation still pending** |
 
 ## 0. Visual authority
 
