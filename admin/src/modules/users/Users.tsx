@@ -338,6 +338,8 @@ export const Users = () => {
   const isGlobalOwner = user?.role === 'GLOBAL_OWNER';
   const isTenantAdmin = user?.role === 'TENANT_ADMIN';
   const canDeleteUsers = canActorDeleteUsers(user?.role);
+  const isCurrentGlobalOwner = (targetUserId: number) =>
+    isGlobalOwner && user?.id === targetUserId;
   const tenantScope = useTenantScope();
 
   const handleImpersonate = async (targetUserId: number) => {
@@ -375,7 +377,7 @@ export const Users = () => {
         email: createForm.email,
         password: createForm.password,
         role: createForm.role,
-        tenant_id: createForm.tenant_id || undefined,
+        tenant_id: createForm.role === 'GLOBAL_OWNER' ? undefined : createForm.tenant_id || undefined,
       });
       notifications.show({
         title: t.users.userCreated,
@@ -396,18 +398,23 @@ export const Users = () => {
     if (!selectedUser) return;
     setActionLoading(true);
     try {
+      const editingCurrentGlobalOwner = isCurrentGlobalOwner(selectedUser.id);
       const updatePayload: any = {
         username: editForm.username,
         email: editForm.email,
-        is_active: editForm.is_active,
+        is_active: editingCurrentGlobalOwner ? true : editForm.is_active,
         bio: editForm.bio,
         avatar: editForm.avatar || null,
       };
 
       if (canActorAssignRole(user?.role, editForm.role)) {
-        updatePayload.role = editForm.role;
+        updatePayload.role = editingCurrentGlobalOwner ? 'GLOBAL_OWNER' : editForm.role;
       }
-      if (canActorReassignTenant(user?.role) && editForm.tenant_id) {
+      if (
+        canActorReassignTenant(user?.role)
+        && editForm.role !== 'GLOBAL_OWNER'
+        && editForm.tenant_id
+      ) {
         updatePayload.tenant_id = editForm.tenant_id;
       }
       if (editForm.password) {
@@ -430,6 +437,7 @@ export const Users = () => {
   };
 
   const handleToggleLockUser = async (userRow: UserRow) => {
+    if (isCurrentGlobalOwner(userRow.id)) return;
     try {
       const newStatus = !userRow.is_active;
       await AdminApi.updateUser(userRow.id, { is_active: newStatus });
@@ -445,7 +453,7 @@ export const Users = () => {
   };
 
   const handleDeleteUser = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isCurrentGlobalOwner(deleteTarget.id)) return;
     setActionLoading(true);
     try {
       await AdminApi.deleteUser(deleteTarget.id);
@@ -546,6 +554,17 @@ export const Users = () => {
 
   const selectedRoleIsLockedForTenantAdmin =
     isTenantAdmin && selectedUser != null && !canTenantAdminAssignRole(selectedUser.role);
+  const selectedUserIsCurrentGlobalOwner =
+    selectedUser != null && isCurrentGlobalOwner(selectedUser.id);
+  const visibleSelectableUserIds = usersList
+    .filter((candidate) => !isCurrentGlobalOwner(candidate.id))
+    .map((candidate) => candidate.id);
+  const allVisibleSelectableSelected =
+    visibleSelectableUserIds.length > 0
+    && visibleSelectableUserIds.every((id) => selectedUserIds.includes(id));
+  const someVisibleSelectableSelected =
+    visibleSelectableUserIds.some((id) => selectedUserIds.includes(id));
+
   const editRoleOptions = selectedRoleIsLockedForTenantAdmin && selectedUser
     ? [
         {
@@ -759,15 +778,14 @@ export const Users = () => {
                     <Table.Th style={{ width: '44px' }}>
                       <Checkbox
                         aria-label={t.common.selectAll}
-                        checked={usersList.length > 0 && usersList.every((u) => selectedUserIds.includes(u.id))}
-                        indeterminate={usersList.some((u) => selectedUserIds.includes(u.id)) && !usersList.every((u) => selectedUserIds.includes(u.id))}
+                        checked={allVisibleSelectableSelected}
+                        indeterminate={someVisibleSelectableSelected && !allVisibleSelectableSelected}
                         onChange={(e) => {
                           const checked = e.currentTarget.checked;
-                          const visibleIds = usersList.map((u) => u.id);
                           if (checked) {
-                            setSelectedUserIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+                            setSelectedUserIds((prev) => Array.from(new Set([...prev, ...visibleSelectableUserIds])));
                           } else {
-                            setSelectedUserIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+                            setSelectedUserIds((prev) => prev.filter((id) => !visibleSelectableUserIds.includes(id)));
                           }
                         }}
                       />
@@ -800,7 +818,9 @@ export const Users = () => {
                           <Checkbox
                             aria-label={`${t.common.selectAll} ${u.displayId}`}
                             checked={selectedUserIds.includes(u.id)}
+                            disabled={isCurrentGlobalOwner(u.id)}
                             onChange={(e) => {
+                              if (isCurrentGlobalOwner(u.id)) return;
                               const checked = e.currentTarget.checked;
                               setSelectedUserIds((prev) => {
                                 if (checked) return Array.from(new Set([...prev, u.id]));
@@ -832,16 +852,18 @@ export const Users = () => {
                             <Badge color={u.is_active ? 'green' : 'orange'} variant="light" size="xs">
                               {u.is_active ? t.users.active : t.users.locked}
                             </Badge>
-                            <Tooltip label={u.is_active ? t.users.lockAccount : t.users.unlockAccount}>
-                              <ActionIcon
-                                variant="subtle"
-                                size="sm"
-                                color={u.is_active ? 'orange' : 'green'}
-                                onClick={() => handleToggleLockUser(u)}
-                              >
-                                {u.is_active ? <Lock size={12} /> : <Unlock size={12} />}
-                              </ActionIcon>
-                            </Tooltip>
+                            {!isCurrentGlobalOwner(u.id) && (
+                              <Tooltip label={u.is_active ? t.users.lockAccount : t.users.unlockAccount}>
+                                <ActionIcon
+                                  variant="subtle"
+                                  size="sm"
+                                  color={u.is_active ? 'orange' : 'green'}
+                                  onClick={() => handleToggleLockUser(u)}
+                                >
+                                  {u.is_active ? <Lock size={12} /> : <Unlock size={12} />}
+                                </ActionIcon>
+                              </Tooltip>
+                            )}
                           </Group>
                         </Table.Td>
                         <Table.Td>
@@ -849,7 +871,7 @@ export const Users = () => {
                             <Tooltip label={t.users.editProfile}>
                               <ActionIcon variant="subtle" color="cyan" onClick={() => setSelectedUser(u)}><Eye size={16} /></ActionIcon>
                             </Tooltip>
-                            {canDeleteUsers && (
+                            {canDeleteUsers && !isCurrentGlobalOwner(u.id) && (
                               <Tooltip label={t.users.deleteUser}>
                                 <ActionIcon
                                   variant="subtle"
@@ -1008,9 +1030,9 @@ export const Users = () => {
                     value={editForm.role}
                     onChange={(v) => setEditForm({ ...editForm, role: v || 'ATHLETE' })}
                     data={editRoleOptions}
-                    disabled={selectedRoleIsLockedForTenantAdmin}
+                    disabled={selectedRoleIsLockedForTenantAdmin || selectedUserIsCurrentGlobalOwner}
                   />
-                  {isGlobalOwner && (
+                  {isGlobalOwner && editForm.role !== 'GLOBAL_OWNER' && (
                     <Select
                     label={t.users.assignedTenant}
                       value={editForm.tenant_id}
@@ -1026,6 +1048,7 @@ export const Users = () => {
                       checked={editForm.is_active}
                       onChange={(e) => setEditForm({ ...editForm, is_active: e.currentTarget.checked })}
                       color="cyan"
+                      disabled={selectedUserIsCurrentGlobalOwner}
                     />
                   </Group>
                 </Stack>
@@ -1123,7 +1146,7 @@ export const Users = () => {
             onChange={(v) => setCreateForm({ ...createForm, role: v || 'ATHLETE' })}
             data={createRoleOptions}
           />
-          {isGlobalOwner && (
+          {isGlobalOwner && createForm.role !== 'GLOBAL_OWNER' && (
             <Select label={t.users.tenant} value={createForm.tenant_id} onChange={(v) => setCreateForm({ ...createForm, tenant_id: v || '' })} data={tenantsList.map((t: TenantRow) => ({ value: String(t.id), label: t.name }))} clearable />
           )}
           <Button fullWidth onClick={handleCreateUser} color="cyan" loading={actionLoading}>{t.users.createUser}</Button>
