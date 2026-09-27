@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   TENANT_ADMIN_ASSIGNABLE_ROLES,
   canActorAssignRole,
+  canActorDeleteUsers,
   canActorReassignTenant,
   canTenantAdminAssignRole,
 } from '../modules/users/rolePolicy';
@@ -37,5 +38,10 @@ describe('tenant admin user-role policy', () => {
   it('keeps global-owner role assignment unrestricted by tenant policy', () => {
     expect(canActorAssignRole('GLOBAL_OWNER', 'TENANT_ADMIN')).toBe(true);
     expect(canActorAssignRole('GLOBAL_OWNER', 'GLOBAL_OWNER')).toBe(true);
+  });
+
+  it('matches the RBAC users.delete contract', () => {
+    expect(canActorDeleteUsers('TENANT_ADMIN')).toBe(false);
+    expect(canActorDeleteUsers('GLOBAL_OWNER')).toBe(true);
   });
 });
