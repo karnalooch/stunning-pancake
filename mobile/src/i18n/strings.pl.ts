@@ -95,6 +95,8 @@ export const stringsPl = {
     poiTitle: 'Punkty POI',
     poiEmpty: 'Brak POI w pobliżu.',
     mapHint: 'Punkty sponsorów w Twoim mieście',
+    poiLoadError: 'Punkty POI są niedostępne',
+    poiLoadErrorHint: 'Nie udało się pobrać punktów POI. Sprawdź połączenie i spróbuj ponownie.',
     openMap: 'Mapa',
     openMarketplace: 'Marketplace',
     marketHint: 'Wymieniaj XP na vouchery partnerów i nagrody wyścigowe.',
