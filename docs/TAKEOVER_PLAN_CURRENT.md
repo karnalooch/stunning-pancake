@@ -2,7 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Last reconciled with `main`:** 2026-09-25 (`d31d039a`)  
+**Last reconciled with `main`:** 2026-09-27 (`af7ee359`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
@@ -21,10 +21,11 @@ Supporting documents remain useful as detailed contracts/evidence, but they do n
 
 If any stage label (`P3`, `P4`, `P5`, `PPH`, `P6`) conflicts with a tranche below, the tranche table in this document wins for execution order. Stage labels are only human-friendly milestones.
 
-### Reconciliation snapshot — 2026-09-25
+### Reconciliation snapshot — 2026-09-27
 
 This snapshot records the actual repository/runtime state after the September cleanup so older issue text does not reopen already-proven work:
 
+- **2026-09-27 mobile/CI reconciliation:** #278, #282, #286, #287 and #288 are merged on `main`. Ordinary PR validation is lane-classified; pure JS/UI work does not pay for Android Gradle/release proof, native-affecting work retains clean debug proof, and heavyweight full/release validation is explicit through the Full Release lane. T81 and T82 repo-side slices are landed; T83-A continues in #292.
 - **Repository hygiene:** PR #266 merged. Historical/stale non-Dependabot branch refs were pruned; unique unmerged tips were preserved with archive tags before deletion. At cleanup completion the branch set was `main` plus five retained Dependabot branches.
 - **Dependabot policy:** ordinary version-update PR generation is disabled; new Dependabot PRs are security-only and grouped per ecosystem. Existing useful PRs may remain open for deliberate review.
 - **Operational notifications:** PR #267 merged Slack routing for selected 4VELO operational signals.
@@ -194,11 +195,11 @@ Required behavior:
 | --- | --- | --- | --- |
 | T77 | Mobile UI audit + freeze global visual direction | DONE | PR #91. Grand Prix Modern contract is the current direction. |
 | T78 | Auth + onboarding implementation | DONE | PR #92. Preserve real auth/onboarding behavior; no fake production team data. |
-| T79 | Home screen implementation/polish | ACTIVE | #271 restored the Home dashboard on current main. #277 carries the governed production hero/Place Badge cut-over; final acceptance still requires reconciliation onto current main plus #284 exact-SHA runtime screenshots/manual visual sign-off. |
-| T80 | Active Ride screen implementation/polish | ACTIVE | #275 is merged with Frozen UI v1.2 live HUD chrome and preserved ride semantics. #277 supplies the governed rider marker; final exact-SHA/outdoor acceptance remains open. |
-| T81 | Ride Summary implementation/polish | ACTIVE | #286 is the current visual slice: product typography/cards/actions with durable-success vs pending/recovery separation preserved. Main CI is green; Android clean debug compile is the remaining heavy gate before stack reconciliation. |
-| T82 | History + Activity Detail implementation/polish | PLANNED | Data-first: consume the existing detail endpoint and real `route_coords`; fix duration typing, compute truthful average speed, replace route placeholder with the functional map, remove static achievement claims, and distinguish API failure from a genuine empty history. |
-| T83 | Profile + remaining pilot mobile surfaces | PLANNED | Consistent typography/tokens/visual language plus governed production art. Screen-level asset coverage is machine-tracked: Profile/Compete/Explore cannot be visually signed off on procedural fallbacks alone. |
+| T79 | Home screen implementation/polish | PARTIAL | #271 and #277 are merged and the governed Home implementation is on `main`. No implementation PR remains open; residual exact-SHA/physical visual acceptance is carried as validation evidence rather than reopening merged code without a concrete regression. |
+| T80 | Active Ride screen implementation/polish | PARTIAL | #275 and #277 are merged with Frozen UI v1.2 live HUD chrome, preserved ride semantics and governed rider marker. Residual exact-SHA/outdoor acceptance remains a validation item; there is no open implementation PR. |
+| T81 | Ride Summary implementation/polish | DONE | #286 is merged on `main`: product typography/cards/actions with durable-success vs pending/recovery separation preserved. The old stacked implementation is reconciled and no further native release build is required merely because later JS/UI work touches adjacent screens. |
+| T82 | History + Activity Detail implementation/polish | DONE | #288 is merged on `main`: numeric duration contract, canonical detail endpoint, real `route_coords` map, truthful average speed, no static achievement/route placeholders, and explicit empty/error/offline behavior. |
+| T83 | Profile + remaining pilot mobile surfaces | ACTIVE | #292 implements T83-A Athlete Profile on Frozen UI v1.2 with truthful profile/history data and no derived fake achievements. Compete/Explore and planned governed production art remain later T83 slices; final visual acceptance still follows asset-governance and exact-SHA evidence. |
 | T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check, 2–3 person dry run if useful. |
 
 UI is not considered complete because screenshots look good. It must be truthful under real error/offline/synchronization states.
@@ -245,19 +246,18 @@ This is the only short sequence worth remembering:
    T68
    T76 residual physical Android/home-lab scenarios
 
-2. close mobile release trust:
-   #156 T80-E canonical toolchain/provenance
-   restore/review archived #265 runtimeVersion/appVersion gate
-   #157 exact-artifact absolute-zero proof
+2. close remaining mobile release trust:
+   #156 T80-E is DONE
+   runtimeVersion/appVersion boundary is landed
+   #157 exact-artifact absolute-zero proof remains
 
-3. finish Home:
-   restore archived #262 work
-   rebase on current main
-   runtime + visual sign-off
-   merge T79
+3. preserve landed Home / Active Ride implementation:
+   T79/T80 code is on main
+   carry residual exact-SHA/outdoor sign-off into validation
+   reopen implementation only for a concrete regression
 
 4. finish pilot mobile UI:
-   T80 -> T81 -> T82 -> T83 -> T84
+   T81 DONE -> T82 DONE -> T83 ACTIVE (#292) -> T84
 
 5. panels/operations:
    T85 -> T86 -> T87
@@ -273,7 +273,7 @@ This is the only short sequence worth remembering:
    T93
 ```
 
-Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T69–T75`, `T77`, `T78`, `T94`) is not repeated unless a concrete regression invalidates it.
+Already-DONE evidence (`T05`, `T13`, `T14`, `T16`, `T60–T67`, `T69–T75`, `T77`, `T78`, `T81`, `T82`, `T94`) is not repeated unless a concrete regression invalidates it.
 
 # Full takeover after the pilot
 
