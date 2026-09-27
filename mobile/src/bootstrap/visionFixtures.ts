@@ -84,19 +84,8 @@ export const VISION_PROFILE = {
   level: 12,
   xpCurrent: 3850,
   xpMax: 5000,
-  stats: { km: 342, rides: 28, kom: 12 },
-  achievements: [
-    { id: 'ach_100km', label: '100 KM', unlocked: true },
-    { id: 'ach_10rides', label: '10 JAZD', unlocked: true },
-    { id: 'ach_500m', label: '500 M', unlocked: true },
-    { id: 'ach_kom', label: 'KOM', unlocked: true },
-    { id: 'ach_5h', label: '5H CZAS', unlocked: true },
-    { id: 'ach_endurance', label: 'WYTRWAŁOŚĆ', unlocked: true },
-    { id: 'ach_1000kcal', label: '1000 KCAL', unlocked: true },
-    { id: 'ach_7days', label: '7 DNI', unlocked: true },
-    { id: 'ach_explorer', label: 'ODKRYWCA', unlocked: true },
-    { id: 'ach_passion', label: 'PASJA', unlocked: true },
-  ],
+  streakDays: 6,
+  stats: { km: 342, rides: 28, verified: 12 },
 } as const;
 
 /** Compete hub — mirrors `vision/05_compete_hub.png` (Lublin). */
