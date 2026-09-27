@@ -49,4 +49,11 @@ describe('T85 tenant-admin pilot UI contract', () => {
       "{isGlobalOwner && bulkChangeRoleForm.role !== 'GLOBAL_OWNER' && (",
     );
   });
+
+  it('does not surface users.delete to TENANT_ADMIN', () => {
+    const source = readUsers();
+
+    expect(source).toContain('const canDeleteUsers = canActorDeleteUsers(user?.role)');
+    expect(source).toContain('{canDeleteUsers && (');
+  });
 });
