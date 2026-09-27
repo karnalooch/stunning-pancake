@@ -95,6 +95,8 @@ export const stringsEn = {
     poiTitle: 'POI points',
     poiEmpty: 'No POIs nearby.',
     mapHint: 'Sponsor points in your city',
+    poiLoadError: 'Points of interest unavailable',
+    poiLoadErrorHint: 'We could not load POIs. Check your connection and try again.',
     openMap: 'Map',
     openMarketplace: 'Marketplace',
     marketHint: 'Exchange XP for partner vouchers and race rewards.',
