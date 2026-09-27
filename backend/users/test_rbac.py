@@ -328,3 +328,69 @@ class TestRoleApi:
         )
         assert response.status_code == 400
         assert not UserRole.objects.filter(user=athlete, role=role).exists()
+
+    def test_tenant_admin_cannot_delete_privileged_role_assignment(
+        self, tenant_admin, athlete, tenant, rbac_roles
+    ):
+        from rest_framework.test import APIClient
+
+        privileged = Role.objects.get(slug="tenant_admin")
+        assignment = UserRole.objects.create(
+            user=athlete,
+            role=privileged,
+            tenant=tenant,
+            tenant_scoped=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+
+        response = client.delete(f"/api/users/rbac/user-roles/{assignment.id}/")
+
+        assert response.status_code == 400
+        assert UserRole.objects.filter(id=assignment.id).exists()
+
+    def test_tenant_admin_cannot_revoke_privileged_role_assignment(
+        self, tenant_admin, athlete, tenant, rbac_roles
+    ):
+        from rest_framework.test import APIClient
+
+        privileged = Role.objects.get(slug="tenant_admin")
+        assignment = UserRole.objects.create(
+            user=athlete,
+            role=privileged,
+            tenant=tenant,
+            tenant_scoped=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+
+        response = client.post(
+            f"/api/users/rbac/user-roles/{assignment.id}/revoke/",
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert UserRole.objects.filter(id=assignment.id).exists()
+
+    def test_tenant_admin_can_revoke_assignable_role(
+        self, tenant_admin, athlete, tenant, rbac_roles
+    ):
+        from rest_framework.test import APIClient
+
+        assignable = Role.objects.get(slug="athlete")
+        assignment = UserRole.objects.create(
+            user=athlete,
+            role=assignable,
+            tenant=tenant,
+            tenant_scoped=True,
+        )
+        client = APIClient()
+        client.force_authenticate(user=tenant_admin)
+
+        response = client.post(
+            f"/api/users/rbac/user-roles/{assignment.id}/revoke/",
+            format="json",
+        )
+
+        assert response.status_code == 200
+        assert not UserRole.objects.filter(id=assignment.id).exists()
