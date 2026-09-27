@@ -261,14 +261,26 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, source)
 
-    def test_runtime_audit_accepts_vision_fixture_bypass_and_uses_ui_identity(self):
+    def test_runtime_audit_requires_first_run_onboarding_and_persistence(self):
         source = read("scripts/emulator-ui-audit.py")
+        app_root = read("mobile/src/app/AppRoot.tsx")
+        auth_session = read("mobile/src/bootstrap/useAuthSession.ts")
+        storage = read("mobile/src/bootstrap/storage.ts")
+
         self.assertIn("MAIN_SHELL_PATTERN", source)
         self.assertIn("ui_has_pattern(MAIN_SHELL_PATTERN)", source)
-        self.assertIn("Vision fixtures — onboarding intentionally bypassed by AppRoot", source)
-        self.assertIn("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot", source)
-        self.assertNotIn('any("E2E skip" in n for n in onboard_notes)', source)
-        self.assertNotIn("Nieważny run parity (onboarding pominięty)", source)
+        self.assertIn("Fresh runtime acceptance entered the main shell before onboarding", source)
+        self.assertIn("Onboarding completion persisted across app restart", source)
+        self.assertIn('"force-stop", APP_ID', source)
+        self.assertNotIn("Vision fixtures — onboarding intentionally bypassed by AppRoot", source)
+        self.assertNotIn("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot", source)
+
+        self.assertIn("if (!auth.isOnboarded.get())", app_root)
+        self.assertNotIn("&& !isVisionFixtures()", app_root)
+        self.assertIn("isOnboardingCompleteGlobal()", auth_session)
+        self.assertIn("auth.isOnboarded.set(", auth_session)
+        self.assertIn("export function isOnboardingCompleteGlobal()", storage)
+
 
     def test_stale_machine_specific_pilot_helpers_are_removed(self):
         self.assertFalse((ROOT / "mobile" / "eas-wsl-build.sh").exists())
