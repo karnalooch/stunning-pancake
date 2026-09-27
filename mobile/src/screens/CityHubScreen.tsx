@@ -1,305 +1,444 @@
-/* eslint-disable react-hooks/set-state-in-effect -- T94 legacy lint baseline: preserve existing mount/load behavior while real mobile lint is activated. */
-/**
- * CityHubScreen — STITCH Phase 1 (P0)
- * 
- * City-level competition dashboard. Shows City Wars VS banner,
- * local leaderboard, nearby quests, City of the Week.
- */
-
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, ScrollView, Pressable } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import {
-    ActivityService,
-    type CityHubSummary,
-    type LeaderboardEntry,
-} from '../services/api';
-import { useI18n } from '../i18n/useI18n';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { FONTS } from '../theme/fonts';
-import { useImmersiveTheme } from '../hooks/useImmersiveTheme';
-import { useGameProgress } from '../hooks/useGameProgress';
-import { SceneBackground } from '../components/scene/SceneBackground';
-import { SpeechBubble } from '../components/narration/SpeechBubble';
-import { LevelXpBar } from '../components/game/LevelXpBar';
-import { ChromeIcon } from '../components/ui/ChromeIcon';
-import { OfflineCacheService } from '../services/OfflineCacheService';
-import { withRetry } from '../services/apiRetry';
-import { AppHeader } from '../components/ui/AppHeader';
-import { SkeletonBlock } from '../components/ui/SkeletonBlock';
-import { CityBanner } from '../components/game/CityBanner';
-import { VersusBar } from '../components/game/VersusBar';
-import { LaurelHeader } from '../components/ui/LaurelHeader';
-import { OrnateFrame } from '../components/ui/OrnateFrame';
-import { getVisionCityHubFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { StyleSheet } from 'react-native-unistyles';
 
-const stylesheet = StyleSheet.create(theme => {
-    const C = theme.colors as Record<string, string>;
-    const shadow = { shadowColor: C.onBackground, shadowOffset: { width: 4, height: 4 }, shadowOpacity: 1, shadowRadius: 0, elevation: 8 };
-    const shadowSm = { shadowColor: C.onBackground, shadowOffset: { width: 2, height: 2 }, shadowOpacity: 1, shadowRadius: 0, elevation: 4 };
-    return {
-    shadow,
-    shadowSm,
-    container: { flex: 1, backgroundColor: C.background },
+import { Metric, PrimaryButton, ProductCard } from '../components/product';
+import { SkeletonBlock } from '../components/ui/SkeletonBlock';
+import { getVisionCityHubFixture, isVisionFixtures } from '../bootstrap/visionFixtures';
+import { useI18n } from '../i18n/useI18n';
+import {
+  ActivityService,
+  type CityHubSummary,
+} from '../services/api';
+import { withRetry } from '../services/apiRetry';
+import { OfflineCacheService } from '../services/OfflineCacheService';
+import { LAYOUT } from '../theme/layout';
+import { getSemanticColors } from '../theme/semantic';
+import { PRODUCT_TYPOGRAPHY } from '../theme/typography';
+
+const stylesheet = StyleSheet.create((theme) => {
+  const semantic = getSemanticColors(theme.colors);
+
+  return {
+    container: {
+      flex: 1,
+      backgroundColor: semantic.canvas.background,
+    },
     header: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingHorizontal: 16, paddingVertical: 12, backgroundColor: C.surface,
-        borderBottomWidth: 4, borderBottomColor: C.onBackground,
+      minHeight: 72,
+      paddingHorizontal: LAYOUT.gutter,
+      paddingVertical: 12,
+      justifyContent: 'center',
+      backgroundColor: semantic.surface.raised,
+      borderBottomWidth: 1,
+      borderBottomColor: semantic.border.subtle,
     },
-    hdrLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    avatar: { width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: C.onBackground, backgroundColor: C.primaryContainer },
-    hdrTitle: { fontSize: 18, fontFamily: FONTS.display, color: C.primary, textTransform: 'uppercase' },
-    lvlBadge: { backgroundColor: C.primaryContainer, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 2, borderColor: C.onBackground, borderRadius: 4 },
-    lvlText: { fontSize: 12, fontFamily: FONTS.display, textTransform: 'uppercase' },
-    scroll: { flex: 1 },
-    content: { padding: 16, gap: 16 },
-    // Section wrappers
-    sectionFrame: { gap: 10 },
-    // Legacy City Wars typography (kept for labels around the new VS component)
-    vsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    vsTitle: { fontSize: 16, fontFamily: FONTS.display, color: C.onBackground, textTransform: 'uppercase' },
-    vsDelta: { fontSize: 10, fontFamily: FONTS.display, color: C.secondary, textTransform: 'uppercase', textAlign: 'center', marginTop: 4 },
-    // Leaderboard
-    lbRow: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: C.parchment, borderWidth: 2, borderColor: C.onBackground,
-        borderRadius: 4, paddingHorizontal: 12, paddingVertical: 10,
+    headerTitle: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      color: semantic.text.primary,
     },
-    lbRank: { fontSize: 18, fontFamily: FONTS.display, width: 24 },
-    lbName: { fontSize: 14, fontFamily: FONTS.display, flex: 1, marginLeft: 8 },
-    lbScore: { fontSize: 18, fontFamily: FONTS.display },
-    // Nearby quests
-    questGrid: { flexDirection: 'row', gap: 8 },
-    questCard: {
-        flex: 1, backgroundColor: C.parchment, borderWidth: 2, borderColor: C.onBackground,
-        borderRadius: 8, padding: 12, gap: 4,
+    content: {
+      padding: LAYOUT.gutter,
+      gap: LAYOUT.sectionGap,
+      paddingBottom: 112,
     },
-    questTitle: { fontSize: 14, fontFamily: FONTS.display, textTransform: 'uppercase' },
-    questBadge: {
-        fontSize: 10, fontFamily: FONTS.display, paddingHorizontal: 6, paddingVertical: 2,
-        borderWidth: 2, borderColor: C.onBackground, borderRadius: 2, alignSelf: 'flex-start',
+    section: {
+      gap: 8,
     },
-    questDist: { fontSize: 10, color: C.secondary },
-    questTime: { fontSize: 16, fontFamily: FONTS.display, color: C.onBackground, marginTop: 4 },
-    };
+    sectionTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      fontSize: 18,
+      lineHeight: 24,
+      color: semantic.text.primary,
+    },
+    stateContent: {
+      gap: 10,
+    },
+    errorTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.error,
+    },
+    offlineTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.status.offline,
+    },
+    stateBody: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    cityName: {
+      ...PRODUCT_TYPOGRAPHY.title,
+      fontSize: 20,
+      lineHeight: 26,
+      color: semantic.text.primary,
+    },
+    warRow: {
+      flexDirection: 'row',
+      alignItems: 'stretch',
+      gap: 10,
+    },
+    warSide: {
+      flex: 1,
+    },
+    versus: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      alignSelf: 'center',
+      color: semantic.text.secondary,
+    },
+    lead: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+      textAlign: 'center',
+    },
+    leaderboard: {
+      gap: 8,
+    },
+    leaderboardRow: {
+      minHeight: 52,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: semantic.border.subtle,
+      backgroundColor: semantic.surface.default,
+    },
+    leaderboardRowMine: {
+      borderColor: semantic.selection.border,
+      backgroundColor: semantic.selection.background,
+    },
+    rank: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      width: 32,
+      color: semantic.text.secondary,
+      fontVariant: ['tabular-nums'],
+    },
+    rider: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      flex: 1,
+      color: semantic.text.primary,
+    },
+    score: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      color: semantic.text.primary,
+      fontVariant: ['tabular-nums'],
+    },
+    questStack: {
+      gap: 10,
+    },
+    questContent: {
+      gap: 6,
+    },
+    questCategory: {
+      ...PRODUCT_TYPOGRAPHY.metricLabel,
+      color: semantic.text.secondary,
+      textTransform: 'uppercase',
+    },
+    questTitle: {
+      ...PRODUCT_TYPOGRAPHY.bodyMedium,
+      fontSize: 17,
+      lineHeight: 23,
+      color: semantic.text.primary,
+    },
+    questMeta: {
+      ...PRODUCT_TYPOGRAPHY.body,
+      color: semantic.text.secondary,
+    },
+    navActions: {
+      gap: 8,
+    },
+  };
 });
 
 export const CityHubScreen: React.FC<{
-    user?: { username: string } | null;
-    onStartQuest?: (id: string) => void;
-    onOpenClubs?: () => void;
-    onOpenSegments?: () => void;
-}> = ({ user, onStartQuest, onOpenClubs, onOpenSegments }) => {
-    const { theme } = useUnistyles();
-    const { t } = useI18n();
-    const s = stylesheet;
-    const C = theme.colors as Record<string, string>;
-    const { enabled: immersiveEnabled } = useImmersiveTheme();
-    const fixturesEnabled = isVisionFixtures();
-    const cityHubFixture = getVisionCityHubFixture(fixturesEnabled);
-    const { level, xpBar } = useGameProgress();
-    const displayLevel = cityHubFixture?.level ?? level;
-    const [showMoo, setShowMoo] = useState(false);
-    const mooTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const [leaderboardLive, setLeaderboardLive] = useState<LeaderboardEntry[]>([]);
-    const [lbLoadingLive, setLbLoadingLive] = useState(true);
-    const [cityHubLive, setCityHubLive] = useState<CityHubSummary | null>(null);
-    const fixtureSummary = useMemo<CityHubSummary>(() => ({
-        active_event: null,
-        city_of_week: {
-            tenant_id: 'fixture_lublin',
-            name: cityHubFixture?.cityOfWeek.name ?? 'Lublin',
-            score_km: (cityHubFixture?.cityWars.left.score ?? 1240) / 10,
-        },
-        city_wars: {
-            event_id: 1,
-            tenant_a: { id: 'fixture_lublin', name: cityHubFixture?.cityWars.left.name ?? 'Lublin', score: cityHubFixture?.cityWars.left.score ?? 1240 },
-            tenant_b: { id: 'fixture_warszawa', name: cityHubFixture?.cityWars.right.name ?? 'Warszawa', score: cityHubFixture?.cityWars.right.score ?? 1180 },
-            leader:
-                (cityHubFixture?.cityWars.left.score ?? 1240) >= (cityHubFixture?.cityWars.right.score ?? 1180)
-                    ? (cityHubFixture?.cityWars.left.name ?? 'Lublin')
-                    : (cityHubFixture?.cityWars.right.name ?? 'Warszawa'),
-            delta: Math.abs((cityHubFixture?.cityWars.left.score ?? 1240) - (cityHubFixture?.cityWars.right.score ?? 1180)),
-        },
-        leaderboard: (cityHubFixture?.leaderboard ?? []).map((entry) => ({
-            rank: entry.rank,
-            username: entry.name,
-            points: entry.score,
-            score_km: entry.score,
-            is_me: false,
-        })),
-        my_rank: null,
-        quests: (cityHubFixture?.quests ?? []).map((quest) => ({
-            id: quest.id,
-            name: quest.title,
-            category: 'QUEST',
-            description: `${quest.distanceKm.toFixed(2)} km · ${quest.star}★ · ${quest.coin}`,
-            latitude: null,
-            longitude: null,
-        })),
-    }), [cityHubFixture]);
-    useEffect(() => {
-        if (fixturesEnabled) return;
-        const cached = OfflineCacheService.getCityHub();
-        if (cached) {
-            setCityHubLive(cached);
-            setLeaderboardLive((cached.leaderboard ?? []).slice(0, 10));
-        }
-        setLbLoadingLive(true);
-        withRetry(() => ActivityService.getCityHubSummary())
-            .then((summary) => {
-                OfflineCacheService.setCityHub(summary);
-                setCityHubLive(summary);
-                setLeaderboardLive((summary.leaderboard ?? []).slice(0, 10));
-            })
-            .catch(() => {
-                if (!cached) {
-                    setCityHubLive(null);
-                    setLeaderboardLive([]);
-                }
-            })
-            .finally(() => setLbLoadingLive(false));
-    }, [fixtureSummary, fixturesEnabled, user?.username]);
+  user?: { username: string } | null;
+  onStartQuest?: (id: string) => void;
+  onOpenClubs?: () => void;
+  onOpenSegments?: () => void;
+}> = ({ onStartQuest, onOpenClubs, onOpenSegments }) => {
+  const { t } = useI18n();
+  const s = stylesheet;
+  const fixturesEnabled = isVisionFixtures();
+  const cityHubFixture = getVisionCityHubFixture(fixturesEnabled);
 
-    useEffect(() => () => {
-        if (mooTimer.current) clearTimeout(mooTimer.current);
-    }, []);
+  const fixtureSummary = useMemo<CityHubSummary>(() => ({
+    active_event: null,
+    city_of_week: {
+      tenant_id: 'fixture_lublin',
+      name: cityHubFixture?.cityOfWeek.name ?? 'Lublin',
+      score_km: (cityHubFixture?.cityWars.left.score ?? 1240) / 10,
+    },
+    city_wars: {
+      event_id: 1,
+      tenant_a: {
+        id: 'fixture_lublin',
+        name: cityHubFixture?.cityWars.left.name ?? 'Lublin',
+        score: cityHubFixture?.cityWars.left.score ?? 1240,
+      },
+      tenant_b: {
+        id: 'fixture_warszawa',
+        name: cityHubFixture?.cityWars.right.name ?? 'Warszawa',
+        score: cityHubFixture?.cityWars.right.score ?? 1180,
+      },
+      leader:
+        (cityHubFixture?.cityWars.left.score ?? 1240) >=
+        (cityHubFixture?.cityWars.right.score ?? 1180)
+          ? (cityHubFixture?.cityWars.left.name ?? 'Lublin')
+          : (cityHubFixture?.cityWars.right.name ?? 'Warszawa'),
+      delta: Math.abs(
+        (cityHubFixture?.cityWars.left.score ?? 1240) -
+          (cityHubFixture?.cityWars.right.score ?? 1180),
+      ),
+    },
+    leaderboard: (cityHubFixture?.leaderboard ?? []).map((entry) => ({
+      rank: entry.rank,
+      username: entry.name,
+      points: entry.score,
+      score_km: entry.score,
+      is_me: false,
+    })),
+    my_rank: null,
+    quests: (cityHubFixture?.quests ?? []).map((quest) => ({
+      id: quest.id,
+      name: quest.title,
+      category: 'QUEST',
+      description: `${quest.distanceKm.toFixed(2)} km · ${quest.star}★ · ${quest.coin}`,
+      latitude: null,
+      longitude: null,
+    })),
+  }), [cityHubFixture]);
 
-    const rivalColor = C.rival;
+  const [cityHubLive, setCityHubLive] = useState<CityHubSummary | null>(
+    () => (fixturesEnabled ? null : OfflineCacheService.getCityHub()),
+  );
+  const [loading, setLoading] = useState(!fixturesEnabled && cityHubLive === null);
+  const [loadError, setLoadError] = useState(false);
+  const [usingCached, setUsingCached] = useState(!fixturesEnabled && cityHubLive !== null);
 
-    const handleCityWarsPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        setShowMoo(true);
-        if (mooTimer.current) clearTimeout(mooTimer.current);
-        mooTimer.current = setTimeout(() => setShowMoo(false), 2500);
+  useEffect(() => {
+    if (fixturesEnabled) return;
+
+    let active = true;
+    void withRetry(() => ActivityService.getCityHubSummary())
+      .then((summary) => {
+        if (!active) return;
+        OfflineCacheService.setCityHub(summary);
+        setCityHubLive(summary);
+        setLoadError(false);
+        setUsingCached(false);
+      })
+      .catch(() => {
+        if (active) setLoadError(true);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
     };
+  }, [fixturesEnabled]);
 
-    const effectiveCityHub = fixturesEnabled ? fixtureSummary : cityHubLive;
-    const effectiveLeaderboard = fixturesEnabled ? fixtureSummary.leaderboard : leaderboardLive;
-    const lbLoading = fixturesEnabled ? false : lbLoadingLive;
+  const retryCityHub = useCallback(async () => {
+    setLoading(cityHubLive === null);
+    setLoadError(false);
+    try {
+      const summary = await withRetry(() => ActivityService.getCityHubSummary());
+      OfflineCacheService.setCityHub(summary);
+      setCityHubLive(summary);
+      setUsingCached(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [cityHubLive]);
 
-    const cityOfWeekName = effectiveCityHub?.city_of_week?.name ?? '—';
-    const cityOfWeekKm = effectiveCityHub?.city_of_week?.score_km ?? 0;
-    const wars = effectiveCityHub?.city_wars;
-    const leftScore = wars?.tenant_a?.score ?? 0;
-    const rightScore = wars?.tenant_b?.score ?? 0;
-    const quests = effectiveCityHub?.quests ?? [];
+  const effectiveCityHub = fixturesEnabled ? fixtureSummary : cityHubLive;
+  const cityOfWeek = effectiveCityHub?.city_of_week ?? null;
+  const wars = effectiveCityHub?.city_wars ?? null;
+  const leaderboard = effectiveCityHub?.leaderboard ?? [];
+  const quests = effectiveCityHub?.quests ?? [];
 
-    return (
-    <View style={s.container}>
-        {immersiveEnabled && <SceneBackground sceneId="city_hub" scrim="soft" />}
-        <AppHeader
-            rightSlot={
-                <LevelXpBar level={displayLevel} xpCurrent={xpBar.current} xpMax={xpBar.max} pct={xpBar.pct} />
-            }
-        />
-        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-            {/* City of the Week */}
-            <OrnateFrame style={s.sectionFrame}>
-                <CityBanner cityName={cityOfWeekName} label={t.compete.cityOfWeek} />
-                <Text style={{ color: C.secondary, textAlign: 'center' }}>{cityOfWeekKm.toFixed(1)} km</Text>
-            </OrnateFrame>
+  const startQuest = (id: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    onStartQuest?.(id);
+  };
 
-            {/* City Wars */}
-            <OrnateFrame style={s.sectionFrame}>
-                <Pressable style={s.vsHeader} onPress={handleCityWarsPress}>
-                    <ChromeIcon id="cityWars" size={20} />
-                    <Text style={s.vsTitle}>{t.compete.cityWars}</Text>
-                </Pressable>
-                {showMoo ? <SpeechBubble text={t.compete.moo} /> : null}
-                <VersusBar
-                    left={{ name: wars?.tenant_a?.name ?? '—', score: Math.round(leftScore) }}
-                    right={{ name: wars?.tenant_b?.name ?? '—', score: Math.round(rightScore) }}
-                />
-                <Text style={s.vsDelta}>
-                    {wars ? `${t.compete.lead}: ${wars.delta.toFixed(2)} ${t.compete.vpUnit}` : t.compete.waitingBattle}
-                </Text>
-            </OrnateFrame>
+  return (
+    <SafeAreaView style={s.container} edges={['top']}>
+      <View style={s.header}>
+        <Text style={s.headerTitle}>{t.tabs.compete}</Text>
+      </View>
 
-            {/* Top Riders — live API */}
-            <OrnateFrame style={s.sectionFrame}>
-                <LaurelHeader title={t.compete.leaderboard} />
-                {lbLoading ? (
-                    <SkeletonBlock height={160} />
-                ) : effectiveLeaderboard.length === 0 ? (
-                    <Text style={s.questDist}>{t.compete.empty}</Text>
-                ) : (
-                    effectiveLeaderboard.map((r) => (
-                        <View
-                            key={`${r.rank}-${r.username}`}
-                            style={[
-                                s.lbRow,
-                                r.is_me && { backgroundColor: C.primaryContainer, transform: [{ translateY: -2 }] },
-                                s.shadowSm,
-                            ]}
-                        >
-                            <Text style={[s.lbRank, { color: r.rank === 1 ? C.primary : C.secondary }]}>{r.rank}</Text>
-                            <Text style={s.lbName}>{r.is_me ? t.compete.you : r.username}</Text>
-                            <Text style={s.lbScore}>
-                                {r.score_km != null ? `${r.score_km.toFixed(1)} km` : `${r.points}`}
-                            </Text>
-                        </View>
-                    ))
-                )}
-            </OrnateFrame>
+      <ScrollView contentContainerStyle={s.content}>
+        {!fixturesEnabled && usingCached ? (
+          <ProductCard testID="compete-cached-state">
+            <View style={s.stateContent}>
+              <Text style={s.offlineTitle}>
+                {loadError ? t.compete.cachedOfflineTitle : t.compete.refreshingCached}
+              </Text>
+              <Text style={s.stateBody}>{loadError ? t.compete.cachedOfflineBody : t.compete.refreshingCachedBody}</Text>
+            </View>
+          </ProductCard>
+        ) : null}
 
-            {/* Nearby Quests */}
-            <OrnateFrame style={s.sectionFrame}>
-                <View style={s.vsHeader}>
-                    <ChromeIcon id="quests" size={20} />
-                    <Text style={s.vsTitle}>{t.compete.nearbyQuests}</Text>
-                </View>
-                {quests.length === 0 ? (
-                    <Text style={s.questDist}>{t.compete.noQuests}</Text>
-                ) : (
-                    <View style={s.questGrid}>
-                        {quests.slice(0, 2).map((quest, idx) => (
-                            <Pressable
-                                key={quest.id}
-                                style={({ pressed }) => [
-                                    s.questCard,
-                                    idx % 2 === 1 && { backgroundColor: C.primaryContainer },
-                                    pressed && { opacity: 0.8 },
-                                ]}
-                                onPress={() => onStartQuest?.(quest.id)}
-                            >
-                                <Text
-                                    style={[
-                                        s.questBadge,
-                                        {
-                                            backgroundColor: idx % 2 === 0 ? rivalColor : C.onBackground,
-                                            color: C.onPrimary,
-                                        },
-                                    ]}
-                                >
-                                    {quest.category}
-                                </Text>
-                                <Text style={[s.questTitle, { color: C.onBackground }]}>{quest.name}</Text>
-                                <Text style={s.questDist}>
-                                    {quest.latitude != null && quest.longitude != null
-                                        ? `${quest.latitude.toFixed(3)}, ${quest.longitude.toFixed(3)}`
-                                        : t.compete.noGeoData}
-                                </Text>
-                                <Text style={s.questTime}>{quest.description || t.compete.tapToStart}</Text>
-                            </Pressable>
-                        ))}
-                    </View>
-                )}
-            </OrnateFrame>
-
-            <View style={s.questGrid}>
-                <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={onOpenClubs}>
-                    <Text style={s.questTitle}>{t.compete.clubs}</Text>
-                    <Text style={s.questDist}>{t.compete.clubsHint}</Text>
-                </Pressable>
-                <Pressable style={({ pressed }) => [s.questCard, pressed && { opacity: 0.8 }]} onPress={onOpenSegments}>
-                    <Text style={s.questTitle}>{t.compete.segments}</Text>
-                    <Text style={s.questDist}>{t.compete.segmentsHint}</Text>
-                </Pressable>
+        {loading && !effectiveCityHub ? (
+          <SkeletonBlock height={360} />
+        ) : loadError && !effectiveCityHub ? (
+          <ProductCard variant="raised" testID="compete-load-error">
+            <View style={s.stateContent}>
+              <Text style={s.errorTitle}>{t.compete.loadError}</Text>
+              <Text style={s.stateBody}>{t.compete.loadErrorHint}</Text>
+              <PrimaryButton
+                label={t.common.retry}
+                onPress={() => void retryCityHub()}
+                variant="secondary"
+                testID="compete-retry"
+              />
+            </View>
+          </ProductCard>
+        ) : effectiveCityHub ? (
+          <>
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t.compete.cityOfWeek}</Text>
+              {cityOfWeek ? (
+                <ProductCard variant="raised" testID="compete-city-of-week">
+                  <View style={s.stateContent}>
+                    <Text style={s.cityName}>{cityOfWeek.name}</Text>
+                    <Metric
+                      label={t.compete.distance}
+                      value={`${cityOfWeek.score_km.toFixed(1)} km`}
+                    />
+                  </View>
+                </ProductCard>
+              ) : (
+                <ProductCard testID="compete-city-of-week-empty">
+                  <Text style={s.stateBody}>{t.compete.noCityOfWeek}</Text>
+                </ProductCard>
+              )}
             </View>
 
-            <View style={{ height: 80 }} />
-        </ScrollView>
-    </View>
-    );
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t.compete.cityWars}</Text>
+              {wars ? (
+                <ProductCard testID="compete-city-wars">
+                  <View style={s.stateContent}>
+                    <View style={s.warRow}>
+                      <View style={s.warSide}>
+                        <Metric
+                          label={wars.tenant_a.name}
+                          value={`${Math.round(wars.tenant_a.score).toLocaleString()} ${t.compete.vpUnit}`}
+                        />
+                      </View>
+                      <Text style={s.versus}>{t.compete.vs}</Text>
+                      <View style={s.warSide}>
+                        <Metric
+                          label={wars.tenant_b.name}
+                          value={`${Math.round(wars.tenant_b.score).toLocaleString()} ${t.compete.vpUnit}`}
+                        />
+                      </View>
+                    </View>
+                    <Text style={s.lead}>
+                      {t.compete.lead}: {wars.leader} · +{wars.delta.toFixed(2)} {t.compete.vpUnit}
+                    </Text>
+                  </View>
+                </ProductCard>
+              ) : (
+                <ProductCard testID="compete-city-wars-empty">
+                  <Text style={s.stateBody}>{t.compete.waitingBattle}</Text>
+                </ProductCard>
+              )}
+            </View>
+
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t.compete.leaderboard}</Text>
+              <ProductCard testID="compete-leaderboard">
+                {leaderboard.length === 0 ? (
+                  <Text style={s.stateBody}>{t.compete.empty}</Text>
+                ) : (
+                  <View style={s.leaderboard}>
+                    {leaderboard.slice(0, 10).map((entry) => (
+                      <View
+                        key={`${entry.rank}-${entry.username}`}
+                        style={[
+                          s.leaderboardRow,
+                          entry.is_me && s.leaderboardRowMine,
+                        ]}
+                      >
+                        <Text style={s.rank}>#{entry.rank}</Text>
+                        <Text style={s.rider} numberOfLines={1}>
+                          {entry.is_me ? t.compete.you : entry.username}
+                        </Text>
+                        <Text style={s.score}>
+                          {entry.score_km != null
+                            ? `${entry.score_km.toFixed(1)} km`
+                            : entry.points.toLocaleString()}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </ProductCard>
+            </View>
+
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t.compete.nearbyQuests}</Text>
+              {quests.length === 0 ? (
+                <ProductCard testID="compete-quests-empty">
+                  <Text style={s.stateBody}>{t.compete.noQuests}</Text>
+                </ProductCard>
+              ) : (
+                <View style={s.questStack}>
+                  {quests.map((quest) => (
+                    <ProductCard key={quest.id} testID={`compete-quest-${quest.id}`}>
+                      <View style={s.questContent}>
+                        <Text style={s.questCategory}>{quest.category}</Text>
+                        <Text style={s.questTitle}>{quest.name}</Text>
+                        {quest.description ? (
+                          <Text style={s.questMeta}>{quest.description}</Text>
+                        ) : null}
+                        <Text style={s.questMeta}>
+                          {quest.latitude != null && quest.longitude != null
+                            ? `${quest.latitude.toFixed(3)}, ${quest.longitude.toFixed(3)}`
+                            : t.compete.noGeoData}
+                        </Text>
+                        <PrimaryButton
+                          label={t.compete.startQuest}
+                          onPress={() => startQuest(quest.id)}
+                          variant="secondary"
+                          disabled={!onStartQuest}
+                        />
+                      </View>
+                    </ProductCard>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={s.navActions}>
+              <PrimaryButton
+                label={t.compete.clubs}
+                onPress={() => onOpenClubs?.()}
+                variant="secondary"
+                disabled={!onOpenClubs}
+                testID="compete-open-clubs"
+              />
+              <PrimaryButton
+                label={t.compete.segments}
+                onPress={() => onOpenSegments?.()}
+                variant="secondary"
+                disabled={!onOpenSegments}
+                testID="compete-open-segments"
+              />
+            </View>
+          </>
+        ) : null}
+      </ScrollView>
+    </SafeAreaView>
+  );
 };
