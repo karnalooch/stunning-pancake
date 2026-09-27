@@ -208,7 +208,7 @@ UI is not considered complete because screenshots look good. It must be truthful
 
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
-| T85 | Club Admin pilot path validation/polish | PLANNED | Members, allowed roles, own-club activity review/moderation; tenant-safe end-to-end. |
+| T85 | Club Admin pilot path validation/polish | ACTIVE | #302. Validate TENANT_ADMIN users/member management, allowed role assignment, own-tenant activity review/moderation and fail-closed cross-tenant behavior. Current slice closes the create/edit/invite/bulk role-policy mismatch and the update-path TENANT_ADMIN privilege-escalation gap; existing club/moderation tenant-isolation tests remain authoritative evidence. |
 | T86 | GLOBAL_OWNER pilot path validation/polish | PLANNED | Clubs, administrators, account blocks and existing audit; no new analytics platform. |
 | T87 | Pilot operator flow | PLANNED | Required config, migrations, backup/restore operator procedure and operational smoke for exact environment. |
 
@@ -260,7 +260,7 @@ This is the only short sequence worth remembering:
    T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation (#300)
 
 5. panels/operations:
-   T85 -> T86 -> T87
+   T85 ACTIVE (#302) -> T86 -> T87
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
