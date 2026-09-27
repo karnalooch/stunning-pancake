@@ -382,25 +382,17 @@ def wait_for_main_shell(timeout_s: float = 30) -> bool:
 
 def complete_onboarding_flow() -> tuple[list[str], bool]:
     notes: list[str] = []
-    vision_mode = os.getenv("EXPO_PUBLIC_VISION_FIXTURES") == "true"
 
+    # mobile-runtime-acceptance.ps1 clears app data before this audit. Entering
+    # the main shell here means first-run onboarding was silently bypassed.
     if wait_for_main_shell(20):
-        if vision_mode:
-            notes.append("Vision fixtures — onboarding intentionally bypassed by AppRoot")
-        else:
-            notes.append("Główna aplikacja dostępna bez ręcznego onboardingu")
-        capture_raw("00_main_after_onboarding", "Po onboardingu — shell główny", notes=notes)
-        capture_raw("00_onboarding_complete", "Po ukończeniu onboardingu", notes=notes)
-        return notes, True
-
-    if vision_mode:
+        notes.append("Fresh runtime acceptance entered the main shell before onboarding")
         capture_raw(
-            "00_unexpected_onboarding",
-            "Vision fixtures — nieoczekiwany onboarding",
-            notes=["Build z EXPO_PUBLIC_VISION_FIXTURES=true powinien wejść bezpośrednio do shella głównego."],
+            "00_missing_onboarding",
+            "Brak onboardingu po czystym starcie",
+            notes=notes,
             status="fail",
         )
-        notes.append("Vision fixtures nie ominęły onboardingu zgodnie z kontraktem AppRoot")
         return notes, False
 
     capture_raw("00_onboarding_city", "Onboarding — wybór miasta")
@@ -435,8 +427,28 @@ def complete_onboarding_flow() -> tuple[list[str], bool]:
     notes.append("Onboarding ukończony (sekwencja testID + fallback tekstowy)")
     capture_raw("00_onboarding_complete", "Po ukończeniu onboardingu", notes=notes)
     capture_raw("00_main_after_onboarding", "Po onboardingu — shell główny", notes=notes)
-    return notes, True
 
+    # Regression proof for the historical loop: completion must survive a
+    # process restart even in fixture/bypass-auth builds.
+    adb("shell", "am", "force-stop", APP_ID)
+    foreground_app()
+    if not wait_for_main_shell(20):
+        notes.append("Onboarding completion did not persist across app restart")
+        capture_raw(
+            "00_onboarding_restart_failed",
+            "Onboarding — błąd trwałości po restarcie",
+            notes=notes,
+            status="fail",
+        )
+        return notes, False
+
+    notes.append("Onboarding completion persisted across app restart")
+    capture_raw(
+        "00_onboarding_restart_persisted",
+        "Onboarding — trwałość po restarcie",
+        notes=notes,
+    )
+    return notes, True
 
 def screen_signature(img: Image.Image | None) -> str:
     return classify_capture(img)

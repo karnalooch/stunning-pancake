@@ -21,14 +21,6 @@ const stylesheet = StyleSheet.create(theme => {
   };
 });
 
-function parseDurationSeconds(duration: string | null): number {
-  if (!duration) return 0;
-  const parts = duration.split(':').map((p) => Number(p));
-  if (parts.some((n) => !Number.isFinite(n))) return 0;
-  const [h = 0, m = 0, s = 0] = parts;
-  return h * 3600 + m * 60 + s;
-}
-
 export const PerformanceTrendsScreen: React.FC = () => {
   const { t } = useI18n();
   const s = stylesheet;
@@ -64,7 +56,10 @@ export const PerformanceTrendsScreen: React.FC = () => {
   const stats = useMemo(() => {
     const recent = history.slice(0, 8);
     const totalDistanceKm = recent.reduce((acc, item) => acc + (item.distance ?? 0) / 1000, 0);
-    const totalSeconds = recent.reduce((acc, item) => acc + parseDurationSeconds(item.duration), 0);
+    const totalSeconds = recent.reduce(
+      (acc, item) => acc + (item.duration != null && Number.isFinite(item.duration) ? item.duration : 0),
+      0,
+    );
     const avgSpeedKmh =
       totalSeconds > 0 ? (totalDistanceKm / totalSeconds) * 3600 : 0;
     return {

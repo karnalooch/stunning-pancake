@@ -17,6 +17,7 @@ from .serializers import (
     ActivitySerializer,
     POISerializer,
     PrivacyZoneSerializer,
+    RiderActivityDetailSerializer,
 )
 from .social import SocialSharingService
 from .wearables import GarminService, StravaService, _resolve_oauth_state
@@ -433,6 +434,12 @@ class ActivityDetailView(generics.RetrieveAPIView):
     queryset = Activity.objects.select_related("user").all()
     serializer_class = ActivityDetailSerializer
     permission_classes = (permissions.IsAuthenticated,)
+
+    def get_serializer_class(self):
+        role = getattr(self.request.user, "role", None)
+        if role in ("GLOBAL_OWNER", "TENANT_ADMIN", "TENANT_MODERATOR"):
+            return ActivityDetailSerializer
+        return RiderActivityDetailSerializer
 
     def get_queryset(self):
         user = self.request.user

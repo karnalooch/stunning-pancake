@@ -155,7 +155,7 @@ const AppContent = observer(function AppContent({
     );
   }
 
-  if (!auth.isOnboarded.get() && !isVisionFixtures()) {
+  if (!auth.isOnboarded.get()) {
     return <OnboardingScreen user={user} onFinish={handleOnboardingFinish} />;
   }
 

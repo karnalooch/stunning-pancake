@@ -89,6 +89,10 @@ export const mobileActivityPaths = {
     `/api/activities/sessions/${activityId}/finalize-durable/` as const,
   sessionTelemetryToken: (activityId: number) =>
     `/api/activities/sessions/${activityId}/telemetry-token/` as const,
+  sessionDetail: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/detail/` as const,
+  sessionGpx: (activityId: number) =>
+    `/api/activities/sessions/${activityId}/gpx/` as const,
   leaderboard: (cityId: string) => `/api/activities/leaderboard/${cityId}/` as const,
   leaderboardMe: (cityId: string) => `/api/activities/leaderboard/${cityId}/me/` as const,
   privacyZone: (zoneId: string) => `/api/activities/privacy-zones/${zoneId}/` as const,

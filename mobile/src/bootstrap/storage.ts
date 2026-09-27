@@ -55,6 +55,10 @@ export function setOnboardingCompleteForUser(userId: string | number): void {
   getAppStorage().set(onboardingKeyForUser(userId), 'true');
 }
 
+export function isOnboardingCompleteGlobal(): boolean {
+  return getAppStorage().getString(ONBOARDING_KEY) === 'true';
+}
+
 /** Device-global onboarding flag — fallback when no stable user id is known. */
 export function setOnboardingCompleteGlobal(): void {
   getAppStorage().set(ONBOARDING_KEY, 'true');

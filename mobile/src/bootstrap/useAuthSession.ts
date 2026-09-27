@@ -18,6 +18,7 @@ import { registerDevicePushToken } from '../services/PushNotificationService';
 import { setOnSessionExpired } from '../services/apiClient';
 import {
   isOnboardingCompleteForUser,
+  isOnboardingCompleteGlobal,
   setOnboardingCompleteForUser,
   setOnboardingCompleteGlobal,
 } from './storage';
@@ -91,6 +92,10 @@ export function useAuthSession(onUserReady: (userId: number | null) => Promise<v
 
     void (async () => {
       if (BYPASS_AUTH) {
+        auth.isOnboarded.set(
+          isOnboardingCompleteGlobal() ||
+            (isE2eAutoLoginEnabled() && shouldSkipOnboardingForE2e()),
+        );
         auth.isLoading.set(false);
         return;
       }
