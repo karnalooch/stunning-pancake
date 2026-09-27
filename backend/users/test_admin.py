@@ -545,10 +545,19 @@ class TestTenantAdminIsolation:
         assert response.status_code == 403
         assert not User.objects.filter(username="owner2").exists()
 
-    def test_delete_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
+    def test_delete_is_forbidden_for_tenant_admin(
+        self, api_client, admin_user, athlete_user, other_tenant_admin
+    ):
         api_client.force_authenticate(user=admin_user)
-        response = api_client.delete(reverse("user-delete", kwargs={"pk": other_tenant_admin.id}))
-        assert response.status_code == 404
+
+        own_tenant = api_client.delete(reverse("user-delete", kwargs={"pk": athlete_user.id}))
+        assert own_tenant.status_code == 403
+        assert User.objects.filter(pk=athlete_user.id).exists()
+
+        foreign_tenant = api_client.delete(
+            reverse("user-delete", kwargs={"pk": other_tenant_admin.id})
+        )
+        assert foreign_tenant.status_code == 403
         assert User.objects.filter(pk=other_tenant_admin.id).exists()
 
     def test_update_hides_other_tenant_user(self, api_client, admin_user, other_tenant_admin):
