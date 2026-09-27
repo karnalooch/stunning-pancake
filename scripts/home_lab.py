@@ -14,7 +14,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-from backup_crypto import decrypt_file_to_stream, encrypt_stream, generate_key
+from backup_crypto import decode_key, decrypt_file_to_stream, encrypt_stream, generate_key
 
 ROOT = Path(__file__).resolve().parents[1]
 ENV_FILE = ROOT / ".env.home"
@@ -35,6 +35,25 @@ CORE_SERVICES = (
     "global_admin",
     "celery_worker",
     "celery_beat",
+)
+HEALTH_ENDPOINTS = (
+    ("backend", "http://127.0.0.1:8000/health/"),
+    ("telemetry", "http://127.0.0.1:8001/api/telemetry/health"),
+    ("global_admin", "http://127.0.0.1:3001/"),
+)
+T87_REQUIRED_EXACT_ENV = {
+    "TELEMETRY_INGEST_JWT_REQUIRED": "1",
+    "TELEMETRY_INGEST_AUDIENCE_REQUIRED": "1",
+    "TELEMETRY_INGEST_QUEUE": "0",
+    "RLS_RUNTIME_ROLE_GUARD": "1",
+    "RUN_DEMO_SEED": "0",
+}
+T87_SECRET_ENV_NAMES = (
+    "DB_PASSWORD",
+    "ADMIN_PASSWORD",
+    "SECRET_KEY",
+    "TELEMETRY_INGEST_JWT_SECRET",
+    "BACKUP_ENCRYPTION_KEY",
 )
 P3_RECOVERY_EXPECTED_COUNTS = {
     "tenants": 2,
@@ -208,6 +227,7 @@ def run_capture(command: list[str]) -> str:
 def render_environment(template: str) -> str:
     values = {
         "DB_PASSWORD": secrets.token_urlsafe(32),
+        "ADMIN_PASSWORD": secrets.token_urlsafe(32),
         "SECRET_KEY": secrets.token_urlsafe(64),
         "TELEMETRY_INGEST_JWT_SECRET": secrets.token_urlsafe(64),
         "BACKUP_ENCRYPTION_KEY": generate_key(),
@@ -268,6 +288,105 @@ def home_env_value(name: str, default: str | None = None) -> str:
     raise SystemExit(f"Missing required {name} in {ENV_FILE.name}")
 
 
+def read_home_environment() -> dict[str, str]:
+    require_environment()
+    values: dict[str, str] = {}
+    for raw_line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        values[name.strip()] = value.strip().strip('"').strip("'")
+    return values
+
+
+def validate_pilot_configuration() -> dict[str, object]:
+    values = read_home_environment()
+
+    missing = [
+        name
+        for name in (*T87_REQUIRED_EXACT_ENV, *T87_SECRET_ENV_NAMES, "POSTGRES_USER", "APP_DB_USER")
+        if not values.get(name)
+    ]
+    if missing:
+        raise SystemExit(
+            "Pilot home-lab configuration is incomplete; missing="
+            + ",".join(sorted(missing))
+        )
+
+    placeholder = "GENERATE_WITH_HOME_LAB_INIT"
+    unresolved = [name for name in T87_SECRET_ENV_NAMES if values[name] == placeholder]
+    if unresolved:
+        raise SystemExit(
+            "Pilot home-lab secrets were not initialized; unresolved="
+            + ",".join(sorted(unresolved))
+        )
+
+    mismatched = {
+        name: values.get(name)
+        for name, expected in T87_REQUIRED_EXACT_ENV.items()
+        if values.get(name) != expected
+    }
+    if mismatched:
+        names = ",".join(sorted(mismatched))
+        raise SystemExit(f"Pilot home-lab fail-closed invariant mismatch: {names}")
+
+    if values["POSTGRES_USER"] == values["APP_DB_USER"]:
+        raise SystemExit("POSTGRES_USER and APP_DB_USER must remain distinct pilot roles")
+
+    if len(values["ADMIN_PASSWORD"]) < 20:
+        raise SystemExit("ADMIN_PASSWORD must contain at least 20 characters for the pilot")
+
+    secret_values = [values[name] for name in T87_SECRET_ENV_NAMES]
+    if len(secret_values) != len(set(secret_values)):
+        raise SystemExit("Pilot home-lab secrets must be independent values")
+
+    try:
+        decode_key(values["BACKUP_ENCRYPTION_KEY"])
+    except ValueError as exc:
+        raise SystemExit("BACKUP_ENCRYPTION_KEY is not a valid AES-256 key") from exc
+
+    return {
+        "telemetry_jwt_required": True,
+        "telemetry_audience_required": True,
+        "telemetry_ack_mode": "direct-db",
+        "rls_runtime_role_guard": True,
+        "demo_seed": False,
+        "runtime_db_role_separated": True,
+        "admin_password_configured": True,
+        "backup_encryption_key_valid": True,
+    }
+
+
+def checked_out_commit() -> str:
+    commit = run_capture(["git", "rev-parse", "HEAD"]).strip()
+    if len(commit) != 40:
+        raise SystemExit("Unable to resolve the exact checked-out Git commit")
+    dirty = run_capture(["git", "status", "--porcelain"]).strip()
+    if dirty:
+        raise SystemExit(
+            "Operator gate requires a clean Git checkout so evidence maps to one exact commit"
+        )
+    return commit
+
+
+def check_migrations() -> None:
+    require_environment()
+    run(
+        compose_command(
+            "exec",
+            "-T",
+            "backend",
+            "python",
+            "manage.py",
+            "migrate",
+            "--check",
+            "--no-input",
+        )
+    )
+    print("Django migration state is current")
+
+
 def profiles(args: argparse.Namespace) -> tuple[str, ...]:
     selected = []
     if args.routing:
@@ -324,10 +443,7 @@ def check_health() -> None:
     ]
     if missing or unhealthy:
         raise SystemExit(f"Home lab is not healthy; missing={missing}, unhealthy={unhealthy}")
-    for url in (
-        "http://127.0.0.1:8000/health/",
-        "http://127.0.0.1:8001/api/telemetry/health",
-    ):
+    for _service, url in HEALTH_ENDPOINTS:
         with urllib.request.urlopen(url, timeout=5) as response:
             if response.status != 200:
                 raise SystemExit(f"Health endpoint failed: {url} returned {response.status}")
@@ -603,6 +719,53 @@ def verify_restore(path: Path) -> None:
         drop_database(RECOVERY_DATABASE)
 
 
+def operator_gate() -> Path:
+    require_environment()
+    commit = checked_out_commit()
+    configuration = validate_pilot_configuration()
+    run(compose_command("config", "--quiet"))
+    check_health()
+    check_migrations()
+
+    started_at = datetime.now(UTC)
+    backup_path = backup()
+    backup_digest = file_sha256(backup_path)
+    verify_restore(backup_path)
+    completed_at = datetime.now(UTC)
+
+    report = {
+        "schema_version": 1,
+        "gate": "t87-pilot-operator",
+        "overall_status": "PASS",
+        "git_commit": commit,
+        "git_checkout_clean": True,
+        "started_at_utc": started_at.isoformat(),
+        "completed_at_utc": completed_at.isoformat(),
+        "configuration": configuration,
+        "health_endpoints": [url for _service, url in HEALTH_ENDPOINTS],
+        "migrations": "no_pending",
+        "backup_file": backup_path.name,
+        "backup_sha256": backup_digest,
+        "backup_encryption": "AES-256-GCM",
+        "backup_plaintext_staged": False,
+        "restore_database": RECOVERY_DATABASE,
+        "isolated_restore_verified": True,
+    }
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    report_path = EVIDENCE_DIR / f"t87-operator-{stamp}.json"
+    report_path.write_text(
+        json.dumps(report, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        "T87 pilot operator gate PASS: "
+        f"commit={commit[:12]}…, backup={backup_path.name}"
+    )
+    print(f"Evidence written: {report_path}")
+    return report_path
+
+
 def p3_recovery_drill() -> Path:
     require_environment()
     check_health()
@@ -708,6 +871,7 @@ def parse_args() -> argparse.Namespace:
     prune.add_argument("--days", type=int, default=BACKUP_RETENTION_DAYS)
     restore = sub.add_parser("verify-restore")
     restore.add_argument("path", type=Path)
+    sub.add_parser("operator-gate")
     sub.add_parser("p3-recovery-drill")
     return parser.parse_args()
 
@@ -736,6 +900,8 @@ def main() -> None:
         print(f"Pruned {len(removed)} encrypted backup(s)")
     elif args.action == "verify-restore":
         verify_restore(args.path)
+    elif args.action == "operator-gate":
+        operator_gate()
     elif args.action == "p3-recovery-drill":
         p3_recovery_drill()
 
