@@ -231,7 +231,10 @@ export const RewardsService = {
 };
 
 export const POIService = {
-  getPOIs: () => api.get(API_PATHS_FULL.activitiesPois).then((r) => r.data),
+  getPOIs: () =>
+    api
+      .get<POI[] | { results?: POI[] }>(API_PATHS_FULL.activitiesPois)
+      .then((r) => r.data),
 };
 
 export const WearableService = {
