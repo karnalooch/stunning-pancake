@@ -2,7 +2,7 @@
 
 **Status:** canonical execution index  
 **Decision date:** 2026-09-17  
-**Last reconciled with `main`:** 2026-09-27 (`6a1b57bd`)  
+**Last reconciled with `main`:** 2026-09-27 (`af2ec473`)  
 **Rule:** one tranche = one small, reviewable responsibility/PR unless a historical tranche already landed in several small PRs. Tranche IDs are stable identifiers; the explicit execution-order section below is authoritative when a later-added tranche is intentionally pulled forward.
 
 ## One plan, not two
@@ -25,7 +25,7 @@ If any stage label (`P3`, `P4`, `P5`, `PPH`, `P6`) conflicts with a tranche belo
 
 This snapshot records the actual repository/runtime state after the September cleanup so older issue text does not reopen already-proven work:
 
-- **2026-09-27 mobile/CI reconciliation:** #278, #282, #286, #287 and #288 are merged on `main`. Ordinary PR validation is lane-classified; pure JS/UI work does not pay for Android Gradle/release proof, native-affecting work retains clean debug proof, and heavyweight full/release validation is explicit through the Full Release lane. T81 and T82 repo-side slices are landed. T83-A Profile merged in #292; T83-B Explore continues in #293.
+- **2026-09-27 mobile/CI reconciliation:** #278, #282, #286, #287 and #288 are merged on `main`. Ordinary PR validation is lane-classified; pure JS/UI work does not pay for Android Gradle/release proof, native-affecting work retains clean debug proof, and heavyweight full/release validation is explicit through the Full Release lane. T81 and T82 repo-side slices are landed. T83-A Profile merged in #292; T83-B Explore merged in #294; T83-C Compete/City Hub continues in #295.
 - **Repository hygiene:** PR #266 merged. Historical/stale non-Dependabot branch refs were pruned; unique unmerged tips were preserved with archive tags before deletion. At cleanup completion the branch set was `main` plus five retained Dependabot branches.
 - **Dependabot policy:** ordinary version-update PR generation is disabled; new Dependabot PRs are security-only and grouped per ecosystem. Existing useful PRs may remain open for deliberate review.
 - **Operational notifications:** PR #267 merged Slack routing for selected 4VELO operational signals.
@@ -199,7 +199,7 @@ Required behavior:
 | T80 | Active Ride screen implementation/polish | PARTIAL | #275 and #277 are merged with Frozen UI v1.2 live HUD chrome, preserved ride semantics and governed rider marker. Residual exact-SHA/outdoor acceptance remains a validation item; there is no open implementation PR. |
 | T81 | Ride Summary implementation/polish | DONE | #286 is merged on `main`: product typography/cards/actions with durable-success vs pending/recovery separation preserved. The old stacked implementation is reconciled and no further native release build is required merely because later JS/UI work touches adjacent screens. |
 | T82 | History + Activity Detail implementation/polish | DONE | #288 is merged on `main`: numeric duration contract, canonical detail endpoint, real `route_coords` map, truthful average speed, no static achievement/route placeholders, and explicit empty/error/offline behavior. |
-| T83 | Profile + remaining pilot mobile surfaces | ACTIVE | T83-A Profile is merged in #292. #293 is T83-B Explore: truthful POI loading/error/empty states and a real MapLibre POI map on Frozen UI v1.2. Compete/City Hub remains T83-C; final visual acceptance still follows asset-governance and exact-SHA evidence. |
+| T83 | Profile + remaining pilot mobile surfaces | ACTIVE | T83-A Profile is merged in #292 and T83-B Explore in #294. #295 is T83-C Compete/City Hub: explicit live/cache/error truth plus Frozen UI v1.2 product chrome. Final visual acceptance still follows asset-governance and exact-SHA evidence. |
 | T84 | Physical Android UI/UX validation | BLOCKED | ENVIRONMENT REQUIRED. Exact pilot build, real data, first-use without explanation, outdoor/readability + one-handed check, 2–3 person dry run if useful. |
 
 UI is not considered complete because screenshots look good. It must be truthful under real error/offline/synchronization states.
@@ -257,7 +257,7 @@ This is the only short sequence worth remembering:
    reopen implementation only for a concrete regression
 
 4. finish pilot mobile UI:
-   T81 DONE -> T82 DONE -> T83 ACTIVE (#293) -> T84
+   T81 DONE -> T82 DONE -> T83 ACTIVE (#295) -> T84
 
 5. panels/operations:
    T85 -> T86 -> T87
