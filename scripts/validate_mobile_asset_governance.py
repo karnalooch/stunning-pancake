@@ -157,6 +157,63 @@ def validate_policy(policy: dict[str, Any], repo_root: Path = REPO_ROOT) -> list
     if missing:
         errors.append("missing required pilot targets: " + ", ".join(missing))
 
+    coverage = policy.get("screenAssetCoverage")
+    if not isinstance(coverage, dict) or not coverage:
+        errors.append("screenAssetCoverage must be a non-empty object")
+    else:
+        target_by_id = {
+            target.get("id"): target
+            for target in targets
+            if isinstance(target, dict) and isinstance(target.get("id"), str)
+        }
+        allowed_coverage_statuses = {"covered", "planned", "data_first"}
+        reference_keys = (
+            "requiredTargets",
+            "optionalTargets",
+            "temporaryApprovedFallback",
+            "functionalFallback",
+        )
+        for screen_id, contract in coverage.items():
+            if not isinstance(contract, dict):
+                errors.append(f"screenAssetCoverage.{screen_id} must be an object")
+                continue
+            status = contract.get("status")
+            if status not in allowed_coverage_statuses:
+                errors.append(
+                    f"screenAssetCoverage.{screen_id}: unsupported status {status!r}"
+                )
+            required_targets = contract.get("requiredTargets", [])
+            if not isinstance(required_targets, list):
+                errors.append(
+                    f"screenAssetCoverage.{screen_id}.requiredTargets must be a list"
+                )
+                required_targets = []
+            if status == "data_first" and required_targets:
+                errors.append(
+                    f"screenAssetCoverage.{screen_id}: data_first surfaces must not require decorative asset targets"
+                )
+
+            for key in reference_keys:
+                refs = contract.get(key, [])
+                if refs is None:
+                    continue
+                if not isinstance(refs, list):
+                    errors.append(f"screenAssetCoverage.{screen_id}.{key} must be a list")
+                    continue
+                for asset_id in refs:
+                    if asset_id not in target_by_id:
+                        errors.append(
+                            f"screenAssetCoverage.{screen_id}.{key}: unknown target {asset_id}"
+                        )
+
+            if status == "covered":
+                for asset_id in required_targets:
+                    target = target_by_id.get(asset_id)
+                    if target and target.get("status") != "approved":
+                        errors.append(
+                            f"screenAssetCoverage.{screen_id}: covered surface requires approved target {asset_id}"
+                        )
+
     documented = production_doc_target_ids(repo_root)
     if documented and documented != seen:
         missing_from_policy = sorted(documented - seen)
