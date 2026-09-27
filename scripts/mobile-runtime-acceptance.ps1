@@ -189,7 +189,7 @@ try {
     if (-not $CiRunId) {
       $runsJson = ((& gh run list --workflow "Mobile Native Smoke" --branch $gitBranch --event pull_request --status success --commit $gitSha --limit 20 --json databaseId,headSha,headBranch,conclusion 2>&1) | Out-String).Trim()
       if ($LASTEXITCODE -ne 0) {
-        throw "Could not query successful Mobile Native Smoke runs for $gitSha: $runsJson"
+        throw "Could not query successful Mobile Native Smoke runs for ${gitSha}: $runsJson"
       }
 
       $runs = @()
