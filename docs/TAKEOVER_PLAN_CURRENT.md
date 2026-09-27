@@ -209,7 +209,7 @@ UI is not considered complete because screenshots look good. It must be truthful
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
 | T85 | Club Admin pilot path validation/polish | PARTIAL | #302 / PR #303 merged (`4989f139`). Repo audit/fixes cover TENANT_ADMIN member management, assignment hierarchy, GLOBAL_OWNER-only account deletion, RBAC revoke hierarchy, authoritative tenant scope and existing own-tenant activity/moderation/club isolation. Evidence: `admin/T85_TENANT_ADMIN_PILOT_VALIDATION.md`. Real pilot-environment TENANT_ADMIN role smoke is still required before DONE. |
-| T86 | GLOBAL_OWNER pilot path validation/polish | PLANNED | Clubs, administrators, account blocks and existing audit; no new analytics platform. |
+| T86 | GLOBAL_OWNER pilot path validation/polish | PARTIAL | #305 / PR #306 merged (`d5f5cd5d`). Repo-side hardening rejects GLOBAL_OWNER self-delete/deactivation/demotion (single + bulk), removes destructive self-actions from the admin UI, makes GLOBAL_OWNER tenant-neutral across supported admin writes and preserves existing platform-wide club/audit scope. Evidence: `admin/T86_GLOBAL_OWNER_PILOT_VALIDATION.md`. Real pilot-environment GLOBAL_OWNER smoke is still required before DONE. |
 | T87 | Pilot operator flow | PLANNED | Required config, migrations, backup/restore operator procedure and operational smoke for exact environment. |
 
 ## T88–T92 — pre-pilot hardening & polish
@@ -260,7 +260,7 @@ This is the only short sequence worth remembering:
    T81 DONE -> T82 DONE -> T83 DONE -> T84 physical Android validation (#300)
 
 5. panels/operations:
-   T85 ACTIVE (#302) -> T86 -> T87
+   T85 PARTIAL (#302/#303/#304) -> T86 PARTIAL (#305/#306) -> T87
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
