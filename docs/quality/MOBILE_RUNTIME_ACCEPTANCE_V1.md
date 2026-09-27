@@ -174,10 +174,29 @@ Evidence is written under the ignored local directory
 - `provenance.json` with Git/toolchain/device/artifact identity;
 - `emulator-audit.md`;
 - exact-runtime screenshots;
-- `acceptance-summary.md` with the manual visual review checklist.
+- `acceptance-summary.md` with the manual visual review checklist;\n- `physical-signoff.md` with the T84 real-device review sheet bound to the same exact SHA/artifact/device evidence.
 
 `AUTOMATION_PASS` means the technical/runtime evidence is complete. It does
 **not** replace the manual visual sign-off required by major visual slices.
+
+## 10.1 T84 physical Android sign-off
+
+T84 uses the exact artifact proven by this harness, but the final acceptance is deliberately human and physical.
+
+The evidence bundle records the current device display characteristics (size, density, font scale and brightness mode/value) and generates `physical-signoff.md`.
+
+The reviewer must exercise the exact identified artifact on a real Android device and record:
+
+- first-use comprehension without coaching;
+- outdoor/sunlight readability of Active Ride;
+- one-handed reach and clarity of pause/resume/stop;
+- touch target usability and text clipping at the tested font scale;
+- map/metric readability;
+- truthful offline/GPS/sync/error presentation;
+- pending/failure vs durable-success distinction on Ride Summary;
+- absence of routine legacy arcade/RPG chrome on migrated production screens.
+
+The result is one of **PASS / FAIL / BLOCKED**. A screenshot-only review or emulator-only result cannot close T84.
 
 ## 11. Failure classification
 

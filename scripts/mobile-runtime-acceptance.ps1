@@ -114,6 +114,7 @@ $shotsDir = Join-Path $runDir "screenshots"
 $reportPath = Join-Path $runDir "emulator-audit.md"
 $provenancePath = Join-Path $runDir "provenance.json"
 $summaryPath = Join-Path $runDir "acceptance-summary.md"
+$physicalSignoffPath = Join-Path $runDir "physical-signoff.md"
 $expoConfigPath = Join-Path $runDir "expo-public.json"
 
 New-Item -ItemType Directory -Force -Path $shotsDir | Out-Null
@@ -143,6 +144,12 @@ $adbVersion = ((& $adbPath version) | Out-String).Trim()
 $deviceApi = (& $adbPath -s $selectedDevice shell getprop ro.build.version.sdk).Trim()
 $deviceAbi = (& $adbPath -s $selectedDevice shell getprop ro.product.cpu.abi).Trim()
 $deviceModel = (& $adbPath -s $selectedDevice shell getprop ro.product.model).Trim()
+$deviceManufacturer = (& $adbPath -s $selectedDevice shell getprop ro.product.manufacturer).Trim()
+$displaySize = ((& $adbPath -s $selectedDevice shell wm size) | Out-String).Trim()
+$displayDensity = ((& $adbPath -s $selectedDevice shell wm density) | Out-String).Trim()
+$fontScale = ((& $adbPath -s $selectedDevice shell settings get system font_scale) | Out-String).Trim()
+$brightnessMode = ((& $adbPath -s $selectedDevice shell settings get system screen_brightness_mode) | Out-String).Trim()
+$brightnessValue = ((& $adbPath -s $selectedDevice shell settings get system screen_brightness) | Out-String).Trim()
 
 $mobileDir = Join-Path $repoRoot "mobile"
 $androidDir = Join-Path $mobileDir "android"
@@ -417,9 +424,15 @@ try {
     }
     device = [ordered]@{
       serialHash = $deviceHash
+      manufacturer = $deviceManufacturer
       model = $deviceModel
       api = $deviceApi
       abi = $deviceAbi
+      displaySize = $displaySize
+      displayDensity = $displayDensity
+      fontScale = $fontScale
+      brightnessMode = $brightnessMode
+      brightnessValue = $brightnessValue
     }
     artifact = [ordered]@{
       source = $artifactSource
@@ -448,21 +461,90 @@ try {
     "- Git SHA: $gitSha",
     "- Branch: $gitBranch",
     "- APK SHA-256: $apkHash",
-    "- Device: $deviceModel / API $deviceApi / $deviceAbi / serial hash $deviceHash",
+    "- Device: $deviceManufacturer $deviceModel / API $deviceApi / $deviceAbi / serial hash $deviceHash",
+    "- Display: $displaySize / $displayDensity / font scale $fontScale",
+    "- Brightness: mode=$brightnessMode value=$brightnessValue",
     "- Audit: emulator-audit.md",
     "- Provenance: provenance.json",
+    "- Physical sign-off: physical-signoff.md",
     "",
     "## Mandatory visual review",
     "",
     "- [ ] Home hero / Start Ride hierarchy",
-    "- [ ] Active Ride sunlight/readability and marker/control clarity",
+    "- [ ] Active Ride marker/control clarity",
     "- [ ] Pause modal hierarchy and touch targets",
     "- [ ] Summary durable-success truth and production art quality",
     "- [ ] Return Home state",
     "",
-    "> AUTOMATION_PASS proves exact-SHA technical/runtime evidence only. Major visual slices still require manual visual sign-off."
+    "## T84 physical Android review",
+    "",
+    "- [ ] First-use flow succeeds without explanation from the reviewer",
+    "- [ ] Active Ride remains readable in outdoor/sunlight conditions",
+    "- [ ] Primary ride controls are reachable and understandable one-handed",
+    "- [ ] Touch targets remain usable at the tested font scale",
+    "- [ ] Map and primary metrics remain legible while moving/walking",
+    "- [ ] Offline/GPS/sync/error states are truthful and distinguishable",
+    "- [ ] Pending finalization is visually distinct from durable success",
+    "- [ ] No routine production surface regresses to legacy arcade chrome",
+    "",
+    "> AUTOMATION_PASS proves exact-SHA technical/runtime evidence only. T84 remains BLOCKED until physical-signoff.md records a real-device PASS."
   )
   $summary -join [Environment]::NewLine | Set-Content -Path $summaryPath -Encoding UTF8
+
+  $physicalSignoff = @(
+    "# T84 physical Android sign-off",
+    "",
+    "## Exact evidence identity",
+    "",
+    "- Git SHA: $gitSha",
+    "- Branch: $gitBranch",
+    "- APK SHA-256: $apkHash",
+    "- Package: com.sport.athlete $packageVersionName ($packageVersionCode)",
+    "- Device: $deviceManufacturer $deviceModel / API $deviceApi / $deviceAbi / serial hash $deviceHash",
+    "- Display: $displaySize / $displayDensity",
+    "- Font scale at evidence capture: $fontScale",
+    "- Brightness mode/value at evidence capture: $brightnessMode / $brightnessValue",
+    "- Technical result: $automationResult",
+    "",
+    "## Reviewer context",
+    "",
+    "- Reviewer: ____________________",
+    "- Date/time: ____________________",
+    "- Environment: [ ] indoor  [ ] outdoor shade  [ ] direct/strong sunlight",
+    "- Device orientation used: [ ] portrait  [ ] landscape",
+    "- One-handed test hand: [ ] left  [ ] right  [ ] both",
+    "",
+    "## Required checks",
+    "",
+    "- [ ] Fresh first-use is understandable without coaching",
+    "- [ ] Home primary action and hierarchy are immediately clear",
+    "- [ ] Active Ride speed/metrics remain glance-readable outdoors",
+    "- [ ] GPS state and degraded/offline state are unmistakable",
+    "- [ ] Pause/resume/stop are reachable and unambiguous one-handed",
+    "- [ ] STOP protection is not accidentally easy to trigger",
+    "- [ ] Text does not clip at the tested font scale",
+    "- [ ] Maps, labels and route context remain legible",
+    "- [ ] Error/offline/cache states do not impersonate live success",
+    "- [ ] Ride Summary pending/failure does not impersonate durable success",
+    "- [ ] No migrated production screen visibly regresses to arcade/RPG chrome",
+    "",
+    "## Observations",
+    "",
+    "1. ____________________",
+    "2. ____________________",
+    "3. ____________________",
+    "",
+    "## Verdict",
+    "",
+    "- [ ] PASS",
+    "- [ ] FAIL",
+    "- [ ] BLOCKED",
+    "",
+    "Reason / blocker / follow-up issue: ____________________",
+    "",
+    "> Do not mark T84 DONE unless this file records PASS against the exact identified artifact above."
+  )
+  $physicalSignoff -join [Environment]::NewLine | Set-Content -Path $physicalSignoffPath -Encoding UTF8
 
   Write-Host ""
   Write-Host "Evidence bundle: $runDir" -ForegroundColor Cyan
@@ -474,4 +556,4 @@ if ($automationResult -ne "AUTOMATION_PASS") {
 }
 
 Write-Host ""
-Write-Host "AUTOMATION_PASS — review screenshots and record manual visual sign-off." -ForegroundColor Green
+Write-Host "AUTOMATION_PASS — review screenshots and complete physical-signoff.md for T84." -ForegroundColor Green
