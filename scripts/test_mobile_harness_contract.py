@@ -146,6 +146,8 @@ class MobileHarnessContractTests(unittest.TestCase):
         self.assertNotIn("emulator-5554", source)
         self.assertNotIn("$LASTEXITCODE:", source)
         self.assertIn("${LASTEXITCODE}:", source)
+        self.assertNotIn("$gitSha:", source)
+        self.assertIn("${gitSha}:", source)
         self.assertIn('$gitBranch = "DETACHED"', source)
 
         mobile_package = json.loads(read("mobile/package.json"))
