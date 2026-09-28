@@ -103,14 +103,18 @@ The affected-test planner intentionally selected the users domain; the unrelated
 
 PR/CI evidence is necessary but is not the final T86 end-to-end proof.
 
-Run the existing GLOBAL_OWNER role smoke against the intended pilot admin environment with real credentials:
+Run the commit-bound operator wrapper against the intended pilot admin environment. The canonical combined T85 + T86 run requires both real role-specific accounts and one explicit 40-character candidate SHA:
 
 ```bash
 ADMIN_URL=<pilot-admin-url> \
+ADMIN_USER_TENANT_ADMIN=<tenant-admin> \
+ADMIN_PASS_TENANT_ADMIN=<secret> \
 ADMIN_USER_GLOBAL_OWNER=<global-owner> \
 ADMIN_PASS_GLOBAL_OWNER=<secret> \
-pnpm --filter admin smoke:p0
+python scripts/admin_pilot_smoke.py --expected-sha <40-char-pilot-sha>
 ```
+
+The wrapper fails closed on a dirty checkout, SHA mismatch, missing credentials, skipped required roles, failed navigation, or target-URL drift and writes secret-free evidence to `backups/home-lab/evidence/t85-t86-admin-smoke-*.json`. Automated PASS is necessary but not sufficient for T86 DONE.
 
 In addition to the automated navigation smoke, record targeted T86 observations on the real pilot environment:
 
