@@ -536,6 +536,14 @@ class AdminDockerBuildValidationTests(unittest.TestCase):
 
 
 class PnpmSetupCacheTests(unittest.TestCase):
+    @staticmethod
+    def _install_step() -> dict:
+        return next(
+            step
+            for step in _pnpm_setup()["runs"]["steps"]
+            if "pnpm install --frozen-lockfile" in step.get("run", "")
+        )
+
     def test_setup_node_cache_is_bound_to_root_lockfile(self):
         setup_node = next(
             step
@@ -544,6 +552,19 @@ class PnpmSetupCacheTests(unittest.TestCase):
         )
         self.assertEqual(setup_node["with"]["cache"], "pnpm")
         self.assertEqual(setup_node["with"]["cache-dependency-path"], "pnpm-lock.yaml")
+
+    def test_workspace_install_preserves_frozen_lockfile(self):
+        run = self._install_step()["run"]
+        self.assertIn("pnpm install --frozen-lockfile", run)
+        self.assertNotIn("--no-frozen-lockfile", run)
+
+    def test_workspace_install_retry_is_bounded_and_fail_closed(self):
+        step = self._install_step()
+        run = step["run"]
+        self.assertIn("max_attempts=3", run)
+        self.assertIn('if [ "$attempt" -eq "$max_attempts" ]; then', run)
+        self.assertIn('exit "$status"', run)
+        self.assertNotIn("continue-on-error", step)
 
 
 class NoSecretInheritTests(unittest.TestCase):
