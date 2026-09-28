@@ -19,9 +19,11 @@ const ROLE_SPECS = [
     role: 'GLOBAL_OWNER',
     user: process.env.ADMIN_USER_GLOBAL_OWNER || process.env.ADMIN_USER,
     pass: process.env.ADMIN_PASS_GLOBAL_OWNER || process.env.ADMIN_PASS,
+    mfa: process.env.ADMIN_MFA_GLOBAL_OWNER,
     paths: [
       '/owner/dashboard',
       '/owner/users',
+      '/owner/analytics/audit-log',
       '/owner/analytics/simulator',
       '/owner/analytics/revenue',
       '/owner/control-plane/inbox',
@@ -31,9 +33,11 @@ const ROLE_SPECS = [
     role: 'TENANT_ADMIN',
     user: process.env.ADMIN_USER_TENANT_ADMIN,
     pass: process.env.ADMIN_PASS_TENANT_ADMIN,
+    mfa: process.env.ADMIN_MFA_TENANT_ADMIN,
     paths: [
       '/owner/dashboard',
       '/owner/users',
+      '/owner/activities',
       '/owner/white-label',
       '/owner/moderation',
       '/owner/analytics/feedback',
@@ -69,7 +73,7 @@ const ROLE_SPECS = [
   },
 ];
 
-async function login(page, username, password) {
+async function login(page, username, password, mfaCode) {
   await page.goto(`${BASE}/#/login`, { waitUntil: 'load', timeout: 120000 });
   const userInput = page
     .locator('input[autocomplete="username"], input[name="username"]')
@@ -77,6 +81,11 @@ async function login(page, username, password) {
   await userInput.waitFor({ state: 'visible', timeout: 60000 });
   await userInput.fill(username);
   await page.locator('input[type="password"]').first().fill(password);
+  if (mfaCode) {
+    const mfaInput = page.locator('input[autocomplete="one-time-code"]').first();
+    await mfaInput.waitFor({ state: 'visible', timeout: 60000 });
+    await mfaInput.fill(mfaCode);
+  }
   await page.getByRole('button', { name: /sign in|log in|zaloguj/i }).click();
   await page.waitForURL(/#\/owner\//, { timeout: 60000 });
 }
@@ -102,7 +111,7 @@ async function runRole(browser, spec) {
   const page = await context.newPage();
   const failures = [];
   try {
-    await login(page, spec.user, spec.pass);
+    await login(page, spec.user, spec.pass, spec.mfa);
     for (const p of spec.paths) {
       const r = await checkPath(page, p);
       if (!r.ok) failures.push({ path: p, reason: r.reason });
