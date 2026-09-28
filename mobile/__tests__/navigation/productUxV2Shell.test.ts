@@ -56,6 +56,15 @@ describe('Product UX v2 main shell contract', () => {
     expect(shell).toContain("onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}");
   });
 
+  test('Club cannot bypass the canonical Start Ride surface', () => {
+    const shell = read('bootstrap/NavigationShell.tsx');
+
+    expect(shell).toContain(
+      "onStartQuest={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}",
+    );
+    expect(shell).not.toContain('onStartQuest={() => void handleStartRide()}');
+  });
+
   test('deep-link compatibility keeps established public paths behind new internal names', () => {
     const routes = read('navigation/routeContract.ts');
     const linking = read('navigation/linking.ts');
