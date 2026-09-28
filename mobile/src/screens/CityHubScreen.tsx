@@ -272,7 +272,7 @@ export const CityHubScreen: React.FC<{
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>{t.tabs.compete}</Text>
+        <Text style={s.headerTitle}>{t.tabs.club}</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
