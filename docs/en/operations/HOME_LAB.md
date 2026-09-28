@@ -15,6 +15,8 @@
 
 The home lab mirrors the service boundaries used by the pilot while using only the local `4velo-home` Compose project, private `.env.home`, and Docker volumes. Do not copy production secrets or production data into it.
 
+Use `python scripts/home_lab.py ...` as the only canonical control path. Bare `docker compose ...` is not equivalent because Compose auto-loads `docker-compose.override.yml`; the pilot path deliberately and explicitly layers only `docker-compose.yml` followed by `docker-compose.home.yml`.
+
 ## Requirements
 
 - Docker Desktop with WSL2, or Docker Engine with `docker compose` support;
