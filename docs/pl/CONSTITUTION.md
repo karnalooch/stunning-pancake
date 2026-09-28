@@ -5,7 +5,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | pl |
 | **translation** | [English](../en/CONSTITUTION.md) |
@@ -17,7 +17,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Product / Tech Lead |
-| **Last reviewed** | 2026-06-03 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Cały zespół |
 
 > **Wersja:** v0.2.0-rc.1 · **Data przyjęcia:** 2026-05-15  
@@ -43,7 +43,7 @@
 
 ## 1. Preambuła
 
-Platforma **4VELO** to otwartoźródłowy, samohostowany ekosystem dla sportów wytrzymałościowych — od amatorskich treningów po profesjonalne zawody. Łączy śledzenie aktywności GPS, grywalizację, system walki z oszustwami (Anti-Cheat) oraz zaawansowaną analitykę w jednym spójnym środowisku.
+Platforma **4VELO** to samohostowana platforma dla sportów wytrzymałościowych, aktywnie rozwijana w fazie pre-production. Repozytorium jest publiczne, ale na 2026-09-28 nie deklaruje licencji obejmującej cały projekt; publiczna dostępność kodu nie oznacza udzielenia licencji open source. Platforma łączy śledzenie aktywności GPS, grywalizację, system walki z oszustwami (Anti-Cheat) oraz zaawansowaną analitykę w jednym spójnym środowisku.
 
 Niniejsza Konstytucja definiuje niezmienne zasady, które obowiązują wszystkich współtwórców projektu — od deweloperów, przez DevOps, po projektantów UX. Każda decyzja architektoniczna, każdy pull request i każde wdrożenie muszą być zgodne z duchem i literą tego dokumentu.
 
@@ -75,7 +75,7 @@ Pięć filarów, na których opiera się platforma 4VELO. Żaden kompromis nie j
 
 - **Row-Level Security (RLS)** na poziomie bazy danych — każdy tenant widzi tylko swoje dane
 - **Privacy Zones** — maskowanie współrzędnych GPS w strefach prywatnych użytkownika
-- Pełna zgodność z **RODO/GDPR**:
+- **Gotowość RODO/GDPR ma status pre-production i podlega gate’om**; aktualny stan prawny definiują [RCP](../compliance/RCP.md) i [platformowa DPIA](../compliance/DPIA_PLATFORM_CURRENT.md). Funkcje projektowane do obsługi praw osób obejmują:
   - Prawo do bycia zapomnianym (hard delete + anonymizacja)
   - Prawo do przenoszenia danych (eksport JSON/GPX)
   - Przejrzysta polityka prywatności i zgody użytkownika
@@ -420,10 +420,12 @@ Każde wdrożenie musi mieć **udokumentowany i przetestowany** plan rollbacku:
 | Aktywności (przejazdy, treningi) | **Czas życia konta + 1 rok** po usunięciu |
 | Surowa telemetria (GPS punkty) | **Anonimizowana po 90 dniach** (tylko zagregowane statystyki) |
 | Dane kont użytkowników | Do momentu usunięcia konta + 30 dni (grace period) |
-| Logi audytu | **Minimum 3 lata** (wymóg RODO) |
+| Logi audytu | Okres polityki musi być uzasadniony i zweryfikowany w aktualnej macierzy retencji (bez deklarowania uniwersalnego 3-letniego minimum RODO) |
 | Logi aplikacyjne | 30 dni (rotowane) |
 
-### 8.3 Zgodność z RODO/GDPR
+> Te wartości retencji są celami polityki, a nie dowodem kompletnego egzekwowania. Jeżeli Konstytucja koliduje z aktualną bazą prawną, [RCP](../compliance/RCP.md) i [platformowa DPIA](../compliance/DPIA_PLATFORM_CURRENT.md) mają pierwszeństwo dla oceny gotowości przed pilotem.
+
+### 8.3 Gotowość RODO/GDPR
 
 | Prawo użytkownika | Implementacja |
 |---|---|
