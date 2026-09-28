@@ -149,6 +149,8 @@ Do not keep compatibility wrappers indefinitely. If a wrapper exists only to bri
 
 ### UI-1 — shells
 
+**Implementation tracking:** GitHub Issue #350 / mobile runtime migration.
+
 Mobile:
 - replace `GameTabBar`;
 - establish Today / Discover / Start Ride / Club / You route contract;
