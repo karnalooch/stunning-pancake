@@ -33,7 +33,7 @@ cd 4velo
 python scripts/dev_doctor.py
 ```
 
-Doctor sprawdza root repo, checkout Git, Pythona, dokładne piny Node/pnpm, Corepack, Docker Compose, dostęp do daemona Dockera, RAM i wolne miejsce. Przy wymaganym błędzie kończy się kodem != 0 i podaje konkretną naprawę. Sprawdza jedynie, czy `.env.home` istnieje — nigdy nie czyta ani nie wypisuje wartości sekretów. Runtime health i końcowy komunikat `DEV ENV READY` należą do T90.
+Doctor sprawdza root repo, checkout Git, Pythona, dokładne piny Node/pnpm, Corepack, Docker Compose, dostęp do daemona Dockera, RAM i wolne miejsce. Przy wymaganym błędzie kończy się kodem != 0 i podaje konkretną naprawę. Weryfikuje, że `.env.home` jest ignorowany przez Git, sprawdza jedynie istnienie pliku i nigdy nie czyta ani nie wypisuje wartości sekretów. Runtime health i końcowy komunikat `DEV ENV READY` należą do T90.
 
 ## Przygotowanie
 
