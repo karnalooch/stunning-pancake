@@ -191,7 +191,7 @@ function MainTabs({
         {() => (
           <CityHubScreen
             user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
-            onStartQuest={() => void handleStartRide()}
+            onStartQuest={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}
             onOpenClubs={() => navRef.current?.navigate('Clubs')}
             onOpenSegments={() => navRef.current?.navigate('Segments')}
           />
