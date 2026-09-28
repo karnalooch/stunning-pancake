@@ -14,6 +14,7 @@ K8S = ROOT / ".github" / "workflows" / "k8s-release-gate.yml"
 SCORECARD = ROOT / ".github" / "workflows" / "scorecard.yml"
 MOBSF = ROOT / ".github" / "workflows" / "mobsf.yml"
 FULL_RELEASE = ROOT / ".github" / "workflows" / "full-release.yml"
+QUALITY_BASELINE_SH = ROOT / "scripts" / "run-quality-baseline.sh"
 HOME_LAB = ROOT / ".github" / "workflows" / "home-lab.yml"
 NATIVE_SMOKE = ROOT / ".github" / "workflows" / "mobile-native-smoke.yml"
 
@@ -176,6 +177,25 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         ci_trigger = self._trigger(CI)
         self.assertNotIn("schedule", ci_trigger)
 
+    def test_quality_baseline_is_triggered_and_uses_non_django_test_isolation(self):
+        trigger = self._trigger(FULL_RELEASE)
+        self.assertIn(
+            "scripts/run-quality-baseline.sh",
+            trigger["pull_request"]["paths"],
+        )
+
+        baseline = text(QUALITY_BASELINE_SH)
+        self.assertIn(
+            "env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/test_check_docs_links.py -q",
+            baseline,
+        )
+        self.assertIn(
+            "cd telemetry && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q --tb=no",
+            baseline,
+        )
+        self.assertIn("pnpm --dir mobile test --ci", baseline)
+        self.assertNotIn("pnpm --dir mobile test -- --ci", baseline)
+
     def test_heavy_proofs_reuse_canonical_workflows(self):
         wf = load(FULL_RELEASE)
         jobs = wf["jobs"]
@@ -183,7 +203,10 @@ class FullReleaseLaneContractTests(unittest.TestCase):
             jobs["android-native"]["uses"],
             "./.github/workflows/mobile-native-smoke.yml",
         )
-        self.assertIs(jobs["android-native"]["with"]["release"], True)
+        self.assertEqual(
+            jobs["android-native"]["with"]["release"],
+            "${{ github.event_name != 'pull_request' }}",
+        )
         self.assertEqual(
             jobs["home-lab"]["uses"],
             "./.github/workflows/home-lab.yml",
@@ -219,6 +242,22 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         for path in (NATIVE_SMOKE, HOME_LAB, K8S):
             with self.subTest(path=path.name):
                 self.assertIn("workflow_call", self._trigger(path))
+
+    def test_reused_workflow_concurrency_is_namespaced(self):
+        expected = {
+            NATIVE_SMOKE: "mobile-native-smoke-",
+            HOME_LAB: "home-lab-",
+            K8S: "k8s-release-gate-",
+        }
+        for path, prefix in expected.items():
+            with self.subTest(path=path.name):
+                group = load(path)["concurrency"]["group"]
+                self.assertTrue(group.startswith(prefix))
+                self.assertIn("${{ github.workflow }}", group)
+                self.assertIn(
+                    "${{ github.event.pull_request.number || github.run_id }}",
+                    group,
+                )
 
     def test_release_orchestrator_is_read_only_and_cannot_deploy(self):
         release = load(FULL_RELEASE)
