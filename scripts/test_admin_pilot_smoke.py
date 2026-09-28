@@ -115,6 +115,15 @@ class AdminPilotSmokeTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("GLOBAL_OWNER: skipped", reasons)
 
+    def test_p0_role_smoke_covers_t85_t86_required_navigation(self):
+        smoke = (
+            admin_pilot_smoke.ROOT / "admin" / "scripts" / "p0-role-smoke.mjs"
+        ).read_text(encoding="utf-8")
+        self.assertIn("'GLOBAL_OWNER'", smoke)
+        self.assertIn("'TENANT_ADMIN'", smoke)
+        self.assertGreaterEqual(smoke.count("'/owner/activities'"), 2)
+        self.assertGreaterEqual(smoke.count("'/owner/analytics/audit-log'"), 2)
+
     def test_evidence_is_commit_bound_and_secret_free(self):
         with tempfile.TemporaryDirectory() as folder:
             evidence_dir = Path(folder)
