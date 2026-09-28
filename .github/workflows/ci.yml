@@ -501,6 +501,10 @@ jobs:
         run: python -m unittest test_backend_entrypoint -v
         working-directory: scripts
 
+      - name: Test developer preflight doctor
+        run: python -m unittest test_dev_doctor.py -v
+        working-directory: scripts
+
       - name: Validate tracked Railway signing-key configuration
         run: |
           python -m unittest test_check_config_secrets -v
