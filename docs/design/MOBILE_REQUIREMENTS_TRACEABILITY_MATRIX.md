@@ -74,7 +74,7 @@ Use this file as the release gate for "are we really done?".
 | `RidePausedScreen` | resume/stop flow correct, no navigation dead end |
 | `RideSummaryScreen` | summary values valid, share action does not crash, return to hub works |
 | `CityHubScreen` | city wars and leaderboard render with cache fallback |
-| `StartRideScreen` | owns sport selection, start errors/GPS recovery and the primary ride-start action into the focused live ride flow |
+| `StartRideScreen` | owns sport selection, start errors/GPS recovery, GPS diagnostics entry and the primary ride-start action into the focused live ride flow |
 | `ExploreMapScreen` / Discover | map-first POI surface renders, fallback states work, Marketplace remains reachable without an intermediate hub |
 | `MarketplaceScreen` | balance/pools/redeem flow safe under API errors |
 | `AthleteProfileScreen` | profile stats visible, navigation to training/settings/trends works |
