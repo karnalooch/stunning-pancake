@@ -203,7 +203,10 @@ class FullReleaseLaneContractTests(unittest.TestCase):
             jobs["android-native"]["uses"],
             "./.github/workflows/mobile-native-smoke.yml",
         )
-        self.assertIs(jobs["android-native"]["with"]["release"], True)
+        self.assertEqual(
+            jobs["android-native"]["with"]["release"],
+            "${{ github.event_name != 'pull_request' }}",
+        )
         self.assertEqual(
             jobs["home-lab"]["uses"],
             "./.github/workflows/home-lab.yml",
