@@ -210,7 +210,7 @@ Używane przez `mobile/app.config.js`: `app_icon` (1024×1024), `splash_icon` (1
 
 ## 19. Spięcie z pipeline (follow-up, śledzone osobno)
 
-Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), zastąpienie historycznego generatora Grand Prix oraz import PNG zamiast SVG w [`mobile/src/components/navigation/PixelTabIcon.tsx`](../../../mobile/src/components/navigation/PixelTabIcon.tsx).
+Po akceptacji tego dokumentu: aktualizacja [`scripts/asset_definitions.py`](../../../scripts/asset_definitions.py) (ikony → `format: png`, `model: gemini`), dołączanie referencji w [`scripts/generators/gemini_client.py`](../../../scripts/generators/gemini_client.py), zastąpienie historycznego generatora Grand Prix oraz import PNG zamiast SVG w `mobile/src/components/navigation/PixelTabIcon.tsx` (wycofany przez Product UX v2).
 
 ## 20. Sun-readability spec (chrome HUD — normatywne)
 

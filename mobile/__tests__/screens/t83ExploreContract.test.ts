@@ -4,19 +4,15 @@ import path from 'path';
 const SRC = path.resolve(__dirname, '../../src');
 const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'utf8');
 
-describe('T83-B Explore truth contract', () => {
-  test('Explore Hub uses Frozen UI product chrome', () => {
-    const hub = read('screens/ExploreHubScreen.tsx');
+describe('Discover map-first truth contract', () => {
+  test('Discover is map-first and does not route through the legacy Explore hub', () => {
+    const shell = read('bootstrap/NavigationShell.tsx');
+    const map = read('screens/ExploreMapScreen.tsx');
 
-    expect(hub).toContain('<ProductCard');
-    expect(hub).toContain('<PrimaryButton');
-    expect(hub).toContain('PRODUCT_TYPOGRAPHY');
-    expect(hub).toContain('getSemanticColors');
-
-    expect(hub).not.toContain('SceneBackground');
-    expect(hub).not.toContain('GameCard');
-    expect(hub).not.toContain('FONTS.display');
-    expect(hub).not.toContain('ChromeIcon');
+    expect(shell).toContain('<Tab.Screen name="Discover">');
+    expect(shell).toContain('<ExploreMapScreen');
+    expect(shell).not.toContain('ExploreHubScreen');
+    expect(map).toContain('discover-marketplace');
   });
 
   test('Explore POI surface keeps error distinct from genuine empty data', () => {

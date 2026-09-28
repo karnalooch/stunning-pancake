@@ -378,7 +378,7 @@ export function useRideLifecycle(options: RideLifecycleOptions = {}) {
       return { navigated: false };
     }
 
-    return { navigated: true, target: 'Ride' as const };
+    return { navigated: true, target: 'Today' as const };
   }, [
     liveDistanceKm,
     liveElapsedS,

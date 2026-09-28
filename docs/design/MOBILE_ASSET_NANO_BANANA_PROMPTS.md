@@ -457,7 +457,7 @@ After this doc is accepted:
 
 - Update [`scripts/asset_definitions.py`](../../scripts/asset_definitions.py): icons become `format: png`, `model: gemini`; descriptions point at these prompts.
 - [`scripts/generators/gemini_client.py`](../../scripts/generators/gemini_client.py): attach the reference image on every call and source prompt text from this SSOT.
-- [`mobile/src/components/navigation/PixelTabIcon.tsx`](../../mobile/src/components/navigation/PixelTabIcon.tsx): keep tab chrome independent from retired legacy PNG registries.
+- `mobile/src/components/navigation/PixelTabIcon.tsx` (retired by Product UX v2): keep tab chrome independent from retired legacy PNG registries.
 - **UI integration roadmap:** [GRAND_PRIX_UI_CONSISTENCY_AUDIT.md](./GRAND_PRIX_UI_CONSISTENCY_AUDIT.md) — full audit of wired vs unwired assets, tokens, fonts, HUD, scenes (2026-06-13).
 
 ## 20. Sun-readability spec (HUD chrome — normative)

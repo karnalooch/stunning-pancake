@@ -1,19 +1,19 @@
 # Macierz traceability wymagań mobile — 4VELO
 
-> **VISUAL_AUTHORITY: SUPERSEDED_BY_TAKEOVER_UI_FREEZE_V1_2**  
-> **Historyczny / nienormatywny dla decyzji wizualnych mobile.** Wizualne ustalenia w tym dokumencie są starsze niż takeover T00 / PR #60 i nie mogą nadpisać Frozen UI v1.2. Funkcjonalne wymagania pozostają ważne tylko tam, gdzie utrzymuje je bieżący kod lub aktualny takeover.
+> **BIEŻĄCY AUTORYTET UX:** [Product UX v2](../../design/PRODUCT_UX_V2.md).  
+> Ta macierz pozostaje funkcjonalnym/QA companionem. Gdy stare nazwy ekranów lub opisy wizualne kolidują z Product UX v2, obowiązuje Product UX v2.
 
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Mobile Lead / QA Lead |
-| **Last reviewed** | 2026-06-14 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Mobile engineers, QA, product, release |
 | **lang** | pl |
 | **translation** | [English](../../design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md) |
 | **canonical_path** | docs/design/MOBILE_REQUIREMENTS_TRACEABILITY_MATRIX.md |
-| **Powiązane** | [DESIGN_SYSTEM_MOBILE.md](../../design/DESIGN_SYSTEM_MOBILE.md) · [ADR 014](../../adr/014-mobile-immersive-pixel-art-and-bike-computer.md) · [DATA_RESILIENCE.md](../../pl/DATA_RESILIENCE.md) · [MOBILE_FULL_VISION_VERIFICATION.md](../../pl/operations/MOBILE_FULL_VISION_VERIFICATION.md) |
+| **Powiązane** | [Product UX v2](../../design/PRODUCT_UX_V2.md) · [DATA_RESILIENCE.md](../../pl/DATA_RESILIENCE.md) · [MOBILE_FULL_VISION_VERIFICATION.md](../../pl/operations/MOBILE_FULL_VISION_VERIFICATION.md) |
 
 ---
 
@@ -69,13 +69,13 @@ To jest główna odpowiedź na pytanie "czy naprawdę jesteśmy gotowi?".
 | Ekran | Kryteria akceptacji must-have |
 |-------|-------------------------------|
 | `AuthScreen` | login/register działa, social callback ma bezpieczny fallback, error jest czytelny |
-| `RideDashboardScreen` | start ride działa, settings/gps wejścia działają, błąd startu jest widoczny |
+| `RideDashboardScreen` / Today | bieżący kontekst renderuje się poprawnie, settings/gps działają, wejście w jazdę jest zgodne ze stanem |
 | `ActiveRideHUDScreen` | mapa + metryki + status bar + action bar + recovery banner + motion-safe behavior |
 | `RidePausedScreen` | resume/stop flow poprawny, brak dead-end nawigacji |
 | `RideSummaryScreen` | wartości poprawne, share nie crashuje, powrót do hub działa |
 | `CityHubScreen` | city wars i leaderboard renderują się z fallback cache |
-| `ExploreHubScreen` | wejścia do mapy i marketplace prowadzą poprawnie |
-| `ExploreMapScreen` | mapa renderuje, POI i fallback states działają |
+| `StartRideScreen` | wybór sportu i główna akcja startu prowadzą do skupionego flow jazdy |
+| `ExploreMapScreen` / Discover | mapa-first POI działa, fallback states są czytelne, Marketplace pozostaje dostępny bez pośredniego huba |
 | `MarketplaceScreen` | balance/pools/redeem bez crash przy API error |
 | `AthleteProfileScreen` | statystyki widoczne, nawigacja training/settings/trends działa |
 | `TrainingLogScreen` | lista aktywności ładuje się i otwiera detail |

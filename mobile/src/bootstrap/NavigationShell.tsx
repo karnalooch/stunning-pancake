@@ -6,11 +6,11 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { UserProfile } from '@4velo/api-client';
-import { GameTabBar } from '../navigation/GameTabBar';
+import { ProductTabBar } from '../navigation/ProductTabBar';
 import type { MainTabParamList, RootStackParamList } from '../navigation/types';
 import { RideDashboardScreen } from '../screens/RideDashboardScreen';
+import { StartRideScreen } from '../screens/StartRideScreen';
 import { CityHubScreen } from '../screens/CityHubScreen';
-import { ExploreHubScreen } from '../screens/ExploreHubScreen';
 import { AthleteProfileScreen } from '../screens/AthleteProfileScreen';
 import { ActiveRideHUDScreen } from '../screens/ActiveRideHUDScreen';
 import { RidePausedScreen } from '../screens/RidePausedScreen';
@@ -71,7 +71,7 @@ export type NavigationShellProps = {
   setRideEdgeMessage: (msg: RideEdgeMessage | null) => void;
   onGpsRecoveryPress: () => void;
   onStartRide: (activityType?: ActivitySportType, eventId?: number) => Promise<boolean>;
-  onStopRide: () => Promise<{ navigated: boolean; target?: 'Ride' } | void>;
+  onStopRide: () => Promise<{ navigated: boolean; target?: 'Today' } | void>;
   onLogout: () => void;
 };
 
@@ -132,13 +132,17 @@ function MainTabs({
   const handleStopRide = async () => {
     const result = await onStopRide();
     if (result && 'navigated' in result && result.navigated) {
-      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Ride' });
+      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
     }
   };
 
   return (
-    <Tab.Navigator tabBar={(props) => <GameTabBar {...props} />} screenOptions={{ headerShown: false }}>
-      <Tab.Screen name="Ride">
+    <Tab.Navigator
+      initialRouteName="Today"
+      tabBar={(props) => <ProductTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
+    >
+      <Tab.Screen name="Today">
         {() => (
           <RideDashboardScreen
             user={
@@ -165,7 +169,28 @@ function MainTabs({
           />
         )}
       </Tab.Screen>
-      <Tab.Screen name="Compete">
+      <Tab.Screen name="Discover">
+        {() => (
+          <ExploreMapScreen
+            onOpenMarketplace={() => navRef.current?.navigate('Marketplace')}
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="StartRide">
+        {() => (
+          <StartRideScreen
+            isRecording={isRecording}
+            onStartRide={(sport) => void handleStartRide(sport)}
+            onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
+            startRideError={startRideError}
+            onDismissStartRideError={clearStartRideError}
+            rideEdgeMessage={rideEdgeMessage}
+            onDismissRideEdgeMessage={clearRideEdgeMessage}
+            {...gpsRecoveryProps}
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="Club">
         {() => (
           <CityHubScreen
             user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
@@ -175,15 +200,7 @@ function MainTabs({
           />
         )}
       </Tab.Screen>
-      <Tab.Screen name="Explore">
-        {() => (
-          <ExploreHubScreen
-            onOpenMap={() => navRef.current?.navigate('ExploreMap')}
-            onOpenMarketplace={() => navRef.current?.navigate('Marketplace')}
-          />
-        )}
-      </Tab.Screen>
-      <Tab.Screen name="Profile">
+      <Tab.Screen name="You">
         {() => (
           <AthleteProfileScreen
             user={shellUser ? { username: shellUser.username } : undefined}
@@ -436,7 +453,7 @@ export function NavigationShell(props: NavigationShellProps) {
                   void (async () => {
                     const result = await onStopRide();
                     if (result && 'navigated' in result && result.navigated) {
-                      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Ride' });
+                      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
                     }
                   })();
                 }}
@@ -455,7 +472,7 @@ export function NavigationShell(props: NavigationShellProps) {
                   onShare={() => void handleShareSummary()}
                   onBackToHub={() => {
                     setRideFinishState(null);
-                    navigation.navigate('MainTabs', { screen: 'Ride' });
+                    navigation.navigate('MainTabs', { screen: 'Today' });
                   }}
                 />
                 {rideEdgeMessage ? (
@@ -479,10 +496,10 @@ export function NavigationShell(props: NavigationShellProps) {
                   <VisionGalleryScreen
                     entries={[
                       {
-                        label: 'Ride',
+                        label: 'Today',
                         onPress: () => {
                           setVisionHomePreviewState('default');
-                          navigation.navigate('MainTabs', { screen: 'Ride' });
+                          navigation.navigate('MainTabs', { screen: 'Today' });
                         },
                       },
                       ...(isVisionFixtures()
@@ -490,13 +507,14 @@ export function NavigationShell(props: NavigationShellProps) {
                             label: `Home — ${state}`,
                             onPress: () => {
                               setVisionHomePreviewState(state);
-                              navigation.navigate('MainTabs', { screen: 'Ride' });
+                              navigation.navigate('MainTabs', { screen: 'Today' });
                             },
                           }))
                         : []),
-                      { label: 'Compete', onPress: () => navigation.navigate('MainTabs', { screen: 'Compete' }) },
-                      { label: 'Explore', onPress: () => navigation.navigate('MainTabs', { screen: 'Explore' }) },
-                      { label: 'Profile', onPress: () => navigation.navigate('MainTabs', { screen: 'Profile' }) },
+                      { label: 'Club', onPress: () => navigation.navigate('MainTabs', { screen: 'Club' }) },
+                      { label: 'Discover', onPress: () => navigation.navigate('MainTabs', { screen: 'Discover' }) },
+                      { label: 'Start Ride', onPress: () => navigation.navigate('MainTabs', { screen: 'StartRide' }) },
+                      { label: 'You', onPress: () => navigation.navigate('MainTabs', { screen: 'You' }) },
                       { label: 'Trends', onPress: () => navigation.navigate('PerformanceTrends') },
                       { label: 'Leaderboard', onPress: () => navigation.navigate('GlobalLeaderboard') },
                       { label: 'Training Log', onPress: () => navigation.navigate('TrainingLog') },
@@ -528,7 +546,7 @@ export function NavigationShell(props: NavigationShellProps) {
                                 label: `Ride flow finish — ${kind}`,
                                 onPress: () => {
                                   setVisionRideFinishKind(kind);
-                                  navigation.navigate('MainTabs', { screen: 'Ride' });
+                                  navigation.navigate('MainTabs', { screen: 'Today' });
                                 },
                               },
                               {

@@ -121,7 +121,7 @@ const stylesheet = StyleSheet.create((theme) => {
   };
 });
 
-export const ExploreMapScreen: React.FC = () => {
+export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({ onOpenMarketplace }) => {
   const { theme } = useUnistyles();
   const { t } = useI18n();
   const s = stylesheet;
@@ -199,6 +199,15 @@ export const ExploreMapScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
+        {onOpenMarketplace ? (
+          <PrimaryButton
+            label={t.marketplace.title}
+            onPress={onOpenMarketplace}
+            variant="secondary"
+            testID="discover-marketplace"
+          />
+        ) : null}
+
         {loading ? (
           <SkeletonBlock height={320} />
         ) : loadError ? (

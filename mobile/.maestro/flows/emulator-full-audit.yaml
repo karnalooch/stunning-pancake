@@ -56,7 +56,8 @@ appId: com.sport.athlete
 - takeScreenshot: 04_gps_diagnostics
 - pressKey: back
 
-- tapOn: "RYWALIZACJA"
+- tapOn:
+    text: ".*(Klub|Club).*"
 - extendedWaitUntil:
     visible: ".*(RYWALIZACJA|Ranking|Wojny|Kluby).*"
     timeout: 15000
@@ -73,7 +74,8 @@ appId: com.sport.athlete
 - takeScreenshot: 07_clubs
 - pressKey: back
 
-- tapOn: "RYWALIZACJA"
+- tapOn:
+    text: ".*(Klub|Club).*"
 - scroll
 - tapOn:
     text: "Segmenty"
@@ -85,7 +87,8 @@ appId: com.sport.athlete
 - takeScreenshot: 08_segments
 - pressKey: back
 
-- tapOn: "ODKRYWAJ"
+- tapOn:
+    text: ".*(Odkrywaj|Discover).*"
 - extendedWaitUntil:
     visible: ".*(ODKRYWAJ|Mapa|Marketplace).*"
     timeout: 15000
@@ -100,7 +103,8 @@ appId: com.sport.athlete
 - takeScreenshot: 10_explore_map
 - pressKey: back
 
-- tapOn: "ODKRYWAJ"
+- tapOn:
+    text: ".*(Odkrywaj|Discover).*"
 - tapOn:
     text: "Marketplace"
     optional: true
@@ -111,7 +115,8 @@ appId: com.sport.athlete
 - takeScreenshot: 11_marketplace
 - pressKey: back
 
-- tapOn: "PROFIL"
+- tapOn:
+    text: ".*(Ty|You).*"
 - extendedWaitUntil:
     visible: ".*(PROFIL|WOJOWNIK|Dystans).*"
     timeout: 15000
@@ -128,7 +133,8 @@ appId: com.sport.athlete
 - takeScreenshot: 14_trends
 - pressKey: back
 
-- tapOn: "PROFIL"
+- tapOn:
+    text: ".*(Ty|You).*"
 - scroll
 - tapOn:
     text: "RANKING"
@@ -140,7 +146,8 @@ appId: com.sport.athlete
 - takeScreenshot: 15_leaderboard
 - pressKey: back
 
-- tapOn: "PROFIL"
+- tapOn:
+    text: ".*(Ty|You).*"
 - scroll
 - tapOn:
     text: "DZIENNIK"
@@ -152,7 +159,8 @@ appId: com.sport.athlete
 - takeScreenshot: 16_training_log
 - pressKey: back
 
-- tapOn: "PROFIL"
+- tapOn:
+    text: ".*(Ty|You).*"
 - tapOn:
     point: "92%,8%"
     optional: true
@@ -165,5 +173,6 @@ appId: com.sport.athlete
 - takeScreenshot: 18_settings_scrolled
 - pressKey: back
 
-- tapOn: "JAZDA"
-- takeScreenshot: 19_final_ride
+- tapOn:
+    text: ".*(Dzisiaj|Today).*"
+- takeScreenshot: 19_final_today

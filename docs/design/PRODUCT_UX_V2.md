@@ -5,7 +5,7 @@
 | **Status** | **APPROVED / NORMATIVE / CURRENT** |
 | **Decision date** | 2026-09-28 |
 | **Owner role** | Product / Mobile / Admin Frontend |
-| **Tracks** | GitHub Issue #346 |
+| **Tracks** | GitHub Issue #346 (authority) · #348 / PR #349 (mobile UI-1) |
 | **Machine mobile authority** | `MOBILE_UI_VISUAL_AUTHORITY_V1.json` (legacy path retained for validator compatibility; `currentAuthority` points here first) |
 | **Applies to** | 4VELO mobile UI and 4VELO CONTROL (admin/web) information architecture, shell, visual language and legacy retirement |
 | **Supersedes for UI direction** | `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` hard-freeze direction, Frozen UI v1.2 intent, dated mobile UI audits and the current admin shell/IA descriptions where they conflict |
@@ -149,9 +149,10 @@ Do not keep compatibility wrappers indefinitely. If a wrapper exists only to bri
 
 ### UI-1 — shells
 
-Mobile:
+Mobile implementation is tracked in **#348 / PR #349**:
 - replace `GameTabBar`;
 - establish Today / Discover / Start Ride / Club / You route contract;
+- make Discover map-first and retire the intermediate Explore hub;
 - keep live ride behaviour intact while changing entry/navigation.
 
 CONTROL:

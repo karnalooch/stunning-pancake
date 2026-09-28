@@ -311,6 +311,15 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, critical)
 
+    def test_full_audit_uses_product_ux_v2_tab_labels(self):
+        source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
+        for token in ("Klub|Club", "Odkrywaj|Discover", "Ty|You", "Dzisiaj|Today"):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+        for legacy in ('tapOn: "RYWALIZACJA"', 'tapOn: "PROFIL"', 'tapOn: "JAZDA"'):
+            with self.subTest(legacy=legacy):
+                self.assertNotIn(legacy, source)
+
     def test_python_ride_audit_accepts_stable_transition_ids(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (

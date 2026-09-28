@@ -57,7 +57,7 @@
 |-------------|-------------|----------|
 | Button press-in | `Light` | [`ArcadeButton.tsx:152`](mobile/src/components/ArcadeButton.tsx:152) |
 | Button press (activate) | `Medium` | [`ArcadeButton.tsx:162`](mobile/src/components/ArcadeButton.tsx:162) |
-| Tab switch | `Light` | [`GameTabBar.tsx:48`](mobile/src/navigation/GameTabBar.tsx:48) |
+| Tab switch | `Light` | `GameTabBar.tsx:48` (historical; retired by Product UX v2) |
 
 **Key Finding:** Only 3 haptic triggers exist. No success/failure/achievement haptic patterns.
 
