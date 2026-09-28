@@ -254,7 +254,7 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.headerTitle}>{t.tabs.profile}</Text>
+        <Text style={s.headerTitle}>{t.tabs.you}</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
