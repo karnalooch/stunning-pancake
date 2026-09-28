@@ -218,7 +218,7 @@ Security inventory work keeps its original IDs `T28–T30`; release gate/RC keep
 
 | ID | Tranche | Status | Evidence / acceptance |
 | --- | --- | --- | --- |
-| T88 | DX0: fix/verify home-lab Compose layering + one canonical startup path | PLANNED | CI executes the same effective startup/config contract developers use. |
+| T88 | DX0: fix/verify home-lab Compose layering + one canonical startup path | DONE | #313 closed / PR #314 merged (`2b6feffe`). `home_lab.py` is now the single explicit local/pilot Compose control path; CI runs `init` + canonical `config` (including optional profiles) through that same entrypoint; T76 reuses the shared Compose builder; tests lock exactly base `docker-compose.yml` + `docker-compose.home.yml` and exclude implicit `docker-compose.override.yml`. Home Lab validation, Scripts, Backend, Mobile, Admin, Telemetry, E2E/Audit, CodeQL/Trivy and required Aggregate CI were GREEN. |
 | T89 | DX0: doctor/preflight + init/up + dev env/toolchain contract | PLANNED | Fresh machine reports actionable checks; local secrets generated safely; no undocumented magic steps. |
 | T90 | DX0: cold-start smoke → `DEV ENV READY` | PLANNED | Migrations, backend, telemetry, admin and required workers verified automatically after clean start. |
 | T91 | Final UI validation on exact pilot candidate | BLOCKED | ENVIRONMENT REQUIRED. Repeat critical mobile flow on exact release candidate, real Android and real failure states. |
@@ -264,7 +264,7 @@ This is the only short sequence worth remembering:
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
-   T88 -> T89 -> T90
+   T88 DONE (#313/#314) -> T89 -> T90
    T58
    T91 -> T92
    T59
