@@ -30,8 +30,7 @@ The read-only `python scripts/dev_doctor.py` owns the canonical host prerequisit
 
 ```powershell
 python scripts/home_lab.py init
-python scripts/home_lab.py config
-python scripts/home_lab.py up
+python scripts/home_lab.py cold-start-smoke
 ```
 
 `init` creates ignored `.env.home` and refuses to overwrite an existing file. It generates independent local values for the database password, dedicated GLOBAL_OWNER `ADMIN_PASSWORD`, Django `SECRET_KEY`, telemetry JWT signing secret, and AES-256 backup key. Secret values are never written to T87 evidence.
