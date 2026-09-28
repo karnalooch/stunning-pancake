@@ -65,7 +65,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-club"
+    text: ".*(Klub|Club).*"
 - extendedWaitUntil:
     visible: ".*(RYWALIZACJA|Ranking|Wojny|Kluby).*"
     timeout: 15000
@@ -83,7 +83,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-club"
+    text: ".*(Klub|Club).*"
 - scroll
 - tapOn:
     text: "Segmenty"
@@ -96,7 +96,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-discover"
+    text: ".*(Odkrywaj|Discover).*"
 - extendedWaitUntil:
     visible: ".*(ODKRYWAJ|Mapa|Marketplace).*"
     timeout: 15000
@@ -112,7 +112,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-discover"
+    text: ".*(Odkrywaj|Discover).*"
 - tapOn:
     text: "Marketplace"
     optional: true
@@ -124,7 +124,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-you"
+    text: ".*(Ty|You).*"
 - extendedWaitUntil:
     visible: ".*(PROFIL|WOJOWNIK|Dystans).*"
     timeout: 15000
@@ -142,7 +142,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-you"
+    text: ".*(Ty|You).*"
 - scroll
 - tapOn:
     text: "RANKING"
@@ -155,7 +155,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-you"
+    text: ".*(Ty|You).*"
 - scroll
 - tapOn:
     text: "DZIENNIK"
@@ -168,7 +168,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-you"
+    text: ".*(Ty|You).*"
 - tapOn:
     point: "92%,8%"
     optional: true
@@ -182,5 +182,5 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    id: "tab-today"
+    text: ".*(Dzisiaj|Today).*"
 - takeScreenshot: 19_final_today
