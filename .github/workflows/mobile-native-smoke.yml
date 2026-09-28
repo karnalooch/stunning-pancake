@@ -47,7 +47,7 @@ on:
   workflow_call:
     inputs:
       release:
-        description: "Build release APK and publish exact-SHA runtime artifact"
+        description: "Force release APK and publish exact-SHA runtime artifact"
         required: false
         type: boolean
         default: false
@@ -66,42 +66,80 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run: ${{ steps.decision.outputs.run }}
+      release: ${{ steps.decision.outputs.release }}
       reason: ${{ steps.decision.outputs.reason }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
 
-      - name: Classify native-affecting changes
+      - name: Classify direct native-affecting changes
         id: classifier
         if: github.event_name == 'pull_request'
         env:
-          CI_EVENT_NAME: ${{ github.event_name }}
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           CI_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          python scripts/plan_affected_tests.py \
-            --github-output "$GITHUB_OUTPUT"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          from scripts.plan_affected_tests import (
+              changed_files_from_git,
+              is_mobile_native_affecting_path,
+          )
+
+          changed = changed_files_from_git(
+              os.environ["CI_BASE_SHA"],
+              os.environ["CI_HEAD_SHA"],
+          )
+          # Full Release owns Android release orchestration, so changing the
+          # caller itself must still prove a real release APK.
+          release_orchestration = {".github/workflows/full-release.yml"}
+          native_changed = [
+              path
+              for path in changed
+              if is_mobile_native_affecting_path(path)
+              or path in release_orchestration
+          ]
+          required = bool(native_changed)
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
+              fh.write(
+                  "direct_native_changed="
+                  + ("true" if required else "false")
+                  + "\n"
+              )
+          if native_changed:
+              print("Direct native/release-affecting paths:")
+              for path in native_changed:
+                  print(f"- {path}")
+          else:
+              print("No direct native/release-affecting paths changed.")
+          PY
       - name: Decide whether Gradle is required
         id: decision
         env:
           EVENT_NAME: ${{ github.event_name }}
-          NATIVE_CHANGED: ${{ steps.classifier.outputs.lane_mobile_native }}
+          NATIVE_CHANGED: ${{ steps.classifier.outputs.direct_native_changed }}
           FORCE_RELEASE: ${{ inputs.release || false }}
         run: |
           set -euo pipefail
           if [ "$FORCE_RELEASE" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "reason=full-release caller forces native + release validation" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "reason=caller forces native + release validation" >> "$GITHUB_OUTPUT"
           elif [ "$EVENT_NAME" != "pull_request" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "reason=$EVENT_NAME forces a native smoke" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "reason=$EVENT_NAME forces native + release validation" >> "$GITHUB_OUTPUT"
           elif [ "$NATIVE_CHANGED" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
-            echo "reason=native-affecting PR paths changed" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "reason=direct native/release-affecting PR paths changed" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "reason=JS/UI/assets-only PR; covered by Mobile + Visual Contract" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "reason=no direct native/release inputs changed; heavyweight Android build not required" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Report native scope
@@ -109,6 +147,7 @@ jobs:
           echo "### Mobile Native Smoke" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Run Android build:** `${{ steps.decision.outputs.run }}`" >> "$GITHUB_STEP_SUMMARY"
+          echo "**Build release APK:** `${{ steps.decision.outputs.release }}`" >> "$GITHUB_STEP_SUMMARY"
           echo "**Reason:** ${{ steps.decision.outputs.reason }}" >> "$GITHUB_STEP_SUMMARY"
 
   android-debug:
@@ -229,10 +268,10 @@ jobs:
           sha256sum "$DEBUG_APK"
           ls -lh "$DEBUG_APK"
 
-      # Pull requests prove native/prebuild compatibility with a debug APK only.
-      # Release packaging is reserved for main/scheduled/manual/full-release runs.
+      # Native/release-affecting PRs prove both debug and release packaging.
+      # JS/UI/assets-only and unrelated infra PRs never reach this job.
       - name: Harden Gradle release memory
-        if: github.event_name != 'pull_request' || inputs.release == true
+        if: needs.native-scope.outputs.release == 'true'
         working-directory: mobile/android
         run: |
           GRADLE_PROPERTIES="gradle.properties"
@@ -244,12 +283,12 @@ jobs:
           grep -F -- "-XX:MaxMetaspaceSize=1g" "$GRADLE_PROPERTIES"
 
       - name: Compile Android release APK
-        if: github.event_name != 'pull_request' || inputs.release == true
+        if: needs.native-scope.outputs.release == 'true'
         working-directory: mobile/android
         run: ./gradlew assembleRelease --no-daemon --stacktrace --max-workers=2
 
       - name: Record release artifact
-        if: github.event_name != 'pull_request' || inputs.release == true
+        if: needs.native-scope.outputs.release == 'true'
         run: |
           RELEASE_APK="mobile/android/app/build/outputs/apk/release/app-release.apk"
           test -f "$RELEASE_APK"
@@ -257,7 +296,7 @@ jobs:
           ls -lh "$RELEASE_APK"
 
       - name: Prepare exact-SHA runtime artifact
-        if: github.event_name != 'pull_request' || inputs.release == true
+        if: needs.native-scope.outputs.release == 'true'
         env:
           SOURCE_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
@@ -296,7 +335,7 @@ jobs:
           PY
 
       - name: Upload exact-SHA runtime artifact
-        if: github.event_name != 'pull_request' || inputs.release == true
+        if: needs.native-scope.outputs.release == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: mobile-runtime-${{ github.run_id }}
