@@ -19,16 +19,18 @@ Use `python scripts/home_lab.py ...` as the only canonical control path. Bare `d
 
 ## Requirements
 
-- Docker Desktop with WSL2, or Docker Engine with `docker compose` support;
-- at least 16 GB RAM and 40 GB free disk space;
-- Git and Python 3.12+ for the control script.
+- Git;
+- Node.js 24.21.0 and pnpm 12.4.2 through Corepack;
+- Python 3.12;
+- Docker Desktop or Docker Engine with Docker Compose v2.
+
+The read-only `python scripts/dev_doctor.py` owns the canonical host prerequisite checks; this runbook does not invent separate RAM/disk thresholds.
 
 ## First start
 
 ```powershell
 python scripts/home_lab.py init
-python scripts/home_lab.py config
-python scripts/home_lab.py up
+python scripts/home_lab.py cold-start-smoke
 ```
 
 `init` creates ignored `.env.home` and refuses to overwrite an existing file. It generates independent local values for the database password, dedicated GLOBAL_OWNER `ADMIN_PASSWORD`, Django `SECRET_KEY`, telemetry JWT signing secret, and AES-256 backup key. Secret values are never written to T87 evidence.
@@ -47,6 +49,20 @@ python scripts/home_lab.py up --all-admin
 ```
 
 Profiles can be combined. `simulation` also enables BRouter and OSRM. Initial routing-data preparation may download large files and take much longer than the core startup.
+
+## T90 cold-start smoke and `DEV ENV READY`
+
+After a green doctor and one-time `init`, run the canonical environment-readiness proof with one command:
+
+```powershell
+python scripts/home_lab.py cold-start-smoke
+```
+
+The command is fail-closed. From a known process state it runs `down --remove-orphans` **without `-v`**, preserving named volumes and local data. It then validates exactly `docker-compose.yml` + `docker-compose.home.yml`, runs `up -d --build --wait`, verifies the core services and backend/telemetry/GLOBAL_OWNER HTTP surfaces, proves that Django has no pending migrations, and actively probes PostgreSQL, Redis, and the main Celery worker path.
+
+Only after the complete contract passes does it write secret-free exact-SHA evidence to `backups/home-lab/evidence/t90-dev-env-ready-*.json` and print `DEV ENV READY`. A bare `docker compose up`, container status, or a single health endpoint is not equivalent evidence.
+
+Retries are deterministic: the smoke removes stale containers/orphans first but never deletes named volumes. A failed partial stack may remain available for diagnosis; the next smoke starts again with the controlled restart.
 
 ## Daily operation
 
