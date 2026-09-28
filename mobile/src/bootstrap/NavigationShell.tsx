@@ -178,6 +178,7 @@ function MainTabs({
             isRecording={isRecording}
             onStartRide={(sport) => void handleStartRide(sport)}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
+            onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
             startRideError={startRideError}
             onDismissStartRideError={clearStartRideError}
             rideEdgeMessage={rideEdgeMessage}
