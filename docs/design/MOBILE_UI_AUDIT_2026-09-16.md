@@ -1,3 +1,5 @@
+> **HISTORICAL SNAPSHOT:** this 2026-09-16 audit predates [Product UX v2](./PRODUCT_UX_V2.md). Any recommendation here to preserve the old IA, shell or screen structure is superseded. Runtime/safety observations remain evidence only where current code/contracts still support them.
+
 # 4VELO Mobile UI Audit — 2026-09-16
 
 | | |
