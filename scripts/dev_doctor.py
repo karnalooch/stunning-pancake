@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 """4VELO developer-environment preflight.
 
-This command is intentionally read-only. It verifies the local toolchain and
-host prerequisites needed by the canonical Home Lab path, then prints the
+This command is intentionally read-only. It verifies the tracked local toolchain
+and host prerequisites needed by the canonical Home Lab path, then prints the
 explicit next commands. Runtime/service health belongs to T90.
 """
 
 from __future__ import annotations
 
 import argparse
-import ctypes
 import json
-import os
-import shutil
+import re
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -20,10 +18,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MIN_PYTHON = (3, 12)
-MIN_RAM_GIB = 16
-MIN_FREE_DISK_GIB = 40
-GIB = 1024**3
 
 
 @dataclass(frozen=True)
@@ -31,6 +25,7 @@ class ToolchainContract:
     node: str
     node_engine: str
     pnpm: str
+    python: str
 
 
 @dataclass(frozen=True)
@@ -57,10 +52,34 @@ def load_toolchain_contract(root: Path = ROOT) -> ToolchainContract:
     if not package_manager.startswith("pnpm@"):
         raise ValueError("package.json packageManager must pin pnpm@<version>")
     pnpm = package_manager.split("@", 1)[1]
+
     node_engine = str(package.get("engines", {}).get("node", ""))
-    if not node_engine:
-        raise ValueError("package.json engines.node must be declared")
-    return ToolchainContract(node=node, node_engine=node_engine, pnpm=pnpm)
+    try:
+        next_node_major = int(node.split(".", 1)[0]) + 1
+    except ValueError as exc:
+        raise ValueError(".nvmrc must contain a semantic Node version") from exc
+    expected_engine = f">={node} <{next_node_major}"
+    if node_engine != expected_engine:
+        raise ValueError(
+            f"package.json engines.node must match .nvmrc: expected {expected_engine!r}, "
+            f"found {node_engine!r}"
+        )
+
+    ci = (root / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    match = re.search(
+        r"(?m)^\s*PYTHON_VERSION:\s*['\"]?([0-9]+\.[0-9]+)['\"]?\s*$",
+        ci,
+    )
+    if match is None:
+        raise ValueError(".github/workflows/ci.yml must declare env.PYTHON_VERSION")
+    python = match.group(1)
+
+    return ToolchainContract(
+        node=node,
+        node_engine=node_engine,
+        pnpm=pnpm,
+        python=python,
+    )
 
 
 def run_command(args: Sequence[str]) -> CommandResult:
@@ -79,37 +98,6 @@ def run_command(args: Sequence[str]) -> CommandResult:
     except subprocess.TimeoutExpired:
         return CommandResult(124, "command timed out")
     return CommandResult(completed.returncode, completed.stdout.strip())
-
-
-def total_memory_bytes() -> int | None:
-    if sys.platform == "win32":
-        class MemoryStatus(ctypes.Structure):
-            _fields_ = [
-                ("dwLength", ctypes.c_ulong),
-                ("dwMemoryLoad", ctypes.c_ulong),
-                ("ullTotalPhys", ctypes.c_ulonglong),
-                ("ullAvailPhys", ctypes.c_ulonglong),
-                ("ullTotalPageFile", ctypes.c_ulonglong),
-                ("ullAvailPageFile", ctypes.c_ulonglong),
-                ("ullTotalVirtual", ctypes.c_ulonglong),
-                ("ullAvailVirtual", ctypes.c_ulonglong),
-                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
-            ]
-
-        status = MemoryStatus()
-        status.dwLength = ctypes.sizeof(MemoryStatus)
-        if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(status)):
-            return int(status.ullTotalPhys)
-        return None
-
-    try:
-        page_size = int(os.sysconf("SC_PAGE_SIZE"))
-        page_count = int(os.sysconf("SC_PHYS_PAGES"))
-    except (AttributeError, OSError, TypeError, ValueError):
-        return None
-    if page_size <= 0 or page_count <= 0:
-        return None
-    return page_size * page_count
 
 
 def _version(text: str) -> str:
@@ -144,8 +132,7 @@ def collect_checks(
     root: Path = ROOT,
     runner: CommandRunner = run_command,
     python_version: tuple[int, int] | None = None,
-    memory_bytes: int | None = None,
-    free_disk_bytes: int | None = None,
+    cwd: Path | None = None,
 ) -> list[Check]:
     checks: list[Check] = []
     required = (
@@ -155,18 +142,32 @@ def collect_checks(
         "docker-compose.yml",
         "docker-compose.home.yml",
         "scripts/home_lab.py",
+        ".github/workflows/ci.yml",
     )
     missing = [path for path in required if not (root / path).is_file()]
     checks.append(
         Check(
             "repository",
             "PASS" if not missing else "FAIL",
-            "canonical repository root" if not missing else f"missing: {', '.join(missing)}",
-            "Run the doctor from a complete 4VELO repository checkout.",
+            "canonical repository files present"
+            if not missing
+            else f"missing: {', '.join(missing)}",
+            "Use a complete 4VELO repository checkout.",
         )
     )
     if missing:
         return checks
+
+    actual_cwd = (cwd or Path.cwd()).resolve()
+    expected_cwd = root.resolve()
+    checks.append(
+        Check(
+            "repository root",
+            "PASS" if actual_cwd == expected_cwd else "FAIL",
+            str(actual_cwd),
+            f"Run the doctor from the repository root: {expected_cwd}",
+        )
+    )
 
     try:
         contract = load_toolchain_contract(root)
@@ -176,10 +177,18 @@ def collect_checks(
                 "toolchain contract",
                 "FAIL",
                 str(exc),
-                "Repair the tracked package.json/.nvmrc toolchain contract first.",
+                "Repair the tracked package.json/.nvmrc/CI toolchain contract first.",
             )
         )
         return checks
+
+    checks.append(
+        Check(
+            "toolchain contract",
+            "PASS",
+            f"Node {contract.node}; pnpm {contract.pnpm}; Python {contract.python}",
+        )
+    )
 
     git = runner(("git", "rev-parse", "--show-toplevel"))
     if git.returncode == 0:
@@ -187,14 +196,14 @@ def collect_checks(
             git_root = Path(git.output).resolve()
         except OSError:
             git_root = Path(git.output)
-        if git_root == root.resolve():
+        if git_root == expected_cwd:
             checks.append(Check("git checkout", "PASS", str(git_root)))
         else:
             checks.append(
                 Check(
                     "git checkout",
                     "FAIL",
-                    f"expected {root.resolve()}, found {git_root}",
+                    f"expected {expected_cwd}, found {git_root}",
                     "Run from the intended 4VELO Git checkout.",
                 )
             )
@@ -222,21 +231,16 @@ def collect_checks(
         )
 
     current_python = python_version or (sys.version_info.major, sys.version_info.minor)
-    if current_python[0] == 3 and current_python >= MIN_PYTHON:
-        checks.append(
-            Check(
-                "python",
-                "PASS",
-                f"{current_python[0]}.{current_python[1]} (minimum {MIN_PYTHON[0]}.{MIN_PYTHON[1]})",
-            )
-        )
+    actual_python = f"{current_python[0]}.{current_python[1]}"
+    if actual_python == contract.python:
+        checks.append(Check("python", "PASS", actual_python))
     else:
         checks.append(
             Check(
                 "python",
                 "FAIL",
-                f"requires Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+, found {current_python[0]}.{current_python[1]}",
-                "Install Python 3.12+; CI uses Python 3.12.",
+                f"expected {contract.python}, found {actual_python}",
+                f"Install/activate Python {contract.python} to match CI.",
             )
         )
 
@@ -269,8 +273,13 @@ def collect_checks(
     )
 
     compose = runner(("docker", "compose", "version", "--short"))
-    if compose.returncode == 0 and compose.output.strip():
-        checks.append(Check("docker compose", "PASS", compose.output.strip()))
+    compose_version = _version(compose.output)
+    try:
+        compose_major = int(compose_version.split(".", 1)[0])
+    except (ValueError, IndexError):
+        compose_major = -1
+    if compose.returncode == 0 and compose_major == 2:
+        checks.append(Check("docker compose", "PASS", compose_version))
     else:
         checks.append(
             Check(
@@ -293,40 +302,6 @@ def collect_checks(
                 "Start Docker Desktop/Engine and ensure the current user can access it.",
             )
         )
-
-    if memory_bytes is None:
-        memory_bytes = total_memory_bytes()
-    if memory_bytes is None:
-        checks.append(
-            Check(
-                "memory",
-                "FAIL",
-                "could not determine physical RAM",
-                f"Verify at least {MIN_RAM_GIB} GiB physical RAM.",
-            )
-        )
-    else:
-        memory_gib = memory_bytes / GIB
-        checks.append(
-            Check(
-                "memory",
-                "PASS" if memory_gib >= MIN_RAM_GIB else "FAIL",
-                f"{memory_gib:.1f} GiB (minimum {MIN_RAM_GIB} GiB)",
-                f"Use a machine with at least {MIN_RAM_GIB} GiB RAM.",
-            )
-        )
-
-    if free_disk_bytes is None:
-        free_disk_bytes = shutil.disk_usage(root).free
-    free_gib = free_disk_bytes / GIB
-    checks.append(
-        Check(
-            "free disk",
-            "PASS" if free_gib >= MIN_FREE_DISK_GIB else "FAIL",
-            f"{free_gib:.1f} GiB free (minimum {MIN_FREE_DISK_GIB} GiB)",
-            f"Free at least {MIN_FREE_DISK_GIB} GiB on the filesystem containing the checkout.",
-        )
-    )
 
     env_file = root / ".env.home"
     checks.append(
