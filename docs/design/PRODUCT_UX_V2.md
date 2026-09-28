@@ -161,7 +161,7 @@ CONTROL:
 
 ### UI-2 — primary flows
 
-**Implementation tracking:** Today / Start Ride separation is tracked by GitHub Issue #354 and stacked PR #356.
+**Implementation tracking:** Today / Start Ride separation is delivered by GitHub Issue #354 / PR #356. Club recomposition is tracked by Issue #358 / PR #359.
 
 - Today and Start Ride;
 - Discover map-first flow;

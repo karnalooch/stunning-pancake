@@ -56,6 +56,23 @@ describe('Product UX v2 main shell contract', () => {
     expect(shell).toContain("onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}");
   });
 
+  test('Club owns challenge ride entry and the global leaderboard', () => {
+    const shell = read('bootstrap/NavigationShell.tsx');
+    const club = read('screens/CityHubScreen.tsx');
+    const you = read('screens/AthleteProfileScreen.tsx');
+
+    expect(shell).toContain(
+      "onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}",
+    );
+    expect(shell).toContain(
+      "onOpenLeaderboard={() => navRef.current?.navigate('GlobalLeaderboard')}",
+    );
+    expect(club).toContain('club-open-global-leaderboard');
+    expect(club).not.toContain('onStartQuest');
+    expect(you).not.toContain('onLeaderboard');
+    expect(shell).not.toContain('onStartQuest={() => void handleStartRide()}');
+  });
+
   test('deep-link compatibility keeps established public paths behind new internal names', () => {
     const routes = read('navigation/routeContract.ts');
     const linking = read('navigation/linking.ts');

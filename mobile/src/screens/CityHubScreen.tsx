@@ -156,10 +156,11 @@ const stylesheet = StyleSheet.create((theme) => {
 
 export const CityHubScreen: React.FC<{
   user?: { username: string } | null;
-  onStartQuest?: (id: string) => void;
+  onOpenStartRide?: () => void;
+  onOpenLeaderboard?: () => void;
   onOpenClubs?: () => void;
   onOpenSegments?: () => void;
-}> = ({ onStartQuest, onOpenClubs, onOpenSegments }) => {
+}> = ({ onOpenStartRide, onOpenLeaderboard, onOpenClubs, onOpenSegments }) => {
   const { t } = useI18n();
   const s = stylesheet;
   const fixturesEnabled = isVisionFixtures();
@@ -264,9 +265,9 @@ export const CityHubScreen: React.FC<{
   const leaderboard = effectiveCityHub?.leaderboard ?? [];
   const quests = effectiveCityHub?.quests ?? [];
 
-  const startQuest = (id: string) => {
+  const openChallengeRide = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    onStartQuest?.(id);
+    onOpenStartRide?.();
   };
 
   return (
@@ -277,7 +278,7 @@ export const CityHubScreen: React.FC<{
 
       <ScrollView contentContainerStyle={s.content}>
         {!fixturesEnabled && usingCached ? (
-          <ProductCard testID="compete-cached-state">
+          <ProductCard testID="club-cached-state">
             <View style={s.stateContent}>
               <Text style={s.offlineTitle}>
                 {loadError ? t.compete.cachedOfflineTitle : t.compete.refreshingCached}
@@ -290,7 +291,7 @@ export const CityHubScreen: React.FC<{
         {loading && !effectiveCityHub ? (
           <SkeletonBlock height={360} />
         ) : loadError && !effectiveCityHub ? (
-          <ProductCard variant="raised" testID="compete-load-error">
+          <ProductCard variant="raised" testID="club-load-error">
             <View style={s.stateContent}>
               <Text style={s.errorTitle}>{t.compete.loadError}</Text>
               <Text style={s.stateBody}>{t.compete.loadErrorHint}</Text>
@@ -298,7 +299,7 @@ export const CityHubScreen: React.FC<{
                 label={t.common.retry}
                 onPress={() => void retryCityHub()}
                 variant="secondary"
-                testID="compete-retry"
+                testID="club-retry"
               />
             </View>
           </ProductCard>
@@ -307,7 +308,7 @@ export const CityHubScreen: React.FC<{
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t.compete.cityOfWeek}</Text>
               {cityOfWeek ? (
-                <ProductCard variant="raised" testID="compete-city-of-week">
+                <ProductCard variant="raised" testID="club-city-of-week">
                   <View style={s.stateContent}>
                     <Text style={s.cityName}>{cityOfWeek.name}</Text>
                     <Metric
@@ -317,7 +318,7 @@ export const CityHubScreen: React.FC<{
                   </View>
                 </ProductCard>
               ) : (
-                <ProductCard testID="compete-city-of-week-empty">
+                <ProductCard testID="club-city-of-week-empty">
                   <Text style={s.stateBody}>{t.compete.noCityOfWeek}</Text>
                 </ProductCard>
               )}
@@ -326,7 +327,7 @@ export const CityHubScreen: React.FC<{
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t.compete.cityWars}</Text>
               {wars ? (
-                <ProductCard testID="compete-city-wars">
+                <ProductCard testID="club-city-wars">
                   <View style={s.stateContent}>
                     <View style={s.warRow}>
                       <View style={s.warSide}>
@@ -349,7 +350,7 @@ export const CityHubScreen: React.FC<{
                   </View>
                 </ProductCard>
               ) : (
-                <ProductCard testID="compete-city-wars-empty">
+                <ProductCard testID="club-city-wars-empty">
                   <Text style={s.stateBody}>{t.compete.waitingBattle}</Text>
                 </ProductCard>
               )}
@@ -357,7 +358,7 @@ export const CityHubScreen: React.FC<{
 
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t.compete.leaderboard}</Text>
-              <ProductCard testID="compete-leaderboard">
+              <ProductCard testID="club-leaderboard">
                 {leaderboard.length === 0 ? (
                   <Text style={s.stateBody}>{t.compete.empty}</Text>
                 ) : (
@@ -389,13 +390,13 @@ export const CityHubScreen: React.FC<{
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t.compete.nearbyQuests}</Text>
               {quests.length === 0 ? (
-                <ProductCard testID="compete-quests-empty">
+                <ProductCard testID="club-quests-empty">
                   <Text style={s.stateBody}>{t.compete.noQuests}</Text>
                 </ProductCard>
               ) : (
                 <View style={s.questStack}>
                   {quests.map((quest) => (
-                    <ProductCard key={quest.id} testID={`compete-quest-${quest.id}`}>
+                    <ProductCard key={quest.id} testID={`club-quest-${quest.id}`}>
                       <View style={s.questContent}>
                         <Text style={s.questCategory}>{quest.category}</Text>
                         <Text style={s.questTitle}>{quest.name}</Text>
@@ -409,9 +410,10 @@ export const CityHubScreen: React.FC<{
                         </Text>
                         <PrimaryButton
                           label={t.compete.startQuest}
-                          onPress={() => startQuest(quest.id)}
+                          onPress={openChallengeRide}
                           variant="secondary"
-                          disabled={!onStartQuest}
+                          disabled={!onOpenStartRide}
+                          testID={`club-challenge-start-${quest.id}`}
                         />
                       </View>
                     </ProductCard>
@@ -422,18 +424,25 @@ export const CityHubScreen: React.FC<{
 
             <View style={s.navActions}>
               <PrimaryButton
+                label={t.settings.globalLb}
+                onPress={() => onOpenLeaderboard?.()}
+                variant="secondary"
+                disabled={!onOpenLeaderboard}
+                testID="club-open-global-leaderboard"
+              />
+              <PrimaryButton
                 label={t.compete.clubs}
                 onPress={() => onOpenClubs?.()}
                 variant="secondary"
                 disabled={!onOpenClubs}
-                testID="compete-open-clubs"
+                testID="club-open-clubs"
               />
               <PrimaryButton
                 label={t.compete.segments}
                 onPress={() => onOpenSegments?.()}
                 variant="secondary"
                 disabled={!onOpenSegments}
-                testID="compete-open-segments"
+                testID="club-open-segments"
               />
             </View>
           </>

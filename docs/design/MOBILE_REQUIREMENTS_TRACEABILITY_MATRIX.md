@@ -40,7 +40,7 @@ Use this file as the release gate for "are we really done?".
 | FR-04 | Configurable ride data grid/presets | `DESIGN_SYSTEM_MOBILE` §3 | `mobile/src/components/ride/DataFieldGrid.tsx`, `mobile/src/ride/dataFields.ts`, `mobile/src/ride/layouts.ts` | manual layout edit + persistence check | schema migrations as fields evolve |
 | FR-05 | Explore map and POI flows | `DESIGN_SYSTEM_MOBILE` §4 | `mobile/src/screens/ExploreMapScreen.tsx`, `mobile/src/services/api.ts` (`POIService`) | manual map/POI validation | backend POI data completeness |
 | FR-06 | Marketplace shows balances/pools and redeem action | product/docs marketplace | `mobile/src/screens/MarketplaceScreen.tsx`, `mobile/src/services/api.ts` (`RewardsService`) | manual + API failure fallback | payment/reward backend edge behaviors |
-| FR-07 | City competition hub + leaderboard available | `DESIGN_SYSTEM_MOBILE` §7 | `mobile/src/screens/CityHubScreen.tsx`, `mobile/src/screens/GlobalLeaderboardScreen.tsx` | manual + cache fallback check | stale cache windows |
+| FR-07 | Club owns city/community competition, challenges and global leaderboard entry | Product UX v2 / Club | `mobile/src/screens/CityHubScreen.tsx`, `mobile/src/screens/GlobalLeaderboardScreen.tsx` | manual + cache fallback + navigation contract | stale cache windows |
 | FR-08 | Profile, training log, and activity detail available | profile/training docs | `mobile/src/screens/AthleteProfileScreen.tsx`, `mobile/src/screens/TrainingLogScreen.tsx`, `mobile/src/screens/ActivityDetailScreen.tsx` | manual drilldown | detail screen partial placeholders |
 | FR-09 | Settings include rider/sensor/privacy controls | full vision plan + ops | `mobile/src/screens/SettingsScreen.tsx`, `mobile/src/services/RiderPreferencesService.ts`, `mobile/src/services/api.ts` (`PrivacyService`, `WearableService`) | manual sections walkthrough | wearables external auth reliability |
 | FR-10 | Deep links route into critical screens | navigation contract | `mobile/src/navigation/linking.ts`, `mobile/src/navigation/routeContract.ts`, `mobile/src/navigation/types.ts` | unit test + manual URL open | platform-specific URI handling |
@@ -73,7 +73,7 @@ Use this file as the release gate for "are we really done?".
 | `ActiveRideHUDScreen` | map + metrics + status bar + action bar + recovery banner + motion-safe behavior |
 | `RidePausedScreen` | resume/stop flow correct, no navigation dead end |
 | `RideSummaryScreen` | summary values valid, share action does not crash, return to hub works |
-| `CityHubScreen` | city wars and leaderboard render with cache fallback |
+| `CityHubScreen` / Club | city/community/challenges render with cache fallback; challenge ride entry routes through Start Ride; global leaderboard is reachable from Club |
 | `StartRideScreen` | owns sport selection, start errors/GPS recovery, GPS diagnostics entry and the primary ride-start action into the focused live ride flow |
 | `ExploreMapScreen` / Discover | map-first POI surface renders, fallback states work, Marketplace remains reachable without an intermediate hub |
 | `MarketplaceScreen` | balance/pools/redeem flow safe under API errors |

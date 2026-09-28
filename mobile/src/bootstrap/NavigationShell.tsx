@@ -191,7 +191,8 @@ function MainTabs({
         {() => (
           <CityHubScreen
             user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
-            onStartQuest={() => void handleStartRide()}
+            onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}
+            onOpenLeaderboard={() => navRef.current?.navigate('GlobalLeaderboard')}
             onOpenClubs={() => navRef.current?.navigate('Clubs')}
             onOpenSegments={() => navRef.current?.navigate('Segments')}
           />
@@ -205,7 +206,6 @@ function MainTabs({
             onTraining={() => navRef.current?.navigate('TrainingLog')}
             onSettings={() => navRef.current?.navigate('Settings')}
             onTrends={() => navRef.current?.navigate('PerformanceTrends')}
-            onLeaderboard={() => navRef.current?.navigate('GlobalLeaderboard')}
           />
         )}
       </Tab.Screen>
