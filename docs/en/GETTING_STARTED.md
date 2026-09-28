@@ -20,8 +20,7 @@ See the [takeover guide](../PROJECT_TAKEOVER.md) for project limitations.
 - Git.
 - Node.js **24.21.0** (tracked in `.nvmrc`; the root manifest allows Node 24 from 24.21.0) and pnpm **12.4.2** through Corepack.
 - Docker Desktop / Docker Engine with Compose v2.
-- At least **16 GB RAM** and **40 GB free disk space** for the Home Lab.
-- Python **3.12+** for CI-aligned local tools; CI currently uses Python 3.12 and service images may use their own pinned runtime.
+- Python **3.12** for CI-aligned local tools; the doctor requires the same minor version as CI, while service images may use their own pinned runtime.
 
 ## Preflight
 
@@ -33,7 +32,7 @@ cd 4velo
 python scripts/dev_doctor.py
 ```
 
-The doctor checks the repository root, Git checkout, Python, the exact Node/pnpm pins, Corepack, Docker Compose, Docker daemon access, RAM and free disk space. It exits non-zero with a concrete remediation for every required failure. It verifies that `.env.home` is Git-ignored, checks only whether the file exists, and never reads or prints its secret values. Runtime health and the final `DEV ENV READY` claim belong to T90.
+The doctor checks the repository root, Git checkout, the CI-pinned Python minor, the exact Node/pnpm pins, Corepack, Docker Compose v2 and Docker daemon access. It exits non-zero with a concrete remediation for every required failure. It verifies that `.env.home` is Git-ignored, checks only whether the file exists, and never reads or prints its secret values. Runtime health and the final `DEV ENV READY` claim belong to T90.
 
 ## Preparation
 
