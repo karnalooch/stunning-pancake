@@ -1,21 +1,28 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const source = readFileSync(
-  resolve(__dirname, '../../src/screens/RideDashboardScreen.tsx'),
-  'utf8',
-);
+const screen = (name: string) =>
+  readFileSync(resolve(__dirname, `../../src/screens/${name}.tsx`), 'utf8');
 
-describe('T79 Home visual contract', () => {
-  test('uses the Frozen UI product primitives', () => {
-    expect(source).toContain('PrimaryButton');
-    expect(source).toContain('ProductCard');
-    expect(source).toContain('SportChip');
-    expect(source).toContain('Metric');
-    expect(source).toContain('getSemanticColors');
+const today = screen('RideDashboardScreen');
+const startRide = screen('StartRideScreen');
+
+describe('Product UX v2 Today context contract', () => {
+  test('Today uses product primitives without owning ride setup', () => {
+    expect(today).toContain('PrimaryButton');
+    expect(today).toContain('ProductCard');
+    expect(today).toContain('Metric');
+    expect(today).toContain('getSemanticColors');
+
+    expect(today).not.toContain('SportChip');
+    expect(today).not.toContain('ACTIVITY_SPORT_OPTIONS');
+    expect(today).not.toContain('selectedSport');
+    expect(today).not.toContain('onStartRide');
+    expect(today).not.toContain('GpsRecoveryBanner');
+    expect(today).not.toContain('startRideError');
   });
 
-  test('does not restore legacy arcade or generated-art Home chrome', () => {
+  test('does not restore legacy arcade or generated-art Today chrome', () => {
     for (const forbidden of [
       'ArcadeButton',
       'GameCard',
@@ -27,13 +34,13 @@ describe('T79 Home visual contract', () => {
       'RiderAvatar',
       'FONTS.display',
     ]) {
-      expect(source).not.toContain(forbidden);
+      expect(today).not.toContain(forbidden);
     }
   });
 
-  test('keeps deterministic state hooks for visual review', () => {
+  test('keeps deterministic Today state hooks for visual review', () => {
     for (const testId of [
-      'home-start-ride',
+      'home-open-start-ride',
       'home-go-to-ride',
       'home-stats-error',
       'home-stats-offline',
@@ -41,45 +48,51 @@ describe('T79 Home visual contract', () => {
       'home-weekly-context',
       'home-week-distance',
     ]) {
-      expect(source).toContain(testId);
+      expect(today).toContain(testId);
     }
   });
 
-  test('supports the five deterministic Home review states', () => {
-    expect(source).toContain('getVisionHomePreviewState');
-    expect(source).toContain("effectivePreviewState === 'loading'");
-    expect(source).toContain("effectivePreviewState === 'empty'");
-    expect(source).toContain("effectivePreviewState === 'offline'");
-    expect(source).toContain("effectivePreviewState === 'error'");
+  test('supports the five deterministic Today review states', () => {
+    expect(today).toContain('getVisionHomePreviewState');
+    expect(today).toContain("effectivePreviewState === 'loading'");
+    expect(today).toContain("effectivePreviewState === 'empty'");
+    expect(today).toContain("effectivePreviewState === 'offline'");
+    expect(today).toContain("effectivePreviewState === 'error'");
   });
 
-  test('keeps the Frozen UI T79 above-fold hierarchy in source order', () => {
-    const startRide = source.indexOf('testID="home-start-ride"');
-    const sportSelector = source.indexOf('testID={`home-sport-${option.type.toLowerCase()}`}');
-    const weeklyPreview = source.indexOf('testID="home-weekly-context"');
-    const gpsCheck = source.indexOf('testID="home-gps-check"');
-    const lastRide = source.indexOf('testID="home-last-ride-distance"');
+  test('keeps Today hierarchy focused on context rather than pre-ride configuration', () => {
+    const rideEntry = today.indexOf('testID="home-open-start-ride"');
+    const weeklyPreview = today.indexOf('testID="home-weekly-context"');
+    const lastRide = today.indexOf('testID="home-last-ride-distance"');
 
-    for (const position of [startRide, sportSelector, weeklyPreview, gpsCheck, lastRide]) {
+    for (const position of [rideEntry, weeklyPreview, lastRide]) {
       expect(position).toBeGreaterThanOrEqual(0);
     }
 
-    expect(startRide).toBeLessThan(sportSelector);
-    expect(sportSelector).toBeLessThan(weeklyPreview);
-    expect(weeklyPreview).toBeLessThan(gpsCheck);
-    expect(gpsCheck).toBeLessThan(lastRide);
+    expect(rideEntry).toBeLessThan(weeklyPreview);
+    expect(weeklyPreview).toBeLessThan(lastRide);
+    expect(today).not.toContain('home-gps-check');
+    expect(today).not.toContain('home-sport-');
   });
 
-  test('refreshes rider history when Home regains focus', () => {
-    expect(source).toContain('useFocusEffect');
-    expect(source).toContain('hasFocusedHome');
-    expect(source).toContain('void refreshStats()');
+  test('Start Ride exclusively owns sport selection and pre-ride recovery/error UI', () => {
+    expect(startRide).toContain('SportChip');
+    expect(startRide).toContain('ACTIVITY_SPORT_OPTIONS');
+    expect(startRide).toContain('start-ride-primary');
+    expect(startRide).toContain('GpsRecoveryBanner');
+    expect(startRide).toContain('startRideError');
+  });
+
+  test('refreshes rider history when Today regains focus', () => {
+    expect(today).toContain('useFocusEffect');
+    expect(today).toContain('hasFocusedHome');
+    expect(today).toContain('void refreshStats()');
   });
 
   test('distinguishes hard history failure from a legitimate empty history', () => {
-    expect(source).toContain('error: statsError');
-    expect(source).toContain('refresh: refreshStats');
-    expect(source).toContain('displayStatsError');
-    expect(source).toContain('home-stats-retry');
+    expect(today).toContain('error: statsError');
+    expect(today).toContain('refresh: refreshStats');
+    expect(today).toContain('displayStatsError');
+    expect(today).toContain('home-stats-retry');
   });
 });
