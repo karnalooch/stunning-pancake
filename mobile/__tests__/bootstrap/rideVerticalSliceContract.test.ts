@@ -30,14 +30,14 @@ describe('T80-D deterministic Ride vertical slice contract', () => {
     expect(summary).toContain('testID="ride-summary-back-home"');
   });
 
-  test('navigation owns the complete Ride slice transitions', () => {
+  test('navigation owns the complete Ride slice transitions under the Today shell', () => {
     const navigation = source('bootstrap/NavigationShell.tsx');
 
     expect(navigation).toContain("screen: 'Tracking'");
     expect(navigation).toContain("navigate('RidePaused')");
     expect(navigation).toContain("navigate('RideSummary', rideFinishState)");
     expect(navigation).toContain('setRideFinishState(null)');
-    expect(navigation).toContain("screen: 'Ride'");
+    expect(navigation).toContain("screen: 'Today'");
   });
 
   test('vision mode uses the deterministic controller at composition root', () => {
