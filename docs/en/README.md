@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **lang** | en |
 | **translation** | [Indeks główny (PL)](../pl/README.md) |
 
@@ -12,7 +12,7 @@
 
 ## Localization
 
-Paired documents: **English** under `docs/en/`, **Polish canonical** under `docs/pl/`. Legacy paths (`docs/operations/`, root `docs/GETTING_STARTED.md`, …) are **phase-2 redirect stubs** — edit content in `docs/pl/`, not the stub. Policy: [locales/STANDARD.en.md](../locales/STANDARD.en.md). Progress: [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md).
+The cross-language navigation hub is [`docs/README.md`](../README.md). Paired documents live under `docs/en/` and `docs/pl/`. Legacy content paths (`docs/operations/`, root `docs/GETTING_STARTED.md`, …) are **phase-2 redirect stubs** — edit canonical content in the locale trees, not the stub. Policy: [locales/STANDARD.en.md](../locales/STANDARD.en.md). Progress: [locales/MIGRATION_REGISTRY.md](../locales/MIGRATION_REGISTRY.md).
 
 ---
 
@@ -64,6 +64,6 @@ PL summaries: [pl/adr/](../pl/adr/) · [pl/API.md](../pl/API.md) · [pl/ARCHITEC
 
 ---
 
-## Full tree
+## Navigation
 
-The master index (Polish-first, all links): [../pl/README.md](../pl/README.md). Legacy entry: [../README.md](../README.md) (redirect).
+Cross-language task/SSOT map: [../README.md](../README.md). Polish locale index: [../pl/README.md](../pl/README.md). Documentation lifecycle rules: [../DOCUMENTATION_LIFECYCLE.md](../DOCUMENTATION_LIFECYCLE.md).

@@ -25,7 +25,7 @@ This document translates the full-vision mobile plan into implementation contrac
 1. `docs/design/DESIGN_SYSTEM_MOBILE.md`
 2. `docs/adr/014-mobile-immersive-pixel-art-and-bike-computer.md`
 3. `docs/pl/DATA_RESILIENCE.md`
-4. `docs/adr/012-mobile-performance-budgets.md`
+4. `docs/adr/016-mobile-performance-budgets.md`
 5. `docs/pl/CONSTITUTION.md`
 
 ## Operational hardening references

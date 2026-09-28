@@ -259,7 +259,7 @@ Per [MOBILE_ASSET_NANO_BANANA_PROMPTS.md §2](./MOBILE_ASSET_NANO_BANANA_PROMPTS
 - Maestro smoke: tab PNG, parallax, HUD sun-readability
 - Visual regression snapshots (Dashboard, Active Ride, Summary)
 - `immersiveTheme` default ON — remove emoji fallback after PNG migration
-- `useFrameBudgetMonitor` + degrade particles/parallax ([ADR 012](../adr/012-mobile-performance-budgets.md))
+- `useFrameBudgetMonitor` + degrade particles/parallax ([ADR 012](../adr/016-mobile-performance-budgets.md))
 - Monitor APK size (~35 PNG bundle)
 
 ---
