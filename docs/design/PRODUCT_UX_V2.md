@@ -161,10 +161,10 @@ CONTROL:
 
 ### UI-2 — primary flows
 
-**Implementation tracking:** Today / Start Ride separation is delivered by GitHub Issue #354 / PR #356. Club recomposition is delivered by Issue #358 / PR #359. You recomposition is tracked by Issue #360 / PR #361.
+**Implementation tracking:** Today / Start Ride separation is delivered by GitHub Issue #354 / PR #356. Club recomposition is delivered by Issue #358 / PR #359. You recomposition is delivered by Issue #360 / PR #361. Discover map-first recomposition is tracked by Issue #362.
 
 - Today and Start Ride;
-- Discover map-first flow;
+- Discover map-first flow; Marketplace remains a secondary utility during UI-2, while placeholder-only Segments are not promoted into primary discovery until they have real product data;
 - Club;
 - You;
 - CONTROL Overview, Riders, Rides and Map.
