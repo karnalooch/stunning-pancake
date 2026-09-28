@@ -101,7 +101,10 @@ jobs:
           )
           # Full Release owns Android release orchestration, so changing the
           # caller itself must still prove a real release APK.
-          release_orchestration = {\n              ".github/workflows/full-release.yml",\n              ".github/workflows/t92-exact-sha-regression.yml",\n          }
+          release_orchestration = {
+              ".github/workflows/full-release.yml",
+              ".github/workflows/t92-exact-sha-regression.yml",
+          }
           native_changed = [
               path
               for path in changed
