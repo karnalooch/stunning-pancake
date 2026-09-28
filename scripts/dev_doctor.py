@@ -208,6 +208,19 @@ def collect_checks(
             )
         )
 
+    ignored = runner(("git", "check-ignore", "-q", ".env.home"))
+    if ignored.returncode == 0:
+        checks.append(Check("secret-file ignore", "PASS", ".env.home is ignored by Git"))
+    else:
+        checks.append(
+            Check(
+                "secret-file ignore",
+                "FAIL",
+                ".env.home is not protected by the Git ignore contract",
+                "Restore the tracked .gitignore rule for .env.home before generating secrets.",
+            )
+        )
+
     current_python = python_version or (sys.version_info.major, sys.version_info.minor)
     if current_python[0] == 3 and current_python >= MIN_PYTHON:
         checks.append(
