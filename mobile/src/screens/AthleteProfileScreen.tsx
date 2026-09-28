@@ -150,7 +150,6 @@ interface Props {
   onTraining?: () => void;
   onSettings?: () => void;
   onTrends?: () => void;
-  onLeaderboard?: () => void;
 }
 
 function initialsFor(name: string): string {
@@ -171,7 +170,6 @@ export const AthleteProfileScreen: React.FC<Props> = ({
   onTraining,
   onSettings,
   onTrends,
-  onLeaderboard,
 }) => {
   const { t } = useI18n();
   const s = stylesheet;
@@ -424,11 +422,6 @@ export const AthleteProfileScreen: React.FC<Props> = ({
           <PrimaryButton
             label={t.settings.trends}
             onPress={() => runAction(onTrends)}
-            variant="secondary"
-          />
-          <PrimaryButton
-            label={t.settings.globalLb}
-            onPress={() => runAction(onLeaderboard)}
             variant="secondary"
           />
           <PrimaryButton
