@@ -12,7 +12,11 @@ describe('Discover map-first truth contract', () => {
     expect(shell).toContain('<Tab.Screen name="Discover">');
     expect(shell).toContain('<ExploreMapScreen');
     expect(shell).not.toContain('ExploreHubScreen');
+    expect(map).toContain('discover-map-region');
     expect(map).toContain('discover-marketplace');
+    expect(map.indexOf('testID="discover-map-region"')).toBeLessThan(
+      map.indexOf('testID="discover-marketplace"'),
+    );
   });
 
   test('Explore POI surface keeps error distinct from genuine empty data', () => {
@@ -35,6 +39,8 @@ describe('Discover map-first truth contract', () => {
     expect(map).toContain('<Layer');
     expect(map).toContain('coordinates: [poi.longitude, poi.latitude]');
     expect(map).toContain('resolveRideMapStyle(false)');
+    expect(map).not.toContain('poi.latitude.toFixed(4)');
+    expect(map).not.toContain('poi.longitude.toFixed(4)');
     expect(map).not.toContain('SceneBackground');
     expect(map).not.toContain('FONTS.display');
   });
