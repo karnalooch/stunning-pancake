@@ -103,10 +103,18 @@ jobs:
               or path in release_orchestration
           ]
           required = bool(native_changed)
+          self_workflow_changed = (
+              ".github/workflows/mobile-native-smoke.yml" in changed
+          )
           with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as fh:
               fh.write(
                   "direct_native_changed="
                   + ("true" if required else "false")
+                  + "\n"
+              )
+              fh.write(
+                  "self_workflow_changed="
+                  + ("true" if self_workflow_changed else "false")
                   + "\n"
               )
           if native_changed:
@@ -120,7 +128,9 @@ jobs:
         id: decision
         env:
           EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_NAME: ${{ github.workflow }}
           NATIVE_CHANGED: ${{ steps.classifier.outputs.direct_native_changed }}
+          SELF_WORKFLOW_CHANGED: ${{ steps.classifier.outputs.self_workflow_changed }}
           FORCE_RELEASE: ${{ inputs.release || false }}
         run: |
           set -euo pipefail
@@ -132,6 +142,10 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "release=true" >> "$GITHUB_OUTPUT"
             echo "reason=$EVENT_NAME forces native + release validation" >> "$GITHUB_OUTPUT"
+          elif [ "$WORKFLOW_NAME" = "Mobile Native Smoke" ] && [ "$SELF_WORKFLOW_CHANGED" = "true" ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "reason=Full Release owns the heavyweight Android proof for mobile-native workflow changes" >> "$GITHUB_OUTPUT"
           elif [ "$NATIVE_CHANGED" = "true" ]; then
             echo "run=true" >> "$GITHUB_OUTPUT"
             echo "release=true" >> "$GITHUB_OUTPUT"
