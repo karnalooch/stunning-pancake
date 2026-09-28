@@ -198,6 +198,22 @@ The reviewer must exercise the exact identified artifact on a real Android devic
 
 The result is one of **PASS / FAIL / BLOCKED**. A screenshot-only review or emulator-only result cannot close T84.
 
+## 10.2 T91 exact-RC real-device sign-off
+
+T91 (#323) is the final mobile UI/runtime validation on one exact pilot release candidate.
+
+Reuse the same canonical harness and evidence identity as T84:
+
+```powershell
+pwsh -NoProfile -File scripts/mobile-runtime-acceptance.ps1 -UseCiArtifact
+```
+
+T91 requires a real Android device and an explicit reviewer PASS against the exact candidate SHA/APK/device. The reviewer must cover the critical Home → Ride → Summary → Home journey plus truthful degraded GPS/offline and pending/failure finalization or sync states.
+
+A prior T84 PASS may be referenced only when it was captured on the same exact SHA, APK hash and device, and its recorded scenarios satisfy the T91 checks. Otherwise repeat the missing checks. `AUTOMATION_PASS` or emulator screenshots alone cannot close T91.
+
+The detailed procedure and verdict boundary are defined in `docs/quality/T91_EXACT_RC_VALIDATION.md`.
+
 ## 11. Failure classification
 
 Runtime results use only:
