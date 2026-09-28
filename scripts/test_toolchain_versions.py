@@ -111,6 +111,16 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "mobile" / "eas.json").is_file())
         self.assertTrue((ROOT / "mobile" / ".easignore").is_file())
 
+    def test_getting_started_uses_canonical_toolchain_and_doctor(self):
+        for path in ("docs/en/GETTING_STARTED.md", "docs/pl/GETTING_STARTED.md"):
+            with self.subTest(path=path):
+                source = read(path)
+                self.assertIn(NODE_VERSION, source)
+                self.assertIn(PNPM_VERSION, source)
+                self.assertIn("python scripts/dev_doctor.py", source)
+                self.assertNotIn("Node 20", source)
+                self.assertNotIn("pnpm 9.15", source)
+
     def test_known_operational_helpers_do_not_reintroduce_old_pnpm(self):
         sources = (
             "scripts/test-admin.ps1",
