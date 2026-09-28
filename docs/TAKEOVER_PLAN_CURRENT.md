@@ -220,7 +220,7 @@ Security inventory work keeps its original IDs `T28–T30`; release gate/RC keep
 | --- | --- | --- | --- |
 | T88 | DX0: fix/verify home-lab Compose layering + one canonical startup path | DONE | #313 closed / PR #314 merged (`2b6feffe`). `home_lab.py` is now the single explicit local/pilot Compose control path; CI runs `init` + canonical `config` (including optional profiles) through that same entrypoint; T76 reuses the shared Compose builder; tests lock exactly base `docker-compose.yml` + `docker-compose.home.yml` and exclude implicit `docker-compose.override.yml`. Home Lab validation, Scripts, Backend, Mobile, Admin, Telemetry, E2E/Audit, CodeQL/Trivy and required Aggregate CI were GREEN. |
 | T89 | DX0: doctor/preflight + init/up + dev env/toolchain contract | DONE | #317 closed / PR #318 merged (`e8843766`). Read-only `scripts/dev_doctor.py` validates the repo/toolchain/host prerequisites and emits actionable remediation; EN/PL onboarding is reconciled to Node 24.21.0 + pnpm 12.4.2 + Python 3.12. Runtime readiness remains owned by T90. |
-| T90 | DX0: cold-start smoke → `DEV ENV READY` | ACTIVE | #319 / PR #320. Canonical `python scripts/home_lab.py cold-start-smoke` starts from a known process state without deleting named volumes, proves core service/HTTP health, migrations, PostgreSQL, Redis and Celery, emits secret-free exact-SHA evidence, and prints `DEV ENV READY` only after the full contract passes. Fresh bootstrap defects found by the smoke are fixed and regression-tested; final exact-SHA CI is rerunning after reconciliation onto `main`. |
+| T90 | DX0: cold-start smoke → `DEV ENV READY` | DONE | #319 closed / PR #320 merged (`458d3f39`). Reconciled exact head `7ccf337f` passed Home Lab #145, Full / Release #33 and normal CI #2335 with required `Aggregate CI gate` GREEN. `Cold-start smoke to DEV ENV READY` and exact-SHA evidence upload both passed; artifact `t90-dev-env-ready-36398169101` proves the canonical Home Lab runtime path. Android was correctly skipped because T90 changed no native inputs. Fresh-bootstrap PostGIS ownership and Compose `$...` shell-variable escaping are regression-tested. |
 | T91 | Final UI validation on exact pilot candidate | BLOCKED | ENVIRONMENT REQUIRED. Repeat critical mobile flow on exact release candidate, real Android and real failure states. |
 | T92 | Full pre-pilot regression on exact SHA | PLANNED | P3 failure matrix, core mobile journey, tenant negatives, admin/GLOBAL_OWNER, recovery invariants, security gate and required CI all green. T94 selective PR execution does not replace this full exact-SHA regression. |
 
@@ -264,7 +264,7 @@ This is the only short sequence worth remembering:
 
 6. pre-pilot:
    T28 -> T29/T30 only where findings require them
-   T88 DONE (#313/#314) -> T89 DONE (#317/#318) -> T90 ACTIVE (#319/#320)
+   T88 DONE (#313/#314) -> T89 DONE (#317/#318) -> T90 DONE (#319/#320)
    T58
    T91 -> T92
    T59
