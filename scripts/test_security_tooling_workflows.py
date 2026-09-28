@@ -17,6 +17,8 @@ FULL_RELEASE = ROOT / ".github" / "workflows" / "full-release.yml"
 QUALITY_BASELINE_SH = ROOT / "scripts" / "run-quality-baseline.sh"
 HOME_LAB = ROOT / ".github" / "workflows" / "home-lab.yml"
 NATIVE_SMOKE = ROOT / ".github" / "workflows" / "mobile-native-smoke.yml"
+T92 = ROOT / ".github" / "workflows" / "t92-exact-sha-regression.yml"
+T92_HELPER = ROOT / "scripts" / "t92_regression.py"
 
 
 def load(path: Path) -> dict:
@@ -300,6 +302,108 @@ class FullReleaseLaneContractTests(unittest.TestCase):
         self.assertNotIn("packages: write", text(K8S))
         deploy = k8s["jobs"]["deploy_placeholder"]
         self.assertIn("workflow_dispatch", deploy["if"])
+
+
+class T92ExactShaRegressionContractTests(unittest.TestCase):
+    @staticmethod
+    def _trigger(path: Path) -> dict:
+        wf = load(path)
+        return wf.get(True, wf.get("on", {}))
+
+    def test_t92_is_manual_only_and_requires_exact_candidate_input(self):
+        trigger = self._trigger(T92)
+        self.assertEqual(set(trigger), {"workflow_dispatch"})
+        inputs = trigger["workflow_dispatch"]["inputs"]
+        self.assertTrue(inputs["candidate_sha"]["required"])
+        self.assertEqual(inputs["candidate_sha"]["type"], "string")
+
+        wf = load(T92)
+        self.assertEqual(wf["permissions"], {"contents": "read"})
+        self.assertNotIn("environment:", text(T92))
+        self.assertNotIn("deploy_target: production", text(T92))
+
+    def test_t92_preflight_requires_main_reachability_and_t58_pass(self):
+        raw = text(T92)
+        self.assertIn(
+            'ref: ${{ inputs.candidate_sha }}',
+            raw,
+        )
+        self.assertIn(
+            'python scripts/t92_regression.py validate-sha --candidate-sha "${{ inputs.candidate_sha }}"',
+            raw,
+        )
+        self.assertIn('ACTUAL_SHA="$(git rev-parse HEAD)"', raw)
+        self.assertIn(
+            'git merge-base --is-ancestor "$CANDIDATE_SHA" origin/main',
+            raw,
+        )
+        self.assertIn(
+            "python scripts/release/pre_release_check.py --pilot --report",
+            raw,
+        )
+
+    def test_t92_reuses_exact_sha_full_release_and_runs_non_selective_deep_regression(self):
+        wf = load(T92)
+        jobs = wf["jobs"]
+        full_release = jobs["full-release"]
+        self.assertEqual(
+            full_release["uses"],
+            "./.github/workflows/full-release.yml",
+        )
+        self.assertEqual(
+            full_release["with"]["source_sha"],
+            "${{ inputs.candidate_sha }}",
+        )
+
+        raw = text(T92)
+        self.assertIn("Full Django regression", raw)
+        self.assertIn("python manage.py test --verbosity=2", raw)
+        self.assertIn("Full admin unit + production build", raw)
+        self.assertIn("pnpm --filter admin test -- --run", raw)
+        self.assertIn("Full admin browser regression", raw)
+        self.assertIn("playwright test --project=chromium", raw)
+        self.assertNotIn("plan_affected_tests.py", raw)
+        self.assertNotIn("run_affected_backend_tests.py", raw)
+        self.assertNotIn("run_affected_mobile_tests.py", raw)
+
+    def test_t92_final_gate_requires_all_lanes_and_emits_commit_bound_evidence(self):
+        jobs = load(T92)["jobs"]
+        gate = jobs["evidence"]
+        self.assertIn("always()", gate["if"])
+        self.assertEqual(
+            set(gate["needs"]),
+            {"preflight", "full-release", "exact-regression"},
+        )
+        raw = text(T92)
+        self.assertIn("scripts/t92_regression.py write-evidence", raw)
+        self.assertIn("--candidate-sha", raw)
+        self.assertIn("--workflow-run-id", raw)
+        self.assertIn("T92 EXACT-SHA PRE-PILOT REGRESSION PASS", raw)
+        self.assertIn("actions/upload-artifact@", raw)
+
+    def test_reused_heavy_workflows_accept_and_propagate_source_sha(self):
+        source_expression = (
+            "${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}"
+        )
+        for path in (FULL_RELEASE, NATIVE_SMOKE, HOME_LAB, K8S):
+            with self.subTest(path=path.name):
+                trigger = self._trigger(path)
+                self.assertIn("workflow_call", trigger)
+                self.assertIn("source_sha", trigger["workflow_call"]["inputs"])
+                self.assertIn(source_expression, text(path))
+
+        full = load(FULL_RELEASE)["jobs"]
+        self.assertEqual(full["android-native"]["with"]["source_sha"], source_expression)
+        self.assertEqual(full["home-lab"]["with"]["source_sha"], source_expression)
+        self.assertEqual(full["k8s-release"]["with"]["source_sha"], source_expression)
+
+    def test_t92_helper_is_fail_closed_and_secret_free_by_contract(self):
+        raw = text(T92_HELPER)
+        self.assertIn('REQUIRED_LANES = ("preflight", "exact_regression", "full_release")', raw)
+        self.assertIn('"t94_selective_execution_used": False', raw)
+        self.assertIn('"deployment_performed": False', raw)
+        self.assertIn('result == "success"', raw)
+
 
 
 class MobSFContractTests(unittest.TestCase):
