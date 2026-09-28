@@ -194,88 +194,87 @@ export const ExploreMapScreen: React.FC<{ onOpenMarketplace?: () => void }> = ({
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>{t.explore.poiTitle}</Text>
+        <Text style={s.title}>{t.tabs.discover}</Text>
         <Text style={s.hint}>{t.explore.mapHint}</Text>
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
-        {onOpenMarketplace ? (
-          <PrimaryButton
-            label={t.marketplace.title}
-            onPress={onOpenMarketplace}
-            variant="secondary"
-            testID="discover-marketplace"
-          />
-        ) : null}
-
-        {loading ? (
-          <SkeletonBlock height={320} />
-        ) : loadError ? (
-          <ProductCard variant="raised" testID="explore-poi-error">
-            <View style={s.stateContent}>
-              <Text style={s.errorTitle}>{t.explore.poiLoadError}</Text>
-              <Text style={s.stateBody}>{t.explore.poiLoadErrorHint}</Text>
-              <PrimaryButton
-                label={t.common.retry}
-                onPress={() => void loadPois()}
-                variant="secondary"
-                testID="explore-poi-retry"
-              />
-            </View>
-          </ProductCard>
-        ) : pois.length === 0 ? (
-          <ProductCard testID="explore-poi-empty">
-            <Text style={s.stateBody}>{t.explore.poiEmpty}</Text>
-          </ProductCard>
-        ) : (
-          <>
-            {mapCenter && poiGeoJson ? (
-              <View style={s.mapFrame} testID="explore-poi-map">
-                <Map
-                  style={s.map}
-                  mapStyle={mapStyle}
-                  logo={false}
-                  attribution
-                  touchZoom
-                  dragPan
-                  touchPitch={false}
-                  touchRotate={false}
-                >
-                  <Camera initialViewState={{ center: mapCenter, zoom: 12 }} />
-                  <GeoJSONSource id="explore-pois" data={poiGeoJson}>
-                    <Layer
-                      id="explore-poi-points"
-                      type="circle"
-                      source="explore-pois"
-                      style={{
-                        circleColor: semantic.action.primary,
-                        circleRadius: 7,
-                        circleStrokeColor: semantic.text.onAction,
-                        circleStrokeWidth: 2,
-                      }}
-                    />
-                  </GeoJSONSource>
-                </Map>
+        <View style={s.poiList} testID="discover-map-region">
+          {loading ? (
+            <SkeletonBlock height={320} />
+          ) : loadError ? (
+            <ProductCard variant="raised" testID="explore-poi-error">
+              <View style={s.stateContent}>
+                <Text style={s.errorTitle}>{t.explore.poiLoadError}</Text>
+                <Text style={s.stateBody}>{t.explore.poiLoadErrorHint}</Text>
+                <PrimaryButton
+                  label={t.common.retry}
+                  onPress={() => void loadPois()}
+                  variant="secondary"
+                  testID="explore-poi-retry"
+                />
               </View>
-            ) : null}
+            </ProductCard>
+          ) : pois.length === 0 ? (
+            <ProductCard testID="explore-poi-empty">
+              <Text style={s.stateBody}>{t.explore.poiEmpty}</Text>
+            </ProductCard>
+          ) : mapCenter && poiGeoJson ? (
+            <View style={s.mapFrame} testID="explore-poi-map">
+              <Map
+                style={s.map}
+                mapStyle={mapStyle}
+                logo={false}
+                attribution
+                touchZoom
+                dragPan
+                touchPitch={false}
+                touchRotate={false}
+              >
+                <Camera initialViewState={{ center: mapCenter, zoom: 12 }} />
+                <GeoJSONSource id="explore-pois" data={poiGeoJson}>
+                  <Layer
+                    id="explore-poi-points"
+                    type="circle"
+                    source="explore-pois"
+                    style={{
+                      circleColor: semantic.action.primary,
+                      circleRadius: 7,
+                      circleStrokeColor: semantic.text.onAction,
+                      circleStrokeWidth: 2,
+                    }}
+                  />
+                </GeoJSONSource>
+              </Map>
+            </View>
+          ) : null}
+        </View>
 
+        {!loading && !loadError && pois.length > 0 ? (
+          <>
             <Text style={s.sectionTitle}>{t.explore.poiTitle}</Text>
             <View style={s.poiList}>
               {pois.map((poi) => (
                 <ProductCard key={poi.id} testID={`explore-poi-${poi.id}`}>
                   <View style={s.poiCardContent}>
                     <Text style={s.poiName}>{poi.name}</Text>
-                    <Text style={s.poiMeta}>{poi.category}</Text>
+                    {poi.category ? <Text style={s.poiMeta}>{poi.category}</Text> : null}
                     {poi.description ? <Text style={s.poiMeta}>{poi.description}</Text> : null}
-                    <Text style={s.poiMeta}>
-                      {poi.latitude.toFixed(4)}, {poi.longitude.toFixed(4)}
-                    </Text>
                   </View>
                 </ProductCard>
               ))}
             </View>
           </>
-        )}
+        ) : null}
+
+        {onOpenMarketplace ? (
+          <PrimaryButton
+            label={t.explore.openMarketplace}
+            onPress={onOpenMarketplace}
+            variant="secondary"
+            testID="discover-marketplace"
+          />
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
