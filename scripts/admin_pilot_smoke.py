@@ -25,7 +25,7 @@ ROLE_MFA_ENV = {
     "TENANT_ADMIN": "ADMIN_MFA_TENANT_ADMIN",
     "GLOBAL_OWNER": "ADMIN_MFA_GLOBAL_OWNER",
 }
-MFA_RE = re.compile(r"^\\d{6}$")
+MFA_RE = re.compile(r"^\d{6}$")
 
 MANUAL_OBSERVATIONS = {
     "TENANT_ADMIN": [
