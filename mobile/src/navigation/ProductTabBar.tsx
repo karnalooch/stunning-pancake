@@ -48,7 +48,7 @@ const stylesheet = StyleSheet.create((theme) => {
       opacity: 0.78,
     },
     itemFocused: {
-      backgroundColor: semantic.navigation.activeBackground,
+      backgroundColor: semantic.selection.background,
     },
     startItem: {
       minHeight: 58,
@@ -60,10 +60,10 @@ const stylesheet = StyleSheet.create((theme) => {
     glyph: {
       fontSize: 18,
       lineHeight: 20,
-      color: semantic.navigation.inactiveContent,
+      color: semantic.navigation.inactive,
     },
     glyphFocused: {
-      color: semantic.navigation.activeContent,
+      color: semantic.navigation.active,
     },
     glyphStart: {
       color: semantic.text.onAction,
@@ -72,11 +72,11 @@ const stylesheet = StyleSheet.create((theme) => {
       ...PRODUCT_TYPOGRAPHY.metricLabel,
       fontSize: 10,
       lineHeight: 12,
-      color: semantic.navigation.inactiveContent,
+      color: semantic.navigation.inactive,
       textAlign: 'center',
     },
     labelFocused: {
-      color: semantic.navigation.activeContent,
+      color: semantic.navigation.active,
     },
     labelStart: {
       ...PRODUCT_TYPOGRAPHY.bodyMedium,
