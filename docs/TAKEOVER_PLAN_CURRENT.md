@@ -104,9 +104,9 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T25 | Quality baseline scripts unified | PLANNED | Full takeover quality cleanup. |
 | T26 | Audit scripts truthful | PLANNED | Full takeover quality cleanup. |
 | T27 | Dependency manifest ownership + Dependabot | PARTIAL | PR #266 normalizes Dependabot to security-only grouped updates and removes routine version-update PR noise. Broader dependency-manifest ownership remains for later cleanup. |
-| T28 | Security/dependency inventory, commit-bound | PLANNED | Pre-pilot: classify GitHub vulnerability/code-scanning inventory by runtime/dev/test, severity, duplicates, reachability and false positives. |
-| T29 | Backend Python runtime remediation | PLANNED | Before pilot only for confirmed runtime HIGH/CRITICAL or another concrete blocker. |
-| T30 | Node dependency remediation | PLANNED | Before pilot for confirmed runtime HIGH/CRITICAL; dev-only debt can remain scheduled. |
+| T28 | Security/dependency inventory, commit-bound | DONE | #322 / PR #327. Exact source head `18467e27` (PR merge candidate `8dd3fd5f`) passed CI #2348: backend `pip-audit` with no vulnerability suppression reported zero known vulnerabilities; workspace `pnpm audit --audit-level=high` reported zero; blocking Trivy HIGH/CRITICAL reported zero for backend requirements, pnpm lockfile and telemetry requirements; CodeQL Python + JS/TS and Dependency Review were GREEN. Evidence: `security/T28_SECURITY_DEPENDENCY_INVENTORY_2026-09-28.md`. |
+| T29 | Backend Python runtime remediation | NOT REQUIRED | T28 found no backend runtime vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime HIGH/CRITICAL or another concrete blocker. |
+| T30 | Node dependency remediation | NOT REQUIRED | T28 found no Node workspace HIGH/CRITICAL vulnerability requiring pre-pilot remediation. Reopen only for a new confirmed runtime blocker. |
 | T31 | DRF/GIS direction decision + prototype | PLANNED | Post-pilot unless concrete blocker. |
 | T32 | Mobile overrides → pnpm root overrides | PLANNED | Post-pilot unless required by dependency remediation. |
 | T33 | Expo/EAS canonical configuration + E2E secrets | PARTIAL | Pilot-local/profile prerequisites landed across #85/#86/#88; #257 adds generated-native provenance validation; #264 makes Windows raw native builds diagnostic-only and keeps EAS as artifact authority. Remaining canonical runtime/appVersion closure is tracked by #156/#157. |
@@ -134,7 +134,7 @@ These retain their original IDs. Only statuses/notes below are refreshed where l
 | T55 | Documentation navigation + takeover updates | PLANNED | Final docs cleanup after current plan stabilizes. |
 | T56 | Orphan investigation | PLANNED | Post-pilot cleanup. |
 | T57 | Business-integrity backup/restore + measured RPO/RTO | DONE | Real home-lab drill passed 2026-09-18: encrypted backup → isolated restore → business snapshot/invariant match → restricted-runtime critical-path smoke. Measured RPO 64.397 s / RTO 4.344 s against plan targets 24 h / 4 h. PR #115 contains blocker fixes discovered by the drill. |
-| T58 | Home-lab release gate | ACTIVE | #325 implements a two-level release check: the existing cheap artifact gate remains CI-safe, while explicit `--pilot` mode consumes `docs/security/PILOT_RELEASE_EVIDENCE.json`, binds a secret-free report to the exact checkout and fails closed unless every required pre-T58 item is PASS. Current expected result is NO-GO while T28/T68/T76/T84/T85/T86 remain unresolved. |
+| T58 | Home-lab release gate | ACTIVE | #325 implements a two-level release check: the existing cheap artifact gate remains CI-safe, while explicit `--pilot` mode consumes `docs/security/PILOT_RELEASE_EVIDENCE.json`, binds a secret-free report to the exact checkout and fails closed unless every required pre-T58 item is PASS. Current expected result is NO-GO while T68/T76/T84/T85/T86 remain unresolved. |
 | T59 | Release-candidate declaration | PLANNED | Final pre-pilot declaration after T92 + required gates. |
 
 ## T60–T76 — pilot data-safety work added by the partial takeover

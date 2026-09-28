@@ -75,7 +75,6 @@ class PreReleaseCheckTests(unittest.TestCase):
         self.assertEqual(
             set(blockers),
             {
-                "t28_security_inventory: PLANNED",
                 "t68_signing_key_closure: BLOCKED",
                 "t76_android_chaos: PARTIAL",
                 "t84_physical_android_ui: BLOCKED",
