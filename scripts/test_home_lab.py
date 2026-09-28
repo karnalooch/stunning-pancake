@@ -198,6 +198,32 @@ class HomeLabTests(unittest.TestCase):
         ), self.assertRaises(SystemExit):
             home_lab.check_runtime_dependencies()
 
+    def test_cold_start_smoke_prints_bounded_diagnostics_on_compose_failure(self):
+        failure = home_lab.subprocess.CalledProcessError(1, ["docker", "compose", "up"])
+        with (
+            patch.object(home_lab, "require_environment"),
+            patch.object(home_lab, "checked_out_commit", return_value="e" * 40),
+            patch.object(home_lab, "validate_pilot_configuration", return_value={}),
+            patch.object(home_lab, "run", side_effect=[None, None, failure]),
+            patch.object(home_lab, "print_startup_diagnostics") as diagnostics,
+            self.assertRaises(home_lab.subprocess.CalledProcessError),
+        ):
+            home_lab.cold_start_smoke()
+
+        diagnostics.assert_called_once_with()
+
+    def test_startup_diagnostics_are_bounded_to_status_and_telemetry_logs(self):
+        with patch.object(home_lab, "run") as run_mock:
+            home_lab.print_startup_diagnostics()
+
+        commands = [call.args[0] for call in run_mock.call_args_list]
+        self.assertEqual(commands[0][-1], "ps")
+        self.assertEqual(
+            commands[1][-6:],
+            ["logs", "--no-color", "--tail", "120", "telemetry"],
+        )
+        self.assertTrue(all(call.kwargs["check"] is False for call in run_mock.call_args_list))
+
     def test_cold_start_smoke_writes_exact_sha_secret_free_evidence(self):
         with tempfile.TemporaryDirectory() as folder:
             evidence_dir = Path(folder) / "evidence"
