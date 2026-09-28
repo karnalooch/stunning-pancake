@@ -46,7 +46,7 @@ export function useDeterministicRideController(
     dispatch({ type: 'finish', kind: options.deterministicFinishKind });
     return hasSummary
       ? { navigated: false }
-      : { navigated: true, target: 'Ride' as const };
+      : { navigated: true, target: 'Today' as const };
   }, [options.deterministicFinishKind, state.liveDistanceKm]);
 
   const clearEdgeMessage = useCallback(() => {
