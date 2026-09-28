@@ -77,7 +77,7 @@ The command fails closed unless the pilot configuration is initialized and prese
 
 The evidence contains the commit SHA, timestamps, sanitized invariant results, endpoint names/URLs, migration result, encrypted backup filename/hash, and isolated-restore result. It does not contain passwords, signing keys, Django secrets, or the backup encryption key.
 
-A repo-side green T87 implementation is still **PARTIAL** until this command is executed on the exact intended pilot environment and that evidence is reviewed.
+T87 is **DONE**: the operator gate was executed on the intended pilot home lab against clean commit `5085b5215e6ff82a7397685252a42525f86113b8`. Core HTTP health and migration checks passed, encrypted backup `4velo-home-20260927-235157.dump.enc` was created, isolated restore passed, and commit-bound evidence was written to `backups/home-lab/evidence/t87-operator-20260927-235202.json`.
 
 ## Backup and restore verification
 
