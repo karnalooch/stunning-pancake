@@ -43,4 +43,14 @@ describe('UX v2 mobile shell contract', () => {
     expect(tabBar).not.toContain("'Tracking'");
     expect(tabBar).not.toContain("'VT323'");
   });
+
+  test('public deep-link paths remain backward compatible while screen names migrate', () => {
+    const routes = read('navigation/routeContract.ts');
+
+    expect(routes).toContain("today: 'ride'");
+    expect(routes).toContain("discover: 'explore'");
+    expect(routes).toContain("club: 'compete'");
+    expect(routes).toContain("you: 'profile'");
+    expect(routes).toContain("startRide: 'ride/start'");
+  });
 });
