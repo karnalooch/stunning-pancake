@@ -379,13 +379,6 @@ export const AthleteProfileScreen: React.FC<Props> = ({
         ) : null}
 
         <View style={s.section}>
-          <Text style={s.sectionTitle}>{t.settings.achievements}</Text>
-          <ProductCard testID="profile-achievements-unavailable">
-            <Text style={s.stateBody}>{t.profile.achievementsUnavailable}</Text>
-          </ProductCard>
-        </View>
-
-        <View style={s.section}>
           <Text style={s.sectionTitle}>{t.profile.progression}</Text>
           <ProductCard>
             <View style={s.stateContent}>
@@ -410,31 +403,39 @@ export const AthleteProfileScreen: React.FC<Props> = ({
               </View>
             </View>
           </ProductCard>
+
+          <View style={s.actionStack}>
+            <PrimaryButton
+              label={t.settings.trends}
+              onPress={() => runAction(onTrends)}
+              variant="secondary"
+              testID="you-open-trends"
+            />
+            <PrimaryButton
+              label={t.profile.trainingLog}
+              onPress={() => runAction(onTraining)}
+              variant="secondary"
+              testID="you-open-training-log"
+            />
+          </View>
         </View>
 
-        <View style={s.actionStack}>
-          <PrimaryButton
-            label={t.settings.title}
-            onPress={() => runAction(onSettings)}
-            variant="secondary"
-            testID="profile-settings-button"
-          />
-          <PrimaryButton
-            label={t.settings.trends}
-            onPress={() => runAction(onTrends)}
-            variant="secondary"
-          />
-          <PrimaryButton
-            label={t.profile.trainingLog}
-            onPress={() => runAction(onTraining)}
-            variant="secondary"
-          />
-          <PrimaryButton
-            label={t.common.logout}
-            onPress={() => runAction(onLogout)}
-            variant="destructive"
-            testID="profile-logout-button"
-          />
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>{t.settings.title}</Text>
+          <View style={s.actionStack}>
+            <PrimaryButton
+              label={t.settings.title}
+              onPress={() => runAction(onSettings)}
+              variant="secondary"
+              testID="profile-settings-button"
+            />
+            <PrimaryButton
+              label={t.common.logout}
+              onPress={() => runAction(onLogout)}
+              variant="destructive"
+              testID="profile-logout-button"
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
