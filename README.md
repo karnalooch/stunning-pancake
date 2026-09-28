@@ -26,20 +26,30 @@ przejęcia i stabilizacji. Obecność funkcji w kodzie nie oznacza jej gotowośc
 
 ## Przygotowanie środowiska
 
-Bazą porównania jest istniejące CI: Node 20, pnpm 9.15 i Python 3.12.
-Obrazy usług używają Pythona 3.11. Pełne testy integracyjne wymagają
+Kanoniczny toolchain lokalny jest zgodny z CI: Node.js **24.21.0**, pnpm **12.4.2** przez Corepack i Python **3.12**.
+Obrazy usług mogą używać własnych przypiętych runtime'ów. Pełne testy integracyjne wymagają
 PostgreSQL/PostGIS oraz Redis. Nie zastępuj ich SQLite.
 
-Zainstaluj zależności JavaScript z głównego katalogu repo:
+Najpierw uruchom read-only preflight z głównego katalogu repo:
 
 ```bash
-corepack pnpm install --frozen-lockfile
+python scripts/dev_doctor.py
+```
+
+Po zielonym doctorze użyj kanonicznej ścieżki Home Laba:
+
+```bash
+corepack enable
+corepack prepare pnpm@12.4.2 --activate
+pnpm install --frozen-lockfile
+python scripts/home_lab.py init
+python scripts/home_lab.py config
+python scripts/home_lab.py up
 ```
 
 Dalsze kroki: [uruchomienie lokalne](docs/pl/GETTING_STARTED.md).
-Używaj wyłącznie lokalnych danych dostępowych. Przed startem przygotuj `.env`
-z `.env.example`, ustaw własny `SECRET_KEY` i zachowaj `RUN_DEMO_SEED=0`.
-Pełny Compose zawiera także kosztowne usługi routingowe i symulatory.
+`home_lab.py init` tworzy prywatny, ignorowany przez Git plik `.env.home`; nie kopiuj do niego sekretów produkcyjnych.
+Nie zastępuj tej ścieżki gołym `docker compose up`, bo kanoniczny Home Lab świadomie kontroluje warstwy Compose i profile.
 
 ## Kontrole
 
