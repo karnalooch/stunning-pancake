@@ -83,7 +83,7 @@ class AffectedTestPlannerTests(unittest.TestCase):
         self.assertFalse(plan["lanes"]["javascript"])
 
     def test_mobile_navigation_is_full(self):
-        plan = plan_from_files(["mobile/src/navigation/GameTabBar.tsx"])
+        plan = plan_from_files(["mobile/src/navigation/ProductTabBar.tsx"])
         self.assertEqual(plan["mobile"]["mode"], "full")
         self.assertGreaterEqual(int(plan["risk"][1:]), 3)
 
