@@ -22,7 +22,8 @@
     "t68_signing_key_closure": {
       "status": "BLOCKED",
       "evidence": [
-        "docs/TAKEOVER_PLAN_CURRENT.md#T60-T76"
+        "docs/TAKEOVER_PLAN_CURRENT.md#T60-T76",
+        "https://github.com/karnalooch/stunning-pancake/issues/343"
       ]
     },
     "t75_transport_backup": {
@@ -35,7 +36,8 @@
       "status": "PARTIAL",
       "evidence": [
         "docs/TAKEOVER_PLAN_CURRENT.md#T60-T76",
-        "scripts/t76_chaos.py"
+        "scripts/t76_chaos.py",
+        "https://github.com/karnalooch/stunning-pancake/issues/344"
       ]
     },
     "t84_physical_android_ui": {
