@@ -10,10 +10,11 @@ export const stringsEn = {
     english: 'English',
   },
   tabs: {
-    ride: 'Ride',
-    compete: 'Compete',
-    explore: 'Explore',
-    profile: 'Profile',
+    today: 'Today',
+    discover: 'Discover',
+    startRide: 'Start ride',
+    club: 'Club',
+    you: 'You',
   },
   marketplace: {
     title: 'Marketplace',
