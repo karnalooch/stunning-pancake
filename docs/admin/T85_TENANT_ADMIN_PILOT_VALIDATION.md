@@ -112,10 +112,14 @@ Before T85 is marked DONE, use the commit-bound operator wrapper against the int
 ADMIN_URL=<pilot-admin-url> \
 ADMIN_USER_TENANT_ADMIN=<tenant-admin> \
 ADMIN_PASS_TENANT_ADMIN=<secret> \
+ADMIN_MFA_TENANT_ADMIN=<fresh-6-digit-code> \
 ADMIN_USER_GLOBAL_OWNER=<global-owner> \
 ADMIN_PASS_GLOBAL_OWNER=<secret> \
+ADMIN_MFA_GLOBAL_OWNER=<fresh-6-digit-code> \
 python scripts/admin_pilot_smoke.py --expected-sha <40-char-pilot-sha>
 ```
+
+Generate both MFA codes immediately before starting the run. The codes are passed only to the browser login flow and are never included in the JSON evidence.
 
 The wrapper writes secret-free commit-bound evidence to `backups/home-lab/evidence/t85-t86-admin-smoke-*.json`. A wrapper PASS proves only the automated role/navigation smoke; it does not replace the manual runtime observations below.
 
