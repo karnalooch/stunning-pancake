@@ -6,6 +6,7 @@
 | **Decision date** | 2026-09-28 |
 | **Owner role** | Product / Mobile / Admin Frontend |
 | **Tracks** | GitHub Issue #346 |
+| **Machine mobile authority** | `MOBILE_UI_VISUAL_AUTHORITY_V1.json` (legacy path retained for validator compatibility; `currentAuthority` points here first) |
 | **Applies to** | 4VELO mobile UI and 4VELO CONTROL (admin/web) information architecture, shell, visual language and legacy retirement |
 | **Supersedes for UI direction** | `MOBILE_UI_VISUAL_PROTECTION_ARCHITECTURE_V1.md` hard-freeze direction, Frozen UI v1.2 intent, dated mobile UI audits and the current admin shell/IA descriptions where they conflict |
 
