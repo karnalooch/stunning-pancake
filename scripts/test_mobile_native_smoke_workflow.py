@@ -74,6 +74,22 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
             text,
         )
 
+    def test_standalone_self_change_defers_heavy_build_to_full_release(self):
+        text = workflow_text()
+        self.assertIn(
+            'SELF_WORKFLOW_CHANGED: ${{ steps.classifier.outputs.self_workflow_changed }}',
+            text,
+        )
+        self.assertIn('WORKFLOW_NAME: ${{ github.workflow }}', text)
+        self.assertIn(
+            '[ "$WORKFLOW_NAME" = "Mobile Native Smoke" ] && [ "$SELF_WORKFLOW_CHANGED" = "true" ]',
+            text,
+        )
+        self.assertIn(
+            "Full Release owns the heavyweight Android proof for mobile-native workflow changes",
+            text,
+        )
+
     def test_full_build_publishes_exact_sha_release_artifact(self):
         text = workflow_text()
         for token in (
