@@ -1,7 +1,7 @@
 {
   "name": "admin",
   "private": true,
-  "version": "0.3.6-dev",
+  "version": "0.3.7-dev",
   "type": "module",
   "main": "electron-main.cjs",
   "scripts": {
@@ -41,7 +41,7 @@
     "react-router-dom": "^7.18.2",
     "recharts": "^3.8.1",
     "supercluster": "^8.0.1",
-    "zustand": "^5.0.12"
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@4velo/eslint-config": "workspace:*",
