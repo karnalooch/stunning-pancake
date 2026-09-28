@@ -198,7 +198,7 @@ class MobileHarnessContractTests(unittest.TestCase):
     def test_mobile_native_smoke_requires_debug_and_release_parity(self):
         workflow = read(".github/workflows/mobile-native-smoke.yml")
 
-        self.assertIn('ref: ${{ github.event.pull_request.head.sha || github.sha }}', workflow)
+        self.assertIn('ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}', workflow)
         self.assertIn("Assert exact source checkout", workflow)
         self.assertIn("Exact source checkout mismatch", workflow)
         self.assertIn("NODE_ENV: production", workflow)
