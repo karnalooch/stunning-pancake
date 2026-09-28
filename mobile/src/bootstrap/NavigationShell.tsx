@@ -453,7 +453,7 @@ export function NavigationShell(props: NavigationShellProps) {
                   void (async () => {
                     const result = await onStopRide();
                     if (result && 'navigated' in result && result.navigated) {
-                      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Ride' });
+                      navRef.current?.navigate('MainTabs', { screen: result.target ?? 'Today' });
                     }
                   })();
                 }}
@@ -546,7 +546,7 @@ export function NavigationShell(props: NavigationShellProps) {
                                 label: `Ride flow finish — ${kind}`,
                                 onPress: () => {
                                   setVisionRideFinishKind(kind);
-                                  navigation.navigate('MainTabs', { screen: 'Ride' });
+                                  navigation.navigate('MainTabs', { screen: 'Today' });
                                 },
                               },
                               {
