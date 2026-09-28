@@ -10,7 +10,7 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
 3. Używaj Node.js **24.21.0 LTS** i pnpm **12.4.2**. Po klonowaniu uruchom `python scripts/dev_doctor.py` i usuń zgłoszone braki; kanoniczny Corepack aktywuje `pnpm@12.4.2`. Zainstaluj zależności z **root** monorepo: `pnpm install --frozen-lockfile`. **Nie** używaj `npm install` w `admin/` — `workspace:*` wymaga pnpm.
 4. Opcjonalnie hooki lokalne: `pip install pre-commit && pre-commit install` (Ruff, `pnpm tokens:check`, docs links).
-5. Uruchom środowisko kanoniczną ścieżką z [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md): `python scripts/home_lab.py init/config/up`. `.\dev.ps1` jest legacy helperem K8s/Podman i **nie** zastępuje Home Laba.
+5. Uruchom środowisko kanoniczną ścieżką z [docs/pl/GETTING_STARTED.md](docs/pl/GETTING_STARTED.md): `python scripts/home_lab.py init`, następnie `python scripts/home_lab.py config` i `python scripts/home_lab.py up`. `.\dev.ps1` jest legacy helperem K8s/Podman i **nie** zastępuje Home Laba.
 6. Dla zmian w symulatorze / Railway: [docs/pl/operations/](docs/pl/operations/) (EN: [docs/en/operations/](docs/en/operations/)).
 
 ---
