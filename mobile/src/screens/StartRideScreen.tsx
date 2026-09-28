@@ -55,6 +55,7 @@ type StartRideScreenProps = {
   isRecording: boolean;
   onStartRide: (sport: ActivitySportType) => void;
   onGoToRide: () => void;
+  onOpenGpsWizard: () => void;
   gpsRecoveryVisible?: boolean;
   gpsRecoveryBusy?: boolean;
   onGpsRecoveryPress?: () => void;
@@ -68,6 +69,7 @@ export const StartRideScreen: React.FC<StartRideScreenProps> = ({
   isRecording,
   onStartRide,
   onGoToRide,
+  onOpenGpsWizard,
   gpsRecoveryVisible = false,
   gpsRecoveryBusy = false,
   onGpsRecoveryPress,
@@ -143,6 +145,13 @@ export const StartRideScreen: React.FC<StartRideScreenProps> = ({
                 />
               </>
             )}
+
+            <PrimaryButton
+              label={t.dashboard.gpsWizard}
+              onPress={onOpenGpsWizard}
+              variant="secondary"
+              testID="start-ride-gps-diagnostics"
+            />
           </View>
         </ProductCard>
       </ScrollView>
