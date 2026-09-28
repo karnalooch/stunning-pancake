@@ -21,6 +21,11 @@ ROLE_ENV = {
     "TENANT_ADMIN": ("ADMIN_USER_TENANT_ADMIN", "ADMIN_PASS_TENANT_ADMIN"),
     "GLOBAL_OWNER": ("ADMIN_USER_GLOBAL_OWNER", "ADMIN_PASS_GLOBAL_OWNER"),
 }
+ROLE_MFA_ENV = {
+    "TENANT_ADMIN": "ADMIN_MFA_TENANT_ADMIN",
+    "GLOBAL_OWNER": "ADMIN_MFA_GLOBAL_OWNER",
+}
+MFA_RE = re.compile(r"^\\d{6}$")
 
 MANUAL_OBSERVATIONS = {
     "TENANT_ADMIN": [
@@ -79,12 +84,18 @@ def require_role_credentials(roles: list[str], env: dict[str, str]) -> None:
 
     for role in roles:
         user_name, pass_name = ROLE_ENV[role]
+        mfa_name = ROLE_MFA_ENV[role]
         username = env.get(user_name, "").strip()
         password = env.get(pass_name, "")
+        mfa_code = env.get(mfa_name, "").strip()
         if not username:
             missing.append(user_name)
         if not password:
             missing.append(pass_name)
+        if not mfa_code:
+            missing.append(mfa_name)
+        elif not MFA_RE.fullmatch(mfa_code):
+            raise SystemExit(f"{mfa_name} must contain exactly six digits")
         if username:
             usernames.append(username)
 
@@ -232,7 +243,7 @@ def run_operator(expected_sha: str, scope: str) -> Path:
         env.pop(name, None)
     for role, names in ROLE_ENV.items():
         if role not in roles:
-            for name in names:
+            for name in (*names, ROLE_MFA_ENV[role]):
                 env.pop(name, None)
 
     env["ADMIN_URL"] = admin_url
