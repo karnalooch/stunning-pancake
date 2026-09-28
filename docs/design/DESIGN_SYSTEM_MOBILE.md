@@ -116,7 +116,7 @@ Audio is ~50% of game feel and is **safety-critical while riding** (eyes-free cu
 ## 8. Performance, accessibility, rollout
 
 - **Feature flag** `immersiveTheme` (MMKV + Settings toggle) for staged rollout / rollback.
-- **Frame budgets**: `useFrameBudgetMonitor` auto-degrades particles/parallax under FPS drops ([ADR 012](../adr/012-mobile-performance-budgets.md)); Skia integer positioning.
+- **Frame budgets**: `useFrameBudgetMonitor` auto-degrades particles/parallax under FPS drops ([ADR 012](../adr/016-mobile-performance-budgets.md)); Skia integer positioning.
 - **Battery / background**: auto-pause animations when backgrounded (`AppState`), battery-saver, or low battery; tie to GPS/battery wizard. During riding: data > skin.
 - **Reduced motion**: respect system setting — disables parallax/particles, static backgrounds remain.
 - **Memory/bundle**: lazy-load scenes per screen, `expo-image` caching, sheet size limits; target < ~1 MB extra bundle.

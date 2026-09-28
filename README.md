@@ -6,11 +6,13 @@ przejęcia i stabilizacji. Obecność funkcji w kodzie nie oznacza jej gotowośc
 
 ## Zacznij tutaj
 
-1. [Przewodnik przejęcia](docs/PROJECT_TAKEOVER.md) — komponenty i kryteria gotowości.
-2. [Dokumentacja](docs/README.md) — uruchomienie, rozwój i operacje.
+1. [Dokumentacja](docs/README.md) — główny indeks SSOT: uruchomienie, rozwój, operacje, release i bezpieczeństwo.
+2. [Getting started](docs/pl/GETTING_STARTED.md) — kanoniczna ścieżka lokalnego uruchomienia.
 3. [Mapa repozytorium](docs/reports/REPOSITORY_MAP.md) — gdzie szukać kodu.
-4. [Macierz poleceń](docs/reports/QUALITY_COMMAND_MATRIX.md) — wyniki lokalnego audytu i jego ograniczenia.
-5. [Mapa ryzyka](docs/reports/RISK_AND_OWNERSHIP_MAP.md) — ustalenia wymagające dalszej weryfikacji.
+4. [Architektura i ADR](docs/ARCHITECTURE.md) — aktualne granice systemu i decyzje.
+5. [Macierz jakości](docs/reports/QUALITY_COMMAND_MATRIX.md) — polecenia, wymagania i ograniczenia walidacji.
+
+Materiały `PROJECT_TAKEOVER.md` i `TAKEOVER_*` są zachowaną historią stabilizacji projektu, a nie domyślną instrukcją bieżącej pracy.
 
 ## Komponenty
 
@@ -56,6 +58,7 @@ Nie zastępuj tej ścieżki gołym `docker compose up`, bo kanoniczny Home Lab �
 ```bash
 python scripts/check_docs_links.py
 python scripts/check_docs_i18n.py
+python scripts/check_docs_structure.py
 python scripts/check_config_secrets.py
 python scripts/check_openapi_drift.py
 corepack pnpm --filter admin lint

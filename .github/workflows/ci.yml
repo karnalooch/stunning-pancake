@@ -93,6 +93,8 @@ jobs:
               - 'AGENTS.md'
               - 'scripts/check_docs_links.py'
               - 'scripts/check_docs_i18n.py'
+              - 'scripts/check_docs_structure.py'
+              - 'scripts/test_check_docs_structure.py'
             visual:
               - 'mobile/assets/**'
               - 'mobile/src/assets/**'
@@ -521,10 +523,10 @@ jobs:
       - name: OpenAPI docs drift (critical paths)
         run: python scripts/check_openapi_drift.py
 
-      - name: Test check_docs_links parser
+      - name: Test documentation guards
         run: |
           pip install pytest
-          python -m pytest scripts/test_check_docs_links.py -q
+          python -m pytest scripts/test_check_docs_links.py scripts/test_check_docs_structure.py -q
 
       - name: Test load report helpers
         run: python -m pytest scripts/test_load_report.py -q
@@ -704,6 +706,9 @@ jobs:
 
       - name: Check EN/PL paired docs
         run: python scripts/check_docs_i18n.py
+
+      - name: Check documentation structure
+        run: python scripts/check_docs_structure.py
 
   # ──────────────────────────────────────────
   # Admin Dashboard: Lint + Type Check + Build

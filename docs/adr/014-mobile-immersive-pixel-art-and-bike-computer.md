@@ -52,7 +52,7 @@ The existing design SSOT ([`docs/archive/designmobile.md`](../archive/designmobi
 
 **9. Audio (4 layers).** UI SFX, reward/dopamine, data-driven ambient (wind ∝ speed, chain ∝ cadence), and eyes-free navigation cues (turn-by-turn TTS via `expo-speech` + 8-bit alerts). Migrate `SoundService` off the deprecated `expo-av` to `expo-audio`. Per-layer mute, ducking, respect silent switch / system volume.
 
-**10. Rollout & guardrails.** Ship behind an `immersiveTheme` feature flag (MMKV + Settings toggle). Respect reduced-motion. Auto-degrade via `useFrameBudgetMonitor` (see [ADR 012](012-mobile-performance-budgets.md)). Auto-pause animations when backgrounded / battery-saver / low battery. Instrument engagement events (quest-complete, share, streak, level-up, layout edit) into telemetry/Datadog.
+**10. Rollout & guardrails.** Ship behind an `immersiveTheme` feature flag (MMKV + Settings toggle). Respect reduced-motion. Auto-degrade via `useFrameBudgetMonitor` (see [ADR 012](016-mobile-performance-budgets.md)). Auto-pause animations when backgrounded / battery-saver / low battery. Instrument engagement events (quest-complete, share, streak, level-up, layout edit) into telemetry/Datadog.
 
 ## Consequences
 
@@ -73,4 +73,4 @@ Execution roadmap and phase tracking live in the working plan (Cursor plan track
 - [ADR 002 — Unistyles v3 initialization](002-unistyles-v3-initialization.md)
 - [ADR 003 — State management (Legend-State)](003-state-management-legend-state.md)
 - [ADR 006 — Hybrid design system (Stitch)](006-design-system-stitch.md)
-- [ADR 012 — Mobile performance budgets](012-mobile-performance-budgets.md)
+- [ADR 012 — Mobile performance budgets](016-mobile-performance-budgets.md)

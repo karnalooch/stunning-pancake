@@ -6,7 +6,7 @@ Dziękujemy za udział w rozwoju platformy. Ten plik opisuje minimalny workflow;
 
 ## Zanim zaczniesz
 
-1. Zacznij od [indeksu dokumentacji](docs/README.md) i [przewodnika przejęcia](docs/PROJECT_TAKEOVER.md). Indeksy [PL](docs/pl/README.md) i [EN](docs/en/README.md) prowadzą do materiałów językowych.
+1. Zacznij od [indeksu dokumentacji](docs/README.md). Wybierz bieżący SSOT według zadania; `PROJECT_TAKEOVER.md` i `TAKEOVER_*` traktuj jako historię stabilizacji, nie domyślną instrukcję. Indeksy [PL](docs/pl/README.md) i [EN](docs/en/README.md) prowadzą do materiałów językowych.
 2. Luki bezpieczeństwa: [SECURITY.md](SECURITY.md) (nie otwieraj publicznych issue z exploitami).
 3. Używaj Node.js **24.21.0 LTS** i pnpm **12.4.2**. Po klonowaniu uruchom `python scripts/dev_doctor.py` i usuń zgłoszone braki; kanoniczny Corepack aktywuje `pnpm@12.4.2`. Zainstaluj zależności z **root** monorepo: `pnpm install --frozen-lockfile`. **Nie** używaj `npm install` w `admin/` — `workspace:*` wymaga pnpm.
 4. Opcjonalnie hooki lokalne: `pip install pre-commit && pre-commit install` (Ruff, `pnpm tokens:check`, docs links).
@@ -68,6 +68,6 @@ Checklist utrzymania: [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 - Rozróżniaj pliki śledzone (`git ls-files`), lokalne i ignorowane (`git check-ignore`). Brak statycznych odwołań nie jest wystarczającym dowodem, że plik można usunąć.
 - Generator jest źródłem plików generowanych. Regeneruj je właściwą komendą, sprawdź diff i zachowaj lockfile przy instalacji odtwarzającej środowisko.
 - Dokumentuj bieżące zachowanie w istniejącym przewodniku. Raporty pozostają datowanymi wynikami kontroli; roadmapa nie jest dowodem wdrożenia.
-- Zachowuj pary językowe z `docs/locales/i18n_manifest.json`. Po zmianach dokumentacji uruchom `python scripts/check_docs_links.py` i `python scripts/check_docs_i18n.py`.
+- Zachowuj pary językowe z `docs/locales/i18n_manifest.json`. Po zmianach dokumentacji uruchom `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py` i `python scripts/check_docs_structure.py`.
 - Archiwizuj dokument dopiero po wskazaniu jego następcy i sprawdzeniu odsyłaczy. Nie usuwaj dokumentacji tylko dlatego, że jest stara.
 - W PR podaj komendy, wyniki oraz blokery. Nie zamieniaj `BLOCKED` lub niewykonanych testów na `PASS`; brak lokalnego środowiska opisz i skonfrontuj z właściwym zadaniem CI.

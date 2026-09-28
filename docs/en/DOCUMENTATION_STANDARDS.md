@@ -4,7 +4,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | See canonical document |
 | **lang** | en |
 | **translation** | [Polski](../DOCUMENTATION_STANDARDS.md) |
@@ -15,7 +15,7 @@
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Tech Lead |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Runbook authors, operators, tech lead |
 
 ---
@@ -24,7 +24,9 @@
 
 One consistent format for runbooks, specifications and indexes - easy review, audit and onboarding without duplication of content.
 
-**Main Index:** [README.md](./README.md)
+**Locale index:** [README.md](./README.md)  
+**Documentation hub:** [../README.md](../README.md)  
+**Document lifecycle:** [../DOCUMENTATION_LIFECYCLE.md](../DOCUMENTATION_LIFECYCLE.md)
 
 **Section indexes:**
 
@@ -172,4 +174,4 @@ Index abbreviation: [README.md § Language policy](./README.md#language-policy).
 2. New runbook → entry in [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) and [operations/README.md](./operations/README.md).
 3. New admin/compliance document → appropriate `*_INDEX.md`.
 4. [MAINTENANCE.md](./MAINTENANCE.md) + date in [README.md](./README.md).
-5. Run `python scripts/check_docs_links.py`.
+5. Run `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, and `python scripts/check_docs_structure.py`.
