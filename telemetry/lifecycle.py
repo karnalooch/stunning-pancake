@@ -23,7 +23,8 @@ logger = logging.getLogger("telemetry")
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     pool = await get_pool()
     async with pool.acquire() as conn:
-        await conn.execute("CREATE EXTENSION IF NOT EXISTS postgis;")
+        # Database extensions are owned by the privileged migration/bootstrap
+        # path. Telemetry intentionally runs with a NOSUPERUSER runtime role.
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS gps_points (
                 time        TIMESTAMPTZ     NOT NULL,
