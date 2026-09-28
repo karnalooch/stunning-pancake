@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Database: TimescaleDB + PostGIS (Constitution §24.3 — Time-Series Hypertables)
   db:

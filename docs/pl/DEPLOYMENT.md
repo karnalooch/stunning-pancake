@@ -132,8 +132,6 @@ curl https://<domena>.up.railway.app/api/docs/
 ### Plik: `docker-compose.prod.yml`
 
 ```yaml
-version: '3.8'
-
 services:
   backend:
     build: ./backend

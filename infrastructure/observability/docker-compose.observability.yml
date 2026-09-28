@@ -1,5 +1,3 @@
-version: '3.8'
-
 # Observability stack — run alongside main docker-compose.yml
 # Usage: podman-compose -f docker-compose.yml -f infrastructure/observability/docker-compose.observability.yml up
 
