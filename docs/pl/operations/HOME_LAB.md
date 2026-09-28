@@ -15,6 +15,8 @@
 
 Domowy lab odtwarza granice usług używane przez pilota, ale korzysta wyłącznie z lokalnego projektu Compose `4velo-home`, prywatnego pliku `.env.home` i wolumenów Dockera. Nie kopiuj do niego sekretów ani danych produkcyjnych.
 
+Używaj `python scripts/home_lab.py ...` jako jedynej kanonicznej ścieżki sterowania. Gołe `docker compose ...` nie jest równoważne, ponieważ Compose automatycznie dołącza `docker-compose.override.yml`; ścieżka pilota świadomie i jawnie warstwuje wyłącznie `docker-compose.yml`, a po nim `docker-compose.home.yml`.
+
 ## Wymagania
 
 - Docker Desktop z WSL2 albo Docker Engine z obsługą `docker compose`;
