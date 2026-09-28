@@ -317,6 +317,24 @@ class MobileHarnessContractTests(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, critical)
 
+    def test_full_audit_uses_ux_v2_stable_tab_ids(self):
+        source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
+        for token in (
+            'id: "home-open-start-ride"',
+            'id: "start-ride-primary"',
+            'id: "tab-start-ride"',
+            'id: "tab-club"',
+            'id: "tab-discover"',
+            'id: "tab-you"',
+            'id: "tab-today"',
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, source)
+
+        for legacy in ('tapOn: "RYWALIZACJA"', 'tapOn: "PROFIL"', 'tapOn: "JAZDA"'):
+            with self.subTest(legacy=legacy):
+                self.assertNotIn(legacy, source)
+
     def test_python_ride_audit_accepts_stable_transition_ids(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
