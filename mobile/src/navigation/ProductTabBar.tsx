@@ -97,7 +97,7 @@ export const ProductTabBar: React.FC<BottomTabBarProps> = ({
                   ? semantic.action.primaryPressed
                   : semantic.action.primary
                 : isFocused
-                  ? 'rgba(255,255,255,0.08)'
+                  ? semantic.surface.selected
                   : 'transparent',
               transform: isStartRide ? [{ translateY: -7 }] : undefined,
               opacity: pressed && !isStartRide ? 0.72 : 1,
