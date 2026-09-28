@@ -172,7 +172,7 @@ sequenceDiagram
 
 | Obszar | Ocena klienta | Dowód w kodzie |
 |--------|---------------|----------------|
-| Wygląd / vibe | 8/10 | STITCH theme, [`GameTabBar`](../../mobile/src/navigation/GameTabBar.tsx) |
+| Wygląd / vibe | 8/10 | STITCH theme, `GameTabBar` (retired by Product UX v2 / #348) |
 | Nawigacja | 3/10 | Flat 4 tabs vs plan 4 stacks + settings w [`screen-architecture-plan.md`](../archive/plans/screen-architecture-plan.md) |
 | Dane live | 2/10 | Mocki na większości ekranów |
 | Core ride loop | 5/10 | GPS sync OK, brak summary + mapy |
