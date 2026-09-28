@@ -5,18 +5,19 @@ const SRC = path.resolve(__dirname, '../../src');
 const read = (relative: string) => fs.readFileSync(path.join(SRC, relative), 'utf8');
 
 describe('T83-B Explore truth contract', () => {
-  test('Explore Hub uses Frozen UI product chrome', () => {
-    const hub = read('screens/ExploreHubScreen.tsx');
+  test('Discover is map-first and keeps Marketplace reachable without a legacy hub', () => {
+    const shell = read('bootstrap/NavigationShell.tsx');
+    const map = read('screens/ExploreMapScreen.tsx');
 
-    expect(hub).toContain('<ProductCard');
-    expect(hub).toContain('<PrimaryButton');
-    expect(hub).toContain('PRODUCT_TYPOGRAPHY');
-    expect(hub).toContain('getSemanticColors');
+    expect(shell).toContain('<Tab.Screen name="Discover">');
+    expect(shell).toContain('<ExploreMapScreen');
+    expect(shell).not.toContain('ExploreHubScreen');
+    expect(map).toContain('discover-open-marketplace');
+    expect(map).toContain('onOpenMarketplace');
 
-    expect(hub).not.toContain('SceneBackground');
-    expect(hub).not.toContain('GameCard');
-    expect(hub).not.toContain('FONTS.display');
-    expect(hub).not.toContain('ChromeIcon');
+    expect(map).not.toContain('SceneBackground');
+    expect(map).not.toContain('GameCard');
+    expect(map).not.toContain('FONTS.display');
   });
 
   test('Explore POI surface keeps error distinct from genuine empty data', () => {
