@@ -65,7 +65,6 @@ class T92RegressionTests(unittest.TestCase):
             candidate_sha="d" * 40,
             workflow_run_id="987",
             repository="owner/repo",
-            operator_reason="final pilot regression",
             lane_results={
                 "preflight": "success",
                 "exact_regression": "success",
