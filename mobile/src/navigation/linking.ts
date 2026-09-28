@@ -19,10 +19,11 @@ export const mobileLinking: LinkingOptions<RootStackParamList> = {
     screens: {
       MainTabs: {
         screens: {
-          Ride: ROUTE_PATHS.ride,
-          Compete: ROUTE_PATHS.compete,
-          Explore: ROUTE_PATHS.explore,
-          Profile: ROUTE_PATHS.profile,
+          Today: ROUTE_PATHS.today,
+          Discover: ROUTE_PATHS.discover,
+          StartRide: ROUTE_PATHS.startRide,
+          Club: ROUTE_PATHS.club,
+          You: ROUTE_PATHS.you,
           Tracking: ROUTE_PATHS.tracking,
         },
       },
