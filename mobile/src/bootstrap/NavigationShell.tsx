@@ -165,16 +165,6 @@ function MainTabs({
           />
         )}
       </Tab.Screen>
-      <Tab.Screen name="Club">
-        {() => (
-          <CityHubScreen
-            user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
-            onStartQuest={() => void handleStartRide()}
-            onOpenClubs={() => navRef.current?.navigate('Clubs')}
-            onOpenSegments={() => navRef.current?.navigate('Segments')}
-          />
-        )}
-      </Tab.Screen>
       <Tab.Screen name="Discover">
         {() => (
           <ExploreMapScreen
@@ -189,6 +179,16 @@ function MainTabs({
             onStartRide={(sport) => void handleStartRide(sport)}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
             onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
+          />
+        )}
+      </Tab.Screen>
+      <Tab.Screen name="Club">
+        {() => (
+          <CityHubScreen
+            user={shellUser ? { username: shellUser.username ?? 'RIDER' } : null}
+            onStartQuest={() => void handleStartRide()}
+            onOpenClubs={() => navRef.current?.navigate('Clubs')}
+            onOpenSegments={() => navRef.current?.navigate('Segments')}
           />
         )}
       </Tab.Screen>
