@@ -6,6 +6,12 @@ concurrency:
 
 on:
   workflow_call:
+    inputs:
+      source_sha:
+        description: "Optional exact source SHA for reusable exact-candidate validation"
+        required: false
+        default: ""
+        type: string
   pull_request:
     paths:
       - 'docker-compose.yml'
@@ -51,11 +57,11 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
 
       - name: Assert exact source checkout
         env:
-          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_HEAD_SHA: ${{ inputs.source_sha || github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           ACTUAL_HEAD_SHA="$(git rev-parse HEAD)"

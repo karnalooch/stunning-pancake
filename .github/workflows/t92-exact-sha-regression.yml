@@ -1,0 +1,223 @@
+name: T92 Exact-SHA Pre-Pilot Regression
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: "Exact 40-character Git SHA from protected main"
+        required: true
+        type: string
+      reason:
+        description: "Optional operator note"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: t92-exact-sha-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "24.21.0"
+
+jobs:
+  preflight:
+    name: Exact candidate + T58 preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Validate candidate SHA syntax
+        run: python scripts/t92_regression.py validate-sha --candidate-sha "${{ inputs.candidate_sha }}"
+
+      - name: Assert exact checkout is reachable from protected main
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$CANDIDATE_SHA" ]; then
+            echo "::error::Exact checkout mismatch: expected $CANDIDATE_SHA, got $ACTUAL_SHA"
+            exit 1
+          fi
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$CANDIDATE_SHA" origin/main; then
+            echo "::error::T92 candidate is not reachable from protected main: $CANDIDATE_SHA"
+            exit 1
+          fi
+
+      - name: Enforce T58 pilot evidence PASS on this exact candidate
+        run: |
+          mkdir -p artifacts/t92
+          python scripts/release/pre_release_check.py --pilot --report artifacts/t92/t58-pilot-gate.json
+
+      - name: Upload T58 preflight evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: t92-t58-preflight-${{ github.run_id }}
+          path: artifacts/t92/t58-pilot-gate.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  full-release:
+    name: Exact-SHA heavyweight release matrix
+    needs: [preflight]
+    uses: ./.github/workflows/full-release.yml
+    with:
+      source_sha: ${{ inputs.candidate_sha }}
+
+  exact-regression:
+    name: Deep application regression
+    needs: [preflight]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    services:
+      postgres:
+        image: postgis/postgis:15-3.3
+        env:
+          POSTGRES_DB: fourvelo_ci
+          POSTGRES_USER: fourvelo_ci
+          POSTGRES_PASSWORD: fourvelo_ci_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+    env:
+      DATABASE_URL: postgres://fourvelo_ci:fourvelo_ci_pass@localhost:5432/fourvelo_ci
+      REDIS_URL: redis://localhost:6379/0
+      SECRET_KEY: t92-ci-only-key
+      DJANGO_SETTINGS_MODULE: core.settings
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Assert exact source checkout
+        env:
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [ "$ACTUAL_SHA" != "$CANDIDATE_SHA" ]; then
+            echo "::error::Exact checkout mismatch: expected $CANDIDATE_SHA, got $ACTUAL_SHA"
+            exit 1
+          fi
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Set up pnpm workspace
+        uses: ./.github/actions/pnpm-setup
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install full backend dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev
+          python -m pip install -r backend/requirements.txt
+
+      - name: Backend guarded coverage gate
+        working-directory: backend
+        env:
+          REDIS_URL: redis://localhost:6379/15
+        run: |
+          python -m pip install pytest-cov
+          python run_pytest.py \
+            --cov=core.load_guard \
+            --cov=activities.gpx_export --cov=activities.telemetry_shard \
+            --cov=activities.simulator_routing_backpressure \
+            --cov-report=term-missing --cov-fail-under=40 -q \
+            activities/test_gpx_export.py \
+            activities/test_simulator_backpressure.py activities/test_simulator_status_views.py \
+            activities/test_simulator_operational_gate.py \
+            -m simulator_light -q
+
+      - name: Full Django regression
+        working-directory: backend
+        run: python manage.py test --verbosity=2
+
+      - name: Full admin unit + production build
+        run: |
+          pnpm --filter admin lint
+          pnpm --filter admin typecheck
+          pnpm --filter admin test -- --run
+          pnpm --filter admin build
+
+      - name: Full admin browser regression
+        run: |
+          pnpm --dir admin exec playwright install --with-deps chromium
+          VITE_E2E=1 pnpm --filter admin build
+          pnpm --dir admin exec playwright test --project=chromium
+
+  evidence:
+    name: T92 Exact-SHA Gate
+    if: always()
+    needs:
+      - preflight
+      - full-release
+      - exact-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ inputs.candidate_sha }}
+
+      - name: Write secret-free T92 evidence
+        id: evidence
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts/t92
+          python scripts/t92_regression.py write-evidence \
+            --candidate-sha "${{ inputs.candidate_sha }}" \
+            --workflow-run-id "${{ github.run_id }}" \
+            --repository "${{ github.repository }}" \
+            --preflight-result "${{ needs.preflight.result }}" \
+            --exact-regression-result "${{ needs.exact-regression.result }}" \
+            --full-release-result "${{ needs.full-release.result }}" \
+            --output "artifacts/t92/t92-exact-sha-${{ inputs.candidate_sha }}.json"
+
+      - name: Upload T92 exact-SHA evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: t92-exact-sha-${{ github.run_id }}
+          path: artifacts/t92/t92-exact-sha-*.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce T92 PASS
+        env:
+          EVIDENCE_OUTCOME: ${{ steps.evidence.outcome }}
+          PREFLIGHT: ${{ needs.preflight.result }}
+          FULL_RELEASE: ${{ needs.full-release.result }}
+          EXACT_REGRESSION: ${{ needs.exact-regression.result }}
+        run: |
+          set -euo pipefail
+          test "$EVIDENCE_OUTCOME" = "success"
+          test "$PREFLIGHT" = "success"
+          test "$FULL_RELEASE" = "success"
+          test "$EXACT_REGRESSION" = "success"
+          echo "T92 EXACT-SHA PRE-PILOT REGRESSION PASS: ${{ inputs.candidate_sha }}"

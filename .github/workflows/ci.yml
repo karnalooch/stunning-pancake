@@ -508,6 +508,10 @@ jobs:
       - name: Test T58 pilot release gate
         run: python -m unittest scripts/test_pre_release_check.py -v
 
+      - name: Test T92 exact-SHA regression evidence
+        working-directory: scripts
+        run: python -m unittest test_t92_regression.py -v
+
       - name: Validate tracked Railway signing-key configuration
         run: |
           python -m unittest test_check_config_secrets -v
