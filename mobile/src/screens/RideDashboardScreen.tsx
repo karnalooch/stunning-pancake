@@ -1,12 +1,12 @@
 /**
- * Authenticated 4VELO Home / pre-ride dashboard.
+ * Authenticated 4VELO Today context surface.
  *
- * Frozen UI v1.2: product-first chrome, truthful activity history and a
- * dominant ride action. Approved Home artwork uses the governed raster
- * day-hero family from ASSET_GOVERNANCE_V1.
+ * Product UX v2 keeps truthful rider/activity context here while new-ride
+ * setup lives exclusively in StartRideScreen. Approved Home artwork uses the
+ * governed raster day-hero family from ASSET_GOVERNANCE_V1.
  */
 
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { Image, Pressable, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,13 +15,11 @@ import * as Haptics from 'expo-haptics';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { DevEnvironmentBanner } from '../components/DevEnvironmentBanner';
-import { GpsRecoveryBanner } from '../components/GpsRecoveryBanner';
 import { PlatformNoticeBanner } from '../components/PlatformNoticeBanner';
 import {
   Metric,
   PrimaryButton,
   ProductCard,
-  SportChip,
 } from '../components/product';
 import { PlaceBadge } from '../components/product/PlaceBadge';
 import { EdgeStateBanner } from '../components/ui/EdgeStateBanner';
@@ -33,13 +31,10 @@ import {
   isVisionFixtures,
   type VisionHomePreviewState,
 } from '../bootstrap/visionFixtures';
-import { useGameProgress } from '../hooks/useGameProgress';
 import { usePlatformNotices } from '../hooks/usePlatformNotices';
 import { useRiderStats } from '../hooks/useRiderStats';
 import { useI18n } from '../i18n/useI18n';
 import type { RideEdgeMessage } from '../services/apiRetry';
-import type { ActivitySportType } from '../services/api';
-import { ACTIVITY_SPORT_OPTIONS } from '../types/activitySport';
 import { formatRiderDisplayName } from '../utils/displayName';
 import { formatDurationSeconds } from '../utils/activityMetrics';
 import { LAYOUT } from '../theme/layout';
@@ -177,14 +172,6 @@ const stylesheet = StyleSheet.create((theme) => {
       ...PRODUCT_TYPOGRAPHY.body,
       color: semantic.text.secondary,
     },
-    sportRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 8,
-    },
-    actionStack: {
-      gap: 8,
-    },
     activeMetricRow: {
       flexDirection: 'row',
       gap: 20,
@@ -278,18 +265,12 @@ export type HomePreviewState = VisionHomePreviewState;
 
 interface RideDashboardScreenProps {
   user: { username: string; tenant_name?: string; tenant_id?: string } | null;
-  onStartRide?: (sport: ActivitySportType) => void;
+  onOpenStartRide?: () => void;
   onGoToRide?: () => void;
   isRecording?: boolean;
   liveSpeed?: number;
   liveDistance?: number;
-  gpsRecoveryVisible?: boolean;
-  gpsRecoveryBusy?: boolean;
-  onGpsRecoveryPress?: () => void;
-  onOpenGpsWizard?: () => void;
   onOpenSettings?: () => void;
-  startRideError?: string | null;
-  onDismissStartRideError?: () => void;
   rideEdgeMessage?: RideEdgeMessage | null;
   onDismissRideEdgeMessage?: () => void;
   previewState?: HomePreviewState;
@@ -297,18 +278,12 @@ interface RideDashboardScreenProps {
 
 export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(({
   user,
-  onStartRide,
+  onOpenStartRide,
   onGoToRide,
   isRecording = false,
   liveSpeed = 0,
   liveDistance = 0,
-  gpsRecoveryVisible = false,
-  gpsRecoveryBusy = false,
-  onGpsRecoveryPress,
-  onOpenGpsWizard,
   onOpenSettings,
-  startRideError,
-  onDismissStartRideError,
   rideEdgeMessage,
   onDismissRideEdgeMessage,
   previewState,
@@ -318,9 +293,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
   const fixturesEnabled = isVisionFixtures();
   const rideFixture = getVisionRideDashboardFixture(fixturesEnabled);
   const profileFixture = getVisionProfileFixture(fixturesEnabled);
-  const [selectedSport, setSelectedSport] = useState<ActivitySportType>('BIKE');
   const { notice, dismiss } = usePlatformNotices(user?.tenant_id ?? null);
-  const { onStartRide: trackQuestStart } = useGameProgress();
   const {
     latest: latestRide,
     weeklyBars,
@@ -385,11 +358,10 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
         ? formatDurationSeconds(latestRide.duration)
         : null;
 
-  const handleStartRide = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
-    trackQuestStart();
-    onStartRide?.(selectedSport);
-  }, [onStartRide, selectedSport, trackQuestStart]);
+  const handleOpenStartRide = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    onOpenStartRide?.();
+  }, [onOpenStartRide]);
 
   const handleGoToRide = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -446,20 +418,7 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
           />
         ) : null}
 
-        {startRideError ? (
-          <EdgeStateBanner
-            title={t.errors.startRide}
-            message={startRideError}
-            onDismiss={onDismissStartRideError}
-          />
-        ) : null}
-
         <PlatformNoticeBanner notice={notice} onDismiss={dismiss} />
-        <GpsRecoveryBanner
-          visible={gpsRecoveryVisible}
-          busy={gpsRecoveryBusy}
-          onPress={() => onGpsRecoveryPress?.()}
-        />
 
         <ProductCard variant="raised">
           <View style={s.heroContent}>
@@ -518,24 +477,11 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 />
               </>
             ) : (
-              <>
-                <PrimaryButton
-                  label={t.dashboard.startRide}
-                  onPress={handleStartRide}
-                  testID="home-start-ride"
-                />
-                <View style={s.sportRow}>
-                  {ACTIVITY_SPORT_OPTIONS.map((option) => (
-                    <SportChip
-                      key={option.type}
-                      label={locale === 'pl' ? option.labelPl : option.labelEn}
-                      selected={selectedSport === option.type}
-                      onPress={() => setSelectedSport(option.type)}
-                      testID={`home-sport-${option.type.toLowerCase()}`}
-                    />
-                  ))}
-                </View>
-              </>
+              <PrimaryButton
+                label={t.dashboard.startRide}
+                onPress={handleOpenStartRide}
+                testID="home-open-start-ride"
+              />
             )}
           </View>
         </ProductCard>
@@ -600,15 +546,6 @@ export const RideDashboardScreen: React.FC<RideDashboardScreenProps> = observer(
                 </ProductCard>
               )}
             </View>
-            <View style={s.section}>
-              <PrimaryButton
-                label={t.dashboard.gpsWizard}
-                onPress={() => onOpenGpsWizard?.()}
-                variant="secondary"
-                testID="home-gps-check"
-              />
-            </View>
-
             <View style={s.section}>
               <Text style={s.sectionHeader}>{t.dashboard.lastRide}</Text>
               {displayStatsLoading ? (

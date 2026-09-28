@@ -8,7 +8,13 @@ appId: com.sport.athlete
 - takeScreenshot: 01_ride_dashboard
 
 - tapOn:
-    text: ".*(START JAZDY|START RIDE).*"
+    id: "home-open-start-ride"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 12000
+- takeScreenshot: 01b_start_ride
+- tapOn:
+    id: "start-ride-primary"
 - extendedWaitUntil:
     visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
     timeout: 20000
@@ -47,7 +53,9 @@ appId: com.sport.athlete
     timeout: 15000
 
 - tapOn:
-    text: "KREATOR GPS"
+    id: "tab-start-ride"
+- tapOn:
+    id: "start-ride-gps-diagnostics"
     optional: true
 - extendedWaitUntil:
     visible: ".*(GPS|Kreator|Diagnostyka).*"
@@ -57,7 +65,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Klub|Club).*"
+    id: "tab-club"
 - extendedWaitUntil:
     visible: ".*(RYWALIZACJA|Ranking|Wojny|Kluby).*"
     timeout: 15000
@@ -75,7 +83,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Klub|Club).*"
+    id: "tab-club"
 - scroll
 - tapOn:
     text: "Segmenty"
@@ -88,7 +96,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Odkrywaj|Discover).*"
+    id: "tab-discover"
 - extendedWaitUntil:
     visible: ".*(ODKRYWAJ|Mapa|Marketplace).*"
     timeout: 15000
@@ -104,7 +112,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Odkrywaj|Discover).*"
+    id: "tab-discover"
 - tapOn:
     text: "Marketplace"
     optional: true
@@ -116,7 +124,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Ty|You).*"
+    id: "tab-you"
 - extendedWaitUntil:
     visible: ".*(PROFIL|WOJOWNIK|Dystans).*"
     timeout: 15000
@@ -134,7 +142,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Ty|You).*"
+    id: "tab-you"
 - scroll
 - tapOn:
     text: "RANKING"
@@ -147,7 +155,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Ty|You).*"
+    id: "tab-you"
 - scroll
 - tapOn:
     text: "DZIENNIK"
@@ -160,7 +168,7 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Ty|You).*"
+    id: "tab-you"
 - tapOn:
     point: "92%,8%"
     optional: true
@@ -174,5 +182,5 @@ appId: com.sport.athlete
 - pressKey: back
 
 - tapOn:
-    text: ".*(Dzisiaj|Today).*"
+    id: "tab-today"
 - takeScreenshot: 19_final_today

@@ -157,15 +157,11 @@ function MainTabs({
             isRecording={isRecording}
             liveSpeed={liveSpeed * 3.6}
             liveDistance={liveDistanceKm}
-            onStartRide={(sport) => void handleStartRide(sport)}
+            onOpenStartRide={() => navRef.current?.navigate('MainTabs', { screen: 'StartRide' })}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
-            onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
             onOpenSettings={() => navRef.current?.navigate('Settings')}
-            startRideError={startRideError}
-            onDismissStartRideError={clearStartRideError}
             rideEdgeMessage={rideEdgeMessage}
             onDismissRideEdgeMessage={clearRideEdgeMessage}
-            {...gpsRecoveryProps}
           />
         )}
       </Tab.Screen>
@@ -182,6 +178,7 @@ function MainTabs({
             isRecording={isRecording}
             onStartRide={(sport) => void handleStartRide(sport)}
             onGoToRide={() => navRef.current?.navigate('MainTabs', { screen: 'Tracking' })}
+            onOpenGpsWizard={() => navRef.current?.navigate('GpsDiagnostics')}
             startRideError={startRideError}
             onDismissStartRideError={clearStartRideError}
             rideEdgeMessage={rideEdgeMessage}

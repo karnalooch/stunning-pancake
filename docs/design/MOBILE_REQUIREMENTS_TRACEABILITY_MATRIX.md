@@ -69,12 +69,12 @@ Use this file as the release gate for "are we really done?".
 | Screen | Must-have acceptance checks |
 |--------|-----------------------------|
 | `AuthScreen` | login/register works, social callback safe fallback, clear error message |
-| `RideDashboardScreen` / Today | current context renders, settings/gps access works, ride entry remains truthful |
+| `RideDashboardScreen` / Today | rider/current-ride/weekly/history context renders; settings works; new-ride CTA navigates to Start Ride without duplicating sport/GPS setup |
 | `ActiveRideHUDScreen` | map + metrics + status bar + action bar + recovery banner + motion-safe behavior |
 | `RidePausedScreen` | resume/stop flow correct, no navigation dead end |
 | `RideSummaryScreen` | summary values valid, share action does not crash, return to hub works |
 | `CityHubScreen` | city wars and leaderboard render with cache fallback |
-| `StartRideScreen` | sport selection and primary ride start enter the focused live ride flow |
+| `StartRideScreen` | owns sport selection, start errors/GPS recovery, GPS diagnostics entry and the primary ride-start action into the focused live ride flow |
 | `ExploreMapScreen` / Discover | map-first POI surface renders, fallback states work, Marketplace remains reachable without an intermediate hub |
 | `MarketplaceScreen` | balance/pools/redeem flow safe under API errors |
 | `AthleteProfileScreen` | profile stats visible, navigation to training/settings/trends works |

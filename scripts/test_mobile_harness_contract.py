@@ -302,20 +302,35 @@ class MobileHarnessContractTests(unittest.TestCase):
         for token in ("START JAZDY", "PAUZA", "WZNÓW", "ZATRZYMAJ JAZDĘ", "Jazda ukończona", "POWRÓT"):
             with self.subTest(token=token):
                 self.assertIn(token, source)
+        self.assertIn('id: "home-open-start-ride"', source)
+        self.assertIn('id: "start-ride-primary"', source)
+        self.assertLess(
+            source.index('id: "home-open-start-ride"'),
+            source.index('id: "start-ride-primary"'),
+        )
 
     def test_full_audit_critical_ride_prefix_has_no_optional_steps(self):
         source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
-        critical, _, _secondary = source.partition('text: "KREATOR GPS"')
+        critical, _, _secondary = source.partition('id: "start-ride-gps-diagnostics"')
         self.assertNotIn("optional: true", critical)
         for token in ("START JAZDY", "PAUZA", "WZNÓW", "ZATRZYMAJ JAZDĘ", "Jazda ukończona"):
             with self.subTest(token=token):
                 self.assertIn(token, critical)
 
-    def test_full_audit_uses_product_ux_v2_tab_labels(self):
+    def test_full_audit_uses_ux_v2_stable_tab_ids(self):
         source = read("mobile/.maestro/flows/emulator-full-audit.yaml")
-        for token in ("Klub|Club", "Odkrywaj|Discover", "Ty|You", "Dzisiaj|Today"):
+        for token in (
+            'id: "home-open-start-ride"',
+            'id: "start-ride-primary"',
+            'id: "tab-start-ride"',
+            'id: "tab-club"',
+            'id: "tab-discover"',
+            'id: "tab-you"',
+            'id: "tab-today"',
+        ):
             with self.subTest(token=token):
                 self.assertIn(token, source)
+
         for legacy in ('tapOn: "RYWALIZACJA"', 'tapOn: "PROFIL"', 'tapOn: "JAZDA"'):
             with self.subTest(legacy=legacy):
                 self.assertNotIn(legacy, source)
@@ -323,7 +338,7 @@ class MobileHarnessContractTests(unittest.TestCase):
     def test_python_ride_audit_accepts_stable_transition_ids(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
-            "home-start-ride",
+            "start-ride-primary",
             "active-ride-screen",
             "ride-pause-button",
             "ride-paused-screen",
@@ -338,7 +353,8 @@ class MobileHarnessContractTests(unittest.TestCase):
 
     def test_ride_screens_expose_stable_transition_ids(self):
         expectations = {
-            "mobile/src/screens/RideDashboardScreen.tsx": ("home-start-ride",),
+            "mobile/src/screens/RideDashboardScreen.tsx": ("home-open-start-ride",),
+            "mobile/src/screens/StartRideScreen.tsx": ("start-ride-primary",),
             "mobile/src/screens/ActiveRideHUDScreen.tsx": ("active-ride-screen",),
             "mobile/src/components/ride/RideActionBar.tsx": (
                 "ride-pause-button",

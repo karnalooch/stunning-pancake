@@ -7,7 +7,12 @@ appId: com.sport.athlete
     timeout: 60000
 
 - tapOn:
-    text: ".*(START JAZDY|START RIDE).*"
+    id: "home-open-start-ride"
+- extendedWaitUntil:
+    visible: ".*(START JAZDY|START RIDE).*"
+    timeout: 12000
+- tapOn:
+    id: "start-ride-primary"
 - extendedWaitUntil:
     visible: ".*(PAUZA|PAUSE|SZUKAM GPS|SEARCHING GPS).*"
     timeout: 20000
