@@ -219,6 +219,22 @@ def run_operator(expected_sha: str, scope: str) -> Path:
     raw_report = EVIDENCE_DIR / f".p0-role-smoke-{os.getpid()}.json"
     raw_report.unlink(missing_ok=True)
 
+    # Keep the role smoke deterministic: inherited credentials for optional or
+    # unrequested roles must not turn this gate into a different test matrix.
+    for name in (
+        "ADMIN_USER",
+        "ADMIN_PASS",
+        "ADMIN_USER_MODERATOR",
+        "ADMIN_PASS_MODERATOR",
+        "ADMIN_USER_SPONSOR",
+        "ADMIN_PASS_SPONSOR",
+    ):
+        env.pop(name, None)
+    for role, names in ROLE_ENV.items():
+        if role not in roles:
+            for name in names:
+                env.pop(name, None)
+
     env["ADMIN_URL"] = admin_url
     env["P0_SMOKE_REPORT"] = str(raw_report)
 
