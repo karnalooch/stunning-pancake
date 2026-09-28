@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import call, patch
 
 import t76_chaos
 
@@ -30,6 +31,32 @@ DENIED1\tunauthorized
         fingerprint = t76_chaos.serial_fingerprint("ABC123")
         self.assertEqual(len(fingerprint), 64)
         self.assertNotIn("ABC123", fingerprint)
+
+    def test_restart_service_reuses_canonical_home_lab_compose_command(self):
+        with tempfile.TemporaryDirectory() as folder:
+            env = Path(folder) / ".env.home"
+            env.write_text("initialized", encoding="utf-8")
+            with (
+                patch.object(t76_chaos, "HOME_ENV", env),
+                patch.object(
+                    t76_chaos.home_lab,
+                    "compose_command",
+                    side_effect=[["compose-restart"], ["compose-up"]],
+                ) as compose_mock,
+                patch.object(t76_chaos, "run_visible") as run_mock,
+                patch.object(t76_chaos, "check_home_lab") as check_mock,
+            ):
+                t76_chaos.restart_service("backend")
+
+        self.assertEqual(
+            compose_mock.call_args_list,
+            [call("restart", "backend"), call("up", "-d", "--wait")],
+        )
+        self.assertEqual(
+            [item.args[0] for item in run_mock.call_args_list],
+            [["compose-restart"], ["compose-up"]],
+        )
+        check_mock.assert_called_once_with()
 
     @staticmethod
     def _evidence():
