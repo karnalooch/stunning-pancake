@@ -38,13 +38,15 @@ class AdminPilotSmokeTests(unittest.TestCase):
             "ADMIN_PASS_TENANT_ADMIN": "secret-a",
             "ADMIN_USER_GLOBAL_OWNER": "global-owner",
             "ADMIN_PASS_GLOBAL_OWNER": "secret-b",
+            "ADMIN_MFA_TENANT_ADMIN": "123456",
+            "ADMIN_MFA_GLOBAL_OWNER": "654321",
         }
         admin_pilot_smoke.require_role_credentials(
             ["TENANT_ADMIN", "GLOBAL_OWNER"], env
         )
 
         missing = dict(env)
-        missing.pop("ADMIN_PASS_GLOBAL_OWNER")
+        missing.pop("ADMIN_MFA_GLOBAL_OWNER")
         with self.assertRaises(SystemExit):
             admin_pilot_smoke.require_role_credentials(
                 ["TENANT_ADMIN", "GLOBAL_OWNER"], missing
@@ -55,6 +57,13 @@ class AdminPilotSmokeTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             admin_pilot_smoke.require_role_credentials(
                 ["TENANT_ADMIN", "GLOBAL_OWNER"], reused
+            )
+
+        invalid_mfa = dict(env)
+        invalid_mfa["ADMIN_MFA_TENANT_ADMIN"] = "12ab56"
+        with self.assertRaises(SystemExit):
+            admin_pilot_smoke.require_role_credentials(
+                ["TENANT_ADMIN", "GLOBAL_OWNER"], invalid_mfa
             )
 
     def test_exact_checkout_rejects_mismatch_and_dirty_tree(self):
@@ -121,6 +130,9 @@ class AdminPilotSmokeTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("'GLOBAL_OWNER'", smoke)
         self.assertIn("'TENANT_ADMIN'", smoke)
+        self.assertIn("ADMIN_MFA_GLOBAL_OWNER", smoke)
+        self.assertIn("ADMIN_MFA_TENANT_ADMIN", smoke)
+        self.assertIn('autocomplete="one-time-code"', smoke)
         self.assertGreaterEqual(smoke.count("'/owner/activities'"), 2)
         self.assertGreaterEqual(smoke.count("'/owner/analytics/audit-log'"), 2)
 
