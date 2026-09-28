@@ -95,6 +95,8 @@ jobs:
               - 'scripts/check_docs_i18n.py'
               - 'scripts/check_docs_structure.py'
               - 'scripts/test_check_docs_structure.py'
+              - 'scripts/check_docs_freshness.py'
+              - 'scripts/test_check_docs_freshness.py'
             visual:
               - 'mobile/assets/**'
               - 'mobile/src/assets/**'
@@ -526,7 +528,7 @@ jobs:
       - name: Test documentation guards
         run: |
           pip install pytest
-          python -m pytest scripts/test_check_docs_links.py scripts/test_check_docs_structure.py -q
+          python -m pytest scripts/test_check_docs_links.py scripts/test_check_docs_structure.py scripts/test_check_docs_freshness.py -q
 
       - name: Test load report helpers
         run: python -m pytest scripts/test_load_report.py -q
@@ -709,6 +711,9 @@ jobs:
 
       - name: Check documentation structure
         run: python scripts/check_docs_structure.py
+
+      - name: Check current-document freshness
+        run: python scripts/check_docs_freshness.py
 
   # ──────────────────────────────────────────
   # Admin Dashboard: Lint + Type Check + Build

@@ -35,6 +35,7 @@ Step "backend: pytest (light)" {
 Step "docs: link check" { python scripts/check_docs_links.py }
 Step "docs: i18n check" { python scripts/check_docs_i18n.py }
 Step "docs: structure check" { python scripts/check_docs_structure.py }
+Step "docs: freshness check" { python scripts/check_docs_freshness.py }
 Step "admin: eslint" {
     pnpm --filter admin lint
 }

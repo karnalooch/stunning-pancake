@@ -90,6 +90,7 @@ Nowe snapshoty umieszczaj w `reports/`, `audits/` albo odpowiednim katalogu dome
 python scripts/check_docs_links.py
 python scripts/check_docs_i18n.py
 python scripts/check_docs_structure.py
+python scripts/check_docs_freshness.py
 ```
 
-Standard autora: [DOCUMENTATION_STANDARDS.md](DOCUMENTATION_STANDARDS.md). Zasady życia dokumentu: [DOCUMENTATION_LIFECYCLE.md](DOCUMENTATION_LIFECYCLE.md).
+Standard autora: [DOCUMENTATION_STANDARDS.md](DOCUMENTATION_STANDARDS.md). Zasady życia dokumentu: [DOCUMENTATION_LIFECYCLE.md](DOCUMENTATION_LIFECYCLE.md). SLA przeglądu bieżących SSOT-ów: [`DOCUMENTATION_FRESHNESS.json`](DOCUMENTATION_FRESHNESS.json).

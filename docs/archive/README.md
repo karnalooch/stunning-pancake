@@ -13,4 +13,5 @@ Before archiving a live document, identify its successor, update inbound links w
 
 Current navigation starts at [docs/README.md](../README.md). Documentation lifecycle rules: [DOCUMENTATION_LIFECYCLE.md](../DOCUMENTATION_LIFECYCLE.md).
 
-The `plans/` subtree contains superseded implementation/design plans retained for history.
+- [`takeover/`](takeover/) — takeover, pilot-planning and data-safety snapshots retained for provenance.
+- `plans/` — superseded implementation/design plans retained for history.

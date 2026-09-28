@@ -174,4 +174,4 @@ Index abbreviation: [README.md § Language policy](./README.md#language-policy).
 2. New runbook → entry in [operations/OPERATIONS_INDEX.md](./operations/OPERATIONS_INDEX.md) and [operations/README.md](./operations/README.md).
 3. New admin/compliance document → appropriate `*_INDEX.md`.
 4. [MAINTENANCE.md](./MAINTENANCE.md) + date in [README.md](./README.md).
-5. Run `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, and `python scripts/check_docs_structure.py`.
+5. Run `python scripts/check_docs_links.py`, `python scripts/check_docs_i18n.py`, `python scripts/check_docs_structure.py`, and `python scripts/check_docs_freshness.py`.
