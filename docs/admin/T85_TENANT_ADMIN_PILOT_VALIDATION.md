@@ -106,14 +106,18 @@ Admin:
 
 PR/CI evidence is necessary but is not the final T85 end-to-end proof.
 
-Before T85 is marked DONE, run the existing role smoke against the intended pilot admin environment with real TENANT_ADMIN credentials:
+Before T85 is marked DONE, use the commit-bound operator wrapper against the intended pilot admin environment. The canonical combined T85 + T86 run requires both role-specific accounts and refuses a dirty checkout, SHA mismatch, missing credentials, skipped required roles, failed navigation, or a report aimed at a different admin URL:
 
 ```bash
 ADMIN_URL=<pilot-admin-url> \
 ADMIN_USER_TENANT_ADMIN=<tenant-admin> \
 ADMIN_PASS_TENANT_ADMIN=<secret> \
-pnpm --filter admin smoke:p0
+ADMIN_USER_GLOBAL_OWNER=<global-owner> \
+ADMIN_PASS_GLOBAL_OWNER=<secret> \
+python scripts/admin_pilot_smoke.py --expected-sha <40-char-pilot-sha>
 ```
+
+The wrapper writes secret-free commit-bound evidence to `backups/home-lab/evidence/t85-t86-admin-smoke-*.json`. A wrapper PASS proves only the automated role/navigation smoke; it does not replace the manual runtime observations below.
 
 Required runtime observations:
 
