@@ -20,7 +20,7 @@
 
 ---
 
-This is the living design SSOT for the 4VELO mobile app. It supersedes the archived snapshot [`docs/archive/designmobile.md`](../archive/designmobile.md) as the source of truth for **direction and systems**; the archived doc is retained as a detailed component/token/mockup reference appendix.
+This file is a historical design reference. [Product UX v2](./PRODUCT_UX_V2.md) is the current source of truth for mobile product direction, shell, IA and legacy retirement. This file may still explain older components/tokens and safety rationale, but it does not constrain the v2 migration.
 
 ## 1. Direction: bike-computer core, pixel-art skin
 
