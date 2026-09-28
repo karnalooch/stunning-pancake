@@ -1,8 +1,10 @@
 # 4VELO — UI Visual Protection Architecture v1
 
+> **SUPERSEDED FOR CURRENT UI DIRECTION (2026-09-28):** [Product UX v2](./PRODUCT_UX_V2.md) is now the normative product/shell/IA authority. This document is retained as the Frozen UI v1.2 historical baseline and for still-valid visual safety constraints. Do not use it to preserve legacy navigation or screen composition.
+
 | | |
 |---|---|
-| **Status** | **APPROVED / NORMATIVE / HARD VISUAL FREEZE** |
+| **Status** | **SUPERSEDED / HISTORICAL FROZEN BASELINE** |
 | **Decision date** | 2026-09-18 |
 | **Visual freeze** | **v1.2.0 — Adventure Grand Prix / Grand Prix Modern refinement** |
 | **Applies to** | 4VELO mobile UI, visual components, assets, screen composition and visual regression |
