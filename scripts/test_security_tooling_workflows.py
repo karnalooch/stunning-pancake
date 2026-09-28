@@ -353,6 +353,13 @@ class T92ExactShaRegressionContractTests(unittest.TestCase):
         )
 
         raw = text(T92)
+        self.assertIn("Backend guarded coverage gate", raw)
+        self.assertIn("pytest-cov", raw)
+        self.assertIn("--cov=core.load_guard", raw)
+        self.assertIn("--cov=activities.gpx_export", raw)
+        self.assertIn("--cov=activities.telemetry_shard", raw)
+        self.assertIn("--cov=activities.simulator_routing_backpressure", raw)
+        self.assertIn("--cov-fail-under=40", raw)
         self.assertIn("Full Django regression", raw)
         self.assertIn("python manage.py test --verbosity=2", raw)
         self.assertIn("Full admin unit + production build", raw)
@@ -371,6 +378,12 @@ class T92ExactShaRegressionContractTests(unittest.TestCase):
             set(gate["needs"]),
             {"preflight", "full-release", "exact-regression"},
         )
+        checkout = next(
+            step
+            for step in gate["steps"]
+            if str(step.get("uses", "")).startswith("actions/checkout@")
+        )
+        self.assertEqual(checkout["with"]["ref"], "${{ inputs.candidate_sha }}")
         raw = text(T92)
         self.assertIn("scripts/t92_regression.py write-evidence", raw)
         self.assertIn("--candidate-sha", raw)
