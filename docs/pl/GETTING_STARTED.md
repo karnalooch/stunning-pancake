@@ -17,16 +17,31 @@ weryfikacji; lista adresów poniżej nie oznacza działających usług.
 
 ## Narzędzia
 
-- Git, Node 20 (wersja w CI), pnpm 9.15.
-- Docker z Compose 2 i zasoby na PostGIS, Redis oraz routing.
-- Python 3.12 dla narzędzi lokalnych zgodnych z CI; obrazy usług używają 3.11.
+- Git.
+- Node.js **24.21.0** (pin w `.nvmrc`; root manifest dopuszcza Node 24 od 24.21.0) oraz pnpm **12.4.2** przez Corepack.
+- Docker Desktop / Docker Engine z Compose v2.
+- Python **3.12** dla narzędzi lokalnych zgodnych z CI; doctor wymaga tej samej wersji minor co CI, a obrazy usług mogą mieć własny przypięty runtime.
 
-## Przygotowanie
+## Preflight
+
+Po sklonowaniu repo uruchom read-only doctor przed instalacją zależności i startem usług:
 
 ```powershell
 git clone https://github.com/karnalooch/stunning-pancake.git 4velo
 cd 4velo
-corepack pnpm install --frozen-lockfile
+python scripts/dev_doctor.py
+```
+
+Doctor sprawdza root repo, checkout Git, przypiętą w CI wersję minor Pythona, dokładne piny Node/pnpm, Corepack, Docker Compose v2 i dostęp do daemona Dockera. Przy wymaganym błędzie kończy się kodem != 0 i podaje konkretną naprawę. Weryfikuje, że `.env.home` jest ignorowany przez Git, sprawdza jedynie istnienie pliku i nigdy nie czyta ani nie wypisuje wartości sekretów. Runtime health i końcowy komunikat `DEV ENV READY` należą do T90.
+
+## Przygotowanie
+
+Po zielonym doctorze wykonaj podaną przez niego kanoniczną sekwencję:
+
+```powershell
+corepack enable
+corepack prepare pnpm@12.4.2 --activate
+pnpm install --frozen-lockfile
 python scripts/home_lab.py init
 ```
 

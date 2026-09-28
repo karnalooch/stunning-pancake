@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NODE_VERSION = "24.21.0"
 PNPM_VERSION = "12.4.2"
+PYTHON_VERSION = "3.12"
 PNPM_ACTION_SETUP_SHA = "0977fd99725f1db4007ccb2928dbb4e90d06cc86"
 SETUP_NODE_ACTION_SHA = "249970729cb0ef3589644e2896645e5dc5ba9c38"
 
@@ -110,6 +111,21 @@ class ToolchainVersionContractTests(unittest.TestCase):
         self.assertFalse((ROOT / ".easignore").exists(), "root .easignore is forbidden")
         self.assertTrue((ROOT / "mobile" / "eas.json").is_file())
         self.assertTrue((ROOT / "mobile" / ".easignore").is_file())
+
+    def test_onboarding_docs_use_canonical_toolchain_and_doctor(self):
+        for path in (
+            "README.md",
+            "docs/en/GETTING_STARTED.md",
+            "docs/pl/GETTING_STARTED.md",
+        ):
+            with self.subTest(path=path):
+                source = read(path)
+                self.assertIn(NODE_VERSION, source)
+                self.assertIn(PNPM_VERSION, source)
+                self.assertIn(PYTHON_VERSION, source)
+                self.assertIn("python scripts/dev_doctor.py", source)
+                self.assertNotIn("Node 20", source)
+                self.assertNotIn("pnpm 9.15", source)
 
     def test_known_operational_helpers_do_not_reintroduce_old_pnpm(self):
         sources = (
