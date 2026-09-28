@@ -96,7 +96,9 @@ jobs:
     name: Full Android native smoke
     uses: ./.github/workflows/mobile-native-smoke.yml
     with:
-      release: true
+      # PRs delegate the expensive APK decision to direct native/release path
+      # classification. Nightly/manual/tag runs always force a release APK.
+      release: ${{ github.event_name != 'pull_request' }}
 
   home-lab:
     name: Home Lab configuration proof
