@@ -20,13 +20,16 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         self.assertIn('      - "mobile/**"', text)
         self.assertIn("  pull_request:", text)
 
-    def test_scope_uses_canonical_change_classifier(self):
+    def test_scope_uses_canonical_direct_native_classifier(self):
         text = workflow_text()
-        self.assertIn("Classify native-affecting changes", text)
-        self.assertIn("python scripts/plan_affected_tests.py", text)
-        self.assertIn("steps.classifier.outputs.lane_mobile_native", text)
+        self.assertIn("Classify direct native-affecting changes", text)
+        self.assertIn("changed_files_from_git", text)
+        self.assertIn("is_mobile_native_affecting_path", text)
+        self.assertIn('release_orchestration = {".github/workflows/full-release.yml"}', text)
+        self.assertIn("steps.classifier.outputs.direct_native_changed", text)
         self.assertIn("github.event.pull_request.base.sha", text)
         self.assertIn("github.event.pull_request.head.sha", text)
+        self.assertNotIn("steps.classifier.outputs.lane_mobile_native", text)
         self.assertNotIn("dorny/paths-filter", text)
 
     def test_full_android_build_is_conditioned_on_scope_decision(self):
@@ -42,23 +45,34 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
             text.index("./gradlew assembleRelease --no-daemon --stacktrace"),
         )
 
-    def test_pull_request_smoke_builds_debug_only(self):
+    def test_native_affecting_pr_builds_debug_and_release(self):
         text = workflow_text()
+        self.assertIn("release: ${{ steps.decision.outputs.release }}", text)
         self.assertIn(
-            "- name: Compile Android release APK\n        if: github.event_name != 'pull_request' || inputs.release == true",
+            "- name: Compile Android release APK\n        if: needs.native-scope.outputs.release == 'true'",
             text,
         )
         self.assertIn(
-            "- name: Prepare exact-SHA runtime artifact\n        if: github.event_name != 'pull_request' || inputs.release == true",
+            "- name: Prepare exact-SHA runtime artifact\n        if: needs.native-scope.outputs.release == 'true'",
             text,
         )
         self.assertIn(
-            "- name: Upload exact-SHA runtime artifact\n        if: github.event_name != 'pull_request' || inputs.release == true",
+            "- name: Upload exact-SHA runtime artifact\n        if: needs.native-scope.outputs.release == 'true'",
             text,
         )
-        self.assertIn("Release packaging is reserved for main/scheduled/manual/full-release runs.", text)
+        self.assertIn("Native/release-affecting PRs prove both debug and release packaging.", text)
         self.assertIn("FORCE_RELEASE: ${{ inputs.release || false }}", text)
-        self.assertIn("full-release caller forces native + release validation", text)
+        self.assertIn('echo "release=true" >> "$GITHUB_OUTPUT"', text)
+        self.assertIn("direct native/release-affecting PR paths changed", text)
+
+    def test_unrelated_full_release_pr_can_skip_gradle(self):
+        text = workflow_text()
+        self.assertIn('echo "run=false" >> "$GITHUB_OUTPUT"', text)
+        self.assertIn('echo "release=false" >> "$GITHUB_OUTPUT"', text)
+        self.assertIn(
+            "no direct native/release inputs changed; heavyweight Android build not required",
+            text,
+        )
 
     def test_full_build_publishes_exact_sha_release_artifact(self):
         text = workflow_text()
