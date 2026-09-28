@@ -25,7 +25,13 @@ class MobileNativeSmokeWorkflowTests(unittest.TestCase):
         self.assertIn("Classify direct native-affecting changes", text)
         self.assertIn("changed_files_from_git", text)
         self.assertIn("is_mobile_native_affecting_path", text)
-        self.assertIn('release_orchestration = {".github/workflows/full-release.yml"}', text)
+        self.assertIn('".github/workflows/full-release.yml"', text)
+        self.assertIn('".github/workflows/t92-exact-sha-regression.yml"', text)
+        self.assertIn("source_sha:", text)
+        self.assertIn(
+            "inputs.source_sha || github.event.pull_request.head.sha || github.sha",
+            text,
+        )
         self.assertIn("steps.classifier.outputs.direct_native_changed", text)
         self.assertIn("github.event.pull_request.base.sha", text)
         self.assertIn("github.event.pull_request.head.sha", text)
