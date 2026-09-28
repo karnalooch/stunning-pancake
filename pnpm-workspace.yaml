@@ -51,3 +51,6 @@ packages:
   - "admin"
   - "mobile"
   - "packages/*"
+
+minimumReleaseAgeExclude:
+  - expo-updates@55.0.32
