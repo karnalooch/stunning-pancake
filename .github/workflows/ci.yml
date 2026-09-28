@@ -505,6 +505,9 @@ jobs:
         run: python -m unittest test_dev_doctor.py -v
         working-directory: scripts
 
+      - name: Test T58 pilot release gate
+        run: python -m unittest scripts/test_pre_release_check.py -v
+
       - name: Validate tracked Railway signing-key configuration
         run: |
           python -m unittest test_check_config_secrets -v

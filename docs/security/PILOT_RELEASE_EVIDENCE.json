@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "gate": "t58-pilot-release",
+  "updated_at": "2026-09-28",
+  "notes": "Only PASS satisfies T58. Non-PASS states are intentional fail-closed blockers, not waivers.",
+  "evidence": {
+    "t28_security_inventory": {
+      "status": "PLANNED",
+      "evidence": [
+        "docs/TAKEOVER_PLAN_CURRENT.md#T28-T30"
+      ]
+    },
+    "t57_business_recovery": {
+      "status": "PASS",
+      "evidence": [
+        "docs/TAKEOVER_PLAN_CURRENT.md#T57",
+        "docs/en/operations/HOME_LAB.md"
+      ]
+    },
+    "t68_signing_key_closure": {
+      "status": "BLOCKED",
+      "evidence": [
+        "docs/TAKEOVER_PLAN_CURRENT.md#T60-T76"
+      ]
+    },
+    "t75_transport_backup": {
+      "status": "PASS",
+      "evidence": [
+        "docs/security/T75_TRANSPORT_BACKUP_CONFIDENTIALITY.md"
+      ]
+    },
+    "t76_android_chaos": {
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/TAKEOVER_PLAN_CURRENT.md#T60-T76",
+        "scripts/t76_chaos.py"
+      ]
+    },
+    "t84_physical_android_ui": {
+      "status": "BLOCKED",
+      "evidence": [
+        "https://github.com/karnalooch/stunning-pancake/issues/300",
+        "docs/quality/T84_PHYSICAL_ANDROID_VALIDATION.md"
+      ]
+    },
+    "t85_tenant_admin_smoke": {
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/admin/T85_TENANT_ADMIN_PILOT_VALIDATION.md"
+      ]
+    },
+    "t86_global_owner_smoke": {
+      "status": "PARTIAL",
+      "evidence": [
+        "docs/admin/T86_GLOBAL_OWNER_PILOT_VALIDATION.md"
+      ]
+    },
+    "t87_operator_gate": {
+      "status": "PASS",
+      "evidence": [
+        "docs/TAKEOVER_PLAN_CURRENT.md#T85-T87",
+        "docs/en/operations/HOME_LAB.md"
+      ]
+    },
+    "t90_dev_env_ready": {
+      "status": "PASS",
+      "evidence": [
+        "https://github.com/karnalooch/stunning-pancake/issues/319",
+        "docs/TAKEOVER_PLAN_CURRENT.md#T88-T92"
+      ]
+    }
+  }
+}
