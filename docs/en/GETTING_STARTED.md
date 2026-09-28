@@ -33,7 +33,7 @@ cd 4velo
 python scripts/dev_doctor.py
 ```
 
-The doctor checks the repository root, Git checkout, Python, the exact Node/pnpm pins, Corepack, Docker Compose, Docker daemon access, RAM and free disk space. It exits non-zero with a concrete remediation for every required failure. It checks only whether `.env.home` exists and never reads or prints its secret values. Runtime health and the final `DEV ENV READY` claim belong to T90.
+The doctor checks the repository root, Git checkout, Python, the exact Node/pnpm pins, Corepack, Docker Compose, Docker daemon access, RAM and free disk space. It exits non-zero with a concrete remediation for every required failure. It verifies that `.env.home` is Git-ignored, checks only whether the file exists, and never reads or prints its secret values. Runtime health and the final `DEV ENV READY` claim belong to T90.
 
 ## Preparation
 
