@@ -1,10 +1,12 @@
-# Document
+# 4VELO CONTROL — referencja bieżącego Admin/Web
+
+> **BIEŻĄCY AUTORYTET UX (2026-09-28):** [Product UX v2](../../design/PRODUCT_UX_V2.md). Opisy obecnego shella, grupowania sidebara, gradientowego stylu i dashboardów poniżej są inwentarzem migracyjnym, a nie chronionym kierunkiem produktu. Funkcje i RBAC pozostają obowiązujące do czasu ich jawnej migracji w kodzie.
 
 | | |
 |--|--|
 | **Status** | ✅ Active |
 | **Owner role** | Documentation maintainer |
-| **Last reviewed** | 2026-06-04 |
+| **Last reviewed** | 2026-09-28 |
 | **Audience** | Zobacz dokument kanoniczny |
 | **lang** | pl |
 | **translation** | [English](../../admin/README.md) |
