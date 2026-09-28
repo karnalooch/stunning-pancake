@@ -27,13 +27,14 @@ REPORT = REPO / "docs" / "design" / f"MOBILE_EMULATOR_UI_AUDIT_{DATE}.md"
 ACTIVITY = f"{APP_ID}/.MainActivity"
 
 TABS = {
-    "jazda": (170, 2282),
-    "rywalizacja": (422, 2282),
-    "odkrywaj": (668, 2282),
-    "profil": (915, 2282),
+    "today": (108, 2282),
+    "discover": (324, 2282),
+    "start": (540, 2282),
+    "club": (756, 2282),
+    "you": (972, 2282),
 }
 
-MAIN_SHELL_PATTERN = r"home-start-ride|ride-start-button|START JAZDY|START RIDE|DO JAZDY"
+MAIN_SHELL_PATTERN = r"tab-today|tab-start-ride|home-start-ride|start-ride-primary|START JAZDY|START RIDE|DO JAZDY"
 
 
 @dataclass
@@ -292,6 +293,8 @@ def screencap_image() -> Image.Image | None:
 def is_onboarding_image(img: Image.Image | None) -> bool:
     if img is None:
         return False
+    if is_main_shell_image(img):
+        return False
     w, h = img.size
     tab_strip = img.getpixel((540, h - 100))
     if tab_strip[0] > 200:
@@ -320,10 +323,12 @@ def is_main_shell_image(img: Image.Image | None) -> bool:
     w, h = img.size
     tab_strip = img.getpixel((540, h - 100))
     header = img.getpixel((200, 220))
-    if tab_strip[0] < 200 or header[0] < 180:
+    legacy_light_shell = tab_strip[0] > 200
+    product_dark_shell = tab_strip[0] < 80 and tab_strip[1] < 100 and tab_strip[2] < 140
+    if not (legacy_light_shell or product_dark_shell) or header[0] < 160:
         return False
     mid = img.getpixel((540, int(h * 0.55)))
-    return mid[0] > 80
+    return mid[0] > 70
 
 
 def is_system_settings_image(img: Image.Image | None) -> bool:
@@ -341,10 +346,10 @@ def classify_capture(img: Image.Image | None) -> str:
         return "blank"
     if is_system_settings_image(img):
         return "system_settings"
-    if is_onboarding_image(img):
-        return "onboarding"
     if is_main_shell_image(img):
         return "main"
+    if is_onboarding_image(img):
+        return "onboarding"
     return "unknown"
 
 
@@ -524,7 +529,9 @@ def main() -> int:
             )
         )
 
-    capture("01_ride_dashboard", "Jazda — dashboard (stan startowy)")
+    capture("01_today", "Today — stan startowy")
+    tap_tab("start")
+    capture("01b_start_ride", "Start Ride — wybór sportu")
 
     # Critical Ride smoke is fail-closed. No coordinate fallback and no optional
     # continuation: a screenshot after a failed transition is not evidence.
@@ -540,7 +547,7 @@ def main() -> int:
         write_report()
         return 2
 
-    if not tap_pattern(r"home-start-ride|ride-start-button|START JAZDY|START RIDE|DO JAZDY", None):
+    if not tap_pattern(r"start-ride-primary|home-start-ride|START JAZDY|START RIDE|DO JAZDY", None):
         steps.append(
             Step(
                 id="02_active_ride_hud",
@@ -682,7 +689,7 @@ def main() -> int:
 
     capture("03e_home_after_summary", "Home po podsumowaniu")
 
-    tap_tab("jazda")
+    tap_tab("today")
     if tap_pattern(r"KREATOR GPS", (540, 280)):
         sleep(2)
         capture("04_gps_diagnostics", "Kreator GPS (modal)")
@@ -692,7 +699,7 @@ def main() -> int:
     else:
         steps.append(Step(id="04_gps_diagnostics", title="Kreator GPS", status="skip"))
 
-    tap_tab("rywalizacja")
+    tap_tab("club")
     capture("05_compete_hub", "Rywalizacja — City Hub")
     swipe(540, 1700, 540, 500, 500)
     sleep(0.8)
@@ -706,7 +713,7 @@ def main() -> int:
     else:
         steps.append(Step(id="07_clubs", title="Kluby", status="skip"))
 
-    tap_tab("rywalizacja")
+    tap_tab("club")
     swipe(540, 1700, 540, 500, 500)
     if tap_pattern(r"^Segmenty", (810, 1200)):
         sleep(2)
@@ -716,26 +723,17 @@ def main() -> int:
     else:
         steps.append(Step(id="08_segments", title="Segmenty", status="skip"))
 
-    tap_tab("odkrywaj")
-    capture("09_explore_hub", "Odkrywaj — hub")
-    if tap_pattern(r"^Mapa", (270, 400)):
-        sleep(3)
-        capture("10_explore_map", "Mapa POI")
-        adb("shell", "input", "keyevent", "KEYCODE_BACK")
-        sleep(1.5)
-    else:
-        steps.append(Step(id="10_explore_map", title="Mapa", status="skip"))
-
-    tap_tab("odkrywaj")
-    if tap_pattern(r"Marketplace", (810, 400)):
+    tap_tab("discover")
+    capture("09_discover_map", "Discover — mapa POI")
+    if tap_pattern(r"discover-marketplace|Marketplace", None):
         sleep(2)
-        capture("11_marketplace", "Marketplace")
+        capture("10_marketplace", "Discover — Marketplace")
         adb("shell", "input", "keyevent", "KEYCODE_BACK")
         sleep(1.5)
     else:
-        steps.append(Step(id="11_marketplace", title="Marketplace", status="skip"))
+        steps.append(Step(id="10_marketplace", title="Marketplace", status="skip"))
 
-    tap_tab("profil")
+    tap_tab("you")
     capture("12_profile", "Profil — góra")
     swipe(540, 1600, 540, 600, 450)
     sleep(0.8)
@@ -746,7 +744,7 @@ def main() -> int:
         (r"RANKING", "15_leaderboard", "Ranking globalny"),
         (r"DZIENNIK", "16_training_log", "Dziennik treningów"),
     ]:
-        tap_tab("profil")
+        tap_tab("you")
         swipe(540, 1600, 540, 600, 450)
         if tap_pattern(pat, (540, 1100)):
             sleep(2)
@@ -756,7 +754,7 @@ def main() -> int:
         else:
             steps.append(Step(id=sid, title=title, status="skip"))
 
-    tap_tab("profil")
+    tap_tab("you")
     settings_opened = False
     if tap_testid("profile-settings-button") or tap_pattern(r"Ustawienia|settings", (980, 130)):
         sleep(2)
@@ -780,7 +778,7 @@ def main() -> int:
             )
         )
 
-    tap_tab("jazda")
+    tap_tab("today")
     capture("19_final", "Stan końcowy — zakładka Jazda")
 
     write_report()
