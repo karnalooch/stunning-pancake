@@ -314,7 +314,7 @@ class MobileHarnessContractTests(unittest.TestCase):
     def test_python_ride_audit_accepts_stable_transition_ids(self):
         source = read("scripts/emulator-ui-audit.py")
         for token in (
-            "home-start-ride",
+            "start-ride-primary",
             "active-ride-screen",
             "ride-pause-button",
             "ride-paused-screen",
@@ -329,7 +329,8 @@ class MobileHarnessContractTests(unittest.TestCase):
 
     def test_ride_screens_expose_stable_transition_ids(self):
         expectations = {
-            "mobile/src/screens/RideDashboardScreen.tsx": ("home-start-ride",),
+            "mobile/src/screens/RideDashboardScreen.tsx": ("home-open-start-ride",),
+            "mobile/src/screens/StartRideScreen.tsx": ("start-ride-primary",),
             "mobile/src/screens/ActiveRideHUDScreen.tsx": ("active-ride-screen",),
             "mobile/src/components/ride/RideActionBar.tsx": (
                 "ride-pause-button",
