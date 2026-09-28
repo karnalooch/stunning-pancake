@@ -24,7 +24,8 @@ step "telemetry: ruff check" ruff check telemetry
 step "telemetry: ruff format --check" ruff format --check telemetry
 step "scripts: ruff check" ruff check scripts --config pyproject.toml
 step "scripts: openapi drift" python scripts/check_openapi_drift.py
-step "scripts: documentation guard tests" env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/test_check_docs_links.py scripts/test_check_docs_structure.py -q
+step "scripts: check_docs_links tests" env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/test_check_docs_links.py -q
+step "scripts: check_docs_structure tests" env PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest scripts/test_check_docs_structure.py -q
 step "telemetry: pytest" bash -c 'cd telemetry && PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python -m pytest -p pytest_asyncio.plugin -q --tb=no'
 step "backend: pytest (light)" bash -c 'cd backend && python run_pytest.py core/test_load_guard.py activities/test_live_map_read_policy.py activities/test_telemetry_shard.py -m simulator_light -q --tb=no'
 step "docs: link check" python scripts/check_docs_links.py
