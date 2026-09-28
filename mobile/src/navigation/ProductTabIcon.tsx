@@ -23,7 +23,7 @@ export function ProductTabIcon({
   };
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" accessibilityElementsHidden>
+    <Svg width={size} height={size} viewBox="0 0 24 24">
       {routeName === 'Today' ? (
         <>
           <Circle cx="12" cy="12" r="7" {...common} />
