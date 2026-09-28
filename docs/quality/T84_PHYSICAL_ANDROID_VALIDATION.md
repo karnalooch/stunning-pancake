@@ -132,4 +132,4 @@ T84 may be marked DONE only when the exact candidate artifact has:
 1. `AUTOMATION_PASS`; and
 2. a completed `physical-signoff.md` with **PASS**.
 
-This physical acceptance does not automatically close T76 chaos/restart evidence or later T91 exact-RC validation unless the captured scenario explicitly satisfies those separate contracts.
+This physical acceptance does not automatically close T76 chaos/restart evidence or T91 (#323) exact-RC validation. T91 may reference this evidence only when the exact SHA, APK hash, device identity and captured scenarios satisfy the separate T91 contract.
