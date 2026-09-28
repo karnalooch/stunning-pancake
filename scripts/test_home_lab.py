@@ -77,6 +77,16 @@ class HomeLabTests(unittest.TestCase):
         self.assertIn(role, home)
         self.assertLess(home.index(extension), home.index(role))
 
+        # Compose must pass these through to /bin/bash inside the init container.
+        # A single $ is interpolated by Compose from the host/.env.home before
+        # the service-level environment exists, which can silently blank PGUSER
+        # and APP_DB_PASSWORD on a fresh bootstrap.
+        self.assertIn('--set=app_user="$APP_DB_USER"', home)
+        self.assertIn('--set=app_password="$APP_DB_PASSWORD"', home)
+        self.assertIn('--set=admin_user="$PGUSER"', home)
+        self.assertNotIn('--set=app_password="$APP_DB_PASSWORD"', home)
+        self.assertNotIn('--set=admin_user="$PGUSER"', home)
+
         telemetry_lifecycle = (
             home_lab.ROOT / "telemetry" / "lifecycle.py"
         ).read_text(encoding="utf-8")
