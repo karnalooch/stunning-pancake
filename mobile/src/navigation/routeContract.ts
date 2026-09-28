@@ -4,10 +4,13 @@ import type { RootStackParamList } from './types';
  * Route contract for stack-level destinations and deep-link helpers.
  */
 export const ROUTE_PATHS = {
-  ride: 'ride',
-  compete: 'compete',
-  explore: 'explore',
-  profile: 'profile',
+  // Keep the established public paths for compatibility while the internal
+  // route names move to Product UX v2.
+  today: 'ride',
+  discover: 'explore',
+  startRide: 'ride/start',
+  club: 'compete',
+  you: 'profile',
   tracking: 'ride/live',
   settings: 'settings',
   trainingLog: 'profile/training-log',
