@@ -20,8 +20,7 @@ weryfikacji; lista adresów poniżej nie oznacza działających usług.
 - Git.
 - Node.js **24.21.0** (pin w `.nvmrc`; root manifest dopuszcza Node 24 od 24.21.0) oraz pnpm **12.4.2** przez Corepack.
 - Docker Desktop / Docker Engine z Compose v2.
-- Co najmniej **16 GB RAM** i **40 GB wolnego miejsca** dla Home Laba.
-- Python **3.12+** dla narzędzi lokalnych zgodnych z CI; CI używa obecnie Pythona 3.12, a obrazy usług mogą mieć własny przypięty runtime.
+- Python **3.12** dla narzędzi lokalnych zgodnych z CI; doctor wymaga tej samej wersji minor co CI, a obrazy usług mogą mieć własny przypięty runtime.
 
 ## Preflight
 
@@ -33,7 +32,7 @@ cd 4velo
 python scripts/dev_doctor.py
 ```
 
-Doctor sprawdza root repo, checkout Git, Pythona, dokładne piny Node/pnpm, Corepack, Docker Compose, dostęp do daemona Dockera, RAM i wolne miejsce. Przy wymaganym błędzie kończy się kodem != 0 i podaje konkretną naprawę. Weryfikuje, że `.env.home` jest ignorowany przez Git, sprawdza jedynie istnienie pliku i nigdy nie czyta ani nie wypisuje wartości sekretów. Runtime health i końcowy komunikat `DEV ENV READY` należą do T90.
+Doctor sprawdza root repo, checkout Git, przypiętą w CI wersję minor Pythona, dokładne piny Node/pnpm, Corepack, Docker Compose v2 i dostęp do daemona Dockera. Przy wymaganym błędzie kończy się kodem != 0 i podaje konkretną naprawę. Weryfikuje, że `.env.home` jest ignorowany przez Git, sprawdza jedynie istnienie pliku i nigdy nie czyta ani nie wypisuje wartości sekretów. Runtime health i końcowy komunikat `DEV ENV READY` należą do T90.
 
 ## Przygotowanie
 
