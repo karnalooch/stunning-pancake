@@ -36,7 +36,7 @@
     "@expo-google-fonts/silkscreen": "^0.4.2",
     "@expo-google-fonts/vt323": "^0.4.1",
     "@legendapp/state": "3.0.0-beta.46",
-    "@maplibre/maplibre-react-native": "^11.3.4",
+    "@maplibre/maplibre-react-native": "^11.4.0",
     "@react-native-community/netinfo": "^11.5.2",
     "@react-native-firebase/app": "^21.10.0",
     "@react-native-firebase/crashlytics": "^21.10.0",
